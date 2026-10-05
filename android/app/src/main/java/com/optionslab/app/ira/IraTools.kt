@@ -1128,27 +1128,26 @@ internal object IraTools {
     /** The day and Boss's open legs (where, symbol, quantity - no prices or amounts) noted once near the morning mark. */
     private const val MORNING_HELD = "jarvis.morningHeld"
 
-    /** Today's morning legs, or null when none were noted today. */
-    fun morningHeld(today: java.time.LocalDate): List<com.optionslab.ira.SinceMorning.Held>? = runCatching {
-        val lines = (prefs().getString(MORNING_HELD) ?: "").lines().filter { it.isNotBlank() }
-        if (lines.firstOrNull() != today.toString()) null
-        else lines.drop(1).mapNotNull { l ->
-            val p = l.split("|")
-            if (p.size != 3) null else p[2].toIntOrNull()?.let { com.optionslab.ira.SinceMorning.Held(p[0], p[1], it) }
-        }
+    /** Today's morning legs and whether Zerodha's were read, or null when none were noted today. */
+    fun morningHeld(today: java.time.LocalDate): com.optionslab.ira.SinceMorning.Noted? = runCatching {
+        com.optionslab.ira.SinceMorning.decode(prefs().getString(MORNING_HELD) ?: "", today)
     }.getOrNull()
 
-    /** Notes [held] as today's morning legs, once a day. */
+    /** The day the morning note was completed (Zerodha's legs read too), so the window stops reading. */
     @Volatile private var heldNotedOn: java.time.LocalDate? = null
 
-    /** True once today's morning legs are noted (or being noted). */
-    fun morningHeldNoted(today: java.time.LocalDate): Boolean = heldNotedOn == today || morningHeld(today) != null
+    /** True once today's morning legs are noted with Zerodha's read; until then each refresh in the window reads again. */
+    fun morningHeldNoted(today: java.time.LocalDate): Boolean =
+        heldNotedOn == today || !com.optionslab.ira.SinceMorning.wantsRead(morningHeld(today))
 
-    @Synchronized fun noteMorningHeld(today: java.time.LocalDate, held: List<com.optionslab.ira.SinceMorning.Held>) {
+    /** Notes [held] (with whether Zerodha's were read) as today's morning legs: the first read kept, Zerodha's filled in by a later one. */
+    @Synchronized fun noteMorningHeld(today: java.time.LocalDate, held: List<com.optionslab.ira.SinceMorning.Held>, zerodha: com.optionslab.ira.SinceMorning.Zerodha) {
         runCatching {
-            if (heldNotedOn == today || morningHeld(today) != null) return@runCatching
-            heldNotedOn = today
-            prefs().putAllSoon(mapOf(MORNING_HELD to (listOf(today.toString()) + held.map { "${it.where}|${it.symbol}|${it.qty}" }).joinToString("\n")))
+            if (heldNotedOn == today) return@runCatching
+            val kept = morningHeld(today)
+            val next = com.optionslab.ira.SinceMorning.renote(kept, held, zerodha)
+            if (next != kept) prefs().putAllSoon(mapOf(MORNING_HELD to com.optionslab.ira.SinceMorning.encode(today, next)))
+            if (!com.optionslab.ira.SinceMorning.wantsRead(next)) heldNotedOn = today
         }
     }
 

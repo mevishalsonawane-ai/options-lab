@@ -70,9 +70,11 @@ object BotTrades {
 
     /** The arm's name as Boss hears it; the tested record's name ([TradeCheck.RECORD]). */
     fun label(source: String): String = armOf(source)?.label ?: source
-    private fun recordName(source: String): String = armOf(source)?.let { if (it.liquidity) LiquidityRules.ARM.label else it.label } ?: source
-    private fun group(source: String): String = armOf(source)?.let { if (it.liquidity) "liquidity" else it.source } ?: source
-    private fun underlying(t: Trade): String = armOf(t.source)?.takeIf { it.liquidity }?.let { LiquidityRules.underlyingOf(it) }
+    internal fun recordName(source: String): String = armOf(source)?.let { if (it.liquidity) LiquidityRules.ARM.label else it.label } ?: source
+    internal fun group(source: String): String = armOf(source)?.let { if (it.liquidity) "liquidity" else it.source } ?: source
+    /** The arm group's name as its tested record names it ("orb" -> "ORB", "liquidity" -> "Liquidity 15+5"), or null. */
+    internal fun groupName(bot: String): String? = ARMS.firstOrNull { group(it.source) == bot }?.let { recordName(it.source) }
+    internal fun underlying(t: Trade): String = armOf(t.source)?.takeIf { it.liquidity }?.let { LiquidityRules.underlyingOf(it) }
         ?: if (t.symbol.uppercase(Locale.ENGLISH).startsWith("FINNIFTY")) "FINNIFTY" else OrbRules.UNDERLYING
     private fun index(u: String) = if (u == "FINNIFTY") "FinNifty" else "BankNifty"
 

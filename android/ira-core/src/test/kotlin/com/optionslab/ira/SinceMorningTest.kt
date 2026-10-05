@@ -146,4 +146,40 @@ class SinceMorningTest {
             LocalDate.of(2026, 10, 4).atTime(12, 0)).startsWith("There is no session today"))
         assertTrue(SinceMorning.answer(listOf(Market.BANKNIFTY), bars, emptyMap(), emptyList(), zone, null, false, at(12, 0)).startsWith("I have no candles"))
     }
+
+    @Test fun morningZerodhaLegsNotReadAreSaidSoNeverCalledOpened() {
+        val paper = SinceMorning.Held("Paper", "NIFTY24000PE", 75)
+        val zLeg = SinceMorning.Held("Zerodha", "BANKNIFTY07OCT2654200CE", 35)
+        // The 09:40 read: the broker timed out, so only Paper's legs were read - the note keeps that it was not read.
+        val first = SinceMorning.renote(null, listOf(paper), SinceMorning.Zerodha.FAILED)
+        assertEquals(SinceMorning.Zerodha.FAILED, first.zerodha)
+        assertTrue(SinceMorning.wantsRead(first))
+        // Kept and read back the same; a note kept before this round reads as read.
+        assertEquals(first, SinceMorning.decode(SinceMorning.encode(day, first), day))
+        assertEquals(null, SinceMorning.decode(SinceMorning.encode(day, first), day.plusDays(1)))
+        assertEquals(SinceMorning.Zerodha.READ, SinceMorning.decode("$day\nPaper|NIFTY24000PE|75", day)!!.zerodha)
+        // Asked later with Zerodha's leg held: never "opened since the morning" - said plainly that the morning's weren't read.
+        val f = SinceMorning.positions(SinceMorning.Positions(first.held, listOf(paper, zLeg), first.zerodha, SinceMorning.Zerodha.READ))
+        assertTrue(f.changes.isEmpty(), f.changes.toString())
+        assertTrue(f.notes.single().startsWith("This morning's Zerodha legs weren't read") && f.notes.single().contains("1 Zerodha leg you hold now"), f.notes.toString())
+        assertTrue(f.held.single().startsWith("your Paper positions as they were this morning"), f.held.toString())
+        val said = SinceMorning.say(f, null, false)
+        assertFalse(said.contains("You opened"), said)
+        assertTrue(said.contains("This morning's Zerodha legs weren't read"), said)
+        // A retry at 09:50 that reads Zerodha fills its legs in, keeping the 09:40 Paper legs; the window then stops reading.
+        val second = SinceMorning.renote(first, listOf(SinceMorning.Held("Paper", "NIFTY24100CE", 50), zLeg), SinceMorning.Zerodha.READ)
+        assertEquals(SinceMorning.Noted(listOf(paper, zLeg), SinceMorning.Zerodha.READ), second)
+        assertFalse(SinceMorning.wantsRead(second))
+        // Another failed retry changes nothing kept; a read note is never replaced.
+        assertEquals(first, SinceMorning.renote(first, emptyList(), SinceMorning.Zerodha.FAILED))
+        assertEquals(second, SinceMorning.renote(second, emptyList(), SinceMorning.Zerodha.READ))
+        // Both read: Zerodha's legs compared as before.
+        val both = SinceMorning.positions(SinceMorning.Positions(second.held, listOf(paper), SinceMorning.Zerodha.READ, SinceMorning.Zerodha.READ))
+        assertTrue(both.changes.single().text.contains("Zerodha BANKNIFTY07OCT2654200CE (long 35) from the morning is closed"), both.changes.toString())
+        // Now's read failing: the morning's Zerodha leg is not called closed.
+        val nowFailed = SinceMorning.positions(SinceMorning.Positions(second.held, listOf(paper), SinceMorning.Zerodha.READ, SinceMorning.Zerodha.FAILED))
+        assertTrue(nowFailed.changes.isEmpty() && nowFailed.notes.single().startsWith("Zerodha didn't answer in time just now"), nowFailed.toString())
+        // Never logged in, no Zerodha legs either side: nothing to say about Zerodha.
+        assertTrue(SinceMorning.positions(SinceMorning.Positions(listOf(paper), listOf(paper), SinceMorning.Zerodha.LOGGED_OUT, SinceMorning.Zerodha.LOGGED_OUT)).notes.isEmpty())
+    }
 }

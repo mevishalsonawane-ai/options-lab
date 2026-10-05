@@ -680,7 +680,13 @@ internal object IraCoach {
     }.getOrNull()
 
     /** Boss's open positions (paper, and Zerodha when logged in), each with its delta and gamma now when they can be worked out. */
-    internal suspend fun openLegs(): List<com.optionslab.ira.Exposure.Leg> {
+    internal suspend fun openLegs(): List<com.optionslab.ira.Exposure.Leg> = openLegsRead().first
+
+    /**
+     * The open legs and whether Zerodha's part was read ([com.optionslab.ira.SinceMorning.Zerodha]): not logged in, or the
+     * broker not answering within 8 seconds (or failing), leaves Zerodha's legs out - said so, never taken as none held.
+     */
+    internal suspend fun openLegsRead(): Pair<List<com.optionslab.ira.Exposure.Leg>, com.optionslab.ira.SinceMorning.Zerodha> {
         val now = java.time.ZonedDateTime.now(IST)
         fun spot(u: String) = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
         /** Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now. */
@@ -698,16 +704,19 @@ internal object IraCoach {
             val g = c?.let { runCatching { greeks(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() }
             out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second)
         } }
+        var zerodha = if (Broker.loggedIn) com.optionslab.ira.SinceMorning.Zerodha.FAILED else com.optionslab.ira.SinceMorning.Zerodha.LOGGED_OUT
         if (Broker.loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             // The broker is not waited on past 8 seconds (a hung read would hang the answer).
-            kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }.forEach { p ->
+            val book = kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }
+            book?.net.orEmpty().filter { it.open }.forEach { p ->
                 val i = ins[p.symbol]
                 val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
                 out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second)
             }
+            if (book != null) zerodha = com.optionslab.ira.SinceMorning.Zerodha.READ
         }
-        return out
+        return out to zerodha
     }
 
     /** "What happens to my P&L if Nifty moves 100 points": a rough figure from the open positions' deltas. Reads only. */

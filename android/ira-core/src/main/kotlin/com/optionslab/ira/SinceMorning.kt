@@ -26,7 +26,8 @@ import kotlin.math.min
  *  - the news: the themes in today's headlines up to the mark against the themes new since ([NewsDesk.tags]; index names
  *    are not themes);
  *  - Boss's open positions, on an unlocked phone only and only when the app noted them that morning: legs opened, closed
- *    or resized since. On a locked phone they are left out, and said so.
+ *    or resized since. On a locked phone they are left out, and said so. Zerodha's legs are set side by side only when
+ *    both reads read them (round 16): a morning read the broker did not answer is said plainly, never taken as no legs.
  *
  * The [TOP] biggest are said in order, with the facts that did not change after them. Facts from the phone's own data,
  * never a cause, a forecast or advice; nothing here acts. Pure.
@@ -56,9 +57,9 @@ object SinceMorning {
     /** One fact that changed since the mark, with its [score] (1.0 is one plain step). */
     data class Change(val kind: Kind, val text: String, val score: Double)
 
-    /** What came out of one reader: the [changes] and the facts that held (short, said after). */
-    data class Found(val changes: List<Change> = emptyList(), val held: List<String> = emptyList()) {
-        operator fun plus(o: Found) = Found(changes + o.changes, held + o.held)
+    /** What came out of one reader: the [changes], the facts that held (short, said after) and [notes] always said. */
+    data class Found(val changes: List<Change> = emptyList(), val held: List<String> = emptyList(), val notes: List<String> = emptyList()) {
+        operator fun plus(o: Found) = Found(changes + o.changes, held + o.held, notes + o.notes)
     }
 
     /** One open leg of Boss's: [where] "Paper" or "Zerodha", its [symbol] and signed [qty]. */
@@ -66,8 +67,54 @@ object SinceMorning {
         val key: String get() = "$where|$symbol"
     }
 
-    /** Boss's open legs at the mark ([morning]; null: not noted that morning) and [now]. */
-    data class Positions(val morning: List<Held>?, val now: List<Held>)
+    /**
+     * Whether Zerodha's legs were read: [READ]; [FAILED] - logged in, but the broker did not answer in time (or the read
+     * failed); [LOGGED_OUT] - not logged in to Zerodha, so its legs could not be read at all.
+     */
+    enum class Zerodha { READ, FAILED, LOGGED_OUT }
+
+    /**
+     * Boss's open legs at the mark ([morning]; null: not noted that morning) and [now], with whether Zerodha's part of each
+     * was read ([morningZerodha], [nowZerodha]). Zerodha's legs are compared only when both were read: a leg the morning's
+     * read missed is never called opened since, nor a leg now's read missed closed.
+     */
+    data class Positions(val morning: List<Held>?, val now: List<Held>, val morningZerodha: Zerodha = Zerodha.READ, val nowZerodha: Zerodha = Zerodha.READ)
+
+    /** What the app keeps for the morning: the [held] legs and whether Zerodha's were read ([zerodha]). */
+    data class Noted(val held: List<Held>, val zerodha: Zerodha)
+
+    const val ZERODHA = "Zerodha"
+
+    /**
+     * The morning's note after one more read near the mark: the first read kept, except that Zerodha's legs, when the
+     * kept note could not read them and this read could, are taken from this read (its Paper legs stay the first read's,
+     * nearer the mark). A read that again could not read Zerodha changes nothing kept.
+     */
+    fun renote(kept: Noted?, legs: List<Held>, zerodha: Zerodha): Noted {
+        val read = legs.filter { it.qty != 0 }
+        if (kept == null) return Noted(read, zerodha)
+        if (kept.zerodha == Zerodha.READ || zerodha != Zerodha.READ) return kept
+        return Noted(kept.held.filter { it.where != ZERODHA } + read.filter { it.where == ZERODHA }, Zerodha.READ)
+    }
+
+    /** True while the morning's note still wants a read: none kept, or Zerodha's legs not read yet. */
+    fun wantsRead(kept: Noted?): Boolean = kept == null || kept.zerodha != Zerodha.READ
+
+    /** The note as kept on the phone: the day (with Zerodha's state when not read), then one leg a line. */
+    fun encode(day: LocalDate, n: Noted): String =
+        (listOf(day.toString() + (if (n.zerodha == Zerodha.READ) "" else "|" + n.zerodha.name)) + n.held.map { "${it.where}|${it.symbol}|${it.qty}" }).joinToString("\n")
+
+    /** [today]'s note from what is kept, or null (none, or another day's). A note kept before Zerodha's state was is read as read. */
+    fun decode(text: String, today: LocalDate): Noted? {
+        val lines = text.lines().filter { it.isNotBlank() }
+        val head = lines.firstOrNull()?.split("|") ?: return null
+        if (head[0] != today.toString()) return null
+        val z = head.getOrNull(1)?.let { w -> Zerodha.values().firstOrNull { it.name == w } } ?: Zerodha.READ
+        return Noted(lines.drop(1).mapNotNull { l ->
+            val p = l.split("|")
+            if (p.size != 3) null else p[2].toIntOrNull()?.let { Held(p[0], p[1], it) }
+        }, z)
+    }
 
     // ---- the question ---------------------------------------------------------------------------------------------
 
@@ -231,11 +278,30 @@ object SinceMorning {
 
     private fun lots(q: Int) = "${if (q > 0) "long" else "short"} ${abs(q)}"
 
+    private fun zLegs(k: Int) = "$k Zerodha leg${if (k == 1) "" else "s"}"
+
     /** Boss's open legs at the mark against now. Never called for a locked phone. */
     fun positions(p: Positions): Found {
-        val now = p.now.filter { it.qty != 0 }
-        val morning = p.morning?.filter { it.qty != 0 }
-            ?: return Found(held = listOf("your positions not noted this morning; you hold ${now.size} open leg${if (now.size == 1) "" else "s"} now"))
+        val allNow = p.now.filter { it.qty != 0 }
+        val allMorning = p.morning?.filter { it.qty != 0 }
+            ?: return Found(held = listOf("your positions not noted this morning; you hold ${allNow.size} open leg${if (allNow.size == 1) "" else "s"} now"))
+        // Zerodha's legs are set side by side only when both reads read them; otherwise they are left out, and said so plainly.
+        val both = p.morningZerodha == Zerodha.READ && p.nowZerodha == Zerodha.READ
+        val notes = ArrayList<String>()
+        if (!both) {
+            val zNow = allNow.count { it.where == ZERODHA }
+            val zMorning = allMorning.count { it.where == ZERODHA }
+            when {
+                p.nowZerodha != Zerodha.READ -> if (zMorning > 0 || p.nowZerodha == Zerodha.FAILED)
+                    notes += (if (p.nowZerodha == Zerodha.FAILED) "Zerodha didn't answer in time just now" else "You're not logged in to Zerodha now") +
+                        ", so your Zerodha legs are left out of this" + (if (zMorning > 0) " (this morning you held ${zLegs(zMorning)})" else "") + "."
+                p.morningZerodha == Zerodha.FAILED -> notes += "This morning's Zerodha legs weren't read - Zerodha didn't answer in time when I noted them - " +
+                    (if (zNow > 0) "so I can't say which of the ${zLegs(zNow)} you hold now are new since then." else "so a Zerodha leg closed since wouldn't show here.")
+                zNow > 0 -> notes += "You weren't logged in to Zerodha when I noted this morning's legs, so I can't say which of the ${zLegs(zNow)} you hold now are new since then."
+            }
+        }
+        val now = if (both) allNow else allNow.filter { it.where != ZERODHA }
+        val morning = if (both) allMorning else allMorning.filter { it.where != ZERODHA }
         val was = morning.associateBy { it.key }; val is_ = now.associateBy { it.key }
         val changes = ArrayList<Change>()
         for (h in now) {
@@ -244,8 +310,9 @@ object SinceMorning {
             else if (w.qty != h.qty) changes += Change(Kind.POSITIONS, "Your ${h.where} ${h.symbol} went from ${lots(w.qty)} to ${lots(h.qty)}.", POSITION_SCORE)
         }
         for (w in morning) if (is_[w.key] == null) changes += Change(Kind.POSITIONS, "Your ${w.where} ${w.symbol} (${lots(w.qty)}) from the morning is closed.", POSITION_SCORE)
-        val held = if (changes.isEmpty()) listOf("your positions as they were this morning (${now.size} open leg${if (now.size == 1) "" else "s"})") else emptyList()
-        return Found(changes, held)
+        val held = if (changes.isEmpty()) listOf((if (both) "your positions" else "your Paper positions") +
+            " as they were this morning (${now.size} open leg${if (now.size == 1) "" else "s"})") else emptyList()
+        return Found(changes, held, notes)
     }
 
     // ---- the answer -----------------------------------------------------------------------------------------------
@@ -292,6 +359,7 @@ object SinceMorning {
         }
         val held = found.held.take(4)
         if (held.isNotEmpty()) out.append(" Unchanged: ").append(held.joinToString("; ")).append(".")
+        for (note in found.notes) out.append(" ").append(note)
         if (locked) out.append(" ").append(LOCKED_NOTE)
         out.append(" Facts from the phone's own data, not a forecast.")
         return out.toString()

@@ -459,7 +459,7 @@ class CollisionTest {
         "what trades did orb take" to "BotTrades", "are my bots fighting each other" to "BotTrades", "did my bots take opposite sides" to "BotTrades",
         "mere bots ne aaj kya kiya" to "BotTrades", "orb ne trade kyun liya" to "BotTrades", "today's bot trades" to "BotTrades",
         "why did the liquidity bot exit" to "BotTrades", "did orb stick to its rules today" to "BotTrades",
-        "any contradictions between my bots" to "BotTrades", "why did my bots lose today" to "BotTrades",
+        "any contradictions between my bots" to "BotTrades", "why did my bots lose today" to "ArmDay",
         "explain the trades my bots took today" to "BotTrades", "why did orb go long today" to "BotTrades",
         "were my bots' trades within their rules" to "BotTrades", "what did range fade do today" to "BotTrades", "break down the orb trades" to "BotTrades",
         "bots ke trades samjhao" to "BotTrades", "what did the liquidity bot do today" to "BotTrades", "why did my bots trade today" to "BotTrades",
@@ -569,7 +569,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "Weekdays", "DayCompare", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 

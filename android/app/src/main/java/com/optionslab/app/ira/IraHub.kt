@@ -1230,7 +1230,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
@@ -2166,6 +2166,21 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraHeadroom.answer(roomAsk) }.getOrElse { "I could not read your limits just now, Boss." }) }
+            return true
+        }
+        // "Why did my strategy lose today?", "why did ORB lose?", "what went wrong with Range Fade today?", "ORB ka aaj loss kyun
+        // hua" ([com.optionslab.ira.ArmDay]): today's arm trades set beside the index each traded - the gap, the opening range and
+        // its breaks, the index through each hold and after the exit - and each losing trade's shape from those facts (a break
+        // that came back inside, a move that came back past the entry, an index that never went its way). Boss's account, so
+        // never on a locked phone; facts only, never a cause proven, a forecast or advice - nothing is armed, stopped, placed
+        // or closed. (Not in IraGoldAlgo.)
+        val armDayAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.ArmDay.asked(q) }.getOrNull() else null
+        if (armDayAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.ArmDay.LOCKED); return true }
+            val bars = listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY).associate { m -> m.name to histories[m]?.bars.orEmpty() }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.armDay(armDayAsk, bars) }.getOrElse { "I could not set your bots' day beside the index just now, Boss." }) }
             return true
         }
         // "Explain my bots' trades today", "why did ORB take that trade?", "did my bots follow their rules?", "mere bots ne aaj kya
@@ -3531,22 +3546,34 @@ object IraHub {
         val bars = (indices + IraMarket.VIX).associateWith { histories[it]?.bars.orEmpty() }
         // Boss's account: never read for this on a locked phone.
         val positions = if (locked) null else runCatching {
-            val legs = IraCoach.openLegs().filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }
-            com.optionslab.ira.SinceMorning.Positions(IraTools.morningHeld(today), legs)
+            val (open, zerodha) = IraCoach.openLegsRead()
+            val legs = open.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }
+            val morning = IraTools.morningHeld(today)
+            com.optionslab.ira.SinceMorning.Positions(morning?.held, legs, morning?.zerodha ?: com.optionslab.ira.SinceMorning.Zerodha.READ, zerodha)
         }.getOrNull()
         return com.optionslab.ira.SinceMorning.answer(indices, bars, chains, _state.value.news, IST, positions, locked, now)
     }
 
-    /** Boss's open legs noted once a day near the morning mark (09:40 to 10:15, in session), in the background. */
+    /** A morning-legs read in flight (the broker may take up to 8 seconds; refreshes don't stack reads). */
+    private val morningHeldBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * Boss's open legs noted near the morning mark (09:40 to 10:15, in session), in the background: noted on the first
+     * read, and - while Zerodha's legs could not be read (the broker timed out, or not logged in) - read again on each
+     * refresh in the window, Zerodha's legs filled in once read. Not read by 10:15, the note says so and the answer too.
+     */
     private fun morningHeldIfDue() {
         val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         val mark = com.optionslab.ira.SinceMorning.MARK
         val t = now.toLocalTime()
         if (t.isBefore(mark.minusMinutes(5)) || !t.isBefore(mark.plusMinutes(30)) || !IraMarket.NIFTY.trading(now)) return
         if (IraTools.morningHeldNoted(now.toLocalDate())) return
+        if (!morningHeldBusy.compareAndSet(false, true)) return
         scope.launch {
-            val legs = runCatching { IraCoach.openLegs() }.getOrNull() ?: return@launch
-            IraTools.noteMorningHeld(now.toLocalDate(), legs.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) })
+            try {
+                val (legs, zerodha) = runCatching { IraCoach.openLegsRead() }.getOrNull() ?: return@launch
+                IraTools.noteMorningHeld(now.toLocalDate(), legs.filter { it.qty != 0 }.map { com.optionslab.ira.SinceMorning.Held(it.where, it.symbol, it.qty) }, zerodha)
+            } finally { morningHeldBusy.set(false) }
         }
     }
 

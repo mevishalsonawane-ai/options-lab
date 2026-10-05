@@ -151,6 +151,20 @@ internal object IraBots {
             IraHub.offer(what, "Boss, switch off ${arm.name}?", com.optionslab.ira.SwitchOff.ask(arm), act, alwaysAsk = true)
     }
 
+    /**
+     * "Why did my strategy lose today?" ([com.optionslab.ira.ArmDay]): today's arm trades from the arms' own book set beside
+     * the index each traded - the day's gap, opening range and its breaks, and the index through each hold and after the
+     * exit - from the 1-minute candles by underlying ([bars]). Reads only; nothing is armed, stopped, placed or closed.
+     */
+    suspend fun armDay(q: com.optionslab.ira.ArmDay.Q, bars: Map<String, List<com.optionslab.ira.Candle>>): String {
+        val v = com.optionslab.app.data.OrbArms.view()
+        val trades = v.arms.flatMap { it.today }.map { p ->
+            com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
+                p.charges, p.live, p.level, p.target, p.ladder, p.peak)
+        }
+        return com.optionslab.ira.ArmDay.answer(q, trades, bars, v.range, com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
     @Volatile private var lastPass = 0L
 
     /**
