@@ -1589,7 +1589,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
@@ -2661,7 +2661,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2895,6 +2895,25 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.AfterLoss.LOCKED); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraCoach.afterLoss(q, afterLossSide) }.getOrElse { "I could not read your trades after a loss just now, Boss." }) }
+            return true
+        }
+        // "What requests are waiting?", "anything waiting for my approval?", "what did I approve today?", "koi request hai",
+        // "maine aaj kya approve kiya" ([com.optionslab.ira.RequestBook]): the Requests panel's own read-only lists said -
+        // those waiting now (what each would do, where, when it lapses, whether a yes needs his fingerprint) or the last few
+        // answered or ended. Words only: nothing is approved, declined or changed here. On a locked phone only how many wait;
+        // a list that could not be read is said so, never as none. (After AfterLoss, before NetLean. IraGoldAlgo: only talk.)
+        val requestBookAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.RequestBook.asked(q) }.getOrNull() else null
+        if (requestBookAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (GOLD_ONLY_TALK) { reply(com.optionslab.ira.Requests.GOLD); return true }
+            val requestBookNow = System.currentTimeMillis()
+            val requestBookWaiting = runCatching { com.optionslab.ira.Requests.shown(requestsOf(_state.value), requestBookNow, gold = false) }.getOrNull()
+            if (requestBookWaiting == null) { reply(com.optionslab.ira.RequestBook.READ_FAILED); return true }
+            if (phoneLocked()) { reply(com.optionslab.ira.RequestBook.locked(requestBookWaiting.size)); return true }
+            reply(runCatching {
+                com.optionslab.ira.RequestBook.answer(requestBookAsk, requestBookWaiting, _recent.value, requestBookNow, com.optionslab.app.data.Market.now().zone)
+            }.getOrElse { com.optionslab.ira.RequestBook.READ_FAILED })
             return true
         }
         // "Am I net long or short?", "which way am I leaning?", "what's my net delta?", "do my bots contradict each other right
