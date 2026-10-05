@@ -494,7 +494,7 @@ class JarvisVoice : Service() {
             runCatching { announce(text, weight = weight, whole = whole) }.getOrDefault(false)
 
         /** Robolectric shares static state between tests: the voice's own memory reset. */
-        internal fun resetForTest() { lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally() }
+        internal fun resetForTest() { lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally(); resetLangAskForTest() }
 
         /** Boss's cuts over Jarvis: how many, and how soon the voice went silent (durations only - [com.optionslab.ira.CutStops]). */
         @Volatile internal var cutStopTally = com.optionslab.ira.CutStops.Tally()
@@ -580,6 +580,25 @@ class JarvisVoice : Service() {
          * switch is never made to an English it lacks - which it may take silently and listen in another (round 20).
          */
         @Volatile internal var onDeviceLangs: List<String>? = null
+
+        /**
+         * Round 28: English (India) asked for once (aloud and in the chat) and taken by itself when the phone gets it
+         * ([com.optionslab.ira.ListenLanguage.arrival]) - codes and dates only, kept on the phone.
+         */
+        private const val LANG_ASK_KEY = "jarvis.voice.lang.ask"
+        @Volatile private var langAskKept: com.optionslab.ira.ListenLanguage.Ask? = null
+        internal val langAsk: com.optionslab.ira.ListenLanguage.Ask
+            get() = langAskKept ?: runCatching { com.optionslab.ira.ListenLanguage.loadAsk(com.optionslab.app.security.SecurePrefs.getString(LANG_ASK_KEY)) }
+                .getOrDefault(com.optionslab.ira.ListenLanguage.Ask()).also { langAskKept = it }
+        internal fun langAskSet(a: com.optionslab.ira.ListenLanguage.Ask) {
+            if (a == langAsk) return
+            langAskKept = a
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(LANG_ASK_KEY to com.optionslab.ira.ListenLanguage.saveAsk(a))) }
+        }
+        /** When the phone's on-device languages were last read for English (India) (elapsed ms; 0: not yet). */
+        @Volatile internal var langCheckedAt = 0L
+        /** Robolectric shares static state between tests: the language ask's memory reset. */
+        internal fun resetLangAskForTest() { langAskKept = null; langCheckedAt = 0L }
 
         /** Writes the hearing counts now (listening stopping). */
         internal fun hearingSave() {
@@ -804,6 +823,8 @@ class JarvisVoice : Service() {
                 Automations.acted(Automations.Auto.SELFHEAL, "Restarted listening.")
                 again()
             }
+            // English (India) awaited: the phone's list read again, at most hourly (round 28).
+            runCatching { langCheck() }
             main.postDelayed(this, 5_000)
         }
     }
@@ -1194,9 +1215,59 @@ class JarvisVoice : Service() {
                             langState.last?.takeIf { it.to == p && it.from == com.optionslab.ira.ListenLanguage.norm(was) }
                                 ?.let { IraActivity.add(com.optionslab.ira.ListenLanguage.line(it)) }
                         } }
+                        // English (India): asked for once, taken when it arrives (round 28) - after the pick above.
+                        main.post { langArrival(installed) }
                     }
                     override fun onError(error: Int) {}
                 })
+            langCheckedAt = SystemClock.elapsedRealtime()
+        }
+    }
+
+    /**
+     * While English (India) is awaited (seen missing), the phone's on-device list is read again at most hourly
+     * ([com.optionslab.ira.ListenLanguage.checkDue]) - on a recognizer of its own, made and dropped for the reading, so
+     * the listening one is never disturbed. Called from the watchdog.
+     */
+    private fun langCheck() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || stopped) return
+        val now = SystemClock.elapsedRealtime()
+        if (!com.optionslab.ira.ListenLanguage.checkDue(langAsk, langCheckedAt, now, googleSpeech)) return
+        langCheckedAt = now
+        val probe = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this) }.getOrNull() ?: return
+        val done = runCatching {
+            probe.checkRecognitionSupport(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), ContextCompat.getMainExecutor(this),
+                object : android.speech.RecognitionSupportCallback {
+                    override fun onSupportResult(s: android.speech.RecognitionSupport) {
+                        val installed = s.installedOnDeviceLanguages.toList()
+                        onDeviceLangs = installed
+                        main.post { runCatching { probe.destroy() }; langArrival(installed) }
+                    }
+                    override fun onError(error: Int) { main.post { runCatching { probe.destroy() } } }
+                })
+        }.isSuccess
+        if (!done) runCatching { probe.destroy() }
+    }
+
+    /**
+     * The phone's on-device list read: [com.optionslab.ira.ListenLanguage.ASK_LINE] once (aloud and in the chat), or the
+     * move to English (India) when it has arrived ([com.optionslab.ira.ListenLanguage.SWITCHED_LINE]). Only a language
+     * code changes; never in a run whose English has given words ([langWorks]). Codes only in the trace.
+     */
+    private fun langArrival(installed: List<String>) {
+        if (stopped) return
+        val l = com.optionslab.ira.ListenLanguage
+        val r = runCatching { l.arrival(langAsk, langState, lang, installed, googleSpeech, hearingDay(), hhmm(), langWorks) }.getOrNull() ?: return
+        langAskSet(r.ask)
+        r.to?.let { to ->
+            val was = lang; lang = to; triedOtherLanguage = false
+            langCount { r.state }
+            note("$to now on this phone for on-device listening: $was -> $to")
+            r.state.last?.let { IraActivity.add(l.line(it)) }
+        }
+        r.say?.let { text ->
+            runCatching { IraHub.note(text) }
+            runCatching { announce(text, full = true) }
         }
     }
 
