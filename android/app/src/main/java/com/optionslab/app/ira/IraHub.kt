@@ -1375,6 +1375,16 @@ object IraHub {
             scope.launch { reply(runCatching { consistency() }.getOrElse { "I could not check myself for contradictions just now, Boss." }) }
             return
         }
+        // "What matters right now?", "brief me", "brief me like a co-pilot" ([com.optionslab.ira.CoPilot]): the facts from every
+        // reader ranked by a plain score (recency, size against usual, Boss's open positions, conflicts), the top few said
+        // with why each ranked there. Boss's account only on an unlocked phone; facts only, never advice. (IraGoldAlgo keeps
+        // the plain briefing below.)
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD && !GOLD_ONLY_TALK &&
+            runCatching { com.optionslab.ira.CoPilot.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch { reply(runCatching { coPilot() }.getOrElse { "I could not put the brief together just now, Boss." }) }
+            return
+        }
         // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
         // expected move by expiry from the straddle?": the option chain read beyond PCR and max pain ([com.optionslab.ira.ChainIntel]),
         // every number from the chain with its time. Market data only (fine on a locked phone); words only, never advice.
@@ -2778,6 +2788,64 @@ object IraHub {
         val mismatch = chainRead?.let { r -> runCatching { com.optionslab.ira.Consistency.priceCheck(IraMarket.NIFTY, bars, com.optionslab.ira.Consistency.chainQuote(r)) }.getOrNull() }
         val clashes = if (locked) null else IraCoach.wordClashes()
         return com.optionslab.ira.Consistency.say(tensions, mismatch, clashes, locked)
+    }
+
+    /**
+     * "What matters right now?" ([com.optionslab.ira.CoPilot]): candidate facts gathered from every reader - today's sharp
+     * moves, Nifty's and BankNifty's structure, the Nifty chain, the most-carried stories, facts pulling different ways,
+     * his own numbers disagreeing, data age, the calendar, his own record in conditions like now and, on an unlocked
+     * phone only, Boss's open positions, loss limits and words against today - ranked, the top few said with why. Reads
+     * only; words only.
+     */
+    private suspend fun coPilot(): String {
+        val locked = phoneLocked()
+        val nowAt = LocalDateTime.now(IST)
+        val today = com.optionslab.app.data.Market.today()
+        val st = _state.value
+        val facts = ArrayList<com.optionslab.ira.CoPilot.Fact>()
+        for (m in com.optionslab.ira.SharpMove.INDICES) runCatching { facts += com.optionslab.ira.CoPilot.moves(m, histories[m]?.bars.orEmpty()) }
+        val niftyBars = histories[IraMarket.NIFTY]?.bars.orEmpty()
+        val structure = runCatching { com.optionslab.ira.Structure.read(IraMarket.NIFTY, niftyBars, today) }.getOrNull()
+        com.optionslab.ira.CoPilot.structure(structure)?.let { facts += it }
+        runCatching { com.optionslab.ira.CoPilot.structure(com.optionslab.ira.Structure.read(IraMarket.BANKNIFTY, histories[IraMarket.BANKNIFTY]?.bars.orEmpty(), today)) }
+            .getOrNull()?.let { facts += it }
+        val chainRead = runCatching {
+            withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") }
+            IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
+        }.getOrNull()
+        runCatching { com.optionslab.ira.CoPilot.chain(chainRead, today) }.getOrNull()?.let { facts += it }
+        runCatching { facts += com.optionslab.ira.CoPilot.news(st.news, Instant.now(), IST) }
+        runCatching {
+            facts += com.optionslab.ira.CoPilot.tensions(com.optionslab.ira.Consistency.tensions(
+                com.optionslab.ira.Consistency.leans(structure, chainRead, st.snaps[IraMarket.VIX]?.changePct)), IraMarket.NIFTY, nowAt)
+        }
+        chainRead?.let { r -> runCatching { com.optionslab.ira.CoPilot.mismatch(com.optionslab.ira.Consistency.priceCheck(IraMarket.NIFTY, niftyBars,
+            com.optionslab.ira.Consistency.chainQuote(r))) }.getOrNull() }?.let { facts += it }
+        runCatching { facts += com.optionslab.ira.CoPilot.data(ageChecks(listOf(IraMarket.NIFTY), emptySet(), all = true), nowAt) }
+        runCatching { facts += com.optionslab.ira.CoPilot.events(IraEvents.upcoming(2), today) }
+        runCatching {
+            val calibration = runCatching { IraNewsTrades.calibration() }.getOrDefault(emptyList()) + runCatching { IraSolo.calibration() }.getOrDefault(emptyList())
+            com.optionslab.ira.CoPilot.record(calibration, nowAt, runCatching { IraStudy.regimeOf(IraMarket.NIFTY) }.getOrNull())?.let { facts += it }
+        }
+        // Boss's account: never read for this on a locked phone.
+        var held = emptySet<IraMarket>()
+        if (!locked) {
+            val legs = runCatching { IraCoach.openLegs() }.getOrDefault(emptyList())
+            held = legs.filter { it.qty != 0 }.mapNotNull { l -> IraMarket.entries.firstOrNull { it.name.equals(l.underlying, true) } }.toSet()
+            runCatching { facts += com.optionslab.ira.CoPilot.positions(legs) }
+            runCatching {
+                val set = com.optionslab.app.data.AppSettings.load()
+                val pnl = HashMap<String, Double>()
+                runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
+                if (com.optionslab.app.data.Broker.loggedIn) runCatching {
+                    withTimeoutOrNull(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
+                }.getOrNull()?.let { pnl["Zerodha"] = it }
+                facts += com.optionslab.ira.CoPilot.limits(mapOf("Zerodha" to set.guardDailyLoss, "Paper" to set.guardPaperDailyLoss), pnl)
+            }
+            runCatching { facts += com.optionslab.ira.CoPilot.clashes(IraCoach.wordClashes()) }
+        }
+        val head = runCatching { com.optionslab.ira.Briefing.say(st.snaps, nowAt, emptyList()) }.getOrNull()
+        return com.optionslab.ira.CoPilot.brief(head, facts, held, nowAt, locked)
     }
 
     /** "Make the case" waits at most this long for a fresh option chain. */
