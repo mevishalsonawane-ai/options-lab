@@ -46,14 +46,27 @@ object Heartbeat {
     @Volatile private var memBeat = 0L
     /** The value this process last wrote; a stored value different from it was written by someone else and wins. */
     @Volatile private var persisted = 0L
+    /**
+     * When (SystemClock.elapsedRealtime, 0 = never) this process last wrote it. The minute is timed on this monotonic
+     * clock, which counts deep sleep too, not on the wall clock alone: a wall clock that stands still or is set back can
+     * never hold the write back past the minute, and it is the clock Robolectric's ShadowSystemClock advances (the app's
+     * own System.currentTimeMillis() is not moved by it in tests). The stored value stays wall-clock time, which another
+     * process can compare.
+     */
+    @Volatile private var persistedAt = 0L
 
     /** Called by the watch on every pass, including while it waits for the open. */
     fun beat(context: Context) {
         val now = System.currentTimeMillis()
+        val el = android.os.SystemClock.elapsedRealtime()
         memBeat = now
-        if (now - persisted >= PERSIST_MS || now < persisted || SecurePrefs.getLong(KEY, 0L) != persisted) {
+        val due = persistedAt == 0L || el < persistedAt || el - persistedAt >= PERSIST_MS
+        // The wall-clock checks stay: a clock moved by more than the minute since the write is written at once, so the
+        // stored beat never sits in the future or looks a stall old after a clock change.
+        if (due || now - persisted >= PERSIST_MS || now < persisted || SecurePrefs.getLong(KEY, 0L) != persisted) {
             SecurePrefs.put(KEY, now)
             persisted = now
+            persistedAt = el
         }
         if (SecurePrefs.getString(ALERTED) != null) {
             SecurePrefs.put(ALERTED, null)
