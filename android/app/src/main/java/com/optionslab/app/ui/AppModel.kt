@@ -1717,7 +1717,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         r
     }
 
-    fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id) }
+    fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id, "you") }
     fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
     fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).

@@ -573,7 +573,7 @@ object OrbArms {
             // (or a restart after it), or the owner closed it (a notification's Close button, the Trade tab).
             // Its resting stop comes out of the book at once, so it can never fill as a short.
             if (net <= 0) {
-                cur.stopOrderId?.let { runCatching { Paper.cancel(it) } }
+                cur.stopOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
                 val backstop = cur.day.isBefore(t.toLocalDate()) || !t.toLocalTime().isBefore(LocalTime.of(15, 15))
                 // Book the actual closing fill (slippage and charges included) when there is one.
                 val sq = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && it.strategy == "AUTO_SQUARE_OFF" && !it.timestamp.isBefore(cur.entryTime) }
@@ -602,7 +602,7 @@ object OrbArms {
     /** Take the resting stop out of the book first, then sell; if the stop filled meanwhile, that is the exit. */
     private suspend fun exit(p: Position, c: Paper.Contract, why: String): Position {
         p.stopOrderId?.let { id ->
-            Paper.cancel(id)
+            Paper.cancel(id, "exit:$why")
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
             if (so?.status == "complete") return p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp, why = "stop",
                 charges = p.charges + chargesOf(id))
@@ -931,7 +931,7 @@ object OrbArms {
         r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { return Filled(it.quantity, it.symbol, it.price) }
         val id = r.orderId ?: return null
         if (!r.ok) return null
-        Paper.cancel(id)
+        Paper.cancel(id, "unfilled_market")
         val o = Paper.state.orders.firstOrNull { it.orderId == id } ?: return null
         return if (o.status == "complete") Filled(o.quantity, o.symbol, o.averagePrice?.toDouble() ?: return null) else null
     }

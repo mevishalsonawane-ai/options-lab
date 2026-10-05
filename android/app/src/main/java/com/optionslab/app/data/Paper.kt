@@ -48,7 +48,12 @@ object Paper {
     data class Contract(val symbol: String, val underlying: String, val expiry: LocalDate, val strike: Double, val right: Right,
                         val lotSize: Int, val feedKey: String)
 
-    private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>)
+    /** [why]: why the app cancelled an order (order id -> a reason key, see [cancel]); the newest [WHY_KEPT] only. */
+    private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>,
+                            val why: Map<String, String> = emptyMap())
+
+    /** How many cancel reasons are kept (the newest). */
+    private const val WHY_KEPT = 300
 
     private val DDMMMYY = DateTimeFormatter.ofPattern("ddMMMyy", Locale.ENGLISH)
 
@@ -67,7 +72,10 @@ object Paper {
                 it.getString(0) to Contract(it.getString(0), it.getString(1), LocalDate.parse(it.getString(2)), it.getDouble(3),
                     Right.valueOf(it.getString(4)), it.getInt(5), it.getString(6))
             }
-            Book(SandboxJson.decode(o.getString("state")), BigDecimal(o.getString("capital")), contracts)
+            val w = o.optJSONObject("cancelWhy")
+            val why = LinkedHashMap<String, String>()
+            if (w != null) for (k in w.keys()) why[k] = w.optString(k)
+            Book(SandboxJson.decode(o.getString("state")), BigDecimal(o.getString("capital")), contracts, why)
         }.getOrNull()
         // An unreadable account is set aside, never silently overwritten.
         if (loaded == null && file.exists()) file.renameTo(File(file.parentFile, "paper.unreadable.${System.currentTimeMillis()}"))
@@ -83,8 +91,9 @@ object Paper {
     private fun save(b: Book) {
         val cs = JSONArray()
         b.contracts.values.forEach { cs.put(JSONArray().put(it.symbol).put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.feedKey)) }
+        val why = JSONObject(); b.why.forEach { (k, v) -> why.put(k, v) }
         Vault.writeFile(file, JSONObject().put("state", SandboxJson.encode(b.state)).put("capital", b.capital.toPlainString())
-            .put("contracts", cs).toString().toByteArray(Charsets.UTF_8))
+            .put("contracts", cs).put("cancelWhy", why).toString().toByteArray(Charsets.UTF_8))
         cache = b
     }
 
@@ -219,15 +228,30 @@ object Paper {
         describe(out.result, out.events)
     }
 
-    suspend fun cancel(orderId: String): Result {
+    /**
+     * Cancel a working order. [why] is why the app cancelled it, kept beside the order so Jarvis can say why later ("why was
+     * my last order cancelled"): a key such as "position_closed", "exit:index_stop", "oco:stop", "unfilled_market", "you",
+     * "jarvis", "strategy", "protection_removed" (worded by com.optionslab.ira.OrderWhy). Only a note: the cancel itself
+     * is exactly as before.
+     */
+    suspend fun cancel(orderId: String, why: String? = null): Result {
         val sym = book().state.orders.firstOrNull { it.orderId == orderId }?.symbol
         val q = sym?.let { quickQuote(it) }
         synchronized(this) {
             val b = book()
             val out = engine(b.capital, b.contracts).cancel(b.state, orderId, Market.now(), q)
-            save(b.copy(state = out.state))
+            val ended = out.events.any { it is SandboxEvent.OrderUpdate && it.orderId == orderId && it.status == "cancelled" }
+            save(b.copy(state = out.state, why = if (ended && why != null) noted(b.why, mapOf(orderId to why)) else b.why))
             return describe(out.result, out.events)
         }
+    }
+
+    /** Why the app cancelled paper order [orderId] (a key from [cancel]), when it noted one. */
+    fun cancelReason(orderId: String): String? = book().why[orderId]
+
+    private fun noted(old: Map<String, String>, add: Map<String, String>): Map<String, String> {
+        val m = LinkedHashMap(old); m.putAll(add)
+        return if (m.size <= WHY_KEPT) m else LinkedHashMap(m.entries.drop(m.size - WHY_KEPT).associate { it.key to it.value })
     }
 
     suspend fun close(symbol: String, product: String): Result {
@@ -267,7 +291,12 @@ object Paper {
             e.positionBook(s, now, q).also { s = it.state; events += it.events }
             e.squareOffDue(s, now, q).also { s = it.state; events += it.events }
             e.settleExpiries(s, now).also { s = it.state; events += it.events }
-            if (s != b.state) save(b.copy(state = s))
+            // The book's own cancels here are the 15:15 MIS square-off or a contract's expiry: noted, so Jarvis can say why.
+            val own = events.filterIsInstance<SandboxEvent.OrderUpdate>().filter { it.status == "cancelled" }.associate { u ->
+                val exp = s.orders.firstOrNull { it.orderId == u.orderId }?.symbol?.let { sym -> b.contracts[sym]?.expiry }
+                u.orderId to (if (exp != null && !exp.isAfter(now.toLocalDate())) "expiry" else "square_off")
+            }
+            if (s != b.state) save(b.copy(state = s, why = if (own.isEmpty()) b.why else noted(b.why, own)))
             return events
         }
     }

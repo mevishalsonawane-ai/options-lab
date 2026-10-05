@@ -68,7 +68,7 @@ internal object IraActions {
         val out = ArrayList<Target>()
         runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.orders?.orders
             ?.filter { com.optionslab.ira.AppFacts.isOpen(it.status) }?.forEach { o ->
-                out += Target("paper ${o.action} ${o.quantity} ${o.symbol}") { com.optionslab.app.data.Paper.cancel(o.orderId).message }
+                out += Target("paper ${o.action} ${o.quantity} ${o.symbol}") { com.optionslab.app.data.Paper.cancel(o.orderId, "jarvis").message }
             }
         if (Broker.loggedIn) runCatching { Broker.orders() }.getOrNull()?.filter { it.working }?.forEach { o ->
             out += Target("Zerodha ${o.side} ${o.qty} ${o.symbol}") { Broker.cancel(o.id, o.variety); "Cancelled at Zerodha: ${o.side} ${o.qty} ${o.symbol}." }

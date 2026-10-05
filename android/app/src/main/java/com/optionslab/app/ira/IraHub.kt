@@ -1224,7 +1224,7 @@ object IraHub {
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
-                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
+                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -2168,6 +2168,19 @@ object IraHub {
                         b.linked, b.loggedIn, b.expiresAt()?.withZoneSameInstant(IST)?.toLocalDateTime())
                 }.getOrElse { "I could not read the Zerodha record just now, Boss." })
             }
+            return true
+        }
+        // "Why was my last order cancelled?", "why did my order get rejected?", "why was the BankNifty order cancelled?", "mera
+        // order cancel kyun hua", "what happened to my last order?" ([com.optionslab.ira.OrderWhy]): the latest cancelled or
+        // rejected order today (or the one named) and why - the reason the app noted when it cancelled it, the broker's or paper
+        // book's own message, its leg and what filled beside it. Boss's account, so never on a locked phone; Zerodha's orders
+        // only with a session. Reads only: nothing is placed, changed or cancelled ("cancel my last order" stays its command).
+        val whyOrder = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.OrderWhy.asked(q) }.getOrNull() else null
+        if (whyOrder != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraOrderWhy.answer(whyOrder) }.getOrElse { "I could not read your orders just now, Boss." }) }
             return true
         }
         return false

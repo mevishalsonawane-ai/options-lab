@@ -346,7 +346,7 @@ object Strategies {
             return if (fill != null) StrategyHost.Placed.Accepted("paper:$id", "complete", fill.quantity, fill.price)
             else StrategyHost.Placed.Accepted("paper:$id", "open", 0, null)
         }
-        override fun cancel(brokerId: String) = runBlocking { Paper.cancel(brokerId.removePrefix("paper:")).ok }
+        override fun cancel(brokerId: String) = runBlocking { Paper.cancel(brokerId.removePrefix("paper:"), "strategy").ok }
         override fun status(brokerId: String): StrategyHost.Status? =
             Paper.state.orders.firstOrNull { it.orderId == brokerId.removePrefix("paper:") }?.let {
                 StrategyHost.Status(it.status, it.filledQuantity, it.averagePrice?.toDouble(), it.rejectionReason)
