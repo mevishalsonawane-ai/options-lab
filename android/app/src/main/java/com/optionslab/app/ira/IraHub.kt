@@ -1231,6 +1231,7 @@ object IraHub {
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
                 com.optionslab.ira.PriorDay.asked(q) != null || com.optionslab.ira.LastHour.asked(q) != null ||
+                com.optionslab.ira.InsideDays.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2415,6 +2416,23 @@ object IraHub {
                 else com.optionslab.ira.LastHour.answer(lastHourAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the last-hour record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "After an inside day, how often does Nifty's range expand?", "do NR7 days usually break out the next day?": what
+        // followed the index's past inside days and narrowest-of-7 days, set against what followed every session, on the
+        // phone's own 1-minute sessions ([com.optionslab.ira.InsideDays]), beside the last session and today. A record of past
+        // days, never a forecast or advice; market data only (fine on a locked phone); nothing acts.
+        val insideAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.InsideDays.asked(q) }.getOrNull() else null
+        if (insideAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.InsideDays.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.InsideDays.NOT_HERE
+                else com.optionslab.ira.InsideDays.answer(insideAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the inside-day record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true
