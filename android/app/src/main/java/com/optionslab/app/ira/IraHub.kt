@@ -287,6 +287,8 @@ object IraHub {
                 if (added > 0) save()
                 val snaps = hs.mapNotNull { (m, h) -> Brain.read(h)?.let { m to it } }.toMap()
                 histories = hs
+                // The patterns Jarvis told of: how each went, from the phone's own candles ([com.optionslab.ira.PatternCalls]).
+                runCatching { IraTools.patternsSettle(hs.mapValues { it.value.bars }) }
                 val days = hs.values.maxOfOrNull { it.days.size } ?: 0
                 _state.update { it.copy(loading = false, snaps = snaps, lastDay = snaps.values.maxOfOrNull { s -> s.at.toLocalDate() },
                     days = days, learned = book.size, problem = if (snaps.isEmpty()) "No market data on this phone yet" else null,
@@ -1208,7 +1210,7 @@ object IraHub {
             // Asked of his memory as said ("what do you know about me", "what did I tell you"): never read as anything else.
             !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) ||
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
-                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1247,6 +1249,14 @@ object IraHub {
         if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null && !bundled && runCatching { com.optionslab.ira.Airtime.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(IraAirtime.answer())
+            return
+        }
+        // "Which patterns work on Nifty?" / "how good are your pattern calls?": how the patterns he told of played out on
+        // this phone ([com.optionslab.ira.PatternCalls]; market data only, facts, never advice).
+        if (parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
+            val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
+                .getOrDefault("I couldn't read my pattern record just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
@@ -1908,10 +1918,11 @@ object IraHub {
         val now = LocalDateTime.now(IST)
         val st0 = _state.value
         val book0 = book
+        val calls0 = runCatching { IraTools.patternCalls() }.getOrDefault(emptyList())
         // Worked out ahead while the recognizer's final reading was awaited ([prepare]): taken only for the same question
         // from the same prices, news and minute (the same words then, exactly); otherwise worked out now, as before.
         val a0 = ahead.take(Inputs(com.optionslab.ira.Turn.key(parsed), st0.snaps, st0.news, book0, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason))
-            ?: runCatching { Ira(book0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
+            ?: runCatching { Ira(book0, calls0).answer(q, st0.snaps, st0.news, voice = com.optionslab.app.BuildConfig.JARVIS,
                 now = now, closedReason = closedReason) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
@@ -1947,6 +1958,8 @@ object IraHub {
         if (doubt.level != com.optionslab.ira.SelfDoubt.Level.NORMAL) runCatching { IraThinking.add(com.optionslab.ira.Thinking.caution(IraThinking.now(), doubt)) }
         val msg = Msg(true, doubt.wrap(a.text), a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
+        // The patterns the answer told of are followed (market data only; withheld words told of nothing).
+        if (dressed?.withheld != true && a.calls.isNotEmpty()) scope.launch(Dispatchers.IO) { runCatching { IraTools.patternsTold(a.calls) } }
         if (write) scope.launch {
             // Talking and writing run side by side: the model starts as soon as the voice has started (the first sound is
             // the only moment it would slow), or after 1.5 seconds when nothing is being said.
@@ -1995,7 +2008,7 @@ object IraHub {
         val now = LocalDateTime.now(IST)
         val st = _state.value
         val b = book
-        val a = runCatching { Ira(b).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
+        val a = runCatching { Ira(b, runCatching { IraTools.patternCalls() }.getOrDefault(emptyList())).answer(q, st.snaps, st.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = now, closedReason = closedReason) }.getOrNull() ?: return
         ahead.put(Inputs(com.optionslab.ira.Turn.key(parsed), st.snaps, st.news, b, now.truncatedTo(java.time.temporal.ChronoUnit.MINUTES), closedReason), a)
     }
 
@@ -2434,11 +2447,12 @@ object IraHub {
     fun marketAnswer(question: String): String? {
         val q = Ask.parse(question)
         if (q.command != null || q.order != null || Topic.ACCOUNT in q.topics) return null
-        val a = runCatching { Ira(book).answer(question, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS,
-            now = LocalDateTime.now(IST)) }.getOrNull() ?: return null
+        val a = runCatching { Ira(book, runCatching { IraTools.patternCalls() }.getOrDefault(emptyList())).answer(question, _state.value.snaps,
+            _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS, now = LocalDateTime.now(IST)) }.getOrNull() ?: return null
         // Stale data (prices, candles or news it rests on) is not offered unasked.
         val stale = runCatching { ageChecks(q.markets, q.topics).any { it.level == com.optionslab.ira.DataAge.Level.STALE } }.getOrDefault(false)
         if (offlineNote() != null || stale) return null
+        if (a.calls.isNotEmpty()) runCatching { IraTools.patternsTold(a.calls) }
         return a.text
     }
 

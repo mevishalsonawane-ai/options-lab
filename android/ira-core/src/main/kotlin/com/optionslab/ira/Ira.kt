@@ -3,13 +3,17 @@ package com.optionslab.ira
 import java.util.Locale
 
 /** An answer: the words, the facts they were built from (every number in the words is among them), and an order to review. */
-data class Answer(val text: String, val facts: List<String>, val order: OrderRequest? = null)
+data class Answer(val text: String, val facts: List<String>, val order: OrderRequest? = null,
+                  /** The patterns the words told of, to follow how they played out ([PatternCalls]). */
+                  val calls: List<PatternCalls.Call> = emptyList())
 
 /**
  * Ira's answering, without any language model: it reads the question and writes sentences from the snapshots, the
  * pattern book and the headlines - and from nothing else. Pure.
  */
-class Ira(private val book: PatternBook = PatternBook()) {
+class Ira(private val book: PatternBook = PatternBook(),
+          /** How the patterns Jarvis told of before played out on this phone ([PatternCalls]). */
+          private val calls: List<PatternCalls.Call> = emptyList()) {
 
     /** [app]: the app and the owner's trading as the app read it (null: not read); [voice]: this app can listen (Jarvis). */
     fun answer(question: String, snaps: Map<Market, Snapshot>, news: List<Headline>, app: AppView? = null, voice: Boolean = false,
@@ -18,6 +22,7 @@ class Ira(private val book: PatternBook = PatternBook()) {
         val q = Ask.parse(question)
         val facts = ArrayList<String>()
         val parts = ArrayList<String>()
+        val told = ArrayList<PatternCalls.Call>()
         if (Topic.ORDER in q.topics) return orderAnswer(q.order!!)
         if (Topic.BACKTEST in q.topics) return Answer("Backtesting needs the app's candles; ask me on the Ira screen.", emptyList())
         if (Topic.HELP in q.topics) return AppAnswers.help(q, voice)
@@ -45,13 +50,15 @@ class Ira(private val book: PatternBook = PatternBook()) {
             if (Topic.LEVELS in t || Topic.OVERVIEW in t) parts += levels(s)
             if (Topic.WHY in t) Why.story(s, snaps)?.let { parts += it; facts += it }
             if (Topic.VOLATILITY in t || Topic.WHY in t) parts += volatility(s, snaps[Market.VIX])
-            if (Topic.PATTERNS in t || Topic.OVERVIEW in t || Topic.WHY in t) patterns(s)?.let { parts += it; facts += it }
+            // Patterns asked about are always told; brought up with an overview, a kind with a poor record here is not.
+            if (Topic.PATTERNS in t || Topic.OVERVIEW in t || Topic.WHY in t) patterns(s, Topic.PATTERNS in t)?.let { (said, p) ->
+                parts += said; facts += said; PatternCalls.call(m, p)?.let { told += it } }
             if (Topic.NEWS in t && q.markets.isNotEmpty() || Topic.WHY in t) parts += newsLines(m, news, facts)
             if (Topic.ADVICE in t && Topic.OVERVIEW !in t) parts += overview(s)
         }
         if (Topic.ADVICE in q.topics) parts += "I don't give buy or sell advice; these are the facts for you to decide on."
         val text = parts.filter { it.isNotBlank() }.distinct().joinToString(" ")
-        return Answer(text.ifBlank { "I don't have that." }, facts)
+        return Answer(text.ifBlank { "I don't have that." }, facts, calls = if (text.isBlank()) emptyList() else told)
     }
 
     private fun pct(x: Double) = "%+.2f%%".format(Locale.ENGLISH, x)
@@ -110,15 +117,20 @@ class Ira(private val book: PatternBook = PatternBook()) {
         return (mood + v).trim()
     }
 
-    /** The newest pattern today with what the book has learned about it. */
-    private fun patterns(s: Snapshot): String? {
-        val p = s.patterns.firstOrNull() ?: return null
+    /**
+     * The newest pattern today with what the book has learned about it, and how it went when Jarvis told of it before
+     * on this phone. Not [asked]: the newest one whose record of his calls is not clearly poor ([PatternCalls.quiet]).
+     */
+    private fun patterns(s: Snapshot, asked: Boolean = true): Pair<String, Pattern>? {
         val m = s.market
+        val today = s.at.toLocalDate()
+        val p = (if (asked) s.patterns.firstOrNull() else s.patterns.firstOrNull { !PatternCalls.quiet(calls, m, it.minutes, it.kind, today) }) ?: return null
         val st = book.stat(m, p.minutes, p.kind)
         val chart = if (p.minutes == 60) "1-hour" else "${p.minutes}-minute"
         val past = if (st.seen < PatternBook.ENOUGH) "I have seen it only ${st.seen} times here, too few to say how it usually goes."
             else "Here it moved its way over the next ${PatternBook.HORIZON} candles in ${Math.round(st.rate * 100)}% of ${st.seen} cases, average ${pct(st.avgMovePct)}."
-        return "A ${p.kind.label} formed on the $chart chart at ${Brain.when_(p.at, m, s.at.toLocalDate())} near ${m.price(p.price)}. $past"
+        val mine = PatternCalls.line(calls, m, p, today)?.let { " $it" } ?: ""
+        return "A ${p.kind.label} formed on the $chart chart at ${Brain.when_(p.at, m, today)} near ${m.price(p.price)}. $past$mine" to p
     }
 
     /** The newest headlines (Indian markets first), however they are tagged. */

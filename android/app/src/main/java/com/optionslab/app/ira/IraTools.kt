@@ -615,4 +615,36 @@ internal object IraTools {
         say(com.optionslab.ira.Practice.summary(m, day, events))
         IraActivity.add("Practised on $day (${m.label}): ${events.size} suggestions.")
     }
+
+    // ---- how the patterns Jarvis told of played out ([com.optionslab.ira.PatternCalls]) -----------------------------
+
+    /** The patterns told of (market, chart, kind, candle, close and how each horizon went - market data only). */
+    private const val PATTERN_CALLS = "jarvis.patternCalls"
+    @Volatile private var callsCache: List<com.optionslab.ira.PatternCalls.Call>? = null
+
+    fun patternCalls(): List<com.optionslab.ira.PatternCalls.Call> = callsCache ?: runCatching {
+        com.optionslab.ira.PatternCalls.load(prefs().getString(PATTERN_CALLS) ?: "")
+    }.getOrDefault(emptyList()).also { callsCache = it }
+
+    @Synchronized private fun callsUpdate(f: (List<com.optionslab.ira.PatternCalls.Call>) -> List<com.optionslab.ira.PatternCalls.Call>) {
+        runCatching {
+            val was = patternCalls()
+            val log = f(was)
+            if (log == was) return@runCatching
+            callsCache = log
+            prefs().putAllSoon(mapOf(PATTERN_CALLS to com.optionslab.ira.PatternCalls.save(log)))
+        }
+    }
+
+    /** Patterns just told of (in an answer Boss saw or heard): followed from now on. */
+    fun patternsTold(calls: List<com.optionslab.ira.PatternCalls.Call>) {
+        if (calls.isEmpty()) return
+        callsUpdate { com.optionslab.ira.PatternCalls.add(it, calls, com.optionslab.app.data.Market.today()) }
+    }
+
+    /** The calls whose horizons have passed, measured on the phone's 1-minute candles. */
+    fun patternsSettle(bars: Map<com.optionslab.ira.Market, List<com.optionslab.ira.Candle>>) {
+        if (patternCalls().all { it.settled }) return
+        callsUpdate { log -> bars.entries.fold(log) { l, e -> com.optionslab.ira.PatternCalls.settle(l, e.key, e.value) } }
+    }
 }
