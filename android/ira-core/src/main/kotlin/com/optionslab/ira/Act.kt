@@ -132,7 +132,9 @@ object Commands {
             return Command(Command.Kind.EXIT_ALL)
         if (Regex("^ (forget|reset|clear) (what you (have )?learned|your learning|what you learnt|the corrections) $").containsMatchIn(s)) return Command(Command.Kind.LEARN_RESET)
         if (Regex("^ (brief mode( on)?|short answers( please)?|keep it short|be brief|shorter answers) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
-        if (Regex("^ (brief mode off|full answers|detailed answers|long answers|answer in full) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
+        // How much Jarvis says aloud (Boss, 5 Oct): a preference for his voice only - nothing else changes.
+        if (Regex("^ (shorter|shorter please|say less|talk less|less detail|less detail please|too long|that was too long|keep it shorter) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
+        if (Regex("^ (brief mode off|full answers|detailed answers|long answers|answer in full|longer|longer answers|in more detail|more detail always|always more detail) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
         if (Regex("^ (tell me more|more|more details|go on|details|explain more|the full answer|repeat|repeat that|repeat it|say that again|say it again|say again|come again|pardon|sorry what|what did you say|once more|one more time) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
         if (Practice.asked(s) && TradeReplay.asked(s) == null && Regex("^ (practi[cs]e|replay|simulate|rehearse) ").containsMatchIn(s)) return Command(Command.Kind.PRACTICE, target = text)
         Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->

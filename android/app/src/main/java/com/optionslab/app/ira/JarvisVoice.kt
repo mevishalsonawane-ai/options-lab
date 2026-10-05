@@ -1048,7 +1048,7 @@ class JarvisVoice : Service() {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
                     val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
                         else { IraHub.cancelAction(id); "Rejected. Nothing was placed." }
-                    say(com.optionslab.ira.Address.boss(Wake.spoken(r)), "answer")
+                    say(com.optionslab.ira.Aloud.say(r), "answer")
                 }
                 return
             }
@@ -1206,11 +1206,12 @@ class JarvisVoice : Service() {
                     say(com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?"), "question")
                     return@launch
                 }
-                // Short answers (the owner's setting): the first sentence; "tell me more" says the whole answer.
-                else -> (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Address.boss(Wake.spoken(a.text, when {
-                    com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> 8
-                    IraTools.brief -> 1
-                    else -> 3 }))
+                // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
+                // answer. Said as a person says it (Boss once, figures rounded), the rest left in the chat.
+                else -> (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Aloud.say(a.text, when {
+                    com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL
+                    IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT
+                    else -> com.optionslab.ira.Aloud.Length.USUAL })
             }.let { text ->
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.

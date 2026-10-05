@@ -19,8 +19,9 @@ object JarvisSpeaker {
     private var ready = false
     private var waiting: String? = null
 
-    /** How a reply is said: addressed to Boss, rupees read as rupees, the first few sentences. */
-    fun words(text: String, sentences: Int = if (IraTools.brief) 1 else 6): String = com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(text, sentences))
+    /** How a reply is said ([com.optionslab.ira.Aloud]): Boss once, figures as a person says them, the first few sentences and "the rest is in the chat". */
+    fun words(text: String, sentences: Int = (if (IraTools.brief) com.optionslab.ira.Aloud.Length.SHORT else com.optionslab.ira.Aloud.Length.USUAL).sentences): String =
+        com.optionslab.ira.Aloud.say(text, sentences)
 
     /**
      * The 09:00 morning check said aloud (Boss, 4 Oct: "will Jarvis greet me by voice at 9?"): through the listening voice
