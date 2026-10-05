@@ -1057,6 +1057,8 @@ object IraHub {
         if (q.isEmpty()) return
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
+        // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
+        if (com.optionslab.app.BuildConfig.JARVIS) scope.launch { runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.ASKED) } }
         // Only the very next words after a missed question may teach it (Boss's rephrase).
         if (!understood) runCatching { IraTools.asked(q) }
         // What Boss's corrections taught: misunderstood words read as meant (questions only, never anything that acts).
@@ -1085,6 +1087,14 @@ object IraHub {
         val parsed = Ask.parse(q)
         // The kinds of question Boss asks (kind keys only, no words): set against those he marks wrong ([SelfDoubt]).
         scope.launch { runCatching { IraTools.countAsked(q) } }
+        // "Which alerts do you hold back?" / "say everything again": the unasked alerts he says aloud less often (kinds only,
+        // nothing about the account; it only ever changes how often his own voice speaks, never anything that acts).
+        val alertAsk = if (com.optionslab.app.BuildConfig.JARVIS && parsed.order == null) runCatching { com.optionslab.ira.AlertSense.asked(q) }.getOrNull() else null
+        if (alertAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch { reply(if (alertAsk == com.optionslab.ira.AlertSense.Request.ALL) IraTools.alertsAll() else IraTools.alertsHeld()) }
+            return
+        }
         // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).
         if (com.optionslab.app.BuildConfig.GOLD && (parsed.order != null || parsed.command != null || Topic.ORDER in parsed.topics || Topic.COMMAND in parsed.topics)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }

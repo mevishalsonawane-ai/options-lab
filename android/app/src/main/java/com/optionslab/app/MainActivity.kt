@@ -58,6 +58,8 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         // Jarvis's listening, switched on but stopped by Android while the app was away, starts again on screen.
         if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.JarvisVoice.resume(this) }
+        // Opening the app just after one of Jarvis's unasked alerts: Boss followed it up (kinds and minutes only).
+        if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.OPENED) }
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {

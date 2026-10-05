@@ -281,7 +281,7 @@ internal object IraActions {
             Command.Kind.PREF_RESET -> { IraNewsTrades.resetPreferences(); "Done, Boss: I'll offer every kind of suggestion again." to null }
             Command.Kind.QUIET_OFF -> { JarvisVoice.quietHours = false; "Quiet hours off." to null }
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
-            Command.Kind.MUTE -> { JarvisVoice.muted = true; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
+            Command.Kind.MUTE -> { JarvisVoice.muted = true; runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.MUTED) }; IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
             Command.Kind.UNMUTE -> { JarvisVoice.muted = false; IraActivity.add("Voice back on."); "Voice on, Boss." to null }
             Command.Kind.HINDI -> { JarvisVoice.hindi = true
                 (if (IraModel.state.value.status == IraModel.Status.READY) "Ab main Hindi mein jawab doonga, Boss." +
@@ -291,7 +291,7 @@ internal object IraActions {
             Command.Kind.PACE_SLOWER -> { JarvisVoice.pace = JarvisVoice.pace - 0.15f; "Slower now, Boss." to null }
             Command.Kind.PACE_FASTER -> { JarvisVoice.pace = JarvisVoice.pace + 0.15f; "Faster now, Boss." to null }
             Command.Kind.PACE_NORMAL -> { JarvisVoice.pace = 1f; "Back to my normal pace, Boss." to null }
-            Command.Kind.MUTE_FOR -> { val n = c.number ?: 30; JarvisVoice.muteFor(n); IraActivity.add("Quiet for $n minutes."); IraTools.count(com.optionslab.ira.Improve.MUTED)
+            Command.Kind.MUTE_FOR -> { val n = c.number ?: 30; JarvisVoice.muteFor(n); runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.MUTED) }; IraActivity.add("Quiet for $n minutes."); IraTools.count(com.optionslab.ira.Improve.MUTED)
                 "Quiet for $n minutes, Boss. Replies on screen meanwhile; say \"Jarvis, unmute\" to hear me sooner." to null }
             Command.Kind.JTRADES_PAPER -> Commands.describe(c) to suspend { IraNewsTrades.paperFirst = true; "My suggested trades stay on paper now, Boss." }
             Command.Kind.JTRADES_LIVE -> {

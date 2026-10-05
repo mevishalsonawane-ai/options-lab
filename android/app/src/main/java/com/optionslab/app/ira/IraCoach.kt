@@ -228,7 +228,7 @@ internal object IraCoach {
         // Kept as told only once said: an answer that could not be given (old prices) is tried again on the next pass.
         val text = IraHub.usualAnswer(question) ?: return
         com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + due)).toString())
-        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
+        IraHub.note(text); IraTools.sayAlert(Automations.Auto.USUAL, com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
     }
 
     /**
@@ -337,7 +337,7 @@ internal object IraCoach {
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val gap = (snap.open - prev) / prev * 100
         val text = com.optionslab.ira.GapPlan.say(com.optionslab.ira.Market.BANKNIFTY, gap, gapRecord(com.optionslab.ira.GapPlan.of(gap)))
-        IraHub.note(com.optionslab.ira.Address.boss(text)); JarvisVoice.announce(com.optionslab.ira.Address.boss(text))
+        IraHub.note(com.optionslab.ira.Address.boss(text)); IraTools.sayAlert(Automations.Auto.GAP, com.optionslab.ira.Address.boss(text))
         Automations.acted(Automations.Auto.GAP, text)
     }
 
@@ -357,7 +357,7 @@ internal object IraCoach {
             com.optionslab.ira.OiShift.say(u, before, now).forEach { line ->
                 if (synchronized(wallTold) { wallTold.add("$day|$line") }) {
                     IraHub.appContext()?.let { JarvisPopup.show(it, "$u: open interest moved", line) }
-                    IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.OI, line)
+                    IraHub.note(line); IraTools.sayAlert(Automations.Auto.OI, line); Automations.acted(Automations.Auto.OI, line)
                 }
             }
         }
@@ -388,7 +388,7 @@ internal object IraCoach {
             if (!synchronized(orbTold) { orbTold.add("$day|${m.name}|$up") }) continue
             val line = com.optionslab.ira.OpeningRange.alert(s, up)
             IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: opening range", line) }
-            IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.ORB, line)
+            IraHub.note(line); IraTools.sayAlert(Automations.Auto.ORB, line); Automations.acted(Automations.Auto.ORB, line)
         }
     }
 
@@ -412,7 +412,7 @@ internal object IraCoach {
             for (a in com.optionslab.ira.Moments.alerts(s, bars, before, now)) {
                 if (!synchronized(momentTold) { momentTold.add("$day|${a.key}") }) continue
                 IraHub.appContext()?.let { JarvisPopup.show(it, a.title, a.text) }
-                IraHub.note(a.text); JarvisVoice.announce(a.text); Automations.acted(Automations.Auto.MOMENTS, a.text)
+                IraHub.note(a.text); IraTools.sayAlert(Automations.Auto.MOMENTS, a.text); Automations.acted(Automations.Auto.MOMENTS, a.text)
             }
         }
     }
@@ -445,7 +445,7 @@ internal object IraCoach {
             }
             val text = com.optionslab.ira.ExpiryDay.say(m, slot, first, read, IraHub.recentBars(m))
             IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: expiry day", text) }
-            IraHub.note(text); JarvisVoice.announce(text); Automations.acted(Automations.Auto.EXPIRYDAY, text)
+            IraHub.note(text); IraTools.sayAlert(Automations.Auto.EXPIRYDAY, text); Automations.acted(Automations.Auto.EXPIRYDAY, text)
         }
     }
 
@@ -477,7 +477,7 @@ internal object IraCoach {
         val line = com.optionslab.ira.VixSpike.alert(v, before) ?: return
         if (!synchronized(vixTold) { vixTold.add(day) }) return
         IraHub.appContext()?.let { JarvisPopup.show(it, "India VIX spiking", line) }
-        IraHub.note(line); JarvisVoice.announce(line); Automations.acted(Automations.Auto.VIX, line)
+        IraHub.note(line); IraTools.sayAlert(Automations.Auto.VIX, line); Automations.acted(Automations.Auto.VIX, line)
     }
 
     /** The end of the last sharp move told for each index (day|market): one move is told once. */
@@ -587,13 +587,20 @@ internal object IraCoach {
         val doubtBefore = savedDoubt?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
         val doubtNow = runCatching { com.optionslab.ira.SelfDoubt.weakKeys(wrongs, askedKinds, day) }.getOrDefault(emptySet())
         val doubts = runCatching { com.optionslab.ira.SelfDoubt.review(wrongs, askedKinds, day, doubtBefore) }.getOrDefault(emptyList())
+        // The unasked alerts Boss lets pass, now said aloud less often (they stay in the chat; kind names kept with their day too).
+        val alertKey = "jarvis.review.alerts"
+        val savedAlerts = com.optionslab.app.security.SecurePrefs.getString(alertKey)?.split('\n')
+        val alertsBefore = savedAlerts?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
+        val alertsNow = IraTools.alertQuietKeys()
+        val alertLines = IraTools.alertReview(alertsBefore)
         val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
-            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration, doubts))
+            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration, doubts, alertLines))
         com.optionslab.app.security.SecurePrefs.put(key, "$bar|$today|${before ?: bar}")
         com.optionslab.app.security.SecurePrefs.put(calibKey, calibNow.joinToString("\t") + "\n" + today + "\n" + (calibBefore ?: calibNow).joinToString("\t"))
         com.optionslab.app.security.SecurePrefs.put(soloKey, soloNow.joinToString("\t") + "\n" + today + "\n" + (soloBefore ?: soloNow).joinToString("\t"))
         com.optionslab.app.security.SecurePrefs.put(doubtKey, doubtNow.joinToString("\t") + "\n" + today + "\n" + (doubtBefore ?: doubtNow).joinToString("\t"))
+        com.optionslab.app.security.SecurePrefs.put(alertKey, alertsNow.joinToString("\t") + "\n" + today + "\n" + (alertsBefore ?: alertsNow).joinToString("\t"))
         said?.let { IraActivity.add(it) }
         said
     }.getOrNull()

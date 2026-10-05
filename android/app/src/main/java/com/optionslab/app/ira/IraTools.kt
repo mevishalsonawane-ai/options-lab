@@ -79,6 +79,84 @@ internal object IraTools {
         return weak
     }
 
+    // ---- which unasked alerts Boss follows up ([com.optionslab.ira.AlertSense]) --------------------------------------
+
+    /** The alerts said aloud and held back (kind names and minutes only, never the words), the last 14 days. */
+    private const val ALERTS = "jarvis.alertSense"
+    @Volatile private var alertCache: com.optionslab.ira.AlertSense.Log? = null
+
+    private fun alertLog(): com.optionslab.ira.AlertSense.Log = alertCache ?: runCatching {
+        val o = JSONObject(prefs().getString(ALERTS) ?: "{}")
+        val s = o.optJSONArray("s") ?: JSONArray()
+        val h = o.optJSONArray("h") ?: JSONArray()
+        val k = o.optJSONObject("k") ?: JSONObject()
+        com.optionslab.ira.AlertSense.Log(
+            said = (0 until s.length()).map { i -> s.getJSONObject(i).let { x ->
+                com.optionslab.ira.AlertSense.Said(x.getString("k"), LocalDateTime.parse(x.getString("t")),
+                    x.optString("r").takeIf { it.isNotEmpty() }?.let { r -> runCatching { com.optionslab.ira.AlertSense.Reaction.valueOf(r) }.getOrNull() })
+            } },
+            held = (0 until h.length()).map { i -> h.getJSONObject(i).let { x -> x.getString("k") to LocalDateTime.parse(x.getString("t")) } },
+            skipped = k.keys().asSequence().associateWith { n -> k.optInt(n) },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.AlertSense.Log()).also { alertCache = it }
+
+    @Synchronized private fun alertUpdate(f: (com.optionslab.ira.AlertSense.Log) -> com.optionslab.ira.AlertSense.Log) {
+        runCatching {
+            val was = alertLog()
+            val log = f(was)
+            if (log == was) return@runCatching
+            alertCache = log
+            val o = JSONObject()
+                .put("s", JSONArray().apply { log.said.forEach { x -> put(JSONObject().put("k", x.kind).put("t", x.at.toString()).apply { x.reaction?.let { put("r", it.name) } }) } })
+                .put("h", JSONArray().apply { log.held.forEach { (k, t) -> put(JSONObject().put("k", k).put("t", t.toString())) } })
+                .put("k", JSONObject().apply { log.skipped.forEach { (k, n) -> put(k, n) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(ALERTS to o.toString()))
+        }
+    }
+
+    private fun minuteNow(): LocalDateTime = LocalDateTime.now(IST).withSecond(0).withNano(0)
+
+    /**
+     * An unasked market alert ([a]) aloud - or, a kind Boss keeps letting pass, now and then only (every caller has
+     * already put the line in the chat, so nothing is lost). Only market colour is ever held back: any other kind, every
+     * safety warning among them, is said as always. True when it was said.
+     */
+    fun sayAlert(a: Automations.Auto, text: String): Boolean {
+        val now = minuteNow()
+        val aloud = runCatching { com.optionslab.ira.AlertSense.aloud(alertLog(), a.name, now) }.getOrDefault(true)
+        if (!aloud) { alertUpdate { com.optionslab.ira.AlertSense.heldBack(it, a.name, now) }; return false }
+        val said = JarvisVoice.announce(text)
+        // Only alerts Boss could hear are judged by what he did next.
+        if (said) alertUpdate { com.optionslab.ira.AlertSense.spoken(it, a.name, now) }
+        return said
+    }
+
+    /** Boss asked something, opened the app or muted Jarvis: the alert said just before it is marked (no write otherwise). */
+    fun alertBoss(what: com.optionslab.ira.AlertSense.Boss) {
+        val now = minuteNow()
+        if (!runCatching { com.optionslab.ira.AlertSense.waiting(alertLog(), now) }.getOrDefault(false)) return
+        alertUpdate { com.optionslab.ira.AlertSense.boss(it, what, now) }
+    }
+
+    /** "Which alerts do you hold back?". */
+    fun alertsHeld(): String = runCatching { com.optionslab.ira.AlertSense.say(alertLog(), minuteNow()) }
+        .getOrDefault("I could not read my alert record just now, Boss.")
+
+    /** "Say everything again": every alert aloud again, the count started afresh. */
+    fun alertsAll(): String {
+        val now = minuteNow()
+        val said = runCatching { com.optionslab.ira.AlertSense.sayAll(alertLog(), now) }.getOrDefault("Done, Boss: I'll say every alert aloud again.")
+        alertUpdate { com.optionslab.ira.AlertSense.reset(it, now) }
+        IraActivity.add("Saying every alert aloud again (as asked).")
+        return said
+    }
+
+    /** For the evening review: the kinds said less often now (kind names). */
+    fun alertQuietKeys(): Set<String> = runCatching { com.optionslab.ira.AlertSense.quietKeys(alertLog(), minuteNow()) }.getOrDefault(emptySet())
+
+    fun alertReview(before: Set<String>?): List<String> = runCatching { com.optionslab.ira.AlertSense.review(alertLog(), minuteNow(), before) }.getOrDefault(emptyList())
+
     // ---- learning from corrections ---------------------------------------------------------------------------------
 
     private const val LEARNED = "jarvis.learned"
