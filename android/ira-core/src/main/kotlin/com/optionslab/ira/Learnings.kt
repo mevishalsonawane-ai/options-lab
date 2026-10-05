@@ -10,7 +10,7 @@ import java.util.Locale
  * the wordings Boss taught him ([Corrections]), the routines kept on his yes ([Routine]), the alerts said less often
  * ([AlertSense]), the conditions his own ideas and Solo sit out ([SelfCalibration], [SoloCalibration]), the answer kinds
  * he flags ([SelfDoubt]), the pattern kinds he no longer brings up unasked ([PatternCalls]), his data-freshness record
- * ([DataAge]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * ([DataAge]), how Nifty moved after each news theme's headlines ([NewsMoves]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -37,6 +37,7 @@ object Learnings {
         ANSWERS("Answer kinds I flag", true),
         PATTERNS("Patterns I no longer bring up", false),
         DATA("My data-freshness record", false),
+        NEWS("News and the index on this phone", false),
         GOALS("My own goals", true),
     }
 
@@ -57,6 +58,7 @@ object Learnings {
         val tally: DoubtTally = emptyMap(),
         val patterns: List<PatternCalls.Call> = emptyList(),
         val data: DataAge.Log = DataAge.Log(),
+        val news: List<NewsMoves.Note> = emptyList(),
         val plan: Improve.Plan? = null,
     )
 
@@ -130,6 +132,13 @@ object Learnings {
                 "$warned of my $answers market answers on those days carried an age warning" + (if (withheld > 0) " and $withheld I would not quote" else "") +
                     "; I say how old it is, never pass it off as live", null)
         }
+        // How Nifty moved after each news theme's headlines (a record of timing, never a cause; it only changes what he says).
+        NewsMoves.TAGS.map { NewsMoves.record(i.news, it, Market.NIFTY, today) }.filter { it.n > 0 }
+            .sortedByDescending { it.newest ?: LocalDate.MIN }
+            .forEach { r ->
+                out += Item(Area.NEWS, NewsMoves.fact(r)!! + if (r.n < NewsMoves.FEW) " (too few to go by)" else "", r.newest,
+                    "timed on the phone's own candles from each story's first headline - timing only, never a cause; it only adds a line when such news comes up", null)
+            }
         // His own goals for the week (they only speak, study, ask Boss to teach him or work on paper).
         i.plan?.takeIf { it.goals.isNotEmpty() && !it.week.isBefore(Improve.weekOf(today)) }?.let { p ->
             out += Item(Area.GOALS, "for the week of ${day(p.week)}: " + p.goals.joinToString("; ") { it.text() }, p.week.minusDays(2).takeIf { !it.isAfter(today) } ?: today,
@@ -176,7 +185,7 @@ object Learnings {
     fun say(items: List<Item>, ask: Ask, today: LocalDate, locked: Boolean): String {
         val shown = items.filter { !locked || !it.personal }
             .filter { ask == Ask.ALL || thisWeek(it.on, today) }
-            .filter { ask != Ask.CHANGED || it.area != Area.DATA }
+            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS) }
         val hidden = locked && items.any { it.personal }
         val tail = listOfNotNull(if (hidden) UNLOCK else null, NEVER_ACTS).joinToString(" ")
         if (shown.isEmpty()) {

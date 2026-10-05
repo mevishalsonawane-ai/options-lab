@@ -218,6 +218,12 @@ object NewsDesk {
         }
     }
 
+    private fun ranked(all: List<Story>) = all.sortedWith(compareByDescending<Story> { it.sourceCount }.thenByDescending { it.latest ?: Instant.EPOCH })
+
+    /** The main-news answer's stories: today's top [TOP] by sources, then recency (none: no headline from today). */
+    fun top(news: List<Headline>, zone: ZoneId, today: LocalDate): List<Story> =
+        ranked(stories(news.filter { h -> h.at != null && LocalDateTime.ofInstant(h.at, zone).toLocalDate() == today })).take(TOP)
+
     private fun main(news: List<Headline>, zone: ZoneId, today: LocalDate): String {
         val todays = news.filter { h -> h.at != null && LocalDateTime.ofInstant(h.at, zone).toLocalDate() == today }
         if (todays.isEmpty()) {
@@ -225,7 +231,7 @@ object NewsDesk {
             return "No headline on the phone is from today yet, Boss. The latest stories: ${numbered(last, zone, today)}"
         }
         val all = stories(todays)
-        val top = all.sortedWith(compareByDescending<Story> { it.sourceCount }.thenByDescending { it.latest ?: Instant.EPOCH }).take(TOP)
+        val top = ranked(all).take(TOP)
         val many = top.count { it.sourceCount > 1 }
         val how = if (many == 0) "each carried by one source, so the newest first" else "most sources first, then the newest"
         return "Today's main stories, Boss ($how; ${todays.size} headline${if (todays.size == 1) "" else "s"} in ${all.size} " +

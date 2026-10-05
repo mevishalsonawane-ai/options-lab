@@ -557,6 +557,7 @@ internal object IraTools {
         tally = runCatching { askedKinds() }.getOrDefault(emptyMap()),
         patterns = runCatching { patternCalls() }.getOrDefault(emptyList()),
         data = runCatching { freshLog() }.getOrDefault(com.optionslab.ira.DataAge.Log()),
+        news = runCatching { newsMoves() }.getOrDefault(emptyList()),
         plan = plan)
 
     /**
@@ -710,5 +711,31 @@ internal object IraTools {
     fun patternsSettle(bars: Map<com.optionslab.ira.Market, List<com.optionslab.ira.Candle>>) {
         if (patternCalls().all { it.settled }) return
         callsUpdate { log -> bars.entries.fold(log) { l, e -> com.optionslab.ira.PatternCalls.settle(l, e.key, e.value) } }
+    }
+
+    // ---- how the index moved after each news theme's headlines ([com.optionslab.ira.NewsMoves]) --------------------
+
+    /** The timed stories (theme, index, minute, price and the biggest move after it - market data only, no headline text). */
+    private const val NEWS_MOVES = "jarvis.newsMoves"
+    @Volatile private var newsMovesCache: List<com.optionslab.ira.NewsMoves.Note>? = null
+    /** The headline list last noted (the same list is not grouped into stories again). */
+    @Volatile private var newsMovesSeen: List<com.optionslab.ira.Headline>? = null
+
+    fun newsMoves(): List<com.optionslab.ira.NewsMoves.Note> = newsMovesCache ?: runCatching {
+        com.optionslab.ira.NewsMoves.load(prefs().getString(NEWS_MOVES) ?: "")
+    }.getOrDefault(emptyList()).also { newsMovesCache = it }
+
+    /** New stories in [news] noted, and every open horizon measured on the phone's 1-minute candles. Timing only; nothing acts on it. */
+    @Synchronized fun newsMovesUpdate(news: List<com.optionslab.ira.Headline>, bars: Map<com.optionslab.ira.Market, List<com.optionslab.ira.Candle>>) {
+        runCatching {
+            val was = newsMoves()
+            val fresh = news.isNotEmpty() && news !== newsMovesSeen
+            if (!fresh && was.all { it.settled }) return@runCatching
+            val log = com.optionslab.ira.NewsMoves.update(was, if (fresh) news else emptyList(), bars, IST, com.optionslab.app.data.Market.today())
+            if (fresh) newsMovesSeen = news
+            if (log == was) return@runCatching
+            newsMovesCache = log
+            prefs().putAllSoon(mapOf(NEWS_MOVES to com.optionslab.ira.NewsMoves.save(log)))
+        }
     }
 }

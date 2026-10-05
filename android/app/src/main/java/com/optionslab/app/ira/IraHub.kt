@@ -295,6 +295,9 @@ object IraHub {
                     liveAt = if (live.isNotEmpty()) Instant.now() else it.liveAt, liveMissing = missing,
                     news = news?.first ?: it.news, newsAt = if (news != null) Instant.now() else it.newsAt,
                     newsMissing = news?.second ?: it.newsMissing, best = book.best()) }
+                // How the index moved after each news theme's headlines, timed on the phone's own candles - timing facts
+                // only, never a cause; it only ever adds words ([com.optionslab.ira.NewsMoves]). No news read in IraGoldAlgo.
+                if (!GOLD_ONLY_TALK) runCatching { IraTools.newsMovesUpdate(_state.value.news, hs.mapValues { it.value.bars }) }
                 if (news != null && com.optionslab.app.BuildConfig.JARVIS) runCatching { judgeNews(news.first) }
                 nightlyIfDue()
             }.onFailure {
@@ -1213,7 +1216,8 @@ object IraHub {
             !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) ||
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) ||
-                com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
+                com.optionslab.ira.NewsMoves.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1270,6 +1274,20 @@ object IraHub {
             val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
                 .getOrDefault("I couldn't read my pattern record just now, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "How does the market react to RBI news?" / "do Fed headlines move Nifty?": how far the index moved in the hour after
+        // each theme's headlines on this phone ([com.optionslab.ira.NewsMoves]) - timing only, never a cause, no forecast or
+        // advice. Headlines and market data only (fine on a locked phone); not in the GOLD build (no news read there).
+        val movesAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.NewsMoves.asked(q) }.getOrNull() else null
+        if (movesAsk != null) {
+            val said = runCatching {
+                val usual = runCatching { com.optionslab.ira.NewsMoves.usual(movesAsk.market, histories[movesAsk.market]?.bars.orEmpty()) }.getOrNull()
+                com.optionslab.ira.NewsMoves.say(IraTools.newsMoves(), movesAsk, com.optionslab.app.data.Market.today(), usual)
+            }.getOrDefault("I couldn't read my news-and-moves record just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
             return
         }
         // "Export my trades for tax": the financial year's trades in a CSV for Boss to share ([com.optionslab.ira.TaxRecords]).
@@ -1775,7 +1793,13 @@ object IraHub {
             val said = runCatching {
                 val mk = com.optionslab.ira.NewsDesk.market(parsed.markets)
                 val bars = com.optionslab.ira.SharpMove.INDICES.associateWith { histories[it]?.bars.orEmpty() }
-                com.optionslab.ira.NewsDesk.answer(deskAsk, _state.value.news, Instant.now(), IST, mk, bars)
+                val desk = com.optionslab.ira.NewsDesk.answer(deskAsk, _state.value.news, Instant.now(), IST, mk, bars)
+                // Beside a story on RBI, the Fed, inflation...: how Nifty moved after such headlines on this phone (timing only).
+                val record = if (_state.value.news.isEmpty()) null else runCatching {
+                    val usual = com.optionslab.ira.NewsMoves.usual(IraMarket.NIFTY, histories[IraMarket.NIFTY]?.bars.orEmpty())
+                    com.optionslab.ira.NewsMoves.forDesk(deskAsk, _state.value.news, IraTools.newsMoves(), Instant.now(), IST, usual)
+                }.getOrNull()
+                if (record == null) desk else "$desk $record"
             }.getOrElse { "I could not read the headlines just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
