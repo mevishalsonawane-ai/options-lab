@@ -20,7 +20,9 @@ import kotlin.math.abs
  *     1-minute candles;
  *  5. how often a move like the one needed (or, where the condition holds now, the one that would undo it) happened in
  *     the past stretches of the same length on the phone - past stretches, never odds or a forecast;
- *  6. time decay - what each day costs a buyer or pays a seller.
+ *  6. time decay - what each day costs a buyer or pays a seller;
+ *  7. (reasoning, round 25) today's move in the underlying beside its own intraday comeback record and its average
+ *     day's range, said for each option on it - the way it needs or against it, and how often such a move held or came back.
  *
  * At-expiry arithmetic only, charges left out, said so. Facts, never advice: it ends "your call, Boss". Nothing here
  * places, changes or closes anything; it reads the account, so the app answers it on an unlocked phone only, like every
@@ -223,6 +225,80 @@ object NeedsTrue {
         return out
     }
 
+    /** The smallest move from the previous close set beside the comeback record (in %). */
+    const val MIN_TODAY_PCT = 0.5
+    /** The largest size the record is counted at (in %): a bigger move is counted at this. */
+    const val MAX_TODAY_PCT = 3.0
+
+    /**
+     * Reasoning, round 25 (2026-10-05): today's move in [u] (an index, upper case) so far, joined with two facts the app
+     * already has - its own intraday comeback record on the phone ([Comebacks.past] and [Comebacks.side], counted at the
+     * move now rounded down to the half per cent, [MIN_TODAY_PCT] to [MAX_TODAY_PCT]) and today's range against its
+     * average day's range - then said for each of Boss's options on it ([held]): whether today's move is the way it needs
+     * or against it, and how often such a move held or came back on the record. Past days, never odds, a forecast or
+     * advice; nothing acts. Empty when the phone has no session of today with one before it. Pure.
+     */
+    fun todayBeside(u: String, bars: List<Candle>, now: LocalDateTime, held: List<PositionHealth.Pos>): List<String> {
+        val today = now.toLocalDate()
+        val ss = MarketStory.sessions(bars)
+        val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return emptyList()
+        val before = ss.lastOrNull { it.day.isBefore(today) && it.bars.isNotEmpty() }?.takeIf { it.close > 0 } ?: return emptyList()
+        val name = label(u)
+        val pc = before.close
+        val live = now.toLocalTime().isBefore(CLOSE)
+        val nowPct = (t.close - pc) / pc * 100
+        val lowPct = (t.bars.minOf { it.l } - pc) / pc * 100
+        val highPct = (t.bars.maxOf { it.h } - pc) / pc * 100
+        val out = ArrayList<String>()
+        val rangeNote = held.firstNotNullOfOrNull { p -> p.avgRange?.takeIf { it > 0 }?.let { it to p.rangeDays } }?.let { (r, n) ->
+            "; its range ${if (live) "so far" else "today"} is ${n0(t.range)} points, %.1f of its average day's range (${n0(r)}, last $n sessions)"
+                .format(Locale.ENGLISH, t.range / r)
+        } ?: ""
+        out += "Beside today: $name ${if (live) "is" else "ended"} at ${p2(t.close)}, ${sp(nowPct)} on the previous close of ${p2(pc)} " +
+            "(today's low ${sp(lowPct)}, high ${sp(highPct)})$rangeNote."
+        val size = minOf(MAX_TODAY_PCT, Math.floor(abs(nowPct) * 2) / 2)
+        if (size < MIN_TODAY_PCT) {
+            out += "That is under ${p1(MIN_TODAY_PCT)} from the previous close, too small a move to set beside its comeback record."
+            return out
+        }
+        val fall = nowPct < 0
+        val days = Comebacks.past(bars, today, size)
+        if (days.size < Comebacks.MIN_SESSIONS) {
+            out += "Too few whole sessions of $name on the phone (${days.size}) to set today's move beside its comeback record (I need ${Comebacks.MIN_SESSIONS})."
+            return out
+        }
+        val s = Comebacks.side(days, if (fall) -1 else 1, size)
+        val moved = if (fall) "fell ${p1(size)} or more below" else "rose ${p1(size)} or more above"
+        if (s.touched < Comebacks.MIN_TOUCHES) {
+            out += "Over the last ${days.size} whole sessions on the phone, $name $moved the previous close in the day on only ${s.touched} - " +
+                "too few to say how such days ended (I need ${Comebacks.MIN_TOUCHES})."
+            return out
+        }
+        out += "Its comeback record: over the last ${days.size} whole sessions on the phone, $name $moved the previous close in the day on ${s.touched}; " +
+            "${s.back} of them ended back ${if (fall) "above" else "below"} it (${pct(s.back, s.touched)}), " +
+            "${s.half} ${if (fall) "won back at least half of the day's fall" else "gave back at least half of the day's rise"} (${pct(s.half, s.touched)}) " +
+            "and ${s.held} ended still ${p1(size)} or more ${if (fall) "down" else "up"} (${pct(s.held, s.touched)})." +
+            (if (s.touched < Comebacks.FEW_TOUCHES) " Only ${s.touched} days, so a few days move these figures a lot." else "")
+        for (p in held.sortedBy { it.symbol }) {
+            val k = p.strike ?: continue
+            val call = p.right == "CE"
+            val above = call == (p.qty > 0)
+            val be = if (call) k + p.avg else k - p.avg
+            // Today's move is the position's way when it goes towards the side its breakeven needs.
+            val itsWay = fall != above
+            val move = if (fall) "fall" else "rise"
+            val needs = "Your ${p.symbol} needs $name ${if (above) "above" else "below"} ${n0(be)} at expiry"
+            out += if (itsWay) "$needs: today's $move is its way, and on the record such a move held to the close on ${s.held} of ${s.touched} days " +
+                "(${pct(s.held, s.touched)}) and came back across the previous close on ${s.back} (${pct(s.back, s.touched)})."
+            else "$needs: today's $move is against it; on the record such a move came back across the previous close on ${s.back} of ${s.touched} days " +
+                "(${pct(s.back, s.touched)}) and held to the close on ${s.held} (${pct(s.held, s.touched)})."
+        }
+        return out
+    }
+
+    private fun sp(x: Double) = (if (x > 0) "+" else "") + "%.2f%%".format(Locale.ENGLISH, x)
+    private fun p1(x: Double) = "%.1f%%".format(Locale.ENGLISH, x).replace(".0%", "%")
+
     private fun pct(k: Int, of: Int) = if (of > 0) "%.0f%%".format(Locale.ENGLISH, k * 100.0 / of) else "-"
 
     /**
@@ -244,6 +320,9 @@ object NeedsTrue {
             else "What has to be true for each of your ${chosen.size} open positions, Boss, worked from the facts:"
         chosen.sortedWith(compareBy<PositionHealth.Pos> { it.expiry ?: LocalDate.MAX }.thenBy { it.symbol })
             .forEach { out += one(it, bars[it.underlying?.uppercase()].orEmpty(), now, isTradingDay) }
+        // Reasoning, round 25: today's move in each underlying beside its own comeback record and its usual day's range.
+        chosen.filter { it.option && it.underlying != null }.groupBy { it.underlying!!.uppercase() }.toSortedMap()
+            .forEach { (u, held) -> out += todayBeside(u, bars[u].orEmpty(), now, held) }
         if (chosen.any { it.option }) out += "That is at expiry, from your average price, charges left out; before expiry an option's price also moves " +
             "with time and volatility, so it can be in profit or loss sooner. The stretches are past ones on the phone, not odds."
         out += "Facts and arithmetic, not a forecast or advice - your call, Boss."
