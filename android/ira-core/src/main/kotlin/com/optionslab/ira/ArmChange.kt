@@ -69,6 +69,8 @@ object ArmChange {
         " $MY$ARMS (ka|ki|ke|mein|me|main) $THIS (vs |versus |aur |ke mukable |ke mukabale )?(kya badla|$LAST)",
         " $MY$ARMS (ka|ki|ke|mein|me|main) (is hafte |iss hafte )?(pichle hafte se|last week se) (kya badla|kya farak|kya fark|kya change)",
         " $LAST (se|ke mukable|ke mukabale) $MY$ARMS (mein|me|main|ka|ki|ke) (kya badla|kya farak|kya fark|kya change|kaise)",
+        // "is hafte mere bots kaise rahe pichle hafte ke mukable" (understanding round 20)
+        " $THIS $MY$ARMS (kaise|kaisa|kaisi) (rahe|raha|rahi|chale|chala|chali|hain|hai)( hain| hai)? $LAST (ke mukable|ke mukabale|ke muqable|ke muqabale|se|ke comparison mein|ke compare mein)",
     ).map { rx(it) }
     // A switch, a forecast, advice, one day or one trade, the backtest or the week ahead.
     private val NOT = rx(" (stop it|switch off|switch on|turn off|turn on|disarm|should|shall|will|would|next week|agle hafte|" +

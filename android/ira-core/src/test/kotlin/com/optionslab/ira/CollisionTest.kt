@@ -56,6 +56,13 @@ import kotlin.test.assertTrue
  * And 60-odd everyday questions ("nifty kaha hai", "aaj ka plan", "mera p&l", "kya karu", "orb ka kya haal", "market band
  * hai kya", "kal expiry hai kya") still go where they should after all the additions - none acts - while "kill switch on
  * karo", "close all" and the rest stay commands.
+ *
+ * Round 20 (5 Oct): more English and Hinglish of ExtremeCloses, the day's wrap-up (DaySummary's newest words), ArmChange
+ * ("is hafte mere bots kaise rahe pichle hafte ke mukable" was the account's history) and WeekRange; Boss's reminders one
+ * at a time (ReminderBook: the list reads only, one named waits for his Confirm) and all of them ("sab reminders hata do",
+ * "saare reminders cancel karo" were Missed: now the cancel-all, which names them and waits for his Confirm -
+ * coverage-actions.txt is unchanged, as none of its lines reads differently); UsualIndex's corrections ("no banknifty",
+ * "mera matlab sensex se tha") read as the index meant and never act; the everyday questions still go where they should.
  */
 class CollisionTest {
     private val audit = CoverageTest()
@@ -1834,6 +1841,80 @@ class CollisionTest {
         assertEquals("Act", audit.feature("buy 1 lot nifty 24500 ce"))
         // "Market band karo" is no market-hours question: it stays a stop of an arm by that name (the app asks which one).
         assertEquals(Command.Kind.STOP_ONE, Ask.parse("market band karo").command?.kind)
+    }
+
+    // ---- Round 20: the newest families' wordings, Boss's reminders, his index corrections ----
+
+    /** Round 20's question wordings, each with the feature it must get - none acts. */
+    private val ROUND20 = listOf(
+        // ExtremeCloses
+        "how often does banknifty close at its high" to "ExtremeCloses", "how often does nifty close at the low" to "ExtremeCloses",
+        "does sensex usually close near the day high" to "ExtremeCloses", "what happens next day after a close at the low" to "ExtremeCloses",
+        "low pe close hone ke baad agle din kya hota hai" to "ExtremeCloses", "closing near the high record for finnifty" to "ExtremeCloses",
+        "how often does nifty settle near its low" to "ExtremeCloses", "what happens the day after a strong close" to "ExtremeCloses",
+        // DaySummary: the wrap-up's newest words (usefulness round 28)
+        "summarize today" to "DaySummary", "give me a summary of my day" to "DaySummary", "end of day report" to "DaySummary",
+        "eod summary" to "DaySummary", "summary of today" to "DaySummary", "wrap up my day" to "DaySummary", "how did my day go" to "DaySummary",
+        "aaj ka summary" to "DaySummary", "can you summarise my day for me" to "DaySummary",
+        // ArmChange ("is hafte ... pichle hafte ke mukable" was the account's history before this round)
+        "what changed in my arms this week" to "ArmChange", "how did my strategies do this week vs last week" to "ArmChange",
+        "compare my arms week on week" to "ArmChange", "is hafte mere bots kaise rahe pichle hafte ke mukable" to "ArmChange",
+        "is hafte meri strategies kaisi rahi pichle hafte se" to "ArmChange",
+        // WeekRange: the weekdays of the week's high and low
+        "which day usually makes the week's high" to "WeekRange", "week ka high kis din banta hai" to "WeekRange",
+        "on which day does nifty usually make its weekly high" to "WeekRange",
+        // ReminderBook: the list only reads
+        "what reminders do i have" to "ReminderBook", "list my reminders" to "ReminderBook", "any reminders" to "ReminderBook",
+        "mere reminders kya hain" to "ReminderBook", "do i have any reminders today" to "ReminderBook", "which reminders are set" to "ReminderBook",
+        // The everyday questions, still where they were
+        "how is nifty" to "Market", "what's the vix" to "Market", "banknifty kitna gira" to "Market", "mera p&l kitna hai" to "Account:PNL",
+        "how many trades today" to "Account:ORDERS", "what's my target" to "Account:PROTECTIONS",
+    )
+    /** One reminder named: ReminderBook's, waiting for Boss's Confirm. */
+    private val CANCEL_ONE_20 = listOf("cancel the 14:30 reminder", "delete the reminder about nifty", "3 baje wala reminder hata do",
+        "remove the reminder about expiry", "cancel the 3 pm reminder")
+    /** All of them: the cancel-all, which names each and waits for Boss's Confirm. The first five were Missed before this round. */
+    private val CANCEL_ALL_20 = listOf("sab reminders hata do", "saare reminders cancel karo", "mere sab reminders hata do", "all reminders hata do",
+        "mere saare reminders hatao", "cancel all my reminders", "delete all reminders", "clear my reminders", "cancel my reminders")
+    /** Boss's corrections of the index Jarvis took, with the index each means. */
+    private val CORRECTIONS_20 = listOf("no banknifty" to Market.BANKNIFTY, "i meant sensex" to Market.SENSEX, "nahi finnifty ka" to Market.FINNIFTY,
+        "not nifty, banknifty" to Market.BANKNIFTY, "mera matlab sensex se tha" to Market.SENSEX, "no i meant finnifty" to Market.FINNIFTY)
+
+    @Test fun roundTwentyWordingsNeitherOrderNorCommandNorBundle() {
+        assertEquals(ROUND20.size, ROUND20.map { it.first }.distinct().size)
+        val wrong = ROUND20.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND20) neverActs(s)
+    }
+
+    @Test fun remindersAreReadOrAskedFirstNeverDroppedUnasked() {
+        for (s in CANCEL_ONE_20 + CANCEL_ALL_20) {
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            // Never a trade, a strategy or the kill switch; the cancel-all reads as "cancel my reminders" always has.
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            if (s in CANCEL_ALL_20) assertEquals(Bundle.acts("cancel my reminders"), Bundle.acts(s), s)
+        }
+        // One named: ReminderBook's pick (asked first in the hub); never the cancel-all.
+        for (s in CANCEL_ONE_20) { assertEquals("ReminderBook", audit.feature(s), s); assertTrue(ReminderBook.cancelOne(s) != null, s) }
+        // All of them: the cancel-all's Confirm (the hub names them and waits); never one picked.
+        for (s in CANCEL_ALL_20) {
+            assertEquals("Reminder", audit.feature(s), s)
+            assertTrue(Reminder.cancelAsked(s), s); assertEquals(null, ReminderBook.cancelOne(s), s)
+        }
+        // The list only reads: never a cancel.
+        for ((s, want) in ROUND20) if (want == "ReminderBook") { assertTrue(ReminderBook.listAsked(s), s); assertTrue(!Reminder.cancelAsked(s), s) }
+        // Not the reminders: strategies, alarms and orders keep their own words.
+        assertEquals(Command.Kind.STOP_ALL, Ask.parse("sab strategies band karo").command?.kind)
+        for (s in listOf("sab alarms hata do", "saare orders cancel karo", "sab band karo", "remind me at 3 pm to check nifty")) assertTrue(!Reminder.cancelAsked(s), s)
+    }
+
+    @Test fun bossIndexCorrectionsAreReadAndNeverAct() {
+        for ((s, m) in CORRECTIONS_20) {
+            assertEquals(m, UsualIndex.correction(s), s)
+            neverActs(s)
+        }
+        for (s in listOf("no", "no thanks", "how is banknifty", "buy banknifty", "no banknifty is falling")) assertEquals(null, UsualIndex.correction(s), s)
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

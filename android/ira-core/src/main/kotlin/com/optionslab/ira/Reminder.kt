@@ -49,9 +49,14 @@ object Reminder {
     /** "Remind me what I said about expiry" asks his own words back ([SaidAbout]), never a reminder to set (routing round 11). */
     private fun recall(text: String): Boolean = !Later.mentionsTime(text) && runCatching { SaidAbout.asked(text) != null }.getOrDefault(false)
 
-    /** "Cancel my reminders", "delete the reminder", "reminder hata do": reminders only (timed commands stay). */
+    /**
+     * "Cancel my reminders", "delete the reminder", "reminder hata do": reminders only (timed commands stay). "Sab reminders
+     * hata do", "saare reminders cancel karo", "mere sab reminders hatao" (understanding round 20) are all of them too - each
+     * still names them and waits for Boss's Confirm, as "cancel my reminders" does.
+     */
     fun cancelAsked(text: String): Boolean =
-        rx("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((cancel|clear|delete|remove|drop)( all)?( my| the)? reminders?|reminders? (hata|cancel) (do|karo|kar do))\\s*$").containsMatchIn(text)
+        rx("(?i)^\\s*(jarvis,?\\s+)?(please\\s+)?((cancel|clear|delete|remove|drop)( all)?( my| the)? reminders?|reminders? (hata|cancel) (do|karo|kar do)|" +
+            "((sab|saare|sare|saari|sari|all)( ke| ki)?( mere| my)? |(mere|my) (sab|saare|sare|saari|sari|all) )reminders? (hata|hatao|cancel|delete|clear|remove)( (do|karo|kar do|dijiye))?)\\s*$").containsMatchIn(text)
 
     fun said(what: String) = "Boss, your reminder: $what."
 
