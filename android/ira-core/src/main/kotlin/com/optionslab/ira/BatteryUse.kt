@@ -351,3 +351,17 @@ object StudyPace {
         else -> SLOW_HOURS
     }
 }
+
+/**
+ * Battery (round 8): IraGoldAlgo's 5-minute alarm pass (24x5, an exact wake-up even while idle) read the gold feed -
+ * today's 1-minute candles and the 1-hour history - with no arm armed and nothing held too, only to refresh a price no
+ * one was watching (up to 288 wake-ups with a download a day). It now reads only when there is something to watch: an
+ * arm armed, a trade held, the Trend arm's wait for the trend to turn down and up again after a profit-lock sale (a pass
+ * may clear it, so it keeps its passes), or the saved books not read yet (fail open: an armed arm or a held buy is never
+ * left unwatched). The alarm still sets the next one and still starts the always-on service when it is needed; the Gold
+ * screen reads the price itself while open. Buys, exits and targets run as before whenever there is an arm or a trade. Pure.
+ */
+object GoldPass {
+    fun due(booksRead: Boolean, anyArmed: Boolean, anyHeld: Boolean, trendWaitsFlip: Boolean): Boolean =
+        !booksRead || anyArmed || anyHeld || trendWaitsFlip
+}

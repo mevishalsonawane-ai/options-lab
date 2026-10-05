@@ -21,6 +21,8 @@ object IraHeadroom {
             val live = Broker.within(ZERODHA_MS) { Broker.accountNow() }
             if (live != null) books += Headroom.Book("Zerodha", live, s.guardLimits(paper = false), enforced = true)
         }
+        // Battery (round 8): kept fresh on purpose - [com.optionslab.app.data.Guard.paperAccount] records the drawdown guard's
+        // peak equity from this read, and that guard input is only ever fed fresh prices.
         val snap = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
         val paper = snap?.let { sn -> runCatching { com.optionslab.app.data.Guard.paperAccount(sn) }.getOrNull() }
         if (paper != null) books += Headroom.Book("Paper", paper, s.guardLimits(paper = true), enforced = false)

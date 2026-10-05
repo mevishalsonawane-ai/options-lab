@@ -50,7 +50,8 @@ class GoldReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { GoldPaper.tick() } finally {
+            // Battery (round 8): the feed is read only with something to watch ([com.optionslab.ira.GoldPass]); any doubt reads.
+            try { if (runCatching { GoldService.passDue() }.getOrDefault(true)) GoldPaper.tick() } finally {
                 runCatching { GoldAlarm.schedule(context) }
                 // The alarm is the backup: it (re)starts the always-on service whenever it is needed and not running.
                 runCatching { GoldService.ensure(context) }
@@ -85,6 +86,22 @@ class GoldService : android.app.Service() {
             val ts = com.optionslab.app.data.GoldTasPaper.book.value
             return (liq.armed || liq.position != null || tr.armed || tr.position != null || dp.armed || dp.position != null ||
                 ts.armed || ts.position != null) && GoldLiquidity.inSession(now)
+        }
+
+        /**
+         * Battery (round 8): is the alarm's pass to read the feed? An arm armed, a trade held, the Trend arm's flip wait,
+         * or the books not read within 3 s ([com.optionslab.ira.GoldPass.due]: fail open).
+         */
+        suspend fun passDue(): Boolean {
+            val booksRead = kotlinx.coroutines.withTimeoutOrNull(3_000L) { com.optionslab.app.data.GoldBooks.awaitLoaded() } != null
+            val liq = GoldPaper.book.value
+            val tr = com.optionslab.app.data.GoldTrendPaper.book.value
+            val dp = com.optionslab.app.data.GoldDipPaper.book.value
+            val ts = com.optionslab.app.data.GoldTasPaper.book.value
+            return com.optionslab.ira.GoldPass.due(booksRead,
+                anyArmed = liq.armed || tr.armed || dp.armed || ts.armed,
+                anyHeld = liq.position != null || tr.position != null || dp.position != null || ts.position != null,
+                trendWaitsFlip = tr.waitFlip)
         }
 
         /** Start it when it is needed and not running (from the screen, the alarm or a reboot). Never throws. */

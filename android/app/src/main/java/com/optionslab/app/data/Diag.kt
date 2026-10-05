@@ -183,6 +183,10 @@ object Diag {
         if (!booksRead) append("The saved paper books are still being read; the empty ones show below.\n")
         append("Now ${GoldPaper.when_(t)} · gold trading: ${com.optionslab.engine.gold.GoldLiquidity.inSession(t)}\n")
         append("Price ${liq.price?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"} at ${liq.priceAt?.let { GoldPaper.when_(it) } ?: "-"} · feed delayed: ${GoldPaper.stale(liq, t)}\n")
+        // Battery (round 8): with nothing to watch the 5-minute alarm leaves the feed unread, so an old price is expected then.
+        if (!com.optionslab.ira.GoldPass.due(booksRead, liq.armed || tr.armed || dp.armed || ts.armed,
+                liq.position != null || tr.position != null || dp.position != null || ts.position != null, tr.waitFlip))
+            append("  (no arm armed and nothing held: the background pass skips the price read; the Gold screen reads it while open)\n")
         app?.let { c ->
             append("Notifications: ${runCatching { com.optionslab.app.work.Notifier.canPost(c) }.getOrNull()} · precise alarms: " +
                 "${runCatching { com.optionslab.app.work.Jobs.canExact(c) }.getOrNull()} · left out of battery saving: " +

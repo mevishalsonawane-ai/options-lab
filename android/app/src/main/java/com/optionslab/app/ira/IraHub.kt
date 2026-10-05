@@ -4019,10 +4019,14 @@ object IraHub {
         runCatching { checked = android.os.SystemClock.elapsedRealtime() to tradeCheck() }
     }
 
-    /** The day's P&L so far (Zerodha's in Live, else the paper account's), or null when it cannot be read. */
-    private suspend fun dayPnlNow(live: Boolean): Double? =
+    /**
+     * The day's P&L so far (Zerodha's in Live, else the paper account's), or null when it cannot be read. [paperReuseMs]
+     * as [com.optionslab.app.data.Paper.snapshot] takes it: 0 (fresh) for the trade check, which gates Solo's entries and
+     * the trade ideas; [com.optionslab.app.data.Paper.SHARED_QUOTE_MS] for words only (Battery, round 8).
+     */
+    private suspend fun dayPnlNow(live: Boolean, paperReuseMs: Long = 0L): Double? =
         if (live) runCatching { com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook().m2m } }.getOrNull()
-        else runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()
+        else runCatching { com.optionslab.app.data.Paper.snapshot(paperReuseMs).dayPnl }.getOrNull()
 
     /** What Boss told about himself that bears on a trade check now ([com.optionslab.ira.AboutBoss.recall]), or null. Words only. */
     private suspend fun aboutBossNow(): String? {
@@ -4031,7 +4035,8 @@ object IraHub {
         val m = com.optionslab.app.data.Market
         val live = com.optionslab.app.data.AppSettings.load().live
         return com.optionslab.ira.AboutBoss.recall(notes, com.optionslab.ira.AboutBoss.Moment(m.today(), com.optionslab.ira.AboutBoss.At.CHECK,
-            dayPnl = dayPnlNow(live),
+            // Words only, said right after the trade check (whose fresh read it then shares): Battery, round 8.
+            dayPnl = dayPnlNow(live, com.optionslab.app.data.Paper.SHARED_QUOTE_MS),
             expiryToday = listOf("NIFTY", "BANKNIFTY", "FINNIFTY").any { runCatching { m.isExpiryDay(it) }.getOrDefault(false) }))
     }
 
@@ -4188,7 +4193,8 @@ object IraHub {
             runCatching {
                 val set = com.optionslab.app.data.AppSettings.load()
                 val pnl = HashMap<String, Double>()
-                runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
+                // Words only: shares the prices [IraCoach.openLegs] read just above (Battery, round 8).
+                runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
                 if (com.optionslab.app.data.Broker.loggedIn) runCatching {
                     com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
                 }.getOrNull()?.let { pnl["Zerodha"] = it }
@@ -4342,7 +4348,8 @@ object IraHub {
             val set = com.optionslab.app.data.AppSettings.load()
             val pnl = HashMap<String, Double>()
             if (!s.next) {
-                runCatching { com.optionslab.app.data.Paper.snapshot().dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
+                // Words only (a scenario said aloud): a price read in the last 20 s is shared (Battery, round 8).
+                runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).dayPnl }.getOrNull()?.let { pnl["Paper"] = it }
                 if (com.optionslab.app.data.Broker.loggedIn) runCatching {
                     com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }?.m2m
                 }.getOrNull()?.let { pnl["Zerodha"] = it }
