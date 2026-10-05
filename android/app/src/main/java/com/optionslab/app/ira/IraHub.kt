@@ -1232,7 +1232,8 @@ object IraHub {
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
-                com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null || com.optionslab.ira.MindChange.asked(q) ||
+                com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
+                com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1963,6 +1964,22 @@ object IraHub {
             runCatching { com.optionslab.ira.FigureFirst.asked(q) }.getOrNull() else null
         if (figureAsk != null) {
             val said = if (figureAsk == com.optionslab.ira.FigureFirst.Request.RESET) IraTools.figureReset() else IraTools.figureHeld()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What did you get wrong today?" / "galat jawab": the questions Jarvis answered with the wrong thing - asked again within
+        // 2 minutes, or Boss saying so ([com.optionslab.ira.WrongThing]; the question's kind and the way taken only, never the
+        // words). A record to fix the routing by: nothing learned acts or re-routes by itself.
+        val wrongAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.WrongThing.asked(q) }.getOrNull() else null
+        val wrongObjected = wrongAsk == null && com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.WrongThing.objected(q) }.getOrDefault(false)
+        if (wrongAsk != null || wrongObjected) {
+            val said = if (wrongAsk != null) IraTools.wrongSay(wrongAsk) else {
+                IraTools.wrongSaid()
+                "Sorry, Boss - noted that my last answer missed what you asked (what it was about and how I took it, never your words). " +
+                    "Ask it again in other words, or say \"that was wrong\" and I'll ask whether to learn what you meant."
+            }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

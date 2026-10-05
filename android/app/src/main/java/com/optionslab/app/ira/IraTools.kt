@@ -36,6 +36,8 @@ internal object IraTools {
         count("mistakes")
         IraActivity.add("Marked wrong: \"$said\".")
         awaiting = said to System.currentTimeMillis()
+        // The question's kind and the way it was taken, for "what did you get wrong today?" (never the words; a record only).
+        wrongSaid()
         return "Sorry, Boss. I've noted it: you said \"$said\". Say it another way and I'll ask whether to learn what you meant."
     }
 
@@ -57,6 +59,7 @@ internal object IraTools {
         runCatching {
             clarityAsked(said)
             againAsked(said)
+            wrongAsked(said)
             val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
             val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
             prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
@@ -705,6 +708,53 @@ internal object IraTools {
         }
     }
 
+    // ---- the questions he answered with the wrong thing ([com.optionslab.ira.WrongThing]) ------------------------------
+
+    /** The misses noted (the question's kind, the way it was taken, the time and the sign only - never the words), 30 days. */
+    private const val WRONG_THING = "jarvis.wrongThing"
+    @Volatile private var wrongCache: com.optionslab.ira.WrongThing.Log? = null
+    /** The question asked last (its kind, the way taken, its words as a set; in memory only, never saved). */
+    @Volatile private var wrongLast: com.optionslab.ira.WrongThing.Last? = null
+
+    fun wrongLog(): com.optionslab.ira.WrongThing.Log = wrongCache ?: runCatching {
+        val e = JSONArray(prefs().getString(WRONG_THING) ?: "[]")
+        com.optionslab.ira.WrongThing.Log((0 until e.length()).map { i -> e.getJSONObject(i).let { x ->
+            com.optionslab.ira.WrongThing.Event(x.getString("k"), x.getString("w"), LocalDateTime.parse(x.getString("t")),
+                runCatching { com.optionslab.ira.WrongThing.Why.valueOf(x.optString("y")) }.getOrDefault(com.optionslab.ira.WrongThing.Why.REPEAT))
+        } })
+    }.getOrDefault(com.optionslab.ira.WrongThing.Log()).also { wrongCache = it }
+
+    private fun wrongSave(log: com.optionslab.ira.WrongThing.Log) {
+        wrongCache = log
+        val a = JSONArray().apply { log.events.forEach { x ->
+            put(JSONObject().put("k", x.kind).put("w", x.took).put("t", x.at.toString()).put("y", x.why.name))
+        } }
+        prefs().putAllSoon(mapOf(WRONG_THING to a.toString()))
+    }
+
+    /** A question asked: the same question again within 2 minutes notes the first answer as a miss (a record only). */
+    @Synchronized fun wrongAsked(said: String) {
+        runCatching {
+            val step = com.optionslab.ira.WrongThing.heard(wrongLog(), wrongLast, said, LocalDateTime.now(IST).withNano(0))
+            wrongLast = step.last
+            if (step.noted != null) wrongSave(step.log)
+        }
+    }
+
+    /** Boss said the last answer was not what he asked ("galat jawab", "that was wrong"): noted against that question, once. */
+    @Synchronized fun wrongSaid() {
+        runCatching {
+            val step = com.optionslab.ira.WrongThing.said(wrongLog(), wrongLast, LocalDateTime.now(IST).withNano(0))
+            wrongLast = step.last
+            if (step.noted != null) wrongSave(step.log)
+        }
+    }
+
+    /** "What did you get wrong today?". */
+    fun wrongSay(request: com.optionslab.ira.WrongThing.Request): String =
+        runCatching { com.optionslab.ira.WrongThing.say(wrongLog(), request, LocalDateTime.now(IST).withNano(0)) }
+            .getOrDefault("I could not read my record of answers that missed just now, Boss.")
+
     /** "Which of your answers do I ask again?". */
     fun againSay(): String = runCatching { com.optionslab.ira.AskedAgain.say(againLog(), askedKinds(), LocalDateTime.now(IST).withNano(0)) }
         .getOrDefault("I could not read my record of answers you asked again just now, Boss.")
@@ -782,6 +832,7 @@ internal object IraTools {
         clarity = runCatching { clarityLog() }.getOrDefault(com.optionslab.ira.Clarity.Log()),
         wordFit = runCatching { wordFitLog() }.getOrDefault(com.optionslab.ira.WordFit.Log()),
         again = runCatching { againLog() }.getOrDefault(com.optionslab.ira.AskedAgain.Log()),
+        wrong = runCatching { wrongLog() }.getOrDefault(com.optionslab.ira.WrongThing.Log()),
         figure = runCatching { figureLog() }.getOrDefault(com.optionslab.ira.FigureFirst.Log()))
 
     /**

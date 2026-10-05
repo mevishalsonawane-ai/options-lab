@@ -11,7 +11,7 @@ import java.util.Locale
  * ([AlertSense]), the conditions his own ideas and Solo sit out ([SelfCalibration], [SoloCalibration]), the answer kinds
  * he flags ([SelfDoubt]), the pattern kinds he no longer brings up unasked ([PatternCalls]), his data-freshness record
  * ([DataAge]), how Nifty moved after each news theme's headlines ([NewsMoves]), the market reads Boss asked again within
- * minutes ([AskedAgain], a record only) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
+ * minutes ([AskedAgain], a record only), the questions he answered with the wrong thing ([WrongThing], a record only) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
  * words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -41,6 +41,7 @@ object Learnings {
         CLARITY("Answers I keep shorter aloud", false),
         WORD_FIT("Confidence words I set to fit my numbers", false),
         AGAIN("Market reads you asked again within minutes", false),
+        WRONG_THING("Questions I answered with the wrong thing", false),
         FIGURE_FIRST("Market reads I start with the figure aloud", false),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -72,6 +73,7 @@ object Learnings {
         val clarity: Clarity.Log = Clarity.Log(),
         val wordFit: WordFit.Log = WordFit.Log(),
         val again: AskedAgain.Log = AskedAgain.Log(),
+        val wrong: WrongThing.Log = WrongThing.Log(),
         val figure: FigureFirst.Log = FigureFirst.Log(),
     )
 
@@ -123,6 +125,11 @@ object Learnings {
         // The market reads Boss asked again within minutes ([AskedAgain]; kinds only): a record, it changes nothing he does.
         AskedAgain.shown(i.again, i.tally, now).forEach { r ->
             out += Item(Area.AGAIN, AskedAgain.ledgerWhat(r), r.newest.toLocalDate(), AskedAgain.ledgerWhy(r), null)
+        }
+        // The questions he answered with the wrong thing ([WrongThing]; kinds and the way taken only): a record to fix the
+        // routing by - it re-routes nothing and has no undo.
+        WrongThing.shown(i.wrong, now).forEach { r ->
+            out += Item(Area.WRONG_THING, WrongThing.ledgerWhat(r), r.newest.toLocalDate(), WrongThing.ledgerWhy(r), null)
         }
         // The market reads whose figure he says first aloud, Boss having asked them again for it ([FigureFirst]; kinds only).
         FigureFirst.leading(i.figure, now).forEach { r ->
@@ -216,7 +223,7 @@ object Learnings {
     fun say(items: List<Item>, ask: Ask, today: LocalDate, locked: Boolean): String {
         val shown = items.filter { !locked || !it.personal }
             .filter { ask == Ask.ALL || thisWeek(it.on, today) }
-            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS && it.area != Area.AGAIN) }
+            .filter { ask != Ask.CHANGED || (it.area != Area.DATA && it.area != Area.NEWS && it.area != Area.AGAIN && it.area != Area.WRONG_THING) }
         val hidden = locked && items.any { it.personal }
         val tail = listOfNotNull(if (hidden) UNLOCK else null, NEVER_ACTS).joinToString(" ")
         if (shown.isEmpty()) {
