@@ -1463,6 +1463,9 @@ class JarvisVoice : Service() {
         val id = asking
         if (id != null && SystemClock.elapsedRealtime() < askingUntil) {
             val yes = alternatives.firstOrNull()?.let { Wake.yesNo(it) }
+            // A yes or no here is Boss's next words: the morning offer and the wait for a turn-down reason end (the "no"
+            // below may start a new wait for its reason).
+            if (yes != null) runCatching { IraTools.endWaits() }
             // An offer said after the question ("... say yes for it"): this yes or no may be for the offer, so it is not
             // taken for the request - never approved by a yes meant for something else ([com.optionslab.ira.AnswerWindow]).
             // Said so as a yes-or-no question again: the next yes or no is the request's.
@@ -1480,14 +1483,17 @@ class JarvisVoice : Service() {
                 // "Answer only my voice": a yes in another voice never approves anything (a no from anyone still cancels).
                 if (yes && onlyBoss && VoiceGuard.enrolled && lastHeard != null && !VoiceGuard.isBoss(lastHeard)) { note("a yes in another voice: ignored"); again(); return }
                 if (yes && askingNeedsBoss && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
+                // Whether a "no"'s words may be read for Boss's reason: his voice when enrolled (judged now, on this turn's audio).
+                val bossNo = !yes && (!VoiceGuard.enrolled || (lastHeard != null && VoiceGuard.isBoss(lastHeard)))
                 asking = null
                 _state.value = VoiceState(Mode.THINKING)
                 scope.launch {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
                     val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
                         // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
-                        // only, and only in Boss's own voice when it is enrolled; a no from anyone still cancels.)
-                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { !VoiceGuard.enrolled || lastHeard == null || VoiceGuard.isBoss(lastHeard) }); "Rejected. Nothing was placed." }
+                        // only, and only in Boss's own voice when it is enrolled - a no with no voice heard is not his reason; a
+                        // no from anyone still cancels.)
+                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }); "Rejected. Nothing was placed." }
                     // An order's result is read back as it is: its prices exact, never rounded for the ear.
                     say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }

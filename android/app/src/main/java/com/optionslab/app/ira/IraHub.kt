@@ -796,18 +796,29 @@ object IraHub {
         runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.filter { it.quantity != 0 }
             .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
         // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, the live positions wait for the next pass.
-        if (com.optionslab.app.data.Broker.loggedIn) com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }
-            ?.net?.filter { it.open && it.exchange == "NFO" }
-            ?.forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, true, it.qty, it.avg, it.last) to it.product }
+        // [liveRead]: Zerodha's positions and stop orders were both read this pass. When not, the live positions' "L:" first-
+        // seen times are kept (a flaky read never restarts their two-minute grace, so the guard still gets to them).
+        var liveRead = !com.optionslab.app.data.Broker.loggedIn
+        if (com.optionslab.app.data.Broker.loggedIn) {
+            val liveBook = com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.positionBook() }
+            if (liveBook != null) {
+                liveRead = true
+                liveBook.net.filter { it.open && it.exchange == "NFO" }
+                    .forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, true, it.qty, it.avg, it.last) to it.product }
+            }
+        }
         // Nothing open (most passes): nothing can be bare, so the stop orders are not read (a Zerodha read each pass).
-        if (open.isEmpty()) { synchronized(unguardedSince) { unguardedSince.clear() }; return }
+        if (open.isEmpty()) {
+            synchronized(unguardedSince) { if (liveRead) unguardedSince.clear() else unguardedSince.keys.removeAll { !it.startsWith("L:") } }
+            return
+        }
         runCatching { com.optionslab.app.data.Paper.snapshot().orders.orders.filter { o -> o.priceType.uppercase() in setOf("SL", "SL-M") &&
             o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }.forEach { guarded += "P:" + it.symbol } }
         if (com.optionslab.app.data.Broker.loggedIn) {
             val liveOrders = com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.orders() }
             // Zerodha's stop orders not read in time: no live position is called bare this pass (never a stop offered on
             // one that has its own).
-            if (liveOrders == null) open.removeAll { it.first.live }
+            if (liveOrders == null) { open.removeAll { it.first.live }; liveRead = false }
             else liveOrders.filter { o -> o.working && o.type in setOf("SL", "SL-M") }.forEach { guarded += "L:" + it.symbol }
             if (open.isEmpty()) return
         }
@@ -820,7 +831,8 @@ object IraHub {
         runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
         val day = com.optionslab.app.data.Market.today().toString()
         val bare = open.filter { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol !in guarded && p.symbol !in bots }
-        synchronized(unguardedSince) { unguardedSince.keys.retainAll(bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()) }
+        val bareKeys = bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()
+        synchronized(unguardedSince) { unguardedSince.keys.retainAll { it in bareKeys || (!liveRead && it.startsWith("L:")) } }
         for ((p, product) in bare) {
             val k = (if (p.live) "L:" else "P:") + p.symbol
             val since = synchronized(unguardedSince) { unguardedSince.getOrPut(k) { now } }
@@ -1201,6 +1213,9 @@ object IraHub {
             val said = runCatching { IraDayJournal.heard(q) }.getOrNull()
             if (said != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }; return }
         }
+        // Words read as understood (a voice not recognised, the chat's confirm path, or a reading of his words): they are his
+        // next words too, so the morning offer and the wait for a turn-down reason end here (never taken by them).
+        if (com.optionslab.app.BuildConfig.JARVIS && understood) runCatching { IraTools.endWaits() }
         // Boss's bare "yes" as his very next words after the morning check offered his usual morning question
         // ([com.optionslab.ira.MorningAsks]): asked as that question - a market question only, checked again here, never an
         // order or a command. Any other words end the offer, and a yes while something waits for his yes or Confirm is never
@@ -2318,7 +2333,7 @@ object IraHub {
                     val next = com.optionslab.ira.ExpiryEve.nextTradingDay(mk.today()) { mk.isTradingDay(it) }
                     // Whether Zerodha's positions were actually read (round 23): a failed or timed-out read is never "both read".
                     val r = IraCoach.expiryEveRead()
-                    com.optionslab.ira.ExpiryEve.answer(r?.line, next, r?.zerodhaRead ?: false, r?.loggedIn ?: com.optionslab.app.data.Broker.loggedIn)
+                    com.optionslab.ira.ExpiryEve.answer(r?.line, next, r?.zerodhaRead ?: false, r?.loggedIn ?: com.optionslab.app.data.Broker.loggedIn, r?.undated ?: 0)
                 }.getOrElse { "I could not read what of yours expires tomorrow just now, Boss." }
                 reply(said)
             }
@@ -2489,12 +2504,15 @@ object IraHub {
         // "Why is the app using battery?", "battery kyun kha raha hai" ([com.optionslab.ira.BatteryUse]; battery round 1): what of
         // the app runs in the background now, the biggest cost first - listening, the live stream, the order watch (named, never
         // offered slower: it guards stops, targets and exits), the AI model - and the battery saver for listening's switch. The
-        // app's own state only (no amount, no position, no symbol), so the same on a locked phone. Reads only: nothing is switched.
+        // app's own state only (no amount, no position, no symbol); on a locked phone without the watch's pace or the stream's
+        // instrument count (both hint at a position). Reads only: nothing is switched.
         if (!bundled && parsed.order == null && parsed.command == null &&
             runCatching { com.optionslab.ira.BatteryUse.asked(q) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val lockedNow = phoneLocked()
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { com.optionslab.ira.BatteryUse.answer(com.optionslab.app.work.BatteryNow.snapshot(app)) }
+                // A locked phone: no watch pace, no instrument count (either hints that something is held).
+                reply(runCatching { com.optionslab.ira.BatteryUse.answer(com.optionslab.app.work.BatteryNow.snapshot(app), lockedNow) }
                     .getOrElse { "I could not read what runs in the background just now, Boss." })
             }
             return true

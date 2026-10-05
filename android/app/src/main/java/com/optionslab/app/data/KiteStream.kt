@@ -154,6 +154,9 @@ object KiteStream {
             if (now - idleSince < IDLE_STOP_MS) { start(); return }
             idleStopped = true
             stop("nothing needed live prices for ${IDLE_STOP_MS / 60_000} min (the app in the background, no open position, no quote asked); it starts again when something does")
+            // A touch that landed between needed() above and idleStopped = true found it not yet stopped, so its wake()
+            // did nothing: looked at again now, and started again if so.
+            if (needed()) wake()
         } else stop(when { !loggedIn -> "no Zerodha login"; !hasKey -> "no API key"; else -> "outside market hours" })
     }
 

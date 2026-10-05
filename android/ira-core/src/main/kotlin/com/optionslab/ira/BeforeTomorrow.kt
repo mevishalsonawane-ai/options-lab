@@ -29,6 +29,7 @@ object BeforeTomorrow {
      * Live. [expiring]: his legs expiring on [next] (null: not read - a locked phone). [loggedIn]: Zerodha logged in now;
      * [zerodhaRead]: its positions were actually read. [armed]: names armed now; [records]: their paper records by name
      * (null: not read). [staticIp]/[relay]/[battery]: null when not set up or not known. [lastBackup]: null when never.
+     * [undated]: open Zerodha positions read but not in the instruments on the phone, so their expiry couldn't be told.
      */
     data class Facts(
         val today: LocalDate, val next: LocalDate?,
@@ -37,6 +38,7 @@ object BeforeTomorrow {
         val armed: List<String>, val records: Map<String, Record>?,
         val staticIp: Boolean?, val relay: Boolean?, val battery: Boolean?,
         val lastBackup: LocalDate?,
+        val undated: Int = 0,
     )
 
     /** One item: [todo] true is a step Boss takes, false is fine, null a note. */
@@ -71,6 +73,7 @@ object BeforeTomorrow {
                     (zerodhaGap(f)?.let { " $it" } ?: ""))
             f.loggedIn && !f.zerodhaRead -> Item("Expiring legs", null, "Nothing on Paper expires $day; Zerodha's positions couldn't be read just now, so I can't say the same for them.")
             f.configured && !f.loggedIn -> Item("Expiring legs", false, "Nothing on Paper expires $day; Zerodha isn't logged in, so its positions weren't read.")
+            f.configured && f.zerodhaRead && f.undated > 0 -> Item("Expiring legs", null, "Nothing I could date of yours expires $day - Paper read; ${ExpiryEve.undatedLine(f.undated)}.")
             f.configured -> Item("Expiring legs", false, "Nothing you hold expires $day - Paper and Zerodha both read.")
             else -> Item("Expiring legs", false, "Nothing you hold on Paper expires $day.")
         }
@@ -110,6 +113,7 @@ object BeforeTomorrow {
     private fun zerodhaGap(f: Facts): String? = when {
         f.loggedIn && !f.zerodhaRead -> "(Zerodha's positions couldn't be read just now: only Paper's are listed.)"
         f.configured && !f.loggedIn -> "(Zerodha isn't logged in, so only Paper's are listed.)"
+        f.zerodhaRead && f.undated > 0 -> "(${ExpiryEve.undatedLine(f.undated)}.)"
         else -> null
     }
 

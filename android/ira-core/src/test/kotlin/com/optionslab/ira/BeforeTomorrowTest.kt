@@ -100,4 +100,13 @@ class BeforeTomorrowTest {
         assertEquals("x", ExpiryEve.answer("x", d, true, true))
         assertEquals("x", ExpiryEve.answer("x", d, false, false))
     }
+
+    @Test fun undatedZerodhaPositionsSaid() {
+        val s = BeforeTomorrow.say(facts().copy(undated = 2), false)
+        assertFalse(s.contains("both read"), s)
+        assertTrue(s.contains("2 Zerodha positions I couldn't date"), s)
+        val withLegs = BeforeTomorrow.say(facts(expiring = listOf(ExpiryEve.Leg("Paper", "X", 75))).copy(undated = 1), false)
+        assertTrue(withLegs.contains("1 Zerodha position I couldn't date"), withLegs)
+        assertTrue(BeforeTomorrow.say(facts(), false).contains("both read"))
+    }
 }

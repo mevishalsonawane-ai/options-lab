@@ -969,15 +969,18 @@ internal object IraCoach {
      * answers "what expires tomorrow?" in IraHub.)
      */
     internal suspend fun expiryEve(): String? = expiryEveRead()?.let { r ->
-        r.line?.let { l -> l + (com.optionslab.ira.ExpiryEve.unread(r.zerodhaRead, r.loggedIn)?.let { " $it" } ?: "") }
+        r.line?.let { l -> l + (com.optionslab.ira.ExpiryEve.unread(r.zerodhaRead, r.loggedIn, r.undated)?.let { " $it" } ?: "") }
     }
 
     /**
      * What [expiryEve] read: the checklist [line] (null: nothing expiring), the [legs] themselves, whether Zerodha was logged
      * in ([loggedIn]) and whether its positions were actually read ([zerodhaRead]: false when the read failed, timed out, or
-     * its instruments were not on the phone to tell the expiry). Null when the next trading day is not known. Reads only.
+     * its instruments were not on the phone to tell the expiry). [undated]: open Zerodha derivative positions read but not
+     * in the instruments on the phone (SENSEX/BFO, stock options, MCX), so their expiry couldn't be told - said, never
+     * taken for "nothing expires". Null when the next trading day is not known. Reads only.
      */
-    internal class EveRead(val line: String?, val legs: List<com.optionslab.ira.ExpiryEve.Leg>, val loggedIn: Boolean, val zerodhaRead: Boolean)
+    internal class EveRead(val line: String?, val legs: List<com.optionslab.ira.ExpiryEve.Leg>, val loggedIn: Boolean, val zerodhaRead: Boolean,
+                           val undated: Int = 0)
 
     internal suspend fun expiryEveRead(): EveRead? {
         val mk = com.optionslab.app.data.Market
@@ -999,6 +1002,7 @@ internal object IraCoach {
         } }
         val loggedIn = Broker.loggedIn
         var zerodhaRead = false
+        var undated = 0
         if (loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
             // The broker is not waited on past 8 seconds, run apart (Broker.within: a blocking read a plain timeout cannot
@@ -1009,13 +1013,15 @@ internal object IraCoach {
             if (open.isNotEmpty() && ins.isEmpty()) return@runCatching
             zerodhaRead = true
             open.forEach { p ->
-                val i = ins[p.symbol] ?: return@forEach
+                // Not in the instruments on the phone (cash equity never expires, so it isn't counted): its expiry can't be
+                // told, so it is counted and said - never a silent "nothing expires".
+                val i = ins[p.symbol] ?: run { if (p.exchange != "NSE" && p.exchange != "BSE") undated++; return@forEach }
                 if (i.expiry != expiry) return@forEach
                 val right = i.right.name.takeIf { it == "CE" || it == "PE" }
                 legs += com.optionslab.ira.ExpiryEve.Leg("Zerodha", p.symbol, p.qty, p.product, i.name, i.strike, right, spot(i.name),
                     keptToSettlement = kept(i.name, i.strike, right))
             }
         }
-        return EveRead(com.optionslab.ira.ExpiryEve.line(legs, today, expiry, s.expirySquareOff), legs, loggedIn, zerodhaRead)
+        return EveRead(com.optionslab.ira.ExpiryEve.line(legs, today, expiry, s.expirySquareOff), legs, loggedIn, zerodhaRead, undated)
     }
 }

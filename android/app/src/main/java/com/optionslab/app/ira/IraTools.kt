@@ -1036,6 +1036,15 @@ internal object IraTools {
         return com.optionslab.ira.MorningAsks.taken(key, at, said, waiting, asksNow())
     }
 
+    /**
+     * Boss's words went another way (a request read as understood, or a yes / no to Jarvis's question): the morning offer
+     * and the wait for a turn-down reason both end - only ever his very next words may take them.
+     */
+    fun endWaits() {
+        asksOffered = null
+        turnedDownAt = null
+    }
+
     /** "What do you offer me in the morning?". */
     fun morningAsksSay(): String = runCatching { com.optionslab.ira.MorningAsks.say(asksLog(), com.optionslab.app.data.Market.today()) }
         .getOrDefault("I could not read my record of your morning questions just now, Boss.")

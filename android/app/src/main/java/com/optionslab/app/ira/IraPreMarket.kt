@@ -115,7 +115,7 @@ internal object IraPreMarket {
             expiring = eve?.legs, loggedIn = eve?.loggedIn ?: Broker.loggedIn, zerodhaRead = eve?.zerodhaRead ?: false,
             armed = armed, records = records,
             staticIp = staticIp, relay = runCatching { relayAnswers() }.getOrNull(), battery = battery,
-            lastBackup = lastBackup,
+            lastBackup = lastBackup, undated = eve?.undated ?: 0,
         )
         return com.optionslab.ira.BeforeTomorrow.say(facts, locked)
     }

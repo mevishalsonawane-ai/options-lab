@@ -109,11 +109,16 @@ object ExpiryEve {
      * The answer to [asked]: [line] (the checklist, when something he holds expires on [expiry], the next trading day), else
      * that nothing does - saying whether Zerodha's positions were actually read ([zerodhaRead]) and, when not, why: not
      * logged in ([loggedIn] false), or logged in but the read failed or timed out (round 23: it used to claim both were
-     * read whenever Zerodha was logged in). A checklist from Paper alone says so too. Facts only; nothing acts.
+     * read whenever Zerodha was logged in). A checklist from Paper alone says so too. [undated]: open Zerodha positions
+     * read but not in the instruments on the phone (SENSEX/BFO, stock options, MCX), so their expiry couldn't be told -
+     * said so, never counted as "nothing expires". Facts only; nothing acts.
      */
-    fun answer(line: String?, expiry: LocalDate?, zerodhaRead: Boolean, loggedIn: Boolean = zerodhaRead): String {
-        if (line != null) return line + (unread(zerodhaRead, loggedIn)?.let { " $it" } ?: "")
+    fun answer(line: String?, expiry: LocalDate?, zerodhaRead: Boolean, loggedIn: Boolean = zerodhaRead, undated: Int = 0): String {
+        if (line != null) return line + (unread(zerodhaRead, loggedIn, undated)?.let { " $it" } ?: "")
         if (expiry == null) return "I couldn't tell the next trading day just now, Boss, so I can't say what expires."
+        val gap = undatedLine(undated)
+        if (zerodhaRead && gap != null)
+            return "Nothing I could date of yours expires on the next trading day (${expiry.format(DAY)}), Boss - Paper read; $gap. Facts only, nothing is done."
         return "Nothing you hold expires on the next trading day (${expiry.format(DAY)}), Boss" +
             (when {
                 zerodhaRead -> " - your Paper and Zerodha positions both read."
@@ -123,9 +128,20 @@ object ExpiryEve {
             " Facts only, nothing is done."
     }
 
-    /** Said after a checklist when Zerodha is logged in but its positions weren't read (only Paper's legs are in it). */
-    fun unread(zerodhaRead: Boolean, loggedIn: Boolean): String? =
-        if (loggedIn && !zerodhaRead) "Zerodha's positions couldn't be read just now, so only your Paper legs are listed." else null
+    /**
+     * Said after a checklist when Zerodha is logged in but its positions weren't read (only Paper's legs are in it), or when
+     * [undated] open Zerodha positions couldn't be dated (not in the instruments on the phone).
+     */
+    fun unread(zerodhaRead: Boolean, loggedIn: Boolean, undated: Int = 0): String? = when {
+        loggedIn && !zerodhaRead -> "Zerodha's positions couldn't be read just now, so only your Paper legs are listed."
+        zerodhaRead && undated > 0 -> undatedLine(undated)!!.replaceFirstChar { it.uppercase() } + ", so they aren't listed."
+        else -> null
+    }
+
+    /** "2 Zerodha positions I couldn't date (not in the instruments on the phone) - check those yourself", or null for none. */
+    fun undatedLine(undated: Int): String? =
+        if (undated <= 0) null
+        else "$undated Zerodha position${if (undated == 1) "" else "s"} I couldn't date (not in the instruments on the phone) - check ${if (undated == 1) "it" else "those"} yourself"
 
     /** The next trading day after [today] by [isTradingDay] (within two weeks), or null. */
     fun nextTradingDay(today: LocalDate, isTradingDay: (LocalDate) -> Boolean): LocalDate? =

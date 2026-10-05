@@ -96,14 +96,18 @@ object BatteryUse {
         "phone " + (s.batteryPercent?.let { "$it%" } ?: "battery unknown") + if (s.charging) ", charging" else ", not charging",
     ).joinToString(" · ")
 
-    /** The spoken answer, the biggest background cost first. */
-    fun answer(s: Snapshot): String {
+    /**
+     * The spoken answer, the biggest background cost first. [locked]: a locked phone - the order watch's pace (every 15
+     * seconds means something is held) and the stream's instrument count are left out, so nothing hints at a position.
+     */
+    fun answer(s: Snapshot, locked: Boolean = false): String {
         val parts = ArrayList<String>()
         if (s.listening) parts += "Listening for \"Jarvis\" - the microphone and the phone's speech recognizer, all the time; that is usually the biggest. " +
             if (s.listenSaver) "Battery saver for listening is on" + (if (s.resting) ", and I'm resting between turns now." else ": I rest between turns when the screen is off, the market is shut and the room is quiet.")
             else "Battery saver for listening is off: switch it on in the Jarvis page and I listen in short rests when the screen is off, the market is shut and the room is quiet."
-        if (s.stream != "OFF") parts += "Zerodha's live price stream (${s.streamTokens} instrument${if (s.streamTokens == 1) "" else "s"}): it stops by itself when nothing needs live prices for a few minutes."
-        if (s.watch) parts += "The order watch" + (s.watchStepSec?.let { ", every $it seconds" } ?: "") +
+        if (s.stream != "OFF") parts += "Zerodha's live price stream" + (if (locked) "" else " (${s.streamTokens} instrument${if (s.streamTokens == 1) "" else "s"})") +
+            ": it stops by itself when nothing needs live prices for a few minutes."
+        if (s.watch) parts += "The order watch" + (s.watchStepSec?.takeIf { !locked }?.let { ", every $it seconds" } ?: "") +
             ": it guards your stops, targets, exits and the expiry square-off, so I never slow it; it ends at the close."
         if (s.modelLoaded) parts += "The AI model is in memory: it leaves by itself after a few minutes unused."
         val battery = when {

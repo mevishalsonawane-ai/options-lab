@@ -52,4 +52,21 @@ class ExpiryEveTest {
         assertEquals(LocalDate.of(2026, 10, 12), ExpiryEve.nextTradingDay(fri) { it.dayOfWeek.value <= 5 })
         assertEquals(tue, ExpiryEve.nextTradingDay(today) { true })
     }
+
+    @Test fun undatedZerodhaPositionsAreNeverABothRead() {
+        // Open Zerodha positions outside the instruments on the phone (SENSEX/BFO, stock options, MCX): never "both read".
+        val none = ExpiryEve.answer(null, tue, true, true, 2)
+        assertFalse(none.contains("both read"), none)
+        assertTrue(none.contains("2 Zerodha positions I couldn't date"), none)
+        assertTrue(none.contains("Boss"), none)
+        val one = ExpiryEve.answer(null, tue, true, true, 1)
+        assertTrue(one.contains("1 Zerodha position I couldn't date") && one.contains("check it yourself"), one)
+        assertEquals("x 3 Zerodha positions I couldn't date (not in the instruments on the phone) - check those yourself, so they aren't listed.",
+            ExpiryEve.answer("x", tue, true, true, 3))
+        // None undated: as before.
+        assertTrue(ExpiryEve.answer(null, tue, true, true, 0).contains("both read"))
+        // Not read at all: the unread words, not the undated ones.
+        assertTrue(ExpiryEve.answer(null, tue, false, true, 2).contains("couldn't be read just now"))
+        assertNull(ExpiryEve.undatedLine(0))
+    }
 }

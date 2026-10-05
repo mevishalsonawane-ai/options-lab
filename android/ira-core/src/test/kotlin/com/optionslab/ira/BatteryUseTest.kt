@@ -117,4 +117,15 @@ class NightNewsPaceTest {
         assertEquals(null, NightNewsPace.nextOpen(at(3, 12)) { false })
         assertTrue(NightNewsPace.due(at(3, 12), null))
     }
+
+    private val lockSnap = BatteryUse.Snapshot(listening = true, listenSaver = false, resting = false, watch = true, watchStepSec = 60,
+        stream = "LIVE", streamTokens = 5, modelLoaded = false, marketOpen = true, batteryPercent = 60, charging = false)
+
+    @Test fun lockedPhoneHintsAtNoPosition() {
+        val a = BatteryUse.answer(lockSnap.copy(watchStepSec = 15), locked = true)
+        assertFalse("15 seconds" in a || "every 15" in a, a)
+        assertFalse("instrument" in a, a)
+        assertTrue("order watch" in a && "live price stream" in a && "Boss" in a, a)
+        assertTrue("every 15 seconds" in BatteryUse.answer(lockSnap.copy(watchStepSec = 15)))
+    }
 }

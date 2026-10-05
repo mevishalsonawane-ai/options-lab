@@ -110,12 +110,20 @@ class GoldService : android.app.Service() {
         return title to line
     }
 
-    /** The notice last shown: re-posted only when its words change (Battery, round 2 - it was re-posted every minute). */
+    /**
+     * The notice last shown: re-posted when its words change (Battery, round 2 - it was re-posted every minute), and at
+     * least every [RESHOW_MS] even unchanged - on Android 14+ a foreground notice can be swiped away, and only a re-post
+     * brings it back.
+     */
     private var shown: Pair<String, String>? = null
+    /** When the notice was last posted (elapsed realtime). */
+    private var shownAt = 0L
+    private val RESHOW_MS = 15 * 60_000L
 
     private fun show(): Boolean {
         val (title, line) = text()
         shown = title to line
+        shownAt = android.os.SystemClock.elapsedRealtime()
         val n = Notifier.builder(this, Notifier.GOLD_BG, title, line)
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true).build()
         val type = if (android.os.Build.VERSION.SDK_INT >= 34) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
@@ -138,7 +146,7 @@ class GoldService : android.app.Service() {
                 while (true) {
                     if (!needed()) break
                     runCatching { GoldPaper.tick() }
-                    runCatching { if (text() != shown) show() }
+                    runCatching { if (text() != shown || android.os.SystemClock.elapsedRealtime() - shownAt >= RESHOW_MS) show() }
                     // 30 s past each minute, as the alarm's pass (the feed's last minute is in by then).
                     val now = LocalDateTime.now(ZoneOffset.UTC)
                     val next = now.withSecond(30).withNano(0).let { if (it.isAfter(now)) it else it.plusMinutes(1) }
