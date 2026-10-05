@@ -354,7 +354,8 @@ object IraHub {
     suspend fun refreshIfDue(quiet: Boolean) {
         val began = refreshBeganAt
         val sinceMs = if (began == 0L) null else System.nanoTime() / 1_000_000L - began
-        if (com.optionslab.ira.LiveReadPace.due(sinceMs, quiet)) refresh()
+        // Nothing read yet (a first start, or after forgetAll): read now, whoever read a moment ago.
+        if (_state.value.snaps.isEmpty() || com.optionslab.ira.LiveReadPace.due(sinceMs, quiet)) refresh()
     }
 
     /** When the last [refresh] began its reads (monotonic ms, [System.nanoTime]; 0: none yet). Battery, round 10. */
@@ -4671,6 +4672,7 @@ object IraHub {
         IraTools.forgetMemory()
         synchronized(askedAt) { askedAt.clear() }
         checked = null
+        refreshBeganAt = 0L
         book = PatternBook()
         lastNews = null
         lastBackground = null
