@@ -43,18 +43,27 @@ object DailyPnl {
         else SandboxRules.lastSessionExpiry("03:00", t).toLocalDate()
     }
 
-    /** The current trading day's figure for the account; [trades] < 0 keeps the count already stored. */
+    /**
+     * The current trading day's figure for the account; [trades] < 0 keeps the count already stored. True when the
+     * kept figure changed (the calendar then reads again).
+     *
+     * Speed, round 5 ([com.optionslab.ira.DayFigure]): a reading equal to the kept one writes nothing, and a new one is
+     * readable at once and written to the vault in the background ([SecurePrefs.putAllSoon]): the paper and Zerodha
+     * refreshes that record it no longer wait on a Keystore encryption and two disk syncs before showing the new book.
+     */
     @Synchronized
-    fun record(live: Boolean, pnl: Double, trades: Int) {
-        if (!pnl.isFinite()) return
-        val today = (sessionDay(live) ?: return).toString()
+    fun record(live: Boolean, pnl: Double, trades: Int): Boolean {
+        if (!pnl.isFinite()) return false
+        val today = (sessionDay(live) ?: return false).toString()
         val o = read(live)
-        val keepTrades = o.optJSONArray(today)?.optInt(1, 0) ?: 0
-        o.put(today, JSONArray().put(Math.round(pnl * 100) / 100.0).put(if (trades >= 0) trades else keepTrades))
+        val stored = o.optJSONArray(today)?.let { a -> runCatching { a.getDouble(0) to a.optInt(1, 0) }.getOrNull() }
+        val entry = com.optionslab.ira.DayFigure.next(stored, pnl, trades) ?: return false
+        o.put(today, JSONArray().put(entry.first).put(entry.second))
         // About three years of days is plenty; the oldest go first.
         val keys = o.keys().asSequence().toList().sorted()
         keys.dropLast(1100).forEach { o.remove(it) }
-        SecurePrefs.put(key(live), o.toString())
+        SecurePrefs.putAllSoon(mapOf(key(live) to o.toString()))
+        return true
     }
 
     /** The paper calendar starts empty again (Reset paper); the Zerodha days are kept. */

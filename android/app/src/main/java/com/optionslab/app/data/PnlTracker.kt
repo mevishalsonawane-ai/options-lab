@@ -24,17 +24,23 @@ object PnlTracker {
         return (0 until a.length()).map { a.getJSONArray(it) }.map { Point(it.getInt(0), it.getDouble(1)) }
     }
 
-    /** Record [pnl] for the current minute (the latest sample in a minute wins). */
+    /**
+     * Record [pnl] for the current minute (the latest sample in a minute wins).
+     *
+     * Speed, round 5 ([com.optionslab.ira.DayFigure.sample]): the same figure in the same minute writes nothing, and a
+     * new one is readable at once and written to the vault in the background ([SecurePrefs.putAllSoon]), so the Zerodha
+     * account refresh that records it no longer waits on a Keystore encryption and two disk syncs.
+     */
     @Synchronized
     fun record(pnl: Double): List<Point> {
         val now = Market.now()
         val minute = now.hour * 60 + now.minute
-        val pts = today().filter { it.minute != minute }.toMutableList()
-        pts += Point(minute, Math.round(pnl * 100) / 100.0)
-        val kept = pts.sortedBy { it.minute }.takeLast(MAX)
+        val was = today()
+        val kept = com.optionslab.ira.DayFigure.sample(was.map { it.minute to it.pnl }, minute, pnl, MAX)
+            ?.map { (m, v) -> Point(m, v) } ?: return was
         val a = JSONArray()
         kept.forEach { a.put(JSONArray().put(it.minute).put(it.pnl)) }
-        SecurePrefs.putAll(mapOf(K_DAY to Market.today().toString(), K_SERIES to a.toString()))
+        SecurePrefs.putAllSoon(mapOf(K_DAY to Market.today().toString(), K_SERIES to a.toString()))
         return kept
     }
 
