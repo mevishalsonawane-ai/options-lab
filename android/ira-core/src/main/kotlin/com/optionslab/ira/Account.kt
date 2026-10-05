@@ -114,7 +114,7 @@ object AppAnswers {
         Section.SETTINGS to Regex(" (settings|setting|mode|paper mode|live mode|paper or live|live or paper|product|nrml|mis|preferences|one tap|biometric|pin) "),
         Section.STATUS to Regex(" (status|market open|is the market|open today|holiday|holidays|expiry|expiries|harvest|data|zerodha|kite|login|logged|connected|static ip|relay|app) "),
         Section.HOWTO to Regex(" (where|how do i|how can i|how to|find|which tab|which page|switch to) "),
-        Section.REVIEW to Regex(" (review|weekly review|insight|insights|mistake|mistakes|habits|patterns in my|what am i doing wrong|how did my week|my week|news trades?|(my|our) (win rate|winning rate|hit rate|success rate|strike rate|accuracy)) "),
+        Section.REVIEW to Regex(" (review|weekly review|insight|insights|mistake|mistakes|habits|patterns in my|what am i doing wrong|how did my week|my week|my hafta|how (was|did|s|is) my weak|my weak (go|went|been)|news trades?|(my|our) (win rate|winning rate|hit rate|success rate|strike rate|accuracy)) "),
         Section.FLOWS to Regex(" (fii|fiis|dii|diis|fpi|fpis|institutional|institutions|flows|foreign funds|mutual funds) "),
         Section.CHAIN to Regex(" (oi|open interest|pcr|put call|put-call|max pain|option chain|chain|iv|implied volatility|skew|call writing|put writing|writers) "),
         Section.STUDY to Regex(" (what did you study|your study|you studied|you learn|you learned|history say|history says|history shows|what usually happens|usually happens|overnight|last night|night news|how will the market|how the market will|will the market|market will|how markets? works?|edge|edges) "),
@@ -152,6 +152,9 @@ object AppAnswers {
         if (Section.RISK in out && rx(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.HISTORY in out && rx(" (made|lost|earned|p l|pnl|profit|loss|make|earn|lose) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.EVENTS in out && rx(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
+        // "How did I do this week": his own week, not the calendar's events (routing audit, 5 Oct).
+        else if (Section.EVENTS in out && Section.HISTORY in out && rx(" (i|my|me|mine) ").containsMatchIn(t) &&
+            !rx(" (calendar|policy|expiry day|expiries|news events) ").containsMatchIn(t)) out.remove(Section.EVENTS)
         if (Section.FLOWS in out || Section.CHAIN in out) { out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         if (Section.STUDY in out) { out.remove(Section.STRATEGIES); out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         // "My last P&L", "previous day's profit": the last session, from the record.

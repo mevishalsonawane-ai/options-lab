@@ -163,7 +163,10 @@ object Airtime {
     }
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |please )*"
-    private val ASKED = Regex("^ $LEAD(why (are you|were you|have you been|so) (so )?(quiet|silent)( today| lately| this hour)?|" +
+    private val ASKED = Regex("^ $LEAD(why (are you|were you|have you been|so|are u|so very) (so )?(quiet|quite|silent)( today| lately| this hour)?|" +
+        // (Routing audit, 5 Oct: these went to the market's why.)
+        "why (aren t|arent|are not|haven t|havent|have not) (you|u) (saying|said|telling me|told me|speaking) (anything|much)( today| lately| this hour)?|" +
+        "(aaj )?(itna |itne |aaj itna )?(chup|chupchap|shant|khamosh) (kyun|kyu|kyon) (ho|hai|the|tha|ho aaj|baithe ho)( aaj)?|" +
         "(what|which) (market )?alerts (did you|have you) (hold|held|keep|kept|skip|skipped)( back)?( today)?|" +
         "(did you|have you) (hold|held|keep|kept|skip|skipped) (back )?(any )?(market )?alerts( today)?|" +
         "how many (market )?alerts (did you|have you) (say|said|speak|spoken|give|given)( today| this hour)?|" +

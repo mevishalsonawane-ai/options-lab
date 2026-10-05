@@ -43,7 +43,7 @@ object Charges {
 
     private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
 
-    private const val CHARGE = "(charges|charge|brokerage|brokerages|fees|transaction costs?|trading costs?|stt)"
+    private const val CHARGE = "(charges|charge|brokerage|brokerages|fees|transaction costs?|trading costs?|stt|gst|stamp duty|taxes on (my )?trades|tax on (my )?trades)"
     private val ASKED = Regex(" (how much (did|have|do) i (pay|paid|spend|spent|give|given|lose|lost)( in| on| for| as| to)? (my |the |all |all the )?$CHARGE" +
         "|(my|mine|our) (total |overall |weekly |monthly )?$CHARGE|$CHARGE (did i|have i|i have|i) (pay|paid|spend|spent)" +
         "|(total|overall) $CHARGE|$CHARGE (this|last|previous|the) (week|month)|$CHARGE (today|so far)|(weekly|monthly) $CHARGE" +

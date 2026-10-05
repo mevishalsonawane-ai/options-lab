@@ -96,16 +96,22 @@ object ChainIntel {
         " (oi|open interest|chain|option chain|writing|pcr|put call ratio) (shifted|shift|shifting|moved|changed|change|built|build|building|developed) (since|from) (the )?(morning|open|opening|start|start of the day|9 15|first read|today s open|market open) |" +
         " (how|what) (has|have|s) (the )?(oi|open interest|option chain|chain|writing|pcr) (shifted|moved|changed|built up|developed)( today| since (the )?(morning|open|opening|start))? |" +
         " (oi|open interest) (shift|shifts|shifting|migration|build up|buildup)( today| since (the )?(morning|open))? |" +
-        " (since|from) (the )?(morning|open|opening) (how|what) (has|s) (the )?(oi|open interest|chain|writing) "
+        " (since|from) (the )?(morning|open|opening) (how|what) (has|s) (the )?(oi|open interest|chain|writing) |" +
+        // Hinglish (routing audit, 5 Oct): "OI kaise shift hua", "subah se OI kitna badla".
+        " (oi|open interest|chain|writing) (kaise|kitna|kitni|kaisa) (shift|badla|badli|change|move) (hua|hui|hue|ho raha hai|hua hai|kiya) "
     )
     private val SKEW = Regex(
-        " (iv|implied volatility|volatility|vol) skew | skew (in|on|of) (the )?(options|chain|option chain|iv|nifty|bank nifty|banknifty|finnifty|fin nifty) | what s the skew | what is the skew | how is the skew | skew (now|today) |" +
+        " (iv|implied volatility|volatility|vol) skew | skew (in|on|of) (the )?(options|chain|option chain|iv|nifty|bank nifty|banknifty|finnifty|fin nifty) | what s the skew | what is the skew | how is the skew | skew (now|today) | is there (a |any )?skew |" +
         " (are )?puts (dearer|costlier|pricier|more expensive|richer|cheaper) than calls | (are )?calls (dearer|costlier|pricier|more expensive|richer|cheaper) than puts |" +
         " (put|puts) (iv|ivs) (vs|versus|against|compared to|or) (call|calls)( iv| ivs)? | (call|calls) (iv|ivs) (vs|versus|against|compared to|or) (put|puts)( iv| ivs)? "
     )
     private val MOVE = Regex(
         " straddle( implies| implied| implying| says| price| prices| premium| cost| costs| move| range)? | (atm|at the money) straddle |" +
         " (expected|implied|priced in|priced) (move|range|swing) (by|till|until|to|for|into|before|on|at) (the )?(this )?(weekly |monthly )?expiry |" +
+        // (Routing audit, 5 Oct: "expected move this expiry", "for BankNifty by expiry", "this week" - the weekly expiry's
+        // straddle, never the day's VIX range that [ExpectedRange] gives for "expected move today".)
+        " (expected|implied) (move|range|swing) (for |on |of )?(nifty |bank nifty |banknifty |finnifty |fin nifty )?(by|till|until|into|before|for|on) (the )?(this )?(weekly |monthly )?expiry |" +
+        " (expected|implied) (move|range|swing) (for |on |of )?(nifty |bank nifty |banknifty |finnifty |fin nifty )?(this|current) (weekly |monthly )?expiry | (expected|implied) (move|range|swing) (for )?(this|the) week |" +
         " (move|range) (by|till|until|into|before) (the )?(this )?expiry (expected|implied|priced in|priced) |" +
         " (how much|how big a|what) (move|range|swing) (is|are) (the )?(options?|option prices|market|chain|premiums) (pricing|pricing in|implying|priced for|expecting) |" +
         " what (do|are) (the )?(options|option prices|premiums) (imply|implying|pricing in|price in) "

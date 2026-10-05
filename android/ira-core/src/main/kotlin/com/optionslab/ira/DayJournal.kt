@@ -48,6 +48,10 @@ object DayJournal {
         " help (me )?(with |to )?(write |do |fill (in )?)?(my |the |todays |today s )?(trading )?journal" +
         "| (write|draft|do|fill|fill in|start|make|prepare|prep) (my|the|todays|today s|a) (trading )?(journal|journal entry|diary)( for today| for the day)? $" +
         "| journal (my|the|todays|today s) (day|trades|session|trading) (please )?$" +
+        // Hinglish (routing audit, 5 Oct): "aaj ka journal likhne mein madad karo" (it read as the P&L history), "journal
+        // likhne mein help karo" (as a note).
+        "| (aaj ka |aaj ki |mera |meri |aaj )?(journal|diary) (likhne|bharne|banane) (mein|me|main) (help|madad|maddad) (karo|kar do|kardo|chahiye|kijiye) $" +
+        "| (aaj ka |mera )?(journal|diary) (likhwao|likhwa do|likhne mein help|banwao) $" +
         "| (lets|let us|time to) journal( today| the day| my day)? $" +
         "| (my|todays|today s) journal entry $" +
         "| journal (for )?today (please )?$")

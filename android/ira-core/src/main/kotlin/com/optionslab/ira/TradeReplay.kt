@@ -44,7 +44,9 @@ object TradeReplay {
     private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     private val LAST = Regex(" (how was|how did|how s|hows|how is|how about|replay|review|tell me about|walk me through|go over|go through|break down|look at|analy[sz]e) " +
-        "(my|the) (last|latest|previous|most recent|recent) (trade|exit|round trip)s? ")
+        "(my|the) (last|latest|previous|most recent|recent) (trade|exit|round trip)s? " +
+        // Hinglish (routing audit, 5 Oct): "mera last trade kaisa tha" read the whole account.
+        "| (my|mera|meri|mere) (last|latest|previous|pichla|pichhla|aakhri|akhri) (trade|exit) (kaisa|kaise|kaisi) (tha|thi|raha|rahi|gaya|gayi|hua) ")
     // ("Review my trades" alone stays the weekly review: a review is today's only when it says so, or is of the exits.)
     private val TODAY = Regex(" (replay|go over|go through|walk me through|break down) (my|today s|todays|the) (trades|exits|round trips) " +
         "| (review|analy[sz]e) ((my|the) (trades|round trips) (of )?today|(today s|todays) (trades|round trips)|(my|today s|todays|the) exits) " +

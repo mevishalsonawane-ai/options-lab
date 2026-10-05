@@ -224,7 +224,7 @@ object Thinking {
                      val yesterday: Boolean = false, val market: Market? = null, val latest: Boolean = false, val day: Boolean = false)
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |but |please |tell me |explain )*"
-    private const val YOU = "(you|jarvis|solo)"
+    private const val YOU = "(you|u|jarvis|solo)"
     private const val NOT = "(didn t|did not|didnt|haven t|have not|wouldn t|would not|don t|do not)"
     private const val TRADE = "(trade|trades|idea|ideas|call|put|one|it|position|setup|signal)"
     private val CAUTION = Regex("^ $LEAD(why|what made you|how come)( did you| do you| have you)? (say|said|add|added|end with|ended with|tell me to|ask me to|asked me to)?( me)? ?(to )?(check me|double check|check you|check that|did you mean)")
@@ -234,6 +234,10 @@ object Thinking {
         "^ $LEAD(why|how come)( did| have)? $YOU (hold|held|keep|kept|merge|merged|combine|combined|skip|skipped) (back )?(that|the|this|those|these|my|an|any)? ?(alerts?|moves?|lines?)|" +
         "^ $LEAD(why|how come) (was|were) (that|the|this|those|these) (alerts?|moves?) (held|kept|merged|combined|skipped|not said)")
     private val TRADE_NOT = Regex("^ $LEAD(why|how come) $NOT $YOU (take|took|buy|bought|trade|enter|go for|act on|place)( on)?( that| the| this| my| your| a| an)?( nifty| banknifty| bank nifty| finnifty| sensex)? ?$TRADE?|" +
+        // (Routing audit, 5 Oct: "why did you not take that trade" went to the activity log; Hinglish "tumne woh trade
+        // kyun nahi liya" to the market's why.)
+        "^ $LEAD(how come $YOU $NOT|(why|how come) (did|do|have) $YOU not) (take|taken|buy|bought|trade|enter|go for|act on|place)( on)?( that| the| this| a| an)?( nifty| banknifty| bank nifty| finnifty| sensex)? ?$TRADE?|" +
+        "^ $LEAD(tumne |tum ne |aapne |aap ne |jarvis ne |solo ne )?(wo |woh |vo |voh |ye |yeh |us |is )?(nifty |banknifty |bank nifty |finnifty |sensex )?(trade|position|setup|signal) (kyun|kyu|kyon) (nahi|nahin) (liya|lia|li|kiya|kia|lagaya|uthaya)( tumne| aapne)?( boss| jarvis)? $|" +
         "^ $LEAD(why|how come)( did| have)? $YOU (sit|sat) (that |it |this )?(one )?out|" +
         "^ $LEAD(why|how come)( did| have)? $YOU (skip|skipped|pass on|passed on|pass|shadow|shadowed)( on)? (that|the|this|my|your|a|an)?( nifty| banknifty| bank nifty| finnifty| sensex)? ?$TRADE")
     private val TRADE_DID = Regex("^ $LEAD(why|how come)( did| have)? $YOU (take|took|buy|bought|trade|traded|enter|entered|go for|went for)( on)?( that| the| this| a| an)?( nifty| banknifty| bank nifty| finnifty| sensex)? ?$TRADE|" +

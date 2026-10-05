@@ -149,7 +149,9 @@ object MarketMemory {
     /** A forecast, a study of what follows, advice, or Boss's own trades: never this. */
     private val NOT = Regex(" (will|would|tomorrow|next|predict|prediction|forecast|should|shall|usually|typically|normally|after a|after the|chance|chances|odds|probability|likely|i|me|my|mine|we|our|backtest|strategy|mean|means|meaning|define) ")
     private val LIKE = Regex(" (this much|that much|so much|as much|like this|like that|like today|this big|that big|as big|so big|this hard|such a|like it did today|as hard) ")
-    private val WHEN_LAST = Regex(" when (did|was|were|has|had|have) [a-z ]{0,30}?last | when (was|is) the (last|previous|most recent) | (the )?last time | (the )?previous time | last (gap|gapped|trend|wide|big|vix|fear|day|session)[a-z ]{0,30}?(was|when|on) | when (did|was|were)[a-z ]{0,30}? (before|previously) | last (\\w+ ){0,3}(gap|gaps|gapped|gap up|gap down|trend day|wide range day|vix spike) $")
+    private val WHEN_LAST = Regex(" when (did|was|were|has|had|have) [a-z ]{0,30}?last | when (was|is) the (last|previous|most recent) | (the )?last time | (the )?previous time | last (gap|gapped|trend|wide|big|vix|fear|day|session)[a-z ]{0,30}?(was|when|on) | when (did|was|were)[a-z ]{0,30}? (before|previously) | last (\\w+ ){0,3}(gap|gaps|gapped|gap up|gap down|trend day|wide range day|vix spike) $" +
+        // Hinglish and "remember when" (routing audit, 5 Oct): "Nifty last kab gap down hua", "pichli baar VIX kab uchla".
+        "| (last|pichli|pichhli|aakhri) (baar|bar|time|dafa) | last kab | kab (last|pichli baar|aakhri baar) |^ (do you )?remember when ")
     private val COUNTING = Regex(" how many | how often | number of | count | count of | kitne | kitni ")
     private val NOTABLE = Regex("^ $LEAD(what |which )?(big |notable |memorable |unusual |biggest )(days|sessions|market days)( do you remember| have there been| on the phone| you remember| in memory)?( lately| recently)?( boss| jarvis)? $|" +
         "^ $LEAD(do you remember|remember) (any )?(big|notable|unusual|memorable) (days|sessions)( lately| recently)?( boss| jarvis)? $|" +
@@ -198,7 +200,7 @@ object MarketMemory {
         // "What happened the last 3 expiries", "how did the last expiry go", "previous expiry days".
         if (so == Sort.EXPIRY) {
             if (Regex(" (today|today s|todays|this expiry|current expiry|now) ").containsMatchIn(t)) return null
-            val m = Regex(" (last|past|previous|recent) (\\d{1,2}|[a-z]+(?: of)?)? ?(expiry|expiries|expiry days|expiry sessions) ").find(t)
+            val m = Regex(" (last|past|previous|recent|pichle|pichhle|pichli) (\\d{1,2}|[a-z]+(?: of)?)? ?(expiry|expiries|expiry days|expiry sessions) ").find(t)
                 ?: Regex(" (last|past|previous|recent) (a few|a couple of|couple of) (expiry|expiries|expiry days|expiry sessions) ").find(t)
                 ?: Regex(" (recent|previous) (expiry|expiries) ").find(t)
             if (m == null) {

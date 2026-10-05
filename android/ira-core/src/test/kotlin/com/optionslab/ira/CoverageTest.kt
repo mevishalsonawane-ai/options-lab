@@ -379,6 +379,213 @@ class CoverageTest {
         assertEquals(null, Ask.parse("kya kharidu").order)
     }
 
+    // ---- The cross-feature routing audit (round 6, 5 Oct) ----
+
+    /**
+     * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
+     * ask(): fillers and follow-ups first, then DayJournal, AlertSense, Airtime, DataAge, Honest, Thinking, ChainIntel,
+     * TradeCase, Agenda, Improve, the reminders and Jarvis's own checks, Distance... down to the account's sections and
+     * the reasoning over the candles). Over the pure readers only; a branch the app adds must be added here in its place.
+     * (Thinking takes its question first; with nothing in the trail and SelfWhy's words it goes on to SelfWhy - by design.)
+     */
+    private fun feature(said: String): String {
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said)
+        val qs = if (asSaid) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
+        if (qs != null) return qs.joinToString(" & ") { feature(it) }
+        val q = said
+        if (DayJournal.asked(q)) return "DayJournal"
+        val p = Ask.parse(q)
+        val plain = p.order == null && p.command == null
+        if (p.order == null && AlertSense.asked(q) != null) return "AlertSense"
+        if (p.order == null && Airtime.asked(q)) return "Airtime"
+        if (plain && DataAge.asked(q)) return "DataAge"
+        if (plain && Honest.asked(q) != null) return "Honest"
+        if (plain && Thinking.asked(q) != null) return "Thinking"
+        if (plain && ChainIntel.asked(q) != null) return "ChainIntel"
+        if (plain && TradeCase.asked(q)) return "TradeCase"
+        if (plain && Agenda.asked(q)) return "Agenda"
+        if (plain && Improve.asked(q)) return "Improve"
+        if (Reminder.cancelAsked(q) || Reminder.asked(q)) return "Reminder"
+        if (SelfCheck.asked(q)) return "SelfCheck"
+        if (Reminder.missedAsked(q)) return "Missed"
+        if (Reminder.heardAsked(q)) return "Heard"
+        if (Latency.asked(q)) return "Latency"
+        if (Reminder.usageAsked(q)) return "Usage"
+        if (Reminder.modelAsked(q)) return "Model"
+        if (plain && Distance.asked(q) != null) return "Distance"
+        if (plain && OptionFacts.asked(q) != null) return "OptionFacts"
+        if (plain && Sizing.asked(q) != null) return "Sizing"
+        if (plain && DaySummary.asked(q)) return "DaySummary"
+        if (plain && (MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null)) return "MarketDays"
+        if (plain && p.markets.isEmpty() && Reminder.tomorrow(q)) return "Tomorrow"
+        if (plain && Outlook.asked(q) && !Regex("(?i)\\b(my|mine|our)\\b").containsMatchIn(q)) return "Outlook"
+        if (plain && Chat.smallTalk(q, 0) != null) return "Chat"
+        if (Memory.toKeep(q) != null || plain && (AboutBoss.fact(q) != null || AboutBoss.forgetAsked(q) != null) || AboutBoss.knowAsked(q) ||
+            Memory.recallAsked(q) || Memory.forgetAsked(q)) return "AboutBoss"
+        if (Goals.asked(q) || Goals.clearAsked(q)) return "Goals"
+        if (plain && SelfWhy.asked(q)) return "SelfWhy"
+        if (Vetting.asked(q)) return "Vetting"
+        if (SelfCalibration.asked(q)) return "SelfCalibration"
+        if (Lessons.asked(q)) return "Lessons"
+        if (Sources.asked(q)) return "Sources"
+        if (Habits.asked(q)) return "Habits"
+        if (Topic.BACKTEST in p.topics) return "Backtest"
+        if (Topic.ACCOUNT in p.topics) return "Account:" + AppAnswers.sections(q).joinToString("+")
+        if (Topic.COMMAND in p.topics || Topic.ORDER in p.topics) return "Act"
+        if (Topic.SUGGEST in p.topics) return "Suggest"
+        if (Topic.TRADE_CHECK in p.topics) return "TradeCheck"
+        // IraHub.reasoned, in its order.
+        val t = p.text.ifBlank { q }
+        if (MarketStory.asked(t) != null) return "MarketStory"
+        if (SharpMove.asked(t) != null) return "SharpMove"
+        if (MarketMemory.asked(t) != null) return "MarketMemory"
+        if (ExpiryDay.asked(t)) return "ExpiryDay"
+        if (Topic.WHY in p.topics && !Regex("(?i)\\bhow much\\b").containsMatchIn(t)) return "Why"
+        if (Regex("(?i)\\b(i|me|my|we|our)\\b").containsMatchIn(t)) return "Market"
+        if (Odds.asked(t) != null) return "Odds"
+        if (ExpectedRange.asked(t)) return "ExpectedRange"
+        if (PeriodMove.asked(t) != null) return "PeriodMove"
+        return if (Topic.OFF_TOPIC in p.topics) "Missed" else "Market"
+    }
+
+    private val ACCOUNT_REVIEW = "Account:REVIEW"
+
+    /** The new families (DayJournal to AboutBoss), as Boss says them - English, Hinglish, the recognizer's spellings. */
+    private val ROUTED: List<Pair<String, String>> = listOf(
+        // ---- MarketMemory: the notable sessions remembered ----
+        "when did nifty last gap down" to "MarketMemory", "when did banknifty last gap up this much" to "MarketMemory",
+        "last time vix spiked" to "MarketMemory", "when did vix last jump like this" to "MarketMemory",
+        "when was the last trend day" to "MarketMemory", "how many trend days this month" to "MarketMemory",
+        "how many gap ups this month" to "MarketMemory", "what happened the last 3 expiries" to "MarketMemory",
+        "how did the last expiry go" to "MarketMemory", "when did banknifty last fall this much" to "MarketMemory",
+        "do you remember any big days lately" to "MarketMemory", "what notable days do you remember" to "MarketMemory",
+        "nifty last kab gap down hua" to "MarketMemory", "pichle 3 expiry mein kya hua" to "MarketMemory",
+        "remember when nifty gapped down" to "MarketMemory", "do you remember when nifty last gapped down" to "MarketMemory",
+        // ---- ChainIntel: writing, the OI's shift, the skew, the move priced in by expiry ----
+        "where is the most call writing" to "ChainIntel", "where is the most put writing" to "ChainIntel",
+        "sabse zyada call writing kahan hai" to "ChainIntel", "call writing kahan ho rahi hai" to "ChainIntel",
+        "put writing kahan hai" to "ChainIntel", "where are the put writers" to "ChainIntel", "where is call writing highest" to "ChainIntel",
+        "how has the oi shifted since morning" to "ChainIntel", "how has the oi changed since the open" to "ChainIntel",
+        "oi kaise shift hua" to "ChainIntel", "iv skew" to "ChainIntel", "iv skew kya hai" to "ChainIntel", "is there a skew" to "ChainIntel",
+        "are puts costlier than calls" to "ChainIntel", "expected move by expiry" to "ChainIntel",
+        "what's the expected move for this expiry" to "ChainIntel", "what's the expected move this expiry" to "ChainIntel",
+        "expected move for banknifty by expiry" to "ChainIntel", "expected move this week" to "ChainIntel",
+        "what is the straddle pricing" to "ChainIntel", "straddle kitna hai" to "ChainIntel", "how much move is the market pricing in" to "ChainIntel",
+        "analyze the option chain in detail" to "ChainIntel",
+        // ---- ExpectedRange: the day's range from VIX (not the expiry's straddle) ----
+        "expected move today" to "ExpectedRange", "expected range today" to "ExpectedRange", "expected move kitna hai" to "ExpectedRange",
+        "what is the expected move" to "ExpectedRange",
+        // ---- TradeCase: the case for and against trading now ----
+        "make the case" to "TradeCase", "make the case for trading now" to "TradeCase", "make the case for and against" to "TradeCase",
+        "pros and cons of trading now" to "TradeCase", "pros and cons of trading today" to "TradeCase", "talk me through it" to "TradeCase",
+        "should i trade now and why" to "TradeCase", "explain the trade check" to "TradeCase", "full trade check" to "TradeCase",
+        "trade karu ya nahi aur kyun" to "TradeCase", "aaj trade karu ya nahi kyun" to "TradeCase",
+        // ---- Thinking: his own decisions, from the reason trail ----
+        "why didn't you take that trade" to "Thinking", "why didnt you take the trade" to "Thinking", "why didnt u take that trade" to "Thinking",
+        "why did you not take that trade" to "Thinking", "why didn't you take the nifty trade" to "Thinking",
+        "tumne woh trade kyun nahi liya" to "Thinking", "trade kyun nahi liya" to "Thinking", "jarvis ne woh trade kyun nahi liya" to "Thinking",
+        "why did you skip that trade" to "Thinking", "why didn't solo take that trade" to "Thinking", "why did you take that trade" to "Thinking",
+        "why only one lot" to "Thinking", "why were you quiet at 11" to "Thinking", "why didn't you alert me about the fall" to "Thinking",
+        "why didn't you tell me about that move" to "Thinking", "why did you hold back that alert" to "Thinking",
+        "why did you skip that check" to "Thinking", "why did you skip the plan item" to "Thinking", "what made you say check me" to "Thinking",
+        "why did you say check me" to "Thinking", "what were you thinking" to "Thinking", "walk me through your day" to "Thinking",
+        // ---- SelfWhy: what he did, from the activity log ----
+        "why did you stop orb" to "SelfWhy", "why did you say that" to "SelfWhy",
+        // ---- Airtime: the day's quiet ----
+        "why so quiet" to "Airtime", "why so quite" to "Airtime", "why are you so quiet today" to "Airtime", "why have you been quiet" to "Airtime",
+        "why were you so silent" to "Airtime", "why so quiet jarvis" to "Airtime", "why aren't you saying anything" to "Airtime",
+        "why havent you said anything today" to "Airtime", "itna chup kyun ho" to "Airtime", "chup kyun ho" to "Airtime",
+        "aaj itna shant kyun ho" to "Airtime", "did you hold back any alerts" to "Airtime", "how many alerts did you say today" to "Airtime",
+        "what did you not tell me today" to "Airtime",
+        // ---- AlertSense: the alerts he says less often ----
+        "which alerts do you hold back" to "AlertSense", "say everything again" to "AlertSense",
+        // ---- DataAge: how old his data is ----
+        "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
+        "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",
+        "how old are the prices" to "DataAge", "when did you last read the news" to "DataAge", "is the news old" to "DataAge",
+        "are your prices live" to "DataAge", "data fresh hai kya" to "DataAge", "data kitna purana hai" to "DataAge",
+        "tumhara data live hai kya" to "DataAge", "bhav kitna purana hai" to "DataAge",
+        // ---- DayJournal: help with today's journal ----
+        "help me journal today" to "DayJournal", "let's journal today" to "DayJournal", "help me write my journal" to "DayJournal",
+        "help me journal" to "DayJournal", "draft my journal" to "DayJournal", "journal my day" to "DayJournal", "my journal entry" to "DayJournal",
+        "aaj ka journal likhne mein madad karo" to "DayJournal", "journal likhne mein help karo" to "DayJournal",
+        "mera journal likhwao" to "DayJournal",
+        // ---- Improve and Lessons ----
+        "how are you improving" to "Improve", "tum kaise improve ho rahe ho" to "Improve", "are you getting better" to "Improve",
+        "how are you getting better" to "Improve", "what are you improving" to "Improve", "what have you learned this week" to "Lessons",
+        // ---- AboutBoss: what he was told about Boss ----
+        "what do you know about me" to "AboutBoss", "tum mere baare mein kya jaante ho" to "AboutBoss", "what did i tell you" to "AboutBoss",
+        "forget that i trade on fridays" to "AboutBoss", "i get greedy after a win" to "AboutBoss", "remember that i trade on fridays" to "AboutBoss",
+        // ---- Boss's week, month, charges and trades (the account's own sections) ----
+        "how was my week" to ACCOUNT_REVIEW, "how was my weak" to ACCOUNT_REVIEW, "review my week" to ACCOUNT_REVIEW,
+        "how did my week go" to ACCOUNT_REVIEW, "weekly review" to ACCOUNT_REVIEW, "how was my week overall" to ACCOUNT_REVIEW,
+        "mera hafta kaisa raha" to ACCOUNT_REVIEW, "any insights on my trading" to ACCOUNT_REVIEW, "what are my habits" to ACCOUNT_REVIEW,
+        "review my trades" to ACCOUNT_REVIEW, "how did i do this week" to "Account:HISTORY",
+        "how was my month" to "Account:MONTH", "mera mahina kaisa raha" to "Account:MONTH", "review last month" to "Account:MONTH",
+        "how was my month after charges" to "Account:MONTH",
+        "how much did i pay in charges this week" to "Account:CHARGES", "charges kitne lage" to "Account:CHARGES",
+        "kitna brokerage diya" to "Account:CHARGES", "how much brokerage did i pay" to "Account:CHARGES",
+        "how much did i pay in charges this month" to "Account:CHARGES", "what were my charges today" to "Account:CHARGES",
+        "how much brokerage this month" to "Account:CHARGES", "how much did charges eat into my profit" to "Account:CHARGES",
+        "how much tax on my trades" to "Account:CHARGES", "what is my gst" to "Account:CHARGES",
+        "how was my last trade" to "Account:REPLAY", "replay my last trade" to "Account:REPLAY", "replay my trades today" to "Account:REPLAY",
+        "how were my exits today" to "Account:REPLAY", "mera last trade kaisa tha" to "Account:REPLAY", "mera pichla trade kaisa raha" to "Account:REPLAY",
+        "why did my last trade lose" to "Account:LOSSES", "what did you do today" to "Account:ACTIVITY",
+        // ---- More of each, as said in a hurry ----
+        "when did nifty last gap down like this" to "MarketMemory", "last time banknifty gapped up" to "MarketMemory",
+        "where is maximum call writing" to "ChainIntel", "how is the skew today" to "ChainIntel", "are puts dearer than calls" to "ChainIntel",
+        "what is the atm straddle" to "ChainIntel", "expected move till expiry" to "ChainIntel", "implied move by expiry" to "ChainIntel",
+        "give me the case for and against" to "TradeCase", "why didnt jarvis take that trade" to "Thinking",
+        "how come you didn't take that trade" to "Thinking", "why didn't you take that one" to "Thinking",
+        "why were you silent today" to "Airtime", "why so silent" to "Airtime", "why are u so quiet" to "Airtime",
+        "is your data up to date" to "DataAge", "data taza hai kya" to "DataAge", "write my journal" to "DayJournal",
+        "help me with my journal" to "DayJournal", "pichla mahina kaisa raha" to "Account:MONTH", "stt kitna laga" to "Account:CHARGES",
+        "brokerage kitna gaya" to "Account:CHARGES", "what do you know about me jarvis" to "AboutBoss",
+        // ---- The market's own week (never Boss's history) ----
+        "how was the market this week" to "PeriodMove", "how was nifty this week" to "PeriodMove",
+    )
+
+    @Test fun eachFamilyGetsItsOwnQuestions() {
+        val wrong = ROUTED.mapNotNull { (s, want) -> feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got" } }
+        assertTrue(wrong.isEmpty(), "taken by the wrong feature (${wrong.size} of ${ROUTED.size}):\n" + wrong.joinToString("\n"))
+        assertTrue(ROUTED.size >= 180, "${ROUTED.size}")
+        assertEquals(ROUTED.size, ROUTED.map { it.first }.distinct().size)
+    }
+
+    @Test fun neighboursKeepTheirOwnQuestions() {
+        // The pairs that sound alike: each goes to its own feature in the hub's order.
+        for ((a, b) in listOf(
+            ("why didn't you take that trade" to "Thinking") to ("why did you stop orb" to "SelfWhy"),
+            ("expected move today" to "ExpectedRange") to ("expected move by expiry" to "ChainIntel"),
+            ("how was my week" to ACCOUNT_REVIEW) to ("how was the market this week" to "PeriodMove"),
+            ("how was my month" to "Account:MONTH") to ("how much did i pay in charges this month" to "Account:CHARGES"),
+            ("how was my last trade" to "Account:REPLAY") to ("why did my last trade lose" to "Account:LOSSES"),
+            ("why so quiet" to "Airtime") to ("why were you quiet at 11" to "Thinking"),
+            ("make the case" to "TradeCase") to ("should i trade now" to "TradeCheck"),
+            ("help me journal today" to "DayJournal") to ("how was my day" to "DaySummary"),
+            ("remember when nifty gapped down" to "MarketMemory") to ("remember that i trade on fridays" to "AboutBoss"),
+            ("how are you improving" to "Improve") to ("how are you" to "Chat"),
+            ("is your data fresh" to "DataAge") to ("what's sgx nifty" to "Honest"),
+        )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
+        // "Remember when..." asks; it is never kept as a note.
+        assertEquals(null, Memory.toKeep("remember when nifty gapped down"))
+        assertEquals("i trade on fridays", Memory.toKeep("remember that i trade on fridays"))
+        // "How did I do this week" is his week, not the calendar's events; "any events this week" stays the events.
+        assertEquals(setOf(Section.HISTORY), AppAnswers.sections("how did i do this week"))
+        assertEquals(setOf(Section.EVENTS), AppAnswers.sections("any events this week"))
+    }
+
+    @Test fun noRoutedQuestionActs() {
+        // Every line of the routing audit is a question: no feature it reaches acts, and nothing in it reads as an
+        // order (a "journal ... help karo" read as a note is taken by DayJournal first, before anything is parsed).
+        for ((s, _) in ROUTED) {
+            val f = feature(s)
+            assertTrue(f != "Act" && f != "Reminder", "$s -> $f")
+            assertEquals(null, Ask.parse(s).order, s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) }, s)
+        }
+    }
+
     @Test fun whatIsStillNotUnderstoodNeverActs() {
         for (s in KNOWN_GAPS) assertTrue(Kind.ACT !in route(s), s)
         // Round 5's gaps: said honestly now - and none of them acts.

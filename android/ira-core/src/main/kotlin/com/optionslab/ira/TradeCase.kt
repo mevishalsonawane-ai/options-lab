@@ -110,7 +110,8 @@ object TradeCase {
         "^ $LEAD(should|shall|can) i (trade|be trading)$NOW (and )?(why|why or why not|why not|explain|tell me why) $|" +
         "^ $LEAD(why|why or why not) (should|shouldn t|should not) i (trade|be trading)$NOW( boss| jarvis)? $|" +
         "^ $LEAD(what would you|what do you|what should we) (watch|keep an eye on|keep an eye out for)$NOW( before (trading|a trade))?( boss| jarvis)? $|" +
-        "^ $LEAD(trade (karu|karun|karna|karoon) (ya nahi|kya)|kya trade (karu|karun|karna)) (samjhao|samjha do|kyun|explain karo|pura batao) $"
+        // ("Aaj trade karu ya nahi aur kyun", routing audit 5 Oct: it went to the market's why.)
+        "^ $LEAD(aaj |abhi )?(trade (karu|karun|karna|karoon|lu|loon|lun) (ya nahi|ya nahin|kya)|kya trade (karu|karun|karna)) (aur )?(samjhao|samjha do|kyun|kyu|kyon|explain karo|pura batao) $"
     )
 
     private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")

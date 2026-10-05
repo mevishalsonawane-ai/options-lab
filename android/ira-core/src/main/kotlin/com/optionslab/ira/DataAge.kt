@@ -289,7 +289,11 @@ object DataAge {
         "(fresh|live|current|up ?to ?date|recent|old|stale|delayed|lagging|behind|real ?time)\\b|" +
         "\\bhow (old|fresh|recent|stale|current|up ?to ?date|late|delayed) (is|are) (your|the) (data|prices?|news|feed|quotes?|numbers|information|info|chain|option chain|candles?)\\b|" +
         "\\bwhen did you last (get|read|update|fetch|check|refresh) (your |the )?(prices?|data|news|feed|quotes?|chain|option chain|candles?)\\b|" +
-        "\\b(data|price|feed|news) (freshness|age)\\b")
+        "\\b(data|price|feed|news) (freshness|age)\\b|" +
+        // Hinglish (routing audit, 5 Oct): "data fresh hai kya", "data kitna purana hai", "bhav live hai kya".
+        "\\b(tumhara |aapka |tera )?(data|prices?|bhav|bhaav|news|feed|chain) (fresh|live|taza|taaza|purana|stale|old|delayed) (hai|hain|he)( kya)?\\b|" +
+        "\\b(tumhara |aapka |tera )?(data|prices?|bhav|bhaav|news|feed|chain) (kitna|kitne|kitni) (purana|old|stale|fresh|der ka) (hai|hain|he)\\b|" +
+        "\\b(data|bhav|prices?) kab ka (hai|he)\\b")
 
     /** "Is your data fresh?", "how old are your prices?", "when did you last read the news?". */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(text)
