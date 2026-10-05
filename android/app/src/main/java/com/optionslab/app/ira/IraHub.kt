@@ -1519,6 +1519,7 @@ object IraHub {
                 com.optionslab.ira.LunchRange.asked(q) != null || com.optionslab.ira.OpenHighLow.asked(q) != null ||
                 com.optionslab.ira.BigCandles.asked(q) != null || com.optionslab.ira.ExtremeCloses.asked(q) != null || com.optionslab.ira.WeekRange.asked(q) != null ||
                 com.optionslab.ira.RelativeMove.asked(q) != null || com.optionslab.ira.Comebacks.asked(q) != null || com.optionslab.ira.VixBand.asked(q) != null ||
+                com.optionslab.ira.Overnight.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -3081,7 +3082,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3413,6 +3414,24 @@ object IraHub {
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime(),
                     isTradingDay = { d -> runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) })
             }.getOrElse { "I could not read the VIX band record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "Does Nifty make its moves overnight or during the day?", "overnight vs intraday returns for BankNifty", "nifty ka move
+        // raat mein banta hai ya din mein": the past sessions split at the open into the overnight move and the session's, on the
+        // phone's own 1-minute sessions ([com.optionslab.ira.Overnight]), beside today so far. A record of past days, never a
+        // forecast or advice; market data only (fine on a locked phone); nothing acts.
+        val overnightAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.Overnight.asked(q) }.getOrNull() else null
+        if (overnightAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.Overnight.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.Overnight.NOT_HERE
+                else com.optionslab.ira.Overnight.answer(overnightAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime(),
+                    isTradingDay = { d -> runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) })
+            }.getOrElse { "I could not read the overnight record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true
