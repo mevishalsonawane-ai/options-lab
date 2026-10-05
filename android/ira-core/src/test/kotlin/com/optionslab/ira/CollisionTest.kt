@@ -2435,6 +2435,116 @@ class CollisionTest {
             assertTrue(AfterLoss.asked(s) == null, s)
     }
 
+    /**
+     * Round 26: the newest reads and panels as Boss says them - MoveTime ("how fast / how quickly does Nifty move 50 points",
+     * "time taken for", "average time for", "how long for BankNifty to do 200 points", "kitni jaldi", "kitne der me" - the
+     * Hindi "me" was read as Boss's), MultiDay ("the usual 3 day move", "5 din me kitna upar niche"), OpenReach ("how much
+     * does Nifty move from the open", "the usual move from the open", "from the opening price does Nifty go", "open se kitna
+     * move hota hai"), DayAfter ("what does Nifty do after a 2 percent fall", "badi girawat ke baad agle din", "after a 3% day
+     * what next", "follow through after big days", "after Nifty tanks"), the Requests panel ("anything pending for me",
+     * "what did I okay / deny today", "request status", "request history", "what's in the requests panel"), the charges
+     * ("charges batao", "charges lage kitne", "charges ka total", "how much did I pay Zerodha", "how much tax did I pay on
+     * trades"), the P&L after them ("charges ke baad kitna bacha") and the short answer's "more" ("say more", "keep going",
+     * "the rest", "baaki batao", "aage bolo", "poori baat batao", "give me the full answer", "the whole thing").
+     */
+    private val ROUND26 = listOf(
+        // MoveTime
+        "how fast does nifty move 50 points" to "MoveTime", "how quickly does banknifty move 200 points" to "MoveTime",
+        "time taken for nifty to move 50 points" to "MoveTime", "how long for banknifty to do 200 points" to "MoveTime",
+        "50 points kitni jaldi chalta hai nifty" to "MoveTime", "time to move 50 points" to "MoveTime",
+        "nifty 50 points kitne time mein move karta hai" to "MoveTime", "average time for nifty to move 50 points" to "MoveTime",
+        "typical time for banknifty to move 200 points" to "MoveTime", "how soon does nifty move 50 points" to "MoveTime",
+        "nifty 50 point kitne der me chalta hai" to "MoveTime", "how long does banknifty take for 200 points" to "MoveTime",
+        "how often does nifty do 50 points in 30 minutes" to "MoveTime", "time for nifty to move 50 points" to "MoveTime",
+        "nifty 100 point kitne time me chalta hai" to "MoveTime", "how long does nifty take to make a 1% move" to "MoveTime",
+        // MultiDay
+        "what's the usual 3 day move in nifty" to "MultiDay", "nifty 5 din me kitna upar niche hota hai" to "MultiDay",
+        "nifty 3 din mein kitna upar jata hai" to "MultiDay",
+        // OpenReach
+        "how much does nifty move from the open" to "OpenReach", "what's the usual move from the open" to "OpenReach",
+        "how far from the opening price does nifty go" to "OpenReach", "open se kitna move hota hai" to "OpenReach",
+        "open se kitna chalta hai nifty" to "OpenReach", "what's the typical move from the open for banknifty" to "OpenReach",
+        // DayAfter
+        "what does nifty do after a 2 percent fall" to "DayAfter", "nifty bade girawat ke baad agle din kya karta hai" to "DayAfter",
+        "after a 2 percent drop day what happens next" to "DayAfter", "follow through after big days" to "DayAfter",
+        "after nifty tanks what happens next day" to "DayAfter", "after a 3% day what next" to "DayAfter",
+        "what happens after a 1.5% rally day" to "DayAfter",
+        // The Requests panel
+        "anything pending for me" to "RequestBook", "what did i okay today" to "RequestBook", "what did i deny today" to "RequestBook",
+        "request status" to "RequestBook", "what's in the requests panel" to "RequestBook", "is anything awaiting approval" to "RequestBook",
+        "history of requests" to "RequestBook", "request history" to "RequestBook", "approval history" to "RequestBook",
+        "requests panel me kya hai" to "RequestBook",
+        // The charges, and the P&L after them
+        "charges batao" to "Account:CHARGES", "charges ka total kya hai" to "Account:CHARGES", "charges lage kitne" to "Account:CHARGES",
+        "charges ka hisaab" to "Account:CHARGES", "how much tax did i pay on trades" to "Account:CHARGES", "how much did i pay zerodha" to "Account:CHARGES",
+        "brokerage dikhao" to "Account:CHARGES", "show my charges" to "Account:CHARGES", "tell me today's charges" to "Account:CHARGES",
+        "charges ke baad kitna bacha" to "Account:PNL", "charges kaat ke kitna bacha" to "Account:PNL", "charges ke baad kitna mila" to "Account:PNL",
+    )
+
+    /** Round 26's "more": the full last answer only (a command that trades nothing), and the short answer's WHOLE. */
+    private val ROUND26_MORE = listOf("say more", "keep going", "the rest", "rest of it", "tell me the rest", "baaki batao", "baki bolo",
+        "aage batao", "aage bolo", "poori baat batao", "full answer", "give me the full answer", "say the whole thing", "the whole thing",
+        "the full answer please")
+
+    @Test fun roundTwentySixWordingsRouteAndNeverAct() {
+        assertEquals(ROUND26.size, ROUND26.map { it.first }.distinct().size)
+        val wrong = ROUND26.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND26) neverActs(s)
+        // "More": that command and only that, typed or heard; with a question mark, never a command.
+        assertEquals(ROUND26_MORE.size, ROUND26_MORE.distinct().size)
+        for (s in ROUND26_MORE) {
+            val p = Ask.parse(s)
+            assertEquals(Command.Kind.MORE, p.command?.kind, s); assertEquals(null, p.order, s)
+            assertEquals("Act", audit.feature(s), s)
+            assertEquals(null, Ask.parse("$s?").command, s)
+            assertEquals(ShortAnswer.Kind.WHOLE, ShortAnswer.kind(s), s)
+        }
+        // Not "more": a bare "rest", trading on, the rest of his positions, what to do next, a mode, a topic said.
+        for (s in listOf("rest", "keep going with the trade", "the rest of my positions", "baaki positions batao", "aage kya karna hai",
+            "full answer mode", "say more about theta"))
+            assertTrue(Ask.parse(s).command?.kind != Command.Kind.MORE, "$s: ${Ask.parse(s).command}")
+        for ((s, want) in listOf("the rest of my positions" to "Account:POSITIONS", "baaki positions batao" to "Account:POSITIONS"))
+            assertEquals(want, audit.feature(s), s)
+        // The Requests panel read: what was okayed is the approved, what was denied the declined; it never answers one.
+        assertEquals(RequestBook.Asked(true, Requests.Outcome.APPROVED, true), RequestBook.asked("what did i okay today"))
+        assertEquals(RequestBook.Asked(true, Requests.Outcome.DECLINED, true), RequestBook.asked("what did i deny today"))
+        assertEquals(RequestBook.Asked(false, null, false), RequestBook.asked("what's in the requests panel"))
+        for (s in listOf("deny it", "approve it", "where is the requests panel", "how do i use the requests panel", "what did i do okay today",
+            "did i do ok today", "order history", "trade history", "order status", "my order status", "anything else"))
+            assertEquals(null, RequestBook.asked(s), s)
+        for ((s, want) in listOf("order history" to "Account:HISTORY+ORDERS", "trade history" to "Account:HISTORY", "what's pending in my orders" to "Account:ORDERS",
+            "is my order awaiting execution" to "Account:ORDERS", "where is the requests panel" to "Account:HOWTO"))
+            assertEquals(want, audit.feature(s), s)
+        // The one-lot calculator and a definition are not the account's charges; a price paid for an option is not either.
+        for (s in listOf("show charges for one lot", "tell me the charges per lot", "charges total for one lot", "what are charges",
+            "how much did i pay for nifty calls", "how much did i pay for the option"))
+            assertTrue(!Charges.asked(s), s)
+        // "Kitna bacha" alone is never the P&L: the time left or the margin left stay their own.
+        assertEquals("Account:FUNDS", audit.feature("kitna margin bacha"))
+        assertTrue(audit.feature("kitna time bacha") !in setOf("Account:PNL", "Account:CHARGES"))
+        // MoveTime stays the record: never Jarvis's or the app's speed, now, today, a forecast, advice or Boss's stop.
+        for (s in listOf("how fast is nifty moving", "how fast is nifty moving today", "how fast do you reply", "how quickly can you place an order",
+            "is it time to buy nifty", "how long does nifty take to move 50 points tomorrow", "how fast did nifty move 50 points today",
+            "time to move my stop loss", "how fast does nifty move", "how long before nifty moves 50 points"))
+            assertTrue(audit.feature(s) != "MoveTime", "$s: ${audit.feature(s)}")
+        // MultiDay and OpenReach stay records: never one past stretch, today's own read or now.
+        for (s in listOf("what was the 3 day move in nifty", "nifty 3 din se upar hai", "is nifty up in 3 days"))
+            assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")
+        for (s in listOf("how much did nifty move from the open", "how much has nifty moved from the open today", "nifty open se kitna upar hai",
+            "how much is nifty up from the open", "open se abhi kitna chala"))
+            assertTrue(audit.feature(s) != "OpenReach", "$s: ${audit.feature(s)}")
+        // DayAfter stays the session after a whole big day: never a part of the day, from the open, advice, today, a forecast or an alert.
+        for (s in listOf("after a 2 percent fall in the morning what happens", "what does nifty do after a 2 percent fall from the open",
+            "should i buy after a 2 percent fall", "after a 2% fall today what next", "after a 2 percent fall will nifty bounce", "nifty fell 2 percent",
+            "what happens after nifty crashes", "set an alert after a 2% fall"))
+            assertTrue(audit.feature(s) != "DayAfter", "$s: ${audit.feature(s)}")
+        // A size after "after" with no way said is both ways; with one said, that one.
+        assertEquals(null, DayAfter.asked("after a 3% day what next")?.side)
+        assertEquals(-1, DayAfter.asked("what does nifty do after a 2 percent fall")?.side)
+        assertEquals(-1, DayAfter.asked("after nifty tanks what happens next day")?.side)
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

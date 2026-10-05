@@ -45,7 +45,10 @@ object RequestBook {
         "| (what|kya) happened (to|with) (my |the |those |these )?$REQ " +
         "| (recent|past|earlier|answered|old) $REQ " +
         "| (maine|mene|main ne) (aaj )?(kya|kaun sa|kaunsa|kaun se|kitne|kitni) (\\w+ ){0,2}(approve|reject|decline|mana) (kiya|kiye|ki|kari|kar diya) " +
-        "| aaj (kya|kaun sa|kaunsa) (approve|reject|decline) (kiya|hua|kiye) ")
+        "| aaj (kya|kaun sa|kaunsa) (approve|reject|decline) (kiya|hua|kiye) " +
+        // Understanding round 26: "what did I okay / deny today", "request history".
+        "| (what|which|kya) (did|have) i (okay|okayed|ok|okd|deny|denied|refuse|refused) " +
+        "| $REQ (history|log) | (history|log) of (my |the )?$REQ ")
 
     private val WAITING = rx(
         " (any|koi|kitni|kitne|how many|what|whats|which|my|mere|meri|show|list|open|pending|waiting) (\\w+ ){0,3}$REQ " +
@@ -55,13 +58,21 @@ object RequestBook {
         "| (do|must) i (need|have) to (approve|answer) " +
         "| (anything|something|kuch|what|whats) (\\w+ ){0,2}(for me to|i need to|i have to|to) approve " +
         "| (are|is) (you|jarvis) waiting (on|for) (me|my|boss) " +
-        "| (kya|kuch) (approve|approval) (karna|karne) ")
+        "| (kya|kuch) (approve|approval) (karna|karne) " +
+        // Understanding round 26: "anything pending for me", "is anything awaiting approval", "request status".
+        "| (anything|something|kuch|koi cheez) pending (for|on) (me|boss) " +
+        "| (awaiting|awaits) (my |bosss |boss )?(approval|sign off|yes|nod|answer) " +
+        "| $REQ (status|ka status) | status of (my |the )?$REQ ")
+    /** "What's in the Requests panel": its list asked, before [NOT] takes the panel for the app's own question (round 26). */
+    private val IN_PANEL = rx(" (whats|what is|what all is) (in|inside|on) (the |my )?$REQ (panel|screen|tab|list|page) " +
+        "| $REQ (panel|screen|tab|list|page) (me|mein|main) (kya|kya kya) (hai|hain) ")
 
     /** Does [text] ask about his requests? What he asked, or null. */
     fun asked(text: String): Asked? {
         for (s in listOf(text, Ask.reading(text))) {
             var t = norm(s)
             while (true) { val u = " " + POLITE.replace(t, " ").trim() + " "; if (u == t) break; t = u }
+            if (t.isNotBlank() && IN_PANEL.containsMatchIn(t)) return Asked(false, null, false)
             if (t.isBlank() || NOT.containsMatchIn(t)) continue
             val today = rx(" (today|todays|aaj) ").containsMatchIn(t)
             if (DONE.containsMatchIn(t)) return Asked(true, outcomeIn(t), today)
@@ -71,8 +82,8 @@ object RequestBook {
     }
 
     private fun outcomeIn(t: String): Requests.Outcome? = when {
-        rx(" (approv\\w*|accept\\w*|say yes|said yes) ").containsMatchIn(t) && !rx(" (declin\\w*|reject\\w*|mana) ").containsMatchIn(t) -> Requests.Outcome.APPROVED
-        rx(" (declin\\w*|reject\\w*|turn down|turned down|say no|said no|mana) ").containsMatchIn(t) -> Requests.Outcome.DECLINED
+        rx(" (approv\\w*|accept\\w*|say yes|said yes|okay|okayed|ok|okd) ").containsMatchIn(t) && !rx(" (declin\\w*|reject\\w*|mana|deny|denied|refuse|refused) ").containsMatchIn(t) -> Requests.Outcome.APPROVED
+        rx(" (declin\\w*|reject\\w*|turn down|turned down|say no|said no|mana|deny|denied|refuse|refused) ").containsMatchIn(t) -> Requests.Outcome.DECLINED
         rx(" (lapsed|expired) ").containsMatchIn(t) -> Requests.Outcome.LAPSED
         rx(" failed ").containsMatchIn(t) -> Requests.Outcome.FAILED
         else -> null

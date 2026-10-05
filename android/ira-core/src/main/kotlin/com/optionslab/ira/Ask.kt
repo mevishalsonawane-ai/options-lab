@@ -62,7 +62,9 @@ object Ask {
         // (Understanding round 21: Boss speaks of his book as "we" - "how much are we down", "how much did we make today", "are we
         // in the green", "where do I stand today", "am I bleeding" got the market or nothing. Questions only: a "we" never places anything.)
         "|( how much (are|were) we (up|down) | how much (money )?(did|have) we (make|made|earn|earned|lose|lost) | how did we do( today| so far)? $|" +
-        "^ (so )?are we (in the green|in the red|making money|losing money)( today| now| so far)? $| (am i|are we) bleeding | where do (i|we) stand )")
+        "^ (so )?are we (in the green|in the red|making money|losing money)( today| now| so far)? $| (am i|are we) bleeding | where do (i|we) stand )" +
+        // (Understanding round 26: "charges ke baad kitna bacha" - his P&L after charges, in Hinglish.)
+        "|( (charges|brokerage) (ke )?(baad|bad|kaat|kat|katke) (ke )?(how much|kitna|kitne) (bacha|bache|bachi|bachta|mila) )")
     private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
     private val HELP = Regex(" (what can you do|what all can you do|what else can you do|what all do you do|what all can you help (me )?with|what are all the things you can do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +

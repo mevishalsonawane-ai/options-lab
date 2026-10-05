@@ -106,12 +106,16 @@ object MultiDay {
     /** Asked of the record: how often, how far usually. */
     private val HOW = Regex(" (how often|how many times|how frequently|what share|what percent|what percentage|usually|normally|typically|generally|" +
         "tend to|tends to|on average|average|median|historically|odds|chance|chances|how far does|how far do|how far can|how much does|typical|" +
-        "how much do|how much can|how big is|how big are|kitna|kitni|kitne|aksar|zyada tar|mostly|often) ")
+        "how much do|how much can|how big is|how big are|kitna|kitni|kitne|aksar|zyada tar|mostly|often|" +
+        // Understanding round 26: "what's the usual 3 day move".
+        "usual|normal) ")
     /** Getting away from the close: moving, going, rising, falling, staying within. */
     private val MOVE = Regex(" (move|moves|moved|moving|movement|go|goes|went|gone|going|get|gets|got|travel|travels|swing|swings|swung|run|runs|" +
         "reach|reaches|reached|range|ranges|rise|rises|rose|fall|falls|fell|drop|drops|dropped|rally|rallies|climb|climbs|gain|gains|" +
         "slide|slides|stay|stays|stayed|hold|holds|remain|remains|far|door|dur|chalta|chalti|jata|jaata|jati|jaati|girta|girti|badhta|badhti|" +
-        "chadhta|chadhti|hilta|hilti) ")
+        "chadhta|chadhti|hilta|hilti|" +
+        // "5 din me kitna upar niche hota hai" (round 26).
+        "upar niche|upar neeche|ooper neeche|upar|neeche|niche) ")
     /** Said of one past stretch as it went: "how much did Nifty move in 3 days". */
     private val PAST_ONE = Regex(" (did|has|have|had) ")
     private val COUNTING = Regex(" (how often|how many times|kitni baar) ")

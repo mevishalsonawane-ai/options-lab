@@ -99,7 +99,10 @@ object OpenReach {
         "kitni baar|kitne din|aksar|zyada tar|mostly|often|jata hai|jaata hai|jati hai|jaati hai|" +
         // Understanding round 25: "how far does Nifty go from the open", "on a normal day", "open se kitna move karta hai".
         "how far (does|do)|how far from (the |its )?open (does|do)|on a (normal|typical|usual|regular|average) day|on (normal|typical|usual) days|" +
-        "karta hai|karti hai) ")
+        "karta hai|karti hai|" +
+        // Understanding round 26: "how much does Nifty move from the open", "the usual move from the open", "from the opening
+        // price does Nifty go" (read "open price"), "open se kitna move hota hai / chalta hai".
+        "how much (does|do)|usual|typical|how far from (the |its )?open (price |level )(does|do)|hota hai|hoti hai|chalta hai|chalti hai) ")
     /** Ending near the open itself: "how often does Nifty close near its open" (round 25). */
     private val NEAR_OPEN = Regex(" (close|closes|closed|end|ends|ended|finish|finishes|settle|settles) (near|close to|around|at|back at|back near) " +
         "(the |its |the day s |day s )?open ")

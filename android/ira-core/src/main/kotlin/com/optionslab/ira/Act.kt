@@ -85,9 +85,16 @@ object Commands {
         "(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|full details|the full details|" +
         "carry on|continue|" +
         "tell me more|more|more details|go on|details|aur batao|" +
+        // Understanding round 26: "say more", "keep going", "the rest", "tell me the rest", "baaki batao", "aage bolo", "poori baat
+        // batao", "the full answer", "the whole thing".
+        "say more|keep going|the rest|rest of it|the rest of it|(tell me|say|give me) the rest( of it)?|" +
+        "(baaki|baki|baaki ka|baki ka|aage|aage ka) (batao|bataao|bolo|bataiye|boliye|sunao)|(poori|puri|pura|poora) baat (batao|bataao|bolo)|" +
+        "(give me |say )?(the )?full answer|(say |tell me )?the whole thing|(give me |say )?the whole answer|" +
         // (As [Hinglish.normalize] turns "batao" round: "pura batao" -> "show pura". "Detail mein batao" and "explain in detail"
         // stay Boss's wish for the length of a topic, [TopicLength].)
-        "show (pura|poora|puri|poori|pure|poore|or|details|full details))( please| boss| jarvis| now)? $")
+        "show (pura|poora|puri|poori|pure|poore|or|details|full details|" +
+        // ("Baaki batao" -> "show baaki", "poori baat batao" -> "show poori baat": round 26.)
+        "baaki|baki|baaki ka|baki ka|aage|aage ka|(poori|puri|pura|poora) baat))( please| boss| jarvis| now)? $")
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
     /** Every market's names, longest first, as one alternation (for a removal by market). */
     private val ALIASES = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }

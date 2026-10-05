@@ -52,7 +52,13 @@ object Charges {
         "|(how much|kitna|kitni|kitne) (in |on )?$CHARGE|$CHARGE (how much|kitna|kitni|kitne)" +
         // Understanding round 25: "how much went in charges", "today's charges", "charges ne kitna khaya".
         "|how much (went|has gone|was gone|is gone|goes|got eaten) (in|on|to|into|as) (the |my )?$CHARGE|(today|today s|todays|aaj ke|aaj ka|aaj ki) $CHARGE" +
-        "|$CHARGE (ne )?(kitna|kitne|kitni|how much) (khaya|kha liya|kha gaye|kha gayi|liya|le liya|kata|kaata|kat gaya|gaya|gaye)) ")
+        "|$CHARGE (ne )?(kitna|kitne|kitni|how much) (khaya|kha liya|kha gaye|kha gayi|liya|le liya|kata|kaata|kat gaya|gaya|gaye)" +
+        // Understanding round 26: "charges lage kitne", "charges ka total kya hai", "charges batao", "how much tax did I pay on
+        // trades", "how much did I pay Zerodha".
+        "|$CHARGE (lage|laga|lagi|hue|hua|kate|kaate|gaye|gaya) (kitne|kitna|kitni|how much)|$CHARGE (ka |ki )?(total|hisaab|hisab|jod)" +
+        "|(show|tell|batao|bataao|dikhao|bolo) (me )?(my |the |today s |todays |aaj ke )?$CHARGE|$CHARGE (batao|bataao|dikhao|bolo)" +
+        "|how much (tax|taxes) (did|have|do) i (pay|paid) (on|for) (my )?(trades|trading|f o|options)" +
+        "|how much (did|have|do) i (pay|paid|give|given) (to )?(zerodha|kite|the broker|my broker)) ")
     /** One order's charges ("charges for one lot", "charges per order"): the cost calculator's question, not the account's. */
     private val ONE = Regex(" (per order|per lot|per trade|for (a|one|1) (lot|order|trade)|on (a|one|1) (lot|order|trade)|calculator|calculate|if i (buy|sell)|what is brokerage|what are charges) ")
 

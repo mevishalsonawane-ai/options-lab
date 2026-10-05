@@ -120,7 +120,9 @@ object AppAnswers {
         Section.ALARMS to Regex(" (alarm|alarms|alert|alerts) "),
         Section.FUNDS to Regex(" (funds|fund|margin|margins|balance|cash|capital|money|buying power|trade with) "),
         Section.HISTORY to Regex(" (yesterday|week|weekly|month|monthly|history|calendar|journal|last \\d+ days|best day|worst day|so far|this year|all time) "),
-        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)) "),
+        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)|" +
+            // (Understanding round 26: "charges ke baad kitna bacha".)
+            "(charges|brokerage) (ke )?(baad|bad|kaat|kat|katke) (ke )?(how much|kitna|kitne) (bacha|bache|bachi|bachta|mila)) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
         // ("Is Nifty holding up", "how's the market holding above 25000": the index holding a level, never Boss's holdings - round 21.)
         Section.POSITIONS to Regex(" (position|positions|holding(?! (up|on|above|below|its|at|steady|firm|strong) )|holdings|open trades|exposure) "),

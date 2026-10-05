@@ -101,19 +101,36 @@ object DayAfter {
     private val AFTER_BIG_DAY = Regex(" after (a |the )?(big|large|huge|sharp|strong|heavy|massive) (red|green|up|down) (day|days|session|sessions) ")
     /** What followed asked as "after" or "ke baad" a big day. */
     private val AFTER = Regex(" (after|ke baad|ke bad) ")
-    /** A crash is a big day said in one word. */
-    private val CRASH = Regex(" (crash|crashes|crashed) ")
+    /** A crash is a big day said in one word (round 26: a tank, a plunge, a soar too). */
+    private val CRASH = Regex(" (crash|crashes|crashed|tank|tanks|tanked|plunge|plunges|plunged|plummet|plummets|plummeted|nosedive|nosedives|" +
+        "soar|soars|soared|skyrocket|skyrockets|skyrocketed) ")
+    /**
+     * "After a 2 percent fall", "after a 3% day", "after a 1% drop day" (round 26): the big day said by its size right after
+     * "after" - a whole day's, never a part of the day's ([INTRADAY]).
+     */
+    private val AFTER_SIZED = Regex(" after (a |an |the )?\\d+(\\.\\d+)? ?(%|percent|per cent|pc|pct) ((up|down|red|green|fall|drop|dip|selloff|crash|" +
+        "decline|rally|rise|jump|surge|gain|move) ?)?(day|days|session|sessions)? ")
+    private val AFTER_SIZED_WAY = Regex(" after (a |an |the )?\\d+(\\.\\d+)? ?(%|percent|per cent|pc|pct) (up|down|red|green|fall|drop|dip|selloff|crash|" +
+        "decline|rally|rise|jump|surge|gain|day|days|session|sessions) ")
+    private val THEN = Regex(" (what next|next|then|what happens|kya hota|uske baad) ")
+    private val INTRADAY = Regex(" (morning|afternoon|hour|hours|minute|minutes|mins|in the day|first|opening|open|subah|dopahar) ")
     private val SLIPS = listOf(" dey after " to " day after ", " die after " to " day after ", " bigfall " to " big fall ", " bigdrop " to " big drop ")
     /** Following through, named as a record: "follow through record", "day after record". */
     private val NAME = Regex(" ((big day|big days|big move|big moves|big up day|big down day|day after|next day) " +
-        "(follow through|followthrough|record|records|stats|statistics|history)|follow through (record|records|stats|statistics|history|rate|odds)) ")
+        "(follow through|followthrough|record|records|stats|statistics|history)|follow through (record|records|stats|statistics|history|rate|odds)|" +
+        // "Follow through after big days" (round 26).
+        "follow through after (a |the )?(big|large|huge|sharp|strong|heavy|massive) (up |down |red |green )?(day|days|session|sessions|move|moves)) ")
     /** A big day: a size in %, or said big. */
     private val SIZE = Regex(" (\\d+(?:\\.\\d+)?) ?(%|percent|per cent|pc|pct) ")
     private val BIG = Regex(" (big|large|huge|sharp|strong|heavy|massive|bada|badi|bade|tez) ")
     private val DOWN = Regex(" (down|fall|falls|fell|falling|fallen|drop|drops|dropped|dip|dips|dipped|slide|slid|selloff|sell off|crash|crashes|crashed|" +
-        "red|loss|decline|declines|declined|girta|girti|girne|gira|giri|gire|gir|tootne|toota|tuta) ")
+        "red|loss|decline|declines|declined|girta|girti|girne|gira|giri|gire|gir|tootne|toota|tuta|" +
+        // Round 26: "badi girawat", a tank, a plunge.
+        "girawat|giravat|tank|tanks|tanked|plunge|plunges|plunged|plummet|plummets|plummeted|nosedive|nosedives) ")
     private val UP = Regex(" (up|rise|rises|rose|rising|risen|rally|rallies|rallied|jump|jumps|jumped|surge|surges|surged|gain|gains|gained|" +
-        "green|climb|climbs|climbed|chadhta|chadhti|chadhne|chadha|chadhe|badhne|badha|uchhal|uchalta|uchla) ")
+        "green|climb|climbs|climbed|chadhta|chadhti|chadhne|chadha|chadhe|badhne|badha|uchhal|uchalta|uchla|" +
+        // Round 26: "badi tezi", a soar.
+        "tezi|teji|soar|soars|soared|skyrocket|skyrockets|skyrocketed) ")
     /** Asked of the record or of what followed. */
     private val HOW = Regex(" (how often|how many times|how frequently|what share|what percent|what percentage|usually|normally|typically|" +
         "generally|tend to|tends to|on average|historically|record|history|stats|statistics|odds|chance|chances|what happens|what happened|" +
@@ -149,10 +166,13 @@ object DayAfter {
         if (!named) {
             // The session after, a big day (a size, "big" or a crash) with its way, asked of what followed - or said as
             // "after" / "ke baad" a big day ("next day after a 2% rally", "nifty bada girne ke baad agle din"; round 24).
-            if (!NEXT.containsMatchIn(t) && !AFTER_BIG_DAY.containsMatchIn(t)) return null
+            // Or by its size right after "after", asked of what followed ("what does Nifty do after a 2 percent fall", "after
+            // a 3% day what next"; round 26) - with no way said, both ways.
+            val sized = AFTER_SIZED.containsMatchIn(t) && !INTRADAY.containsMatchIn(t) && (HOW.containsMatchIn(t) || THEN.containsMatchIn(t))
+            if (!NEXT.containsMatchIn(t) && !AFTER_BIG_DAY.containsMatchIn(t) && !sized) return null
             if (!HOW.containsMatchIn(t) && !AFTER.containsMatchIn(t)) return null
             if (size == null && !BIG.containsMatchIn(t) && !CRASH.containsMatchIn(t)) return null
-            if (down == null && up == null) return null
+            if (down == null && up == null && !(sized && AFTER_SIZED_WAY.containsMatchIn(t))) return null
         }
         val side = side(t)
         val inRange = size != null && size >= MIN_PCT && size <= MAX_PCT

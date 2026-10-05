@@ -67,7 +67,11 @@ object ShortAnswer {
     private val Q_WHOLE = Regex("^ (tell me |say |some )?more( please| details| detail| boss)? $| (details?|in detail|detail mein|detail me|vistar se|" +
         "aur batao|aur bolo|aur bataiye|explain more|full answer|the full answer|go on|tell me more|in full|elaborate|say the rest|the rest) |" +
         // Understanding round 24: as Commands' "more" said as heard.
-        "^ (aur (bataao|btao|bata|boliye|sunao)|or (batao|bataao)|(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|carry on|continue)( please| boss| jarvis| now)? $")
+        "^ (aur (bataao|btao|bata|boliye|sunao)|or (batao|bataao)|(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|carry on|continue|" +
+        // Understanding round 26: as Commands' "more" said as heard.
+        "say more|keep going|the rest|rest of it|the rest of it|(tell me|say|give me) the rest( of it)?|" +
+        "(baaki|baki|baaki ka|baki ka|aage|aage ka) (batao|bataao|bolo|bataiye|boliye|sunao)|(poori|puri|pura|poora) baat (batao|bataao|bolo)|" +
+        "(give me |say )?(the )?full answer|(say |tell me )?the whole thing|(give me |say )?the whole answer)( please| boss| jarvis| now)? $")
     private val Q_TRADES_LEFT = Regex(" (trades? (left|remaining)|how many (more )?trades (can|may|left)|more trades) ")
     private val Q_THETA = Regex(" (theta|time decay|decay) ")
     private val Q_LAST = Regex(" last (trade|order|fill) ")
