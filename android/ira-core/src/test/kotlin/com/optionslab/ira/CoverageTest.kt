@@ -29,7 +29,7 @@ class CoverageTest {
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
             RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
@@ -52,6 +52,7 @@ class CoverageTest {
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
             if (PreMarket.asked(q)) return Kind.ACCOUNT
             if (Headroom.asked(q) != null) return Kind.ACCOUNT
+            if (BotTrades.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (WeekAhead.asked(q) != null) return Kind.INFO
             if (ZerodhaSession.asked(q) != null) return Kind.ACCOUNT
@@ -434,7 +435,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -454,7 +455,7 @@ class CoverageTest {
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
@@ -480,6 +481,7 @@ class CoverageTest {
         if (alone && !understood && Learnings.undoAsked(q)) return "LearningsUndo"
         if (alone && PreMarket.asked(q)) return "PreMarket"
         if (alone && Headroom.asked(q) != null) return "Headroom"
+        if (alone && BotTrades.asked(q) != null) return "BotTrades"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
         if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
@@ -740,6 +742,13 @@ class CoverageTest {
         "monday ko nifty kaisa chalta hai" to "Weekdays", "are expiry days more volatile" to "Weekdays",
         "expiry day range vs normal days" to "Weekdays", "kis din market sabse zyada hilta hai" to "Weekdays",
         "which weekday is the most volatile" to "Weekdays", "expiry ke din range zyada hota hai kya" to "Weekdays",
+        // ---- BotTrades: today's arm trades explained, signal to exit, against their rules (reasoning round 13) ----
+        "explain my bots trades today" to "BotTrades", "explain my bots' trades" to "BotTrades", "explain today's bot trades" to "BotTrades",
+        "walk me through my bots' trades" to "BotTrades", "why did orb take that trade" to "BotTrades", "why did my bots trade today" to "BotTrades",
+        "why did the liquidity bot exit" to "BotTrades", "what did my bots do today" to "BotTrades", "what trades did orb take" to "BotTrades",
+        "did my bots follow their rules" to "BotTrades", "did orb stick to its rules today" to "BotTrades", "any contradictions in my bots" to "BotTrades",
+        "did my bots take opposite sides" to "BotTrades", "my bots' trades today" to "BotTrades", "mere bots ne aaj kya kiya" to "BotTrades",
+        "orb ne trade kyun liya" to "BotTrades", "bots ke trades samjhao" to "BotTrades", "break down the range fade trade" to "BotTrades",
         // ---- DayCompare: today set against an earlier session, measure against measure (reasoning round 12) ----
         "how is today different from yesterday" to "DayCompare", "how is nifty today different from yesterday" to "DayCompare",
         "compare today with yesterday" to "DayCompare", "compare yesterday and today" to "DayCompare",

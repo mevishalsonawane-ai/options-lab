@@ -112,6 +112,20 @@ internal object IraBots {
     suspend fun lines(question: String): List<String> = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
         runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
 
+    /**
+     * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
+     * switches and the day's opening range, with BankNifty's 1-minute candles ([bankNifty]) for the signal bars. Reads only.
+     */
+    suspend fun tradesToday(q: com.optionslab.ira.BotTrades.Q, bankNifty: List<com.optionslab.ira.Candle>): String {
+        val v = com.optionslab.app.data.OrbArms.view()
+        val trades = v.arms.flatMap { it.today }.map { p ->
+            com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
+                p.charges, p.live, p.level, p.target, p.ladder, p.peak)
+        }
+        val switches = v.arms.map { com.optionslab.ira.BotTrades.Switch(it.arm.label, it.armed) }
+        return com.optionslab.ira.BotTrades.answer(q, trades, switches, v.range, bankNifty, com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
     @Volatile private var lastPass = 0L
 
     /**

@@ -1222,7 +1222,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2094,6 +2094,21 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraHeadroom.answer(roomAsk) }.getOrElse { "I could not read your limits just now, Boss." }) }
+            return true
+        }
+        // "Explain my bots' trades today", "why did ORB take that trade?", "did my bots follow their rules?", "mere bots ne aaj kya
+        // kiya" ([com.optionslab.ira.BotTrades]): each of today's arm trades chained from its signal (the opening range and the
+        // break bar, the sweep, the fade, the liquidity level) to its exit and reason and its points and rupees, against the
+        // arm's written rule and tested record; then what does not fit (armed though its test lost in both years, opposite
+        // sides at once, an exit earlier than its rule). Boss's account, so never on a locked phone; facts only - nothing is
+        // armed, stopped, placed or closed. (Not in IraGoldAlgo.)
+        val botTradesAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.BotTrades.asked(q) }.getOrNull() else null
+        if (botTradesAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.BotTrades.LOCKED); return true }
+            val bankNifty = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraBots.tradesToday(botTradesAsk, bankNifty) }.getOrElse { "I could not read your bots' trades just now, Boss." }) }
             return true
         }
         // "What did I say about expiry?", "did I note anything about the hammer last week?", "maine expiry ke baare mein kya
