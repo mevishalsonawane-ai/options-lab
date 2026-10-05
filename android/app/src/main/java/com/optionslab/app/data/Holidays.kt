@@ -92,7 +92,21 @@ object Holidays {
         cache = b
     }
 
-    fun isHoliday(d: LocalDate): Boolean = book().holiday(d)
+    /**
+     * The exchange seen trading on [d] (index candles or ticks stamped that day, in session hours). A day the list
+     * wrongly has as shut then counts as a trading day: on 5 Oct 2026 the app said "Market closed" at 09:24 while the
+     * market traded. Only evidence from the exchange's own prices sets it; it lasts the day, in memory.
+     */
+    @Volatile private var tradingSeen: LocalDate? = null
+
+    fun sawTrading(d: LocalDate) {
+        if (tradingSeen == d) return
+        val listed = runCatching { book().holiday(d) }.getOrDefault(false)
+        tradingSeen = d
+        if (listed) runCatching { Diag.record("info", "The holiday list has $d as shut, but the exchange is trading it: treated as a trading day") }
+    }
+
+    fun isHoliday(d: LocalDate): Boolean = book().holiday(d) && tradingSeen != d
 
     @Synchronized
     fun add(d: LocalDate) = book().let { save(it.copy(added = it.added + d, removed = it.removed - d)) }

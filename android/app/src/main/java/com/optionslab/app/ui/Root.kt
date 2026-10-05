@@ -620,7 +620,9 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
     var needLink by remember { mutableStateOf(false) }
     var now by remember { mutableStateOf(Market.now()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000); now = Market.now() } }
-    val open = Market.isOpen()
+    // Read with [now], so the state follows the clock: computed once, it stayed "Market closed" after the 09:15 open
+    // when the screen had first drawn before it (5 Oct, 09:24).
+    val open = now.let { Market.isOpen() }
     // The trading mode, on every screen. Tap to switch; going live asks first (and needs Zerodha linked).
     val modePill: @Composable () -> Unit = {
                 val tint = if (live) p.oxblood else p.verdigris
@@ -664,7 +666,11 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.CenterVertically)) {
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
+                        // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
+                        val why = if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.CLOSE) null else
+                            runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull()
                         Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                        if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                     }
                 }
             }

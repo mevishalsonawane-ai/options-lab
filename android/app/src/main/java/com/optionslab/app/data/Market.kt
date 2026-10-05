@@ -91,6 +91,8 @@ object Market {
         val read = runCatching { if (quick) Net.intradayQuick(key) else Net.intraday(key) }
         read.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
         var bars = read.getOrDefault(emptyList()).filter { it.istDate == today() }
+        // Today's candles in session hours are the exchange trading today, whatever the holiday list says.
+        if (bars.any { it.istMinute in OPEN until CLOSE }) Holidays.sawTrading(today())
         if (bars.isEmpty() && isOpen()) {
             // In session a failed read is an error, never the last close passed off as the live price.
             read.exceptionOrNull()?.let { throw it }
