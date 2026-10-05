@@ -417,6 +417,48 @@ internal object IraCoach {
         }
     }
 
+    /** Today's reads of each expiring chain (day|market), oldest first: the first is what decay is measured from. */
+    private val expiryReads = HashMap<String, MutableList<com.optionslab.ira.ExpiryDay.Read>>()
+    private val expiryTold = HashSet<String>()
+
+    /**
+     * The expiry-day companion (market hours, an index's expiry day): at 09:30, 12:00, 13:30, 14:30 and 15:20 the
+     * at-the-money straddle and how much of it has gone, spot against max pain, and the day's / last hour's range. Each
+     * slot told once a day, only within ten minutes of its time; the chain is read only then. Words only.
+     */
+    suspend fun expiryWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.EXPIRYDAY) ||
+            !com.optionslab.app.data.Market.isOpen()) return
+        val now = LocalDateTime.now(IST)
+        val slot = com.optionslab.ira.ExpiryDay.due(now.toLocalTime()) ?: return
+        val day = com.optionslab.app.data.Market.today().toString()
+        for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) runCatching {
+            if (!com.optionslab.app.data.Market.isExpiryDay(m.name)) return@runCatching
+            val key = "$day|${m.name}|${slot.name}"
+            if (synchronized(expiryTold) { key in expiryTold }) return@runCatching
+            val c = kotlinx.coroutines.withTimeoutOrNull(25_000) { IraAccount.chain(m.name) } ?: return@runCatching
+            val read = com.optionslab.ira.ExpiryDay.read(c, now) ?: return@runCatching
+            if (!synchronized(expiryTold) { expiryTold.add(key) }) return@runCatching
+            val first = synchronized(expiryReads) {
+                val rs = expiryReads.getOrPut("$day|${m.name}") { ArrayList() }
+                rs.add(read); rs.first()
+            }
+            val text = com.optionslab.ira.ExpiryDay.say(m, slot, first, read, IraHub.recentBars(m))
+            IraHub.appContext()?.let { JarvisPopup.show(it, "${m.label}: expiry day", text) }
+            IraHub.note(text); JarvisVoice.announce(text); Automations.acted(Automations.Auto.EXPIRYDAY, text)
+        }
+    }
+
+    /** "How is expiry going?": today's expiry reads, or null when there are none. */
+    fun expirySoFar(): String? {
+        val day = com.optionslab.app.data.Market.today().toString()
+        val reads = synchronized(expiryReads) {
+            listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)
+                .associateWith { m -> expiryReads["$day|${m.name}"]?.toList().orEmpty() }
+        }
+        return com.optionslab.ira.ExpiryDay.soFar(reads)
+    }
+
     /** VIX's change on the day at the last look (a spike is told on the way up, once). */
     private val vixLast = HashMap<String, Double?>()
     private val vixTold = HashSet<String>()

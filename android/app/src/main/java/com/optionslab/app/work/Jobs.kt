@@ -403,6 +403,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraHub.feedWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.orbWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.momentsWatch() }
+        // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
+        runCatching { com.optionslab.app.ira.IraCoach.expiryWatch() }
         runCatching { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: your own stops trailed up automatically; too many trades too fast; the opening gap plan.
         runCatching { com.optionslab.app.ira.IraCoach.trailWatch() }
