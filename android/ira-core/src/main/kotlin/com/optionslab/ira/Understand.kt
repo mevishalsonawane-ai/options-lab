@@ -110,7 +110,8 @@ object Compound {
 }
 
 /**
- * Understanding what Boss said in context (2026-10-05): the recognizer's fillers left out ([Filler]), two questions in
+ * Understanding what Boss said in context (2026-10-05): the recognizer's fillers left out ([Filler]), numbers and times
+ * said in words read as digits ([Spoken.question]), two questions in
  * one breath answered both ([Compound]), and a follow-up read with the question before it ([FollowUp]) - also between
  * the parts ("how is Nifty and what about BankNifty"). QUESTIONS only: when anything said could act, only the
  * follow-up reading that [FollowUp] always did is given, and every question given is checked not to act. Pure.
@@ -126,7 +127,8 @@ object Understand {
         // Words that could act: never cleaned or split - only the follow-up reading (which never acts) as before.
         if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(" " + said.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "))
             return FollowUp.resolve(prev, said)?.let { listOf(it) }
-        val clean = Filler.clean(said).ifBlank { return null }
+        // Numbers and times said in words ("how far is Nifty from twenty five thousand"): as digits, questions only.
+        val clean = Spoken.question(Filler.clean(said).ifBlank { return null })
         if (FollowUp.acts(clean)) return null
         val parts = Compound.split(clean) ?: listOf(clean)
         val out = mutableListOf<String>()
