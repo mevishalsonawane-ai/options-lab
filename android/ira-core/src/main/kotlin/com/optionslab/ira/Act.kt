@@ -53,6 +53,8 @@ object Commands {
     /** Commands a misspelt word may never become (only what the owner typed correctly). */
     private val NEVER_FROM_TYPO = setOf(Command.Kind.MODE_LIVE, Command.Kind.KILL_OFF, Command.Kind.JTRADES_LIVE, Command.Kind.AUTOPILOT_ON)
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
+    /** Every market's names, longest first, as one alternation (for a removal by market). */
+    private val ALIASES = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
 
     /**
      * [said] as typed; with a misspelt word ("start all statergies") read again with it fixed ([Spelling]) when that
@@ -70,24 +72,24 @@ object Commands {
 
     private fun parseAs(said: String): Command? {
         // "Jarvis, note: I bought because of the hammer at support" - kept as said (before the question and negation checks).
-        Regex("(?i)^\\s*(?:(?:hey |ok |okay )?jarvis[,.!]?\\s+)?(?:note|journal)(?: that| down)?\\s*[:,-]?\\s+(.{3,300})$").find(said.trim())?.let { m ->
+        rx("(?i)^\\s*(?:(?:hey |ok |okay )?jarvis[,.!]?\\s+)?(?:note|journal)(?: that| down)?\\s*[:,-]?\\s+(.{3,300})$").find(said.trim())?.let { m ->
             return Command(Command.Kind.NOTE, target = m.groupValues[1].trim())
         }
         // A question ("is live mode on?") is never a command.
         if (said.trim().endsWith("?")) return null
         val text = Hinglish.normalize(said)
         // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
-        val t = " " + text.lowercase().replace("%", " percent ").replace(Regex("(\\d),(?=\\d{3})"), "$1").replace(Regex("\\.(?!\\d)"), " ")
-            .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val s = t.replace(Regex(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|for me) "), " ")
-            .replace(Regex("\\s+"), " ").let { " ${it.trim()} " }
+        val t = " " + text.lowercase().replace("%", " percent ").replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\.(?!\\d)"), " ")
+            .replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val s = t.replace(rx(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|for me) "), " ")
+            .replace(rx("\\s+"), " ").let { " ${it.trim()} " }
         // "That was wrong": kept with what was said and answered (before the negation check: "not what I asked").
-        if (Regex("^ (that was wrong|that s wrong|thats wrong|that is wrong|wrong answer|you got (that|it) wrong|that s not right|thats not right|not what i asked|you misheard( me)?|you misunderstood( me)?) $").containsMatchIn(s))
+        if (rx("^ (that was wrong|that s wrong|thats wrong|that is wrong|wrong answer|you got (that|it) wrong|that s not right|thats not right|not what i asked|you misheard( me)?|you misunderstood( me)?) $").containsMatchIn(s))
             return Command(Command.Kind.MISTAKE)
         // Jarvis's voice (before the negation check: "don't speak" is a mute).
-        if (Regex("^ (un ?mute|unmute yourself|speak again|talk again|voice on|turn (on )?(your )?voice( on)?|you can (speak|talk)( now| again)?|start (speaking|talking)) $").containsMatchIn(s)) return Command(Command.Kind.UNMUTE)
+        if (rx("^ (un ?mute|unmute yourself|speak again|talk again|voice on|turn (on )?(your )?voice( on)?|you can (speak|talk)( now| again)?|start (speaking|talking)) $").containsMatchIn(s)) return Command(Command.Kind.UNMUTE)
         // A mute for a while: "be quiet for 30 minutes", "mute for an hour", "30 minute chup raho".
-        Regex("^ ((be quiet|mute|mute yourself|stay quiet|stay silent|go silent|don t speak|do not speak|stop talking|chup raho)( for)? (\\d{1,3}|an|a|one|half an) (min|mins|minute|minutes|hour|hours)|(\\d{1,3}) (minute|minutes|min|ghante|ghanta) (chup raho|mute|be quiet)) $").find(s)?.let { m ->
+        rx("^ ((be quiet|mute|mute yourself|stay quiet|stay silent|go silent|don t speak|do not speak|stop talking|chup raho)( for)? (\\d{1,3}|an|a|one|half an) (min|mins|minute|minutes|hour|hours)|(\\d{1,3}) (minute|minutes|min|ghante|ghanta) (chup raho|mute|be quiet)) $").find(s)?.let { m ->
             val g = m.groupValues
             val num = g[4].ifEmpty { g[6] }
             val n = when (num) { "an", "a", "one" -> 1; "half an" -> 0; else -> num.toIntOrNull() ?: 0 }
@@ -96,61 +98,61 @@ object Commands {
             if (minutes in 1..480) return Command(Command.Kind.MUTE_FOR, number = minutes)
         }
         // A mute needs clear words (a stray "quiet" or "silence" nearby is not one).
-        if (Regex("^ ((be |go |stay |keep )?(mute|muted)|be quiet|mute (yourself|your voice|the voice)|(be|go|stay|keep) (on )?silent|(don t|do not|stop) (speak|speaking|talk|talking)|voice off|turn (off )?(your )?voice( off)?) $").containsMatchIn(s)) return Command(Command.Kind.MUTE)
-        if (Regex("^ (why can t i hear you|why can i not hear you|i can t hear you|cant hear you|no voice|voice check|check (your|the) voice|why (are you|is your voice) (silent|not speaking|quiet)|why no voice|why (can t|cant|don t|dont|do not|can not|cannot) you (hear|listen to) me|why (are you|aren t you|arent you) (not )?(listening|hearing me)|you (are not|aren t|arent|don t|dont) (listening|hearing me)|(listening|mic|microphone) (is )?not working|(why |wht |wy )?(can t|cant|can not|cannot) (you )?(hear|here) me|(am i|can you|are you) (audible|hearing me|able to hear me)( to you| too you)?|(do|can) you (hear|here) me (now|at all|properly)|i (am|m) trying to (speak|talk)( to you)?( am i audible( to you| too you)?)?) $").containsMatchIn(s)) return Command(Command.Kind.VOICE_CHECK)
+        if (rx("^ ((be |go |stay |keep )?(mute|muted)|be quiet|mute (yourself|your voice|the voice)|(be|go|stay|keep) (on )?silent|(don t|do not|stop) (speak|speaking|talk|talking)|voice off|turn (off )?(your )?voice( off)?) $").containsMatchIn(s)) return Command(Command.Kind.MUTE)
+        if (rx("^ (why can t i hear you|why can i not hear you|i can t hear you|cant hear you|no voice|voice check|check (your|the) voice|why (are you|is your voice) (silent|not speaking|quiet)|why no voice|why (can t|cant|don t|dont|do not|can not|cannot) you (hear|listen to) me|why (are you|aren t you|arent you) (not )?(listening|hearing me)|you (are not|aren t|arent|don t|dont) (listening|hearing me)|(listening|mic|microphone) (is )?not working|(why |wht |wy )?(can t|cant|can not|cannot) (you )?(hear|here) me|(am i|can you|are you) (audible|hearing me|able to hear me)( to you| too you)?|(do|can) you (hear|here) me (now|at all|properly)|i (am|m) trying to (speak|talk)( to you)?( am i audible( to you| too you)?)?) $").containsMatchIn(s)) return Command(Command.Kind.VOICE_CHECK)
         // How fast he speaks (Boss, 4 Oct: answers to follow by ear).
-        if (Regex("^ ((speak|talk) (more )?(slower|slowly|slow)|(slower|slow down)( please)?|(thoda )?(dheere|dhire|aaram se) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_SLOWER)
-        if (Regex("^ ((speak|talk) (a bit )?(faster|quicker|quickly|fast)|(faster|speed up)( please)?|(thoda )?(jaldi|tez) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_FASTER)
-        if (Regex("^ ((speak|talk) (at )?(normal|normally|usual)( speed| pace)?|normal (speed|pace)|(speak|talk) normally|(normal|usual) (bolo|speed mein bolo)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_NORMAL)
-        if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in hindi $|^ hindi (mein|me) (bolo|baat karo|jawab do) $|^ hindi (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.HINDI)
-        if (Regex("^ (reply|answer|speak|talk|respond)( to me)? in english( again)? $|^ english (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.ENGLISH)
+        if (rx("^ ((speak|talk) (more )?(slower|slowly|slow)|(slower|slow down)( please)?|(thoda )?(dheere|dhire|aaram se) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_SLOWER)
+        if (rx("^ ((speak|talk) (a bit )?(faster|quicker|quickly|fast)|(faster|speed up)( please)?|(thoda )?(jaldi|tez) (bolo|boliye)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_FASTER)
+        if (rx("^ ((speak|talk) (at )?(normal|normally|usual)( speed| pace)?|normal (speed|pace)|(speak|talk) normally|(normal|usual) (bolo|speed mein bolo)) $").containsMatchIn(s)) return Command(Command.Kind.PACE_NORMAL)
+        if (rx("^ (reply|answer|speak|talk|respond)( to me)? in hindi $|^ hindi (mein|me) (bolo|baat karo|jawab do) $|^ hindi (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.HINDI)
+        if (rx("^ (reply|answer|speak|talk|respond)( to me)? in english( again)? $|^ english (replies|mode)( on)? $").containsMatchIn(s)) return Command(Command.Kind.ENGLISH)
         if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
-        fun has(r: String) = Regex(r).containsMatchIn(s)
-        fun num(r: String) = Regex(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
+        fun has(r: String) = rx(r).containsMatchIn(s)
+        fun num(r: String) = rx(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
 
-        if (Regex("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
+        if (rx("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
         // The day's target: "my target today is 3000", "set my daily target to 5k", "clear my target".
-        if (Regex(" (clear|remove|cancel|delete|drop) (my |the |today s )?(daily |day s |day )?target ").containsMatchIn(s)) return Command(Command.Kind.TARGET_CLEAR)
+        if (rx(" (clear|remove|cancel|delete|drop) (my |the |today s )?(daily |day s |day )?target ").containsMatchIn(s)) return Command(Command.Kind.TARGET_CLEAR)
         // ("Nifty target 25000 today" is a market level, not the owner's day target.)
-        if (Market.mentioned(s).isEmpty()) Regex(" target (\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)? (?:today|for today|for the day) ").find(s)?.let { m ->
+        if (Market.mentioned(s).isEmpty()) rx(" target (\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)? (?:today|for today|for the day) ").find(s)?.let { m ->
             val v = m.groupValues[1].toDouble() * when (m.groupValues[2]) { "k", "thousand" -> 1_000.0; "lakh" -> 100_000.0; else -> 1.0 }
             if (v >= 100) return Command(Command.Kind.TARGET_SET, level = v)
         }
-        Regex(" (?:my (?:daily |day s |day )?target(?: for today| for the day| today)?|(?:daily|day s|today s) target|target (?:for today|for the day|today)) (?:is |to |at |of |=|be )?(?:rs |rupees )?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)?(?: rupees)? ").find(s)?.let { m ->
+        rx(" (?:my (?:daily |day s |day )?target(?: for today| for the day| today)?|(?:daily|day s|today s) target|target (?:for today|for the day|today)) (?:is |to |at |of |=|be )?(?:rs |rupees )?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh)?(?: rupees)? ").find(s)?.let { m ->
             val v = m.groupValues[1].toDouble() * when (m.groupValues[2]) { "k", "thousand" -> 1_000.0; "lakh" -> 100_000.0; else -> 1.0 }
             if (v >= 100) return Command(Command.Kind.TARGET_SET, level = v)
         }
-        if (Regex("^ (reset|clear|forget) (my |your )?(preferences|suggestion preferences|what i reject(ed)?) $").containsMatchIn(s)) return Command(Command.Kind.PREF_RESET)
-        if (Regex("^ (turn|switch) (on|off) (the )?quiet hours | quiet hours (on|off) |^ (enable|disable) (the )?quiet hours ").containsMatchIn(s))
-            return Command(if (Regex(" (off|disable) ").containsMatchIn(s.replace(" quiet hours ", " "))) Command.Kind.QUIET_OFF else Command.Kind.QUIET_ON)
+        if (rx("^ (reset|clear|forget) (my |your )?(preferences|suggestion preferences|what i reject(ed)?) $").containsMatchIn(s)) return Command(Command.Kind.PREF_RESET)
+        if (rx("^ (turn|switch) (on|off) (the )?quiet hours | quiet hours (on|off) |^ (enable|disable) (the )?quiet hours ").containsMatchIn(s))
+            return Command(if (rx(" (off|disable) ").containsMatchIn(s.replace(" quiet hours ", " "))) Command.Kind.QUIET_OFF else Command.Kind.QUIET_ON)
         // "Tell me if BankNifty falls 1% from here": an alarm at a level worked out from the price now.
         if (has(" (alert|alarm|notify|tell|ping|wake|warn) ")) MoveAlarm.read(s)?.let { mv ->
             return Command(Command.Kind.ALARM_ADD, market = Market.mentioned(s).firstOrNull(), above = mv.up, pct = mv.pct)
         }
         // The emergency exit: everything closed, the kill switch on, the bots stopped.
-        if (Regex("^ (emergency exit|exit everything|panic( exit| button)?|close everything and stop|get me out( of everything)?|exit all( now)?|square off everything and stop) $").containsMatchIn(s))
+        if (rx("^ (emergency exit|exit everything|panic( exit| button)?|close everything and stop|get me out( of everything)?|exit all( now)?|square off everything and stop) $").containsMatchIn(s))
             return Command(Command.Kind.EXIT_ALL)
-        if (Regex("^ (forget|reset|clear) (what you (have )?learned|your learning|what you learnt|the corrections) $").containsMatchIn(s)) return Command(Command.Kind.LEARN_RESET)
-        if (Regex("^ (brief mode( on)?|short answers( please)?|keep it short|be brief|shorter answers) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
+        if (rx("^ (forget|reset|clear) (what you (have )?learned|your learning|what you learnt|the corrections) $").containsMatchIn(s)) return Command(Command.Kind.LEARN_RESET)
+        if (rx("^ (brief mode( on)?|short answers( please)?|keep it short|be brief|shorter answers) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
         // How much Jarvis says aloud (Boss, 5 Oct): a preference for his voice only - nothing else changes.
-        if (Regex("^ (shorter|shorter please|say less|talk less|less detail|less detail please|too long|that was too long|keep it shorter) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
-        if (Regex("^ (brief mode off|full answers|detailed answers|long answers|answer in full|longer|longer answers|in more detail|more detail always|always more detail) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
-        if (Regex("^ (tell me more|more|more details|go on|details|explain more|the full answer|repeat|repeat that|repeat it|say that again|say it again|say again|come again|pardon|sorry what|what did you say|once more|one more time) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
-        if (Practice.asked(s) && TradeReplay.asked(s) == null && Regex("^ (practi[cs]e|replay|simulate|rehearse) ").containsMatchIn(s)) return Command(Command.Kind.PRACTICE, target = text)
-        Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
+        if (rx("^ (shorter|shorter please|say less|talk less|less detail|less detail please|too long|that was too long|keep it shorter) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_ON)
+        if (rx("^ (brief mode off|full answers|detailed answers|long answers|answer in full|longer|longer answers|in more detail|more detail always|always more detail) $").containsMatchIn(s)) return Command(Command.Kind.BRIEF_OFF)
+        if (rx("^ (tell me more|more|more details|go on|details|explain more|the full answer|repeat|repeat that|repeat it|say that again|say it again|say again|come again|pardon|sorry what|what did you say|once more|one more time) $").containsMatchIn(s)) return Command(Command.Kind.MORE)
+        if (Practice.asked(s) && TradeReplay.asked(s) == null && rx("^ (practi[cs]e|replay|simulate|rehearse) ").containsMatchIn(s)) return Command(Command.Kind.PRACTICE, target = text)
+        rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_WEEKLY, level = m.groupValues[1].toDouble())
         }
         // The app's limits ("set max lots to 3"); never the PIN, real orders or the lock.
         if (SettingsTalk.forbidden(s)) return Command(Command.Kind.SET_REFUSED)
-        if (!Regex(" (your|jarvis s) | jarvis (own )?(trades? )?(daily )?(loss limit|risk) ").containsMatchIn(t)) SettingsTalk.parse(s)?.let { return it }
+        if (!rx(" (your|jarvis s) | jarvis (own )?(trades? )?(daily )?(loss limit|risk) ").containsMatchIn(t)) SettingsTalk.parse(s)?.let { return it }
         // Jarvis's own trades (before Live / Paper mode: "let your trades go live" is not the app's mode).
         if (has(" (your|jarvis s|jarvis) (own )?trades? (go |to |on )?live | (let|put|send|switch|move|take) (your|jarvis s) (own )?trades? (go )?(to )?live ")) return Command(Command.Kind.JTRADES_LIVE)
         if (has(" (your|jarvis s) (own )?trades? (on|to|back to|go to) paper | keep (your|jarvis s) (own )?trades? (on )?paper ")) return Command(Command.Kind.JTRADES_PAPER)
-        if (Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?risk (?:per trade )?(?:off|none|zero) ").containsMatchIn(t)) return Command(Command.Kind.JTRADES_RISK)
-        Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?risk (?:per trade )?(?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
+        if (rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?risk (?:per trade )?(?:off|none|zero) ").containsMatchIn(t)) return Command(Command.Kind.JTRADES_RISK)
+        rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?risk (?:per trade )?(?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_RISK, level = m.groupValues[1].toDouble())
         }
-        Regex(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?(?:daily )?loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
+        rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?(?:daily )?loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_LIMIT, level = m.groupValues[1].toDouble())
         }
         when {
@@ -162,15 +164,15 @@ object Commands {
         if (has(" (turn|switch) on (the )?autopilot | (enable|start) (the )?autopilot | autopilot on ")) return Command(Command.Kind.AUTOPILOT_ON)
         if (has(" (turn|switch) off (the )?autopilot | (disable|stop) (the )?autopilot | autopilot off ")) return Command(Command.Kind.AUTOPILOT_OFF)
         // Events: "add event RBI policy on 5 Dec", "remove event 2".
-        Regex(" (add|note|remember|mark) (an |the )?event (.+) (on|for) (.+?) $").find(s)?.let { m ->
+        rx(" (add|note|remember|mark) (an |the )?event (.+) (on|for) (.+?) $").find(s)?.let { m ->
             return Command(Command.Kind.EVENT_ADD, target = m.groupValues[3].trim(), day = Events.date(m.groupValues[5], java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))))
         }
         if (has(" (remove|delete|cancel|clear) (the |my )?event")) return Command(Command.Kind.EVENT_REMOVE, number = num(" event (\\d+) "), target = rest(s, " event "))
         // Alarms: "alert me when nifty goes above 25000", "set an alarm on banknifty below 51000", "remove alarm 2".
         // "Remove the Nifty alarm", "clear all BankNifty alerts", "remove alarms on Sensex": a market's alarms, named right
         // in the removal (never from elsewhere in the sentence; two markets named: all of them, as before).
-        val aliases = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
-        val clause = Regex(" (?:remove|delete|cancel|clear) (?:the |my |all |all my |all the )?(?:last )?($aliases) (?:index )?(?:alarm|alert)s?(?= |$)" +
+        val aliases = ALIASES
+        val clause = rx(" (?:remove|delete|cancel|clear) (?:the |my |all |all my |all the )?(?:last )?($aliases) (?:index )?(?:alarm|alert)s?(?= |$)" +
             "| (?:remove|delete|cancel|clear) (?:the |my |all |all my |all the )?(?:alarm|alert)s? (?:on|for|of) (?:the )?($aliases)(?= |$)").find(s)
         val alarmMarket = clause?.let { Market.mentioned(it.value).firstOrNull() }?.takeIf { Market.mentioned(s).size == 1 }
         // A sentence that also sets an alarm or touches orders is not a removal by market.
@@ -187,8 +189,8 @@ object Commands {
         // (Hinglish "pe" before an alert word is "at", not a put: "Nifty 24500 pe alert lagao".)
         val optionWords = has(" (ce|call|put|premium|price|ltp) ") || (has(" pe ") && !has(" pe (alert|alarm|pahunche|pahunch jaye|aaye|aa jaye|cross kare|hit kare|touch kare) "))
         val setAlarm = !optionWords && has(" set (an |a )?(alarm|alert) | (alarm|alert) (lagao|laga do|set karo|set kar do|set) | (pahunche|pahunch jaye|aaye|aa jaye|cross kare|hit kare|touch kare) (to )?(batana|bata dena) ")
-        val lvl = Regex(" (?:above|below|over|under|crosses|crossing|cross|rises to|falls to|drops to|reaches|hits|hit|touches|touch|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
-            ?: if (setAlarm) Regex(" (\\d{4,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble() else null
+        val lvl = rx(" (?:above|below|over|under|crosses|crossing|cross|rises to|falls to|drops to|reaches|hits|hit|touches|touch|to) (\\d{2,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble()
+            ?: if (setAlarm) rx(" (\\d{4,6}(?:\\.\\d+)?) ").find(s)?.groupValues?.get(1)?.toDouble() else null
         if (lvl != null && (has(" (alert|alarm|notify|tell|ping|wake|remind|let me know) ") || setAlarm) &&
             (setAlarm || has(" (above|below|over|under|crosses|crossing|cross|rises|falls|drops|goes|reaches|hits|hit|touches|touch) "))) {
             val m = Market.mentioned(s).firstOrNull()
@@ -208,28 +210,28 @@ object Commands {
         // "Close the Nifty position", "exit 24500 CE", "sell my BankNifty call", "book profit in Nifty": one position, by its
         // words (a new sell is "sell" without "my" - never read as a close).
         // (A number of lots said with a close is kept aside: only a whole position closes, so the app refuses a part.)
-        val lotWords = Regex(" (\\d+|one|two|three|four|five|ek|do) lots?( of)? ")
+        val lotWords = rx(" (\\d+|one|two|three|four|five|ek|do) lots?( of)? ")
         val saidLots = lotWords.find(s)?.groupValues?.get(1)?.let { it.toIntOrNull() ?: (listOf("one", "two", "three", "four", "five").indexOf(it) + 1).takeIf { n -> n > 0 } ?: if (it == "ek") 1 else 2 }
         val sc = s.replace(lotWords, " ")
-        Regex("^ (?:square off|squareoff|close|exit|sell my|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(sc)?.let { m ->
+        rx("^ (?:square off|squareoff|close|exit|sell my|book (?:my |the )?profits? (?:in|on)) (?:the |my )?((?:[a-z0-9]+ ){0,3}?)(position|trade|call|put|ce|pe|option)s?( |$)").find(sc)?.let { m ->
             val kind = m.groupValues[2].takeIf { it !in setOf("position", "trade", "option") }
             val words = listOfNotNull(m.groupValues[1].trim().takeIf { it.isNotEmpty() }, kind).joinToString(" ")
             return Command(Command.Kind.CLOSE_ONE, target = words.ifEmpty { null }, lots = saidLots)
         }
-        if (Regex("^ book (?:my |the )?profits? $").containsMatchIn(s)) return Command(Command.Kind.CLOSE_ONE)
-        Regex("^ book (?:my |the )?profits? (?:in|on) (?:the |my )?(.+?) $").find(s)?.let { return Command(Command.Kind.CLOSE_ONE, target = it.groupValues[1].trim()) }
+        if (rx("^ book (?:my |the )?profits? $").containsMatchIn(s)) return Command(Command.Kind.CLOSE_ONE)
+        rx("^ book (?:my |the )?profits? (?:in|on) (?:the |my )?(.+?) $").find(s)?.let { return Command(Command.Kind.CLOSE_ONE, target = it.groupValues[1].trim()) }
         // The bots: everything at once, or one strategy / arm by its number or name.
         if (has(" (stop|halt|pause|disarm|switch off|turn off) (all|every|everything)( the| my)?( strategies| arms| bots| algos| scripts| trading)? | stop trading | stop (the |my )?(bots|algos|arms|strategies) ")) return Command(Command.Kind.STOP_ALL)
         if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ") ||
             has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
             return Command(Command.Kind.START_ALL)
         // One strategy or arm: the verb comes first ("stop strategy 2"), and settings are never read as a name.
-        val notArm = Regex("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b|timer|recording|backtest")
-        Regex("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
+        val notArm = rx("kill switch|\\blive\\b|paper|\\bmode\\b|alert|alarm|autopilot|listening|^trading$|^(it|that|this|jarvis|everything)$|voice|notifications?|\\bloss\\b|talking|speaking|^(when|if|once|after|before|sending|telling|giving|the music|music|news|calling|reminding)\\b|timer|recording|backtest")
+        rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.STOP_ONE, what)
         }
-        Regex("^ (start|arm|switch on|turn on|resume|run|enable) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
+        rx("^ (start|arm|switch on|turn on|resume|run|enable) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what)) return one(Command.Kind.START_ONE, what)
         }
@@ -237,22 +239,22 @@ object Commands {
     }
 
     private fun one(kind: Command.Kind, what: String): Command {
-        val n = Regex("^(?:number |no |#)?(\\d{1,2})$").find(what)?.groupValues?.get(1)?.toIntOrNull()
-            ?: Regex("^(one|two|three|four|five|six|seven|eight|nine|ten)$").find(what)?.groupValues?.get(1)
+        val n = rx("^(?:number |no |#)?(\\d{1,2})$").find(what)?.groupValues?.get(1)?.toIntOrNull()
+            ?: rx("^(one|two|three|four|five|six|seven|eight|nine|ten)$").find(what)?.groupValues?.get(1)
                 ?.let { listOf("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten").indexOf(it) + 1 }
         return Command(kind, number = n, target = if (n == null) what else null)
     }
 
     /** The words after [after] (a name to match), or null. */
-    private fun rest(s: String, after: String): String? = s.substringAfter(after, "").trim().takeIf { it.isNotEmpty() && !Regex("^\\d+$").matches(it) }
+    private fun rest(s: String, after: String): String? = s.substringAfter(after, "").trim().takeIf { it.isNotEmpty() && !rx("^\\d+$").matches(it) }
 
     /** The thing named by [c] among [names] (1-based numbers as Jarvis lists them, or the best name match), or null. */
     fun pick(c: Command, names: List<String>): Int? {
         c.number?.let { return (it - 1).takeIf { i -> i in names.indices } }
-        val want = c.target?.lowercase()?.replace(Regex("[^a-z0-9 ]"), " ")?.split(Regex("\\s+"))?.filter { it.length > 1 && it !in STOP_WORDS } ?: return null
+        val want = c.target?.lowercase()?.replace(rx("[^a-z0-9 ]"), " ")?.split(rx("\\s+"))?.filter { it.length > 1 && it !in STOP_WORDS } ?: return null
         if (want.isEmpty()) return null
         val scored = names.mapIndexed { i, n ->
-            val w = n.lowercase().replace(Regex("[^a-z0-9 ]"), " ").split(Regex("\\s+")).toSet()
+            val w = n.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).toSet()
             i to want.count { it in w || w.any { x -> x.startsWith(it) } }
         }.filter { it.second > 0 }
         val best = scored.maxOfOrNull { it.second } ?: return null

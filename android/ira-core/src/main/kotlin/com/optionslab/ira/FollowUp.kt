@@ -33,8 +33,8 @@ object FollowUp {
         Span.TODAY to Regex("^(today|aaj)$"),
     )
 
-    private fun t(s: String) = " " + s.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
-        .replace(Regex("^(jarvis|hey jarvis|ok jarvis) "), "") + " "
+    private fun t(s: String) = " " + s.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+        .replace(rx("^(jarvis|hey jarvis|ok jarvis) "), "") + " "
 
     /** The previous question asked again for what [now] names, or null when [now] stands on its own. */
     fun resolve(prev: String?, now: String): String? {
@@ -99,7 +99,7 @@ object FollowUp {
     /** [text] with [from] (as said: "bank nifty", "nifty 50", "bnf") swapped for [to]; null when [from] is not in it. */
     internal fun swap(text: String, from: Market, to: Market): String? {
         val names = (from.aliases + from.label + from.name).distinct().sortedByDescending { it.length }
-        val swapped = Regex("(?i)\\b(" + names.joinToString("|") { n -> n.split(" ").joinToString("\\s*") { Regex.escape(it) } } + ")\\b")
+        val swapped = rx("(?i)\\b(" + names.joinToString("|") { n -> n.split(" ").joinToString("\\s*") { Regex.escape(it) } } + ")\\b")
             .replace(text.trim(), to.label)
         return if (swapped == text.trim()) null else swapped
     }
@@ -107,9 +107,9 @@ object FollowUp {
     /** Is [s] only market names ("bank nifty", "the sensex")? */
     internal fun onlyMarkets(s: String): Boolean {
         if (Market.mentioned(s).isEmpty()) return false
-        var r = " " + s.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.forEach { r = r.replace(" $it ", " ") }
-        return r.replace(Regex(" (the|and|aur|or|on|for|in|index) "), " ").replace(Regex(" (the|and|aur|or|on|for|in|index) "), " ").isBlank()
+        var r = " " + s.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        Market.ALIASES_LONGEST_FIRST.forEach { r = r.replace(" $it ", " ") }
+        return r.replace(rx(" (the|and|aur|or|on|for|in|index) "), " ").replace(rx(" (the|and|aur|or|on|for|in|index) "), " ").isBlank()
     }
 
     /**

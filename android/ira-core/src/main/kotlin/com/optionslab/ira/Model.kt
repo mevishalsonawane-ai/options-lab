@@ -40,14 +40,17 @@ enum class Market(val label: String, val unit: String, val open: LocalTime?, val
     companion object {
         /** The markets a piece of text mentions, longest alias first so "bank nifty" is not read as "nifty". */
         fun mentioned(text: String): List<Market> {
-            var s = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ") + " "
+            var s = " " + text.lowercase().replace(NOT_WORD, " ") + " "
             val found = LinkedHashSet<Market>()
-            entries.flatMap { m -> m.aliases.map { it to m } }.sortedByDescending { it.first.length }.forEach { (a, m) ->
-                val key = " $a "
-                if (s.contains(key)) { found += m; s = s.replace(key, " ") }
-            }
+            for ((key, m) in KEYS) if (s.contains(key)) { found += m; s = s.replace(key, " ") }
             return found.toList()
         }
+
+        private val NOT_WORD = Regex("[^a-z0-9 ]")
+        /** Every alias as " alias " with its market, longest first: worked out once, not at every reading. */
+        private val KEYS: List<Pair<String, Market>> by lazy { entries.flatMap { m -> m.aliases.map { it to m } }.sortedByDescending { it.first.length }.map { (a, m) -> " $a " to m } }
+        /** Every alias, longest first ([FollowUp.onlyMarkets]). */
+        internal val ALIASES_LONGEST_FIRST: List<String> by lazy { entries.flatMap { it.aliases }.sortedByDescending { it.length } }
     }
 }
 

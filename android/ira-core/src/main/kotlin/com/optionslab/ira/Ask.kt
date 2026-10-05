@@ -98,46 +98,46 @@ object Ask {
     private fun parseAs(said: String): Question {
         // Commands and orders: from the words as heard, exactly as strict as ever.
         val heard = Hinglish.normalize(said)
-        val t0 = " " + heard.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        val t0 = " " + heard.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         // (A question mark said - lost when Hinglish is read - still keeps a question from acting, as [Commands] does.)
         Commands.parse(heard)?.takeIf { !said.trim().endsWith("?") || it.kind == Command.Kind.NOTE }
             ?.let { c -> return Question(heard, Market.mentioned(heard), setOf(Topic.COMMAND), null, command = c) }
         // Everything else is a question, read with misheard and Hinglish words understood.
         val text = reading(said)
-        val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         // "What should I buy?" - the pattern expert's suggestion (with why), or why there is none now.
         if (SUGGEST.containsMatchIn(t)) return Question(text, Market.mentioned(text), setOf(Topic.SUGGEST), null)
         // "What is a hammer?" - the pattern explained, with its own record.
-        if (Regex(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !Regex(" (backtest|back test) ").containsMatchIn(t))
+        if (rx(" (what is|what s|whats|what are|explain|meaning of|tell me about|define) (a |an |the )?").containsMatchIn(t) && named(t) != null && !rx(" (backtest|back test) ").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.EXPLAIN), null, pattern = named(t))
         // "What's moving?" / "top gainers": the app follows the indices, so every index's move (Boss, 4 Oct).
-        if (Regex("^ (so )?((what s|whats|what is) moving( today| now)?|top (gainers|losers|movers)( today)?|(biggest|big) (movers|moves)( today)?|any big moves( today)?|which (index|indices|market) (is|are) (moving|up|down|strongest|weakest)( today)?) $").containsMatchIn(t))
+        if (rx("^ (so )?((what s|whats|what is) moving( today| now)?|top (gainers|losers|movers)( today)?|(biggest|big) (movers|moves)( today)?|any big moves( today)?|which (index|indices|market) (is|are) (moving|up|down|strongest|weakest)( today)?) $").containsMatchIn(t))
             return Question(text, listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX), setOf(Topic.OVERVIEW), null)
         // "What's going on?" (heard 2026-10-04 and sent to the chat, which knew nothing): the Nifty overview.
-        if (Regex("^ (so )?(what s|whats|what is) (going on|happening)( today| now| in the market)? $|^ (any|what s the) (update|updates)( today)? $|^ (kya chal raha hai|kya haal hai market ka) $").containsMatchIn(t))
+        if (rx("^ (so )?(what s|whats|what is) (going on|happening)( today| now| in the market)? $|^ (any|what s the) (update|updates)( today)? $|^ (kya chal raha hai|kya haal hai market ka) $").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW), null)
         // "Describe the Nifty chart": the trend, levels, today's range and the latest candle pattern.
-        if (Regex(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
+        if (rx(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW, Topic.TREND, Topic.LEVELS, Topic.PATTERNS), null)
         // "Should I trade now?" - Jarvis's trade check (never a direction, never a single instrument).
         // (An index named - "is Nifty bullish" - asks that index's trend, not the market-wide check.)
-        if (!Regex(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles|why|what happened|what moved|what drove) ").containsMatchIn(t) &&
-            Market.mentioned(text).none { it != Market.VIX } && Regex(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
-            Regex(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time |day )?to (trade|sell options|buy options|sell|buy)| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
+        if (!rx(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles|why|what happened|what moved|what drove) ").containsMatchIn(t) &&
+            Market.mentioned(text).none { it != Market.VIX } && rx(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
+            rx(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time |day )?to (trade|sell options|buy options|sell|buy)| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.TRADE_CHECK), null)
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
         // A question ("Did I buy 2 lots of Nifty?") is never an order.
         val placed = if (said.trim().endsWith("?")) null else order(t0)
         // "Where is BankNifty trading?" asks the price, not where something is in the app.
-        val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
-            !Regex(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
+        val priceAsk = Market.mentioned(text).isNotEmpty() && rx("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
+            !rx(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
         // "Yesterday's high on Nifty": the market's own figures, not the owner's history.
         // ("This week", "since the open", "pivots", "RSI"... on a named market are the market's too; stops, targets, alarms,
         // orders and positions stay the owner's.)
-        val marketFigure = Market.mentioned(text).isNotEmpty() && !Regex(" (my|mine|our|i|me) ").containsMatchIn(t) &&
-            !Regex(" (stop|stop loss|stoploss|sl|target|alarm|alert|order|orders|position|positions|square|squareoff) ").containsMatchIn(t) &&
-            (Regex(" (high|low|close|closing|open|opening|price|level|levels|range|history|performance|returns?|week|weekly|month|monthly|so far|running|risk) ").containsMatchIn(t) ||
+        val marketFigure = Market.mentioned(text).isNotEmpty() && !rx(" (my|mine|our|i|me) ").containsMatchIn(t) &&
+            !rx(" (stop|stop loss|stoploss|sl|target|alarm|alert|order|orders|position|positions|square|squareoff) ").containsMatchIn(t) &&
+            (rx(" (high|low|close|closing|open|opening|price|level|levels|range|history|performance|returns?|week|weekly|month|monthly|so far|running|risk) ").containsMatchIn(t) ||
                 PeriodMove.asked(text) != null || Moves.asked(text) != null || Lookback.time(text) != null || Lookback.prevAsked(text) ||
                 Pivots.asked(text) || OpeningRange.asked(text) || Momentum.asked(text) || DayStory.asked(text) || Gap.asked(text) || Streak.asked(text))
         // "If I bought the 24500 CE at 120, what is my profit at 24700": the payoff sum, not the account.
@@ -162,11 +162,11 @@ object Ask {
         }
         if (Topic.BACKTEST in topics) { topics.remove(Topic.OVERVIEW); topics.remove(Topic.PATTERNS) }
         // The owner's own trading: unless a backtest is named outright, it is about the account, not the market.
-        if (account && !Regex(" (backtest|back test|backtested|test this|test it|test the pattern|make it an arm|(create|make|build|write|turn) .*(strategy|arm)) ").containsMatchIn(t)) { topics.clear(); topics += Topic.ACCOUNT }
+        if (account && !rx(" (backtest|back test|backtested|test this|test it|test the pattern|make it an arm|(create|make|build|write|turn) .*(strategy|arm)) ").containsMatchIn(t)) { topics.clear(); topics += Topic.ACCOUNT }
         else if (order == null && markets.isEmpty() && Topic.BACKTEST !in topics && HELP.containsMatchIn(t)) { topics.clear(); topics += Topic.HELP }
         return Question(text, markets, topics, order, pattern = pattern(t), minutes = when {
-            Regex(" (1 hour|1h|hourly|60 minute|60m|one hour) ").containsMatchIn(t) -> 60
-            Regex(" (15 minute|15m|15 min|fifteen minute) ").containsMatchIn(t) -> 15
+            rx(" (1 hour|1h|hourly|60 minute|60m|one hour) ").containsMatchIn(t) -> 60
+            rx(" (15 minute|15m|15 min|fifteen minute) ").containsMatchIn(t) -> 15
             else -> null
         })
     }
@@ -199,23 +199,23 @@ object Ask {
 
     /** "buy 2 lots banknifty 52000 ce" -> an [OrderRequest]; null when the words do not ask for an order. */
     private fun order(t: String): OrderRequest? {
-        val buy = Regex(" (buy|purchase) ").containsMatchIn(t)
-        val sell = Regex(" sell(?! off) ").containsMatchIn(t)
+        val buy = rx(" (buy|purchase) ").containsMatchIn(t)
+        val sell = rx(" sell(?! off) ").containsMatchIn(t)
         if (!buy && !sell) return null
         // "Sell my 1 lot of Nifty 24500 CE", "square off 2 lots": closing what Boss holds, never a new order.
-        if (Regex(" (my|mine|existing|square off|squareoff|position|positions) ").containsMatchIn(t)) return null
+        if (rx(" (my|mine|existing|square off|squareoff|position|positions) ").containsMatchIn(t)) return null
         // A question about buying ("what if I buy...", "why did I buy...", "how much margin to buy...") is not an order.
-        if (Regex(" (should|shall|can|could|would|is it|worth|what|why|how|when|where|which|did|does|if|need to|do i|have i|has) ").containsMatchIn(t)) return null
+        if (rx(" (should|shall|can|could|would|is it|worth|what|why|how|when|where|which|did|does|if|need to|do i|have i|has) ").containsMatchIn(t)) return null
         val market = Market.mentioned(t).firstOrNull { it != Market.VIX }
-        val lots = Regex(" (\\d+) (lot|lots) ").find(t)?.groupValues?.get(1)?.toIntOrNull()
-            ?: Regex(" (one|two|three|four|five) (lot|lots) ").find(t)?.groupValues?.get(1)?.let { listOf("one", "two", "three", "four", "five").indexOf(it) + 1 }
+        val lots = rx(" (\\d+) (lot|lots) ").find(t)?.groupValues?.get(1)?.toIntOrNull()
+            ?: rx(" (one|two|three|four|five) (lot|lots) ").find(t)?.groupValues?.get(1)?.let { listOf("one", "two", "three", "four", "five").indexOf(it) + 1 }
         val right = when {
-            Regex(" (ce|call|calls) ").containsMatchIn(t) -> "CE"
-            Regex(" (pe|put|puts) ").containsMatchIn(t) -> "PE"
+            rx(" (ce|call|calls) ").containsMatchIn(t) -> "CE"
+            rx(" (pe|put|puts) ").containsMatchIn(t) -> "PE"
             else -> null
         }
-        val strike = Regex(" (\\d{4,6}) ").findAll(t).map { it.groupValues[1].toInt() }.firstOrNull { it >= 1000 }
-        val atm = strike == null && Regex(" (atm|at the money) ").containsMatchIn(t)
+        val strike = rx(" (\\d{4,6}) ").findAll(t).map { it.groupValues[1].toInt() }.firstOrNull { it >= 1000 }
+        val atm = strike == null && rx(" (atm|at the money) ").containsMatchIn(t)
         val missing = buildList {
             if (market == null) add("which index")
             if (lots == null) add("how many lots")

@@ -44,13 +44,13 @@ object Filler {
             if (from != null) return FollowUp.swap(left, from, to) ?: left
         }
         // "What's the trend, I mean the levels on BankNifty": said again whole.
-        return if (right.split(Regex("\\s+")).size >= 2) right else "$left $right"
+        return if (right.split(rx("\\s+")).size >= 2) right else "$left $right"
     }
 
-    private fun tidy(s: String) = s.replace(Regex("\\s*,(\\s*,)+"), ",").replace(Regex("\\s+([,?.!])"), "$1").replace(Regex("\\s+"), " ")
+    private fun tidy(s: String) = s.replace(rx("\\s*,(\\s*,)+"), ",").replace(rx("\\s+([,?.!])"), "$1").replace(rx("\\s+"), " ")
         .trim().trim(',').trim()
 
-    private fun squash(s: String) = s.lowercase().replace(Regex("[^a-z0-9&]"), "")
+    private fun squash(s: String) = s.lowercase().replace(rx("[^a-z0-9&]"), "")
 }
 
 /**
@@ -76,7 +76,7 @@ object Compound {
     /** "?" or ";" ends a question outright. */
     private val STRONG = Regex("\\s*[?;]\\s*")
 
-    private fun norm(s: String) = " " + s.lowercase().replace("'", "").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(s: String) = " " + s.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
 
     /** The questions in [text] as said, or null when it is one question - or holds a word that could act. */
     fun split(text: String): List<String>? {
@@ -127,7 +127,7 @@ object Understand {
         val said = now.trim()
         if (said.isEmpty()) return null
         // Words that could act: never cleaned or split - only the follow-up reading (which never acts) as before.
-        if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(" " + said.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "))
+        if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(" " + said.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "))
             return FollowUp.resolve(prev, said)?.let { listOf(it) }
         // Numbers and times said in words ("how far is Nifty from twenty five thousand"): as digits, questions only.
         val clean = Spoken.question(Filler.clean(said).ifBlank { return null })

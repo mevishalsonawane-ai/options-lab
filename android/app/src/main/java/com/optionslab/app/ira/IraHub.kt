@@ -177,6 +177,8 @@ object IraHub {
             }
         }
         IraModel.init(context)
+        // The question readers' patterns made ready off the main thread, so Boss's first question does not wait for them.
+        scope.launch { runCatching { com.optionslab.ira.Warm.up() } }
         val f = File(context.applicationContext.noBackupFilesDir, "ira-book.vault")
         bookFile = f
         book = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }.getOrNull() ?: PatternBook()
