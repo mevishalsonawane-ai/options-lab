@@ -158,6 +158,22 @@ object DailyReports {
             }
             runCatching { com.optionslab.app.ira.IraHub.refresh() }
             val ira = com.optionslab.app.ira.IraHub.state.value
+            // The pre-market checklist's checks the morning did not have ([com.optionslab.ira.PreMarket]): the relay, the
+            // guards, the bots against the ones he usually arms and - on an unlocked phone only - his margin against his
+            // usual position size and the positions carried overnight. A fail says the step he takes; nothing is changed.
+            runCatching {
+                val locked = com.optionslab.app.ira.IraHub.locked()
+                val setup = com.optionslab.app.ira.IraPreMarket.setup(context, locked)
+                val acct = if (locked) null else com.optionslab.app.ira.IraPreMarket.account()
+                val parts = setOf(com.optionslab.ira.PreMarket.Part.RELAY, com.optionslab.ira.PreMarket.Part.GUARDS, com.optionslab.ira.PreMarket.Part.BOTS,
+                    com.optionslab.ira.PreMarket.Part.MARGIN, com.optionslab.ira.PreMarket.Part.CARRIED)
+                com.optionslab.ira.PreMarket.checks(setup, acct, locked || acct == null).filter { it.part in parts }.forEach { c ->
+                    when (val v = c.ok) {
+                        null -> lines += "• ${c.part.label}: ${c.text}"
+                        else -> ok(v, "${c.part.label}: ${c.text.removeSuffix(".")}" + (c.fix?.let { ". $it" } ?: ""))
+                    }
+                }
+            }
             ok(ira.liveMissing.size < 3, if (ira.liveMissing.isEmpty()) "Live prices reaching the app" else "No live prices yet from ${ira.liveMissing.joinToString { it.label }}")
             // The day's expected move, from India VIX.
             runCatching {
@@ -272,6 +288,8 @@ object DailyReports {
             // ... and after the month's last session, the monthly review.
             if (com.optionslab.ira.MonthReview.lastTradingDay(Market.today()) { Market.isTradingDay(it) }) runCatching { com.optionslab.app.ira.IraHub.monthlyReview() }
         }
+        // What was armed today, kept (names only) so the morning checklist knows the bots he usually arms.
+        if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraPreMarket.remember(com.optionslab.app.ira.IraPreMarket.armedNow()) }
         if (AppSettings.load().guardKill) lines += "⚠ The kill switch is on"
         if (lines.isEmpty()) lines += "No trades today."
         val title = "Day report · ${Market.today().format(DAY)}" + if (lines.first() != "No trades today.") " · ${rs(total)}" else ""

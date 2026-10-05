@@ -1217,7 +1217,7 @@ object IraHub {
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
-                com.optionslab.ira.NewsMoves.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1357,6 +1357,16 @@ object IraHub {
                     }, alwaysAsk = true)
                 }
             }
+            return
+        }
+        // "Am I ready to trade?", "pre-market checklist" ([com.optionslab.ira.PreMarket]): the app's readiness and Boss's setup,
+        // each pass or fail with the fix said as a step he takes himself; his margin and overnight positions only on an
+        // unlocked phone. Reads only: nothing is placed, changed, closed or armed. (Not in IraGoldAlgo: no broker there.)
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.PreMarket.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val locked = phoneLocked()
+            scope.launch { reply(runCatching { IraPreMarket.answer(app, locked) }.getOrElse { "I could not run the checklist just now, Boss." }) }
             return
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
