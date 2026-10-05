@@ -868,6 +868,39 @@ internal object IraTools {
         return said
     }
 
+    // ---- the confidence scores that have not held up ([com.optionslab.ira.HonestStars]) --------------------------------
+
+    /** When Boss last asked for his confidence plainly (no idea before it counts); the ideas themselves are IraNewsTrades'. */
+    private const val STARS_RESET = "jarvis.honestStars.reset"
+
+    fun starsReset(): LocalDateTime? = runCatching { prefs().getString(STARS_RESET)?.let { LocalDateTime.parse(it) } }.getOrNull()
+
+    private fun starsNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    /**
+     * The spoken "Confidence N out of 5." of a trade idea, with the score's record beside it when it has not held up.
+     * The voice only - the score, the chat and the approval card are unchanged. On any trouble, the plain words.
+     */
+    fun starsAloud(stars: Int): String = runCatching {
+        com.optionslab.ira.HonestStars.aloud(stars, com.optionslab.ira.HonestStars.honest(IraNewsTrades.starsScored(), starsNow(), starsReset()))
+    }.getOrDefault("Confidence $stars out of 5.")
+
+    /** "How honest are your confidence scores?". */
+    fun starsSay(): String = runCatching { com.optionslab.ira.HonestStars.say(IraNewsTrades.starsScored(), starsNow(), starsReset()) }
+        .getOrDefault("I could not read my ideas' record just now, Boss.")
+
+    /** "Say your confidence plainly": the record no longer added aloud, the count afresh from now. */
+    fun starsPlain(): String {
+        val now = starsNow()
+        val said = runCatching { com.optionslab.ira.HonestStars.sayReset(IraNewsTrades.starsScored(), now, starsReset()) }
+            .getOrDefault("Done, Boss: I'll say my confidence plainly.")
+        starsResetAt(now)
+        IraActivity.add("Saying my confidence plainly again (as asked).")
+        return said
+    }
+
+    private fun starsResetAt(now: LocalDateTime) = runCatching { prefs().putAllSoon(mapOf(STARS_RESET to now.toString())) }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -889,7 +922,9 @@ internal object IraTools {
         wrong = runCatching { wrongLog() }.getOrDefault(com.optionslab.ira.WrongThing.Log()),
         figure = runCatching { figureLog() }.getOrDefault(com.optionslab.ira.FigureFirst.Log()),
         arms = runCatching { IraBots.armLog() }.getOrDefault(com.optionslab.ira.ArmHabits.Log()),
-        morning = runCatching { morningLog() }.getOrDefault(com.optionslab.ira.MorningSense.Log()))
+        morning = runCatching { morningLog() }.getOrDefault(com.optionslab.ira.MorningSense.Log()),
+        stars = runCatching { IraNewsTrades.starsScored() }.getOrDefault(emptyList()),
+        starsReset = starsReset())
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -906,8 +941,10 @@ internal object IraTools {
         if (u.clarity.isNotEmpty()) clarityUpdate { com.optionslab.ira.Clarity.reset(it, now) }
         if (u.figure.isNotEmpty()) figureUpdate { com.optionslab.ira.FigureFirst.reset(it, now) }
         if (u.morning.isNotEmpty()) morningUpdate { com.optionslab.ira.MorningSense.reset(it, now) }
+        if (u.stars.isNotEmpty()) starsResetAt(now)
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
-            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again.")
+            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
+            "${u.stars.size} confidence score(s) said plainly again.")
         return u
     }
 

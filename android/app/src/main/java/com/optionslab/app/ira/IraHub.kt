@@ -708,7 +708,7 @@ object IraHub {
             if (took) {
                 // Kept with the suggestions (scorecard, report card, "what if"), marked as Jarvis's own - never as Boss's answer.
                 val sid = System.nanoTime()
-                runCatching { IraNewsTrades.suggested(sid, idea, snap.price, source, regimeNow, iv?.first); IraNewsTrades.answered(sid, com.optionslab.ira.JarvisTrades.SELF) }
+                runCatching { IraNewsTrades.suggested(sid, idea, snap.price, source, regimeNow, iv?.first, conf.stars); IraNewsTrades.answered(sid, com.optionslab.ira.JarvisTrades.SELF) }
                 IraActivity.add("Took on paper by myself: $what (${source.substringBefore(':')}).")
                 Automations.acted(Automations.Auto.ACT_PAPER, "Took a ${m.label} $side on paper (${conf.stars}/5).")
             } else IraActivity.add("Did not take my own ${m.label} $side idea: ${IraActivity.short(done)}")
@@ -725,7 +725,7 @@ object IraHub {
             newsAsks += id
             if (solo) soloAsks += id
         }
-        IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source, regimeNow, iv?.first)
+        IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source, regimeNow, iv?.first, conf.stars)
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
         val where = if (goesLive) " on ZERODHA with real money (approve with your fingerprint)"
             else if (com.optionslab.app.data.AppSettings.load().live) " (on paper: ${if (solo) "Solo's" else "my"} trades stay there until proven)" else ""
@@ -733,7 +733,10 @@ object IraHub {
         val full = "$text$ivLine ${conf.text()}$risk$hourLine Shall I $what$where? Approve or reject."
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
-        JarvisVoice.askYesNo(id, "$said Confidence ${conf.stars} out of 5. Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
+        // A score that has not held up is said aloud with its record beside it ([com.optionslab.ira.HonestStars]); the score,
+        // the chat and the approval card are as worked out. On a locked phone, or on any trouble, the plain words.
+        val starsAloud = if (phoneLocked()) "Confidence ${conf.stars} out of 5." else IraTools.starsAloud(conf.stars)
+        JarvisVoice.askYesNo(id, "$said $starsAloud Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
         scope.launch {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
             if (synchronized(actions) { actions.remove(id) } != null) {
@@ -1243,6 +1246,7 @@ object IraHub {
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
+                com.optionslab.ira.HonestStars.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1906,7 +1910,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2034,6 +2038,17 @@ object IraHub {
             runCatching { com.optionslab.ira.MorningSense.asked(q) }.getOrNull() else null
         if (morningAsk != null) {
             val said = if (morningAsk == com.optionslab.ira.MorningSense.Request.RESET) IraTools.morningReset() else IraTools.morningSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "How honest are your confidence scores?" / "say your confidence plainly": the scores whose ideas have not held up,
+        // said aloud with their record ([com.optionslab.ira.HonestStars]; counts only). Only the spoken score gains its record -
+        // the score, the chat and what Jarvis does are unchanged. His ideas and Boss's answers, so never on a locked phone.
+        val starsAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.HonestStars.asked(q) }.getOrNull() else null
+        if (starsAsk != null) {
+            val said = if (phoneLocked()) com.optionslab.ira.HonestStars.LOCKED
+                else if (starsAsk == com.optionslab.ira.HonestStars.Request.RESET) IraTools.starsPlain() else IraTools.starsSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

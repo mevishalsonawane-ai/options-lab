@@ -134,7 +134,8 @@ internal object IraNewsTrades {
             o.getLong("id") to JarvisTrades.Suggestion(java.time.LocalDateTime.parse(o.getString("at")), com.optionslab.ira.Market.valueOf(o.getString("m")),
                 o.getBoolean("c"), o.getDouble("s"), o.getString("src"), o.getString("a"), if (o.has("p")) o.getDouble("p") else null, if (o.has("l")) o.getInt("l") else null,
                 if (o.has("rg")) runCatching { com.optionslab.ira.Regime.Kind.valueOf(o.getString("rg")) }.getOrNull() else null,
-                if (o.has("iv")) o.getDouble("iv") else null)
+                if (o.has("iv")) o.getDouble("iv") else null,
+                if (o.has("st")) o.getInt("st") else null)
         }.getOrNull() }
     }.getOrDefault(emptyList())
 
@@ -142,14 +143,20 @@ internal object IraNewsTrades {
         com.optionslab.app.security.SecurePrefs.put(SKEY, JSONArray().apply { l.takeLast(300).forEach { (id, x) ->
             put(JSONObject().put("id", id).put("at", x.at.toString()).put("m", x.market.name).put("c", x.call).put("s", x.spot).put("src", x.source).put("a", x.answer)
                 .apply { x.points?.let { put("p", it) }; x.lot?.let { put("l", it) }; x.regime?.let { put("rg", it.name) }
-                    x.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) } }) } }.toString())
+                    x.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) }; x.stars?.let { put("st", it) } }) } }.toString())
     }
 
-    /** [regime], [ivRank]: the conditions it came in, kept so Jarvis can judge himself by them ([com.optionslab.ira.SelfCalibration]). */
+    /**
+     * [regime], [ivRank]: the conditions it came in, kept so Jarvis can judge himself by them ([com.optionslab.ira.SelfCalibration]);
+     * [stars]: the confidence it was put with, so he can say how that score has held up ([com.optionslab.ira.HonestStars]).
+     */
     @Synchronized fun suggested(id: Long, idea: NewsTrade.Idea, spot: Double, source: String,
-                                regime: com.optionslab.ira.Regime.Kind? = null, ivRank: Double? = null) =
+                                regime: com.optionslab.ira.Regime.Kind? = null, ivRank: Double? = null, stars: Int? = null) =
         saveSuggestions(suggestions() + (id to JarvisTrades.Suggestion(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")), idea.market, idea.call, spot, source, "waiting",
-            regime = regime, ivRank = ivRank)))
+            regime = regime, ivRank = ivRank, stars = stars)))
+
+    /** Every scored idea that knew its confidence ([com.optionslab.ira.HonestStars]; counts only, never an amount). */
+    @Synchronized fun starsScored(): List<com.optionslab.ira.HonestStars.Scored> = com.optionslab.ira.HonestStars.of(suggestions().map { it.second })
 
     /** Every idea scored on real option prices (taken, approved, rejected or lapsed), with its conditions: what Jarvis judges himself by. */
     @Synchronized fun calibration(): List<com.optionslab.ira.SelfCalibration.Outcome> = com.optionslab.ira.SelfCalibration.of(suggestions().map { it.second })
