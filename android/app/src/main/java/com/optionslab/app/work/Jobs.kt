@@ -41,6 +41,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -797,6 +798,14 @@ class WatchService : Service() {
         @Volatile var stepSec: Int = 0
     }
 
+    /**
+     * Held while [RUN_DAY] is set at a watch's start and cleared at its end, so the two never interleave: an old run's
+     * end landing after a new run's start would clear the new run's day (and its process death would go untold).
+     */
+    private val runDayLock = Any()
+    /** The watch run that set [RUN_DAY] last (guarded by [runDayLock]); only that run's end clears it. */
+    private var watchRun = 0L
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = java.util.concurrent.ConcurrentHashMap<Jobs.Kind, Job>()
     @Volatile private var watching = false
@@ -884,7 +893,7 @@ class WatchService : Service() {
         if (k == null) { maybeStop(); return stickiness() }
         if (running[k]?.isActive == true) return stickiness()
         val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
-        if (k == Jobs.Kind.LIVE) noteStart(byAndroid)
+        val run = if (k == Jobs.Kind.LIVE) noteStart(byAndroid) else 0L
         running[k] = scope.launch {
             val s = AppSettings.load()
             var end: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
@@ -919,30 +928,50 @@ class WatchService : Service() {
                 if (k == Jobs.Kind.LIVE) {
                     // Cancelled with no reason given: Android destroyed the service under the watch.
                     val why = end ?: endWhy ?: (com.optionslab.ira.WatchHealth.End.SERVICE_DESTROYED to null)
+                    // Seen to end: not a process death. Cleared - on disk, synchronously - BEFORE the "ended" line, so
+                    // whoever sees the end in the diary (the owner, the next start) also sees the day cleared; and only
+                    // by the run that set it, never over a newer run's day.
+                    endRun(run)
                     Heartbeat.diary(com.optionslab.ira.WatchHealth.ended(why.first, why.second))
-                    runCatching { SecurePrefs.put(RUN_DAY, null) }      // seen to end: not a process death
                     Heartbeat.pulseStopped()
                     Tasks.publishWatch(Tasks.LiveState(false))
                 } else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
-                running.remove(k)
-                if (k == Jobs.Kind.LIVE) watching = false
+                // Only this run's own entry: a new start after a stop may already have put its job here.
+                running.remove(k, coroutineContext.job)
+                if (k == Jobs.Kind.LIVE && running[k]?.isActive != true) watching = false
                 maybeStop()
             }
         }
         return stickiness()
     }
 
-    /** The watch starts: a start after a watch that was never seen to end means the app's process ended under it. */
-    private fun noteStart(byAndroid: Boolean) {
+    /**
+     * The watch starts: a start after a watch that was never seen to end means the app's process ended under it.
+     * Returns this run's number, which its end hands to [endRun].
+     */
+    private fun noteStart(byAndroid: Boolean): Long {
         endWhy = null
+        val run = synchronized(runDayLock) { ++watchRun }
         runCatching {
             val today = Market.today().toString()
             val crash = java.io.File(filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).exists()
-            com.optionslab.ira.WatchHealth.restart(SecurePrefs.getString(RUN_DAY), today, crash, byAndroid)?.let { Heartbeat.diary(it) }
-            SecurePrefs.put(RUN_DAY, today)
+            synchronized(runDayLock) {
+                com.optionslab.ira.WatchHealth.restart(SecurePrefs.getString(RUN_DAY), today, crash, byAndroid)?.let { Heartbeat.diary(it) }
+                if (run == watchRun) SecurePrefs.put(RUN_DAY, today)
+            }
             val battery = Heartbeat.batteryRestricted(this) == true
             Heartbeat.diary("started" + if (battery) " · battery OPTIMIZED: Android may stop the watch (set IraAlgo's battery to Unrestricted)" else "")
         }
+        return run
+    }
+
+    /**
+     * The watch run [run] was seen to end: [RUN_DAY] is cleared at once (every read sees it) and written to the vault
+     * before this returns. A later run's day is left alone. Should the vault write fail, the cleared map stays in memory
+     * and goes to disk with the next write.
+     */
+    private fun endRun(run: Long) {
+        synchronized(runDayLock) { if (run == watchRun) runCatching { SecurePrefs.put(RUN_DAY, null) } }
     }
 
     private suspend fun watch(s: AppSettings) = kotlinx.coroutines.coroutineScope {
