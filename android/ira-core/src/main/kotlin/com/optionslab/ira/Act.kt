@@ -251,7 +251,7 @@ object Commands {
     }
 
     /** "Stop offering", "stop reminding me", "stop saying", "stop shortening"...: a speech habit of Jarvis's own named after "stop". */
-    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out|mentioning|naming|listing|putting|starting with) ")
+    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out|mentioning|naming|listing|putting|starting with|starting on|beginning with|beginning on) ")
 
     /**
      * "Stop offering my morning question", "stop shortening your briefings", "stop reminding me why I turn your ideas down":

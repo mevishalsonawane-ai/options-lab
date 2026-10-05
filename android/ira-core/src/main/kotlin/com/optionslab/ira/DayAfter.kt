@@ -25,8 +25,15 @@ import kotlin.math.abs
  * [MarketMemory]'s, the day after a VIX jump [VixNext]'s. Pure.
  */
 object DayAfter {
-    /** What was asked: the big day's way ([side] +1 a big rise, -1 a big fall, null both) and its size in % ([pct]). */
-    data class Q(val side: Int?, val pct: Double = DEFAULT_PCT)
+    /**
+     * What was asked: the big day's way ([side] +1 a big rise, -1 a big fall, null both) and its size in % ([pct]); [asked]
+     * the size said when it was outside [MIN_PCT] to [MAX_PCT] (then [pct] is [DEFAULT_PCT], and the answer says so).
+     */
+    data class Q(val side: Int?, val pct: Double = DEFAULT_PCT, val asked: Double? = null)
+
+    /** The sizes of a big day counted, % close to close. */
+    const val MIN_PCT = 0.3
+    const val MAX_PCT = 5.0
 
     /** One big-day candidate: a whole session ([day]) between the whole sessions just before and just after it. */
     data class Day(
@@ -133,13 +140,44 @@ object DayAfter {
             if (size == null && !BIG.containsMatchIn(t)) return null
             if (down == null && up == null) return null
         }
-        val side = when {
-            down != null && (up == null || down < up) -> -1
-            up != null -> 1
-            else -> null
+        val side = side(t)
+        val inRange = size != null && size >= MIN_PCT && size <= MAX_PCT
+        return Q(side, if (inRange) size!! else DEFAULT_PCT, if (size != null && !inRange) size else null)
+    }
+
+    /** A word's way: -1 a fall, +1 a rise, 0 neither. */
+    private fun way(w: String): Int = when {
+        DOWN.containsMatchIn(" $w ") -> -1
+        UP.containsMatchIn(" $w ") -> 1
+        else -> 0
+    }
+
+    /**
+     * The big day's way in [t] (normalized): with one way said, that one. With both ("does nifty rally the day after a 1%
+     * drop"), the way said with the size or "big" ("1% drop", "big rally", "falls 1%"), else the one in the clause after
+     * "after" (or before "ke baad"), else the first.
+     */
+    private fun side(t: String): Int? {
+        val ws = t.trim().split(" ").filter { it.isNotEmpty() }
+        val ways = ws.map { way(it) }.toMutableList()
+        for (i in 0 until ws.size - 1) if (ws[i] == "sell" && ws[i + 1] == "off") ways[i] = -1
+        val said = ways.filter { it != 0 }
+        if (said.isEmpty()) return null
+        if (said.distinct().size == 1) return said[0]
+        fun one(xs: List<Int>): Int? = xs.filter { it != 0 }.distinct().singleOrNull()
+        // Attached to the size or "big": the nearest word around it, the one after first ("1% drop", "big down day",
+        // "falls 1%", "big sharp fall").
+        val marks = ws.indices.filter { i -> SIZE.containsMatchIn(" ${ws[i]} ") || BIG.containsMatchIn(" ${ws[i]} ") ||
+            (i + 1 < ws.size && SIZE.containsMatchIn(" ${ws[i]} ${ws[i + 1]} ")) }
+        for (i in marks) for (d in listOf(1, -1, 2, -2, 3)) {
+            val j = i + d
+            if (j in ws.indices && ways[j] != 0) return ways[j]
         }
-        val pct = size?.takeIf { it in 0.3..5.0 } ?: DEFAULT_PCT
-        return Q(side, pct)
+        // The clause before "ke baad" (Hindi), or after the last "after" that is followed by one way.
+        val baad = (0 until ws.size - 1).lastOrNull { ws[it] == "ke" && ws[it + 1] == "baad" }
+        if (baad != null) one(ways.subList(0, baad))?.let { return it }
+        for (a in ws.indices.reversed().filter { ws[it] == "after" }) one(ways.subList(a + 1, ws.size))?.let { return it }
+        return said[0]
     }
 
     /** The index asked about (Nifty when none is named), or null for gold or India VIX alone. */
@@ -195,6 +233,8 @@ object DayAfter {
             return "I have only ${days.size} whole session${if (days.size == 1) "" else "s"} of ${m.label} with a whole one on each side on the phone, Boss - " +
                 "too few to say what followed its big days (I need $MIN_SESSIONS)."
         val lines = ArrayList<String>()
+        if (q.asked != null)
+            lines += "I count big days of ${p1(MIN_PCT).removeSuffix("%")} to ${p1(MAX_PCT)} only, Boss, so here are the ${p1(q.pct)} days."
         lines += "Over the last ${days.size} whole sessions of ${m.label} on this phone (${date(days.first().day)} to ${date(days.last().day)}), " +
             "a big day being a close ${p1(q.pct)} or more from the close before:"
         val sides = if (q.side != null) listOf(q.side) else listOf(-1, 1)
@@ -202,7 +242,7 @@ object DayAfter {
         val newest = days.lastOrNull { abs(it.movePct) >= q.pct && (q.side == null || it.movePct * q.side > 0) }
         if (newest != null)
             lines += "The newest was ${date(newest.day)}, when ${m.label} ended ${s2(newest.movePct)}; the next session, ${date(newest.next)}, ended ${s2(newest.nextPct)} on it."
-        todayLine(m, bars, today, now, q.pct, isTradingDay)?.let { lines += it }
+        todayLine(m, bars, today, now, q.pct, q.side, isTradingDay)?.let { lines += it }
         lines += NOTE
         return lines.joinToString(" ")
     }
@@ -223,7 +263,7 @@ object DayAfter {
     }
 
     /** Today against the close before, when the phone has today's session and a whole one just before it. */
-    private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, pct: Double, isTradingDay: (LocalDate) -> Boolean): String? {
+    private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime, pct: Double, side: Int?, isTradingDay: (LocalDate) -> Boolean): String? {
         val ss = MarketStory.sessions(bars)
         val t = ss.lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() } ?: return null
         val before = ss.lastOrNull { it.day.isBefore(today) }
@@ -237,7 +277,7 @@ object DayAfter {
             Comebacks.whole(t) -> "ended ${s2(move)} on ${date(before.day)}'s close"
             else -> "was ${s2(move)} on ${date(before.day)}'s close at ${"%02d:%02d".format(Locale.ENGLISH, last.hour, last.minute)}"
         }
-        val sized = if (abs(move) >= pct) ", a move of the size asked" else ""
+        val sized = if (abs(move) >= pct && (side == null || move * side > 0)) ", a move of the size asked" else ""
         return "Today ${m.label} $where$sized."
     }
 }

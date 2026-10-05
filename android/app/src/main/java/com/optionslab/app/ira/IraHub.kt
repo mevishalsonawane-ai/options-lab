@@ -2369,6 +2369,9 @@ object IraHub {
             runCatching { com.optionslab.ira.FigureFirst.asked(q) }.getOrNull() else null
         if (figureAsk != null) {
             val said = if (figureAsk == com.optionslab.ira.FigureFirst.Request.RESET) IraTools.figureReset() else IraTools.figureHeld()
+            // "Don't start your answers with the levels": the levels first in an overview ([com.optionslab.ira.LeadPart]) undone too.
+            if (figureAsk == com.optionslab.ira.FigureFirst.Request.RESET && runCatching { com.optionslab.ira.FigureFirst.namesPart(q) }.getOrDefault(false))
+                runCatching { IraTools.leadPartReset(phoneLocked()) }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

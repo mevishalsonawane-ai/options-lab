@@ -54,8 +54,10 @@ class Ira(private val book: PatternBook = PatternBook(),
             if (leadPart != null && LeadPart.reorders(t) && leadPart in LeadPart.PARTS) {
                 val pat = patterns(s, false)
                 pat?.let { (said, p) -> facts += said; PatternCalls.call(m, p)?.let { told += it } }
-                parts += head(s)
-                parts += LeadPart.order(listOf(Topic.TREND to trend(s), Topic.LEVELS to levels(s), Topic.PATTERNS to (pat?.first ?: "")), leadPart)
+                // One part per market (as [overview] is), so a sentence two markets share ("Not enough candles yet to
+                // read the trend.") is never dropped by the [distinct] below.
+                parts += (listOf(head(s)) + LeadPart.order(listOf(Topic.TREND to trend(s), Topic.LEVELS to levels(s),
+                    Topic.PATTERNS to (pat?.first ?: "")), leadPart)).filter { it.isNotBlank() }.joinToString(" ")
                 continue
             }
             if (Topic.OVERVIEW in t || Topic.WHY in t) parts += overview(s)

@@ -515,7 +515,7 @@ class CollisionTest {
         "sawal suggest karo" to "Tour", "take me on a tour" to "Tour",
         // ---- FigureFirst: the figure said first ----
         "which answers do you start with the number" to "FigureFirst", "why do you start with the number first" to "FigureFirst",
-        "don't start with the number" to "FigureFirst", "why are you saying the level first" to "FigureFirst",
+        "don't start with the number" to "FigureFirst", "why are you saying the level first" to "LeadPart",
         "which reads do you say the figure first" to "FigureFirst", "dont say the number first anymore" to "FigureFirst",
         "kaun se jawab mein number pehle bolte ho" to "FigureFirst", "what level is nifty at" to "Market",
         // ---- OutsideApp: anything outside IraAlgo, said politely (never done) ----

@@ -60,6 +60,16 @@ class DayAfterTest {
         assertEquals(DayAfter.Q(-1, 1.0), DayAfter.asked("1% girne ke baad agle din nifty kya karta hai"))
         assertEquals(DayAfter.Q(1, 1.5), DayAfter.asked("how does sensex usually do the day after a 1.5% rally"))
         assertEquals(DayAfter.Q(-1, 1.0), DayAfter.asked("does nifty recover the day after a 1% fall"))
+        // Both ways said: the big day's is the one with the size or "big", or after "after" / before "ke baad".
+        assertEquals(DayAfter.Q(-1, 1.0), DayAfter.asked("does nifty rally the day after a 1% drop"))
+        assertEquals(DayAfter.Q(1, 1.0), DayAfter.asked("does nifty fall the day after a big rally"))
+        assertEquals(DayAfter.Q(-1, 2.0), DayAfter.asked("after nifty falls 2% does it rally the next day"))
+        assertEquals(DayAfter.Q(1, 1.0), DayAfter.asked("does banknifty drop the next day after a big up day"))
+        assertEquals(DayAfter.Q(-1, 1.0), DayAfter.asked("bade girne ke baad agle din nifty aksar uchalta hai"))
+        // A size outside 0.3 to 5%: kept as asked, the 1% days counted.
+        assertEquals(DayAfter.Q(-1, 1.0, 7.0), DayAfter.asked("does nifty bounce the day after a 7% fall"))
+        assertEquals(DayAfter.Q(1, 1.0, 0.1), DayAfter.asked("does nifty follow through the day after a 0.1% rise"))
+        assertEquals(DayAfter.Q(1, 5.0), DayAfter.asked("does nifty follow through the day after a 5% rise"))
         // Today, yesterday, a forecast, advice, Boss's own book, a what-if, the last time, a run of closes, the intraday
         // comeback, a gap, a close at the low, VIX, gold and options are others'.
         for (q in listOf("what happens after today's 1% fall", "will nifty bounce tomorrow after a big fall",
@@ -123,6 +133,18 @@ class DayAfterTest {
         val cut = DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, past + session(today, pc, pc * 0.988, LocalTime.of(11, 0)), today, today.atTime(16, 0))
         assertTrue(Regex("Today Nifty was -\\d\\.\\d\\d% on \\d+ \\w+'s close at 11:00").containsMatchIn(cut), cut)
         assertFalse(cut.contains("Today Nifty ended"), cut)
+        // A fall today is not "of the size asked" when the big up days were asked.
+        val upAsked = DayAfter.answer(DayAfter.Q(1), Market.NIFTY, past + session(today, pc, pc * 0.988), today, today.atTime(16, 0))
+        assertTrue(Regex("Today Nifty ended -1\\.20% on \\d+ \\w+'s close\\.").containsMatchIn(upAsked), upAsked)
+        assertFalse(upAsked.contains("a move of the size asked"), upAsked)
+        val both = DayAfter.answer(DayAfter.Q(null), Market.NIFTY, past + session(today, pc, pc * 0.988), today, today.atTime(16, 0))
+        assertTrue(both.contains("a move of the size asked"), both)
+    }
+
+    @Test fun aSizeOutsideTheRangeIsSaid() {
+        val said = DayAfter.answer(DayAfter.Q(-1, 1.0, 7.0), Market.NIFTY, nifty(40), today, today.atTime(16, 0))
+        assertTrue(said.startsWith("I count big days of 0.3 to 5% only, Boss, so here are the 1% days. Over the last 39"), said)
+        assertFalse(DayAfter.answer(DayAfter.Q(-1), Market.NIFTY, nifty(40), today, today.atTime(16, 0)).contains("I count big days"))
     }
 
     @Test fun aMissingSessionIsNeverBridged() {

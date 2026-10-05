@@ -135,7 +135,7 @@ object FigureFirst {
     private val RESET = rx(LEAD + "(say|give|read) (your |me your |me |my )?(market reads|answers|reads) in the (usual|normal|old|original) order" + TAIL + "|" +
         LEAD + "(dont|do not|no need to) (starting|start|leading|lead|beginning|begin|opening|open) (your answers |your reads |answers |reads )?with $FIG( first)?( any ?more)?" + TAIL + "|" +
         LEAD + "(dont|do not) (saying|say|putting|put) $FIG first( any ?more)?" + TAIL + "|" +
-        LEAD + "(number|figure|level) (pehle|pahle) mat (bolo|batao)" + TAIL)
+        LEAD + "(number|figure) (pehle|pahle) mat (bolo|batao)" + TAIL)
 
     /** "Which reads do you start with the number?" or "say your market reads in the usual order", else null. */
     fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
@@ -145,12 +145,23 @@ object FigureFirst {
 
     private fun askedFresh(text: String): Request? {
         val t = norm(text)
-        return when {
+        val r = when {
             RESET.containsMatchIn(t) -> Request.RESET
             WHICH.containsMatchIn(t) -> Request.WHICH
             else -> null
         }
+        // "Why do you say the levels first?", "don't put the levels first": the levels (or patterns) first in an overview,
+        // [LeadPart]'s own. Only with "your answers" / "reads" said ("don't start your answers with the levels") are they
+        // the figure first here - and then the hub undoes [LeadPart] too ([namesPart]).
+        if (r != null && namesPart(text) && !OWN.containsMatchIn(t)) return null
+        return r
     }
+
+    private val PART_WORD = rx(" (level|levels|pattern|patterns|support and resistance) ")
+    private val OWN = rx(" (answers|answer|replies|reads|read|jawab) ")
+
+    /** Do [text]'s words name the levels or patterns ([LeadPart]'s part)? The hub then undoes [LeadPart] with this undo. */
+    fun namesPart(text: String): Boolean = PART_WORD.containsMatchIn(norm(text))
 
     const val UNDO = "say your market reads in the usual order"
     const val ONLY_ORDER = "Only the order I say them aloud changes - never a word or a figure, and the chat keeps every answer as written; nothing I learn acts."

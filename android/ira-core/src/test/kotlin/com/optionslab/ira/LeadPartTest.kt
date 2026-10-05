@@ -101,6 +101,15 @@ class LeadPartTest {
             assertEquals(usual.text, Ira(leadPart = null).answer(q, snaps, emptyList(), now = now).text)
             assertEquals(usual.text, Ira(leadPart = Topic.TREND).answer(q, snaps, emptyList(), now = now).text)
         }
+        // Two markets with no trend read yet: each says "Not enough candles yet..." - neither dropped as a repeat.
+        val bare = mapOf(Market.NIFTY to snap(Market.NIFTY, 24600.0).copy(trends = emptyList()),
+            Market.BANKNIFTY to snap(Market.BANKNIFTY, 55100.0).copy(trends = emptyList()))
+        val q2 = "how are nifty and banknifty"
+        val usual2 = Ira().answer(q2, bare, emptyList(), now = now).text
+        val led2 = Ira(leadPart = Topic.LEVELS).answer(q2, bare, emptyList(), now = now).text
+        assertEquals(2, Regex("Not enough candles yet").findAll(usual2).count(), usual2)
+        assertEquals(2, Regex("Not enough candles yet").findAll(led2).count(), led2)
+        assertEquals(usual2.length, led2.length)
         // Any other question is never touched by it.
         for (q in listOf("what are the levels", "what is the trend on nifty", "why is nifty up", "any patterns on nifty", "good morning"))
             assertEquals(Ira().answer(q, snaps, emptyList(), now = now).text, Ira(leadPart = Topic.LEVELS).answer(q, snaps, emptyList(), now = now).text, q)
@@ -124,10 +133,31 @@ class LeadPartTest {
             assertNull(Ask.parse(q).command, q); assertNull(Ask.parse(q).order, q)
         }
         for (q in NOT_UNDO) assertNull(LeadPart.asked(q), q)
-        // FigureFirst's own words (the figure said first) stay its own.
-        for (q in listOf("why do you say the levels first", "don't put the levels first")) {
+        // The levels or patterns first are this one's, never FigureFirst's (it keeps the number and figure wordings, and the
+        // levels only with "your answers" said - then the hub undoes this one too).
+        for (q in listOf("why do you say the levels first", "why do you put the levels first"))
+            assertEquals(LeadPart.Request.WHICH, LeadPart.asked(q), q)
+        for (q in listOf("don't put the levels first", "level pehle mat batao", "stop beginning with the patterns",
+                "stop starting on the levels", "stop beginning on levels"))
+            assertEquals(LeadPart.Request.RESET, LeadPart.asked(q), q)
+        for (q in listOf("why do you say the levels first", "why do you put the levels first", "don't put the levels first",
+                "level pehle mat batao")) assertNull(FigureFirst.asked(q), q)
+        for (q in listOf("why do you say the figure first", "don't put the number first", "number pehle mat bolo")) {
             assertNotNull(FigureFirst.asked(q), q); assertNull(LeadPart.asked(q), q)
         }
+        assertEquals(FigureFirst.Request.RESET, FigureFirst.asked("don't start your answers with the levels"))
+        assertTrue(FigureFirst.namesPart("don't start your answers with the levels"))
+        assertFalse(FigureFirst.namesPart("don't put the number first"))
+        // The undo of a speech habit, never a stop of an arm; an arm named stays one.
+        for (q in listOf("stop beginning with the patterns", "stop starting on the levels", "stop beginning on levels"))
+            assertNull(Ask.parse(q).command, q)
+        for (q in listOf("stop orb", "stop levels", "stop patterns", "stop the levels strategy"))
+            assertEquals(Command.Kind.STOP_ONE, Ask.parse(q).command?.kind, q)
+        // His questions about the order are never tallied as questions about the levels.
+        for (q in listOf("don't put the levels first", "why do you say the levels first", "why do you put the levels first",
+                "level pehle mat batao", "stop putting the levels first", "don't put the number first"))
+            assertTrue(SelfDoubt.count(emptyMap(), today, q).isEmpty(), q)
+        assertEquals(1, SelfDoubt.count(emptyMap(), today, "what are the levels on nifty")[today]?.get("topic:LEVELS"))
         // Not his market questions, not LeadIndex's or FigureFirst's, never an order or a command.
         for (q in listOf("how is nifty", "what are the levels on nifty", "which index do you mention first", "mention nifty first again",
                 "say your market reads in the usual order", "buy nifty first", "say that again", "stop orb"))

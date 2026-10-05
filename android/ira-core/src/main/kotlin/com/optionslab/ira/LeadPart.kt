@@ -86,16 +86,16 @@ object LeadPart {
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| now| again| from now on| for me)* $"
-    private const val PART = "(the )?(levels|patterns|pattern|support and resistance)"
+    private const val PART = "(the )?(levels|level|patterns|pattern|support and resistance)"
 
-    private val WHICH = rx(LEAD + "why do you (always )?(say|give|tell me|mention|put|start with) $PART first( in (the|an|your) overviews?)?" + TAIL + "|" +
+    private val WHICH = rx(LEAD + "(why|how come) (do you|are you) (always )?(say|saying|give|giving|tell me|telling me|mention|mentioning|put|putting|start with|starting with) $PART first( in (the|an|your) overviews?)?" + TAIL + "|" +
         LEAD + "why do you (always )?(start|begin) (with|on) $PART( in (the|an|your) overviews?)?" + TAIL + "|" +
         LEAD + "why (are|were|is|was) $PART (said |given |put )?first( in (the|an|your) overviews?)?" + TAIL + "|" +
         LEAD + "what do you (say|tell me|give|mention|put) first in (the|an|your) overviews?" + TAIL + "|" +
         LEAD + "what comes first in your overviews?" + TAIL + "|" +
         LEAD + "(which|what) part (of the market |of a market read )?do i ask (you )?(about|for) (the )?most" + TAIL + "|" +
         LEAD + "overview (mein|me|main) pehle kya (bolte|batate) ho" + TAIL + "|" +
-        LEAD + "(levels|patterns|pattern) pehle (kyun|kyu|kyon) (bolte|batate) ho" + TAIL)
+        LEAD + "(level|levels|patterns|pattern) pehle (kyun|kyu|kyon) (bolte|batate) ho" + TAIL)
 
     /**
      * Only a clear undo: "say your overviews in the usual order", "stop (or don't) putting the levels first", "go back to the
@@ -107,7 +107,7 @@ object LeadPart {
         LEAD + "stop (starting|beginning) (with|on) $PART( in (the|your) overviews?)?" + TAIL + "|" +
         LEAD + "(dont|do not) (put|say|give|mention|start with) $PART first( in (the|your) overviews?)?" + TAIL + "|" +
         LEAD + "go back to the usual order in (the|your) overviews?" + TAIL + "|" +
-        LEAD + "(levels|patterns|pattern) pehle (mat|na) (bolo|batao|bolna|batana)" + TAIL)
+        LEAD + "(level|levels|patterns|pattern) pehle (mat|na) (bolo|batao|bolna|batana)" + TAIL)
 
     /** "What do you say first in an overview?" or "say your overviews in the usual order", else null. */
     fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
@@ -115,8 +115,9 @@ object LeadPart {
     private val askedKept = Kept<Request?>(64)
 
     private fun askedFresh(text: String): Request? {
-        // "Why do you say the levels first?", "don't put the levels first": FigureFirst's own words (the figure said
-        // first in a market read), routed before this in the hub - they stay its own.
+        // "Why do you say the levels first?", "don't put the levels first" are this one's; FigureFirst keeps the number and
+        // figure wordings and the levels only with "your answers" / "reads" said ("don't start your answers with the levels",
+        // routed before this in the hub, which then undoes this one too).
         if (FigureFirst.asked(text) != null) return null
         val t = norm(text)
         return when {
