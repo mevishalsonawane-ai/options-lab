@@ -251,13 +251,16 @@ object DailyReports {
             // read out, and the chat note below keeps every item. Today's failing items are noted (keys only).
             val failing = lines.filter { it.startsWith("✗") }
             val needYou = com.optionslab.app.ira.IraTools.morningAloud(bad, failing.filter { !privateLine(it) }.map { it.removePrefix("✗ ") }, failing)
-            runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + if (bad == 0) "We are set for today's trading." else
+            // The question Boss asks on most mornings and has not asked yet today: offered in one last line ("say 'yes'
+            // for it"), never answered unasked ([com.optionslab.ira.MorningAsks]; a market question only - words, nothing acts).
+            val usual = runCatching { com.optionslab.app.ira.IraTools.morningAsksLine() }.getOrNull()
+            runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. " + (if (bad == 0) "We are set for today's trading." else
                 needYou +
                 (if (brief.isEmpty()) "" else " Now my analysis. " + brief.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 2) } +
-                    " That is history, not a promise.")) }
+                    " That is history, not a promise.")) + (usual?.let { " $it" } ?: "")) }
             com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +
                 (if (bad == 0) "We are set for today's trading. " else "$bad thing${if (bad > 1) "s" else ""} need you before 09:15. ") +
-                lines.joinToString(" ") { it.removePrefix("✓ ").removePrefix("✗ ").removePrefix("• ").trimEnd('.') + "." }))
+                lines.joinToString(" ") { it.removePrefix("✓ ").removePrefix("✗ ").removePrefix("• ").trimEnd('.') + "." } + (usual?.let { " $it" } ?: "")))
             return title to lines
         }
         val title = "Morning check · ${Market.today().format(DAY)}" + if (bad == 0) " · all set" else " · $bad to fix"

@@ -1168,6 +1168,19 @@ object IraHub {
             val said = runCatching { IraDayJournal.heard(q) }.getOrNull()
             if (said != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }; return }
         }
+        // Boss's bare "yes" as his very next words after the morning check offered his usual morning question
+        // ([com.optionslab.ira.MorningAsks]): asked as that question - a market question only, checked again here, never an
+        // order or a command. Any other words end the offer, and a yes while something waits for his yes or Confirm is never
+        // taken as it. Understanding only: nothing learned acts.
+        if (com.optionslab.app.BuildConfig.JARVIS && !understood && !cleaned) {
+            val waiting = synchronized(actions) { actions.isNotEmpty() }
+            val usual = runCatching { IraTools.morningAsksYes(q, waiting) }.getOrNull()
+            if (usual != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$usual\".")).takeLast(MAX_MESSAGES)) }
+                ask(usual, understood = true)
+                return
+            }
+        }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
@@ -1248,7 +1261,7 @@ object IraHub {
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.FigureFirst.asked(q) != null ||
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
-                com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null ||
+                com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1914,7 +1927,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2063,6 +2076,16 @@ object IraHub {
             runCatching { com.optionslab.ira.TalkHours.asked(q) }.getOrNull() else null
         if (talkAsk != null) {
             val said = if (talkAsk == com.optionslab.ira.TalkHours.Request.RESET) IraTools.talkReset() else IraTools.talkSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What do you offer me in the morning?" / "don't offer my usual morning question": the question Boss asks every
+        // morning, offered in one line at the end of the morning check ([com.optionslab.ira.MorningAsks]; kinds and days only).
+        // Words only - never answered unasked, and nothing learned acts.
+        val morningAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MorningAsks.asked(q) }.getOrNull() else null
+        if (morningAsk != null) {
+            val said = if (morningAsk == com.optionslab.ira.MorningAsks.Request.RESET) IraTools.morningAsksReset() else IraTools.morningAsksSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

@@ -61,6 +61,7 @@ internal object IraTools {
             againAsked(said)
             wrongAsked(said)
             talkHeard()
+            asksHeard(said)
             val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
             val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
             prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
@@ -971,6 +972,86 @@ internal object IraTools {
         return said
     }
 
+    // ---- the question Boss asks every morning ([com.optionslab.ira.MorningAsks]) ----------------------------------------
+
+    /** The weekday mornings: the kinds of market question Boss asked and whether the check ran (kinds and days only - never a word). */
+    private const val MORNING_ASKS = "jarvis.morningAsks"
+    @Volatile private var asksCache: com.optionslab.ira.MorningAsks.Log? = null
+    /** The kind offered at the end of this morning's check, and when (kept in memory only; any other words end it). */
+    @Volatile private var asksOffered: Pair<String, LocalDateTime>? = null
+
+    fun asksLog(): com.optionslab.ira.MorningAsks.Log = asksCache ?: runCatching {
+        val o = JSONObject(prefs().getString(MORNING_ASKS) ?: "{}")
+        val m = o.optJSONArray("m") ?: JSONArray()
+        com.optionslab.ira.MorningAsks.Log(
+            mornings = (0 until m.length()).map { i -> m.getJSONObject(i).let { x ->
+                val k = x.optJSONArray("k") ?: JSONArray()
+                com.optionslab.ira.MorningAsks.Morning(java.time.LocalDate.parse(x.getString("d")), (0 until k.length()).map { k.getString(it) }.toSet(),
+                    x.optBoolean("c", false)) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.MorningAsks.Log()).also { asksCache = it }
+
+    @Synchronized private fun asksUpdate(f: (com.optionslab.ira.MorningAsks.Log) -> com.optionslab.ira.MorningAsks.Log) {
+        runCatching {
+            val log = f(asksLog())
+            if (log == asksCache) return@runCatching
+            asksCache = log
+            val o = JSONObject().put("m", JSONArray().apply { log.mornings.forEach { x ->
+                put(JSONObject().put("d", x.day.toString()).put("c", x.checked).put("k", JSONArray().apply { x.keys.sorted().forEach { put(it) } })) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(MORNING_ASKS to o.toString()))
+        }
+    }
+
+    private fun asksNow(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime().withSecond(0).withNano(0)
+
+    /** Boss asked [said] now: on a weekday morning, its market kind noted (never the words, never the account). */
+    private fun asksHeard(said: String) {
+        val now = asksNow()
+        if (!com.optionslab.ira.MorningAsks.morning(now)) return
+        asksUpdate { com.optionslab.ira.MorningAsks.heard(it, said, now) }
+    }
+
+    /**
+     * The 09:00 check's last line: the question Boss asks on most mornings and has not asked yet today, offered in words
+     * ("say 'yes' for it") - never answered unasked; then today marked a trading morning. Null when there is none.
+     * Words only: nothing here acts.
+     */
+    fun morningAsksLine(): String? {
+        val today = com.optionslab.app.data.Market.today()
+        val u = runCatching { com.optionslab.ira.MorningAsks.offer(asksLog(), today) }.getOrNull()
+        asksUpdate { com.optionslab.ira.MorningAsks.checked(it, today) }
+        asksOffered = u?.let { it.key to asksNow() }
+        return u?.let { runCatching { com.optionslab.ira.MorningAsks.line(it) }.getOrNull() }
+    }
+
+    /**
+     * Boss's words [said] after the morning offer: a bare "yes" within the minutes allowed - and nothing else waiting
+     * for his yes ([waiting]) - is the offered question (a market question, checked again), else null. Any words end
+     * the offer, whatever they were.
+     */
+    fun morningAsksYes(said: String, waiting: Boolean): String? {
+        val (key, at) = asksOffered ?: return null
+        asksOffered = null
+        if (waiting || !com.optionslab.ira.MorningAsks.yes(said) || !com.optionslab.ira.MorningAsks.fresh(at, asksNow())) return null
+        return com.optionslab.ira.MorningAsks.question(key)
+    }
+
+    /** "What do you offer me in the morning?". */
+    fun morningAsksSay(): String = runCatching { com.optionslab.ira.MorningAsks.say(asksLog(), com.optionslab.app.data.Market.today()) }
+        .getOrDefault("I could not read my record of your morning questions just now, Boss.")
+
+    /** "Don't offer my usual morning question": the morning check ends as before, the count afresh. */
+    fun morningAsksReset(): String {
+        val now = asksNow()
+        val said = runCatching { com.optionslab.ira.MorningAsks.sayReset(asksLog(), now.toLocalDate()) }
+            .getOrDefault("Done, Boss: no morning question offered, and my count starts afresh.")
+        asksUpdate { com.optionslab.ira.MorningAsks.reset(it, now) }
+        asksOffered = null
+        IraActivity.add("No longer offering Boss's usual morning question (as asked).")
+        return said
+    }
+
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
@@ -995,7 +1076,8 @@ internal object IraTools {
         morning = runCatching { morningLog() }.getOrDefault(com.optionslab.ira.MorningSense.Log()),
         stars = runCatching { IraNewsTrades.starsScored() }.getOrDefault(emptyList()),
         starsReset = starsReset(),
-        hours = runCatching { talkLog() }.getOrDefault(com.optionslab.ira.TalkHours.Log()))
+        hours = runCatching { talkLog() }.getOrDefault(com.optionslab.ira.TalkHours.Log()),
+        asks = runCatching { asksLog() }.getOrDefault(com.optionslab.ira.MorningAsks.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1014,9 +1096,11 @@ internal object IraTools {
         if (u.morning.isNotEmpty()) morningUpdate { com.optionslab.ira.MorningSense.reset(it, now) }
         if (u.stars.isNotEmpty()) starsResetAt(now)
         if (u.hours.isNotEmpty()) talkUpdate { com.optionslab.ira.TalkHours.reset(it, now) }
+        if (u.asks.isNotEmpty()) { asksUpdate { com.optionslab.ira.MorningAsks.reset(it, now) }; asksOffered = null }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
-            "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again." else "briefings unchanged."))
+            "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
+            (if (u.asks.isNotEmpty()) "no morning question offered." else "morning check unchanged."))
         return u
     }
 
