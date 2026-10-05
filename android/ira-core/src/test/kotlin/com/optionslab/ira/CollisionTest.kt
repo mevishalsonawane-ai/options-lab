@@ -93,6 +93,7 @@ class CollisionTest {
         "VixNext" to { q -> VixNext.asked(q) != null },
         "SplitDays" to { q -> SplitDays.asked(q) != null },
         "RoundCloses" to { q -> RoundCloses.asked(q) != null },
+        "MonthTurns" to { q -> MonthTurns.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -658,6 +659,12 @@ class CollisionTest {
         "nifty gol figure ke paas kitni baar band hota hai" to "RoundCloses", "do sensex closes cluster at round levels" to "RoundCloses",
         // Its neighbours: one price, the expiry pin.
         "what s at 25000 on nifty" to "LevelInfo", "does nifty pin to max pain on expiry" to "ExpiryPin",
+        // ---- MonthTurns: a month's first and last 3 trading days against the rest (round 25) ----
+        "how does nifty do at the beginning of the month" to "MonthTurns", "is there a turn of the month effect" to "MonthTurns",
+        "how does banknifty usually do at month end" to "MonthTurns", "month beginning record" to "MonthTurns",
+        "mahine ke aakhri din nifty kaisa rehta hai" to "MonthTurns", "how volatile are the first few days of the month" to "MonthTurns",
+        // Its neighbours: the month's own move, Boss's month, a weekday's record.
+        "how was nifty this month" to "PeriodMove", "how was my month" to "Account:MONTH", "is friday usually the widest day" to "Weekdays",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -876,7 +883,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
