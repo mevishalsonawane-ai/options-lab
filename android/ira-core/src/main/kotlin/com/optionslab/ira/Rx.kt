@@ -54,6 +54,9 @@ internal class Kept<V>(private val max: Int) {
 
     /** How many readings are kept. */
     val size: Int get() = synchronized(kept) { kept.size }
+
+    /** Every kept reading forgotten (tests). */
+    fun clear() = synchronized(kept) { kept.clear() }
 }
 
 /** [read] of [words] kept in [kept], given back as [words] itself when it reads as the same words (a reader that returns its input). */
