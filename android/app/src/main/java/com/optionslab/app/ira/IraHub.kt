@@ -1228,6 +1228,7 @@ object IraHub {
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
+                com.optionslab.ira.PriorDay.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2296,6 +2297,24 @@ object IraHub {
                 else com.optionslab.ira.RangeBreaks.answer(orbAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
             }.getOrElse { "I could not read the opening-range record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "When Nifty takes out yesterday's high in the first hour, how often does it close above it?", "how often does Nifty break
+        // the previous day's low?", "PDH PDL record": how the index's past take-outs of the prior day's high and low closed, on
+        // the phone's own 1-minute sessions ([com.optionslab.ira.PriorDay]), beside today against yesterday's high and low. A
+        // record of past days, never a forecast or advice; market data only (fine on a locked phone); nothing acts. (Where
+        // yesterday's high is and how far the price is from it stay the level readers'.)
+        val priorAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.PriorDay.asked(q) }.getOrNull() else null
+        if (priorAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.PriorDay.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.PriorDay.NOT_HERE
+                else com.optionslab.ira.PriorDay.answer(priorAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the prior-day high and low record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true

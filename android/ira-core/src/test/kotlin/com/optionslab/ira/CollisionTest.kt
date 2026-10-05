@@ -382,7 +382,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "SaidAbout", "WeekAhead", "ZerodhaSession", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "Weekdays", "DayCompare", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "Weekdays", "DayCompare", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
