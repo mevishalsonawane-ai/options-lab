@@ -86,6 +86,40 @@ internal object IraPreMarket {
         return PreMarket.Account(available, PreMarket.usualSize(sizes), carried)
     }
 
+    /**
+     * "What do I need to do before tomorrow?" ([com.optionslab.ira.BeforeTomorrow], usefulness round 23): the Zerodha
+     * login, his legs expiring on the next trading day (IraCoach.expiryEveRead, saying when Zerodha wasn't read), the arms
+     * armed now with their paper records, the static IP and the relay, the battery setting and the backup's age - one
+     * checklist, facts only. Reads only: nothing is placed, changed, closed, armed or disarmed. On a locked phone his legs
+     * and the records are not read at all.
+     */
+    suspend fun beforeTomorrow(context: Context?, locked: Boolean): String {
+        val s = AppSettings.load()
+        val today = Market.today()
+        val next = com.optionslab.ira.ExpiryEve.nextTradingDay(today) { Market.isTradingDay(it) }
+        val eve = if (locked) null else runCatching { IraCoach.expiryEveRead() }.getOrNull()
+        val armed = runCatching { armedNow() }.getOrDefault(emptySet()).toList()
+        val records = if (locked) null else runCatching {
+            IraBots.bots().filter { it.where == "Paper" && it.name in armed }.associate { b ->
+                val st = com.optionslab.ira.BotHealth.stats(b.trades)
+                b.name to com.optionslab.ira.BeforeTomorrow.Record(st.trades, st.wins, st.net, b.tested?.winRate)
+            }
+        }.getOrNull()
+        val staticIp = com.optionslab.app.data.StaticIp.registered?.let {
+            runCatching { com.optionslab.app.data.StaticIp.status(force = true).matches }.getOrDefault(false)
+        }
+        val battery = context?.let { c -> runCatching { com.optionslab.app.ui.screens.BatteryCheck.unrestricted(c) }.getOrNull() }
+        val lastBackup = runCatching { SecurePrefs.getString("backup.last")?.let(java.time.LocalDate::parse) }.getOrNull()
+        val facts = com.optionslab.ira.BeforeTomorrow.Facts(
+            today = today, next = next, configured = Broker.configured, live = s.live,
+            expiring = eve?.legs, loggedIn = eve?.loggedIn ?: Broker.loggedIn, zerodhaRead = eve?.zerodhaRead ?: false,
+            armed = armed, records = records,
+            staticIp = staticIp, relay = runCatching { relayAnswers() }.getOrNull(), battery = battery,
+            lastBackup = lastBackup,
+        )
+        return com.optionslab.ira.BeforeTomorrow.say(facts, locked)
+    }
+
     /** "Am I ready to trade?": the checklist in words. Reads only. */
     suspend fun answer(context: Context?, locked: Boolean): String {
         val setup = setup(context, locked)

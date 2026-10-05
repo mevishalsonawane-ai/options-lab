@@ -54,6 +54,7 @@ class CollisionTest {
         "ArmDay" to { q -> ArmDay.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
+        "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
@@ -698,6 +699,16 @@ class CollisionTest {
         "how did the market beat my strategy today" to "ArmDay", "aaj bot ko nuksan kyun hua" to "ArmDay", "why are my bots in the red today" to "ArmDay",
         // Their neighbours: what the bots did today (BotTrades), and the meaning of a candle.
         "what did orb trade today" to "BotTrades", "did orb follow its rule today" to "BotTrades",
+        // ---- Round 16. BeforeTomorrow: what Boss needs to do before the next trading day ----
+        "what do i need to do before tomorrow" to "BeforeTomorrow", "what do i have to do before tomorrow" to "BeforeTomorrow",
+        "anything i need to do before tomorrow" to "BeforeTomorrow", "is there anything i need to do for tomorrow" to "BeforeTomorrow",
+        "what should i sort out before tomorrow" to "BeforeTomorrow", "anything to do before tomorrow" to "BeforeTomorrow",
+        "what do i need to take care of before tomorrow's open" to "BeforeTomorrow", "checklist for tomorrow" to "BeforeTomorrow",
+        "tomorrow's checklist" to "BeforeTomorrow", "my to do list for tomorrow" to "BeforeTomorrow", "kal se pehle kya karna hai" to "BeforeTomorrow",
+        "kal ke liye kya karna hai" to "BeforeTomorrow", "mujhe kal ke liye kuch karna hai kya" to "BeforeTomorrow",
+        "what do i need to check before the next trading day" to "BeforeTomorrow", "kya karna padega kal se pehle" to "BeforeTomorrow",
+        // Its neighbours: what expires (ExpiryEve), the morning's own checklist (PreMarket).
+        "what's expiring tomorrow for me" to "ExpiryEve", "pre market checklist" to "PreMarket", "is everything set for today" to "PreMarket",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
@@ -723,7 +734,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 

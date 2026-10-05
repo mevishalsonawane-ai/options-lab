@@ -107,15 +107,25 @@ object ExpiryEve {
 
     /**
      * The answer to [asked]: [line] (the checklist, when something he holds expires on [expiry], the next trading day), else
-     * that nothing does - saying whether Zerodha's positions were read ([zerodhaRead]). Facts only; nothing acts.
+     * that nothing does - saying whether Zerodha's positions were actually read ([zerodhaRead]) and, when not, why: not
+     * logged in ([loggedIn] false), or logged in but the read failed or timed out (round 23: it used to claim both were
+     * read whenever Zerodha was logged in). A checklist from Paper alone says so too. Facts only; nothing acts.
      */
-    fun answer(line: String?, expiry: LocalDate?, zerodhaRead: Boolean): String {
-        if (line != null) return line
+    fun answer(line: String?, expiry: LocalDate?, zerodhaRead: Boolean, loggedIn: Boolean = zerodhaRead): String {
+        if (line != null) return line + (unread(zerodhaRead, loggedIn)?.let { " $it" } ?: "")
         if (expiry == null) return "I couldn't tell the next trading day just now, Boss, so I can't say what expires."
         return "Nothing you hold expires on the next trading day (${expiry.format(DAY)}), Boss" +
-            (if (zerodhaRead) " - your Paper and Zerodha positions both read." else " - I read your Paper positions; Zerodha isn't logged in, so its positions weren't read.") +
+            (when {
+                zerodhaRead -> " - your Paper and Zerodha positions both read."
+                loggedIn -> " - on Paper, that is: Zerodha's positions couldn't be read just now, so I can't say the same for them."
+                else -> " - I read your Paper positions; Zerodha isn't logged in, so its positions weren't read."
+            }) +
             " Facts only, nothing is done."
     }
+
+    /** Said after a checklist when Zerodha is logged in but its positions weren't read (only Paper's legs are in it). */
+    fun unread(zerodhaRead: Boolean, loggedIn: Boolean): String? =
+        if (loggedIn && !zerodhaRead) "Zerodha's positions couldn't be read just now, so only your Paper legs are listed." else null
 
     /** The next trading day after [today] by [isTradingDay] (within two weeks), or null. */
     fun nextTradingDay(today: LocalDate, isTradingDay: (LocalDate) -> Boolean): LocalDate? =

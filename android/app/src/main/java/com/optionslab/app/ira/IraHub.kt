@@ -1256,7 +1256,7 @@ object IraHub {
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
-                com.optionslab.ira.ExpiryEve.asked(q) ||
+                com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
@@ -2257,9 +2257,26 @@ object IraHub {
                 val said = runCatching {
                     val mk = com.optionslab.app.data.Market
                     val next = com.optionslab.ira.ExpiryEve.nextTradingDay(mk.today()) { mk.isTradingDay(it) }
-                    com.optionslab.ira.ExpiryEve.answer(IraCoach.expiryEve(), next, com.optionslab.app.data.Broker.loggedIn)
+                    // Whether Zerodha's positions were actually read (round 23): a failed or timed-out read is never "both read".
+                    val r = IraCoach.expiryEveRead()
+                    com.optionslab.ira.ExpiryEve.answer(r?.line, next, r?.zerodhaRead ?: false, r?.loggedIn ?: com.optionslab.app.data.Broker.loggedIn)
                 }.getOrElse { "I could not read what of yours expires tomorrow just now, Boss." }
                 reply(said)
+            }
+            return true
+        }
+        // "What do I need to do before tomorrow?", "checklist for tomorrow", "kal se pehle kya karna hai"
+        // ([com.optionslab.ira.BeforeTomorrow]): one checklist for the next trading day - the Zerodha login, his legs that
+        // expire then (saying when Zerodha wasn't read), the arms armed now with their paper records, the static IP and the
+        // relay, the battery setting and the backup's age. Facts only: nothing is placed, changed, closed, armed or disarmed;
+        // each step is his. His legs and the records only on an unlocked phone. (Not in IraGoldAlgo.)
+        val beforeTomorrowAsk = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.BeforeTomorrow.asked(q) }.getOrDefault(false)
+        if (beforeTomorrowAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val locked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraPreMarket.beforeTomorrow(app, locked) }.getOrElse { "I could not put tomorrow's checklist together just now, Boss." })
             }
             return true
         }

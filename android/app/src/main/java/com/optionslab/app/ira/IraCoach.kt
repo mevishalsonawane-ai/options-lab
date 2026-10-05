@@ -968,7 +968,18 @@ internal object IraCoach {
      * nothing is placed, changed or closed. Null when nothing he holds expires on the next trading day. (Also what
      * answers "what expires tomorrow?" in IraHub.)
      */
-    internal suspend fun expiryEve(): String? {
+    internal suspend fun expiryEve(): String? = expiryEveRead()?.let { r ->
+        r.line?.let { l -> l + (com.optionslab.ira.ExpiryEve.unread(r.zerodhaRead, r.loggedIn)?.let { " $it" } ?: "") }
+    }
+
+    /**
+     * What [expiryEve] read: the checklist [line] (null: nothing expiring), the [legs] themselves, whether Zerodha was logged
+     * in ([loggedIn]) and whether its positions were actually read ([zerodhaRead]: false when the read failed, timed out, or
+     * its instruments were not on the phone to tell the expiry). Null when the next trading day is not known. Reads only.
+     */
+    internal class EveRead(val line: String?, val legs: List<com.optionslab.ira.ExpiryEve.Leg>, val loggedIn: Boolean, val zerodhaRead: Boolean)
+
+    internal suspend fun expiryEveRead(): EveRead? {
         val mk = com.optionslab.app.data.Market
         val today = mk.today()
         val expiry = com.optionslab.ira.ExpiryEve.nextTradingDay(today) { mk.isTradingDay(it) } ?: return null
@@ -986,11 +997,17 @@ internal object IraCoach {
             legs += com.optionslab.ira.ExpiryEve.Leg("Paper", p.symbol, p.quantity, p.product, c.underlying, c.strike, right, spot(c.underlying),
                 keptToSettlement = kept(c.underlying, c.strike, right))
         } }
-        if (Broker.loggedIn) runCatching {
+        val loggedIn = Broker.loggedIn
+        var zerodhaRead = false
+        if (loggedIn) runCatching {
             val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
-            // The broker is not waited on past 8 seconds (a hung read would hang the wrap-up): run apart, so the deadline
-            // holds even while the blocking read does not suspend.
-            val open = Broker.within(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
+            // The broker is not waited on past 8 seconds, run apart (Broker.within: a blocking read a plain timeout cannot
+            // end would hang the wrap-up). Null: not read - said so, never taken for "nothing of Zerodha's expires".
+            val book = Broker.within(8_000) { Broker.positionBook() } ?: return@runCatching
+            val open = book.net.filter { it.open }
+            // An open position with no instruments on the phone to tell its expiry is not a read either.
+            if (open.isNotEmpty() && ins.isEmpty()) return@runCatching
+            zerodhaRead = true
             open.forEach { p ->
                 val i = ins[p.symbol] ?: return@forEach
                 if (i.expiry != expiry) return@forEach
@@ -999,6 +1016,6 @@ internal object IraCoach {
                     keptToSettlement = kept(i.name, i.strike, right))
             }
         }
-        return com.optionslab.ira.ExpiryEve.line(legs, today, expiry, s.expirySquareOff)
+        return EveRead(com.optionslab.ira.ExpiryEve.line(legs, today, expiry, s.expirySquareOff), legs, loggedIn, zerodhaRead)
     }
 }
