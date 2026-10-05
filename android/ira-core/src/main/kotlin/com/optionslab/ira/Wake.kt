@@ -123,10 +123,24 @@ object Wake {
     private fun english(text: String): Boolean? {
         val t = " " + text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim() + " "
         if (t.isBlank()) return null
+        // "Why not", "no problem": a yes said with a no word in it (voice round 25) - it used to cancel the request. Read
+        // as a yes only when nothing else is said, or what else is said is itself a clear yes; with any other words
+        // ("why not the other one") it is unclear, and with a no ("no problem, leave it") a no. Unclear is never a yes.
+        if (YES_IDIOM.containsMatchIn(t)) {
+            val rest = t.replace(YES_IDIOM, " ").replace(ANSWER_EXTRA, " ").replace(rx("\\s+"), " ").trim()
+            if (rest.isEmpty()) return true
+            val e = english(rest); val h = Hinglish.yesNo(rest)
+            return if (e == false || h == false) false else if (e == true || h == true) true else null
+        }
         if (rx(" (no+|nope|nah|not|not now|don t|dont|do not|reject|rejected|cancel|skip|leave it|stop|wait|never|negative|abort|hold off|hold on|decline|declined|deny|denied|later) ").containsMatchIn(t)) return false
-        if (rx(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|do it|place it|buy it|take it|ok|okay|affirmative|positive) ").containsMatchIn(t)) return true
+        if (rx(" (yes|yeah|yep|yup|sure|approve|approved|confirm|confirmed|go ahead|go for it|do it|please do|place it|buy it|take it|ok|okay|alright|all right|affirmative|positive|absolutely|definitely|certainly|of course|correct) ").containsMatchIn(t)) return true
         return null
     }
+
+    /** A yes said with a no word in it ([english]). */
+    private val YES_IDIOM = rx("(?<= )(why not|no problem|not a problem|no worries|no issues?)(?= )")
+    /** Words that only address or soften ("Jarvis", "Boss", "please"): nothing to read in a yes or a no. */
+    private val ANSWER_EXTRA = rx("(?<= )(jarvis|boss|sir|please|yaar|bhai|ji|then|so|well|oh|ah|um|uh|hmm)(?= )")
 
     private fun words(s: String) = s.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.length > 1 }
 
