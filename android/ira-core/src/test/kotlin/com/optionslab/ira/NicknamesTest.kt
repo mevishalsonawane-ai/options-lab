@@ -13,7 +13,7 @@ class NicknamesTest {
     private val arms = listOf("ORB Nifty", "ORB BankNifty", "Range Fade")
 
     private fun learnedScalper(): Nicknames.Log {
-        val asked = assertNotNull(Nicknames.asking(Nicknames.Family.ARM, "the scalper", arms, t0))
+        val asked = assertNotNull(Nicknames.asking(Command.Kind.STOP_ONE, "the scalper", arms, t0))
         val n = assertNotNull(Nicknames.picked(asked, Command.Kind.STOP_ONE, 1, arms, t0.plusMinutes(1)))
         return Nicknames.heard(Nicknames.Log(), n)
     }
@@ -48,26 +48,32 @@ class NicknamesTest {
         assertNull(Nicknames.key("the strategy"))
         assertNull(Nicknames.key("one two three four five"))
         assertNull(Nicknames.key("pin 4321"))
-        assertNull(Nicknames.asking(Nicknames.Family.ARM, "my password is abc", arms, t0))
+        assertNull(Nicknames.asking(Command.Kind.STOP_ONE, "my password is abc", arms, t0))
     }
 
     @Test fun onlyAPickOfThatVeryListSoonAfter() {
-        val asked = assertNotNull(Nicknames.asking(Nicknames.Family.ARM, "scalper", arms, t0))
+        val asked = assertNotNull(Nicknames.asking(Command.Kind.STOP_ONE, "scalper", arms, t0))
         assertNull(Nicknames.picked(asked, Command.Kind.STOP_ONE, 1, arms, t0.plusMinutes(Nicknames.REACT_MINUTES + 1)))
         assertNull(Nicknames.picked(asked, Command.Kind.CLOSE_ONE, 1, arms, t0.plusMinutes(1)))
         assertNull(Nicknames.picked(asked, Command.Kind.STOP_ONE, 1, arms + "Gap Fill", t0.plusMinutes(1)))
         assertNull(Nicknames.picked(asked, Command.Kind.STOP_ONE, 9, arms, t0.plusMinutes(1)))
         assertNull(Nicknames.picked(null, Command.Kind.STOP_ONE, 1, arms, t0.plusMinutes(1)))
-        // A start after "which one?" for a stop still names the same arm.
-        assertNotNull(Nicknames.picked(asked, Command.Kind.START_ONE, 1, arms, t0.plusMinutes(1)))
+        // A start after "which one?" for a stop is another command, not his pick: nothing kept.
+        assertNull(Nicknames.picked(asked, Command.Kind.START_ONE, 1, arms, t0.plusMinutes(1)))
+        // Asked for a start, picked by a start: kept.
+        val started = assertNotNull(Nicknames.asking(Command.Kind.START_ONE, "scalper", arms, t0))
+        assertNotNull(Nicknames.picked(started, Command.Kind.START_ONE, 1, arms, t0.plusMinutes(1)))
+        assertNull(Nicknames.picked(started, Command.Kind.STOP_ONE, 1, arms, t0.plusMinutes(1)))
+        // A command that names no single arm or position is never asked for.
+        assertNull(Nicknames.asking(Command.Kind.STOP_ALL, "scalper", arms, t0))
         // Never kept when Boss's words already are that name.
-        val same = assertNotNull(Nicknames.asking(Nicknames.Family.ARM, "range fade", arms, t0))
+        val same = assertNotNull(Nicknames.asking(Command.Kind.STOP_ONE, "range fade", arms, t0))
         assertNull(Nicknames.picked(same, Command.Kind.STOP_ONE, 2, arms, t0.plusMinutes(1)))
     }
 
     @Test fun positionsKeyWithoutTheirQuantity() {
         val pos = listOf("paper NIFTY25O2124500PE (75)", "paper NIFTY25O2124600PE (75)")
-        val asked = assertNotNull(Nicknames.asking(Nicknames.Family.POSITION, "my hedge", pos, t0))
+        val asked = assertNotNull(Nicknames.asking(Command.Kind.CLOSE_ONE, "my hedge", pos, t0))
         val n = assertNotNull(Nicknames.picked(asked, Command.Kind.CLOSE_ONE, 1, pos, t0.plusMinutes(2)))
         assertEquals("hedge", n.words)
         assertEquals("paper NIFTY25O2124600PE", n.name)
@@ -77,7 +83,7 @@ class NicknamesTest {
 
     @Test fun theSameWordsKeepOnlyTheNewestPick() {
         val log = learnedScalper()
-        val asked = assertNotNull(Nicknames.asking(Nicknames.Family.ARM, "scalper", arms, t0.plusHours(1)))
+        val asked = assertNotNull(Nicknames.asking(Command.Kind.STOP_ONE, "scalper", arms, t0.plusHours(1)))
         val n = assertNotNull(Nicknames.picked(asked, Command.Kind.STOP_ONE, 2, arms, t0.plusHours(1)))
         val log2 = Nicknames.heard(log, n)
         assertEquals(1, log2.notes.size)

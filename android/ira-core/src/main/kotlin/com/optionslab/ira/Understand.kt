@@ -186,6 +186,9 @@ object Bundle {
     /** Words after "reminder" that are its own words ("the reminder to exit all trades" names a reminder, does nothing). */
     private val ITS_WORDS = Regex("(?i)^(about|to|for|of|that|saying|regarding|on|at|wala|waala|vala)\\b")
 
+    /** Marks that bring in a reminder's own words straight after "reminder". */
+    private const val INTRO = ":\"'\u201C\u2018"
+
     private fun actsAlone(s: String): Boolean = Corrections.acts(s) || Plan.pronounClose(s) || Ask.parse(s).let { it.order != null || it.command != null }
 
     /**
@@ -198,7 +201,12 @@ object Bundle {
         SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }.any { part ->
             val tail = REMINDER_TAIL.find(part)
             if (tail == null) actsAlone(part)
-            else tail.groupValues[1].trim().let { t -> t.isNotEmpty() && !ITS_WORDS.containsMatchIn(t) && actsAlone(t) }
+            else tail.groupValues[1].trim().let { t ->
+                // "set a reminder: exit all at 3", 'a reminder "close nifty"': words brought in by a colon or a quote are
+                // the reminder's own, and so are its own words after one ("reminder: to exit all").
+                val bare = t.trimStart { c -> c.isWhitespace() || c in INTRO }
+                bare.isNotEmpty() && bare.length == t.length && !ITS_WORDS.containsMatchIn(bare) && actsAlone(bare)
+            }
         }
     }.getOrDefault(true)
 }

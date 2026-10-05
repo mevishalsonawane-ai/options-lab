@@ -93,7 +93,10 @@ class GoldService : android.app.Service() {
          * or the books not read within 3 s ([com.optionslab.ira.GoldPass.due]: fail open).
          */
         suspend fun passDue(): Boolean {
-            val booksRead = kotlinx.coroutines.withTimeoutOrNull(3_000L) { com.optionslab.app.data.GoldBooks.awaitLoaded() } != null
+            val loaded = kotlinx.coroutines.withTimeoutOrNull(3_000L) { com.optionslab.app.data.GoldBooks.awaitLoaded() } != null
+            // A saved book there but unreadable shows empty: that is not "read and nothing armed", so the pass runs (fail open).
+            val booksRead = loaded && !GoldPaper.readFailed && !com.optionslab.app.data.GoldTrendPaper.readFailed &&
+                !com.optionslab.app.data.GoldDipPaper.readFailed && !com.optionslab.app.data.GoldTasPaper.readFailed
             val liq = GoldPaper.book.value
             val tr = com.optionslab.app.data.GoldTrendPaper.book.value
             val dp = com.optionslab.app.data.GoldDipPaper.book.value

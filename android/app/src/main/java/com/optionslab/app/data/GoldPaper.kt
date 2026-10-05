@@ -96,7 +96,8 @@ object GoldPaper {
     }
 
     /** The saved book could not be read at the start: only a reset writes over it ([load], [edit]). */
-    @Volatile private var readFailed = false
+    @Volatile var readFailed = false
+        private set
 
     fun now(): LocalDateTime = testNow ?: LocalDateTime.now(ZoneOffset.UTC)
 

@@ -69,7 +69,8 @@ object GoldDipPaper {
     }
 
     /** The saved book could not be read at the start: only a reset writes over it ([load], [edit]). */
-    @Volatile private var readFailed = false
+    @Volatile var readFailed = false
+        private set
 
     suspend fun setArmed(on: Boolean) = edit { it.copy(armed = on, decided = if (on) ARMED else it.decided, status = if (on) WAITING else "Not armed") }
 

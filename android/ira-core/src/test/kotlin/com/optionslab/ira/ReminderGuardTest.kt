@@ -20,7 +20,11 @@ class ReminderGuardTest {
         for (s in listOf("cancel the 3 pm reminder", "cancel the reminder about nifty", "delete the reminder to call the broker",
             "delete the reminder to buy nifty", "cancel the reminder to exit all trades", "cancel the reminder to stop orb",
             "what reminders do I have", "cancel my reminders", "3 baje wala reminder hata do", "delete the reminder about nifty and banknifty",
-            "what reminders do I have and what's my pnl", "stop orb and close everything", "how is nifty")) assertFalse(Bundle.reminderAndMore(s), s)
+            "what reminders do I have and what's my pnl", "stop orb and close everything", "how is nifty",
+            "set a reminder: exit all at 3", "set a reminder:exit all at 3", "set a reminder: to exit all at 3",
+            "set a reminder \"close my nifty put\"")) assertFalse(Bundle.reminderAndMore(s), s)
+        // A colon's reminder with something else to do after it is still both.
+        assertTrue(Bundle.reminderAndMore("set a reminder: check nifty, and close my nifty put"))
         assertTrue(Bundle.REMINDER_AND_MORE.startsWith("Boss,") && "Nothing was done" in Bundle.REMINDER_AND_MORE)
     }
 

@@ -906,6 +906,13 @@ object IraHub {
             // one that has its own).
             if (liveOrders == null) { open.removeAll { it.first.live }; liveRead = false }
             else liveOrders.filter { o -> o.working && o.type in setOf("SL", "SL-M") }.forEach { guarded += "L:" + it.symbol }
+            // An active Kite GTT on the symbol (a stop-loss Boss set there) guards it too: never a second stop beside it.
+            // Not read in time: no live position is called bare this pass, as with the orders.
+            if (open.any { it.first.live }) {
+                val liveGtts = com.optionslab.app.data.Broker.within(8_000) { com.optionslab.app.data.Broker.gtts() }
+                if (liveGtts == null) { open.removeAll { it.first.live }; liveRead = false }
+                else liveGtts.filter { g -> g.status.lowercase() == "active" }.forEach { guarded += "L:" + it.symbol }
+            }
             if (open.isEmpty()) return
         }
         // The bots (ORB arms, Pine scripts, strategy runs) manage their own exits: only positions they do not hold.
@@ -964,7 +971,8 @@ object IraHub {
                 // 5 Oct). Not read (in time): none placed either. True: one is working; null: the orders could not be read.
                 val slWorking: Boolean? = runCatching {
                     if (p.live) com.optionslab.app.data.Broker.within(8_000) {
-                        com.optionslab.app.data.Broker.orders().any { o -> o.working && o.symbol == p.symbol && o.type in setOf("SL", "SL-M") }
+                        com.optionslab.app.data.Broker.orders().any { o -> o.working && o.symbol == p.symbol && o.type in setOf("SL", "SL-M") } ||
+                            com.optionslab.app.data.Broker.gtts().any { g -> g.symbol == p.symbol && g.status.lowercase() == "active" }
                     }
                     else com.optionslab.app.data.Paper.snapshot().orders.orders.any { o -> o.symbol == p.symbol && o.priceType.uppercase() in setOf("SL", "SL-M") &&
                         o.status.lowercase() !in setOf("complete", "cancelled", "rejected") }
@@ -972,7 +980,7 @@ object IraHub {
                 when {
                     qty <= 0 -> "${p.symbol} is no longer held, so no stop was set."
                     has -> "${p.symbol} has a stop now, so I left it."
-                    slWorking == true -> "${p.symbol} has a stop order working now, so I did not place a second one."
+                    slWorking == true -> "${p.symbol} has a stop order or GTT working now, so I did not place a second one."
                     slWorking == null -> "I could not read ${p.symbol}'s orders just now, so no stop was placed - ask me again in a moment."
                     ltp == null || ltp <= stop -> "${p.symbol} is already at or under " + "%.2f".format(java.util.Locale.ENGLISH, stop) + ": close it or set a stop from the position."
                     p.live -> com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, qty, ltp, stop, null, null)

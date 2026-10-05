@@ -1368,8 +1368,8 @@ internal object IraTools {
 
     /** Jarvis asks "Which one?" of [names] for Boss's [words] in a command of [kind]: kept (in memory) for his pick. */
     fun nickAsking(kind: com.optionslab.ira.Command.Kind, words: String?, names: List<String>) {
-        val fam = com.optionslab.ira.Nicknames.family(kind) ?: return
-        nickAsked = com.optionslab.ira.Nicknames.asking(fam, words, names, nickNow())
+        if (com.optionslab.ira.Nicknames.family(kind) == null) return
+        nickAsked = com.optionslab.ira.Nicknames.asking(kind, words, names, nickNow())
     }
 
     /**

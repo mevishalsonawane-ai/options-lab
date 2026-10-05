@@ -44,8 +44,11 @@ object Nicknames {
     /** The nicknames kept. */
     data class Log(val notes: List<Note> = emptyList())
 
-    /** Jarvis's "Which one?": the words Boss used, the kind of thing, and the names listed, in order (in memory only). */
-    data class Asked(val at: LocalDateTime, val family: Family, val words: String, val names: List<String>)
+    /**
+     * Jarvis's "Which one?": the command it was asked for ([kind]: a stop is answered by a stop, never by a start), the
+     * kind of thing, the words Boss used, and the names listed, in order (in memory only).
+     */
+    data class Asked(val at: LocalDateTime, val kind: Command.Kind, val family: Family, val words: String, val names: List<String>)
 
     /** The family a command of [kind] names one of, or null (only a single arm or a single position). */
     fun family(kind: Command.Kind): Family? = when (kind) {
@@ -82,21 +85,25 @@ object Nicknames {
     fun nameKey(family: Family, name: String): String =
         if (family == Family.POSITION) name.replace(rx("\\s*\\([^()]*\\)\\s*$"), "").trim() else name.trim()
 
-    /** Jarvis asks which of [names] Boss meant by [words] at [at]: kept for his pick, or null when the words cannot be a nickname. */
-    fun asking(family: Family, words: String?, names: List<String>, at: LocalDateTime): Asked? {
+    /**
+     * Jarvis asks which of [names] Boss meant by [words] in a command of [kind] at [at]: kept for his pick, or null when
+     * the words cannot be a nickname or the command names no single arm or position.
+     */
+    fun asking(kind: Command.Kind, words: String?, names: List<String>, at: LocalDateTime): Asked? {
+        val fam = family(kind) ?: return null
         val k = key(words) ?: return null
         if (names.isEmpty()) return null
-        return Asked(at, family, k, names)
+        return Asked(at, kind, fam, k, names)
     }
 
     /**
      * Boss's command of [kind] at [now] picked [index] of [names]: the nickname noted, or null - only for the "Which one?"
-     * [asked] within [REACT_MINUTES] minutes, of the same family, over the very same list, and never when his words are
+     * [asked] within [REACT_MINUTES] minutes, for the same command (a stop's list is not picked by a start), over the very same list, and never when his words are
      * already that name.
      */
     fun picked(asked: Asked?, kind: Command.Kind, index: Int?, names: List<String>, now: LocalDateTime): Note? {
         if (asked == null || index == null || index !in names.indices) return null
-        if (family(kind) != asked.family || names != asked.names) return null
+        if (kind != asked.kind || family(kind) != asked.family || names != asked.names) return null
         if (now.isBefore(asked.at) || now.isAfter(asked.at.plusMinutes(REACT_MINUTES))) return null
         val name = nameKey(asked.family, names[index])
         if (name.isEmpty() || key(name) == asked.words) return null

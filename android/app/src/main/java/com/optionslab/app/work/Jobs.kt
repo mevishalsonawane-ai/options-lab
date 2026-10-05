@@ -794,17 +794,22 @@ class WatchService : Service() {
         const val STOP = "com.optionslab.app.WATCH_STOP"
         /** The day a watch was last started and has not been seen to end: still set at the next start = the process died. */
         private const val RUN_DAY = "watch.run.day"
+        /**
+         * Held while [RUN_DAY] is set at a watch's start and cleared at its end, so the two never interleave: an old run's
+         * end landing after a new run's start would clear the new run's day (and its process death would go untold).
+         * Process-wide (not per service): an old service's run can still be ending when Android starts a new one.
+         */
+        private val runDayLock = Any()
+        /** The watch run that set [RUN_DAY] last (written under [runDayLock]); only that run's end clears it. */
+        @Volatile private var watchRun = 0L
+        /**
+         * The last run seen to end (Boss's stop, Android's time limit, a destroyed service) before its own end has cleared
+         * [RUN_DAY]: a start meanwhile does not take that day for a process that died.
+         */
+        @Volatile private var endSeenRun = 0L
         /** The watch's check pace now in seconds (30 before the open, 15 with a position open, 60 otherwise; 0 = not running), for the battery line. */
         @Volatile var stepSec: Int = 0
     }
-
-    /**
-     * Held while [RUN_DAY] is set at a watch's start and cleared at its end, so the two never interleave: an old run's
-     * end landing after a new run's start would clear the new run's day (and its process death would go untold).
-     */
-    private val runDayLock = Any()
-    /** The watch run that set [RUN_DAY] last (guarded by [runDayLock]); only that run's end clears it. */
-    private var watchRun = 0L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = java.util.concurrent.ConcurrentHashMap<Jobs.Kind, Job>()
@@ -894,12 +899,13 @@ class WatchService : Service() {
         if (running[k]?.isActive == true) return stickiness()
         val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
         val run = if (k == Jobs.Kind.LIVE) noteStart(byAndroid) else 0L
-        running[k] = scope.launch {
+        // Registered before it runs (LAZY, started below): a maybeStop() in between never sees the service idle and stops it.
+        val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
             val s = AppSettings.load()
             var end: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
             try {
                 when (k) {
-                    Jobs.Kind.LIVE -> { watch(s); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
+                    Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
                     Jobs.Kind.TICKET -> Tasks.ticket(this@WatchService, s)
                     Jobs.Kind.SETTLE -> Tasks.settle(this@WatchService, s)
                     Jobs.Kind.HARVEST -> Tasks.harvest(this@WatchService, s, session) { stage, p ->
@@ -931,10 +937,14 @@ class WatchService : Service() {
                     // Seen to end: not a process death. Cleared - on disk, synchronously - BEFORE the "ended" line, so
                     // whoever sees the end in the diary (the owner, the next start) also sees the day cleared; and only
                     // by the run that set it, never over a newer run's day.
+                    val current = synchronized(runDayLock) { run == watchRun }
                     endRun(run)
                     Heartbeat.diary(com.optionslab.ira.WatchHealth.ended(why.first, why.second))
-                    Heartbeat.pulseStopped()
-                    Tasks.publishWatch(Tasks.LiveState(false))
+                    // A newer watch started meanwhile: its pulse and its "running" state are left alone.
+                    if (current) {
+                        Heartbeat.pulseStopped()
+                        Tasks.publishWatch(Tasks.LiveState(false))
+                    }
                 } else if (k == Jobs.Kind.HARVEST) Tasks.publish(Tasks.LiveState(false))
                 // Only this run's own entry: a new start after a stop may already have put its job here.
                 running.remove(k, coroutineContext.job)
@@ -942,6 +952,8 @@ class WatchService : Service() {
                 maybeStop()
             }
         }
+        running[k] = job
+        job.start()
         return stickiness()
     }
 
@@ -956,7 +968,9 @@ class WatchService : Service() {
             val today = Market.today().toString()
             val crash = java.io.File(filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).exists()
             synchronized(runDayLock) {
-                com.optionslab.ira.WatchHealth.restart(SecurePrefs.getString(RUN_DAY), today, crash, byAndroid)?.let { Heartbeat.diary(it) }
+                // The run before this one was seen to end (its own end may not have cleared the day yet): not a process death.
+                val runDay = if (run > 1 && endSeenRun == run - 1) null else SecurePrefs.getString(RUN_DAY)
+                com.optionslab.ira.WatchHealth.restart(runDay, today, crash, byAndroid)?.let { Heartbeat.diary(it) }
                 if (run == watchRun) SecurePrefs.put(RUN_DAY, today)
             }
             val battery = Heartbeat.batteryRestricted(this) == true
@@ -964,6 +978,9 @@ class WatchService : Service() {
         }
         return run
     }
+
+    /** The newest watch run is ending, seen here (its own end clears [RUN_DAY] a moment later). */
+    private fun markEndSeen() { endSeenRun = watchRun }
 
     /**
      * The watch run [run] was seen to end: [RUN_DAY] is cleared at once (every read sees it) and written to the vault
@@ -974,7 +991,7 @@ class WatchService : Service() {
         synchronized(runDayLock) { if (run == watchRun) runCatching { SecurePrefs.put(RUN_DAY, null) } }
     }
 
-    private suspend fun watch(s: AppSettings) = kotlinx.coroutines.coroutineScope {
+    private suspend fun watch(s: AppSettings, run: Long) = kotlinx.coroutines.coroutineScope {
         // The service's own pulse: no network, no lock, every 30 s - "alive", whatever a check is waiting on.
         val pulse = launch {
             while (true) { Heartbeat.pulse(); delay(com.optionslab.ira.WatchHealth.PULSE_MS) }
@@ -983,8 +1000,11 @@ class WatchService : Service() {
             watchLoop(s)
         } finally {
             pulse.cancel()
-            Heartbeat.pulseStopped()
-            stepSec = 0
+            // Only the newest run's end stops the pulse (an old run ending after a new start leaves the new one's).
+            if (synchronized(runDayLock) { run == watchRun }) {
+                Heartbeat.pulseStopped()
+                stepSec = 0
+            }
         }
     }
 
@@ -1079,7 +1099,8 @@ class WatchService : Service() {
 
     @Synchronized
     private fun maybeStop() {
-        if (running.values.none { it.isActive }) {
+        // A job registered but not started yet (LAZY, a moment) counts as running: only finished or cancelled ones do not.
+        if (running.values.all { it.isCompleted || it.isCancelled }) {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -1087,6 +1108,9 @@ class WatchService : Service() {
 
     /** Runs on the main thread (a STOP intent, Android's timeout): nothing here may block. */
     private fun stopEverything() {
+        // Seen to end (no lock, no disk: this is the main thread): a start before the run's own end clears the day
+        // does not report a process death.
+        markEndSeen()
         val harvesting = running.containsKey(Jobs.Kind.HARVEST)
         running.values.forEach { it.cancel() }
         running.clear()
@@ -1103,7 +1127,10 @@ class WatchService : Service() {
 
     override fun onDestroy() {
         // The watch's job is cancelled below; its own finally writes the diary line (SERVICE_DESTROYED unless a reason was set).
-        if (running[Jobs.Kind.LIVE]?.isActive == true && endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.SERVICE_DESTROYED to null
+        if (running[Jobs.Kind.LIVE]?.isActive == true) {
+            if (endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.SERVICE_DESTROYED to null
+            markEndSeen()
+        }
         scope.cancel()
         super.onDestroy()
     }
