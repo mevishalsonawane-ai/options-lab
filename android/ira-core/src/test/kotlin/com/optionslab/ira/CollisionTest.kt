@@ -69,6 +69,7 @@ class CollisionTest {
         "VixNext" to { q -> VixNext.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
+        "LikeToday" to { q -> LikeToday.asked(q) },
         "Structure" to { q -> Structure.asked(q) != null },
         "MindChange" to { q -> MindChange.asked(q) },
         "TradeCase" to { q -> TradeCase.asked(q) },
@@ -404,6 +405,10 @@ class CollisionTest {
         "is nifty above the opening range" to "OpeningRange", "will nifty break the opening range today" to "OpeningRange",
         "how is my orb arm doing" to "Account:BOTS", "how did my orb strategy do" to "Account:STRATEGIES",
         "what is an opening range breakout" to "PatternExpert",
+        // ---- LikeToday: today's start against every past session's ----
+        "is today like any past day" to "LikeToday", "has there been a day like today" to "LikeToday", "how did days like today end" to "LikeToday",
+        "which past days started like today" to "LikeToday", "similar days to today for banknifty" to "LikeToday", "aaj jaisa din pehle kab tha" to "LikeToday",
+        "show me days like today" to "LikeToday", "is today like yesterday" to "DayCompare",
         // ---- DayCompare: today against an earlier session ----
         "nifty today vs friday" to "DayCompare", "how does today compare to last thursday" to "DayCompare",
         "is today more of a trend day than yesterday" to "DayCompare", "what's different about today from yesterday" to "DayCompare",
@@ -650,7 +655,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmDay", "NetLean", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "Weekdays", "DayCompare", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {

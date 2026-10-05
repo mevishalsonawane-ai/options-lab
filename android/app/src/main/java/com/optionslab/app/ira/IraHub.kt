@@ -1249,7 +1249,7 @@ object IraHub {
                 com.optionslab.ira.WrongThing.asked(q) != null || com.optionslab.ira.WrongThing.objected(q) || com.optionslab.ira.MindChange.asked(q) ||
                 com.optionslab.ira.ArmHabits.asked(q) || com.optionslab.ira.MorningSense.asked(q) != null ||
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null ||
-                com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
+                com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -2489,7 +2489,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2663,6 +2663,23 @@ object IraHub {
                 if (mk == null) com.optionslab.ira.DayCompare.NOT_HERE
                 else com.optionslab.ira.DayCompare.answer(compareAsk, mk, histories[mk]?.bars.orEmpty(), com.optionslab.app.data.Market.today())
             }.getOrElse { "I could not set the two days side by side just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "Is today like any past day?", "how did days like today end?", "aaj jaisa din pehle kab tha": today's start (the gap,
+        // the range from 09:15 to 10:15 or to now, India VIX at that minute) set against each whole past session read over the
+        // same minutes ([com.optionslab.ira.LikeToday]): how many matched, how they went on to the close, the nearest named.
+        // Past days, never a forecast or advice; market data only (fine on a locked phone); nothing acts. (After DayCompare:
+        // a named day beside today stays its.)
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.LikeToday.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.LikeToday.NOT_HERE
+                else com.optionslab.ira.LikeToday.answer(mk, histories[mk]?.bars.orEmpty(), histories[IraMarket.VIX]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not set today against the past days just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true
