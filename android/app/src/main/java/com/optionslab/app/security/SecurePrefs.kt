@@ -62,7 +62,7 @@ object SecurePrefs {
         pending = true
         val gen = generation
         writer.execute {
-            val snap = synchronized(this) { if (pending && gen == generation) snapshot(gen) else null } ?: return@execute
+            val snap = synchronized(this) { if (pending && gen == generation) copyOut(gen) else null } ?: return@execute
             runCatching { write(snap) }
         }
     }
@@ -107,7 +107,7 @@ object SecurePrefs {
     private class Snap(val seq: Long, val gen: Int, val bytes: ByteArray)
 
     @Synchronized
-    private fun snapshot(gen: Int = generation): Snap? {
+    private fun copyOut(gen: Int = generation): Snap? {
         map()
         if (unreadable) return null   // never write over a vault we could not read
         pending = false               // this write carries every value set so far
@@ -138,7 +138,7 @@ object SecurePrefs {
     fun put(k: String, v: Any?) {
         val snap = synchronized(this) {
             if (v == null) map().remove(k) else map().put(k, v)
-            snapshot()
+            copyOut()
         } ?: return
         write(snap)
     }
@@ -147,7 +147,7 @@ object SecurePrefs {
         val snap = synchronized(this) {
             val m = map()
             for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
-            snapshot()
+            copyOut()
         } ?: return
         write(snap)
     }
