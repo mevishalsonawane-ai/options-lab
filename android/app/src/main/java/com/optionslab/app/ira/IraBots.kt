@@ -158,6 +158,17 @@ internal object IraBots {
     }
 
     /**
+     * The arms' paper week ([com.optionslab.ira.ArmWeek]), for Sunday evening: each arm's switch and its closed paper trades
+     * (all of them: its paper test counts them all). Reads only; nothing is armed, stopped, placed or closed.
+     */
+    suspend fun armWeek(today: java.time.LocalDate): com.optionslab.ira.ArmWeek.Said? {
+        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        val paper = bots().filter { it.where == "Paper" && it.name in armed }
+            .associate { b -> b.name to b.trades.map { com.optionslab.ira.ArmWeek.Trade(it.closedAt.toLocalDate(), it.net) } }
+        return com.optionslab.ira.ArmWeek.say(armed.map { (name, on) -> com.optionslab.ira.ArmWeek.Arm(name, on, paper[name].orEmpty()) }, today)
+    }
+
+    /**
      * One armed arm that lost in both records, put to Boss as a yes or no - always asked, even with automatic stops on; only
      * when the arm found is exactly this one (an ORB arm's stop sells nothing on Zerodha: its open position is managed to its exit).
      */

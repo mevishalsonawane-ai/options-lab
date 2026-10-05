@@ -30,6 +30,9 @@ import kotlin.math.abs
  *   09:10  login reminder  only if Zerodha is still not logged in
  *   15:45  day report      paper and Zerodha P&L, trades, the ORB arms, anything that went wrong
  *
+ * and, for Jarvis, one on Sunday evening (18:00): the paper arms' week ([com.optionslab.ira.ArmWeek]) - said once, kept in
+ * the chat, no notification; nothing acts.
+ *
  * They run in a worker (the contract list can take a while to download), from
  * their own exact alarms, re-armed for the next trading day each time.
  */
@@ -38,7 +41,12 @@ object DailyReports {
         MORNING("ol.report.morning", LocalTime.of(9, 0), 2020),
         LOGIN("ol.report.login", LocalTime.of(9, 10), 2021),
         EVENING("ol.report.evening", LocalTime.of(15, 45), 2022),
+        /** Sundays only, Jarvis only (not IraGoldAlgo): the paper arms' week. */
+        WEEK("ol.report.week", LocalTime.of(18, 0), 2023),
     }
+
+    /** The Sunday report runs in Jarvis (not IraGoldAlgo) whether or not Zerodha is set up: the arms trade on paper. */
+    private fun weekOn() = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
 
     fun of(action: String?): Kind? = Kind.entries.firstOrNull { it.action == action }
 
@@ -53,6 +61,21 @@ object DailyReports {
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = intent(context, k)
         am.cancel(pi)
+        if (k == Kind.WEEK) {
+            if (!weekOn()) return
+            val now = Market.now()
+            var d = now.toLocalDate()
+            if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
+            while (d.dayOfWeek != java.time.DayOfWeek.SUNDAY) d = d.plusDays(1)
+            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
+            try {
+                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            } catch (_: SecurityException) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            }
+            return
+        }
         // Jarvis's morning check runs whether or not Zerodha is set up (it says so); the rest need Zerodha.
         if (!Broker.linked && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val now = Market.now()
@@ -72,7 +95,8 @@ object DailyReports {
     /** The alarm fired: re-arm, then hand the work to a worker. */
     fun fired(context: Context, k: Kind) {
         schedule(context, k)
-        if (!Market.isTradingDay() && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
+        if (k == Kind.WEEK) { if (!weekOn() || Market.today().dayOfWeek != java.time.DayOfWeek.SUNDAY) return }
+        else if (!Market.isTradingDay() && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val req = OneTimeWorkRequestBuilder<ReportWorker>()
             .setInputData(workDataOf("kind" to k.name))
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -315,6 +339,24 @@ object DailyReports {
         return title to lines
     }
 
+    /**
+     * Sunday 18:00: the paper arms' week ([com.optionslab.ira.ArmWeek]) - each arm's trades, wins and net beside its two-year
+     * test, and which is on track to pass its paper test. Once a week (a retried run repeats nothing), under the weekly
+     * review's own switch; the numbers in the chat, aloud plain words only (a locked phone hears only that it is in the chat).
+     * Reads only: nothing is armed, stopped, placed or closed.
+     */
+    suspend fun week() {
+        if (!weekOn() || !com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.WEEK)) return
+        val today = Market.today()
+        val onceKey = "jarvis.armWeek.last"
+        if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) == today.toString() }.getOrDefault(false)) return
+        val said = com.optionslab.app.ira.IraBots.armWeek(today) ?: return
+        runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, today.toString()) }
+        com.optionslab.app.ira.IraHub.note(said.chat)
+        runCatching { com.optionslab.app.ira.JarvisVoice.announce(said.aloud) }
+        runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.WEEK, said.aloud) }
+    }
+
     fun post(context: Context, k: Kind, title: String, lines: List<String>) =
         Notifier.post(context, k.id, Notifier.APPROVAL, title, lines.joinToString("\n"),
             // Not logged in: the notification opens the Zerodha page, one login and done.
@@ -333,6 +375,8 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 DailyReports.Kind.LOGIN -> if (!Broker.loggedIn) DailyReports.post(applicationContext, k, "Log in to Zerodha now",
                     listOf("The market opens at 09:15 and there is no Zerodha session today. Open the app → ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha."))
                 DailyReports.Kind.EVENING -> DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                // Said and kept in the chat only: no notification.
+                DailyReports.Kind.WEEK -> DailyReports.week()
             }
             Result.success()
         } catch (e: Exception) {
