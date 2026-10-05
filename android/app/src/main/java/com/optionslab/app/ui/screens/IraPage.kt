@@ -260,7 +260,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
             }
             if (st.messages.isNotEmpty()) item {
                 Text("Forget this conversation", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
-                    modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))
+                    modifier = Modifier.clickable { IraHub.forgetConversation(); com.optionslab.ira.ShortAnswer.clearCache() }.padding(6.dp))
             }
         }
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -285,7 +285,8 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
     val shortOn = remember { runCatching { com.optionslab.app.ira.IraTools.shortAnswers }.getOrDefault(true) }
     val brief = remember(m.text, asked, shortOn, keepWhole) {
         if (keepWhole) com.optionslab.ira.ShortAnswer.Short(m.text, null)
-        else runCatching { com.optionslab.ira.ShortAnswer.of(asked, m.text, shortOn) }.getOrDefault(com.optionslab.ira.ShortAnswer.Short(m.text, null))
+        // Speed, round 7: read once per (question, answer, choice) for the app's life, not each time the bubble comes back into the list.
+        else runCatching { com.optionslab.ira.ShortAnswer.cached(asked, m.text, shortOn) }.getOrDefault(com.optionslab.ira.ShortAnswer.Short(m.text, null))
     }
     var showDetails by remember { mutableStateOf(false) }
     val shownText = if (showDetails || brief.details == null) m.text else brief.line

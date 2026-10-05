@@ -353,6 +353,7 @@ fun eraseEverything() {
     val main = android.os.Looper.getMainLooper()
     if (android.os.Looper.myLooper() == main) web.run() else android.os.Handler(main).post(web)
     SecurePrefs.wipe()
+    com.optionslab.ira.ShortAnswer.clearCache()
     BiometricGate.forget()
     com.optionslab.app.security.PinPepper.destroy()
     Vault.destroy()
