@@ -808,6 +808,23 @@ internal object IraCoach {
     suspend fun healthLines(): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(), LocalDateTime.now(IST))
 
     /**
+     * "For my 24500 put to work, what needs to happen?", "where is my breakeven?" ([com.optionslab.ira.NeedsTrue]): each
+     * open position (or the one named) worked through - breakeven, distance, sessions left, the typical move and how often
+     * one like it happened on the phone's own candles, time decay. Reads only: nothing is placed, changed or closed.
+     */
+    suspend fun needLines(question: String): List<String> {
+        if (com.optionslab.app.BuildConfig.GOLD) return listOf("What has to be true for a position is worked out in IraAlgo, Boss; IraGoldAlgo only talks.")
+        val ps = healthPositions()
+        val bars = HashMap<String, List<com.optionslab.ira.Candle>>()
+        for (u in ps.mapNotNull { it.underlying?.uppercase() }.distinct()) {
+            val m = runCatching { com.optionslab.ira.Market.valueOf(u) }.getOrNull() ?: continue
+            bars[u] = runCatching { IraHub.recentBars(m) }.getOrDefault(emptyList())
+        }
+        return com.optionslab.ira.NeedsTrue.lines(question, ps, bars, LocalDateTime.now(IST)) { d ->
+            runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) }
+    }
+
+    /**
      * 14:45-14:54 on a trading day, once: when a position of Boss's expires today, the health check is put in the chat and
      * a few words are said - counts only, no amount, no symbol (a locked phone may be heard). Words only: nothing is
      * placed, changed or closed.

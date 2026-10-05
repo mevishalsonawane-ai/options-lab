@@ -419,7 +419,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null
+            PatternCalls.asked(said) || ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -672,6 +672,12 @@ class CoverageTest {
         "meri positions ka haal" to "Account:HEALTH", "check on my open positions" to "Account:HEALTH",
         "are all my positions safe" to "Account:HEALTH", "check my position" to "Account:HEALTH", "chek my positions" to "Account:HEALTH",
         "check my postions" to "Account:HEALTH", "chk my positions" to "Account:HEALTH", "chek my postions" to "Account:HEALTH",
+        // ---- NeedsTrue: what has to be true for an open position (the account's NEED) ----
+        "for my 24500 put to work, what needs to happen" to "Account:NEED", "what has to happen for my call to pay off" to "Account:NEED",
+        "what would have to be true for my position to make money" to "Account:NEED", "where is my breakeven" to "Account:NEED",
+        "how far is my breakeven" to "Account:NEED", "what does my 24500 put need" to "Account:NEED",
+        "meri put ke liye kya hona chahiye" to "Account:NEED", "what needs to happen for my banknifty call" to "Account:NEED",
+        "what's my breakeven on the 24500 pe" to "Account:NEED", "for my short call to make money what has to happen" to "Account:NEED",
         // ---- Its neighbours: the positions shown, and ranked ----
         "show my positions" to "Account:POSITIONS", "show positions" to "Account:POSITIONS", "what are my positions" to "Account:POSITIONS",
         "my positions" to "Account:POSITIONS", "how are my positions" to "Account:POSITIONS",
