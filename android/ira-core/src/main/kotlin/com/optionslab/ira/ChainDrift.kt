@@ -31,7 +31,7 @@ object ChainDrift {
     private const val IDX = "(nifty |bank nifty |banknifty |finnifty |fin nifty )?"
     private val MAX_PAIN = Regex(
         " $MP (has |is |s |have )?(been )?($V) | $MP (since|from) (the )?(morning|open|opening|9 15|start|first read) |" +
-        " $MP (through|during|over|across) the day | $MP (so far|intraday) | (drift|shift|change|movement|migration) (in|of) (the )?$IDX$MP |" +
+        " $MP (through|during|over|across) the day | $MP (so far|intraday) | $MP (trend|drift|path) (today|intraday|so far) | (drift|shift|change|movement|migration) (in|of) (the )?$IDX$MP |" +
         // Hinglish: "max pain kitna shift hua", "max pain kahan gaya".
         " $MP (kitna|kaise|kahan|kaha|kidhar) (shift|badla|badli|gaya|gayi|move|khiska|khiski|chala|chali) "
     )

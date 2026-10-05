@@ -37,7 +37,7 @@ object NeedsTrue {
     private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
 
     private val OWNER = Regex(" (my|mine|our|meri|mere|mera|hamari|hamare|apni|apne|apna) ")
-    private val HOLDING = "(put|puts|call|calls|ce|pe|position|positions|trade|trades|option|options|short|long|straddle|strangle|spread|futures?|holding|holdings|strike)"
+    private val HOLDING = "(put|puts|call|calls|ce|pe|position|positions|trade|trades|option|options|short|long|straddle|strangle|spread|futures?|holding|holdings|strike|condor|iron condor|butterfly)"
     private val ASK = Regex(
         // "What needs to happen for my put to work", "what would have to be true for my 24500 put"
         " (what|wat|wht) (needs|need|has|have|would have|will have|must|should have|would need|will need|is needed|is required) (to )?(happen|be true|go right|go my way|occur)|" +
@@ -48,8 +48,20 @@ object NeedsTrue {
         // "Where is my breakeven", "how far is my breakeven", "breakeven of my put", "my breakevens"
         " (break ?even|break evens|breakevens|breakeven point|breakeven level)s? |" +
         // Hinglish: "meri put ke liye kya hona chahiye", "mere call ko profit ke liye kya chahiye"
-        " (ke liye|ko|me|mein) kya (hona|hone|chahiye|hona chahiye|hone chahiye|zaroori|zaruri)"
+        " (ke liye|ko|me|mein) kya (hona|hone|chahiye|hona chahiye|hone chahiye|zaroori|zaruri)|" +
+        // Round 10: "does my put need Nifty to fall", "how much does Nifty need to fall for my put", "at what level does my
+        // call make money", "where do I start losing on my put", "what Nifty level do I need for profit", "make the case for
+        // holding my put", "meri put kaam karegi kya" - each what has to happen, worked from the facts (never a forecast).
+        " (does|do) (my|our) ([a-z0-9 ]{0,30})?$HOLDING need |" +
+        " how (much|far) (does|do|would|will) [a-z ]{0,20}(need|have) to (fall|drop|rise|go up|go down|go|move|climb|come down) (for|so) |" +
+        " (at )?(what|which) ([a-z]+ )?(level|price|strike) (does|do|will|would) (my|our|i) ([a-z0-9 ]{0,30})?(make money|make a profit|profit|break even|breakeven|start losing|start making money|turn profitable|pay off|work) |" +
+        " where (do|does|will|would) (i|my|our) ([a-z0-9 ]{0,30})?(start losing|start making money|break even|turn profitable) |" +
+        " (what|which) ([a-z]+ )?(level|price) do (i|we) need (for|to) (profit|make money|break even|be in profit) |" +
+        " (make the case|the case|pros and cons|arguments?) (for|of|on) (holding|keeping|staying in) |" +
+        " $HOLDING (kaam|profit) (karegi|karega|karenge|degi|dega|denge) kya | $HOLDING (kab|kaise) (profit|paisa) (dega|degi|denge|banayega|banayegi) "
     )
+    /** "At what level do I break even", "what level do I need for profit": Boss's own book named by "I" (round 10). */
+    private val I_HOLD = Regex(" (do|will|would|does) i (need|break even|make money|start losing|start making money|turn profitable) | where do i (start losing|break even) ")
     /** Not this question: a what-if, an order or a change, the P&L now, a ranking, a plain list or a word explained. */
     private val NOT = Regex(" (if|suppose|agar|close|exit|square|sell|buy|add|cancel|set|place|move it|modify|worst|best|rank|what is a|what is the meaning|meaning of|define|explain) ")
 
@@ -57,9 +69,9 @@ object NeedsTrue {
     fun asked(text: String): Boolean = runCatching {
         listOf(text, Ask.reading(text)).any { s ->
             val t = norm(s)
-            ASK.containsMatchIn(t) && OWNER.containsMatchIn(t) && !NOT.containsMatchIn(t) &&
+            ASK.containsMatchIn(t) && (OWNER.containsMatchIn(t) || I_HOLD.containsMatchIn(t)) && !NOT.containsMatchIn(t) &&
                 // The breakeven or a holding must be named: "what needs to happen for my day" is not this.
-                (Regex(" $HOLDING ").containsMatchIn(t) || Regex(" (break ?even|breakevens?) ").containsMatchIn(t) || Regex(" \\d{3,6} ").containsMatchIn(t))
+                (Regex(" $HOLDING ").containsMatchIn(t) || Regex(" (break ?even|breakevens?) ").containsMatchIn(t) || Regex(" \\d{3,6} ").containsMatchIn(t) || I_HOLD.containsMatchIn(t))
         }
     }.getOrDefault(false)
 

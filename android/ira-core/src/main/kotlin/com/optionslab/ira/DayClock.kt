@@ -58,25 +58,56 @@ object DayClock {
     private val USUAL = "(usually|normally|typically|generally|mostly|often|most often|most days|tend to|tends to|on most days|on average)"
     private val EXTREME = "(high|low|highs|lows|top|bottom|peak)"
     private val INDEX = "(nifty|banknifty|bank nifty|finnifty|fin nifty|sensex|the market|the index|market|index|it)"
+    /** A stretch of the session named in a question about when the high or low comes (round 10). */
+    private val PART = "(first hour|first half hour|first 30 minutes|first 15 minutes|opening hour|opening half hour|open|opening|morning|" +
+        "afternoon|last hour|last half hour|closing hour|close|lunch|lunch hour|midday|mid day|second half|first half)"
     private val HIGH_LOW = Regex(
         " (when|what time|which time|at what time|which part of the day|what part of the day|which hour|what hour) (does|do|is|are) ($INDEX )?$USUAL (make|makes|made|set|sets|print|prints|hit|hits|form|forms|put in) (its |the |their |her )?(day s |days |intraday )?$EXTREME |" +
         " (when|what time|which time|at what time|which part of the day|what part of the day|which hour|what hour) (is|are) (the )?(day s |days |daily |intraday )?$EXTREME (of the day )?$USUAL (made|set|in|done|formed|put in) |" +
         " (usual |normal |typical )?(time|timing) of (the )?(day s |days |daily |intraday )?$EXTREME (of the day )?$USUAL |" +
         " (usual |normal |typical )(time|timing) of (the )?(day s |days |daily |intraday )?$EXTREME |" +
         " (day s |days |intraday )?$EXTREME (of the day )?(usually |normally |typically |generally )?kab (banta|banti|bante|aata|aati|hota|hoti) |" +
-        " $INDEX (ka |ki )?(high|low) (usually |normally |aksar )?kab (banta|banti|bante|aata|hota) ")
+        " $INDEX (ka |ki )?(high|low) (usually |normally |aksar )?kab (banta|banti|bante|aata|hota) |" +
+        // "kab high banta hai", "high usually kitne baje banta hai" (round 10).
+        " (kab|kitne baje|kis time) (ka )?(high|low) (usually |normally |aksar )?(banta|banti|bante|aata|hota) |" +
+        " (high|low) (usually |normally |aksar )?(kitne baje|kis time) (banta|banti|bante|aata|hota) |" +
+        // Round 10: a stretch of the day named - "is the high of the day usually made in the first hour", "does Nifty usually
+        // make its high in the morning", "how often is the low made in the first half hour", "when does Nifty usually bottom".
+        " (is|are) (the )?(day s |days |daily |intraday )?$EXTREME (of the day )?$USUAL (made|set|formed|put in|in|done) (in|during|before|after|by) (the )?$PART |" +
+        " (does|do) ($INDEX )?$USUAL (make|set|print|hit|form|put in) (its |the |their )?(day s |days |intraday )?$EXTREME (of the day )?(in|during|before|after|by) (the )?$PART |" +
+        " (how often|how many times|how many days) (is|are|was|were|does|do) (the )?(day s |days |daily |intraday )?$EXTREME (of the day )?(get )?(made|set|formed|come|in|done) (in|during|before|after|by) (the )?$PART |" +
+        " (when|what time|at what time) (does|do) ($INDEX )?$USUAL (bottom|top|peak)( out)? |" +
+        " (does|do) ($INDEX )?$USUAL (bottom|top|peak)( out)? (in|during|before|after|by) (the )?$PART |" +
+        " (how often|how many times|how many days) (does|do|did) ($INDEX )?(make|set|hit|print|form) (its |the |their )?(day s |days |intraday )?$EXTREME (of the day )?(in|during|before|after|by) (the )?$PART ")
     private val BY_NOW = Regex(
         " (is|are) (the )?(day s |days |daily )?$EXTREME (of the day )?(usually |normally |typically |generally )?(already )?(in|done|made|set) (by now|by this time|already) |" +
         " (how often|how many times|how many days) (is|are|was|were|has|have) (the )?(day s |days |daily )?$EXTREME (of the day )?(already )?(been )?(in|done|made|set) by (now|this time|this hour) |" +
         " (has|have) (the )?(day s |days |daily )?$EXTREME (of the day )?(usually |normally |typically )?(already )?(been )?(made|set|in|done) by (now|this time) (on most days|usually|normally|typically) |" +
         " by (now|this time|this hour) (is|are|has|was) (the )?(day s |days )?$EXTREME (of the day )?(usually |normally |typically )(in|made|set|done) |" +
-        " (high|low) (usually |normally )?(ban|aa) (chuka|chuki|gaya|gayi) (hota|hoti) (hai )?(ab tak|is time tak) ")
+        " (high|low) (usually |normally )?(ban|aa) (chuka|chuki|gaya|gayi) (hota|hoti) (hai )?(ab tak|is time tak) |" +
+        // "Has the low usually been made by now" (round 10: the usual word before, not after).
+        " (has|have) (the )?(day s |days |daily )?$EXTREME (of the day )?$USUAL (already )?(been )?(made|set|in|done) by (now|this time) |" +
+        // "Has the high been made already?" (today's, with how often it is in by now) - it fell to Boss's P&L on "made".
+        "^ (has|have) the (day s |days |daily )?(high|low) (of the day )?(already )?been (made|set|put in) (already|by now|yet|for the day) $")
     private val BUSY = Regex(
         " (busiest|quietest|most active|least active|most volatile|least volatile|calmest|slowest|liveliest|deadest|dullest) (time|hour|half hour|part|stretch|period|window|minutes)( of the day| of day| in the day| of the session)? |" +
         " (which|what) (time|hour|half hour|part of the day|time of day|time of the day|stretch of the day) (usually |normally |typically )?(moves|move|is|has) (the )?(most|least|biggest|smallest|busiest|quietest|most active|most volatile|calmest) |" +
         " (is|are) (the )?(lunch|lunch hour|lunch time|lunchtime|midday|mid day|afternoon|opening|first half hour|last hour|closing hour) (hour |session |time )?$USUAL (quiet|slow|dull|dead|calm|busy|volatile|active|wild|choppy) |" +
         " (volatility|range|movement|moves|activity) by (time of day|time of the day|hour|half hour) |" +
-        " (time of day|time of the day|hourly|half hourly|intraday) (volatility|range profile|activity|seasonality) ")
+        " (time of day|time of the day|hourly|half hourly|intraday) (volatility|range profile|activity|seasonality) |" +
+        // Round 10: "when is Nifty most volatile", "is it usually quiet after lunch", "how volatile is the first hour usually",
+        // "how does Nifty behave at lunch", and Hinglish - "sabse zyada movement kab hota hai", "lunch mein market shant rehta hai kya".
+        " (when|what time) (is|does) ($INDEX )?(usually |normally |typically )?(the )?(most|least) (volatile|active|busy|quiet|lively)( of the day)? |" +
+        " (is|are) $INDEX $USUAL (quiet|slow|dull|dead|calm|busy|volatile|active|wild|choppy) (after|during|at|around|before|in) (the )?(lunch|lunch hour|lunchtime|midday|mid day|open|opening|close|last hour|first hour|afternoon|morning) |" +
+        " (is|are) (the )?(open|opening|first hour|first half hour|lunch hour|lunch|midday|afternoon|last hour|closing hour) $USUAL (the )?(busiest|quietest|most volatile|most active|calmest|least active|least volatile)( time| part)?( of the day)? |" +
+        " (which|what) (time|hour|half hour) (moved|was) (the )?(most|busiest|most volatile|most active|quietest)( today| so far)? |" +
+        " how (volatile|busy|quiet|active|wild|choppy) (is|are) (the )?(first hour|first half hour|opening|opening hour|lunch hour|lunch|midday|afternoon|last hour|closing hour) $USUAL |" +
+        " how (does|do) $INDEX (usually |normally |typically )?(behave|move|trade) (at|during|around|in) (the )?(lunch|lunch hour|lunchtime|midday|mid day) |" +
+        " sabse (zyada|jyada|kam) ([a-z]+ )?(movement|volatility|hilta|hilti|chalta|chalti|move) (kab|kis time|kitne baje) |" +
+        " sabse (zyada|jyada|kam) (kab|kis time|kitne baje) (hilta|hilti|chalta|chalti|move karta|volatile) |" +
+        " sabse (busy|zyada busy|quiet|shant|volatile) (time|waqt|samay) (kab|kaunsa|kaun sa|kya) |" +
+        " (kab|kis time|kitne baje) sabse (zyada|jyada|kam) (movement|volatility|hilta|hilti|chalta|chalti|move) |" +
+        " (lunch|dopahar) (mein|me|ke time|time) ($INDEX )?(shant|slow|dull|quiet|thanda|dheema) (rehta|rahta|hota|rehti|rahti) ")
     private val ALL = Regex(" (day clock|days clock|day s clock|time of day (pattern|patterns|stats|statistics|profile|habits)|intraday (seasonality|time pattern|time patterns)|time of the day (pattern|patterns|stats|profile)) ")
 
     /** Which was asked, or null. A record of past days by time of day only: never a forecast, advice or Boss's own book. */

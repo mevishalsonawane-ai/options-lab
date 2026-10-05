@@ -125,10 +125,16 @@ object Clarity {
         ASK_LEAD + "(which|what) (of )?(your )?(answers|replies) (do i|did i) (find|found) (unclear|confusing|hard to follow)" + ASK_TAIL + "|" +
         ASK_LEAD + "(which|what) (of )?(your )?(answers|replies) (are|were) (unclear|confusing|hard to follow)( to me)?" + ASK_TAIL + "|" +
         ASK_LEAD + "(why|how come) (are )?(your )?answers (are )?(so )?(short|shorter) (now|lately|these days)" + ASK_TAIL + "|" +
-        ASK_LEAD + "(kaun se|kon se|kaunse) (jawab|answers) (chhote|chote|short) (karte|kar rahe) ho" + ASK_TAIL)
+        ASK_LEAD + "(kaun se|kon se|kaunse) (jawab|answers) (chhote|chote|short) (karte|kar rahe) ho" + ASK_TAIL + "|" +
+        // Round 10: "are you keeping your answers short", "why are you giving short answers".
+        ASK_LEAD + "(are|r) (you|u) (keeping|making|giving) (your |me |my )?(answers|replies) (short|shorter|brief)( now| lately| these days)?" + ASK_TAIL + "|" +
+        ASK_LEAD + "(are|r) (you|u) (shortening|cutting short|trimming) (your |my )?(answers|replies)( now| lately| these days)?" + ASK_TAIL + "|" +
+        ASK_LEAD + "(why|how come) (are|r) (you|u) (giving|keeping|making) (me )?(such )?(short|shorter|brief) (answers|replies)( now| lately| these days)?" + ASK_TAIL)
     private val RESET = Regex(ASK_LEAD + "(say|give|speak) (your |me your |me |my )?answers in full again" + ASK_TAIL + "|" +
         ASK_LEAD + "(dont|do not|no need to) (shorten|cut short|trim) (your |my |the )?answers( any ?more)?" + ASK_TAIL + "|" +
-        ASK_LEAD + "(forget|reset|clear) (which|the) answers (i found |were |i find )?(unclear|confusing)" + ASK_TAIL)
+        ASK_LEAD + "(forget|reset|clear) (which|the) answers (i found |were |i find )?(unclear|confusing)" + ASK_TAIL + "|" +
+        // Round 10: "can you give full answers (again)" - every answer, never the last one ("give me the full answer" is that).
+        ASK_LEAD + "(give|say) (me )?full answers( again| from now on| always)?" + ASK_TAIL)
 
     /** "Which answers do you keep short?" or "say your answers in full again", else null. */
     fun asked(text: String): Request? {

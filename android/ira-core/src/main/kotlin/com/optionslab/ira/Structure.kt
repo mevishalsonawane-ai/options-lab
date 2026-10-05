@@ -50,7 +50,11 @@ object Structure {
     private val TREND_RANGE = Regex(" (trend|trending|trendy|one way|directional) (day )?(hai )?(or|vs|versus|ya) (a )?(range|ranging|range bound|rangebound|sideways|choppy|chop)( day)? |" +
         " (range|ranging|range bound|rangebound|sideways|choppy) (day )?(hai )?(or|vs|versus|ya) (a )?(trend|trending|trendy|one way|directional)( day)? |" +
         " (is it|is today|today is|is this|is nifty|is banknifty|is bank nifty|is finnifty|is sensex|is the market) (having )?(a |an )?(trend|trending|range|range bound|rangebound|ranging) day |" +
-        " (trend|range) day so far | so far (a )?(trend|range) day ")
+        " (trend|range) day so far | so far (a )?(trend|range) day |" +
+        // Hinglish: "aaj trend day hai kya", "range day hai ya nahi" (round 10).
+        " (trend|range) day (hai|he) (kya|ya nahi|ki nahi) |" +
+        // "What's the trend so far", "trend so far" (round 10: they fell to Boss's own history).
+        "^ (what s |whats |what is |how is |how s )?(the )?(trend|range) so far( today)? $")
 
     /** Which of the four was asked, or null. Today's structure only: never a forecast, advice or another span. */
     fun asked(text: String): Ask? {

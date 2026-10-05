@@ -157,6 +157,10 @@ object AppAnswers {
         else if (Section.EVENTS in out && Section.HISTORY in out && rx(" (i|my|me|mine) ").containsMatchIn(t) &&
             !rx(" (calendar|policy|expiry day|expiries|news events) ").containsMatchIn(t)) out.remove(Section.EVENTS)
         if (Section.FLOWS in out || Section.CHAIN in out) { out.remove(Section.HISTORY); out.remove(Section.STATUS) }
+        // "Where is max pain", "where is resistance from the option chain": the chain's own answer (round 10), not where to find
+        // it in the app - unless the app is named ("where can I see max pain", "which tab shows the chain").
+        if (Section.CHAIN in out && Section.HOWTO in out && !rx(" (how do i|how can i|how to|find|which tab|which page|switch to|see|screen|tab|page|app|show|shown) ").containsMatchIn(t))
+            out.remove(Section.HOWTO)
         if (Section.STUDY in out) { out.remove(Section.STRATEGIES); out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         // "My last P&L", "previous day's profit": the last session, from the record.
         if (rx(" (last|previous|yesterday|yesterday s|last session s|last day s|last trading day s) (p l|pnl|profit|loss|day|session|result)").containsMatchIn(t) &&

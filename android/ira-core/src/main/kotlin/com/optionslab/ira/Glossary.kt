@@ -10,6 +10,8 @@ object Glossary {
 
     private val TERMS = listOf(
         Term(listOf("pcr", "put call ratio", "put-call ratio"), true, "PCR, the put-call ratio, is the open interest in puts divided by that in calls. Above about 1.2 more puts are written, which traders read as support below; under about 0.7 calls dominate, read as resistance above. It is a mood gauge, not a timing signal."),
+        // (Round 10: "what is a call wall" was handed here by the chain's drift and found nothing.)
+        Term(listOf("call wall", "put wall", "oi wall"), false, "A call wall is the strike with the most call open interest, and a put wall the one with the most put open interest. Option writers are said to defend them, so traders read the call wall as resistance and the put wall as support - a reading of positions, not a rule, and walls shift through the day."),
         Term(listOf("max pain"), true, "Max pain is the strike at which option buyers together would lose the most at expiry, so option writers gain the most. Prices are often said to drift towards it near expiry, but it is a tendency, not a rule."),
         Term(listOf("vix", "india vix", "volatility index"), true, "India VIX is the market's own guess of Nifty's swing over the next month, from option prices, as a yearly percentage. Divide it by about 16 for a usual one-day move: VIX 16 means about a 1% day. Rising VIX means fear and dearer options."),
         Term(listOf("open interest", "oi"), true, "Open interest is the number of option or futures contracts still open. For futures, rising OI with rising price means fresh buying and with falling price fresh selling; falling OI means positions are being closed. For options, rising OI at a strike usually means writers are adding there."),

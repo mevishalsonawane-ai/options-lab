@@ -1,0 +1,333 @@
+package com.optionslab.ira
+
+import java.time.LocalDate
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+/**
+ * The collision hunt (routing round 10, 5 Oct): what Boss asks around the newest families - Clarity (and its "what?"),
+ * Headroom, NeedsTrue, PositionHealth, TradeCase, DayClock, Structure, MarketDays, ChainDrift, ChainIntel and the chain's
+ * own read (the account's CHAIN) - in English and Hinglish, run through every one of their matchers and through the whole
+ * hub ([CoverageTest.feature], IraHub.ask's order). A question two families take must go, by the hub's order, to the one
+ * meant; each line names the feature it must get.
+ */
+class CollisionTest {
+    private val audit = CoverageTest()
+    private val today: LocalDate = LocalDate.of(2026, 10, 5)
+
+    /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
+    private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
+        "Clarity" to { q -> Clarity.asked(q) != null },
+        "Headroom" to { q -> Headroom.asked(q) != null },
+        "ChainDrift" to { q -> ChainDrift.asked(q) != null },
+        "ChainIntel" to { q -> ChainIntel.asked(q) != null },
+        "DayClock" to { q -> DayClock.asked(q) != null },
+        "Structure" to { q -> Structure.asked(q) != null },
+        "TradeCase" to { q -> TradeCase.asked(q) },
+        "Scenarios" to { q -> Scenarios.asked(q) != null },
+        "MarketDays" to { q -> MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null },
+        // The account's own sections, in Account.sections' precedence (NEED is set last and wins over HEALTH).
+        "Account:NEED" to { q -> NeedsTrue.asked(q) },
+        "Account:HEALTH" to { q -> PositionHealth.asked(q) },
+        "Account:RISK" to { q -> Topic.ACCOUNT in Ask.parse(q).topics && Section.RISK in AppAnswers.sections(q) },
+        "Account:CHAIN" to { q -> Topic.ACCOUNT in Ask.parse(q).topics && Section.CHAIN in AppAnswers.sections(q) },
+    )
+
+    private fun hits(q: String): List<String> = FAMILIES.filter { (_, f) -> runCatching { f(q) }.getOrDefault(false) }.map { it.first }
+
+    /** What Boss asks around these families (English, Hinglish, the recognizer's spellings), with the feature each must get. */
+    private val ASKED: List<Pair<String, String>> = listOf(
+        // ---- Clarity ----
+        "which answers do you keep short" to "Clarity", "say your answers in full again" to "Clarity", "which answers do you cut short" to "Clarity",
+        "are you keeping your answers short" to "Clarity", "why are you giving short answers" to "Clarity", "can you give full answers" to "Clarity",
+        "which answers were confusing" to "Clarity", "which answers are unclear" to "Clarity", "which of your answers are confusing" to "Clarity",
+        "why are your answers so short now" to "Clarity", "give me answers in full again" to "Clarity", "don't shorten your answers" to "Clarity",
+        "which answers did i find unclear" to "Clarity", "what answers do you shorten" to "Clarity", "are you shortening your answers" to "Clarity",
+        "why are you giving me short answers" to "Clarity", "give full answers again" to "Clarity",
+        // ---- Headroom ----
+        "how much can i still lose today" to "Headroom", "kitna aur loss le sakta hoon" to "Headroom", "how much room do i have today" to "Headroom",
+        "how many trades left" to "Headroom", "am i close to my limit" to "Headroom", "how close is my loss to the limit" to "Headroom",
+        "am i allowed to trade more today" to "Headroom", "am i blocked from trading" to "Headroom",
+        "kya main aur trade kar sakta hoon" to "Headroom", "kitne trade aur kar sakta hoon" to "Headroom", "am i overtrading" to "Headroom",
+        "how much more can i trade" to "Headroom", "am i trading too much" to "Headroom", "how close am i to my limits" to "Headroom",
+        "how close am i to my daily loss limit" to "Headroom", "how close am i to the loss limit" to "Headroom",
+        "how much more can i lose" to "Headroom", "how many trades do i have left" to "Headroom", "how many more trades can i take" to "Headroom",
+        "how many orders can i still place today" to "Headroom", "am i near my loss limit" to "Headroom", "am i close to my max loss" to "Headroom",
+        "how much headroom do i have" to "Headroom", "show my headroom" to "Headroom", "kitne trade bache hain" to "Headroom",
+        "limit se kitna door hoon" to "Headroom", "how much room is left today" to "Headroom", "where do i stand against my limits" to "Headroom",
+        "am i within my limits" to "Headroom", "how much loss is left" to "Headroom", "kitna aur loss utha sakta hoon" to "Headroom",
+        "kitne aur trade le sakta hoon" to "Headroom", "limit ke kitne paas hoon" to "Headroom", "jarvis how close am i to my limits" to "Headroom",
+        "boss style how much can i still lose" to "Headroom", "kitne trade aur le sakta hoon aaj" to "Headroom",
+        "am i allowed to take another trade" to "Headroom", "how close is my drawdown to my daily loss limit" to "Headroom",
+        // ---- Account:NEED ----
+        "make the case for holding my put" to "Account:NEED", "pros and cons of holding my call" to "Account:NEED",
+        "does my put need nifty to fall" to "Account:NEED", "meri put kaam karegi kya" to "Account:NEED",
+        "where do i start losing on my put" to "Account:NEED", "at what level does my call make money" to "Account:NEED",
+        "at what nifty level do i break even" to "Account:NEED", "what nifty level do i need for profit" to "Account:NEED",
+        "how much does nifty need to fall for my put" to "Account:NEED", "what needs to happen for my put to work" to "Account:NEED",
+        "where is my breakeven" to "Account:NEED", "what does my iron condor need" to "Account:NEED",
+        "at what price does my put start making money" to "Account:NEED", "where will my call break even" to "Account:NEED",
+        "how far does nifty have to go for my call" to "Account:NEED", "how much does banknifty have to rise for my call to work" to "Account:NEED",
+        "my breakeven" to "Account:NEED", "for my trade to work" to "Account:NEED", "for my trade to work what needs to happen" to "Account:NEED",
+        "what is my breakeven" to "Account:NEED", "how far is my breakeven" to "Account:NEED",
+        "what is the breakeven of my 24500 put" to "Account:NEED", "for my 24500 put to work what needs to happen" to "Account:NEED",
+        "what does my call need" to "Account:NEED", "what has to be true for my position" to "Account:NEED",
+        "what does my straddle need to make money" to "Account:NEED", "what does my short strangle need" to "Account:NEED",
+        "for my short straddle to work what has to happen" to "Account:NEED", "breakeven of my iron condor" to "Account:NEED",
+        "meri put ke liye kya hona chahiye" to "Account:NEED", "mere call ko profit ke liye kya chahiye" to "Account:NEED",
+        "meri position ka breakeven kya hai" to "Account:NEED", "what must nifty do for my call to work" to "Account:NEED",
+        "mera breakeven kahan hai" to "Account:NEED", "where does my position break even" to "Account:NEED",
+        "how far is nifty from my breakeven" to "Account:NEED", "meri call ke liye kya hona chahiye" to "Account:NEED",
+        "mera iron condor kab profit dega" to "Account:NEED", "how much does nifty have to fall for my put to pay off" to "Account:NEED",
+        "how far does banknifty need to move for my straddle" to "Account:NEED",
+        // ---- Account:HEALTH ----
+        "is my put healthy" to "Account:HEALTH", "is my 24500 call okay" to "Account:HEALTH", "how is my 24500 put doing" to "Account:HEALTH",
+        "check my positions" to "Account:HEALTH", "is my straddle safe" to "Account:HEALTH", "is my trade okay" to "Account:HEALTH",
+        "are my trades fine" to "Account:HEALTH", "check my position" to "Account:HEALTH", "check on my positions" to "Account:HEALTH",
+        "are my positions in danger" to "Account:HEALTH", "are any of my positions at risk" to "Account:HEALTH",
+        "which of my positions is at risk" to "Account:HEALTH", "how is my put" to "Account:HEALTH", "are my positions okay" to "Account:HEALTH",
+        "is my position safe" to "Account:HEALTH",
+        // ---- TradeCase ----
+        "make the case" to "TradeCase", "make the case for trading now" to "TradeCase", "pros and cons of trading now" to "TradeCase",
+        "case for and against" to "TradeCase",
+        // ---- DayClock ----
+        "has the low usually been made by now" to "DayClock", "is the high of the day usually made in the first hour" to "DayClock",
+        "does nifty usually make its high in the morning" to "DayClock", "is the low usually made in the first half hour" to "DayClock",
+        "how often is the high made in the first hour" to "DayClock", "what time does nifty usually bottom" to "DayClock",
+        "when is nifty most volatile" to "DayClock", "when is the market most volatile" to "DayClock",
+        "how volatile is the first hour usually" to "DayClock", "is it usually quiet after lunch" to "DayClock",
+        "how does nifty behave at lunch" to "DayClock", "lunch mein market shant rehta hai kya" to "DayClock",
+        "sabse zyada movement kab hota hai" to "DayClock", "nifty sabse zyada kab hilta hai" to "DayClock",
+        "when does nifty usually make its high" to "DayClock", "is the lunch hour usually quiet" to "DayClock",
+        "is the market usually quiet at lunch" to "DayClock", "does banknifty usually make its low in the afternoon" to "DayClock",
+        "how often is the low in by the first hour" to "DayClock", "when is banknifty most active" to "DayClock",
+        "which hour moved the most today" to "DayClock", "has the high been made already" to "DayClock",
+        "has the low been made by now" to "DayClock", "is it usually volatile at the open" to "DayClock",
+        "when does nifty usually make its low" to "DayClock", "kab high banta hai" to "DayClock", "high usually kitne baje banta hai" to "DayClock",
+        "busiest half hour" to "DayClock", "which half hour is the busiest" to "DayClock", "quietest time of day" to "DayClock",
+        "when is the market most quiet" to "DayClock", "is the open usually the busiest" to "DayClock",
+        "is the first half hour usually the most volatile" to "DayClock", "what's the day clock" to "DayClock",
+        "how is the day clock for banknifty" to "DayClock", "time of day pattern for nifty" to "DayClock", "intraday seasonality" to "DayClock",
+        "what time is the low usually made" to "DayClock", "is the high usually in by now" to "DayClock",
+        "which half hour moves the most" to "DayClock", "busiest time of the day" to "DayClock", "quietest hour of the day" to "DayClock",
+        "is the afternoon usually volatile" to "DayClock", "nifty ka high kab banta hai" to "DayClock", "nifty ka low kab banta hai" to "DayClock",
+        "what time is most volatile" to "DayClock", "which hour is the most volatile" to "DayClock",
+        "is the first half hour usually volatile" to "DayClock", "is the opening usually volatile" to "DayClock",
+        "is the last hour usually busy" to "DayClock", "day clock" to "DayClock", "nifty day clock" to "DayClock", "time of day stats" to "DayClock",
+        "which time of day moves the most for banknifty" to "DayClock", "what part of the day is the busiest" to "DayClock",
+        "sabse busy time kab hota hai" to "DayClock", "how often does nifty make its low in the first hour" to "DayClock",
+        "is the high usually made before lunch" to "DayClock", "does banknifty usually bottom in the morning" to "DayClock",
+        "is the market usually volatile at the open" to "DayClock",
+        // ---- Structure ----
+        "aaj trend day hai kya" to "Structure", "range day hai ya nahi" to "Structure", "what's the structure today" to "Structure",
+        "is today a trend day" to "Structure", "the structure today" to "Structure", "banknifty structure" to "Structure",
+        "higher highs today" to "Structure", "is it a range day" to "Structure", "what's the trend so far" to "Structure",
+        "trend so far" to "Structure", "what's the range so far" to "Structure", "is nifty making higher highs" to "Structure",
+        "trend or range so far" to "Structure", "nifty ka structure kya hai" to "Structure",
+        // ---- MarketDays ----
+        "is the market open today" to "MarketDays", "aaj market khula hai kya" to "MarketDays", "kal expiry hai kya" to "MarketDays",
+        "next holiday kab hai" to "MarketDays", "how many days to expiry" to "MarketDays", "days left to expiry" to "MarketDays",
+        "time left for expiry" to "MarketDays", "is today a trading day" to "MarketDays", "is the market open on saturday" to "MarketDays",
+        "what time does the market open tomorrow" to "MarketDays", "is tomorrow a holiday" to "MarketDays",
+        "when is the next expiry" to "MarketDays", "how long till expiry" to "MarketDays",
+        // ---- ChainDrift ----
+        "how has max pain moved today" to "ChainDrift", "how has max pain moved" to "ChainDrift",
+        "has the call wall moved since morning" to "ChainDrift", "how has the put wall shifted" to "ChainDrift",
+        "where is the put wall now" to "ChainDrift", "call wall kahan hai" to "ChainDrift", "max pain kahan shift hua" to "ChainDrift",
+        "max pain trend today" to "ChainDrift", "max pain shift since the open" to "ChainDrift", "has max pain moved up or down" to "ChainDrift",
+        "how has the highest call oi strike changed" to "ChainDrift", "did the call wall move" to "ChainDrift",
+        "is the put wall holding" to "ChainDrift", "put wall kahan shift hua" to "ChainDrift", "has max pain shifted" to "ChainDrift",
+        "max pain since the open" to "ChainDrift", "max pain kitna shift hua" to "ChainDrift", "where is the call wall" to "ChainDrift",
+        "is the call wall shifting" to "ChainDrift", "has the put wall moved" to "ChainDrift",
+        "has the biggest call oi moved since morning" to "ChainDrift", "how has the chain drifted today" to "ChainDrift",
+        "chain drift" to "ChainDrift", "is max pain moving up" to "ChainDrift", "max pain and the walls" to "ChainDrift",
+        "max pain through the day" to "ChainDrift", "max pain kahan gaya" to "ChainDrift", "how has max pain drifted since the open" to "ChainDrift",
+        "max pain kahan khiska" to "ChainDrift", "has the put wall shifted today" to "ChainDrift",
+        // ---- ChainIntel ----
+        "how has the chain changed since morning" to "ChainIntel", "how has oi changed since morning" to "ChainIntel",
+        "how has the oi built up today" to "ChainIntel", "where is the biggest put oi now" to "ChainIntel", "what's the straddle at" to "ChainIntel",
+        "how much is the straddle" to "ChainIntel", "what is the skew today" to "ChainIntel", "where is the biggest oi build up" to "ChainIntel",
+        "which strike has the highest call oi" to "ChainIntel", "straddle breakeven" to "ChainIntel",
+        "breakeven of the atm straddle" to "ChainIntel", "where is the biggest call oi" to "ChainIntel",
+        "how has the oi shifted since morning" to "ChainIntel", "oi kaise shift hua" to "ChainIntel",
+        "where is the most call writing" to "ChainIntel", "how has the pcr changed today" to "ChainIntel", "expected move by expiry" to "ChainIntel",
+        "what's the iv skew" to "ChainIntel", "put writing kahan ho rahi hai" to "ChainIntel",
+        // ---- Account:CHAIN ----
+        "where is max pain" to "Account:CHAIN", "has oi shifted" to "Account:CHAIN", "where is fresh call writing" to "Account:CHAIN",
+        "max pain kya hai" to "Account:CHAIN", "what is max pain now" to "Account:CHAIN", "max pain of banknifty" to "Account:CHAIN",
+        "what's the pcr" to "Account:CHAIN", "how is the option chain" to "Account:CHAIN", "how is the option chain looking" to "Account:CHAIN",
+        "read the option chain" to "Account:CHAIN", "max pain vs spot" to "Account:CHAIN", "how far is spot from max pain" to "Account:CHAIN",
+        "is nifty near max pain" to "Account:CHAIN", "will nifty go to max pain" to "Account:CHAIN", "where is max pain heading" to "Account:CHAIN",
+        "iv kya hai" to "Account:CHAIN", "call oi vs put oi" to "Account:CHAIN", "which strike has the most oi" to "Account:CHAIN",
+        "what is the pcr" to "Account:CHAIN", "what is max pain" to "Account:CHAIN", "what's the max pain now" to "Account:CHAIN",
+        "kya matlab hai pcr ka" to "Account:CHAIN", "what is the max pain for banknifty" to "Account:CHAIN",
+        "option chain of nifty" to "Account:CHAIN", "analyze the option chain" to "Account:CHAIN", "will max pain shift" to "Account:CHAIN",
+        "where is support from oi" to "Account:CHAIN", "where is resistance from the option chain" to "Account:CHAIN",
+        "max pain kahan hai" to "Account:CHAIN",
+        // ---- Account:RISK ----
+        "what's my risk on my put" to "Account:RISK", "what's my loss limit" to "Account:RISK", "show my limits" to "Account:RISK",
+        "loss limit kitna bacha hai" to "Account:RISK", "what is my max loss for the day" to "Account:RISK",
+        "how much risk is left" to "Account:RISK", "is my risk ok" to "Account:RISK", "what is my daily loss limit" to "Account:RISK",
+        "what are my risk limits" to "Account:RISK", "what is my trade limit" to "Account:RISK", "mera loss limit kya hai" to "Account:RISK",
+        "is the guard on" to "Account:RISK", "is my strategy close to its limit" to "Account:RISK+STRATEGIES",
+        "how much risk am i taking" to "Account:RISK",
+        // ---- Their neighbours: the other features these words must stay with ----
+        "how much can i lose if nifty falls 1%" to "Account:MOVE", "make the case for my position" to "Account:POSITIONS",
+        "when was today's high" to "Market", "what time was the high today" to "Market", "aaj high kab bana" to "Market",
+        "should i trade now" to "TradeCheck", "what if nifty falls 1%" to "Scenarios", "how much do i lose if nifty falls 1%" to "Account:MOVE",
+        "is my call in profit" to "Account:PNL", "what time does the market close" to "OptionFacts",
+        "when does the market usually reverse" to "Market", "what is the opening range" to "Glossary", "how is the first hour today" to "Market",
+        "how volatile was the first hour today" to "Market", "how much did nifty move in the first hour" to "Market",
+        "was lunch quiet today" to "Market", "is it quiet today" to "Market", "is the market quiet" to "Market", "is nifty quiet today" to "Market",
+        "is nifty making new highs" to "Market", "has nifty made its high for the day" to "Market", "is the low in" to "Market",
+        "is the high in for the day" to "Market", "nifty ka high ban gaya kya" to "Market", "aaj ka low ban chuka hai kya" to "Market",
+        "what is the high of the day" to "Market", "how far is nifty from the day high" to "Market",
+        "how much can i still lose if nifty falls 200 points" to "Account:MOVE", "what's the expected move" to "ExpectedRange",
+        "what is today's trend" to "Market", "which way is nifty trending" to "Market", "range today" to "Market",
+        "how big is today's range" to "Market", "today's high and low" to "Market", "day high day low" to "Market",
+        "market kab band hoga" to "OptionFacts", "how are my positions looking" to "Account:POSITIONS",
+        "is any position near its stop" to "Account:PROTECTIONS+POSITIONS", "what needs to happen today" to "Market",
+        "what needs to happen for nifty to break out" to "Market", "what has to happen for banknifty to recover" to "Market",
+        "what would it take for nifty to cross 25000" to "Odds", "what does nifty need to do to reach 25000" to "Market",
+        "how far is nifty from 25000" to "Distance", "how much more does nifty need to fall to hit 24000" to "Market",
+        "how is my day going" to "Account:PNL+POSITIONS+ORDERS+STRATEGIES", "what is my max loss on this trade" to "Account:PNL",
+        "how many trades did i take" to "Account:ORDERS", "can i take another trade" to "Market", "should i take another trade" to "Market",
+        "should i stop trading for the day" to "Account:PROTECTIONS", "what's the case for nifty going up" to "Market",
+        "bull case for nifty" to "Market", "bear case for banknifty" to "Market", "talk me through my positions" to "Account:POSITIONS",
+        "walk me through my trade" to "Account:EXPLAIN_POS", "explain my positions" to "Account:EXPLAIN_POS", "what is nifty at" to "Market",
+        "what is my p&l" to "Account:PNL", "what was that about vix" to "Market", "what do you mean by max pain" to "Glossary",
+        "what does pcr mean" to "Glossary", "repeat the levels" to "Market", "what was the nifty high" to "Market",
+        "what was the high today" to "Market", "meaning of theta" to "Glossary", "which alerts do you hold back" to "AlertSense",
+        "how much did i lose today" to "Account:PNL", "how is my position doing" to "Account:EXPLAIN_POS",
+        "what if nifty falls 100 points what happens to my put" to "Account:MOVE", "what's the worst position" to "Account:RANK",
+        "are my stops okay" to "Account:PROTECTIONS", "where was today's high" to "Market", "when did nifty make its high today" to "Market",
+        "what is the day high" to "Market", "nifty day low" to "Market", "when does the market open" to "OptionFacts",
+        "how much time is left in the session" to "OptionFacts", "how much time till close" to "OptionFacts",
+        "market kitne baje band hoga" to "OptionFacts", "when is the best time to trade" to "Account:TIMEOFDAY",
+        "where will max pain be at expiry" to "Outlook", "what is a call wall" to "Glossary", "how is nifty" to "Market",
+        "what's the vix" to "Market", "why is nifty falling" to "Causes", "what is theta" to "Glossary",
+        "how many lots can i buy with 50000" to "Sizing", "what's my pnl" to "Account:PNL", "show my positions" to "Account:POSITIONS",
+        "how are my strategies doing" to "Account:BOTS", "stop all strategies" to "Act", "close all positions" to "Act", "kill switch on" to "Act",
+        "buy 1 lot nifty 25000 ce" to "Act", "sell my put" to "Act", "square off my position" to "Act",
+        "should i exit my position" to "Account:POSITIONS", "brief me" to "CoPilot", "what matters right now" to "CoPilot",
+        "any contradictions" to "Consistency", "is it a good day to trade" to "TradeCheck", "what are my rules" to "AboutBoss",
+        "how are you improving" to "Improve", "what have you learned this week" to "Learnings", "how well are you hearing me" to "Hearing",
+        "can you hear me" to "Chat", "am i ready to trade" to "PreMarket", "which patterns work on nifty" to "PatternCalls",
+        "what's the main news" to "NewsDesk", "how does the market react to rbi news" to "NewsMoves", "is your data fresh" to "DataAge",
+        "what if vix goes to 20" to "Scenarios", "recap the day" to "DayStory", "how was my day" to "DaySummary",
+        "help me journal today" to "DayJournal", "why so quiet" to "Airtime", "what's crude doing" to "Honest",
+        "what time do i lose most" to "Account:TIMEOFDAY", "how did i do this week" to "Account:HISTORY", "mera pnl kitna hai" to "Account:PNL",
+        "aaj kitne trade hue" to "Account:ORDERS",
+    )
+
+    @Test fun eachQuestionGoesWhereItShould() {
+        assertTrue(ASKED.size >= 300, "${ASKED.size}")
+        assertEquals(ASKED.size, ASKED.map { it.first }.distinct().size)
+        val wrong = ASKED.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), "taken by the wrong feature (${wrong.size} of ${ASKED.size}):\n" + wrong.joinToString("\n"))
+    }
+
+    @Test fun noCollisionGoesToTheWrongFamily() {
+        // Caught by two or more families: the hub's order must give the one meant (the first family that takes it).
+        val wrong = ASKED.mapNotNull { (s, want) ->
+            val h = hits(s)
+            if (h.size < 2 || h.none { want.startsWith(it) } || want.startsWith(h.first())) null
+            else "\"$s\": $h - the hub gives ${h.first()}, wanted $want"
+        }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        // The hunt did meet collisions (Headroom over the account's RISK, NEED over HEALTH, ChainDrift over ChainIntel...).
+        assertTrue(ASKED.count { hits(it.first).size >= 2 } >= 20)
+    }
+
+    // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
+
+    /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "Clarity", "WordFit", "AskedAgain", "NewsMoves",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "SaidAbout", "WeekAhead", "DataAge", "Honest", "Thinking",
+        "SelfWhy", "Consistency", "CoPilot", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "Weekdays", "Structure", "MindChange", "Breadth",
+        "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
+
+    @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
+        val hub = java.io.File("../app/src/main/java/com/optionslab/app/ira/IraHub.kt").takeIf { it.isFile }?.readText() ?: return
+        val from = hub.indexOf("val bundled = runCatching"); val to = hub.indexOf("com.optionslab.ira.Plan.steps(q)", from)
+        assertTrue(from > 0 && to > from)
+        val body = hub.substring(from, to)
+        val calls = Regex("com\\.optionslab\\.ira\\.(\\w+)\\.(asked|exportAsked|undoAsked)\\(q\\)").findAll(body).toList()
+        val order = calls.map { it.groupValues[1] + (if (it.groupValues[2] == "asked") "" else "." + it.groupValues[2]) }.distinct()
+        assertEquals(HUB_ORDER, order)
+        // Every question branch there keeps the guard: not said with something to do, no order, no command. (SelfWhy is
+        // read only inside Thinking's own guarded branch.)
+        for (c in calls) {
+            if (c.groupValues[1] == "SelfWhy") continue
+            val head = body.substring(0, c.range.first).let { it.substring(maxOf(it.lastIndexOf(" if ("), it.lastIndexOf("= if ("))) }
+            for (g in listOf("!bundled", "parsed.order == null", "parsed.command == null")) assertTrue(g in head, "${c.groupValues[1]}: $g")
+        }
+        // HeardBack is the voice path's own read-back (JarvisVoice), never a question branch of the hub.
+        assertTrue("HeardBack" !in body)
+    }
+
+    // ---- Clarity's "what?": only the bare "what?" family, never a real question that starts with "what" ----
+
+    private val UNCLEAR = listOf("what", "what?", "huh", "kya", "come again", "say that again", "what did you say", "what does that mean",
+        "what do you mean", "pardon", "sorry what", "what was that", "i didn't understand", "samjha nahi", "samajh nahi aaya", "matlab",
+        "kya bola", "phir se", "dobara bolo", "i didn't get that", "you lost me", "that was confusing", "jarvis what")
+    private val NOT_UNCLEAR = listOf("what is nifty at", "what is the pcr", "what is max pain", "what is my breakeven", "what was that about vix",
+        "what did you say about banknifty", "what do you mean by max pain", "what does pcr mean", "what do you mean nifty is weak",
+        "what's the structure today", "what time is the low usually made", "what needs to happen for my put to work", "what about banknifty",
+        "what now", "what's up", "what if nifty falls 1%", "what are my risk limits", "what matters right now", "kya matlab hai pcr ka",
+        "matlab kya hai", "kya bola tumne", "phir se bolo nifty ka level", "i didn't understand the levels", "repeat the levels",
+        "what was the high today", "what is a call wall", "which answers do you keep short", "say your answers in full again", "tell me more", "go on")
+
+    @Test fun onlyTheBareWhatIsUnclear() {
+        for (s in UNCLEAR) { assertTrue(Clarity.unclear(s), s); assertEquals(null, Clarity.asked(s), s) }
+        for (s in NOT_UNCLEAR) assertTrue(!Clarity.unclear(s), s)
+        // Asking about the shorter answers is never the "what?" itself, and never anything that acts.
+        for (s in listOf("which answers do you keep short", "are you shortening your answers", "give full answers again"))
+            assertTrue(!Clarity.unclear(s) && Ask.parse(s).command == null && Ask.parse(s).order == null, s)
+    }
+
+    // ---- Round 10's new wordings: none acts ----
+
+    /** The newest features' natural variants added this round, with the feature each must get. */
+    private val ROUND10 = listOf(
+        "has the low usually been made by now" to "DayClock", "is the high of the day usually made in the first hour" to "DayClock",
+        "does nifty usually make its high in the morning" to "DayClock", "how often is the high made in the first hour" to "DayClock",
+        "what time does nifty usually bottom" to "DayClock", "when is nifty most volatile" to "DayClock", "is it usually quiet after lunch" to "DayClock",
+        "lunch mein market shant rehta hai kya" to "DayClock", "sabse zyada movement kab hota hai" to "DayClock", "nifty sabse zyada kab hilta hai" to "DayClock",
+        "kab high banta hai" to "DayClock", "is the open usually the busiest" to "DayClock", "has the high been made already" to "DayClock",
+        "aaj trend day hai kya" to "Structure", "what's the trend so far" to "Structure",
+        "is my put healthy" to "Account:HEALTH", "how is my 24500 put doing" to "Account:HEALTH", "are any of my positions at risk" to "Account:HEALTH",
+        "does my put need nifty to fall" to "Account:NEED", "at what nifty level do i break even" to "Account:NEED",
+        "make the case for holding my put" to "Account:NEED", "meri put kaam karegi kya" to "Account:NEED", "where do i start losing on my put" to "Account:NEED",
+        "mera iron condor kab profit dega" to "Account:NEED",
+        "am i allowed to take another trade" to "Headroom", "kya main aur trade kar sakta hoon" to "Headroom", "am i overtrading" to "Headroom",
+        "how close is my loss to the limit" to "Headroom", "how much can i lose if nifty falls 1%" to "Account:MOVE",
+        "are you keeping your answers short" to "Clarity", "can you give full answers" to "Clarity",
+        "max pain trend today" to "ChainDrift", "where is max pain" to "Account:CHAIN", "case for and against" to "TradeCase",
+        "what is a call wall" to "Glossary",
+    )
+
+    @Test fun roundTenWordingsNeitherOrderNorCommandNorBundle() {
+        assertTrue(ROUND10.size >= 10)
+        for ((s, want) in ROUND10) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // A change of a limit stays out of Headroom; the orders beside these words still act as before (each its own confirm).
+        for (s in listOf("change my loss limit", "increase my trade limit to 10", "set my daily loss limit to 5000")) assertEquals(null, Headroom.asked(s), s)
+        for (s in listOf("sell my put", "close my call", "exit my put if it falls 50", "square off my position")) {
+            assertEquals(false, NeedsTrue.asked(s), s); assertEquals(false, PositionHealth.asked(s), s); assertEquals("Act", audit.feature(s), s)
+        }
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("is my put healthy then close all positions", "am i overtrading, then stop all strategies",
+            "when is nifty most volatile and kill switch on"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+}

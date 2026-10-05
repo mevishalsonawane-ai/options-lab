@@ -144,7 +144,10 @@ object Headroom {
         "| am i (near|close to|nearing|approaching|at|hitting) (my |the |any )?$LIM | (am i|are we) (within|inside|under) (my |the )?$LIM " +
         "| how much (room|headroom|room to trade|space) (do i have|is left|have i got|left)| (my|whats my|what is my|show me my|show my) headroom " +
         "| how much of my (limits?|daily loss limit|loss limit|risk) (have i|did i|is) (used|left|gone)| where do i stand (on|against|with) my $LIM " +
-        "| (limit|limits) (ke|se) (kitna|kitne) (paas|pass|door|dur) (hoon|hu|hun|hai|hain) | kitna (paas|door|dur) (hoon|hu|hun) (limit|limits) (se|ke) ")
+        "| (limit|limits) (ke|se) (kitna|kitne) (paas|pass|door|dur) (hoon|hu|hun|hai|hain) | kitna (paas|door|dur) (hoon|hu|hun) (limit|limits) (se|ke) " +
+        // Round 10: "how close is my loss to the limit", "am I blocked from trading", "how much more can I trade today".
+        "| how (close|near) is my (loss|drawdown|day s loss|days loss) to (my |the )?$LIM | (am i|are we) (blocked|locked out|stopped|barred) from trading " +
+        "| how much more can i trade( today)? $")
     private val LOSS = rx(
         " how much (more )?can i (still )?(lose|loose|afford to lose)| how much (more )?(loss )?(is |do i have )?(left|remaining) (on|of|in) (my |the )?(daily )?(loss )?limit " +
         "| how much (loss|room) (is |do i have )?(left|remaining)( today)? | how close am i to (my |the )?(daily )?(max )?loss | (my )?(daily )?loss limit (left|remaining) " +
@@ -152,12 +155,18 @@ object Headroom {
     private val TRADES = rx(
         " how many (more )?(trades|orders) (can i|may i|am i allowed to) (still )?(take|place|do|make|send)| how many (more )?(trades|orders) (do i have |have i got |are |is )?(left|remaining)" +
         "| how many (trades|orders) (have i|did i) (got )?(left|remaining)| (trades|orders) (left|remaining) (today|for today|for the day) " +
-        "| kitne (aur )?(trade|trades|order|orders) (le|kar|laga|lagaa) sakta (hoon|hu|hun) | kitne (trade|trades|order|orders) (bache|baaki|baki|bachey) (hai|hain|he) ")
+        "| kitne (aur )?(trade|trades|order|orders) (le|kar|laga|lagaa) sakta (hoon|hu|hun) | kitne (trade|trades|order|orders) (bache|baaki|baki|bachey) (hai|hain|he) " +
+        // Round 10: "kitne trade aur kar sakta hoon", "kya main aur trade kar sakta hoon", "am I allowed to trade more today",
+        // "am I overtrading" (his own count against the guard's - never the arms', which BotHealth reads).
+        "| kitne (trade|trades|order|orders) aur (le|kar|laga) sakta (hoon|hu|hun) | (kya )?(main |mai )?aur (trade|trades) (le|kar) sakta (hoon|hu|hun) " +
+        "| (am i|are we) allowed (to trade more|to take (another|one more|more) (trade|trades)|more trades) | (am i|are we) (overtrading|over trading|trading too much) ")
 
     /** "How close am I to my limits?" (ALL), "how much can I still lose today?" (LOSS), "how many trades left?" (TRADES); null otherwise. */
     fun asked(text: String): Asked? {
         val t = words(text)
         if (ACTS.containsMatchIn(t)) return null
+        // A what-if ("how much can I lose if Nifty falls 1%"): his book at a move, the account's own (Exposure; round 10).
+        if (rx(" (if|agar|suppose|supposing|imagine) ").containsMatchIn(t)) return null
         // Another day's or the market's: not this (only today's limits are counted).
         if (rx(" (yesterday|last week|this week|last month|this month|tomorrow|kal) ").containsMatchIn(t)) return null
         return when {

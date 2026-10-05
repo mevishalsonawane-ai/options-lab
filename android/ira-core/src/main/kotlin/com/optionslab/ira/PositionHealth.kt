@@ -63,15 +63,20 @@ object PositionHealth {
     private val ASK = Regex(" (positions? (health|health check|healthcheck|check up|checkup)|health (check )?(of|on|for) (all )?(my|our) (open )?positions?|" +
         "how healthy are (all )?(my|our) (open )?positions?|check (on )?(all )?(my|our|meri|mere) (open )?positions?|" +
         "(are|is) (all )?(my|our) (open )?positions? (ok|okay|fine|alright|all right|healthy|in good shape|in shape|safe)|" +
+        // "Is my put healthy", "is my 24500 call okay" (round 10): one holding named, the same check.
+        "(are|is) (my|our) ([a-z0-9 ]{0,20})?(put|puts|call|calls|straddle|strangle|spread|trade|trades) (ok|okay|fine|alright|all right|healthy|in good shape|safe)|" +
+        "(are|is) (any of )?(all )?(my|our) (open )?positions? (in danger|at risk|in trouble)|(which|any) of (my|our) (open )?positions? (is |are )?(in danger|at risk|in trouble)|" +
         "positions? (theek|thik|theekh|theek|sahi|ok|okay|fine|thik thak|theek thaak) (hai|hain|he|h|hei|hein|na)|positions? (ka|ki) (haal|halat|haalat)|" +
         "positions? haal) ")
+    /** "How is my put (doing)?", "how is my 24500 call": one holding asked after, as a whole question (round 10). */
+    private val HOW = Regex("^ how (is|are|s) (my|our) ([0-9]{3,6} )?(put|puts|call|calls|straddle|strangle|iron condor|condor)( doing| looking| holding up)?( now| today)? $")
     /** Not this check: a P&L, a move, a rank, an order or a change. */
     private val NOT = Regex(" (p l|pnl|profit|loss|if|close|exit|square|sell|buy|add|cancel|set|place|move|worst|best|rank) ")
 
     /** "Check my positions", "position health", "are my positions okay", "kya meri positions theek hain". */
     fun asked(text: String): Boolean = listOf(text, Ask.reading(text)).any { s ->
         val t = norm(s.replace("p&l", "p l", ignoreCase = true))
-        ASK.containsMatchIn(t) && (OWNER.containsMatchIn(t) || rx(" positions? (health|health check|healthcheck|check up|checkup) ").containsMatchIn(t)) &&
+        (ASK.containsMatchIn(t) || HOW.containsMatchIn(t)) && (OWNER.containsMatchIn(t) || rx(" positions? (health|health check|healthcheck|check up|checkup) ").containsMatchIn(t)) &&
             !NOT.containsMatchIn(t)
     }
 
