@@ -1441,6 +1441,19 @@ object IraHub {
                 return
             }
         }
+        // Boss's bare "yes" as his very next words after an answer ended by offering the question he usually asks next
+        // ([com.optionslab.ira.NextAsk]): asked as that question - checked again to be no order and no command, never on a
+        // locked phone. Any other words end the offer, and a yes while something waits for his yes or Confirm is never taken
+        // as it. Understanding only: nothing learned acts. Not in IraGoldAlgo.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
+            val nextAskWaiting = synchronized(actions) { actions.isNotEmpty() }
+            val nextAskQ = runCatching { IraTools.nextAskYes(q, nextAskWaiting, phoneLocked()) }.getOrNull()
+            if (nextAskQ != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$nextAskQ\".")).takeLast(MAX_MESSAGES)) }
+                ask(nextAskQ, understood = true)
+                return
+            }
+        }
         // Boss's very next words just after he turned a trade idea down, when they give his reason ("it's too late in the
         // day"): its kind noted ([com.optionslab.ira.TurnDowns]; never his words) and acknowledged - a statement only, never
         // a question, an order or a command. Any other words end the wait and go on as usual. Nothing learned acts.
@@ -1572,7 +1585,7 @@ object IraHub {
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
-                com.optionslab.ira.LeadPart.asked(q) != null ||
+                com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2325,7 +2338,15 @@ object IraHub {
         // A confidence word the number beside it doesn't bear out ("usually" beside "4 of the last 12") is said as the word
         // that fits ([com.optionslab.ira.WordFit]); only words, never a figure, and never an order's words.
         val fitted = if (a.order == null && parsed.order == null && parsed.command == null) IraTools.fitWords(a.text) else a.text
-        val msg = Msg(true, doubt.wrap(fitted), a.facts, a.order, writing = write)
+        // The question Boss usually asks after this kind, offered in one short question at the end
+        // ([com.optionslab.ira.NextAsk]; from his routine log, keys only): his own words only, an unlocked phone, a plain
+        // answer (no order, no command, no caution, no old or withheld data). Words only - never answered unasked.
+        val nextAskLine: String? = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !bundled &&
+            parsed.order == null && parsed.command == null && a.order == null && doubt.level == com.optionslab.ira.SelfDoubt.Level.NORMAL &&
+            off == null && ageNote == null && dressed?.withheld != true)
+            runCatching { IraTools.nextAskOffer(q, phoneLocked()) }.getOrNull() else null
+        val nextAskTail = if (nextAskLine == null) "" else " $nextAskLine"
+        val msg = Msg(true, doubt.wrap(fitted) + nextAskTail, a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
         // The patterns the answer told of are followed (market data only; withheld words told of nothing).
         if (dressed?.withheld != true && a.calls.isNotEmpty()) scope.launch(Dispatchers.IO) { runCatching { IraTools.patternsTold(a.calls) } }
@@ -2341,14 +2362,14 @@ object IraHub {
             // The model's wording checked the same way (outside the update, which may run more than once).
             val betterFit = if (better != null && better != a.text) IraTools.fitWords(better) else null
             _state.update { s -> s.copy(messages = s.messages.map { m ->
-                if (m !== msg) m else if (betterFit != null) m.copy(text = doubt.wrap(betterFit), draft = msg.text, writing = false) else m.copy(writing = false)
+                if (m !== msg) m else if (betterFit != null) m.copy(text = doubt.wrap(betterFit) + nextAskTail, draft = msg.text, writing = false) else m.copy(writing = false)
             }) }
         }
     }
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2587,6 +2608,18 @@ object IraHub {
             val partSaid = if (partAsk == com.optionslab.ira.LeadPart.Request.RESET) IraTools.leadPartReset(phoneLocked())
                 else if (phoneLocked()) com.optionslab.ira.LeadPart.LOCKED else IraTools.leadPartSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, partSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What do I usually ask next?" / "stop offering what I ask next": the question Boss usually asks after an answer,
+        // offered in one short question at its end ([com.optionslab.ira.NextAsk]; from his routine log, keys only). His
+        // habit: named on an unlocked phone only; the undo works locked too, in neutral words. Words only - nothing learned
+        // acts. Not in IraGoldAlgo.
+        val nextAskReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.NextAsk.asked(q) }.getOrNull() else null
+        if (nextAskReq != null) {
+            val nextAskSaid = if (nextAskReq == com.optionslab.ira.NextAsk.Request.RESET) IraTools.nextAskReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.NextAsk.LOCKED else IraTools.nextAskSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, nextAskSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false

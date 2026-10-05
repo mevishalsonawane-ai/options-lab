@@ -73,7 +73,7 @@ object SelfDoubt {
     fun count(tally: DoubtTally, day: LocalDate, text: String): DoubtTally {
         // "Why do you put the levels first?", "don't put the levels first": about Jarvis's order, never a question about the
         // levels - not tallied, so an undo never counts toward what it undoes ([LeadPart], [FigureFirst]).
-        val ours = runCatching { LeadPart.asked(text) != null || FigureFirst.asked(text) != null }.getOrDefault(false)
+        val ours = runCatching { LeadPart.asked(text) != null || FigureFirst.asked(text) != null || NextAsk.asked(text) != null }.getOrDefault(false)
         val keys = if (ours) emptyList() else tags(text).map { it.key }
         val kept = tally.filterKeys { !it.isBefore(day.minusDays(WINDOW_DAYS)) }
         if (keys.isEmpty()) return kept

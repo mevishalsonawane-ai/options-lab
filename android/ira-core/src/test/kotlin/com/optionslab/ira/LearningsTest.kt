@@ -69,7 +69,7 @@ class LearningsTest {
         Learnings.Area.MORNING to MorningSense.UNDO, Learnings.Area.STARS to HonestStars.UNDO, Learnings.Area.HOURS to TalkHours.UNDO,
         Learnings.Area.MORNING_ASKS to MorningAsks.UNDO, Learnings.Area.TURN_DOWNS to TurnDowns.UNDO, Learnings.Area.LENGTHS to TopicLength.UNDO,
         Learnings.Area.USUAL_INDEX to UsualIndex.UNDO, Learnings.Area.NICKNAMES to Nicknames.UNDO, Learnings.Area.LEAD_INDEX to LeadIndex.UNDO,
-        Learnings.Area.LEAD_PART to LeadPart.UNDO)
+        Learnings.Area.LEAD_PART to LeadPart.UNDO, Learnings.Area.NEXT_ASK to NextAsk.UNDO)
 
     private fun everyArea(): List<Learnings.Item> = Learnings.Area.entries.map { a ->
         Learnings.Item(a, "learned-${a.name.lowercase()}", today.minusDays(1), "why-${a.name.lowercase()}", UNDOS[a])
@@ -88,11 +88,11 @@ class LearningsTest {
 
     @Test fun theNewAreasAreAllThere() {
         val names = Learnings.Area.entries.map { it.name }.toSet()
-        for (n in listOf("LENGTHS", "TURN_DOWNS", "MORNING_ASKS", "HOURS", "STARS", "MORNING", "USUAL_INDEX", "NICKNAMES", "LEAD_INDEX", "LEAD_PART", "FIGURE_FIRST", "CLARITY",
+        for (n in listOf("LENGTHS", "TURN_DOWNS", "MORNING_ASKS", "HOURS", "STARS", "MORNING", "USUAL_INDEX", "NICKNAMES", "LEAD_INDEX", "LEAD_PART", "NEXT_ASK", "FIGURE_FIRST", "CLARITY",
                 "WORD_FIT", "AGAIN", "WRONG_THING", "ARM_HABITS")) assertTrue(n in names, n)
         // Boss's own habits and records are personal: never said on a locked phone.
         for (a in listOf(Learnings.Area.WORDS, Learnings.Area.ROUTINES, Learnings.Area.STARS, Learnings.Area.TURN_DOWNS, Learnings.Area.USUAL_INDEX,
-                Learnings.Area.NICKNAMES, Learnings.Area.LEAD_INDEX, Learnings.Area.LEAD_PART, Learnings.Area.ARM_HABITS, Learnings.Area.GOALS)) assertTrue(a.personal, a.name)
+                Learnings.Area.NICKNAMES, Learnings.Area.LEAD_INDEX, Learnings.Area.LEAD_PART, Learnings.Area.NEXT_ASK, Learnings.Area.ARM_HABITS, Learnings.Area.GOALS)) assertTrue(a.personal, a.name)
     }
 
     @Test fun eachUndoIsHeardAsItsOwnReset() {
@@ -106,6 +106,7 @@ class LearningsTest {
         assertEquals(Nicknames.Request.RESET, Nicknames.asked(Nicknames.UNDO))
         assertEquals(LeadIndex.Request.RESET, LeadIndex.asked(LeadIndex.UNDO))
         assertEquals(LeadPart.Request.RESET, LeadPart.asked(LeadPart.UNDO))
+        assertEquals(NextAsk.Request.RESET, NextAsk.asked(NextAsk.UNDO))
         assertEquals(Clarity.Request.RESET, Clarity.asked(Clarity.UNDO))
         assertEquals(FigureFirst.Request.RESET, FigureFirst.asked(FigureFirst.UNDO))
         assertTrue(Corrections.forgetWordAsked("forget the word nifty kaisa") != null)

@@ -96,6 +96,7 @@ class CollisionTest {
         "Nicknames" to { q -> Nicknames.asked(q) != null },
         "LeadIndex" to { q -> LeadIndex.asked(q) != null },
         "LeadPart" to { q -> LeadPart.asked(q) != null },
+        "NextAsk" to { q -> NextAsk.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -829,6 +830,15 @@ class CollisionTest {
         "say your overviews in the usual order" to "LeadPart", "stop putting the levels first" to "LeadPart",
         "stop starting with the levels" to "LeadPart", "don't put the patterns first" to "LeadPart",
         "go back to the usual order in your overviews" to "LeadPart", "levels pehle mat batao" to "LeadPart",
+        // ---- NextAsk: the question Boss usually asks next, offered in one short question at the end of an answer ----
+        "what do i usually ask next" to "NextAsk", "what do i ask after the levels" to "NextAsk",
+        "which follow ups do i ask" to "NextAsk", "what follow ups have you learned" to "NextAsk",
+        "why do you keep offering the next question" to "NextAsk", "why did you ask what is next" to "NextAsk",
+        "main uske baad kya puchta hoon" to "NextAsk", "main aksar agla kya puchta hoon" to "NextAsk",
+        "stop offering what i ask next" to "NextAsk", "stop suggesting the next question" to "NextAsk",
+        "don't offer follow ups" to "NextAsk", "do not ask me what comes next" to "NextAsk",
+        "stop ending your answers with a question" to "NextAsk", "no more follow up offers" to "NextAsk",
+        "agla sawal mat pucho" to "NextAsk", "agla sawal offer mat karo" to "NextAsk",
         // ...and a market question that merely puts Nifty first is never its undo: it keeps its market route.
         "nifty pehle batao" to "Market", "nifty ko pehle lo" to "Market", "give nifty first" to "Market", "say nifty first" to "Market",
         // ---- HonestStars: his confidence scores against their record ----
@@ -1230,7 +1240,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

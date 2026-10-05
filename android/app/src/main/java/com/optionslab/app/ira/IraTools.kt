@@ -1049,6 +1049,7 @@ internal object IraTools {
      */
     fun endWaits() {
         asksOffered = null
+        nextAskOffered = null
         turnedDownAt = null
         nickAsked = null
     }
@@ -1510,6 +1511,73 @@ internal object IraTools {
         return said
     }
 
+    // ---- the question Boss usually asks next, offered at the end of an answer ([com.optionslab.ira.NextAsk]) --------
+
+    /** Only when Boss last asked to stop the offers: the learning reads his routine log already kept ([routineLog]). */
+    private const val NEXT_ASK = "jarvis.nextAsk"
+    @Volatile private var nextAskCache: com.optionslab.ira.NextAsk.Log? = null
+    /** The follow-up just offered (its key) and when: only Boss's very next words may take it. In memory only. */
+    @Volatile private var nextAskOffered: Pair<String, LocalDateTime>? = null
+
+    fun nextAskLog(): com.optionslab.ira.NextAsk.Log = nextAskCache ?: runCatching {
+        val o = JSONObject(prefs().getString(NEXT_ASK) ?: "{}")
+        com.optionslab.ira.NextAsk.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.NextAsk.Log()).also { nextAskCache = it }
+
+    @Synchronized private fun nextAskSave(log: com.optionslab.ira.NextAsk.Log) {
+        runCatching {
+            nextAskCache = log
+            val o = JSONObject()
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(NEXT_ASK to o.toString()))
+        }
+    }
+
+    /** The follow-ups learned now (keys and counts only). Nothing here acts. */
+    private fun nextAskRecords(): List<com.optionslab.ira.NextAsk.Record> = runCatching {
+        com.optionslab.ira.NextAsk.learned(routineLog(), nextAskLog(), com.optionslab.app.data.Market.today())
+    }.getOrDefault(emptyList())
+
+    /**
+     * The one short question ending Boss's answer to [question] ("BankNifty's levels next, Boss?"), or null - never on a
+     * [locked] phone. The offer is remembered for his very next words only; nothing is answered unasked.
+     */
+    fun nextAskOffer(question: String, locked: Boolean): String? {
+        if (locked) { nextAskOffered = null; return null }
+        val at = asksNow()
+        val r = runCatching { com.optionslab.ira.NextAsk.offer(nextAskRecords(), question, routineLog(), at, false) }.getOrNull()
+        nextAskOffered = r?.let { it.next to at }
+        return r?.let { runCatching { com.optionslab.ira.NextAsk.line(it) }.getOrNull() }
+    }
+
+    /**
+     * Boss's words [said] after a follow-up was offered: a bare "yes" in time - nothing else waiting for his yes
+     * ([waiting]), the phone unlocked - is that question (checked again: no order, no command), else null. Any words end
+     * the offer, whatever they were.
+     */
+    fun nextAskYes(said: String, waiting: Boolean, locked: Boolean): String? {
+        val (key, at) = nextAskOffered ?: return null
+        nextAskOffered = null
+        return com.optionslab.ira.NextAsk.taken(key, at, said, waiting, locked, asksNow())
+    }
+
+    /** "What do I usually ask next?". */
+    fun nextAskSay(): String = runCatching { com.optionslab.ira.NextAsk.say(nextAskRecords()) }
+        .getOrDefault("I could not read my record of what you ask next just now, Boss.")
+
+    /**
+     * "Stop offering what I ask next": nothing offered at the end of an answer, the count afresh from now. On a [locked]
+     * phone, one neutral reply that never names what was learned (nor whether).
+     */
+    fun nextAskReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.NextAsk.RESET_LOCKED
+            else runCatching { com.optionslab.ira.NextAsk.sayReset(nextAskRecords()) }.getOrDefault("Done, Boss: nothing offered at the end of my answers.")
+        nextAskSave(com.optionslab.ira.NextAsk.reset(asksNow()))
+        nextAskOffered = null
+        IraActivity.add("No question offered next at the end of answers (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1577,7 +1645,9 @@ internal object IraTools {
         usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()),
         nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()),
         leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()),
-        leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()))
+        leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()),
+        routineLog = runCatching { routineLog() }.getOrDefault(emptyList()),
+        nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1603,6 +1673,7 @@ internal object IraTools {
         if (u.nicknames.isNotEmpty()) { nickUpdate { com.optionslab.ira.Nicknames.forgetWeek(it, today) }; nickAsked = null }
         if (u.leadIndex.isNotEmpty()) firstIndexSave(com.optionslab.ira.LeadIndex.reset(today))
         if (u.leadPart.isNotEmpty()) leadPartSave(com.optionslab.ira.LeadPart.reset(today))
+        if (u.nextAsk.isNotEmpty()) { nextAskSave(com.optionslab.ira.NextAsk.reset(now)); nextAskOffered = null }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -1612,7 +1683,8 @@ internal object IraTools {
             (if (u.usualIndex.isNotEmpty()) "Nifty again when Boss names no index, " else "the index taken unchanged, ") +
             (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten, " else "nicknames unchanged, ") +
             (if (u.leadIndex.isNotEmpty()) "Nifty named first again, " else "the index named first unchanged, ") +
-            (if (u.leadPart.isNotEmpty()) "overviews in the usual order again." else "overviews unchanged."))
+            (if (u.leadPart.isNotEmpty()) "overviews in the usual order again, " else "overviews unchanged, ") +
+            (if (u.nextAsk.isNotEmpty()) "no question offered next." else "next-question offers unchanged."))
         return u
     }
 
