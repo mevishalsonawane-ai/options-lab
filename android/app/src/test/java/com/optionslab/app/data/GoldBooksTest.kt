@@ -9,7 +9,7 @@ import org.junit.Test
 
 /** Speed, round 2: the four gold books are read off the main thread at the start, and a change waits for that read. */
 class GoldBooksTest : RobolectricTest() {
-    @After fun down() = runBlocking { GoldPaper.replaceForTest(GoldPaper.Book()); GoldTrendPaper.replaceForTest(GoldTrendPaper.Book()) }
+    @After fun down() { runBlocking { GoldPaper.replaceForTest(GoldPaper.Book()); GoldTrendPaper.replaceForTest(GoldTrendPaper.Book()) } }
 
     @Test fun theSavedBooksComeBackAndAChangeIsMadeOnThem() = runBlocking {
         GoldBooks.init(context)
