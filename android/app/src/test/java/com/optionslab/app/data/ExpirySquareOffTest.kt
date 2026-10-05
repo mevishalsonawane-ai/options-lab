@@ -29,10 +29,13 @@ class ExpirySquareOffTest : RobolectricTest() {
     private val pe = "NIFTY26SEP24500PE"
     private val later = "NIFTY26OCT24500CE"
 
+    /** The test's day, read once: a run that crossed midnight IST (CI at 18:30 UTC) read two different "today"s. */
+    private lateinit var today: java.time.LocalDate
+
     @Before fun up() {
         kite = FakeKite()
         kite.login()
-        val today = com.optionslab.app.data.Market.today()
+        today = com.optionslab.app.data.Market.today()
         kite.instruments += FakeKite.Ins(1_001, ce, "NIFTY", today, 24_500.0, "CE", 75)
         kite.instruments += FakeKite.Ins(1_002, pe, "NIFTY", today, 24_500.0, "PE", 75)
         kite.instruments += FakeKite.Ins(1_003, later, "NIFTY", today.plusDays(7), 24_500.0, "CE", 75)
@@ -50,9 +53,9 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
-    private fun at(h: Int, m: Int) { ExpirySquareOff.testNow = AutomationSupport.todayAt(h, m) }
+    private fun at(h: Int, m: Int) { ExpirySquareOff.testNow = today.atTime(h, m).atZone(java.time.ZoneId.of("Asia/Kolkata")) }
     private fun pass() = runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
-    private fun done() = SecurePrefs.getString("sq.expiry.done") == com.optionslab.app.data.Market.today().toString()
+    private fun done() = SecurePrefs.getString("sq.expiry.done") == today.toString()
     private fun sent() = kite.placed.map { Triple(it.form["tradingsymbol"], it.form["transaction_type"], it.form["quantity"]) }
 
     /** What the banner said, each distinct text once. */
