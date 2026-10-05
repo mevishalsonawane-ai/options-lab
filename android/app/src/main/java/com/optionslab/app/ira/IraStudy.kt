@@ -181,9 +181,12 @@ internal object IraStudy {
         val lines = com.optionslab.ira.ReportCard.lines(if (trips.isEmpty()) null else trips.sumOf { it.net }, trips.size,
             IraNewsTrades.weekSuggestions(today), arms, habit) +
             listOfNotNull(com.optionslab.ira.TimeOfDay.line(IraJournal.trips())) + com.optionslab.ira.TradeReasons.lines(IraJournal.noted())
-        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", lines.joinToString(" ")) }
+        // A locked phone may be overheard or seen: the card's figures stay in the chat; only that it is there is said.
+        val locked = runCatching { IraHub.locked() }.getOrDefault(true)
+        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", if (locked) "It's in the chat." else lines.joinToString(" ")) }
         IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")))
-        JarvisVoice.announce("Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
+        JarvisVoice.announce(if (locked) "Good morning, Boss. Your week's report card is in the chat."
+            else "Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
         IraActivity.add("Gave the weekly report card.")
         com.optionslab.app.security.SecurePrefs.put(key, week)
     }

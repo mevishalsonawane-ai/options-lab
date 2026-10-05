@@ -106,8 +106,11 @@ internal object IraJournal {
         if (com.optionslab.app.security.SecurePrefs.getString(key) == com.optionslab.app.data.Market.today().toString()) return
         com.optionslab.app.security.SecurePrefs.put(key, com.optionslab.app.data.Market.today().toString())
         val text = com.optionslab.ira.DayTarget.say(pnl, t)
-        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, target reached", text) }
-        IraHub.note(text); JarvisVoice.announce(text); Automations.acted(Automations.Auto.TARGET, text)
+        // A locked phone may be overheard or seen: the amount stays in the chat.
+        val locked = runCatching { IraHub.locked() }.getOrDefault(true)
+        val plain = "Boss, you've reached your day's target. The figures are in the chat."
+        IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, target reached", if (locked) plain else text) }
+        IraHub.note(text); JarvisVoice.announce(if (locked) plain else text); Automations.acted(Automations.Auto.TARGET, text)
     }
 
     // ---- trades going nowhere ------------------------------------------------------------------------------------
