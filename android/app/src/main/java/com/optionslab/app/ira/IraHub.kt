@@ -142,6 +142,8 @@ object IraHub {
     private var app: Context? = null
     /** The last candles read (stored + live), for backtests. */
     @Volatile private var histories: Map<IraMarket, History> = emptyMap()
+    /** The days in [histories] each index's saved option candles show were its expiry days (market memory). */
+    @Volatile private var expiryDays: Map<IraMarket, Set<LocalDate>> = emptyMap()
     /** Pattern, market, chart and day already backtested automatically (each is tried once a day). */
     private val tested = HashSet<String>()
     @Volatile private var lastBackground: Instant? = null
@@ -1936,6 +1938,19 @@ object IraHub {
             val bars = (com.optionslab.ira.SharpMove.INDICES + IraMarket.VIX).associateWith { histories[it]?.bars.orEmpty() }
             return com.optionslab.ira.SharpMove.answer(a, mk, bars, _state.value.news, IST, expiry = expiryToday(mk))
         }
+        // "When did Nifty last gap down this much?", "last time VIX jumped like this?", "how many trend days this month?",
+        // "what happened the last 3 expiries?": the notable sessions remembered from the candles on the phone - before the
+        // why-answer ("what happened" reaches it) and the week's and month's moves ("this month" reaches them). Past
+        // sessions with their dates and numbers only: never a forecast, never advice.
+        com.optionslab.ira.MarketMemory.asked(q)?.let { a ->
+            val mk = parsed.markets.firstOrNull { it in com.optionslab.ira.MarketStory.INDICES } ?: IraMarket.NIFTY
+            val bars = histories[mk]?.bars ?: return null
+            val today = com.optionslab.app.data.Market.today()
+            val live = mk.trading(LocalDateTime.now(IST)) && closedToday() == null
+            val ex = expiryDays[mk].orEmpty() + (if (expiryToday(mk)) setOf(today) else emptySet())
+            val days = com.optionslab.ira.MarketMemory.days(mk, bars, ex, histories[IraMarket.VIX]?.bars.orEmpty(), today, live)
+            return com.optionslab.ira.MarketMemory.answer(a, days, today)
+        }
         // "How is expiry going?": the expiry-day companion's reads today (none yet: the usual answer).
         if (com.optionslab.ira.ExpiryDay.asked(q)) IraCoach.expirySoFar()?.let { return it }
         // "Why did Nifty fall in the last hour": the why-story and the news answer it, not bare figures ("how much did it
@@ -2603,14 +2618,26 @@ object IraHub {
         all to got.filter { it.second == null }.map { it.first }
     }
 
-    private fun load(): Map<IraMarket, History> = SOURCES.mapNotNull { (m, u) ->
-        val bars = ArrayList<Candle>()
-        val all = Store.barDays(u)
-        val from = all.takeLast(KEEP_DAYS).firstOrNull()
-        // The last KEEP_DAYS days: enough for the snapshots and for learning each new day (the book skips what it learned).
-        Store.barSessions(u).forEach { s -> s.index?.let { ix -> if (from == null || !s.day.isBefore(from)) bars += candles(s.day, ix) } }
-        if (bars.isEmpty()) null else m to History(m, bars)
-    }.toMap()
+    private fun load(): Map<IraMarket, History> {
+        val expiries = HashMap<IraMarket, Set<LocalDate>>()
+        val out = SOURCES.mapNotNull { (m, u) ->
+            val bars = ArrayList<Candle>()
+            val ex = HashSet<LocalDate>()
+            val all = Store.barDays(u)
+            val from = all.takeLast(KEEP_DAYS).firstOrNull()
+            // The last KEEP_DAYS days: enough for the snapshots and for learning each new day (the book skips what it learned).
+            Store.barSessions(u).forEach { s ->
+                if (from != null && s.day.isBefore(from)) return@forEach
+                s.index?.let { ix -> bars += candles(s.day, ix) }
+                // An expiry day: the day's saved option candles include a contract expiring that day (for Jarvis's market memory).
+                if (s.series.any { it.right != Right.IX && it.expiry == s.day }) ex += s.day
+            }
+            if (ex.isNotEmpty()) expiries[m] = ex
+            if (bars.isEmpty()) null else m to History(m, bars)
+        }.toMap()
+        expiryDays = expiries
+        return out
+    }
 
     /** A harvested index series as Ira's candles (minutes are IST minutes of the day). */
     internal fun candles(day: LocalDate, ix: Series): List<Candle> {
