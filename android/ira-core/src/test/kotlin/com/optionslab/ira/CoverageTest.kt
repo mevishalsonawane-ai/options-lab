@@ -30,7 +30,7 @@ class CoverageTest {
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null ||
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
             RangeBreaks.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
@@ -56,7 +56,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || Weekdays.asked(q) != null || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -430,7 +430,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, Clarity,
      * WordFit, AskedAgain, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, Weekdays, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -450,7 +450,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -488,6 +488,7 @@ class CoverageTest {
         if (alone && GapRecord.asked(q) != null) return "GapRecord"
         if (alone && RangeBreaks.asked(q) != null) return "RangeBreaks"
         if (alone && Weekdays.asked(q) != null) return "Weekdays"
+        if (alone && DayCompare.asked(q) != null) return "DayCompare"
         if (alone && Structure.asked(q) != null) return "Structure"
         if (alone && MindChange.asked(q)) return "MindChange"
         if (alone && Breadth.asked(q) != null) return "Breadth"
@@ -724,6 +725,15 @@ class CoverageTest {
         "monday ko nifty kaisa chalta hai" to "Weekdays", "are expiry days more volatile" to "Weekdays",
         "expiry day range vs normal days" to "Weekdays", "kis din market sabse zyada hilta hai" to "Weekdays",
         "which weekday is the most volatile" to "Weekdays", "expiry ke din range zyada hota hai kya" to "Weekdays",
+        // ---- DayCompare: today set against an earlier session, measure against measure (reasoning round 12) ----
+        "how is today different from yesterday" to "DayCompare", "how is nifty today different from yesterday" to "DayCompare",
+        "compare today with yesterday" to "DayCompare", "compare yesterday and today" to "DayCompare",
+        "today vs yesterday" to "DayCompare", "banknifty today vs yesterday" to "DayCompare",
+        "is today more like a trend day than yesterday" to "DayCompare", "is today more like a trend day or a range day than yesterday" to "DayCompare",
+        "how is today different from last thursday" to "DayCompare", "compare today with last friday" to "DayCompare",
+        "how does today compare with yesterday" to "DayCompare", "what's the difference between today and yesterday" to "DayCompare",
+        "is today like yesterday" to "DayCompare", "aaj aur kal mein kya fark hai" to "DayCompare", "aaj kal se kaise alag hai" to "DayCompare",
+        "is today a trend day like yesterday" to "DayCompare", "how is today different from the day before yesterday" to "DayCompare",
         // ---- Structure: today's intraday structure - higher highs, swing levels, trend or range so far ----
         "what's the structure today" to "Structure", "what's the structure" to "Structure", "market structure" to "Structure",
         "what is the market structure today" to "Structure", "nifty structure today" to "Structure",

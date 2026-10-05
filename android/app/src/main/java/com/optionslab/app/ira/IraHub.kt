@@ -1231,7 +1231,8 @@ object IraHub {
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
-                com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.MindChange.asked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.MindChange.asked(q) ||
+                com.optionslab.ira.DayCompare.asked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1628,6 +1629,22 @@ object IraHub {
                     com.optionslab.ira.Weekdays.answer(weekdayAsk, mk, histories[mk]?.bars.orEmpty(), today, LocalDateTime.now(IST), ex)
                 }
             }.getOrElse { "I could not read the weekday record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
+        // "How is today different from yesterday?", "is today more like a trend day than yesterday?", "compare today with last
+        // Thursday", "aaj aur kal mein kya fark hai": today and an earlier session side by side on the same measures, the other
+        // day cut at the same minute while today trades ([com.optionslab.ira.DayCompare]). Market data only (fine on a locked
+        // phone); facts only, never a cause, a forecast or advice; nothing acts. (Before Structure: today alone stays its.)
+        val compareAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.DayCompare.asked(q) }.getOrNull() else null
+        if (compareAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.DayCompare.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.DayCompare.NOT_HERE
+                else com.optionslab.ira.DayCompare.answer(compareAsk, mk, histories[mk]?.bars.orEmpty(), com.optionslab.app.data.Market.today())
+            }.getOrElse { "I could not set the two days side by side just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return
