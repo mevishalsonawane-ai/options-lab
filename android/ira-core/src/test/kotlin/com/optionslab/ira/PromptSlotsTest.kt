@@ -3,7 +3,9 @@ package com.optionslab.ira
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class PromptSlotsTest {
     private val now = LocalDateTime.of(2026, 10, 5, 10, 0)
@@ -43,5 +45,27 @@ class PromptSlotsTest {
         s.pick("x".repeat(100)); s.pick("y".repeat(100))
         s.clear()
         assertEquals(0, s.pick("z".repeat(100)))
+    }
+
+    @Test fun warmedBeginningsAreWhatTheQuestionsStartWith() {
+        val (intents, chat) = PromptWarm.prefixes(now)
+        assertTrue(Intents.prompt("pause the bots").startsWith(intents))
+        assertTrue(Chat.prompt("how was your day", now).startsWith(chat))
+        assertTrue(Chat.prompt("do you like music", now, listOf("how was your day" to "Good, Boss.")).startsWith(chat))
+        // Each holds the whole fixed part: the list of lines and the instructions.
+        assertTrue(intents.contains(Intents.LINES.last()) && intents.endsWith("REQUEST:"))
+        assertTrue(chat.contains("Boss") && chat.endsWith("Boss:"))
+    }
+
+    @Test fun warmedSlotsAreTheOnesTheQuestionsFind() {
+        val s = PromptSlots(size = 4)
+        val warm = PromptWarm.prefixes(now).map { p -> assertFalse(s.holds(p)); s.pick(p).also { assertTrue(s.holds(p)) } }
+        assertEquals(2, warm.toSet().size)
+        assertEquals(warm[0], s.pick(Intents.prompt("what did the fiis do")))
+        assertEquals(warm[1], s.pick(Chat.prompt("how was your day", now)))
+        // Still held after the questions (each slot's last prompt begins with its warmed part): not warmed twice.
+        PromptWarm.prefixes(now).forEach { assertTrue(s.holds(it)) }
+        s.clear()
+        assertFalse(s.holds(PromptWarm.prefixes(now)[0]))
     }
 }

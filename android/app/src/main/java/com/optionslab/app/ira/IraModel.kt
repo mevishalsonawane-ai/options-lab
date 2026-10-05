@@ -335,6 +335,31 @@ object IraModel {
                 if (JarvisVoice.wanted) { unloadLocked(); return@withLock }
                 idle = idleUnload()
             }
+            warm()
+        }
+    }
+
+    /**
+     * Right after [preload]: the fixed instructions a free-form question sends ([com.optionslab.ira.PromptWarm]) are read
+     * into their slots now, while the owner is still reading the page, so the first question only reads its own words -
+     * it paid for a few hundred words of instructions before. One beginning per turn of the lock: a question asked
+     * meanwhile waits for at most the one being read (which it would mostly have read itself). Nothing is written or
+     * shown; it stops when the model leaves, is switched off or listening starts.
+     */
+    private suspend fun warm() {
+        val now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
+        for (p in com.optionslab.ira.PromptWarm.prefixes(now)) {
+            val more = lock.withLock {
+                if (handle == 0L || !usable() || JarvisVoice.wanted) return@withLock false
+                if (slots.holds(p)) return@withLock true
+                idle?.cancel()
+                val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
+                // One token asked for: the beginning is read and kept; the word the model would write is not used.
+                try { gently { LlmNative.generate(handle, p, 1, slots.pick(p), true) } } finally { watchdog.cancel() }
+                idle = idleUnload()
+                true
+            }
+            if (!more) break
         }
     }
 
