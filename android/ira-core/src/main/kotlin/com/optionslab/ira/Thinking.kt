@@ -252,8 +252,7 @@ object Thinking {
 
     private val AT = Regex(" (at|around|near|about|by) (\\d{1,2})(?:[ :.](\\d{2}))?( ?(am|pm|baje))? ")
 
-    private fun norm(text: String) = " " + Spoken.digits(text).lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")
-        .replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(Spoken.digits(text).lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " "), ":") + " "
 
     /** What [text] asks of his thinking, or null when it is not such a question. */
     fun asked(text: String): Query? {

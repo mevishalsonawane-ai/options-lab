@@ -78,8 +78,7 @@ object OutsideApp {
         "news|level|levels|nifty|banknifty|finnifty|sensex|vix|gold|expiry|atm|otm|itm|money|lot|lots|the|of|in|on|at|kya|hai|kitna|kahan|kab|kyun|" +
         "up|down|out|off|now|today|done|ok|okay|yes|no|it|wait|stop|more|less|how|what|why|when|where|who|is|are) ")
 
-    private fun words(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", "").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun words(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", "")) + " "
 
     /** Does [text] ask Jarvis to do something outside IraAlgo (open another app, play music, call or message someone)? */
     fun asked(text: String): Boolean {

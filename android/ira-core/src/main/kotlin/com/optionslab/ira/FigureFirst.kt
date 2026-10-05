@@ -39,8 +39,7 @@ object FigureFirst {
     /** The re-asks noted, and when Boss last asked for the usual order (nothing before it counts). */
     data class Log(val events: List<Event> = emptyList(), val resetAt: LocalDateTime? = null)
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9% ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", ""), "%") + " "
 
     private val WANTS = rx(" (exact|exactly|number|numbers|figure|figures|how much|how many|how far|what level|which level|" +
         "what levels|which levels|at what|what price|which price|price|points|point|percent|%|where exactly|where is|where are|" +
@@ -139,7 +138,12 @@ object FigureFirst {
         LEAD + "(number|figure|level) (pehle|pahle) mat (bolo|batao)" + TAIL)
 
     /** "Which reads do you start with the number?" or "say your market reads in the usual order", else null. */
-    fun asked(text: String): Request? {
+    fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Request?>(64)
+
+    private fun askedFresh(text: String): Request? {
         val t = norm(text)
         return when {
             RESET.containsMatchIn(t) -> Request.RESET

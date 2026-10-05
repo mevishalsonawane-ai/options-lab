@@ -233,8 +233,7 @@ object WordFit {
 
     enum class Request { HOW, OFF, ON }
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")
-        .replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")) + " "
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| now| again)* $"
@@ -255,7 +254,12 @@ object WordFit {
         LEAD + "(correct|calibrate) (your )?$WORDS" + TAIL)
 
     /** "How well do your words match your numbers?", "what do you mean by usually?", "say your confidence words as written", "match your words to the numbers again"; else null. */
-    fun asked(text: String): Request? {
+    fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Request?>(64)
+
+    private fun askedFresh(text: String): Request? {
         val t = norm(text)
         return when {
             OFF.containsMatchIn(t) -> Request.OFF

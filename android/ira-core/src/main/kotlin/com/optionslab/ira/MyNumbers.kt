@@ -53,8 +53,7 @@ object MyNumbers {
     private fun date(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " ${d.dayOfMonth} " +
         d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
     private fun mins(m: Long) = if (m < 60) plural(m.toInt(), "minute") else "%d h %02d min".format(Locale.ENGLISH, m / 60, m % 60)
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "").replace("&", " and ")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "").replace("&", " and ")) + " "
 
     private val MINE = rx(" (i|my|me|mine|am i|do i|did i|mera|meri|mere|main|maine|mujhe) ")
     private const val WINS = "(win|wins|winner|winners|winning trades?|profit|profits|profitable trades?|gain|gains|munafa|profit trade)"

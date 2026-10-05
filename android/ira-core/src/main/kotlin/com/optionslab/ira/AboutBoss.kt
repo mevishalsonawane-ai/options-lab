@@ -34,8 +34,7 @@ object AboutBoss {
     /** Facts brought up at once, at most (Boss is reminded, not lectured). */
     const val MAX_SAID = 3
 
-    private fun t(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", "").replace(",", "")
-        .replace(rx("[^a-z0-9.: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun t(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", "").replace(",", ""), ".:") + " "
 
     private val LEAD = Regex("(?i)^\\s*(?:(?:hey |ok )?jarvis[,!.]?\\s+|boss[,!.]?\\s+|please\\s+)*")
 

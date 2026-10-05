@@ -43,10 +43,14 @@ object Tour {
     )
 
     /** Does [text] ask which questions to ask Jarvis ("what can I ask you?")? Never "what can you do" (his full list). */
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(words(text))
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
 
-    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(words(text))
+
+    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")) + " "
 
     /** The part of the day at [minute] (minutes after midnight, IST) on a day that is or is not a [tradingDay]. */
     fun part(minute: Int, tradingDay: Boolean): Part = when {

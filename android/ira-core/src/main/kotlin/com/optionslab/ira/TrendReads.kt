@@ -91,8 +91,7 @@ object TrendReads {
 
     // ---- the question ----
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
 
     private const val WHO = "(your|ur|jarvis|jarvis s|jarvis s own|your own|tumhare|tumhari|aapke|aapki|tera|tere)"
     private const val WHAT = "(trend|trend and range|trend or range|range|structure|day type|day kind|trend day|range day)"
@@ -114,7 +113,12 @@ object TrendReads {
         " $WHO? ?$WHAT $CALLS (kitne|kitni baar|kitni bar|kaise) (sahi|theek|thik)? ?(the|thi|tha|rahe|rahi|nikle|nikla|nikli|hue|hain) |" +
         " $WHAT $CALLS (kaise|kitne sahi) (rahe|the|nikle|hain) ")
 
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(norm(text))
 
     /** The span asked of: today, this week, this month, last month, or everything kept. */
     fun span(text: String): Span {

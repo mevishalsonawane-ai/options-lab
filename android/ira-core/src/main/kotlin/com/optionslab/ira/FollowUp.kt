@@ -33,7 +33,7 @@ object FollowUp {
         Span.TODAY to Regex("^(today|aaj)$"),
     )
 
-    private fun t(s: String) = " " + s.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+    private fun t(s: String) = " " + spacedWords(s.lowercase())
         .replace(rx("^(jarvis|hey jarvis|ok jarvis) "), "") + " "
 
     /** The previous question asked again for what [now] names, or null when [now] stands on its own. */
@@ -110,7 +110,7 @@ object FollowUp {
     /** Is [s] only market names ("bank nifty", "the sensex")? */
     internal fun onlyMarkets(s: String): Boolean {
         if (Market.mentioned(s).isEmpty()) return false
-        var r = " " + s.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        var r = " " + spacedWords(s.lowercase()) + " "
         Market.ALIASES_LONGEST_FIRST.forEach { r = r.replace(" $it ", " ") }
         return r.replace(rx(" (the|and|aur|or|on|for|in|index) "), " ").replace(rx(" (the|and|aur|or|on|for|in|index) "), " ").isBlank()
     }

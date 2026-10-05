@@ -185,8 +185,7 @@ object PreMarket {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")) + " "
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |please |ok |okay )*"
     private const val END = "( (today|now|this morning|for today|for the day|for the open))?( boss| jarvis| please)? $"
@@ -204,5 +203,10 @@ object PreMarket {
     )
 
     /** "Am I ready to trade?", "pre-market checklist", "go through my morning checklist" - never going live ([Section.READY]). */
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(words(text))
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(words(text))
 }

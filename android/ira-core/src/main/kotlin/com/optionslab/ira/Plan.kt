@@ -68,7 +68,7 @@ object Plan {
     /** One of Boss's positions named by its kind: "my put", "my 24500 put", "meri call", "my BankNifty straddle". */
     private val NAMED = rx("\\b(?:my|meri|mera|mere) ((?:[a-z0-9]+ ){0,2}?(?:put|call|ce|pe|straddle|strangle|iron condor|condor|spread|butterfly|position|trade))s?\\b")
 
-    private fun words(s: String) = " " + s.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun words(s: String) = " " + spacedWords(s.lowercase().replace("'", "")) + " "
 
     /** Is [part] a close by a pronoun ("close it", "exit that", "square it off", "isko band karo")? */
     fun pronounClose(part: String): Boolean = PRONOUN_CLOSE.containsMatchIn(words(part))

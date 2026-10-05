@@ -64,7 +64,12 @@ object OrderWhy {
         .replace(rx("\\s+"), " ").trim()
 
     /** Is [q] asking why an order was cancelled or rejected (or what became of one)? Null when not. */
-    fun asked(q: String): Asked? {
+    fun asked(q: String): Asked? = askedKept.of(q) { askedFresh(q) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Asked?>(64)
+
+    private fun askedFresh(q: String): Asked? {
         val t = norm(q)
         if (ACTING.containsMatchIn(t)) return null
         val why = WHY.any { it.containsMatchIn(t) }

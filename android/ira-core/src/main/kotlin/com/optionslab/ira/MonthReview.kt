@@ -49,7 +49,7 @@ object MonthReview {
     private fun monthName(m: YearMonth) = m.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
     private fun dayName(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " ${d.dayOfMonth} " +
         d.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
 
     private val ASKED = Regex(" (how (was|is|s|has been|did) (my|the) month|how did i do (this|last|the) month|how did my (trading|trades) (go|do) (this|last) month|" +
         "(review|recap|summari[sz]e|sum up|go over|go through) (my |the )?(this |last )?month|(review|recap) of (my |the |this |last )?month|" +

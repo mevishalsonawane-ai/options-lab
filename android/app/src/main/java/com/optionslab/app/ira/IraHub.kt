@@ -3663,15 +3663,21 @@ object IraHub {
         val st = _state.value
         val bn = histories[IraMarket.BANKNIFTY]?.bars.orEmpty()
         val bnSnap = st.snaps[IraMarket.BANKNIFTY]
-        val dayPnl = dayPnlNow(s.live)
+        // The two network reads at once, each bounded (speed round 10): the day's P&L (Zerodha's, at most 8 s) and the
+        // static IP check (ipify, whose blocking read could hold the answer up to 12 s; past IP_CHECK_MS it is unknown).
+        val dayPnlAsk = scope.async { dayPnlNow(s.live) }
+        val ipAsk = com.optionslab.app.data.StaticIp.registered?.let {
+            scope.async { runCatching { com.optionslab.app.data.StaticIp.status(force = false).matches }.getOrNull() }
+        }
         val arms = ArrayList<String>()
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }.forEach { arms += it.arm.label }
         com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on }.forEach { arms += it.name }
         runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).filter { it.def.scheduler?.enabled == true }.forEach { arms += it.def.name }
         val today = m.today()
         val events = runCatching { IraEvents.upcoming(0) }.getOrDefault(emptyList()).filter { it.day == today && !it.name.endsWith("expiry") }.map { it.name }
-        val ipOk = com.optionslab.app.data.StaticIp.registered?.let { runCatching { com.optionslab.app.data.StaticIp.status(force = false).matches }.getOrNull() }
-        val burst = if (bn.isNotEmpty()) com.optionslab.ira.Watch.move30(bn)?.first else null
+        val ipOk = ipAsk?.let { withTimeoutOrNull(IP_CHECK_MS) { it.await() } }
+        val dayPnl = dayPnlAsk.await()
+        val burst =if (bn.isNotEmpty()) com.optionslab.ira.Watch.move30(bn)?.first else null
         return com.optionslab.ira.TradeCheck.Now(
             marketOpen = m.isOpen(), tradingDay = m.isTradingDay(today), minute = m.minuteNow(),
             liveMode = s.live, zerodhaLoggedIn = com.optionslab.app.data.Broker.loggedIn, staticIpOk = ipOk,
@@ -3698,6 +3704,8 @@ object IraHub {
      */
     private suspend fun tradeCase(): String {
         val locked = phoneLocked()
+        // The Nifty chain read afresh while the trade check's own reads are made (speed round 10: not one after the other).
+        val chainFetch = scope.async { runCatching { withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") } } }
         val now = tradeNow()
         val mine = if (locked) null else runCatching {
             val live = com.optionslab.app.data.AppSettings.load().live
@@ -3714,7 +3722,7 @@ object IraHub {
         // The Nifty option chain's facts (the straddle's implied move, the biggest OI, the skew), with the chain's time:
         // read afresh when it comes quickly, else the last read kept today. Market data, so said on a locked phone too.
         val chainRead = runCatching {
-            withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") }
+            withTimeoutOrNull(CASE_CHAIN_MS) { chainFetch.await() }
             val today = com.optionslab.app.data.Market.today()
             IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
         }.getOrNull()
@@ -3763,6 +3771,8 @@ object IraHub {
         val nowAt = LocalDateTime.now(IST)
         val today = com.optionslab.app.data.Market.today()
         val st = _state.value
+        // The Nifty chain read afresh from the start, while the candles are read (speed round 10).
+        val chainFetch = scope.async { runCatching { withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") } } }
         val facts = ArrayList<com.optionslab.ira.CoPilot.Fact>()
         for (m in com.optionslab.ira.SharpMove.INDICES) runCatching { facts += com.optionslab.ira.CoPilot.moves(m, histories[m]?.bars.orEmpty()) }
         val niftyBars = histories[IraMarket.NIFTY]?.bars.orEmpty()
@@ -3771,7 +3781,7 @@ object IraHub {
         runCatching { com.optionslab.ira.CoPilot.structure(com.optionslab.ira.Structure.read(IraMarket.BANKNIFTY, histories[IraMarket.BANKNIFTY]?.bars.orEmpty(), today)) }
             .getOrNull()?.let { facts += it }
         val chainRead = runCatching {
-            withTimeoutOrNull(CASE_CHAIN_MS) { IraAccount.chain("NIFTY") }
+            withTimeoutOrNull(CASE_CHAIN_MS) { chainFetch.await() }
             IraAccount.chainBook.latest("NIFTY")?.takeIf { it.at.toLocalDate() == today }
         }.getOrNull()
         runCatching { com.optionslab.ira.CoPilot.chain(chainRead, today) }.getOrNull()?.let { facts += it }
@@ -3860,6 +3870,9 @@ object IraHub {
 
     /** "Make the case" waits at most this long for a fresh option chain. */
     private const val CASE_CHAIN_MS = 8_000L
+
+    /** The trade check waits at most this long for the static IP check (unknown past it; Zerodha still decides). */
+    private const val IP_CHECK_MS = 8_000L
 
     /**
      * "Where is the most call writing?", "how has OI shifted since morning?", "what's the IV skew?", "the expected move

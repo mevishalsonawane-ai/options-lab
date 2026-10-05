@@ -133,8 +133,7 @@ object Headroom {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "").replace("-", " ")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "").replace("-", " ")) + " "
 
     /** Words of changing a limit, an order or a stop: never this question. */
     private val ACTS = rx(" (set|change|raise|increase|lower|reduce|decrease|turn|switch|remove|clear|disable|enable|reset|cancel|buy|sell|square|kar do|karo|badha|ghata|badhao|ghatao) ")
@@ -162,7 +161,12 @@ object Headroom {
         "| (am i|are we) allowed (to trade more|to take (another|one more|more) (trade|trades)|more trades) | (am i|are we) (overtrading|over trading|trading too much) ")
 
     /** "How close am I to my limits?" (ALL), "how much can I still lose today?" (LOSS), "how many trades left?" (TRADES); null otherwise. */
-    fun asked(text: String): Asked? {
+    fun asked(text: String): Asked? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Asked?>(64)
+
+    private fun askedFresh(text: String): Asked? {
         val t = words(text)
         if (ACTS.containsMatchIn(t)) return null
         // A what-if ("how much can I lose if Nifty falls 1%"): his book at a move, the account's own (Exposure; round 10).

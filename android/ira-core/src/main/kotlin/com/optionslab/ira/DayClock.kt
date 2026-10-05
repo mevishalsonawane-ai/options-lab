@@ -44,8 +44,7 @@ object DayClock {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the day clock for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
@@ -111,7 +110,12 @@ object DayClock {
     private val ALL = Regex(" (day clock|days clock|day s clock|time of day (pattern|patterns|stats|statistics|profile|habits)|intraday (seasonality|time pattern|time patterns)|time of the day (pattern|patterns|stats|profile)) ")
 
     /** Which was asked, or null. A record of past days by time of day only: never a forecast, advice or Boss's own book. */
-    fun asked(text: String): Ask? {
+    fun asked(text: String): Ask? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Ask?>(64)
+
+    private fun askedFresh(text: String): Ask? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null

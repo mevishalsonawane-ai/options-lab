@@ -63,8 +63,7 @@ object InsideDays {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the inside-day record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so its days have no session high and low of the kind, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun x2(x: Double) = "%.2f".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
@@ -133,7 +132,12 @@ object InsideDays {
      * What was asked, or null. The record of past setups, or (routing round 14) whether one named session was such a day
      * ([Q.one]); never a forecast, advice, an alert or the candle pattern.
      */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         one(t)?.let { return it }

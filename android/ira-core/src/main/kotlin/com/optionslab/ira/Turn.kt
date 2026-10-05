@@ -82,7 +82,7 @@ object Turn {
     private val QUICK = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS,
         Topic.VOLATILITY, Topic.HELP, Topic.GREETING, Topic.EXPLAIN)
 
-    private fun norm(s: String) = s.lowercase().replace(rx("[^a-z0-9% ]"), " ").replace(rx("\\s+"), " ").trim()
+    private fun norm(s: String) = spacedWords(s.lowercase(), "%")
 }
 
 /**

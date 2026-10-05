@@ -41,7 +41,7 @@ object Charges {
         val share: Double? get() = if (gross > 0) charges / gross else null
     }
 
-    private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("p&l", "p l")) + " "
 
     private const val CHARGE = "(charges|charge|brokerage|brokerages|fees|transaction costs?|trading costs?|stt|gst|stamp duty|taxes on (my )?trades|tax on (my )?trades)"
     private val ASKED = Regex(" (how much (did|have|do) i (pay|paid|spend|spent|give|given|lose|lost)( in| on| for| as| to)? (my |the |all |all the )?$CHARGE" +

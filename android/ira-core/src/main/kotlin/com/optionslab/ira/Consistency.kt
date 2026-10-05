@@ -154,8 +154,7 @@ object Consistency {
     private val DAYS = mapOf("monday" to DayOfWeek.MONDAY, "tuesday" to DayOfWeek.TUESDAY, "wednesday" to DayOfWeek.WEDNESDAY,
         "thursday" to DayOfWeek.THURSDAY, "friday" to DayOfWeek.FRIDAY)
 
-    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace(rx("[^a-z0-9: ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " "), ":") + " "
 
     private val AVOID = Regex(" (don t|dont|do not|never|no|avoid|skip|not|stay out) ")
     private val TRADE = Regex(" (trade|trades|trading|trade on|positions?|entries|entry) ")

@@ -261,7 +261,12 @@ object StreamHealth {
     private val ACTING = rx("^(?:please |jarvis )*(?:turn|switch|connect|reconnect|restart|start|stop|reset|fix|open|show|chart)\\b")
 
     /** Is [q] a question about the live price stream dropping? */
-    fun asked(q: String): Boolean {
+    fun asked(q: String): Boolean = askedKept.of(q) { askedFresh(q) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(q: String): Boolean {
         val t = norm(q)
         if (ACTING.containsMatchIn(t) && !t.startsWith("why")) return false
         if ("relay" in t || "static ip" in t || "voice" in t || "mic" in t) return false

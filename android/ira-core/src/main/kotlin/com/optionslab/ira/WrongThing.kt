@@ -88,8 +88,8 @@ object WrongThing {
     /** "OTHER" when none: a question of another kind. */
     const val OTHER = "OTHER"
 
-    private fun spaced(text: String): String = " " + runCatching { Ask.reading(text) }.getOrDefault(text).lowercase()
-        .replace("p&l", "p l").replace("'", "").replace("’", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun spaced(text: String): String = " " + spacedWords(runCatching { Ask.reading(text) }.getOrDefault(text).lowercase()
+        .replace("p&l", "p l").replace("'", "").replace("’", "")) + " "
 
     /** What [text] was about (a kind key; [OTHER] when none fits). */
     fun kind(text: String): String {
@@ -153,8 +153,7 @@ object WrongThing {
 
     // ---- what Boss says --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
 
     private val STOP = setOf("the", "a", "an", "is", "was", "my", "me", "i", "you", "jarvis", "please", "boss", "hey", "ok", "okay", "to", "of", "and", "so", "tell")
 
@@ -265,7 +264,12 @@ object WrongThing {
         LEAD + "(what|which) (did|have) you (route|send|routed|sent) (to the )?wrong( place| feature)?$WHEN?" + TAIL + "|" +
         LEAD + "(aaj )?(aapne |apne |tumne |tum ne |aap ne )?(aaj )?(kya|kaun se|kon se|kaunse) (sawal|sawaal|question|questions|cheez|cheezein)? ?(ka |ke |mein |main )?galat (jawab|jawaab|answer) (diya|diye|kiya|kiye)( aaj)?" + TAIL)
 
-    fun asked(text: String): Request? {
+    fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Request?>(64)
+
+    private fun askedFresh(text: String): Request? {
         val t = norm(text)
         if (!ASKED.containsMatchIn(t)) return null
         return if (rx(" (today|aaj) ").containsMatchIn(t)) Request.TODAY else Request.ALL

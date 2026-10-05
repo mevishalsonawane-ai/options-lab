@@ -68,7 +68,7 @@ object Intents {
 
     /** [text] as one line of the list by the fixed rules, or null. */
     fun quick(text: String): String? {
-        var t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        var t = " " + spacedWords(text.lowercase()) + " "
         repeat(3) { t = FILL.replace(t, " ") }
         t = t.replace(rx("\\s+"), " ").trim()
         val line = QUICK.firstOrNull { it.first.matches(t) }?.second ?: return null

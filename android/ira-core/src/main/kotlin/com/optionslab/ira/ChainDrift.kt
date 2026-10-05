@@ -47,11 +47,15 @@ object ChainDrift {
     /** The word itself asked ("what is max pain", "what's a call wall", "call wall ka matlab"): the glossary's. */
     private val WORD = Regex("^ (what is|what s|whats|define|explain|meaning of) (a |an )?(max pain|maxpain|call wall|put wall|oi wall)( mean| means)? $| (ka matlab|kya hota|kya hoti|matlab|meaning of|definition) ")
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
 
     /** Which of these questions [text] asks, or null. Max pain as it stands stays [ChainRead]'s, the OI shift [ChainIntel]'s. */
-    fun asked(text: String): Ask? {
+    fun asked(text: String): Ask? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Ask?>(64)
+
+    private fun askedFresh(text: String): Ask? {
         val t = norm(text)
         if (NOT.containsMatchIn(t) || WORD.containsMatchIn(t)) return null
         val mp = MAX_PAIN.containsMatchIn(t); val w = WALLS.containsMatchIn(t)

@@ -86,7 +86,12 @@ object RelayHealth {
     private val ASKING = rx("^(?:why|when|what|how|is|are|am|can|could|will|would|do|does|did|has|have|kya|relay|static)\\b")
 
     /** Is [q] a question about the relay, the static IP or whether live orders can go now? */
-    fun asked(q: String): Asked? {
+    fun asked(q: String): Asked? = askedKept.of(q) { askedFresh(q) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Asked?>(64)
+
+    private fun askedFresh(q: String): Asked? {
         val t = norm(q)
         if (ACTING_HI.containsMatchIn(t) || ACTING.containsMatchIn(t) && !ASKING.containsMatchIn(t)) return null
         if (rx("\\b(?:relay|static ip)\\b.*\\b(?:on|off)$").containsMatchIn(t) && !ASKING.containsMatchIn(t)) return null

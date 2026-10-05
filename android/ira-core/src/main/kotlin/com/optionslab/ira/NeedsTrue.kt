@@ -34,10 +34,12 @@ object NeedsTrue {
     private val CLOSE: LocalTime = PositionHealth.CLOSE
     private val DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
 
-    private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("p&l", "p l")) + " "
 
     private val OWNER = Regex(" (my|mine|our|meri|mere|mera|hamari|hamare|apni|apne|apna) ")
     private val HOLDING = "(put|puts|call|calls|ce|pe|position|positions|trade|trades|option|options|short|long|straddle|strangle|spread|futures?|holding|holdings|strike|condor|iron condor|butterfly)"
+    /** A holding named ([HOLDING] as a word), compiled once. */
+    private val HOLDING_RX = Regex(" $HOLDING ")
     private val ASK = Regex(
         // "What needs to happen for my put to work", "what would have to be true for my 24500 put"
         " (what|wat|wht) (needs|need|has|have|would have|will have|must|should have|would need|will need|is needed|is required) (to )?(happen|be true|go right|go my way|occur)|" +
@@ -68,12 +70,18 @@ object NeedsTrue {
     private val NOT = Regex(" (if|suppose|agar|close|exit|square|sell|buy|add|cancel|set|place|move it|modify|worst|best|rank|what is a|what is the meaning|meaning of|define|explain) ")
 
     /** "For my 24500 put to work, what needs to happen?", "where is my breakeven?", "meri put ke liye kya hona chahiye". */
-    fun asked(text: String): Boolean = runCatching {
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = runCatching {
         listOf(text, Ask.reading(text)).any { s ->
             val t = norm(s)
-            ASK.containsMatchIn(t) && (OWNER.containsMatchIn(t) || I_HOLD.containsMatchIn(t)) && !NOT.containsMatchIn(t) &&
+            // (The owner first: the cheap check before the long one - the same answer, speed round 10.)
+            (OWNER.containsMatchIn(t) || I_HOLD.containsMatchIn(t)) && ASK.containsMatchIn(t) && !NOT.containsMatchIn(t) &&
                 // The breakeven or a holding must be named: "what needs to happen for my day" is not this.
-                (Regex(" $HOLDING ").containsMatchIn(t) || Regex(" (break ?even|breakevens?) ").containsMatchIn(t) || Regex(" \\d{3,6} ").containsMatchIn(t) || I_HOLD.containsMatchIn(t))
+                (HOLDING_RX.containsMatchIn(t) || rx(" (break ?even|breakevens?) ").containsMatchIn(t) || rx(" \\d{3,6} ").containsMatchIn(t) || I_HOLD.containsMatchIn(t))
         }
     }.getOrDefault(false)
 
@@ -81,20 +89,20 @@ object NeedsTrue {
     data class Pick(val strike: Double? = null, val right: String? = null, val underlying: String? = null)
 
     fun pick(text: String): Pick {
-        val t = norm(text.replace(Regex("(\\d),(\\d)"), "$1$2"))
-        val strike = Regex(" (\\d{3,6})(?: ?(ce|pe|call|calls|put|puts|strike))? ").findAll(t).map { it.groupValues[1].toDouble() }
+        val t = norm(text.replace(rx("(\\d),(\\d)"), "$1$2"))
+        val strike = rx(" (\\d{3,6})(?: ?(ce|pe|call|calls|put|puts|strike))? ").findAll(t).map { it.groupValues[1].toDouble() }
             .firstOrNull { it >= 100 }
         val right = when {
-            Regex(" (put|puts|pe) |\\d(pe) ").containsMatchIn(t) -> "PE"
-            Regex(" (call|calls|ce) |\\d(ce) ").containsMatchIn(t) -> "CE"
+            rx(" (put|puts|pe) |\\d(pe) ").containsMatchIn(t) -> "PE"
+            rx(" (call|calls|ce) |\\d(ce) ").containsMatchIn(t) -> "CE"
             else -> null
         }
         val u = when {
-            Regex(" (banknifty|bank nifty|bnf|nifty bank) ").containsMatchIn(t) -> "BANKNIFTY"
-            Regex(" (finnifty|fin nifty|nifty fin) ").containsMatchIn(t) -> "FINNIFTY"
-            Regex(" (midcpnifty|midcap nifty|midcp nifty) ").containsMatchIn(t) -> "MIDCPNIFTY"
-            Regex(" (sensex) ").containsMatchIn(t) -> "SENSEX"
-            Regex(" (nifty|nifty 50|nifty50) ").containsMatchIn(t) -> "NIFTY"
+            rx(" (banknifty|bank nifty|bnf|nifty bank) ").containsMatchIn(t) -> "BANKNIFTY"
+            rx(" (finnifty|fin nifty|nifty fin) ").containsMatchIn(t) -> "FINNIFTY"
+            rx(" (midcpnifty|midcap nifty|midcp nifty) ").containsMatchIn(t) -> "MIDCPNIFTY"
+            rx(" (sensex) ").containsMatchIn(t) -> "SENSEX"
+            rx(" (nifty|nifty 50|nifty50) ").containsMatchIn(t) -> "NIFTY"
             else -> null
         }
         return Pick(strike, right, u)

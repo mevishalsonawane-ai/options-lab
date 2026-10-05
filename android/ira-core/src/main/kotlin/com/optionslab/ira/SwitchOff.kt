@@ -110,7 +110,7 @@ object SwitchOff {
 
     // ---- the question --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH)) + " "
 
     private const val BOT = "(bots?|algos?|arms?|strateg(y|ies)|orb arms?|ones?)"
     private const val OFF = "(switch off|turn off|disarm|stop|drop|shut off|switch them off|turn them off)"
@@ -138,7 +138,12 @@ object SwitchOff {
     private val NOT = rx(" (when|what time|too (fast|soon|early|quickly)|kill switch|alert|alerts|alarm|alarms|notification|notifications|voice|listening|music|phone|wifi|bluetooth|mic|talking|speaking|trading|live|real orders|positions?|trades?) ")
 
     /** "What should I switch off?", "which arms lost in both the test and on paper?", "should I disarm ORB Fresh?". */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         for (s in listOf(text, Ask.reading(text))) {
             val t = norm(s).replace(" orb arms ", " arms ")
             if (NOT.containsMatchIn(t) || ASK.none { it.containsMatchIn(t) }) continue

@@ -60,8 +60,7 @@ object TaxRecords {
      */
     fun turnover(trades: List<Trade>): Double = trades.filter { segment(it.symbol) != Segment.OTHER }.sumOf { kotlin.math.abs(it.gross) }
 
-    private fun norm(text: String) = " " + text.lowercase().replace("p&l", "p l").replace("f&o", " fno ").replace("f & o", " fno ")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("p&l", "p l").replace("f&o", " fno ").replace("f & o", " fno ")) + " "
 
     private val TURNOVER = Regex(" (turnover|turn over|turnovers) ")
     private val MINE = Regex(" (my|mine|i|me|our|mera|meri|mere|mujhe) ")

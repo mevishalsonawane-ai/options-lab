@@ -235,8 +235,7 @@ object Learnings {
 
     enum class Ask { WEEK, CHANGED, ALL }
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?"
     private const val TAIL = "( please| boss| jarvis)* $"
@@ -254,7 +253,12 @@ object Learnings {
         LEAD + "what (have you|did you) change(d)? (in|about) (yourself|how you work)( this week| lately| recently)?" + TAIL)
 
     /** "What have you learned this week?", "what changed in how you work?", "show me everything you've learned about me", else null. */
-    fun asked(text: String): Ask? {
+    fun asked(text: String): Ask? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Ask?>(64)
+
+    private fun askedFresh(text: String): Ask? {
         val t = norm(text)
         return when {
             ALL.containsMatchIn(t) -> Ask.ALL

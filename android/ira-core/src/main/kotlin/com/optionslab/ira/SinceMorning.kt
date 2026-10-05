@@ -140,8 +140,7 @@ object SinceMorning {
 
     // ---- the question ---------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
 
     private const val SINCE = "(since|from) (this |the |today s |today )?(morning|open|opening|market open|start of (the )?(day|session)|" +
         "9 ?15|9 ?30|9 ?45|morning brief|brief|9 am|9 am brief|nine)"
@@ -164,7 +163,12 @@ object SinceMorning {
     private val NOT = rx(" (oi|open interest|max pain|maxpain|wall|walls|pcr|put call|chain|option chain|premium|premiums|iv|news|headline|headlines|" +
         "should|will|would|tomorrow|forecast|predict|expect|buy|sell|you learned|learn|learnt|how you work|your mind|my bot|my bots|rule|rules) ")
 
-    fun asked(text: String): Boolean {
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean {
         val t = norm(text)
         return !NOT.containsMatchIn(t) && ASKED.containsMatchIn(t)
     }

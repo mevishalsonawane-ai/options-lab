@@ -54,7 +54,7 @@ object SharpMove {
     private fun pct(x: Double) = "%+.2f%%".format(Locale.ENGLISH, x)
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
-    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(), ":") + " "
 
     /** The candles of [day] in [bars], in time order. */
     private fun dayOf(bars: List<Candle>, day: java.time.LocalDate) = bars.filter { it.t.toLocalDate() == day }.sortedBy { it.t }

@@ -53,8 +53,7 @@ object GapRecord {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the gap record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so it has no opening gap, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun p1(x: Double) = "%.1f%%".format(Locale.ENGLISH, x).replace(".0%", "%")
@@ -82,7 +81,12 @@ object GapRecord {
     private val LIKE_TODAY = Regex(" (like today|like today s|today s gap|todays gap|this gap|such a gap|gap like this|gap this size|gap this big|aaj jaisa|aaj ka gap|aaj jaise) ")
 
     /** What was asked, or null. A record of past gaps only: never a forecast, advice, Boss's own book or bots. */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (!GAP.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
@@ -99,9 +103,9 @@ object GapRecord {
 
     /** "by 11", "by 11:30", "by 1 pm", "by noon", "11 baje tak": a time within the session (not its open), or null. */
     fun by(raw: String): LocalTime? {
-        if (Regex("\\bby (noon|lunch|midday|mid day)\\b").containsMatchIn(raw)) return LocalTime.NOON
-        val m = Regex("\\bby (\\d{1,2})(?:[:.](\\d{2}))?\\s*(am|pm|a\\.m\\.|p\\.m\\.|o'?\\s?clock)?").find(raw)
-            ?: Regex("\\b(\\d{1,2})(?:[:.](\\d{2}))?\\s*(baje)\\s*tak\\b").find(raw) ?: return null
+        if (rx("\\bby (noon|lunch|midday|mid day)\\b").containsMatchIn(raw)) return LocalTime.NOON
+        val m = rx("\\bby (\\d{1,2})(?:[:.](\\d{2}))?\\s*(am|pm|a\\.m\\.|p\\.m\\.|o'?\\s?clock)?").find(raw)
+            ?: rx("\\b(\\d{1,2})(?:[:.](\\d{2}))?\\s*(baje)\\s*tak\\b").find(raw) ?: return null
         var h = m.groupValues[1].toIntOrNull() ?: return null
         val min = m.groupValues[2].toIntOrNull() ?: 0
         val ampm = m.groupValues[3]

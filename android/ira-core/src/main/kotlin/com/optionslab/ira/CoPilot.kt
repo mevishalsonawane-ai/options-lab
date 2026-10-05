@@ -102,8 +102,7 @@ object CoPilot {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun words(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")) + " "
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |please |ok |okay )*"
     private val ASKED = Regex(

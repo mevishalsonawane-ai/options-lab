@@ -35,7 +35,7 @@ object Wake {
      * never his own voice heard back ([BargeIn]).
      */
     fun named(text: String): Boolean {
-        val t = " " + text.lowercase().replace(rx("[^a-z0-9% ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val t = " " + spacedWords(text.lowercase(), "%") + " "
         return WORDS.any { t.contains(" $it ") }
     }
 
@@ -59,7 +59,7 @@ object Wake {
 
     /** [awake]: the wake word was said alone a moment ago, so this sentence is the question. */
     fun heard(text: String, awake: Boolean): Heard {
-        val t = " " + text.lowercase().replace(rx("[^a-z0-9% ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val t = " " + spacedWords(text.lowercase(), "%") + " "
         val at = WORDS.mapNotNull { w -> rx(" $w ").find(t)?.let { it.range.last } }.minOrNull()
             ?: FIRST.find(t)?.let { it.range.last }
         val rest = (if (at != null) t.substring(at) else t).trim().let { r -> var x = r; repeat(3) { x = x.replace(FILLER, "").trim() }; x }

@@ -12,7 +12,7 @@ object Memory {
 
     const val KEEP = 50
 
-    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+    private fun norm(text: String) = " " + spacedWords(text.lowercase())
         .replace(rx("^(jarvis|hey jarvis|ok jarvis|boss|please) "), "") + " "
 
     /** What to remember from "remember (that) ...", in Boss's own words, or null. */

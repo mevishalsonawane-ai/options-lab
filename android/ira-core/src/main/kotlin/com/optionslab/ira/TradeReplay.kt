@@ -41,7 +41,7 @@ object TradeReplay {
 
     enum class Scope { LAST, TODAY }
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "")) + " "
 
     private val LAST = Regex(" (how was|how did|how s|hows|how is|how about|replay|review|tell me about|walk me through|go over|go through|break down|look at|analy[sz]e) " +
         "(my|the) (last|latest|previous|most recent|recent) (trade|exit|round trip)s? " +

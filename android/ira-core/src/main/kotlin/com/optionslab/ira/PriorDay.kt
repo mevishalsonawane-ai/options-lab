@@ -52,8 +52,7 @@ object PriorDay {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the prior-day high and low record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so its days have no clean high and low, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
@@ -105,7 +104,12 @@ object PriorDay {
      * What was asked, or null. The record of past take-outs, or (routing round 14) one session's own place against the
      * prior day's high or low ([Q.now]); never a forecast, advice or an alert.
      */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         if (nowAsked(t)) return Q(dir(t), false, now = true)

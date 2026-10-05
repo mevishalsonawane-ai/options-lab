@@ -54,7 +54,12 @@ object WeekAhead {
         " anything (big|major|special|important|notable|on) (this|next|in the|the coming|coming) week ")
 
     /** "This week" or "next week", or null when [text] does not ask for the week's calendar. */
-    fun asked(text: String): Which? {
+    fun asked(text: String): Which? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Which?>(64)
+
+    private fun askedFresh(text: String): Which? {
         val t = norm(text)
         if (!ASK.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
         return if (rx(" (next|agle|agla|aane wale) (week|weeks|hafte) ").containsMatchIn(t) &&

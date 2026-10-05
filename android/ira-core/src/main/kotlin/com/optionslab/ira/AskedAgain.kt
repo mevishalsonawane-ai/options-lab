@@ -119,8 +119,7 @@ object AskedAgain {
 
     // ---- asked -----------------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| lately| these days| this month)* $"
@@ -136,7 +135,12 @@ object AskedAgain {
         LEAD + "(main |mai )?kya (dobara|phir se) (puchta|poochta|puchhta) (hoon|hu|hun)" + TAIL)
 
     /** "Which of your answers do I ask again?" / "what do I keep asking twice?". */
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(norm(text))
 
     const val ONLY_RECORD = "A record only: it changes nothing I do, and nothing I learn acts - though a read you keep asking again for its figure, I say figure first aloud."
 

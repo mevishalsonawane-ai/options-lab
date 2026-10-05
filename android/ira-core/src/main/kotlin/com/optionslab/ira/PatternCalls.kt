@@ -169,7 +169,12 @@ object PatternCalls {
         "|\\b(which|what) (candle |chart )?patterns? (are|have been|were) (reliable|trustworthy|dependable|accurate)\\b" +
         "|\\b(kaun se|kaunse|kon se|konse) (candle |chart )?patterns? (pe|par|pr) (bharosa|bharosaa|bharose|yakeen|vishwas|bharosa kar)\\b")
 
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(text.replace(rx("\\s+"), " "))
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(text.replace(rx("\\s+"), " "))
 
     // ---- saved as plain text: one call a line (market, chart, kind, candle, close, then each horizon's result) ----
 

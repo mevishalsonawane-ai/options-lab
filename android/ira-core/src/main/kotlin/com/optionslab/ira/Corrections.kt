@@ -32,7 +32,7 @@ object Corrections {
     private val FILLER = Regex(" (jarvis|hey|ok|okay|please|boss|um|uh|so|tell me|can you|could you) ")
 
     fun normalize(text: String): String {
-        var t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        var t = " " + spacedWords(text.lowercase()) + " "
         repeat(3) { t = FILLER.replace(t, " ") }
         return t.replace(rx("\\s+"), " ").trim()
     }
@@ -174,7 +174,7 @@ object Corrections {
     fun touch(learned: List<Learned>, l: Learned, today: LocalDate): List<Learned> =
         learned.map { if (it.wrong == l.wrong) it.copy(used = today) else it }
 
-    private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
 
     private val WORDS_ASKED = Regex("^ (jarvis )?((what|which) (words|wordings|phrases)( of mine)? (have|did|do) you (learned|learnt|learn|know)( from me)?|" +
         "(show|list|tell)( me)? (the |your )?(words|wordings|phrases) you (have )?(learned|learnt)|(your )?learned (words|wordings)|" +

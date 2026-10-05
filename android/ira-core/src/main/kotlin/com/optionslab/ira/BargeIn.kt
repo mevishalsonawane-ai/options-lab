@@ -30,7 +30,7 @@ object BargeIn {
         "finish|finish it|finish that|say the rest|tell me the rest|the rest|rest of it|and the rest|what were you saying|" +
         "aage bolo|aage batao|aage bata|aage boliye|aage bataiye|baaki bolo|baki bolo|baaki batao|baki batao|bolte raho|haan bolo|haan aage)( please| now| boss)?$")
 
-    private fun norm(s: String?) = (s ?: "").lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+    private fun norm(s: String?) = spacedWords((s ?: "").lowercase())
 
     /**
      * What a partial reading [partial] heard while Jarvis was saying [saying] means: [Cut.NAME], [Cut.HUSH], or null

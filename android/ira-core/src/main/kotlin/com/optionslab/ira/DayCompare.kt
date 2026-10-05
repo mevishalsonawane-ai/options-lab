@@ -49,7 +49,7 @@ object DayCompare {
 
     /** Lower case, words only, the index names and a few fillers taken out ("how is Nifty's day today ..." -> "how is today ..."). */
     private fun norm(text: String): String {
-        var t = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        var t = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
         for (a in Market.ALIASES_LONGEST_FIRST) t = t.replace(" $a ", " ")
         t = t.replace(rx(" (jarvis|hey|ok|boss|please|so|the|market|markets|index|indices|s|day s|session s|ka|ki|ke) "), " ")
         t = t.replace(rx(" (jarvis|hey|ok|boss|please|so|the|market|markets|index|indices|s|day s|session s|ka|ki|ke) "), " ")
@@ -101,7 +101,12 @@ object DayCompare {
     private val MARKET_NAMED = Regex("(?i)\\b(market|markets|bazaar|bazar|index|indices)\\b")
 
     /** What was asked, or null: today against one earlier session, as a whole question. Never a forecast or another span. */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         val t = norm(text)
         if (rx(NOT).containsMatchIn(t)) return null

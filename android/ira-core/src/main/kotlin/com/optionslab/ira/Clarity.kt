@@ -46,8 +46,7 @@ object Clarity {
     /** The kind of answer [text] gets: its main topic's key, or null (a command, an order, words not understood). */
     fun kind(text: String): String? = runCatching { SelfDoubt.tags(text).firstOrNull { it.dim == SelfDoubt.Dim.TOPIC }?.key }.getOrNull()
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
 
     private const val LEAD = "^ (sorry |umm |um |uh |hmm |jarvis |boss )*"
     private const val TAIL = "( jarvis| boss| please| sorry| again| bhai| yaar)* $"
@@ -137,7 +136,12 @@ object Clarity {
         ASK_LEAD + "(give|say) (me )?full answers( again| from now on| always)?" + ASK_TAIL)
 
     /** "Which answers do you keep short?" or "say your answers in full again", else null. */
-    fun asked(text: String): Request? {
+    fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Request?>(64)
+
+    private fun askedFresh(text: String): Request? {
         val t = norm(text)
         return when {
             RESET.containsMatchIn(t) -> Request.RESET

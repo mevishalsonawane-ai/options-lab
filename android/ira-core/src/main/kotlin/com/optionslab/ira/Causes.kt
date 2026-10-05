@@ -60,8 +60,7 @@ object Causes {
 
     // ---- what was asked ----------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(Regex("'s\\b"), "s").replace(Regex("[^a-z0-9 ]"), " ")
-        .replace(Regex("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("'s\\b"), "s")) + " "
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |tell me |please |bata |batao )*"
     private const val SUBJ = "(the )?(market|markets|stock market|share market|indices|index|nifty|nifty 50|nifty fifty|banknifty|bank nifty|nifty bank|finnifty|fin nifty|sensex)"
@@ -89,13 +88,18 @@ object Causes {
     /** Not here: a sudden move is [SharpMove]'s, news is [NewsDesk]'s, his own book or Jarvis's own doings, a forecast or advice. */
     private val NOT = Regex(" (suddenly|just|news|headline|headlines|khabar|my|mine|me|i|you|your|we|our|will|would|tomorrow|kal|should|buy|sell|gold|vix|crude|dollar|rupee|trade|trades|position|positions|strategy|bot|orb|solo) ")
 
-    fun asked(text: String): Ask? {
+    fun asked(text: String): Ask? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Ask?>(64)
+
+    private fun askedFresh(text: String): Ask? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
         if (!(WHY.containsMatchIn(t) || CAUSED_TO.containsMatchIn(t) || HINDI.containsMatchIn(t) || CAUSED.containsMatchIn(t) || REASON.containsMatchIn(t) || DROVE.containsMatchIn(t))) return null
         val down = when {
-            Regex(" ($DOWN|$NOUN_DOWN|$HI_DOWN) ").containsMatchIn(t) -> true
-            Regex(" ($UP|$NOUN_UP|$HI_UP) ").containsMatchIn(t) -> false
+            rx(" ($DOWN|$NOUN_DOWN|$HI_DOWN) ").containsMatchIn(t) -> true
+            rx(" ($UP|$NOUN_UP|$HI_UP) ").containsMatchIn(t) -> false
             else -> null
         }
         val named = Market.mentioned(text).firstOrNull { it in INDICES }

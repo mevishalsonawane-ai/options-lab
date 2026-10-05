@@ -59,7 +59,12 @@ object ZerodhaSession {
     private val ASKING = rx("^(?:why|when|what time|till when|until when)\\b")
 
     /** Is [q] a question about the Zerodha session ending (or when it ends)? */
-    fun asked(q: String): Asked? {
+    fun asked(q: String): Asked? = askedKept.of(q) { askedFresh(q) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Asked?>(64)
+
+    private fun askedFresh(q: String): Asked? {
         val t = q.lowercase(Locale.ENGLISH).replace('’', '\'').replace(rx("[?!.,]"), " ").replace(rx("\\s+"), " ").trim()
         if (ACTING_HI.containsMatchIn(t) || ACTING.containsMatchIn(t) && !ASKING.containsMatchIn(t)) return null
         if (UNTIL.any { it.containsMatchIn(t) }) return Asked.UNTIL

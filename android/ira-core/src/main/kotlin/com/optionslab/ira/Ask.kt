@@ -96,21 +96,24 @@ object Ask {
      * [said] as a question: misheard words fixed ([Heard]) and a common Hinglish question read as its English
      * ([Hinglish.question]). Never used to find a command or an order - those are read from the words as heard.
      */
-    fun reading(said: String): String {
+    fun reading(said: String): String = readings.same(said) {
         val h = Heard.fix(said)
-        return Hinglish.question(h).takeIf { it != h } ?: Hinglish.normalize(h)
+        Hinglish.question(h).takeIf { it != h } ?: Hinglish.normalize(h)
     }
+
+    /** The last questions' readings (speed round 10: some sixty readers ask for it per question; [Kept], pure). */
+    private val readings = Kept<String>(64)
 
     private fun parseAs(said: String): Question {
         // Commands and orders: from the words as heard, exactly as strict as ever.
         val heard = Hinglish.normalize(said)
-        val t0 = " " + heard.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val t0 = " " + spacedWords(heard.lowercase()) + " "
         // (A question mark said - lost when Hinglish is read - still keeps a question from acting, as [Commands] does.)
         Commands.parse(heard)?.takeIf { !said.trim().endsWith("?") || it.kind == Command.Kind.NOTE }
             ?.let { c -> return Question(heard, Market.mentioned(heard), setOf(Topic.COMMAND), null, command = c) }
         // Everything else is a question, read with misheard and Hinglish words understood.
         val text = reading(said)
-        val t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val t = " " + spacedWords(text.lowercase()) + " "
         // "What should I buy?" - the pattern expert's suggestion (with why), or why there is none now.
         if (SUGGEST.containsMatchIn(t)) return Question(text, Market.mentioned(text), setOf(Topic.SUGGEST), null)
         // "What is a hammer?" - the pattern explained, with its own record.

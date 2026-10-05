@@ -129,8 +129,7 @@ object ArmHabits {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase().replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(boss )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis)* $"
@@ -152,7 +151,12 @@ object ArmHabits {
         "^ (jarvis )?(loss|losses) ke baad (main |mai |mein )?(bots|bot|strategies) ke saath kya karta (hoon|hu|hun)" + TAIL)
 
     /** "Do I usually disarm my bots after losses?", "which bots do I keep armed?", "my arming habits". */
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(norm(text))
 
     const val LOCKED = "Unlock the phone for your bots' record, Boss."
     const val ONLY_RECORD = "Your record only, Boss: nothing I learn here arms, disarms or stops anything - what stays armed is your call."

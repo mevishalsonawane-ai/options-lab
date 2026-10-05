@@ -334,8 +334,7 @@ object BotTrades {
 
     // ---- the question --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
 
     private const val BOT = "((paper bots?|bots?|algos?|arms?|orb fresh|orb sweep|orb|range fade|liquidity( 15 5| 15| 5| 30| bot| arm| books?)?)s?)"
     private const val MY = "(my |our |the |mere |meri |mera |hamare |todays |today s )?"
@@ -365,13 +364,22 @@ object BotTrades {
         " $MY$BOT (ke|ka|ki) (aaj ke )?(trades?|entry|exit) (samjhao|samjha do|explain karo|batao|bata do|explain) ",
         " $MY$BOT (ne )?(apne )?(rules?|niyam) (follow|maane|mana|tode|toda) ",
     ).map { rx(it) }
+    /** What every alternative of [BOT] holds: no [ASK] can match words without one of these. */
+    private val BOT_WORDS = listOf("bot", "algo", "arm", "orb", "range fade", "liquidity")
     /** Not this: a command, a backtest or the regime fit, how they are doing (BotHealth's), another day, a forecast or advice. */
     private val NOT = rx(" (stop|start|disarm|arm it|switch|turn on|turn off|pause|backtest|back test|create|build|write|add|set up|suit|suits|should|shall|will|would|tomorrow|yesterday|kal|week|month|how are|doing|performing|health|behaving) ")
 
     /** "Explain my bots' trades today", "why did ORB take that trade?", "what did my bots do today?", "did my bots follow their rules?". */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         for (s in listOf(text, Ask.reading(text))) {
             val t = norm(s)
+            // (Every [ASK] names a bot ([BOT]): words naming none are passed over before the patterns - speed round 10.)
+            if (BOT_WORDS.none { t.contains(it) }) continue
             if (NOT.containsMatchIn(t) || ASK.none { it.containsMatchIn(t) }) continue
             val bot = when {
                 rx(" orb fresh ").containsMatchIn(t) -> "orb_fresh"

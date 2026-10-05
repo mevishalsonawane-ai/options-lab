@@ -61,11 +61,11 @@ object Glossary {
 
     /** The explanation of a trading word asked about in [said], or null. */
     fun explain(said: String): String? {
-        val plain = said.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+        val plain = spacedWords(said.lowercase())
         // ("Mera stop loss kya hai" is Boss's own stop, not the word.)
         val text = HINDI_MEANING.takeUnless { rx("\\b(mera|meri|mere|apna|apni|apne|hamara|hamari)\\b").containsMatchIn(plain) }.orEmpty()
             .firstOrNull { it.first.matches(plain) }?.let { (r, to) -> r.replace(plain, to) } ?: said
-        val t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+        val t = " " + spacedWords(text.lowercase())
             .replace(rx("^(jarvis|hey jarvis|ok jarvis|boss) "), "") + " "
         val meaning = MEANING.containsMatchIn(t)
         // Only a plain "what does it mean" outweighs "today" or a number ("explain the gap down today" wants today's gap).

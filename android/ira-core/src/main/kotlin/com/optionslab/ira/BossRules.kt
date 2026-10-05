@@ -16,7 +16,7 @@ object BossRules {
 
     /** The rule in a kept note, or null when it holds none. */
     fun of(note: String): Rule? {
-        val t = " " + note.lowercase(Locale.ENGLISH).replace("'", " ").replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val t = " " + spacedWords(note.lowercase(Locale.ENGLISH).replace("'", " "), ":") + " "
         val avoid = rx(" (don t|dont|do not|never|no|avoid|skip|stay away from|not) ").containsMatchIn(t)
         fun minute(): Int? = rx(" (\\d{1,2})[:.](\\d{2}) ?(am|pm)? | (\\d{1,2}) ?(am|pm) ").find(t)?.let { m ->
             val pm = (m.groupValues[3].ifEmpty { m.groupValues[5] }) == "pm"

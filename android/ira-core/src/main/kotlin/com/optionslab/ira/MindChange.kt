@@ -59,7 +59,12 @@ object MindChange {
     )
 
     /** "What would change your mind?" and its kin - about Jarvis's own market read, never Boss's position or a forecast. */
-    fun asked(text: String): Boolean {
+    fun asked(text: String): Boolean = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Boolean>(64)
+
+    private fun askedFresh(text: String): Boolean {
         val t = norm(text)
         return ASKED.containsMatchIn(t) && !NOT.containsMatchIn(t)
     }

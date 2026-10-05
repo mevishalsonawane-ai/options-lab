@@ -31,16 +31,26 @@ object Suggest {
         val raw = WORD.findAll(said.lowercase()).map { it.value }.toSet()
         val heard = words(said) - MARKET_WORDS
         if (heard.isEmpty()) return null
-        val lines = (Intents.LINES.filter { "<n>" !in it && "<level>" !in it && !it.startsWith("start") } + EXTRA)
-            .mapNotNull { l -> if ("<market>" in l) m?.let { l.replace("<market>", it) } else l }
-        return lines.mapNotNull { l ->
-            val lw = WORD.findAll(l.lowercase()).map { it.value }.toSet()
-            if (lw.any { w -> OPPOSITE[w]?.let { it in raw && w !in raw } == true }) return@mapNotNull null
-            val w = words(l) - MARKET_WORDS
+        return linesFor(m).mapNotNull { (l, lw, w) ->
+            if (lw.any { x -> OPPOSITE[x]?.let { it in raw && x !in raw } == true }) return@mapNotNull null
             val shared = w.count { it in heard }
             if (shared >= 2 && shared >= w.size - (if (w.size >= 3) 1 else 0)) Triple(l, shared, w.size) else null
         }.maxWithOrNull(compareBy<Triple<String, Int, Int>> { it.second }.thenByDescending { it.third })?.first
     }
+
+    /**
+     * The lines that can be offered with the market [m] named (its label in lower case, or null), each with its words and
+     * its words less the markets' - worked out once per market (speed round 10), never per question: the lines are fixed.
+     */
+    private fun linesFor(m: String?): List<Triple<String, Set<String>, Set<String>>> = synchronized(byMarket) {
+        byMarket.getOrPut(m) {
+            (Intents.LINES.filter { "<n>" !in it && "<level>" !in it && !it.startsWith("start") } + EXTRA)
+                .mapNotNull { l -> if ("<market>" in l) m?.let { l.replace("<market>", it) } else l }
+                .map { l -> Triple(l, WORD.findAll(l.lowercase()).map { it.value }.toSet(), words(l) - MARKET_WORDS) }
+        }
+    }
+
+    private val byMarket = HashMap<String?, List<Triple<String, Set<String>, Set<String>>>>()
 
     fun line(said: String): String? = closest(said)?.let { "I didn't catch that, Boss. Did you mean \"$it\"?" }
 }

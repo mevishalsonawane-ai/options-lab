@@ -59,6 +59,25 @@ internal class Kept<V>(private val max: Int) {
 /** [read] of [words] kept in [kept], given back as [words] itself when it reads as the same words (a reader that returns its input). */
 internal fun Kept<String>.same(words: String, read: () -> String): String = of(words, read = read).let { if (it == words) words else it }
 
+/**
+ * [s] with every character but a-z, 0-9 and those in [keep] made a space, each run of spaces made one and the ends
+ * trimmed (speed round 10): in one pass exactly what replacing the pattern "[^a-z0-9<keep> ]" with a space, then "\\s+"
+ * with one space, then trimming gives - the readers' shared way of spacing words, which cost two pattern passes in each
+ * of some seventy readers per question. [keep] never holds whitespace.
+ */
+internal fun spacedWords(s: String, keep: String = ""): String {
+    val out = StringBuilder(s.length)
+    var space = false
+    for (c in s) {
+        if (c in 'a'..'z' || c in '0'..'9' || (keep.isNotEmpty() && keep.indexOf(c) >= 0)) {
+            if (space && out.isNotEmpty()) out.append(' ')
+            space = false
+            out.append(c)
+        } else space = true
+    }
+    return out.toString()
+}
+
 /** Does [s] hold a digit 0-9 (what `\\d` matches in a pattern)? A pattern that needs one cannot match without. */
 internal fun hasDigit(s: CharSequence): Boolean {
     for (i in 0 until s.length) if (s[i] in '0'..'9') return true

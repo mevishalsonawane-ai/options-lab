@@ -69,7 +69,7 @@ object Hinglish {
     private val STEPPED = Regex("\\S\\s+(?:phir|fir|then|uske\\s+baad|iske\\s+baad|aur\\s+phir|and\\s+then)\\s+(?!se\\b)\\S")
 
     private fun normalizeFresh(text: String): String {
-        var t = text.lowercase().replace(rx("[^a-z0-9.,&% ]"), " ").replace(rx("\\s+"), " ").trim()
+        var t = spacedWords(text.lowercase(), ".,&%")
         if (!hasHindi(t)) return text
         for ((r, to) in WORDS) t = r.replace(t, to).replace(rx("\\s+"), " ").trim()
         // Said in steps ("meri put explain karo phir isko band karo"; routing round 13): the last verb is its own step's, so the

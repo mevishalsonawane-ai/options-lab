@@ -80,8 +80,7 @@ object NewsDesk {
 
     const val TIMING = "That is timing only, Boss: a headline published near a move does not say it caused the move, and I can't tell which news moved the market."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
     private fun stamp(t: Instant?, zone: ZoneId, today: LocalDate): String {

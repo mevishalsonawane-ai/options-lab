@@ -70,7 +70,12 @@ object Spoken {
     }
 
     /** [text] with spoken numbers and times written as digits; [text] itself (exactly) when there are none. */
-    fun digits(text: String): String {
+    fun digits(text: String): String = digited.same(text) { digitsFresh(text) }
+
+    /** The last words read (speed round 10; [Kept], pure). */
+    private val digited = Kept<String>(64)
+
+    private fun digitsFresh(text: String): String {
         val pre = text.replace(rx("(?i)\\bo'?\\s?clock\\b"), "oclock").replace(rx("(?<=[A-Za-z])-(?=[A-Za-z])"), " ")
         val toks = pre.split(rx("\\s+")).filter { it.isNotEmpty() }.map { Tok(it) }
         val out = ArrayList<String>()
@@ -110,7 +115,7 @@ object Spoken {
         "tell me when|let me know|sl|stoploss|trailing|automatically|approve|confirm|yaad|bata dena|batana|bolna|setting|settings|" +
         "quantity|qty|exit|stop loss) ")
 
-    private fun norm(s: String) = " " + s.lowercase(Locale.ENGLISH).replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", "")) + " "
 
     // ---- Times ----
 

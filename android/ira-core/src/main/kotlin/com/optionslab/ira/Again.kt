@@ -45,7 +45,7 @@ object Again {
     /** The speech rate (times the voice style's own) for a repeat: [pace] for a plain one, slower for a slow one. */
     fun rate(pace: Float, slow: Boolean): Float = if (!slow) pace else (pace * SLOW).coerceIn(0.55f, 1f)
 
-    private fun norm(s: String) = " " + s.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(s: String) = " " + spacedWords(s.lowercase()) + " "
 
     private const val LEAD = "^ ((hey |ok |okay )?jarvis |please |can you |could you |will you |would you |boss |arre |haan |ok |okay |sorry )*"
     private const val TAIL = "( please| boss| jarvis| now| this time| for me)* $"

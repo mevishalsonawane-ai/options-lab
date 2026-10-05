@@ -39,12 +39,15 @@ enum class Market(val label: String, val unit: String, val open: LocalTime?, val
 
     companion object {
         /** The markets a piece of text mentions, longest alias first so "bank nifty" is not read as "nifty". */
-        fun mentioned(text: String): List<Market> {
+        fun mentioned(text: String): List<Market> = named.of(text) {
             var s = " " + text.lowercase().replace(NOT_WORD, " ") + " "
             val found = LinkedHashSet<Market>()
             for ((key, m) in KEYS) if (s.contains(key)) { found += m; s = s.replace(key, " ") }
-            return found.toList()
+            found.toList()
         }
+
+        /** The last words read (speed round 10: read some forty times for one question; [Kept], pure). */
+        private val named = Kept<List<Market>>(64)
 
         private val NOT_WORD = Regex("[^a-z0-9 ]")
         /** Every alias as " alias " with its market, longest first: worked out once, not at every reading. */

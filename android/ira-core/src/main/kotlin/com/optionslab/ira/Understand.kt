@@ -76,7 +76,7 @@ object Compound {
     /** "?" or ";" ends a question outright. */
     private val STRONG = Regex("\\s*[?;]\\s*")
 
-    private fun norm(s: String) = " " + s.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(s: String) = " " + spacedWords(s.lowercase().replace("'", "")) + " "
 
     /** The questions in [text] as said, or null when it is one question - or holds a word that could act. */
     fun split(text: String): List<String>? {
@@ -127,7 +127,7 @@ object Understand {
         val said = now.trim()
         if (said.isEmpty()) return null
         // Words that could act: never cleaned or split - only the follow-up reading (which never acts) as before.
-        if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(" " + said.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "))
+        if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(" " + spacedWords(said.lowercase()) + " "))
             return FollowUp.resolve(prev, said)?.let { listOf(it) }
         // Numbers and times said in words ("how far is Nifty from twenty five thousand"): as digits, questions only.
         val clean = Spoken.question(Filler.clean(said).ifBlank { return null })

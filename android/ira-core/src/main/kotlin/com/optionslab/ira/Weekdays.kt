@@ -48,8 +48,7 @@ object Weekdays {
     const val NOT_HERE = "I keep the weekday record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
     private const val NO_EXPIRY = "I only know an expiry day from the option candles saved that day"
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
     private fun times(x: Double) = "%.1f".format(Locale.ENGLISH, x)
@@ -89,7 +88,12 @@ object Weekdays {
         "open|opens|closed|holiday|holidays|band|khula|khulega|when|kab|mean|means|meaning|define|strategy|strategies|backtest|bot|bots|news|gap|gaps) "
 
     /** What was asked, or null. A record of past weekdays only: never a forecast, advice, Boss's own book or one day's story. */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (rx(NOT).containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null

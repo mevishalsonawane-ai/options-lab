@@ -266,8 +266,7 @@ object NewsMoves {
 
     // ---- what was asked --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
 
     private val ASK_TAGS: List<Pair<NewsDesk.Tag, Regex>> = listOf(
         NewsDesk.Tag.RBI to Regex(" (rbi|reserve bank|repo rate|rate decision|rate decisions|monetary policy|mpc|rbi policy) "),
@@ -319,7 +318,12 @@ object NewsMoves {
         " (kya )?(news|khabar|khabron|headline|headlines) (se|ki wajah se|ke karan|ke kaaran) $MKT (hila|gira|chadha|badha|upar gaya|neeche gaya|move hua|move kiya)")
 
     /** The theme and index asked about, or null. Facts only: a forecast, advice, Boss's own book or one day's moves are not this. */
-    fun asked(text: String): Ask? {
+    fun asked(text: String): Ask? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Ask?>(64)
+
+    private fun askedFresh(text: String): Ask? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
         val market = if (BANK_INDEX.containsMatchIn(t)) Market.BANKNIFTY else Market.NIFTY

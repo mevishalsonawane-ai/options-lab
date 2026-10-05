@@ -41,8 +41,7 @@ object DayJournal {
     /** An answer is kept up to this many characters. */
     const val MAX_ANSWER = 400
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")) + " "
 
     private val ASKED = Regex(
         " help (me )?(with |to )?(write |do |fill (in )?)?(my |the |todays |today s )?(trading )?journal" +

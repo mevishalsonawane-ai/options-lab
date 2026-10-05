@@ -50,8 +50,7 @@ object RangeBreaks {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the opening-range record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so it has no opening range, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(rx("[^a-z0-9 ]"), " ")
-        .replace(rx("\\s+"), " ").trim() + " "
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
@@ -82,7 +81,12 @@ object RangeBreaks {
     private const val DOWN = " (down|downside|below|lower|low|neeche|bearish|breakdown|breakdowns) "
 
     /** What was asked, or null. A record of past breaks only: never a forecast, advice, Boss's ORB arms or today's own break. */
-    fun asked(text: String): Q? {
+    fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Q?>(64)
+
+    private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (rx(NOT).containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null

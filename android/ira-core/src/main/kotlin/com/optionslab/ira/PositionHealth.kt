@@ -54,7 +54,7 @@ object PositionHealth {
     /** Index options, cash-settled; every other underlying's options (stocks) are settled by delivery. */
     val INDICES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX", "BANKEX", "SENSEX50")
 
-    private fun norm(text: String) = (" " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " ")
+    private fun norm(text: String) = (" " + spacedWords(text.lowercase()) + " ")
         // The recognizer's and the keyboard's slips (routing audit, round 7): "chek my postions" is this check.
         .replace(rx(" (postions?|positons?|possitions?|posistions?|positiions?|pozitions?|pisitions?)(?= )")) { " position" + if (it.value.endsWith("s")) "s" else "" }
         .replace(rx(" (chek|chk|chck|chec|cheak|chekc)(?= )"), " check")

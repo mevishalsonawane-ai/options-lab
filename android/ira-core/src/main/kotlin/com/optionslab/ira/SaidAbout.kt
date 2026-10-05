@@ -37,8 +37,7 @@ object SaidAbout {
     /** A topic longer than this many words is not a topic (a whole sentence). */
     const val MAX_TOPIC_WORDS = 6
 
-    private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")
-        .replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim()
+    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", ""))
         .replace(rx("^(jarvis|hey jarvis|ok jarvis|okay jarvis|boss|please)( |$)"), "").trim() + " "
 
     private const val SAID = "(say|said|tell you|told you|note|noted|write|wrote|written|mention|mentioned|jot|jotted|journal|journaled|journalled)"
@@ -74,7 +73,12 @@ object SaidAbout {
     private val PRONOUN = Regex("^(it|that|this|them|those|these|me|you|him|her|us|everything|anything|something|all|kuch|ye|yeh|woh|wo|vo)$")
 
     /** Does [text] ask what Boss said about something? The topic as he said it (and the period), or null. */
-    fun asked(text: String): Asked? {
+    fun asked(text: String): Asked? = askedKept.of(text) { askedFresh(text) }
+
+    /** The last words read (speed round 10: the hub reads them as said, then again in its order; [Kept], pure). */
+    private val askedKept = Kept<Asked?>(64)
+
+    private fun askedFresh(text: String): Asked? {
         val t = norm(text)
         for (r in ENGLISH) {
             val m = r.find(t) ?: continue
@@ -118,7 +122,7 @@ object SaidAbout {
 
     /** The words of [text] that a match is made on. */
     fun terms(text: String): List<String> {
-        val t = (" " + text.lowercase(Locale.ENGLISH).replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " ")
+        val t = (" " + spacedWords(text.lowercase(Locale.ENGLISH)) + " ")
             .replace(" bank nifty ", " banknifty ").replace(" bnf ", " banknifty ").replace(" bank nifti ", " banknifty ")
             .replace(" fin nifty ", " finnifty ").replace(" nifty bank ", " banknifty ").replace(" nifty 50 ", " nifty ").replace(" nifty fifty ", " nifty ")
             .replace(" stop loss ", " stoploss ").replace(" sl ", " stoploss ").replace(" stop losses ", " stoploss ")

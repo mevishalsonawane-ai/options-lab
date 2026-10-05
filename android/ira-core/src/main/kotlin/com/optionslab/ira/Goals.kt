@@ -27,7 +27,7 @@ object Goals {
 
     data class Status(val goal: Goal, val text: String, val broken: Boolean, val near: Boolean, val met: Boolean)
 
-    private fun t(s: String) = " " + s.lowercase(Locale.ENGLISH).replace(",", "").replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+    private fun t(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace(",", ""), ".") + " "
 
     private fun amount(s: String): Double? = rx(" (?:rs |inr |₹)?(\\d+(?:\\.\\d+)?) ?(k|thousand|lakh|lac)? ").find(s)?.let { m ->
         val n = m.groupValues[1].toDouble()

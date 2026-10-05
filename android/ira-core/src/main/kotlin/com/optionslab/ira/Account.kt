@@ -155,9 +155,14 @@ object AppAnswers {
         // "Is Kite connected", "is the app working" (audit, 5 Oct): the app's own status.
         rx(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t)
 
-    fun sections(text: String): Set<Section> {
+    fun sections(text: String): Set<Section> = sectioned.of(text) { sectionsFresh(text) }
+
+    /** The last questions' sections (speed round 10: read ahead and again when answered; [Kept], every reader in it pure). */
+    private val sectioned = Kept<Set<Section>>(64)
+
+    private fun sectionsFresh(text: String): Set<Section> {
         // (Read as a question: "aaj kitna kamaya" and a misheard "p and l" ask the P&L too - only what to read, never an action.)
-        val t = " " + Ask.reading(text).lowercase().replace("p&l", "p l").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        val t = " " + spacedWords(Ask.reading(text).lowercase().replace("p&l", "p l")) + " "
         val out = LinkedHashSet<Section>()
         for ((s, r) in WORDS) if (r.containsMatchIn(t)) out += s
         // "My daily stop loss", "stop loss for the day", "max loss per day": the daily loss limit (Boss's words, 3 Oct),

@@ -9,7 +9,7 @@ import kotlin.math.sqrt
 private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
 private fun pts(x: Double) = "%+,.2f".format(Locale.ENGLISH, x)
 private fun pct(x: Double) = "%+.2f%%".format(Locale.ENGLISH, x)
-private fun norm(text: String) = " " + text.lowercase().replace(rx("[^a-z0-9: ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+private fun norm(text: String) = " " + spacedWords(text.lowercase(), ":") + " "
 
 /**
  * How far a market moved over a stretch of time (Jarvis self-improvement, 2026-10-03): "how much did Nifty move in the
