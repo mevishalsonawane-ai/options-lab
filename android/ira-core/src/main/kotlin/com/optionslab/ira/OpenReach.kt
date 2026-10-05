@@ -16,7 +16,10 @@ import kotlin.math.abs
  * open (its high and low against the open), how often it got the size asked ([DEFAULT_PCT]% when none is, or points) or
  * more away on one side, on the other, on both sides or neither, the median reach on each side and on the farther side
  * with its middle half, how often it ended within that size of its open - all days, and the days that first went that far
- * - and the farthest day. Beside today: its reach so far (or how it ended, "ended" only for a whole session). A record of
+ * - and the farthest day. Beside today: its reach so far (or how it ended, "ended" only for a whole session). Reasoning
+ * round 29: when the phone has today from its open, the lead is today's farther reach set in the record by percentile
+ * ([DayAfter.rank]'s shared rule), with the record's share for the size asked, and today's line ranks each side the same
+ * way and says whether today has gone the size asked; a live reach is said as a figure so far set against whole days. A record of
  * past days on this phone, said with its counts and plainly when there are too few; never a forecast or advice; nothing
  * acts. The open as the day's high or low stays [OpenHighLow]'s, the opening range's breaks [RangeBreaks]', the gap
  * [GapRecord]'s, the first move [FirstMove]'s, a fall from the previous close [Comebacks]', the overnight part
@@ -180,6 +183,31 @@ object OpenReach {
             median(days.map { it.upPct }), median(days.map { it.downPct }), median(far), quartile(far, 0.25), quartile(far, 0.75))
     }
 
+    /**
+     * Today's session from the open: [d] its reach so far (or all day), [live] while it trades, [whole] when it ended whole,
+     * else its candles stop at [last].
+     */
+    data class Today(val d: Day, val live: Boolean, val whole: Boolean, val last: LocalTime)
+
+    /** Today's session on the phone from its open (its candles start by 09:20), or null. */
+    fun todayReach(bars: List<Candle>, today: LocalDate, now: LocalDateTime): Today? {
+        val t = MarketStory.sessions(bars).lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() && it.open > 0 } ?: return null
+        // Today's open is only today's open when its candles start at the open.
+        if (t.bars.first().t.toLocalTime().isAfter(LocalTime.of(9, 20))) return null
+        val d = Day(today, t.open, t.bars.maxOf { it.h }, t.bars.minOf { it.l }, t.close)
+        val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
+        return Today(d, live, !live && Comebacks.whole(t), t.bars.last().t.toLocalTime())
+    }
+
+    /**
+     * Where a reach of [pct]% sits among [days]' reaches ([of] picks the side: the farther one, above or below): the share
+     * (0-100) of days that got less far, by [DayAfter.rank]'s shared rule - rounded down, 100 only when every day got less far.
+     */
+    fun percentile(days: List<Day>, pct: Double, of: (Day) -> Double = { it.farPct }): Int =
+        DayAfter.rank(days.count { of(it) < pct }, days.size)
+
+    private fun hm(t: LocalTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
+
     /** [m]'s record from its 1-minute candles over many days, for [q], at [now] on [today]. */
     fun answer(q: Q, m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String {
         val days = past(bars, today)
@@ -188,12 +216,26 @@ object OpenReach {
                 "too few to say how far its days usually get from the open (I need $MIN_SESSIONS)."
         val r = record(days, q.pct, q.pts)
         val size = if (q.pts != null) "${pts(q.pts)} points" else p1(q.pct)
+        val td = todayReach(bars, today, now)
         val lines = ArrayList<String>()
-        // The lead carries the key figure (ShortAnswer's line).
-        lines += "${m.label} went $size or more from its open on ${r.reached} of the last ${r.n} whole sessions on this phone " +
-            "(${share(r.reached, r.n)}), and on both sides of it on ${r.both} (${share(r.both, r.n)})."
+        // A size outside what is counted is corrected first, so the short answer never passes 0.5% days off as the size asked.
         if (q.asked != null)
             lines += "I count sizes of ${p1(MIN_PCT).removeSuffix("%")} to ${p1(MAX_PCT)} only, so that is ${p1(q.pct)}, not the ${p1(q.asked)} asked."
+        // The lead carries the key figure (ShortAnswer's line). Reasoning round 29: when the phone has today from its open,
+        // today's farther reach set in the record by percentile, with the record's share for the size asked; else that share.
+        if (td != null) {
+            val far = p2(td.d.farPct)
+            val rank = percentile(days, td.d.farPct)
+            val so = when {
+                td.live -> "has reached $far from its open so far, farther than $rank% of the last ${r.n} whole sessions did all day"
+                td.whole -> "reached $far from its open, farther than $rank% of the last ${r.n} whole sessions"
+                else -> "reached $far from its open by ${hm(td.last)}, farther than $rank% of the last ${r.n} whole sessions did all day"
+            }
+            lines += "Today ${m.label} $so; ${r.reached} (${share(r.reached, r.n)}) went $size or more."
+            lines += "Of those ${r.n}, ${r.both} (${share(r.both, r.n)}) went that far on both sides of the open."
+        } else
+            lines += "${m.label} went $size or more from its open on ${r.reached} of the last ${r.n} whole sessions on this phone " +
+                "(${share(r.reached, r.n)}), and on both sides of it on ${r.both} (${share(r.both, r.n)})."
         lines += "Above the open only on ${r.aboveOnly}, below it only on ${r.belowOnly}, and it never got that far on ${r.neither} " +
             "(${date(days.first().day)} to ${date(days.last().day)})."
         lines += "The median day reached ${p2(r.medianUp)} above its open and ${p2(r.medianDown)} below it, and ${p2(r.medianFar)} on its farther side " +
@@ -204,25 +246,39 @@ object OpenReach {
         val farSide = if (far.upPct >= far.downPct) "above" else "below"
         lines += "The farthest was ${date(far.day)}, ${p2(far.farPct)} $farSide its open, ending ${s2(far.closePct)} on it."
         if (r.n < FEW_SESSIONS) lines += "That is only ${r.n} days, so a few more would move these shares."
-        todayLine(m, bars, today, now)?.let { lines += it }
+        td?.let { lines += todayLine(m, days, it, q) }
         lines += NOTE
         return lines.joinToString(" ")
     }
 
-    /** Today's reach from its open, when the phone has today's session from the open. */
-    private fun todayLine(m: Market, bars: List<Candle>, today: LocalDate, now: LocalDateTime): String? {
-        val t = MarketStory.sessions(bars).lastOrNull { it.day == today }?.takeIf { it.bars.isNotEmpty() && it.open > 0 } ?: return null
-        // Today's open is only today's open when its candles start at the open.
-        if (t.bars.first().t.toLocalTime().isAfter(LocalTime.of(9, 20))) return null
-        val d = Day(today, t.open, t.bars.maxOf { it.h }, t.bars.minOf { it.l }, t.close)
-        val live = now.toLocalDate() == today && now.toLocalTime().isBefore(CLOSE)
-        val last = t.bars.last().t.toLocalTime()
+    /**
+     * Today's reach from its open on each side, each set in the record by percentile (round 29), whether it has gone the
+     * size asked, and - while it trades - that a reach so far is set against whole days.
+     */
+    private fun todayLine(m: Market, days: List<Day>, td: Today, q: Q): String {
+        val d = td.d
         val reach = "${p2(d.upPct)} above its open and ${p2(d.downPct)} below it"
         // "Ended" only for a whole session; candles that stop early say when they stop.
-        return when {
-            live -> "Today ${m.label} has been $reach so far, and is ${s2(d.closePct)} on the open."
-            Comebacks.whole(t) -> "Today ${m.label} got $reach, and ended ${s2(d.closePct)} on the open."
-            else -> "Today ${m.label} got $reach by ${"%02d:%02d".format(Locale.ENGLISH, last.hour, last.minute)}, where its candles on the phone stop."
+        val head = when {
+            td.live -> "Today ${m.label} has been $reach so far, and is ${s2(d.closePct)} on the open"
+            td.whole -> "Today ${m.label} got $reach, and ended ${s2(d.closePct)} on the open"
+            else -> "Today ${m.label} got $reach by ${hm(td.last)}, where its candles on the phone stop"
         }
+        // A side it never went past the open on is said so, not ranked ("farther than 0%").
+        val above = if (d.upPct > 0) "above, farther than ${percentile(days, d.upPct) { it.upPct }}% of the record's days got above" else "never above it"
+        val below = if (d.downPct > 0) "below, farther than ${percentile(days, d.downPct) { it.downPct }}%${if (d.upPct > 0) "" else " of the record's days"} got below"
+            else "never below it"
+        val sides = "$above, and $below"
+        val line = if (q.pts != null) q.pts / d.open * 100 else q.pct
+        val size = if (q.pts != null) "${pts(q.pts)} points" else p1(q.pct)
+        val up = d.upPct >= line
+        val dn = d.downPct >= line
+        val gone = when {
+            up && dn -> "it has gone $size or more on both sides."
+            up || dn -> "it has gone $size or more ${if (up) "above" else "below"} it only."
+            else -> "it has not gone $size from its open on either side."
+        }
+        val open = if (td.live) " The session is not over: a reach so far can only grow, and here it is set against whole days." else ""
+        return "$head - $sides; $gone$open"
     }
 }

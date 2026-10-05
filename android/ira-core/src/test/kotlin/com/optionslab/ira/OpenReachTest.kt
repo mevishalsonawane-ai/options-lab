@@ -116,18 +116,22 @@ class OpenReachTest {
     @Test fun theAnswer() {
         val bars = nifty(40) + session(today, 25000.0, 25150.0, 24950.0, 25050.0, until = LocalTime.of(12, 0))
         val a = OpenReach.answer(OpenReach.Q(), Market.NIFTY, bars, today, today.atTime(12, 1))
-        assertTrue(a.startsWith("Nifty went 0.5% or more from its open on 30 of the last 40 whole sessions on this phone (75%), and on both sides of it on 10 (25%)."), a)
+        // Round 29: today from its open leads, set in the record by percentile.
+        assertTrue(a.startsWith("Today Nifty has reached 0.60% from its open so far, farther than 25% of the last 40 whole sessions did all day; " +
+            "30 (75%) went 0.5% or more. Of those 40, 10 (25%) went that far on both sides of the open."), a)
         assertTrue("Above the open only on 10, below it only on 10, and it never got that far on 10" in a, a)
         assertTrue("It ended within 0.5% of its open on 20 days (50%), 10 of them after first going that far" in a, a)
         assertTrue("The farthest was" in a && "1.20% below its open" in a, a)
         assertTrue("Today Nifty has been" in a && "so far" in a, a)
-        assertFalse("ended" in a.substringAfter("Today"), a)
+        assertFalse("ended" in a.substringAfter("Today Nifty has been"), a)
+        assertTrue("so far, and is +0.20% on the open - above, farther than 50% of the record's days got above, and never below it; " +
+            "it has gone 0.5% or more above it only. The session is not over" in a, a)
         assertTrue("only 40 days" in a, a)
         assertTrue(a.endsWith(OpenReach.NOTE), a)
         assertFalse(ADVICE.containsMatchIn(a), a)
         // The short line keeps the key figure.
         val line = ShortAnswer.of("how often does nifty go 0.5% from the open", a).line
-        assertTrue("30 of the last 40" in line, line)
+        assertTrue("0.60% from its open so far, farther than 25% of the last 40" in line && "30 (75%)" in line, line)
         // After the close, a whole session: "ended"; one that stopped early says where it stops.
         val whole = nifty(40) + session(today, 25000.0, 25150.0, 24950.0, 25050.0)
         assertTrue("and ended +0.20% on the open" in OpenReach.answer(OpenReach.Q(), Market.NIFTY, whole, today, today.atTime(16, 0)))
@@ -135,11 +139,53 @@ class OpenReachTest {
         assertTrue("by 12:00, where its candles on the phone stop" in early, early)
         assertFalse("ended +" in early, early)
         // Points, a size out of range, too few days, gold.
-        assertTrue(OpenReach.answer(OpenReach.Q(pts = 100.0), Market.NIFTY, bars, today, today.atTime(12, 1)).startsWith("Nifty went 100 points or more"))
-        assertTrue("not the 8% asked" in OpenReach.answer(OpenReach.Q(0.5, asked = 8.0), Market.NIFTY, bars, today, today.atTime(12, 1)))
+        assertTrue(OpenReach.answer(OpenReach.Q(pts = 100.0), Market.NIFTY, bars, today, today.atTime(12, 1)).contains("; 30 (75%) went 100 points or more."))
+        assertTrue(OpenReach.answer(OpenReach.Q(pts = 100.0), Market.NIFTY, nifty(40), today, today.atTime(12, 1)).startsWith("Nifty went 100 points or more"))
+        // A size out of range is corrected first, before the lead.
+        assertTrue(OpenReach.answer(OpenReach.Q(0.5, asked = 8.0), Market.NIFTY, bars, today, today.atTime(12, 1))
+            .startsWith("I count sizes of 0.1 to 5% only, so that is 0.5%, not the 8% asked. Today Nifty has reached"))
         assertTrue(OpenReach.answer(OpenReach.Q(), Market.NIFTY, nifty(10), today, today.atTime(12, 1)).startsWith("I have only 10 whole sessions"))
         assertNull(OpenReach.market(listOf(Market.GOLD)))
         assertEquals(Market.NIFTY, OpenReach.market(emptyList()))
         assertTrue("Boss" in OpenReach.NOT_HERE)
+    }
+
+    /** Round 29: today's reach from the open against the record, by percentile, on the farther side and each side. */
+    @Test fun todayAgainstTheRecord() {
+        val days = OpenReach.past(nifty(40), today)
+        // Farther sides: 0.2% (10 days), 0.8%, 0.7%, 1.2%. DayAfter.rank's rule: ties are not "farther", rounded down, 100
+        // only past every day.
+        assertEquals(0, OpenReach.percentile(days, 0.2))
+        assertEquals(25, OpenReach.percentile(days, 0.65))
+        assertEquals(75, OpenReach.percentile(days, 1.0))
+        assertEquals(76, OpenReach.percentile(days.dropLast(1), 1.0))   // 30 of 39 is 76.9: rounded down
+        assertEquals(100, OpenReach.percentile(days, 1.3))
+        assertEquals(50, OpenReach.percentile(days, 0.6) { it.upPct })
+        assertEquals(0, OpenReach.percentile(emptyList(), 1.0))
+
+        // A whole day today that went 1% below and 0.3% above: farther than 75%, and the size asked gone below only.
+        val whole = nifty(40) + session(today, 25000.0, 25075.0, 24750.0, 24800.0)
+        val td = OpenReach.todayReach(whole, today, today.atTime(16, 0))!!
+        assertTrue(td.whole && !td.live)
+        assertEquals(1.0, td.d.farPct, 1e-9)
+        val a = OpenReach.answer(OpenReach.Q(), Market.NIFTY, whole, today, today.atTime(16, 0))
+        assertTrue(a.startsWith("Today Nifty reached 1.00% from its open, farther than 75% of the last 40 whole sessions; 30 (75%) went 0.5% or more."), a)
+        assertTrue("Today Nifty got 0.30% above its open and 1.00% below it, and ended -0.80% on the open - above, farther than 50% of the record's days " +
+            "got above, and below, farther than 75% got below; it has gone 0.5% or more below it only." in a, a)
+        assertFalse("not over" in a, a)
+        val lead = a.substringBefore(". ") + "."
+        assertEquals(lead, ShortAnswer.trim(lead))
+        assertFalse(ADVICE.containsMatchIn(a), a)
+        // Live: said as a reach so far, set against whole days; candles that stop early say when.
+        val live = nifty(40) + session(today, 25000.0, 25150.0, 24950.0, 25050.0, until = LocalTime.of(12, 0))
+        val l = OpenReach.answer(OpenReach.Q(1.0), Market.NIFTY, live, today, today.atTime(12, 1))
+        assertTrue(l.contains("it has not gone 1% from its open on either side. The session is not over: a reach so far can only grow, and here it is set against whole days."), l)
+        val cut = OpenReach.answer(OpenReach.Q(), Market.NIFTY, live, today, today.atTime(16, 0))
+        assertTrue(cut.startsWith("Today Nifty reached 0.60% from its open by 12:00, farther than 25% of the last 40 whole sessions did all day;"), cut)
+        // Today not from its open: the record leads as before, and no today line.
+        val late = nifty(40) + session(today, 25000.0, 25150.0, 24950.0, 25050.0).filter { it.t.toLocalTime() >= LocalTime.of(10, 0) }
+        assertNull(OpenReach.todayReach(late, today, today.atTime(16, 0)))
+        val noToday = OpenReach.answer(OpenReach.Q(), Market.NIFTY, late, today, today.atTime(16, 0))
+        assertTrue(noToday.startsWith("Nifty went 0.5% or more from its open on 30 of the last 40") && "Today" !in noToday, noToday)
     }
 }
