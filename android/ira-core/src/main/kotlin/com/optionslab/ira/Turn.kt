@@ -30,6 +30,17 @@ object Turn {
         return p
     }
 
+    /**
+     * When Boss finished speaking (elapsed ms), for the spoken-answer wait: the earlier of the last time his words changed
+     * ([wordsAt]) and the recognizer's "speech ended" ([endAt]) - each 0 when not seen this turn, and a time more than
+     * [STALE_MS] old (another turn's) is not taken. Neither: [now] (the wait then counts from the turn's end, as before).
+     * The turn's closing wait and the recognizer's final reading are part of what Boss waits for, so they count too.
+     */
+    fun spokeEnd(wordsAt: Long, endAt: Long, now: Long): Long =
+        listOf(wordsAt, endAt).filter { it > 0 && it <= now && now - it <= STALE_MS }.minOrNull() ?: now
+
+    const val STALE_MS = 20_000L
+
     /** What a question may be about to be answered from its partial reading. */
     private val QUICK = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS,
         Topic.VOLATILITY, Topic.HELP, Topic.GREETING, Topic.EXPLAIN)

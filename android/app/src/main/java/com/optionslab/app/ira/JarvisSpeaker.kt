@@ -45,7 +45,7 @@ object JarvisSpeaker {
                 synchronized(this) {
                     val x = tts ?: return@synchronized
                     ready = status == TextToSpeech.SUCCESS && JarvisVoice.applyStyle(x)
-                    if (ready) waiting?.let { x.speak(it, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+                    if (ready) waiting?.let { sayNow(x, it) }
                     waiting = null
                 }
             }
@@ -60,16 +60,23 @@ object JarvisSpeaker {
         if (android.os.Build.FINGERPRINT == "robolectric") return
         synchronized(this) {
             val t = tts
-            if (t != null && ready) { JarvisVoice.applyStyle(t); t.speak(said, TextToSpeech.QUEUE_FLUSH, null, "reply"); return }
+            if (t != null && ready) { JarvisVoice.applyStyle(t); sayNow(t, said); return }
             waiting = said
             if (t == null) tts = TextToSpeech(context.applicationContext) { status ->
                 synchronized(this) {
                     val x = tts ?: return@synchronized
                     ready = status == TextToSpeech.SUCCESS && JarvisVoice.applyStyle(x)
-                    if (ready) waiting?.let { x.speak(it, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+                    if (ready) waiting?.let { sayNow(x, it) }
                     waiting = null
                 }
             }
+        }
+    }
+
+    /** The first sentence alone, the rest queued behind it: the voice starts before the whole reply is made into sound. */
+    private fun sayNow(t: TextToSpeech, text: String) {
+        com.optionslab.ira.Wake.pieces(text).forEachIndexed { k, p ->
+            t.speak(p, if (k == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "reply.$k")
         }
     }
 

@@ -75,6 +75,28 @@ object Wake {
     }
 
     /**
+     * What is said, in the pieces it is handed to the voice (Boss, 5 Oct: speed): the first sentence alone, the rest
+     * queued behind it in one piece, so the first word is heard as soon as the first sentence is made into sound - not
+     * after the whole answer is. A short answer stays whole (two pieces only add a pause), and a very short first
+     * sentence ("Boss, yes.") is kept with the next. Every word is kept, in order.
+     */
+    fun pieces(text: String): List<String> {
+        val t = text.trim()
+        if (t.length < WHOLE_UNDER) return listOf(t)
+        val parts = Regex("(?<=[.!?])\\s+").split(t).filter { it.isNotBlank() }
+        var first = 0
+        var head = ""
+        while (first < parts.size && head.length < FIRST_AT_LEAST) { head = if (head.isEmpty()) parts[first] else "$head ${parts[first]}"; first++ }
+        val rest = parts.drop(first).joinToString(" ")
+        return if (rest.isEmpty()) listOf(t) else listOf(head, rest)
+    }
+
+    /** Shorter than this, an answer is said in one piece. */
+    const val WHOLE_UNDER = 60
+    /** The first piece holds at least this many characters. */
+    const val FIRST_AT_LEAST = 12
+
+    /**
      * The owner's answer when Jarvis asked a yes-or-no question (a news trade to approve): true for yes, false for no,
      * null when it is neither or unclear. Any "no" word wins over a "yes" ("yes... no, leave it" is a no), so a muddled
      * answer never places a trade.

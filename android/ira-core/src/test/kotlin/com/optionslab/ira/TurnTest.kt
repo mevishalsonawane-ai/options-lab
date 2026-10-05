@@ -43,4 +43,30 @@ class TurnTest {
         assertFalse(Turn.changed("Jarvis, how is nifty?", "Jarvis how is nifty"))
         assertTrue(Turn.changed("Jarvis how is nifty", "Jarvis how is nifty today"))
     }
+
+    @Test fun theWaitCountsFromBossLastWord() {
+        // The earlier of the words' last change and "speech ended".
+        assertEquals(10_000L, Turn.spokeEnd(wordsAt = 10_000, endAt = 10_600, now = 11_500))
+        assertEquals(10_400L, Turn.spokeEnd(wordsAt = 10_900, endAt = 10_400, now = 11_500))
+        // Only one seen, or neither (the turn's end, as before).
+        assertEquals(10_900L, Turn.spokeEnd(10_900, 0, 11_500))
+        assertEquals(10_400L, Turn.spokeEnd(0, 10_400, 11_500))
+        assertEquals(11_500L, Turn.spokeEnd(0, 0, 11_500))
+        // Another turn's stale time, or one from the future, is not taken.
+        assertEquals(40_000L, Turn.spokeEnd(10_000, 0, 40_000))
+        assertEquals(11_500L, Turn.spokeEnd(12_000, 0, 11_500))
+    }
+
+    @Test fun theFirstSentenceIsSpokenWhileTheRestIsMade() {
+        val a = "Boss, Nifty is at 24,512.35, up 0.4 percent today. It holds above the opening range high. Support is 24,400."
+        assertEquals(listOf("Boss, Nifty is at 24,512.35, up 0.4 percent today.", "It holds above the opening range high. Support is 24,400."), Wake.pieces(a))
+        assertEquals(a, Wake.pieces(a).joinToString(" "))
+        // Short answers stay whole; a very short first sentence goes with the next.
+        assertEquals(listOf("Boss, Nifty is up. Bank Nifty is down."), Wake.pieces("Boss, Nifty is up. Bank Nifty is down."))
+        assertEquals(listOf("Boss, yes. Nifty is at 24,512 and holding the opening range.", "Support is near 24,400 and resistance 24,600."),
+            Wake.pieces("Boss, yes. Nifty is at 24,512 and holding the opening range. Support is near 24,400 and resistance 24,600."))
+        // One long sentence: one piece.
+        val one = "Boss, Nifty is at 24,512 and holding above the opening range high with volume picking up"
+        assertEquals(listOf(one), Wake.pieces(one))
+    }
 }

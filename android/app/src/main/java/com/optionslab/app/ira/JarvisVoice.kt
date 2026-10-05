@@ -475,6 +475,8 @@ class JarvisVoice : Service() {
     @Volatile private var turnPartial: String? = null
     /** When this turn's partial words last changed (a repeated reading is no change). */
     @Volatile private var turnPartialAt = 0L
+    /** When the recognizer said "speech ended" this turn (0: not yet), for the reply time from Boss's last word. */
+    @Volatile private var turnEndAt = 0L
     /** This turn was answered from its partial words ([answerEarly]): a late result or error from it is not a new turn. */
     @Volatile private var answeredEarly = false
     /** Turns with clear sound in which the recognizer found no words, in a row (the language may be wrong). */
@@ -720,7 +722,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnSpeech = false; answeredEarly = false
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; answeredEarly = false
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
@@ -750,6 +752,7 @@ class JarvisVoice : Service() {
         // turn is closed for it 0.7 s later (was 1.5 s: Boss, 4 Oct, "late response") (stopListening makes it give its result), not left to a 25 s reset.
         override fun onEndOfSpeech() {
             note("speech ended")
+            if (turnEndAt == 0L) turnEndAt = SystemClock.elapsedRealtime()
             hushBeep(1_200)                               // the end beep
             if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 700) }
         }
@@ -1070,7 +1073,8 @@ class JarvisVoice : Service() {
     @Volatile private var lateWaiting = false
 
     private fun answer(q: String, confirm: Boolean = false, named: Boolean = true) {
-        heardAt = SystemClock.elapsedRealtime()
+        // From Boss's last word (Boss, 5 Oct): the turn's closing wait and the recognizer's final reading count too.
+        heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
         _state.value = VoiceState(Mode.THINKING)
         answerJob = scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
@@ -1173,20 +1177,40 @@ class JarvisVoice : Service() {
         }
         speaking = true
         spokeAt = SystemClock.elapsedRealtime()
-        utterance = "$id#${++said}"
+        val u = "$id#${++said}"
+        utterance = u
         // Hindi replies: an answer is translated by the model (figures checked) and said in the phone's Hindi voice.
         if (hindi && id == "answer") {
-            val u = utterance
             scope.launch {
                 val h = withContext(Dispatchers.Default) { inHindi(text) }
                 val hv = if (h != null) hindiVoice(t) else null
                 if (utterance != u || !speaking || muted) return@launch
                 if (h != null && hv != null) { t.voice = hv; synchronized(applied) { applied.remove(t) } }
-                if (t.speak(spokenName(if (h != null && hv != null) h else text), TextToSpeech.QUEUE_FLUSH, null, u) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
+                if (!speakPieces(t, spokenName(if (h != null && hv != null) h else text), u)) { speaking = false; afterSpeech(id) }
             }
             return
         }
-        if (t.speak(spokenName(text), TextToSpeech.QUEUE_FLUSH, null, utterance) != TextToSpeech.SUCCESS) { speaking = false; afterSpeech(id) }
+        if (!speakPieces(t, spokenName(text), u)) { speaking = false; afterSpeech(id) }
+    }
+
+    /**
+     * Says [text] as utterance [u]: the first sentence alone, the rest queued behind it ([com.optionslab.ira.Wake.pieces]),
+     * so the voice starts once the first sentence is made into sound, not the whole answer (Boss, 5 Oct: speed). Pieces
+     * before the last are "[u].k" (an answer's first sound still starts with its id, for the reply time); [utterance] is
+     * the last piece queued, so speech counts as over only when all of it is said. False: nothing could be said.
+     */
+    private fun speakPieces(t: TextToSpeech, text: String, u: String): Boolean {
+        val parts = com.optionslab.ira.Wake.pieces(text)
+        for ((k, p) in parts.withIndex()) {
+            val uid = if (k == parts.lastIndex) u else "$u.$k"
+            if (t.speak(p, if (k == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, uid) != TextToSpeech.SUCCESS) {
+                if (k == 0) return false
+                // The rest could not be queued: speech ends with the piece already queued.
+                if (utterance == u) utterance = "$u.${k - 1}"
+                return true
+            }
+        }
+        return true
     }
 
     /**
