@@ -1608,7 +1608,7 @@ object IraHub {
                 com.optionslab.ira.BigCandles.asked(q) != null || com.optionslab.ira.ExtremeCloses.asked(q) != null || com.optionslab.ira.WeekRange.asked(q) != null ||
                 com.optionslab.ira.RelativeMove.asked(q) != null || com.optionslab.ira.Comebacks.asked(q) != null || com.optionslab.ira.VixBand.asked(q) != null ||
                 com.optionslab.ira.Overnight.asked(q) != null || com.optionslab.ira.DayAfter.asked(q) != null || com.optionslab.ira.OpenReach.asked(q) != null || com.optionslab.ira.MultiDay.asked(q) != null ||
-                com.optionslab.ira.MoveTime.asked(q) != null ||
+                com.optionslab.ira.MoveTime.asked(q) != null || com.optionslab.ira.GiveBack.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -3310,7 +3310,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, GiveBack, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3730,6 +3730,24 @@ object IraHub {
                 else com.optionslab.ira.MoveTime.answer(moveTimeAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the time-to-move record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "After Nifty runs 100 points in the first hour, how much does it give back by the close?", "how deep is the pullback
+        // after Nifty runs 1%?", "100 point chalne ke baad nifty kitna wapas deta hai": how much of a run from the open the close
+        // gave back in the whole past sessions on the phone, and the deepest pullback inside it ([com.optionslab.ira.GiveBack]),
+        // beside today's run so far. A record of past sessions, never a forecast or advice; market data only (fine on a locked
+        // phone); nothing acts.
+        val giveBackAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.GiveBack.asked(q) }.getOrNull() else null
+        if (giveBackAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.GiveBack.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.GiveBack.NOT_HERE
+                else com.optionslab.ira.GiveBack.answer(giveBackAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the give-back record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true

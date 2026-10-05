@@ -152,6 +152,7 @@ class CollisionTest {
         "OpenReach" to { q -> OpenReach.asked(q) != null },
         "MultiDay" to { q -> MultiDay.asked(q) != null },
         "MoveTime" to { q -> MoveTime.asked(q) != null },
+        "GiveBack" to { q -> GiveBack.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -812,6 +813,14 @@ class CollisionTest {
         // Its neighbours: the busiest half hour, a big 5-minute candle, the first half hour's direction.
         "is the lunch hour usually quiet on banknifty" to "DayClock", "big candle record for finnifty" to "BigCandles",
         "does the first half hour usually decide the day for sensex" to "FirstMove",
+        // ---- GiveBack: how much of a run from the open the close gave back, and the pullback inside it (round 39) ----
+        "after nifty runs 100 points in the first hour how much does it give back by the end of the day" to "GiveBack",
+        "how much of a 1% run from the open does banknifty usually give back" to "GiveBack", "how deep is the pullback after nifty runs 100 points" to "GiveBack",
+        "give back record for sensex" to "GiveBack", "pullback after a run record" to "GiveBack", "100 point chalne ke baad nifty kitna wapas deta hai" to "GiveBack",
+        "how much does finnifty retrace after a 150 point move in the first 30 minutes" to "GiveBack",
+        // Its neighbours: a comeback from the previous close, the reach from the open, the first move's direction, the last hour.
+        "does a 1.5% intraday rally usually hold for banknifty" to "Comebacks", "how far does finnifty usually move from its open" to "OpenReach",
+        "when sensex is up in the first half hour how often does it end up" to "FirstMove", "does finnifty usually reverse in the last hour" to "LastHour",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1289,7 +1298,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -2539,6 +2548,13 @@ class CollisionTest {
             "is it time to buy nifty", "how long does nifty take to move 50 points tomorrow", "how fast did nifty move 50 points today",
             "time to move my stop loss", "how fast does nifty move", "how long before nifty moves 50 points"))
             assertTrue(audit.feature(s) != "MoveTime", "$s: ${audit.feature(s)}")
+        // GiveBack stays the record: never today's or one past day's give-back, a forecast, advice, Boss's own book or stop, a
+        // definition, a run timed in minutes (MoveTime's), gold, VIX or Jarvis's own speed.
+        for (s in listOf("how much did nifty give back today", "how much has nifty given back so far", "will nifty pull back after this run",
+            "should i book profit after nifty runs 100 points", "how much does my option give back after a 100 point run", "what is a pullback",
+            "what is a fibonacci retracement", "how much does nifty give back after running 100 points in 30 minutes", "how fast do you answer",
+            "how much does gold give back after a 1% run", "should i trail my stop after a 100 point run", "nifty pullback kab aayega"))
+            assertTrue(audit.feature(s) != "GiveBack", "$s: ${audit.feature(s)}")
         // MultiDay and OpenReach stay records: never one past stretch, today's own read or now.
         for (s in listOf("what was the 3 day move in nifty", "nifty 3 din se upar hai", "is nifty up in 3 days"))
             assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")

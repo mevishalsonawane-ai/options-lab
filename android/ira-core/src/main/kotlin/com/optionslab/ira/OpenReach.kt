@@ -122,7 +122,9 @@ object OpenReach {
         "today|todays|aaj|aj|now|right now|abhi|so far|this morning|since|yesterday|yesterdays|last time|when did|" +
         "gap|gaps|gapped|opening|open high|open low|open is|open was|open the high|open the low|open equals|first|last hour|closing hour|" +
         "overnight|night|raat|next day|day after|agle din|candle|candles|week|weekly|weeks|hafte|month|monthly|year|yearly|expiry|expiries|" +
-        "call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|straddle|strangle|gold|vix|fear|position|positions|portfolio|stop|stops|sl) ")
+        "call|calls|put|puts|premium|premiums|option|options|ce|pe|strike|straddle|strangle|gold|vix|fear|position|positions|portfolio|stop|stops|sl|" +
+        // How much of a run from the open was given back is GiveBack's record (round 39).
+        "give back|gives back|gave back|giving back|given back|retrace|retraces|retracement|pullback|pullbacks|pull back|pulls back) ")
     /**
      * A day of the week (Weekdays'), a part of the day or a clock time ("in the morning", "afternoons", "2 pm", "after 2
      * pm": the day's own clock, not the whole day's reach), and a count of sessions ("in 3 sessions", "3 day move":
