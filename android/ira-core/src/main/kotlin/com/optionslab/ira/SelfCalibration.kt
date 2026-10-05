@@ -50,7 +50,7 @@ object SelfCalibration {
     /** The conditions [c] falls in, one per kind of condition known. */
     fun tags(c: Conditions): List<Tag> {
         val out = ArrayList<Tag>()
-        out += Tag(Dim.KIND, c.kind, "${c.kind} ideas")
+        out += Tag(Dim.KIND, c.kind, if (c.kind == SoloCalibration.KIND) SoloCalibration.WHO else "${c.kind} ideas")
         out += Tag(Dim.INDEX, c.market.name, "on ${c.market.label}")
         val m = c.at.hour * 60 + c.at.minute
         out += when {
@@ -95,15 +95,15 @@ object SelfCalibration {
         /** Making money, its win rate over a half even allowing for luck (said only; it never raises any risk). */
         val strong: Boolean get() = enough && net > 0 && rate - z * se > 0.5
 
-        /** "pattern hammer ideas in sideways markets", "my ideas on Nifty". */
-        fun what(): String {
+        /** "pattern hammer ideas in sideways markets", "my ideas on Nifty" ([who]: what they are called with no kind named). */
+        fun what(who: String = "my ideas"): String {
             val k = tags.firstOrNull { it.dim == Dim.KIND }
             val rest = tags.filter { it.dim != Dim.KIND }.joinToString(" ") { it.phrase }
-            return listOfNotNull(k?.phrase ?: "my ideas", rest.ifEmpty { null }).joinToString(" ")
+            return listOfNotNull(k?.phrase ?: who, rest.ifEmpty { null }).joinToString(" ")
         }
 
         /** "9 ideas, 2 worked, -38.0 points a unit". */
-        fun record(): String = "$n idea${if (n == 1) "" else "s"}, $wins worked, " + "%+.1f points a unit".format(Locale.ENGLISH, net)
+        fun record(noun: String = "idea"): String = "$n $noun${if (n == 1) "" else "s"}, $wins worked, " + "%+.1f points a unit".format(Locale.ENGLISH, net)
     }
 
     /** Only what still counts: the last [WINDOW_DAYS] days before [today] and today. */

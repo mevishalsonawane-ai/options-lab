@@ -1458,7 +1458,10 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch {
-                reply(runCatching { com.optionslab.ira.SelfCalibration.say(IraNewsTrades.calibration(), com.optionslab.app.data.Market.today()) }
+                val today = com.optionslab.app.data.Market.today()
+                // And Solo's own paper trades, judged the same way (only when Solo has any scored).
+                val solo = runCatching { com.optionslab.ira.SoloCalibration.say(IraSolo.calibration(), today) }.getOrNull()
+                reply(runCatching { com.optionslab.ira.SelfCalibration.say(IraNewsTrades.calibration(), today) + (solo?.let { " $it" } ?: "") }
                     .getOrElse { "I could not read my record just now, Boss." })
             }
             return

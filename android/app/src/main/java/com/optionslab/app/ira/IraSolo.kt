@@ -3,7 +3,9 @@ package com.optionslab.app.ira
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Paper
 import com.optionslab.ira.Candle
+import com.optionslab.ira.SelfCalibration
 import com.optionslab.ira.Solo
+import com.optionslab.ira.SoloCalibration
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -26,6 +28,8 @@ internal object IraSolo {
     private const val KEY_PAUSED = "jarvis.solo.paused"
     private const val KEY = "jarvis.solo.trades"
     private const val KEY_FROM = "jarvis.solo.from"
+    /** The trades Solo sat out by its own record, followed on paper as if taken (no order) - see [SoloCalibration]. */
+    private const val KEY_SHADOWS = "jarvis.solo.shadows"
     private val IST = ZoneId.of("Asia/Kolkata")
     private val MARKETS = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY)
 
@@ -74,7 +78,9 @@ internal object IraSolo {
                  val entryMinute: Int, val index: Double, val level: Double, val target: Double, val why: String,
                  val closed: Boolean = false, val exitPrice: Double? = null, val net: Double? = null, val exit: String? = null,
                  /** The paper order ids of the entry and the exit (for the order book: "who placed it, which order"). */
-                 val orderId: String? = null, val exitOrderId: String? = null)
+                 val orderId: String? = null, val exitOrderId: String? = null,
+                 /** The conditions it came in, kept so Solo can judge itself by them ([SoloCalibration]); null: not known then. */
+                 val regime: String? = null, val ivRank: Double? = null)
 
     fun all(): List<T> = runCatching {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
@@ -82,7 +88,8 @@ internal object IraSolo {
             T(o.getString("d"), o.getString("m"), o.getString("s"), o.getBoolean("c"), o.getInt("q"), o.getDouble("e"), o.getInt("em"),
                 o.getDouble("i"), o.getDouble("lv"), o.getDouble("tg"), o.getString("w"), o.optBoolean("x"),
                 if (o.has("xp")) o.getDouble("xp") else null, if (o.has("n")) o.getDouble("n") else null, o.optString("xr").ifEmpty { null },
-                o.optString("oid").ifEmpty { null }, o.optString("xoid").ifEmpty { null })
+                o.optString("oid").ifEmpty { null }, o.optString("xoid").ifEmpty { null },
+                o.optString("rg").ifEmpty { null }, if (o.has("iv")) o.getDouble("iv") else null)
         } }.getOrNull() }
     }.getOrDefault(emptyList())
 
@@ -91,8 +98,68 @@ internal object IraSolo {
             put(JSONObject().put("d", t.day).put("m", t.market).put("s", t.symbol).put("c", t.call).put("q", t.qty).put("e", t.entry)
                 .put("em", t.entryMinute).put("i", t.index).put("lv", t.level).put("tg", t.target).put("w", t.why).put("x", t.closed)
                 .apply { t.exitPrice?.let { put("xp", it) }; t.net?.let { put("n", it) }; t.exit?.let { put("xr", it) }
-                    t.orderId?.let { put("oid", it) }; t.exitOrderId?.let { put("xoid", it) } })
+                    t.orderId?.let { put("oid", it) }; t.exitOrderId?.let { put("xoid", it) }
+                    t.regime?.let { put("rg", it) }; t.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) } })
         } }.toString())
+    }
+
+    // ---- self-calibration (Solo judged by its own record; it only ever makes Solo more careful on paper) --------------
+
+    /** The conditions a Solo trade came in (null: its day or market could not be read). */
+    private fun conditionsOf(t: T): SelfCalibration.Conditions? = runCatching {
+        SoloCalibration.conditions(LocalDate.parse(t.day), t.entryMinute, IraMarket.valueOf(t.market), t.call,
+            t.regime?.let { com.optionslab.ira.Regime.Kind.valueOf(it) }, t.ivRank)
+    }.getOrNull()
+
+    private fun shadows(): List<SoloCalibration.Shadow> = runCatching {
+        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY_SHADOWS) ?: "[]")
+        (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
+            SoloCalibration.Shadow(SelfCalibration.Conditions(java.time.LocalDateTime.parse(o.getString("at")), IraMarket.valueOf(o.getString("m")),
+                o.getBoolean("c"), SoloCalibration.KIND, o.optString("rg").ifEmpty { null }?.let { com.optionslab.ira.Regime.Kind.valueOf(it) },
+                if (o.has("iv")) o.getDouble("iv") else null),
+                o.getString("s"), o.getInt("q"), o.getDouble("e"), o.getInt("du"), if (o.has("x")) o.getDouble("x") else null,
+                if (o.has("i")) o.getDouble("i") else null)
+        } }.getOrNull() }
+    }.getOrDefault(emptyList())
+
+    private fun saveShadows(list: List<SoloCalibration.Shadow>) = runCatching {
+        com.optionslab.app.security.SecurePrefs.put(KEY_SHADOWS, JSONArray().apply { list.forEach { x ->
+            put(JSONObject().put("at", x.c.at.toString()).put("m", x.c.market.name).put("c", x.c.call).put("s", x.symbol).put("q", x.qty)
+                .put("e", x.entry).put("du", x.due)
+                .apply { x.c.regime?.let { put("rg", it.name) }; x.c.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) }
+                    x.exit?.let { put("x", it) }; x.spot?.let { put("i", it) } })
+        } }.toString())
+    }
+
+    /** Solo's own record to judge itself by: its closed paper trades and the sat-out trades scored as if taken. */
+    fun calibration(list: List<T> = all()): List<SelfCalibration.Outcome> = SoloCalibration.outcomes(
+        list.filter { it.closed }.mapNotNull { t -> conditionsOf(t)?.let { SoloCalibration.outcome(it, t.net, t.qty) } }, shadows())
+
+    /** Scores the sat-out trades whose time is up (the option's bid then); an earlier day's unscored one is dropped. */
+    private suspend fun settleShadows(today: LocalDate, now: Int) {
+        val all = shadows()
+        val due = SoloCalibration.dueNow(all, today, now)
+        val kept = SoloCalibration.prune(all, today)
+        if (due.isEmpty()) { if (kept.size != all.size) saveShadows(kept); return }
+        val done = HashMap<SoloCalibration.Shadow, Double>()
+        for (x in due) {
+            val c = Paper.contractOf(x.symbol)
+                ?: x.spot?.let { IraNewsTrades.contract(x.c.market.name, it, x.c.call) }?.takeIf { it.symbol == x.symbol } ?: continue
+            val q = runCatching { Paper.quote(c) }.getOrNull() ?: continue
+            SoloCalibration.sellPrice(q.bid, q.ltp)?.let { done[x] = it }
+        }
+        saveShadows(kept.map { x -> done[x]?.let { x.copy(exit = it) } ?: x })
+    }
+
+    /** A trade Solo sits out by its own record: followed on paper as if taken (no order), one at a time a market. */
+    private suspend fun shadow(m: IraMarket, sig: Solo.Signal, cond: SelfCalibration.Conditions, horizon: Int, why: String?) {
+        val all = shadows()
+        if (!SoloCalibration.mayShadow(all, m)) return
+        val c = IraNewsTrades.contract(m.name, sig.index, sig.call) ?: return
+        val q = runCatching { Paper.quote(c) }.getOrNull() ?: return
+        val x = SoloCalibration.shadow(cond, c.symbol, c.lotSize, q.ask, q.ltp, sig.entryMinute, horizon, sig.index) ?: return
+        saveShadows(all + x)
+        IraActivity.add("Solo sat out a ${m.label} ${if (sig.call) "call" else "put"}" + (why?.let { ": $it." } ?: ": my record could not be read."))
     }
 
     private val lock = Mutex()
@@ -262,6 +329,8 @@ internal object IraSolo {
         val now = minuteNow()
         // The brains learn every pass, Solo on or off.
         learnTick(today, now)
+        // The trades Solo sat out are scored when their time is up (paper only, no order).
+        runCatching { settleShadows(today, now) }
         val list = all()
         // An open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, today, now); return@withLock }
@@ -308,12 +377,24 @@ internal object IraSolo {
                 if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text, solo = true)) synchronized(offered) { offered += key }
                 return@withLock
             }
-            enter(m, sig, list, today, read)
+            // Its own record, by the conditions this trade comes in: where it is clearly bad Solo sits out (and follows
+            // the trade on paper as if taken, so the condition can earn its way back); where it is losing, one a day at most.
+            // It only ever stops or limits Solo's own paper trades. (Read failing: sat out - the careful side.)
+            val regimeNow = runCatching { IraStudy.regimeOf(m) }.getOrNull()
+            val ivNow = runCatching { IraNewsTrades.ivNow(com.optionslab.ira.NewsTrade.Idea(m, call, sig.why, kind = "solo"), ix)?.first }.getOrNull()
+            val cond = SoloCalibration.conditions(today, sig.entryMinute, m, call, regimeNow, ivNow)
+            val decision = runCatching { SoloCalibration.decide(calibration(list), cond, list.filter { it.day == today.toString() }.mapNotNull { conditionsOf(it) }) }.getOrNull()
+            if (decision == null || !decision.take) {
+                runCatching { shadow(m, sig, cond, mind.h, decision?.text()) }
+                continue
+            }
+            enter(m, sig, list, today, read, cond, decision.text())
             return@withLock
         }
     }
 
-    private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate, read: String) {
+    private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate, read: String,
+                              cond: SelfCalibration.Conditions? = null, careful: String? = null) {
         val u = m.name
         val c = IraNewsTrades.contract(u, sig.index, sig.call) ?: return
         // Boss's own paper position in this contract is never mixed with Solo's (its stop and close would touch it).
@@ -334,13 +415,13 @@ internal object IraSolo {
         val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stopPx, null, null)
         if (!prot.startsWith("Protected")) IraActivity.add("Solo: the stop-loss on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
         val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why,
-            orderId = r.orderId)
+            orderId = r.orderId, regime = cond?.regime?.name, ivRank = cond?.ivRank)
         save(list + t)
         val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}" +
             (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") + ". Why: ${sig.why}. Out if ${m.label} " +
             "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest. " +
             "Stop-loss on the option at ${"%.2f".format(kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05)} (30% down)." +
-            (if (read.isNotEmpty()) " My read: $read" else "")
+            (if (read.isNotEmpty()) " My read: $read" else "") + (careful?.let { " Careful: $it." } ?: "")
         tell(line)
         IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo · entry", r.orderId) }
     }

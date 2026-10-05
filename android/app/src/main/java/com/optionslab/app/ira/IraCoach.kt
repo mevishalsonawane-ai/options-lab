@@ -498,12 +498,20 @@ internal object IraCoach {
         fun keys(s: String?): Set<String> = s.orEmpty().split('\t').filter { it.isNotBlank() }.toSet()
         val calibBefore = savedCalib?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
         val calibNow = runCatching { com.optionslab.ira.SelfCalibration.sitOutKeys(outcomes, day) }.getOrDefault(emptySet())
-        val calibration = runCatching { com.optionslab.ira.SelfCalibration.review(outcomes, day, calibBefore) }.getOrDefault(emptyList())
+        // And Solo's own paper trades, by the same rules (kept under their own key: a separate record).
+        val soloKey = "jarvis.review.calib.solo"
+        val soloOutcomes = runCatching { IraSolo.calibration() }.getOrDefault(emptyList())
+        val savedSolo = com.optionslab.app.security.SecurePrefs.getString(soloKey)?.split('\n')
+        val soloBefore = savedSolo?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
+        val soloNow = runCatching { com.optionslab.ira.SelfCalibration.sitOutKeys(soloOutcomes, day) }.getOrDefault(emptySet())
+        val calibration = runCatching { com.optionslab.ira.SelfCalibration.review(outcomes, day, calibBefore) }.getOrDefault(emptyList()) +
+            runCatching { com.optionslab.ira.SoloCalibration.review(soloOutcomes, day, soloBefore) }.getOrDefault(emptyList())
         val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration))
         com.optionslab.app.security.SecurePrefs.put(key, "$bar|$today|${before ?: bar}")
         com.optionslab.app.security.SecurePrefs.put(calibKey, calibNow.joinToString("\t") + "\n" + today + "\n" + (calibBefore ?: calibNow).joinToString("\t"))
+        com.optionslab.app.security.SecurePrefs.put(soloKey, soloNow.joinToString("\t") + "\n" + today + "\n" + (soloBefore ?: soloNow).joinToString("\t"))
         said?.let { IraActivity.add(it) }
         said
     }.getOrNull()
