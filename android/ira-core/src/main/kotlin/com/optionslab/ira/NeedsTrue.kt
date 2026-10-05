@@ -1,8 +1,11 @@
 package com.optionslab.ira
 
+import com.optionslab.engine.options.OptionMath
+import com.optionslab.engine.options.OptionType
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -23,7 +26,9 @@ import kotlin.math.abs
  *     the past stretches of the same length on the phone - past stretches, never odds or a forecast;
  *  6. time decay - what each day costs a buyer or pays a seller;
  *  7. (reasoning, round 25) today's move in the underlying beside its own intraday comeback record and its average
- *     day's range, said for each option on it - the way it needs or against it, and how often such a move held or came back.
+ *     day's range, said for each option on it - the way it needs or against it, and how often such a move held or came back;
+ *  8. (reasoning, round 30) for a bought option in a live session, the index move that just covers the rest of today's
+ *     decay at its delta now, and how often and how soon the index went that far from this time of day on the phone.
  *
  * At-expiry arithmetic only, charges left out, said so. Facts, never advice: it ends "your call, Boss". Nothing here
  * places, changes or closes anything; it reads the account, so the app answers it on an unlocked phone only, like every
@@ -238,7 +243,121 @@ object NeedsTrue {
             out += "Time: decay about ${AppFacts.rs(day)} a day on the position (${p2(abs(th))} a unit) - " +
                 (if (long) "each day without the move costs a buyer about that." else "each quiet day pays a seller about that.")
         }
+        // Reasoning, round 30: for a bought option in a live session, the move that covers the rest of today's decay, and how
+        // often and how soon the index went that far from this time of day on the phone.
+        thetaCover(p, bars, now, isTradingDay)?.let { out += it }
         return out
+    }
+
+    /** The session's open; its length in minutes (09:15 to 15:30). */
+    private val OPEN: LocalTime = LocalTime.of(9, 15)
+    const val SESSION_MINUTES = 375
+    /** Below this delta (either sign) the index's move hardly reaches the option's price: no cover is worked out. */
+    const val MIN_DELTA = 0.02
+    private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
+
+    /**
+     * The delta of option [p] now, worked from its price, spot and expiry ([OptionMath.legGreeks], spot as the forward, as
+     * the app works its greeks), or null when it cannot be (no spot or expiry, or no time value to read an IV from). Pure.
+     */
+    fun deltaNow(p: PositionHealth.Pos, now: LocalDateTime): Double? {
+        if (!p.option) return null
+        val s = p.spot?.takeIf { it > 0 } ?: return null
+        val e = p.expiry ?: return null
+        val t = OptionMath.timeToExpiryYears(now.atZone(IST), e)
+        val g = runCatching { OptionMath.legGreeks(if (p.right == "CE") OptionType.CE else OptionType.PE, s, p.strike!!, t, p.ltp) }.getOrNull() ?: return null
+        return g.greeks.delta.takeIf { !g.theoretical && it.isFinite() }
+    }
+
+    /**
+     * The decay per unit still to come in today's session for a bought option: on its expiry day, the [timeValue] left in it
+     * (all gone by 15:30); otherwise one day's [theta] (per calendar day, as the app works it) spread evenly over the
+     * session's [SESSION_MINUTES] minutes, times the [minutesLeft]. Null when there is nothing to cover. Pure.
+     */
+    fun decayLeftToday(theta: Double?, minutesLeft: Int, expiresToday: Boolean, timeValue: Double?): Double? {
+        if (minutesLeft <= 0) return null
+        val d = if (expiresToday) timeValue else theta?.let { abs(it) * minOf(minutesLeft, SESSION_MINUTES) / SESSION_MINUTES }
+        return d?.takeIf { it.isFinite() && it > 0.005 }
+    }
+
+    /**
+     * The phone's record of a move of a fraction (0.004 = 0.4%) from one time of day to the close: over [days] whole
+     * sessions, how many [reached] that far the way asked at some minute before the close (by the candles' highs or lows),
+     * the median minutes it took on those days ([medianMinutes]), and how many [held] that far at the close.
+     */
+    data class Cover(val days: Int, val reached: Int, val held: Int, val medianMinutes: Int?)
+
+    /**
+     * [Cover] from 1-minute [bars]: on each whole session before [today], from the price at [from] (the last candle at or
+     * before it; before the session's first candle, its opening price) to the close, a move of [frac] up ([up]) or down. Pure.
+     */
+    fun coverRecord(bars: List<Candle>, today: LocalDate, from: LocalTime, frac: Double, up: Boolean): Cover {
+        val days = bars.filter { it.t.toLocalDate() < today }.groupBy { it.t.toLocalDate() }
+            .filterValues { it.size >= FULL }.values.map { s -> s.sortedBy { it.t } }
+        var n = 0; var reached = 0; var held = 0
+        val minutes = ArrayList<Int>()
+        for (d in days) {
+            val atOrBefore = d.lastOrNull { !it.t.toLocalTime().isAfter(from) }
+            val start = atOrBefore?.c ?: d.first().o
+            if (!(start > 0)) continue
+            // From the open, the first candle counts (its high or low is a move from the opening price).
+            val rest = if (atOrBefore == null) d else d.filter { it.t.toLocalTime().isAfter(from) }
+            if (rest.isEmpty()) continue
+            n++
+            val goal = if (up) start * (1 + frac) else start * (1 - frac)
+            val hit = rest.firstOrNull { if (up) it.h >= goal else it.l <= goal }
+            if (hit != null) {
+                reached++
+                val began = atOrBefore?.t ?: d.first().t.minusMinutes(1)
+                minutes += maxOf(1, ChronoUnit.MINUTES.between(began, hit.t).toInt())
+            }
+            if (if (up) rest.last().c >= goal else rest.last().c <= goal) held++
+        }
+        val med = minutes.sorted().takeIf { it.isNotEmpty() }?.let { s -> if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2] + 1) / 2 }
+        return Cover(n, reached, held, med)
+    }
+
+    private fun mins(m: Int) = if (m < 60) "$m min" else if (m % 60 == 0) "${m / 60} h" else "${m / 60} h ${m % 60} min"
+    private fun rs0(x: Double) = "Rs " + n0(abs(x))
+
+    /**
+     * Reasoning, round 30 (2026-10-05): for a bought option [p] in a live session on a trading day, the decay still to come
+     * today ([decayLeftToday]), the index move that just makes it back at the option's delta now ([deltaNow]) - points,
+     * percent and which way - and the phone's record ([coverRecord]) of how often, and how soon, the index went that far from
+     * this time of day before the close, and how often it was still that far at the close. Delta held still (said so). Past
+     * sessions, never odds, a forecast or advice; nothing acts. Null when it does not apply (sold, not an option, no spot,
+     * theta or delta, the session over, not a trading day). Pure.
+     */
+    fun thetaCover(p: PositionHealth.Pos, bars: List<Candle>, now: LocalDateTime, isTradingDay: (LocalDate) -> Boolean): String? {
+        if (!p.option || p.qty <= 0) return null
+        val today = now.toLocalDate()
+        val e = p.expiry ?: return null
+        if (e.isBefore(today) || !isTradingDay(today) || !now.toLocalTime().isBefore(CLOSE)) return null
+        val spot = p.spot?.takeIf { it > 0 } ?: return null
+        val preOpen = now.toLocalTime().isBefore(OPEN)
+        val from = if (preOpen) OPEN else now.toLocalTime()
+        val left = ChronoUnit.MINUTES.between(from, CLOSE).toInt()
+        val itm = p.itmBy ?: return null
+        val expiresToday = e == today
+        val unit = decayLeftToday(p.theta, left, expiresToday, maxOf(0.0, p.ltp - maxOf(0.0, itm))) ?: return null
+        val delta = deltaNow(p, now)?.takeIf { abs(it) >= MIN_DELTA } ?: return null
+        val name = label(p.underlying)
+        val call = p.right == "CE"
+        val points = unit / abs(delta)
+        val frac = points / spot
+        val way = if (call) "up" else "down"
+        val onPos = unit * p.qty
+        val whatLeft = if (expiresToday) "the ${rs0(onPos)} of time value left on the position is gone by 15:30"
+            else "about ${rs0(onPos)} of decay is still to come on the position today (one day's theta spread over the session, ${mins(left)} left)"
+        val head = "Covering today's decay: $whatLeft. At its delta of ${"%.2f".format(Locale.ENGLISH, abs(delta))} now, $name has to move about " +
+            "${n0(points)} points (${pc(frac)}) $way, your way, just to make that back."
+        val r = coverRecord(bars, today, if (preOpen) LocalTime.of(9, 14) else from, frac, call)
+        if (r.days < MIN_STRETCHES) return "$head Too few whole sessions of $name on the phone (${r.days}) to say how often it moved that far from this time of day."
+        val since = if (preOpen) "from the open" else "from %02d:%02d".format(from.hour, from.minute)
+        val soon = r.medianMinutes?.let { ", at a median of ${mins(it)} in" } ?: ""
+        return "$head On the record $since, it went that far $way before the close on ${r.reached} of the last ${r.days} whole sessions on the phone " +
+            "(${pct(r.reached, r.days)})$soon, and was still that far $way at the close on ${r.held} (${pct(r.held, r.days)}). " +
+            "Delta held still - gamma, IV and the clock move it."
     }
 
     /** The smallest move from the previous close set beside the comeback record (in %). */
