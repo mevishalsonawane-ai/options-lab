@@ -867,6 +867,25 @@ object IraHub {
         IraActivity.add("Asked: $text")
     }
 
+    /**
+     * A wording learned only on Boss's yes ([com.optionslab.ira.Corrections.propose]): asked once, and on the yes checked
+     * again - the phone still unlocked and the wording still a question that does not act - before it is kept.
+     */
+    private fun offerWording(l: com.optionslab.ira.Corrections.Learned) {
+        IraTools.offered(l)
+        scope.launch {
+            kotlinx.coroutines.delay(300)
+            // A plain label (Boss's words stay out of the diagnostics log).
+            offer("learn a wording you rephrased", "Boss, shall I learn this?", com.optionslab.ira.Corrections.offer(l), suspend {
+                when {
+                    phoneLocked() -> "Unlock the phone for that, Boss: nothing was learned."
+                    !com.optionslab.ira.Corrections.safe(l) -> "Nothing was learned, Boss: that would not be a question."
+                    else -> { IraTools.teach(l); com.optionslab.ira.Corrections.kept(l) }
+                }
+            }, alwaysAsk = true)
+        }
+    }
+
     /** Boss's "do it automatically" / "ask me before stopping" (default: asked). Never taken from a backup. */
     var autoStop: Boolean
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.auto.stop", false) }.getOrDefault(false)
@@ -1118,11 +1137,29 @@ object IraHub {
         // Only the very next words after a missed question may teach it (Boss's rephrase).
         if (!understood) runCatching { IraTools.asked(q) }
         // What Boss's corrections taught: misunderstood words read as meant (questions only, never anything that acts).
-        val learnedAs = runCatching { com.optionslab.ira.Corrections.apply(q, IraTools.learned()) }.getOrNull()
-        if (learnedAs != null && !understood && !lockedAccount(q, learnedAs)) {
+        val learnedHit = runCatching { com.optionslab.ira.Corrections.match(q, IraTools.learned()) }.getOrNull()
+        val learnedAs = learnedHit?.right
+        if (learnedHit != null && learnedAs != null && !understood && !lockedAccount(q, learnedAs)) {
+            // Used: it stays another 60 days (one unused that long is forgotten).
+            scope.launch(Dispatchers.IO) { runCatching { IraTools.usedLearned(learnedHit) } }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$learnedAs\".")).takeLast(MAX_MESSAGES)) }
             ask(learnedAs, understood = true)
             return
+        }
+        // "What words have you learned?" / "forget the word X": his learned wordings, listed or dropped - Boss's own words,
+        // so only on an unlocked phone, and only as said by him (never from a guess or a learned reading).
+        if (!understood) {
+            val wordsAsked = runCatching { com.optionslab.ira.Corrections.wordsAsked(q) }.getOrDefault(false)
+            val forgetWord = runCatching { com.optionslab.ira.Corrections.forgetWordAsked(q) }.getOrNull()
+            if (wordsAsked || forgetWord != null) {
+                val said = when {
+                    phoneLocked() -> "Unlock the phone for that, Boss."
+                    forgetWord != null -> com.optionslab.ira.Corrections.forgot(runCatching { IraTools.forgetWord(forgetWord) }.getOrDefault(emptyList()), forgetWord)
+                    else -> com.optionslab.ira.Corrections.words(IraTools.learned(), com.optionslab.app.data.Market.today())
+                }
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+                return
+            }
         }
         // A short follow-up ("and BankNifty?", "why?", "what are the levels?") asks again about the last question
         // (questions only), when that was asked in the last five minutes.
@@ -1132,7 +1169,8 @@ object IraHub {
         // could act are never split or cleaned, and go on as said). Any part about the account on a locked phone: as said.
         if (!understood && !cleaned && !com.optionslab.ira.Sources.asked(q) &&
             // Asked of his memory as said ("what do you know about me", "what did I tell you"): never read as anything else.
-            !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) }.getOrDefault(false)) {
+            !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) ||
+                com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1533,8 +1571,11 @@ object IraHub {
             return
         }
         IraTools.count("heard")
-        // Just after "that was wrong", a question understood is what was meant: learned.
-        if (parsed.command == null && Topic.OFF_TOPIC !in parsed.topics) runCatching { IraTools.maybeLearn(q) }.getOrNull()?.let { said -> scope.launch { kotlinx.coroutines.delay(300); reply(said) } }
+        // Just after a missed question or "that was wrong" (a minute at most), a question understood may be what was
+        // meant: put to Boss ("Shall I take ... to mean ...?"), kept only on his yes - on an unlocked phone, never in
+        // IraGoldAlgo, and never anything that acts (checked when proposed, again on the yes, and again when used).
+        if (parsed.command == null && Topic.OFF_TOPIC !in parsed.topics) runCatching { IraTools.proposal(q) }.getOrNull()
+            ?.takeIf { !understood && !phoneLocked() && !com.optionslab.app.BuildConfig.GOLD }?.let { l -> offerWording(l) }
         // Small talk ("how are you", "thanks", "who are you"): answered at once, in different words each time. Only words
         // that neither order nor command anything.
         if (parsed.command == null && parsed.order == null && Topic.COMMAND !in parsed.topics && Topic.ORDER !in parsed.topics)
@@ -1968,8 +2009,10 @@ object IraHub {
         val i = ms.indexOfLast { !it.fromIra && it.text == said }
         if (i < 0) return null
         val after = ms.drop(i + 1)
-        // "Got it, Boss: next time..." (a learned wording) is a note beside the answer, not the answer.
+        // "Got it, Boss: next time..." and "Shall I take ... to mean ...?" (a wording to learn) are notes beside the
+        // answer, not the answer.
         val real = after.filter { it.fromIra && !it.text.startsWith(LEARNED_NOTE) && !it.text.startsWith(CHAIN_NOTE) &&
+            !it.text.startsWith(com.optionslab.ira.Corrections.OFFER) &&
             !it.text.startsWith(com.optionslab.ira.Latency.NUDGE) }
         val first = real.firstOrNull() ?: return null
         if (!first.text.startsWith(TOOK_AS)) return first

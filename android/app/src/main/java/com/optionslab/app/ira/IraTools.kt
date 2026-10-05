@@ -36,7 +36,7 @@ internal object IraTools {
         count("mistakes")
         IraActivity.add("Marked wrong: \"$said\".")
         awaiting = said to System.currentTimeMillis()
-        return "Sorry, Boss. I've noted it: you said \"$said\". Say it another way and I'll learn what you meant."
+        return "Sorry, Boss. I've noted it: you said \"$said\". Say it another way and I'll ask whether to learn what you meant."
     }
 
     // ---- which kinds of answer he gets wrong ([com.optionslab.ira.SelfDoubt]) --------------------------------------
@@ -252,15 +252,47 @@ internal object IraTools {
 
     private const val LEARNED = "jarvis.learned"
 
-    fun learned(): List<com.optionslab.ira.Corrections.Learned> = runCatching {
+    /**
+     * The wordings learned and still in use: one unused for [com.optionslab.ira.Corrections.EXPIRE_DAYS] days is dropped
+     * (and one kept before days were noted counts from today).
+     */
+    @Synchronized fun learned(): List<com.optionslab.ira.Corrections.Learned> = runCatching {
         val a = JSONArray(prefs().getString(LEARNED) ?: "[]")
-        (0 until a.length()).map { a.getJSONObject(it).let { o -> com.optionslab.ira.Corrections.Learned(o.getString("w"), o.getString("r")) } }
+        val today = com.optionslab.app.data.Market.today()
+        val all = (0 until a.length()).map { a.getJSONObject(it).let { o ->
+            val u = o.optString("u").takeIf { it.isNotEmpty() }?.let { s -> runCatching { java.time.LocalDate.parse(s) }.getOrNull() }
+            com.optionslab.ira.Corrections.Learned(o.getString("w"), o.getString("r"), u ?: today) } }
+        val fresh = com.optionslab.ira.Corrections.fresh(all, today)
+        if (fresh.size != all.size || (0 until a.length()).any { a.getJSONObject(it).optString("u").isEmpty() }) saveLearned(fresh)
+        fresh
     }.getOrDefault(emptyList())
 
-    /** The words just marked wrong, and when: the next question understood within two minutes is what was meant. */
+    private fun saveLearned(all: List<com.optionslab.ira.Corrections.Learned>) {
+        prefs().put(LEARNED, JSONArray().apply { all.forEach { l -> put(JSONObject().put("w", l.wrong).put("r", l.right)
+            .put("u", (l.used ?: com.optionslab.app.data.Market.today()).toString())) } }.toString())
+    }
+
+    /** A learned wording was just read as meant: it stays another 60 days. */
+    @Synchronized fun usedLearned(l: com.optionslab.ira.Corrections.Learned) {
+        runCatching { saveLearned(com.optionslab.ira.Corrections.touch(learned(), l, com.optionslab.app.data.Market.today())) }
+    }
+
+    /** "Forget the word X": the wordings dropped (none when X was not learned). */
+    @Synchronized fun forgetWord(word: String): List<com.optionslab.ira.Corrections.Learned> {
+        val (kept, gone) = com.optionslab.ira.Corrections.forget(learned(), word)
+        if (gone.isNotEmpty()) { saveLearned(kept); IraActivity.add("Forgot ${gone.size} learned wording(s), as Boss asked.") }
+        return gone
+    }
+
+    /** The words just marked wrong, and when: the next question understood within a minute may be what was meant. */
     @Volatile private var awaiting: Pair<String, Long>? = null
-    /** Words Jarvis just could not place (said "I'm not sure"): Boss's next wording within 45 s may teach them. */
+    /** Words Jarvis just could not place (said "I'm not sure"): Boss's next wording within a minute may teach them. */
     @Volatile private var missedLast: Pair<String, Long>? = null
+    /** Wordings already put to Boss (this run): not asked again, whatever he answered. */
+    private val offeredOnce = java.util.Collections.synchronizedSet(HashSet<Pair<String, String>>())
+
+    /** [l] was just put to Boss: not offered again this run. */
+    fun offered(l: com.optionslab.ira.Corrections.Learned) { offeredOnce += l.wrong to l.right }
 
     /** Jarvis could not place [said]: kept a moment, in case Boss says it another way. */
     @Synchronized fun missed(said: String) {
@@ -286,29 +318,29 @@ internal object IraTools {
     }
 
     /**
-     * After a question is understood: if Boss just said "that was wrong", the misunderstood words are learned as this
-     * question (questions only). Returns what to say about it, or null.
+     * After a question is understood: if Boss just rephrased words Jarvis could not place, or said "that was wrong" a
+     * moment ago ([com.optionslab.ira.Corrections.REPHRASE_MS]), the wording to put to him ("Shall I take ... to mean
+     * ...?"), or null. Nothing is kept here: only his yes keeps it ([teach]), and neither wording may act.
      */
-    @Synchronized fun maybeLearn(question: String): String? {
+    @Synchronized fun proposal(question: String): com.optionslab.ira.Corrections.Learned? {
         // Only the very next question counts as the rephrasing of a missed one.
         val miss = missedLast; missedLast = null
         val next = nextAfterMiss; nextAfterMiss = null
-        if (awaiting == null && miss != null && next == question && System.currentTimeMillis() - miss.second <= com.optionslab.ira.Corrections.REPHRASE_MS) {
-            val l = com.optionslab.ira.Corrections.rephrase(miss.first, com.optionslab.ira.Secrets.redact(question)) ?: return null
-            keep(l)
-            return "Noted, Boss: when you say \"${l.wrong}\", I'll take it as \"${l.right}\". (Say \"that was wrong\" or \"forget what you learned\" if not.)"
-        }
+        val known = learned()
+        fun fresh(l: com.optionslab.ira.Corrections.Learned?) = l?.takeIf { (it.wrong to it.right) !in offeredOnce }
+        if (awaiting == null && miss != null && next == question && System.currentTimeMillis() - miss.second <= com.optionslab.ira.Corrections.REPHRASE_MS)
+            return fresh(com.optionslab.ira.Corrections.propose(miss.first, com.optionslab.ira.Secrets.redact(question), missed = true, learned = known))
         val (wrong, at) = awaiting ?: return null
-        if (System.currentTimeMillis() - at > 120_000) { awaiting = null; return null }
-        val l = com.optionslab.ira.Corrections.learn(wrong, com.optionslab.ira.Secrets.redact(question)) ?: return null
+        if (System.currentTimeMillis() - at > com.optionslab.ira.Corrections.REPHRASE_MS) { awaiting = null; return null }
+        val l = com.optionslab.ira.Corrections.propose(wrong, com.optionslab.ira.Secrets.redact(question), missed = false, learned = known) ?: return null
         awaiting = null
-        keep(l)
-        return "Got it, Boss: next time \"${l.wrong}\" means \"${l.right}\"."
+        return fresh(l)
     }
 
     private fun keep(l: com.optionslab.ira.Corrections.Learned) {
-        val all = (learned().filter { it.wrong != l.wrong } + l).takeLast(com.optionslab.ira.Corrections.KEEP)
-        prefs().put(LEARNED, JSONArray().apply { all.forEach { put(JSONObject().put("w", it.wrong).put("r", it.right)) } }.toString())
+        val today = com.optionslab.app.data.Market.today()
+        val all = (learned().filter { it.wrong != l.wrong } + l.copy(used = today)).takeLast(com.optionslab.ira.Corrections.KEEP)
+        saveLearned(all)
         IraActivity.add("Learned: \"${l.wrong}\" means \"${l.right}\".")
     }
 
@@ -330,7 +362,7 @@ internal object IraTools {
         (0 until a.length()).map { a.getJSONObject(it).let { o -> java.time.LocalDate.parse(o.getString("d")) to o.getString("w") } }
     }.getOrDefault(emptyList())
 
-    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null }
+    fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null; offeredOnce.clear() }
 
     /**
      * The words Jarvis could not place on the last day before [day] that had any (at most 4 days back), for his
@@ -346,8 +378,10 @@ internal object IraTools {
     /** A lesson Boss approved from Jarvis's study ("did you mean ...?" - yes): kept like a correction (questions only). */
     @Synchronized fun teach(l: com.optionslab.ira.Corrections.Learned) {
         // Checked again here: only a question is ever learned, never anything that acts.
-        if (com.optionslab.ira.Corrections.learn(l.wrong, l.right) == null) return
-        keep(l)
+        // What is kept is that checked wording itself (never acting, never about the wordings themselves).
+        val ok = com.optionslab.ira.Corrections.learn(l.wrong, l.right) ?: return
+        if (!com.optionslab.ira.Corrections.safe(ok)) return
+        keep(ok)
     }
 
     /** Jarvis just asked Boss to say [said] another way: his next wording may teach it, as after a live miss. */

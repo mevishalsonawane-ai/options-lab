@@ -199,7 +199,8 @@ class IraHubTest : RobolectricTest() {
         val ms = listOf(m(false, "and BankNifty?"), m(true, "I took that as: \"How is BankNifty?\"."),
             m(false, "How is BankNifty?"))
         assertNull(IraHub.replyAfter(ms, "and BankNifty?"))
-        val done = ms + m(true, "Got it, Boss: next time \"x\" means \"y\".") + m(true, "BankNifty is at 52,000.")
+        val done = ms + m(true, "Got it, Boss: next time \"x\" means \"y\".") + m(true, "Shall I take \"x\" to mean \"y\" from now on, Boss?") +
+            m(true, "BankNifty is at 52,000.")
         assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "and BankNifty?")?.text)
         assertEquals("BankNifty is at 52,000.", IraHub.replyAfter(done, "How is BankNifty?")?.text)
     }
@@ -757,10 +758,18 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("that was wrong")
         waitFor("the mistake") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Sorry, Boss") == true }
         IraHub.ask("how is nifty doing")
+        // Proposed, never kept by itself: only Boss's yes keeps it.
+        waitFor("the proposal") { IraHub.state.value.messages.any { it.text.startsWith("Shall I take \"how is the nifdee boi doing\" to mean \"how is nifty doing\"") } }
+        assertTrue(IraTools.learned().isEmpty())
+        IraHub.confirm(IraHub.state.value.pending.last())
         waitFor("learned") { IraTools.learned().isNotEmpty() }
         assertEquals("how is nifty doing", IraTools.learned().last().right)
         IraHub.ask("how is the nifdee boi doing")
         waitFor("read as meant") { IraHub.state.value.messages.any { it.text == "I took that as: \"how is nifty doing\"." } }
+        IraHub.ask("what words have you learned?")
+        waitFor("listed") { IraHub.state.value.messages.lastOrNull()?.text?.contains("\"how is the nifdee boi doing\" means \"how is nifty doing\"") == true }
+        IraHub.ask("forget the word nifdee boi")
+        waitFor("one forgotten") { IraTools.learned().isEmpty() }
         IraHub.ask("forget what you learned")
         waitFor("forgotten") { IraTools.learned().isEmpty() }
     }
