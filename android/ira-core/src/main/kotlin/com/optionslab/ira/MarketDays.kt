@@ -15,8 +15,8 @@ object MarketDays {
         object Next : Asked()
     }
 
-    private val NEXT = Regex("(?i)\\b(next|upcoming|agla|agli)\\s+(market\\s+|trading\\s+|stock market\\s+)?(holiday|holidays|chutti)\\b|\\bwhen is the next (market )?holiday\\b|\\bholiday list\\b")
-    private val DAY = Regex("(?i)\\b(holiday|chutti|trading day|market (open|closed|shut|band|khulega|khula)|market( \\w+)? (kab )?(khulega|khulta)|open for trading|is (the )?market (open|closed)|exchange (open|closed))\\b")
+    private val NEXT = Regex("(?i)\\b(next|upcoming|agla|agli)\\s+(market\\s+|trading\\s+|stock market\\s+)?(holiday|holidays|chutti|chhutti|chhuti|chuti)\\b|\\bwhen is the next (market )?holiday\\b|\\bholiday list\\b")
+    private val DAY = Regex("(?i)\\b(holiday|chutti|chhutti|chhuti|chuti|trading day|market (open|closed|shut|band|khulega|khula)|market( \\w+)? (kab )?(khulega|khulta)|open for trading|is (the )?market (open|closed)|exchange (open|closed))\\b")
     /** Asked about the past ("was it open on Friday", "kal band tha"): not for this answer. */
     private val PAST = Regex("(?i)\\b(was|were|did|yesterday|tha|thi|last)\\b")
     private val WHEN = Regex("(?i)\\b(today|aaj|tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somvar|mangalvar|budhvar|guruvar|shukravar|shanivar|ravivar)\\b")
@@ -55,7 +55,7 @@ object MarketDays {
 
     /** "When is the next expiry", "is today expiry", "expiry kab hai", "BankNifty expiry": which index (null: all three). */
     fun expiryAsked(text: String): Boolean =
-        Regex("(?i)\\b(next|upcoming|this week'?s?|when is( the)?|is (today|tomorrow)( an?)?|today'?s?|kab hai|kab)\\b.{0,20}\\bexpiry\\b|\\bexpiry\\b.{0,12}\\b(kab|when|today|tomorrow|aaj|kal|date|day)\\b|^\\W*(nifty |banknifty |bank nifty |finnifty )?expiry\\W*$")
+        Regex("(?i)\\b(next|upcoming|this week'?s?|when is( the)?|is (today|tomorrow|monday|tuesday|wednesday|thursday|friday)( an?)?|today'?s?|kab hai|kab|aaj|kal)\\b.{0,20}\\bexpiry\\b|\\b(what|which) day is( the)?( next| this week'?s?)? expiry\\b|\\b(time|days?) (left|remaining) (for|to|till|until|in) (the )?(next )?expiry\\b|\\bhow (long|much time|many days) (to|till|until|for|is left for) (the )?(next )?expiry\\b|\\bexpiry\\b.{0,12}\\b(kab|when|today|tomorrow|aaj|kal|date|day)\\b|^\\W*(nifty |banknifty |bank nifty |finnifty )?expiry\\W*$")
             .containsMatchIn(text) && !Regex("(?i)\\b(my|positions?|square|close|buy|sell)\\b").containsMatchIn(text)
 
     /** One line per index: its next expiry, "today" or "tomorrow" said plainly. */

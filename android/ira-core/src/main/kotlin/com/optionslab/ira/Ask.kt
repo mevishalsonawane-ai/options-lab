@@ -35,13 +35,16 @@ object Ask {
     private val TOPIC_WORDS: List<Pair<Topic, List<String>>> = listOf(
         Topic.BACKTEST to listOf("backtest", "back test", "backtested", "strategy", "test this", "test the pattern", "test it", "make it an arm"),
         Topic.WHY to listOf("why", "reason", "what happened", "behind", "what moved", "moved the market", "what drove"),
-        Topic.TREND to listOf("trend", "direction", "bullish", "bearish", "going up", "going down", "heading"),
+        // ("Is this a reversal", "is it a bull trap", "chances of a bounce": the trend asked in traders' words - audit, 5 Oct.)
+        Topic.TREND to listOf("trend", "direction", "bullish", "bearish", "going up", "going down", "heading", "reversal", "reversing",
+            "bounce", "pullback", "bull trap", "bear trap"),
         Topic.LEVELS to listOf("level", "levels", "support", "resistance", "target", "range", "high", "low", "pool", "liquidity"),
         Topic.PATTERNS to listOf("pattern", "patterns", "candle", "candles", "engulfing", "hammer", "doji", "breakout", "breakdown", "double top", "double bottom"),
-        Topic.NEWS to listOf("news", "headline", "headlines", "update", "updates", "what s new", "whats new", "anything new", "kya khabar", "khabar"),
+        Topic.NEWS to listOf("news", "headline", "headlines", "update", "updates", "what s new", "whats new", "anything new", "kya khabar", "khabar", "global cues"),
         Topic.VOLATILITY to listOf("volatile", "volatility", "vix", "fear", "calm", "busy", "wild", "quiet"),
         Topic.ADVICE to listOf("should i", "shall i", "is it good to", "worth buying", "worth selling", "recommend", "suggest", "tip", "tips", "advice"),
-        Topic.OVERVIEW to listOf("doing", "today", "now", "price", "status", "how is", "how's", "update me", "summary", "overview", "market"),
+        Topic.OVERVIEW to listOf("doing", "today", "now", "price", "status", "how is", "how's", "update me", "summary", "overview", "market",
+            "the fall", "the rally", "the crash", "the selloff"),
         Topic.GREETING to listOf("hello", "hi", "hey", "good morning", "good evening", "jarvis", "ira"),
     )
 
@@ -52,7 +55,10 @@ object Ask {
         // Boss's own money and trades without "my" (4 Oct: "how much did I lose today" got the Nifty update).
         "|( (did|have) i (make|made|lose|lost|earn|earned|gain|gained) (?!a |an |the |it |that |this )| trades? did i | how many trades (did|have|today|i ))" +
         // "How much did I make today", "am I in profit": the owner's P&L, not the market's.
-        "|( how much (money )?(did|have) i (make|made|earn|earned|lose|lost) | am i (up|down|in profit|in loss|making money|losing money) )")
+        "|( how much (money )?(did|have) i (make|made|earn|earned|lose|lost) | am i (up|down|in profit|in loss|making money|losing money) )" +
+        // (Audit, 5 Oct: "am I green today" got the market, "how's my day looking" and "am I on paper or live" nothing.)
+        "|( am i (green|red|in the green|in the red) | how (s|is) my day (going|looking)| (what s|whats|what is) my day looking like | " +
+        "how much (more )?can i (still )?lose | am i (on|in) (paper|live)( or (paper|live))? | my buying power | how much can i trade with )")
     private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
     private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
@@ -114,7 +120,8 @@ object Ask {
         if (rx("^ (so )?((what s|whats|what is) moving( today| now)?|top (gainers|losers|movers)( today)?|(biggest|big) (movers|moves)( today)?|any big moves( today)?|which (index|indices|market) (is|are) (moving|up|down|strongest|weakest)( today)?) $").containsMatchIn(t))
             return Question(text, listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY, Market.SENSEX), setOf(Topic.OVERVIEW), null)
         // "What's going on?" (heard 2026-10-04 and sent to the chat, which knew nothing): the Nifty overview.
-        if (rx("^ (so )?(what s|whats|what is) (going on|happening)( today| now| in the market)? $|^ (any|what s the) (update|updates)( today)? $|^ (kya chal raha hai|kya haal hai market ka) $").containsMatchIn(t))
+        if (rx("^ (so )?(what s|whats|what is) (going on|happening)( today| now| in the market)? $|^ (any|what s the) (update|updates)( today)? $|^ (kya chal raha hai|kya haal hai market ka) $" +
+                "|^ (is there )?anything (i should know|important|i need to know)( about| in)?( the market)?( today| now)? $").containsMatchIn(t))
             return Question(text, Market.mentioned(text).ifEmpty { listOf(Market.NIFTY) }, setOf(Topic.OVERVIEW), null)
         // "Describe the Nifty chart": the trend, levels, today's range and the latest candle pattern.
         if (rx(" (describe|read|explain|walk me through|tell me about) (the |my )?([a-z]+ )?chart ").containsMatchIn(t))
@@ -123,7 +130,7 @@ object Ask {
         // (An index named - "is Nifty bullish" - asks that index's trend, not the market-wide check.)
         if (!rx(" (backtest|back test|engulfing|pattern|patterns|strategy|candle|candles|why|what happened|what moved|what drove) ").containsMatchIn(t) &&
             Market.mentioned(text).none { it != Market.VIX } && rx(" (bullish|bearish|market (good|bad|mood|today)|how is the market|is (the )?market (good|bad|up|down|bullish|bearish|trending|sideways)|which way is the market) ").containsMatchIn(t) ||
-            rx(" (should|shall|can|could) i (trade|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time |day )?to (trade|sell options|buy options|sell|buy)| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
+            rx(" (should|shall|can|could) i (trade(?! with)|be trading|stay out|sit out|take (a |any )?trades?)| (safe|good|right|ok|okay) (time |day )?to (trade|sell options|buy options|sell|buy)| trade (now|today) or not| should i stay out | is today (a )?(good|bad) (day )?(to|for) trad").containsMatchIn(t))
             return Question(text, Market.mentioned(text), setOf(Topic.TRADE_CHECK), null)
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.

@@ -96,6 +96,14 @@ object Hinglish {
         // Positions and orders: "positions dikha do", "mere orders kya hain", "koi order pending hai kya".
         Regex("^$MINE(?:(?:sabhi|saare|sab|open|khuli|khule)\\s+)?(positions?|orders?|trades?|holdings?)\\s+$SHOW$") to "show my $1",
         Regex("^(?:koi|kitne|kitni|kaun\\s+si|kaunsi|kaun\\s+se|kaunse)\\s+(?:open\\s+)?(positions?|orders?|trades?)\\s+(?:(?:khuli|khule|open|pending|baaki|bachi|bache|lagi|lage)\\s+)?(?:$HAI|hui\\s+$HAI)(?:\\s+$KYA)?$") to "show my $1",
+        // What Boss holds and his money (audit, 5 Oct): "mere paas kya hai", "paisa kitna bacha hai", "account mein kitna paisa hai".
+        Regex("^(?:abhi\\s+)?(?:mere|hamare|apne)\\s+(?:paas|pas)\\s+(?:abhi\\s+)?$KYA(?:\\s+$KYA)?\\s+$HAI$") to "show my positions",
+        Regex("^(?:(?:mere|apne)\\s+(?:paas|pas)\\s+|(?:account|khate)\\s+(?:mein|me|main)\\s+)?(?:(?:kitna|kitne|kitni)\\s+)?(?:paisa|paise|funds?|balance|margin|cash)\\s+" +
+            "(?:(?:kitna|kitne|kitni)\\s+)?(?:bacha|bache|bachi|baaki|available|pada|padi)?\\s*$HAI(?:\\s+$KYA)?$") to "what are my funds",
+        // The trade check and a trade idea (audit, 5 Oct): "trade lu kya", "aaj trade karun ya nahi", "kya kharidu".
+        Regex("^(?:(?:aaj|abhi|ab)\\s+)?(?:koi\\s+)?trade\\s+(?:lu|loon|lun|le\\s+lu|le\\s+loon|karun|karu|karoon|karna\\s+chahiye|kar\\s+sakta\\s+(?:hoon|hu)|kar\\s+sakte\\s+hain)" +
+            "\\s+(?:ya\\s+nahi|ya\\s+nahin|ki\\s+nahi|$KYA)$") to "should i trade now",
+        Regex("^(?:(?:aaj|abhi|ab)\\s+)?$KYA\\s+(?:kharidu|kharidun|khareedu|khareedun|lu|loon|lun)(?:\\s+(?:aaj|abhi))?$") to "what should i buy",
         // The owner's bots: "strategies kaise chal rahe hain".
         Regex("^$MINE(strateg(?:y|ies)|arms?|bots?|algos?)\\s+(?:kaise|kaisi|kaisa)\\s+(?:chal\\s+$RAHA\\s+$HAI|$HAI)$") to "how are my $1 doing",
         // One market: "Nifty kya chal raha hai", "BankNifty ka kya haal hai", "Sensex mein kya ho raha hai".

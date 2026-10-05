@@ -48,8 +48,18 @@ object Glossary {
     private val MEANING = Regex(" (mean|means|meaning|explain|define|definition|what do you mean by|in simple words) ")
     private val WHATIS = Regex("^ (what is|what s|whats|what are|what does|what do) ")
 
-    /** The explanation of a trading word asked about in [text], or null. */
-    fun explain(text: String): String? {
+    /** "Theta kya hai", "PCR ka matlab", "doji matlab kya hota hai" (audit, 5 Oct): the meaning asked in Hinglish. */
+    private val HINDI_MEANING = listOf(
+        Regex("^(.+?)\\s+(?:ka\\s+|ki\\s+|ke\\s+)?(?:matlab|meaning|arth)(?:\\s+kya)?(?:\\s+(?:hai|hota\\s+hai|hoti\\s+hai))?$") to "what does $1 mean",
+        Regex("^(.+?)\\s+kya\\s+(?:hai|hota\\s+hai|hoti\\s+hai|hote\\s+hain)$") to "what is $1",
+    )
+
+    /** The explanation of a trading word asked about in [said], or null. */
+    fun explain(said: String): String? {
+        val plain = said.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
+        // ("Mera stop loss kya hai" is Boss's own stop, not the word.)
+        val text = HINDI_MEANING.takeUnless { Regex("\\b(mera|meri|mere|apna|apni|apne|hamara|hamari)\\b").containsMatchIn(plain) }.orEmpty()
+            .firstOrNull { it.first.matches(plain) }?.let { (r, to) -> r.replace(plain, to) } ?: said
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
             .replace(Regex("^(jarvis|hey jarvis|ok jarvis|boss) "), "") + " "
         val meaning = MEANING.containsMatchIn(t)

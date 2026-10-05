@@ -1,0 +1,135 @@
+stop all strategies	STOP_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | stop all strategies | false | false | true | null | null
+stop strategy 1	STOP_ONE/null/1/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+start all strategies	START_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+start orb	START_ONE/orb/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+stop orb 5	STOP_ONE/orb 5/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+pause all bots	STOP_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | stop all strategies | false | false | true | null | null
+halt the algos	STOP_ONE/s/null/null/null/null/null/null/false | null | [COMMAND] | stop all strategies | false | false | true | null | null
+close all positions	CLOSE_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | close all positions | false | false | true | null | null
+close my nifty position	CLOSE_ONE/nifty/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+close everything	CLOSE_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | close all positions | false | false | true | null | null
+exit all trades	CLOSE_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | close all positions | false | false | true | null | null
+square off everything	CLOSE_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | close all positions | false | false | true | null | null
+cancel all orders	CANCEL_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | cancel all orders | false | false | true | null | null
+cancel order 2	CANCEL_ONE/null/2/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+cancel my pending orders	CANCEL_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | cancel all orders | false | false | true | null | null
+kill switch on	KILL_ON/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+turn the kill switch on	KILL_ON/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+kill switch off	KILL_OFF/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+activate the kill switch	KILL_ON/null/null/null/null/null/null/null/false | null | [COMMAND] | turn the kill switch on | false | false | true | null | null
+switch to paper mode	MODE_PAPER/null/null/null/null/null/null/null/false | null | [COMMAND] | switch to paper mode | false | false | true | null | null
+go back to paper	MODE_PAPER/null/null/null/null/null/null/null/false | null | [COMMAND] | switch to paper mode | false | false | true | null | null
+switch to live mode	MODE_LIVE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+go live	MODE_LIVE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+buy 2 lots nifty 25000 ce	null | OrderRequest(market=NIFTY, buy=true, lots=2, strike=25000, right=CE, missing=[], atm=false) | [ORDER] | null | false | false | true | null | null
+buy 1 lot banknifty atm pe	null | OrderRequest(market=BANKNIFTY, buy=true, lots=1, strike=null, right=PE, missing=[], atm=true) | [ORDER] | null | false | false | true | null | null
+sell 1 lot nifty 24500 pe	null | OrderRequest(market=NIFTY, buy=false, lots=1, strike=24500, right=PE, missing=[], atm=false) | [ORDER] | null | false | false | true | null | null
+buy nifty call	null | OrderRequest(market=NIFTY, buy=true, lots=null, strike=null, right=CE, missing=[how many lots, which strike], atm=false) | [ORDER] | null | false | false | true | null | null
+set an alarm on nifty above 25000	ALARM_ADD/null/null/NIFTY/true/25000.0/null/null/false | null | [COMMAND] | null | true | false | true | null | null
+alert me when banknifty goes below 51000	ALARM_ADD/null/null/BANKNIFTY/false/51000.0/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+remove alarm 2	ALARM_REMOVE/null/2/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+delete all alarms	ALARM_REMOVE/all/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+mute for 30 minutes	MUTE_FOR/null/30/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+be quiet	MUTE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+unmute	UNMUTE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+stop talking	MUTE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+remind me at 3 pm to check nifty	null | null | [] | null | true | false | false | null | null
+cancel my reminders	null | null | [] | null | false | true | false | null | null
+set my day target to 5000	TARGET_SET/null/null/null/null/5000.0/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+set daily loss limit to 3000	SET_LIMIT/DAILY_LOSS/null/null/null/3000.0/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+set max lots 5	SET_LIMIT/MAX_LOTS/null/null/null/5.0/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+trail my stop loss	null | null | [] | null | false | false | false | null | null
+set target 25200 on nifty	null | null | [] | null | false | false | false | null | null
+strategy 1 band karo	STOP_ONE/null/1/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+sab strategies band karo	STOP_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+orb chalu karo	START_ONE/orb/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+saare orders cancel karo	CANCEL_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+position band karo	CLOSE_ONE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+nifty 25000 ce 2 lot khareedo	null | OrderRequest(market=NIFTY, buy=true, lots=2, strike=25000, right=CE, missing=[], atm=false) | [ORDER] | null | false | false | true | null | null
+kill switch on karo	KILL_ON/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+alarm lagao nifty 25000 pe	null | null | [] | null | false | false | false | null | null
+can you close all positions?	null | null | [] | null | false | false | false | null | null
+should i close my position	null | null | [] | null | false | false | false | null | null
+did i buy 2 lots of nifty?	null | null | [] | null | false | false | false | null | null
+what if i buy nifty calls	null | null | [] | null | false | false | false | null | null
+why did you stop orb	null | null | [] | null | false | false | false | null | null
+is the kill switch on	null | null | [] | null | false | false | false | null | null
+what is my daily loss limit	null | null | [] | null | false | false | false | null | null
+what are my alarms	null | null | [] | null | false | false | false | null | null
+what's my target	null | null | [] | null | false | false | false | null | null
+am i on live	null | null | [] | null | false | false | false | null | null
+how many orders did i place	null | null | [] | null | false | false | false | null | null
+what is a stop loss	null | null | [] | null | false | false | false | null | null
+explain the kill switch	null | null | [] | null | false | false | false | null | null
+aur banknifty band karo	STOP_ONE/aur banknifty/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+and close everything	CLOSE_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+how is nifty and stop all strategies	null | null | [] | null | false | false | false | null | null
+nifty kaisa hai aur sab band karo	STOP_ONE/nifty kaisa hai aur all/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+umm stop all strategies	STOP_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+jarvis stop orb	STOP_ONE/orb/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+please cancel all orders	CANCEL_ALL/null/null/null/null/null/null/null/false | null | [COMMAND] | cancel all orders | false | false | true | null | null
+go live now	MODE_LIVE/null/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+turn on live mode	null | null | [] | null | false | false | false | null | null
+am i on paper or live	null | null | [] | null | false | false | false | null | null
+kya kharidu	null | null | [] | null | false | false | false | null | null
+kya buy karu	null | OrderRequest(market=null, buy=true, lots=null, strike=null, right=null, missing=[which index, how many lots, call or put, which strike], atm=false) | [ORDER] | null | false | false | true | null | null
+nifty khareedu kya	null | null | [] | null | false | false | false | null | null
+what did you study last night	null | null | [] | what did you study last night | false | false | false | null | null
+previous close of nifty	null | null | [] | null | false | false | false | null | null
+yesterday's close banknifty	null | null | [] | null | false | false | false | null | null
+chances nifty closes above 25000	null | null | [] | null | false | false | false | null | null
+how many lots can i buy with 20000	null | null | [] | null | false | false | false | null | null
+can i trade now	null | null | [] | should i trade now | false | false | false | null | null
+what should i buy	null | null | [] | null | false | false | false | null | null
+should i buy nifty calls	null | null | [] | null | false | false | false | null | null
+how much did i make today	null | null | [] | what is my p&l today | false | false | false | null | null
+how much did i lose today	null | null | [] | what is my p&l today | false | false | false | null | null
+am i in profit	null | null | [] | what is my p&l today | false | false | false | null | null
+am i up today	null | null | [] | what is my p&l today | false | false | false | null | null
+what am i holding	null | null | [] | show my positions | false | false | false | null | null
+my orders	null | null | [] | null | false | false | false | null | null
+any pending orders	null | null | [] | null | false | false | false | null | null
+did my order fill	null | null | [] | null | false | false | false | null | null
+was my order rejected	null | null | [] | null | false | false | false | null | null
+why was my order rejected	null | null | [] | null | false | false | false | null | null
+what's my daily loss limit	null | null | [] | null | false | false | false | null | null
+what are my stops	null | null | [] | null | false | false | false | null | null
+where is my stop loss	null | null | [] | null | false | false | false | null | null
+my targets	null | null | [] | null | false | false | false | null | null
+my alarms	null | null | [] | null | false | false | false | null | null
+what alerts do i have	null | null | [] | null | false | false | false | null | null
+where is the kill switch	null | null | [] | null | false | false | false | null | null
+how do i switch to live	null | null | [] | null | false | false | false | null | null
+where can i see my orders	null | null | [] | null | false | false | false | null | null
+am i ready for live	null | null | [] | null | false | false | false | null | null
+run a self check	START_ONE/a self check/null/null/null/null/null/null/false | null | [COMMAND] | null | false | false | true | null | null
+mere orders dikhao	null | null | [] | null | false | false | false | null | null
+koi order pending hai kya	null | null | [] | null | false | false | false | null | null
+aaj market kahan band hoga	null | null | [] | null | false | false | false | null | null
+kill switch on hai kya	null | null | [] | null | false | false | false | null | null
+live mode on hai kya	null | null | [] | null | false | false | false | null | null
+mera stop loss kya hai	null | null | [] | null | false | false | false | null | null
+mera target kya hai	null | null | [] | null | false | false | false | null | null
+alerts kya lage hain	null | null | [] | null | false | false | false | null | null
+market kitne baje band hoga	null | null | [] | null | false | false | false | null | null
+where will nifty close today	null | null | [] | null | false | false | false | null | null
+is it a good time to buy calls	null | null | [] | null | false | false | false | null | null
+should i buy puts now	null | null | [] | null | false | false | false | null | null
+should i sell options today	null | null | [] | null | false | false | false | null | null
+what's my profit right now	null | null | [] | what is my p&l today | false | false | false | null | null
+any open orders	null | null | [] | null | false | false | false | null | null
+did my nifty order go through	null | null | [] | null | false | false | false | null | null
+what's the status of my order	null | null | [] | null | false | false | false | null | null
+what's my buying power	null | null | [] | null | false | false | false | null | null
+what's the kill switch status	null | null | [] | null | false | false | false | null | null
+what are my risk limits	null | null | [] | null | false | false | false | null | null
+how close am i to my daily loss limit	null | null | [] | null | false | false | false | null | null
+where's my stop	null | null | [] | null | false | false | false | null | null
+what's my stop loss on nifty	null | null | [] | null | false | false | false | null | null
+did my stop loss hit	null | null | [] | null | false | false | false | null | null
+which alerts are set	null | null | [] | null | false | false | false | null | null
+any alarms set	null | null | [] | null | false | false | false | null | null
+when does the market close today	null | null | [] | null | false | false | false | null | null
+how much time till close	null | null | [] | null | false | false | false | null | null
+how long till the market closes	null | null | [] | null | false | false | false | null | null
+did fiis buy or sell	null | null | [] | null | false | false | false | null | null

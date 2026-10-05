@@ -102,16 +102,16 @@ object AppFacts {
 /** Answers about the app, the owner's trading, and Ira itself. Pure. */
 object AppAnswers {
     private val WORDS: List<Pair<Section, Regex>> = listOf(
-        Section.RISK to Regex(" (kill switch|daily loss|loss limit|drawdown|guard|limits?|risk|breaker|max lots|max trades|cut ?off) "),
+        Section.RISK to Regex(" (kill switch|daily loss|loss limit|drawdown|guard|limits?|risk|breaker|max lots|max trades|cut ?off|can i (still )?lose|left to lose) "),
         Section.PROTECTIONS to Regex(" (stop|stops|stop loss|stoploss|sl|target|targets|trail|trailing|protection|protections|bracket|gtt|gtts) "),
         Section.ALARMS to Regex(" (alarm|alarms|alert|alerts) "),
-        Section.FUNDS to Regex(" (funds|fund|margin|margins|balance|cash|capital|money) "),
+        Section.FUNDS to Regex(" (funds|fund|margin|margins|balance|cash|capital|money|buying power|trade with) "),
         Section.HISTORY to Regex(" (yesterday|week|weekly|month|monthly|history|calendar|journal|last \\d+ days|best day|worst day|so far|this year|all time) "),
         Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
         Section.POSITIONS to Regex(" (position|positions|holding|holdings|open trades|exposure) "),
         Section.STRATEGIES to Regex(" (strategy|strategies|arm|arms|bot|bots|algo|algos|pine|orb|script|scripts|studies|study|running) "),
-        Section.SETTINGS to Regex(" (settings|setting|mode|paper mode|live mode|product|nrml|mis|preferences|one tap|biometric|pin) "),
+        Section.SETTINGS to Regex(" (settings|setting|mode|paper mode|live mode|paper or live|live or paper|product|nrml|mis|preferences|one tap|biometric|pin) "),
         Section.STATUS to Regex(" (status|market open|is the market|open today|holiday|holidays|expiry|expiries|harvest|data|zerodha|kite|login|logged|connected|static ip|relay|app) "),
         Section.HOWTO to Regex(" (where|how do i|how can i|how to|find|which tab|which page|switch to) "),
         Section.REVIEW to Regex(" (review|weekly review|insight|insights|mistake|mistakes|habits|patterns in my|what am i doing wrong|how did my week|my week|news trades?|(my|our) (win rate|winning rate|hit rate|success rate|strike rate|accuracy)) "),
@@ -137,7 +137,9 @@ object AppAnswers {
     /** Does [t] (lower-case, spaced) ask about the app or the owner's trading? */
     fun about(t: String): Boolean = WORDS.any { (s, r) -> s != Section.HOWTO && s != Section.STATUS && r.containsMatchIn(t) } ||
         Regex(" (my|mine|our|i|me) ").containsMatchIn(t) && WORDS.any { it.second.containsMatchIn(t) } ||
-        Regex(" (how am i doing|how did i do|app status|this app|kill switch|zerodha|login|logged in|holiday|holidays|harvest|static ip|where is|where do i|how do i|how can i|when is (the )?(next )?expiry|next expiry|expiry (day|date|today)|is (the )?market open|market open today) ").containsMatchIn(t)
+        Regex(" (how am i doing|how did i do|app status|this app|kill switch|zerodha|login|logged in|holiday|holidays|harvest|static ip|where is|where do i|how do i|how can i|when is (the )?(next )?expiry|next expiry|expiry (day|date|today)|is (the )?market open|market open today) ").containsMatchIn(t) ||
+        // "Is Kite connected", "is the app working" (audit, 5 Oct): the app's own status.
+        Regex(" is (kite|zerodha|the data|data|the app|app|the relay|relay|the feed|my broker) (connected|working|running|ok|okay|down|up) ").containsMatchIn(t)
 
     fun sections(text: String): Set<Section> {
         // (Read as a question: "aaj kitna kamaya" and a misheard "p and l" ask the P&L too - only what to read, never an action.)
