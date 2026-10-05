@@ -448,6 +448,9 @@ object Tasks {
         // Jarvis: open Zerodha MIS positions named at 15:10, before Zerodha's own square-off (words only) - last, after every
         // stop, target and exit above, as it reads Zerodha over the network (review, 4 Oct).
         runCatching { com.optionslab.app.ira.IraCoach.misWatch() }
+        // Jarvis: 14:45 on a day a position expires, the position health check in the chat and a few words (counts only;
+        // last too, as it reads Zerodha and the quotes over the network).
+        runCatching { com.optionslab.app.ira.IraCoach.healthWatch() }
     }
 
 

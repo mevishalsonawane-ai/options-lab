@@ -16,7 +16,7 @@ enum class Section(val title: String) {
     WHATIF("What if"), CHANGES("Settings changes"), EXPLAIN_POS("Your positions explained"),
     SEARCH("Your trades found"), TIMEOFDAY("Your time of day"), REASONS("Your reasons"), MISTAKES("Mistakes noted"),
     MOVE("If the market moves"), RANK("Your positions ranked"), REPLAY("Your trades replayed"),
-    MONTH("Your month reviewed"), CHARGES("Your charges"),
+    MONTH("Your month reviewed"), CHARGES("Your charges"), HEALTH("Your positions' health"),
 }
 
 /** Fact lines per section, each a finished sentence; [mode] "Paper" or "Live". */
@@ -168,9 +168,11 @@ object AppAnswers {
         if (MonthReview.asked(text)) { out.clear(); out += Section.MONTH }
         // "How much did I pay in charges this week?": what the trading paid in charges, and which kind paid most.
         if (Charges.asked(text)) { out.clear(); out += Section.CHARGES }
+        // "Check my positions", "position health", "kya meri positions theek hain": each open position's health, on its own.
+        if (PositionHealth.asked(text)) { out.clear(); out += Section.HEALTH }
         // The new sections are asked on their own: drop the broad matches their words also hit.
         if (!Regex(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
-                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES })
+                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES || it == Section.HEALTH })
             out.removeAll(setOf(Section.EVENTS, Section.POSITIONS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && rx(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))

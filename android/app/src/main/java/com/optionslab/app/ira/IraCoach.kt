@@ -660,6 +660,112 @@ internal object IraCoach {
     suspend fun rankLines(): List<String> = com.optionslab.ira.Exposure.rank(openLegs())
 
     /**
+     * Each open position (paper, and Zerodha when logged in) for the health check ([com.optionslab.ira.PositionHealth]):
+     * its contract, spot, average day's range, theta, best bid and ask now, the spread first noted, and any stop or
+     * target set in the app. Reads only: nothing is placed, changed or closed.
+     */
+    private suspend fun healthPositions(): List<com.optionslab.ira.PositionHealth.Pos> {
+        val now = java.time.ZonedDateTime.now(IST)
+        val today = now.toLocalDate()
+        val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
+        fun market(u: String?): com.optionslab.ira.Market? = u?.let { runCatching { com.optionslab.ira.Market.valueOf(it) }.getOrNull() }
+        fun spot(u: String?): Double? = market(u)?.let { m -> runCatching { IraHub.state.value.snaps[m]?.price }.getOrNull() }
+        val ranges = HashMap<String, Pair<Double, Int>?>()
+        fun range(u: String?): Pair<Double, Int>? {
+            val k = u ?: return null
+            if (!ranges.containsKey(k)) ranges[k] = market(k)?.let { m -> com.optionslab.ira.PositionHealth.avgRange(IraHub.recentBars(m), today) }
+            return ranges[k]
+        }
+        fun theta(right: com.optionslab.engine.Right, u: String, strike: Double, expiry: LocalDate, price: Double): Double? {
+            if (right == com.optionslab.engine.Right.IX) return null
+            val s = spot(u) ?: return null
+            val t = com.optionslab.engine.options.OptionMath.timeToExpiryYears(now, expiry)
+            return com.optionslab.engine.options.OptionMath.legGreeks(if (right == com.optionslab.engine.Right.CE) com.optionslab.engine.options.OptionType.CE
+                else com.optionslab.engine.options.OptionType.PE, s, strike, t, price)?.greeks?.theta
+        }
+        val out = ArrayList<com.optionslab.ira.PositionHealth.Pos>()
+        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+            val c = Paper.contractOf(p.symbol)
+            val q = if (c == null) null else kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { Paper.quote(c) }.getOrNull() }
+            val pr = prot.firstOrNull { !it.live && it.symbol == p.symbol }
+            val r = range(c?.underlying)
+            out += com.optionslab.ira.PositionHealth.Pos("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp,
+                c?.underlying, c?.strike, c?.right?.name?.takeIf { it == "CE" || it == "PE" }, c?.expiry,
+                spot = spot(c?.underlying), avgRange = r?.first, rangeDays = r?.second ?: 0,
+                theta = c?.let { runCatching { theta(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() },
+                bid = q?.bid?.takeIf { it > 0 }, ask = q?.ask?.takeIf { it > 0 }, stop = pr?.stop, target = pr?.target)
+        } }
+        if (Broker.loggedIn) runCatching {
+            val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
+            // The broker is not waited on past 8 seconds (a hung read would hang the answer).
+            val open = kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
+            val quotes = kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { Broker.quotes(open.map { "${it.exchange}:${it.symbol}" }) }.getOrNull() }.orEmpty()
+            open.forEach { p ->
+                val i = ins[p.symbol]
+                val q = quotes["${p.exchange}:${p.symbol}"]
+                val pr = prot.firstOrNull { it.live && it.symbol == p.symbol }
+                val r = range(i?.name)
+                out += com.optionslab.ira.PositionHealth.Pos("Zerodha", p.symbol, p.qty, p.avg, p.last,
+                    i?.name, i?.strike, i?.right?.name?.takeIf { it == "CE" || it == "PE" }, i?.expiry,
+                    spot = spot(i?.name), avgRange = r?.first, rangeDays = r?.second ?: 0,
+                    theta = i?.let { runCatching { theta(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() },
+                    bid = q?.bid?.takeIf { it > 0 }, ask = q?.ask?.takeIf { it > 0 }, stop = pr?.stop, target = pr?.target)
+            }
+        }
+        return withFirstSpreads(out, now.toLocalDateTime())
+    }
+
+    /**
+     * The spread first noted for each position (kept in the encrypted prefs until the position is gone), compared with
+     * the one now; a position seen for the first time has its spread noted now. Spreads and times only.
+     */
+    private fun withFirstSpreads(ps: List<com.optionslab.ira.PositionHealth.Pos>, now: LocalDateTime): List<com.optionslab.ira.PositionHealth.Pos> = runCatching {
+        val key = "jarvis.health.spreads"
+        val saved = runCatching { org.json.JSONObject(com.optionslab.app.security.SecurePrefs.getString(key) ?: "{}") }.getOrDefault(org.json.JSONObject())
+        val keep = org.json.JSONObject()
+        val out = ps.map { p ->
+            val k = "${p.where}:${p.symbol}"
+            val was = saved.optJSONObject(k)
+            if (was != null) {
+                keep.put(k, was)
+                val at = runCatching { LocalDateTime.parse(was.getString("t")) }.getOrNull()
+                val label = at?.let { if (it.toLocalDate() == now.toLocalDate()) "%02d:%02d today".format(it.hour, it.minute)
+                    else it.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH)) }
+                p.copy(firstSpread = was.optDouble("s").takeIf { !it.isNaN() }, firstSpreadWhen = label)
+            } else {
+                p.spread?.let { sp -> keep.put(k, org.json.JSONObject().put("s", sp).put("t", now.withSecond(0).withNano(0).toString())) }
+                p
+            }
+        }
+        com.optionslab.app.security.SecurePrefs.put(key, keep.toString())
+        out
+    }.getOrDefault(ps)
+
+    /** "Check my positions", "kya meri positions theek hain": each open position's health. Reads only. */
+    suspend fun healthLines(): List<String> = com.optionslab.ira.PositionHealth.lines(healthPositions(), LocalDateTime.now(IST))
+
+    /**
+     * 14:45-14:54 on a trading day, once: when a position of Boss's expires today, the health check is put in the chat and
+     * a few words are said - counts only, no amount, no symbol (a locked phone may be heard). Words only: nothing is
+     * placed, changed or closed.
+     */
+    suspend fun healthWatch() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.HEALTH)) return
+        val m = com.optionslab.app.data.Market
+        val today = m.today()
+        if (!m.isTradingDay(today) || !com.optionslab.ira.PositionHealth.due(m.minuteNow())) return
+        val key = "jarvis.health.told"
+        if (com.optionslab.app.security.SecurePrefs.getString(key) == today.toString()) return
+        com.optionslab.app.security.SecurePrefs.put(key, today.toString())
+        val ps = healthPositions()
+        val spoken = com.optionslab.ira.PositionHealth.spoken(ps, today) ?: return
+        val lines = com.optionslab.ira.PositionHealth.lines(ps, LocalDateTime.now(IST))
+        IraHub.note(lines.joinToString("\n")); IraActivity.add(lines.first())
+        Automations.acted(Automations.Auto.HEALTH, "Expiry-day position check.")
+        JarvisVoice.announce(com.optionslab.ira.Overheard.said(spoken, IraHub.locked()))
+    }
+
+    /**
      * The word before Boss sends an order he opened to review ([com.optionslab.ira.PreTrade]): just after a loss, past
      * his usual day or his own trade goal, in the first five minutes, or against a rule he asked me to remember. Shown on
      * the order review only (never spoken, no amounts); it never blocks, delays or changes the order. Opening orders only:
