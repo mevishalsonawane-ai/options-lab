@@ -20,7 +20,8 @@ import java.util.Locale
  *
  * "Undo everything you learned this week" ([undoAsked], [undo]) is put to Boss first and resets learned behaviour only:
  * the wordings and routines kept in the last [DAYS] days, the alert count (every alert aloud again), the answers said
- * shorter aloud ([Clarity]: every answer as usual again) and his own goals. (His confidence words set to fit the
+ * shorter aloud ([Clarity]: every answer as usual again), the market reads said figure first ([FigureFirst]: the usual
+ * order again) and his own goals. (His confidence words set to fit the
  * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
@@ -40,6 +41,7 @@ object Learnings {
         CLARITY("Answers I keep shorter aloud", false),
         WORD_FIT("Confidence words I set to fit my numbers", false),
         AGAIN("Market reads you asked again within minutes", false),
+        FIGURE_FIRST("Market reads I start with the figure aloud", false),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
         PATTERNS("Patterns I no longer bring up", false),
@@ -70,6 +72,7 @@ object Learnings {
         val clarity: Clarity.Log = Clarity.Log(),
         val wordFit: WordFit.Log = WordFit.Log(),
         val again: AskedAgain.Log = AskedAgain.Log(),
+        val figure: FigureFirst.Log = FigureFirst.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -120,6 +123,10 @@ object Learnings {
         // The market reads Boss asked again within minutes ([AskedAgain]; kinds only): a record, it changes nothing he does.
         AskedAgain.shown(i.again, i.tally, now).forEach { r ->
             out += Item(Area.AGAIN, AskedAgain.ledgerWhat(r), r.newest.toLocalDate(), AskedAgain.ledgerWhy(r), null)
+        }
+        // The market reads whose figure he says first aloud, Boss having asked them again for it ([FigureFirst]; kinds only).
+        FigureFirst.leading(i.figure, now).forEach { r ->
+            out += Item(Area.FIGURE_FIRST, FigureFirst.ledgerWhat(r), FigureFirst.newest(i.figure, r.kind)?.toLocalDate(), FigureFirst.ledgerWhy(r), FigureFirst.UNDO)
         }
         // The conditions his own ideas and Solo sit out: the record decides, so it lifts only as the record does.
         fun sitOut(outcomes: List<SelfCalibration.Outcome>, solo: Boolean) {
@@ -246,8 +253,8 @@ object Learnings {
 
     /** What undoing the week resets: wordings and routines kept in the last [DAYS] days, the alert count, this week's own goals. */
     data class Undo(val words: List<Corrections.Learned>, val routines: List<Routine.Kept>, val alerts: List<AlertSense.Record>, val goals: Int,
-                    val clarity: List<Clarity.Record> = emptyList()) {
-        val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty()
+                    val clarity: List<Clarity.Record> = emptyList(), val figure: List<FigureFirst.Record> = emptyList()) {
+        val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -257,7 +264,8 @@ object Learnings {
             Routine.live(i.routines, today).filter { thisWeek(it.since, today) },
             AlertSense.quieter(i.alerts, now),
             i.plan?.takeIf { it.week == Improve.weekOf(today) }?.goals?.size ?: 0,
-            Clarity.shorter(i.clarity, i.tally, now))
+            Clarity.shorter(i.clarity, i.tally, now),
+            FigureFirst.leading(i.figure, now))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -277,12 +285,13 @@ object Learnings {
         if (u.routines.isEmpty()) null else plural(u.routines.size, "routine") + " kept on your yes",
         if (u.alerts.isEmpty()) null else "the alerts I say less often (" + u.alerts.joinToString(", ") { it.phrase } + ") - aloud every time again",
         if (u.clarity.isEmpty()) null else "the answers I say shorter aloud (" + u.clarity.joinToString(", ") { it.phrase } + ") - said as usual again",
+        if (u.figure.isEmpty()) null else "the market reads I start with the figure aloud (" + u.figure.joinToString(", ") { it.phrase } + ") - in the usual order again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +
         "The answers you marked wrong, the trades and the patterns' outcomes stay - they're records, not habits."
 
-    const val NOTHING = "There's nothing I learned in the last $DAYS days to undo, Boss: no wording or routine kept, no alert held back, no answer said shorter and no goals of mine this week."
+    const val NOTHING = "There's nothing I learned in the last $DAYS days to undo, Boss: no wording or routine kept, no alert held back, no answer said shorter or with its figure first and no goals of mine this week."
 
     /** Put to Boss before anything is reset. */
     fun offer(u: Undo): String = "Boss, shall I undo what I learned in the last $DAYS days? That resets " + parts(u).joinToString("; ") + ". $ONLY"

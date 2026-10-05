@@ -136,7 +136,7 @@ object AskedAgain {
     /** "Which of your answers do I ask again?" / "what do I keep asking twice?". */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(norm(text))
 
-    const val ONLY_RECORD = "A record only: it changes nothing I do, and nothing I learn acts."
+    const val ONLY_RECORD = "A record only: it changes nothing I do, and nothing I learn acts - though a read you keep asking again for its figure, I say figure first aloud."
 
     /** "Which of your answers do I ask again?". */
     fun say(log: Log, tally: DoubtTally, now: LocalDateTime): String {

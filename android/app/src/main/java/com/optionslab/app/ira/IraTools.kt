@@ -694,7 +694,9 @@ internal object IraTools {
         runCatching {
             val step = com.optionslab.ira.AskedAgain.heard(againLog(), againOpen, said, LocalDateTime.now(IST).withNano(0))
             againOpen = step.open
-            if (step.again == null) return@runCatching
+            val again = step.again ?: return@runCatching
+            // Whether the re-ask was after a figure (a yes or no by its kind, never the words; [com.optionslab.ira.FigureFirst]).
+            runCatching { figureUpdate { com.optionslab.ira.FigureFirst.heard(it, again.kind, com.optionslab.ira.FigureFirst.wantsFigure(again.kind, said), minuteNow()) } }
             againCache = step.log
             val a = JSONArray().apply { step.log.events.forEach { x ->
                 put(JSONObject().put("k", x.kind).put("m", JSONArray().apply { x.markets.forEach { put(it) } }).put("t", x.at.toString()).put("g", x.gapS))
@@ -706,6 +708,61 @@ internal object IraTools {
     /** "Which of your answers do I ask again?". */
     fun againSay(): String = runCatching { com.optionslab.ira.AskedAgain.say(againLog(), askedKinds(), LocalDateTime.now(IST).withNano(0)) }
         .getOrDefault("I could not read my record of answers you asked again just now, Boss.")
+
+    // ---- the figure first in a market read Boss keeps asking again for it ([com.optionslab.ira.FigureFirst]) ----------
+
+    /** The re-asks noted (kind keys, after a figure or not, and minutes only - never the words), the last 30 days. */
+    private const val FIGURE = "jarvis.figureFirst"
+    @Volatile private var figureCache: com.optionslab.ira.FigureFirst.Log? = null
+    /** The kinds said figure first now, worked out at most every 10 minutes or when the log changes. */
+    @Volatile private var leadCache: Triple<String, Long, List<com.optionslab.ira.FigureFirst.Record>>? = null
+
+    fun figureLog(): com.optionslab.ira.FigureFirst.Log = figureCache ?: runCatching {
+        val o = JSONObject(prefs().getString(FIGURE) ?: "{}")
+        val e = o.optJSONArray("e") ?: JSONArray()
+        com.optionslab.ira.FigureFirst.Log(
+            events = (0 until e.length()).map { i -> e.getJSONObject(i).let { x ->
+                com.optionslab.ira.FigureFirst.Event(x.getString("k"), x.optBoolean("f"), LocalDateTime.parse(x.getString("t"))) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.FigureFirst.Log()).also { figureCache = it }
+
+    @Synchronized private fun figureUpdate(f: (com.optionslab.ira.FigureFirst.Log) -> com.optionslab.ira.FigureFirst.Log) {
+        runCatching {
+            val log = f(figureLog())
+            figureCache = log
+            leadCache = null
+            val o = JSONObject().put("e", JSONArray().apply { log.events.forEach { x -> put(JSONObject().put("k", x.kind).put("f", x.figure).put("t", x.at.toString())) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(FIGURE to o.toString()))
+        }
+    }
+
+    private fun figureLeading(): List<com.optionslab.ira.FigureFirst.Record> {
+        val log = figureLog()
+        val now = minuteNow()
+        val key = "${log.events.size}|${log.events.lastOrNull()?.at}|${log.resetAt}|${now.toLocalDate()}"
+        leadCache?.takeIf { it.first == key && System.currentTimeMillis() - it.second < 10 * 60_000L }?.let { return it.third }
+        val list = com.optionslab.ira.FigureFirst.leading(log, now)
+        leadCache = Triple(key, System.currentTimeMillis(), list)
+        return list
+    }
+
+    /** The answer [text] to [said] as said aloud: its figure first for a read Boss keeps asking again for it, else as it is. Voice only. */
+    fun figureLead(said: String, text: String): String =
+        runCatching { com.optionslab.ira.FigureFirst.lead(said, text, figureLeading()) }.getOrDefault(text)
+
+    /** "Which reads do you start with the number?". */
+    fun figureHeld(): String = runCatching { com.optionslab.ira.FigureFirst.say(figureLog(), minuteNow()) }
+        .getOrDefault("I could not read my record of the reads you asked again for a figure just now, Boss.")
+
+    /** "Say your market reads in the usual order": every read in its usual order aloud, the count afresh. */
+    fun figureReset(): String {
+        val now = minuteNow()
+        val said = runCatching { com.optionslab.ira.FigureFirst.sayReset(figureLog(), now) }.getOrDefault("Done, Boss: every market read in its usual order aloud again.")
+        figureUpdate { com.optionslab.ira.FigureFirst.reset(it, now) }
+        IraActivity.add("Saying every market read in its usual order aloud again (as asked).")
+        return said
+    }
 
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
@@ -724,7 +781,8 @@ internal object IraTools {
         plan = plan,
         clarity = runCatching { clarityLog() }.getOrDefault(com.optionslab.ira.Clarity.Log()),
         wordFit = runCatching { wordFitLog() }.getOrDefault(com.optionslab.ira.WordFit.Log()),
-        again = runCatching { againLog() }.getOrDefault(com.optionslab.ira.AskedAgain.Log()))
+        again = runCatching { againLog() }.getOrDefault(com.optionslab.ira.AskedAgain.Log()),
+        figure = runCatching { figureLog() }.getOrDefault(com.optionslab.ira.FigureFirst.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -739,8 +797,9 @@ internal object IraTools {
         if (u.routines.isNotEmpty()) runCatching { saveKept(com.optionslab.ira.Learnings.keepRoutines(routineKept(), today)) }
         if (u.alerts.isNotEmpty()) alertUpdate { com.optionslab.ira.AlertSense.reset(it, now) }
         if (u.clarity.isNotEmpty()) clarityUpdate { com.optionslab.ira.Clarity.reset(it, now) }
+        if (u.figure.isNotEmpty()) figureUpdate { com.optionslab.ira.FigureFirst.reset(it, now) }
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
-            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again.")
+            "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again.")
         return u
     }
 

@@ -30,7 +30,7 @@ class CoverageTest {
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null ||
             RangeBreaks.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
@@ -45,6 +45,7 @@ class CoverageTest {
             // (Clarity: the answers said shorter aloud - Jarvis's own voice; HeardBack is the voice path's alone, not a branch here.)
             if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q) || Clarity.asked(q) != null) return Kind.JARVIS
             if (AskedAgain.asked(q)) return Kind.JARVIS
+            if (FigureFirst.asked(q) != null) return Kind.JARVIS
             if (NewsMoves.asked(q) != null) return Kind.MARKET
             if (TaxRecords.exportAsked(q)) return Kind.ACCOUNT
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
@@ -432,7 +433,7 @@ class CoverageTest {
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, Clarity,
-     * WordFit, AskedAgain, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
      * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, Weekdays, DayCompare, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -453,7 +454,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said)
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -470,6 +471,7 @@ class CoverageTest {
         if (alone && Clarity.asked(q) != null) return "Clarity"
         if (alone && WordFit.asked(q) != null) return "WordFit"
         if (alone && AskedAgain.asked(q)) return "AskedAgain"
+        if (alone && FigureFirst.asked(q) != null) return "FigureFirst"
         if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Learnings.asked(q) != null) return "Learnings"
@@ -936,6 +938,10 @@ class CoverageTest {
         "which of your answers do i ask again" to "AskedAgain", "which answers did i have to ask twice" to "AskedAgain",
         "what do i keep asking again" to "AskedAgain", "which of your market reads missed" to "AskedAgain",
         "which answers didn't land" to "AskedAgain", "kaun se jawab main dobara puchta hoon" to "AskedAgain",
+        // ---- FigureFirst (round 14): the market reads said figure first aloud, Boss having asked them again for it ----
+        "which reads do you start with the number" to "FigureFirst", "why do you start with the number" to "FigureFirst",
+        "why are you saying the figure first" to "FigureFirst", "say your market reads in the usual order" to "FigureFirst",
+        "dont start with the number" to "FigureFirst", "number pehle mat bolo" to "FigureFirst",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
@@ -1034,6 +1040,8 @@ class CoverageTest {
             ("what do you mean by usually" to "WordFit") to ("what do you mean by max pain" to "Glossary"),
             // Round 13: what Boss asks again is a record of Jarvis's answers; his usual questions stay his routine.
             ("what do i keep asking again" to "AskedAgain") to ("what do i usually ask" to "Routine"),
+            // Round 14: the order his reads are said in is his own; the answers said shorter stay Clarity's.
+            ("say your market reads in the usual order" to "FigureFirst") to ("say your answers in full again" to "Clarity"),
             // Reasoning round 10: a fall weighed by its evidence, beside one sudden move's coincidences and the news behind it.
             ("why did nifty fall" to "Causes") to ("why did nifty suddenly fall" to "SharpMove"),
             ("what caused the fall today" to "Causes") to ("what news moved the market" to "NewsDesk"),
