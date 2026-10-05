@@ -22,6 +22,8 @@ object FollowUp {
         if (p.command != null || p.order != null || Topic.COMMAND in p.topics || Topic.ORDER in p.topics || Topic.OFF_TOPIC in p.topics) return null
         // What is said now must not act either: "and close BankNifty" is a command of its own, never a question.
         if (acts(now)) return null
+        // "What's your plan today?" asks about Jarvis's own plan ([Agenda]), never the last market's.
+        if (Agenda.asked(now)) return null
         return (found(prev, now) ?: carry(prev, now))?.takeIf { !acts(it) }
     }
 

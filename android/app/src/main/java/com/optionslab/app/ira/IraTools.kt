@@ -110,6 +110,30 @@ internal object IraTools {
 
     fun forgetLearned() { prefs().put(LEARNED, null); awaiting = null; missedLast = null }
 
+    /**
+     * The words Jarvis could not place on the last day before [day] that had any (at most 4 days back), for his
+     * overnight study ([com.optionslab.ira.Agenda.study]).
+     */
+    fun missedBefore(day: java.time.LocalDate): List<String> = runCatching {
+        val o = JSONObject(prefs().getString(MISSED) ?: return emptyList())
+        val d = java.time.LocalDate.parse(o.getString("d"))
+        if (!d.isBefore(day) || d.isBefore(day.minusDays(4))) return emptyList()
+        val a = o.getJSONArray("w"); (0 until a.length()).map { a.getString(it) }
+    }.getOrDefault(emptyList())
+
+    /** A lesson Boss approved from Jarvis's study ("did you mean ...?" - yes): kept like a correction (questions only). */
+    @Synchronized fun teach(l: com.optionslab.ira.Corrections.Learned) {
+        // Checked again here: only a question is ever learned, never anything that acts.
+        if (com.optionslab.ira.Corrections.learn(l.wrong, l.right) == null) return
+        keep(l)
+    }
+
+    /** Jarvis just asked Boss to say [said] another way: his next wording may teach it, as after a live miss. */
+    @Synchronized fun expectRephrase(said: String) {
+        missedLast = if (runCatching { com.optionslab.ira.Corrections.missed(said) }.getOrDefault(false)) said to System.currentTimeMillis() else null
+        nextAfterMiss = null
+    }
+
     // ---- Boss's own words, kept ---------------------------------------------------------------------------------------
 
     private const val MEMORY = "jarvis.memory"

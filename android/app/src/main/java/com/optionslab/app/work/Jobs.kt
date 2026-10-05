@@ -416,6 +416,8 @@ object Tasks {
         runCatching { com.optionslab.app.ira.IraCoach.usualWatch() }
         // Jarvis: the morning plan - the paper arms fitted to the market's regime.
         runCatching { com.optionslab.app.ira.IraCoach.dayPlanWatch() }
+        // Jarvis: his own plan for the day - made each morning, worked through at each item's time (words, study, paper only).
+        runCatching { com.optionslab.app.ira.IraAgenda.watch() }
         // Jarvis: Boss's goals over days - close, broken or met is told once a day.
         runCatching { com.optionslab.app.ira.IraGoals.watch() }
         // Jarvis: the paper tests - what held up is brought to Boss, what failed is offered off (asked first).

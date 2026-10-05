@@ -797,11 +797,12 @@ object IraHub {
      * Something Jarvis thinks should be done or stopped, put to Boss first (4 Oct): pending with Confirm on the Ira
      * screen, a pop-up and a spoken yes or no; [act] runs only on his yes, and lapses after 30 minutes.
      */
-    fun offer(what: String, title: String, text: String, act: suspend () -> String, addsRisk: Boolean = false) {
+    fun offer(what: String, title: String, text: String, act: suspend () -> String, addsRisk: Boolean = false,
+              /** Always put to Boss, even with automatic stops on (a lesson from Jarvis's study is never kept unasked). */ alwaysAsk: Boolean = false) {
         val c = app ?: return
         // Boss said "do it automatically" in chat: done now and told - only what stops or parks; anything that adds risk
         // (arming again) is always asked (review, 4 Oct).
-        if (autoStop && !addsRisk) {
+        if (autoStop && !addsRisk && !alwaysAsk) {
             scope.launch {
                 val r = IraActions.run(what, act)
                 JarvisPopup.show(c, title, r); reply(com.optionslab.ira.Address.boss("Done by myself, as you asked: $r"))
@@ -1064,6 +1065,15 @@ object IraHub {
         // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).
         if (com.optionslab.app.BuildConfig.GOLD && (parsed.order != null || parsed.command != null || Topic.ORDER in parsed.topics || Topic.COMMAND in parsed.topics)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "What's your plan today?" / "what are you working on?": Jarvis's own plan for the day (it names Boss's goals and
+        // words, so the phone must be unlocked). Words only: the plan itself only ever speaks, studies or works on paper.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
+            runCatching { com.optionslab.ira.Agenda.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch { reply(runCatching { IraAgenda.say() }.getOrElse { "I could not read my plan just now, Boss." }) }
             return
         }
         // A request in steps ("stop all strategies, then kill switch on and switch to paper"): one plan, one Confirm, done
@@ -1684,6 +1694,9 @@ object IraHub {
         if (Topic.ACCOUNT !in Ask.parse(rewrite).topics || Topic.ACCOUNT in Ask.parse(original).topics) return false
         return phoneLocked()
     }
+
+    /** The phone is locked now (Boss's account and words are then not said aloud). */
+    internal fun locked(): Boolean = phoneLocked()
 
     private fun phoneLocked(): Boolean {
         val c = app ?: return false
