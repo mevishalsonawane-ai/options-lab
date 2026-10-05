@@ -55,12 +55,11 @@ class RequestsPanelTest {
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("New request: "))
         compose.waitForText("Requests 1")
         compose.waitForText("Lapses in", substring = true)
-        // The emergency exit can send orders: labelled by what is open, never "No order". Paper alone only when Zerodha
-        // is not logged in here; logged in with nothing read counts as open (Paper + Zerodha) - a guess is never "Paper".
+        // "Hit the panic button" is the kill switch: it stops new entries and sends no order, so it is labelled "No order".
+        // (Exits, closes and cancels are labelled by what is open: RequestsTest and IraActions.venueOf.)
         val view = IraHub.requestsOf(IraHub.state.value).single()
-        assertTrue(view.venue.name, view.venue != com.optionslab.ira.Requests.Venue.NONE)
-        if (!com.optionslab.app.data.Broker.loggedIn) assertEquals(com.optionslab.ira.Requests.Venue.PAPER, view.venue)
-        compose.waitForText(view.venue.label)
+        assertEquals(com.optionslab.ira.Requests.Venue.NONE, view.venue)
+        compose.waitForText("No order")
         // The chat line carries the full what, never only the short title.
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains(view.what.trim().trimEnd('.')))
         compose.waitForText("Yes, approve")
