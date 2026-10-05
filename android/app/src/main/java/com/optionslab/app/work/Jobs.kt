@@ -875,6 +875,7 @@ class WatchService : Service() {
     /** Sticky while the watch runs: Android brings the service back if it ends the app's process. */
     private fun stickiness(): Int = if (watching) START_STICKY else START_NOT_STICKY
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)   // CoroutineStart.ATOMIC
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Foreground first, always: the system requires it within seconds.
         // No intent: Android restarted this sticky service after ending the app's process. In market hours that is the
@@ -901,11 +902,15 @@ class WatchService : Service() {
         if (running[k]?.isActive == true) return stickiness()
         val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
         val run = if (k == Jobs.Kind.LIVE) noteStart(byAndroid) else 0L
-        // Registered before it runs (LAZY, started below): a maybeStop() in between never sees the service idle and stops it.
-        val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-            val s = AppSettings.load()
+        // Registered before its work runs (it waits for [registered]): a maybeStop() in between never sees the service idle
+        // and stops it. ATOMIC: the body always starts, so a stop that lands before the coroutine is first dispatched
+        // still goes through the finally below (the end in the diary, the run's day cleared), never skipped.
+        val registered = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.ATOMIC) {
             var end: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
             try {
+                registered.await()
+                val s = AppSettings.load()
                 when (k) {
                     Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
                     Jobs.Kind.TICKET -> Tasks.ticket(this@WatchService, s)
@@ -958,7 +963,7 @@ class WatchService : Service() {
             }
         }
         running[k] = job
-        job.start()
+        registered.complete(Unit)
         return stickiness()
     }
 
@@ -1107,7 +1112,8 @@ class WatchService : Service() {
 
     @Synchronized
     private fun maybeStop() {
-        // A job registered but not started yet (LAZY, a moment) counts as running: only finished or cancelled ones do not.
+        // A job registered but not at its work yet (waiting for its registration, a moment) counts as running: only
+        // finished or cancelled ones do not.
         if (running.values.all { it.isCompleted || it.isCancelled }) {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
