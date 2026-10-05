@@ -98,6 +98,7 @@ class JarvisVoice : Service() {
             append("Voice check: ${runCatching { diagnose(context) }.getOrElse { "could not run" }}\n")
             com.optionslab.ira.Latency.say(latencies)?.let { append(it).append('\n') }
             append(com.optionslab.ira.BossPace.say(paceGaps)).append('\n')
+            append(runCatching { com.optionslab.ira.CutIn.say(cutInNow(context ?: instance?.get()), cutInChoice) }.getOrElse { "Cut-in: could not check" }).append('\n')
             append("Last turns:\n"); traceLines(all = true).forEach { append("  ").append(it).append('\n') }
         }
 
@@ -265,12 +266,49 @@ class JarvisVoice : Service() {
             set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.voice.style2", v.name) } }
 
         /**
-         * Cutting in while Jarvis talks: it listens during its own speech (only for "Jarvis"). Off by default: on
-         * many phones listening silences the speech. Switched off by itself when the phone does that.
+         * Cutting in while Jarvis talks: it listens during its own speech (the name or a stop word only,
+         * [com.optionslab.ira.BargeIn]). Boss's own setting: on, off, or null - automatic, on only with a headset or
+         * echo cancelling ([com.optionslab.ira.CutIn]). An "on" from before is kept. Choosing again clears a phone found
+         * to go silent, so Boss can try once more.
          */
-        var cutIn: Boolean
-            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.cutin", false) }.getOrDefault(false)
-            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.cutin", v) } }
+        var cutInChoice: Boolean?
+            get() = runCatching { val sp = com.optionslab.app.security.SecurePrefs
+                com.optionslab.ira.CutIn.load(sp.getString("jarvis.cutin2")) ?: if (sp.getBoolean("jarvis.cutin", false)) true else null }.getOrNull()
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.putAll(mapOf("jarvis.cutin2" to com.optionslab.ira.CutIn.save(v),
+                "jarvis.cutin" to null, "jarvis.cutin.silences" to null)) } }
+
+        /** This phone was seen to stop speaking while it listened: the automatic choice stays off. */
+        private var cutInSilences: Boolean
+            get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.cutin.silences", false) }.getOrDefault(false)
+            set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.cutin.silences", if (v) true else null) } }
+
+        /** Outputs that put Jarvis's voice in Boss's ears, not the room (a Bluetooth headset plays as A2DP or SCO). */
+        private val HEADSETS = setOf(android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET, android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO, android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            android.media.AudioDeviceInfo.TYPE_USB_HEADSET, android.media.AudioDeviceInfo.TYPE_HEARING_AID, 26 /* TYPE_BLE_HEADSET, Android 12 */)
+
+        private fun headset(c: Context): Boolean = runCatching {
+            val am = c.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS).any { it.type in HEADSETS }
+        }.getOrDefault(false)
+
+        /**
+         * The echo canceller: applied when our own shared capture feeds the recognizer (we switch it on there); else only
+         * the phone's own, which the recognizer may use.
+         */
+        private fun echo(): com.optionslab.ira.CutIn.Echo {
+            val has = runCatching { android.media.audiofx.AcousticEchoCanceler.isAvailable() }.getOrDefault(false)
+            if (!has) return com.optionslab.ira.CutIn.Echo.NONE
+            val v = instance?.get()
+            val shared = v != null && VoiceGuard.supported && VoiceGuard.enrolled && !v.tapFailed
+            // A shared capture running now whose canceller did not switch on: only the phone's own.
+            val live = v?.tap
+            return if (shared && (live == null || live.echoCancelled)) com.optionslab.ira.CutIn.Echo.APPLIED else com.optionslab.ira.CutIn.Echo.AVAILABLE
+        }
+
+        /** Is cut-in on now, why, and how soon into his speech listening starts (Boss's choice wins). */
+        fun cutInNow(context: Context?): com.optionslab.ira.CutIn.Decision =
+            com.optionslab.ira.CutIn.decide(cutInChoice, cutInSilences, context?.let { headset(it) } ?: false, echo())
 
         /**
          * Muted (the owner's wish, 2026-10-02: "Jarvis, mute"): nothing is spoken - replies, news and questions stay on
@@ -640,7 +678,9 @@ class JarvisVoice : Service() {
                     if (stoppedByUs) { stoppedByUs = false; return@post }  // Boss cut in
                     // The speech was cut off by something else - listening at the same time, on this phone.
                     if (turnInSpeech) {
-                        cutIn = false
+                        // Off from now on: Boss's "on" goes back to automatic, which stays off on this phone.
+                        if (cutInChoice == true) cutInChoice = null
+                        cutInSilences = true; note("cut-in off: speech stopped while listening")
                         _state.value = VoiceState(Mode.LISTENING, problem = "Cutting in is off: this phone stops speaking while it listens.")
                     }
                     afterSpeech(id?.substringBefore('#'))
@@ -1350,9 +1390,11 @@ class JarvisVoice : Service() {
         if (!voiceReady || t == null) { afterSpeech(id); return }
         _state.value = VoiceState(Mode.SPEAKING)
         applyStyle(t)                                   // a style or voice changed on the Ira screen takes effect now
-        if (cutIn) {
-            // Keep listening (for "Jarvis" only) once the sentence is under way.
-            if (id != STOP_AFTER) main.postDelayed({ if (speaking) listen() }, 900)
+        val ci = cutInNow(this)
+        if (ci.on) {
+            // Keep listening (for the name or a stop word only) once the sentence is under way: sooner when his voice
+            // cannot reach the microphone loud (a headset, echo cancelling - [com.optionslab.ira.CutIn]).
+            if (id != STOP_AFTER) main.postDelayed({ if (speaking) listen() }, ci.startMs)
         } else {
             // Take turns: not listening while speaking, so Jarvis never hears itself.
             main.removeCallbacks(finish)

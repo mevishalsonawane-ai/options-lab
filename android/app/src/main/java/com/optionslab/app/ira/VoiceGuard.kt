@@ -90,12 +90,17 @@ object VoiceGuard {
     /**
      * The phone's noise suppression and gain control on one capture (Boss, 4 Oct: background noise heard, a soft voice
      * missed). Used on the teaching recordings and the shared capture alike, so the voice print is compared like with
-     * like. Released with the capture; a phone without them keeps the plain capture.
+     * like. Released with the capture; a phone without them keeps the plain capture. [echo]: also the phone's echo
+     * canceller (the shared capture only, so Jarvis's own voice is taken out while he talks and Boss cuts in -
+     * [com.optionslab.ira.CutIn]); with nothing playing it leaves the voice as it is.
      */
-    private class Clean(session: Int) {
+    private class Clean(session: Int, echo: Boolean = false) {
         private val ns = runCatching { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
         private val agc = runCatching { if (android.media.audiofx.AutomaticGainControl.isAvailable()) android.media.audiofx.AutomaticGainControl.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
-        fun release() { runCatching { ns?.release() }; runCatching { agc?.release() } }
+        private val aec = if (!echo) null else runCatching { if (android.media.audiofx.AcousticEchoCanceler.isAvailable()) android.media.audiofx.AcousticEchoCanceler.create(session)?.also { it.setEnabled(true) } else null }.getOrNull()
+        /** The echo canceller is on for this capture. */
+        val echoOn: Boolean get() = runCatching { aec?.enabled == true }.getOrDefault(false)
+        fun release() { runCatching { ns?.release() }; runCatching { agc?.release() }; runCatching { aec?.release() } }
     }
 
     @SuppressLint("MissingPermission")
@@ -140,7 +145,7 @@ object VoiceGuard {
                 r = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
                 check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }
-                clean = Clean(r.audioSessionId)
+                clean = Clean(r.audioSessionId, echo = true)
                 r.startRecording()
             } catch (e: Exception) {
                 // Nothing may leak when the microphone cannot be had: both ends of the pipe and the recorder go.
@@ -165,6 +170,9 @@ object VoiceGuard {
 
         /** What was heard this turn (up to [KEEP_S] seconds), oldest first. */
         fun heard(): ShortArray = synchronized(buf) { ShortArray(filled) { buf[(at - filled + it + buf.size) % buf.size] } }
+
+        /** The phone's echo canceller is on for this capture (Jarvis's own voice taken out while he talks). */
+        val echoCancelled: Boolean get() = clean?.echoOn == true
 
         fun close() {
             running = false

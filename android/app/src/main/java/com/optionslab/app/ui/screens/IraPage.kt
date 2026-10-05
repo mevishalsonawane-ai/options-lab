@@ -400,13 +400,18 @@ internal fun VoiceSwitch() {
             androidx.compose.material3.Switch(checked = speakTyped, onCheckedChange = { v ->
                 speakTyped = v; com.optionslab.app.ira.JarvisSpeaker.speakTyped = v; if (!v) com.optionslab.app.ira.JarvisSpeaker.stop() })
         }
-        var cut by remember { mutableStateOf(JarvisVoice.cutIn) }
+        // On by itself with a headset or echo cancelling; Boss's own choice wins, and "Automatic" gives it back.
+        var cutChoice by remember { mutableStateOf(JarvisVoice.cutInChoice) }
+        val cutNow = remember(cutChoice) { JarvisVoice.cutInNow(ctx) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Let me cut in while Jarvis talks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = cut, onCheckedChange = { v -> cut = v; JarvisVoice.cutIn = v })
+            androidx.compose.material3.Switch(checked = cutNow.on, onCheckedChange = { v -> JarvisVoice.cutInChoice = v; cutChoice = v })
         }
-        Note("Say \"Jarvis\" while it speaks and it stops to listen. Some phones go silent when they listen while speaking: " +
-            "then Jarvis switches this off by itself.")
+        Note("Say \"Jarvis\" or \"stop\" while it speaks and it stops. " +
+            (if (cutChoice == null) "Automatic: on with a headset or where the phone cancels its own voice (now ${cutNow.why.say}). "
+            else "Your choice (${if (cutChoice == true) "on" else "off"}). ") +
+            "Some phones go silent when they listen while speaking: then Jarvis switches this off by itself.")
+        if (cutChoice != null) androidx.compose.material3.TextButton({ JarvisVoice.cutInChoice = null; cutChoice = null }) { Text("Back to automatic") }
         var mute by remember { mutableStateOf(JarvisVoice.muted) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Text("Mute Jarvis (replies on screen only)", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
