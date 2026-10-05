@@ -20,7 +20,12 @@ import java.util.Locale
  *  - a plus between two figures is said as one (Voice, round 19): "Liquidity 15+5" -> "Liquidity 15 plus 5" (the voice
  *    read it "fifteen five"); a sign before a lone figure ("+0.4") is left as written;
  *  - a news line's "(word tone +0.0)" is not said (Voice, round 19): the sentence already says how it reads ("It reads
- *    good for Nifty"), and a bare word-list score said aloud tells Boss nothing. Only that aside, only aloud.
+ *    good for Nifty"), and a bare word-list score said aloud tells Boss nothing. Only that aside, only aloud;
+ *  - a range written with a dash is said with "to" (Voice, round 24): "a usual day spans about 24,300-24,700",
+ *    "the opening range 9:15-10:00", "gapped 0.5-1 percent" were read "24,300 minus 24,700" or run together as one
+ *    number; now "24,300 to 24,700", "9:15 to 10:00", "0.5 to 1 percent" (Hindi "से"). Only two figures (or two clock
+ *    times) joined by one unspaced hyphen or en dash with nothing else glued on either side - so a date ("2026-10-05",
+ *    "05-10-2026"), a phone number, a year span ("FY2025-26"), a symbol and a spaced minus ("24,512 - 85") stay as written.
  *
  * The chat keeps the exact figures; this only shapes the words said, adds nothing new and never changes a sentence's end,
  * so "go on" after a cut-in finds the same sentences ([BargeIn]). Applying it twice changes nothing. Pure.
@@ -60,6 +65,15 @@ object SayAs {
     private val PLUS = Regex("(?<![\\w,.])(\\d{1,3})\\+ ?(?=\\d)")
     /** The news line's word-list score ([NewsAnalyst.take]): " (word tone +0.0)". */
     private val WORD_TONE = Regex(" ?\\(word tone [+-]?\\d+(?:\\.\\d+)?\\)")
+    /** One side of a range: a clock time ("9:15"), a grouped figure ("24,300", "1,23,456.5") or plain digits ("0.5", "15"). */
+    private const val SIDE = "(?:\\d{1,2}:\\d{2}|\\d{1,3}(?:,\\d{2,3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)"
+    /**
+     * Two figures joined by one unspaced hyphen or en dash: nothing of a word, a figure, a colon or another dash before the
+     * first or after the second - so dates ("2026-10-05", "05-10-2026"), phone numbers and "FY2025-26" are never one.
+     */
+    /** "am" / "pm" right after: "3-30 pm" is half past three, not a range. */
+    private val CLOCK_AFTER = Regex("\\s?[aApP]\\.?[mM]\\b")
+    private val RANGE = Regex("(?<![\\w.,:\\-\\u2013+])($SIDE)[\\-\\u2013]($SIDE)(?![\\w:\\-\\u2013]|[.,]\\d)")
 
     /** [text] with its figures as said aloud; [hindi]: the units in Hindi (लाख, करोड़, कॉल, पुट). */
     fun figures(text: String, hindi: Boolean = false): String {
@@ -68,6 +82,14 @@ object SayAs {
         if (text.isEmpty() || !hasDigit(text)) return text
         var s = text
         if (s.contains("(word tone ")) s = WORD_TONE.replace(s, "")
+        if (s.indexOf('-') >= 0 || s.indexOf('\u2013') >= 0) {
+            val src = s
+            s = RANGE.replace(src) { m ->
+                // "3-30 pm" is a clock time heard with a dash, not a range: as written.
+                if (m.groupValues[2].length == 2 && CLOCK_AFTER.matchesAt(src, m.range.last + 1)) m.value
+                else m.groupValues[1] + (if (hindi) " से " else " to ") + m.groupValues[2]
+            }
+        }
         if (s.indexOf('+') >= 0) s = PLUS.replace(s, if (hindi) "\$1 प्लस " else "\$1 plus ")
         if (sided(s)) {
             s = DAY_OPTION.replace(s) { m -> dayOption(m, hindi) ?: m.value }

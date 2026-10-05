@@ -112,4 +112,27 @@ class SayAsTest {
         val once = SayAs.figures("Exit BANKNIFTY27OCT2655100CE now.")
         assertEquals(once, SayAs.figures(once))
     }
+
+    @Test fun aRangeWithADashIsSaidWithTo() {
+        assertEquals("a usual day spans about 24,300 to 24,700", SayAs.figures("a usual day spans about 24,300-24,700"))
+        assertEquals("the opening range 24,700 to 24,500 (9:15 to 10:00)", SayAs.figures("the opening range 24,700-24,500 (9:15-10:00)"))
+        assertEquals("days it gapped 0.5 to 1 percent", SayAs.figures("days it gapped 0.5-1 percent"))
+        assertEquals("leave 13:00 to 14:00 alone.", SayAs.figures("leave 13:00\u201314:00 alone."))
+        assertEquals("between 2 to 3 pm", SayAs.figures("between 2-3 pm"))
+        assertEquals("expect 15 to 30 minutes", SayAs.figures("expect 15-30 minutes"))
+        assertEquals("24,300 से 24,700", SayAs.figures("24,300-24,700", hindi = true))
+        // A lakh-sized range is still said in lakh.
+        assertEquals("1 lakh rupees to 2 lakh", SayAs.figures("Rs 1,00,000-2,00,000"))
+        // Dates, phone numbers, year spans, symbols, a spaced minus, a sign and a hyphenated word stay as written.
+        listOf("On 2026-10-05.", "On 05-10-2026.", "Call 1800-123-4567", "FY2025-26 taxes", "trades-FY2025-26-all.csv",
+            "Nifty 24,512 - 85", "down -0.4 percent", "a 5-minute chart", "M&M-EQ", "10-15-minute window", "-5-10",
+            "it's 3-30 pm", "at 9-15 am")
+            .forEach { assertEquals(it, SayAs.figures(it)) }
+        // Through Aloud: the times rounded, then the range said; twice is once and the sentences stay the same.
+        val text = "Boss, a usual day spans about 24,300-24,700. The opening range was 09:15-10:00."
+        val said = Aloud.say(text)
+        assertEquals("Boss, a usual day spans about 24,300 to 24,700. The opening range was 9:15 to 10:00.", said)
+        assertEquals(said, Pauses.shape(SayAs.figures(said)))
+        assertEquals(BargeIn.sentences(text).size, BargeIn.sentences(said).size)
+    }
 }
