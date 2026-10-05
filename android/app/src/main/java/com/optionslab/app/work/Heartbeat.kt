@@ -91,11 +91,11 @@ object Heartbeat {
             setting = "schedule.permissions")
         // Once per stall, as the notification: Jarvis says in the chat which open positions and stops are now unwatched,
         // and what keeps the phone from stopping the watch again. Only speaks (round 21). Off the main thread already
-        // (the alarm receiver's IO scope); bounded so a hung read never holds the receiver.
+        // (the alarm receiver's IO scope); bounded under goAsync's ~10 s window so a hung read never holds the receiver.
         runCatching {
             val at = if (since != null) lastAt.toLocalTime() else null
             kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.withTimeoutOrNull(20_000) { com.optionslab.app.ira.IraWatchStopped.tell(context, at) }
+                kotlinx.coroutines.withTimeoutOrNull(8_000) { com.optionslab.app.ira.IraWatchStopped.tell(context, at) }
             }
         }
     }

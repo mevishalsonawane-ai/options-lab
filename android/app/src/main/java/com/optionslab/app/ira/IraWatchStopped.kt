@@ -37,7 +37,7 @@ internal object IraWatchStopped {
         }
         var unread = false
         if (com.optionslab.app.data.Broker.loggedIn) {
-            val open = kotlinx.coroutines.withTimeoutOrNull(8_000) { runCatching { com.optionslab.app.data.Broker.positionBook() }.getOrNull() }
+            val open = kotlinx.coroutines.withTimeoutOrNull(5_000) { runCatching { com.optionslab.app.data.Broker.positionBook() }.getOrNull() }
                 ?.net?.filter { it.open }
             if (open == null) unread = true
             open.orEmpty().forEach { p ->
