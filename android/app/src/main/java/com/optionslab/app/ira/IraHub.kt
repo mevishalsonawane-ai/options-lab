@@ -1502,7 +1502,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
@@ -2502,7 +2502,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2710,6 +2710,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.WhereIWin.LOCKED); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraCoach.whereIWin(q, whereIWinCut) }.getOrElse { "I could not split your trades just now, Boss." }) }
+            return true
+        }
+        // "Do I do better when I trade less?", "how many trades a day work best for me?", "how does my first trade of the day
+        // do?", "din ka pehla trade kaisa jaata hai" ([com.optionslab.ira.TradesADay]): his own trading days grouped by how
+        // many trades he opened on them, and his trades by their place in the day - each account apart, over the span he
+        // names. His record, so never on a locked phone; facts only, never a number to take or a limit set - nothing is
+        // placed, changed or armed. (After WhereIWin, before NetLean. Not in IraGoldAlgo.)
+        val tradesADayPart = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TradesADay.asked(q) }.getOrNull() else null
+        if (tradesADayPart != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.TradesADay.LOCKED); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { IraCoach.tradesADay(q, tradesADayPart) }.getOrElse { "I could not count your trades by day just now, Boss." }) }
             return true
         }
         // "Am I net long or short?", "which way am I leaning?", "what's my net delta?", "do my bots contradict each other right
