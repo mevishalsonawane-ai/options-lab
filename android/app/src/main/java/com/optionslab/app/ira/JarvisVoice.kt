@@ -495,6 +495,8 @@ class JarvisVoice : Service() {
 
         /** Times each spoken reply from Boss's words to its own first sound ([com.optionslab.ira.ReplyClock]). */
         private val replyClock = com.optionslab.ira.ReplyClock()
+        /** The question whose stages are being timed ([IraHub.askStages]; 0: none). Speed, round 4. */
+        @Volatile private var askTimed = 0L
 
         /**
          * The voice needs the phone's processor now - an answer being worked out or said, or Boss speaking - so the
@@ -562,10 +564,19 @@ class JarvisVoice : Service() {
 
         /**
          * [english] in Hindi when the owner chose Hindi replies and the model is ready (every figure checked), else null.
+         *
+         * Speed, round 4 (Boss's diagnostics, 5 Oct: 33.4 s from the answer handed to the voice to its first sound, the model
+         * not loaded): the voice never waits for the model to load - only an already-loaded model translates, within
+         * [com.optionslab.ira.ModelWait.HINDI_MS]; otherwise (or slower) the answer is said in English at once.
          */
         suspend fun inHindi(english: String): String? {
             if (!hindi || IraModel.state.value.status != IraModel.Status.READY) return null
-            val out = runCatching { IraModel.complete(com.optionslab.ira.Hindi.prompt(english), maxTokens = 200) }.getOrNull()
+            val wait = com.optionslab.ira.ModelWait.hindiWait(hindi, IraModel.state.value.loaded)
+            if (wait <= 0L) { note("Hindi: the AI model is not loaded, so this answer is said in English (no wait)"); return null }
+            val out = kotlinx.coroutines.withTimeoutOrNull(wait) {
+                runCatching { IraModel.complete(com.optionslab.ira.Hindi.prompt(english), maxTokens = 200, timeoutMs = wait) }.getOrNull()
+            }
+            if (out == null) note("Hindi: no translation within %.1f s, said in English".format(java.util.Locale.ENGLISH, wait / 1000.0))
             return com.optionslab.ira.Hindi.accept(english, out)
         }
 
@@ -892,6 +903,7 @@ class JarvisVoice : Service() {
                 // "answer ready 4.8 s" - a loose time taken by a later sound).
                 val split = replyClock.startedSplit(id, now)
                 val took = split?.total
+                if (split != null) runCatching { IraHub.askStages.mark(askTimed, com.optionslab.ira.AskStages.Stage.SPOKEN, now) }
                 if (split != null && took != null) { lastLatencyMs = took; latencies = com.optionslab.ira.Latency.add(latencies, took)
                     // Where the wait went (Voice, round 22): the voice's own part - the reply handed to it, to its first sound.
                     voiceLatencies = com.optionslab.ira.Latency.addVoice(voiceLatencies, latencies, took, split.voice)
@@ -1773,6 +1785,9 @@ class JarvisVoice : Service() {
         heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
         learnPace()
         _state.value = VoiceState(Mode.THINKING)
+        // Speed, round 4: this question's stages timed from Boss's last word ([com.optionslab.ira.AskStages]; durations only).
+        val timed = IraHub.askStages.begin(heardAt, voice = true)
+        askTimed = timed
         answerJob = scope.launch {
             // Answer at once from what Jarvis already knows (kept fresh every minute while listening in market hours);
             // only with no prices at all is the first answer held for a refresh.
@@ -1786,7 +1801,7 @@ class JarvisVoice : Service() {
             else if (!chat && IraHub.online() && com.optionslab.ira.Market.NIFTY.trading(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))) &&
                 st.liveAt?.isBefore(java.time.Instant.now().minusSeconds(120)) != false) launch(Dispatchers.Default) { runCatching { IraHub.refresh() } }
             // Read off the main thread (this scope's); waited for, so the reply below is looked for after it as before.
-            IraHub.askSoon(q, confirmed = confirm).join()
+            IraHub.askSoon(q, confirmed = confirm, timed = timed).join()
             // A slow answer (your account, the trade check): say so at once instead of going quiet.
             val hold = launch { kotlinx.coroutines.delay(1_000); say("Working on it, Boss.", "wait") }
             val said = com.optionslab.ira.Secrets.redact(q.trim())
@@ -1807,6 +1822,8 @@ class JarvisVoice : Service() {
                 }
             }
             hold.cancel()
+            if (a != null) IraHub.askStages.mark(timed, com.optionslab.ira.AskStages.Stage.ANSWERED, SystemClock.elapsedRealtime())
+            else IraHub.askStages.finish(timed)
             // How long Boss waited, for the diagnostics (Boss, 4 Oct: "getting late response").
             if (a != null) note("answer ready %.1f s after the words".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - heardAt) / 1000.0))
             val o = a?.order
@@ -1909,6 +1926,7 @@ class JarvisVoice : Service() {
         // any answer may hold Boss's side: its repeat re-checks the lock ([com.optionslab.ira.Again.reply]).
         if (id == "answer" && keep) repeatable = com.optionslab.ira.Again.Last(words, account || !locked(), SystemClock.elapsedRealtime())
         sayingFull = if (id == "answer") full else null; sayingAccount = account
+        sayingReply = reply && (id == "answer" || id == "question")
         sayingText = text; reachedAt = -1
         val invited = com.optionslab.ira.AnswerWindow.invites(words)
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
@@ -1980,8 +1998,20 @@ class JarvisVoice : Service() {
     private fun sayWhenFree(text: String, id: String, tries: Int = 0) {
         if (stopped) return
         if (tries < 32 && !speaking && bossSpeaking()) { main.postDelayed({ sayWhenFree(text, id, tries + 1) }, 250); return }
+        // Speed, round 4: Boss's own answer first. A note nobody asked for just now (a coach line, a market note - never a
+        // trade's own yes-or-no question) waits while his question is being answered or its reply is being said (30 s at
+        // most): said over it, it flushed the reply waiting for its first sound. Urgent warnings never come here.
+        if (id != "question" && tries < REPLY_FIRST_TRIES &&
+            ((_state.value.mode == Mode.THINKING && answerJob?.isActive == true) || (speaking && sayingReply))) {
+            main.postDelayed({ sayWhenFree(text, id, tries + 1) }, 250); return
+        }
         say(text, id, reply = false)
     }
+
+    /** The words being said now answer Boss ([say]'s reply, an "answer" or "question"); unasked notes wait for them. */
+    @Volatile private var sayingReply = false
+    /** [sayWhenFree] waits this many 250 ms turns at most for Boss's answer to be worked out and said. */
+    private val REPLY_FIRST_TRIES = 120
 
     /**
      * Says [text] as utterance [u]: the first sentence alone, the rest queued behind it ([com.optionslab.ira.Wake.pieces]),

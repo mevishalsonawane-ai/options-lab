@@ -6,6 +6,8 @@ import com.optionslab.ira.AppFacts
 import com.optionslab.ira.AppView
 import com.optionslab.ira.Section
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -95,13 +97,30 @@ internal object IraAccount {
         Section.PROTECTIONS, Section.STRATEGIES, Section.ALARMS)
 
     /** Something changed (an order, a command): the next question reads afresh. */
-    fun invalidate() { synchronized(cache) { cache.clear(); warmedAt = 0L } }
+    fun invalidate() { synchronized(cache) { cache.clear(); cacheMode = null; warmedAt = 0L; generation++ } }
+
+    /**
+     * Bumped by [invalidate] (under the cache's lock): a read begun before an order or a command is never kept after it
+     * (its figures could predate the change). Speed, round 4.
+     */
+    private var generation = 0L
 
     /**
      * When [warm] last read ahead (SystemClock.elapsedRealtime; 0 = not since a change). [invalidate] clears it, so the
      * next pass after an order or a command reads at once; it is also the reset hook between tests.
      */
     @Volatile private var warmedAt = 0L
+
+    /** [v]'s sections kept as read at [at] (elapsed ms) - only when nothing was done since the read began ([gen]). */
+    private fun keep(v: AppView, at: Long, gen: Long) {
+        synchronized(cache) {
+            if (gen != generation) return
+            v.lines.forEach { (k, l) -> val was = cache[k]; if (was == null || was.first <= at) cache[k] = at to l }
+            cacheMode = v.mode
+        }
+    }
+
+    private fun generationNow(): Long = synchronized(cache) { generation }
 
     /**
      * [read], but from what was read in the last [FRESH_MS] when every section asked is there (questions naming a
@@ -116,23 +135,89 @@ internal object IraAccount {
             if (mode != null && sections.all { s -> cache[s]?.let { now - it.first < FRESH_MS } == true })
                 return AppView(mode, sections.associateWith { cache.getValue(it).second })
         }
+        val gen = generationNow()
         val v = read(sections, markets) ?: return null
-        if (markets.isEmpty() && testView == null) synchronized(cache) { v.lines.forEach { (k, l) -> cache[k] = now to l }; cacheMode = v.mode }
+        if (markets.isEmpty() && testView == null) keep(v, now, gen)
         return v
+    }
+
+    /** An account answer's figures and, when they are not as of now, the words said before them ([com.optionslab.ira.KeptFigures]). */
+    data class Quick(val view: AppView, val note: String?)
+
+    /** Where a read behind a question runs (apart from the asker, so one it stopped waiting for still finishes and is kept). */
+    private val behind = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** The one read behind under way ([readQuick] starts at most one at a time). */
+    @Volatile private var behindJob: kotlinx.coroutines.Job? = null
+
+    /** For the diagnostics' "Speed (asks)" line: account questions said from kept figures, read fresh, and slow reads stood in for. */
+    private val quickKept = java.util.concurrent.atomic.AtomicInteger()
+    private val quickRead = java.util.concurrent.atomic.AtomicInteger()
+    private val quickSlow = java.util.concurrent.atomic.AtomicInteger()
+    /** The reset hook between tests: the counts above, what is kept, and any read behind. */
+    internal fun resetSpeed() { behindJob?.cancel(); behindJob = null; quickKept.set(0); quickRead.set(0); quickSlow.set(0); invalidate() }
+    fun speedNote(): String = "account answers: ${quickKept.get()} from kept figures, ${quickRead.get()} read fresh, ${quickSlow.get()} slow reads stood in for"
+
+    /**
+     * Speed, round 4: [readFast] for a question Boss is waiting on ([com.optionslab.ira.KeptFigures]). Figures kept under
+     * five minutes are said at once (with their time once over a minute old) and read again behind; otherwise read now -
+     * waited on 3 s at most when a kept copy can stand in, else as long as the read takes (its own bounds apply). Words
+     * only; [invalidate] (anything done) clears what is kept, so a change Jarvis made is never answered from before it.
+     */
+    suspend fun readQuick(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): Quick? {
+        if (sections.any { it in ASKED } || markets.isNotEmpty() || testView != null)
+            return read(sections, markets, question)?.let { Quick(it, null) }
+        val now = android.os.SystemClock.elapsedRealtime()
+        val (mode, kept) = synchronized(cache) { cacheMode to sections.associateWith { cache[it] } }
+        val ages = sections.map { s -> kept[s]?.let { now - it.first } }
+        fun keptView(): AppView? = mode?.let { m -> if (kept.values.any { it == null }) null else AppView(m, kept.mapValues { it.value!!.second }) }
+        fun noteFor(slow: Boolean): String? = com.optionslab.ira.KeptFigures.oldest(ages)?.let {
+            com.optionslab.ira.KeptFigures.note(it, java.time.LocalTime.now(com.optionslab.engine.IST), slow) }
+        val use = if (mode == null) com.optionslab.ira.KeptFigures.Use.READ else com.optionslab.ira.KeptFigures.use(ages)
+        if (use != com.optionslab.ira.KeptFigures.Use.READ) {
+            val v = keptView()
+            if (v != null) {
+                quickKept.incrementAndGet()
+                if (use == com.optionslab.ira.KeptFigures.Use.KEPT_AND_REFRESH) readBehind(sections)
+                return Quick(v, if (use == com.optionslab.ira.KeptFigures.Use.KEPT) null else noteFor(false))
+            }
+        }
+        val gen = generationNow()
+        val fresh = behind.async { runCatching { read(sections) }.getOrNull()?.also { keep(it, now, gen) } }
+        val stand = keptView()?.takeIf { com.optionslab.ira.KeptFigures.standIn(ages) }
+        val v = if (stand != null) withTimeoutOrNull(com.optionslab.ira.KeptFigures.WAIT_MS) { fresh.await() } else fresh.await()
+        if (v != null) { quickRead.incrementAndGet(); return Quick(v, null) }
+        if (stand == null) return null
+        // Slow (or failed): the kept figures stand in, said with their time; the read goes on behind and is kept.
+        quickSlow.incrementAndGet()
+        return Quick(stand, noteFor(true))
+    }
+
+    /** [sections] read again behind the answer just given from kept figures (one such read at a time). */
+    private fun readBehind(sections: Set<Section>) {
+        if (behindJob?.isActive == true) return
+        val gen = generationNow()
+        behindJob = behind.launch {
+            val at = android.os.SystemClock.elapsedRealtime()
+            runCatching { read(sections) }.getOrNull()?.let { keep(it, at, gen) }
+        }
     }
 
     /**
      * Reads [WARM] ahead (the listening keeper calls it), so those answers need no wait. [quiet]: the screen off and
      * nothing held or armed - then read about every 2 minutes, not on every 30 s pass (Battery, round 11,
      * [com.optionslab.ira.AccountWarmPace]). Words only; a question past [FRESH_MS] reads afresh itself.
+     *
+     * Speed, round 4: what is kept stays in place while this reads (it used to be cleared first, so a question asked
+     * during the read - seconds with Zerodha - found nothing kept and read everything again itself, waiting).
      */
     suspend fun warm(quiet: Boolean = false) {
         val at = android.os.SystemClock.elapsedRealtime()
         val last = warmedAt
         if (!com.optionslab.ira.AccountWarmPace.due(if (last == 0L) null else at - last, quiet)) return
-        invalidate()
         warmedAt = at.coerceAtLeast(1L)
-        readFast(WARM)
+        if (testView != null) { readFast(WARM); return }
+        val gen = generationNow()
+        read(WARM)?.let { keep(it, at, gen) }
     }
 
     /** "Am I ready to go live?": each thing that should be in place first. */

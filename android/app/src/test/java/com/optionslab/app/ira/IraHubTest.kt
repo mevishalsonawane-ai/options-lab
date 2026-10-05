@@ -43,7 +43,7 @@ class IraHubTest : RobolectricTest() {
     )
 
     @After fun down() { IraHub.testLabBars = null; IraAccount.testView = null; IraHub.testHistories = null; IraHub.testAutoLab = false
-        IraHub.testLoadHold?.complete(Unit); IraHub.testLoadHold = null; runBlocking { IraHub.forgetAll() } }
+        IraHub.testLoadHold?.complete(Unit); IraHub.testLoadHold = null; runBlocking { IraHub.forgetAll() }; IraHub.resetAskSpeed() }
 
     private fun waitFor(what: String, ok: () -> Boolean) {
         val t0 = System.currentTimeMillis()

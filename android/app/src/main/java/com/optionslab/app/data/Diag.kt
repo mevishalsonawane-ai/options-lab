@@ -128,6 +128,9 @@ object Diag {
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
+        // Speed, round 4 (Boss, 5 Oct: "Answer is taking a lot after question is asked"): where a question's wait goes,
+        // stage by stage (heard→routed, routed→answered, answered→spoken) and the slowest - durations only, never words.
+        append(redact(runCatching { com.optionslab.app.ira.IraHub.askSpeedLine() }.getOrElse { "Speed (asks): could not read" })).append('\n')
         // Jarvis's ears and his recent actions (Boss, 4 Oct: "is there a file of logs I can give you?").
         if (com.optionslab.app.BuildConfig.JARVIS) {
             append("\n-- Jarvis's ears --\n")

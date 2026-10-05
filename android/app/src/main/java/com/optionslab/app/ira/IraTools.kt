@@ -320,12 +320,13 @@ internal object IraTools {
     /** Jarvis could not place [said]: kept a moment, in case Boss says it another way. */
     @Synchronized fun missed(said: String) {
         val w = com.optionslab.ira.Secrets.redact(said)
-        if (w.isNotBlank()) runCatching { prefs().put(MISSED, JSONObject().put("d", com.optionslab.app.data.Market.today().toString())
-            .put("w", JSONArray(com.optionslab.ira.Missed.add(missedToday(), w))).toString()) }
+        // Speed, round 4: written behind (readable at once), not under this lock on the answer's way.
+        if (w.isNotBlank()) runCatching { prefs().putAllSoon(mapOf(MISSED to JSONObject().put("d", com.optionslab.app.data.Market.today().toString())
+            .put("w", JSONArray(com.optionslab.ira.Missed.add(missedToday(), w))).toString())) }
         // Also kept for the week (two weeks at most): what his weekly goals of understanding are set on.
         if (w.isNotBlank()) runCatching {
             val all = com.optionslab.ira.Improve.addMissed(missedWeek(), com.optionslab.app.data.Market.today(), w)
-            prefs().put(MISSED_WEEK, JSONArray().apply { all.forEach { put(JSONObject().put("d", it.first.toString()).put("w", it.second)) } }.toString())
+            prefs().putAllSoon(mapOf(MISSED_WEEK to JSONArray().apply { all.forEach { put(JSONObject().put("d", it.first.toString()).put("w", it.second)) } }.toString()))
         }
         missedLast = if (runCatching { com.optionslab.ira.Corrections.missed(w) }.getOrDefault(false)) w to System.currentTimeMillis() else null
         nextAfterMiss = null
@@ -1624,7 +1625,11 @@ internal object IraTools {
     private fun dayKey() = "$USAGE${com.optionslab.app.data.Market.today()}"
 
     /** One more of [what] today: "heard", "misunderstood", "nameFirst", "failed", "mistakes". */
-    @Synchronized fun count(what: String) = runCatching { prefs().putAll(counted(what)) }
+    // Speed, round 4: written behind (readable at once), never on the caller's thread - every question counted "heard"
+    // in the questions' lane, and the voice counted each answer's time on the speech engine's thread, each paying a
+    // Keystore encryption of the whole settings vault and two disk syncs (and the wait for any write in flight) under
+    // this object's lock, which the next question's readers take too. Counts only: nothing safety-related is in them.
+    @Synchronized fun count(what: String) = runCatching { prefs().putAllSoon(counted(what)) }
 
     /** The writes for one more of [what] today - and, with the day's first count, the days older than [USAGE_KEEP_DAYS] dropped. */
     private fun counted(what: String): Map<String, Any?> {

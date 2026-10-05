@@ -1357,8 +1357,35 @@ object IraHub {
      * did), so a caller waiting for the reply ([replyAfter]) still waits after it. Not tied to the screen: leaving the
      * page never drops a question.
      */
-    fun askSoon(text: String, confirmed: Boolean = false): kotlinx.coroutines.Job =
-        scope.launch(askLane) { awaitLoaded(); if (confirmed) askConfirmed(text) else ask(text) }
+    fun askSoon(text: String, confirmed: Boolean = false, timed: Long = 0L): kotlinx.coroutines.Job {
+        // Speed, round 4: each question's stages timed for the diagnostics ([com.optionslab.ira.AskStages]; durations
+        // only). [timed]: the voice's own timing of this question ([askStages] begun at Boss's words); 0: typed, timed here.
+        val typed = timed == 0L
+        val id = if (typed) askStages.begin(android.os.SystemClock.elapsedRealtime(), voice = false) else timed
+        return scope.launch(askLane) {
+            askStages.mark(id, com.optionslab.ira.AskStages.Stage.STARTED, android.os.SystemClock.elapsedRealtime())
+            try { awaitLoaded(); if (confirmed) askConfirmed(text) else ask(text) }
+            finally { askStages.mark(id, com.optionslab.ira.AskStages.Stage.ROUTED, android.os.SystemClock.elapsedRealtime()) }
+            // A typed question: answered when its reply is in the chat (spoken or not - the screen shows it then).
+            if (typed) scope.launch {
+                val said = com.optionslab.ira.Secrets.redact(text.trim())
+                val got = kotlinx.coroutines.withTimeoutOrNull(30_000) { _state.first { st -> replyAfter(st.messages, said) != null } }
+                if (got != null) askStages.mark(id, com.optionslab.ira.AskStages.Stage.ANSWERED, android.os.SystemClock.elapsedRealtime())
+                askStages.finish(id)
+            }
+        }
+    }
+
+    /** Each question's stages, for the diagnostics' "Speed (asks):" line (durations only, never words). Speed, round 4. */
+    val askStages = com.optionslab.ira.AskStages()
+
+    /** The reset hook between tests (Robolectric shares this object): the ask timings and the account's kept figures. */
+    internal fun resetAskSpeed() { askStages.clear(); IraAccount.resetSpeed() }
+
+    /** The diagnostics' "Speed (asks):" line: where a question's wait goes, the account answers, and the Hindi setting. */
+    fun askSpeedLine(): String = askStages.line() + " · " + IraAccount.speedNote() +
+        " · Hindi replies: " + (if (runCatching { JarvisVoice.hindi }.getOrDefault(false)) "on" else "off") +
+        " · AI model loaded: " + runCatching { IraModel.state.value.loaded }.getOrDefault(false)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val askLane = Dispatchers.Default.limitedParallelism(1)
@@ -3752,14 +3779,20 @@ object IraHub {
         scope.launch {
             // Offline: what the phone keeps is read, and the broker is not waited on past a few seconds.
             val net = online()
-            val read = scope.async { runCatching { IraAccount.readFast(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q), question = q) }.getOrNull() }
-            val v = if (net) read.await() else kotlinx.coroutines.withTimeoutOrNull(5_000) { read.await() }
+            // Speed, round 4: figures kept a few minutes said at once (with their time), read again behind; a slow fresh
+            // read is waited on 3 s when kept ones can stand in ([IraAccount.readQuick], [com.optionslab.ira.KeptFigures]).
+            val read = scope.async { runCatching { IraAccount.readQuick(com.optionslab.ira.AppAnswers.sections(q), IraMarket.mentioned(q), question = q) }.getOrNull() }
+            val got = if (net) read.await() else kotlinx.coroutines.withTimeoutOrNull(5_000) { read.await() }
+            val v = got?.view
+            val keptNote = got?.note
             if (v == null && !net) {
                 _state.update { it.copy(messages = (it.messages + Msg(true, "I'm offline, Boss: your account needs the internet. I can still answer about the markets from the prices saved on the phone.")).takeLast(MAX_MESSAGES)) }
                 return@launch
             }
-            val a = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
-            val write = v != null && IraModel.usable() && a.facts.isNotEmpty()
+            val a0 = runCatching { Ira(book).answer(q, emptyMap(), emptyList(), app = v) }.getOrElse { com.optionslab.ira.Answer("I could not work that out.", emptyList()) }
+            // Figures not as of now: their time said first (in the facts too), and the model never rewrites it away.
+            val a = if (keptNote == null) a0 else a0.copy(text = com.optionslab.ira.KeptFigures.dress(a0.text, keptNote), facts = listOf(keptNote) + a0.facts)
+            val write = v != null && keptNote == null && IraModel.usable() && a.facts.isNotEmpty()
             val msg = Msg(true, IraTools.fitWords(a.text), a.facts, writing = write)
             _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
             if (write) {
@@ -3783,9 +3816,10 @@ object IraHub {
      * The model's work, or null when it fails or takes over 15 seconds (Boss is never left waiting in silence; a slow
      * run finishes in the background and is dropped).
      */
-    private suspend fun <T> modelOrNull(work: suspend () -> T?): T? {
+    private suspend fun <T> modelOrNull(ms: Long = 15_000L, work: suspend () -> T?): T? {
+        if (ms <= 0L) return null
         val d = scope.async { runCatching { work() }.getOrNull() }
-        return kotlinx.coroutines.withTimeoutOrNull(15_000) { d.await() }
+        return kotlinx.coroutines.withTimeoutOrNull(ms) { d.await() }
     }
 
     /** [rewrite] would read the account where [original] did not, on a locked phone (the lock was checked on [original]). */
@@ -4026,8 +4060,11 @@ object IraHub {
         // a quick answer back by the two seconds it takes to say. (Before the voice's own 1 s "working on it".)
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         val held = java.util.concurrent.atomic.AtomicBoolean(false)
+        // Speed, round 4: with the model still to load (it leaves memory after a minute while Jarvis listens), "One
+        // moment" at once - no answer can come before the load anyway ([com.optionslab.ira.ModelWait.holdAfter]).
+        val modelLoaded = runCatching { IraModel.state.value.loaded }.getOrDefault(true)
         val holding = scope.launch {
-            kotlinx.coroutines.delay(600)
+            kotlinx.coroutines.delay(com.optionslab.ira.ModelWait.holdAfter(modelLoaded))
             if (replyAfter(_state.value.messages, q) == null && _state.value.messages.lastOrNull { !it.fromIra }?.text == q) {
                 held.set(true)
                 _state.update { it.copy(messages = (it.messages + Msg(true, "One moment, Boss, let me think about that.")).takeLast(MAX_MESSAGES)) }
@@ -4037,17 +4074,30 @@ object IraHub {
         // is spoken here; without it, the voice (or the typed-reply speaker) says the answer itself - never twice.
         suspend fun answerFirst(text: String) { holding.cancelAndJoin(); reply(text); if (held.get()) speakLater(text, q) }
         scope.launch {
+            // Speed, round 4 (Boss's diagnostics, 5 Oct: 33 s from the answer handed to the voice to its first sound, the
+            // model not loaded): the model's load and passes take the fast cores, and the speech engine making "One moment"
+            // into sound waited behind them. While Jarvis listens, the model starts once that line has begun to sound
+            // (2.5 s at most) - and both passes now share one budget ([com.optionslab.ira.ModelWait]; they were 15 s each).
+            if (JarvisVoice.wanted && !JarvisVoice.muted) {
+                val since = android.os.SystemClock.elapsedRealtime()
+                kotlinx.coroutines.withTimeoutOrNull(com.optionslab.ira.ModelWait.HOLD_FIRST_MS) {
+                    while (JarvisVoice.speechStartedAt < since) kotlinx.coroutines.delay(100)
+                }
+            }
+            val began = android.os.SystemClock.elapsedRealtime()
             // Words to Jarvis himself ("how was your day") go straight to the chat: no command could be meant.
             val personal = com.optionslab.ira.Chat.personal(q)
             // Words that cannot mean any command skip the first pass too: one model run, not two (Boss, 4 Oct: too slow).
             val line = if (personal || !com.optionslab.ira.Intents.mayMean(q)) null
-                else modelOrNull { IraModel.complete(com.optionslab.ira.Intents.prompt(q), 24, 8_000, oneLine = true)?.let { com.optionslab.ira.Intents.pick(it) } }
+                else modelOrNull(com.optionslab.ira.ModelWait.FIRST_PASS_MS) { IraModel.complete(com.optionslab.ira.Intents.prompt(q), 24, 8_000, oneLine = true)?.let { com.optionslab.ira.Intents.pick(it) } }
             if (line == null) {
                 // Not something Jarvis can do or look up: the model just talks (a short reply with no figures, no advice
                 // and no claimed actions), else a varied "I don't know that".
                 // Close to something Jarvis knows: "Did you mean ...?" at once (a suggestion; nothing is done), no model wait.
                 val near = if (personal) null else runCatching { com.optionslab.ira.Suggest.line(q) }.getOrNull()
-                val chat = if (near != null) null else modelOrNull { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST), recentTalk(q)), 40, 8_000, oneLine = true)) }
+                val left = com.optionslab.ira.ModelWait.left(android.os.SystemClock.elapsedRealtime() - began)
+                val chat = if (near != null || !com.optionslab.ira.ModelWait.another(left)) null
+                    else modelOrNull(left) { com.optionslab.ira.Chat.accept(IraModel.complete(com.optionslab.ira.Chat.prompt(q, LocalDateTime.now(IST), recentTalk(q)), 40, minOf(8_000L, left), oneLine = true)) }
                 val text = near ?: chat ?: if (personal) com.optionslab.ira.Chat.aboutMe(chatTurn.getAndIncrement()) else com.optionslab.ira.Chat.fallback(chatTurn.getAndIncrement())
                 // Boss asked something newer meanwhile: a late chat line would land under that answer (seen 2026-10-04).
                 if (_state.value.messages.lastOrNull { !it.fromIra }?.text != q) return@launch
