@@ -16,8 +16,14 @@ object SelfWhy {
     private val YOU = Regex("(?i)\\bwhy (did|have|has|were|was) (you|jarvis)\\b|\\bwhat made you\\b|\\bexplain (that|what you did)\\b")
     private val MARKET = Regex("(?i)\\b(market|markets|nifty|banknifty|finnifty|sensex|vix|gold|exchange|nse|bse)\\b")
 
-    /** Asked about Jarvis's own doing ("why is ORB parked?"); a market question ("why is the market closed") is not. */
-    fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && (YOU.containsMatchIn(text) || !MARKET.containsMatchIn(text))
+    /** Boss's own order ("why was my last order cancelled?"): what happened to it is his account's, not Jarvis's doing (routing round 12). */
+    private val MY_ORDER = Regex("(?i)\\b(my|mera|meri|mere)\\b.{0,30}\\borders?\\b")
+
+    /**
+     * Asked about Jarvis's own doing ("why is ORB parked?"); a market question ("why is the market closed") is not, nor
+     * one about Boss's own order ("why was my order cancelled?" - "why did you cancel my order?" still is his own).
+     */
+    fun asked(text: String): Boolean = ASKED.containsMatchIn(text) && (YOU.containsMatchIn(text) || !MARKET.containsMatchIn(text) && !MY_ORDER.containsMatchIn(text))
 
     private fun words(s: String) = s.lowercase(Locale.ENGLISH).replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.length > 1 && it !in STOP }.toSet()
 

@@ -71,7 +71,9 @@ object RangeBreaks {
     private const val HOW = " (how often|how many times|how frequently|how many days|how many sessions|how many of|what share|what percentage|what percent|what fraction|" +
         "usually|normally|typically|generally|tend to|tends to|on average|most times|most of the time|historically|history|record|rate|success rate|hold rate|" +
         "fail rate|failure rate|stats|statistics|odds|chances|probability|reliable|reliability|work|works|hit rate|percentage|" +
-        "kitni baar|kitne din|aksar|zyada tar|mostly) "
+        "kitni baar|kitne din|aksar|zyada tar|mostly|" +
+        // "Do ORB breakouts fail often?" (routing round 12: it went to Boss's strategies).
+        "often|fail|fails|failing) "
     // Forecasts, advice, Boss's own book or bots, a single day (today's own break stays OpeningRange's), a gap, a meaning.
     private const val NOT = " (will|would|going to|gonna|tomorrow|kal|predict|prediction|forecast|outlook|should|shall|buy|sell|enter|exit|trade|trades|trading|" +
         "i|me|my|mine|we|our|what if|suppose|imagine|scenario|agar|was|were|did|happened|last time|yesterday|today|aaj|now|right now|abhi|this|" +

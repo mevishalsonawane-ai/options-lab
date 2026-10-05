@@ -24,18 +24,23 @@ class CollisionTest {
 
     /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
     private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
+        "OutsideApp" to { q -> OutsideApp.asked(q) },
         "Clarity" to { q -> Clarity.asked(q) != null },
         "WordFit" to { q -> WordFit.asked(q) != null },
         "AskedAgain" to { q -> AskedAgain.asked(q) },
+        "FigureFirst" to { q -> FigureFirst.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
+        "Tour" to { q -> Tour.asked(q) },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
         "DayClock" to { q -> DayClock.asked(q) != null },
         "GapRecord" to { q -> GapRecord.asked(q) != null },
+        "RangeBreaks" to { q -> RangeBreaks.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
+        "DayCompare" to { q -> DayCompare.asked(q) != null },
         "Structure" to { q -> Structure.asked(q) != null },
         "MindChange" to { q -> MindChange.asked(q) },
         "TradeCase" to { q -> TradeCase.asked(q) },
@@ -43,6 +48,7 @@ class CollisionTest {
         "Causes" to { q -> Causes.asked(q) != null },
         "MarketDays" to { q -> MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null },
         // The account's own sections, in Account.sections' precedence (STREAKS is set last, then NEED; each wins over HEALTH).
+        "Account:NUMBERS" to { q -> MyNumbers.asked(q) },
         "Account:STREAKS" to { q -> MyStreaks.asked(q) },
         "Account:NEED" to { q -> NeedsTrue.asked(q) },
         "Account:HEALTH" to { q -> PositionHealth.asked(q) },
@@ -356,6 +362,62 @@ class CollisionTest {
         // An index's run stays the candles' Streak.
         "nifty streak" to "Streak", "how many days in a row has nifty fallen" to "Streak", "banknifty losing streak" to "Streak",
         "how many days in a row has banknifty risen" to "Streak", "how many red days in a row for nifty" to "Streak",
+        // ---- Round 12. RangeBreaks: the opening-range breakout record ----
+        "do orb breakouts fail often" to "RangeBreaks", "how often does the opening range breakout work on banknifty" to "RangeBreaks",
+        "how often does nifty break the opening range and reverse" to "RangeBreaks", "what's the orb breakout success rate" to "RangeBreaks",
+        "orb breakout stats for nifty" to "RangeBreaks", "how reliable is the opening range breakout" to "RangeBreaks",
+        "does the first 15 minute range usually hold" to "RangeBreaks", "how often does a break of the first hour range hold" to "RangeBreaks",
+        "opening range breakout kitni baar kaam karta hai" to "RangeBreaks", "how often does the opening range breakdown hold" to "RangeBreaks",
+        "when banknifty breaks below the opening range how often does it close there" to "RangeBreaks",
+        "how often does the first 30 minute range hold on sensex" to "RangeBreaks", "is the opening range breakout reliable on finnifty" to "RangeBreaks",
+        "opening range breakdown kitni baar tikta hai" to "RangeBreaks", "what percentage of opening range breakouts hold till close" to "RangeBreaks",
+        // Its neighbours: today's own opening range, his ORB arms, the meaning.
+        "did nifty break the opening range" to "OpeningRange", "what's the opening range today" to "OpeningRange",
+        "is nifty above the opening range" to "OpeningRange", "will nifty break the opening range today" to "OpeningRange",
+        "how is my orb arm doing" to "Account:BOTS", "how did my orb strategy do" to "Account:STRATEGIES",
+        "what is an opening range breakout" to "PatternExpert",
+        // ---- DayCompare: today against an earlier session ----
+        "nifty today vs friday" to "DayCompare", "how does today compare to last thursday" to "DayCompare",
+        "is today more of a trend day than yesterday" to "DayCompare", "what's different about today from yesterday" to "DayCompare",
+        "how is banknifty today different from yesterday" to "DayCompare", "compare today and friday for banknifty" to "DayCompare",
+        "difference between today and yesterday" to "DayCompare", "today versus yesterday on sensex" to "DayCompare",
+        "kal aur aaj mein kya farak hai" to "DayCompare", "aaj parso se kaise alag hai" to "DayCompare",
+        "how was today different from monday" to "DayCompare", "is today any different from yesterday" to "DayCompare",
+        "how did today stack up against yesterday" to "DayCompare", "comparison between today and friday" to "DayCompare",
+        // Its neighbours: today alone, his own P&L, two indices.
+        "compare my pnl today with yesterday" to "Account:HISTORY", "compare nifty and banknifty" to "Compare",
+        // ---- Account:NUMBERS: Boss's own trading numbers ----
+        "what's my profit factor" to "Account:NUMBERS", "what is my expectancy" to "Account:NUMBERS", "what's my risk reward" to "Account:NUMBERS",
+        "what is my average loss this month" to "Account:NUMBERS", "show me my trading numbers" to "Account:NUMBERS",
+        "what is my average win this week" to "Account:NUMBERS", "meri trading stats batao" to "Account:NUMBERS",
+        "average profit per trade kitna hai mera" to "Account:NUMBERS", "do i book my profits too early" to "Account:NUMBERS",
+        "am i cutting my winners too early" to "Account:NUMBERS", "what's my payoff ratio" to "Account:NUMBERS",
+        "my win loss ratio last month" to "Account:NUMBERS", "how much do i lose per trade on average" to "Account:NUMBERS",
+        "mera average profit kitna hai" to "Account:NUMBERS",
+        // Its neighbours: the review's win rate, the day's P&L, his limits, an index's range.
+        "what's my win rate" to "Account:REVIEW", "what is my biggest loss" to "Account:PNL", "what is my max loss limit" to "Account:RISK",
+        "what's the average range of nifty" to "Market",
+        // ---- Tour: which questions to ask ----
+        "what should i ask you now" to "Tour", "what else can i ask you" to "Tour", "any questions i should ask" to "Tour",
+        "what kind of things can i ask you" to "Tour", "suggest some good questions" to "Tour", "aapse kya pooch sakta hoon" to "Tour",
+        "sawal suggest karo" to "Tour", "take me on a tour" to "Tour",
+        // ---- FigureFirst: the figure said first ----
+        "which answers do you start with the number" to "FigureFirst", "why do you start with the number first" to "FigureFirst",
+        "don't start with the number" to "FigureFirst", "why are you saying the level first" to "FigureFirst",
+        "which reads do you say the figure first" to "FigureFirst", "dont say the number first anymore" to "FigureFirst",
+        "kaun se jawab mein number pehle bolte ho" to "FigureFirst", "what level is nifty at" to "Market",
+        // ---- OutsideApp: anything outside IraAlgo, said politely (never done) ----
+        "open youtube" to "OutsideApp", "youtube kholo" to "OutsideApp", "whatsapp kholo" to "OutsideApp", "launch spotify" to "OutsideApp",
+        "play some music" to "OutsideApp", "gaana bajao" to "OutsideApp", "play a song on youtube" to "OutsideApp", "call mom" to "OutsideApp",
+        "mummy ko call karo" to "OutsideApp", "message rahul" to "OutsideApp", "send a whatsapp to rahul" to "OutsideApp",
+        "text my wife" to "OutsideApp", "open google" to "OutsideApp", "open instagram" to "OutsideApp", "open the camera" to "OutsideApp",
+        "book an uber" to "OutsideApp", "order food from swiggy" to "OutsideApp", "jarvis open youtube" to "OutsideApp",
+        "can you open whatsapp for me" to "OutsideApp", "send rahul a message" to "OutsideApp", "ring dad" to "OutsideApp",
+        "put on some music" to "OutsideApp", "spotify chalao" to "OutsideApp", "start the music" to "OutsideApp", "take a screenshot" to "OutsideApp",
+        // Its neighbours: the app's own screens and words, and the commands beside them.
+        "open the chain" to "Account:CHAIN", "open settings" to "Account:SETTINGS", "open my positions" to "Account:POSITIONS",
+        "call oi kahan hai" to "Account:CHAIN", "call writing kahan hai" to "ChainIntel", "put call ratio" to "Account:CHAIN",
+        "open zerodha" to "Account:STATUS", "start orb" to "Act", "play the alert sound" to "Account:ALARMS", "open orders" to "Account:ORDERS",
     )
 
     @Test fun eachQuestionGoesWhereItShould() {
@@ -380,7 +442,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "BotTrades", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "Weekdays", "DayCompare", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
@@ -545,6 +607,119 @@ class CollisionTest {
             assertTrue(MarketDays.asked(s, today) != MarketDays.Asked.Month, s)
         // Logging in or out stays Boss's own step on the Zerodha screen: never answered as a session question.
         for (s in listOf("log me out of zerodha", "log me in to kite", "zerodha login karo")) assertEquals(null, ZerodhaSession.asked(s), s)
+    }
+
+    // ---- Round 12 (Boss's chat, 5 Oct): his order's fate asked, outside the app, a close by a pronoun ----
+
+    /** Asked what became of his order: a question about his account, never the CANCEL command (its answer is built elsewhere). */
+    private val ORDER_WHY = listOf("why was my last order canceled", "why was my last order cancelled", "why was my order cancelled",
+        "why was my order rejected", "what happened to my last order", "order cancel kyun hua", "mera order cancel kyun hua",
+        "why did my order get rejected", "why did my last order get cancelled", "mera order reject kyun hua", "why did my order fail")
+
+    @Test fun anOrdersFateAskedIsNeverTheCancelCommand() {
+        for (s in ORDER_WHY) {
+            val p = Ask.parse(s)
+            assertEquals(null, p.command, s); assertEquals(null, p.order, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s) && !FollowUp.acts(s) && !Reminder.asked(s) && !Reminder.cancelAsked(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertEquals(null, Plan.steps(s) { x -> Ask.parse(x).let { it.order == null && it.command != null } || Toolbox.isRead(x) }, s)
+            // Left as a question about his own account: never the command, never Jarvis's own doing, never "not understood".
+            val got = audit.feature(s)
+            assertTrue(got != "Act" && got != "SelfWhy" && got != "Missed" && got != "Market" && got != "OutsideApp", "$s: $got")
+            assertTrue(!SelfWhy.asked(s) && !OutsideApp.asked(s), s)
+        }
+        // Cancelling stays the command, through its own confirm; "why did you cancel my order" is still his question to Jarvis.
+        assertEquals(Command(Command.Kind.CANCEL_ONE, target = "last"), Ask.parse("cancel my last order").command)
+        assertEquals(Command.Kind.CANCEL_ONE, Ask.parse("cancel my order").command?.kind)
+        for (s in listOf("cancel my last order", "cancel my order", "cancel all orders")) assertEquals("Act", audit.feature(s), s)
+        assertTrue(SelfWhy.asked("why did you cancel my order"))
+        assertTrue(SelfWhy.asked("why was orb parked"))
+    }
+
+    @Test fun outsideTheAppIsSaidPolitelyAndNothingActs() {
+        val outside = ASKED.filter { it.second == "OutsideApp" }.map { it.first }
+        assertTrue(outside.size >= 20)
+        for (s in outside) {
+            val p = Ask.parse(s)
+            assertEquals(null, p.command, s); assertEquals(null, p.order, s)
+            assertTrue(!Bundle.acts(s) && !FollowUp.acts(s) && !Reminder.asked(s), s)
+            assertEquals(null, Intents.quick(s), s)
+        }
+        assertTrue(OutsideApp.SAY.startsWith("I only work inside IraAlgo, Boss") && "can't open other apps" in OutsideApp.SAY)
+        // The app's own screens and words, and anything of the market or the account, are never taken.
+        for (s in listOf("open the chain", "open settings", "open my positions", "open zerodha", "open orders", "call oi kahan hai", "call side",
+            "call writing kahan hai", "put call ratio", "call 24500", "call me boss", "call it a day", "call option kya hai", "play the alert sound",
+            "play the replay of my last trade", "start orb", "start strategy 2", "message me when nifty hits 25000", "text me at 3 pm", "call the support",
+            "open interest kitna hai", "launch the strategy", "show me the chain", "close it", "how is nifty"))
+            assertTrue(!OutsideApp.asked(s), s)
+    }
+
+    @Test fun roundTwelveWordingsNeitherOrderNorCommandNorBundle() {
+        val newest = setOf("RangeBreaks", "DayCompare", "Account:NUMBERS", "Tour", "FigureFirst", "OutsideApp")
+        val all = ASKED.filter { it.second in newest }
+        assertTrue(all.size >= 80, "${all.size}")
+        for ((s, want) in all) {
+            assertEquals(want, audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s)
+            assertTrue(Topic.ORDER !in p.topics && Topic.COMMAND !in p.topics, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Intents.quick(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+            assertEquals(null, Reminder.parse(s, today.atTime(10, 0)), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
+        for (s in listOf("do orb breakouts fail often then close all positions", "compare today with yesterday and stop all strategies",
+            "what's my profit factor, then kill switch on", "what can i ask you then square off my position", "open youtube then close all positions"))
+            assertTrue(Bundle.acts(s) || Ask.parse(s).command != null || Ask.parse(s).order != null, s)
+    }
+
+    /** The hub's own test of a plan's step: an action a plan may hold, or a question it can answer. */
+    private fun hubStep(s: String) = Ask.parse(s).let { it.order == null && it.command?.kind in Plan.ALLOWED } || Toolbox.isRead(s)
+
+    @Test fun aCloseByAPronounIsLeftToThePlanThatAsksFirst() {
+        // Round 11's open item: "explain my put then close it". "Close it" alone names nothing, so it is never a command; after
+        // a named position it is that position's close - a step of the plan, shown and confirmed once before anything is done.
+        val named = mapOf(
+            "explain my put then close it" to listOf("explain my put", "close my put"),
+            "explain my put and close it" to listOf("explain my put", "close my put"),
+            "how is my put then close that" to listOf("how is my put", "close my put"),
+            "explain my put then square it off" to listOf("explain my put", "close my put"),
+            "explain my 24500 put then close this position" to listOf("explain my 24500 put", "close my 24500 put"),
+        )
+        for ((s, steps) in named) {
+            // The whole is never one command (nothing runs as said), but it holds an action: no question handler answers it.
+            assertEquals(null, Ask.parse(s).command, s); assertEquals(null, Ask.parse(s).order, s)
+            assertTrue(Bundle.acts(s), s)
+            assertEquals(steps, Plan.steps(s, ::hubStep), s)
+            // The close is the one position's close, a step that lowers risk, done only after the plan's confirm (IraHub.planAsked).
+            val close = Ask.parse(steps[1]).command
+            assertEquals(Command.Kind.CLOSE_ONE, close?.kind, s)
+            assertTrue(close!!.kind in Plan.ALLOWED)
+            assertTrue(!Plan.pronounUnclear(s), s)
+        }
+        assertEquals("put", Ask.parse("close my put").command?.target)
+        // No position named before it: asked which, nothing done - and never a plan.
+        for (s in listOf("how is nifty then close it", "why did nifty fall then close that", "what's the pcr and exit it")) {
+            assertTrue(Bundle.acts(s), s)
+            assertEquals(null, Plan.steps(s, ::hubStep), s)
+            assertTrue(Plan.pronounUnclear(s), s)
+            assertEquals(null, Ask.parse(s).command, s)
+        }
+        assertTrue(Plan.WHICH_POSITION.startsWith("Which position should I close, Boss?") && "nothing was done" in Plan.WHICH_POSITION)
+        // Alone, a pronoun close stays words that do nothing: never a command, an order, a Bundle act or a plan.
+        for (s in listOf("close it", "close that", "exit it", "square it off", "close this one")) {
+            val p = Ask.parse(s)
+            assertEquals(null, p.command, s); assertEquals(null, p.order, s)
+            assertTrue(!Bundle.acts(s), s)
+            assertEquals(null, Plan.steps(s, ::hubStep), s)
+            assertTrue(!Plan.pronounUnclear(s), s)
+        }
+        // The named closes and the plans of round 11 are unchanged.
+        assertEquals(listOf("explain my put", "close all positions"), Plan.steps("explain my put then close all positions", ::hubStep))
+        assertEquals(Command.Kind.CLOSE_ONE, Ask.parse("close that position").command?.kind)
     }
 
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----

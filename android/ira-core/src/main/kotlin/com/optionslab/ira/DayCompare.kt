@@ -72,8 +72,8 @@ object DayCompare {
         "^ compare $REF( and| with| to| against| vs| versus)? $TODAY ",
         "^ (comparison|compare) (of |between )?$TODAY (and|with|vs|versus) $REF ",
         // "Today vs yesterday", "Friday versus today"
-        "^ $TODAY (vs|versus|against|compared to|compared with|or) $REF $",
-        "^ $REF (vs|versus|against|compared to|compared with) $TODAY $",
+        "^ $TODAY (vs|versus|against|compared to|compared with|or) $REF( on| for| in)? $",  // ("today versus yesterday on Sensex": the index taken out leaves its "on"; round 12)
+        "^ $REF (vs|versus|against|compared to|compared with) $TODAY( on| for| in)? $",
         // "Is today more like a trend day than yesterday?", "is today more of a range day or a trend day than Thursday?"
         "^ (is|was) $TODAY (more|less) (like |of )?(a |an )?$KIND( day)?( or (a |an )?$KIND( day)?)? (than|compared to|compared with|vs) $REF ",
         "^ (is|was) $TODAY (like|similar to|same as|different from|any different from|different to|different than) $REF ",

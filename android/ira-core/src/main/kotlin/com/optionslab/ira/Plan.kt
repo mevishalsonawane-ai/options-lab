@@ -33,7 +33,7 @@ object Plan {
         val t = text.trim().trimEnd('.', '!', '?')
         fun parts(r: Regex) = t.split(r).map { it.trim().trim(',').trim() }.filter { it.isNotEmpty() }
         val strong = parts(STRONG)
-        val split = if (strong.size >= 2) strong.flatMap { splitAnd(it, isStep) } else splitAnd(t, isStep)
+        val split = named(if (strong.size >= 2) strong.flatMap { splitAnd(it, isStep) } else splitAnd(t, isStep))
         if (split.size < 2 || split.size > MAX_STEPS || !split.all(isStep)) return null
         // A plan does something: questions alone are just answered (one after the other, as asked).
         if (split.all { Ask.parse(it).command == null }) return null
@@ -43,8 +43,53 @@ object Plan {
     /** [p] split on "and" / commas only when every part is a step; else [p] whole. */
     private fun splitAnd(p: String, isStep: (String) -> Boolean): List<String> {
         val bits = p.split(AND).map { it.trim() }.filter { it.isNotEmpty() }
-        return if (bits.size >= 2 && bits.all(isStep)) bits else listOf(p)
+        // ("Explain my put and close it": the close by a pronoun is a step once the position it means is named.)
+        return if (bits.size >= 2 && named(bits).all(isStep)) bits else listOf(p)
     }
+
+    // ---- a close by a pronoun ("explain my put then close it"; routing round 12) ----------------------------------
+
+    /**
+     * "Close it", "exit that", "square it off", "close this position", "isko band karo": a close that names no position
+     * of its own. Alone it is never a command (it says nothing of what to close); after a part that names one of Boss's
+     * positions it is put as that position's close, a step of the plan - shown and confirmed first, never done silently.
+     */
+    private val PRONOUN_CLOSE = rx("^ (?:and |then |also |now )*(?:please )?(?:" +
+        "(?:close|exit|square off|squareoff|cut|get out of) (?:it|that|this|that one|this one|that position|this position|that trade|this trade|the position|the trade)(?: off)?|" +
+        "square (?:it|that|this|that one|this one) off|" +
+        "(?:isko|usko|ise|use|ye|yeh|wo|woh|vo|isse|usse) (?:close|band|exit|square off) (?:karo|kar do|kardo|kar de)|" +
+        "(?:close|band|exit|square off) (?:karo|kar do|kardo|kar de) (?:isko|usko|ise|use|ye|yeh|wo|woh|vo)" +
+        ")(?: now| too| as well| also| bhi| please| boss| jarvis)* $")
+
+    /** One of Boss's positions named by its kind: "my put", "my 24500 put", "meri call", "my BankNifty straddle". */
+    private val NAMED = rx("\\b(?:my|meri|mera|mere) ((?:[a-z0-9]+ ){0,2}?(?:put|call|ce|pe|straddle|strangle|iron condor|condor|spread|butterfly|position|trade))s?\\b")
+
+    private fun words(s: String) = " " + s.lowercase().replace("'", "").replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+
+    /** Is [part] a close by a pronoun ("close it", "exit that", "square it off", "isko band karo")? */
+    fun pronounClose(part: String): Boolean = PRONOUN_CLOSE.containsMatchIn(words(part))
+
+    /** The last of Boss's positions named in [parts], as said ("24500 put"), or null. */
+    private fun lastNamed(parts: List<String>): String? = parts.asReversed().firstNotNullOfOrNull { p ->
+        NAMED.findAll(words(p)).lastOrNull()?.groupValues?.get(1)?.trim()
+    }
+
+    /** [parts] with each close by a pronoun put as the close of the position named before it; left as said when none is. */
+    private fun named(parts: List<String>): List<String> = parts.mapIndexed { i, p ->
+        if (i == 0 || !pronounClose(p)) p
+        else lastNamed(parts.subList(0, i))?.let { w ->
+            if (w.substringAfterLast(' ') in setOf("put", "call", "ce", "pe", "position", "trade")) "close my $w" else "close my $w position"
+        } ?: p
+    }
+
+    /** Said with a close by a pronoun after something else, and no position of Boss's named before it to close. */
+    fun pronounUnclear(text: String): Boolean {
+        val bits = text.trim().trimEnd('.', '!', '?').split(STRONG).flatMap { it.split(AND) }.map { it.trim() }.filter { it.isNotEmpty() }
+        return bits.size >= 2 && bits.withIndex().any { (i, b) -> i > 0 && pronounClose(b) && lastNamed(bits.subList(0, i)) == null }
+    }
+
+    /** Said when a close by a pronoun names no position: nothing is done. */
+    const val WHICH_POSITION = "Which position should I close, Boss? Say it by name, like \"close my 24500 put\" - nothing was done."
 
     /** Did a step's result say it was not done? (The plan then stops there.) */
     fun failed(result: String): Boolean =

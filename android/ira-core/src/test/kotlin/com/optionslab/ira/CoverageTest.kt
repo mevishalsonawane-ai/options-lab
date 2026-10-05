@@ -471,6 +471,7 @@ class CoverageTest {
         if (alone && Airtime.asked(q)) return "Airtime"
         if (alone && Hearing.asked(q)) return "Hearing"
         if (alone && PatternCalls.asked(q)) return "PatternCalls"
+        if (alone && OutsideApp.asked(q)) return "OutsideApp"
         if (alone && Clarity.asked(q) != null) return "Clarity"
         if (alone && WordFit.asked(q) != null) return "WordFit"
         if (alone && AskedAgain.asked(q)) return "AskedAgain"
@@ -972,6 +973,12 @@ class CoverageTest {
         "what did you get wrong this week" to "WrongThing", "where did you misunderstand me today" to "WrongThing",
         "aaj kya galat jawab diya" to "WrongThing", "galat jawab" to "WrongThing", "ye nahi poocha" to "WrongThing",
         "you answered the wrong thing" to "WrongThing",
+        // ---- OutsideApp (routing round 12): outside IraAlgo, said politely - nothing outside the app is ever done ----
+        "open youtube" to "OutsideApp", "youtube kholo" to "OutsideApp", "open whatsapp" to "OutsideApp", "play music" to "OutsideApp",
+        "call mom" to "OutsideApp", "message rahul" to "OutsideApp", "launch spotify" to "OutsideApp", "gaana bajao" to "OutsideApp",
+        "open chrome" to "OutsideApp", "book a cab" to "OutsideApp",
+        // Its neighbours: the app's own screens.
+        "open the option chain" to "Account:CHAIN", "open settings" to "Account:SETTINGS",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",

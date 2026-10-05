@@ -1285,6 +1285,12 @@ object IraHub {
             val any = runCatching { com.optionslab.ira.Plan.steps(q) { s -> Ask.parse(s).let { it.order == null && it.command != null } || com.optionslab.ira.Toolbox.isRead(s) } }.getOrNull()
             if (any != null) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.ONLY_LOWERING)).takeLast(MAX_MESSAGES)) }; return }
         }
+        // "How is Nifty, then close it": a close by a pronoun with no position of Boss's named before it - asked which,
+        // nothing done (never guessed, never dropped silently; routing round 12).
+        if (bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Plan.pronounUnclear(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Plan.WHICH_POSITION)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // Boss's own reminder ("remind me at 3 pm to check Nifty"): only said at its time, never run (Boss, 4 Oct).
         // "Cancel my reminders": the reminders only (timed commands are cancelled with "cancel everything set for later").
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.Reminder.cancelAsked(q) }.getOrDefault(false)) {
@@ -1926,6 +1932,12 @@ object IraHub {
             val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
                 .getOrDefault("I couldn't read my pattern record just now, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Open YouTube", "play music", "call mom": something outside IraAlgo. Jarvis works only inside the app, so he says so
+        // politely (it landed in "Words I could not place", 5 Oct). Words only: nothing is opened, played, called or sent.
+        if (!bundled && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.OutsideApp.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.OutsideApp.SAY)).takeLast(MAX_MESSAGES)) }
             return true
         }
         // "Which answers do you keep short?" / "say your answers in full again": the answer kinds said shorter aloud, Boss having

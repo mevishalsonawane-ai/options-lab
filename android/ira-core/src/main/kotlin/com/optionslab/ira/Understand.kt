@@ -166,7 +166,9 @@ object Bundle {
     fun acts(text: String): Boolean = runCatching {
         acted.of(text) {
             Corrections.acts(text) || SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }.let { parts ->
-                parts.size > 1 && parts.any { Corrections.acts(it) }
+                // ("Explain my put then close it": a close by a pronoun is never a command alone, but said after something
+                // else it asks for a close - left to the multi-step plan, which names the position and asks first. Round 12.)
+                parts.size > 1 && parts.any { Corrections.acts(it) || Plan.pronounClose(it) }
             }
         }
     }.getOrDefault(true)
