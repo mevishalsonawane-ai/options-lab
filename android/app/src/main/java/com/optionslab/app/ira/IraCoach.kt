@@ -954,8 +954,48 @@ internal object IraCoach {
         val improve = runCatching { IraImprove.wrapLine() }.getOrNull()
         // What stood out in the market today against its usual, and the offer of the whole story (after Boss's own figures,
         // so it never pushes them out of what is spoken).
-        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), if (review) selfReview() else null, agenda, improve, IraSolo.daySummary(),
+        // The expiry-eve checklist right after Boss's own figures (so it is within what is spoken). Facts only.
+        val eve = runCatching { expiryEve() }.getOrNull()
+        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, agenda, improve, IraSolo.daySummary(),
             IraHub.marketWrapLine(),
             runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
+    }
+
+    /**
+     * The expiry-eve checklist ([com.optionslab.ira.ExpiryEve]): Boss's open legs, paper and Zerodha, that expire on the
+     * next trading day, with their moneyness at the price now, product, and tomorrow's 15:05 square-off. Reads only:
+     * nothing is placed, changed or closed. Null when nothing he holds expires on the next trading day.
+     */
+    private suspend fun expiryEve(): String? {
+        val mk = com.optionslab.app.data.Market
+        val today = mk.today()
+        val expiry = com.optionslab.ira.ExpiryEve.nextTradingDay(today) { mk.isTradingDay(it) } ?: return null
+        val s = AppSettings.load()
+        val ticket = runCatching { com.optionslab.app.data.Ledger.openTicket()?.row?.ticket?.takeIf { s.expirySquareOff && s.keepExpiryPut && it.session == expiry } }.getOrNull()
+        fun kept(underlying: String?, strike: Double?, right: String?): Boolean =
+            ticket != null && underlying == ticket.underlying && right == "PE" && (strike == ticket.strike || strike == ticket.wingStrike)
+        fun spot(u: String?): Double? = u?.let { runCatching { com.optionslab.ira.Market.valueOf(it) }.getOrNull() }
+            ?.let { m -> runCatching { IraHub.state.value.snaps[m]?.price }.getOrNull() }
+        val legs = ArrayList<com.optionslab.ira.ExpiryEve.Leg>()
+        runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.forEach { p ->
+            val c = Paper.contractOf(p.symbol) ?: return@forEach
+            if (c.expiry != expiry) return@forEach
+            val right = c.right.name.takeIf { it == "CE" || it == "PE" }
+            legs += com.optionslab.ira.ExpiryEve.Leg("Paper", p.symbol, p.quantity, p.product, c.underlying, c.strike, right, spot(c.underlying),
+                keptToSettlement = kept(c.underlying, c.strike, right))
+        } }
+        if (Broker.loggedIn) runCatching {
+            val ins = Broker.cachedInstruments().orEmpty().associateBy { it.tradingSymbol }
+            // The broker is not waited on past 8 seconds (a hung read would hang the wrap-up).
+            val open = kotlinx.coroutines.withTimeoutOrNull(8_000) { Broker.positionBook() }?.net.orEmpty().filter { it.open }
+            open.forEach { p ->
+                val i = ins[p.symbol] ?: return@forEach
+                if (i.expiry != expiry) return@forEach
+                val right = i.right.name.takeIf { it == "CE" || it == "PE" }
+                legs += com.optionslab.ira.ExpiryEve.Leg("Zerodha", p.symbol, p.qty, p.product, i.name, i.strike, right, spot(i.name),
+                    keptToSettlement = kept(i.name, i.strike, right))
+            }
+        }
+        return com.optionslab.ira.ExpiryEve.line(legs, today, expiry, s.expirySquareOff)
     }
 }
