@@ -38,6 +38,11 @@ internal object IraAccount {
     /** The option chain of [u] (nearest expiry, the strikes near the money) as the Options tab prices it, or null. */
     suspend fun chain(u: String): com.optionslab.engine.options.ChainSnapshot? = runCatching {
         val lc = com.optionslab.app.data.Market.liveChain(u, near = 12)
+        // The minute its data is from (a quote snapshot's minute, else the end of the newest 1-minute bar), for its age.
+        runCatching {
+            val minute = lc.pricedAt ?: lc.series.mapNotNull { it.minutes.lastOrNull() }.maxOrNull()?.plus(1)
+            IraTools.chainSeen(u, minute?.let { com.optionslab.app.data.Market.today().atStartOfDay().plusMinutes(it.toLong()) })
+        }
         val symbols = lc.contracts.associate { (it.strike to it.right) to it.tradingSymbol }
         val rows = com.optionslab.app.data.OiBaseline.apply(com.optionslab.engine.options.ChainSnapshot.rowsFrom(lc.series, symbols, lc.lotSize))
         com.optionslab.engine.options.ChainSnapshot.of(u, lc.expiry, lc.spot, lc.lotSize, rows, com.optionslab.app.data.Market.now())
@@ -286,7 +291,7 @@ internal object IraAccount {
             if (wants(Section.CHAIN)) {
                 val us = markets.mapNotNull { mk -> when (mk) { com.optionslab.ira.Market.NIFTY -> "NIFTY"; com.optionslab.ira.Market.BANKNIFTY -> "BANKNIFTY"
                     com.optionslab.ira.Market.FINNIFTY -> "FINNIFTY"; else -> null } }.ifEmpty { listOf("NIFTY", "BANKNIFTY") }
-                out[Section.CHAIN] = us.flatMap { u -> withTimeoutOrNull(25_000) { chain(u) }?.let { com.optionslab.ira.ChainRead.lines(it) }
+                out[Section.CHAIN] = us.flatMap { u -> withTimeoutOrNull(25_000) { chain(u) }?.let { listOfNotNull(IraTools.chainNote(u)) + com.optionslab.ira.ChainRead.lines(it) }
                     ?: listOf("The $u option chain did not load just now.") } +
                     (if (markets.any { it == com.optionslab.ira.Market.SENSEX || it == com.optionslab.ira.Market.GOLD }) listOf("Option chains are read for Nifty, BankNifty and FinNifty.") else emptyList())
             }

@@ -920,6 +920,13 @@ object IraHub {
         val now = LocalDateTime.now(IST)
         if (com.optionslab.ira.FeedHealth.stale(last(), now, open)) runCatching { refresh() }
         val stale = com.optionslab.ira.FeedHealth.stale(last(), LocalDateTime.now(IST), open)
+        // The day's freshness record ([com.optionslab.ira.DataAge]): sampled only just after a fetch (or one that failed),
+        // so prices merely not re-read yet are not counted as a feed behind. Ages only.
+        runCatching {
+            val st = _state.value
+            if (st.liveAt?.isAfter(Instant.now().minusSeconds(30)) == true || IraMarket.NIFTY in st.liveMissing)
+                IraTools.freshSeen(ageChecks(listOf(IraMarket.NIFTY), setOf(Topic.OVERVIEW, Topic.NEWS)))
+        }
         if (stale && !feedWarned) {
             feedWarned = true
             val text = com.optionslab.ira.FeedHealth.say(last())
@@ -1135,6 +1142,14 @@ object IraHub {
             reply(IraAirtime.answer())
             return
         }
+        // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
+        // record ([com.optionslab.ira.DataAge]; ages only, nothing about the account).
+        if (!GOLD_ONLY_TALK && parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.DataAge.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch { reply(freshAsked(markets)) }
+            return
+        }
         // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).
         if (com.optionslab.app.BuildConfig.GOLD && (parsed.order != null || parsed.command != null || Topic.ORDER in parsed.topics || Topic.COMMAND in parsed.topics)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
@@ -1289,7 +1304,7 @@ object IraHub {
         if (parsed.command == null && parsed.order == null) runCatching { com.optionslab.ira.Distance.asked(q) }.getOrNull()?.let { a ->
             val p = _state.value.snaps[a.market]?.price
             val said = if (p == null || p <= 0) "I have no ${a.market.label} price yet, Boss." else
-                listOfNotNull(offlineNote() ?: staleNote(listOf(a.market)), com.optionslab.ira.Distance.say(a, p)).joinToString(" ")
+                com.optionslab.ira.Distance.say(a, p).let { t -> offlineNote()?.let { "$it $t" } ?: aged(t, listOf(a.market), setOf(Topic.LEVELS)).text }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }
@@ -1665,7 +1680,8 @@ object IraHub {
         // Reasoning over the data on the phone: a move over a stretch of time, which market is stronger, the expected range.
         // (Not for an advice question: the usual answer says Jarvis gives no buy or sell advice.)
         if (parsed.order == null && parsed.command == null && Topic.ADVICE !in parsed.topics) runCatching { reasoned(q, parsed) }.getOrNull()?.let { text ->
-            val said = (offlineNote() ?: staleNote(parsed.markets))?.let { "$it $text" } ?: text
+            // How old the prices are, said first (a reasoned answer over past days is still given, its figures marked).
+            val said = offlineNote()?.let { "$it $text" } ?: aged(text, parsed.markets, parsed.topics + Topic.OVERVIEW, withhold = false).text
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, listOf(text))).takeLast(MAX_MESSAGES)) }
             return
         }
@@ -1698,8 +1714,18 @@ object IraHub {
         // A holiday or a weekend: said first, so the last session's prices are not taken for today's.
         val closed = closedToday()?.takeIf { parsed.topics.any { it in MARKET_TOPICS } && testHistories == null }
         val a1 = if (closed == null) a0 else a0.copy(text = closed.substringBefore(" Prices") + " " + a0.text, facts = listOf(closed) + a0.facts)
-        val off = if (parsed.topics.any { it in MARKET_TOPICS }) (offlineNote() ?: staleNote(parsed.markets)) else null
-        val a2 = if (off == null) a1 else a1.copy(text = off + " " + a1.text, facts = listOf(off) + a1.facts)
+        val market = parsed.topics.any { it in MARKET_TOPICS }
+        val off = if (market) offlineNote() else null
+        // How old the data it rests on is ([com.optionslab.ira.DataAge]): old, said first with the price figures marked;
+        // stale prices, said so instead of quoted. Only ever adds caution.
+        val dressed: com.optionslab.ira.DataAge.Dressed? = if (market && off == null && a1.order == null) aged(a1.text, parsed.markets, parsed.topics) else null
+        val ageNote: String? = dressed?.note
+        val a2 = when {
+            off != null -> a1.copy(text = off + " " + a1.text, facts = listOf(off) + a1.facts)
+            dressed == null || ageNote == null -> a1
+            dressed.withheld -> a1.copy(text = dressed.text, facts = listOf(dressed.text))
+            else -> a1.copy(text = dressed.text, facts = listOf(ageNote) + a1.facts)
+        }
         // A day with an event (an expiry, RBI, the Fed, the budget): said with the market's picture, it explains the moves.
         val ev = if (parsed.topics.any { it == Topic.OVERVIEW || it == Topic.WHY || it == Topic.VOLATILITY } && testHistories == null)
             runCatching { val today = com.optionslab.app.data.Market.today(); IraEvents.upcoming(1).filter { it.day == today }.take(2).map { com.optionslab.ira.Events.line(it, today) } }.getOrNull().orEmpty()
@@ -1710,7 +1736,8 @@ object IraHub {
         if (parsed.topics.any { it in MARKET_TOPICS }) (parsed.markets.ifEmpty { listOf(IraMarket.NIFTY) }).forEach { mk ->
             _state.value.snaps[mk]?.let { sn -> synchronized(askedAt) { askedAt.remove(mk); askedAt[mk] = sn.price to LocalDateTime.now(IST) } }
         }
-        val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
+        // An answer carrying its data's age is not rewritten (the model could drop the warning or the marks).
+        val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a) && ageNote == null
         // A kind of answer Boss often marks wrong: "check me on this, Boss" (and, clearly weak, how the question was read)
         // around it - words only, the figures as they are, never for an order or a command.
         val doubt = if (parsed.order == null && parsed.command == null && a.order == null) IraTools.doubt(q) else com.optionslab.ira.SelfDoubt.NONE
@@ -2187,8 +2214,9 @@ object IraHub {
         if (q.command != null || q.order != null || Topic.ACCOUNT in q.topics) return null
         val a = runCatching { Ira(book).answer(question, _state.value.snaps, _state.value.news, voice = com.optionslab.app.BuildConfig.JARVIS,
             now = LocalDateTime.now(IST)) }.getOrNull() ?: return null
-        val off = offlineNote() ?: staleNote(q.markets)
-        if (off != null) return null                                  // old prices are not offered unasked
+        // Stale data (prices, candles or news it rests on) is not offered unasked.
+        val stale = runCatching { ageChecks(q.markets, q.topics).any { it.level == com.optionslab.ira.DataAge.Level.STALE } }.getOrDefault(false)
+        if (offlineNote() != null || stale) return null
         return "Boss, your usual around now (${question}): " + a.text
     }
 
@@ -2397,17 +2425,55 @@ object IraHub {
         }.getOrDefault(true)
     }
 
-    /** Said before a market answer when the market trades but the prices lag (a stalled feed). */
-    private fun staleNote(markets: List<IraMarket>): String? {
-        if (testHistories != null || closedToday() != null) return null       // a holiday: old prices are expected
-        val m = markets.firstOrNull() ?: IraMarket.NIFTY
-        if (m == IraMarket.GOLD) return null
-        // Only when a fetch has just been tried: a price merely not refreshed yet is not a feed behind.
+    /**
+     * How old the data a market answer about [topics] rests on is ([com.optionslab.ira.DataAge]): the first market's
+     * prices or candles and the news; with [all], every source whatever the topics (for "is your data fresh?"). Nothing on
+     * a holiday (old prices are expected) or in IraGoldAlgo (it reads no NSE feeds).
+     */
+    private fun ageChecks(markets: List<IraMarket>, topics: Set<Topic>, all: Boolean = false): List<com.optionslab.ira.DataAge.Check> {
+        if (testHistories != null || GOLD_ONLY_TALK || (!all && closedToday() != null)) return emptyList()
+        // Gold trades round the clock on its own feed: its answers are not checked against the NSE session.
+        if (!all && markets.firstOrNull() == IraMarket.GOLD) return emptyList()
+        val m = markets.firstOrNull { it != IraMarket.GOLD } ?: IraMarket.NIFTY
         val st = _state.value
-        val fetched = st.liveAt?.isAfter(java.time.Instant.now().minusSeconds(120)) == true || m in st.liveMissing
-        if (!fetched) return null
-        val at = st.snaps[m]?.at ?: return null
-        return runCatching { com.optionslab.ira.Freshness.note(m, at, LocalDateTime.now(IST)) }.getOrNull()
+        val now = LocalDateTime.now(IST)
+        val live = m.trading(now) && closedToday() == null
+        val src = if (all) com.optionslab.ira.DataAge.Source.entries.toSet() else com.optionslab.ira.DataAge.sources(topics)
+        // A fetch just tried: data still old after it means the feed itself is behind.
+        val tried = st.liveAt?.isAfter(Instant.now().minusSeconds(120)) == true || m in st.liveMissing
+        val out = ArrayList<com.optionslab.ira.DataAge.Check>()
+        st.snaps[m]?.let { s ->
+            if (com.optionslab.ira.DataAge.Source.PRICES in src)
+                com.optionslab.ira.DataAge.prices(m.label, st.liveAt?.atZone(IST)?.toLocalDateTime(), s.at, now, live, tried)?.let { out += it }
+            if (com.optionslab.ira.DataAge.Source.CANDLES in src) com.optionslab.ira.DataAge.candles(m.label, s.at, now, live, tried)?.let { out += it }
+        }
+        if (com.optionslab.ira.DataAge.Source.NEWS in src)
+            com.optionslab.ira.DataAge.news(st.newsAt?.atZone(IST)?.toLocalDateTime(), st.news.mapNotNull { it.at }.maxOrNull()?.atZone(IST)?.toLocalDateTime(), now, live)?.let { out += it }
+        if (all) LIVE[m]?.let { u -> IraTools.chainCheck(u) }?.let { out += it }
+        return out
+    }
+
+    /**
+     * A market answer as said given how old its data is: old, the age first and the price figures marked; stale prices
+     * (with [withhold]), said so instead of quoted - and fresh ones fetched when no fetch was just tried. Kept in the day's
+     * freshness record (ages and counts only). Only ever adds caution; never acts.
+     */
+    private fun aged(text: String, markets: List<IraMarket>, topics: Set<Topic>, withhold: Boolean = true): com.optionslab.ira.DataAge.Dressed {
+        val checks = runCatching { ageChecks(markets, topics) }.getOrDefault(emptyList())
+        if (checks.isEmpty()) return com.optionslab.ira.DataAge.Dressed(text, null, false)
+        val d = runCatching { com.optionslab.ira.DataAge.dress(text, checks, LocalDateTime.now(IST), withhold) }.getOrNull()
+            ?: return com.optionslab.ira.DataAge.Dressed(text, null, false)
+        if (checks.any { it.source == com.optionslab.ira.DataAge.Source.PRICES && it.level == com.optionslab.ira.DataAge.Level.STALE && !it.tried } && online())
+            scope.launch { runCatching { refresh() } }
+        scope.launch { runCatching { IraTools.freshAnswered(checks, d.note != null, d.withheld) } }
+        return d
+    }
+
+    /** "Is your data fresh?" / "how old are your prices?": each source's age now and today's record. */
+    private fun freshAsked(markets: List<IraMarket>): String {
+        val checks = runCatching { ageChecks(markets, emptySet(), all = true) }.getOrDefault(emptyList())
+        val m = markets.firstOrNull { it != IraMarket.GOLD } ?: IraMarket.NIFTY
+        return IraTools.freshSay(checks, m.trading(LocalDateTime.now(IST)) && closedToday() == null)
     }
 
     /** Said before a market answer when offline: where the figures come from. */

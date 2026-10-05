@@ -19,6 +19,8 @@ object SelfReview {
         val doubts: List<String> = emptyList(),
         /** The kinds of unasked alert he now says aloud less often, Boss rarely following them up ([AlertSense.review]). */
         val alerts: List<String> = emptyList(),
+        /** How often and how long his data was old today ([DataAge.review]). */
+        val freshness: List<String> = emptyList(),
     )
 
     fun say(f: Facts): String? {
@@ -28,7 +30,7 @@ object SelfReview {
                 else "my record improved, so I act alone again from ${barText(f.bar)}"
         if (f.badHours.isNotEmpty()) now += "I leave ${f.badHours.joinToString(", ")} alone - my trades lost then"
         if (f.badKinds.isNotEmpty()) now += "I take no ${f.badKinds.joinToString(", ")} ideas by myself - they lost"
-        now += (f.calibration + f.doubts + f.alerts).map { it.trim().trimEnd('.') }.filter { it.isNotEmpty() }
+        now += (f.calibration + f.doubts + f.alerts + f.freshness).map { it.trim().trimEnd('.') }.filter { it.isNotEmpty() }
         val tomorrow = ArrayList<String>()
         f.goalsAtRisk.firstOrNull()?.let { tomorrow += "watch your goal: ${it.trimEnd('.')}" }
         f.lesson?.let { tomorrow += it.trimEnd('.').replaceFirstChar { c -> c.lowercase() } }

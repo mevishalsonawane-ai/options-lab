@@ -602,9 +602,11 @@ internal object IraCoach {
         val alertsBefore = savedAlerts?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
         val alertsNow = IraTools.alertQuietKeys()
         val alertLines = IraTools.alertReview(alertsBefore)
+        // How often and how long his own data was old today (ages and counts only).
+        val freshLines = IraTools.freshReview()
         val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
-            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration, doubts, alertLines))
+            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration, doubts, alertLines, freshLines))
         com.optionslab.app.security.SecurePrefs.put(key, "$bar|$today|${before ?: bar}")
         com.optionslab.app.security.SecurePrefs.put(calibKey, calibNow.joinToString("\t") + "\n" + today + "\n" + (calibBefore ?: calibNow).joinToString("\t"))
         com.optionslab.app.security.SecurePrefs.put(soloKey, soloNow.joinToString("\t") + "\n" + today + "\n" + (soloBefore ?: soloNow).joinToString("\t"))

@@ -169,6 +169,81 @@ internal object IraTools {
 
     fun alertReview(before: Set<String>?): List<String> = runCatching { com.optionslab.ira.AlertSense.review(alertLog(), minuteNow(), before) }.getOrDefault(emptyList())
 
+    // ---- how old his own data is ([com.optionslab.ira.DataAge]) ------------------------------------------------------
+
+    /** The day's freshness record: counts, times and source names only (never a price or a headline), the last 14 days. */
+    private const val FRESH = "jarvis.dataAge"
+    @Volatile private var freshCache: com.optionslab.ira.DataAge.Log? = null
+
+    private fun freshLog(): com.optionslab.ira.DataAge.Log = freshCache ?: runCatching {
+        val a = JSONArray(prefs().getString(FRESH) ?: "[]")
+        com.optionslab.ira.DataAge.Log((0 until a.length()).map { i -> a.getJSONObject(i).let { o ->
+            val sp = o.optJSONArray("s") ?: JSONArray()
+            com.optionslab.ira.DataAge.Day(java.time.LocalDate.parse(o.getString("d")), o.optInt("c"), o.optInt("o"), o.optInt("a"),
+                o.optInt("w"), o.optInt("h"), (0 until sp.length()).mapNotNull { j -> runCatching { sp.getJSONObject(j).let { x ->
+                    com.optionslab.ira.DataAge.Spell(com.optionslab.ira.DataAge.Source.valueOf(x.getString("k")), LocalDateTime.parse(x.getString("f")),
+                        LocalDateTime.parse(x.getString("t")), x.optLong("w")) } }.getOrNull() })
+        } })
+    }.getOrDefault(com.optionslab.ira.DataAge.Log()).also { freshCache = it }
+
+    @Synchronized private fun freshUpdate(f: (com.optionslab.ira.DataAge.Log) -> com.optionslab.ira.DataAge.Log) {
+        runCatching {
+            val was = freshLog()
+            val log = f(was)
+            if (log == was) return@runCatching
+            freshCache = log
+            val a = JSONArray().apply { log.days.forEach { d -> put(JSONObject().put("d", d.day.toString()).put("c", d.checks).put("o", d.old)
+                .put("a", d.answers).put("w", d.warned).put("h", d.withheld)
+                .put("s", JSONArray().apply { d.spells.forEach { x -> put(JSONObject().put("k", x.source.name).put("f", x.from.toString())
+                    .put("t", x.to.toString()).put("w", x.worstSec)) } })) } }
+            prefs().putAllSoon(mapOf(FRESH to a.toString()))
+        }
+    }
+
+    private fun secondNow(): LocalDateTime = LocalDateTime.now(IST).withNano(0)
+
+    /** Checks the watch made (kept only while the market trades; nothing but their ages). */
+    fun freshSeen(checks: List<com.optionslab.ira.DataAge.Check>) {
+        if (checks.isEmpty()) return
+        val now = secondNow()
+        freshUpdate { com.optionslab.ira.DataAge.observe(it, checks, now) }
+    }
+
+    /** A market answer given on [checks]: whether it carried an age note, and whether its prices were held back. */
+    fun freshAnswered(checks: List<com.optionslab.ira.DataAge.Check>, warned: Boolean, withheld: Boolean) {
+        if (checks.isEmpty()) return
+        val now = secondNow()
+        freshUpdate { com.optionslab.ira.DataAge.answered(it, checks, warned, withheld, now) }
+    }
+
+    /** "Is your data fresh?": each source's age now and today's record. */
+    fun freshSay(checks: List<com.optionslab.ira.DataAge.Check>, trading: Boolean): String =
+        runCatching { com.optionslab.ira.DataAge.say(checks, freshLog(), secondNow(), trading) }
+            .getOrDefault("I could not read my freshness record just now, Boss.")
+
+    /** For the evening review: how often and how long his data was old today. */
+    fun freshReview(): List<String> =
+        runCatching { com.optionslab.ira.DataAge.review(freshLog(), com.optionslab.app.data.Market.today()) }.getOrDefault(emptyList())
+
+    /** The minute each option chain read last is from (underlying name to minute), for its age. */
+    private val chainAt = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+
+    /** The option chain of [u] was read: its data is from [at] (null: unknown, nothing kept). */
+    fun chainSeen(u: String, at: LocalDateTime?) { if (at != null) chainAt[u] = at }
+
+    /** How old the last chain of [u] is, or null when none was read. */
+    fun chainCheck(u: String): com.optionslab.ira.DataAge.Check? {
+        val now = secondNow()
+        return com.optionslab.ira.DataAge.chain(u, chainAt[u], now, com.optionslab.ira.Market.NIFTY.trading(now))
+    }
+
+    /** Said before an option-chain answer when that chain is old (kept in the day's record too), else null. */
+    fun chainNote(u: String): String? = runCatching {
+        val c = chainCheck(u) ?: return@runCatching null
+        freshSeen(listOf(c))
+        com.optionslab.ira.DataAge.note(c, secondNow())
+    }.getOrNull()
+
     // ---- learning from corrections ---------------------------------------------------------------------------------
 
     private const val LEARNED = "jarvis.learned"
