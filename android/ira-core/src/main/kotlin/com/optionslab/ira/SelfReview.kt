@@ -15,6 +15,8 @@ object SelfReview {
         val lesson: String?, val heldUp: List<String>, val failed: List<String>,
         /** What his scored ideas say about the conditions he is weak in ([SelfCalibration.review]). */
         val calibration: List<String> = emptyList(),
+        /** The kinds of answer Boss marks wrong, where he now asks to be checked ([SelfDoubt.review]). */
+        val doubts: List<String> = emptyList(),
     )
 
     fun say(f: Facts): String? {
@@ -24,7 +26,7 @@ object SelfReview {
                 else "my record improved, so I act alone again from ${barText(f.bar)}"
         if (f.badHours.isNotEmpty()) now += "I leave ${f.badHours.joinToString(", ")} alone - my trades lost then"
         if (f.badKinds.isNotEmpty()) now += "I take no ${f.badKinds.joinToString(", ")} ideas by myself - they lost"
-        now += f.calibration.map { it.trim().trimEnd('.') }.filter { it.isNotEmpty() }
+        now += (f.calibration + f.doubts).map { it.trim().trimEnd('.') }.filter { it.isNotEmpty() }
         val tomorrow = ArrayList<String>()
         f.goalsAtRisk.firstOrNull()?.let { tomorrow += "watch your goal: ${it.trimEnd('.')}" }
         f.lesson?.let { tomorrow += it.trimEnd('.').replaceFirstChar { c -> c.lowercase() } }

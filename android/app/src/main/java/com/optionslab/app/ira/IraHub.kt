@@ -1079,6 +1079,8 @@ object IraHub {
             }
         }
         val parsed = Ask.parse(q)
+        // The kinds of question Boss asks (kind keys only, no words): set against those he marks wrong ([SelfDoubt]).
+        scope.launch { runCatching { IraTools.countAsked(q) } }
         // IraGoldAlgo: Jarvis talks only - no order, no command (no broker there; its gold arms trade on paper by their rules).
         if (com.optionslab.app.BuildConfig.GOLD && (parsed.order != null || parsed.command != null || Topic.ORDER in parsed.topics || Topic.COMMAND in parsed.topics)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }
@@ -1477,7 +1479,10 @@ object IraHub {
                 val today = com.optionslab.app.data.Market.today()
                 // And Solo's own paper trades, judged the same way (only when Solo has any scored).
                 val solo = runCatching { com.optionslab.ira.SoloCalibration.say(IraSolo.calibration(), today) }.getOrNull()
-                reply(runCatching { com.optionslab.ira.SelfCalibration.say(IraNewsTrades.calibration(), today) + (solo?.let { " $it" } ?: "") }
+                // And the kinds of answer Boss marks wrong (only when some kind is doubted).
+                val answers = runCatching { com.optionslab.ira.SelfDoubt.say(IraTools.mistakes(), IraTools.askedKinds(), today) }.getOrNull()
+                reply(runCatching { com.optionslab.ira.SelfCalibration.say(IraNewsTrades.calibration(), today) + (solo?.let { " $it" } ?: "") +
+                    (answers?.let { " $it" } ?: "") }
                     .getOrElse { "I could not read my record just now, Boss." })
             }
             return
@@ -1634,7 +1639,10 @@ object IraHub {
             _state.value.snaps[mk]?.let { sn -> synchronized(askedAt) { askedAt.remove(mk); askedAt[mk] = sn.price to LocalDateTime.now(IST) } }
         }
         val write = IraModel.usable() && com.optionslab.ira.Writer.worthRewriting(parsed, a)
-        val msg = Msg(true, a.text, a.facts, a.order, writing = write)
+        // A kind of answer Boss often marks wrong: "check me on this, Boss" (and, clearly weak, how the question was read)
+        // around it - words only, the figures as they are, never for an order or a command.
+        val doubt = if (parsed.order == null && parsed.command == null && a.order == null) IraTools.doubt(q) else com.optionslab.ira.SelfDoubt.NONE
+        val msg = Msg(true, doubt.wrap(a.text), a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
         if (write) scope.launch {
             // Talking and writing run side by side: the model starts as soon as the voice has started (the first sound is
@@ -1644,7 +1652,7 @@ object IraHub {
             while (JarvisVoice.speechStartedAt < askedAt && waited < 1_500) { kotlinx.coroutines.delay(100); waited += 100 }
             val better = runCatching { IraModel.rewrite(q, a.facts, a.text) }.getOrNull()
             _state.update { s -> s.copy(messages = s.messages.map { m ->
-                if (m !== msg) m else if (better != null && better != a.text) m.copy(text = better, draft = a.text, writing = false) else m.copy(writing = false)
+                if (m !== msg) m else if (better != null && better != a.text) m.copy(text = doubt.wrap(better), draft = msg.text, writing = false) else m.copy(writing = false)
             }) }
         }
     }

@@ -39,6 +39,46 @@ internal object IraTools {
         return "Sorry, Boss. I've noted it: you said \"$said\". Say it another way and I'll learn what you meant."
     }
 
+    // ---- which kinds of answer he gets wrong ([com.optionslab.ira.SelfDoubt]) --------------------------------------
+
+    /** Question kinds asked a day (kind keys and counts only, never the words), the last 30 days. */
+    private const val ASKED_KINDS = "jarvis.askedKinds"
+
+    fun askedKinds(): com.optionslab.ira.DoubtTally = runCatching {
+        val o = JSONObject(prefs().getString(ASKED_KINDS) ?: "{}")
+        o.keys().asSequence().associate { d ->
+            val day = o.getJSONObject(d)
+            java.time.LocalDate.parse(d) to day.keys().asSequence().associateWith { k -> day.optInt(k) }
+        }
+    }.getOrDefault(emptyMap())
+
+    /** One more question of [said]'s kinds asked today (a command or an order adds nothing). */
+    @Synchronized fun countAsked(said: String) {
+        runCatching {
+            val t = com.optionslab.ira.SelfDoubt.count(askedKinds(), com.optionslab.app.data.Market.today(), said)
+            val o = JSONObject().apply { t.forEach { (d, m) -> put(d.toString(), JSONObject().apply { m.forEach { (k, n) -> put(k, n) } }) } }
+            prefs().putAllSoon(mapOf(ASKED_KINDS to o.toString()))
+        }
+    }
+
+    /** How careful to be answering [said], from the answers Boss marked wrong (words only: it never acts). */
+    fun doubt(said: String): com.optionslab.ira.SelfDoubt.Caution = runCatching {
+        com.optionslab.ira.SelfDoubt.judge(said, weakAnswers())
+    }.getOrDefault(com.optionslab.ira.SelfDoubt.NONE)
+
+    /** The kinds he doubts now, worked out at most every 10 minutes or when a new mistake is marked (not on every question). */
+    @Volatile private var weakCache: Triple<String, Long, List<com.optionslab.ira.SelfDoubt.Record>>? = null
+
+    private fun weakAnswers(): List<com.optionslab.ira.SelfDoubt.Record> {
+        val all = mistakes()
+        val today = com.optionslab.app.data.Market.today()
+        val key = "${all.size}|${all.lastOrNull()?.at}|$today"
+        weakCache?.takeIf { it.first == key && System.currentTimeMillis() - it.second < 10 * 60_000L }?.let { return it.third }
+        val weak = com.optionslab.ira.SelfDoubt.weak(all, askedKinds(), today)
+        weakCache = Triple(key, System.currentTimeMillis(), weak)
+        return weak
+    }
+
     // ---- learning from corrections ---------------------------------------------------------------------------------
 
     private const val LEARNED = "jarvis.learned"

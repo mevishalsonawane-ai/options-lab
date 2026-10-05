@@ -548,12 +548,21 @@ internal object IraCoach {
         val soloNow = runCatching { com.optionslab.ira.SelfCalibration.sitOutKeys(soloOutcomes, day) }.getOrDefault(emptySet())
         val calibration = runCatching { com.optionslab.ira.SelfCalibration.review(outcomes, day, calibBefore) }.getOrDefault(emptyList()) +
             runCatching { com.optionslab.ira.SoloCalibration.review(soloOutcomes, day, soloBefore) }.getOrDefault(emptyList())
+        // The kinds of answer Boss marks wrong, where Jarvis now asks to be checked (words only; kept with their day too).
+        val doubtKey = "jarvis.review.doubt"
+        val wrongs = runCatching { IraTools.mistakes() }.getOrDefault(emptyList())
+        val askedKinds = runCatching { IraTools.askedKinds() }.getOrDefault(emptyMap())
+        val savedDoubt = com.optionslab.app.security.SecurePrefs.getString(doubtKey)?.split('\n')
+        val doubtBefore = savedDoubt?.let { if (it.getOrNull(1) == today) keys(it.getOrNull(2)) else keys(it.getOrNull(0)) }
+        val doubtNow = runCatching { com.optionslab.ira.SelfDoubt.weakKeys(wrongs, askedKinds, day) }.getOrDefault(emptySet())
+        val doubts = runCatching { com.optionslab.ira.SelfDoubt.review(wrongs, askedKinds, day, doubtBefore) }.getOrDefault(emptyList())
         val said = com.optionslab.ira.SelfReview.say(com.optionslab.ira.SelfReview.Facts(bar, before, hours, badKinds, goals, lesson,
             verdicts.filter { it.state == com.optionslab.ira.Vetting.State.HELD_UP }.map { it.name },
-            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration))
+            verdicts.filter { it.state == com.optionslab.ira.Vetting.State.FAILED }.map { it.name }, calibration, doubts))
         com.optionslab.app.security.SecurePrefs.put(key, "$bar|$today|${before ?: bar}")
         com.optionslab.app.security.SecurePrefs.put(calibKey, calibNow.joinToString("\t") + "\n" + today + "\n" + (calibBefore ?: calibNow).joinToString("\t"))
         com.optionslab.app.security.SecurePrefs.put(soloKey, soloNow.joinToString("\t") + "\n" + today + "\n" + (soloBefore ?: soloNow).joinToString("\t"))
+        com.optionslab.app.security.SecurePrefs.put(doubtKey, doubtNow.joinToString("\t") + "\n" + today + "\n" + (doubtBefore ?: doubtNow).joinToString("\t"))
         said?.let { IraActivity.add(it) }
         said
     }.getOrNull()
