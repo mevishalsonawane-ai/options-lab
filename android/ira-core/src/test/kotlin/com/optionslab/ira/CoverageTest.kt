@@ -19,12 +19,30 @@ class CoverageTest {
 
     private val today: LocalDate = LocalDate.of(2026, 10, 5)
 
-    /** The kind of each question [said] is understood as, in the order the app's hub takes them (IraHub.ask). */
-    private fun route(said: String): List<Kind> =
-        ((if (Sources.asked(said)) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
+    /**
+     * The kind of each question [said] is understood as, in the order the app's hub takes them (IraHub.ask). Boss's learned
+     * words (Jarvis's own) and his routine with Jarvis (his own) only as said by him, before anything is cleaned or split;
+     * a question said with something to do is left to the multi-step plan by the families added since round 5.
+     */
+    private fun route(said: String): List<Kind> {
+        if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
+        if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
+        val asSaid = Sources.asked(said) || PatternCalls.asked(said)
+        return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
+    }
 
     private fun kind(q: String, depth: Int): Kind {
         val p = Ask.parse(q)
+        // The families added since round 5 (rounds 6-8), in the hub's order: Boss's journal is his; Jarvis's alerts, data,
+        // reasons, pattern record and self-check are his own; the chain, the structure, a what-if, the case and the news desk
+        // are the market's.
+        if (p.order == null && p.command == null && !Bundle.acts(q)) {
+            if (DayJournal.asked(q)) return Kind.ACCOUNT
+            if (AlertSense.asked(q) != null || Airtime.asked(q) || PatternCalls.asked(q) || DataAge.asked(q)) return Kind.JARVIS
+            if (Honest.asked(q) != null) return Kind.HONEST
+            if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
+            if (ChainIntel.asked(q) != null || Structure.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null) return Kind.MARKET
+        }
         if (SelfCheck.asked(q)) return Kind.JARVIS
         if (p.command != null || p.order != null || Topic.ORDER in p.topics || Topic.COMMAND in p.topics) return Kind.ACT
         // What the phone has no data for, VWAP, targets, lots with no budget: said so (IraHub, just after "is your data fresh").
@@ -37,6 +55,7 @@ class CoverageTest {
         if (DaySummary.asked(q)) return Kind.ACCOUNT
         if (MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null) return Kind.INFO
         if (Outlook.asked(q) && !Regex("(?i)\\b(my|mine|our)\\b").containsMatchIn(q)) return Kind.MARKET
+        if (p.order == null && p.command == null && !Bundle.acts(q) && NewsDesk.asked(q) != null) return Kind.MARKET
         if (Goals.asked(q) || SelfWhy.asked(q) || Vetting.asked(q) || SelfCalibration.asked(q) || Lessons.asked(q) || Sources.asked(q)) return Kind.JARVIS
         if (Habits.asked(q)) return Kind.MARKET
         if (depth == 0 && p.command?.kind.let { it == null || it == Command.Kind.STOP_ONE }) Intents.quick(q)?.let { return kind(it, 1) }
@@ -215,7 +234,7 @@ class CoverageTest {
         "is thursday expiry" to I, "what day is expiry this week" to I, "what's the lot size" to I, "what's atm right now" to I, "nifty atm" to I,
         "what's the premium of the atm call" to I, "nifty 25000 ce price" to I, "banknifty 52000 pe ltp" to I, "how much is the 25000 call" to M,
         "what's the iv today" to A, "what's the pcr today" to A, "nifty pcr" to A, "banknifty max pain" to A, "where is the max oi" to A,
-        "call writing kahan hai" to A, "what are fiis doing" to A, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
+        "call writing kahan hai" to M, "what are fiis doing" to A, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
         "gold rate" to M, "what's sgx nifty" to H, "gift nifty" to H, "how is gift nifty" to H, "what are global cues" to M, "any events today" to A,
         "is there rbi policy today" to A, "when is the fed meeting" to A, "what is the budget date" to A, "explain the market today" to M,
         "summarize the market" to M, "give me a summary" to M, "market summary please" to M, "what's happening with banknifty" to M,
@@ -383,9 +402,11 @@ class CoverageTest {
 
     /**
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
-     * ask(): Boss's learned words and routine as said, fillers and follow-ups, then DayJournal, AlertSense, Airtime,
-     * DataAge, Honest, Thinking, ChainIntel, Structure, TradeCase, Scenarios, Agenda, Improve, the reminders and Jarvis's
-     * own checks, Distance... down to the account's sections and IraHub.reasoned's readers over the candles, each in its
+     * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
+     * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, PatternCalls, DataAge, Honest,
+     * Thinking, Consistency, ChainIntel, Structure, TradeCase, Scenarios, Agenda, Improve; the reminders and Jarvis's own
+     * checks, Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth and BotHealth are its HEALTH and
+     * BOTS), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
      * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
      * branch the app adds must be added here in its place. (Thinking takes its question first; with nothing in the trail
      * and SelfWhy's words it goes on to SelfWhy - by design.) [understood] and [cleaned] are IraHub.ask's own: a part of a
@@ -396,25 +417,31 @@ class CoverageTest {
         if (!understood && (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null)) return "Corrections"
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
-            Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said)
+            Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
+            PatternCalls.asked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
-        if (DayJournal.asked(q)) return "DayJournal"
+        // A question said with something to do: the question handlers leave it to the multi-step plan (IraHub's `bundled`).
+        val free = !Bundle.acts(q)
+        if (free && DayJournal.asked(q)) return "DayJournal"
         val p = Ask.parse(q)
         val plain = p.order == null && p.command == null
-        if (p.order == null && AlertSense.asked(q) != null) return "AlertSense"
-        if (p.order == null && Airtime.asked(q)) return "Airtime"
-        if (plain && TaxRecords.exportAsked(q)) return "TaxExport"
-        if (plain && DataAge.asked(q)) return "DataAge"
-        if (plain && Honest.asked(q) != null) return "Honest"
-        if (plain && Thinking.asked(q) != null) return "Thinking"
-        if (plain && ChainIntel.asked(q) != null) return "ChainIntel"
-        if (plain && Structure.asked(q) != null) return "Structure"
-        if (plain && TradeCase.asked(q)) return "TradeCase"
-        if (plain && Scenarios.asked(q) != null) return "Scenarios"
-        if (plain && Agenda.asked(q)) return "Agenda"
-        if (plain && Improve.asked(q)) return "Improve"
+        val alone = plain && free
+        if (free && p.order == null && AlertSense.asked(q) != null) return "AlertSense"
+        if (free && p.order == null && Airtime.asked(q)) return "Airtime"
+        if (alone && PatternCalls.asked(q)) return "PatternCalls"
+        if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
+        if (alone && DataAge.asked(q)) return "DataAge"
+        if (alone && Honest.asked(q) != null) return "Honest"
+        if (alone && Thinking.asked(q) != null) return "Thinking"
+        if (alone && Consistency.asked(q)) return "Consistency"
+        if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
+        if (alone && Structure.asked(q) != null) return "Structure"
+        if (alone && TradeCase.asked(q)) return "TradeCase"
+        if (alone && Scenarios.asked(q) != null) return "Scenarios"
+        if (alone && Agenda.asked(q)) return "Agenda"
+        if (alone && Improve.asked(q)) return "Improve"
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return "Reminder"
         if (SelfCheck.asked(q)) return "SelfCheck"
         if (Reminder.missedAsked(q)) return "Missed"
@@ -429,6 +456,7 @@ class CoverageTest {
         if (plain && (MarketDays.expiryAsked(q) || MarketDays.asked(q, today) != null)) return "MarketDays"
         if (plain && p.markets.isEmpty() && Reminder.tomorrow(q)) return "Tomorrow"
         if (plain && Outlook.asked(q) && !Regex("(?i)\\b(my|mine|our)\\b").containsMatchIn(q)) return "Outlook"
+        if (alone && NewsDesk.asked(q) != null) return "NewsDesk"
         if (plain && Chat.smallTalk(q, 0) != null) return "Chat"
         if (Memory.toKeep(q) != null || plain && (AboutBoss.fact(q) != null || AboutBoss.forgetAsked(q) != null) || AboutBoss.knowAsked(q) ||
             Memory.recallAsked(q) || Memory.forgetAsked(q)) return "AboutBoss"
@@ -447,7 +475,9 @@ class CoverageTest {
         if (Topic.ACCOUNT in p.topics) return "Account:" + AppAnswers.sections(q).joinToString("+")
         if (Topic.COMMAND in p.topics || Topic.ORDER in p.topics) return "Act"
         if (Topic.SUGGEST in p.topics) return "Suggest"
+        if (p.pattern != null && Topic.EXPLAIN in p.topics) return "PatternExpert"
         if (Topic.TRADE_CHECK in p.topics) return "TradeCheck"
+        if (plain && Regex("(?i)\\bsolo\\b").containsMatchIn(q)) return "Solo"
         // IraHub.reasoned, in its order.
         val t = p.text.ifBlank { q }
         if (MarketStory.asked(t) != null) return "MarketStory"
@@ -481,7 +511,7 @@ class CoverageTest {
 
     private val ACCOUNT_REVIEW = "Account:REVIEW"
 
-    /** The new families (DayJournal to AboutBoss; round 7: Scenarios, Structure, PositionHealth, Routine, Corrections), as Boss says them - English, Hinglish, the recognizer's spellings. */
+    /** The new families (DayJournal to AboutBoss; round 7: Scenarios, Structure, PositionHealth, Routine, Corrections; round 8: NewsDesk, Consistency, PatternCalls, BotHealth), as Boss says them - English, Hinglish, the recognizer's spellings. */
     private val ROUTED: List<Pair<String, String>> = listOf(
         // ---- MarketMemory: the notable sessions remembered ----
         "when did nifty last gap down" to "MarketMemory", "when did banknifty last gap up this much" to "MarketMemory",
@@ -663,12 +693,94 @@ class CoverageTest {
         // ---- Their neighbours: what Jarvis learned of the market, and of Boss ----
         "what did you learn" to "Lessons", "what did you learn today" to "Lessons",
         "forget what i told you" to "AboutBoss", "what have you learned about me" to "AboutBoss",
+
+        // ==== Round 8 (5 Oct): last round's open items, and NewsDesk, Consistency, PatternCalls and BotHealth ====
+        // ---- The market's "we" is the structure; Boss's "we" stays his book ----
+        "are we making higher highs" to "Structure", "are we making lower lows" to "Structure",
+        "are we making higher lows today" to "Structure", "r we making lower highs" to "Structure",
+        "are we trending or ranging" to "Structure", "are we in profit" to "Account:PNL",
+        // ---- A position ranked with no "my": the open positions are Boss's (the account; locked-phone rules) ----
+        "which position is losing the most" to "Account:RANK", "which position is losing most" to "Account:RANK",
+        "worst position" to "Account:RANK", "best position" to "Account:RANK", "worst open position" to "Account:RANK",
+        "which position is winning the most" to "Account:RANK", "biggest losing position" to "Account:RANK",
+        "what's the best position to take" to "Account:POSITIONS", "which positions are losing most in the market" to "Account:POSITIONS",
+        // ---- "My trading routine" is his routine with Jarvis; his trading habits stay the review ----
+        "what is my trading routine" to "Routine", "what's my trading routine" to "Routine", "whats my trading routine" to "Routine",
+        // ---- NewsDesk: the main news, news on a sector or theme, the news that moved the market ----
+        "what's the main news today" to "NewsDesk", "what's the main news" to "NewsDesk", "whats the main news today" to "NewsDesk",
+        "wats the main news" to "NewsDesk", "main news" to "NewsDesk", "what's the news today" to "NewsDesk",
+        "top headlines today" to "NewsDesk", "todays top headlines" to "NewsDesk", "top stories today" to "NewsDesk",
+        "major headlines" to "NewsDesk", "key news today" to "NewsDesk", "biggest story today" to "NewsDesk",
+        "what's the big news today" to "NewsDesk", "important news today" to "NewsDesk", "what's in the news" to "NewsDesk",
+        "what's making the news" to "NewsDesk", "what is in the headlines" to "NewsDesk",
+        "any news on banks" to "NewsDesk", "banks pe koi news" to "NewsDesk", "banking sector news" to "NewsDesk",
+        "any rbi news" to "NewsDesk", "news on the fed" to "NewsDesk", "any news on it stocks" to "NewsDesk",
+        "news about tcs" to "NewsDesk", "any news on infosys" to "NewsDesk", "any news on pharma" to "NewsDesk",
+        "any news on auto stocks" to "NewsDesk", "any news on metals" to "NewsDesk", "any news on oil" to "NewsDesk",
+        "headlines about inflation" to "NewsDesk", "any earnings news" to "NewsDesk", "news on fii flows" to "NewsDesk",
+        "rupee news" to "NewsDesk", "budget news" to "NewsDesk", "any news on the budget" to "NewsDesk",
+        "what news moved the market" to "NewsDesk", "what news moved the market today" to "NewsDesk",
+        "did the news move nifty" to "NewsDesk", "which headline moved banknifty" to "NewsDesk",
+        "what news drove banknifty today" to "NewsDesk", "which news pushed the market" to "NewsDesk",
+        "did any news move the market" to "NewsDesk", "news behind today's fall" to "NewsDesk",
+        "aaj ki main news kya hai" to "NewsDesk", "koi badi news hai aaj" to "NewsDesk", "koi zaroori news" to "NewsDesk",
+        "aaj ki badi khabar" to "NewsDesk",
+        // ---- Its neighbours: the plain news (Ira's), a sharp move explained, why the market fell ----
+        "any news" to "Market", "what's the news" to "Market", "latest news" to "Market", "news on nifty" to "Market",
+        "banknifty news" to "Market", "any news behind this sudden fall" to "SharpMove", "explain this move" to "SharpMove",
+        "what coincided with this drop" to "SharpMove", "why did nifty suddenly fall" to "SharpMove",
+        "why did the market drop today" to "Why",
+        // ---- Consistency: facts pulling different ways, and Boss's words against his day ----
+        "any contradictions" to "Consistency", "any contradictions today" to "Consistency", "jarvis any contradictions" to "Consistency",
+        "is there any contradiction" to "Consistency", "any mixed signals today" to "Consistency", "any conflicts in the data" to "Consistency",
+        "any inconsistency in the data" to "Consistency", "do the facts agree" to "Consistency", "do the signals agree" to "Consistency",
+        "do the numbers add up" to "Consistency", "do your numbers agree with each other" to "Consistency",
+        "are the numbers consistent" to "Consistency", "are the facts conflicting" to "Consistency",
+        "what's pulling different ways" to "Consistency", "anything pulling opposite ways" to "Consistency",
+        "check yourself for contradictions" to "Consistency", "consistency check" to "Consistency", "contradiction check please" to "Consistency",
+        "am i going against my own rules" to "Consistency", "have i been going against my rules" to "Consistency",
+        "am i breaking my rules today" to "Consistency", "was i keeping my rules today" to "Consistency", "am i following my rules" to "Consistency",
+        // (Its neighbours, the case both ways and Boss's own notes, are in the pairs below and round 6's lines.)
+        // ---- PatternCalls: how the patterns Jarvis told of played out ----
+        "which patterns work on nifty" to "PatternCalls", "which patterns worked on banknifty" to "PatternCalls",
+        "which candle patterns work on nifty" to "PatternCalls", "which patterns work on banknifty 15 minute" to "PatternCalls",
+        "what patterns work" to "PatternCalls", "what patterns are working" to "PatternCalls", "which patterns pay off" to "PatternCalls",
+        "which chart patterns held up" to "PatternCalls", "what patterns did well this week" to "PatternCalls",
+        "how good are your pattern calls" to "PatternCalls", "how accurate are your pattern calls" to "PatternCalls",
+        "how reliable are your pattern calls" to "PatternCalls", "how right have your pattern calls been" to "PatternCalls",
+        "your pattern hit rate" to "PatternCalls", "your pattern record" to "PatternCalls", "pattern track record" to "PatternCalls",
+        "your pattern calls track record" to "PatternCalls", "jarvis pattern accuracy" to "PatternCalls",
+        "kaun se patterns kaam karte hain" to "PatternCalls", "nifty pe kaun se pattern chalte hain" to "PatternCalls",
+        "pattern calls kaise rahe" to "PatternCalls",
+        // ---- Its neighbours: the paper tests (Vetting), the patterns now, a pattern explained ----
+        "what held up on paper" to "Vetting", "what pattern is forming on nifty" to "Market", "explain the hammer" to "PatternExpert",
+        "what is a doji" to "PatternExpert",
+        // ---- BotHealth: each strategy's health (the account's BOTS) ----
+        "how are my bots doing" to "Account:BOTS", "how are my strategies doing" to "Account:BOTS", "how are the arms doing" to "Account:BOTS",
+        "how are my pine scripts doing" to "Account:BOTS", "how are my auto trades doing" to "Account:BOTS",
+        "is the orb arm behaving" to "Account:BOTS", "is orb 5 behaving" to "Account:BOTS", "is my pine script behaving" to "Account:BOTS",
+        "is the orb arm overtrading" to "Account:BOTS", "is the orb arm acting up" to "Account:BOTS", "is my bot going crazy" to "Account:BOTS",
+        "is my strategy misbehaving" to "Account:BOTS", "how is the orb arm performing" to "Account:BOTS", "how is my orb arm doing" to "Account:BOTS",
+        "are my algos ok" to "Account:BOTS", "are the bots fine" to "Account:BOTS", "are my bots healthy" to "Account:BOTS",
+        "are my arms working fine" to "Account:BOTS", "are my auto trades fine" to "Account:BOTS",
+        "which strategy is losing" to "Account:BOTS", "which bot is losing" to "Account:BOTS", "which arm is losing" to "Account:BOTS",
+        "which algo lost" to "Account:BOTS", "which strategies lost" to "Account:BOTS", "which of my bots is worst" to "Account:BOTS",
+        "strategy health" to "Account:BOTS", "bots health check" to "Account:BOTS", "health check on my strategies" to "Account:BOTS",
+        "mere bots kaise chal rahe hain" to "Account:BOTS", "mere algos kaise chal rahe hain" to "Account:BOTS",
+        "meri strategies theek chal rahi hain" to "Account:BOTS", "mere bots ka haal" to "Account:BOTS",
+        "kaun si strategy loss mein hai" to "Account:BOTS",
+        // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
+        "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
+        "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
+        "how is solo doing" to "Solo", "is my position healthy" to "Account:HEALTH",
+        // ---- The chain's words asked are the glossary's; the chain's own reads stay ChainIntel's ----
+        "what is a straddle" to "Glossary", "explain straddle" to "Glossary", "straddle kya hota hai" to "Glossary",
     )
 
     @Test fun eachFamilyGetsItsOwnQuestions() {
         val wrong = ROUTED.mapNotNull { (s, want) -> feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got" } }
         assertTrue(wrong.isEmpty(), "taken by the wrong feature (${wrong.size} of ${ROUTED.size}):\n" + wrong.joinToString("\n"))
-        assertTrue(ROUTED.size >= 340, "${ROUTED.size}")
+        assertTrue(ROUTED.size >= 470, "${ROUTED.size}")
         assertEquals(ROUTED.size, ROUTED.map { it.first }.distinct().size)
     }
 
@@ -707,13 +819,35 @@ class CoverageTest {
             ("forget the word teeta" to "Corrections") to ("forget that i trade on fridays" to "AboutBoss"),
             ("what's my f&o turnover this year" to "Account:TAX") to ("export my trades for tax" to "TaxExport"),
             ("my tax summary" to "Account:TAX") to ("how much tax on my trades" to "Account:CHARGES"),
+            // Round 8: the newest families beside the ones they sound like.
+            ("what's the main news today" to "NewsDesk") to ("what's the news" to "Market"),
+            ("any news on banks" to "NewsDesk") to ("banknifty news" to "Market"),
+            ("what news moved the market" to "NewsDesk") to ("any news behind this sudden fall" to "SharpMove"),
+            ("news behind today's fall" to "NewsDesk") to ("why did the market drop today" to "Why"),
+            ("how are my bots doing" to "Account:BOTS") to ("show my strategies" to "Account:STRATEGIES"),
+            ("which strategy is losing" to "Account:BOTS") to ("which position is losing the most" to "Account:RANK"),
+            ("is the orb arm behaving" to "Account:BOTS") to ("is orb running" to "Account:STRATEGIES"),
+            ("are my bots healthy" to "Account:BOTS") to ("are my positions okay" to "Account:HEALTH"),
+            ("is orb 5 behaving" to "Account:BOTS") to ("stop orb 5" to "Act"),
+            ("any contradictions" to "Consistency") to ("make the case" to "TradeCase"),
+            ("do the facts agree" to "Consistency") to ("give me the case for and against" to "TradeCase"),
+            ("am i going against my own rules" to "Consistency") to ("what did i tell you" to "AboutBoss"),
+            ("which patterns work on nifty" to "PatternCalls") to ("what held up" to "Vetting"),
+            ("how good are your pattern calls" to "PatternCalls") to ("where are you weakest" to "SelfCalibration"),
+            ("which patterns work on nifty" to "PatternCalls") to ("what pattern is forming on nifty" to "Market"),
+            ("your pattern record" to "PatternCalls") to ("explain the hammer" to "PatternExpert"),
+            ("are we making higher highs" to "Structure") to ("are we in profit" to "Account:PNL"),
+            ("what is my trading routine" to "Routine") to ("what are my trading habits" to ACCOUNT_REVIEW),
+            ("worst position" to "Account:RANK") to ("what's the best position to take" to "Account:POSITIONS"),
+            ("what is a straddle" to "Glossary") to ("what is the atm straddle" to "ChainIntel"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
             "agar nifty 1% gira to meri positions ka kya hoga", "what if nifty falls 1% should i buy puts", "will nifty fall 1% tomorrow"))
             assertEquals(null, Scenarios.asked(s), s)
-        // "What is my trading routine" is his trading, not his routine with Jarvis.
-        assertEquals(false, Routine.asked("what is my trading routine"))
+        // "What is my trading routine" is his routine (round 8: it fell to a market answer); his trading habits stay the review.
+        assertEquals(true, Routine.asked("what is my trading routine"))
+        assertEquals(false, Routine.asked("what are my trading habits"))
         // "Remember when..." asks; it is never kept as a note.
         assertEquals(null, Memory.toKeep("remember when nifty gapped down"))
         assertEquals("i trade on fridays", Memory.toKeep("remember that i trade on fridays"))

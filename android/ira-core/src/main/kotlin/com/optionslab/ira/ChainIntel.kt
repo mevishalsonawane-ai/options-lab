@@ -123,10 +123,14 @@ object ChainIntel {
     private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ").replace(Regex("[^a-z0-9 ]"), " ")
         .replace(Regex("\\s+"), " ").trim() + " "
 
+    /** The word itself asked ("what is a straddle", "explain straddle", "skew ka matlab"): the glossary's (routing audit, round 8). */
+    private val WORD = Regex(" (what is a|what s a|whats a|what is an|define|definition of|meaning of) | (meaning|kya hota|kya hoti|ka matlab|matlab) |" +
+        "^ (explain|define) (a |an |the term )?(straddle|strangle|skew|iv skew|call writing|put writing|open interest|oi) $")
+
     /** Which of these questions [text] asks, or null. The broad PCR / max pain read stays [ChainRead]'s. */
     fun asked(text: String): Ask? {
         val t = norm(text)
-        if (NOT.containsMatchIn(t)) return null
+        if (NOT.containsMatchIn(t) || WORD.containsMatchIn(t)) return null
         val hits = listOfNotNull(Ask.WRITING.takeIf { WRITING.containsMatchIn(t) }, Ask.SHIFT.takeIf { SHIFT.containsMatchIn(t) },
             Ask.SKEW.takeIf { SKEW.containsMatchIn(t) }, Ask.MOVE.takeIf { MOVE.containsMatchIn(t) })
         return when {

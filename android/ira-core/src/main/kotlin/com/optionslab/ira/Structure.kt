@@ -54,7 +54,9 @@ object Structure {
 
     /** Which of the four was asked, or null. Today's structure only: never a forecast, advice or another span. */
     fun asked(text: String): Ask? {
-        val t = norm(text)
+        // "Are we making higher highs?": the market's "we" (routing audit, round 8), not Boss's book ("are we in profit"
+        // has no structure word and stays out).
+        val t = norm(text).replace(Regex(" (are|r|were) we (making|seeing|printing|forming|getting|trending|ranging) "), " is the market $2 ")
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD }) return null
         return when {

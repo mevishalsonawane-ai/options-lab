@@ -46,6 +46,12 @@ class ExposureTest {
         assertTrue(Exposure.rankAsked("rank my open positions"))
         assertFalse(Exposure.rankAsked("which positions are losing most in the market"))   // not Boss's
         assertFalse(Exposure.rankAsked("what was my worst trade this month"))               // the record, not open positions
+        // A position named needs no "my" (round 8); one to take, or the market's, is not Boss's ranking.
+        assertTrue(Exposure.rankAsked("which position is losing the most"))
+        assertTrue(Exposure.rankAsked("worst position"))
+        assertFalse(Exposure.rankAsked("what's the best position to take"))
+        assertFalse(Exposure.rankAsked("best position for nifty"))
+        assertFalse(Exposure.rankAsked("which trade is losing most"))
         val l = Exposure.rank(listOf(ce, bank, pe))
         assertEquals("Losing most: Zerodha BANKNIFTY24OCT52000CE, 30 at 300.00, now 250.00: -Rs 1,500.00 (-16.7% on what it cost).", l[0])
         assertTrue(l[1].startsWith("Doing best: Paper NIFTY24OCT24800PE, -75 at 90.00, now 60.00: +Rs 2,250.00"))

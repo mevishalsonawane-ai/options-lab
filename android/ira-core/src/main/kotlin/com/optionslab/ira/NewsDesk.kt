@@ -149,7 +149,7 @@ object NewsDesk {
     // Forecasts, advice, Boss's own book, and the app's news settings or feeds ("which news sources do you use").
     private val NOT = Regex(" (will|would|going to|gonna|tomorrow|predict|prediction|forecast|should|shall|buy|sell|enter|exit|short|long|i|me|my|mine|we|our|" +
         "source|sources|feed|feeds|setting|settings|alert|alerts|notify|notification|notifications|mute|unmute|turn on|turn off|switch) ")
-    private val MAIN = Regex(" (main|top|big|biggest|major|key|important|leading|lead) (market )?(news|headline|headlines|story|stories) |" +
+    private val MAIN = Regex(" (main|top|big|biggest|major|key|important|leading|lead|badi|bada|khaas|khas|zaroori|zaruri) (market )?(news|headline|headlines|story|stories|khabar|khabren|khabrein) |" +
         " (what s|what is|whats) (making|in) (the )?(news|headlines) | news of the day | (today s|todays) (main |top |big )?(headlines|stories) |" +
         " (what s|what is|whats) the news today ")
     private val MOVED = Regex(" (what|which|any|did|did any|was it|is) (the )?(news|headline|headlines|story|stories) (moved|move|moving|drove|drive|driving|caused|cause|causing|pushed|push|pushing|dragged|lifted|sank|hit) |" +
@@ -177,7 +177,7 @@ object NewsDesk {
     /** Which of the three was asked, or null. Facts only: a forecast, advice, Boss's own or the news settings are not these. */
     fun asked(text: String): Ask? {
         val t = norm(text)
-        if (!Regex(" (news|headline|headlines|story|stories) ").containsMatchIn(t)) return null
+        if (!Regex(" (news|headline|headlines|story|stories|khabar|khabren|khabrein) ").containsMatchIn(t)) return null
         if (NOT.containsMatchIn(t)) return null
         if (MOVED.containsMatchIn(t)) return Ask.Moved
         if (MAIN.containsMatchIn(t)) return Ask.Main

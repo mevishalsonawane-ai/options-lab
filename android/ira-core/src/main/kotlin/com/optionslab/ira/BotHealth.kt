@@ -199,12 +199,15 @@ object BotHealth {
 
     private fun norm(text: String) = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
 
-    private val BOTS = "(bots?|algos?|strateg(y|ies)|arms?|scripts?|pine scripts?|auto ?trades?)"
+    // (An ORB arm by its name too - "is ORB 5 behaving?": routing audit, round 8.)
+    private val BOTS = "(bots?|algos?|strateg(y|ies)|arms?|scripts?|pine scripts?|auto ?trades?|orb \\d+)"
     private val ASK = Regex(" (how (are|is|re) (my|our|the|mere|meri) (\\w+ )?$BOTS (doing|performing|working|going|behaving|holding up|faring)|" +
         "(is|are) (my |our |the )?(\\w+ )?(\\w+ )?$BOTS (behaving|ok|okay|fine|healthy|working (ok|okay|fine|properly|right)|alright|all right|misbehaving|acting up|going crazy|overtrading)|" +
         "(which|what) (of my )?$BOTS (is|are) (losing|lose|in loss|bleeding|down|worst)|(which|what) $BOTS lost|" +
         "$BOTS health|health (check )?(of|on|for) (all )?(my|our) $BOTS|" +
-        "(my|our|mere|meri) $BOTS (kaise|kesa|kaisa|kaisi|kese) (chal|kar)|$BOTS (theek|thik|sahi|ok) (chal|hai|hain))")
+        "(my|our|mere|meri) $BOTS (kaise|kesa|kaisa|kaisi|kese) (chal|kar)|$BOTS (theek|thik|sahi|ok) (chal|hai|hain)|" +
+        // Hinglish (routing audit, round 8): "mere bots ka haal", "kaun si strategy loss mein hai".
+        "(my|our|mere|meri) $BOTS (ka|ki|ke) (haal|halat|haalat)|(kaun si|kaunsi|konsi|kon si|kaun sa|kaunsa|konsa) $BOTS (loss|nuksan|nuksaan|ghate) (mein|me|main) (hai|hain|he|chal))")
     /** Not this check: a command, a backtest, the arms' regime fit, the paper tests or making one. */
     private val NOT = Regex(" (stop|start|arm it|disarm|switch|turn (on|off)|pause|backtest|back test|suit|suits|held up|create|make|build|write|add|set) ")
 

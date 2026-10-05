@@ -160,7 +160,10 @@ object PatternCalls {
     private val ASKED = Regex("(?i)\\b(which|what) (candle |chart )?patterns? (work|works|worked|are working|do well|did well|hold up|held up|went right|pay off)\\b" +
         "|\\bhow (good|accurate|reliable|right|often right|well) (are|is|were|have been) (your|jarvis s|jarvis's|the) (candle |chart )?pattern (calls?|reads?|spotting|alerts?|mentions?)\\b" +
         "|\\b(your|jarvis s|jarvis's) (candle |chart )?pattern (calls?|record|track record|hit rate|accuracy|score)\\b" +
-        "|\\bpattern (calls? )?(hit rate|track record|accuracy)\\b")
+        "|\\bpattern (calls? )?(hit rate|track record|accuracy)\\b" +
+        // Hinglish (routing audit, round 8): "kaun se patterns kaam karte hain", "pattern calls kaise rahe".
+        "|\\b(kaun se|kaunse|kon se|konse) (candle |chart )?patterns? (kaam karte|kaam kar rahe|kaam kiye|chalte|chal rahe|sahi (jaate|jate|nikle|rahe))\\b" +
+        "|\\b(tumhare |aapke |your )?pattern calls? (kaise|kitne sahi) (rahe|hain|the|nikle)\\b")
 
     fun asked(text: String): Boolean = ASKED.containsMatchIn(text.replace(Regex("\\s+"), " "))
 

@@ -233,7 +233,7 @@ object Consistency {
         "^ $LEAD(what s|what is|anything) (pulling|pointing) (different|opposite|two) ways( (today|now))?( boss| jarvis)? $|" +
         "^ $LEAD(check|run) (yourself|your facts|your numbers|the facts)( for (contradictions?|conflicts?|consistency))?( boss| jarvis| please)? $|" +
         "^ $LEAD(consistency|contradiction) check( please)?( boss| jarvis)? $|" +
-        "^ $LEAD(am i|have i been|was i) (going against|breaking|contradicting|keeping) my (own )?(rules|words|goals|word)( today)?( boss| jarvis)? $"
+        "^ $LEAD(am i|have i been|was i) (going against|breaking|contradicting|keeping|following|sticking to) my (own )?(rules|words|goals|word)( today)?( boss| jarvis)? $"
     )
 
     /** "Any contradictions?", "do the facts agree?", "what's pulling different ways?", "am I going against my own rules?". */

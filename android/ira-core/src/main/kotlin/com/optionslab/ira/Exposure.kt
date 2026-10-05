@@ -93,11 +93,17 @@ object Exposure {
         "(worst|best|weakest|strongest|biggest losing|biggest winning) (open )?(position|positions|trade|trades)|biggest (loser|losers|winner|winners)|" +
         "rank (my |the )?(open )?(positions|trades)|(positions|trades) ranked|which (of my |one of my )?(open )?(position|positions|trade|trades) (is|are) (losing|winning|down|up|in the red|in the green)) ")
 
-    /** "Which of my positions is losing most", "my worst position", "rank my positions". */
+    /**
+     * "Which of my positions is losing most", "my worst position", "rank my positions" - and with no "my" when it names a
+     * position ("which position is losing the most", "worst position": the open positions are Boss's; routing audit, round
+     * 8), but never one to take ("the best position to take", "worst position for Nifty").
+     */
     fun rankAsked(text: String): Boolean {
         val t = norm(text)
         return RANK.containsMatchIn(t) && rx(" (position|positions|trade|trades|loser|losers|winner|winners) ").containsMatchIn(t) &&
-            OWNER.containsMatchIn(t) && !rx(" (today s|yesterday|week|month|year|all time|ever|history|closed) ").containsMatchIn(t)
+            (OWNER.containsMatchIn(t) || rx(" (position|positions) ").containsMatchIn(t) &&
+                !rx(" (to|for|should|shall|would|take|buy|sell|enter|short|long|market|markets|stocks|shares|sector|index|indices) ").containsMatchIn(t)) &&
+            !rx(" (today s|yesterday|week|month|year|all time|ever|history|closed) ").containsMatchIn(t)
     }
 
     private fun one(l: Leg): String {
