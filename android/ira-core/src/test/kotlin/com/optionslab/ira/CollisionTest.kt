@@ -143,6 +143,8 @@ class CollisionTest {
         "kya main aur trade kar sakta hoon" to "Headroom", "kitne trade aur kar sakta hoon" to "Headroom", "am i overtrading" to "Headroom",
         "how much more can i trade" to "Headroom", "am i trading too much" to "Headroom", "how close am i to my limits" to "Headroom",
         "how close am i to my daily loss limit" to "Headroom", "how close am i to the loss limit" to "Headroom",
+        "whats my worst case today" to "Headroom", "what if all my stops get hit" to "Headroom", "how much do i lose if every stop is hit" to "Headroom",
+        "aaj kitna loss ho sakta hai" to "Headroom", "sab stop hit ho gaye to kitna loss" to "Headroom", "what is my worst possible loss today" to "Headroom",
         "how much more can i lose" to "Headroom", "how many trades do i have left" to "Headroom", "how many more trades can i take" to "Headroom",
         "how many orders can i still place today" to "Headroom", "am i near my loss limit" to "Headroom", "am i close to my max loss" to "Headroom",
         "how much headroom do i have" to "Headroom", "show my headroom" to "Headroom", "kitne trade bache hain" to "Headroom",

@@ -169,6 +169,9 @@ object Headroom {
     private fun askedFresh(text: String): Asked? {
         val t = words(text)
         if (ACTS.containsMatchIn(t)) return null
+        // "What's my worst case today", "what if all my stops get hit" (round 26): the day's loss room with the open legs at
+        // their stops ([AtStops]) - read before the what-if below, which its own "if" would otherwise turn away.
+        if (AtStops.ASKED.containsMatchIn(t)) return Asked.LOSS
         // A what-if ("how much can I lose if Nifty falls 1%"): his book at a move, the account's own (Exposure; round 10).
         if (rx(" (if|agar|suppose|supposing|imagine) ").containsMatchIn(t)) return null
         // Another day's or the market's: not this (only today's limits are counted).
