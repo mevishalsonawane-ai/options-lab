@@ -981,7 +981,7 @@ object IraHub {
                     else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.ltp ?: p.avg, stop, null, null)
                 }.getOrElse { "Not protected: ${it.message}" }
                 val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
-                JarvisPopup.show(c, "Boss, I guarded ${p.symbol}", said)
+                JarvisPopup.show(c, if (com.optionslab.ira.Rescue.failed(result)) "Boss, ${p.symbol} is NOT guarded" else "Boss, I guarded ${p.symbol}", said)
                 // Said and shown whole: a "Not protected: ..." in it is never cut to the line "I set one" (review, 5 Oct).
                 note(said, whole = true); IraActivity.add(said)
                 runCatching { JarvisVoice.offerNote(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) }

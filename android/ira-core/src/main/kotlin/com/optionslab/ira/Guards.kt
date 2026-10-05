@@ -67,7 +67,13 @@ object Rescue {
 
     /** Told after the guard set a stop by itself ([result]: what the app said). */
     fun saySet(p: Open, stop: Double, result: String): String =
-        "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) had no stop, so I set one at %.2f, 15%% under the %.2f you paid. ".format(Locale.ENGLISH, stop, p.avg) + result
+        if (failed(result))
+            "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) has no stop. I tried to set one at %.2f, 15%% under the %.2f you paid, but it did not go through: ".format(Locale.ENGLISH, stop, p.avg) + result
+        else "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) had no stop, so I set one at %.2f, 15%% under the %.2f you paid. ".format(Locale.ENGLISH, stop, p.avg) + result
+
+    /** The protect step's own words say it did not happen (never read as "I set one"). */
+    private val FAILED = Regex("not protected|failed|refused|rejected|not sent|not placed|not set|could not|insufficient|switch to live", RegexOption.IGNORE_CASE)
+    fun failed(result: String): Boolean = FAILED.containsMatchIn(result)
 
     fun say(p: Open, stop: Double?): String = if (stop != null)
         "${p.symbol} (${if (p.live) "Zerodha" else "paper"}, ${p.qty}) has no stop. Shall I set one at %.2f, 15%% under the %.2f you paid?".format(Locale.ENGLISH, stop, p.avg)

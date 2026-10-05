@@ -66,6 +66,9 @@ class GuardsTest {
         assertFalse(Rescue.setAlone(true, short, 115.0))                 // never on a short
         assertFalse(Rescue.setAlone(true, long, null))                   // already under the stop: told, not set
         assertTrue(Rescue.saySet(long, 85.0, "Protected.").startsWith("NIFTY24000CE (Zerodha, 75) had no stop, so I set one at 85.00"))
+        val no = Rescue.saySet(long, 85.0, "Not protected: Insufficient funds.")
+        assertTrue(no.startsWith("NIFTY24000CE (Zerodha, 75) has no stop. I tried to set one at 85.00"))
+        assertTrue("did not go through: Not protected: Insufficient funds." in no && "so I set one" !in no)
     }
 
     @Test fun coolOffAfterTwoLosses() {
