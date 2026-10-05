@@ -21,8 +21,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -75,6 +80,14 @@ fun RowActionPopup(model: AppModel) {
     var removeAuth by remember { mutableStateOf<Long?>(null) }
     var protectFor by remember { mutableStateOf<ProtectTarget?>(null) }
     var journalFor by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // Speed, round 4: the journal is a vault file (Keystore decrypt, retried with sleeps on a hiccup). It was read while
+    // composing the popup of a trade, so the first tap on a trade waited on it on the main thread; now it is read on IO
+    // and its line joins the popup when read (at once after the first read: Journal keeps it). Read again after a save.
+    var journalRev by remember { mutableStateOf(0) }
+    val journal by produceState<Map<String, com.optionslab.app.data.Journal.Entry>>(
+        com.optionslab.app.data.Journal.cached() ?: emptyMap(), t, journalRev) {
+        value = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.Journal.all() }.getOrNull() } ?: value
+    }
     val protections by model.protections.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(t) { model.refreshProtections() }
     // Live figures while the popup is open: the paper account is re-priced on its usual cadence (the Zerodha account
@@ -160,7 +173,7 @@ fun RowActionPopup(model: AppModel) {
             lines += "Time" to r.timestamp.takeLast(8)
             lines += "Trade · order id" to "${r.tradeId} · ${r.orderId}"
             val jKey = "paper:${r.tradeId}"
-            com.optionslab.app.data.Journal.of(jKey)?.let { e -> lines += "Journal" to (e.tags.joinToString() + if (e.note.isNotBlank()) " · ${e.note}" else "") }
+            journal[jKey]?.let { e -> com.optionslab.ira.JournalNote.line(e.tags, e.note) }?.let { lines += "Journal" to it }
             button("Journal: note · tags") { journalFor = jKey to "${r.action} ${r.symbol}" }
             if (pos != null) {
                 pnl = (pos.ltp - r.price) * r.quantity * (if (r.action == "BUY") 1 else -1)
@@ -228,7 +241,7 @@ fun RowActionPopup(model: AppModel) {
             lines += "Time" to r.at.takeLast(8)
             lines += "Trade · order id" to "${r.id} · ${r.orderId}"
             val jKey = "kite:${r.id}"
-            com.optionslab.app.data.Journal.of(jKey)?.let { e -> lines += "Journal" to (e.tags.joinToString() + if (e.note.isNotBlank()) " · ${e.note}" else "") }
+            journal[jKey]?.let { e -> com.optionslab.ira.JournalNote.line(e.tags, e.note) }?.let { lines += "Journal" to it }
             button("Journal: note · tags") { journalFor = jKey to "${r.side} ${r.symbol}" }
             if (pos != null) {
                 pnl = (pos.last - r.price) * r.qty * (if (r.side == "BUY") 1 else -1)
@@ -273,7 +286,7 @@ fun RowActionPopup(model: AppModel) {
     )
     modify?.let { o -> ModifyDialog(model, o) { modify = null; close() } }
     protectFor?.let { pt -> ProtectDialog(model, pt) { done -> protectFor = null; if (done) close() } }
-    journalFor?.let { (key, label) -> JournalDialog(key, label) { journalFor = null } }
+    journalFor?.let { (key, label) -> JournalDialog(key, label, onSaved = { journalRev += 1 }) { journalFor = null } }
     // Cancelling a working order (it may be a stop-loss) is proved like a send.
     removeAuth?.let { id -> Reauth(model, onOk = { removeAuth = null; model.removeProtection(id); close() }, onCancel = { removeAuth = null },
         why = "Enter your app PIN to cancel this position's stop and target at Zerodha.") }
@@ -335,14 +348,31 @@ fun PriceField(v: String, set: (String) -> Unit, label: String) {
 }
 
 
-/** A note and tags on one trade (setup, mistakes, mood); the P&L tab adds up what each tag makes. */
+/**
+ * A note and tags on one trade (setup, mistakes, mood); the P&L tab adds up what each tag makes.
+ * Speed, round 4: the entry is read and the journal saved (a Keystore encrypt and a file write) on IO, not on the main
+ * thread at the tap; [onSaved] after a save, so the popup reads the new line.
+ */
 @Composable
-fun JournalDialog(key: String, label: String, onClose: () -> Unit) {
+fun JournalDialog(key: String, label: String, onSaved: () -> Unit = {}, onClose: () -> Unit) {
+    val j = com.optionslab.app.data.Journal
+    // read.first: the entry has been read (at once when the popup has read the journal already, the usual case).
+    val read by produceState<Pair<Boolean, com.optionslab.app.data.Journal.Entry?>>(
+        j.cached()?.let { m -> true to m[key] } ?: (false to null), key) {
+        if (!value.first) value = true to withContext(Dispatchers.IO) { runCatching { j.of(key) }.getOrNull() }
+    }
+    if (!read.first) return
+    JournalEditor(key, label, read.second, onSaved, onClose)
+}
+
+@Composable
+private fun JournalEditor(key: String, label: String, start: com.optionslab.app.data.Journal.Entry?, onSaved: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
     val j = com.optionslab.app.data.Journal
-    val start = remember(key) { j.of(key) }
+    val scope = rememberCoroutineScope()
     var note by remember(key) { mutableStateOf(start?.note.orEmpty()) }
     var tags by remember(key) { mutableStateOf(start?.tags.orEmpty()) }
+    var saving by remember(key) { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -364,7 +394,21 @@ fun JournalDialog(key: String, label: String, onClose: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
             }
         },
-        confirmButton = { TextButton({ j.put(key, note, tags); com.optionslab.app.work.Alerts.success("Journal saved."); onClose() }) { Text("Save") } },
+        confirmButton = {
+            TextButton({
+                if (!saving) {
+                    saving = true
+                    val n = note
+                    val tg = tags
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) { runCatching { j.put(key, n, tg) }.isSuccess }
+                        // Back on the main thread here (the composition's scope): the states and the callbacks are safe.
+                        if (ok) { com.optionslab.app.work.Alerts.success("Journal saved."); onSaved(); onClose() }
+                        else { saving = false; com.optionslab.app.work.Alerts.error("Journal not saved: the vault could not be written.") }
+                    }
+                }
+            }) { Text(if (saving) "Saving..." else "Save") }
+        },
         dismissButton = { TextButton(onClose) { Text("Cancel") } },
     )
 }

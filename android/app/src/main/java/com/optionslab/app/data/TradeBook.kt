@@ -143,7 +143,13 @@ object Journal {
     val MOODS = listOf("Calm", "Confident", "Anxious", "Greedy", "Bored")
 
     private lateinit var file: File
-    private var cache: MutableMap<String, Entry>? = null
+    // Volatile: [cached] peeks at it from the main thread without the lock. Never changed in place once kept (each
+    // change keeps a new map), so a peeked map stays whole.
+    @Volatile private var cache: MutableMap<String, Entry>? = null
+
+    /** The journal if it has been read already, else null: never reads the vault (safe on the main thread). */
+    fun cached(): Map<String, Entry>? = cache
+
     fun init(context: Context) { file = File(context.applicationContext.noBackupFilesDir, "journal.vault") }
 
     @Synchronized
