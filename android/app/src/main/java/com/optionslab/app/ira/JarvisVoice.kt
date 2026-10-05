@@ -1324,7 +1324,19 @@ class JarvisVoice : Service() {
                         // A start set for later runs while Boss may be away: only his own voice sets one.
                         risky && !verified && (cmd!!.kind in HIGH_RISK || loosens || laterRest != null) ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't do it. Use the Ira screen.")
-                        else -> answer(h.question, confirm = risky && !verified, named = named)
+                        else -> {
+                            // Not sure it heard this question right (a low score, or its best readings differ in an index, a
+                            // number, a side or a day): what it took it as is said first, then the answer - questions only,
+                            // never an order or command (each has its own confirm); the trace keeps why, never the words.
+                            val echo = com.optionslab.ira.HeardBack.why(h.question, alternatives, sure,
+                                isQuestion = parsedQ.order == null && parsedQ.command == null && laterRest == null &&
+                                    com.optionslab.ira.Topic.ORDER !in topics && com.optionslab.ira.Topic.COMMAND !in topics,
+                                lockedAccount = locked() && com.optionslab.ira.Topic.ACCOUNT in topics)?.let { why ->
+                                note("read back first (${why.name.lowercase()}, ${com.optionslab.ira.Sure.say(sure)})")
+                                com.optionslab.ira.HeardBack.line(h.question, com.optionslab.ira.Aloud.hindi(h.question))
+                            }
+                            answer(h.question, confirm = risky && !verified, named = named, echo = echo)
+                        }
                     }
                 }
             }
@@ -1375,7 +1387,8 @@ class JarvisVoice : Service() {
     /** A slow answer Boss was told is coming: the mic button's one-question listen is not ended before it. */
     @Volatile private var lateWaiting = false
 
-    private fun answer(q: String, confirm: Boolean = false, named: Boolean = true) {
+    /** [echo]: what Jarvis took the question as, said before the answer when he was not sure ([com.optionslab.ira.HeardBack]). */
+    private fun answer(q: String, confirm: Boolean = false, named: Boolean = true, echo: String? = null) {
         // From Boss's last word (Boss, 5 Oct): the turn's closing wait and the recognizer's final reading count too.
         heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime())
         learnPace()
@@ -1431,11 +1444,16 @@ class JarvisVoice : Service() {
                 }
                 // Short answers (the owner's setting, or "shorter"): the first sentence; "tell me more" says the whole
                 // answer. Said as a person says it (Boss once, figures rounded), the rest left in the chat.
-                // A kind of answer Boss often asks "what?" after is said shorter (two sentences or one; [com.optionslab.ira.Clarity]).
-                else -> { full = a.text; (if (late) "About what you asked earlier: " else "") + com.optionslab.ira.Aloud.say(a.text, when {
-                    com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL.sentences
-                    IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT.sentences
-                    else -> IraTools.claritySentences(q) ?: com.optionslab.ira.Aloud.Length.USUAL.sentences }) }
+                // Not sure of the words (echo): what he took them as goes first, one sentence, Boss named once. A kind of
+                // answer Boss often asks "what?" after is said shorter (two sentences or one; [com.optionslab.ira.Clarity]).
+                else -> {
+                    val spoken = com.optionslab.ira.Aloud.say(a.text, when {
+                        com.optionslab.ira.Ask.parse(q).command?.kind == com.optionslab.ira.Command.Kind.MORE -> com.optionslab.ira.Aloud.Length.FULL.sentences
+                        IraTools.brief -> com.optionslab.ira.Aloud.Length.SHORT.sentences
+                        else -> IraTools.claritySentences(q) ?: com.optionslab.ira.Aloud.Length.USUAL.sentences })
+                    if (late) { full = a.text; "About what you asked earlier: $spoken" }
+                    else { full = com.optionslab.ira.HeardBack.full(echo, a.text); com.optionslab.ira.HeardBack.lead(echo, spoken) }
+                }
             }.let { text ->
                 // A follow-up (no "Jarvis") that brings back the very answer just given is not said again: the
                 // follow-up window closes instead, so one answer can never repeat itself in a loop.
