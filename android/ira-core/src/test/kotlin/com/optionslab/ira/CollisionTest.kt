@@ -2223,6 +2223,86 @@ class CollisionTest {
         assertEquals("Overnight", audit.feature("are weekend gaps bigger than usual"))
     }
 
+    /**
+     * Round 24: the newest features as Boss says them - DayAfter said as "after" a big day and the recognizer's "dey after",
+     * the short answer's "more" in Hinglish ("pura batao", "aur bolo boss"), "why aren't you speaking" in Indian English and
+     * Hindi, the voice mute in Hinglish ("awaz band karo" was a strategy called "awaz") and its split "your self", "start
+     * speaking again", and "Jarvis, hold on" / "ek minute ruko" as a hush.
+     */
+    private val ROUND24 = listOf(
+        // DayAfter: the session after said by "after" / "ke baad", a crash as a big day, the recognizer's slips
+        "next day after a 2 percent rally" to "DayAfter", "day after big down days" to "DayAfter", "nifty bada girne ke baad agle din" to "DayAfter",
+        "after nifty falls one percent what next day" to "DayAfter", "what does nifty do after a big red day" to "DayAfter",
+        "day after a crash what does banknifty do" to "DayAfter", "dey after big fall" to "DayAfter", "the day after a bigfall" to "DayAfter",
+    )
+
+    /** Round 24's voice words: Jarvis's own voice and the full last answer only (each a command that trades nothing). */
+    private val ROUND24_VOICE = listOf(
+        // The short answer's "more" in Hinglish, with "boss", the recognizer's "or batao", and "carry on"
+        "aur bolo boss" to Command.Kind.MORE, "aur bataao" to Command.Kind.MORE, "or batao" to Command.Kind.MORE, "pura batao" to Command.Kind.MORE,
+        "poora batao" to Command.Kind.MORE, "full details" to Command.Kind.MORE, "carry on" to Command.Kind.MORE, "continue" to Command.Kind.MORE,
+        // "Why aren't you speaking?" in Indian English and Hindi: the voice check (it only explains)
+        "why is jarvis not speaking" to Command.Kind.VOICE_CHECK, "why you are not speaking" to Command.Kind.VOICE_CHECK,
+        "why are you only typing" to Command.Kind.VOICE_CHECK, "why are you writing instead of speaking" to Command.Kind.VOICE_CHECK,
+        "why only text" to Command.Kind.VOICE_CHECK, "why no sound" to Command.Kind.VOICE_CHECK, "why is there no voice" to Command.Kind.VOICE_CHECK,
+        "aawaz kyu nahi aa rahi" to Command.Kind.VOICE_CHECK, "aawaz kyun nahi aa rahi" to Command.Kind.VOICE_CHECK,
+        "bol kyu nahi rahe" to Command.Kind.VOICE_CHECK, "tum bol kyun nahi rahe" to Command.Kind.VOICE_CHECK,
+        // The voice mute and unmute in Hinglish, and the recognizer's split "your self"
+        "awaz band karo" to Command.Kind.MUTE, "aawaz band kar do" to Command.Kind.MUTE, "voice band karo" to Command.Kind.MUTE,
+        "mute karo" to Command.Kind.MUTE, "mute your self" to Command.Kind.MUTE, "mute you self" to Command.Kind.MUTE,
+        "awaz chalu karo" to Command.Kind.UNMUTE, "start speaking again" to Command.Kind.UNMUTE,
+    )
+
+    @Test fun roundTwentyFourWordingsRouteAndNeverAct() {
+        assertEquals(ROUND24.size, ROUND24.map { it.first }.distinct().size)
+        val wrong = ROUND24.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND24) neverActs(s)
+        // The voice words: that command and only that (never an order, never a strategy or a position), typed or heard.
+        assertEquals(ROUND24_VOICE.size, ROUND24_VOICE.map { it.first }.distinct().size)
+        for ((s, want) in ROUND24_VOICE) {
+            val p = Ask.parse(s)
+            assertEquals(want, p.command?.kind, s); assertEquals(null, p.order, s)
+            assertEquals("Act", audit.feature(s), s)
+            assertTrue(Ask.parse("$s?").command == null || want == Command.Kind.VOICE_CHECK, "a question mark keeps $s from acting")
+        }
+        for ((s, want) in ROUND24_VOICE) if (want == Command.Kind.MORE) assertEquals(ShortAnswer.Kind.WHOLE, ShortAnswer.kind(s), s)
+        // A heard mute in Hinglish or with the split "your self" is clear; "mute karo" only with the name in the same words.
+        for (s in listOf("awaz band karo", "aawaz band kar do", "voice band karo", "mute your self")) assertTrue(VoiceMute.heardClear(s, named = false), s)
+        assertTrue(VoiceMute.heardClear("mute karo", named = true) && !VoiceMute.heardClear("mute karo", named = false))
+        // "Jarvis, hold on" / "ek minute ruko": a hush, never a question.
+        for (s in listOf("hold on", "wait a second", "one second", "ek minute ruko", "ruko ek minute", "just a second", "hold on boss"))
+            assertEquals(Wake.Heard.Hush, Wake.heard("Jarvis, $s", false), s)
+        assertTrue(Wake.heard("Jarvis, hold on to my nifty position", false) is Wake.Heard.Ask)
+        // Neighbours keep their own: the P&L, the history, Headroom, today's gap, a strategy or a position "band karo".
+        for ((s, want) in listOf("my p&l" to "Account:PNL", "how much did i make today" to "Account:PNL", "aaj kitna kamaya" to "Account:PNL",
+            "what's my p&l this week" to "Account:HISTORY", "my best day this month" to "Account:HISTORY",
+            "how much headroom do i have left" to "Headroom", "how many more trades can i take today" to "Headroom",
+            "is the gap bigger today" to "Gap", "after nifty falls 1% in a day what happens the next day" to "DayAfter",
+            "1% girne ke baad agle din nifty kya karta hai" to "DayAfter"))
+            assertEquals(want, audit.feature(s), s)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("strategy 1 band karo").command?.kind)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop nifty strategy").command?.kind)
+        assertEquals(Command.Kind.CLOSE_ONE, Ask.parse("nifty position band karo").command?.kind)
+        // "Awaz" is never a strategy's name, to stop or to start.
+        for (s in listOf("awaz band karo", "stop awaz", "start awaz", "awaz chalu karo"))
+            assertTrue(Ask.parse(s).command?.kind !in setOf(Command.Kind.STOP_ONE, Command.Kind.START_ONE), s)
+        // Not the voice: trading, a market not moving, orders; not "more": trading on, a definition, a P&L asked in detail.
+        for (s in listOf("why is jarvis not trading", "why are you not trading", "why is nifty not moving", "why only nifty", "why no orders today",
+            "continue trading", "explain theta", "explain in detail my p&l", "stop voice alerts", "show details of my orders"))
+            assertTrue(Ask.parse(s).command?.kind !in setOf(Command.Kind.VOICE_CHECK, Command.Kind.MORE, Command.Kind.MUTE, Command.Kind.UNMUTE), "$s: ${Ask.parse(s).command}")
+        assertEquals("Account:PNL", audit.feature("explain in detail my p&l"))
+        // A wish for a topic's length stays [TopicLength]'s (never "more").
+        for (s in listOf("detail mein batao", "detail me batao", "explain in detail", "in detail", "elaborate", "pura detail batao"))
+            assertEquals(TopicLength.Dir.LONG, TopicLength.wish(s), s)
+        // DayAfter stays a record: never a forecast, advice, Boss's own book, today, a gap, the intraday comeback or the last week.
+        for (s in listOf("what will nifty do the day after a big fall", "after a big fall today what happens tomorrow",
+            "did i make money the day after big falls", "should i buy the day after a big fall", "after a big red day should i buy",
+            "what happens after a big gap down", "after a big fall in the day does nifty recover", "what did nifty do after the crash last week",
+            "how does nifty close after a crash in the morning", "day after a big day"))
+            assertTrue(audit.feature(s) != "DayAfter", "$s: ${audit.feature(s)}")
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

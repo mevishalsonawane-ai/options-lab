@@ -24,7 +24,9 @@ object VoiceMute {
 
     private val CLEAR = Regex("^(mute (yourself|your voice|the voice|jarvis)|(be|go|stay|keep) (on )?silent|(stay|keep|be) muted|" +
         "(don t|do not|dont) (speak|talk)( any more| anymore)?|voice off|turn (off )?(your )?voice( off)?|switch (off )?(your )?voice( off)?|" +
-        "be quiet|stay quiet|keep quiet|chup (ho jao|raho|karo|ho ja)|awaaz band( karo)?|mute (for|till|until) .+)$")
+        "be quiet|stay quiet|keep quiet|chup (ho jao|raho|karo|ho ja)|awaaz band( karo)?|mute (for|till|until) .+|" +
+        // Understanding round 24: the voice named in Hinglish as the recognizer spells it, and its split "your self".
+        "(apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz|voice) band (karo|kar do|kardo|kar dijiye|kijiye)|mute (your self|you self|urself|ur self))$")
 
     private fun norm(s: String) = spacedWords(s.lowercase().replace("'", " "))
 
@@ -38,7 +40,7 @@ object VoiceMute {
         if (q.isEmpty()) return false
         if (CLEAR.matches(q)) return true
         // The name in the same words: a short, plain mute is clear ("Jarvis, mute", "Jarvis mute please").
-        return named && Regex("^(be |go |stay |keep )?(mute|muted)$").matches(q)
+        return named && Regex("^(be |go |stay |keep )?(mute|muted)( karo| kar do| ho jao)?$").matches(q)
     }
 
     /** The mute's own words kept for the diagnostics: a short mute phrase only (else "a mute phrase"). */

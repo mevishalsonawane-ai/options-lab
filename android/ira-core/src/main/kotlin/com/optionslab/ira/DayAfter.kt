@@ -97,6 +97,13 @@ object DayAfter {
     private val NEXT = Regex(" (next day|next days|next session|next sessions|next trading day|the day after|day after|days after|" +
         "the following day|following day|the following session|following session|the session after|the session that follows|" +
         "agle din|agla din|agle session|uske agle din|dusre din|doosre din) ")
+    /** "After a big red day", "after a sharp down session": the session after, said by the big day itself (round 24). */
+    private val AFTER_BIG_DAY = Regex(" after (a |the )?(big|large|huge|sharp|strong|heavy|massive) (red|green|up|down) (day|days|session|sessions) ")
+    /** What followed asked as "after" or "ke baad" a big day. */
+    private val AFTER = Regex(" (after|ke baad|ke bad) ")
+    /** A crash is a big day said in one word. */
+    private val CRASH = Regex(" (crash|crashes|crashed) ")
+    private val SLIPS = listOf(" dey after " to " day after ", " die after " to " day after ", " bigfall " to " big fall ", " bigdrop " to " big drop ")
     /** Following through, named as a record: "follow through record", "day after record". */
     private val NAME = Regex(" ((big day|big days|big move|big moves|big up day|big down day|day after|next day) " +
         "(follow through|followthrough|record|records|stats|statistics|history)|follow through (record|records|stats|statistics|history|rate|odds)) ")
@@ -131,7 +138,8 @@ object DayAfter {
     private val askedKept = Kept<Q?>(64)
 
     private fun askedFresh(text: String): Q? {
-        val t = norm(text)
+        // The recognizer's "dey after" and "bigfall" (understanding round 24).
+        val t = SLIPS.fold(norm(text)) { x, (from, to) -> x.replace(from, to) }
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         val named = NAME.containsMatchIn(t)
@@ -139,9 +147,11 @@ object DayAfter {
         val down = DOWN.find(t)?.range?.first
         val up = UP.find(t)?.range?.first
         if (!named) {
-            // The session after, a big day (a size or "big") with its way, asked of what followed.
-            if (!NEXT.containsMatchIn(t) || !HOW.containsMatchIn(t)) return null
-            if (size == null && !BIG.containsMatchIn(t)) return null
+            // The session after, a big day (a size, "big" or a crash) with its way, asked of what followed - or said as
+            // "after" / "ke baad" a big day ("next day after a 2% rally", "nifty bada girne ke baad agle din"; round 24).
+            if (!NEXT.containsMatchIn(t) && !AFTER_BIG_DAY.containsMatchIn(t)) return null
+            if (!HOW.containsMatchIn(t) && !AFTER.containsMatchIn(t)) return null
+            if (size == null && !BIG.containsMatchIn(t) && !CRASH.containsMatchIn(t)) return null
             if (down == null && up == null) return null
         }
         val side = side(t)

@@ -58,7 +58,36 @@ object Commands {
         "why (only|just) (in )?(the )?chat|why (don t|dont|do not|won t|wont) you (speak|talk)( to me)?( aloud| out loud)?|" +
         "why (are you )?(not|no longer) (speaking|talking)|why are you silent|why (is|are) (your|you r) (voice|replies) (off|only on screen)|" +
         "why (aren t|arent|don t|dont) (i|we) hear(ing)? you|you (are|re) not speaking|you aren t speaking|you don t speak( any more| anymore)?|" +
-        "aap bol kyun nahi rahe|bol kyun nahi rahe( ho)?|aawaz kyun nahi aa rahi)( jarvis| boss| any more| anymore)? $")
+        "aap bol kyun nahi rahe|bol kyun nahi rahe( ho)?|aawaz kyun nahi aa rahi|" +
+        // Understanding round 24: Jarvis named, Indian English word order, "typing" for the chat, the Hindi said with "kyu".
+        "why (is|isn t|isnt) jarvis (not )?(speaking|talking|silent|quiet)|why (you are|you re|u are|you r) not (speaking|talking)|" +
+        "why (are you|you are|r u|are u) (only |just )?(typing|writing|texting)( only)?( instead of (speaking|talking))?|why (only|just) (text|typing|writing)|" +
+        "why (is there )?no (sound|voice|audio)( from you)?|(aawaz|awaz|awaaz|aavaz|avaaz|voice) (kyun|kyu|kyon|why) nahi aa rahi( hai)?|" +
+        // (As the Hindi reads once its "kyun" is turned to "why" - [Hinglish.normalize], which [Ask] parses commands from.)
+        "(tum |aap )?bol (kyun|kyu|kyon|why) nahi rahe( ho)?)( jarvis| boss| any more| anymore)? $")
+    /**
+     * Jarvis's voice in Hinglish and the recognizer's split "your self" (understanding round 24), read as said, before the
+     * Hindi verb is turned round ("awaz band karo" was read as "stop awaz", a strategy). Mute and unmute only: Jarvis's own
+     * voice, nothing that trades.
+     */
+    private val MUTE_SAID = Regex("^ (jarvis )?((apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz|voice) band (karo|kar do|kardo|kar dijiye|kijiye)|" +
+        "mute (karo|kar do|kardo|ho jao|ho ja)|mute (your self|you self|urself|ur self|yourselves)|" +
+        // (As [Hinglish.normalize] turns the verb round: "awaz band karo" -> "stop awaz".)
+        "stop (apni |apna |tumhari |aapki |your )?(awaz|aawaz|awaaz|aavaz|avaaz|voice))( please| boss| jarvis| now)? $")
+    private val UNMUTE_SAID = Regex("^ (jarvis )?((apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz|voice) (chalu|on|wapas chalu) (karo|kar do|kardo)|" +
+        "unmute (karo|kar do|kardo)|(start|begin) (speaking|talking) again|un mute (your self|you self)|" +
+        "start (apni |apna |tumhari |aapki |your )?(awaz|aawaz|awaaz|aavaz|avaaz|voice))( please| boss| jarvis| now)? $")
+    /**
+     * "Aur bolo, Boss", "pura batao", "full details", "carry on": the full last answer ([Command.Kind.MORE]; it only says
+     * what was already answered), read as said (round 24).
+     */
+    private val MORE_SAID = Regex("^ (jarvis )?(aur (batao|bataao|btao|bata|bolo|bataiye|boliye|sunao)|or (batao|bataao)|" +
+        "(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|full details|the full details|" +
+        "carry on|continue|" +
+        "tell me more|more|more details|go on|details|aur batao|" +
+        // (As [Hinglish.normalize] turns "batao" round: "pura batao" -> "show pura". "Detail mein batao" and "explain in detail"
+        // stay Boss's wish for the length of a topic, [TopicLength].)
+        "show (pura|poora|puri|poori|pure|poore|or|details|full details))( please| boss| jarvis| now)? $")
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
     /** Every market's names, longest first, as one alternation (for a removal by market). */
     private val ALIASES = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
@@ -92,6 +121,10 @@ object Commands {
         if (VOICE_WHY.containsMatchIn(" " + spacedWords(said.lowercase().replace("'", " ")) + " ")) return Command(Command.Kind.VOICE_CHECK)
         // A question ("is live mode on?") is never a command.
         if (said.trim().endsWith("?")) return null
+        val asSaid = " " + spacedWords(said.lowercase().replace("'", " ")) + " "
+        if (MUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MUTE)
+        if (UNMUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.UNMUTE)
+        if (MORE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MORE)
         val text = Hinglish.normalize(said)
         // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
         val t = " " + text.lowercase().replace("%", " percent ").replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\.(?!\\d)"), " ")
@@ -249,7 +282,9 @@ object Commands {
             // "Isko band karo" names nothing (a close by a pronoun, [Plan.pronounClose]): never a strategy called "isko".
             "|^(isko|usko|is|us|ise|use|isse|usse|ye|yeh|wo|woh|vo)$" +
             // "Stop stop" / "stop, wait" is Boss hushing Jarvis's voice ([BargeIn]), never a strategy called "stop" (5 Oct).
-            "|^(stop|bas|ruko|rukko|chup|wait|enough|quiet|please)( (stop|bas|ruko|rukko|chup|wait|enough|quiet|please|now|it))*$")
+            "|^(stop|bas|ruko|rukko|chup|wait|enough|quiet|please)( (stop|bas|ruko|rukko|chup|wait|enough|quiet|please|now|it))*$" +
+            // "Awaz band karo" / "awaz chalu karo" is Jarvis's voice (round 24), never a strategy called "awaz".
+            "|^(apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz)\\b")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what) && !habitUndo(s)) return one(Command.Kind.STOP_ONE, what)

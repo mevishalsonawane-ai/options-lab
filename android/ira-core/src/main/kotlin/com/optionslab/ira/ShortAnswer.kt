@@ -65,7 +65,9 @@ object ShortAnswer {
     private fun norm(q: String) = " " + spacedWords(q.lowercase().replace("p&l", "p l").replace("'", ""), "") + " "
 
     private val Q_WHOLE = Regex("^ (tell me |say |some )?more( please| details| detail| boss)? $| (details?|in detail|detail mein|detail me|vistar se|" +
-        "aur batao|aur bolo|aur bataiye|explain more|full answer|the full answer|go on|tell me more|in full|elaborate|say the rest|the rest) ")
+        "aur batao|aur bolo|aur bataiye|explain more|full answer|the full answer|go on|tell me more|in full|elaborate|say the rest|the rest) |" +
+        // Understanding round 24: as Commands' "more" said as heard.
+        "^ (aur (bataao|btao|bata|boliye|sunao)|or (batao|bataao)|(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|carry on|continue)( please| boss| jarvis| now)? $")
     private val Q_TRADES_LEFT = Regex(" (trades? (left|remaining)|how many (more )?trades (can|may|left)|more trades) ")
     private val Q_THETA = Regex(" (theta|time decay|decay) ")
     private val Q_LAST = Regex(" last (trade|order|fill) ")
