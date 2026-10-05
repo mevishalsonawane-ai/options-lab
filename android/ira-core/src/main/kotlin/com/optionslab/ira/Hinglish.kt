@@ -67,6 +67,66 @@ object Hinglish {
         return t
     }
 
+    // How the recognizer spells the little Hindi words ("kya" / "kia", "raha" / "rha", "hai" / "hain").
+    private const val KYA = "(?:kya|kia|kyaa)"
+    private const val RAHA = "(?:raha|rha|rahi|rhi|rahe|rhe)"
+    private const val HAI = "(?:hai|hain|hay|he)"
+    private const val MINE = "(?:(?:mera|meri|mere|apna|apni|apne)\\s+)?"
+    private const val SHOW = "(?:dikhao|dikhaao|dikhaiye|dikha\\s+do|dikha\\s+dijiye|dikhana|batao|bataiye|bata\\s+do|$KYA\\s+$HAI|check\\s+karo)"
+
+    /**
+     * The commonest questions in Hinglish (2026-10-05): "Nifty kya chal raha hai", "aaj kitna kamaya", "positions dikha
+     * do", "koi order pending hai kya" - each read as the English question. Questions only: every line here ends in a
+     * question word, never in a verb that acts, and [Ask] reads commands and orders from [normalize] alone, never from
+     * these (so no action is understood more widely). (pattern, English); `$1` is the market or the thing asked about.
+     */
+    private val QUESTIONS: List<Pair<Regex, String>> = listOf(
+        // The market as a whole: "market kya chal raha hai", "bazaar ka kya haal hai" (as "market kaisa hai").
+        Regex("^(?:(aaj|abhi)\\s+)?(?:share\\s+)?(?:market|bazaar|bazar)\\s+(?:(?:mein|me|main)\\s+)?(?:$KYA\\s+chal\\s+$RAHA|$KYA\\s+ho\\s+$RAHA|kaisa\\s+chal\\s+$RAHA|kaisi\\s+chal\\s+$RAHA)\\s+$HAI$") to "$1 how is the market",
+        Regex("^(?:(aaj|abhi)\\s+)?(?:share\\s+)?(?:market|bazaar|bazar)\\s+(?:ka|ki)\\s+(?:$KYA\\s+haal|haal\\s+$KYA|haal\\s+kaisa)\\s+$HAI$") to "$1 how is the market",
+        // "Market khula hai kya": whether it is open today.
+        Regex("^(?:(?:aaj|kya)\\s+)?(?:market|bazaar|bazar)\\s+(?:aaj\\s+)?(?:khula|khuli|open)\\s+(?:$HAI|hoga|rahega)(?:\\s+$KYA)?(?:\\s+aaj)?$") to "is the market open today",
+        // The owner's own money: "aaj kitna kamaya", "kitna loss hua", "aaj ki kamai kitni hai", "main profit mein hoon kya".
+        Regex("^(?:(?:aaj|maine|humne|abhi\\s+tak|ab\\s+tak)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:paisa\\s+|paise\\s+|profit\\s+|munafa\\s+)?(?:kamaya|kamaye|kamai|kamaai|banaya|banaye)(?:\\s+(?:maine|humne|aaj|$HAI|$KYA))*$") to "what is my p&l today",
+        Regex("^(?:(?:aaj|maine|humne)\\s+)*(?:kitna|kitne|kitni|kitana)\\s+(?:profit|munafa|fayda|faida|loss|nuksan|nuksaan|nuqsan|ghata)\\s+(?:hua|hui|huwa|ho\\s+gaya|$HAI|kiya|banaya)(?:\\s+(?:aaj|$HAI|$KYA))*$") to "what is my p&l today",
+        Regex("^(?:(?:aaj|maine|humne)\\s+)*(?:kitna|kitne|kitni)\\s+(?:paisa\\s+|paise\\s+)?(?:gawaya|gavaya|ganwaya|gavaaya|gawaye|haara|haare)(?:\\s+(?:maine|aaj|$HAI|$KYA))*$") to "what is my p&l today",
+        Regex("^(?:aaj\\s+)?(?:(?:ka|ki)\\s+)?$MINE(?:aaj\\s+)?(?:(?:ka|ki)\\s+)?(?:p&l|p\\s+l|pnl|mtm|kamai|kamaai|profit\\s+loss)\\s+(?:kitna|kitni|kitne|$KYA)\\s+$HAI$") to "what is my p&l today",
+        Regex("^(?:$KYA\\s+)?(?:main|mai|mein|hum)\\s+(?:aaj\\s+)?(?:profit|fayde|faayde|munafe)\\s+(?:mein|me|main)\\s+(?:hoon|hu|hun|hain|$HAI)(?:\\s+$KYA)?$") to "am i in profit today",
+        Regex("^(?:$KYA\\s+)?(?:main|mai|mein|hum)\\s+(?:aaj\\s+)?(?:loss|nuksan|nuksaan|ghate)\\s+(?:mein|me|main)\\s+(?:hoon|hu|hun|hain|$HAI)(?:\\s+$KYA)?$") to "am i in loss today",
+        // Positions and orders: "positions dikha do", "mere orders kya hain", "koi order pending hai kya".
+        Regex("^$MINE(?:(?:sabhi|saare|sab|open|khuli|khule)\\s+)?(positions?|orders?|trades?|holdings?)\\s+$SHOW$") to "show my $1",
+        Regex("^(?:koi|kitne|kitni|kaun\\s+si|kaunsi|kaun\\s+se|kaunse)\\s+(?:open\\s+)?(positions?|orders?|trades?)\\s+(?:(?:khuli|khule|open|pending|baaki|bachi|bache|lagi|lage)\\s+)?(?:$HAI|hui\\s+$HAI)(?:\\s+$KYA)?$") to "show my $1",
+        // The owner's bots: "strategies kaise chal rahe hain".
+        Regex("^$MINE(strateg(?:y|ies)|arms?|bots?|algos?)\\s+(?:kaise|kaisi|kaisa)\\s+(?:chal\\s+$RAHA\\s+$HAI|$HAI)$") to "how are my $1 doing",
+        // One market: "Nifty kya chal raha hai", "BankNifty ka kya haal hai", "Sensex mein kya ho raha hai".
+        Regex("^(?:(aaj|abhi)\\s+)?(.+?)\\s+(?:(?:mein|me|main)\\s+)?(?:$KYA\\s+chal\\s+$RAHA|$KYA\\s+ho\\s+$RAHA|kaisa\\s+chal\\s+$RAHA|kaisi\\s+chal\\s+$RAHA)\\s+$HAI$") to "$1 how is $2",
+        Regex("^(?:(aaj|abhi)\\s+)?(.+?)\\s+(?:ka|ki)\\s+(?:$KYA\\s+haal|haal\\s+$KYA|haal\\s+kaisa)\\s+$HAI$") to "$1 how is $2",
+        // Its price: "Nifty kitne pe hai", "BankNifty ka rate kya hai", "Nifty kahan hai".
+        Regex("^(.+?)\\s+(?:kitne|kitna|kis\\s+level)\\s+(?:pe|par)\\s+(?:$HAI|chal\\s+$RAHA\\s+$HAI|trade\\s+kar\\s+$RAHA\\s+$HAI)$") to "what is $1 price",
+        Regex("^(.+?)\\s+(?:ka|ki)\\s+(?:rate|bhav|bhaav|price|bhaw)\\s+(?:$KYA|kitna)\\s+$HAI$") to "what is $1 price",
+        Regex("^(.+?)\\s+(?:kahan|kaha|kidhar)\\s+(?:$HAI|chal\\s+$RAHA\\s+$HAI|trade\\s+kar\\s+$RAHA\\s+$HAI)$") to "where is $1 trading",
+        // News: "aaj ki news kya hai", "koi khabar hai kya", "news sunao".
+        Regex("^(?:aaj\\s+)?(?:(?:ki|ka)\\s+)?(?:koi\\s+)?(?:taaza\\s+|taza\\s+|nayi\\s+)?(?:news|khabar|khabren|samachar)\\s+(?:$KYA\\s+$HAI|$HAI(?:\\s+$KYA)?|batao|sunao|dikhao)$") to "any news today",
+    )
+
+    /** Markets that a market-only line above must name ("Nifty kahan hai" asks a price; "Boss kahan hai" asks nothing). */
+    private val MARKET_ONLY = setOf("what is \$1 price", "where is \$1 trading", "\$1 how is \$2")
+
+    /**
+     * [text] with a common Hinglish question ([QUESTIONS]) read as its English, then [normalize]d; [text] itself when
+     * no such question is in it. For reading QUESTIONS only - commands and orders are read from [normalize].
+     */
+    fun question(text: String): String {
+        val t = text.lowercase().replace(Regex("[^a-z0-9.,&% ]"), " ").replace(Regex("[.,]+(?=\\s|$)"), " ").replace(Regex("\\s+"), " ").trim()
+            .replace(Regex("\\s+(?:na|yaar|zara|jarvis|boss|please|ji)$"), "").replace(Regex("^(?:(?:jarvis|boss|hey|ok|okay|zara|yaar)\\s+)+"), "")
+        for ((r, to) in QUESTIONS) {
+            val m = r.find(t) ?: continue
+            if (to in MARKET_ONLY && Market.mentioned(Heard.fix(m.groupValues.last())).isEmpty()) continue
+            return normalize(r.replace(t, to).replace(Regex("\\s+"), " ").trim())
+        }
+        return text
+    }
+
     /** "haan" / "nahi" and friends: true, false, or null when it is neither. */
     fun yesNo(text: String): Boolean? {
         val t = " " + text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim() + " "

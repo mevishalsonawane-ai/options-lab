@@ -50,7 +50,9 @@ object Ask {
         "loss|losses|strategy|strategies|arm|arms|bot|bots|algo|algos|studies|study|scripts?|account|portfolio|fills|mtm|m2m) " +
         "|( how am i doing | how did i do | today s p l | todays p l | today s pnl | todays pnl | p l today | pnl today )" +
         // Boss's own money and trades without "my" (4 Oct: "how much did I lose today" got the Nifty update).
-        "|( (did|have) i (make|made|lose|lost|earn|earned|gain|gained) (?!a |an |the |it |that |this )| trades? did i | how many trades (did|have|today|i ))")
+        "|( (did|have) i (make|made|lose|lost|earn|earned|gain|gained) (?!a |an |the |it |that |this )| trades? did i | how many trades (did|have|today|i ))" +
+        // "How much did I make today", "am I in profit": the owner's P&L, not the market's.
+        "|( how much (money )?(did|have) i (make|made|earn|earned|lose|lost) | am i (up|down|in profit|in loss|making money|losing money) )")
     private val GREET = Regex(" (hello|hi|hey|good morning|good afternoon|good evening|jarvis|ira|boss|ok|okay|please|there) ")
     /** About Ira itself: what it can do, the voice. */
     private val HELP = Regex(" (what can you do|what do you do|who are you|what are you|help|how do i use|how to use|can you (hear|listen)|" +
@@ -66,10 +68,25 @@ object Ask {
         return q
     }
 
+    /**
+     * [said] as a question: misheard words fixed ([Heard]) and a common Hinglish question read as its English
+     * ([Hinglish.question]). Never used to find a command or an order - those are read from the words as heard.
+     */
+    fun reading(said: String): String {
+        val h = Heard.fix(said)
+        return Hinglish.question(h).takeIf { it != h } ?: Hinglish.normalize(h)
+    }
+
     private fun parseAs(said: String): Question {
-        val text = Hinglish.normalize(said)
+        // Commands and orders: from the words as heard, exactly as strict as ever.
+        val heard = Hinglish.normalize(said)
+        val t0 = " " + heard.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        // (A question mark said - lost when Hinglish is read - still keeps a question from acting, as [Commands] does.)
+        Commands.parse(heard)?.takeIf { !said.trim().endsWith("?") || it.kind == Command.Kind.NOTE }
+            ?.let { c -> return Question(heard, Market.mentioned(heard), setOf(Topic.COMMAND), null, command = c) }
+        // Everything else is a question, read with misheard and Hinglish words understood.
+        val text = reading(said)
         val t = " " + text.lowercase().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        Commands.parse(text)?.let { c -> return Question(text, Market.mentioned(text), setOf(Topic.COMMAND), null, command = c) }
         // "What should I buy?" - the pattern expert's suggestion (with why), or why there is none now.
         if (SUGGEST.containsMatchIn(t)) return Question(text, Market.mentioned(text), setOf(Topic.SUGGEST), null)
         // "What is a hammer?" - the pattern explained, with its own record.
@@ -93,7 +110,7 @@ object Ask {
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
         // A question ("Did I buy 2 lots of Nifty?") is never an order.
-        val placed = if (said.trim().endsWith("?")) null else order(t)
+        val placed = if (said.trim().endsWith("?")) null else order(t0)
         // "Where is BankNifty trading?" asks the price, not where something is in the app.
         val priceAsk = Market.mentioned(text).isNotEmpty() && Regex("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
             !Regex(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
@@ -111,7 +128,8 @@ object Ask {
         val account = DaySummary.asked(text) || DaySummary.asked(said) || Exposure.moveAsked(text) != null || Exposure.rankAsked(text) || !priceAsk && !marketFigure && !payoff && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
-        val markets = Market.mentioned(text).ifEmpty { if (ALL_INDICES.containsMatchIn(t)) Reasoning.INDICES else emptyList() }
+        // (An order's markets are the words as heard: a misheard name never fills one in.)
+        val markets = Market.mentioned(if (order != null) heard else text).ifEmpty { if (ALL_INDICES.containsMatchIn(t)) Reasoning.INDICES else emptyList() }
         val topics = LinkedHashSet<Topic>()
         if (order != null) topics += Topic.ORDER
         for ((topic, ws) in TOPIC_WORDS) if (ws.any { t.contains(" $it ") }) topics += topic

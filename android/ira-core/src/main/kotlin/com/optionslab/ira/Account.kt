@@ -106,7 +106,7 @@ object AppAnswers {
         Section.ALARMS to Regex(" (alarm|alarms|alert|alerts) "),
         Section.FUNDS to Regex(" (funds|fund|margin|margins|balance|cash|capital|money) "),
         Section.HISTORY to Regex(" (yesterday|week|weekly|month|monthly|history|calendar|journal|last \\d+ days|best day|worst day|so far|this year|all time) "),
-        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m) "),
+        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
         Section.POSITIONS to Regex(" (position|positions|holding|holdings|open trades|exposure) "),
         Section.STRATEGIES to Regex(" (strategy|strategies|arm|arms|bot|bots|algo|algos|pine|orb|script|scripts|studies|study|running) "),
@@ -139,14 +139,15 @@ object AppAnswers {
         Regex(" (how am i doing|how did i do|app status|this app|kill switch|zerodha|login|logged in|holiday|holidays|harvest|static ip|where is|where do i|how do i|how can i|when is (the )?(next )?expiry|next expiry|expiry (day|date|today)|is (the )?market open|market open today) ").containsMatchIn(t)
 
     fun sections(text: String): Set<Section> {
-        val t = " " + text.lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
+        // (Read as a question: "aaj kitna kamaya" and a misheard "p and l" ask the P&L too - only what to read, never an action.)
+        val t = " " + Ask.reading(text).lowercase().replace("p&l", "p l").replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         val out = LinkedHashSet<Section>()
         for ((s, r) in WORDS) if (r.containsMatchIn(t)) out += s
         // "My daily stop loss", "stop loss for the day", "max loss per day": the daily loss limit (Boss's words, 3 Oct),
         // not the stops on positions nor the P&L.
         if (DAY_STOP.containsMatchIn(t)) { out += Section.RISK; out.remove(Section.PROTECTIONS); out.remove(Section.PNL) }   // (paper's too: RISK lists both)
         if (Section.RISK in out && Regex(" (daily loss|loss limit) ").containsMatchIn(t)) out.remove(Section.PNL)
-        if (Section.HISTORY in out && Regex(" (made|lost|earned|p l|pnl|profit|loss) ").containsMatchIn(t)) out.remove(Section.PNL)
+        if (Section.HISTORY in out && Regex(" (made|lost|earned|p l|pnl|profit|loss|make|earn|lose) ").containsMatchIn(t)) out.remove(Section.PNL)
         if (Section.EVENTS in out && Regex(" (event|events|fed|fomc|rbi|budget|cpi) ").containsMatchIn(t)) out.remove(Section.HISTORY)
         if (Section.FLOWS in out || Section.CHAIN in out) { out.remove(Section.HISTORY); out.remove(Section.STATUS) }
         if (Section.STUDY in out) { out.remove(Section.STRATEGIES); out.remove(Section.HISTORY); out.remove(Section.STATUS) }
