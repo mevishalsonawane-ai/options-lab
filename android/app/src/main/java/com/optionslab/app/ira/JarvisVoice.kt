@@ -133,6 +133,8 @@ class JarvisVoice : Service() {
             }
             if (v != null && !v.visibleStart) out += "I was started in the background, where Android gives me no microphone (it is allowed only while using the app): open the app once and I listen again."
             v?.let { s -> out += "Ears: " + (if (googleSpeech) "Google's speech service" else "on the phone only") + ", listening in ${s.lang}, " + (if (s.tap != null || (VoiceGuard.enrolled && !s.tapFailed)) "my own microphone shared (for your voice check)" else "the phone's own microphone") + "." }
+            // The pattern of the last turns in plain words (Boss, 5 Oct: sound, no words, turn after turn).
+            v?.let { s -> runCatching { com.optionslab.ira.EmptyTurns.say(s.recentTurns, s.emptyInRow, cutInNow(s).on) }.getOrNull()?.let { out += it } }
             traceLines().takeIf { it.isNotEmpty() }?.let { out += "Last turns: " + it.joinToString("; ") + "." }
             if (muted) out += "I'm muted: say \"Jarvis, unmute\" or switch Mute off in Settings, Voice and AI model."
             if (quietNow()) out += "It's quiet hours (22:00 to 07:00): I only speak when you ask."
@@ -646,6 +648,11 @@ class JarvisVoice : Service() {
     private var loudNoMatch = 0
     /** The recognizer said "speech began" this turn (a loud room alone is not Boss speaking). */
     @Volatile private var turnSpeech = false
+    /** This turn (opened while Jarvis talked) read only his own words heard back ([com.optionslab.ira.EmptyTurns.echo]). */
+    @Volatile private var turnEcho = false
+    /** Turns in a row with no words for Jarvis, and the kinds of the last few (for the restart pace and the voice check). */
+    @Volatile private var emptyInRow = 0
+    @Volatile private var recentTurns: List<com.optionslab.ira.EmptyTurns.Kind> = emptyList()
     /** When it said so (0: not yet), for the time to the first words read ([com.optionslab.ira.Hearing]). */
     @Volatile private var turnSpeechAt = 0L
     /** The current language has given words since listening began: it works, so it is never switched away from. */
@@ -907,7 +914,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; turnSpeechAt = 0L; answeredEarly = false; finishAt = 0L
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; turnSpeechAt = 0L; answeredEarly = false; finishAt = 0L; turnEcho = false
         turnGaps.clear()
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
@@ -932,7 +939,9 @@ class JarvisVoice : Service() {
             note(if (tap != null) "ready (shared audio)" else "ready")
         }
         override fun onBeginningOfSpeech() {
-            turnSpeech = true; if (turnSpeechAt == 0L) turnSpeechAt = SystemClock.elapsedRealtime(); note("speech began")
+            // Once per turn in the trace (a recognizer that says it again is not a second speaker).
+            if (!turnSpeech) note("speech began" + if (speaking || turnInSpeech) " (while I spoke)" else "")
+            turnSpeech = true; if (turnSpeechAt == 0L) turnSpeechAt = SystemClock.elapsedRealtime()
             // Boss is speaking: a rewrite under way stops, so the recognizer has the processor (5 Oct: 7-9 s of his speech
             // read as nothing while the model was writing).
             if (!speaking && !turnInSpeech) runCatching { IraModel.yieldToVoice() }
@@ -943,9 +952,13 @@ class JarvisVoice : Service() {
         // turn is closed for it 0.7 s later (was 1.5 s: Boss, 4 Oct, "late response") (stopListening makes it give its result), not left to a 25 s reset.
         // A close already due sooner (the words stood still) is kept, never put off (Boss, 5 Oct: speed).
         override fun onEndOfSpeech() {
+            // Boss, 5 Oct 09:57:05: "speech ended" logged twice in one turn - the recognizer says it again when our
+            // close (stopListening) reaches it after its own end of speech. Only the first counts: once in the trace, and
+            // the close already set for it is not set again.
+            if (turnEndAt != 0L) return
             note("speech ended")
             val now = SystemClock.elapsedRealtime()
-            if (turnEndAt == 0L) turnEndAt = now
+            turnEndAt = now
             hushBeep(1_200)                               // the end beep
             if (!speaking) {
                 val wait = com.optionslab.ira.Turn.closeIn(now, finishAt)
@@ -955,7 +968,13 @@ class JarvisVoice : Service() {
         override fun onPartialResults(partialResults: Bundle?) {
             // Only words that changed restart the end-of-turn wait (a recognizer repeating the same reading pushed it back).
             var fresh = false
-            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let {
+            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.takeIf {
+                // A turn opened while Jarvis talked (cut-in): his own words heard back are not the turn's words - never
+                // "read mid-turn", never kept as a lost turn's question, never closing the turn (Boss, 5 Oct).
+                val own = (speaking || turnInSpeech) && com.optionslab.ira.EmptyTurns.echo(it, sayingText)
+                if (own) { turnEcho = true; turnHeardAny = true }
+                !own
+            }?.let {
                 fresh = com.optionslab.ira.Turn.changed(turnPartial, it)
                 if (fresh) {
                     val now = SystemClock.elapsedRealtime()
@@ -1027,6 +1046,10 @@ class JarvisVoice : Service() {
             }
             readings.firstOrNull()?.let { remember(it) }
             errorsInRow = 0
+            // A final reading in a cut-in turn that is only his own words is no words for him (his own voice).
+            val ownOnly = first != null && turnInSpeech && com.optionslab.ira.EmptyTurns.echo(first, sayingText)
+            if (ownOnly) turnEcho = true
+            countTurn(first != null && !ownOnly)
             endTap()
             heard(readings, sure = sure)
         }
@@ -1042,6 +1065,7 @@ class JarvisVoice : Service() {
                 note("kept the words read mid-turn (final: error $error)")
                 hear(com.optionslab.ira.Hearing.Kind.HEARD, name = WAKE.containsMatchIn(partial), saved = true)
                 errorsInRow = 0; loudNoMatch = 0
+                countTurn(true)
                 endTap()
                 remember(partial)
                 heard(listOf(partial), recovered = true)
@@ -1065,13 +1089,17 @@ class JarvisVoice : Service() {
             }
             // The loudest sound says whether the microphone gave the recognizer anything (Boss, 4 Oct: error 7 each turn).
             note("error $error" + (if (turnLoudest > -100f) ", loudest %.0f dB".format(java.util.Locale.ENGLISH, turnLoudest) else ", no sound level") +
-                (turnPartial?.let { ", read ${it.trim().split(Regex("\\s+")).size} word(s) mid-turn" } ?: ", read nothing"))
+                (turnPartial?.let { ", read ${it.trim().split(Regex("\\s+")).size} word(s) mid-turn" } ?: if (turnEcho) ", read only my own voice" else ", read nothing") +
+                (if (turnInSpeech) " (opened while I spoke)" else ""))
+            // The kind of this empty turn (TV, his own voice, a quiet room) for the restart pace and the voice check.
+            if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) countTurn(false)
             // Clear speech, no words found, four turns in a row: the language pack may be the trouble - the other English.
             // Only turns where speech began, and never away from a language that has given words (Boss, 4 Oct: a quiet
             // room at 6-8 dB switched a working en-US to the missing en-IN, and listening stopped).
             // Round 17 (Boss, 5 Oct 08:53): 4 in a row, at most one such switch a day, never away from the English that
             // last gave words (kept on the phone, so a fresh start no longer forgets it) - [com.optionslab.ira.ListenLanguage].
-            if (error == SpeechRecognizer.ERROR_NO_MATCH && turnSpeech && turnLoudest >= 6f && !langWorks) {
+            // (Never a turn opened while Jarvis spoke: his own voice heard back says nothing about the language - 5 Oct.)
+            if (error == SpeechRecognizer.ERROR_NO_MATCH && turnSpeech && !turnInSpeech && turnLoudest >= 6f && !langWorks) {
                 val d = runCatching { com.optionslab.ira.ListenLanguage.clearNoWords(langState, lang, hearingDay(), hhmm(), ++loudNoMatch) }.getOrNull()
                 if (d != null && (d.to != null || d.held)) {
                     loudNoMatch = 0
@@ -1156,7 +1184,10 @@ class JarvisVoice : Service() {
                         rec = runCatching { newRecognizer().also { it.setRecognitionListener(this) } }.getOrNull()
                         IraActivity.add("Restarted listening (the speech recognizer kept failing).")
                     }
-                    again(if (errorsInRow == 0) 200L else minOf(MAX_BACKOFF_MS, 250L shl minOf(errorsInRow, 7)))
+                    // A long run of empty turns (a quiet room, the TV): the next turn starts a little later - fewer restarts
+                    // and start beeps - never while Boss is expected to speak; still listening for "Jarvis".
+                    again(if (errorsInRow == 0) com.optionslab.ira.EmptyTurns.restartIn(emptyInRow, awake() || asking != null || speaking)
+                        else minOf(MAX_BACKOFF_MS, 250L shl minOf(errorsInRow, 7)))
                 }
             }
         }
@@ -1173,6 +1204,7 @@ class JarvisVoice : Service() {
         runCatching { rec?.cancel() }
         listening = false
         loudNoMatch = 0; errorsInRow = 0; langWorks = true
+        countTurn(true)
         run { val l = lang; langCount { com.optionslab.ira.ListenLanguage.gaveWords(it, l, hearingDay()) } }
         note("heard " + (if (WAKE.containsMatchIn(words)) "the name" else "${words.trim().split(Regex("\\s+")).size} words, no name") +
             " (answered from the partial words; the final reading not waited for)")
@@ -1180,6 +1212,18 @@ class JarvisVoice : Service() {
         remember(words)
         endTap()
         heard(listOf(words))
+    }
+
+    /**
+     * This turn counted for the restart pace and the voice check ([com.optionslab.ira.EmptyTurns]): [words] read for
+     * Jarvis, else its own words only, speech with no words, or none. Kinds only, never a word.
+     */
+    private fun countTurn(words: Boolean) {
+        val k = com.optionslab.ira.EmptyTurns.kind(words, turnEcho && turnPartial == null, turnSpeech)
+        emptyInRow = com.optionslab.ira.EmptyTurns.inRow(emptyInRow, k)
+        recentTurns = com.optionslab.ira.EmptyTurns.add(recentTurns, k)
+        if (emptyInRow == com.optionslab.ira.EmptyTurns.CALM_AFTER || emptyInRow == com.optionslab.ira.EmptyTurns.SLOW_AFTER)
+            note("$emptyInRow turns with no words in a row: listening restarts a little slower (still for \"Jarvis\")")
     }
 
     /** This turn was Boss's question: its pauses tell how long his words may stand still ([com.optionslab.ira.BossPace]). */
