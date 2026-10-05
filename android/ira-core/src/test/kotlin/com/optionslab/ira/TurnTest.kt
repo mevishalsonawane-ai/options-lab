@@ -57,6 +57,19 @@ class TurnTest {
         assertEquals(11_500L, Turn.spokeEnd(12_000, 0, 11_500))
     }
 
+    @Test fun speechEndedNeverPutsTheCloseOff() {
+        // A close already due sooner (the words stood still): kept.
+        assertEquals(300L, Turn.closeIn(now = 10_600, dueAt = 10_900))
+        assertEquals(1L, Turn.closeIn(10_899, 10_900))
+        // Due later than the usual wait after speech ended (only the name so far), or none: the usual wait.
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 11_800))
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 10_000 + Turn.END_SPEECH_MS))
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 0))
+        // Already past (it ran, or was cancelled with its turn): not taken.
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 9_500))
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 10_000))
+    }
+
     @Test fun theFirstSentenceIsSpokenWhileTheRestIsMade() {
         val a = "Boss, Nifty is at 24,512.35, up 0.4 percent today. It holds above the opening range high. Support is 24,400."
         assertEquals(listOf("Boss, Nifty is at 24,512.35, up 0.4 percent today.", "It holds above the opening range high. Support is 24,400."), Wake.pieces(a))

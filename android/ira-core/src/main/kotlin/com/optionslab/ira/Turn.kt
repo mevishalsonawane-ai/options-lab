@@ -41,6 +41,19 @@ object Turn {
 
     const val STALE_MS = 20_000L
 
+    /** After the recognizer's "speech ended", the turn is closed this long later (unless it was already due sooner). */
+    const val END_SPEECH_MS = 700L
+
+    /**
+     * How long from [now] ("speech ended" just heard) until the turn is closed, with a close already due at [dueAt]
+     * (elapsed ms; 0 or past: none). "Speech ended" only ever brings the close nearer: it used to replace a close due
+     * sooner (the words standing still, 0.9 s after they last changed) with one [END_SPEECH_MS] later, so Boss waited
+     * longer exactly when the recognizer agreed he had finished (Boss, 5 Oct: speed). The close itself is unchanged -
+     * it only ends the listening, and the words then go the usual way, with every rule.
+     */
+    fun closeIn(now: Long, dueAt: Long): Long =
+        if (dueAt > now && dueAt - now < END_SPEECH_MS) dueAt - now else END_SPEECH_MS
+
     /** What a question may be about to be answered from its partial reading. */
     private val QUICK = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS,
         Topic.VOLATILITY, Topic.HELP, Topic.GREETING, Topic.EXPLAIN)

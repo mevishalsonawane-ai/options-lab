@@ -395,6 +395,8 @@ class JarvisVoice : Service() {
     }
     /** Words stopped changing this long: the turn ends (a short pause inside a sentence must not cut it). */
     private val END_AFTER_MS = 900L
+    /** When the pending [finish] is due (elapsed ms; 0: none this turn), so "speech ended" never puts it off. */
+    private var finishAt = 0L
     /** The sentence being spoken now ("id#n"), so a replaced one is ignored. */
     @Volatile private var utterance: String? = null
     private var said = 0
@@ -722,7 +724,7 @@ class JarvisVoice : Service() {
             }
         }
         listening = true
-        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; answeredEarly = false
+        turnReadyAt = 0; turnHeardAny = false; turnLoudest = -100f; turnPartial = null; turnPartialAt = 0L; turnEndAt = 0L; turnSpeech = false; answeredEarly = false; finishAt = 0L
         hushBeep(1_500)                                   // the start beep (put back once the turn is ready, or in 1.5 s)
         runCatching { rec?.startListening(i) }.onFailure { listening = false; endTap(); again(1_000) }
         _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
@@ -750,11 +752,16 @@ class JarvisVoice : Service() {
         override fun onBufferReceived(buffer: ByteArray?) {}
         // Boss, 4 Oct: "speech began", then nothing - the recognizer never closed the turn. Once he stops speaking, the
         // turn is closed for it 0.7 s later (was 1.5 s: Boss, 4 Oct, "late response") (stopListening makes it give its result), not left to a 25 s reset.
+        // A close already due sooner (the words stood still) is kept, never put off (Boss, 5 Oct: speed).
         override fun onEndOfSpeech() {
             note("speech ended")
-            if (turnEndAt == 0L) turnEndAt = SystemClock.elapsedRealtime()
+            val now = SystemClock.elapsedRealtime()
+            if (turnEndAt == 0L) turnEndAt = now
             hushBeep(1_200)                               // the end beep
-            if (!speaking) { main.removeCallbacks(finish); main.postDelayed(finish, 700) }
+            if (!speaking) {
+                val wait = com.optionslab.ira.Turn.closeIn(now, finishAt)
+                main.removeCallbacks(finish); finishAt = now + wait; main.postDelayed(finish, wait)
+            }
         }
         override fun onPartialResults(partialResults: Bundle?) {
             // Only words that changed restart the end-of-turn wait (a recognizer repeating the same reading pushed it back).
@@ -778,7 +785,9 @@ class JarvisVoice : Service() {
                 val nameOnly = asking == null && com.optionslab.ira.Wake.heard(first, awake()) is com.optionslab.ira.Wake.Heard.Awake
                 // Only the name: still closed, a little later - a lone "Jarvis" left to the recognizer's own silence often
                 // ended as "no match" and was lost (the mic button's turns are always closed, which is why they worked).
-                main.postDelayed(finish, if (nameOnly) 1_800L else END_AFTER_MS)
+                val wait = if (nameOnly) 1_800L else END_AFTER_MS
+                finishAt = SystemClock.elapsedRealtime() + wait
+                main.postDelayed(finish, wait)
             }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
