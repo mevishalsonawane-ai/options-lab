@@ -1760,6 +1760,10 @@ object IraHub {
         if (com.optionslab.ira.Pivots.asked(q)) return com.optionslab.ira.Pivots.say(m, histories[m]?.bars ?: return null, trading, today,
             tomorrow = Regex("(?i)\\b(tomorrow|next session|monday)\\b").containsMatchIn(q))
         if (com.optionslab.ira.DayStory.asked(q)) return com.optionslab.ira.DayStory.say(m, histories[m]?.bars ?: return null)
+        // Last, so none of the questions above is taken: "did Nifty gap up / fill its gap", "how many days in a row has it risen".
+        if (com.optionslab.ira.Gap.asked(q)) return com.optionslab.ira.Gap.say(st.snaps[m] ?: return null)
+        if (com.optionslab.ira.Streak.asked(q)) return com.optionslab.ira.Streak.say(m, histories[m]?.bars ?: return null,
+            live = trading && histories[m]?.bars?.lastOrNull()?.t?.toLocalDate() == today)
         return null
     }
 

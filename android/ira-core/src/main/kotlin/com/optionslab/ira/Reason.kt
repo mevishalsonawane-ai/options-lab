@@ -850,3 +850,84 @@ object Outlook {
 
     private fun n0(x: Double) = "%,.0f".format(Locale.ENGLISH, x)
 }
+
+/**
+ * The opening gap (Jarvis self-improvement, 2026-10-05): "did Nifty gap up today?", "has BankNifty filled its gap?" -
+ * the open against the previous close, whether the day's range has come back to that close, and where the price is
+ * since the open. From the snapshot only; never a guess about the next open. Pure.
+ */
+object Gap {
+    private val ASK = Regex(" (gap|gaps|gapped|gapup|gapdown) ")
+    /** "Will it gap up tomorrow" (a forecast), "what happens after a gap" (the study), "the gap between two indices": not this. */
+    private val NOT = Regex(" (tomorrow|will|next|monday|tuesday|wednesday|thursday|friday|kal|usually|typically|often|after a|historically|between|mean|means|meaning) ")
+
+    fun asked(text: String): Boolean { val t = norm(text); return ASK.containsMatchIn(t) && !NOT.containsMatchIn(t) }
+
+    /** Null without a previous close, and for gold (it trades round the clock, so its open has no gap to read). */
+    fun say(s: Snapshot): String? {
+        val m = s.market
+        if (m == Market.GOLD) return null
+        val prev = s.prevClose ?: return null
+        val gap = s.open - prev
+        val day = if (s.trading) "today" else "on ${s.at.toLocalDate()}"
+        val now = if (s.trading) "It is now ${n(s.price)}" else "It closed at ${n(s.price)}"
+        val tail = "$now, ${pts(s.price - s.open)} from the open (${pct((s.price - prev) / prev * 100)} on the day)."
+        if (abs(gap) < prev * 0.0005)
+            return "${m.label} opened about flat $day: ${n(s.open)} against the previous close of ${n(prev)} (${pts(gap)} points), no real gap. $tail"
+        val up = gap > 0
+        val head = "${m.label} gapped ${if (up) "up" else "down"} $day: it opened at ${n(s.open)}, ${n(abs(gap))} points (${pct(gap / prev * 100)}) " +
+            "${if (up) "above" else "below"} the previous close of ${n(prev)}."
+        // A gap up is filled once the day's low comes back to the previous close; a gap down once the high does.
+        val edge = if (up) s.low else s.high
+        val side = if (up) "low" else "high"
+        val filled = if (up) edge <= prev else edge >= prev
+        val fill = if (filled) "The gap ${if (s.trading) "has been" else "was"} filled: the day's $side of ${n(edge)} reached the previous close."
+            else "The gap ${if (s.trading) "is" else "was"} not filled: the day's $side of ${n(edge)} stayed ${n(abs(edge - prev))} points ${if (up) "above" else "below"} the previous close."
+        return "$head $fill $tail"
+    }
+}
+
+/**
+ * Runs of closes and multi-day highs (Jarvis self-improvement, 2026-10-05): "how many days in a row has Nifty risen?",
+ * "BankNifty losing streak", "is Nifty at a new high?" - the run of higher (or lower) closes up to the latest session,
+ * and the last earlier session that closed beyond the latest price. From the daily closes of the candles on the phone. Pure.
+ */
+object Streak {
+    private val ASK = Regex(" (in a row|straight days|straight sessions|consecutive|streak|winning streak|losing streak|new high|new low|fresh high|fresh low|highest since|lowest since|highest close|lowest close|days up|days down|sessions up|sessions down) ")
+    private val NOT = Regex(" (tomorrow|will|next) ")
+
+    fun asked(text: String): Boolean { val t = norm(text); return ASK.containsMatchIn(t) && !NOT.containsMatchIn(t) }
+
+    /**
+     * [bars]: [m]'s 1-minute candles over several days; [live]: the last day in them is the session trading now (its
+     * close so far is then the price now, and is said so). Null with fewer than three sessions.
+     */
+    fun say(m: Market, bars: List<Candle>, live: Boolean): String? {
+        val days = bars.groupBy { it.t.toLocalDate() }.toSortedMap().map { (d, c) -> d to c.last().c }
+        if (days.size < 3) return null
+        val (lastDay, last) = days.last()
+        val prev = days[days.size - 2].second
+        val dir = last.compareTo(prev)
+        val parts = ArrayList<String>()
+        val so = if (live) " (counting today so far)" else ""
+        if (dir == 0) parts += "${m.label} ${if (live) "is level with" else "closed level with"} the previous close of ${n(prev)}$so: no run either way."
+        else {
+            var k = 0
+            for (i in days.size - 1 downTo 1) if (days[i].second.compareTo(days[i - 1].second) == dir) k++ else break
+            val (fromDay, from) = days[days.size - 1 - k]
+            val all = if (k == days.size - 1) ", every session I have" else ""
+            parts += "${m.label} has closed ${if (dir > 0) "higher" else "lower"} $k session${if (k > 1) "s" else ""} in a row$so$all: " +
+                "from ${n(from)} on $fromDay to ${n(last)} on $lastDay, ${pts(last - from)} points (${pct((last - from) / from * 100)})."
+        }
+        // The last earlier session that closed at or beyond the latest price, each way; said when it is not just the day before.
+        val before = days.dropLast(1)
+        val what = if (live) "At ${n(last)} now it is" else "Its close of ${n(last)} is"
+        val hi = before.indexOfLast { it.second >= last }
+        val lo = before.indexOfLast { it.second <= last }
+        if (hi < 0) parts += "$what above every close of the ${days.size} sessions on the phone (since ${days.first().first})."
+        else if (hi < before.size - 1) parts += "$what the highest since ${before[hi].first}, when it closed at ${n(before[hi].second)}."
+        if (lo < 0) parts += "$what below every close of the ${days.size} sessions on the phone (since ${days.first().first})."
+        else if (lo < before.size - 1) parts += "$what the lowest since ${before[lo].first}, when it closed at ${n(before[lo].second)}."
+        return parts.joinToString(" ")
+    }
+}

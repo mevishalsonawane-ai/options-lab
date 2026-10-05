@@ -104,7 +104,7 @@ object Ask {
             !Regex(" (stop|stop loss|stoploss|sl|target|alarm|alert|order|orders|position|positions|square|squareoff) ").containsMatchIn(t) &&
             (Regex(" (high|low|close|closing|open|opening|price|level|levels|range|history|performance|returns?|week|weekly|month|monthly|so far|running|risk) ").containsMatchIn(t) ||
                 PeriodMove.asked(text) != null || Moves.asked(text) != null || Lookback.time(text) != null || Lookback.prevAsked(text) ||
-                Pivots.asked(text) || OpeningRange.asked(text) || Momentum.asked(text) || DayStory.asked(text))
+                Pivots.asked(text) || OpeningRange.asked(text) || Momentum.asked(text) || DayStory.asked(text) || Gap.asked(text) || Streak.asked(text))
         // "If I bought the 24500 CE at 120, what is my profit at 24700": the payoff sum, not the account.
         val payoff = Payoff.asked(text) != null
         // ("Wrap up my day" holds the day's P&L: Boss's own, like any account question - review, 4 Oct.)
