@@ -89,7 +89,7 @@ object TradeBook {
     private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> {
         // Zerodha's Rs 20 is per order, not per fill: an order that filled in pieces pays it once ([PnlCharges.perFill]).
         val timed = trades.mapNotNull { t -> kiteTime(t.at)?.let { t to it } }.sortedBy { it.second }
-        val costs = com.optionslab.ira.PnlCharges.perFill(timed.map { (t, _) -> com.optionslab.ira.PnlCharges.Fill(t.side, t.price, t.qty, t.orderId) })
+        val costs = com.optionslab.ira.PnlCharges.perFill(timed.map { (t, at) -> chargeFill(t, at.toLocalDate().toString()) })
         return timed.mapIndexed { i, (t, at) ->
             RoundTrips.Fill("kite:${t.id}", "kite:${t.orderId}", t.symbol, if (t.side == "BUY") 1 else -1, t.qty, t.price, at,
                 Math.round(costs[i].values.sum() * 100) / 100.0)
@@ -137,7 +137,11 @@ object TradeBook {
      * charges report): the "Charges ≈ ₹X (estimate)" line under a Zerodha P&L. Pure: no vault read (safe on the main thread).
      */
     fun liveCharges(trades: List<Broker.Trade>): Double =
-        com.optionslab.ira.PnlCharges.estimate(trades.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty, it.orderId) })
+        com.optionslab.ira.PnlCharges.estimate(trades.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
+
+    /** A Zerodha trade as the charges estimate reads it: its own schedule (option, future, shares held or same-day). */
+    private fun chargeFill(t: Broker.Trade, day: String) =
+        com.optionslab.ira.PnlCharges.Fill(t.side, t.price, t.qty, t.orderId, t.symbol, t.exchange, t.product, day)
 
     /**
      * Zerodha's estimated charges on [day] from the trades kept here, or null when none are kept for it (or the book could
@@ -176,7 +180,7 @@ object TradeBook {
         val out = LinkedHashMap<String, Double>()
         if (live) {
             val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month } == true }
-            com.optionslab.ira.PnlCharges.perFill(inMonth.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty, it.orderId) })
+            com.optionslab.ira.PnlCharges.perFill(inMonth.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
                 .forEach { m -> m.forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v } }
         } else Paper.state.trades.filter { YearMonth.from(it.timestamp) == month }.forEach { t ->
             SandboxCosts.breakdown(t.action, t.price.toDouble(), t.quantity).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }

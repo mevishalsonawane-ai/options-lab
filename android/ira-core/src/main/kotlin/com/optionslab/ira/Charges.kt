@@ -212,7 +212,9 @@ object Charges {
      * "Manual", "ORB", a Pine arm, "Jarvis"...), and the leg itself. An order that filled in several pieces is several
      * legs with one [orderId] (a blank one counts as its own order).
      */
-    data class Leg(val at: LocalDateTime, val orderId: String, val owner: String, val side: String, val price: Double, val qty: Int)
+    data class Leg(val at: LocalDateTime, val orderId: String, val owner: String, val side: String, val price: Double, val qty: Int,
+                   /** The contract or share, for its schedule ([PnlCharges.segment]); blank: an option's. */
+                   val symbol: String = "")
 
     /** The kinds of charge said, in this order, as said; SEBI's fee is put with the exchange's (it is on turnover too). */
     val KINDS: List<Pair<String, String>> = listOf("Brokerage" to "brokerage", "STT" to "STT", "Exchange" to "exchange", "GST" to "GST", "Stamp duty" to "stamp")
@@ -221,7 +223,8 @@ object Charges {
     fun owner(label: String?): String =
         label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { ArmOwners.arm(it) } ?: "Manual"
 
-    private fun fills(legs: List<Leg>) = legs.map { PnlCharges.Fill(it.side, it.price, it.qty, it.orderId) }
+    private fun fills(legs: List<Leg>) =
+        legs.map { PnlCharges.Fill(it.side, it.price, it.qty, it.orderId, symbol = it.symbol, day = it.at.toLocalDate().toString()) }
 
     /** [legs]' charges by kind ([KINDS]), with Zerodha's Rs 20 brokerage once per order ([PnlCharges.perFill]). */
     fun split(legs: List<Leg>): Map<String, Double> {

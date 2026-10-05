@@ -69,4 +69,49 @@ class PnlChargesTest {
         assertTrue(legs.drop(1).all { it.getValue("Brokerage") == 0.0 && it.getValue("GST") < 1.0 })
         assertEquals(40.0, PnlCharges.perFill(listOf(PnlCharges.Fill("BUY", 1.0, 1), PnlCharges.Fill("BUY", 1.0, 1))).sumOf { it.getValue("Brokerage") })
     }
+
+    @Test
+    fun eachTradePaysItsOwnSchedule() {
+        val seg = PnlCharges::segment
+        assertEquals(PnlCharges.Segment.OPTIONS, seg("NIFTY26OCT24500CE", "NFO", "NRML"))
+        assertEquals(PnlCharges.Segment.FUTURES, seg("NIFTY26OCTFUT", "NFO", "NRML"))
+        assertEquals(PnlCharges.Segment.DELIVERY, seg("INFY", "NSE", "CNC"))
+        assertEquals(PnlCharges.Segment.INTRADAY, seg("INFY", "NSE", "MIS"))
+        assertEquals(PnlCharges.Segment.OPTIONS, seg("", "", ""))
+        assertEquals(PnlCharges.Segment.DELIVERY, seg("RELIANCE", "", ""))
+
+        // A future: 1 lot of Nifty (75) at 25,000 bought and sold the same day = Rs 18.75 lakh each way.
+        val fut = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 25_000.0, 75, "F1", "NIFTY26OCTFUT", "NFO", "NRML", "2026-10-05"),
+            PnlCharges.Fill("SELL", 25_100.0, 75, "F2", "NIFTY26OCTFUT", "NFO", "NRML", "2026-10-05")))
+        assertEquals(20.0, fut[0].getValue("Brokerage"), 1e-9)                      // 0.03% of 18.75 lakh is 562: capped at Rs 20
+        assertEquals(0.0, fut[0].getValue("STT"), 1e-9)
+        assertEquals(25_100.0 * 75 * 0.0005, fut[1].getValue("STT"), 1e-9)          // 0.05% on the sale, not 0.15%
+        assertEquals(25_000.0 * 75 * 0.00002, fut[0].getValue("Stamp duty"), 1e-9)
+        assertEquals(25_000.0 * 75 * 0.0000173, fut[0].getValue("Exchange"), 1e-9)
+
+        // Shares held: no brokerage, STT 0.1% both ways, stamp 0.015% on the buy, DP once per scrip a day on the sale.
+        val held = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 1_500.0, 10, "S1", "INFY", "NSE", "CNC", "2026-10-01"),
+            PnlCharges.Fill("SELL", 1_600.0, 5, "S2", "INFY", "NSE", "CNC", "2026-10-05"),
+            PnlCharges.Fill("SELL", 1_600.0, 5, "S3", "INFY", "NSE", "CNC", "2026-10-05")))
+        assertTrue(held.all { it.getValue("Brokerage") == 0.0 })
+        assertEquals(15.0, held[0].getValue("STT"), 1e-9)
+        assertEquals(8.0, held[1].getValue("STT"), 1e-9)
+        assertEquals(1_500.0 * 10 * 0.00015, held[0].getValue("Stamp duty"), 1e-9)
+        assertEquals(13.0, held[1].getValue("DP charges"), 1e-9)
+        assertFalse(held[2].containsKey("DP charges"), "DP once per scrip a day")
+
+        // Same-day shares: 0.03% of the order up to Rs 20 (a small order pays less), STT 0.025% on the sale only.
+        val day = PnlCharges.perFill(listOf(
+            PnlCharges.Fill("BUY", 500.0, 20, "M1", "TATASTEEL", "NSE", "MIS", "2026-10-05"),
+            PnlCharges.Fill("SELL", 505.0, 20, "M2", "TATASTEEL", "NSE", "MIS", "2026-10-05")))
+        assertEquals(500.0 * 20 * 0.0003, day[0].getValue("Brokerage"), 1e-9)       // Rs 3, under the Rs 20 cap
+        assertEquals(0.0, day[0].getValue("STT"), 1e-9)
+        assertEquals(505.0 * 20 * 0.00025, day[1].getValue("STT"), 1e-9)
+
+        // An option is unchanged: the same as the paper account's schedule.
+        val opt = PnlCharges.Fill("SELL", 120.0, 75, "O1", "NIFTY26OCT24500CE", "NFO", "NRML")
+        assertEquals(SandboxCosts.breakdown("SELL", 120.0, 75).values.sum(), PnlCharges.perFill(listOf(opt)).single().values.sum(), 1e-9)
+    }
 }
