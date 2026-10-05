@@ -58,13 +58,13 @@ object WeekReview {
 
     private fun held(t: Insights.Trip) = Duration.between(t.openedAt, t.closedAt).toMinutes().coerceAtLeast(0)
 
-    private fun firstMinutes(w: List<Insights.Trip>) = w.filter {
+    internal fun firstMinutes(w: List<Insights.Trip>) = w.filter {
         val m = it.openedAt.hour * 60 + it.openedAt.minute
         m >= OPEN && m < OPEN + FIRST_MINUTES
     }
 
     /** Trades opened within [AFTER_LOSS_MINUTES] after a losing trade closed, the same day. */
-    private fun afterLoss(w: List<Insights.Trip>): List<Insights.Trip> {
+    internal fun afterLoss(w: List<Insights.Trip>): List<Insights.Trip> {
         val losses = w.filter { it.net < 0 }
         return w.filter { t ->
             losses.any { l -> l !== t && l.closedAt.toLocalDate() == t.openedAt.toLocalDate() && !t.openedAt.isBefore(l.closedAt) &&

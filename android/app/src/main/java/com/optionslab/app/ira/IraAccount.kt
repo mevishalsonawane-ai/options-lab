@@ -92,7 +92,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -248,6 +248,19 @@ internal object IraAccount {
             if (wants(Section.RANK)) out[Section.RANK] = IraCoach.rankLines()
             // "How was my last trade?": the trades against their own candles (read only).
             if (wants(Section.REPLAY)) out[Section.REPLAY] = IraJournal.replay(question)
+            // "How was my month?": Boss's own trades (not the bots') this month (or last) against the month before.
+            if (wants(Section.MONTH)) {
+                val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+                val month = com.optionslab.ira.MonthReview.month(question, today)
+                val notes = IraJournal.notes()
+                val r = ArrayList<String>()
+                for (live in listOf(false, true)) {
+                    val own = trips(live, owners).filter { it.owner.startsWith("Manual") }
+                    if (live && own.isEmpty()) continue
+                    r += com.optionslab.ira.MonthReview.lines(if (live) "Zerodha" else "Paper", own, month, today, notes)
+                }
+                out[Section.MONTH] = r
+            }
             if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)
             if (wants(Section.TIMEOFDAY)) out[Section.TIMEOFDAY] = IraJournal.timeOfDay()
             if (wants(Section.REASONS)) out[Section.REASONS] = IraJournal.reasons()

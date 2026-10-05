@@ -265,6 +265,8 @@ object DailyReports {
             var d = Market.today().plusDays(1)
             while (!Market.isTradingDay(d)) d = d.plusDays(1)
             if (d.toEpochDay() - Market.today().toEpochDay() > 1 || d.dayOfWeek == java.time.DayOfWeek.MONDAY) runCatching { com.optionslab.app.ira.IraHub.weeklyReview() }
+            // ... and after the month's last session, the monthly review.
+            if (com.optionslab.ira.MonthReview.lastTradingDay(Market.today()) { Market.isTradingDay(it) }) runCatching { com.optionslab.app.ira.IraHub.monthlyReview() }
         }
         if (AppSettings.load().guardKill) lines += "⚠ The kill switch is on"
         if (lines.isEmpty()) lines += "No trades today."

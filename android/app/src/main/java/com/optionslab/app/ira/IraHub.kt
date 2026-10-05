@@ -391,6 +391,28 @@ object IraHub {
         }
     }
 
+    /**
+     * The monthly review (Jarvis, after the month's last session): Boss's own trades (not the bots') this month against
+     * last month, where they made and lost money, how steady the month was and the one habit that cost most. The
+     * numbers in the chat; aloud only plain words, no amount and no symbol (a locked phone may be heard). Words only.
+     */
+    suspend fun monthlyReview() {
+        if (com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.MONTH)) return
+        runCatching {
+            val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+            val today = LocalDate.now(IST)
+            val month = java.time.YearMonth.from(today)
+            val live = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
+            val own = IraAccount.trips(live, owners).filter { it.owner.startsWith("Manual") }
+            if (own.isEmpty()) return@runCatching
+            val mine = com.optionslab.ira.MonthReview.lines(if (live) "Zerodha" else "Paper", own, month, today, IraJournal.notes())
+            reply(com.optionslab.ira.Address.boss("How your own trading went this month. " + mine.joinToString(" ")))
+            com.optionslab.ira.MonthReview.spoken(own, month, today)?.let { s ->
+                JarvisVoice.announce(s); IraActivity.add("Gave the month's review of your own trades."); Automations.acted(Automations.Auto.MONTH, s)
+            }
+        }
+    }
+
     /** TEST ONLY: the long history for a backtest instead of Upstox's. */
     @Volatile internal var testLabBars: ((IraMarket, Int) -> List<Candle>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }

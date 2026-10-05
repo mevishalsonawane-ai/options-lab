@@ -37,6 +37,7 @@ internal object Automations {
         USUAL("Your usual, unasked", "A market question you ask at the same hour most days (4+ times): said at that hour's start, once a day.", "jarvis.auto.usual"),
         AGENDA("My own plan for the day", "Each morning Jarvis plans his own day (events, expiry, your goals and rules, his weak hours, paper tests, what he studied) and works through it; told at the wrap-up. It only speaks, studies or works on paper; a lesson is kept only on your yes.", "jarvis.auto.agenda"),
         WEEK("Weekly review", "After the week's last session: your own trades this week against last week, and the habits that cost money (losers held longer, trades in the first five minutes or right after a loss, a day of too many trades). Spoken without amounts; the numbers are in the chat.", "jarvis.auto.week"),
+        MONTH("Monthly review", "After the month's last session: your own trades this month against last month - by index, time of day, weekday, holding time and the reasons you noted, your green days and best day against the rest, and the one habit that cost most. Spoken without amounts; the numbers are in the chat.", "jarvis.auto.month"),
         PRETRADE("A word before an order", "Opening an order to review just after a loss, past your usual number of trades or your own trade goal, in the first five minutes, or against a rule you asked me to remember: a gentle reminder on the review, with your own record (words only; the order is never blocked or changed).", "jarvis.auto.pretrade"),
         SUMMARY("15:35 wrap-up", "The day's P&L, scorecard and tomorrow's events, spoken.", "jarvis.auto.summary"),
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
@@ -60,8 +61,8 @@ internal object Automations {
             "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, gaps filling, the previous day's high or low passed, fear (VIX) spikes, sharp moves and what coincided with them, open interest walls moving, the expiry-day straddle and max pain, and news on indices you hold.",
             "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.SHARPMOVE, Auto.OI, Auto.EXPIRYDAY, Auto.POSNEWS)),
-        COACH("Coach me", "A word when you overtrade or before an order sent just after a loss or past your usual day, your day's target reached, a position losing a big share of your daily loss limit or a sold option mostly decayed, your usual question answered at its hour, the 09:00 check, Jarvis's own plan for the day, the 15:35 wrap-up and the week's review spoken.",
-            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.HEADSUP, Auto.USUAL, Auto.MORNING_VOICE, Auto.AGENDA, Auto.SUMMARY, Auto.WEEK, Auto.PRETRADE)),
+        COACH("Coach me", "A word when you overtrade or before an order sent just after a loss or past your usual day, your day's target reached, a position losing a big share of your daily loss limit or a sold option mostly decayed, your usual question answered at its hour, the 09:00 check, Jarvis's own plan for the day, the 15:35 wrap-up, and the week's and the month's reviews spoken.",
+            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.HEADSUP, Auto.USUAL, Auto.MORNING_VOICE, Auto.AGENDA, Auto.SUMMARY, Auto.WEEK, Auto.MONTH, Auto.PRETRADE)),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.group.quiet", listOf(Auto.QUIET)),
     }
 

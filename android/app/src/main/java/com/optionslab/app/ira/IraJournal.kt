@@ -109,7 +109,8 @@ internal object IraJournal {
 
     private const val NOTES = "jarvis.notes"
 
-    private fun notes(): List<Pair<LocalDateTime, String>> = runCatching {
+    /** Boss's notes on why he took a trade, with when (the month's review matches them to the trades). */
+    fun notes(): List<Pair<LocalDateTime, String>> = runCatching {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(NOTES) ?: "[]")
         (0 until a.length()).map { a.getJSONObject(it).let { o -> LocalDateTime.parse(o.getString("t")) to o.getString("n") } }
     }.getOrDefault(emptyList())
