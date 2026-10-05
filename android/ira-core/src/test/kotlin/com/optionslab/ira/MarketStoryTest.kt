@@ -146,6 +146,8 @@ class MarketStoryTest {
         val w = MarketStory.wrapLine(bars, evening)!!
         assertTrue(w.endsWith("Ask me \"what happened in the market today\" for the whole story, Boss."), w)
         assertTrue(w.startsWith("Nifty"), w)
+        // Which index led and which lagged ([Breadth.leadership]).
+        assertTrue("Of the indices, Nifty led (+0.83%) and BankNifty lagged" in w, w)
     }
 
     @Test fun theTrendTrackerTurnsAreTimed() {

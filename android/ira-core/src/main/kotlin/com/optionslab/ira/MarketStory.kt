@@ -263,14 +263,17 @@ object MarketStory {
     }
 
     /**
-     * For the 15:35 wrap-up: the one thing that stood out most today (or that it was a usual day) and how to hear the
-     * whole story. Null without today's candles or enough earlier sessions.
+     * For the 15:35 wrap-up: the one thing that stood out most today (or that it was a usual day), which index led and
+     * which lagged when they were apart, and how to hear the whole story. Null without today's candles or enough earlier sessions.
      */
     fun wrapLine(bars: Map<Market, List<Candle>>, now: LocalDateTime, day: LocalDate = now.toLocalDate()): String? {
         val reads = INDICES.mapNotNull { m -> bars[m]?.let { read(m, it, day) } }
         if (reads.none { it.avgRange != null }) return null
         val vix = bars[Market.VIX]?.let { read(Market.VIX, it, day) }
         val top = differences(reads, vix, closed(day, now)).firstOrNull()?.text ?: "Nothing unusual stood out in the market today."
-        return "$top Ask me \"what happened in the market today\" for the whole story, Boss."
+        // Which index led and which lagged ([Breadth]; not when the top fact already says the indices pulled apart).
+        val lead = Breadth.leadership(reads.mapNotNull { r -> r.changePct?.let { r.market to it } })
+            ?.takeUnless { top.startsWith("The indices pulled apart") }?.let { "$it " }.orEmpty()
+        return "$top ${lead}Ask me \"what happened in the market today\" for the whole story, Boss."
     }
 }

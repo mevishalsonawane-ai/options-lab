@@ -25,6 +25,12 @@ object Moves {
         val t = norm(text)
         // "Nifty last 30 minutes", "BankNifty since open": a market named is enough without a verb.
         if (!MOVE.containsMatchIn(t) && Market.mentioned(text).isEmpty()) return null
+        return window(text, open)
+    }
+
+    /** Just the stretch of time named in [text] ("last hour", "since the open", "since 11"), with no verb needed ([Breadth]). */
+    fun window(text: String, open: LocalTime = LocalTime.of(9, 15)): Window? {
+        val t = norm(text)
         rx(" (last|past) (\\d{1,3}) (minutes|minute|mins|min) ").find(t)?.let { val m = it.groupValues[2].toInt(); if (m in 1..375) return Window(minutes = m, label = "in the last $m minutes") }
         rx(" (last|past) (\\d) (hours|hour|hrs|hr) ").find(t)?.let { val h = it.groupValues[2].toInt(); if (h in 1..6) return Window(minutes = h * 60, label = "in the last $h hour${if (h > 1) "s" else ""}") }
         if (rx(" (last|past|in the last|in an|in the past) (hour|one hour|1 hour) ").containsMatchIn(t)) return Window(minutes = 60, label = "in the last hour")

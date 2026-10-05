@@ -1334,6 +1334,21 @@ object IraHub {
             reply(said)
             return
         }
+        // "Is the rally broad or narrow?", "which index is leading since the open / in the last hour?", "relative strength
+        // BankNifty vs Nifty this week": breadth and leadership across the four indices from the candles on the phone
+        // ([com.optionslab.ira.Breadth]; no sector or stock data there, and it says so). Market data only (fine on a locked
+        // phone); facts only, never advice or a forecast. (Before the market answers: today's comparison must not take a
+        // stretch of time or a week.)
+        val breadthAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.Breadth.asked(q) }.getOrNull() else null
+        if (breadthAsk != null) {
+            val said = runCatching {
+                com.optionslab.ira.Breadth.answer(breadthAsk, histories.mapValues { it.value.bars }, com.optionslab.app.data.Market.today())
+            }.getOrElse { "I could not read the indices just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
         // "Make the case", "pros and cons of trading now", "talk me through it": the trade check reasoned out, facts both
         // ways (Boss's own day, goals and rules only on an unlocked phone). Words only; the decision is Boss's. (Before the
         // other answers: these whole questions are this, and the glossary or a plan must not read "explain" or "and" in them.)
