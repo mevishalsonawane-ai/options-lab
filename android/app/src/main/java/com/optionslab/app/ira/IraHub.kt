@@ -1161,6 +1161,14 @@ object IraHub {
             scope.launch { reply(freshAsked(markets)) }
             return
         }
+        // Markets and figures the phone has no data for (crude, US markets, the rupee, results, VWAP), targets, or lots with
+        // no budget: said honestly, never answered with Nifty's figures ([com.optionslab.ira.Honest]; nothing of the account).
+        if (parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.Honest.asked(q) }.getOrNull()?.let { a ->
+                val follows = if (com.optionslab.app.BuildConfig.GOLD) listOf(com.optionslab.ira.Market.GOLD) else com.optionslab.ira.Market.entries
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Honest.say(a, follows))).takeLast(MAX_MESSAGES)) }
+                return
+            }
         // "Why didn't you take that trade?", "why were you quiet at 11?", "what made you say check me?", "why did you skip
         // that check?": his own decision walked through from the reason trail written when he made it (Boss's account and
         // words left out on a locked phone). Nothing written for it: he says so - a reason is never found afterwards (a
