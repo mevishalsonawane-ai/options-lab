@@ -1405,6 +1405,7 @@ object IraHub {
                 com.optionslab.ira.VixNext.asked(q) != null || com.optionslab.ira.SplitDays.asked(q) != null ||
                 com.optionslab.ira.RoundCloses.asked(q) != null || com.optionslab.ira.MonthTurns.asked(q) != null ||
                 com.optionslab.ira.LunchRange.asked(q) != null || com.optionslab.ira.OpenHighLow.asked(q) != null ||
+                com.optionslab.ira.BigCandles.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -2800,7 +2801,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3027,6 +3028,24 @@ object IraHub {
                 else com.optionslab.ira.OpenHighLow.answer(openEndsAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
             }.getOrElse { "I could not read the open-high and open-low record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "After a big 5-minute candle in the first hour, does the day continue?", "big candle record", "subah bada candle ke
+        // baad nifty kya karta hai": the days whose first hour had a 5-minute candle of 0.4% or more, how often the day closed
+        // beyond it in its direction or back past its open, on the phone's own 1-minute sessions ([com.optionslab.ira.BigCandles]),
+        // beside today's first hour. A record of past days, never a forecast or advice; market data only (fine on a locked
+        // phone); nothing acts.
+        val bigCandleAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.BigCandles.asked(q) }.getOrNull() else null
+        if (bigCandleAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.BigCandles.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.BigCandles.NOT_HERE
+                else com.optionslab.ira.BigCandles.answer(bigCandleAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the big-candle record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return true
