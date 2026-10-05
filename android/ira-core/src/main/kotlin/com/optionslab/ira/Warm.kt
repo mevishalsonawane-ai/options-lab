@@ -44,7 +44,7 @@ object Warm {
         SplitDays::asked, Streak::asked, StreamHealth::asked, Structure::asked, SwitchOff::asked, TalkHours::asked,
         TaxRecords::asked, TaxRecords::exportAsked, Thinking::asked, Together::asked, TopicLength::asked, Tour::asked, TradeCase::asked, TradeReplay::asked, TradeSearch::asked,
         TrendReads::asked, TrendReads::span, TurnDowns::asked, UsualIndex::asked, Vetting::asked, VixNext::asked,
-        VixRank::asked, WatchAsk::asked, WeakLink::asked, WeekAhead::asked, WeekRange::asked, Weekdays::asked, WhatIf::asked,
+        VixBand::asked, VixRank::asked, WatchAsk::asked, WeakLink::asked, WeekAhead::asked, WeekRange::asked, Weekdays::asked, WhatIf::asked,
         WordFit::asked, WrongThing::asked, WrongThing::objected, ZerodhaSession::asked
     )
 
