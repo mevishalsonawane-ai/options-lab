@@ -155,7 +155,7 @@ object Ask {
         val marketSpan = rx(" (the )?(market|markets|indices|bazaar|bazar) ").containsMatchIn(t) && !rx(" (my|mine|our|i|me|we) ").containsMatchIn(t) &&
             PeriodMove.asked(text) != null
         // ("Wrap up my day" holds the day's P&L: Boss's own, like any account question - review, 4 Oct.)
-        val account = DaySummary.asked(text) || DaySummary.asked(said) || TradeReplay.asked(text) != null || MonthReview.asked(text) || Charges.asked(text) || TaxRecords.asked(text) || Exposure.moveAsked(text) != null || Exposure.rankAsked(text) || PositionHealth.asked(said) || BotHealth.asked(said) || Headroom.asked(said) != null || NeedsTrue.asked(said) || !priceAsk && !marketFigure && !payoff && !memory && !marketSpan && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
+        val account = DaySummary.asked(text) || DaySummary.asked(said) || TradeReplay.asked(text) != null || MonthReview.asked(text) || Charges.asked(text) || TaxRecords.asked(text) || Exposure.moveAsked(text) != null || Exposure.rankAsked(text) || PositionHealth.asked(said) || BotHealth.asked(said) || Headroom.asked(said) != null || SaidAbout.asked(said) != null || NeedsTrue.asked(said) || !priceAsk && !marketFigure && !payoff && !memory && !marketSpan && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
         // (An order's markets are the words as heard: a misheard name never fills one in.)

@@ -29,7 +29,8 @@ class CoverageTest {
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
+            SaidAbout.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -46,6 +47,7 @@ class CoverageTest {
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
             if (PreMarket.asked(q)) return Kind.ACCOUNT
             if (Headroom.asked(q) != null) return Kind.ACCOUNT
+            if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
@@ -303,6 +305,9 @@ class CoverageTest {
         "aap kaun ho" to C, "kya haal hai" to C, "dollar ka rate kya hai" to H, "crude ka bhav kya hai" to H, "what is the vee wap" to H,
         "what is the target" to H, "how did asia close" to H, "nasdaq futures" to H, "how is the rupee today" to H,
         "nifty kitna aur jayega" to H, "how low can nifty go" to H, "what is my day target" to A,
+        // ---- Boss's own words looked up (SaidAbout, round 14): his, so the account's kind ----
+        "what did i say about expiry" to A, "did i note anything about the hammer" to A, "find my notes on fridays" to A,
+        "maine expiry ke baare mein kya kaha tha" to A,
     )
 
     /**
@@ -431,7 +436,8 @@ class CoverageTest {
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
+            SaidAbout.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -452,6 +458,7 @@ class CoverageTest {
         if (alone && !understood && Learnings.undoAsked(q)) return "LearningsUndo"
         if (alone && PreMarket.asked(q)) return "PreMarket"
         if (alone && Headroom.asked(q) != null) return "Headroom"
+        if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
@@ -816,6 +823,12 @@ class CoverageTest {
         "how close am i to my limits" to "Headroom", "how much can i still lose today" to "Headroom", "how many trades do i have left" to "Headroom",
         "am i near my loss limit" to "Headroom", "limit se kitna door hoon" to "Headroom", "kitna aur loss le sakta hoon" to "Headroom",
         "what are my risk limits" to "Account:RISK",
+        // ---- SaidAbout (round 14): what Boss said about something, from his own notes and journal answers ----
+        "what did i say about expiry" to "SaidAbout", "what did i say about banknifty" to "SaidAbout",
+        "what have i told you about being greedy" to "SaidAbout", "did i note anything about the hammer" to "SaidAbout",
+        "find my notes on fridays" to "SaidAbout", "my notes about bank nifty" to "SaidAbout",
+        "what did i write about nifty last week" to "SaidAbout", "maine expiry ke baare mein kya kaha tha" to "SaidAbout",
+        "hammer ke baare mein maine kya bola tha" to "SaidAbout",
         // ---- Clarity (round 11): the answers said shorter aloud, and back to usual ----
         "which answers do you keep short" to "Clarity", "which of your answers do you keep shorter" to "Clarity",
         "which answers have you shortened" to "Clarity", "which answers were unclear" to "Clarity",

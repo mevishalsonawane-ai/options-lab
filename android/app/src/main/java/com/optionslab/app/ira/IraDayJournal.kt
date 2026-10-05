@@ -58,6 +58,15 @@ internal object IraDayJournal {
         save(b)
     }
 
+    /** Every answer Boss gave the journal's questions, both accounts, with the day it was for ("what did I say about X?"). */
+    fun allAnswers(): List<Pair<LocalDate, DayJournal.Answer>> = runCatching {
+        val b = book()
+        b.keys().asSequence().toList().flatMap { k ->
+            val day = runCatching { LocalDate.parse(k.substringBefore('|')) }.getOrNull() ?: return@flatMap emptyList<Pair<LocalDate, DayJournal.Answer>>()
+            answers(day, k.substringAfter('|') == "Z").map { day to it }
+        }
+    }.getOrDefault(emptyList())
+
     /** The journal's lines for [day] in the paper or Zerodha account (the P&L calendar's day card), or none. */
     fun entry(day: LocalDate, live: Boolean): List<String> = runCatching {
         val e = book().optJSONObject(key(day, live)) ?: return@runCatching emptyList()
@@ -145,7 +154,8 @@ internal object IraDayJournal {
             val mine = Regex("^(i|i'm|im|i was|i thought|i felt|i wanted|i should|my|main|mujhe|mera|maine|because|kyunki|bas)\\b").containsMatchIn(t)
             val asks = Regex("^(jarvis,? )?(what|how|why|where|when|which|who|is|are|can|could|will|should|do|does|did|tell me|show me|kya|kitna|kitne|kaise|kab|kahan|kyun)\\b").containsMatchIn(t) ||
                 !mine && p.topics.any { it != com.optionslab.ira.Topic.OFF_TOPIC && it != com.optionslab.ira.Topic.GREETING }
-            val other = runCatching { com.optionslab.ira.Reminder.asked(q) || com.optionslab.ira.Memory.toKeep(q) != null }.getOrDefault(false)
+            val other = runCatching { com.optionslab.ira.Reminder.asked(q) || com.optionslab.ira.Memory.toKeep(q) != null ||
+                com.optionslab.ira.SaidAbout.asked(q) != null }.getOrDefault(false)
             if (asks || other) { asking = null; return null }
         }
         val cur = a.current ?: return null
