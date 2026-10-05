@@ -1176,6 +1176,10 @@ class JarvisVoice : Service() {
             // End the turn soon after Boss stops speaking (recognizers that honour it answer sooner).
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 700L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L)
+        // Voice, round 27: lean the ears towards Jarvis's own trading words (Android 13+, RecognizerIntent.EXTRA_BIASING_STRINGS by its key; recognizers that ignore it are unchanged).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) runCatching {
+            i.putStringArrayListExtra("android.speech.extra.BIASING_STRINGS", ArrayList<String>(com.optionslab.ira.ListenBias.words()))
+        }
         // With a taught voice (Android 13+): our own capture feeds the recognizer, so the words are also voice-checked.
         // A turn opened while Jarvis speaks (cut-in) also hears through our own capture, with the phone's echo canceller
         // on it (Boss, 5 Oct: the recognizer's own microphone heard his voice over Boss's "stop" and read nothing).
