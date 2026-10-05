@@ -16,8 +16,11 @@ import java.time.temporal.ChronoUnit
  * "forget the word X" drops one ([forgetWordAsked], [forget]).
  */
 object Corrections {
-    /** [used]: the day the wording was last kept or read as meant (null: kept before days were noted). */
-    data class Learned(val wrong: String, val right: String, val used: LocalDate? = null)
+    /**
+     * [used]: the day the wording was last kept or read as meant (null: kept before days were noted); [since]: the day Boss
+     * said yes to it (null: kept before that was noted) - for what was learned when ([Learnings]).
+     */
+    data class Learned(val wrong: String, val right: String, val used: LocalDate? = null, val since: LocalDate? = null)
 
     /** A learned wording not used for this many days is forgotten. */
     const val EXPIRE_DAYS = 60L
@@ -155,7 +158,8 @@ object Corrections {
         AutoStop.read(text) != null || forgetWordAsked(text) != null
 
     /** About Jarvis's learned wordings themselves: never learned, never rewritten. */
-    private fun meta(text: String): Boolean = wordsAsked(text) || forgetWordAsked(text) != null
+    private fun meta(text: String): Boolean = wordsAsked(text) || forgetWordAsked(text) != null ||
+        Learnings.asked(text) != null || Learnings.undoAsked(text)
 
     // ---- the wordings kept: expiry, listing, forgetting ---------------------------------------------------------------
 

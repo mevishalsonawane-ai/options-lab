@@ -85,7 +85,7 @@ internal object IraTools {
     private const val ALERTS = "jarvis.alertSense"
     @Volatile private var alertCache: com.optionslab.ira.AlertSense.Log? = null
 
-    private fun alertLog(): com.optionslab.ira.AlertSense.Log = alertCache ?: runCatching {
+    fun alertLog(): com.optionslab.ira.AlertSense.Log = alertCache ?: runCatching {
         val o = JSONObject(prefs().getString(ALERTS) ?: "{}")
         val s = o.optJSONArray("s") ?: JSONArray()
         val h = o.optJSONArray("h") ?: JSONArray()
@@ -181,7 +181,7 @@ internal object IraTools {
     /** When the record was last written this run (null: not yet). */
     @Volatile private var freshSavedAt: Long? = null
 
-    private fun freshLog(): com.optionslab.ira.DataAge.Log = freshCache ?: runCatching {
+    fun freshLog(): com.optionslab.ira.DataAge.Log = freshCache ?: runCatching {
         val a = JSONArray(prefs().getString(FRESH) ?: "[]")
         com.optionslab.ira.DataAge.Log((0 until a.length()).map { i -> a.getJSONObject(i).let { o ->
             val sp = o.optJSONArray("s") ?: JSONArray()
@@ -268,7 +268,9 @@ internal object IraTools {
         val today = com.optionslab.app.data.Market.today()
         val all = (0 until a.length()).map { a.getJSONObject(it).let { o ->
             val u = o.optString("u").takeIf { it.isNotEmpty() }?.let { s -> runCatching { java.time.LocalDate.parse(s) }.getOrNull() }
-            com.optionslab.ira.Corrections.Learned(o.getString("w"), o.getString("r"), u ?: today) } }
+            // The day of Boss's yes (none on wordings kept before it was noted).
+            val since = o.optString("s").takeIf { it.isNotEmpty() }?.let { s -> runCatching { java.time.LocalDate.parse(s) }.getOrNull() }
+            com.optionslab.ira.Corrections.Learned(o.getString("w"), o.getString("r"), u ?: today, since) } }
         val fresh = com.optionslab.ira.Corrections.fresh(all, today)
         if (fresh.size != all.size || (0 until a.length()).any { a.getJSONObject(it).optString("u").isEmpty() }) saveLearned(fresh)
         fresh
@@ -276,7 +278,7 @@ internal object IraTools {
 
     private fun saveLearned(all: List<com.optionslab.ira.Corrections.Learned>) {
         prefs().put(LEARNED, JSONArray().apply { all.forEach { l -> put(JSONObject().put("w", l.wrong).put("r", l.right)
-            .put("u", (l.used ?: com.optionslab.app.data.Market.today()).toString())) } }.toString())
+            .put("u", (l.used ?: com.optionslab.app.data.Market.today()).toString()).apply { l.since?.let { put("s", it.toString()) } }) } }.toString())
     }
 
     /** A learned wording was just read as meant: it stays another 60 days. */
@@ -346,7 +348,7 @@ internal object IraTools {
 
     private fun keep(l: com.optionslab.ira.Corrections.Learned) {
         val today = com.optionslab.app.data.Market.today()
-        val all = (learned().filter { it.wrong != l.wrong } + l.copy(used = today)).takeLast(com.optionslab.ira.Corrections.KEEP)
+        val all = (learned().filter { it.wrong != l.wrong } + l.copy(used = today, since = today)).takeLast(com.optionslab.ira.Corrections.KEEP)
         saveLearned(all)
         IraActivity.add("Learned: \"${l.wrong}\" means \"${l.right}\".")
     }
@@ -540,6 +542,38 @@ internal object IraTools {
     @Synchronized fun forgetRoutine() {
         runCatching { prefs().put(ROUTINE_LOG, null); prefs().put(ROUTINE_KEPT, null); prefs().put(ROUTINE_OFFERED, null) }
         IraActivity.add("Forgot Boss's routine, as he asked.")
+    }
+
+    // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
+
+    /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
+    fun learnings(plan: com.optionslab.ira.Improve.Plan?): com.optionslab.ira.Learnings.Inputs = com.optionslab.ira.Learnings.Inputs(
+        words = runCatching { learned() }.getOrDefault(emptyList()),
+        routines = runCatching { routineKept() }.getOrDefault(emptyList()),
+        alerts = runCatching { alertLog() }.getOrDefault(com.optionslab.ira.AlertSense.Log()),
+        paper = runCatching { IraNewsTrades.calibration() }.getOrDefault(emptyList()),
+        solo = runCatching { IraSolo.calibration() }.getOrDefault(emptyList()),
+        mistakes = runCatching { mistakes() }.getOrDefault(emptyList()),
+        tally = runCatching { askedKinds() }.getOrDefault(emptyMap()),
+        patterns = runCatching { patternCalls() }.getOrDefault(emptyList()),
+        data = runCatching { freshLog() }.getOrDefault(com.optionslab.ira.DataAge.Log()),
+        plan = plan)
+
+    /**
+     * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
+     * dropped and the alert count started afresh - learned stores only (the goals are [IraImprove.dropWeek]'s). Never a
+     * setting, the PIN, Live, a guard or the Google speech choice; never a record (marks, trades, pattern outcomes).
+     */
+    @Synchronized fun undoLearnedWeek(): com.optionslab.ira.Learnings.Undo {
+        val today = com.optionslab.app.data.Market.today()
+        val now = minuteNow()
+        val u = com.optionslab.ira.Learnings.undo(learnings(null), now)
+        if (u.words.isNotEmpty()) runCatching { saveLearned(com.optionslab.ira.Learnings.keepWords(learned(), today)) }
+        if (u.routines.isNotEmpty()) runCatching { saveKept(com.optionslab.ira.Learnings.keepRoutines(routineKept(), today)) }
+        if (u.alerts.isNotEmpty()) alertUpdate { com.optionslab.ira.AlertSense.reset(it, now) }
+        IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
+            "${u.alerts.size} alert kind(s) aloud again.")
+        return u
     }
 
     // ---- the day's usage -----------------------------------------------------------------------------------------

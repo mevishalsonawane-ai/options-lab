@@ -92,6 +92,18 @@ internal object IraImprove {
         return Improve.say(p, week(Improve.weekOf(today), today), learned(), today)
     }
 
+    /** This week's plan as kept (for the ledger of what he learned, [com.optionslab.ira.Learnings]). */
+    suspend fun current(): Improve.Plan? = plan(com.optionslab.app.data.Market.today())
+
+    /** "Undo everything you learned this week": his own goals for this week dropped (graded weeks kept). How many. */
+    suspend fun dropWeek(): Int = lock.withLock {
+        val today = com.optionslab.app.data.Market.today()
+        val p = read()
+        val dropped = com.optionslab.ira.Learnings.dropGoals(p, today) ?: return@withLock 0
+        save(dropped)
+        p?.goals?.size ?: 0
+    }
+
     /** The agenda's daily check (null: no goals this week). */
     suspend fun checkLine(): String? {
         val today = com.optionslab.app.data.Market.today()

@@ -34,8 +34,8 @@ object Routine {
         val slot: String get() = listOf(kind.name, key, day?.name ?: "-", if (minute < 0) "-" else (minute / 60).toString()).joinToString("/")
     }
 
-    /** A pattern Boss said yes to: its answer said at its time until [until]. */
-    data class Kept(val key: String, val kind: Kind, val minute: Int, val day: DayOfWeek?, val until: LocalDate) {
+    /** A pattern Boss said yes to: its answer said at its time until [until]; [since]: the day of his yes (null: kept before days were noted). */
+    data class Kept(val key: String, val kind: Kind, val minute: Int, val day: DayOfWeek?, val until: LocalDate, val since: LocalDate? = null) {
         val id: String get() = listOf(kind.name, key, day?.name ?: "-", minute.toString()).joinToString("/")
     }
 
@@ -136,12 +136,13 @@ object Routine {
         Seen(p[1], LocalDateTime.parse(p[0]), p[2] == "1")
     }.getOrNull()
 
-    fun encode(k: Kept): String = "${k.kind.name}#${k.key}#${k.day?.name ?: "-"}#${k.minute}#${k.until}"
+    fun encode(k: Kept): String = "${k.kind.name}#${k.key}#${k.day?.name ?: "-"}#${k.minute}#${k.until}" + (k.since?.let { "#$it" } ?: "")
 
     fun decodeKept(line: String): Kept? = runCatching {
         val p = line.split("#")
-        if (p.size != 5 || question(p[1]) == null) return null
-        Kept(p[1], Kind.valueOf(p[0]), p[3].toInt(), if (p[2] == "-") null else DayOfWeek.valueOf(p[2]), LocalDate.parse(p[4]))
+        if (p.size !in 5..6 || question(p[1]) == null) return null
+        Kept(p[1], Kind.valueOf(p[0]), p[3].toInt(), if (p[2] == "-") null else DayOfWeek.valueOf(p[2]), LocalDate.parse(p[4]),
+            p.getOrNull(5)?.let { LocalDate.parse(it) })
     }.getOrNull()
 
     // ---- the patterns -----------------------------------------------------------------------------------------------
@@ -220,7 +221,7 @@ object Routine {
 
     private fun dayName(d: DayOfWeek) = d.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
 
-    private fun whenSaid(kind: Kind, minute: Int, day: DayOfWeek?): String = when (kind) {
+    internal fun whenSaid(kind: Kind, minute: Int, day: DayOfWeek?): String = when (kind) {
         Kind.DAILY -> "around ${clock(minute)} on trading days"
         Kind.WEEKDAY -> "on ${dayName(day ?: DayOfWeek.MONDAY)}s around ${clock(minute)}"
         Kind.AFTER_LOSS -> "just after a losing trade"
@@ -235,7 +236,7 @@ object Routine {
 
     /** The yes: kept from [today] for [KEEP_DAYS]. Null when it would not be a plain question's answer. */
     fun keep(p: Pattern, today: LocalDate): Kept? =
-        if (!safe(p.key)) null else Kept(p.key, p.kind, p.minute, p.day, today.plusDays(KEEP_DAYS))
+        if (!safe(p.key)) null else Kept(p.key, p.kind, p.minute, p.day, today.plusDays(KEEP_DAYS), since = today)
 
     fun kept(k: Kept): String = "Done, Boss: ${whenSaid(k.kind, k.minute, k.day)} I'll tell you ${about(k.key)} - in words only, never an action. " +
         "Say \"forget my routine\" to stop."

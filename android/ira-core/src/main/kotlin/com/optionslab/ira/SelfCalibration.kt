@@ -107,7 +107,7 @@ object SelfCalibration {
     }
 
     /** Only what still counts: the last [WINDOW_DAYS] days before [today] and today. */
-    private fun recent(outcomes: List<Outcome>, today: LocalDate): List<Outcome> =
+    internal fun recent(outcomes: List<Outcome>, today: LocalDate): List<Outcome> =
         outcomes.filter { it.points.isFinite() && it.c.at.toLocalDate().isAfter(today.minusDays(WINDOW_DAYS)) && !it.c.at.toLocalDate().isAfter(today) }
             .sortedBy { it.c.at }
 

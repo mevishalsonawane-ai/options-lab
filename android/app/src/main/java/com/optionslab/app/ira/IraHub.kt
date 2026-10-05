@@ -1212,7 +1212,8 @@ object IraHub {
             // Asked of his memory as said ("what do you know about me", "what did I tell you"): never read as anything else.
             !runCatching { com.optionslab.ira.AboutBoss.knowAsked(q) || com.optionslab.ira.Memory.recallAsked(q) || com.optionslab.ira.Memory.forgetAsked(q) ||
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
-                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) }.getOrDefault(false)) {
+                com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) ||
+                com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() && it != listOf(q) && it.none { p -> lockedAccount(q, p) } }
@@ -1259,6 +1260,50 @@ object IraHub {
             val said = runCatching { com.optionslab.ira.PatternCalls.say(IraTools.patternCalls(), parsed.markets, com.optionslab.app.data.Market.today()) }
                 .getOrDefault("I couldn't read my pattern record just now, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "What have you learned this week?" / "what changed in how you work?" / "show me everything you've learned about me":
+        // every learning store in one view, with when, why and each undo by voice ([com.optionslab.ira.Learnings]). Boss's own
+        // words, routines and records only on an unlocked phone; nothing in it acts.
+        val learnAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.Learnings.asked(q) }.getOrNull() else null
+        if (learnAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val locked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    val plan = if (locked) null else runCatching { IraImprove.current() }.getOrNull()
+                    val now = LocalDateTime.now(IST).withSecond(0).withNano(0)
+                    com.optionslab.ira.Learnings.say(com.optionslab.ira.Learnings.items(IraTools.learnings(plan), now), learnAsk, now.toLocalDate(), locked)
+                }.getOrElse { "I couldn't read what I've learned just now, Boss." })
+            }
+            return
+        }
+        // "Undo everything you learned this week": learned behaviour only (wordings and routines kept this week, the alert
+        // count, his own goals for the week), put to Boss first with Confirm - only as said by him, on an unlocked phone,
+        // never in IraGoldAlgo. Settings, the PIN, Live, AI trading, guards and the Google speech choice are never touched.
+        if (com.optionslab.app.BuildConfig.JARVIS && !understood && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Learnings.undoAsked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (GOLD_ONLY_TALK) { reply(GOLD_TALK_ONLY); return }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) {
+                val now = LocalDateTime.now(IST).withSecond(0).withNano(0)
+                val u = runCatching { com.optionslab.ira.Learnings.undo(IraTools.learnings(IraImprove.current()), now) }.getOrNull()
+                when {
+                    u == null -> reply("I couldn't read what I've learned just now, Boss.")
+                    u.empty -> reply(com.optionslab.ira.Learnings.NOTHING)
+                    // A plain label (Boss's words stay out of the diagnostics log).
+                    else -> offer("undo this week's learning", "Boss, undo this week's learning?", com.optionslab.ira.Learnings.offer(u), suspend {
+                        if (phoneLocked()) "Unlock the phone for that, Boss: nothing was undone."
+                        else {
+                            val done = IraTools.undoLearnedWeek()
+                            val goals = runCatching { IraImprove.dropWeek() }.getOrDefault(0)
+                            com.optionslab.ira.Learnings.done(done.copy(goals = goals))
+                        }
+                    }, alwaysAsk = true)
+                }
+            }
             return
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
