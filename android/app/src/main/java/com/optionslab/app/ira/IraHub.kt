@@ -1227,7 +1227,8 @@ object IraHub {
                 com.optionslab.ira.ZerodhaSession.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
-                com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.Weekdays.asked(q) != null ||
+                com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
+                com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
                 com.optionslab.ira.AskedAgain.asked(q) || com.optionslab.ira.MindChange.asked(q) }.getOrDefault(false)) {
@@ -1589,6 +1590,24 @@ object IraHub {
                 else com.optionslab.ira.GapRecord.answer(gapAsk, mk, histories[mk]?.bars.orEmpty(),
                     com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
             }.getOrElse { "I could not read the gap record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return
+        }
+        // "When Nifty breaks its first 15-minute range, how often does it hold by the close?", "do opening range breakouts
+        // usually hold?": how the index's past opening-range breaks played out on the phone's own 1-minute sessions
+        // ([com.optionslab.ira.RangeBreaks]) beside today's range and its break. A record of past days, never a forecast or
+        // advice; market data only (fine on a locked phone). (Where the price stands against today's range stays OpeningRange's,
+        // Boss's ORB arms his bots'.)
+        val orbAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.RangeBreaks.asked(q) }.getOrNull() else null
+        if (orbAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.RangeBreaks.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.RangeBreaks.NOT_HERE
+                else com.optionslab.ira.RangeBreaks.answer(orbAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), LocalDateTime.now(IST))
+            }.getOrElse { "I could not read the opening-range record just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
             return

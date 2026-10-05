@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null ||
-            NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null
+            RangeBreaks.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -56,7 +56,7 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || Weekdays.asked(q) != null || Structure.asked(q) != null ||
+            if (CoPilot.asked(q) || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || Weekdays.asked(q) != null || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -430,7 +430,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, Clarity,
      * WordFit, AskedAgain, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, Weekdays, Structure, MindChange, Breadth, TradeCase,
+     * Consistency, CoPilot, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, Weekdays, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -450,7 +450,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || ZerodhaSession.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || RangeBreaks.asked(said) != null || ZerodhaSession.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -486,6 +486,7 @@ class CoverageTest {
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && DayClock.asked(q) != null) return "DayClock"
         if (alone && GapRecord.asked(q) != null) return "GapRecord"
+        if (alone && RangeBreaks.asked(q) != null) return "RangeBreaks"
         if (alone && Weekdays.asked(q) != null) return "Weekdays"
         if (alone && Structure.asked(q) != null) return "Structure"
         if (alone && MindChange.asked(q)) return "MindChange"
@@ -712,6 +713,11 @@ class CoverageTest {
         "where would you be wrong" to "MindChange", "what level would invalidate your read" to "MindChange",
         "what would it take to change your mind" to "MindChange", "aapka view kab badlega" to "MindChange",
         "ye kab galat hoga" to "MindChange", "what would change your read on banknifty" to "MindChange",
+        // ---- RangeBreaks: the opening-range breakout record (round 16) ----
+        "when nifty breaks its first 15 minute range how often does it hold by the close" to "RangeBreaks",
+        "do opening range breakouts usually hold" to "RangeBreaks", "how often do orb breakouts fail" to "RangeBreaks",
+        "opening range breakout record for banknifty" to "RangeBreaks", "how often does nifty stay inside the opening range all day" to "RangeBreaks",
+        "opening range todne ke baad kitni baar tikta hai" to "RangeBreaks", "how often does the first hour range break hold" to "RangeBreaks",
         // ---- Weekdays: each weekday's record, and expiry days against the rest (round 15) ----
         "are mondays more volatile" to "Weekdays", "which day of the week moves the most" to "Weekdays",
         "how does nifty usually do on fridays" to "Weekdays", "weekday record for banknifty" to "Weekdays",
@@ -1011,6 +1017,9 @@ class CoverageTest {
             ("are mondays more volatile" to "Weekdays") to ("is monday a holiday" to "MarketDays"),
             ("are expiry days more volatile" to "Weekdays") to ("how did the last expiry go" to "MarketMemory"),
             ("how does nifty usually do on fridays" to "Weekdays") to ("what will nifty do on monday" to "Outlook"),
+            // Market intelligence round 16: the opening-range record beside today's range and Boss's ORB arms.
+            ("do opening range breakouts usually hold" to "RangeBreaks") to ("did nifty break the opening range" to "OpeningRange"),
+            ("how often do orb breakouts fail" to "RangeBreaks") to ("is the orb arm behaving" to "Account:BOTS"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
         // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
         for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
