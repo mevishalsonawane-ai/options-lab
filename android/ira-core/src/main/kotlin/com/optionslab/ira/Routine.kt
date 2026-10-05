@@ -287,7 +287,9 @@ object Routine {
 
     private val HABITS_ASKED = Regex("^(jarvis )?(what do i (usually|normally|mostly|always|often) ask( you)?( about)?|what do i ask you (the )?(most|usually|every day|often)|" +
         "what (are|is) my (habits?|routine) with you|what s my routine|what is my routine|what have you (learned|noticed|learnt) about my (routine|habits)|" +
-        "do i have a routine( with you)?|what is my usual routine)( jarvis)?$")
+        "do i have a routine( with you)?|what is my usual routine|" +
+        // Hinglish (routing audit, round 7): "mera routine kya hai", "main usually kya poochta hoon".
+        "(mera|meri) (routine|usual routine) (kya|kia) (hai|he|h)|(main|mai|me) (usually|aksar|zyada tar|zyadatar|mostly|roz|rozana) (tumse |aapse |tumhe |aapko )?(kya|kia) (poochta|puchta|pucchta|poochti|puchti|pucchti) (hoon|hu|hun|hoo))( jarvis)?$")
     private val FORGET_ASKED = Regex("^(jarvis )?(forget|drop|clear|stop) (my|the) (routines?|habits)( with you)?( please)?$")
 
     private fun plain(text: String) = text.lowercase().replace(Regex("[^a-z ]"), " ").replace(Regex("\\s+"), " ").trim()

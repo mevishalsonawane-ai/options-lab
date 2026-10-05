@@ -383,15 +383,22 @@ class CoverageTest {
 
     /**
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
-     * ask(): fillers and follow-ups first, then DayJournal, AlertSense, Airtime, DataAge, Honest, Thinking, ChainIntel,
-     * TradeCase, Agenda, Improve, the reminders and Jarvis's own checks, Distance... down to the account's sections and
-     * the reasoning over the candles). Over the pure readers only; a branch the app adds must be added here in its place.
-     * (Thinking takes its question first; with nothing in the trail and SelfWhy's words it goes on to SelfWhy - by design.)
+     * ask(): Boss's learned words and routine as said, fillers and follow-ups, then DayJournal, AlertSense, Airtime,
+     * DataAge, Honest, Thinking, ChainIntel, Structure, TradeCase, Scenarios, Agenda, Improve, the reminders and Jarvis's
+     * own checks, Distance... down to the account's sections and IraHub.reasoned's readers over the candles, each in its
+     * place). Over the pure readers only (what Boss's corrections taught depends on what is kept, and is left out); a
+     * branch the app adds must be added here in its place. (Thinking takes its question first; with nothing in the trail
+     * and SelfWhy's words it goes on to SelfWhy - by design.) [understood] and [cleaned] are IraHub.ask's own: a part of a
+     * split or a learned reading, and one question with its fillers gone.
      */
-    private fun feature(said: String): String {
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said)
-        val qs = if (asSaid) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
-        if (qs != null) return qs.joinToString(" & ") { feature(it) }
+    private fun feature(said: String, understood: Boolean = false, cleaned: Boolean = false): String {
+        // Boss's own learned words and routine: only as said by him, before anything is cleaned or split.
+        if (!understood && (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null)) return "Corrections"
+        if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
+            Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said)
+        val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
+        if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
         if (DayJournal.asked(q)) return "DayJournal"
         val p = Ask.parse(q)
@@ -402,7 +409,9 @@ class CoverageTest {
         if (plain && Honest.asked(q) != null) return "Honest"
         if (plain && Thinking.asked(q) != null) return "Thinking"
         if (plain && ChainIntel.asked(q) != null) return "ChainIntel"
+        if (plain && Structure.asked(q) != null) return "Structure"
         if (plain && TradeCase.asked(q)) return "TradeCase"
+        if (plain && Scenarios.asked(q) != null) return "Scenarios"
         if (plain && Agenda.asked(q)) return "Agenda"
         if (plain && Improve.asked(q)) return "Improve"
         if (Reminder.cancelAsked(q) || Reminder.asked(q)) return "Reminder"
@@ -428,7 +437,11 @@ class CoverageTest {
         if (SelfCalibration.asked(q)) return "SelfCalibration"
         if (Lessons.asked(q)) return "Lessons"
         if (Sources.asked(q)) return "Sources"
-        if (Habits.asked(q)) return "Habits"
+        if (!understood && Habits.asked(q)) return "Habits"
+        if (!understood && p.order == null && (p.command == null || p.command?.kind == Command.Kind.STOP_ONE)) Intents.quick(q)?.let { return feature(it, understood = true) }
+        if (plain && (Topic.ACCOUNT !in p.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in p.topics &&
+            Glossary.explain(q) != null) return "Glossary"
+        if (plain && Topic.ACCOUNT !in p.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q) && OptionQuote.asked(p.text.ifBlank { q }) != null) return "OptionQuote"
         if (Topic.BACKTEST in p.topics) return "Backtest"
         if (Topic.ACCOUNT in p.topics) return "Account:" + AppAnswers.sections(q).joinToString("+")
         if (Topic.COMMAND in p.topics || Topic.ORDER in p.topics) return "Act"
@@ -441,16 +454,33 @@ class CoverageTest {
         if (MarketMemory.asked(t) != null) return "MarketMemory"
         if (ExpiryDay.asked(t)) return "ExpiryDay"
         if (Topic.WHY in p.topics && !Regex("(?i)\\bhow much\\b").containsMatchIn(t)) return "Why"
+        if (Payoff.asked(t) != null) return "Payoff"
+        if (VixRank.asked(t)) return "VixRank"
+        if (SinceLast.asked(t)) return "SinceLast"
+        if (Briefing.asked(t)) return "Briefing"
+        if (Realised.asked(t)) return "Realised"
+        if (Together.asked(t)) return "Together"
+        if (Compare.asked(t)) return "Compare"
         if (Regex("(?i)\\b(i|me|my|we|our)\\b").containsMatchIn(t)) return "Market"
         if (Odds.asked(t) != null) return "Odds"
         if (ExpectedRange.asked(t)) return "ExpectedRange"
+        if (Moves.asked(t) != null) return "Moves"
+        if (Lookback.prevAsked(t) || Lookback.time(t) != null) return "Lookback"
+        if (BigPicture.asked(t)) return "BigPicture"
+        if (LevelInfo.asked(t) != null) return "LevelInfo"
+        if (OpeningRange.asked(t)) return "OpeningRange"
         if (PeriodMove.asked(t) != null) return "PeriodMove"
+        if (Momentum.asked(t)) return "Momentum"
+        if (Pivots.asked(t)) return "Pivots"
+        if (DayStory.asked(t)) return "DayStory"
+        if (Gap.asked(t)) return "Gap"
+        if (Streak.asked(t)) return "Streak"
         return if (Topic.OFF_TOPIC in p.topics) "Missed" else "Market"
     }
 
     private val ACCOUNT_REVIEW = "Account:REVIEW"
 
-    /** The new families (DayJournal to AboutBoss), as Boss says them - English, Hinglish, the recognizer's spellings. */
+    /** The new families (DayJournal to AboutBoss; round 7: Scenarios, Structure, PositionHealth, Routine, Corrections), as Boss says them - English, Hinglish, the recognizer's spellings. */
     private val ROUTED: List<Pair<String, String>> = listOf(
         // ---- MarketMemory: the notable sessions remembered ----
         "when did nifty last gap down" to "MarketMemory", "when did banknifty last gap up this much" to "MarketMemory",
@@ -543,12 +573,97 @@ class CoverageTest {
         "brokerage kitna gaya" to "Account:CHARGES", "what do you know about me jarvis" to "AboutBoss",
         // ---- The market's own week (never Boss's history) ----
         "how was the market this week" to "PeriodMove", "how was nifty this week" to "PeriodMove",
+
+        // ==== Round 7 (5 Oct): the families added since the routing audit, and their neighbours ====
+        // ---- Scenarios: a what-if about an index or India VIX (English, Hinglish, slips) ----
+        "what if nifty opens 1% down" to "Scenarios", "what if nifty opens 1% down tomorrow" to "Scenarios",
+        "what if banknifty falls 500 points" to "Scenarios", "what if vix goes to 20" to "Scenarios",
+        "what if vix jumps 10%" to "Scenarios", "suppose nifty drops 2%" to "Scenarios",
+        "let's say nifty gaps up 100 points" to "Scenarios", "what happens if nifty breaks 25000" to "Scenarios",
+        "what if nifty hits 24000" to "Scenarios", "what if nifty open 1 percent down" to "Scenarios",
+        "what if nifty fall 200 points" to "Scenarios", "what would happen if banknifty crashes 3%" to "Scenarios",
+        "what happens if sensex falls 1000 points" to "Scenarios", "imagine nifty rallies 2%" to "Scenarios",
+        "what if india vix spikes to 25" to "Scenarios", "scenario nifty down 2 percent" to "Scenarios",
+        "what if nifty moves 300 points" to "Scenarios", "what if nifty swings 300 points" to "Scenarios",
+        "what if nifty gaps down 200 points tomorrow" to "Scenarios", "suppose banknifty opens 1% up" to "Scenarios",
+        "what if sensex rallies 1000 points" to "Scenarios", "what happens if nifty goes below 24000" to "Scenarios",
+        "what if nifty crosses 26000" to "Scenarios", "what if nifty dips 150 points" to "Scenarios",
+        "wat if nifty falls 1%" to "Scenarios", "wht if nifty drops 2%" to "Scenarios", "what will happen if nifty falls 2%" to "Scenarios",
+        "what if finnifty falls 1%" to "Scenarios", "what if banknifty opens gap down 300 points" to "Scenarios",
+        "what if nifty goes up 1% today" to "Scenarios", "agar nifty 1% gir jaye to kya hoga" to "Scenarios",
+        "agar nifty kal 1% neeche khule to" to "Scenarios", "nifty 1% down khula to kya hoga" to "Scenarios",
+        "agar banknifty 500 points gira to kya hoga" to "Scenarios", "agar vix 20 ho jaye to kya hoga" to "Scenarios",
+        "agar nifty 25000 todta hai to kya hoga" to "Scenarios", "agar nifty 2% chadh jaye to kya hoga" to "Scenarios",
+        "agar sensex 1000 points gir jaye to kya hoga" to "Scenarios", "agar nifty kal gap down 1% khule to kya hoga" to "Scenarios",
+        // ---- Its neighbours: Boss's own book at a move stays the account's (Exposure.moveAsked), as does his replay ----
+        "what happens to my p&l if nifty moves 100 points" to "Account:MOVE",
+        "what if nifty falls 100 points what happens to my positions" to "Account:MOVE",
+        "how much do i lose if nifty falls 1%" to "Account:MOVE", "if nifty drops 200 points what happens to my p&l" to "Account:MOVE",
+        "what's my exposure if banknifty moves 500 points" to "Account:MOVE",
+        "what if i had taken that trade" to "Account:WHATIF",
+        // ---- Structure: today's intraday structure - higher highs, swing levels, trend or range so far ----
+        "what's the structure today" to "Structure", "what's the structure" to "Structure", "market structure" to "Structure",
+        "what is the market structure today" to "Structure", "nifty structure today" to "Structure",
+        "banknifty ka structure kya hai" to "Structure", "aaj ka structure kya hai" to "Structure", "structure batao" to "Structure",
+        "nifty ka structure batao" to "Structure", "is nifty making higher highs" to "Structure",
+        "is banknifty making lower lows" to "Structure", "higher highs or lower lows" to "Structure", "lower highs today" to "Structure",
+        "where are the swing levels" to "Structure", "swing highs and lows" to "Structure", "nifty swing levels" to "Structure",
+        "swing levels for banknifty" to "Structure", "swing high and low today" to "Structure", "trend or range so far" to "Structure",
+        "is it a trend day" to "Structure", "is today a range day" to "Structure", "trend day or range day" to "Structure",
+        "trending or sideways today" to "Structure", "is nifty trending or ranging" to "Structure",
+        "is the market trending or sideways" to "Structure", "trending or range bound" to "Structure", "trend ya range" to "Structure",
+        "trend hai ya range" to "Structure", "range ya trend" to "Structure", "aaj trend day hai ya range" to "Structure",
+        "what's the strucure today" to "Structure", "whats the structre" to "Structure", "what's the intraday structure" to "Structure",
+        // ---- Its neighbours: the opening range, the day's story, another span's structure ----
+        "how is the opening range" to "OpeningRange", "did nifty break the opening range" to "OpeningRange",
+        "what's the opening range" to "Glossary",
+        "how did the day go for nifty" to "DayStory", "what's the day's story" to "DayStory", "how has the day gone" to "DayStory",
+        "what happened today" to "MarketStory",
+        "what was the structure yesterday" to "Account:HISTORY", "weekly structure" to "Account:HISTORY",
+        // ---- PositionHealth: each open position's health (the account's HEALTH), the slips included ----
+        "check my positions" to "Account:HEALTH", "check my positions please" to "Account:HEALTH",
+        "kya meri positions theek hain" to "Account:HEALTH", "meri positions theek hai kya" to "Account:HEALTH",
+        "meri positions theek hain na" to "Account:HEALTH", "are my positions okay" to "Account:HEALTH",
+        "are my positions fine" to "Account:HEALTH", "position health" to "Account:HEALTH", "positions health check" to "Account:HEALTH",
+        "how healthy are my positions" to "Account:HEALTH", "health check on my positions" to "Account:HEALTH",
+        "meri positions ka haal" to "Account:HEALTH", "check on my open positions" to "Account:HEALTH",
+        "are all my positions safe" to "Account:HEALTH", "check my position" to "Account:HEALTH", "chek my positions" to "Account:HEALTH",
+        "check my postions" to "Account:HEALTH", "chk my positions" to "Account:HEALTH", "chek my postions" to "Account:HEALTH",
+        // ---- Its neighbours: the positions shown, and ranked ----
+        "show my positions" to "Account:POSITIONS", "show positions" to "Account:POSITIONS", "what are my positions" to "Account:POSITIONS",
+        "my positions" to "Account:POSITIONS", "how are my positions" to "Account:POSITIONS",
+        "how are my positions doing" to "Account:POSITIONS", "meri positions kaisi hain" to "Account:POSITIONS",
+        "rank my positions" to "Account:RANK", "which of my positions is losing most" to "Account:RANK",
+        // ---- Routine: what Boss usually asks Jarvis, and forgetting it - as said by him ----
+        "what do i usually ask" to "Routine", "what do i usually ask you" to "Routine", "what do i usually ask about" to "Routine",
+        "what do i ask you the most" to "Routine", "what do i normally ask" to "Routine", "jarvis what do i usually ask" to "Routine",
+        "what's my routine" to "Routine", "what is my routine" to "Routine", "what is my usual routine" to "Routine",
+        "what are my habits with you" to "Routine", "do i have a routine" to "Routine",
+        "what have you noticed about my routine" to "Routine", "mera routine kya hai" to "Routine",
+        "main usually kya poochta hoon" to "Routine", "mai aksar kya puchta hu" to "Routine", "forget my routine" to "Routine",
+        "forget the routine" to "Routine", "clear my routine" to "Routine", "drop my habits" to "Routine", "clear the habits" to "Routine",
+        // ---- Its neighbours: "the usual" (Habits) and his trading habits (the review) ----
+        "the usual" to "Habits", "my usual" to "Habits", "my usual please" to "Habits", "same as always" to "Habits",
+        "what are my trading habits" to ACCOUNT_REVIEW, "what are my bad habits" to ACCOUNT_REVIEW,
+        "review my habits" to ACCOUNT_REVIEW, "my habits" to ACCOUNT_REVIEW,
+        // ---- Corrections: the wordings Jarvis learned from Boss, listed or forgotten ----
+        "what words have you learned" to "Corrections", "which words have you learned" to "Corrections",
+        "what words did you learn from me" to "Corrections", "what words have you learnt" to "Corrections",
+        "what wordings have you learned" to "Corrections", "which phrases did you learn" to "Corrections",
+        "list the words you learned" to "Corrections", "tell me the words you learned" to "Corrections",
+        "show me the words you have learned" to "Corrections", "your learned words" to "Corrections", "learned words" to "Corrections",
+        "forget the word nifty fifty" to "Corrections", "forget the word bank nifty" to "Corrections",
+        "forget the word teeta" to "Corrections", "unlearn the word teeta" to "Corrections", "drop the word nifty fifty" to "Corrections",
+        "forget the phrase market kaisa" to "Corrections", "forget the wording kya scene" to "Corrections",
+        // ---- Their neighbours: what Jarvis learned of the market, and of Boss ----
+        "what did you learn" to "Lessons", "what did you learn today" to "Lessons",
+        "forget what i told you" to "AboutBoss", "what have you learned about me" to "AboutBoss",
     )
 
     @Test fun eachFamilyGetsItsOwnQuestions() {
         val wrong = ROUTED.mapNotNull { (s, want) -> feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got" } }
         assertTrue(wrong.isEmpty(), "taken by the wrong feature (${wrong.size} of ${ROUTED.size}):\n" + wrong.joinToString("\n"))
-        assertTrue(ROUTED.size >= 180, "${ROUTED.size}")
+        assertTrue(ROUTED.size >= 340, "${ROUTED.size}")
         assertEquals(ROUTED.size, ROUTED.map { it.first }.distinct().size)
     }
 
@@ -566,7 +681,32 @@ class CoverageTest {
             ("remember when nifty gapped down" to "MarketMemory") to ("remember that i trade on fridays" to "AboutBoss"),
             ("how are you improving" to "Improve") to ("how are you" to "Chat"),
             ("is your data fresh" to "DataAge") to ("what's sgx nifty" to "Honest"),
+            // Round 7: the families added since, each beside the one it sounds like.
+            ("what if nifty falls 1%" to "Scenarios") to ("how much do i lose if nifty falls 1%" to "Account:MOVE"),
+            ("what if nifty moves 100 points" to "Scenarios") to ("what happens to my p&l if nifty moves 100 points" to "Account:MOVE"),
+            ("agar nifty 1% gir jaye to kya hoga" to "Scenarios") to ("agar nifty 1% gira to mera p&l kya hoga" to "Account:PNL"),
+            ("what if nifty swings 300 points" to "Scenarios") to ("nifty swing levels" to "Structure"),
+            ("what if nifty opens 1% down" to "Scenarios") to ("what if i had taken that trade" to "Account:WHATIF"),
+            ("what's the structure today" to "Structure") to ("how did the day go for nifty" to "DayStory"),
+            ("trend or range so far" to "Structure") to ("how is the opening range" to "OpeningRange"),
+            ("what's the structure today" to "Structure") to ("what was the structure yesterday" to "Account:HISTORY"),
+            ("check my positions" to "Account:HEALTH") to ("show my positions" to "Account:POSITIONS"),
+            ("are my positions okay" to "Account:HEALTH") to ("rank my positions" to "Account:RANK"),
+            ("kya meri positions theek hain" to "Account:HEALTH") to ("meri positions kaisi hain" to "Account:POSITIONS"),
+            ("check my positions" to "Account:HEALTH") to ("close my positions" to "Act"),
+            ("what do i usually ask" to "Routine") to ("the usual" to "Habits"),
+            ("what are my habits with you" to "Routine") to ("what are my habits" to ACCOUNT_REVIEW),
+            ("what's my routine" to "Routine") to ("what are my trading habits" to ACCOUNT_REVIEW),
+            ("forget my routine" to "Routine") to ("forget what i told you" to "AboutBoss"),
+            ("what words have you learned" to "Corrections") to ("what have you learned this week" to "Lessons"),
+            ("forget the word teeta" to "Corrections") to ("forget that i trade on fridays" to "AboutBoss"),
         )) { assertEquals(a.second, feature(a.first), a.first); assertEquals(b.second, feature(b.first), b.first) }
+        // Boss's Hinglish what-if is a what-if; a forecast, advice or his own book in Hindi never is.
+        for (s in listOf("kal nifty ka kya hoga", "nifty 200 points gir jayega kya", "agar nifty 1% gira to kya buy karu",
+            "agar nifty 1% gira to meri positions ka kya hoga", "what if nifty falls 1% should i buy puts", "will nifty fall 1% tomorrow"))
+            assertEquals(null, Scenarios.asked(s), s)
+        // "What is my trading routine" is his trading, not his routine with Jarvis.
+        assertEquals(false, Routine.asked("what is my trading routine"))
         // "Remember when..." asks; it is never kept as a note.
         assertEquals(null, Memory.toKeep("remember when nifty gapped down"))
         assertEquals("i trade on fridays", Memory.toKeep("remember that i trade on fridays"))

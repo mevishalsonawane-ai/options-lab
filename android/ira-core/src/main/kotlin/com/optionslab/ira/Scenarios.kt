@@ -55,11 +55,30 @@ object Scenarios {
     private fun norm(text: String) = " " + text.lowercase().replace("%", " percent ").replace(",", "").replace("'", " ")
         .replace(Regex("[^a-z0-9. ]"), " ").replace(Regex("(?<![0-9])\\.|\\.(?![0-9])"), " ").replace(Regex("\\s+"), " ").trim() + " "
 
+    /**
+     * Boss's Hinglish and the recognizer's slips in English: "agar Nifty 1% gir jaye to kya hoga", "Nifty kal 1% neeche
+     * khula to", "wat if Nifty falls 1%" (routing audit, round 7) - read as the English what-if, a question only.
+     */
+    private val SAID = listOf(
+        Regex(" (wat|wht|whta|waht|wot) if ") to " what if ", Regex(" (agar|agr|yadi) ") to " if ",
+        Regex(" (?:to |toh |tab |then )?(kya|kia) (hoga|hogi|hota|hoti)( phir)?( kya)? ") to " what happens if ",
+        Regex(" (gir|gire|gira|giri|girta|girti|tut|toot|toote|tute)( (jaye|jaaye|jae|jata|jaata|gaya|gayi|jati)( hai)?| hai)?(?= )") to " falls",
+        Regex(" (chadh|chadhe|chadha|chadhi|chadhta|badh|badhe|badha|badhta|uchhle|uchhal)( (jaye|jaaye|jae|jata|jaata|gaya|gayi|jati)( hai)?| hai)?(?= )") to " rises",
+        Regex(" (khule|khula|khuli|khulta|khulti) ") to " opens ",
+        // The level before its verb, as Hindi says it ("agar VIX 20 ho jaye", "Nifty 25000 todta hai").
+        Regex(" (\\d+(?:\\.\\d+)?) (?:(?:ko|ke) )?(?:ho jaye|ho jaaye|ho jae|ho gaya|ho jata hai|pe|par|tak|tod de|tode|todta hai|todti hai|" +
+            "tod deta hai|cross kare|cross karta hai|cross kar jaye|cross kar le|paar kare|paar kar jaye|pahunche|pahunch jaye|chhu le|touch kare)(?= )") to " at $1",
+        Regex(" (neeche|niche|nichay) ") to " down ", Regex(" (upar|uppar|oopar) ") to " up ",
+        // "...to" at the end: Hindi's "then?" ("agar Nifty kal 1% neeche khule to").
+        Regex(" (to|toh|tab) $") to " then what ",
+    )
     private val IF = Regex(" (what if|what happens if|what would happen if|what happens when|suppose|supposing|imagine|let s say|lets say|say|in case|scenario|hypothetically|if) ")
     /** A bare "if" needs a "then what" (or the question's own "what") beside it. */
     private val THEN = Regex(" (what then|then what|what happens|what would|walk me through|what does it mean for|how would|what about) ")
     /** Boss's own action ("what if I had taken it": the replay; "what if I buy puts": a new trade), advice, a forecast. */
-    private val NOT = Regex(" (if|what if|suppose) (i|we) | (had|would have|taken|took|followed|approved) | (should|shall|recommend|suggest|advise|advice|worth it|do i|must i|can i|buy|sell|hedge|exit|book profit|square off|predict|prediction|forecast|likely|chance|chances|odds|probability|expect|expected|will) ")
+    private val NOT = Regex(" (if|what if|suppose) (i|we) | (had|would have|taken|took|followed|approved) | (should|shall|recommend|suggest|advise|advice|worth it|do i|must i|can i|buy|sell|hedge|exit|book profit|square off|predict|prediction|forecast|likely|chance|chances|odds|probability|expect|expected|will) |" +
+        // Boss's own book in Hindi ("agar Nifty gira to mera P&L"): the positions' answer, never this one.
+        " (mera|meri|mere|hamara|hamari|hamare|apna|apni|apne) ")
     private val SIZE = Regex(" (\\d+(?:\\.\\d+)?) ?(points?|pts?|percent|per cent|pc) ")
     private val DOWN = Regex(" (falls?|fell|drops?|dropped|goes down|go down|comes down|crash(es)?|tanks?|slides?|sinks?|declines?|is down|down|lower|red|cracks?|slips?|plunges?|dips?) ")
     private val UP = Regex(" (rises?|rose|goes up|go up|jumps?|rall(y|ies)|climbs?|gains?|surges?|is up|up|higher|green|spikes?|shoots? up|soars?) ")
@@ -72,7 +91,8 @@ object Scenarios {
     fun asked(text: String): Scenario? {
         // "What happens to my P&L if Nifty moves 100 points" is the positions' own answer ([Exposure]).
         if (Exposure.moveAsked(text) != null) return null
-        val t = norm(text).replace(" what will happen if ", " what happens if ").replace(" what will happen when ", " what happens when ")
+        val t = SAID.fold(norm(text)) { a, (r, w) -> r.replace(a, w) }.replace(Regex("\\s+"), " ")
+            .replace(" what will happen if ", " what happens if ").replace(" what will happen when ", " what happens when ")
         val framed = IF.findAll(t).any { m -> when (m.groupValues[1]) {
             "if" -> THEN.containsMatchIn(t) || t.startsWith(" what ")
             "say" -> t.startsWith(" say ")

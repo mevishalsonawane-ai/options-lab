@@ -38,15 +38,17 @@ object Structure {
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
 
     // Forecasts, advice, Boss's own book, other spans (the week's or the daily chart's structure is not today's), counting
-    // and "when did it last" (the market memory's), and the app's own "structures" (fees, charges).
+    // and "when did it last" (the market memory's), the app's own "structures" (fees, charges) and a what-if.
     private val NOT = Regex(" (will|would|going to|gonna|tomorrow|next|predict|prediction|forecast|should|shall|buy|sell|enter|exit|i|me|my|mine|we|our|" +
         "how many|how often|last time|when did|when was|yesterday|week|weekly|month|monthly|daily|days|sessions|backtest|strategy|" +
-        "fee|fees|charge|charges|brokerage|tax|taxes|pricing|cost|margin|app|mean|means|meaning|define|what is a|what is an) ")
-    private val STRUCTURE = Regex(" (structure|market structure|price structure|intraday structure|day s structure|todays structure) ")
+        "fee|fees|charge|charges|brokerage|tax|taxes|pricing|cost|margin|app|mean|means|meaning|define|what is a|what is an|" +
+        // A what-if ("what if Nifty swings 300 points") is the scenario's, worked through by [Scenarios].
+        "if|suppose|supposing|imagine|hypothetically|scenario) ")
+    private val STRUCTURE = Regex(" (structure|strucure|structre|stucture|structer|strcture|struture|market structure|price structure|intraday structure|day s structure|todays structure) ")
     private val HIGHER = Regex(" (higher highs?|higher lows?|lower highs?|lower lows?|hh hl|lh ll|hhs|hls) ")
     private val SWINGS = Regex(" (swing levels?|swing highs?|swing lows?|swing points?|swings|swing high and low|swing highs and lows) ")
-    private val TREND_RANGE = Regex(" (trend|trending|trendy|one way|directional) (day )?(or|vs|versus) (a )?(range|ranging|range bound|rangebound|sideways|choppy|chop)( day)? |" +
-        " (range|ranging|range bound|rangebound|sideways|choppy) (day )?(or|vs|versus) (a )?(trend|trending|trendy|one way|directional)( day)? |" +
+    private val TREND_RANGE = Regex(" (trend|trending|trendy|one way|directional) (day )?(hai )?(or|vs|versus|ya) (a )?(range|ranging|range bound|rangebound|sideways|choppy|chop)( day)? |" +
+        " (range|ranging|range bound|rangebound|sideways|choppy) (day )?(hai )?(or|vs|versus|ya) (a )?(trend|trending|trendy|one way|directional)( day)? |" +
         " (is it|is today|today is|is this|is nifty|is banknifty|is bank nifty|is finnifty|is sensex|is the market) (having )?(a |an )?(trend|trending|range|range bound|rangebound|ranging) day |" +
         " (trend|range) day so far | so far (a )?(trend|range) day ")
 
