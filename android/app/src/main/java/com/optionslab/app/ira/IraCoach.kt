@@ -857,7 +857,7 @@ internal object IraCoach {
      * "no more than N trades a day" goal, against his own trades opened today (closed round trips, as his goals count
      * them). His account: empty on a locked phone. Words only.
      */
-    fun wordClashes(): List<com.optionslab.ira.Consistency.Clash> {
+    suspend fun wordClashes(): List<com.optionslab.ira.Consistency.Clash> {
         if (runCatching { IraHub.locked() }.getOrDefault(true)) return emptyList()
         return runCatching {
             val today = com.optionslab.app.data.Market.today()

@@ -77,6 +77,15 @@ internal object IraBots {
         return out
     }
 
+    /** Strategies and Pine scripts with something live running or held (null: unknown, so none is offered a stop). */
+    private suspend fun liveNames(): Set<String>? = runCatching {
+        val runs = com.optionslab.app.data.Strategies.all()
+            .filter { it.run?.mode == com.optionslab.engine.strategy.RunMode.LIVE }.map { it.def.name }
+        val held = com.optionslab.app.data.PineAuto.held.value
+        val pine = com.optionslab.app.data.PineScripts.items.value.filter { held[it.id]?.live == true }.map { it.name }
+        (runs + pine).toSet()
+    }.getOrNull()
+
     /** Every strategy with its trades (paper, and Zerodha when it traded there). Reads only. */
     suspend fun bots(): List<BotHealth.Bot> {
         val confs = confs()
@@ -135,11 +144,14 @@ internal object IraBots {
         IraHub.note(lines.joinToString("\n")); IraActivity.add(fresh.joinToString(" ") { it.text })
         Automations.acted(Automations.Auto.BOTS, "Told a strategy behaving unusually.")
         val paper = runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
+        val liveHeld = liveNames()
         val said = ArrayList<BotHealth.Unusual>()
         for ((name, us) in fresh.groupBy { it.bot }) {
             val bot = bots.firstOrNull { it.name == name }
             val text = us.joinToString(" ") { it.text }
-            val stoppable = bot != null && bot.on && bot.kind != "Solo" && (paper || bot.kind == "ORB arm")
+            // Stopping exits what it holds in its own mode, not the app's: a live run or a live Pine holding left from
+            // before a switch to Paper would sell on Zerodha, so those are only told (review, 5 Oct).
+            val stoppable = bot != null && bot.on && bot.kind != "Solo" && (bot.kind == "ORB arm" || (paper && liveHeld != null && name !in liveHeld))
             val cmd = com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = name)
             val (what, act) = if (stoppable) runCatching { IraActions.prepare(cmd) }.getOrNull() ?: (null to null) else (null to null)
             // Only when the name found is exactly this strategy's (never a near match stopped by mistake).
