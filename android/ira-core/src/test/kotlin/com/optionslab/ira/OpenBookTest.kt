@@ -1,0 +1,118 @@
+package com.optionslab.ira
+
+import com.optionslab.ira.OpenBook.Ord
+import com.optionslab.ira.OpenBook.Pos
+import com.optionslab.ira.OpenBook.Tone
+import com.optionslab.ira.OpenBook.Venue
+import java.time.LocalDateTime
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class OpenBookTest {
+    private val z = Venue(OpenBook.ZERODHA, 1_234.4, listOf(Pos("NIFTY26OCT25000CE", -75, 112.5, 1_500.0), Pos("BANKNIFTY26OCT56000PE", 0, 80.0, -266.0)),
+        listOf(Ord("NIFTY26OCT25100CE", "BUY", 75, "LIMIT", 90.0, 0.0, "OPEN"),
+            Ord("NIFTY26OCT25000CE", "BUY", 75, "SL", 130.0, 128.0, "TRIGGER PENDING"),
+            Ord("NIFTY26OCT24900PE", "SELL", 75, "LIMIT", 50.0, 0.0, "COMPLETE"),
+            Ord("NIFTY26OCT24800PE", "SELL", 75, "LIMIT", 40.0, 0.0, "CANCELLED"),
+            Ord("NIFTY26OCT24700PE", "SELL", 75, "LIMIT", 40.0, 0.0, "REJECTED"),
+            Ord("NIFTY26OCT24600PE", "BUY", 75, "LIMIT", 20.0, 0.0, "AMO REQ RECEIVED", "amo")), primary = true)
+
+    @Test fun pendingMeansOpenTriggerPendingOrAmoOnly() {
+        assertEquals("OPEN", OpenBook.pendingLabel("OPEN"))
+        assertEquals("OPEN", OpenBook.pendingLabel("open"))
+        assertEquals("TRIGGER PENDING", OpenBook.pendingLabel("trigger pending"))
+        assertEquals("AMO", OpenBook.pendingLabel("AMO REQ RECEIVED"))
+        assertEquals("AMO", OpenBook.pendingLabel("OPEN", "amo"))
+        assertEquals("OPEN", OpenBook.pendingLabel("MODIFY PENDING"))
+        listOf("COMPLETE", "CANCELLED", "REJECTED", "CANCELLED AMO", "", "something new").forEach { assertNull(OpenBook.pendingLabel(it), it) }
+    }
+
+    @Test fun onlyWhatIsOpenPositionsFirst() {
+        val s = OpenBook.screen(listOf(z))
+        assertEquals("Today's P&L · Zerodha", s.caption)
+        assertEquals("+₹1,234", s.headline)
+        assertEquals(Tone.GAIN, s.tone)
+        assertEquals(emptyList(), s.split, "one account: no split lines")
+        assertEquals(listOf("NIFTY26OCT25000CE", "NIFTY26OCT25100CE", "NIFTY26OCT25000CE", "NIFTY26OCT24600PE"), s.rows.map { it.title })
+        assertEquals(OpenBook.Row("NIFTY26OCT25000CE", "-75 · LTP 112.50", "+₹1,500", Tone.GAIN), s.rows[0])
+        assertEquals(OpenBook.Row("NIFTY26OCT25100CE", "BUY 75 · LIMIT · OPEN", "@ 90.00", Tone.PLAIN), s.rows[1])
+        assertEquals("BUY 75 · SL · TRIGGER PENDING · trg 128.00", s.rows[2].detail)
+        assertEquals("BUY 75 · LIMIT · AMO", s.rows[3].detail)
+        assertNull(s.more); assertNull(s.note)
+    }
+
+    @Test fun bothAccountsEachOnItsOwnLineAndTagged() {
+        val p = Venue(OpenBook.PAPER, -2_000.0, listOf(Pos("BANKNIFTY26OCT56000CE", 30, null, -2_000.0)),
+            listOf(Ord("BANKNIFTY26OCT56500CE", "SELL", 30, "SL-M", 0.0, 410.0, "trigger pending")))
+        val s = OpenBook.screen(listOf(z, p))
+        assertEquals("Today's P&L · Zerodha + Paper", s.caption)
+        assertEquals("−₹766", s.headline)
+        assertEquals(Tone.LOSS, s.tone)
+        assertEquals(listOf("Zerodha  +₹1,234", "Paper  −₹2,000"), s.split)
+        assertEquals("+30 · LTP — · Paper", s.rows[1].detail)
+        assertEquals("-75 · LTP 112.50 · Zerodha", s.rows[0].detail)
+        assertEquals(OpenBook.Row("BANKNIFTY26OCT56500CE", "SELL 30 · SL-M · TRIGGER PENDING · Paper", "trg 410.00", Tone.PLAIN), s.rows.last())
+    }
+
+    @Test fun aQuietPaperAccountIsLeftOutWhileLive() {
+        val s = OpenBook.screen(listOf(z, Venue(OpenBook.PAPER, 0.0)))
+        assertEquals("Today's P&L · Zerodha", s.caption)
+        assertEquals(emptyList(), s.split)
+    }
+
+    @Test fun aFailedReadIsSaidNotShownAsEmpty() {
+        val s = OpenBook.screen(listOf(Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true)))
+        assertEquals("—", s.headline)
+        assertEquals(listOf("Zerodha: could not read"), s.split)
+        assertTrue(s.rows.isEmpty())
+        assertNull(s.note, "not 'No open positions'")
+
+        val both = OpenBook.screen(listOf(Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true), Venue(OpenBook.PAPER, 500.0)))
+        assertEquals("Today's P&L · Paper", both.caption)
+        assertEquals("+₹500", both.headline)
+        assertEquals(listOf("Zerodha: could not read", "Paper  +₹500"), both.split)
+        assertEquals("No open Paper positions or orders", both.note)
+    }
+
+    @Test fun nothingOpen() {
+        val s = OpenBook.screen(listOf(Venue(OpenBook.PAPER, -150.0, listOf(Pos("X", 0, 1.0, -150.0)),
+            listOf(Ord("Y", "BUY", 1, "LIMIT", 1.0, 0.0, "COMPLETE")), primary = true)))
+        assertEquals(OpenBook.NOTHING_OPEN, s.note)
+        assertEquals("−₹150", s.headline)
+        assertEquals(OpenBook.WAITING, OpenBook.screen(emptyList()).note)
+        assertEquals("—", OpenBook.screen(emptyList()).headline)
+    }
+
+    @Test fun cappedWithAMoreLine() {
+        val v = Venue(OpenBook.PAPER, 0.0, (1..11).map { Pos("S$it", it, 1.0, 0.0) }, primary = true)
+        val s = OpenBook.screen(listOf(v), maxRows = 8)
+        assertEquals(8, s.rows.size)
+        assertEquals("S8", s.rows.last().title)
+        assertEquals("+3 more", s.more)
+        assertEquals(Tone.PLAIN, s.rows[0].tone)
+        assertNull(OpenBook.screen(listOf(v), maxRows = 11).more)
+    }
+
+    @Test fun theStamp() {
+        val now = LocalDateTime.of(2026, 10, 5, 14, 7)
+        assertEquals("as of 09:05", OpenBook.asOf(LocalDateTime.of(2026, 10, 5, 9, 5), now))
+        assertEquals("as of 3 Oct 15:29", OpenBook.asOf(LocalDateTime.of(2026, 10, 3, 15, 29), now))
+    }
+
+    @Test fun theCodecRoundTrips() {
+        val tricky = z.copy(positions = z.positions + Pos("A\tB\nC", 1, null, 0.0), problem = null)
+        val back = OpenBook.decode(OpenBook.encode(tricky))!!
+        assertEquals(tricky.copy(positions = z.positions + Pos("A B C", 1, null, 0.0)), back)
+        val failed = Venue(OpenBook.ZERODHA, null, problem = "could not read")
+        assertEquals(failed, OpenBook.decode(OpenBook.encode(failed)))
+        assertNull(OpenBook.decode(null)); assertNull(OpenBook.decode("")); assertNull(OpenBook.decode("garbage"))
+        assertNull(OpenBook.decode("V\tZerodha\tnotanumber\t\t1"))
+
+        val text = OpenBook.encodeOrders("2026-10-05", z.orders)
+        assertEquals(z.orders, OpenBook.decodeOrders(text, "2026-10-05"))
+        assertEquals(emptyList(), OpenBook.decodeOrders(text, "2026-10-06"), "yesterday's orders are not today's")
+        assertEquals(emptyList(), OpenBook.decodeOrders(null, "2026-10-05"))
+    }
+}

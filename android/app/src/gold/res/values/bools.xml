@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- IraGoldAlgo has no Zerodha books: the "Open" widget is not offered. -->
+    <bool name="open_widget_enabled">false</bool>
+</resources>

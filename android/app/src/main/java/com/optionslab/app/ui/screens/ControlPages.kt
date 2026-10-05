@@ -286,8 +286,9 @@ fun SecurityPage(model: AppModel) {
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("security.backup") { BackupCard(model, s.wipeOnExhaustion) } }
         item {
             LedgerCard(title = "Home-screen widget") {
-                ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown.", s.widgetPnl) { on ->
+                ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown; the Open widget shows nothing else without it.", s.widgetPnl) { on ->
                     model.update { it.copy(widgetPnl = on) }
+                    runCatching { com.optionslab.app.widget.OpenWidget.refresh(context, on) }
                 }
             }
         }

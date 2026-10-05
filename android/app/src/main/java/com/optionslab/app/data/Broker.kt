@@ -454,7 +454,10 @@ object Broker {
 
     suspend fun orders(): List<OrderRow> {
         val arr = call("GET", "/orders") as JSONArray
-        return rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
+        val list = rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
+        // The "Open" widget's pending orders come from the reads already made here; it never reads Zerodha itself.
+        runCatching { com.optionslab.app.widget.OpenWidget.fromOrders(app, list) }
+        return list
     }
 
     private fun orderRow(o: JSONObject) = OrderRow(o.optString("order_id"), o.optString("tradingsymbol"), o.optString("transaction_type"),

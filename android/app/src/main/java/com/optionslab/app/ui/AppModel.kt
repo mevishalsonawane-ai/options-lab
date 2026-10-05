@@ -790,6 +790,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 trackPnl(book)
                 livePositions.value = book.net
+                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book) }
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = tradesQ.await()
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
@@ -1691,6 +1692,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
                 val snap = com.optionslab.app.data.Paper.snapshot()
                 recordPaperDay(snap)
+                runCatching { com.optionslab.app.widget.OpenWidget.fromPaper(ctx, snap) }
                 Load.Done(snap)
             } catch (e: Exception) { Load.Failed(e.message ?: "could not read the paper account") }
           } finally {

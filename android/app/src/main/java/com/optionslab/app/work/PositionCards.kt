@@ -125,6 +125,7 @@ object PositionCards {
             card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl)
         }
         widgetFromStream(context, moved.pnl)
+        runCatching { com.optionslab.app.widget.OpenWidget.fromStream(context, moved) }
     }
 
     @Volatile private var widgetAt = 0L
@@ -152,7 +153,8 @@ object PositionCards {
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val now = HashMap<String, Unit>()
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
+        val paperSnap = runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()
+        paperSnap?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
             val key = "Paper|${p.symbol}"
             if (p.quantity != 0) {
                 now[key] = Unit
@@ -161,10 +163,12 @@ object PositionCards {
             }
             else if (shown.remove(key) != null) card(context, "Paper", p.symbol, 0, p.averagePrice, null, p.pnl)
         }
-        if (s.live && Broker.loggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
+        val liveLoggedIn = Broker.loggedIn
+        var liveBook: Broker.Positions? = null
+        if (s.live && liveLoggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
             lastLive = book
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
-        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.net?.also { net ->
+        }?.let { com.optionslab.app.data.KiteStream.live(it) }?.also { liveBook = it }?.net?.also { net ->
             // Who opened a Zerodha position is read from the day's trades only when it is new or its size changed.
             val stale = net.filter { it.qty != 0 && sourceQty["Live|${it.symbol}"] != it.qty }
             if (stale.isNotEmpty()) runCatching {
@@ -186,5 +190,7 @@ object PositionCards {
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
         anyOpen = now.isNotEmpty()
+        // The "Open" widget from the books just read (no read of its own); a failed Zerodha read is shown as one.
+        runCatching { com.optionslab.app.widget.OpenWidget.fromWatch(context, s.live, liveLoggedIn, liveBook, paperSnap) }
     }
 }

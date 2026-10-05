@@ -136,6 +136,7 @@ object Background {
         clearChartCache()
         clearAlerts()
         clearCards()
+        com.optionslab.app.widget.OpenWidget.resetForTest()
     }
 
     fun clearChartCache() {
