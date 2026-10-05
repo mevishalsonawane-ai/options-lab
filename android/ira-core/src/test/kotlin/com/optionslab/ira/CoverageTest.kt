@@ -31,7 +31,7 @@ class CoverageTest {
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || Weekdays.asked(said) != null ||
-            NeedsTrue.asked(said) || Clarity.asked(said) != null
+            NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
@@ -52,6 +52,7 @@ class CoverageTest {
             if (Headroom.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (WeekAhead.asked(q) != null) return Kind.INFO
+            if (ZerodhaSession.asked(q) != null) return Kind.ACCOUNT
             if (DataAge.asked(q)) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
@@ -315,6 +316,9 @@ class CoverageTest {
         "maine expiry ke baare mein kya kaha tha" to A,
         // ---- The week ahead from the calendar (WeekAhead, round 15): the calendar's, so information ----
         "what does this week look like" to I, "is this an expiry week" to I, "plan for next week" to I, "is hafte kya hai" to I,
+        // ---- Why Zerodha logged Boss out (ZerodhaSession, voice round 14): his broker session, so the account's kind ----
+        "why was i logged out of zerodha" to A, "why did kite log me out" to A, "what happened to my zerodha session" to A,
+        "zerodha se logout kyun hua" to A, "when does my zerodha session end" to A,
     )
 
     /**
@@ -446,7 +450,7 @@ class CoverageTest {
             PatternCalls.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || MindChange.asked(said) || Weekdays.asked(said) != null || ZerodhaSession.asked(said) != null
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -471,6 +475,7 @@ class CoverageTest {
         if (alone && Headroom.asked(q) != null) return "Headroom"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
+        if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && Honest.asked(q) != null) return "Honest"
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
@@ -878,6 +883,11 @@ class CoverageTest {
         "how many trading days this week" to "WeekAhead", "what's coming up this week" to "WeekAhead",
         "expiries and holidays this week" to "WeekAhead", "plan for next week" to "WeekAhead", "agle hafte kya hai" to "WeekAhead",
         "what does next week look like" to "WeekAhead", "is hafte kya hai" to "WeekAhead",
+        // ---- ZerodhaSession (voice round 14): why the Zerodha login ended, from the diagnostics; logging in stays Boss's own ----
+        "why was i logged out of zerodha" to "ZerodhaSession", "why did zerodha log me out" to "ZerodhaSession",
+        "why did my kite session expire" to "ZerodhaSession", "what happened to my zerodha login" to "ZerodhaSession",
+        "why do i keep getting logged out of kite" to "ZerodhaSession", "zerodha se logout kyun hua" to "ZerodhaSession",
+        "when does my zerodha session end" to "ZerodhaSession",
         "hammer ke baare mein maine kya bola tha" to "SaidAbout",
         // ---- Clarity (round 11): the answers said shorter aloud, and back to usual ----
         "which answers do you keep short" to "Clarity", "which of your answers do you keep shorter" to "Clarity",

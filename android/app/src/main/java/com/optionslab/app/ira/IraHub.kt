@@ -1224,6 +1224,7 @@ object IraHub {
                 com.optionslab.ira.ChainDrift.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
+                com.optionslab.ira.ZerodhaSession.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.Weekdays.asked(q) != null ||
@@ -1460,6 +1461,25 @@ object IraHub {
                         runCatching { IraEvents.owner() }.getOrDefault(emptyList()), unlocked)
                 }.getOrElse { "I could not read the calendar just now, Boss." }
                 reply(said)
+            }
+            return
+        }
+        // "Why was I logged out of Zerodha?", "why did Kite log me out?", "when does my Zerodha session end?", "zerodha se
+        // logout kyun hua" ([com.optionslab.ira.ZerodhaSession]): from the diagnostics diary (each TokenException with its path
+        // and Kite's message, the day's login, Boss's own logout - no key or token is ever in it), the first sentence saying
+        // what happened. His broker session, so never on a locked phone; reads only - nothing logs in, out or changes (logging
+        // in stays Boss's own step on the Zerodha screen, never by voice). (Not in IraGoldAlgo: no broker there.)
+        val kiteAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.ZerodhaSession.asked(q) }.getOrNull() else null
+        if (kiteAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    val b = com.optionslab.app.data.Broker
+                    com.optionslab.ira.ZerodhaSession.answer(kiteAsk, com.optionslab.app.data.Diag.lines(), LocalDateTime.now(IST),
+                        b.linked, b.loggedIn, b.expiresAt()?.withZoneSameInstant(IST)?.toLocalDateTime())
+                }.getOrElse { "I could not read the Zerodha record just now, Boss." })
             }
             return
         }

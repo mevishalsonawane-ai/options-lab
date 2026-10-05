@@ -71,6 +71,16 @@ object Diag {
     /** Waits for the writes queued so far (tests, and the report, read what was just recorded). */
     fun flush() { runCatching { writer.submit {}.get(5, java.util.concurrent.TimeUnit.SECONDS) } }
 
+    /**
+     * The diary's lines as kept ("MM-dd HH:mm:ss [area] text", oldest first, already redacted), after the queued writes:
+     * read on the phone only (Jarvis's "why was I logged out of Zerodha?"), never sent anywhere.
+     */
+    fun lines(): List<String> {
+        if (!::file.isInitialized) return emptyList()
+        flush()
+        return synchronized(this) { diary().toList() }
+    }
+
     /** The report the owner copies: the app's state (no identities, no keys), then the latest events and bot notes. */
     suspend fun report(): String = buildString {
         flush()
