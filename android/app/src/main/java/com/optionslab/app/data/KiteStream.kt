@@ -337,6 +337,12 @@ object KiteStream {
     /**
      * Bring the socket's subscriptions in line with what is wanted, full mode (depth and OI). At most Kite's 3000
      * instruments (the indices and open positions kept first), sent in messages of 500.
+     *
+     * Battery (round 9), kept full on purpose for every token: "quote" mode drops the depth and the OI. A contract not
+     * held yet still needs them - a paper MARKET order fills at the best ask or bid from [Paper]'s stream quote (else the
+     * last price), a news trade's liquidity check reads bid, ask and volume ([Broker.quotes]), and the chain's largest OI
+     * reads the streamed OI - and an index's full packet is only 4 bytes more than its quote packet (the exchange time
+     * the chart's live candle uses), at the same one tick a second, so it would save nothing worth the radio.
      */
     private fun resubscribe() {
         val ws = socket ?: return

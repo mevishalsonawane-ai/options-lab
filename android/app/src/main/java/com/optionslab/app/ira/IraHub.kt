@@ -4105,12 +4105,33 @@ object IraHub {
         return tradeCheck().also { checked = now to it }
     }
 
-    /** Keeps the slow answers ready (called every 30 s while Jarvis listens): your account and the trade check. */
+    /**
+     * Keeps the slow answers ready (called every 30 s while Jarvis listens): your account, and the trade check - every
+     * 30 s while something can use it within the minute ([checkKeptFast]), else every 2 minutes
+     * ([com.optionslab.ira.CheckWarmPace]; Battery, round 9). [tradeCheckFast] never uses one a minute old or more.
+     */
     suspend fun warm() {
         if (GOLD_ONLY_TALK) return
         runCatching { IraAccount.warm() }
-        runCatching { checked = android.os.SystemClock.elapsedRealtime() to tradeCheck() }
+        val warmAt = android.os.SystemClock.elapsedRealtime()
+        val checkAt = checked?.first
+        if (com.optionslab.ira.CheckWarmPace.due(checkAt?.let { warmAt - it }, checkKeptFast()))
+            runCatching { checked = android.os.SystemClock.elapsedRealtime() to tradeCheck() }
     }
+
+    /**
+     * Can anything use a trade check within the minute (Battery, round 9)? Solo on or its setups offered as ideas (it then
+     * reaches its gate, [IraSolo.tick]), Jarvis taking paper trades alone ([Automations.Auto.ACT_PAPER]), or anything
+     * held or waiting to fill: the paper book, Solo's or the news trades' own, and in Live with a Zerodha session always
+     * (its positions are not read here). A read failing says yes.
+     */
+    private fun checkKeptFast(): Boolean = runCatching {
+        val soloGate = IraSolo.on || Automations.on(Automations.Auto.SOLO_IDEAS)
+        val alone = Automations.on(Automations.Auto.ACT_PAPER)
+        val held = com.optionslab.app.data.Paper.watching() || IraSolo.all().any { !it.closed } || IraNewsTrades.all().any { !it.closed } ||
+            (com.optionslab.app.data.AppSettings.load().live && com.optionslab.app.data.Broker.loggedIn)
+        com.optionslab.ira.CheckWarmPace.fast(soloGate, alone, held)
+    }.getOrDefault(true)
 
     /**
      * The day's P&L so far (Zerodha's in Live, else the paper account's), or null when it cannot be read. [paperReuseMs]

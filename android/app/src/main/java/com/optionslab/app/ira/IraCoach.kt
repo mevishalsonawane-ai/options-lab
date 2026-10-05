@@ -951,7 +951,8 @@ internal object IraCoach {
         val live = AppSettings.load().live
         val zerodha = live && Broker.loggedIn
         val pnl = runCatching {
-            if (zerodha) Broker.positionBook().net.sumOf { it.pnl } else Paper.snapshot().dayPnl
+            // Words only (the wrap-up said and noted): a paper price read in the last 20 s is shared (Battery, round 9).
+            if (zerodha) Broker.positionBook().net.sumOf { it.pnl } else Paper.snapshot(Paper.SHARED_QUOTE_MS).dayPnl
         }.getOrNull()?.let { "${if (zerodha) "Zerodha" else "Paper"} today: ${AppFacts.rs(it)}." }
         val events = runCatching { IraEvents.upcoming(2).map { com.optionslab.ira.Events.line(it, com.optionslab.app.data.Market.today()) } }.getOrDefault(emptyList())
         // How Nifty's day went comes first: the market's story, then Boss's own.

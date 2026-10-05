@@ -365,3 +365,25 @@ object GoldPass {
     fun due(booksRead: Boolean, anyArmed: Boolean, anyHeld: Boolean, trendWaitsFlip: Boolean): Boolean =
         !booksRead || anyArmed || anyHeld || trendWaitsFlip
 }
+
+/**
+ * Battery (round 9): while Jarvis listens in market hours, [warm] kept a fresh trade check ready every 30 s - Nifty's
+ * and BankNifty's bars, the day's P&L and each arm's record read again - so Solo's gate (and a trade idea's confidence)
+ * finds one under a minute old instead of working one out inside its pass. When nothing can use it that fast - Solo off
+ * and its setups not offered as ideas, Jarvis not taking paper trades alone, nothing held or waiting to fill (and, in
+ * Live with a Zerodha session, always treated as possibly held) - it is kept ready every 2 minutes instead (8 checks in
+ * 4 minutes become 2). A gate never uses an old check: [tradeCheckFast] works one out afresh whenever the one
+ * kept is a minute old or more, so this only decides how often a check is worked out ahead; with anything that can
+ * place an entry it stays every 30 s. Any doubt (a read failing) keeps the 30 s pace. Pure.
+ */
+object CheckWarmPace {
+    /** How often the check is worked out ahead when nothing can enter or is held. */
+    const val SLOW_MS = 120_000L
+
+    /** Something can use a check within the minute: Solo can reach its gate, Jarvis acts alone on paper, or something is held. */
+    fun fast(soloCanEnter: Boolean, actsAlone: Boolean, held: Boolean): Boolean = soloCanEnter || actsAlone || held
+
+    /** Work the check out on this warm pass? [sinceLastMs]: since the last one was kept (null: none yet). */
+    fun due(sinceLastMs: Long?, fast: Boolean): Boolean =
+        fast || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= SLOW_MS
+}

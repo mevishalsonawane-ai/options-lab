@@ -57,7 +57,8 @@ internal object IraAgenda {
             val read = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).async { runCatching { b.passPositionBook().net.count { it.open } }.getOrNull() }
             return kotlinx.coroutines.withTimeoutOrNull(15_000) { read.await() }
         }
-        return runCatching { com.optionslab.app.data.Paper.snapshot().positions.positions.count { it.quantity != 0 } }.getOrNull()
+        // A count only (no price in it), said or put in the plan: a paper price read in the last 20 s is shared (Battery, round 9).
+        return runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.app.data.Paper.SHARED_QUOTE_MS).positions.positions.count { it.quantity != 0 } }.getOrNull()
     }
 
     /** Today's plan, made now if there is none yet for today ([made]: it was just made). */

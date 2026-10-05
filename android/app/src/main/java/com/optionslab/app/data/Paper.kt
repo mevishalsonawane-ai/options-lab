@@ -111,6 +111,8 @@ object Paper {
     )
 
     val state: SandboxState get() = book().state
+    /** An open order or an open position in the paper book (no price read): Battery, round 9. */
+    fun watching(): Boolean = watched(book().state).isNotEmpty()
     val capital: BigDecimal get() = book().capital
     /** The contract a paper symbol stands for (underlying, expiry, type, lot), when it has been traded here. */
     fun contractOf(symbol: String): Contract? = book().contracts[symbol]
