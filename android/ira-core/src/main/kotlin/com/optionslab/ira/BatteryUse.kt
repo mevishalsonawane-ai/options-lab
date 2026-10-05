@@ -479,3 +479,25 @@ object CaptureEcho {
     fun plainAfter(listening: Boolean, inSpeech: Boolean, callSource: Boolean, speechBegan: Boolean, partial: Boolean): Boolean =
         listening && inSpeech && callSource && !speechBegan && !partial
 }
+
+/**
+ * Battery (round 16): the order watch's index levels in Live mode. Each pass (once a minute, screen on or off) read
+ * every index it has a reader for - the widget's NIFTY and BANKNIFTY, an open ticket's underlying, an alarm on an
+ * index - from Zerodha as a quote AND the day's 1-minute candles so far, the candles only for the day's high, low and
+ * sparkline. The watch reads none of those: the ticket's cushion, the alarms and the widget use the last price and the
+ * change from the open, both in the quote. So the watch now asks for the quote alone (not [wanted]): with the widget
+ * placed, 2 Kite requests a minute instead of 4 (about 750 fewer historical-candle reads a session). Screens that draw
+ * the spark still read the candles, once a minute per index as before. Every check reads the same quote as before. Pure.
+ */
+object IndexSpark {
+    /**
+     * Read the day's candles for an index quote? Only when the caller [wanted] the spark and none is kept for this
+     * [minute] ([keptMinute]: the minute the kept one was read, null: none; [keptEmpty]: that read had no candles).
+     */
+    fun candles(wanted: Boolean, keptMinute: Int?, minute: Int, keptEmpty: Boolean): Boolean =
+        wanted && (keptMinute != minute || keptEmpty)
+
+    /** Kite requests one index quote costs: the quote, and the candles when [candles] says so. */
+    fun requests(wanted: Boolean, keptMinute: Int?, minute: Int, keptEmpty: Boolean): Int =
+        1 + if (candles(wanted, keptMinute, minute, keptEmpty)) 1 else 0
+}

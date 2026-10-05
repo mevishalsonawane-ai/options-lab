@@ -562,15 +562,22 @@ object Broker {
 
     private val sparks = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, List<Double>>>()
 
-    suspend fun indexQuote(symbol: String): Market.Quote? {
+    /**
+     * [symbol]'s level from Zerodha. [spark] false (the order watch: it reads only the last price and the change from
+     * the open): the quote alone, no read of the day's candles - the high, low and spark are then this minute's kept
+     * ones, else the last price ([com.optionslab.ira.IndexSpark]).
+     */
+    suspend fun indexQuote(symbol: String, spark: Boolean = true): Market.Quote? {
         val (key, token) = INDEX[symbol] ?: return null
         val q = quotes(listOf(key))[key] ?: return null
         val minute = Market.minuteNow()
-        val spark = sparks[symbol]?.takeIf { it.first == minute && it.second.isNotEmpty() }?.second
-            ?: runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList()).also { sparks[symbol] = minute to it }
+        val kept = sparks[symbol]
+        val read = com.optionslab.ira.IndexSpark.candles(spark, kept?.first, minute, kept?.second.isNullOrEmpty())
+        val closes = if (read) runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList()).also { sparks[symbol] = minute to it }
+            else kept?.takeIf { it.first == minute }?.second.orEmpty()
         val m = Market.now().let { it.hour * 60 + it.minute }
-        return Market.Quote(symbol, q.last, q.open.takeIf { it > 0 } ?: q.last, spark.maxOrNull() ?: q.last, spark.minOrNull() ?: q.last, m,
-            spark.ifEmpty { listOf(q.last) })
+        return Market.Quote(symbol, q.last, q.open.takeIf { it > 0 } ?: q.last, closes.maxOrNull() ?: q.last, closes.minOrNull() ?: q.last, m,
+            closes.ifEmpty { listOf(q.last) })
     }
 
     // ---- instruments ---------------------------------------------------------------------

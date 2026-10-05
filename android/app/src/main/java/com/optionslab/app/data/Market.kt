@@ -82,9 +82,13 @@ object Market {
      */
     fun liveMode(): Boolean = AppSettings.load().live
 
-    /** [quick]: short timeouts and no queueing behind chart loads, for the market watch (Upstox feed only). */
-    suspend fun quote(symbol: String, quick: Boolean = false): Quote? =
-        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol, quick)
+    /**
+     * [quick]: short timeouts and no queueing behind chart loads, for the market watch (Upstox feed only). [spark] false:
+     * the caller reads only the last price and the change from the open, so Zerodha's day candles are not read for it
+     * (Live mode; the Upstox feed reads its candles for the price itself).
+     */
+    suspend fun quote(symbol: String, quick: Boolean = false, spark: Boolean = true): Quote? =
+        if (liveMode()) Broker.indexQuote(symbol, spark) else upstoxQuote(symbol, quick)
 
     private suspend fun upstoxQuote(symbol: String, quick: Boolean): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)

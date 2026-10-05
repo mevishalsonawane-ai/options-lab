@@ -651,9 +651,11 @@ object Tasks {
         // Battery (round 2): only the ones something reads this pass - the open ticket's underlying, an enabled alarm
         // on the index, a widget on the home screen. None of them: no read at all (stops and targets never used these).
         val wanted = indexQuotesWanted(context, open?.row?.ticket?.underlying)
+        // Battery (round 16): every reader here takes the last price and the change from the open, never the day's
+        // high, low or spark - so in Live mode the quote alone, not the day's candles too ([com.optionslab.ira.IndexSpark]).
         val q = kotlinx.coroutines.coroutineScope {
             wanted.map { sym ->
-                async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true) } }.getOrNull() }
+                async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true, spark = false) } }.getOrNull() }
             }.mapNotNull { it.await() }.associateBy { it.symbol }
         }
         // The index quotes feed the alarms, the ticket's risk checks and the widget; the ongoing notice itself

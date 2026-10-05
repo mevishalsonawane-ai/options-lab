@@ -160,4 +160,20 @@ class BrokerLiveTest : RobolectricTest() {
         assertEquals("DELETE" to "/gtt/triggers/$id", kite.requests.last().let { it.method to it.path })
         assertTrue(Broker.gtts().isEmpty())
     }
+
+    @Test fun theOrderWatchsIndexLevelIsTheQuoteAloneNoDayCandles() = runBlocking {
+        // Battery, round 16: the watch reads only the last price and the change from the open.
+        kite.quote("NSE:NIFTY BANK", 55_000.0)
+        repeat(3) {
+            val q = Broker.indexQuote("BANKNIFTY", spark = false)
+            assertEquals(55_000.0, q!!.last, 0.0)
+        }
+        val candles = { kite.requests.count { it.path.startsWith("/instruments/historical/") } }
+        assertEquals("one quote a read", 3, kite.requests.count { it.path == "/quote" })
+        assertEquals("and never the day's candles", 0, candles())
+        // A screen that draws the spark still reads the day's candles with its quote (once a minute, as before).
+        Broker.indexQuote("BANKNIFTY")
+        assertEquals(4, kite.requests.count { it.path == "/quote" })
+        assertTrue(candles() <= 1)
+    }
 }
