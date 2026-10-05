@@ -847,6 +847,28 @@ internal object IraCoach {
     }
 
     /**
+     * "Where do I make my money?", "am I better at calls or puts?" ([com.optionslab.ira.WhereIWin]): Boss's own closed trades
+     * split by index, calls / puts / futures and bought or sold first, each account apart (Zerodha only when it has trades).
+     * A trade book that could not be read is said so, never taken as no trades. Reads only: nothing is placed, changed or armed.
+     */
+    suspend fun whereIWin(question: String, first: com.optionslab.ira.WhereIWin.Cut): String {
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val today = com.optionslab.app.data.Market.today()
+        val span = com.optionslab.ira.WhereIWin.span(question)
+        val out = ArrayList<String>()
+        for (live in listOf(true, false)) {
+            val label = if (live) "Zerodha" else "Paper"
+            val book = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrNull()
+            if (book == null) { out += "$label: I could not read your $label trade book just now, so it is left out - not taken as no trades."; continue }
+            if (live && book.isEmpty()) continue
+            val trades = book.map { com.optionslab.ira.WhereIWin.Trade(it.symbol, it.direction, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners)) }
+            out += com.optionslab.ira.WhereIWin.lines(label, trades, span, today, first)
+        }
+        out += com.optionslab.ira.WhereIWin.CLOSING
+        return out.joinToString("\n")
+    }
+
+    /**
      * "For my 24500 put to work, what needs to happen?", "where is my breakeven?" ([com.optionslab.ira.NeedsTrue]): each
      * open position (or the one named) worked through - breakeven, distance, sessions left, the typical move and how often
      * one like it happened on the phone's own candles, time decay. Reads only: nothing is placed, changed or closed.

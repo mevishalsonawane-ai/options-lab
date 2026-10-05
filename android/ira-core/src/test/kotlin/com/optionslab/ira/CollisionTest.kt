@@ -102,6 +102,7 @@ class CollisionTest {
         "PnlGap" to { q -> PnlGap.asked(q) },
         "ArmDay" to { q -> ArmDay.asked(q) != null },
         "BookDecay" to { q -> BookDecay.asked(q) },
+        "WhereIWin" to { q -> WhereIWin.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
         "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
@@ -807,6 +808,11 @@ class CollisionTest {
         "how much decay over the weekend on my positions" to "BookDecay", "how much theta am i collecting" to "BookDecay",
         "mera theta kitna hai" to "BookDecay", "meri positions ka theta kitna hai" to "BookDecay", "time decay se kitna nuksan ho raha hai" to "BookDecay",
         "decay kitna kha raha hai" to "BookDecay",
+        // ---- WhereIWin: where his own trading makes and loses its money (usefulness round 30) ----
+        "where do i make my money" to "WhereIWin", "am i better at calls or puts" to "WhereIWin", "my calls vs my puts" to "WhereIWin",
+        "do i make more buying or selling options" to "WhereIWin", "which index do i make money on" to "WhereIWin",
+        "what kind of trades work for me" to "WhereIWin", "my best index" to "WhereIWin", "call mein zyada kamata hoon ya put mein" to "WhereIWin",
+        "kis index mein paisa banta hai" to "WhereIWin",
         // ---- ArmChange: the arms' paper results this week against last week ----
         "what's changed in my arms' results this week vs last" to "ArmChange", "how are my bots doing this week compared to last week" to "ArmChange",
         "my arms this week vs last week" to "ArmChange", "my strategies week on week" to "ArmChange", "what changed in my bots this week" to "ArmChange",
@@ -1182,7 +1188,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
