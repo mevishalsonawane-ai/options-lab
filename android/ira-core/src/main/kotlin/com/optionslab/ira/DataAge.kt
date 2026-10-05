@@ -208,6 +208,12 @@ object DataAge {
         fun day(d: LocalDate): Day? = days.firstOrNull { it.day == d }
     }
 
+    /**
+     * Did [now] change anything in [was] besides the counts of checks made and found old (a new day, a spell, an answer)?
+     * A counts-only change - the watch's check every minute - may wait to be written ([Upkeep.dueToSave]).
+     */
+    fun material(was: Log, now: Log): Boolean = was.days.map { it.copy(checks = 0, old = 0) } != now.days.map { it.copy(checks = 0, old = 0) }
+
     private fun update(log: Log, now: LocalDateTime, f: (Day) -> Day): Log {
         val d = now.toLocalDate()
         val was = log.day(d) ?: Day(d)

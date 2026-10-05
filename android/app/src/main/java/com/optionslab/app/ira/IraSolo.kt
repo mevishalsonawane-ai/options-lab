@@ -148,7 +148,9 @@ internal object IraSolo {
             val q = runCatching { Paper.quote(c) }.getOrNull() ?: continue
             SoloCalibration.sellPrice(q.bid, q.ltp)?.let { done[x] = it }
         }
-        saveShadows(kept.map { x -> done[x]?.let { x.copy(exit = it) } ?: x })
+        // Written only when something changed (a price not read leaves it for the next pass, without a vault write).
+        val next = kept.map { x -> done[x]?.let { x.copy(exit = it) } ?: x }
+        if (next != all) saveShadows(next)
     }
 
     /** A trade Solo sits out by its own record: followed on paper as if taken (no order), one at a time a market. */
@@ -286,6 +288,9 @@ internal object IraSolo {
 
     /** Every pass in market hours: each market's brain reads the new minutes and learns (whether Solo trades or not). */
     private suspend fun learnTick(today: LocalDate, now: Int) {
+        // One save for every market's minds and marks (each save re-encrypts and rewrites the whole vault, and this runs
+        // every minute of the session): the same values, kept as before.
+        val save = HashMap<String, Any?>()
         for (m in MARKETS) {
             val bars = runCatching { IraHub.freshBars(m) }.getOrNull() ?: continue
             val day = session(bars, today, now)
@@ -302,14 +307,13 @@ internal object IraSolo {
                     val upTo = day.lastIndex - SETTLE
                     if (upTo > b.done) {
                         feed(b, day, upTo)
-                        // One save for the market's minds and its mark (each save re-encrypts and rewrites the whole vault,
-                        // and this runs every minute of the session): the same values, kept as before.
-                        com.optionslab.app.security.SecurePrefs.putAll(
-                            b.minds.associate { mind -> mindKey(m, mind.h) to mind.l.save() } + (brainKey(m) + ".at" to "$today|${b.done}"))
+                        // The market's minds and its mark, saved together below.
+                        save.putAll(b.minds.associate { mind -> mindKey(m, mind.h) to mind.l.save() } + (brainKey(m) + ".at" to "$today|${b.done}"))
                     }
                 }
             }
         }
+        if (save.isNotEmpty()) runCatching { com.optionslab.app.security.SecurePrefs.putAll(save) }
     }
 
     /** A learned trade's horizon, from its reason ("... over the next 30 minutes"); 15 when not said. */

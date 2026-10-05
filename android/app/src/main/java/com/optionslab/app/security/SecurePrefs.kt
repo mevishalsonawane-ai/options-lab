@@ -112,6 +112,9 @@ object SecurePrefs {
     /** Every key and value (the backup); callers filter out what must never leave the vault. */
     @Synchronized fun snapshot(): Map<String, Any?> = map().let { m -> m.keys().asSequence().associateWith { m.opt(it) } }
 
+    /** The keys starting with [prefix] (to prune per-day keys); names only. */
+    @Synchronized fun keys(prefix: String): List<String> = map().keys().asSequence().filter { it.startsWith(prefix) }.toList()
+
     @Synchronized fun wipe() {
         generation++; pending = false
         cache = JSONObject()

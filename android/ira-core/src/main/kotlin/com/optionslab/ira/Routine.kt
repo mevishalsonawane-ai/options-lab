@@ -240,8 +240,18 @@ object Routine {
     fun kept(k: Kept): String = "Done, Boss: ${whenSaid(k.kind, k.minute, k.day)} I'll tell you ${about(k.key)} - in words only, never an action. " +
         "Say \"forget my routine\" to stop."
 
-    /** [kept] with [k] in place of any of the same routine. */
-    fun put(kept: List<Kept>, k: Kept): List<Kept> = kept.filter { it.key != k.key || it.kind != k.kind || it.day != k.day } + k
+    /** At most this many routines are kept (lapsed ones go first, then the oldest): a lapsed one is otherwise never dropped. */
+    const val KEPT_MAX = 24
+
+    /** [kept] with [k] in place of any of the same routine (and at most [KEPT_MAX] in all). */
+    fun put(kept: List<Kept>, k: Kept): List<Kept> {
+        val all = kept.filter { it.key != k.key || it.kind != k.kind || it.day != k.day } + k
+        if (all.size <= KEPT_MAX) return all
+        // [k] was kept today, for [KEEP_DAYS]: the routines lapsed by then are dropped first, the longest lapsed first.
+        val today = k.until.minusDays(KEEP_DAYS)
+        val lapsed = all.filter { today.isAfter(it.until) }.sortedBy { it.until }.take(all.size - KEPT_MAX).toSet()
+        return all.filter { it !in lapsed }.takeLast(KEPT_MAX)
+    }
 
     /** Boss asked [key] himself on [today]: his kept routines of it last another [KEEP_DAYS] from today. */
     fun renew(kept: List<Kept>, key: String, today: LocalDate): List<Kept> =

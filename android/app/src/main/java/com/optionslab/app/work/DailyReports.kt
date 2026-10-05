@@ -107,7 +107,11 @@ object DailyReports {
         // The notification is the worker's post; the voice and the chat note are once a day (a retried run repeats nothing).
         val onceKey = "jarvis.closedMorning.$today"
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) != null }.getOrDefault(false)) return title to lines
-        runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, "1") }
+        // One key a closed day: the earlier days' are dropped with it (only today's is ever read).
+        runCatching {
+            val old = com.optionslab.ira.Upkeep.staleDayKeys(com.optionslab.app.security.SecurePrefs.keys("jarvis.closedMorning."), "jarvis.closedMorning.", today, 1)
+            com.optionslab.app.security.SecurePrefs.putAll(old.associateWith<String, Any?> { null } + (onceKey to "1"))
+        }
         runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
             (if (brief.isEmpty()) "" else " From my night's study: " + brief.take(2).joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })) }
         com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }))

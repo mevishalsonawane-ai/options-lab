@@ -227,12 +227,13 @@ internal object IraJournal {
         return out
     }
 
-    private val newsTold = HashSet<String>()
+    /** Headlines already told against a position, the newest 1,000 only (the app can run for days). */
+    private val newsTold = LinkedHashSet<String>()
 
     /** A headline on an index the owner holds: good or bad for the side held, told at once (once per headline). */
     suspend fun positionNews(h: com.optionslab.ira.Headline) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.POSNEWS)) return
-        if (!synchronized(newsTold) { newsTold.add(h.title) }) return
+        if (!synchronized(newsTold) { newsTold.add(h.title).also { com.optionslab.ira.Upkeep.trimOldest(newsTold, 1_000) } }) return
         val text = com.optionslab.ira.PositionNews.say(h.title, h.tone, held(), h.markets) ?: return
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, news on your position", text) }
         IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.POSNEWS, text)

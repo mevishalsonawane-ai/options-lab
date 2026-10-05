@@ -52,26 +52,12 @@ object Backup {
         "n" to "ira-book.vault", "n" to "ira-state.vault")
 
     /**
-     * Preferences that stay on this phone only: never written to a backup, never taken from one.
-     *
-     * RULE: safety settings never come from a file. Trading mode and order limits (k.), the risk
-     * guard - kill switch, loss / drawdown / exposure / lot / value limits, cut-off, expiry
-     * square-off (g.) - the security switches (sec.), the idle lock (lock.) and what the widget
-     * may show (ui.widgetPnl, and its cached figures w.) are this phone's alone: a restored file
-     * must never be able to switch on live trading, clear the kill switch, loosen a limit or
-     * weaken a lock. A new setting of that kind needs its prefix added here.
+     * Preferences that stay on this phone only: never written to a backup, never taken from one - the PIN, Live mode and
+     * order limits, the risk guard, the locks, AI trades going live, Jarvis's automations and Solo, timed commands, Google
+     * speech and the limits' undo history. The list and its rule are [com.optionslab.ira.Upkeep.PRIVATE] (tested in
+     * ira-core): a new setting of that kind needs its prefix added there.
      */
-    private val PRIVATE = listOf("jarvis.memory", "kite.", "draft.kite", "pin.", "tls.", "ol.vault", "hb.", "sq.", "report.", "k.", "g.", "sec.", "lock.",
-        "ui.widgetPnl", "w.", "intent.", "relay.", "breaker.",
-        // Jarvis: the owner's voice print never leaves the phone; its trades' safety (paper first, loss limit, risk) and
-        // the autopilot are this phone's alone, like the other limits. Its learning (the study, records) is carried.
-        "jarvis.voiceprint", "jarvis.trades.", "jarvis.autopilot",
-        // The record that earns live trading and lot sizing, and the model's verified mark, are never taken from a file.
-        "jarvis.newstrades", "ira.model.verified",
-        // What Jarvis does by himself (the guard places real stop orders; it is switched on with the fingerprint only).
-        "jarvis.group.", "jarvis.auto.", "jarvis.autotrail",
-        // Whether Jarvis's ears may use Google's speech service (speech may leave the phone): Boss's choice on this phone.
-        "jarvis.voice.")
+    private fun carried(key: String): Boolean = com.optionslab.ira.Upkeep.carried(key)
     const val DISARM = "restore.disarm"
 
     private fun file(ctx: Context, dir: String, name: String) = File(if (dir == "f") ctx.filesDir else ctx.noBackupFilesDir, name)
@@ -146,7 +132,7 @@ object Backup {
             if (bytes != null) files.put("$dir/$name", Base64.encodeToString(bytes, Base64.NO_WRAP))
         }
         val prefs = JSONObject()
-        SecurePrefs.snapshot().forEach { (k, v) -> if (PRIVATE.none { k.startsWith(it) } && v != null) prefs.put(k, v) }
+        SecurePrefs.snapshot().forEach { (k, v) -> if (carried(k) && v != null) prefs.put(k, v) }
         return JSONObject().put("v", 1).put("at", System.currentTimeMillis()).put("prefs", prefs).put("files", files)
             .toString().toByteArray(Charsets.UTF_8)
     }
@@ -207,7 +193,7 @@ object Backup {
         }
         val prefs = c.json.getJSONObject("prefs")
         val values = HashMap<String, Any?>()
-        prefs.keys().forEach { k -> if (PRIVATE.none { k.startsWith(it) }) values[k] = prefs.get(k) }
+        prefs.keys().forEach { k -> if (carried(k)) values[k] = prefs.get(k) }
         values[DISARM] = true
         SecurePrefs.putAll(values)
         return Restored(changePin = c.pinSealed)

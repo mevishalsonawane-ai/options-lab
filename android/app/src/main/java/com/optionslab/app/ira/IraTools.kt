@@ -178,6 +178,8 @@ internal object IraTools {
     /** The day's freshness record: counts, times and source names only (never a price or a headline), the last 14 days. */
     private const val FRESH = "jarvis.dataAge"
     @Volatile private var freshCache: com.optionslab.ira.DataAge.Log? = null
+    /** When the record was last written this run (null: not yet). */
+    @Volatile private var freshSavedAt: Long? = null
 
     private fun freshLog(): com.optionslab.ira.DataAge.Log = freshCache ?: runCatching {
         val a = JSONArray(prefs().getString(FRESH) ?: "[]")
@@ -196,6 +198,11 @@ internal object IraTools {
             val log = f(was)
             if (log == was) return@runCatching
             freshCache = log
+            // The watch's check every minute only adds to the counts: that is written at most every 10 minutes (the newest
+            // is in memory, so every answer reads it); a new day, a spell of old data or an answer is written at once.
+            val nowMs = System.currentTimeMillis()
+            if (!com.optionslab.ira.Upkeep.dueToSave(freshSavedAt, nowMs, com.optionslab.ira.DataAge.material(was, log))) return@runCatching
+            freshSavedAt = nowMs
             val a = JSONArray().apply { log.days.forEach { d -> put(JSONObject().put("d", d.day.toString()).put("c", d.checks).put("o", d.old)
                 .put("a", d.answers).put("w", d.warned).put("h", d.withheld)
                 .put("s", JSONArray().apply { d.spells.forEach { x -> put(JSONObject().put("k", x.source.name).put("f", x.from.toString())
@@ -450,18 +457,23 @@ internal object IraTools {
      */
     @Synchronized fun noteHabit(question: String, afterLoss: Boolean = false): com.optionslab.ira.Routine.Pattern? {
         val now = LocalDateTime.now(IST)
+        // One vault write for all of it - the habit, its day, the day's count and the routine (each write re-encrypts the
+        // whole vault, and this runs on every market question): the same values as before.
+        val writes = HashMap<String, Any?>()
         runCatching {
             val k = com.optionslab.ira.Habits.key(question)
             if (k != null) {
                 val c = com.optionslab.ira.Habits.add(habits(), k, now.hour)
-                prefs().put(HABITS, JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString())
+                writes[HABITS] = JSONObject().apply { c.forEach { (key, row) -> put(key, JSONArray(row.toList())) } }.toString()
                 val last = (habitsLast() + (k to now.toLocalDate())).filterKeys { it in c.keys }
-                prefs().put(HABITS_LAST, JSONObject().apply { last.forEach { (key, d) -> put(key, d.toString()) } }.toString())
+                writes[HABITS_LAST] = JSONObject().apply { last.forEach { (key, d) -> put(key, d.toString()) } }.toString()
                 // And counted for the day: "the question you asked most" in his weekly review.
-                count(com.optionslab.ira.Improve.ASKED_PREFIX + k)
+                writes.putAll(counted(com.optionslab.ira.Improve.ASKED_PREFIX + k))
             }
         }
-        return runCatching { noteRoutine(question, now, afterLoss) }.getOrNull()
+        val p = runCatching { noteRoutine(question, now, afterLoss, writes) }.getOrNull()
+        if (writes.isNotEmpty()) runCatching { prefs().putAll(writes) }
+        return p
     }
 
     // ---- Boss's routine ([com.optionslab.ira.Routine]) --------------------------------------------------------------
@@ -494,14 +506,18 @@ internal object IraTools {
         prefs().put(ROUTINE_KEPT, JSONArray(all.map { com.optionslab.ira.Routine.encode(it) }).toString())
     }
 
-    private fun noteRoutine(question: String, now: LocalDateTime, afterLoss: Boolean): com.optionslab.ira.Routine.Pattern? {
+    /** [question] noted in Boss's routine; what to write is added to [writes] (the caller writes it once). */
+    private fun noteRoutine(question: String, now: LocalDateTime, afterLoss: Boolean, writes: MutableMap<String, Any?>): com.optionslab.ira.Routine.Pattern? {
         val k = com.optionslab.ira.Routine.key(question) ?: return null
         val log = com.optionslab.ira.Routine.add(routineLog(), com.optionslab.ira.Routine.Seen(k, now, afterLoss))
-        prefs().put(ROUTINE_LOG, JSONArray(log.map { com.optionslab.ira.Routine.encode(it) }).toString())
+        writes[ROUTINE_LOG] = JSONArray(log.map { com.optionslab.ira.Routine.encode(it) }).toString()
         // Asked by himself: a routine of it he said yes to lasts on.
-        val kept = routineKept()
-        if (kept.any { it.key == k }) saveKept(com.optionslab.ira.Routine.renew(kept, k, now.toLocalDate()))
-        return com.optionslab.ira.Routine.toOffer(com.optionslab.ira.Routine.patterns(log, now.toLocalDate()), k, routineKept(), routineOfferedAt(), now.toLocalDate())
+        var kept = routineKept()
+        if (kept.any { it.key == k }) {
+            kept = com.optionslab.ira.Routine.renew(kept, k, now.toLocalDate())
+            writes[ROUTINE_KEPT] = JSONArray(kept.map { com.optionslab.ira.Routine.encode(it) }).toString()
+        }
+        return com.optionslab.ira.Routine.toOffer(com.optionslab.ira.Routine.patterns(log, now.toLocalDate()), k, kept, routineOfferedAt(), now.toLocalDate())
     }
 
     /** [p] was just put to Boss: not put again for a month, whatever he answers. */
@@ -528,13 +544,27 @@ internal object IraTools {
 
     // ---- the day's usage -----------------------------------------------------------------------------------------
 
-    private fun dayKey() = "jarvis.usage.${com.optionslab.app.data.Market.today()}"
+    /** One key a day ("jarvis.usage.2026-10-05"); the last [USAGE_KEEP_DAYS] days are kept (the weekly review reads one week). */
+    private const val USAGE = "jarvis.usage."
+    private const val USAGE_KEEP_DAYS = 35L
+
+    private fun dayKey() = "$USAGE${com.optionslab.app.data.Market.today()}"
 
     /** One more of [what] today: "heard", "misunderstood", "nameFirst", "failed", "mistakes". */
-    @Synchronized fun count(what: String) = runCatching {
-        val o = JSONObject(prefs().getString(dayKey()) ?: "{}")
+    @Synchronized fun count(what: String) = runCatching { prefs().putAll(counted(what)) }
+
+    /** The writes for one more of [what] today - and, with the day's first count, the days older than [USAGE_KEEP_DAYS] dropped. */
+    private fun counted(what: String): Map<String, Any?> {
+        val key = dayKey()
+        val was = prefs().getString(key)
+        val o = JSONObject(was ?: "{}")
         o.put(what, o.optInt(what) + 1)
-        prefs().put(dayKey(), o.toString())
+        val out = HashMap<String, Any?>()
+        if (was == null) runCatching {
+            com.optionslab.ira.Upkeep.staleDayKeys(prefs().keys(USAGE), USAGE, com.optionslab.app.data.Market.today(), USAGE_KEEP_DAYS).forEach { out[it] = null }
+        }
+        out[key] = o.toString()
+        return out
     }
 
     /** All of [day]'s counts (name to count), for his weekly review ([com.optionslab.ira.Improve.week]). */

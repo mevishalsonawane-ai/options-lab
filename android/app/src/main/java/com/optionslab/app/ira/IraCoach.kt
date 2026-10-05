@@ -385,6 +385,21 @@ internal object IraCoach {
         Automations.acted(Automations.Auto.GAP, text)
     }
 
+    /** The day the day-keyed sets and maps of the watches below were last trimmed for. */
+    @Volatile private var trimmedFor: LocalDate? = null
+
+    /**
+     * The watches' "told once today" sets and the day's looks (all keyed by their day), trimmed to today on the day's
+     * first watch: the app can run for days, and an earlier day's entry is never read again.
+     */
+    private fun trimDays(today: LocalDate) {
+        if (trimmedFor == today) return
+        trimmedFor = today
+        for (s in listOf(wallTold, orbTold, momentTold, expiryTold, vixTold)) synchronized(s) { com.optionslab.ira.Upkeep.dropOldDays(s, today) }
+        for (m in listOf<MutableMap<String, *>>(orbLast, momentLast, expiryReads, vixLast, sharpTold))
+            synchronized(m) { com.optionslab.ira.Upkeep.dropOldDays(m.keys, today) }
+    }
+
     private val walls = HashMap<String, com.optionslab.ira.OiShift.Walls>()
     private val wallTold = HashSet<String>()
 
@@ -392,6 +407,7 @@ internal object IraCoach {
     suspend fun oiWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.OI) || !com.optionslab.app.data.Market.isOpen()) return
         val day = com.optionslab.app.data.Market.today().toString()
+        trimDays(com.optionslab.app.data.Market.today())
         for (u in listOf("NIFTY", "BANKNIFTY")) runCatching {
             val c = kotlinx.coroutines.withTimeoutOrNull(25_000) { IraAccount.chain(u) } ?: return@runCatching
             val call = c.rows.filter { (it.ce?.oi ?: 0) > 0 }.maxByOrNull { it.ce!!.oi }?.strike
@@ -420,6 +436,7 @@ internal object IraCoach {
         val now = java.time.LocalTime.now(IST)
         if (now.isBefore(java.time.LocalTime.of(9, 30))) return
         val day = com.optionslab.app.data.Market.today().toString()
+        trimDays(com.optionslab.app.data.Market.today())
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
             val s = IraHub.state.value.snaps[m] ?: continue
             if (s.at.toLocalDate().toString() != day) continue
@@ -448,6 +465,7 @@ internal object IraCoach {
     fun momentsWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.MOMENTS) || !com.optionslab.app.data.Market.isOpen()) return
         val day = com.optionslab.app.data.Market.today().toString()
+        trimDays(com.optionslab.app.data.Market.today())
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
             val s = IraHub.state.value.snaps[m] ?: continue
             if (s.at.toLocalDate().toString() != day) continue
@@ -479,6 +497,7 @@ internal object IraCoach {
         val now = LocalDateTime.now(IST)
         val slot = com.optionslab.ira.ExpiryDay.due(now.toLocalTime()) ?: return
         val day = com.optionslab.app.data.Market.today().toString()
+        trimDays(com.optionslab.app.data.Market.today())
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) runCatching {
             if (!com.optionslab.app.data.Market.isExpiryDay(m.name)) return@runCatching
             val key = "$day|${m.name}|${slot.name}"
@@ -499,6 +518,7 @@ internal object IraCoach {
     /** "How is expiry going?": today's expiry reads, or null when there are none. */
     fun expirySoFar(): String? {
         val day = com.optionslab.app.data.Market.today().toString()
+        trimDays(com.optionslab.app.data.Market.today())
         val reads = synchronized(expiryReads) {
             listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)
                 .associateWith { m -> expiryReads["$day|${m.name}"]?.toList().orEmpty() }
@@ -517,6 +537,7 @@ internal object IraCoach {
     fun vixWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.VIX) || !com.optionslab.app.data.Market.isOpen()) return
         val day = com.optionslab.app.data.Market.today().toString()
+        trimDays(com.optionslab.app.data.Market.today())
         val v = IraHub.state.value.snaps[com.optionslab.ira.Market.VIX] ?: return
         if (v.at.toLocalDate().toString() != day) return
         val (seen, before) = synchronized(vixLast) { val s = vixLast.containsKey(day); val b = vixLast[day]; vixLast[day] = v.changePct; s to b }
@@ -540,6 +561,7 @@ internal object IraCoach {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.SHARPMOVE) ||
             !com.optionslab.app.data.Market.isOpen()) return
         val day = com.optionslab.app.data.Market.today()
+        trimDays(day)
         val now = LocalDateTime.now(IST)
         val bars = (com.optionslab.ira.SharpMove.INDICES + com.optionslab.ira.Market.VIX).associateWith { IraHub.recentBars(it) }
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
@@ -776,7 +798,9 @@ internal object IraCoach {
                 p
             }
         }
-        com.optionslab.app.security.SecurePrefs.put(key, keep.toString())
+        // Written only when a position came or went (each write re-encrypts the whole vault, and this runs every pass).
+        val text = keep.toString()
+        if (text != com.optionslab.app.security.SecurePrefs.getString(key)) com.optionslab.app.security.SecurePrefs.put(key, text)
         out
     }.getOrDefault(ps)
 
