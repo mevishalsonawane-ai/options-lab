@@ -259,6 +259,9 @@ internal object IraAccount {
                     if (live && trips.isEmpty()) continue
                     val label = if (live) "Zerodha" else "Paper"
                     r += com.optionslab.ira.Insights.week(label, trips, today) + com.optionslab.ira.Insights.patterns(label, trips).drop(1)
+                    // Boss's own trades (not the bots') against last week, and the habits that cost money.
+                    trips.filter { it.owner.startsWith("Manual") }.takeIf { it.isNotEmpty() }?.let { own ->
+                        r += com.optionslab.ira.WeekReview.lines(label, own, today) }
                 }
                 if (com.optionslab.app.BuildConfig.JARVIS) r += IraNewsTrades.record()
                 r += "Autopilot: ${if (IraHub.autopilot) "on" else "off"}."

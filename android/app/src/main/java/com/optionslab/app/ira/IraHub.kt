@@ -362,6 +362,17 @@ object IraHub {
         val lines = com.optionslab.ira.Insights.week("Paper", paper, today) + com.optionslab.ira.Insights.patterns("Paper", paper).drop(1).take(3)
         JarvisPopup.show(c, "Boss, your week", lines.first())
         reply(com.optionslab.ira.Address.boss("Your weekly review. " + lines.joinToString(" ")))
+        // Boss's own trades (not the bots') this week against last, and the habits that cost money: the numbers in the
+        // chat; aloud only plain words, no amount and no symbol (a locked phone may be heard). Words only.
+        if (!com.optionslab.app.BuildConfig.GOLD && Automations.on(Automations.Auto.WEEK)) runCatching {
+            val live = runCatching { com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
+            val own = IraAccount.trips(live, owners).filter { it.owner.startsWith("Manual") }
+            val mine = com.optionslab.ira.WeekReview.lines(if (live) "Zerodha" else "Paper", own, today)
+            reply(com.optionslab.ira.Address.boss("How your own trading went this week. " + mine.joinToString(" ")))
+            com.optionslab.ira.WeekReview.spoken(own, today)?.let { s ->
+                JarvisVoice.announce(s); IraActivity.add("Gave the week's review of your own trades."); Automations.acted(Automations.Auto.WEEK, s)
+            }
+        }
         for (p in _state.value.proposals.filter { it.status == Proposal.APPROVED && it.pineId != null }) {
             val item = com.optionslab.app.data.PineScripts.get(p.pineId!!) ?: continue
             if (!item.auto.on) continue

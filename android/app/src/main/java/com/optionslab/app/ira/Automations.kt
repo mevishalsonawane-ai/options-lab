@@ -34,6 +34,7 @@ internal object Automations {
         HEADSUP("Position heads-ups", "One position of yours losing half, then three quarters, of your daily loss limit by itself, or an option you sold 80% decayed: told once each a day (words only; nothing is closed).", "jarvis.auto.headsup"),
         USUAL("Your usual, unasked", "A market question you ask at the same hour most days (4+ times): said at that hour's start, once a day.", "jarvis.auto.usual"),
         AGENDA("My own plan for the day", "Each morning Jarvis plans his own day (events, expiry, your goals and rules, his weak hours, paper tests, what he studied) and works through it; told at the wrap-up. It only speaks, studies or works on paper; a lesson is kept only on your yes.", "jarvis.auto.agenda"),
+        WEEK("Weekly review", "After the week's last session: your own trades this week against last week, and the habits that cost money (losers held longer, trades in the first five minutes or right after a loss, a day of too many trades). Spoken without amounts; the numbers are in the chat.", "jarvis.auto.week"),
         SUMMARY("15:35 wrap-up", "The day's P&L, scorecard and tomorrow's events, spoken.", "jarvis.auto.summary"),
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
         SELFHEAL("Self-healing voice", "No listening for 3 minutes: the microphone is restarted.", "jarvis.auto.selfheal"),
@@ -56,8 +57,8 @@ internal object Automations {
             "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, gaps filling, the previous day's high or low passed, fear (VIX) spikes, open interest walls moving, and news on indices you hold.",
             "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.OI, Auto.POSNEWS)),
-        COACH("Coach me", "A word when you overtrade, your day's target reached, a position losing a big share of your daily loss limit or a sold option mostly decayed, your usual question answered at its hour, the 09:00 check, Jarvis's own plan for the day and the 15:35 wrap-up spoken.",
-            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.HEADSUP, Auto.USUAL, Auto.MORNING_VOICE, Auto.AGENDA, Auto.SUMMARY)),
+        COACH("Coach me", "A word when you overtrade, your day's target reached, a position losing a big share of your daily loss limit or a sold option mostly decayed, your usual question answered at its hour, the 09:00 check, Jarvis's own plan for the day, the 15:35 wrap-up and the week's review spoken.",
+            "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.HEADSUP, Auto.USUAL, Auto.MORNING_VOICE, Auto.AGENDA, Auto.SUMMARY, Auto.WEEK)),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.group.quiet", listOf(Auto.QUIET)),
     }
 
