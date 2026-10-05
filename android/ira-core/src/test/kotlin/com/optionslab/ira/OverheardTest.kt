@@ -31,6 +31,33 @@ class OverheardTest {
         assertFalse(Overheard.holdsAccount(Overheard.SAID))
     }
 
+    @Test fun plainAmountsInTheAccountsWordsAreAccount() {
+        assertTrue(Overheard.holdsAccount("Boss, you're down 2,500 today."))
+        assertTrue(Overheard.holdsAccount("You’re up 1,240.50 so far"))
+        assertTrue(Overheard.holdsAccount("-3,400.50"))
+        assertTrue(Overheard.holdsAccount("Today: +12,000."))
+        assertTrue(Overheard.holdsAccount("Net 840 after the last trade."))
+        assertTrue(Overheard.holdsAccount("Solo made 1,500 on its paper trade."))
+        assertTrue(Overheard.holdsAccount("Profit so far 3,000, Boss."))
+        assertTrue(Overheard.holdsAccount("You lost 1,20,000 this month."))
+        assertTrue(Overheard.holdsAccount("Charges this week came to 2,340.60."))
+        // Beside a market's name, still the account's when it speaks of Boss's own money.
+        assertTrue(Overheard.holdsAccount("Your position in Nifty is down 1,200."))
+        assertTrue(Overheard.holdsAccount("Nifty fell and you're down 4,000."))
+        // A second sentence holds it.
+        assertTrue(Overheard.holdsAccount("Nifty at 24,612. You're down 2,500 today."))
+    }
+
+    @Test fun marketFiguresCountsAndTimesAreNot() {
+        for (s in listOf("Nifty at 24,612", "Boss, Nifty is at 24,612.", "VIX up 8%", "India VIX up 8.5% today.",
+                "BankNifty is down 180 points from the open.", "Nifty up 120 to 24,612.", "Nifty -120.50 since the open.",
+                "Sensex down 1.2% in the first hour.", "Boss, your alarm: Nifty is up at 24,612.", "Nifty broke support at 24,500-24,450.",
+                "You're down 3 in a row, Boss.", "Up 2 trades out of 3 today.", "You lost 2 of your last 3 trades.",
+                "The expiry square-off is at 15:05.", "Nifty net open interest up 12,00,000 contracts.",
+                "Gap up 150 points on Nifty.", "Trade 2 of 5 today.", "Boss, the 2026-10-05 note is saved."))
+            assertFalse(Overheard.holdsAccount(s), s)
+    }
+
     @Test fun lockedSwapsOnlyAccountLines() {
         val full = "Boss, you've hit today's target: +Rs 5,000 against Rs 4,000."
         assertEquals(Overheard.SAID, Overheard.said(full, locked = true))
@@ -41,5 +68,8 @@ class OverheardTest {
         assertEquals("News trade closed: NIFTY25O0725000CE", Overheard.title("News trade closed: NIFTY25O0725000CE", locked = false))
         assertEquals("India VIX spiking", Overheard.title("India VIX spiking", locked = true))
         assertTrue(Overheard.SAID.startsWith("Boss"))
+        assertEquals(Overheard.SAID, Overheard.said("Boss, you're down 2,500 today.", locked = true))
+        assertEquals("Nifty at 24,612", Overheard.said("Nifty at 24,612", locked = true))
+        assertEquals("VIX up 8%", Overheard.said("VIX up 8%", locked = true))
     }
 }

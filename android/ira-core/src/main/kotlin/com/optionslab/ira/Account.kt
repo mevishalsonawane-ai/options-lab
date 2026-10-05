@@ -16,7 +16,7 @@ enum class Section(val title: String) {
     WHATIF("What if"), CHANGES("Settings changes"), EXPLAIN_POS("Your positions explained"),
     SEARCH("Your trades found"), TIMEOFDAY("Your time of day"), REASONS("Your reasons"), MISTAKES("Mistakes noted"),
     MOVE("If the market moves"), RANK("Your positions ranked"), REPLAY("Your trades replayed"),
-    MONTH("Your month reviewed"),
+    MONTH("Your month reviewed"), CHARGES("Your charges"),
 }
 
 /** Fact lines per section, each a finished sentence; [mode] "Paper" or "Live". */
@@ -166,9 +166,11 @@ object AppAnswers {
         else if (Exposure.rankAsked(text)) { out.clear(); out += Section.RANK }
         // "How was my month?", "review last month": the month's review of Boss's own trades.
         if (MonthReview.asked(text)) { out.clear(); out += Section.MONTH }
+        // "How much did I pay in charges this week?": what the trading paid in charges, and which kind paid most.
+        if (Charges.asked(text)) { out.clear(); out += Section.CHARGES }
         // The new sections are asked on their own: drop the broad matches their words also hit.
         if (!Regex(" and | also | plus ").containsMatchIn(t) && out.any { it == Section.ACTIVITY || it == Section.READY || it == Section.REGIME || it == Section.LOSSES || it == Section.WHATIF || it == Section.CHANGES || it == Section.EXPLAIN_POS ||
-                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH })
+                it == Section.SEARCH || it == Section.TIMEOFDAY || it == Section.REASONS || it == Section.MISTAKES || it == Section.MOVE || it == Section.RANK || it == Section.REPLAY || it == Section.MONTH || it == Section.CHARGES })
             out.removeAll(setOf(Section.EVENTS, Section.POSITIONS, Section.STATUS, Section.STRATEGIES, Section.ORDERS, Section.PNL, Section.SETTINGS, Section.HISTORY, Section.HOWTO, Section.STUDY, Section.REVIEW))
         if (Section.REVIEW in out) { out.remove(Section.HISTORY); out.remove(Section.ORDERS); out.remove(Section.PNL) }
         if (out.isEmpty() || out == setOf(Section.STATUS) && Regex(" (how am i doing|how did i do|my account|account) ").containsMatchIn(t))
@@ -235,7 +237,7 @@ object AppAnswers {
             "above 25000\", \"pivots\", \"is Nifty overbought\", \"recap the day\", \"how did Nifty do this week\", \"brief me\", " +
             "\"what is theta\", and \"the usual\". Quick ones: \"price of BankNifty 52000 PE\", \"which strike is ATM\", \"how many lots " +
             "can I buy with 20000\", \"how far is Nifty from 25000\", \"when is the next expiry\", \"is tomorrow a holiday\", \"remind me at 3 pm " +
-            "to check Nifty\", \"wrap up my day\", \"how was my last trade\", \"how was my month\", \"what did I miss\", \"run a self check\", \"speak slower\" - Hinglish too. " +
+            "to check Nifty\", \"wrap up my day\", \"how was my last trade\", \"how was my month\", \"how much did I pay in charges this week\", \"what did I miss\", \"run a self check\", \"speak slower\" - Hinglish too. " +
             "I don't give buy or sell advice. " + Toolbox.say() + " " + voiceLine, emptyList())
     }
 }

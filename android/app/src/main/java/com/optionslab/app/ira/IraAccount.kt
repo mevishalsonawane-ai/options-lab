@@ -97,7 +97,7 @@ internal object IraAccount {
     }
 
     /** Sections answered from the question's own words: never from the cache. */
-    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH)
+    private val ASKED = setOf(Section.WHATIF, Section.CHANGES, Section.SEARCH, Section.TIMEOFDAY, Section.REASONS, Section.EXPLAIN_POS, Section.MISTAKES, Section.MOVE, Section.RANK, Section.REPLAY, Section.MONTH, Section.CHARGES)
 
     suspend fun read(sections: Set<Section>, markets: List<com.optionslab.ira.Market> = emptyList(), question: String = ""): AppView? {
         testView?.let { return it(sections) }
@@ -265,6 +265,22 @@ internal object IraAccount {
                     r += com.optionslab.ira.MonthReview.lines(if (live) "Zerodha" else "Paper", own, month, today, notes)
                 }
                 out[Section.MONTH] = r
+            }
+            // "How much did I pay in charges this week?": the closed trades' charges (every owner) - the app's own sums.
+            if (wants(Section.CHARGES)) {
+                val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+                val span = com.optionslab.ira.Charges.span(question)
+                val month = com.optionslab.ira.Charges.month(span, today)
+                val r = ArrayList<String>()
+                for (live in listOf(false, true)) {
+                    val trips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
+                        com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+                    }
+                    if (live && trips.isEmpty()) continue
+                    val byCharge = if (month == null) emptyMap() else runCatching { com.optionslab.app.data.TradeBook.charges(live, month) }.getOrDefault(emptyMap())
+                    r += com.optionslab.ira.Charges.lines(if (live) "Zerodha" else "Paper", trips, span, today, byCharge, estimated = live)
+                }
+                out[Section.CHARGES] = r
             }
             if (wants(Section.SEARCH)) out[Section.SEARCH] = IraJournal.search(question)
             if (wants(Section.TIMEOFDAY)) out[Section.TIMEOFDAY] = IraJournal.timeOfDay()
