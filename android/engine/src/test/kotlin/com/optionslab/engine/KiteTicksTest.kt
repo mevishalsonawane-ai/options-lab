@@ -57,6 +57,11 @@ class KiteTicksTest {
         assertEquals(654_321L, t.oi)
         assertEquals(212.50, t.bid)
         assertEquals(212.60, t.ask)
+        // The quantity at the best bid and offer (the Hero arm logs it with each of its trades).
+        assertEquals(75L, t.bidQty)
+        assertEquals(150L, t.askQty)
+        val noDepth = KiteTicks.parse(message(packet(44) { putInt(option.toInt()); putInt(21_255) })).single()
+        assertEquals(null, noDepth.bidQty); assertEquals(null, noDepth.askQty)
     }
 
     @Test fun severalPacketsAndHeartbeat() {

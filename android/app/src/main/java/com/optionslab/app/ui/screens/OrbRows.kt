@@ -120,6 +120,8 @@ internal fun OrbRowsContent(
                     val m = a.mark
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
                         (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "") +
+                        // The Hero arm: the part already sold at 5x.
+                        (o.soldAt?.takeIf { o.sold > 0 }?.let { " · ${o.sold} sold @ ${px(it)}" } ?: "") +
                         // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven after charges / +25% / +50%).
                         (com.optionslab.engine.orb.ProfitLock.targetOf(a.arm)?.takeIf { o.ladder }
                             ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry,
@@ -129,7 +131,7 @@ internal fun OrbRowsContent(
                     view.stopped != null && a.armed -> view.stopped.orEmpty()
                     !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15) or not +5% in 20 min · else at the next liquidity"
                     a.arm.liquidity -> a.status
-                    !a.armed && a.arm.hero -> "NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · out 15:05 · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}"
+                    !a.armed && a.arm.hero -> keepNumbersWhole("NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}")
                     a.arm.hero -> OrbArms.describe(a.status)
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock"
@@ -238,9 +240,11 @@ internal fun OrbRowsContent(
                         style = Type.body.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold))
                     Text("On NIFTY expiry days only, from 13:30 to 14:45: when the ATM straddle is 15% above its low since 12:00 and " +
                         "NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1–5 with a LIMIT " +
-                        "order, up to Rs 5,000 of premium, once a day, and sells at 15:05.", style = Type.bodySmall.copy(color = p.inkSoft))
-                    Note("The study: +Rs 4.4 lakh in 2023–24, but three trades made all of it; 2025–26 out of sample lost on all 13 " +
-                        "trades (−Rs 64,190). Expect about Rs 5,000 lost on most firing days. It disarms itself after 12 losing expiry " +
+                        "order, up to Rs 5,000 of premium, once a day. It sells half at 5× the price paid and the rest at 20× or 15:05, " +
+                        "with a stop at −60% of the premium on a minute's close.", style = Type.bodySmall.copy(color = p.inkSoft))
+                    Note("The study, with the old exits (all out at 15:05): +Rs 4.4 lakh in 2023–24, but three trades made all of it; " +
+                        "2025–26 out of sample lost on all 13 trades (−Rs 64,190). The new exits are not proven either. Expect about " +
+                        "Rs 5,000 lost on most firing days. It disarms itself after 12 losing expiry " +
                         "days in a row or Rs 50,000 lost.", Modifier.padding(top = 8.dp))
                 }
             },
@@ -285,6 +289,12 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClo
                     a.today.forEach { t ->
                         val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs((t.grossPnl ?: 0.0) - t.charges)}"
                         Text("%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right} @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute), style = small)
+                        // The Hero arm: the half sold at 5x, and the book (bid / ask / quantities, or the last price) at the signal and each exit.
+                        t.soldAt?.takeIf { t.sold > 0 }?.let { s ->
+                            Text(keepNumbersWhole("  ${t.sold} sold @ ${px(s)} at 5×" + (t.soldTime?.let { " (%02d:%02d)".format(it.hour, it.minute) } ?: "") +
+                                ", ${t.qty} held to the end"), style = soft)
+                        }
+                        t.seen.forEach { Text(keepNumbersWhole("  " + com.optionslab.engine.orb.HeroRules.seenLine(it)), style = soft) }
                     }
                 }
                 v.replay?.let { r ->

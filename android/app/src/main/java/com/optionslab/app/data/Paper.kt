@@ -199,7 +199,7 @@ object Paper {
         val t = KiteStream.tick(token) ?: return null
         if (t.last <= 0) return null
         return Quote(t.last, bid = t.bid ?: 0.0, ask = t.ask ?: 0.0, high = t.high, low = t.low, open = t.open,
-            prevClose = t.close, volume = t.volume)
+            prevClose = t.close, volume = t.volume, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
     }
 
     /** The contract's latest price from the paper feed, or null when there is none today. */

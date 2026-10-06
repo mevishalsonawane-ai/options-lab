@@ -100,11 +100,19 @@ object OrbArms {
          * not recorded (an entry from before it was added, or another arm). It never changes what the arm trades.
          */
         val volSkip: Boolean? = null,
+        /**
+         * The Hero arm only ([HeroRules.exitStep]): the quantity already sold at the first target (5x), at [soldAt] and
+         * [soldTime]; [qty] is then what is still held (bought = [qty] + [sold]). 0: nothing sold early.
+         */
+        val sold: Int = 0, val soldAt: Double? = null, val soldTime: LocalDateTime? = null,
+        /** The Hero arm only: the option's bid / ask / quantities (or last price alone) at the signal and at each exit. */
+        val seen: List<HeroRules.Seen> = emptyList(),
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
         val points: Double? get() = exit?.let { it - entry }
-        val grossPnl: Double? get() = points?.let { it * qty }
+        /** The whole trade's P&L before charges: what is held now at [exit], plus any part sold early at [soldAt]. */
+        val grossPnl: Double? get() = points?.let { it * qty + ((soldAt ?: entry) - entry) * sold }
     }
 
     /** A signal waiting for approval. Liquidity 15+5 also keeps its strike and the index levels (the ORB uses the day's legs). */
@@ -140,6 +148,22 @@ object OrbArms {
 
     private fun contractJson(c: Paper.Contract) = JSONArray().put(c.symbol).put(c.underlying).put(c.expiry.toString()).put(c.strike)
         .put(c.right.name).put(c.lotSize).put(c.feedKey)
+
+    /** The Hero arm's book looks ([Position.seen]) as saved: what, time, LTP, bid, ask, quantities (absent: not known). */
+    private fun seenJson(l: List<HeroRules.Seen>) = JSONArray().apply {
+        l.forEach { s -> put(JSONObject().put("w", s.what).put("t", s.at.toString())
+            .apply { s.ltp?.let { put("ltp", it) }; s.bid?.let { put("bid", it) }; s.ask?.let { put("ask", it) }
+                s.bidQty?.let { put("bq", it) }; s.askQty?.let { put("aq", it) } }) }
+    }
+
+    private fun seenOf(a: JSONArray): List<HeroRules.Seen> = (0 until a.length()).mapNotNull { i ->
+        val o = a.optJSONObject(i) ?: return@mapNotNull null
+        runCatching {
+            HeroRules.Seen(o.getString("w"), LocalTime.parse(o.getString("t")), if (o.has("ltp")) o.getDouble("ltp") else null,
+                if (o.has("bid")) o.getDouble("bid") else null, if (o.has("ask")) o.getDouble("ask") else null,
+                if (o.has("bq")) o.getLong("bq") else null, if (o.has("aq")) o.getLong("aq") else null)
+        }.getOrNull()
+    }
 
     private fun contractOf(a: JSONArray) = Paper.Contract(a.getString(0), a.getString(1), LocalDate.parse(a.getString(2)), a.getDouble(3),
         Right.valueOf(a.getString(4)), a.getInt(5), a.getString(6))
@@ -177,7 +201,10 @@ object OrbArms {
                         p.optBoolean("unconfirmed", false),
                         if (p.has("level")) p.getDouble("level") else null, if (p.has("target")) p.getDouble("target") else null,
                         p.optBoolean("ladder", false), if (p.has("peak")) p.getDouble("peak") else null, p.optBoolean("timed", false),
-                        if (p.has("near")) p.getBoolean("near") else null, if (p.has("volSkip")) p.getBoolean("volSkip") else null)
+                        if (p.has("near")) p.getBoolean("near") else null, if (p.has("volSkip")) p.getBoolean("volSkip") else null,
+                        sold = p.optInt("sold", 0), soldAt = if (p.has("soldAt")) p.getDouble("soldAt") else null,
+                        soldTime = p.optString("soldTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
+                        seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty())
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -323,7 +350,9 @@ object OrbArms {
                     .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed)
                     .apply { p.level?.let { put("level", it) }; p.target?.let { put("target", it) } }
                     .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } }.put("timed", p.timed)
-                    .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) } })
+                    .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) } }
+                    .apply { if (p.sold > 0) put("sold", p.sold); p.soldAt?.let { put("soldAt", it) }; p.soldTime?.let { put("soldTime", it.toString()) }
+                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)) })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -529,9 +558,10 @@ object OrbArms {
         if (on && armOf(source).hero) "$label armed on paper (it never trades on Zerodha) - ${HeroRules.NOT_PROVEN}. Fully automatic, " +
             "NIFTY expiry days only (from the instrument master): from 13:30 to 14:45, when the ATM straddle is 15% above its low " +
             "since 12:00 and NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1-5 with a " +
-            "LIMIT order, up to Rs 5,000 of premium, once a day, and sells at 15:05 (the expiry square-off). Out of sample it " +
-            "lost on all 13 trades (-Rs 64,190). It disarms itself after ${HeroRules.MAX_LOSING_DAYS} losing expiry days in a row " +
-            "or Rs 50,000 lost."
+            "LIMIT order, up to Rs 5,000 of premium, once a day. It sells half at 5x the price paid and the rest at 20x or " +
+            "15:05 (the expiry square-off), with a stop at -60% of the premium on a minute's close. With the old exits it " +
+            "lost on all 13 trades out of sample (-Rs 64,190). It disarms itself after ${HeroRules.MAX_LOSING_DAYS} losing expiry " +
+            "days in a row or Rs 50,000 lost."
         else if (on && armOf(source).fade) "$label armed on paper (it never trades on Zerodha), fully automatic: when a 5-minute bar " +
             "reaches the outer tenth of the opening range and closes back inside, it buys the option toward the middle - 1 lot, " +
             "a 40-point stop, a 40-point target and the 15:10 exit, at most ${RangeFadeRules.MAX_ENTRIES} a day, from 10:30."
@@ -826,10 +856,11 @@ object OrbArms {
             if (ltp == null) continue                                               // no price at all: hold
             val (seen, locked) = ladder(cur, ltp)
             if (seen !== cur) b.positions[i] = seen
+            // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
+            // close), checked here every pass; the operator's stop still sells it all at once below.
+            if (armOf(cur.arm).hero && !stopped) { b.positions[i] = heroManage(seen, c, ltp, t); continue }
             val why = when {
                 stopped -> "operator_stop"
-                // The Hero arm holds to 15:05 (the expiry square-off's minute), and only that: no stop, no target.
-                armOf(cur.arm).hero -> "hero_exit".takeIf { HeroRules.exitDue(t.toLocalTime()) || cur.day.isBefore(t.toLocalDate()) }
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
                 // Liquidity 15+5 exits on index levels (liquidityExits); its 15% stop rests in the book, and if that order is
                 // gone the app sells at the stop level itself.
@@ -893,7 +924,7 @@ object OrbArms {
      * (as [testNow]); no app code sets it, and the tests clear it with the other test feeds.
      */
     @Volatile internal var testHeroBars: ((String, LocalDateTime) -> List<Upstox.Bar>)? = null
-        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v; heroStopBars = null }
 
     /** The Hero arm's feeds read for this pass before the lock ([heroPrefetch]): feed key -> its bars. Cleared after the pass. */
     private val heroFed = java.util.concurrent.ConcurrentHashMap<String, List<Upstox.Bar>>()
@@ -912,6 +943,12 @@ object OrbArms {
         val src = HeroRules.ARM.source
         val day = t.toLocalDate()
         val at = t.toLocalTime().withSecond(0).withNano(0)
+        // An open Hero position: its option's minutes for the -60% stop ([heroManage]), once a minute, read here outside the lock.
+        val minute = t.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val held = lock.withLock { book().positions.lastOrNull { it.arm == src && it.open && !it.live }?.symbol }
+        held?.let { Paper.contractOf(it) }?.takeIf { c -> heroStopBars?.let { it.first == c.feedKey && it.second == minute } != true }?.let { c ->
+            runCatching { heroRead(c.feedKey, t) }.getOrNull()?.let { heroFed[c.feedKey] = it }
+        }
         if (at.isBefore(HeroRules.FIRST) || at.isAfter(HeroRules.LAST)) return
         if (Strategies.stoppedToday()) return
         // Only when [heroCycle] would read them this pass: armed, flat, not stood down, not done, this minute not yet decided.
@@ -1035,20 +1072,27 @@ object OrbArms {
             (if (buy.ok) "the limit %.2f did not fill; the order was cancelled".format(Locale.ENGLISH, limit) else buy.message)
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") }
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${HeroRules.OWNER} · entry", buy.orderId)
-        val text = "NIFTY %s %.2f%% in 15 min, straddle %.0f%% above its low: bought %d %s @ %.2f on PAPER (limit %.2f). Sells at 15:05. %s."
+        val text = ("NIFTY %s %.2f%% in 15 min, straddle %.0f%% above its low: bought %d %s @ %.2f on PAPER (limit %.2f). " +
+            "Sells half at %.2f (5x), the rest at %.2f (20x) or 15:05; stop: a minute closing at or below %.2f (-60%%). %s.")
             .format(Locale.ENGLISH, if (scan.signal > 0) "up" else "down", (scan.mom ?: 0.0) * 100, (scan.stExp ?: 0.0) * 100,
-                fill.quantity, fill.symbol, fill.price, limit, HeroRules.NOT_PROVEN)
+                fill.quantity, fill.symbol, fill.price, limit, HeroRules.target1(fill.price), HeroRules.target2(fill.price),
+                HeroRules.stopLevel(fill.price), HeroRules.NOT_PROVEN)
         runCatching { Notifier.post(app, HERO_NOTICE, Notifier.BUY, "${HeroRules.ARM.label} fired", text, "trade") }
         runCatching { Diag.record("orb", "${HeroRules.ARM.label}: $text") }
+        // The book at the signal minute (bid, ask and their quantities from Zerodha's stream; else the last price alone).
         b.positions += Position(src, c.symbol, c.right.name, fill.quantity, fill.price, now(), day.atTime(at), buy.orderId, null, null,
-            charges = chargesOf(buy.orderId))
+            charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         marks[c.symbol] = fill.price
         return "entered"
     }
 
-    /** The Hero arm's exit: a LIMIT SELL at the bid less a tick; not filled, the usual exit (a market sell, retried). */
-    private suspend fun heroExit(p: Position, c: Paper.Contract, why: String): Position {
+    /**
+     * The Hero arm's exit of everything it still holds (15:05, the -60% stop, the operator's stop): a LIMIT SELL at the bid
+     * less a tick; not filled, the usual exit (a market sell, retried). The book at that moment is logged with the trade.
+     */
+    private suspend fun heroExit(p0: Position, c: Paper.Contract, why: String): Position {
         val q = runCatching { Paper.quote(c) }.getOrNull()
+        val p = p0.copy(seen = p0.seen + heroSeen(why, q, marks[p0.symbol]))
         // A stale feed at the exit: the last known price stands in for the bid.
         val bid = q?.bid?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 } ?: marks[p.symbol]
         if (bid != null) {
@@ -1060,7 +1104,60 @@ object OrbArms {
                 return p.copy(exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
             }
         }
-        return exit(p, c, why)
+        // (Not sold at all: the next pass tries again with a fresh look, so this one is not kept.)
+        return exit(p, c, why).let { if (it.open) p0 else it }
+    }
+
+    /** One look at the option's book for the Hero trade's log ([Position.seen]); without depth, the last price alone. */
+    private fun heroSeen(what: String, q: com.optionslab.engine.sandbox.Quote?, fallback: Double?): HeroRules.Seen =
+        HeroRules.Seen(what, now().toLocalTime().withNano(0), q?.ltp?.takeIf { it > 0 } ?: fallback, q?.bid?.takeIf { it > 0 },
+            q?.ask?.takeIf { it > 0 }, q?.bidQty?.takeIf { it > 0 }, q?.askQty?.takeIf { it > 0 })
+
+    /** The option's 1-minute bars read for the Hero arm's stop this minute (feed key, minute, bars): one read a minute. */
+    @Volatile private var heroStopBars: Triple<String, LocalDateTime, Map<LocalTime, Upstox.Bar>>? = null
+
+    /**
+     * The Hero arm's exits for its open paper position at [ltp] ([HeroRules.exitStep]): half at 5x and the rest at 20x
+     * (LIMIT SELLs at the target, sent once the price trades a tick through it), 15:05, and the -60% stop on a minute's
+     * close (both at the bid less a tick, [heroExit]). Up to two steps a pass (a jump through 5x and 20x at once).
+     */
+    private suspend fun heroManage(p0: Position, c: Paper.Contract, ltp: Double, t: LocalDateTime): Position {
+        var p = p0
+        val lot = c.lotSize.coerceAtLeast(1)
+        val minute = t.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val bars = heroStopBars?.takeIf { it.first == c.feedKey && it.second == minute }?.third
+            ?: runCatching { heroMinutes(c.feedKey, t) }.getOrNull()?.also { heroStopBars = Triple(c.feedKey, minute, it) }
+            ?: emptyMap()
+        val closes = if (p.day == t.toLocalDate()) HeroRules.stopMinutes(p.entryTime.toLocalTime(), bars.keys).mapNotNull { bars[it]?.close }
+            else emptyList()
+        repeat(2) {
+            val step = HeroRules.exitStep(p.entry, p.qty / lot, p.sold > 0, ltp, closes, t.toLocalTime(), p.day.isBefore(t.toLocalDate()))
+                ?: return p
+            val limit = step.limit ?: return heroExit(p, c, step.kind.why)
+            p = heroTarget(p, c, step, limit) ?: return p
+            if (!p.open) return p
+        }
+        return p
+    }
+
+    /**
+     * A target of the Hero arm: a LIMIT SELL of [step]'s lots at [limit] (never below it). Filled: the position with that
+     * part sold (or closed, when it was all of it); not filled at once (the price fell back): cancelled, null, and the
+     * next pass looks again.
+     */
+    private suspend fun heroTarget(p: Position, c: Paper.Contract, step: HeroRules.ExitStep, limit: Double): Position? {
+        val q = runCatching { Paper.quote(c) }.getOrNull()
+        val sell = Paper.place(c, "SELL", step.lots, "LIMIT", "MIS", limit, null, known = q)
+        val fill = filledOrCancelled(sell) ?: return null
+        val why = step.kind.why
+        sell.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · $why") }
+        Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${HeroRules.OWNER} · exit", sell.orderId)
+        val seen = p.seen + heroSeen(why, q, fill.price)
+        val charges = p.charges + chargesOf(sell.orderId)
+        if (fill.quantity >= p.qty) return p.copy(exit = fill.price, exitTime = now(), why = why, charges = charges, seen = seen)
+        runCatching { Diag.record("orb", "${HeroRules.ARM.label}: sold %d %s @ %.2f at 5x; %d held to 20x, 15:05 or the stop. %s."
+            .format(Locale.ENGLISH, fill.quantity, fill.symbol, fill.price, p.qty - fill.quantity, HeroRules.NOT_PROVEN)) }
+        return p.copy(qty = p.qty - fill.quantity, sold = p.sold + fill.quantity, soldAt = fill.price, soldTime = now(), charges = charges, seen = seen)
     }
 
     /**

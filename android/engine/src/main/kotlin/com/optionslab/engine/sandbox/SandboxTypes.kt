@@ -160,6 +160,9 @@ data class Quote(
     val open: Double = 0.0,
     val prevClose: Double = 0.0,
     val volume: Long = 0,
+    /** Quantity at the best bid and offer (Zerodha's stream depth); 0: not known. Logged only, never priced from. */
+    val bidQty: Long = 0,
+    val askQty: Long = 0,
 )
 
 /**

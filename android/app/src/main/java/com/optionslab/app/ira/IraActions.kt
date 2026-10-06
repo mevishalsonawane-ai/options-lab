@@ -291,7 +291,8 @@ internal object IraActions {
                     " (the bot is stopped for today ${com.optionslab.ira.DayStop.by(w)}, so it trades only " +
                         (if (com.optionslab.ira.DayStop.mayLift(w)) "once that stop is lifted - \"start all\")" else "from tomorrow)")
                 } ?: ""
-                val heroNote = if (c.kind == Command.Kind.START_ONE && name == com.optionslab.engine.orb.HeroRules.ARM.label) " - ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}" else ""
+                val heroNote = if (c.kind == Command.Kind.START_ONE && name == com.optionslab.engine.orb.HeroRules.ARM.label)
+                    " - ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}; exits: ${com.optionslab.engine.orb.HeroRules.EXITS}" else ""
                 Commands.describe(c, name) + (armNick?.let { " (${it.second})" } ?: "") + heroNote + dayNote to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
             }
             Command.Kind.CANCEL_ALL -> {

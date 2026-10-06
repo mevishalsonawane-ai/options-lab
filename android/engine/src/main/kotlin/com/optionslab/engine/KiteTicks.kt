@@ -35,6 +35,9 @@ object KiteTicks {
         /** Seconds since the epoch of the exchange's stamp, when the packet carries one. */
         val exchangeTime: Long? = null,
         val tradable: Boolean = true,
+        /** Quantity at the best bid and the best offer (full mode only; null when the packet has no depth). */
+        val bidQty: Long? = null,
+        val askQty: Long? = null,
     ) {
         val changePct: Double get() = if (close > 0) (last - close) / close else 0.0
     }
@@ -83,15 +86,19 @@ object KiteTicks {
             p.size == 44 || p.size == 184 -> {
                 var bid: Double? = null
                 var ask: Double? = null
+                var bidQty: Long? = null
+                var askQty: Long? = null
                 if (p.size == 184) {
                     // Depth from byte 64: 5 bids then 5 offers, 12 bytes each (qty, price, orders, padding).
                     bid = px(64 + 4).takeIf { it > 0 }
                     ask = px(64 + 5 * 12 + 4).takeIf { it > 0 }
+                    bidQty = int(64).takeIf { bid != null }
+                    askQty = int(64 + 5 * 12).takeIf { ask != null }
                 }
                 Tick(
                     token, last = px(4), volume = int(16), open = px(28), high = px(32), low = px(36), close = px(40),
                     oi = if (p.size == 184) int(48) else 0, bid = bid, ask = ask,
-                    exchangeTime = if (p.size == 184) int(60) else null,
+                    exchangeTime = if (p.size == 184) int(60) else null, bidQty = bidQty, askQty = askQty,
                 )
             }
             else -> null

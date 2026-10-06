@@ -144,6 +144,86 @@ class HeroRulesTest {
         assertEquals(0.05, HeroRules.exitLimit(0.05), 1e-9, "never below a tick")
     }
 
+    // ---- the exits: the study's D09 / F07 (half at 5x, the rest at 20x or 15:05, stop -60%) ----------------------
+
+    private val noCloses = emptyList<Double>()
+
+    @Test fun targetsAndStopAreMeasuredFromTheEntryFill() {
+        assertEquals(20.0, HeroRules.target1(4.0), 1e-9)
+        assertEquals(80.0, HeroRules.target2(4.0), 1e-9)
+        assertEquals(1.6, HeroRules.stopLevel(4.0), 1e-9)
+        assertEquals(6.15, HeroRules.target1(1.23), 1e-9, "down to the tick")
+        assertEquals(24.6, HeroRules.target2(1.23), 1e-9)
+        // A target fills only once the price trades a tick through it.
+        assertFalse(HeroRules.targetHit(20.0, 20.0)); assertTrue(HeroRules.targetHit(20.0, 20.05)); assertFalse(HeroRules.targetHit(20.0, null))
+        assertTrue(HeroRules.stopHit(4.0, listOf(3.0, 1.6))); assertFalse(HeroRules.stopHit(4.0, listOf(3.0, 1.65))); assertFalse(HeroRules.stopHit(4.0, noCloses))
+        assertTrue(HeroRules.EXITS.contains("5×") && HeroRules.EXITS.contains("20×") && HeroRules.EXITS.contains("15:05") && HeroRules.EXITS.contains("−60%"))
+    }
+
+    @Test fun halfAt5xSellsHalfTheLotsOddCountsRoundedHalfToEvenAsTheStudy() {
+        assertEquals(9, HeroRules.halfLots(18))
+        assertEquals(1, HeroRules.halfLots(1), "one lot: all of it at 5x")
+        assertEquals(1, HeroRules.halfLots(2))
+        assertEquals(2, HeroRules.halfLots(3)); assertEquals(2, HeroRules.halfLots(5)); assertEquals(4, HeroRules.halfLots(7))
+        assertEquals(4, HeroRules.halfLots(9)); assertEquals(6, HeroRules.halfLots(11))
+        assertEquals(0, HeroRules.halfLots(0))
+        val s = HeroRules.exitStep(4.0, 7, halfSold = false, ltp = 20.05, closes = noCloses, t = t(14, 10))!!
+        assertEquals(HeroRules.ExitKind.HALF, s.kind); assertEquals(4, s.lots); assertEquals(20.0, s.limit!!, 1e-9)
+        assertEquals("hero_5x", s.kind.why)
+        assertNull(HeroRules.exitStep(4.0, 7, false, 20.0, noCloses, t(14, 10)), "not through by a tick: hold")
+        assertNull(HeroRules.exitStep(4.0, 7, false, 19.0, noCloses, t(14, 10)))
+        // Already sold: 5x does not sell again.
+        assertNull(HeroRules.exitStep(4.0, 3, true, 25.0, noCloses, t(14, 10)))
+    }
+
+    @Test fun theRestAt20xOnlyAfterTheHalf() {
+        val s = HeroRules.exitStep(4.0, 9, halfSold = true, ltp = 80.05, closes = noCloses, t = t(14, 30))!!
+        assertEquals(HeroRules.ExitKind.REST, s.kind); assertEquals(9, s.lots); assertEquals(80.0, s.limit!!, 1e-9)
+        assertEquals("hero_20x", s.kind.why)
+        // Not yet sold the half: a jump straight past 20x sells the half first (the rest on the next step).
+        assertEquals(HeroRules.ExitKind.HALF, HeroRules.exitStep(4.0, 18, false, 90.0, noCloses, t(14, 30))!!.kind)
+        assertNull(HeroRules.exitStep(4.0, 9, true, 80.0, noCloses, t(14, 30)))
+    }
+
+    @Test fun theStopAtMinus60PercentOnAMinuteCloseBeforeAndAfterTheHalf() {
+        val before = HeroRules.exitStep(4.0, 18, halfSold = false, ltp = 1.5, closes = listOf(3.0, 1.55), t = t(14, 0))!!
+        assertEquals(HeroRules.ExitKind.STOP, before.kind); assertEquals(18, before.lots); assertNull(before.limit, "at the bid less a tick")
+        assertEquals("hero_stop", before.kind.why)
+        val after = HeroRules.exitStep(4.0, 9, halfSold = true, ltp = 1.6, closes = listOf(22.0, 1.6), t = t(14, 40))!!
+        assertEquals(HeroRules.ExitKind.STOP, after.kind); assertEquals(9, after.lots, "still active on the rest")
+        // The last price alone never stops it: the study's stop is on a minute's close.
+        assertNull(HeroRules.exitStep(4.0, 18, false, 1.0, listOf(2.0, 1.7), t(14, 0)))
+        // The minutes it reads: from the bar after the fill's own minute, closing before 15:05.
+        val closes = (0..90).map { t(13, 45).plusMinutes(it.toLong()) }
+        val m = HeroRules.stopMinutes(LocalTime.of(13, 46, 20), closes)
+        assertEquals(t(13, 48), m.first()); assertEquals(t(15, 4), m.last())
+        assertTrue(HeroRules.stopMinutes(t(15, 3), closes).isEmpty())
+    }
+
+    @Test fun theRestSellsAt1505AndTargetsComeFirst() {
+        val s = HeroRules.exitStep(4.0, 9, halfSold = true, ltp = 10.0, closes = listOf(1.0), t = t(15, 5))!!
+        assertEquals(HeroRules.ExitKind.TIME, s.kind, "15:05 before the stop"); assertEquals(9, s.lots); assertNull(s.limit)
+        assertEquals("hero_exit", s.kind.why)
+        assertEquals(HeroRules.ExitKind.TIME, HeroRules.exitStep(4.0, 18, false, 3.0, noCloses, t(15, 20))!!.kind)
+        assertEquals(HeroRules.ExitKind.TIME, HeroRules.exitStep(4.0, 18, false, 3.0, noCloses, t(10, 0), overnight = true)!!.kind)
+        assertEquals(HeroRules.ExitKind.HALF, HeroRules.exitStep(4.0, 18, false, 21.0, noCloses, t(15, 5))!!.kind, "a target first")
+        assertNull(HeroRules.exitStep(4.0, 18, false, 3.0, noCloses, t(15, 4)))
+        assertNull(HeroRules.exitStep(4.0, 0, false, 30.0, noCloses, t(15, 5)), "nothing held")
+        assertNull(HeroRules.exitStep(0.0, 5, false, 30.0, noCloses, t(15, 5)))
+    }
+
+    @Test fun theBookIsLoggedWithItsSpreadOrTheLastPriceAlone() {
+        val s = HeroRules.Seen("signal", t(13, 46), 4.0, 3.95, 4.05, 1_300, 650)
+        assertEquals(0.10, s.spread!!, 1e-9)
+        assertEquals("signal 13:46 · bid 3.95 ×1,300 / ask 4.05 ×650 · spread 0.10 (2.5%)", HeroRules.seenLine(s))
+        assertEquals("hero_5x 14:02 · bid 20.00 / ask 20.20 · spread 0.20 (1.0%)",
+            HeroRules.seenLine(HeroRules.Seen("hero_5x", t(14, 2), 20.1, 20.0, 20.2)))
+        val ltpOnly = HeroRules.Seen("hero_exit", t(15, 5), 2.0, null, null)
+        assertNull(ltpOnly.spread)
+        assertEquals("hero_exit 15:05 · LTP 2.00 only (no depth in the feed)", HeroRules.seenLine(ltpOnly))
+        assertEquals("x 15:05 · LTP - only (no depth in the feed)", HeroRules.seenLine(HeroRules.Seen("x", t(15, 5), null, 0.0, 2.0)))
+    }
+
     @Test fun disarmsAfterTwelveLosingDaysOrFiftyThousand() {
         assertNull(HeroRules.killReason(List(11) { -4_000.0 }))
         assertNotNull(HeroRules.killReason(List(12) { -4_000.0 }))
