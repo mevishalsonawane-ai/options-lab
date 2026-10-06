@@ -3,6 +3,7 @@ package com.optionslab.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,26 +58,47 @@ fun RequestsPanel(onClose: () -> Unit) {
         }
     }
     val shown = Requests.shown(waiting, now, gold)
-    LazyColumn(Modifier.fillMaxSize().background(p.paper), contentPadding = PaddingValues(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("‹  Back", style = Type.label.copy(color = p.inkSoft, fontSize = 14.sp),
-                    modifier = Modifier.clickable { onClose() }.padding(end = 12.dp, top = 6.dp, bottom = 6.dp))
-                Flourish(Requests.badge(shown.size))
+    // An answered request tapped in Recent (Boss, 6 Oct): the same banner as a tapped notification, with its record -
+    // display only (no Yes / No, nothing re-run); OK, Back or a tap outside closes it.
+    var opened by remember { mutableStateOf<Requests.Recent?>(null) }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize().background(p.paper), contentPadding = PaddingValues(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("‹  Back", style = Type.label.copy(color = p.inkSoft, fontSize = 14.sp),
+                        modifier = Modifier.clickable { onClose() }.padding(end = 12.dp, top = 6.dp, bottom = 6.dp))
+                    Flourish(Requests.badge(shown.size))
+                }
+            }
+            if (gold) item { LedgerCard { Note(Requests.GOLD) } }
+            else if (shown.isEmpty()) item { LedgerCard { Text(Requests.EMPTY, style = Type.body.copy(color = p.ink)) } }
+            // The fingerprint is named only where the hub's own gate asks for it (RequestView.fingerprint), never from the venue.
+            else item { Note(Requests.panelNote(shown)) }
+            items(shown, key = { "w${it.kind.name}${it.id}" }) { v -> RequestCard(v, now) }
+            if (!gold && recent.isNotEmpty()) {
+                item { Flourish("Recent", Modifier.padding(top = 8.dp)) }
+                items(recent, key = { "r${it.view.kind.name}${it.view.id}" }) { r ->
+                    // On a locked phone only the count is ever shown: a tap opens nothing there (nor in IraGoldAlgo).
+                    RecentRow(r) { if (!gold && !runCatching { IraHub.locked() }.getOrDefault(true)) opened = r }
+                }
             }
         }
-        if (gold) item { LedgerCard { Note(Requests.GOLD) } }
-        else if (shown.isEmpty()) item { LedgerCard { Text(Requests.EMPTY, style = Type.body.copy(color = p.ink)) } }
-        // The fingerprint is named only where the hub's own gate asks for it (RequestView.fingerprint), never from the venue.
-        else item { Note(Requests.panelNote(shown)) }
-        items(shown, key = { "w${it.kind.name}${it.id}" }) { v -> RequestCard(v, now) }
-        if (!gold && recent.isNotEmpty()) {
-            item { Flourish("Recent", Modifier.padding(top = 8.dp)) }
-            items(recent, key = { "r${it.view.kind.name}${it.view.id}" }) { r -> RecentRow(r) }
+        opened?.let { r ->
+            androidx.compose.runtime.key(r) {
+                NoticeBanner(answeredCard(r), onDismiss = { opened = null }, onClose = { _, _ -> })
+            }
         }
     }
 }
+
+/**
+ * The banner's card for the answered request [r]: its record ([Requests.answeredLines]) as text and nothing that asks -
+ * no action, proposal, close or approval - so [NoticeBanner] shows no button but OK.
+ */
+internal fun answeredCard(r: Requests.Recent): com.optionslab.app.work.NoticeCard =
+    com.optionslab.app.work.NoticeCard(r.view.id.hashCode(), "request", Requests.answeredTitle(r),
+        (Requests.answeredLines(r, com.optionslab.engine.IST) + "" + Requests.ANSWERED_NOTE).joinToString("\n"), r.at)
 
 @Composable
 private fun RequestCard(v: Requests.RequestView, now: Long) {
@@ -118,7 +140,7 @@ private fun RequestCard(v: Requests.RequestView, now: Long) {
 }
 
 @Composable
-private fun RecentRow(r: Requests.Recent) {
+private fun RecentRow(r: Requests.Recent, onOpen: () -> Unit) {
     val p = LocalPalette.current
     val at = runCatching {
         java.time.Instant.ofEpochMilli(r.at).atZone(com.optionslab.engine.IST).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.ENGLISH))
@@ -128,7 +150,7 @@ private fun RecentRow(r: Requests.Recent) {
         Requests.Outcome.FAILED -> p.oxblood
         else -> p.inkSoft
     }
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(r.outcome.label, style = Type.label.copy(color = tone, fontSize = 12.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.width(72.dp))
         Text("${r.view.title} · ${r.view.venue.label} · $at", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
     }

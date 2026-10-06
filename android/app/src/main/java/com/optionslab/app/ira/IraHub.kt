@@ -610,12 +610,12 @@ object IraHub {
             messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
         saveState()
         IraActivity.add(text)
-        strategyDone(p, if (armed == "ok") com.optionslab.ira.Requests.Outcome.APPROVED else com.optionslab.ira.Requests.Outcome.FAILED)
+        strategyDone(p, if (armed == "ok") com.optionslab.ira.Requests.Outcome.APPROVED else com.optionslab.ira.Requests.Outcome.FAILED, text)
         return text
     }
 
     fun dismiss(id: Long) {
-        _state.value.proposals.firstOrNull { it.id == id && it.status == Proposal.NEW }?.let { strategyDone(it, com.optionslab.ira.Requests.Outcome.DECLINED) }
+        _state.value.proposals.firstOrNull { it.id == id && it.status == Proposal.NEW }?.let { strategyDone(it, com.optionslab.ira.Requests.Outcome.DECLINED, "Dismissed; not offered again today.") }
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id && it.status == Proposal.NEW) it.copy(status = Proposal.DISMISSED) else it },
             messages = (s.messages + Msg(true, "Dismissed. I won't offer that one again today.")).takeLast(MAX_MESSAGES)) }
         saveState()
@@ -876,9 +876,10 @@ object IraHub {
         JarvisVoice.askYesNo(id, com.optionslab.ira.Requests.spoken(reqView.title, "$said $starsAloud" + (turnLine?.let { " $it" } ?: "") + " Shall I buy 1 lot of the ${m.label} $side? Yes or no?"))
         scope.launch {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
+            val lapsedFp = runCatching { needsFingerprint(id) }.getOrNull()
             if (synchronized(actions) { actions.remove(id) } != null) {
                 settled(id)
-                requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED)
+                requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED, result = "No answer in 10 minutes; nothing was placed.", fingerprint = lapsedFp)
                 IraNewsTrades.answered(id, "lapsed")
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("No answer in 10 minutes, so the ${m.label} trade lapsed; nothing was placed.")
@@ -4275,10 +4276,14 @@ object IraHub {
     fun requestAsk(id: Long): String? = synchronized(actions) { requestMeta[id]?.takeIf { actions.containsKey(id) } }
         ?.let { v -> com.optionslab.ira.Requests.ask(v.title, v.what) }
 
-    /** [id] is no longer waiting: listed under Recent with [outcome] (once). */
-    private fun requestDone(id: Long, outcome: com.optionslab.ira.Requests.Outcome) {
+    /**
+     * [id] is no longer waiting: listed under Recent with [outcome] (once), how it was answered ([by], when known), what
+     * came of it ([result]) and whether a yes on it asked for the fingerprint ([fingerprint], read before it was taken out).
+     */
+    private fun requestDone(id: Long, outcome: com.optionslab.ira.Requests.Outcome, by: com.optionslab.ira.Requests.By? = null,
+                            result: String? = null, fingerprint: Boolean? = null) {
         val v = synchronized(actions) { requestMeta.remove(id) } ?: return
-        _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis())) }
+        _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis(), by, result, fingerprint)) }
     }
 
     /** Confirmed and taken out of [actions], its result not yet in Recent (under the [actions] lock): a second yes meanwhile is "already answered". */
@@ -4303,16 +4308,18 @@ object IraHub {
      * nothing waiting any more: [alreadyLine].
      */
     fun confirmAsync(id: Long, fingerprint: Boolean = false): kotlinx.coroutines.Job = scope.launch {
-        val r = confirm(id, fingerprint = fingerprint)
+        val r = confirm(id, fingerprint = fingerprint,
+            by = if (fingerprint) com.optionslab.ira.Requests.By.FINGERPRINT else com.optionslab.ira.Requests.By.TAP)
         if (r == null) reply(alreadyLine(id, "That had already lapsed; nothing was done."))
     }
 
     /** A strategy approved or dismissed: listed under Recent. */
-    private fun strategyDone(p: Proposal, outcome: com.optionslab.ira.Requests.Outcome) {
+    private fun strategyDone(p: Proposal, outcome: com.optionslab.ira.Requests.Outcome, result: String? = null) {
         val seen = synchronized(strategySeen) { strategySeen.remove(p.id) } ?: System.currentTimeMillis()
         val v = com.optionslab.ira.Requests.RequestView(p.id, com.optionslab.ira.Requests.Kind.STRATEGY, p.result.name,
             "add ${p.result.name} as an arm on paper", null, com.optionslab.ira.Requests.Venue.PAPER, seen, null)
-        _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis())) }
+        _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis(),
+            result = result, fingerprint = false)) }
     }
 
     /**
@@ -4852,9 +4859,12 @@ object IraHub {
         return com.optionslab.ira.MoreAnswer.Last(m.text, before, unasked = synchronized(unaskedIds) { m.id in unaskedIds })
     }
 
-    suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false): String? {
+    /** [by]: how the yes came (a tap, the voice, the notification), kept for Recent's record only - it changes no gate. */
+    suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false, by: com.optionslab.ira.Requests.By? = null): String? {
         // IraGoldAlgo: nothing Jarvis prepared is ever done there.
         if (GOLD_ONLY_TALK) { synchronized(actions) { exitIds.remove(id); actions.remove(id) }; _state.update { it.copy(pending = it.pending - id) }; return GOLD_TALK_ONLY.also { reply(it) } }
+        // Whether a yes on it asked for the fingerprint, read while it still waits (for Recent's record).
+        val askedFp = runCatching { needsFingerprint(id) }.getOrNull()
         if (isExit(id) && !fingerprint && !ownerVoice && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
                 "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it, whole = true) } }
@@ -4873,7 +4883,7 @@ object IraHub {
             settled(id)
             _state.update { it.copy(pending = it.pending - id) }
             IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it, whole = true)
-                requestDone(id, com.optionslab.ira.Requests.outcomeOf(it)) }
+                requestDone(id, com.optionslab.ira.Requests.outcomeOf(it), by ?: if (fingerprint) com.optionslab.ira.Requests.By.FINGERPRINT else null, it, askedFp) }
         } finally {
             synchronized(actions) { confirming.remove(id) }
         }
@@ -4888,11 +4898,15 @@ object IraHub {
     private fun isSolo(id: Long): Boolean = synchronized(actions) { id in soloAsks }
 
     /** [said]: Boss's spoken words for the rejection ("no, too late in the day"), when he said it aloud. */
-    fun cancelAction(id: Long, said: String? = null) {
+    /** [by]: how the no came (a tap, the voice, the notification), kept for Recent's record only. */
+    fun cancelAction(id: Long, said: String? = null, by: com.optionslab.ira.Requests.By? = null) {
+        // Whether a yes on it would have asked for the fingerprint, read while it still waits (for Recent's record).
+        val askedFp = runCatching { needsFingerprint(id) }.getOrNull()
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
         val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
         if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
-        requestDone(id, com.optionslab.ira.Requests.Outcome.DECLINED)
+        requestDone(id, com.optionslab.ira.Requests.Outcome.DECLINED, by,
+            if (trade) "Rejected; nothing was placed." else "Cancelled; nothing was done.", askedFp)
         if (trade) IraNewsTrades.answered(id, "rejected")
         // A trade idea turned down: the reason he gave with it, or in his very next words, is noted - its kind only
         // ([com.optionslab.ira.TurnDowns]). It is said up front before the next idea it fits; nothing learned acts.
@@ -4925,8 +4939,9 @@ object IraHub {
         _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, listOfNotNull(lead, com.optionslab.ira.Requests.chatLine(view.title, view.what)).joinToString(" "), action = id)).takeLast(MAX_MESSAGES)) }
         scope.launch {
             kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
+            val lapsedFp = runCatching { needsFingerprint(id) }.getOrNull()
             if (synchronized(actions) { exitIds.remove(id); actions.remove(id) } != null) {
-                requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED)
+                requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED, result = "No Confirm in 30 minutes; nothing was done.", fingerprint = lapsedFp)
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.", whole = true)
             }

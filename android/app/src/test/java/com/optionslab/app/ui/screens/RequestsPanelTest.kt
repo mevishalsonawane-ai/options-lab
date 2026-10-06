@@ -2,6 +2,8 @@ package com.optionslab.app.ui.screens
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,6 +13,7 @@ import com.optionslab.app.testing.AreaEWatchdog
 import com.optionslab.app.testing.frames
 import com.optionslab.app.testing.has
 import com.optionslab.app.testing.until
+import com.optionslab.app.testing.waitForNoText
 import com.optionslab.app.testing.waitForText
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import kotlinx.coroutines.runBlocking
@@ -83,5 +86,71 @@ class RequestsPanelTest {
         compose.until(10_000, "the kill switch on") { com.optionslab.app.data.AppSettings.load().guardKill }
         compose.waitForText("Approved")
         assertFalse("answered: no button left", compose.has("Yes, approve"))
+    }
+
+    /** The answered banner is a record only: no Yes / No, no Later, nothing that approves or rejects. */
+    private fun assertNoAnswerButtons() {
+        for (b in listOf("Yes, approve", "No, reject", "Yes", "No", "Later", "Confirm", "Cancel"))
+            assertFalse("no '$b' on an answered request's banner", compose.has(b))
+    }
+
+    @Test fun anAnsweredRequestOpensTheSameBannerWithItsRecordOnly() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        compose.setContent { IraAlgoTheme("light") { RequestsPanel(onClose = {}) } }
+        compose.frames()
+        compose.waitForText("No requests waiting, Boss.")
+
+        // Rejected: tapped in Recent, the banner says what it was, where, the fingerprint, when asked and when and how
+        // it was rejected, and what came of it - with no Yes or No.
+        IraHub.ask("hit the panic button")
+        compose.until(60_000, "the request") { IraHub.state.value.pending.isNotEmpty() }
+        compose.waitForText("No, reject")
+        tap("No, reject")
+        compose.until(10_000, "declined") { IraHub.recentRequests().value.isNotEmpty() }
+        compose.waitForText("Declined")
+        val rejected = IraHub.recentRequests().value.first()
+        assertEquals(com.optionslab.ira.Requests.By.TAP, rejected.by)
+        assertFalse("not open before the tap", compose.has(com.optionslab.ira.Requests.answeredTitle(rejected)))
+        tap("Declined")
+        compose.waitForText(com.optionslab.ira.Requests.answeredTitle(rejected))
+        assertTrue(com.optionslab.ira.Requests.answeredTitle(rejected).startsWith("Rejected: "))
+        compose.onNodeWithTag("notice-banner", useUnmergedTree = true).assertExists()
+        for (line in listOf("Venue: No order", "Fingerprint: not needed", "Asked: ", "(by tap)", "Result: Cancelled; nothing was done.",
+                com.optionslab.ira.Requests.ANSWERED_NOTE))
+            assertTrue("banner has '$line'", compose.has(line, substring = true))
+        assertNoAnswerButtons()
+        assertFalse("nothing re-run", com.optionslab.app.data.AppSettings.load().guardKill)
+        tap("OK")
+        compose.waitForNoText(com.optionslab.ira.Requests.answeredTitle(rejected))
+        assertFalse(compose.has("Rejected: ", substring = true))
+
+        // A pending request is as before: its card with Yes and No, and no banner of its own.
+        IraHub.ask("hit the panic button")
+        compose.until(60_000, "the second request") { IraHub.state.value.pending.isNotEmpty() }
+        compose.waitForText("Yes, approve")
+        assertTrue(compose.has("No, reject"))
+        assertTrue(compose.has("Lapses in", substring = true))
+        assertTrue("no banner for a pending one", compose.onAllNodesWithTag("notice-banner", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        assertFalse("still waiting: nothing done", com.optionslab.app.data.AppSettings.load().guardKill)
+
+        // Approved: the same banner, "Approved", how and the result; still no Yes or No, and nothing done again.
+        tap("Yes, approve")
+        compose.until(10_000, "approved") { IraHub.state.value.pending.isEmpty() }
+        compose.until(10_000, "the kill switch on") { com.optionslab.app.data.AppSettings.load().guardKill }
+        compose.until(10_000, "approved in Recent") { IraHub.recentRequests().value.firstOrNull()?.outcome == com.optionslab.ira.Requests.Outcome.APPROVED }
+        compose.waitForText("Approved")
+        val approved = IraHub.recentRequests().value.first()
+        assertEquals(com.optionslab.ira.Requests.By.TAP, approved.by)
+        assertTrue(approved.result.orEmpty().isNotBlank())
+        tap("Approved")
+        compose.waitForText(com.optionslab.ira.Requests.answeredTitle(approved))
+        assertTrue(com.optionslab.ira.Requests.answeredTitle(approved).startsWith("Approved: "))
+        for (line in listOf("Venue: No order", "Fingerprint: not needed", "Asked: ", "(by tap)", "Result: ",
+                com.optionslab.ira.Requests.ANSWERED_NOTE))
+            assertTrue("banner has '$line'", compose.has(line, substring = true))
+        assertNoAnswerButtons()
+        tap("OK")
+        compose.waitForNoText(com.optionslab.ira.Requests.answeredTitle(approved))
+        assertEquals(com.optionslab.ira.Requests.Outcome.APPROVED, IraHub.recentRequests().value.first().outcome)
     }
 }

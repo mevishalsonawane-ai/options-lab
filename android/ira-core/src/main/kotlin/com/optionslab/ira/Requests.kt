@@ -61,8 +61,61 @@ object Requests {
         val voiced: Boolean get() = kind != Kind.STRATEGY
     }
 
-    /** A request no longer waiting, with what became of it and when. */
-    data class Recent(val view: RequestView, val outcome: Outcome, val at: Long)
+    /** How a request was answered, when known. */
+    enum class By(val label: String) {
+        TAP("by tap"), FINGERPRINT("by tap, with your fingerprint"), VOICE("by voice"), NOTIFICATION("from the notification");
+    }
+
+    /**
+     * A request no longer waiting, with what became of it and when. [by]: how it was answered (null: not known, or it
+     * lapsed); [result]: what came of it (an order's outcome, "Cancelled; nothing was done."), or null when none was
+     * recorded; [fingerprint]: whether a yes on it asked for the fingerprint while it waited (null: the view's own).
+     */
+    data class Recent(
+        val view: RequestView, val outcome: Outcome, val at: Long,
+        val by: By? = null, val result: String? = null, val fingerprint: Boolean? = null,
+    )
+
+    // ---- an answered request, opened from Recent (Boss, 6 Oct): the same banner, display only ------------------------
+
+    /** The answered banner's title: what became of it, then its heading ("Approved: Stop ORB"). */
+    fun answeredTitle(r: Recent): String = "${answeredWord(r.outcome)}: ${plain(r.view.title).replaceFirstChar { it.uppercase() }}"
+
+    /** Boss's own words for an outcome: Approved, Rejected, Expired, or Approved but failed. */
+    fun answeredWord(o: Outcome): String = when (o) {
+        Outcome.APPROVED -> "Approved"
+        Outcome.DECLINED -> "Rejected"
+        Outcome.LAPSED -> "Expired"
+        Outcome.FAILED -> "Approved, but it failed"
+    }
+
+    private fun stamp(at: Long, zone: java.time.ZoneId): String =
+        java.time.Instant.ofEpochMilli(at).atZone(zone).format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM, HH:mm:ss", java.util.Locale.ENGLISH))
+
+    /**
+     * The answered request [r]'s detail lines, in [zone]: what it was (its kind and its full what), where it would have
+     * acted, whether a yes needed the fingerprint, its figures, why, its whole details, when it was asked, when and how it
+     * was answered (or that it expired unanswered) and what came of it. Words only: nothing here acts or asks again.
+     */
+    fun answeredLines(r: Recent, zone: java.time.ZoneId): List<String> {
+        val v = r.view
+        val out = ArrayList<String>()
+        out += "${v.kind.label}: ${plain(v.what).replaceFirstChar { it.uppercase() }}."
+        out += "Venue: ${v.venue.label}"
+        out += if (r.fingerprint ?: v.fingerprint) "Fingerprint: needed for a yes" else "Fingerprint: not needed"
+        val figures = listOfNotNull(v.symbol?.let { "Symbol: $it" }, v.qty?.let { "Qty: $it" }, v.price?.let { "Price: $it" })
+        if (figures.isNotEmpty()) out += figures.joinToString(" · ")
+        v.why?.trim()?.takeIf { it.isNotEmpty() }?.let { out += "Why: $it" }
+        v.details?.trim()?.takeIf { it.isNotEmpty() }?.let { out += "Details: $it" }
+        out += "Asked: ${stamp(v.askedAt, zone)}"
+        out += if (r.outcome == Outcome.LAPSED) "Expired: ${stamp(r.at, zone)} - no answer came, so nothing was done"
+            else "${answeredWord(r.outcome)}: ${stamp(r.at, zone)}" + (r.by?.let { " (${it.label})" } ?: "")
+        r.result?.trim()?.takeIf { it.isNotEmpty() }?.let { out += "Result: $it" }
+        return out
+    }
+
+    /** The note under an answered request's banner: a record only. */
+    const val ANSWERED_NOTE = "Already answered: this is the record only - nothing can be approved or rejected here."
 
     /** How many recent ones are kept for the panel's "Recent" list. */
     const val RECENT_KEEP = 10

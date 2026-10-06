@@ -759,7 +759,7 @@ internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
                 }
             }
         } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> IraHub.confirmAsync(mineId) } }
-        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId) } }
+        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId, by = com.optionslab.ira.Requests.By.TAP) } }
     }
 }
 
