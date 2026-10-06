@@ -589,6 +589,25 @@ object MarketRecorder {
             .also { _status.value = it }
     }
 
+    /** The last GIFT Nifty reading kept (when it was read, and the reading), or null. Read only. */
+    fun lastGift(): Pair<LocalDateTime, RecorderFeeds.Gift>? = RecorderFeeds.giftDecode(pref(K_GIFT))
+
+    /**
+     * NSE's participant-wise OI of the two newest trade dates in the recorded day files ([com.optionslab.ira.MorningCues]:
+     * the FIIs' positioning and its change), newest first; at most the newest 12 day files are opened. Read only (the
+     * files are decrypted here, on this phone, for Jarvis's answer; nothing is written or sent). Call off the main thread.
+     */
+    fun participantsRecorded(): List<RecorderFeeds.Participants> {
+        if (dirOrNull == null) return emptyList()
+        val out = ArrayList<RecorderFeeds.Participants>()
+        for ((d, _) in days().reversed().take(12)) {
+            runCatching { com.optionslab.ira.MorningCues.participants(readDay(d).lines) }.getOrDefault(emptyList())
+                .forEach { p -> if (out.none { it.date == p.date }) out += p }
+            if (out.size >= 2) break
+        }
+        return out.sortedByDescending { it.date }.take(2)
+    }
+
     /** Jarvis's answer to "how much market data have we recorded" (his own data; nothing acts). */
     fun answer(): String = MarketRecord.answer(status(), Market.today())
 

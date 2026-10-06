@@ -1388,6 +1388,50 @@ object IraHub {
             .mapNotNull { m -> com.optionslab.ira.Outlook.brief(m, histories[m]?.bars.orEmpty(), vix) }
     }.getOrDefault(emptyList())
 
+    /** The GIFT Nifty sentences ([com.optionslab.ira.MorningCues.gift]): the recorder's last reading against Nifty's previous close. */
+    private fun giftCue(now: LocalDateTime): Triple<com.optionslab.ira.RecorderFeeds.Gift?, LocalDateTime?, com.optionslab.ira.MorningCues.Close?> {
+        val g = com.optionslab.app.data.MarketRecorder.lastGift()
+        val prev = g?.let { (read, gift) -> com.optionslab.ira.MorningCues.prevClose(histories[IraMarket.NIFTY]?.bars.orEmpty(), gift.at ?: read) }
+        return Triple(g?.second, g?.first, prev)
+    }
+
+    /** The FIIs' newest and previous index positioning kept by the recorder (either may be null). Reads day files: off the main thread. */
+    private fun fiiCue(): Pair<com.optionslab.ira.MorningCues.Fii?, com.optionslab.ira.MorningCues.Fii?> {
+        val ps = com.optionslab.app.data.MarketRecorder.participantsRecorded()
+        return com.optionslab.ira.MorningCues.fii(ps.getOrNull(0)) to com.optionslab.ira.MorningCues.fii(ps.getOrNull(1))
+    }
+
+    /** Jarvis's answer to a morning-cues question ([com.optionslab.ira.MorningCues.Ask]); the FIIs' cash flows added when NSE's are held. */
+    private suspend fun morningCuesAnswer(ask: com.optionslab.ira.MorningCues.Ask): String {
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val gift = if (ask == com.optionslab.ira.MorningCues.Ask.FII) emptyList() else
+            giftCue(now).let { (g, read, prev) -> com.optionslab.ira.MorningCues.gift(g, read, prev, now) }
+        val fii = if (ask == com.optionslab.ira.MorningCues.Ask.GIFT) emptyList() else {
+            val (cur, prev) = fiiCue()
+            val flowLine = if (ask == com.optionslab.ira.MorningCues.Ask.FII) runCatching { withTimeoutOrNull(8_000) { flows() } }.getOrNull()
+                ?.takeIf { it.isNotEmpty() }?.let { com.optionslab.ira.Flows.lines(it).first() } else null
+            com.optionslab.ira.MorningCues.fiiSay(cur, prev) + listOfNotNull(flowLine)
+        }
+        return com.optionslab.ira.MorningCues.answer(ask, gift, fii)
+    }
+
+    /**
+     * The 09:00 check's morning cues ([com.optionslab.ira.MorningCues]): GIFT Nifty's gap from Nifty's previous close and
+     * the FIIs' index positioning, each only when the recorder holds a recent one. Not in IraGoldAlgo. Reads only.
+     */
+    suspend fun morningCues(): List<String> {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return emptyList()
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+                val (g, read, prev) = giftCue(now)
+                val (cur, before) = fiiCue()
+                listOfNotNull(com.optionslab.ira.MorningCues.giftBrief(g, read, prev, now),
+                    com.optionslab.ira.MorningCues.fiiBrief(cur, before, now.toLocalDate()))
+            }.getOrDefault(emptyList())
+        }
+    }
+
     /**
      * The 09:00 check made its outlook ([morningOutlook]): each index's numbers (previous close, usual-day range, direction
      * read, pivot - [com.optionslab.ira.OutlookCheck.call]) noted for the 15:35 wrap-up. Trading days only; market data only.
@@ -1616,7 +1660,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.BigMoveRisk.asked(q) ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.MorningCues.asked(q) != null || com.optionslab.ira.BigMoveRisk.asked(q) ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.DayScore.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
@@ -3336,7 +3380,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on what to ask, how fresh the data is, what the phone has no data for and Jarvis's own
-     * reasons: Tour, DataAge, MarketRecord, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
+     * reasons: Tour, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfJarvis(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3371,6 +3415,20 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { com.optionslab.app.data.MarketRecorder.answer() }.getOrElse { "I could not read the market recorder just now, Boss." })
+            }
+            return true
+        }
+        // "GIFT Nifty kya bol raha hai", "what are FIIs doing", "FII position", "morning cues" ([com.optionslab.ira.MorningCues]):
+        // the market recorder's last GIFT Nifty reading against Nifty's previous close (the gap, with the reading's time),
+        // and the FIIs' index futures long share and its change and their index calls and puts from NSE's participant OI
+        // rows it kept. Read only from what the recorder holds (nothing fetched here); missing data said as missing; facts
+        // only, never a trade suggestion; nothing acts. (Before Honest, which says GIFT Nifty has no data.) Not in IraGoldAlgo.
+        val cuesAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MorningCues.asked(q) }.getOrNull() else null
+        if (cuesAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { morningCuesAnswer(cuesAsk) }.getOrElse { "I could not read the morning cues just now, Boss." })
             }
             return true
         }

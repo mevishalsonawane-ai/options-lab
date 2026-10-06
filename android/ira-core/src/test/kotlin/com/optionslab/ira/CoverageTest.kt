@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || BigMoveRisk.asked(said) ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
@@ -104,6 +104,8 @@ class CoverageTest {
             if (DataAge.asked(q)) return Kind.JARVIS
             // (What the market recorder keeps on this phone: his own data, read only.)
             if (MarketRecord.asked(q)) return Kind.JARVIS
+            // (GIFT Nifty's gap and the FIIs' positioning from what the recorder keeps: the market's.)
+            if (MorningCues.asked(q) != null) return Kind.MARKET
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null) return Kind.JARVIS
             // (How likely a big 5-minute candle is now: the market's, information only.)
@@ -310,8 +312,8 @@ class CoverageTest {
         "is thursday expiry" to I, "what day is expiry this week" to I, "what's the lot size" to I, "what's atm right now" to I, "nifty atm" to I,
         "what's the premium of the atm call" to I, "nifty 25000 ce price" to I, "banknifty 52000 pe ltp" to I, "how much is the 25000 call" to M,
         "what's the iv today" to A, "what's the pcr today" to A, "nifty pcr" to A, "banknifty max pain" to A, "where is the max oi" to A,
-        "call writing kahan hai" to M, "what are fiis doing" to A, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
-        "gold rate" to M, "what's sgx nifty" to H, "gift nifty" to H, "how is gift nifty" to H, "what are global cues" to M, "any events today" to A,
+        "call writing kahan hai" to M, "what are fiis doing" to M, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
+        "gold rate" to M, "what's sgx nifty" to M, "gift nifty" to M, "how is gift nifty" to M, "what are global cues" to M, "any events today" to A,
         "is there rbi policy today" to A, "when is the fed meeting" to A, "what is the budget date" to A, "explain the market today" to M,
         "summarize the market" to M, "give me a summary" to M, "market summary please" to M, "what's happening with banknifty" to M,
         "bank nifty update please" to M, "quick update" to M, "status update" to M, "how is everything" to M, "anything i should know" to M,
@@ -333,7 +335,7 @@ class CoverageTest {
         "banknifty ka target kya hai" to H, "nifty target today" to H, "nifty ka target batao" to H,
         "where is the bottom for banknifty" to H, "nifty kitna aur girega" to H, "banknifty vwap" to H, "is nifty above vwap" to H,
         "vwap kahan hai" to H, "how many lots can i take" to H, "kitne lots le sakta hu" to H, "how many lots can i buy" to H,
-        "gift nifty kya bol raha hai" to H, "natural gas price" to H, "how is europe" to H, "dax today" to H, "what's the s&p doing" to H,
+        "gift nifty kya bol raha hai" to M, "natural gas price" to H, "how is europe" to H, "dax today" to H, "what's the s&p doing" to H,
         "how is the dow jones today" to H, "how much can banknifty fall" to M, "what is vwap" to I, "vwap kya hota hai" to I,
         "what does vwap mean" to I, "nifty ka haal batao" to M, "bazaar kaisa chal raha hai" to M, "market ka mood kaisa hai" to M,
         "aaj market mein tezi hai kya" to M, "aaj mandi hai kya" to M, "nifty mein tezi hai kya" to M, "banknifty mein mandi hai kya" to M,
@@ -457,6 +459,8 @@ class CoverageTest {
         // ---- The out-of-the-money option's record (OtmReach, market intelligence round 43): the market's ----
         // ---- What the market recorder keeps on this phone (MarketRecord): his own ----
         "how much market data have we recorded" to J, "market recorder status" to J, "kitna market data record hua hai" to J,
+        // ---- GIFT Nifty's gap and the FIIs' positioning from the market recorder (MorningCues): the market's ----
+        "fii position" to M, "fii kya kar rahe hain" to M, "are fiis long or short" to M, "what is gift nifty saying" to M, "morning cues" to M,
         // ---- How likely a big 5-minute candle is now (BigMoveRisk): the market's ----
         "is a big move likely now" to M, "abhi kitna risk hai" to M, "volatile hai kya" to M, "is the market risky right now" to M,
         "bada move aane wala hai kya" to M,
@@ -597,7 +601,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || BigMoveRisk.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
@@ -677,6 +681,7 @@ class CoverageTest {
         if (alone && Tour.asked(q)) return "Tour"
         if (alone && DataAge.asked(q)) return "DataAge"
         if (alone && MarketRecord.asked(q)) return "MarketRecord"
+        if (alone && MorningCues.asked(q) != null) return "MorningCues"
         if (alone && Honest.asked(q) != null) return "Honest"
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
         if (alone && Thinking.asked(q) != null) return "Thinking"
@@ -860,6 +865,9 @@ class CoverageTest {
         // ---- MarketRecord: what the market recorder keeps ----
         "how much market data have we recorded" to "MarketRecord", "is the market recorder running" to "MarketRecord",
         "how much space does the recorded market data take" to "MarketRecord", "market data kitne din ka record hua hai" to "MarketRecord",
+        // ---- MorningCues: GIFT Nifty's gap, the FIIs' positioning ----
+        "gift nifty kya bol raha hai" to "MorningCues", "what are fiis doing" to "MorningCues", "fii position" to "MorningCues",
+        "fii ka position kya hai" to "MorningCues", "morning cues" to "MorningCues",
         // ---- BigMoveRisk: how likely a big 5-minute candle is now ----
         "is a big move likely now" to "BigMoveRisk", "abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
         "is the market volatile right now" to "BigMoveRisk", "big move aa sakta hai kya" to "BigMoveRisk",
@@ -1512,7 +1520,7 @@ class CoverageTest {
             ("help me journal today" to "DayJournal") to ("how was my day" to "DaySummary"),
             ("remember when nifty gapped down" to "MarketMemory") to ("remember that i trade on fridays" to "AboutBoss"),
             ("how are you improving" to "Improve") to ("how are you" to "Chat"),
-            ("is your data fresh" to "DataAge") to ("what's sgx nifty" to "Honest"),
+            ("is your data fresh" to "DataAge") to ("what's sgx nifty" to "MorningCues"),
             // Round 7: the families added since, each beside the one it sounds like.
             ("what if nifty falls 1%" to "Scenarios") to ("how much do i lose if nifty falls 1%" to "Account:MOVE"),
             ("what if nifty moves 100 points" to "Scenarios") to ("what happens to my p&l if nifty moves 100 points" to "Account:MOVE"),

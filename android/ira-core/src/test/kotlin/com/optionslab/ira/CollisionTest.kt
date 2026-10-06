@@ -132,6 +132,7 @@ class CollisionTest {
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "MarketRecord" to { q -> MarketRecord.asked(q) },
+        "MorningCues" to { q -> MorningCues.asked(q) != null },
         "BigMoveRisk" to { q -> BigMoveRisk.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
@@ -859,6 +860,13 @@ class CollisionTest {
         "how much market data have we recorded" to "MarketRecord", "is the market recorder running" to "MarketRecord",
         "market recorder status" to "MarketRecord", "how many days of market data have you recorded" to "MarketRecord",
         "kitna market data record hua hai" to "MarketRecord",
+        // ---- MorningCues: GIFT Nifty's gap from Nifty's last close and the FIIs' index positioning, from the market recorder ----
+        "gift nifty kya bol raha hai" to "MorningCues", "what is gift nifty saying" to "MorningCues", "how is gift nifty" to "MorningCues",
+        "where is gift nifty" to "MorningCues", "gift nifty kitna hai" to "MorningCues", "what's sgx nifty" to "MorningCues",
+        "what are fiis doing" to "MorningCues", "fii position" to "MorningCues", "fii positioning" to "MorningCues",
+        "what is the fii long short ratio" to "MorningCues", "fii ka position kya hai" to "MorningCues", "fii kya kar rahe hain" to "MorningCues",
+        "are fiis long or short" to "MorningCues", "fii index futures position" to "MorningCues", "morning cues" to "MorningCues",
+        "pre market cues" to "MorningCues",
         // ---- BigMoveRisk: how likely a big 5-minute candle is now (level, rough multiple, reasons; never the direction) ----
         "is a big move likely now" to "BigMoveRisk", "is a big move coming" to "BigMoveRisk", "any chance of a big move right now" to "BigMoveRisk",
         "big move aa sakta hai kya" to "BigMoveRisk", "kya abhi bada move aayega" to "BigMoveRisk", "bada move aane wala hai kya" to "BigMoveRisk",
@@ -1401,7 +1409,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -2691,6 +2699,10 @@ class CollisionTest {
             "is my voice being recorded", "what was the record high of nifty", "is your data fresh", "how old is your data",
             "is the call recording on"))
             assertTrue(audit.feature(s) != "MarketRecord", "$s: ${audit.feature(s)}")
+        // MorningCues never takes the FIIs' cash-market flows, the FII/DII figures, news, a definition or Boss's own positions.
+        for (s in listOf("what did fiis do yesterday", "fii data", "fii dii data", "did fiis buy or sell", "fii ne aaj kitna becha",
+            "news on fii flows", "what are my positions", "what does gift nifty mean"))
+            assertTrue(audit.feature(s) != "MorningCues", "$s: ${audit.feature(s)}")
         // BigMoveRisk only reads how likely a big candle is now: never Boss's own risk or limits, a trade's risk, a definition,
         // the big-candle record of past days, a direction, the expected range or an alert.
         for (s in listOf("how much risk am i taking", "what are my risk limits", "what is volatility", "is my position risky",

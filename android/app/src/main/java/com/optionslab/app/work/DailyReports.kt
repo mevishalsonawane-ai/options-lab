@@ -231,6 +231,9 @@ object DailyReports {
             }
             runCatching { kotlinx.coroutines.withTimeoutOrNull(15_000) { com.optionslab.app.ira.IraHub.flows() } }.getOrNull()
                 ?.takeIf { it.isNotEmpty() }?.let { lines += "• " + com.optionslab.ira.Flows.lines(it).first() }
+            // The market recorder's morning cues ([com.optionslab.ira.MorningCues]): GIFT Nifty's gap from Nifty's previous close
+            // and the FIIs' index positioning from NSE's participant OI - each only when a recent one is held. Facts only.
+            runCatching { com.optionslab.app.ira.IraHub.morningCues() }.getOrDefault(emptyList()).forEach { lines += "• $it" }
             com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
             // A mute said by voice lasts that day only (Boss, 5 Oct): yesterday's ends here, and the check says so.
             val voiceBack = runCatching { com.optionslab.app.ira.JarvisVoice.morningUnmute() }.getOrNull()
