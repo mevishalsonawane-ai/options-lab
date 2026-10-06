@@ -1,7 +1,13 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -34,7 +40,7 @@ import com.optionslab.ira.WhatsNew
  * written during composition (the "Show all" choice changes on a tap).
  */
 @Composable
-internal fun WhatsNewCardContent(unseen: List<WhatsNew.Entry>, onGotIt: () -> Unit, onGo: (String) -> Unit) {
+internal fun WhatsNewCardContent(unseen: List<WhatsNew.Entry>, onGotIt: () -> Unit, onGo: ((String) -> Unit)?) {
     val p = LocalPalette.current
     var all by rememberSaveable { mutableStateOf(false) }
     val shown = WhatsNew.collapsed(unseen, all)
@@ -58,6 +64,24 @@ internal fun WhatsNewCardContent(unseen: List<WhatsNew.Entry>, onGotIt: () -> Un
         }
         BrassButton("Got it", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft, onClick = onGotIt)
         Note("The whole list stays in ${com.optionslab.app.ui.Tab.CABINET.label} → What's new.", Modifier.padding(top = 6.dp))
+    }
+}
+
+/**
+ * The Ira page with the "What's new" card above it (Home opens on the Ira page in Jarvis): the same unseen list as the
+ * Dashboard's card ([com.optionslab.app.data.WhatsNewStore.shown]), and the same "Got it", so dismissing either hides both.
+ * The card takes at most [maxHeight] and scrolls within it, so the globe and the chat keep the rest; with nothing unseen the
+ * page is exactly as before. [onGo]: a change's page (null: the rows open nothing).
+ */
+@Composable
+internal fun WhatsNewOverPage(onGo: ((String) -> Unit)?, maxHeight: androidx.compose.ui.unit.Dp = 340.dp, content: @Composable () -> Unit) {
+    val news by remember { com.optionslab.app.data.WhatsNewStore.shown() }.collectAsState()
+    Column(Modifier.fillMaxSize()) {
+        if (news.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState())
+            .padding(horizontal = 14.dp, vertical = 6.dp)) {
+            WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo)
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) { content() }
     }
 }
 

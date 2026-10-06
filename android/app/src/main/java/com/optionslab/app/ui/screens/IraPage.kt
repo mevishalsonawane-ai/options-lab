@@ -69,10 +69,11 @@ import com.optionslab.ira.Market as IraMarket
 
 /**
  * Jarvis's Home: Ira first, the usual dashboard (prices, P&L, strategies) behind the second switch. The choice is
- * kept while the app runs.
+ * kept while the app runs. Over the Ira page, the "What's new" card while changes are unseen ([WhatsNewOverPage]; the
+ * same list and "Got it" as the Dashboard's); [onGo]: a change's page, as Home's shortcuts.
  */
 @Composable
-fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
+fun IraHome(orders: IraOrderPaths? = null, onGo: ((String) -> Unit)? = null, dashboard: @Composable () -> Unit) {
     val p = LocalPalette.current
     var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
     // The Requests panel from Home (Boss, 5 Oct): its badge beside the switch; Back closes it.
@@ -96,7 +97,7 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
             }
             RequestsBadge(Modifier.align(Alignment.CenterVertically).padding(start = 6.dp)) { homeRequests = true }
         }
-        Box(Modifier.weight(1f)) { if (homeRequests) RequestsPanel(onClose = { homeRequests = false }) else if (showIra) IraPage(orders) else dashboard() }
+        Box(Modifier.weight(1f)) { if (homeRequests) RequestsPanel(onClose = { homeRequests = false }) else if (showIra) WhatsNewOverPage(onGo) { IraPage(orders) } else dashboard() }
     }
 }
 

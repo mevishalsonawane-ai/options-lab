@@ -2,7 +2,13 @@ package com.optionslab.app.ui.screens
 
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,9 +61,9 @@ class WhatsNewCardTest {
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)
     @get:Rule val watchdog = com.optionslab.app.testing.ResearchWatchdog()
 
-    @Before fun nothingSeen() { SecurePrefs.put(WhatsNewStore.KEY, null) }
+    @Before fun nothingSeen() { SecurePrefs.put(WhatsNewStore.KEY, null); WhatsNewStore.forget() }
     @After fun noNetwork() {
-        SecurePrefs.put(WhatsNewStore.KEY, null)
+        SecurePrefs.put(WhatsNewStore.KEY, null); WhatsNewStore.forget()
         assertEquals("no host may be reached", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
@@ -114,12 +120,11 @@ class WhatsNewCardTest {
 
     /** Home as the app builds it: the card from the settings' seen ids, above "Today at a glance"; "Got it" hides it for good. */
     @Composable private fun HomeWithNews(went: MutableList<String>) {
-        var unseen by remember { mutableStateOf(WhatsNewStore.unseen()) }
-        val news = unseen
+        val news by remember { WhatsNewStore.shown() }.collectAsState()
         AlmanacContent(false, false, emptyMap(), null, emptyList(), Load.Idle, Load.Done(HomeFixtures.paper), {}, {},
             glance = { TodayGlanceContent(GlanceFixtures.inSession, false, {}, {}) },
             whatsNew = if (news.isNotEmpty()) {
-                { WhatsNewCardContent(news, onGotIt = { WhatsNewStore.markAllSeen(); unseen = emptyList() }, onGo = { went += it }) }
+                { WhatsNewCardContent(news, onGotIt = { WhatsNewStore.markAllSeen() }, onGo = { went += it }) }
             } else null) { Text("strategies card") }
     }
 
@@ -156,11 +161,61 @@ class WhatsNewCardTest {
         org.junit.Assume.assumeTrue(entries.size >= 2)
         // Seen all but the newest (as after an update that brought one more change).
         SecurePrefs.put(WhatsNewStore.KEY, WhatsNew.encode(entries.drop(1).map { it.id }.toSet()))
+        WhatsNewStore.forget()
         assertEquals(listOf(entries[0].id), WhatsNewStore.unseen().map { it.id })
         set { HomeWithNews(ArrayList()) }
         compose.waitForIdle()
         text("1 change since you last looked").assertIsDisplayed()
         assertFalse(compose.onAllNodesWithText("Show all", substring = true).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    /** The Ira page (Home opens on it in Jarvis): the same card above it while changes are unseen; "Got it" hides it. */
+    @Test fun theIraPageShowsTheCardAboveItUntilGotIt() {
+        val entries = WhatsNewStore.entries()
+        org.junit.Assume.assumeTrue("IraGoldAlgo shows none of today's changes", entries.isNotEmpty())
+        set { WhatsNewOverPage(onGo = null) { Text("the ira page") } }
+        compose.waitForIdle()
+        text("What's new").assertIsDisplayed()
+        text("${entries.size} changes since you last looked").assertIsDisplayed()
+        text("the ira page").assertIsDisplayed()
+        val top = { t: String -> compose.onNodeWithText(t).fetchSemanticsNode().boundsInRoot.top }
+        assertTrue("the card is above the page", top("What's new") < top("the ira page"))
+        // With no page to open from here, a change is no button (nothing navigates).
+        text(entries[0].title).assertIsDisplayed()
+        text("Got it").performClick()
+        compose.waitForIdle()
+        assertFalse(shows("What's new"))
+        text("the ira page").assertIsDisplayed()
+        assertTrue(WhatsNewStore.unseen().isEmpty())
+        assertTrue(WhatsNewStore.shown().value.isEmpty())
+    }
+
+    @Test fun nothingUnseenLeavesTheIraPageAsItWas() {
+        SecurePrefs.put(WhatsNewStore.KEY, WhatsNew.encode(WhatsNew.ENTRIES.map { it.id }.toSet()))
+        WhatsNewStore.forget()
+        set { WhatsNewOverPage(onGo = null) { Text("the ira page") } }
+        compose.waitForIdle()
+        assertFalse(shows("What's new"))
+        assertEquals(0f, compose.onNodeWithText("the ira page").fetchSemanticsNode().boundsInRoot.top, 0.5f)
+    }
+
+    /** One list for both places: "Got it" on the Ira page hides the Dashboard's card too. */
+    @Test fun gotItInOnePlaceHidesBoth() {
+        org.junit.Assume.assumeTrue(WhatsNewStore.entries().isNotEmpty())
+        set {
+            Column {
+                Box(Modifier.height(700.dp)) { WhatsNewOverPage(onGo = null) { Text("the ira page") } }
+                Box(Modifier.height(1500.dp)) { HomeWithNews(ArrayList()) }
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(2, compose.onAllNodesWithText("What's new").fetchSemanticsNodes().size)
+        compose.onAllNodesWithText("Got it").fetchSemanticsNodes().let { assertEquals(2, it.size) }
+        compose.onAllNodesWithText("Got it")[0].performClick()
+        compose.waitForIdle()
+        assertFalse(shows("What's new"))
+        text("the ira page").assertIsDisplayed()
+        text("Today at a glance").assertIsDisplayed()
     }
 
     @Test fun theSettingsPageListsEveryChange() {

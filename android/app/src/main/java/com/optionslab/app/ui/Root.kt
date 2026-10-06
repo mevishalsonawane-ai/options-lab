@@ -456,14 +456,13 @@ private fun Main(model: AppModel) {
                 ) { t ->
                     when (t) {
                         Tab.ALMANAC -> {
-                            val dashboard: @Composable () -> Unit = {
-                                AlmanacScreen(model, onGo = { dest ->
-                                    if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
-                                    go(navNow().home(dest))
-                                })
+                            val homeGo: (String) -> Unit = { dest ->
+                                if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+                                go(navNow().home(dest))
                             }
+                            val dashboard: @Composable () -> Unit = { AlmanacScreen(model, onGo = homeGo) }
                             // Jarvis: Home opens on Ira, with the usual dashboard one tap away.
-                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(remember(model) { com.optionslab.app.ui.screens.iraOrderPathsFor(model) }, dashboard) else dashboard()
+                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(remember(model) { com.optionslab.app.ui.screens.iraOrderPathsFor(model) }, onGo = homeGo, dashboard = dashboard) else dashboard()
                         }
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
                         Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }

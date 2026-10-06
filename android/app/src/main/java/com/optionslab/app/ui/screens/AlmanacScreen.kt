@@ -97,15 +97,14 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
-    // "What's new": the changes not seen yet, read once when Home opens (the seen ids are a setting); "Got it" keeps them as
-    // seen and hides the card. Written only on that tap, never while composing. (Not in IraGoldAlgo: [WhatsNewStore.entries].)
-    var unseenNews by remember { mutableStateOf<List<com.optionslab.ira.WhatsNew.Entry>>(com.optionslab.app.data.WhatsNewStore.unseen()) }
-    val news = unseenNews
+    // "What's new": the changes not seen yet, one list with the Ira page's card (the seen ids are a setting); "Got it" keeps
+    // them as seen and hides both cards. Written only on that tap, never while composing. (Not in IraGoldAlgo: [WhatsNewStore.entries].)
+    val news by remember { com.optionslab.app.data.WhatsNewStore.shown() }.collectAsState()
     AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
         glance = { TodayGlanceCard(onGo) },
         whatsNew = if (news.isNotEmpty()) {
-            { WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen(); unseenNews = emptyList() }, onGo = onGo) }
+            { WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo) }
         } else null,
         strategies = { StrategyArmCard(model) { onGo("strategy") } })
 }
