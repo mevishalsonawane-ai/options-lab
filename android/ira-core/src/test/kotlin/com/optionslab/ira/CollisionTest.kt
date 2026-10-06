@@ -121,6 +121,7 @@ class CollisionTest {
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
         "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
         "LiquidityWhyNot" to { q -> LiquidityWhyNot.asked(q) != null },
+        "SoloDay" to { q -> SoloDay.asked(q) != null },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
@@ -912,6 +913,16 @@ class CollisionTest {
         "liquidity kyu nahi chala" to "LiquidityWhyNot", "aaj liquidity ne entry kyun nahi li" to "LiquidityWhyNot", "why no banknifty liquidity trade" to "LiquidityWhyNot",
         "what's liquidity waiting for" to "LiquidityWhyNot", "what is the liquidity bot waiting for" to "LiquidityWhyNot",
         "liquidity kis cheez ka wait kar raha hai" to "LiquidityWhyNot", "what would make liquidity trade" to "LiquidityWhyNot", "when will liquidity trade" to "LiquidityWhyNot",
+        // ---- SoloDay: what Solo (midday) did today, why it did not trade, how it decided, what it will read ----
+        "what did solo do today" to "SoloDay", "what has solo done today" to "SoloDay", "why didn't solo trade" to "SoloDay",
+        "why didn't solo trade today" to "SoloDay", "why hasn't solo traded today" to "SoloDay", "why no solo trade today" to "SoloDay",
+        "why didn't solo buy anything today" to "SoloDay", "solo ne aaj kya kiya" to "SoloDay", "solo ne kya kiya" to "SoloDay",
+        "solo ne trade kyu nahi liya" to "SoloDay", "solo ne aaj trade kyun nahi liya" to "SoloDay", "solo ne kaise decide kiya" to "SoloDay",
+        "how did solo decide" to "SoloDay", "how did solo decide today" to "SoloDay", "how did solo choose" to "SoloDay",
+        "explain solo's decision" to "SoloDay", "solo's decision today" to "SoloDay", "which index did solo pick" to "SoloDay",
+        "why did solo pick banknifty" to "SoloDay", "why did solo skip nifty" to "SoloDay", "what did solo see at 12" to "SoloDay",
+        "what is solo waiting for" to "SoloDay", "what will solo look at" to "SoloDay", "when will solo decide" to "SoloDay",
+        "solo kya karega aaj" to "SoloDay", "did solo trade today" to "SoloDay", "what did solo buy today" to "SoloDay",
         // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityWhyNot",
         "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
@@ -1455,7 +1466,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3124,5 +3135,43 @@ class CollisionTest {
         for (s in listOf("why didn't orb trade", "why no trade today", "why didn't liquidity trade yesterday", "why didn't liquidity trade last week",
             "what is a liquidity pool", "why did liquidity trade today", "why did the liquidity bot exit early", "liquidity ne kal trade kyu nahi liya"))
             assertTrue(audit.feature(s) != "LiquidityWhyNot", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- SoloDay: Solo (midday)'s day from its own records, never the Solo questions that already had their own answers ----
+
+    @Test fun soloDayLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("what did solo do today", "why didn't solo trade", "solo ne aaj kya kiya", "how did solo decide",
+            "why didn't solo trade today?", "solo ne trade kyu nahi liya", "what is solo waiting for", "why did solo skip nifty")) {
+            assertEquals("SoloDay", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // Solo's status, its switches, its record, a decision of the Thinking trail, its exits and results: as before.
+        assertEquals("Solo", audit.feature("how is solo doing"))
+        assertEquals("Solo", audit.feature("how did solo do today"))
+        assertEquals("Solo", audit.feature("solo on"))
+        assertEquals("Solo", audit.feature("solo off"))
+        assertEquals("Solo", audit.feature("is solo on"))
+        assertEquals("Solo", audit.feature("should i switch off solo"))
+        assertEquals("Act", audit.feature("switch on solo"))
+        assertEquals("Act", audit.feature("turn off solo"))
+        assertEquals("Solo", audit.feature("solo record"))
+        assertEquals("Solo", audit.feature("solo forward test"))
+        assertEquals("Solo", audit.feature("what is solo"))
+        assertEquals("Solo", audit.feature("why did solo exit"))
+        assertEquals("Solo", audit.feature("why did solo lose today"))
+        assertEquals("Account:ORDERS", audit.feature("solo trades today"))
+        assertEquals("Thinking", audit.feature("why didn't solo take that trade"))
+        assertEquals("Thinking", audit.feature("why didn't you take that trade"))
+        assertEquals("Thinking", audit.feature("trade kyun nahi liya"))
+        assertEquals("Thinking", audit.feature("solo ne wo trade kyu nahi liya"))
+        assertEquals("Thinking", audit.feature("why didn't solo trade yesterday"))
+        // The other arms keep theirs.
+        assertEquals("LiquidityWhyNot", audit.feature("why didn't liquidity trade"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        for (s in listOf("why didn't orb trade", "why didn't liquidity trade", "how is solo doing", "solo on", "solo off", "switch on solo",
+            "why didn't solo take that trade", "why didn't solo trade yesterday", "what did solo do last week", "solo ko band karo", "solo chalu karo"))
+            assertTrue(audit.feature(s) != "SoloDay", "$s: ${audit.feature(s)}")
     }
 }
