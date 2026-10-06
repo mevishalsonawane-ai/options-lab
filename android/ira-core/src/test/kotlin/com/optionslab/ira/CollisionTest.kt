@@ -127,6 +127,7 @@ class CollisionTest {
         "Tour" to { q -> Tour.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
+        "AtmBuy" to { q -> AtmBuy.asked(q) != null },
         "SinceMorning" to { q -> SinceMorning.asked(q) },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
@@ -830,6 +831,11 @@ class CollisionTest {
         "nifty ka straddle din mein kitna girta hai" to "StraddleDecay", "how much do at the money option premiums usually decay intraday" to "StraddleDecay",
         // Its neighbours: the straddle's implied move now, Boss's own book's decay, today's expiry companion.
         "what does the banknifty straddle imply for expiry" to "ChainIntel", "how much is my book losing to theta" to "BookDecay",
+        // ---- AtmBuy: the at-the-money call and put bought at 9:30 and held, how often each ended the day worth more or doubled (round 41) ----
+        "how often does the atm option double from its 9:30 price before the end of the day" to "AtmBuy",
+        "how often does a bought atm call end the day worth more" to "AtmBuy", "how often does nifty's atm put double on expiry day" to "AtmBuy",
+        "atm option double record for banknifty" to "AtmBuy", "atm call kitni baar double hota hai" to "AtmBuy",
+        "how often do at the money options end the day worth more than at 9:30" to "AtmBuy", "how many sessions does the at the money call double" to "AtmBuy",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -1320,7 +1326,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "StraddleDecay", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -2584,6 +2590,13 @@ class CollisionTest {
             "what is a straddle", "how much does a strangle usually lose in a day", "how much does gold's straddle usually lose",
             "how fast do you answer", "what's my theta", "atm straddle price"))
             assertTrue(audit.feature(s) != "StraddleDecay", "$s: ${audit.feature(s)}")
+        // AtmBuy stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
+        // question, a definition, the straddle, gold, VIX or the quote itself.
+        for (s in listOf("will the atm call double today", "should i buy the atm call", "how often does my atm call double",
+            "has the atm call doubled today", "did the atm put double yesterday", "what is an atm option",
+            "how often does selling the atm option work out", "how often does gold's atm call double", "atm call price",
+            "how often does the atm option double if i buy at 9:30"))
+            assertTrue(audit.feature(s) != "AtmBuy", "$s: ${audit.feature(s)}")
         // MultiDay and OpenReach stay records: never one past stretch, today's own read or now.
         for (s in listOf("what was the 3 day move in nifty", "nifty 3 din se upar hai", "is nifty up in 3 days"))
             assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")

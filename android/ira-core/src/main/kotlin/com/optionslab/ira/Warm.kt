@@ -20,7 +20,7 @@ object Warm {
      * filling their [Kept] readings. Words-only readers: their answers are dropped (a kept reading is what reading again gives).
      */
     private val DETECTORS: List<(String) -> Any?> = listOf<(String) -> Any?>(
-        AboutBoss::forgetAsked, AboutBoss::knowAsked, Airtime::asked, AlertSense::asked, AppAnswers::sections,
+        AboutBoss::forgetAsked, AboutBoss::knowAsked, Airtime::asked, AlertSense::asked, AtmBuy::asked, AppAnswers::sections,
         ArmChange::asked, ArmDay::asked, ArmFit::asked, ArmHabits::asked, AskedAgain::asked, AutoStop::read,
         BatteryUse::asked, BeforeTomorrow::asked, BigCandles::asked, BookDecay::asked, WhereIWin::asked, TradesADay::asked, AfterLoss::asked, RequestBook::asked, BigPicture::asked, BotHealth::asked, BotTrades::asked, Breadth::asked,
         Briefing::asked, Bundle::acts, Causes::asked, ChainDrift::asked, ChainIntel::asked, Charges::asked, Clarity::asked, CoPilot::asked, Comebacks::asked,
