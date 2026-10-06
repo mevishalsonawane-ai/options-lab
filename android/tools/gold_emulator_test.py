@@ -61,12 +61,15 @@ def system_dialog(out):
     read again. True when one was answered. Our own app's box is never dismissed, so a hang of ours still fails."""
     if not any("isn't responding" in t and PKG not in t and "IraGold" not in t for t, _, _, _ in out):
         return False
-    for t, x, y, _ in out:
-        if t in ("Wait", "WAIT"):
-            say("(a system app was not responding: answered Wait)")
-            adb("shell", "input", "tap", str(x), str(y))
-            time.sleep(1.5)
-            return True
+    # Close it (the launcher restarts by itself): answering Wait left a launcher that hung again and again (140 times in
+    # one run) and covered the screen each time. Wait only if no Close is offered.
+    for want in (("Close app", "CLOSE APP", "Close"), ("Wait", "WAIT")):
+        for t, x, y, _ in out:
+            if t in want:
+                say(f"(a system app was not responding: answered {t})")
+                adb("shell", "input", "tap", str(x), str(y))
+                time.sleep(1.5)
+                return True
     return False
 
 
