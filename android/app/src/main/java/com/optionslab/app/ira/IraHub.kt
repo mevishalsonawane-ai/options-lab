@@ -1001,6 +1001,9 @@ object IraHub {
         runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
         // Jarvis's own trades keep their own exits too (none was ever bare long enough to matter, but never doubled).
         runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
+        // Solo's paper trade keeps its own exits (the index stop, the breakeven lock, 14:30): never a premium stop set on it
+        // (the solo2 study found a premium stop instead of the index stop cost money).
+        runCatching { IraSolo.all().filter { !it.closed }.forEach { bots += it.symbol } }
         val day = com.optionslab.app.data.Market.today().toString()
         val bare = open.filter { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol !in guarded && p.symbol !in bots }
         val bareKeys = bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()

@@ -588,7 +588,7 @@ class IraHubTest : RobolectricTest() {
         // Boss, 4 Oct: paper until he switches "AI trades go live" on; even then only once proven, asked each time.
         assertTrue(IraNewsTrades.paperFirst)
         assertTrue(!IraNewsTrades.goesLive()); assertTrue(!IraNewsTrades.goesLive(solo = true))
-        assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper until 20"))
+        assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper always"))
         IraHub.ask("Jarvis, let your trades go live")
         waitFor("the refusal") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("stay on paper until 20"))

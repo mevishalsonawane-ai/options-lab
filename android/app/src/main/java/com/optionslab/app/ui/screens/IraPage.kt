@@ -1085,7 +1085,10 @@ fun JarvisSettingsPage() {
     }
 }
 
-/** Solo (the owner's wish, 2026-10-03): Jarvis trades by himself on paper; the switch, the two-year test and the record. */
+/**
+ * Solo (the owner's wish, 2026-10-03; Solo (midday) since 06 Oct): Jarvis trades by himself on paper; the switch, the
+ * "not proven" label, the forward test ("x of 60") and the research line.
+ */
 @Composable
 private fun SoloCard() {
     val p = LocalPalette.current
@@ -1093,15 +1096,15 @@ private fun SoloCard() {
         var on by remember { mutableStateOf(com.optionslab.app.ira.IraSolo.on) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(if (on) "Solo is on" else "Solo is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money. No strategy made in advance: every minute it reads the market, guesses the next 15 minutes and learns from what really happened. It trades (1 lot, one at a time, out after 15 minutes or by 15:10, a stop-loss 30% below the option's entry) only when it is sure and its own recent guesses have mostly been right. It stops for the day Rs 5,000 down, and pauses itself Rs 15,000 below its best.",
+                Text(if (on) "Solo (midday) is on" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY, FINNIFTY or SENSEX) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
             androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.IraSolo.on = v })
         }
-        Note("The setup: a big 15-minute candle, then a 40% pullback that holds its low (or high); bought the candle's way, stop at that level, target twice the risk. Tested on two years of real option prices:")
-        com.optionslab.app.ira.IraSolo.BACKTEST.forEach { Note(it) }
-        Note("Honest reading: the index edge is real but small, and option costs and decay eat most of it - one year won, one lost. Treat Solo as a test on paper, not a money-maker yet.")
+        // The forward test set in advance, and the "not proven" label with the research line.
+        val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
+        lines.forEach { Note(it) }
         val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
         Note(rec)
         com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
@@ -1123,15 +1126,15 @@ private fun AutomationsCard() {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
             Column(Modifier.weight(1f)) {
                 Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
-                Text(if (aiLive) "On: in Live, Jarvis's and Solo's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint."
-                    else "Off: Jarvis's and Solo's trades go on PAPER, even when the app is in Live.",
+                Text(if (aiLive) "On: in Live, Jarvis's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint. Solo stays on paper always."
+                    else "Off: Jarvis's trades go on PAPER, even when the app is in Live (Solo always does).",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
             androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->
                 if (!v) { aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
                 else if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
                     com.optionslab.app.work.Alerts.error("AI trades go live is switched on with your fingerprint: set one up on the phone first.")
-                else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's and Solo's trades may go to Zerodha, each after your approval") { ok ->
+                else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's trades may go to Zerodha, each after your approval (Solo stays on paper)") { ok ->
                     if (ok) { aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false } }
             })
         }

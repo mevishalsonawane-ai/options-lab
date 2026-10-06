@@ -16,6 +16,10 @@ import java.time.LocalDate
  * Solo is judged by its own record only (never by Boss's trades, never by the news and pattern ideas), and a good
  * record never raises anything: not the lots, not the trades a day, not the stop. Nothing here starts a trade, and
  * nothing here can reach a real order. Pure.
+ *
+ * Retired as a gate on 06 Oct 2026: Solo (midday) ([com.optionslab.engine.orb.SoloMidday]) takes every trade its rule finds,
+ * because the research found a self-gate on Solo's own record cost money out of sample (solo2/SPEC.md, "must NOT be added").
+ * Kept for the old Solo's record and the answers and reviews that read it.
  */
 object SoloCalibration {
     /** The kind Solo's trades are kept under, and what they are called. */
@@ -55,8 +59,11 @@ object SoloCalibration {
         }
     }
 
+    /** 15:10 in minutes from 09:15: the old Solo's last minute (everything out), which its shadows were scored by. */
+    const val CUT = 355
+
     /** The minute a shadow is scored: when the trade would have been out ([horizon] minutes on), 15:10 at the latest. */
-    fun dueAt(entryMinute: Int, horizon: Int): Int = minOf(entryMinute + maxOf(1, horizon), Solo.CUT)
+    fun dueAt(entryMinute: Int, horizon: Int): Int = minOf(entryMinute + maxOf(1, horizon), CUT)
 
     /** The price a shadow is bought at: the ask, or the last price when there is no ask (null: no usable price). */
     fun buyPrice(ask: Double, last: Double): Double? = (if (ask > 0 && ask.isFinite()) ask else last).takeIf { it > 0 && it.isFinite() }

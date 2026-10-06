@@ -47,7 +47,7 @@ internal object Automations {
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
         SELFHEAL("Self-healing voice", "No listening for 3 minutes: the microphone is restarted.", "jarvis.auto.selfheal"),
         ACT_PAPER("Act on my own ideas (paper)", "A news or pattern idea with 3/5 confidence or more: Jarvis takes it on the PAPER account by itself and tells you (never real money).", "jarvis.auto.actpaper"),
-        SOLO_IDEAS("Solo's setups as ideas", "Solo switched off: when its setup appears, offered to you as a trade idea (you approve; on paper until proven).", "jarvis.auto.soloideas"),
+        SOLO_IDEAS("Solo's setups as ideas", "Retired 06 Oct: Solo (midday) is paper only and never offers its setups as trade ideas.", "jarvis.auto.soloideas"),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.quiet"),
     }
 
@@ -61,7 +61,7 @@ internal object Automations {
             "jarvis.group.guard", listOf(Auto.GUARD, Auto.TRAIL), byDefault = false, fingerprint = true),
         HELP("Offer help on my positions", "A position with no stop, or one going nowhere for 45 minutes: Jarvis offers a stop or a close (asks first).",
             "jarvis.group.help", listOf(Auto.RESCUE, Auto.STALE)),
-        OWN("Act on his own, on paper", "Takes his own ideas of 3/5 or more on PAPER (raising the bar where he loses), plans the paper arms each morning, and offers Solo's setups when Solo is off.",
+        OWN("Act on his own, on paper", "Takes his own ideas of 3/5 or more on PAPER (raising the bar where he loses) and plans the paper arms each morning.",
             "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, gaps filling, the previous day's high or low passed, fear (VIX) spikes, sharp moves and what coincided with them, open interest walls moving, the expiry-day straddle and max pain, and news on indices you hold.",
             "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.SHARPMOVE, Auto.OI, Auto.EXPIRYDAY, Auto.POSNEWS)),

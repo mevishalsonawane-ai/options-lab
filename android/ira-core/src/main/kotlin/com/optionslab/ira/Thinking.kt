@@ -49,6 +49,10 @@ object Thinking {
             "where Solo's record in the conditions is losing but not clearly bad, it takes one of those a day and no more"),
         SOLO_SHADOWED(Area.SOLO, false, "had Solo sit it out, followed on paper as if taken (no order)",
             "where Solo's record in the conditions is clearly bad - or its one a day there is used - it sits out and the trade is followed as if taken, so the condition can earn its way back"),
+        SOLO_MIDDAY_TOOK(Area.SOLO, true, "let Solo take it on paper",
+            "Solo (midday, paper only, not proven) buys at 12:00 when an index has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest such index, one trade a day"),
+        SOLO_MIDDAY_SKIPPED(Area.SOLO, false, "had Solo pass it over",
+            "Solo (midday) takes one index a day, the strongest move, and never on that index's expiry day or beside another automatic position on it"),
         SOLO_THIN(Area.SOLO, false, "had Solo skip it",
             "Solo never buys a strike with a wide gap between buyers and sellers or hardly any trading today: the fill and the exit would be poor"),
         ALERT_SAID(Area.ALERT, true, "said it aloud",
@@ -155,6 +159,14 @@ object Thinking {
             ?: if (!d.take) "Solo's record could not be read, so it took the careful side" else "nothing in Solo's record in these conditions said to be careful"
         return step(at, kind, idea(c, "Solo's"), listOf(Fact("it came in " + conditions(c)), Fact(record)), c.market)
     }
+
+    /**
+     * Solo (midday)'s decision on [market]'s 12:00 signal: taken ([took]) or passed over, with the [facts] the code wrote
+     * (the move in ATRs, where it closed in the range, the strongest of how many, or why it was passed over).
+     */
+    fun soloMidday(at: LocalDateTime, market: Market, call: Boolean, took: Boolean, facts: List<String>): Step =
+        step(at, if (took) Kind.SOLO_MIDDAY_TOOK else Kind.SOLO_MIDDAY_SKIPPED, "Solo's ${market.label} ${if (call) "call" else "put"} at 12:00",
+            facts.map { Fact(it) }, market)
 
     /** Solo's trade skipped for a thin strike ([problem]: [StrikeLiquidity.problem]'s words). */
     fun soloThin(at: LocalDateTime, market: Market, call: Boolean, problem: String): Step =

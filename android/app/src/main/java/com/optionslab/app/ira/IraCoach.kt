@@ -29,6 +29,8 @@ internal object IraCoach {
         runCatching { com.optionslab.app.data.PineAuto.held.value.values.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
         runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
+        // Solo's paper trade keeps its own exits: never trailed by Boss's stops.
+        runCatching { IraSolo.all().filter { !it.closed }.forEach { bots += it.symbol } }
         return bots
     }
 

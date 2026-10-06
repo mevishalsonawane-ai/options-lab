@@ -155,7 +155,7 @@ object Diag {
                 listOf("AI trades go live: ${!com.optionslab.app.ira.IraNewsTrades.paperFirst}", "Stops done automatically: ${com.optionslab.app.ira.IraHub.autoStop}") }
             section("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.record() }
             section("Today's suggestions (scorecard)") { com.optionslab.app.ira.IraNewsTrades.scorecard() }
-            section("Solo") { com.optionslab.app.ira.IraSolo.status() + " Learning: " + com.optionslab.app.ira.IraSolo.learning() }
+            section("Solo") { com.optionslab.app.ira.IraSolo.status() }
             val goals = runCatching { com.optionslab.app.ira.IraGoals.say() }.getOrElse { "could not read" }
             section("Goals") { goals }
             val lessons = runCatching { com.optionslab.app.ira.IraAccount.lessons().let { (l, n) -> com.optionslab.ira.Lessons.say(l, n) } }.getOrElse { "could not read" }
