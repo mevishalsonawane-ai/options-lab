@@ -88,12 +88,17 @@ object ForwardCheck {
         "$LOSERS/finalists_test.csv (liq, base: TEST Jul 2024 - Oct 2026)", since = SINCE_06_OCT)
 
     /**
-     * Solo, midday and risk-reduced, 1 lot (Solo buys one lot). solo2/out/riskreduced_trades.csv, rows with day >= 2024-07-01
-     * (TEST): 196 trades, net +₹31,330, ₹159.85 a trade, sd ₹3,107.56, win 50.0%, PF 1.14, max DD −₹24,589 (trade order).
-     * Only Solo (midday)'s own trades are given to it (the app filters on the tag), from 06 Oct 2026.
+     * Solo, midday and risk-reduced, 1 lot (Solo buys one lot), on the three indices it trades (NIFTY, BANKNIFTY, FINNIFTY:
+     * SENSEX dropped, the paper account has no BFO contracts). The research's portfolio re-run on those three (solo3/rr3.py:
+     * solo2.portfolio, max_open 1, strongest first, on the same M08 candidates less SENSEX's - exact, each index's candidates
+     * stand alone; the 4-index run reproduced riskreduced_trades.csv row for row): solo3/solo3_trades.csv, rows with day >=
+     * 2024-07-01 (TEST): 178 trades, net +₹4,375.44, ₹24.58 a trade, sd ₹3,198.28, win 48.9% (87), PF 1.02, max DD −₹29,279
+     * (trade order). (The 4-index line it replaces: 196 trades, +₹31,330, ₹159.85 a trade, sd ₹3,107.56, PF 1.14, DD −₹24,589;
+     * the CUSUM's false-alarm and delay figures above were measured on it.) Only Solo (midday)'s own trades are given to it
+     * (the app filters on the tag), from 06 Oct 2026.
      */
-    val SOLO = Expectation("solo", "Solo", 196, 31_330.0, 159.85, 3_107.56, 0.50, 1.14, -24_589.30,
-        "scratchpad/solo2/out/riskreduced_trades.csv (TEST rows, Jul 2024 - Oct 2026)")
+    val SOLO = Expectation("solo", "Solo", 178, 4_375.44, 24.58, 3_198.28, 0.4888, 1.02, -29_279.39,
+        "scratchpad/solo3/solo3_trades.csv (TEST rows, Jul 2024 - Oct 2026; NIFTY, BANKNIFTY, FINNIFTY)")
 
     /**
      * Hero (expiry) with the deep study's F07 exits, one ₹5,000 ticket a day (the arm's own budget). hero_deep/out/

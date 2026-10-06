@@ -83,18 +83,19 @@ class SoloMiddayTest {
             reasons += g.why
         }
         assertEquals(setOf(SoloMidday.INDEX_STOP, SoloMidday.LOCK, SoloMidday.TIME), reasons)
-        // The strongest of several: 17 Oct 2025, all four signalled; SENSEX (1.09 ATR) over NIFTY (1.03).
+        // The strongest of several: 17 Oct 2025, all three signalled - NIFTY (1.03 ATR) over FINNIFTY and BANKNIFTY. SENSEX
+        // (1.09) was the research's pick on four indices; it is not traded (the 3-index re-run took NIFTY, as here).
+        assertEquals(listOf("NIFTY", "BANKNIFTY", "FINNIFTY"), SoloMidday.UNDERLYINGS)
         val g = golden.single { it.day == LocalDate.of(2025, 10, 17) }
         val noon = g.day.atTime(12, 0, 30)
         val sig = SoloMidday.UNDERLYINGS.mapNotNull { u -> SoloMidday.signal(u, g.bars.getValue(u), g.atr[u], noon).signal }
-        assertEquals(listOf("SENSEX", "NIFTY", "FINNIFTY", "BANKNIFTY"), SoloMidday.rank(sig).map { it.underlying })
-        // SENSEX expiring that day: NIFTY, the next strongest, with the research's own NIFTY exit (index stop, 12:38 bar).
-        val c = SoloMidday.pick(sig) { s -> SoloMidday.gate(s.underlying == "SENSEX", null) }
-        assertEquals("NIFTY", c.taken!!.underlying)
-        assertEquals(listOf("SENSEX" to "expiry_today"), c.skipped.map { it.first.underlying to it.second })
-        val n = c.taken!!
-        val w = SoloMidday.walk(SoloMidday.Open("NIFTY", n.side, n.index, n.atr, n.at), g.bars.getValue("NIFTY"), g.day.atTime(14, 30, 5))
-        assertEquals(SoloMidday.INDEX_STOP to g.day.atTime(9, 15).plusMinutes(218), w.exit to w.decidedOn)
+        assertEquals(listOf("NIFTY", "FINNIFTY", "BANKNIFTY"), SoloMidday.rank(sig).map { it.underlying })
+        assertEquals(1.03, sig.first().strength, 0.005)
+        assertNotNull(SoloMidday.signal("SENSEX", g.bars.getValue("SENSEX"), g.atr["SENSEX"], noon).signal, "SENSEX did signal (not read)")
+        // NIFTY expiring that day: FINNIFTY, the next strongest.
+        val c = SoloMidday.pick(sig) { s -> SoloMidday.gate(s.underlying == "NIFTY", null) }
+        assertEquals("FINNIFTY", c.taken!!.underlying)
+        assertEquals(listOf("NIFTY" to "expiry_today"), c.skipped.map { it.first.underlying to it.second })
     }
 
     // ---- the signal ---------------------------------------------------------------------------------------------------
@@ -154,7 +155,7 @@ class SoloMiddayTest {
     }
 
     @Test fun eachIndexHasItsStrikeStep() {
-        assertEquals(listOf(50, 100, 50, 100), SoloMidday.UNDERLYINGS.map { SoloMidday.step(it) })
+        assertEquals(listOf(50, 100, 50), SoloMidday.UNDERLYINGS.map { SoloMidday.step(it) })
         assertEquals(24_150, SoloMidday.atm("NIFTY", 24_125.0))
         assertEquals(54_600, SoloMidday.strikeFor("BANKNIFTY", 1, 55_010.0))
         assertEquals(73_700, SoloMidday.strikeFor("SENSEX", -1, 73_260.0))
@@ -170,17 +171,17 @@ class SoloMiddayTest {
         SoloMidday.Signal(u, if (move > 0) 1 else -1, 1_000.0, 1_000.0 + move, maxOf(1_000.0, 1_000.0 + move), minOf(1_000.0, 1_000.0 + move), atr, 1_000.0 + move, at(12, 0))
 
     @Test fun theStrongestIsTakenAndABlockedOnePassesTheTurn() {
-        val n = sig("NIFTY", 60.0); val b = sig("BANKNIFTY", -300.0, 400.0); val f = sig("FINNIFTY", 75.0); val x = sig("SENSEX", 70.0)
-        assertEquals(listOf("BANKNIFTY", "FINNIFTY", "SENSEX", "NIFTY"), SoloMidday.rank(listOf(n, b, f, x)).map { it.underlying })
+        val n = sig("NIFTY", 60.0); val b = sig("BANKNIFTY", -300.0, 400.0); val f = sig("FINNIFTY", 70.0)
+        assertEquals(listOf("BANKNIFTY", "FINNIFTY", "NIFTY"), SoloMidday.rank(listOf(n, b, f)).map { it.underlying })
         // A tie goes to the name, A-Z.
-        assertEquals(listOf("FINNIFTY", "NIFTY"), SoloMidday.rank(listOf(sig("NIFTY", 75.0), f)).map { it.underlying })
-        assertEquals(b, SoloMidday.pick(listOf(n, b, f, x)) { null }.taken)
-        // BANKNIFTY's expiry day: FINNIFTY. FINNIFTY held by the Liquidity arm too: SENSEX.
+        assertEquals(listOf("FINNIFTY", "NIFTY"), SoloMidday.rank(listOf(sig("NIFTY", 70.0), f)).map { it.underlying })
+        assertEquals(b, SoloMidday.pick(listOf(n, b, f)) { null }.taken)
+        // BANKNIFTY's expiry day: FINNIFTY. FINNIFTY held by the Liquidity arm too: NIFTY.
         val liq = "same_side_already_held: Liquidity 15+5 holds FINNIFTY26OCT25000CE"
-        val c = SoloMidday.pick(listOf(n, b, f, x)) { s ->
+        val c = SoloMidday.pick(listOf(n, b, f)) { s ->
             SoloMidday.gate(s.underlying == "BANKNIFTY", if (s.underlying == "FINNIFTY") liq else null)
         }
-        assertEquals(x, c.taken)
+        assertEquals(n, c.taken)
         assertEquals(listOf("BANKNIFTY" to "expiry_today", "FINNIFTY" to liq), c.skipped.map { it.first.underlying to it.second })
         // Nothing allowed: none taken, every one said.
         val none = SoloMidday.pick(listOf(n, f)) { "expiry_unknown" }
@@ -254,20 +255,69 @@ class SoloMiddayTest {
         val r = SoloMidday.record(listOf(1_000.0, -3_000.0, 500.0, 2_000.0))
         assertEquals(4, r.trades); assertEquals(500.0, r.net, 1e-9); assertEquals(3, r.wins)
         assertEquals(-500.0, r.drawdown, 1e-9); assertEquals(-3_000.0, r.worstDrawdown, 1e-9); assertEquals(125.0, r.perTrade!!, 1e-9)
-        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(r))
+        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(listOf(1_000.0, -3_000.0, 500.0, 2_000.0)))
         assertNull(SoloMidday.record(emptyList()).perTrade)
         // A drawdown of exactly 25,000 is not beyond it; one rupee more switches it off, even before 60 trades.
-        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(SoloMidday.record(listOf(5_000.0, -25_000.0))))
-        val dd = SoloMidday.verdict(SoloMidday.record(listOf(5_000.0, -25_001.0, 40_000.0)))
+        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(listOf(5_000.0, -25_000.0)))
+        val dd = SoloMidday.verdict(listOf(5_000.0, -25_001.0, 40_000.0))
         assertEquals(SoloMidday.Verdict.FAILED_DRAWDOWN, dd); assertTrue(SoloMidday.switchOff(dd))
         // At 60 trades: net per trade at or below 0 fails, above 0 passes.
         val flat60 = List(60) { if (it % 2 == 0) 100.0 else -100.0 }
-        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(SoloMidday.record(flat60.take(59))))
-        assertEquals(SoloMidday.Verdict.FAILED_NET, SoloMidday.verdict(SoloMidday.record(flat60)))
+        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(flat60.take(59)))
+        assertEquals(SoloMidday.Verdict.FAILED_NET, SoloMidday.verdict(flat60))
         assertTrue(SoloMidday.switchOff(SoloMidday.Verdict.FAILED_NET))
-        val good = SoloMidday.verdict(SoloMidday.record(flat60.dropLast(1) + 1.0))
+        val good = SoloMidday.verdict(flat60.dropLast(1) + 1.0)
         assertEquals(SoloMidday.Verdict.PASSED, good); assertFalse(SoloMidday.switchOff(good))
         assertFalse(SoloMidday.switchOff(SoloMidday.Verdict.RUNNING))
+    }
+
+    @Test fun afterBossSwitchesItBackOnTheDrawdownCountsFromThenAndTheNetBarStillComes() {
+        // -26,000 by the 5th trade: off. Boss switches it back on there (the baseline: 5 trades, equity -26,000).
+        val first = listOf(1_000.0, -9_000.0, -9_000.0, -9_000.0, 0.0)
+        val off = SoloMidday.judge(first)
+        assertEquals(SoloMidday.Verdict.FAILED_DRAWDOWN, off.verdict)
+        assertEquals(-27_000.0, off.drawdown, 1e-9)
+        val base = SoloMidday.baseline(first)
+        assertEquals(SoloMidday.Baseline(5, -26_000.0), base)
+        // The old drawdown no longer counts: small losses after it run on (the worst-ever is still in the record).
+        val later = first + List(10) { -1_000.0 }
+        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(later, base))
+        assertEquals(-10_000.0, SoloMidday.drawdownSince(later, base), 1e-9)
+        assertEquals(-37_000.0, SoloMidday.record(later).worstDrawdown, 1e-9)
+        // A new drawdown beyond 25,000 from the equity at the switch-on (or a new high after it) switches it off again.
+        val again = first + listOf(5_000.0, -30_001.0)
+        val c = SoloMidday.judge(again, base)
+        assertEquals(SoloMidday.Verdict.FAILED_DRAWDOWN, c.verdict)
+        assertEquals(-30_001.0, c.drawdown, 1e-9)
+        assertTrue(SoloMidday.verdictSay(c).startsWith("Boss, Solo (midday) is −₹30,001 below its best since you switched it back on - beyond"))
+        // Each verdict is acted on once per baseline: a new switch-on is a new key.
+        assertEquals("FAILED_DRAWDOWN@5", base.key(SoloMidday.Verdict.FAILED_DRAWDOWN))
+        assertEquals("FAILED_DRAWDOWN@0", SoloMidday.Baseline().key(SoloMidday.Verdict.FAILED_DRAWDOWN))
+        // The net bar is still judged when the record reaches 60 trades (a baseline before 60).
+        val sixty = first + List(55) { if (it % 2 == 0) 100.0 else -100.0 }
+        assertEquals(60, sixty.size)
+        assertEquals(SoloMidday.Verdict.FAILED_NET, SoloMidday.verdict(sixty, base))
+        // Switched back on after the 60-trade verdict: only the drawdown watches from then.
+        val after = SoloMidday.baseline(sixty)
+        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(sixty + -100.0, after))
+        assertEquals(SoloMidday.Verdict.FAILED_DRAWDOWN, SoloMidday.verdict(sixty + -25_001.0, after))
+        // From the start (no switch-on), the drawdown is the record's worst.
+        assertEquals(SoloMidday.record(later).worstDrawdown, SoloMidday.drawdownSince(later, SoloMidday.Baseline()), 1e-9)
+    }
+
+    @Test fun theEntryWindowIsReadAgainRightBeforeTheOrder() {
+        val d = day
+        assertTrue(SoloMidday.mayPlace(d, d.atTime(12, 0)))
+        assertTrue(SoloMidday.mayPlace(d, d.atTime(12, 3, 59)))
+        assertFalse(SoloMidday.mayPlace(d, d.atTime(12, 4)), "never after 12:03")
+        assertFalse(SoloMidday.mayPlace(d, d.atTime(11, 59, 59)))
+        assertFalse(SoloMidday.mayPlace(d, d.plusDays(1).atTime(12, 1)), "another day")
+        // The walk starts at the 12:00 decision minute (the research's entry bar), whenever the order filled.
+        assertEquals(d.atTime(12, 0), SoloMidday.entryTime(d))
+        val p = SoloMidday.Open("NIFTY", 1, 24_105.0, 100.0, SoloMidday.entryTime(d))
+        // The 12:00 bar closing through the stop is read (an entry time of 12:01 would have missed it).
+        val w = SoloMidday.walk(p, listOf(b(12, 0, 24_105.0, 24_106.0, 24_060.0, 24_070.0)), at(12, 1, 5))
+        assertEquals(SoloMidday.INDEX_STOP to at(12, 0), w.exit to w.decidedOn)
     }
 
     // ---- words ------------------------------------------------------------------------------------------------------------
@@ -296,10 +346,10 @@ class SoloMiddayTest {
         assertEquals("BANKNIFTY: waiting for the 11:59 minute", d("waiting_for_1159"))
         assertEquals("BANKNIFTY: waiting for the 11:59 minute", d("before_12"))
         assertEquals("BANKNIFTY: the morning's minutes were incomplete", d("too_few_minutes"))
-        val s = sig("FINNIFTY", 60.0); val big = sig("SENSEX", 90.0)
+        val s = sig("FINNIFTY", 60.0); val big = sig("NIFTY", 90.0)
         assertEquals("FINNIFTY expires today", SoloMidday.passedOver(s, "expiry_today", big))
         assertEquals("FINNIFTY's expiry could not be read", SoloMidday.passedOver(s, "expiry_unknown", null))
-        assertEquals("I already hold SENSEX, the stronger move (FINNIFTY was 0.60 ATR)", SoloMidday.passedOver(s, "stronger", big))
+        assertEquals("I already hold NIFTY, the stronger move (FINNIFTY was 0.60 ATR)", SoloMidday.passedOver(s, "stronger", big))
         assertEquals("FINNIFTY: the Liquidity arm holds it", SoloMidday.passedOver(s, "the Liquidity arm holds it", big))
 
         val stop = SoloMidday.walk(call, listOf(b(12, 0, 24_105.0, 24_120.0, 24_060.0, 24_070.0)), at(12, 1))
@@ -321,7 +371,8 @@ class SoloMiddayTest {
         assertEquals("Trades since start (07 Oct): 3, net −₹300, −₹100 a trade, drawdown −₹1,500.", lines[1])
         assertEquals("3 of 60 trades of the forward test.", lines[2])
         assertTrue(lines[3].contains("more than ₹25,000 below its best"))
-        assertEquals("Research, unseen period (Jul 2024 - Oct 2026): +₹31k on 196 trades, profit factor 1.14 - not proven.", lines[4])
+        assertEquals("Research, unseen period (Jul 2024 - Oct 2026), on NIFTY, BANKNIFTY and FINNIFTY: +₹4k on 178 trades, profit factor 1.02 - " +
+            "about break-even, not proven.", lines[4])
         assertEquals("Trades since start: 0, net ₹0, no ₹/trade yet, drawdown ₹0.", SoloMidday.card(SoloMidday.record(emptyList()), null)[1])
         assertEquals("Forward test: 3 of 60 trades, net −₹300 (−₹100 a trade), drawdown −₹1,500 (worst −₹2,000).", SoloMidday.forwardLine(r))
         assertEquals("Forward test: 0 of 60 trades, net ₹0, drawdown ₹0 (worst ₹0).", SoloMidday.forwardLine(SoloMidday.record(emptyList())))

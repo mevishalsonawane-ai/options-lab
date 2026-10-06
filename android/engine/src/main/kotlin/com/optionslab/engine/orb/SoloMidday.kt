@@ -12,12 +12,17 @@ import kotlin.math.abs
  * online learner and the big-candle rules, which both lost on the research harness (research: solo2/SPEC.md - the learner
  * -Rs 4.13 L on 2,776 trades, the big-candle rules -Rs 2.12 L on 2,745, neither with a positive half-year). This one lost
  * far less on every test but passed no test bar: on the unseen period (Jul 2024 - Oct 2026) it made +Rs 31k on 196 trades,
- * profit factor 1.14 ([RESEARCH]). Pure: no clock, no network, no storage; the app feeds the bars and places the paper order.
+ * profit factor 1.14, on four indices; on the three it can trade (below) +Rs 4k on 178, profit factor 1.02 ([RESEARCH]).
+ * Pure: no clock, no network, no storage; the app feeds the bars and places the paper order.
  *
  * Every rule and constant is pinned exactly as the research code ran it (solo2.py `md`, lib.py `run_trade` / `pick_leg`,
  * solo2.py `portfolio` with `max_open=1`, the setup's `itm=4`, `lock=[(0.75, 0.0)]`, `tx=315`):
  *
- * - Indices: [UNDERLYINGS] (NIFTY, BANKNIFTY, FINNIFTY, SENSEX); one decision per index a day, on the 11:59 1-minute bar.
+ * - Indices: [UNDERLYINGS] (NIFTY, BANKNIFTY, FINNIFTY); one decision per index a day, on the 11:59 1-minute bar. SENSEX,
+ *   in the research's four, is left out (review of 06 Oct): the app's paper account and instrument master are NSE F&O only
+ *   (no BFO contract to buy), so a SENSEX signal could never be traded. The research's portfolio was re-run on the three
+ *   (solo3: the same M08 candidates, max_open 1, strongest first - exact, as each index's candidates stand alone): on a
+ *   day SENSEX was the strongest, the next strongest of the three is taken instead.
  * - The bars: minutes from 09:15 (bar start times). `o` = the first minute's open (09:15), `c` = the 11:59 bar's close,
  *   `H`/`L` = the high/low of the bars 09:15..11:59.
  * - Signal: `|c - o| >= 0.5 x ATR14` ([MOVE_ATR]); up when `c > o`, else down; the close in the outer 25% of the range
@@ -41,8 +46,11 @@ import kotlin.math.abs
  * - Time exit at 14:30 ([EXIT]); no target, no premium stop, no day stop.
  * - The 30/60 rule (Boss's fixed 30-point stop and +60 target with the ladder) is NOT applied to Solo: the research's
  *   ablation (solo2/out/ablation.csv) found it cost -Rs 2.18 L against Solo's own exits on the same trades.
- * - Forward test (pre-registered, [verdict]): after [FORWARD_TRADES] closed paper trades the record is reported; a net per
- *   trade at or below 0, or a drawdown beyond -Rs 25,000 at any time ([FORWARD_MAX_DRAWDOWN]), switches Solo off.
+ * - Forward test (pre-registered, [judge]): after [FORWARD_TRADES] closed paper trades the record is reported; a net per
+ *   trade at or below 0 then, or a drawdown beyond -Rs 25,000 at any time ([FORWARD_MAX_DRAWDOWN]), switches Solo off.
+ *   After Boss switches it back on, the drawdown is measured from then ([Baseline]); the net bar is judged once, when the
+ *   record reaches [FORWARD_TRADES] trades. (On the three indices the research's own unseen period fell -Rs 29,279 at
+ *   worst: this bar can trip on the research's own path.)
  *
  * Only for the live minute data checks it adds what the O08 shadow ([ShadowRules.momoEntry]) pinned for the same 12:00
  * read: the first minute by 09:16 ([FIRST_BY]) and at least [MIN_MINUTES] minutes before 12:00.
@@ -50,7 +58,7 @@ import kotlin.math.abs
 object SoloMidday {
     /** The tag on every trade of this Solo: its record (and the forward test) counts only these, from its first day. */
     const val TAG = "Solo (midday)"
-    val UNDERLYINGS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
+    val UNDERLYINGS = listOf("NIFTY", "BANKNIFTY", "FINNIFTY")
 
     const val MOVE_ATR = 0.5
     const val OUTER = 0.25
@@ -71,8 +79,9 @@ object SoloMidday {
     val EXIT: LocalTime = LocalTime.of(14, 30)
     val FIRST_BY: LocalTime = LocalTime.of(9, 16)
 
-    /** The research line shown with every Solo record (solo2 TEST period, riskreduced_trades.csv). */
-    const val RESEARCH = "Research, unseen period (Jul 2024 - Oct 2026): +₹31k on 196 trades, profit factor 1.14 - not proven."
+    /** The research line shown with every Solo record (the TEST period re-run on its three indices: solo3_trades.csv). */
+    const val RESEARCH = "Research, unseen period (Jul 2024 - Oct 2026), on NIFTY, BANKNIFTY and FINNIFTY: +₹4k on 178 trades, " +
+        "profit factor 1.02 - about break-even, not proven."
 
     // Exit reasons, as the research named them.
     const val INDEX_STOP = "index_stop"
@@ -81,7 +90,7 @@ object SoloMidday {
 
     private const val EPS = 1e-9
 
-    /** The strike step: NIFTY and FINNIFTY 50, BANKNIFTY and SENSEX 100. */
+    /** The strike step: NIFTY and FINNIFTY 50, BANKNIFTY (and SENSEX, not traded) 100. */
     fun step(underlying: String): Int = if (underlying == "NIFTY" || underlying == "FINNIFTY") 50 else 100
 
     /** ATM of [index], half up to the step (the research's `floor(price / step + 0.5) * step`). */
@@ -133,7 +142,7 @@ object SoloMidday {
         fun no(why: String, k: Double? = null, q: Double? = null) = Decision(underlying, null, why, k, q)
         val t = now.toLocalTime()
         if (t.isBefore(DECIDE_AT)) return no("before_12")
-        if (!t.isBefore(LAST_ENTRY.plusMinutes(1))) return no("missed_12")
+        if (!inEntryWindow(t)) return no("missed_12")
         if (atr == null || !(atr > 0)) return no("no_atr")
         val at = now.toLocalDate().atTime(DECIDE_AT)
         val today = ones.filter { it.start.toLocalDate() == now.toLocalDate() }
@@ -154,6 +163,18 @@ object SoloMidday {
         val index = today.firstOrNull { it.start == at }?.open ?: c
         return Decision(underlying, Signal(underlying, side, open, c, hi, lo, atr, index, at), "signal", k, pos)
     }
+
+    /** [t] within the entry minutes, 12:00 to 12:03 (the 12:03 minute included; nothing from 12:04). */
+    fun inEntryWindow(t: LocalTime): Boolean = !t.isBefore(DECIDE_AT) && t.isBefore(LAST_ENTRY.plusMinutes(1))
+
+    /**
+     * May the paper order go in at [now] for a decision made on [day]? Read again right before it is placed (a slow read
+     * after the decision must not carry the entry past 12:03).
+     */
+    fun mayPlace(day: LocalDate, now: LocalDateTime): Boolean = now.toLocalDate() == day && inEntryWindow(now.toLocalTime())
+
+    /** The start of an open trade's walk: the 12:00 decision minute (the research's entry bar), whatever minute it filled. */
+    fun entryTime(day: LocalDate): LocalDateTime = day.atTime(DECIDE_AT)
 
     // ---- the one chosen ------------------------------------------------------------------------------------------------
 
@@ -232,13 +253,50 @@ object SoloMidday {
 
     enum class Verdict { RUNNING, PASSED, FAILED_NET, FAILED_DRAWDOWN }
 
-    /** The pre-registered bar: beyond -Rs 25,000 from the best at any time fails; at 60 trades, a net per trade <= 0 fails. */
-    fun verdict(r: Record): Verdict = when {
-        r.worstDrawdown < -FORWARD_MAX_DRAWDOWN -> Verdict.FAILED_DRAWDOWN
-        r.trades < FORWARD_TRADES -> Verdict.RUNNING
-        r.net <= 0 -> Verdict.FAILED_NET
-        else -> Verdict.PASSED
+    /**
+     * Where the forward test is judged from: [from] closed trades in and the equity then ([peak], the level the drawdown
+     * is measured from at first). Boss switching Solo back on sets it to the record at that moment; 0/0: from the start.
+     */
+    data class Baseline(val from: Int = 0, val peak: Double = 0.0) {
+        /** The key a verdict is acted on once under ([verdict] at this baseline). */
+        fun key(v: Verdict): String = "${v.name}@$from"
     }
+
+    /** The baseline for a switch-on now, after the closed trades' [nets]. */
+    fun baseline(nets: List<Double>): Baseline = Baseline(nets.size, nets.sum())
+
+    /** The worst drawdown (<= 0) of [nets] after [b]: the equity from [Baseline.from] on, the peak starting at [Baseline.peak]. */
+    fun drawdownSince(nets: List<Double>, b: Baseline): Double {
+        var eq = nets.take(b.from).sum()
+        var peak = b.peak
+        var worst = 0.0
+        for (n in nets.drop(b.from)) { eq += n; peak = maxOf(peak, eq); worst = minOf(worst, eq - peak) }
+        return worst
+    }
+
+    /** The forward test's state: the [verdict], the whole [record], and the [drawdown] since the [base] (<= 0). */
+    data class Check(val verdict: Verdict, val record: Record, val drawdown: Double, val base: Baseline)
+
+    /**
+     * The pre-registered bar on the closed trades' [nets] since [base]: a drawdown beyond -Rs 25,000 since the baseline
+     * fails at any time; the net bar is judged once the record has 60 trades - a net per trade <= 0 fails - unless the
+     * baseline is at or past 60 (Boss switched it back on after the 60-trade verdict: then only the drawdown watches).
+     */
+    fun judge(nets: List<Double>, base: Baseline = Baseline()): Check {
+        val r = record(nets)
+        val dd = drawdownSince(nets, base)
+        val v = when {
+            dd < -FORWARD_MAX_DRAWDOWN -> Verdict.FAILED_DRAWDOWN
+            r.trades < FORWARD_TRADES -> Verdict.RUNNING
+            r.net <= 0 && base.from < FORWARD_TRADES -> Verdict.FAILED_NET
+            r.net <= 0 -> Verdict.RUNNING
+            else -> Verdict.PASSED
+        }
+        return Check(v, r, dd, base)
+    }
+
+    /** [judge]'s verdict from the start (no switch-on since). */
+    fun verdict(nets: List<Double>, base: Baseline = Baseline()): Verdict = judge(nets, base).verdict
 
     /** Switching off lowers risk: Solo does it by itself on a failed bar (turning it back on is Boss's choice). */
     fun switchOff(v: Verdict): Boolean = v == Verdict.FAILED_NET || v == Verdict.FAILED_DRAWDOWN
@@ -312,8 +370,12 @@ object SoloMidday {
     )
 
     /** What Jarvis says of the forward test at [v]: the report at 60 trades, or why Solo switched itself off. */
-    fun verdictSay(r: Record, v: Verdict): String = when (v) {
-        Verdict.FAILED_DRAWDOWN -> "Boss, Solo (midday) is ${rs(r.worstDrawdown)} below its best - beyond the ${rs(FORWARD_MAX_DRAWDOWN)} set in " +
+    fun verdictSay(c: Check): String = verdictSay(c.record, c.verdict, c.drawdown, c.base.from > 0)
+
+    /** As [verdictSay]; [drawdown] the drawdown judged (since the last switch-on when [sinceOn]). */
+    fun verdictSay(r: Record, v: Verdict, drawdown: Double = r.worstDrawdown, sinceOn: Boolean = false): String = when (v) {
+        Verdict.FAILED_DRAWDOWN -> "Boss, Solo (midday) is ${rs(drawdown)} below its best" + (if (sinceOn) " since you switched it back on" else "") +
+            " - beyond the ${rs(FORWARD_MAX_DRAWDOWN)} set in " +
             "advance - so it has switched itself off (paper only; switching it back on is your choice). ${forwardLine(r)}"
         Verdict.FAILED_NET -> "Boss, Solo (midday) has ${r.trades} closed paper trades and makes ${rs(r.perTrade ?: 0.0)} a trade - the bar set in " +
             "advance needed more than ₹0 - so it has switched itself off (switching it back on is your choice). ${forwardLine(r)}"

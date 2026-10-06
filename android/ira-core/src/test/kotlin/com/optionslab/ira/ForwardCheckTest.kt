@@ -146,7 +146,7 @@ class ForwardCheckTest {
             assertTrue(e.source.isNotBlank())
         }
         assertEquals(916, ForwardCheck.LIQUIDITY.trades); assertEquals(228.0, Math.round(ForwardCheck.LIQUIDITY.mean).toDouble())
-        assertEquals(196, ForwardCheck.SOLO.trades); assertEquals(160.0, Math.round(ForwardCheck.SOLO.mean).toDouble())
+        assertEquals(178, ForwardCheck.SOLO.trades); assertEquals(25.0, Math.round(ForwardCheck.SOLO.mean).toDouble())
         assertEquals(49, ForwardCheck.HERO.trades)
         // Liquidity counts from the day its new rules went on (the shadow's own day).
         assertEquals(LiquidityShadow.SINCE, ForwardCheck.LIQUIDITY.since)

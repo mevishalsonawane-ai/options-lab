@@ -35,7 +35,9 @@ import com.optionslab.ira.Market as IraMarket
  * BANKNIFTY climbs from 52,000 at 09:15 to 52,100 at 11:59 (ATR14 100 from the daily candles: 1 ATR, closing at the high);
  * the other indices have no minutes. The 12:01 pass buys the 51,700 CE (4 strikes in the money of the 12:00 price, 52,100)
  * on paper; the trade survives a reload; from 12:30 BANKNIFTY falls to 52,040, a 1-minute close through its index stop
- * (52,070), so the 12:31 pass sells it. Zerodha gets no request at all, and the card shows the forward test.
+ * (52,070), so the 12:31 pass sells it. Zerodha gets no request at all, and the card shows the forward test. Also: a trade
+ * closed while the app was away settled the next day with its result, no order after 12:03, the slow reads done before
+ * noon, and the drawdown judged from Boss's switch-on after Solo switched itself off.
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class IraSoloTest : RobolectricTest() {
@@ -177,6 +179,81 @@ class IraSoloTest : RobolectricTest() {
         assertFalse("switched itself off", IraSolo.on)
         assertTrue(IraSolo.paused!!, IraSolo.paused!!.contains("so it has switched itself off"))
         // Off: no new trade the next day's 12:00 either (Boss switches it back on).
+        assertNoKite()
+    }
+
+    @Test fun aTradeClosedWhileTheAppWasAwayIsSettledTheNextDayWithItsResult() {
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        pass(LocalTime.of(12, 1))
+        val t = IraSolo.all().single()
+        // Sold by hand at 13:00 with no Solo pass after it (the app away), at 430.
+        upstox.price(ceKey, 430.0)
+        at(LocalTime.of(13, 0))
+        val sold = runBlocking { Paper.close(t.symbol, "MIS") }
+        val px = sold.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().single().price
+        // The next day's first pass: the sell is found in the paper account's whole history, whatever its day.
+        now = day.plusDays(1).atTime(10, 0)
+        Market.testClock = Clock.fixed(now.atZone(IST).toInstant(), IST)
+        runBlocking { IraSolo.passAt(now) }
+        val done = IraSolo.all().single()
+        assertTrue(done.closed)
+        assertEquals(px, done.exitPrice!!, 1e-9)
+        assertEquals((px - t.entry) * t.qty - ShadowRules.charges(t.entry, px, t.qty), done.net!!, 1e-6)
+        assertEquals(sold.orderId, done.exitOrderId)
+        assertEquals("closed outside Solo", done.exit)
+        assertEquals(1, IraSolo.forward().trades)
+        // The pure read: the first sell after the entry (quantity-weighted), none for another symbol.
+        val found = IraSolo.exitOf(Paper.state.trades, t)!!
+        assertEquals(px, found.first, 1e-9); assertEquals(sold.orderId, found.second)
+        assertEquals(null, IraSolo.exitOf(Paper.state.trades, t.copy(symbol = "NONE")))
+        assertNoKite()
+    }
+
+    @Test fun neverAnOrderAfter1203EvenWhenTheDecisionStartedInTime() {
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        // Decided at 12:03:50 (in time), but the clock reads 12:04 when the order would go in: nothing is placed.
+        at(LocalTime.of(12, 4))
+        runBlocking { IraSolo.passAt(day.atTime(12, 3, 50)) }
+        assertTrue(IraSolo.all().isEmpty())
+        assertTrue(Paper.state.positions.none { it.quantity != 0 })
+        assertTrue(IraSolo.status(), IraSolo.status().contains("the 12:00-12:03 entry window closed before the order could go in"))
+        assertNoKite()
+    }
+
+    @Test fun theSlowReadsAreDoneBeforeNoonAndTheDecisionReadsThemFromMemory() {
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        // The morning's read (the first pass from 09:15 starts it in the background).
+        runBlocking { IraSolo.prefetchNow(day) }
+        // At 12:01 the daily candles are not read again: a read now would be counted (and fail).
+        var reads = 0
+        IraSolo.testDaily = { _ -> reads++; error("read at 12:00") }
+        pass(LocalTime.of(12, 1))
+        assertEquals(0, reads)
+        assertEquals("BANKNIFTY", IraSolo.all().single().market)
+    }
+
+    @Test fun afterSwitchingItselfOffSwitchingBackOnJudgesTheDrawdownFromThen() {
+        upstox.price(ceKey, 1_000.0)
+        IraSolo.on = true
+        assertTrue(IraSolo.onState.value)
+        pass(LocalTime.of(12, 1))
+        upstox.price(ceKey, 100.0)
+        pass(LocalTime.of(12, 31), seconds = 5)
+        assertFalse("switched itself off", IraSolo.on)
+        assertFalse("the card's state follows", IraSolo.onState.value)
+        assertEquals(SoloMidday.Baseline(), IraSolo.baseline())
+        // Boss switches it back on: the drawdown counts from here (1 trade in, its net the peak).
+        IraSolo.on = true
+        assertTrue(IraSolo.onState.value)
+        val net = IraSolo.all().single().net!!
+        assertEquals(SoloMidday.Baseline(1, net), IraSolo.baseline())
+        assertEquals(SoloMidday.Verdict.RUNNING, SoloMidday.verdict(listOf(net), IraSolo.baseline()))
+        // Switched off and on by hand (not by itself): the baseline stays.
+        IraSolo.on = false; IraSolo.on = true
+        assertEquals(SoloMidday.Baseline(1, net), IraSolo.baseline())
         assertNoKite()
     }
 

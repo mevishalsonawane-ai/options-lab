@@ -1095,14 +1095,16 @@ fun JarvisSettingsPage() {
 private fun SoloCard() {
     val p = LocalPalette.current
     LedgerCard(title = "Solo: Jarvis trades by himself (paper)") {
-        var on by remember { mutableStateOf(com.optionslab.app.ira.IraSolo.on) }
+        // Solo's own state, not a copy: it shows off once Solo has switched itself off (the forward test's bar).
+        val on by com.optionslab.app.ira.IraSolo.onState.collectAsState()
+        LaunchedEffect(Unit) { com.optionslab.app.ira.IraSolo.refreshOn() }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (on) "Solo (midday) is on" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY, FINNIFTY or SENSEX) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
+                Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.IraSolo.on = v })
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.on = v })
         }
         // The forward test set in advance, and the "not proven" label with the research line.
         val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }

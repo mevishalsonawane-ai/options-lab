@@ -7,6 +7,12 @@ import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.ShadowRules
 import com.optionslab.engine.orb.SoloMidday
 import com.optionslab.ira.SelfCalibration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -19,13 +25,15 @@ import com.optionslab.ira.Market as IraMarket
  * Solo (the owner's wish, 2026-10-03): Jarvis trades by himself, ON PAPER ONLY, when Boss switches it on.
  *
  * Since 06 Oct 2026 (Boss's approval) Solo trades the "risk-reduced Solo", Solo (midday) - [SoloMidday], pure and pinned
- * exactly as the research ran it: at 12:00, of NIFTY, BANKNIFTY, FINNIFTY and SENSEX, the index that has moved half its
- * daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one - is bought 4
- * strikes in the money, 1 lot, one trade a day and one position at a time; out on a 1-minute close 0.3 ATR against it, at
- * breakeven once the index has gone 75% of the way to 2R, or at 14:30. It is NOT PROVEN (the research's unseen period:
- * +Rs 31k on 196 trades, profit factor 1.14) and runs a forward test set in advance ([SoloMidday.verdict]): after 60
- * closed paper trades Jarvis reports the record, and a net per trade at or below 0 or a drawdown beyond -Rs 25,000 at any
- * time switches Solo off by itself (that only lowers risk; switching it back on is Boss's choice).
+ * exactly as the research ran it: at 12:00, of NIFTY, BANKNIFTY and FINNIFTY (SENSEX is not traded: the paper account
+ * and the instrument master are NSE F&O only), the index that has moved half its daily ATR or more from the open and
+ * closed in the outer quarter of the morning's range - the strongest one - is bought 4 strikes in the money, 1 lot, one
+ * trade a day and one position at a time; out on a 1-minute close 0.3 ATR against it, at breakeven once the index has
+ * gone 75% of the way to 2R, or at 14:30. It is NOT PROVEN (the research's unseen period on these three: +Rs 4k on 178
+ * trades, profit factor 1.02) and runs a forward test set in advance ([SoloMidday.judge]): after 60 closed paper trades
+ * Jarvis reports the record, and a net per trade at or below 0 then or a drawdown beyond -Rs 25,000 at any time
+ * switches Solo off by itself (that only lowers risk; switching it back on is Boss's choice - the drawdown then counts
+ * from that moment, [SoloMidday.Baseline]).
  *
  * Retired as traders on the same day: the online learner (Learner / SoloGate) and the big-candle rules - both lost on the
  * research harness. Their trades stay in the record, readable; the new Solo's record starts fresh with its first trade
@@ -39,8 +47,15 @@ internal object IraSolo {
     /** Why Solo switched itself off (the forward test; earlier, the old Solo's drawdown pause). Boss switching it on clears it. */
     private const val KEY_PAUSED = "jarvis.solo.paused"
     private const val KEY = "jarvis.solo.trades"
-    /** The forward-test verdict Solo last switched itself off for (once a verdict; Boss's switching it back on stands). */
+    /**
+     * The forward-test verdict Solo last switched itself off for, with the baseline it was judged from ("FAILED_DRAWDOWN@0",
+     * [SoloMidday.Baseline.key]): acted once per verdict and baseline - Boss's switching it back on stands until a new one.
+     */
     private const val KEY_VERDICT = "jarvis.solo.midday.verdict"
+    /** Where the forward test is judged from ("from|peak", [SoloMidday.Baseline]): set when Boss switches Solo back on after it switched itself off. */
+    private const val KEY_BASE = "jarvis.solo.midday.base"
+    /** How often a thin strike moved Solo's strike, and passed an index over ("moved|skipped"). */
+    private const val KEY_THIN = "jarvis.solo.midday.thin"
     /** Set once the 60-trade report has been told. */
     private const val KEY_REPORTED = "jarvis.solo.midday.reported"
     private val MARKETS = SoloMidday.UNDERLYINGS.map { IraMarket.valueOf(it) }
@@ -54,10 +69,39 @@ internal object IraSolo {
         set(v) {
             val m = HashMap<String, Any?>()
             m[KEY_ON] = v
-            if (v) m[KEY_PAUSED] = null
+            if (v) {
+                // Back on after Solo switched itself off: the forward test's drawdown counts from here ([SoloMidday.Baseline]).
+                if (paused != null) m[KEY_BASE] = SoloMidday.baseline(nets(all())).let { "${it.from}|${it.peak}" }
+                m[KEY_PAUSED] = null
+            }
             runCatching { com.optionslab.app.security.SecurePrefs.putAll(m) }
             IraActivity.add(if (v) "Solo switched on (paper only, not proven)." else "Solo switched off.")
+            refreshOn()
         }
+
+    private val _onState = MutableStateFlow(false)
+    /** [on] for the Ira page's card: set on every switch, Solo's own switch-off and each pass ([refreshOn]). */
+    val onState: StateFlow<Boolean> = _onState
+
+    /** Reads [on] into [onState]. */
+    fun refreshOn() { _onState.value = on }
+
+    /** Where the forward test is judged from: the last switch-on after a switch-off, else the start. */
+    fun baseline(): SoloMidday.Baseline = runCatching {
+        com.optionslab.app.security.SecurePrefs.getString(KEY_BASE)?.split('|')?.let { SoloMidday.Baseline(it[0].toInt(), it[1].toDouble()) }
+    }.getOrNull() ?: SoloMidday.Baseline()
+
+    /** How often a thin strike made Solo buy the next strike ([first]) and pass an index over ([second]). */
+    fun thinCounts(): Pair<Int, Int> = runCatching {
+        com.optionslab.app.security.SecurePrefs.getString(KEY_THIN)?.split('|')?.let { it[0].toInt() to it[1].toInt() }
+    }.getOrNull() ?: (0 to 0)
+
+    private fun countThin(moved: Boolean): Pair<Int, Int> {
+        val (a, b) = thinCounts()
+        val n = if (moved) a + 1 to b else a to b + 1
+        runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_THIN, "${n.first}|${n.second}") }
+        return n
+    }
 
     /** Why Solo switched itself off (null: it did not). Switching it on again clears it. */
     val paused: String? get() = runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY_PAUSED) }.getOrNull()
@@ -103,9 +147,11 @@ internal object IraSolo {
     /** Solo (midday)'s own trades (the forward test's), oldest first. */
     fun midday(list: List<T> = all()): List<T> = list.filter { it.midday }
 
+    /** Solo (midday)'s closed trades' nets in order (the forward test's). */
+    private fun nets(list: List<T>): List<Double> = midday(list).filter { it.closed && it.net != null }.map { it.net!! }
+
     /** Solo (midday)'s forward-test record: its closed trades' nets in order. */
-    fun forward(list: List<T> = all()): SoloMidday.Record =
-        SoloMidday.record(midday(list).filter { it.closed && it.net != null }.map { it.net!! })
+    fun forward(list: List<T> = all()): SoloMidday.Record = SoloMidday.record(nets(list))
 
     /** The day Solo (midday)'s record starts: its first trade's (null: none yet). */
     fun since(list: List<T> = all()): LocalDate? = midday(list).firstOrNull()?.let { runCatching { LocalDate.parse(it.day) }.getOrNull() }
@@ -141,6 +187,41 @@ internal object IraSolo {
 
     /** Each index's ATR14 for the day (read once a day; a failed read is tried again on the next pass). */
     private val atrs = HashMap<String, Pair<LocalDate, Double>>()
+
+    /** Each Solo index's listed expiries for the day (the instrument master, read once a day). */
+    @Volatile private var listed: Pair<LocalDate, Map<String, List<LocalDate>>>? = null
+
+    private fun expiries(today: LocalDate): Map<String, List<LocalDate>>? {
+        listed?.takeIf { it.first == today }?.let { return it.second }
+        val all = runCatching { com.optionslab.app.data.Market.contracts() }.getOrNull() ?: return null
+        val m = SoloMidday.UNDERLYINGS.associateWith { u -> all.filter { it.underlying == u }.map { it.expiry }.distinct().sorted() }
+        if (m.values.any { it.isNotEmpty() }) listed = today to m
+        return m
+    }
+
+    /** The day the slow reads were started early ([prefetch]), with the vault's generation. */
+    @Volatile private var prefetched: Pair<Int, LocalDate>? = null
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * The 12:00 decision's slow reads - each index's ATR14 (the daily candles) and the instrument master - started on the
+     * first pass from 09:15 (once a day, in the background: the market watch's pass does not wait), so the 12:00-12:03
+     * window reads them from memory. One that fails is read again at 12:00.
+     */
+    private fun prefetch(t: LocalDateTime) {
+        val tt = t.toLocalTime()
+        if (tt.isBefore(java.time.LocalTime.of(9, 15)) || !tt.isBefore(SoloMidday.DECIDE_AT)) return
+        val key = generation() to t.toLocalDate()
+        if (prefetched == key) return
+        prefetched = key
+        background.launch { prefetchNow(t.toLocalDate()) }
+    }
+
+    /** [prefetch]'s reads for [today] (tests call it directly). */
+    internal suspend fun prefetchNow(today: LocalDate) {
+        for (m in MARKETS) runCatching { atr(m.name, today) }
+        runCatching { expiries(today) }
+    }
 
     private suspend fun atr(u: String, day: LocalDate): Double? {
         synchronized(atrs) { atrs[u]?.takeIf { it.first == day }?.let { return it.second } }
@@ -180,9 +261,11 @@ internal object IraSolo {
             }
         }
         val list = all()
+        refreshOn()
         // At most one Solo position: an open trade is always seen through to its exit, even after Solo is switched off.
         list.lastOrNull { !it.closed }?.let { manage(it, list, t); return }
         if (!on) return
+        prefetch(t)
         val today = t.toLocalDate()
         val tt = t.toLocalTime()
         // One decision a day, from 12:00 to 12:03 (the research's 3 minutes' slack); one trade a day, no re-entry.
@@ -202,7 +285,7 @@ internal object IraSolo {
      * today); null when the master could not be read (then Solo skips the index).
      */
     private fun expiryToday(m: IraMarket, today: LocalDate): Boolean? = runCatching {
-        val listed = com.optionslab.app.data.Market.contracts().filter { it.underlying == m.name }.map { it.expiry }
+        val listed = expiries(today)?.get(m.name).orEmpty()
         if (listed.isEmpty()) null else com.optionslab.engine.orb.HeroRules.isExpiryDay(today, listed)
     }.getOrNull()
 
@@ -249,6 +332,12 @@ internal object IraSolo {
                 return
             }
             val why = enter(s, signals, c.skipped, list, t) ?: return
+            if (why == LATE) {
+                val line = "No Solo trade today: the 12:00-12:03 entry window closed before the order could go in."
+                watch = t to line
+                IraActivity.add(line)
+                return
+            }
             excluded[s.underlying] = why
         }
     }
@@ -257,13 +346,22 @@ internal object IraSolo {
         IraThinking.add(com.optionslab.ira.Thinking.soloMidday(IraThinking.now(), IraMarket.valueOf(s.underlying), s.call, took, facts))
     }
 
-    /** Buys [s] on paper: null when bought, else why not (the next strongest is then tried). */
+    /** [enter]'s answer when the clock passed 12:03 before the order: nothing more is tried today. */
+    private const val LATE = "late"
+
+    /**
+     * Buys [s] on paper: null when bought, [LATE] when the entry window closed first, else why not (the next strongest is
+     * then tried).
+     */
     private suspend fun enter(s: SoloMidday.Signal, signals: List<SoloMidday.Signal>, skipped: List<Pair<SoloMidday.Signal, String>>,
                               list: List<T>, t: LocalDateTime): String? {
         val today = t.toLocalDate()
-        val listed = com.optionslab.app.data.Market.contracts().filter { it.underlying == s.underlying }.map { it.expiry }.distinct()
+        val listed = expiries(today)?.get(s.underlying).orEmpty()
         // The nearest expiry (never today's: Solo does not trade an index on its expiry day).
         val expiry = com.optionslab.engine.orb.OrbRules.expiryAfter(today, listed) ?: return "no ${s.underlying} expiry is listed"
+        // A thin strike: the research's fallback order (4 in the money, then one step either way, the less in the money
+        // first) is tried before the index is passed over - each time counted and said.
+        var thinFirst: String? = null
         val right = if (s.call) Right.CE else Right.PE
         var why = "no ${s.underlying} strike near ${s.strike} is listed"
         val held = runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.map { it.symbol }.toSet() }.getOrNull()
@@ -277,10 +375,14 @@ internal object IraSolo {
             val thin = com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize)
             if (thin != null) {
                 why = thin
+                if (thinFirst == null) thinFirst = "${c.symbol}: $thin"
                 IraActivity.add("Solo skipped ${c.symbol}: $thin")
                 runCatching { IraThinking.add(com.optionslab.ira.Thinking.soloThin(IraThinking.now(), IraMarket.valueOf(s.underlying), s.call, thin)) }
                 continue
             }
+            // The decision was made at [t]; the reads since take time: never an order after 12:03.
+            val clock = runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrDefault(t)
+            if (!SoloMidday.mayPlace(today, if (clock.isAfter(t)) clock else t)) return LATE
             // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
             val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
@@ -300,14 +402,26 @@ internal object IraSolo {
             val over = skipped.map { (x, w) -> x to SoloMidday.passedOver(x, w, s) } +
                 SoloMidday.rank(signals).dropWhile { it != s }.drop(1).map { it to SoloMidday.passedOver(it, "stronger", s) }
             val passed = over.map { it.second }
+            // A thin strike moved the buy to the next one: counted and said (how often the research's strike is not the one bought).
+            val moved = thinFirst?.let { first ->
+                val n = countThin(moved = true).first
+                "The strike ${SoloMidday.ITM_STEPS} in the money was thin ($first): bought the next one, as the research's fallback " +
+                    "(the strike moved $n time${if (n == 1) "" else "s"} so far)."
+            }
+            moved?.let { IraActivity.add("Solo: $it") }
             tell("Solo (paper, not proven): bought ${c.symbol} ($itm ITM) at ${"%.2f".format(java.util.Locale.ENGLISH, fill.price)}" +
                 (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") + ". Why: $seen " + SoloMidday.plan(s) +
                 (if (passed.isNotEmpty()) " Passed over: ${passed.joinToString("; ")}." else ""))
             watch = t to "bought ${c.symbol}: ${s.underlying} was the strongest of $n"
-            think(s, true, listOf(seen, SoloMidday.plan(s)))
+            think(s, true, listOfNotNull(seen, moved, SoloMidday.plan(s)))
             over.forEach { (x, words) -> think(x, false, listOf(words)) }
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo · entry", r.orderId) }
             return null
+        }
+        // Every strike near it thin: the index is passed over (counted and said; the next strongest is tried).
+        if (thinFirst != null) {
+            val n = countThin(moved = false).second
+            IraActivity.add("Solo passed ${s.underlying} over: its strikes near ${s.strike} were thin (an index passed over $n time${if (n == 1) "" else "s"} so far).")
         }
         return why
     }
@@ -317,17 +431,19 @@ internal object IraSolo {
         val soloBook = runCatching { Paper.snapshot() }.getOrNull()
         val held = soloBook?.positions?.positions?.any { it.symbol == t.symbol && it.quantity != 0 } ?: true
         if (!held) {
-            // Closed outside Solo (the 15:15 square-off, or by hand): the newest sell today is the exit. With none seen
-            // (settled overnight), no result is counted.
-            val sold = if (t.day == today.toString()) soloBook?.trades?.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price else null
-            finish(t, list, sold, if (sold != null) "closed outside Solo" else "closed while the app was away (no result read)")
+            // Closed outside Solo (the 15:15 square-off, or by hand), maybe on an earlier day while the app was away: the
+            // sells of its symbol after its entry in the paper account's whole trade history are the exit, whatever the day.
+            // With none found, no result is counted.
+            val sold = runCatching { exitOf(Paper.state.trades, t) }.getOrNull()
+            finish(t, list, sold?.first, if (sold != null) "closed outside Solo" else "closed while the app was away (no result read)",
+                exitOrderId = sold?.second)
             return
         }
         val a = t.atr
         // The retired Solo's trade, still open when Solo (midday) replaced it: its rules are gone, so it is closed now.
         val walked: Pair<SoloMidday.Open, SoloMidday.Walk>? = if (!t.midday || a == null) null else {
-            val o = SoloMidday.Open(t.market, if (t.call) 1 else -1, t.index, a,
-                LocalDate.parse(t.day).atTime(9, 15).plusMinutes(t.entryMinute.toLong()))
+            // From the 12:00 decision minute (the research's entry bar), not the minute the paper order filled.
+            val o = SoloMidday.Open(t.market, if (t.call) 1 else -1, t.index, a, SoloMidday.entryTime(LocalDate.parse(t.day)))
             o to SoloMidday.walk(o, bars(IraMarket.valueOf(t.market), now), now)
         }
         // Solo's own exits only (the index stop, the breakeven lock, 14:30). The 30/60 rule (Boss's fixed 30-point stop and
@@ -358,6 +474,25 @@ internal object IraSolo {
         finish(t, list, px, words, exitOrderId = r.orderId)
     }
 
+    /**
+     * [t]'s exit in the paper account's trade history [trades] (every day's, not the session's): the sells of its symbol at
+     * or after its entry fill (found by its order id; else its entry minute), up to its quantity - their quantity-weighted
+     * price and the first sell's order id; null when none.
+     */
+    internal fun exitOf(trades: List<com.optionslab.engine.sandbox.Trade>, t: T): Pair<Double, String>? {
+        val entered = trades.firstOrNull { t.orderId != null && it.orderId == t.orderId }?.timestamp
+            ?: runCatching { LocalDate.parse(t.day).atTime(9, 15).plusMinutes(t.entryMinute.toLong()).withSecond(0) }.getOrNull() ?: return null
+        val sells = trades.filter { it.symbol == t.symbol && it.action == "SELL" && !it.timestamp.isBefore(entered) }.sortedBy { it.timestamp }
+        var q = 0
+        var value = 0.0
+        for (x in sells) {
+            if (q >= t.qty) break
+            val take = minOf(kotlin.math.abs(x.quantity), t.qty - q)
+            q += take; value += take * x.price.toDouble()
+        }
+        return if (q == 0) null else value / q to sells.first().orderId
+    }
+
     private fun finish(t: T, list: List<T>, px: Double?, why: String, exitOrderId: String? = null) {
         val net = px?.let { (it - t.entry) * t.qty - ShadowRules.charges(t.entry, it, t.qty) }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
@@ -371,12 +506,14 @@ internal object IraSolo {
 
     /**
      * The forward test set in advance ([SoloMidday.verdict]), after each closed trade: the record told once at 60 trades;
-     * a failed bar switches Solo off by itself and says so (once a verdict: Boss switching it back on stands).
+     * a failed bar switches Solo off by itself and says so (once a verdict and baseline: Boss switching it back on stands, and
+     * the drawdown is then judged from that moment).
      */
     private fun forwardTest(all: List<T>) {
-        val r = forward(all)
-        val v = SoloMidday.verdict(r)
-        val words = SoloMidday.verdictSay(r, v)
+        val c = SoloMidday.judge(nets(all), baseline())
+        val r = c.record
+        val v = c.verdict
+        val words = SoloMidday.verdictSay(c)
         var told = false
         val reported = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(KEY_REPORTED, false) }.getOrDefault(true)
         if (r.trades >= SoloMidday.FORWARD_TRADES && !reported) {
@@ -384,10 +521,13 @@ internal object IraSolo {
             tell(words); told = true
         }
         val acted = runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY_VERDICT) }.getOrNull()
-        if (SoloMidday.switchOff(v) && acted != v.name) {
+        // Once per verdict and baseline: after Boss switches it back on (a new baseline), a new failure switches it off again.
+        val key = c.base.key(v)
+        if (SoloMidday.switchOff(v) && acted != key) {
             // Switching off only lowers risk: allowed by itself. Turning it back on is Boss's choice.
-            runCatching { com.optionslab.app.security.SecurePrefs.putAll(mapOf(KEY_VERDICT to v.name, KEY_ON to false, KEY_PAUSED to words)) }
+            runCatching { com.optionslab.app.security.SecurePrefs.putAll(mapOf(KEY_VERDICT to key, KEY_ON to false, KEY_PAUSED to words)) }
             IraActivity.add("Solo switched itself off: the forward test's bar failed.")
+            refreshOn()
             if (!told) tell(words)
         }
     }
@@ -418,15 +558,18 @@ internal object IraSolo {
     /** "How is Solo doing": on or off, why it switched itself off, the forward test, what it saw today, the old record. */
     fun status(): String {
         val all = all()
-        val head = if (on) "Solo is on, Boss - Solo (midday), paper only and not proven. At 12:00 it buys the index (NIFTY, BANKNIFTY, " +
-            "FINNIFTY or SENSEX) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's " +
+        val head = if (on) "Solo is on, Boss - Solo (midday), paper only and not proven. At 12:00 it buys the index (NIFTY, BANKNIFTY " +
+            "or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's " +
             "range - the strongest one, 4 strikes in the money, one trade a day, never on that index's expiry day; out on a 1-minute close " +
             "0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30."
         else "Solo is off, Boss: switch it on in Jarvis settings (Solo (midday), paper only, not proven)."
         val seen = watch?.takeIf { on && it.first.toLocalDate() == com.optionslab.app.data.Market.today() }?.let { (at, w) ->
             " At %02d:%02d: %s".format(java.util.Locale.ENGLISH, at.hour, at.minute, w.trimEnd('.')) + "."
         } ?: ""
-        return head + (paused?.let { " $it" } ?: "") + " " + SoloMidday.forwardLine(forward(all)) + " " + RESEARCH + seen + " " + record(all)
+        val (moved, passed) = thinCounts()
+        val thin = if (moved + passed == 0) "" else " Thin strikes so far: the strike moved $moved time${if (moved == 1) "" else "s"}, " +
+            "an index passed over $passed time${if (passed == 1) "" else "s"}."
+        return head + (paused?.let { " $it" } ?: "") + " " + SoloMidday.forwardLine(forward(all)) + " " + RESEARCH + seen + thin + " " + record(all)
     }
 
     /** Solo's record as Jarvis's graduation reads it: none - Solo (midday) never graduates to real money from here. */
