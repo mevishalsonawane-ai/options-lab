@@ -40,16 +40,27 @@ object ProfitLock {
         else -> null
     }
 
-    /** The locked stop for a buy at [entry] whose best price so far is [peak], or null below the first rung. */
-    fun level(entry: Double, target: Double, peak: Double): Double? =
-        LADDER.lastOrNull { peak >= entry + it.first * target - EPS }?.let { entry + it.second * target }
+    /**
+     * The locked stop for a buy at [entry] whose best price so far is [peak], or null below the first rung.
+     *
+     * [costPerUnit] (the round trip's charges per unit, [roundTripPerUnit]; Boss's 06 Oct fix): no rung locks less than
+     * the buy price plus the charges, so the "breakeven" rung is a real breakeven after charges and a protective exit is
+     * never a certain small loss booked as a profit lock. A rung whose level would not sit below the best price seen
+     * does not count (it would sell at once), so the lock only ever rises with the best price and never widens risk.
+     * 0 (the default) is the plain ladder the backtests and the replay use.
+     */
+    fun level(entry: Double, target: Double, peak: Double, costPerUnit: Double = 0.0): Double? {
+        val be = entry + (if (costPerUnit.isFinite()) costPerUnit.coerceAtLeast(0.0) else 0.0)
+        return LADDER.filter { peak >= entry + it.first * target - EPS }.map { maxOf(entry + it.second * target, be) }
+            .filter { it < peak }.maxOrNull()
+    }
 
     /**
      * True when [ltp] is at or below the lock earned by the best price seen BEFORE it ([peakBefore]): a rung counts
-     * from the next look on, as the backtest applies it from the next minute.
+     * from the next look on, as the backtest applies it from the next minute. [costPerUnit] as in [level].
      */
-    fun exits(entry: Double, target: Double, peakBefore: Double, ltp: Double): Boolean =
-        level(entry, target, peakBefore)?.let { ltp <= it + EPS } == true
+    fun exits(entry: Double, target: Double, peakBefore: Double, ltp: Double, costPerUnit: Double = 0.0): Boolean =
+        level(entry, target, peakBefore, costPerUnit)?.let { ltp <= it + EPS } == true
 
     // ---- the percentage trail (2026-10-06): every Pine script, with or without a stop or target ----------------------
 
@@ -125,7 +136,7 @@ object ProfitLock {
      * trail's ([trail]; null for none), or null while neither has a rung reached.
      */
     fun lockLevel(entry: Double, ref: Double?, trail: Trail?, costPerUnit: Double, peak: Double): Double? =
-        listOfNotNull(ref?.let { level(entry, it, peak) }, trail?.let { trailLevel(entry, peak, it, costPerUnit) }).maxOrNull()
+        listOfNotNull(ref?.let { level(entry, it, peak, costPerUnit) }, trail?.let { trailLevel(entry, peak, it, costPerUnit) }).maxOrNull()
 
     /** True when [ltp] is at or below [lockLevel] earned by the best price seen BEFORE it ([peakBefore]), as [exits]. */
     fun lockExits(entry: Double, ref: Double?, trail: Trail?, costPerUnit: Double, peakBefore: Double, ltp: Double): Boolean =

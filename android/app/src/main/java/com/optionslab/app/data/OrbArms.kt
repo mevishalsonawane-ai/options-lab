@@ -714,14 +714,16 @@ object OrbArms {
     }
 
     /**
-     * The profit-lock ladder ([ProfitLock]) for a laddered position at [ltp]: the position with its best price updated,
+     * The profit-lock ladder ([ProfitLock], its breakeven after charges) for a laddered position at [ltp]: the position with its best price updated,
      * and whether [ltp] gave back to the lock its earlier best had earned (then the app sells at market; the resting
      * -40 stop stays in place underneath until that sale takes it out).
      */
     private fun ladder(p: Position, ltp: Double): Pair<Position, Boolean> {
         val target = ProfitLock.targetOf(armOf(p.arm))?.takeIf { p.ladder } ?: return p to false
         val before = p.peak ?: p.entry
-        val locked = ProfitLock.exits(p.entry, target, before, ltp)
+        // The breakeven rung sits at the price paid plus the round trip's charges (Boss's 06 Oct fix): a profit-lock exit is
+        // never a certain small loss after charges.
+        val locked = ProfitLock.exits(p.entry, target, before, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty))
         return (if (ltp > before) p.copy(peak = ltp) else p) to locked
     }
 

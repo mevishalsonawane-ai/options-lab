@@ -26,6 +26,42 @@ class ProfitLockTest {
         assertTrue(ProfitLock.exits(200.0, 40.0, 231.0, 219.5), "went +31: locked at 220")
     }
 
+    @Test fun theBreakevenRungCoversTheRoundTripsCharges() {
+        // Boss's 06 Oct: Range Fade sold at +0.5 via the lock, a loss after ~Rs 70 of charges. One lot of 30 at 200.
+        val c = ProfitLock.roundTripPerUnit(200.0, 30)
+        assertTrue(c > 1.5 && c < 3.0, "about 2 points a unit: $c")
+        assertNull(ProfitLock.level(200.0, 40.0, 209.95, c), "below the first rung nothing is locked")
+        assertEquals(200.0 + c, ProfitLock.level(200.0, 40.0, 210.0, c)!!, 1e-9, "breakeven after charges, not the price paid")
+        // The higher rungs are unchanged (they already clear the charges), and none is ever lowered by the charges.
+        assertEquals(210.0, ProfitLock.level(200.0, 40.0, 220.0, c)!!, 1e-9)
+        assertEquals(220.0, ProfitLock.level(200.0, 40.0, 230.0, c)!!, 1e-9)
+        // Sold at the old breakeven (+0.5) is no longer possible: the lock sells at or above entry + charges.
+        assertTrue(ProfitLock.exits(200.0, 40.0, 212.0, 200.5, c))
+        assertFalse(ProfitLock.exits(200.0, 40.0, 212.0, 200.0 + c + 0.1, c), "still above the after-charges breakeven")
+        // The plain ladder (the backtests, the replay) is as before.
+        assertEquals(200.0, ProfitLock.level(200.0, 40.0, 210.0))
+        // Negative or broken charges count as none.
+        assertEquals(200.0, ProfitLock.level(200.0, 40.0, 210.0, -5.0)!!, 1e-9)
+        assertEquals(200.0, ProfitLock.level(200.0, 40.0, 210.0, Double.NaN)!!, 1e-9)
+    }
+
+    @Test fun chargesAboveTheFirstRungNeverSellAtOnceOrWidenRisk() {
+        // Charges bigger than the first rung's gain: that rung does not count (its level would not sit below the best).
+        assertNull(ProfitLock.level(200.0, 40.0, 210.0, 12.0))
+        // At the second rung the level is the higher of +10 and the charges, still below the best.
+        assertEquals(212.0, ProfitLock.level(200.0, 40.0, 220.0, 12.0)!!, 1e-9)
+        // A higher best never lowers the lock, and every lock sits at or above entry + charges and below the best.
+        for (cost in listOf(0.0, 2.0, 9.0, 15.0)) {
+            var last = Double.NEGATIVE_INFINITY
+            for (pk in (1..80).map { 200.0 + it * 0.5 }) {
+                val l = ProfitLock.level(200.0, 40.0, pk, cost) ?: continue
+                assertTrue(l >= 200.0 + cost - 1e-9 && l < pk, "level $l at best $pk, charges $cost")
+                assertTrue(l >= last - 1e-9, "never lowered ($last -> $l)")
+                last = l
+            }
+        }
+    }
+
     @Test fun everyFixedTargetArmIsLadderedButNotLiquidity() {
         assertEquals(40.0, ProfitLock.targetOf(OrbRules.ORB))
         assertEquals(40.0, ProfitLock.targetOf(OrbRules.ORB_FRESH))

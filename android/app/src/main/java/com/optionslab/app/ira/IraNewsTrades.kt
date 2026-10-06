@@ -321,7 +321,8 @@ internal object IraNewsTrades {
             val ltp = runCatching { if (p.live) com.optionslab.app.data.Broker.within(5_000) { com.optionslab.app.data.Broker.quotes(listOf("NFO:${p.symbol}"))["NFO:${p.symbol}"]?.last }
                 else Paper.contractOf(p.symbol)?.let { Paper.lastPrice(it) } }.getOrNull() ?: return@map p
             val peak = maxOf(p.peak, ltp)
-            val lock = ProfitLock.level(p.entry, TARGET_POINTS, peak)
+            // Breakeven after charges (Boss's 06 Oct fix): the first rung never locks a certain small loss.
+            val lock = ProfitLock.level(p.entry, TARGET_POINTS, peak, ProfitLock.roundTripPerUnit(p.entry, p.qty))
             var stop = p.stop
             if (lock != null && (stop == null || lock > stop + 0.01)) {
                 if (ltp > lock) {

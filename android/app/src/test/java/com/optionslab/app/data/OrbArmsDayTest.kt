@@ -249,6 +249,25 @@ class OrbArmsDayTest : RobolectricTest() {
             Paper.state.orders.none { it.orderId == p.stopOrderId && it.status == "trigger pending" })
     }
 
+    @Test fun theBreakevenRungCoversTheChargesSoAPointAboveThePricePaidIsSold() {
+        // Boss's 06 Oct: a lock exit at +0.5 was a loss after ~Rs 70 of charges. The rung now sits at entry + charges.
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        val cost = com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(p.entry, p.qty)
+        assertTrue("about 2 points a unit for one lot: $cost", cost > 1.0 && cost < 4.0)
+        upstox.price(ceKey, p.entry + 12)                           // past 25% of the +40 target
+        tick(LocalTime.of(10, 36))
+        upstox.price(ceKey, p.entry + cost + 1)                     // above the after-charges breakeven: held
+        tick(LocalTime.of(10, 37))
+        assertTrue("held above entry + charges", arm().open != null)
+        upstox.price(ceKey, p.entry + 0.5)                          // the old rung (the price paid) would have held this
+        tick(LocalTime.of(10, 38))
+        val closed = arm().today.single()
+        assertEquals("profit_lock", closed.why)
+        assertTrue("the resting -40 stop is never lowered or moved", closed.stopTrigger == p.stopTrigger)
+    }
+
     @Test fun threeQuartersOfTheWayLocksHalfTheTarget() {
         armOrb(LocalTime.of(9, 50))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 35))

@@ -115,9 +115,10 @@ internal fun OrbRowsContent(
                     val m = a.mark
                     "${o.right} ${o.symbol.takeLast(7).dropLast(2)} · in ${px(o.entry)}" + (m?.let { " · now ${px(it)} · ${rs((it - o.entry) * o.qty)}" } ?: "") +
                         (o.stopTrigger?.let { " · stop ${px(it)}" } ?: "") +
-                        // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven / +25% / +50%).
+                        // The profit lock earned so far (25 / 50 / 75 % of the target reached -> breakeven after charges / +25% / +50%).
                         (com.optionslab.engine.orb.ProfitLock.targetOf(a.arm)?.takeIf { o.ladder }
-                            ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry) }
+                            ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry,
+                                com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(o.entry, o.qty)) }
                             ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
                     view.stopped != null && a.armed -> view.stopped.orEmpty()
