@@ -459,6 +459,8 @@ internal fun PlanCard(
                 isError = mismatch,
                 modifier = Modifier.fillMaxWidth())
             if (mismatch) priceMismatch = true
+            // Where this price sits against the bid / offer (words only: the order is not changed).
+            if (!mismatch) com.optionslab.ira.LimitFit.note(leg.side.name, leg.orderType, leg.price, q?.bid, q?.ask, q?.last)?.let { Note(it) }
             com.optionslab.app.ui.components.AlertOn(plan.refusals.getOrNull(i)?.takeIf { it.isNotEmpty() }?.joinToString(" "))
         }
         plan.margin?.let { m ->
