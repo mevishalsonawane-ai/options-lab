@@ -101,6 +101,13 @@ object OrbArms {
          */
         val volSkip: Boolean? = null,
         /**
+         * Liquidity 15+5, the shadow of candidate (f) ([LiquidityShadow.strongMomentum], a pre-registered forward test): true
+         * when the signal bar closed more than 10.4 bp beyond the swept level and, over the 5 minutes before, the bought
+         * option's premium rose while the opposite right's fell. Null: not recorded (the momentum could not be read, an
+         * entry from before it was added, or another arm). It never changes what the arm trades.
+         */
+        val strong: Boolean? = null,
+        /**
          * The Hero arm only ([HeroRules.exitStep]): the quantity already sold at the first target (5x), at [soldAt] and
          * [soldTime]; [qty] is then what is still held (bought = [qty] + [sold]). 0: nothing sold early.
          */
@@ -118,7 +125,7 @@ object OrbArms {
     /** A signal waiting for approval. Liquidity 15+5 also keeps its strike and the index levels (the ORB uses the day's legs). */
     data class Pending(val arm: String, val right: String, val signalBar: LocalDateTime, val expires: LocalDateTime,
                        val strike: Int? = null, val level: Double? = null, val target: Double? = null, val near: Boolean? = null,
-                       val volSkip: Boolean? = null)
+                       val volSkip: Boolean? = null, val strong: Boolean? = null)
 
     data class Legs(val day: LocalDate, val strike: Int, val expiry: LocalDate, val ce: Paper.Contract, val pe: Paper.Contract)
 
@@ -202,6 +209,7 @@ object OrbArms {
                         if (p.has("level")) p.getDouble("level") else null, if (p.has("target")) p.getDouble("target") else null,
                         p.optBoolean("ladder", false), if (p.has("peak")) p.getDouble("peak") else null, p.optBoolean("timed", false),
                         if (p.has("near")) p.getBoolean("near") else null, if (p.has("volSkip")) p.getBoolean("volSkip") else null,
+                        if (p.has("strong")) p.getBoolean("strong") else null,
                         sold = p.optInt("sold", 0), soldAt = if (p.has("soldAt")) p.getDouble("soldAt") else null,
                         soldTime = p.optString("soldTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
                         seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty())
@@ -211,7 +219,7 @@ object OrbArms {
                 b.pending[key(k)] = Pending(key(k), p.getString("right"), LocalDateTime.parse(p.getString("bar")), LocalDateTime.parse(p.getString("expires")),
                     if (p.has("strike")) p.getInt("strike") else null, if (p.has("level")) p.getDouble("level") else null,
                     if (p.has("target")) p.getDouble("target") else null, if (p.has("near")) p.getBoolean("near") else null,
-                    if (p.has("volSkip")) p.getBoolean("volSkip") else null) } }
+                    if (p.has("volSkip")) p.getBoolean("volSkip") else null, if (p.has("strong")) p.getBoolean("strong") else null) } }
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[key(it)] = m.getString(it) } }
             o.optJSONObject("replays")?.let { m -> m.keys().forEach { b.replays[it] = m.getJSONObject(it) } }
             o.optJSONObject("upDays")?.let { m -> m.keys().forEach { b.upDays[it] = m.getBoolean(it) } }
@@ -350,14 +358,14 @@ object OrbArms {
                     .put("live", p.live).put("kite", p.kite ?: "").put("unconfirmed", p.unconfirmed)
                     .apply { p.level?.let { put("level", it) }; p.target?.let { put("target", it) } }
                     .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } }.put("timed", p.timed)
-                    .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) } }
+                    .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) } }
                     .apply { if (p.sold > 0) put("sold", p.sold); p.soldAt?.let { put("soldAt", it) }; p.soldTime?.let { put("soldTime", it.toString()) }
                         if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)) })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
             .apply { p.strike?.let { put("strike", it) }; p.level?.let { put("level", it) }; p.target?.let { put("target", it) }; p.near?.let { put("near", it) }
-                p.volSkip?.let { put("volSkip", it) } }) } })
+                p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) } }) } })
         o.put("status", JSONObject(b.status as Map<*, *>))
         o.put("replays", JSONObject().apply { b.replays.entries.toList().takeLast(120).forEach { (k, v) -> put(k, v) } })
         o.put("upDays", JSONObject(b.upDays as Map<*, *>))
@@ -478,16 +486,39 @@ object OrbArms {
             books.all { b.liveOk[it] == true }, shadow = shadowOf(b))
     }
 
-    /** Liquidity 15+5's closed paper trades as [LiquidityShadow] counts them (from 06 Oct, each candidate's flag). */
+    /**
+     * Liquidity 15+5's closed paper trades as [LiquidityShadow] counts them (from 06 Oct, each candidate's flag). Candidates (d)
+     * and (e) are priced by the shadow tracker ([ShadowArms.liquidityHint], read without its lock); a trade it never saw is
+     * not counted for them.
+     */
     private fun shadowOf(b: Book): LiquidityShadow.Summary {
         val books = LiquidityRules.BOOKS.map { it.source }.toSet()
+        val alts = runCatching { ShadowArms.liquidityHint }.getOrDefault(emptyMap())
         return LiquidityShadow.summarize(b.positions.filter { it.arm in books && !it.open && !it.live }.map {
-            LiquidityShadow.Trade(it.day, (it.grossPnl ?: 0.0) - it.charges, it.near, it.arm, it.volSkip)
+            val net = (it.grossPnl ?: 0.0) - it.charges
+            val alt = alts[ShadowArms.liqKey(it.arm, it.entryTime, it.symbol)]
+            val exitTime = it.exitTime
+            LiquidityShadow.Trade(it.day, net, it.near, it.arm, it.volSkip,
+                exit1430 = if (alt == null || exitTime == null) null else LiquidityShadow.exitAllNet(net, exitTime, it.entry, it.qty, alt.at1430),
+                itm2 = alt?.itm2, strong = it.strong)
         })
     }
 
     /** Liquidity 15+5's paper trades since 06 Oct, with and without each candidate rule (Jarvis's "which candidate helped"). Reads only. */
-    suspend fun liquidityShadow(): LiquidityShadow.Summary = lock.withLock { shadowOf(book()) }
+    suspend fun liquidityShadow(): LiquidityShadow.Summary {
+        // (The shadow tracker's record loaded first, for candidates (d) and (e): it never waits on a pass.)
+        runCatching { ShadowArms.rows() }
+        return lock.withLock { shadowOf(book()) }
+    }
+
+    /**
+     * Liquidity 15+5's paper positions entered on [day], open and closed: the shadow tracker prices candidates (d) and (e)
+     * beside them ([ShadowArms]). Reads only.
+     */
+    suspend fun liquidityToday(day: LocalDate): List<Position> = lock.withLock {
+        val books = LiquidityRules.BOOKS.map { it.source }.toSet()
+        book().positions.filter { it.arm in books && !it.live && it.day == day }
+    }
 
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
@@ -632,7 +663,7 @@ object OrbArms {
         val live = liveNow()
         if (live && !pinConfirmed) return@withLock "The app switched to Live: approve with your PIN on Home → Strategies."
         val signal = LiquidityRules.Signal(if (p.right == "CE") 1 else -1, p.level ?: return@withLock "The signal lost its level; a new break will ask again.", p.target)
-        val msg = enterLiquidity(b, armOf(p.arm), signal, p.signalBar, p.strike ?: return@withLock "The signal lost its strike.", live, p.near, p.volSkip)
+        val msg = enterLiquidity(b, armOf(p.arm), signal, p.signalBar, p.strike ?: return@withLock "The signal lost its strike.", live, p.near, p.volSkip, p.strong)
         b.status[p.arm] = msg; save(b); describe(msg)
     }
 
@@ -1245,7 +1276,7 @@ object OrbArms {
      * fill. Only reached after the owner approved with the PIN (see [approve]).
      */
     private suspend fun enterLive(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal? = null,
-                                  near: Boolean? = null, volSkip: Boolean? = null): String {
+                                  near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null): String {
         // A paper-only arm (the Hero arm among them) never reaches Zerodha, whatever called this.
         liveRefusal(arm.source)?.let { return it }
         val s = AppSettings.load()
@@ -1291,7 +1322,7 @@ object OrbArms {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
             b.positions += Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
                 live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ProfitLock.targetOf(arm) != null,
-                near = near, volSkip = volSkip)
+                near = near, volSkip = volSkip, strong = strong)
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
                 "until the order book shows what filled.", "ORB live")
@@ -1303,7 +1334,7 @@ object OrbArms {
         val (stopId, trigger) = placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id), liquidity = liquidity != null)
         b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
-            ladder = ProfitLock.targetOf(arm) != null, near = near, volSkip = volSkip)
+            ladder = ProfitLock.targetOf(arm) != null, near = near, volSkip = volSkip, strong = strong)
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
@@ -1529,19 +1560,46 @@ object OrbArms {
         // Unknown (too little history) is recorded as not skipped: the filter skips only what it can see.
         val volSkip = runCatching { com.optionslab.engine.orb.VolFilter.judge(ones, last.start.plusMinutes(tf.toLong())).wouldSkip == true }
             .getOrDefault(false)
+        // Candidate (f)'s shadow (a pre-registered forward test, Boss's approval 06 Oct): a strong close beyond the swept level
+        // and premium momentum on both rights at the strike over the 5 minutes before now (one minute read of each, on a signal
+        // only); recorded, never acted on. Unreadable: not recorded.
+        val strong = runCatching { strongOf(und, s, last.close, strike, t) }.getOrNull()
         val live = liveNow()
         // As the ORB: automatic unless the owner chose approvals, or it was armed in Paper and now finds the app in Live.
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             val right = if (s.side > 0) "CE" else "PE"
             val expires = last.start.plusMinutes(2L * tf)                    // until the next bar completes
-            b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target, near, volSkip)
+            b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target, near, volSkip, strong)
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
                 "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
                     (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" else "Paper account, 1 lot") +
                     ". Approve by ${hhmm(expires)} or it lapses.", "almanac", approve = "orb")
             return "awaiting_approval"
         }
-        return enterLiquidity(b, arm, s, last.start, strike, live, near, volSkip)
+        return enterLiquidity(b, arm, s, last.start, strike, live, near, volSkip, strong)
+    }
+
+    /** Candidate (f)'s flag for signal [s] on [und] closing at [close], with the option bought at [strike] ([LiquidityShadow.strongMomentum]). */
+    private suspend fun strongOf(und: String, s: LiquidityRules.Signal, close: Double, strike: Int, t: LocalDateTime): Boolean? {
+        val expiry = OrbRules.expiryAfter(t.toLocalDate(), Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct()) ?: return null
+        val (r, o) = if (s.side > 0) Right.CE to Right.PE else Right.PE to Right.CE
+        val leg = Paper.contractFor(und, expiry, strike.toDouble(), r) ?: return null
+        val opp = Paper.contractFor(und, expiry, strike.toDouble(), o) ?: return null
+        return LiquidityShadow.strongMomentum(s.side, close, s.level, optionMinutes(leg.feedKey, t), optionMinutes(opp.feedKey, t), t)
+    }
+
+    /**
+     * TEST ONLY: an option's 1-minute candles at a given moment (candidate (f)'s read). Null in the app, always: [optionMinutes]
+     * then reads [Net.intraday]. While another test feed is set and this is not, no option has candles (no network).
+     */
+    @Volatile internal var testOptionBars: ((String, LocalDateTime) -> List<Upstox.Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test option feed exists only in debug builds" }; field = v }
+
+    /** An option's 1-minute candles of [t]'s day. */
+    private suspend fun optionMinutes(key: String, t: LocalDateTime): List<Bar> {
+        val testing = testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null || testOptionBars != null
+        val raw = if (testing) testOptionBars?.invoke(key, t).orEmpty() else Net.intraday(key)
+        return toBars(raw).filter { it.start.toLocalDate() == t.toLocalDate() }
     }
 
     /**
@@ -1549,7 +1607,7 @@ object OrbArms {
      * the fill. [near], [volSkip]: candidates (a)'s and (c)'s shadow flags, kept with the position.
      */
     private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, live: Boolean,
-                                       near: Boolean? = null, volSkip: Boolean? = null): String {
+                                       near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null): String {
         val right = if (s.side > 0) Right.CE else Right.PE
         val day = signalBar.toLocalDate()
         val und = LiquidityRules.underlyingOf(arm)
@@ -1557,7 +1615,7 @@ object OrbArms {
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
         val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
         exposureRefusal(b, c)?.let { return it }
-        if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip)
+        if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val snap = runCatching { Paper.snapshot() }.getOrNull()
@@ -1575,7 +1633,7 @@ object OrbArms {
             if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · stop") } }
         }
         b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
-            charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip)
+            charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip, strong = strong)
         marks[c.symbol] = fill.price
         return "entered"
     }

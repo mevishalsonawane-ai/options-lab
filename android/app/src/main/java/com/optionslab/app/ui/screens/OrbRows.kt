@@ -180,9 +180,9 @@ internal fun OrbRowsContent(
             retired.forEach { r ->
                 Text("${r.arm.label}: ${com.optionslab.engine.orb.RetiredArms.line(r)}", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
                     modifier = Modifier.padding(top = 2.dp))
-                // Its shadow (no orders): what the research's best variant would have done since the tracker started.
-                view.shadows.firstOrNull { s -> s.variant.arms.any { it.source == r.arm.source } }?.let { s ->
-                    Text(keepNumbersWhole(s.line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                // Its shadows (no orders): one line - the only one, or the best of its two or three (the tap lists them all).
+                retiredShadowLine(view.shadows, r.arm.source)?.let { line ->
+                    Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
                         modifier = Modifier.padding(start = 10.dp))
                 }
             }
@@ -192,6 +192,8 @@ internal fun OrbRowsContent(
                     modifier = Modifier.padding(top = 2.dp))
                 Text(keepNumbersWhole(s.line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(start = 10.dp))
             }
+            if (view.shadows.isNotEmpty()) Text("Tap for every shadow's record and why its losers lost", style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 12.sp),
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 
@@ -319,6 +321,8 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClo
                         Text("${s.variant.label} · ${s.variant.name}", style = small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp))
                         Text(keepNumbersWhole(s.line), style = small)
                         Text(s.variant.description, style = soft)
+                        // Why its losers lost (the losing-trades study's groups).
+                        com.optionslab.engine.orb.ShadowStudy.reasonLine(s.losses)?.let { Text(keepNumbersWhole("Its losers: $it"), style = soft) }
                         if (s.trades.isEmpty()) Text("No shadow trades yet.", style = soft)
                         s.trades.asReversed().take(40).forEach { t ->
                             val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs(t.net ?: 0.0)}"
@@ -339,6 +343,16 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClo
         },
         confirmButton = { TextButton(onClose) { Text("Close") } },
     )
+}
+
+/**
+ * A retired arm's line under it in the Retired section: its one shadow's line, or with two or three the best record's
+ * (highest net; a tie keeps the research's own) as "Best of N shadows · ..."; null with none.
+ */
+internal fun retiredShadowLine(shadows: List<com.optionslab.app.data.ShadowArms.Row>, source: String): String? {
+    val mine = shadows.filter { s -> s.variant.arms.any { it.source == source } }
+    val best = mine.getOrNull(com.optionslab.engine.orb.ShadowRules.bestIndex(mine.map { it.summary.net })) ?: return null
+    return com.optionslab.engine.orb.ShadowRules.bestOf(mine.size, best.line)
 }
 
 /** Money and counts never break across lines (word joiners inside each figure, e.g. "(+₹1,158"). */

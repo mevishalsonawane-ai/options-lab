@@ -1,6 +1,8 @@
 package com.optionslab.engine.orb
 
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.Locale
 import kotlin.math.abs
 
@@ -13,13 +15,76 @@ import kotlin.math.abs
  *       points: [LiquidityRules.indexStopPoints]) - recorded on each signal as [nearLevel];
  *   (b) drop the FINNIFTY 30-minute book ([finThirty]);
  *   (c) skip in high volatility ([VolFilter], Boss's choice later on 06 Oct, from the big-candle study) - recorded on each
- *       signal as [Trade.volSkip]; judged on the trades entered since it was recorded, at [MIN_TRADES] of them.
+ *       signal as [Trade.volSkip]; judged on the trades entered since it was recorded, at [MIN_TRADES] of them;
+ *   (d) exit everything at 14:30 ([EXIT_ALL_AT], from the losing-trades study) - the same trade, sold at 14:30 when still
+ *       held then ([Trade.exit1430]: its net after charges, a MARKET sell of the option's price at the first look from 14:30);
+ *   (e) 2 strikes in the money ([itm2Strike], from the same study) - the same signal, entry and exit moments, priced on the
+ *       option one strike deeper than the trade's ([Trade.itm2]: its net after charges, MARKET fills on its price at the
+ *       trade's entry and at its exit). (d) and (e) are judged like (c), on the trades they priced, at [MIN_TRADES];
+ *   (f) only a strong close with premium momentum ([strongMomentum], Boss's approval later on 06 Oct, from the "meta"
+ *       study) - recorded on each signal as [Trade.strong]: the signal bar closed beyond the swept level by more than
+ *       [STRONG_CLOSE] of it (10.4 bp, in the trade's direction) AND over the 5 minutes before the entry the bought option's
+ *       premium rose while the opposite right at the same strike fell (data before the entry only). The rule was found
+ *       after the study had looked at its TEST period, so it is NOT validated: this is a pre-registered forward test,
+ *       judged like (c) on the trades it flagged, at [MIN_TRADES] of them.
  *
  * Counted from [SINCE] (the day Boss switched it back on, paper only). Pure: no clock, no storage.
  */
 object LiquidityShadow {
     val SINCE: LocalDate = LocalDate.of(2026, 10, 6)
     const val MIN_TRADES = 40
+    /** Candidate (f)'s close beyond the swept level: more than 10.4 bp of it, in the trade's direction. */
+    const val STRONG_CLOSE = 0.00104
+    /** Candidate (f)'s premium look-back, in minutes before the entry. */
+    const val MOMENTUM_MINUTES = 5L
+
+    /** Candidate (f)'s first half: the signal bar's [close] beyond the swept [level] by more than [STRONG_CLOSE] of it, going [side]. */
+    fun strongClose(side: Int, close: Double, level: Double): Boolean = level > 0 && side * (close - level) / level > STRONG_CLOSE
+
+    /**
+     * Candidate (f)'s second half, on 1-minute candles that closed by [at] (the entry): the bought option's [leg] last close
+     * above its close 5 minutes before, and the opposite right's [opp] below its own; null when either has no candle then.
+     */
+    fun premiumMomentum(leg: List<Bar>, opp: List<Bar>, at: LocalDateTime): Boolean? {
+        fun change(x: List<Bar>): Double? {
+            val done = x.filter { !it.start.plusMinutes(1).isAfter(at) && it.start.toLocalDate() == at.toLocalDate() }.sortedBy { it.start }
+            val last = done.lastOrNull() ?: return null
+            val base = done.lastOrNull { !it.start.isAfter(last.start.minusMinutes(MOMENTUM_MINUTES)) } ?: return null
+            return last.close - base.close
+        }
+        val l = change(leg) ?: return null
+        val o = change(opp) ?: return null
+        return l > 0 && o < 0
+    }
+
+    /** Candidate (f)'s flag: a strong close and premium momentum; null when the momentum could not be read (not counted). */
+    fun strongMomentum(side: Int, close: Double, level: Double, leg: List<Bar>, opp: List<Bar>, at: LocalDateTime): Boolean? {
+        val m = premiumMomentum(leg, opp, at) ?: return null
+        return strongClose(side, close, level) && m
+    }
+
+    /** Candidate (d)'s time: everything still held is sold at the first look from 14:30. */
+    val EXIT_ALL_AT: LocalTime = LocalTime.of(14, 30)
+
+    /** Candidate (e)'s strike: one step deeper in the money than the trade's [strike] (1 ITM -> 2 ITM) on [underlying]. */
+    fun itm2Strike(side: Int, strike: Int, underlying: String): Int = strike - side * LiquidityRules.strikeStep(underlying)
+
+    /** Whether candidate (d) sells a trade still held at [now]. */
+    fun exitAllDue(now: LocalDateTime): Boolean = !now.toLocalTime().isBefore(EXIT_ALL_AT)
+
+    /** A bought option's net after charges: [qty] bought at [entry], sold at [exit] (the paper fills, the real charges). */
+    fun net(entry: Double, exit: Double, qty: Int): Double = (exit - entry) * qty - ShadowRules.charges(entry, exit, qty)
+
+    /**
+     * Candidate (d)'s net for a trade that made [actual] and was sold at [exitTime]: the same when it was sold before 14:31
+     * (out by then anyway); else bought at [entry] and sold at [at1430] ([ShadowRules.exitFill] of the price seen from
+     * 14:30), or null when that price was never seen (not counted).
+     */
+    fun exitAllNet(actual: Double, exitTime: LocalDateTime, entry: Double, qty: Int, at1430: Double?): Double? = when {
+        exitTime.toLocalTime().isBefore(EXIT_ALL_AT.plusMinutes(1)) -> actual
+        at1430 != null -> net(entry, at1430, qty)
+        else -> null
+    }
 
     /**
      * Candidate (a) for a signal on [underlying] that closed at [close], going [side] (+1 up, -1 down), with the next
@@ -37,7 +102,13 @@ object LiquidityShadow {
      */
     data class Trade(val day: LocalDate, val net: Double, val near: Boolean?, val book: String,
                      /** Candidate (c)'s flag as recorded at the signal; null: entered before (c) was recorded (not counted for it). */
-                     val volSkip: Boolean? = null)
+                     val volSkip: Boolean? = null,
+                     /** Candidate (d)'s net ([exitAllNet]); null: not priced (not counted for it). */
+                     val exit1430: Double? = null,
+                     /** Candidate (e)'s net on the 2-ITM option; null: not priced (not counted for it). */
+                     val itm2: Double? = null,
+                     /** Candidate (f)'s flag as recorded at the signal; null: not recorded (not counted for it). */
+                     val strong: Boolean? = null)
 
     /** A set of trades: how many, and their net. */
     data class Cut(val trades: Int, val net: Double) {
@@ -50,7 +121,13 @@ object LiquidityShadow {
      * Candidate (c): [volAll], the trades with its flag recorded, and [withoutVol], those of them it would have kept.
      */
     data class Summary(val all: Cut, val withoutNear: Cut, val withoutFin30: Cut, val untracked: Int,
-                       val volAll: Cut = Cut(0, 0.0), val withoutVol: Cut = Cut(0, 0.0)) {
+                       val volAll: Cut = Cut(0, 0.0), val withoutVol: Cut = Cut(0, 0.0),
+                       /** Candidate (d): the trades it priced as they were ([exitAll]) and sold by 14:30 ([at1430]). */
+                       val exitAll: Cut = Cut(0, 0.0), val at1430: Cut = Cut(0, 0.0),
+                       /** Candidate (e): the trades it priced as they were ([itm1]) and on the 2-ITM option ([itm2]). */
+                       val itm1: Cut = Cut(0, 0.0), val itm2: Cut = Cut(0, 0.0),
+                       /** Candidate (f): the trades with its flag ([strongAll]) and those it would have kept ([withStrong]). */
+                       val strongAll: Cut = Cut(0, 0.0), val withStrong: Cut = Cut(0, 0.0)) {
         val enough: Boolean get() = all.trades >= MIN_TRADES
         /** Candidate (c) has [MIN_TRADES] trades of its own. */
         val volEnough: Boolean get() = volAll.trades >= MIN_TRADES
@@ -60,9 +137,15 @@ object LiquidityShadow {
         val since = trades.filter { !it.day.isBefore(SINCE) }
         fun cut(x: List<Trade>) = Cut(x.size, x.sumOf { it.net })
         val vol = since.filter { it.volSkip != null }
+        val d = since.filter { it.exit1430 != null }
+        val e = since.filter { it.itm2 != null }
         return Summary(cut(since), cut(since.filter { it.near != true }), cut(since.filter { !finThirty(it.book) }), since.count { it.near == null },
-            cut(vol), cut(vol.filter { it.volSkip == false }))
+            cut(vol), cut(vol.filter { it.volSkip == false }), cut(d), Cut(d.size, d.sumOf { it.exit1430!! }), cut(e), Cut(e.size, e.sumOf { it.itm2!! }),
+            cut(since.filter { it.strong != null }), cut(since.filter { it.strong == true }))
     }
+
+    /** (d) / (e) on the row: "tracked from its first trade", or its trades and net a trade against the same trades as made. */
+    private fun alt(asMade: Cut, alt: Cut) = if (alt.trades == 0) "tracked from its first trade" else "${alt.trades}, ${per(alt)} against ${per(asMade)}"
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
     private fun per(c: Cut) = c.perTrade?.let { rs(it) + " a trade" } ?: "no trades"
@@ -74,6 +157,9 @@ object LiquidityShadow {
             "(b) no FINNIFTY 30m: ${s.withoutFin30.trades}, ${per(s.withoutFin30)} · " +
             "(c) skip in high volatility: " + (if (s.volAll.trades == 0) "tracked from its first trade"
                 else "${s.withoutVol.trades} of ${s.volAll.trades}, ${per(s.withoutVol)} against ${per(s.volAll)}") +
+            " · (d) all out by 14:30: ${alt(s.exitAll, s.at1430)} · (e) 2 strikes in the money: ${alt(s.itm1, s.itm2)}" +
+            " · (f) only strong close + momentum: " + (if (s.strongAll.trades == 0) "tracked from its first trade"
+                else "${s.withStrong.trades} of ${s.strongAll.trades}, ${per(s.withStrong)} vs ${per(s.strongAll)}") +
             (if (s.untracked > 0) " · ${s.untracked} from before (a) was recorded" else "")
 
     /** Whether candidate [c] helped against [all]: it kept at least one trade, dropped one, and made more a trade. */
@@ -105,6 +191,23 @@ object LiquidityShadow {
         return "$which, Boss. Liquidity 15+5 made ${per(s.all)} over ${s.all.trades} paper trades since 06 Oct; " +
             "(a) skipping signals with the next level within one index stop: ${per(s.withoutNear)} over ${s.withoutNear.trades}; " +
             "(b) without FINNIFTY 30m: ${per(s.withoutFin30)} over ${s.withoutFin30.trades}. $c" +
+            same("(d) selling everything at 14:30", s.exitAll, s.at1430) + same("(e) buying 2 strikes in the money", s.itm1, s.itm2) +
+            (if (s.strongAll.trades < MIN_TRADES) "(f) only a strong close with premium momentum (a forward test) has ${s.strongAll.trades} of " +
+                "$MIN_TRADES trades since it was added; it is judged at $MIN_TRADES. "
+            else "(f) only a strong close with premium momentum (a forward test) ${if (helped(s.strongAll, s.withStrong)) "helped" else "did not help"}: " +
+                "${per(s.withStrong)} over ${s.withStrong.trades} against ${per(s.strongAll)} over ${s.strongAll.trades} since it was added. ") +
             "Nothing changes by itself: adopting one is yours."
     }
+
+    /** Whether the same trades made more a trade under a candidate ([alt]) than as made ([asMade]). */
+    fun better(asMade: Cut, alt: Cut): Boolean {
+        val a = asMade.perTrade ?: return false
+        val c = alt.perTrade ?: return false
+        return c > a
+    }
+
+    /** Jarvis on (d) or (e): judged at [MIN_TRADES] priced trades of its own; until then, how many it has. */
+    private fun same(what: String, asMade: Cut, alt: Cut): String =
+        if (alt.trades < MIN_TRADES) "$what has ${alt.trades} of $MIN_TRADES trades priced; it is judged at $MIN_TRADES. "
+        else "$what ${if (better(asMade, alt)) "helped" else "did not help"}: ${per(alt)} against ${per(asMade)} over the same ${alt.trades} trades. "
 }

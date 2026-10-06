@@ -280,7 +280,42 @@ class ShadowRulesTest {
         RetiredArms.ALL.forEach { assertTrue(ShadowRules.forArm(it.arm.source) != null, it.arm.label) }
         assertEquals(ShadowRules.MOMO_O08, ShadowRules.of("momo_o08"))
         assertNull(ShadowRules.of("nope"))
-        assertEquals(4, ShadowRules.ALL.map { it.id }.distinct().size)
+        assertEquals(9, ShadowRules.ALL.map { it.id }.distinct().size)
+        assertEquals(9, ShadowRules.ALL.map { it.label + it.name }.distinct().size, "each shadow's label and name tell it apart")
         assertTrue(ShadowRules.ALL.all { it.description.isNotBlank() && it.underlying.isNotBlank() })
+        // The losing-trades study's shadows: two or three a retired arm, the research's own first.
+        assertEquals(listOf(ShadowRules.ORB_V43, ShadowRules.ORB_P10), ShadowRules.allForArm(OrbRules.ORB.source))
+        assertEquals(listOf(ShadowRules.ORB_V43, ShadowRules.ORBF_P10), ShadowRules.allForArm(OrbRules.ORB_FRESH.source))
+        assertEquals(listOf(ShadowRules.SWEEP_S17, ShadowRules.SWEEP_H1, ShadowRules.SWEEP_14), ShadowRules.allForArm(SweepRules.ARM.source))
+        assertEquals(listOf(ShadowRules.FADE_R20, ShadowRules.FADE_P10), ShadowRules.allForArm(RangeFadeRules.ARM.source))
+        assertTrue(ShadowRules.allForArm(LiquidityRules.ARM.source).isEmpty())
+        assertEquals("re-arm ORB Sweep with S14 on paper?", ShadowRules.askTitle(ShadowRules.SWEEP_14))
+    }
+
+    @Test fun theRetiredSectionShowsTheBestOfAnArmsShadows() {
+        assertEquals(-1, ShadowRules.bestIndex(emptyList()))
+        assertEquals(1, ShadowRules.bestIndex(listOf(-500.0, 200.0, 100.0)))
+        assertEquals(0, ShadowRules.bestIndex(listOf(0.0, 0.0, 0.0)), "a tie keeps the research's own")
+        assertEquals(2, ShadowRules.bestIndex(listOf(-3.0, -2.0, -1.0)))
+        assertEquals("Shadow (V43)", ShadowRules.bestOf(1, "Shadow (V43)"))
+        assertEquals("Best of 3 shadows · Shadow (S17)", ShadowRules.bestOf(3, "Shadow (S17)"))
+    }
+
+    @Test fun theStudysShadowsExitOnTheirCandlesAndOnTheLtpOnlyAtTheClose() {
+        val p = open(ShadowRules.SWEEP_H1, 1)
+        assertNull(ShadowRules.exitReason(p, 1.0, at(14, 0), emptyList()), "the walk on the candles decides, not the LTP")
+        assertEquals("session_end", ShadowRules.exitReason(p, 300.0, at(15, 10), emptyList()))
+        assertEquals("session_end", ShadowRules.exitReason(open(ShadowRules.ORB_P10, 1), null, at(15, 11), emptyList()))
+    }
+
+    @Test fun jarvisNamesEachShadowsTopLossReason() {
+        val since = LocalDate.of(2026, 10, 6)
+        val g = ShadowStudy.LossGroup.entries
+        val a = ShadowRules.answer(listOf(Triple(ShadowRules.SWEEP_H1, ShadowRules.summarize(listOf(-10.0, -20.0, 5.0)), since),
+            Triple(ShadowRules.ORB_P10, ShadowRules.summarize(emptyList()), since)),
+            reasons = mapOf(ShadowRules.SWEEP_H1.id to listOf(ShadowStudy.LossGroup.WRONG_WAY, ShadowStudy.LossGroup.WRONG_WAY), "gone" to g))
+        assertTrue(a.contains("ORB Sweep: Shadow (SH1, no orders): 3 trades since 06 Oct, net −₹25 (−₹8 a trade). Its losers: mostly wrong way " +
+            "from the start (2 of 2 losers)."), a)
+        assertTrue(a.contains("ORB: Shadow (OP10, no orders): 0 trades since 06 Oct, net ₹0. A shadow"), a)
     }
 }

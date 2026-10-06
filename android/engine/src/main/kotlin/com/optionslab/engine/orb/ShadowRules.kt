@@ -47,6 +47,9 @@ import kotlin.math.floor
  *   side. Buy the option 4 strikes in the money (CE up, PE down; ATM of the 12:00 index price, half-up to 50) on the
  *   expiry on or after today. Index stop: 0.3 x ATR14 against the 12:00 index price, on a 1-minute close; out at 14:30. No
  *   premium stop. Entered only from 12:00 to 12:03 (the research priced the 12:00 minute, 3 minutes' slack).
+ *
+ * The losing-trades study's five ([ORB_P10], [ORBF_P10], [SWEEP_H1], [SWEEP_14], [FADE_P10]; Boss, 06 Oct): pinned and walked
+ * in [ShadowStudy]. Every shadow trade also keeps its best and worst move and why it lost ([ShadowStudy.lossGroup]).
  */
 object ShadowRules {
     /** One shadowed rule: [id] (its key in the book), [name] (the research's), the [arms] it shadows (none: a new candidate). */
@@ -64,11 +67,38 @@ object ShadowRules {
     val MOMO_O08 = Variant("momo_o08", "O08", "Midday momentum (NIFTY)", emptyList(), "NIFTY",
         "NIFTY at 12:00: 0.5 x ATR14 from the open and in the outer 25% of the day's range; buys 4 strikes in the money, " +
             "index stop 0.3 x ATR14 on a 1-minute close, out 14:30")
-    val ALL: List<Variant> = listOf(ORB_V43, SWEEP_S17, FADE_R20, MOMO_O08)
+
+    // The losing-trades study's shadows (Boss, 06 Oct: "enhance the shadows"), pinned in [ShadowStudy]: for each retired arm
+    // the finalist with the best TEST net, and one long shot. None made money out of sample; tracked, never traded.
+    val ORB_P10 = Variant("orb_p10", "OP10", OrbRules.ORB.label, listOf(OrbRules.ORB), OrbRules.UNDERLYING,
+        "BANKNIFTY: ORB's break, first entry only, when the last 30 minutes' volatility is not in the quietest fifth (2.73 bp a " +
+            "minute or more); a LIMIT 10 under the price, 15 minutes to fill; ATM of 09:20, -40 / +40 with the profit lock, out 15:10")
+    val ORBF_P10 = Variant("orbf_p10", "FP10", OrbRules.ORB_FRESH.label, listOf(OrbRules.ORB_FRESH), OrbRules.UNDERLYING,
+        "BANKNIFTY: ORB Fresh's fresh break, first entry only, when the last 30 minutes' volatility is not in the quietest fifth " +
+            "(2.73 bp a minute or more); a LIMIT 10 under the price, 15 minutes to fill; ATM of 09:20, -40 / +40 with the profit lock, out 15:10")
+    val SWEEP_H1 = Variant("sweep_h1", "SH1", SweepRules.ARM.label, listOf(SweepRules.ARM), OrbRules.UNDERLYING,
+        "BANKNIFTY: ORB Sweep's failed break, first entry only; ATM of 09:20, -40 stop, no target and no profit lock, out 15:10")
+    val SWEEP_14 = Variant("sweep_14", "S14", SweepRules.ARM.label, listOf(SweepRules.ARM), OrbRules.UNDERLYING,
+        "BANKNIFTY, a long shot: ORB Sweep's own rules with entries only from 14:00 (13:55-14:25 bars, 2 a day); ATM of 09:20, " +
+            "-40 / +80 with the profit lock, out 15:10")
+    val FADE_P10 = Variant("fade_p10", "RP10", RangeFadeRules.ARM.label, listOf(RangeFadeRules.ARM), OrbRules.UNDERLYING,
+        "BANKNIFTY: Range Fade's edge touch (10:30-13:55 bars), first entry only, when the last 30 minutes' volatility is not in " +
+            "the quietest fifth (2.73 bp a minute or more); a LIMIT 10 under the price, 15 minutes to fill; ATM of 09:20, -40 / +40 " +
+            "with the profit lock, out 15:10")
+
+    val ALL: List<Variant> = listOf(ORB_V43, SWEEP_S17, FADE_R20, MOMO_O08, ORB_P10, ORBF_P10, SWEEP_H1, SWEEP_14, FADE_P10)
 
     fun of(id: String): Variant? = ALL.firstOrNull { it.id == id }
-    /** The variant shadowing the retired arm [source], or null. */
+    /** The first variant shadowing the retired arm [source] (the research's own), or null. */
     fun forArm(source: String): Variant? = ALL.firstOrNull { v -> v.arms.any { it.source == source } }
+    /** Every variant shadowing the retired arm [source], the research's own first. */
+    fun allForArm(source: String): List<Variant> = ALL.filter { v -> v.arms.any { it.source == source } }
+
+    /** The index of the best record among [nets] (the highest net; a tie keeps the first), or -1 with none. */
+    fun bestIndex(nets: List<Double>): Int = nets.indices.maxWithOrNull(compareBy<Int> { nets[it] }.thenByDescending { it }) ?: -1
+
+    /** The Retired section's one line for an arm with [n] shadows: the best one's [line], and that there are more. */
+    fun bestOf(n: Int, line: String): String = if (n <= 1) line else "Best of $n shadows · $line"
 
     // ---- pinned constants ---------------------------------------------------------------------------------------------
 
@@ -267,7 +297,9 @@ object ShadowRules {
                 p.indexStop != null && since.any { (it.close - p.indexStop) * p.side <= 0 } -> "index_stop"
                 else -> null
             }
-            else -> "unknown_variant"
+            // The study's shadows exit on the option's candles ([ShadowStudy.walk]); on the LTP only at 15:10, when no 15:10
+            // candle has closed yet.
+            else -> if (ShadowStudy.ruleOf(p.variant) == null) "unknown_variant" else if (!t.isBefore(OrbRules.SQUARE_OFF)) "session_end" else null
         }
     }
 
@@ -342,15 +374,19 @@ object ShadowRules {
     /** The title of that request: "re-arm ORB with V43 on paper?". */
     fun askTitle(v: Variant): String = "re-arm ${armName(v)} with ${v.name} on paper?"
 
-    /** What Jarvis says of every shadow: each one's line, and which is ready to put to Boss. */
-    fun answer(rows: List<Triple<Variant, Summary, LocalDate>>, promoted: Set<String> = emptySet()): String {
+    /**
+     * What Jarvis says of every shadow: each one's line, which is ready to put to Boss, and why its losers lost ([reasons]:
+     * variant id -> each losing trade's group, [ShadowStudy.lossGroup]; the most common one is named).
+     */
+    fun answer(rows: List<Triple<Variant, Summary, LocalDate>>, promoted: Set<String> = emptySet(),
+               reasons: Map<String, List<ShadowStudy.LossGroup>> = emptyMap()): String {
         if (rows.isEmpty()) return "No shadow has run yet, Boss: they start recording on the next market day."
         val parts = rows.map { (v, s, since) ->
             "${v.label}: ${line(v, s, since)}" + when {
                 v.id in promoted -> " - re-armed on paper with ${v.name} on your yes."
                 promotionDue(s) -> " - it has met the bar; I'll ask you about re-arming it on paper."
                 else -> "."
-            }
+            } + (ShadowStudy.reasonLine(reasons[v.id].orEmpty())?.let { " Its losers: $it." } ?: "")
         }
         return "The shadows place no orders, Boss - they record what each rule would have done, at live prices and real charges. " +
             parts.joinToString(" ") + " A shadow is put to you only at $PROMOTE_TRADES trades, net above zero and a profit factor of " +

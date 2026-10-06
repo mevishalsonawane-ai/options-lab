@@ -38,6 +38,8 @@ class LiquidityArmTest : RobolectricTest() {
     private lateinit var day: LocalDate
     private val ceKey = "NSE_FO|LIQCE"
     private val peKey = "NSE_FO|LIQPE"
+    /** The put at the call's strike: candidate (f)'s opposite right. */
+    private val pe0Key = "NSE_FO|LIQPE0"
     private var failDay = true
     /** The 13:05 bar dips to 54,060 (40 under the broken 54,100) and closes back above it: the index stop, not a failed break. */
     private var dipDay = false
@@ -74,7 +76,8 @@ class LiquidityArmTest : RobolectricTest() {
         val expiry = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
             Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
-            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE")))
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.PE, 30, pe0Key, "BANKNIFTY-LIQ-54000PE")))
         upstox.price(ceKey, 300.0)
         upstox.price(peKey, 280.0)
         OrbArms.testIndexBars = { t -> feed(t) }
@@ -137,6 +140,8 @@ class LiquidityArmTest : RobolectricTest() {
         // Candidate (c), the volatility filter (06 Oct), is recorded too: with no earlier sessions loaded it cannot tell, so
         // it is recorded as not skipped - and the trade went ahead exactly as before (it never changes what the arm trades).
         assertEquals(false, p.volSkip)
+        // Candidate (f) (a forward test): no option candles in this feed, so its momentum cannot be read - not recorded.
+        assertNull(p.strong)
         assertEquals(day.atTime(13, 0), p.signalBar)
         // The owner's 15% stop rests in the book at 85% of the fill.
         assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), p.stopTrigger)
@@ -343,5 +348,33 @@ class LiquidityArmTest : RobolectricTest() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 15))
         assertTrue(row().today.isEmpty())
         assertTrue(Paper.state.orders.isEmpty())
+    }
+
+    /** An option's 1-minute candles at [t] from 12:30: [from] moving [step] a minute. */
+    private fun option(t: LocalDateTime, from: Double, step: Double): List<Upstox.Bar> = (12 * 60 + 30 until 15 * 60 + 30)
+        .map { day.atTime(it / 60, it % 60) }.filter { !it.plusMinutes(1).isAfter(t) }
+        .mapIndexed { i, start -> val c = from + step * i; Upstox.Bar(start.atZone(IST).toEpochSecond(), c, c, c, c, 1000, 0) }
+
+    @Test fun candidateFIsRecordedWithTheSignalAndNeverChangesTheTrade() {
+        // The call's premium rising and the put's at the same strike falling: momentum. But the 13:00 bar closed 40 points
+        // (7.4 bp) beyond the swept 54,100, not more than 10.4 bp: (f) would not have taken it.
+        OrbArms.testOptionBars = { key, t -> when (key) { ceKey -> option(t, 200.0, 1.0); pe0Key -> option(t, 300.0, -1.0); else -> emptyList() } }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue("the arm traded exactly as before", p.open)
+        assertEquals(false, p.strong)
+        assertTrue(com.optionslab.engine.orb.LiquidityShadow.premiumMomentum(
+            option(day.atTime(13, 5), 200.0, 1.0).map { com.optionslab.engine.orb.Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(IST).toLocalDateTime(), it.open, it.high, it.low, it.close) },
+            option(day.atTime(13, 5), 300.0, -1.0).map { com.optionslab.engine.orb.Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(IST).toLocalDateTime(), it.open, it.high, it.low, it.close) },
+            day.atTime(13, 5)) == true)
+        tick(LocalTime.of(13, 10))
+        assertFalse(row().today.single().open)
+        val s = row().shadow!!
+        assertEquals("counted for (f): its flag was recorded", 1, s.strongAll.trades)
+        assertEquals("and it would have skipped it", 0, s.withStrong.trades)
+        // Saved and read back: the flag survives a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(false, row().today.single().strong)
     }
 }
