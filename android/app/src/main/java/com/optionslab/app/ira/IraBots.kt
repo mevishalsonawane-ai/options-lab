@@ -131,6 +131,8 @@ internal object IraBots {
     suspend fun lines(question: String): List<String> {
         // A retired arm named (Boss's 06 Oct choice, [com.optionslab.engine.orb.RetiredArms]): said first that it is retired, and why.
         val retired = com.optionslab.engine.orb.RetiredArms.named(question).map { com.optionslab.engine.orb.RetiredArms.answer(it) }
+        // "How are the shadows doing?", "how are the retired arms doing?": the shadow tracker's record (no orders), on its own.
+        if (SHADOWS.containsMatchIn(question)) return retired + listOf(com.optionslab.app.data.ShadowArms.answer())
         val health = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
             runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
         // Liquidity 15+5 named: its two pre-registered candidates, judged once it has 40 paper trades since 06 Oct.
@@ -138,6 +140,9 @@ internal object IraBots {
             else listOfNotNull(runCatching { com.optionslab.engine.orb.LiquidityShadow.verdict(com.optionslab.app.data.OrbArms.liquidityShadow()) }.getOrNull())
         return retired + health + shadow
     }
+
+    /** The shadows or the retired arms named ([lines]). */
+    private val SHADOWS = Regex("\\b(shadows?|retired)\\b", RegexOption.IGNORE_CASE)
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
@@ -402,6 +407,31 @@ internal object IraBots {
             IraHub.offer("switch off ${arm.name}", "Boss, switch off ${arm.name}?", com.optionslab.ira.ArmCutoff.ask(arm), act)
         }
         runCatching { com.optionslab.app.security.SecurePrefs.put(CUTOFF_KEY, (listOf(today.toString()) + asked).joinToString("|")) }
+    }
+
+    // ---- a shadow that met the bar ([com.optionslab.engine.orb.ShadowRules.promotionDue]) --------------------------
+
+    @Volatile private var lastPromotion = 0L
+
+    /**
+     * Market days, every 30 minutes at most: a shadow with 60 closed trades, net above zero after charges and a profit factor
+     * of 1.2 or more is put to Boss - ONE request a variant, ever: "re-arm <arm> with <variant> on paper?". Approving re-arms
+     * it on paper only ([com.optionslab.app.data.ShadowArms.promote]; never Zerodha); always asked, never done by itself.
+     */
+    suspend fun shadowPromotions() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        if (!m.isTradingDay(m.today())) return
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastPromotion < 30 * 60_000L) return
+        lastPromotion = nowMs
+        for (row in com.optionslab.app.data.ShadowArms.due()) {
+            val v = row.variant
+            com.optionslab.app.data.ShadowArms.asked(v.id)
+            val id = v.id
+            IraHub.offer(com.optionslab.engine.orb.ShadowRules.askTitle(v), "Boss, " + com.optionslab.engine.orb.ShadowRules.askTitle(v),
+                com.optionslab.engine.orb.ShadowRules.ask(v, row.summary), { com.optionslab.app.data.ShadowArms.promote(id) }, addsRisk = true, alwaysAsk = true)
+        }
     }
 
     // ---- what Boss does with his bots after losing days ([com.optionslab.ira.ArmHabits]) --------------------------

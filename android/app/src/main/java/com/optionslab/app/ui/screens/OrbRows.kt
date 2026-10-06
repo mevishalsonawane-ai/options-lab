@@ -64,6 +64,7 @@ fun OrbRows(model: AppModel) {
             override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { model.armOrb(source, on, automatic, pinConfirmed) }
             override fun approve(source: String, pinConfirmed: Boolean) { model.approveOrb(source, pinConfirmed) }
             override fun skip(source: String) { model.skipOrb(source) }
+            override fun shadowOff(id: String) { model.shadowOff(id) }
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) })
 }
@@ -73,6 +74,8 @@ internal interface OrbActions {
     fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean)
     fun approve(source: String, pinConfirmed: Boolean)
     fun skip(source: String)
+    /** A shadow re-armed on paper on Boss's yes ([OrbArms.View.shadows]) switched off again. */
+    fun shadowOff(id: String) {}
 }
 
 /** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
@@ -175,6 +178,17 @@ internal fun OrbRowsContent(
             retired.forEach { r ->
                 Text("${r.arm.label}: ${com.optionslab.engine.orb.RetiredArms.line(r)}", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
                     modifier = Modifier.padding(top = 2.dp))
+                // Its shadow (no orders): what the research's best variant would have done since the tracker started.
+                view.shadows.firstOrNull { s -> s.variant.arms.any { it.source == r.arm.source } }?.let { s ->
+                    Text(keepNumbersWhole(s.line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                        modifier = Modifier.padding(start = 10.dp))
+                }
+            }
+            // The new candidate (no retired arm): its own line and its shadow.
+            view.shadows.filter { it.variant.arms.isEmpty() }.forEach { s ->
+                Text("${s.variant.label}: new candidate, in the shadow only", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                    modifier = Modifier.padding(top = 2.dp))
+                Text(keepNumbersWhole(s.line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(start = 10.dp))
             }
         }
     }
@@ -234,7 +248,7 @@ internal fun OrbRowsContent(
             dismissButton = { TextButton({ heroConfirm = null }) { Text("Cancel") } },
         )
     }
-    if (detail) OrbDetail(view) { detail = false }
+    if (detail) OrbDetail(view, onShadowOff = { actions.shadowOff(it) }) { detail = false }
 }
 
 @Composable
@@ -248,7 +262,7 @@ private fun OrbChoice(title: String, detail: String, onClick: () -> Unit) {
 
 /** The day in full: strike, contracts, range, every trade of both arms, the evening replay and the pass rule. */
 @Composable
-private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
+private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClose: () -> Unit) {
     val p = LocalPalette.current
     AlertDialog(
         onDismissRequest = onClose,
@@ -284,6 +298,25 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
                         for (i in 0 until arr.length()) arr.getJSONObject(i).let { t ->
                             Text("  ${t.getString("bar")} ${t.getString("right")} ${px(t.getDouble("entry"))} → ${px(t.getDouble("exit"))} ${t.getString("why").replace('_', ' ')}", style = soft)
                         }
+                    }
+                }
+                // The shadows (no orders): each variant's record and its trades, newest first.
+                if (v.shadows.isNotEmpty()) {
+                    Text("Shadows · no orders", style = head, modifier = Modifier.padding(top = 14.dp))
+                    Text("What each rule would have done at live prices, paper fills and real charges. Nothing is ordered unless you " +
+                        "say yes to re-arming one on paper.", style = soft)
+                    for (s in v.shadows) {
+                        Text("${s.variant.label} · ${s.variant.name}", style = small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp))
+                        Text(keepNumbersWhole(s.line), style = small)
+                        Text(s.variant.description, style = soft)
+                        if (s.trades.isEmpty()) Text("No shadow trades yet.", style = soft)
+                        s.trades.asReversed().take(40).forEach { t ->
+                            val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs(t.net ?: 0.0)}"
+                            val hm = "%02d:%02d".format(t.entryTime.hour, t.entryTime.minute)
+                            Text(keepNumbersWhole("${t.entryTime.toLocalDate()} $hm ${if (t.paper) "paper" else "shadow"} ${t.right} ${t.strike} @ ${px(t.entry)} → $tail"),
+                                style = soft)
+                        }
+                        if (s.armed) TextButton({ onShadowOff(s.variant.id) }) { Text("Switch ${s.variant.name} off (back to the shadow)") }
                     }
                 }
                 val f = v.forward

@@ -240,7 +240,8 @@ object OrbArms {
      * other automatic trader's. Null when [c] may be bought, else the refusal the row and the log show.
      */
     private fun exposureRefusal(b: Book, c: Paper.Contract): String? =
-        AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true), exposureOf(b))
+        AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true),
+            exposureOf(b) + runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList()))
 
     /** The one-time switch-off on this update (Boss's choice, 06 Oct): its key in [Book.migrated]. */
     internal const val OFF_LOSERS = "off_losers_2026_10_06"
@@ -393,6 +394,8 @@ object OrbArms {
         val replay: JSONObject?, val replayDay: String?,
         /** The day's stop, when the bot is stopped for today: who stopped it and what resumes it ([DayStop.line]); null when it runs. */
         val stopped: String? = null,
+        /** The retired arms' shadows and the new candidate ([ShadowArms]: no orders), one row a variant. */
+        val shadows: List<ShadowArms.Row> = emptyList(),
     )
 
     private val marks = java.util.concurrent.ConcurrentHashMap<String, Double>()
@@ -404,7 +407,9 @@ object OrbArms {
     suspend fun view(): View {
         // (Read apart from the arms' lock: the bot's stop is the strategies' own.)
         val why = runCatching { Strategies.stoppedWhy() }.getOrNull()
-        return viewLocked().copy(stopped = why?.let { DayStop.line(it) })
+        // (The shadows' rows too: they never wait on a pass.)
+        val shadows = runCatching { ShadowArms.rows() }.getOrDefault(emptyList())
+        return viewLocked().copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows)
     }
 
     private suspend fun viewLocked(): View = lock.withLock {
@@ -1531,6 +1536,13 @@ object OrbArms {
     private val liquidityHistory = java.util.concurrent.ConcurrentHashMap<String, Pair<java.time.LocalDate, List<Bar>>>()
     /** The minutes read on this pass per index (its books and the exits share one fetch). */
     private val liquidityPass = java.util.concurrent.ConcurrentHashMap<String, Pair<LocalDateTime, List<Bar>>>()
+
+    /**
+     * An index's 1-minute bars Liquidity 15+5 already read on [t]'s minute (today's only), or null when it did not: the
+     * shadows ([ShadowArms]) share that read instead of downloading the same candles again. Reads nothing.
+     */
+    internal fun minutesReadThisMinute(underlying: String, t: LocalDateTime): List<Bar>? =
+        liquidityPass[underlying]?.takeIf { it.first == t.withSecond(0).withNano(0) }?.second?.filter { it.start.toLocalDate() == t.toLocalDate() }
 
     private fun toBars(ones: List<Upstox.Bar>): List<Bar> = ones.map {
         Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(com.optionslab.engine.IST).toLocalDateTime(), it.open, it.high, it.low, it.close)

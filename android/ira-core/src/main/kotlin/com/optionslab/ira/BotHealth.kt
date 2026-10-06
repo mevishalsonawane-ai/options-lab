@@ -199,8 +199,8 @@ object BotHealth {
 
     private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
 
-    // (An ORB arm by its name too - "is ORB 5 behaving?": routing audit, round 8.)
-    private val BOTS = "(bots?|algos?|strateg(y|ies)|arms?|scripts?|pine scripts?|auto ?trades?|orb \\d+)"
+    // (An ORB arm by its name too - "is ORB 5 behaving?": routing audit, round 8; the retired arms' shadows - "how are the shadows doing?" - 06 Oct.)
+    private val BOTS = "(bots?|algos?|strateg(y|ies)|arms?|scripts?|pine scripts?|auto ?trades?|orb \\d+|shadows?)"
     private val ASK = Regex(" (how (are|is|re) (my|our|the|mere|meri) (\\w+ )?$BOTS (doing|performing|working|going|behaving|holding up|faring)|" +
         "(is|are) (my |our |the )?(\\w+ )?(\\w+ )?$BOTS (behaving|ok|okay|fine|healthy|working (ok|okay|fine|properly|right)|alright|all right|misbehaving|acting up|going crazy|overtrading)|" +
         "(which|what) (of my )?$BOTS (is|are) (losing|lose|in loss|bleeding|down|worst)|(which|what) $BOTS lost|" +

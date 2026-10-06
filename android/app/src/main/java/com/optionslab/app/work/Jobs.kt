@@ -543,6 +543,9 @@ object Tasks {
         // Jarvis: an arm with 15+ closed paper trades and a net below zero after charges - switching it off is asked
         // (Boss's 06 Oct rule; by itself only with automatic stops chosen in chat). Never arms anything.
         word("arm cutoff") { com.optionslab.app.ira.IraBots.cutoffLosers() }
+        // Jarvis: a shadow at 60 closed trades, net above zero and PF 1.2 or more - re-arming that retired arm with it on
+        // paper is asked, once (never done by itself).
+        word("shadow promotion") { com.optionslab.app.ira.IraBots.shadowPromotions() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
@@ -624,6 +627,9 @@ object Tasks {
         step("position cards") { PositionCards.refresh(context) }
         // The money steps are done: that is a check, whatever the quotes and Jarvis's words below wait on.
         runCatching { Heartbeat.beat(context) }
+        // The retired arms' shadows and the new candidate (Boss's 06 Oct choice): what each rule WOULD have done, at live
+        // prices - no order, paper or live (until Boss re-arms one on paper). After the money steps; reads only on a decision.
+        step("shadow arms") { com.optionslab.app.data.ShadowArms.tick() }
         // Jarvis's words-only checks in their own lane (outside the service - tests - they run here, in order).
         if (lanes != null) wordsLane(lanes) else wordsSteps()
     }

@@ -1263,6 +1263,9 @@ class CoverageTest {
         "mere bots kaise chal rahe hain" to "Account:BOTS", "mere algos kaise chal rahe hain" to "Account:BOTS",
         "meri strategies theek chal rahi hain" to "Account:BOTS", "mere bots ka haal" to "Account:BOTS",
         "kaun si strategy loss mein hai" to "Account:BOTS",
+        // The shadow tracker (06 Oct): the retired arms' shadows and the new candidate, no orders.
+        "how are the shadows doing" to "Account:BOTS", "how are the retired arms doing" to "Account:BOTS",
+        "how are the shadow arms doing" to "Account:BOTS", "are the shadows ok" to "Account:BOTS",
         // ---- MyStreaks (round 16): Boss's own runs of days and trades, his best and worst weekday; a market's run stays Streak ----
         "am i on a winning streak" to "Account:STREAKS", "how many green days in a row have i had" to "Account:STREAKS",
         "my losing streak" to "Account:STREAKS", "what's my best weekday" to "Account:STREAKS", "which day of the week do i lose most" to "Account:STREAKS",

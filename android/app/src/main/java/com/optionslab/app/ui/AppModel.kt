@@ -1384,6 +1384,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun approveOrb(source: String, pinConfirmed: Boolean = false) = strategyDo { com.optionslab.app.data.OrbArms.approve(source, pinConfirmed) }
     fun skipOrb(source: String) = strategyDo { com.optionslab.app.data.OrbArms.skip(source) }
 
+    /** A shadow re-armed on paper (Boss's yes) switched off again: back to recording only. */
+    fun shadowOff(id: String) = strategyDo { com.optionslab.app.data.ShadowArms.disarm(id) }
+
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {
             try { block()?.let { say(it) } } catch (e: Exception) { say(e.message ?: "failed") }

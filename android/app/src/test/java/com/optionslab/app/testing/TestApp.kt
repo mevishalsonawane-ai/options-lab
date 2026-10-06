@@ -12,6 +12,7 @@ import com.optionslab.app.data.Market
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.data.Paper
 import com.optionslab.app.data.PineAuto
+import com.optionslab.app.data.ShadowArms
 import com.optionslab.app.data.Protections
 import com.optionslab.app.data.StaticIp
 import com.optionslab.app.data.Store
@@ -57,6 +58,7 @@ class TestApp : Application() {
         History.init(this)
         Strategies.init(this)
         OrbArms.init(this)
+        ShadowArms.init(this)
         PineAuto.init(this)
         Protections.init(this)
         TradeBook.init(this)
@@ -68,6 +70,6 @@ class TestApp : Application() {
         com.optionslab.app.ira.IraHub.testLive = { emptyList() }
         com.optionslab.app.ira.IraHub.testFeed = { "" }
         // Caches from an earlier test (the files behind them are already gone with its directories).
-        Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
+        Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
     }
 }

@@ -109,7 +109,26 @@ internal object StrategyFakes {
         return OrbArms.View(arms, OrbArms.Legs(today, 52_000, today.plusDays(5), contract(Right.CE), contract(Right.PE)), 52_310.0 to 51_980.0,
             PassRule.judge(listOf(PassRule.Closed(today.minusDays(1), 1_158.0, true))),
             org.json.JSONObject().put("up", true).put("orb", org.json.JSONArray().put(org.json.JSONObject().put("bar", "10:40").put("exitBar", "11:20")
-                .put("right", "CE").put("entry", 210.0).put("exit", 250.0).put("why", "target").put("pnl", 1_200.0))), today.minusDays(1).toString())
+                .put("right", "CE").put("entry", 210.0).put("exit", 250.0).put("why", "target").put("pnl", 1_200.0))), today.minusDays(1).toString(),
+            shadows = shadowRows(armed))
+    }
+
+    /** The shadow tracker's rows (no orders): wide figures (124 trades, five-figure nets) to hold on one line; [armedSweep]: S17 re-armed on paper. */
+    fun shadowRows(armedSweep: Boolean = false): List<com.optionslab.app.data.ShadowArms.Row> {
+        val since = LocalDate.of(2026, 10, 6)
+        val t0 = today.atTime(10, 5)
+        val nets = mapOf("orb_v43" to List(124) { -99.56 }, "sweep_s17" to List(61) { if (it % 3 == 0) -1_250.0 else 1_100.0 },
+            "fade_r20" to List(37) { -48.0 }, "momo_o08" to List(9) { 2_345.0 })
+        return com.optionslab.engine.orb.ShadowRules.ALL.map { v ->
+            val s = com.optionslab.engine.orb.ShadowRules.summarize(nets.getValue(v.id))
+            val armed = armedSweep && v == com.optionslab.engine.orb.ShadowRules.SWEEP_S17
+            val trade = com.optionslab.app.data.ShadowArms.Trade(v.id, "BANKNIFTY-TEST-52000CE", "NSE_FO|CE", v.underlying, today.plusDays(5), 52_000,
+                "CE", 30, 300.15, t0, t0.minusMinutes(5))
+            val trades = listOf(trade.copy(exit = 254.74, exitTime = t0.plusMinutes(20), why = "stop", charges = 96.40),
+                trade.copy(exit = 339.83, exitTime = t0.plusMinutes(50), why = "time_exit", charges = 98.12, paper = armed), trade)
+            com.optionslab.app.data.ShadowArms.Row(v, s, since, com.optionslab.engine.orb.ShadowRules.line(v, s, since) +
+                if (armed) " · re-armed on paper" else "", armed, armed, armed, trades, "")
+        }
     }
 
     /** The PIN prompt's stand-in: its own two buttons. */
@@ -143,6 +162,7 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { calls += "orb arm $source on=$on auto=$automatic pin=$pinConfirmed" }
     override fun approve(source: String, pinConfirmed: Boolean) { calls += "orb approve $source pin=$pinConfirmed" }
     override fun skip(source: String) { calls += "orb skip $source" }
+    override fun shadowOff(id: String) { calls += "shadow off $id" }
 }
 
 /** A click through the node's semantics action (as TalkBack does): works wherever the node is, on screen or not. */
@@ -424,6 +444,32 @@ class OrbRowsTest {
         assertTrue("no retired arm's switch", !shown("BANKNIFTY opening-range break"))
         // The Hero arm stays off and says it is not proven.
         assertTrue(shown(com.optionslab.engine.orb.HeroRules.NOT_PROVEN))
+    }
+
+    @Test fun eachRetiredArmShowsItsShadowOnOneLineAndTheCandidateItsOwn() {
+        rows(StrategyFakes.orbView(), live = false)
+        val orb = keepNumbersWhole("Shadow (V43, no orders): 124 trades since 06 Oct, net −₹12,345 (−₹100 a trade)")
+        // ORB and ORB Fresh share V43: its line under each.
+        assertEquals(2, compose.onAllNodesWithText(orb, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertTrue(shown(keepNumbersWhole("Shadow (S17, no orders): 61 trades since 06 Oct, net ₹17,750 (₹291 a trade)")))
+        assertTrue(shown(keepNumbersWhole("Shadow (R20, no orders): 37 trades since 06 Oct, net −₹1,776 (−₹48 a trade)")))
+        assertTrue(shown("Midday momentum (NIFTY): new candidate, in the shadow only"))
+        assertTrue(shown(keepNumbersWhole("Shadow (O08, no orders): 9 trades since 06 Oct, net ₹21,105 (₹2,345 a trade)")))
+        // No figure breaks across lines: each is joined (word joiners), e.g. "(−₹100".
+        assertTrue(orb.contains("(\u2060−\u2060₹\u20601\u20600\u20600"))
+        assertEquals("still only the Hero arm and Liquidity 15+5 have a switch", 2, switches().fetchSemanticsNodes().size)
+    }
+
+    @Test fun theDetailListsTheShadowTradesAndARearmedOneSwitchesOff() {
+        rows(StrategyFakes.orbView(armed = true), live = false)
+        tap("Retired")
+        assertTrue(shown("Shadows · no orders"))
+        assertTrue(shown("ORB / ORB Fresh · V43"))
+        assertTrue(shown(keepNumbersWhole("shadow CE 52000 @ 300.15")))
+        assertTrue(shown(keepNumbersWhole("paper CE 52000 @ 300.15")))
+        assertTrue(shown("stop"))
+        compose.onAllNodesWithText("Switch S17 off", substring = true).onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.waitForIdle()
+        assertEquals(listOf("shadow off sweep_s17"), rec.calls)
     }
 
     @Test fun aRetiredArmStillHoldingAPositionShowsItButHasNoSwitch() {

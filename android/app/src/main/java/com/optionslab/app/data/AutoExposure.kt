@@ -17,6 +17,8 @@ object AutoExposure {
     fun others(except: Source): List<AutoSide.Held> {
         val out = ArrayList<AutoSide.Held>()
         if (except != Source.ORB) out += runCatching { OrbArms.exposureHint }.getOrDefault(emptyList())
+        // A shadow re-armed on paper on Boss's yes trades as an arm: its paper positions count with the arms' (virtual ones never do).
+        if (except != Source.ORB) out += runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList())
         if (except != Source.PINE) out += runCatching { PineAuto.exposure() }.getOrDefault(emptyList())
         if (except != Source.STRATEGIES) out += runCatching { Strategies.exposureHint }.getOrDefault(emptyList())
         if (except != Source.SOLO) out += runCatching { com.optionslab.app.ira.IraSolo.exposure() }.getOrDefault(emptyList())
@@ -33,7 +35,8 @@ object AutoExposure {
         AutoSide.check(underlying, direction, own + others(source))
 
     /** All of them (Boss's own order review warns against these: [AutoSide.warn]). */
-    fun all(): List<AutoSide.Held> = others(Source.ORB) + runCatching { OrbArms.exposureHint }.getOrDefault(emptyList())
+    fun all(): List<AutoSide.Held> = others(Source.ORB) + runCatching { OrbArms.exposureHint }.getOrDefault(emptyList()) +
+        runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList())
 
     /**
      * Boss's order (never refused): a word for its review when an automatic position on the same index leans the other way,
