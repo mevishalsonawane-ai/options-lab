@@ -67,6 +67,9 @@ object Routine {
      * events ahead ("ACCOUNT|events"); never a command, an order, a trade idea or anything else.
      */
     fun key(text: String): String? {
+        // "When do I usually check my P&L?" / "stop getting my P&L ready": about Jarvis's read-ahead ([CheckTimes]), never a
+        // P&L ask - not logged, so asking or undoing it never counts toward it.
+        if (runCatching { CheckTimes.asked(text) != null }.getOrDefault(false)) return null
         Habits.key(text)?.let { return it }
         val q = Ask.parse(text)
         if (q.command != null || q.order != null || q.topics.any { it in NEVER }) return null

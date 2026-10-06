@@ -101,6 +101,7 @@ class CollisionTest {
         "MoreAfter" to { q -> MoreAfter.asked(q) != null },
         "SmallTrades" to { q -> SmallTrades.asked(q) != null },
         "DayIndex" to { q -> DayIndex.asked(q) != null },
+        "CheckTimes" to { q -> CheckTimes.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -938,6 +939,16 @@ class CollisionTest {
         // ...and its neighbours keep theirs: LeadIndex across all days, the market read itself, the weekday record.
         "why do you start with banknifty" to "LeadIndex", "stop saying bank nifty first" to "LeadIndex",
         "how is the market" to "TradeCheck", "how are wednesdays for banknifty" to "Weekdays",
+        // ---- CheckTimes: the times Boss usually checks his P&L, his account read ahead just before them ----
+        "when do i usually check my p&l" to "CheckTimes", "what time do i usually check my p&l" to "CheckTimes",
+        "what time do i check my pnl" to "CheckTimes", "when do i check my positions" to "CheckTimes",
+        "what times do i ask for my p&l" to "CheckTimes", "do you read my account ahead" to "CheckTimes",
+        "why do you read my p&l in advance" to "CheckTimes", "why was my p&l already ready" to "CheckTimes",
+        "do you keep my p&l ready" to "CheckTimes", "main p&l kab check karta hoon" to "CheckTimes",
+        "stop getting my p&l ready" to "CheckTimes", "stop reading my account ahead" to "CheckTimes",
+        "stop preparing my p&l in advance" to "CheckTimes", "don't read my account ahead" to "CheckTimes",
+        "forget when i check my p&l" to "CheckTimes", "forget the times i check my p&l" to "CheckTimes",
+        "read my p&l only when i ask" to "CheckTimes", "p&l pehle se mat padho" to "CheckTimes",
         // ...and its neighbours keep theirs: the charges themselves, why they are high, everything learned.
         "how much did i pay in charges this week" to "Account:CHARGES", "why are my charges so high" to "Account:CHARGES",
         "what have you learned about me" to "AboutBoss",
@@ -1351,7 +1362,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

@@ -1530,6 +1530,56 @@ internal object IraTools {
         return said
     }
 
+    // ---- the times Boss usually checks his P&L, his account read ahead just before them ([com.optionslab.ira.CheckTimes]) ----
+
+    /** Only the time Boss last asked to stop it: the learning reads the routine log already kept ([routineLog]). */
+    private const val CHECK_TIMES = "jarvis.checkTimes"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun checkTimesLog(): com.optionslab.ira.CheckTimes.Log = runCatching {
+        val o = JSONObject(prefs().getString(CHECK_TIMES) ?: "{}")
+        com.optionslab.ira.CheckTimes.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { java.time.LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.CheckTimes.Log())
+
+    @Synchronized private fun checkTimesSave(log: com.optionslab.ira.CheckTimes.Log) {
+        runCatching {
+            val o = JSONObject()
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(CHECK_TIMES to o.toString()))
+        }
+    }
+
+    /** The times learned now (keys and minutes only; nothing here acts). */
+    private fun checkTimesAll(): List<com.optionslab.ira.CheckTimes.Record> = runCatching {
+        com.optionslab.ira.CheckTimes.learned(routineLog(), checkTimesLog(), com.optionslab.app.data.Market.today())
+    }.getOrDefault(emptyList())
+
+    /**
+     * The listening loop's quiet flag for the account read ahead ([com.optionslab.ira.AccountWarmPace]): [quiet] lifted only
+     * while the market is [open] and it is near a time Boss usually checks his P&L. Only read when it could matter (a quiet
+     * pass in market hours), never in IraGoldAlgo. A read ahead only: nothing is said, shown or done.
+     */
+    fun checkTimesQuiet(quiet: Boolean, open: Boolean): Boolean {
+        if (!quiet || !open || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return quiet
+        return runCatching { com.optionslab.ira.CheckTimes.quiet(quiet, open, checkTimesAll(), minuteNow()) }.getOrDefault(quiet)
+    }
+
+    /** "When do I usually check my P&L?". */
+    fun checkTimesSay(): String = runCatching { com.optionslab.ira.CheckTimes.say(checkTimesAll()) }
+        .getOrDefault("I could not read my count of when you check your P&L just now, Boss.")
+
+    /**
+     * "Stop getting my P&L ready": the usual pace again, the count afresh from now. On a [locked] phone, one neutral reply
+     * that never names the times learned (nor whether any were).
+     */
+    fun checkTimesReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.CheckTimes.RESET_LOCKED
+            else runCatching { com.optionslab.ira.CheckTimes.sayReset(checkTimesAll()) }.getOrDefault("Done, Boss: your account read ahead at the usual pace again.")
+        checkTimesSave(com.optionslab.ira.CheckTimes.reset(minuteNow()))
+        IraActivity.add("Reading the account ahead at the usual pace again, not before Boss's usual P&L checks (as asked).")
+        return said
+    }
+
     // ---- the part Boss asks for on its own, said right after the price in an overview ([com.optionslab.ira.LeadPart]) ----
 
     /** Only the day Boss last asked for his overviews in the usual order: the learning reads the kinds tally already kept ([askedKinds]). */
@@ -1914,7 +1964,8 @@ internal object IraTools {
         nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()),
         moreAfter = runCatching { moreAfterLog() }.getOrDefault(com.optionslab.ira.MoreAfter.Log()),
         smallBooks = smallBooks,
-        smallTrades = runCatching { smallTradesLog() }.getOrDefault(com.optionslab.ira.SmallTrades.Log()))
+        smallTrades = runCatching { smallTradesLog() }.getOrDefault(com.optionslab.ira.SmallTrades.Log()),
+        checkTimes = runCatching { checkTimesLog() }.getOrDefault(com.optionslab.ira.CheckTimes.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1943,6 +1994,7 @@ internal object IraTools {
         if (u.leadPart.isNotEmpty()) leadPartSave(com.optionslab.ira.LeadPart.reset(today))
         if (u.nextAsk.isNotEmpty()) { nextAskSave(com.optionslab.ira.NextAsk.reset(now)); nextAskOffered = null }
         if (u.moreAfter.isNotEmpty()) moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }
+        if (u.checkTimes.isNotEmpty()) checkTimesSave(com.optionslab.ira.CheckTimes.reset(now))
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -1954,7 +2006,8 @@ internal object IraTools {
             (if (u.leadIndex.isNotEmpty()) "Nifty named first again, " else "the index named first unchanged, ") +
             (if (u.leadPart.isNotEmpty()) "overviews in the usual order again, " else "overviews unchanged, ") +
             (if (u.nextAsk.isNotEmpty()) "no question offered next, " else "next-question offers unchanged, ") +
-            (if (u.moreAfter.isNotEmpty()) "every answer with its short line first again." else "short lines unchanged."))
+            (if (u.moreAfter.isNotEmpty()) "every answer with its short line first again, " else "short lines unchanged, ") +
+            (if (u.checkTimes.isNotEmpty()) "the account read ahead at the usual pace again." else "the account's read ahead unchanged."))
         return u
     }
 

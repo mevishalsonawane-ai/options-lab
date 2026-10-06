@@ -23,7 +23,8 @@ import java.util.Locale
  * asks for on its own, said right after the price in an overview ([LeadPart]), the question he usually asks next, offered in
  * one short question at the end of an answer ([NextAsk]), the kinds of answer said in full straight away aloud as he
  * usually asks for more after their short line ([MoreAfter]), where his trades that moved less than twice their own charges
- * come from, said once in the 15:35 wrap-up ([SmallTrades], a fact of his record) and his own goals for the week ([Improve]) -
+ * come from, said once in the 15:35 wrap-up ([SmallTrades], a fact of his record), the times of day he usually checks his P&L,
+ * his account read ahead just before them while the market is open ([CheckTimes]) and his own goals for the week ([Improve]) -
  * each with when and why it changed and, where one exists, the words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
@@ -39,7 +40,8 @@ import java.util.Locale
  * said), the topics said shorter or in full ([TopicLength]: the usual length again), the index taken when he names none
  * ([UsualIndex]: Nifty again), the nicknames learned this week ([Nicknames]: forgotten), the index named first ([LeadIndex]: Nifty
  * first again), the index led with on a weekday ([DayIndex]: Nifty first every day again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
- * no longer offered), the answers said in full straight away ([MoreAfter]: the short line first again) and his own goals.
+ * no longer offered), the answers said in full straight away ([MoreAfter]: the short line first again), his account read
+ * ahead before his usual P&L checks ([CheckTimes]: at the usual pace again) and his own goals.
  * (His confidence words set to fit the
  * numbers beside them ([WordFit]) and where his small trades come from ([SmallTrades], a fact of his record) are listed with
  * their own undo, but not reset here: that is a check on his own words
@@ -77,6 +79,7 @@ object Learnings {
         NEXT_ASK("The question I offer next, after an answer", true),
         MORE_AFTER("Answers I say in full straight away, as you usually ask for more", true),
         SMALL_TRADES("Your trades that moved less than twice their own charges, said once in the wrap-up", true),
+        CHECK_TIMES("Your account read ahead just before you usually check your P&L", true),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -136,6 +139,8 @@ object Learnings {
         /** Boss's closed trades by book, and when he last asked to forget his small trades ([SmallTrades]). */
         val smallBooks: List<SmallTrades.Book> = emptyList(),
         val smallTrades: SmallTrades.Log = SmallTrades.Log(),
+        /** When Boss last asked to stop his account being read ahead before his usual P&L checks ([CheckTimes]; read with [routineLog]). */
+        val checkTimes: CheckTimes.Log = CheckTimes.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -261,6 +266,11 @@ object Learnings {
         // day, from his closed trades): a fact said once in the 15:35 wrap-up - never advice, nothing that acts.
         SmallTrades.learned(i.smallBooks, i.smallTrades, now).forEach { r ->
             out += Item(Area.SMALL_TRADES, SmallTrades.ledgerWhat(r), r.newest, SmallTrades.ledgerWhy(r), SmallTrades.UNDO)
+        }
+        // The times of day Boss usually checks his P&L, his account read ahead just before them while the market is open
+        // ([CheckTimes]; from his routine log, keys and minutes only). A read ahead only: nothing said unasked, nothing that acts.
+        CheckTimes.learned(i.routineLog, i.checkTimes, today).forEach { r ->
+            out += Item(Area.CHECK_TIMES, CheckTimes.ledgerWhat(r), r.newest, CheckTimes.ledgerWhy(r), CheckTimes.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
@@ -407,10 +417,10 @@ object Learnings {
                     val usualIndex: List<UsualIndex.Record> = emptyList(), val nicknames: List<Nicknames.Note> = emptyList(),
                     val leadIndex: List<LeadIndex.Record> = emptyList(), val leadPart: List<LeadPart.Record> = emptyList(),
                     val nextAsk: List<NextAsk.Record> = emptyList(), val moreAfter: List<MoreAfter.Record> = emptyList(),
-                    val dayIndex: List<DayIndex.Record> = emptyList()) {
+                    val dayIndex: List<DayIndex.Record> = emptyList(), val checkTimes: List<CheckTimes.Record> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
             stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty() && lengths.isEmpty() && usualIndex.isEmpty() && nicknames.isEmpty() &&
-            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty() && moreAfter.isEmpty() && dayIndex.isEmpty()
+            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty() && moreAfter.isEmpty() && dayIndex.isEmpty() && checkTimes.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -434,7 +444,8 @@ object Learnings {
             listOfNotNull(LeadPart.learned(i.tally, i.leadPart, today)),
             NextAsk.learned(i.routineLog, i.nextAsk, today),
             MoreAfter.learned(i.moreAfter, i.tally, now),
-            DayIndex.learnedAll(i.tally, i.dayIndex, today))
+            DayIndex.learnedAll(i.tally, i.dayIndex, today),
+            CheckTimes.learned(i.routineLog, i.checkTimes, today))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -469,6 +480,7 @@ object Learnings {
         if (u.leadPart.isEmpty()) null else "what I say first in an overview (" + u.leadPart.joinToString(", ") { it.phrase } + ") - the usual order again",
         if (u.nextAsk.isEmpty()) null else "the question I offer next after an answer (" + u.nextAsk.take(SHOW).joinToString(", ") { it.phrase + " after " + it.afterPhrase } + ") - no longer offered",
         if (u.moreAfter.isEmpty()) null else "the answers I say in full straight away (" + u.moreAfter.take(SHOW).joinToString(", ") { it.phrase } + ") - the short line first again",
+        if (u.checkTimes.isEmpty()) null else "your account read ahead before your usual P&L checks (" + u.checkTimes.joinToString(", ") { it.phrase } + ") - at the usual pace again",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +

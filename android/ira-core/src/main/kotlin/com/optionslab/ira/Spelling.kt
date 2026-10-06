@@ -20,7 +20,9 @@ object Spelling {
         "stock", "stocks", "start", "stars", "state", "other", "today", "about", "doing", "there", "where", "which", "should", "would",
         "trade", "alert", "above", "below", "studies", "tomorrow", "please", "price", "prices", "level", "close", "closed", "orders",
         "stops", "start", "started", "stopped", "events", "event", "today's", "week", "month", "money", "lots", "lot", "call", "calls",
-        "five", "like", "line", "life", "give", "love", "shop", "smart", "older", "order", "minute", "minutes", "chart", "charts", "store")
+        "five", "like", "line", "life", "give", "love", "shop", "smart", "older", "order", "minute", "minutes", "chart", "charts", "store",
+        // "Stop getting my P&L ready" ([CheckTimes]'s undo): a word of its own, never "settings" mistyped.
+        "getting")
 
     fun fix(text: String): String = fixed.same(text) { fixFresh(text) }
 

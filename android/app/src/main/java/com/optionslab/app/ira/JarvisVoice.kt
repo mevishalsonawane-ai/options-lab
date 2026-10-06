@@ -1021,9 +1021,11 @@ class JarvisVoice : Service() {
                     // read ahead about every 2 minutes, not every 30 s ([com.optionslab.ira.AccountWarmPace]). Words only.
                     // Battery (round 17): market shut and the screen off, not at all (it was every 30 minutes all night and
                     // weekend); at once on the first pass after the screen comes on ([com.optionslab.ira.OffHoursWarmPace]).
+                    // Learning (round 31): a quiet pass in market hours near a time Boss usually checks his P&L reads the account
+                    // ahead all the same, so his answer then is as of now ([com.optionslab.ira.CheckTimes]). A read only.
                     if (com.optionslab.ira.OffHoursWarmPace.due(open, screen, n, screenLast) && IraHub.online()) runCatching {
                         val accountQuiet = !screen && com.optionslab.app.work.Tasks.wordsQuietNow() == true
-                        IraHub.warm(accountQuiet)
+                        IraHub.warm(IraTools.checkTimesQuiet(accountQuiet, open))
                     }
                     screenLast = screen
                     n++
