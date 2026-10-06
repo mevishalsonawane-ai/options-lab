@@ -59,6 +59,7 @@ internal object GlanceFixtures {
 }
 
 @RunWith(AndroidJUnit4::class)
+@org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")   // the whole open card on one screen
 class TodayGlanceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule(order = 100) val dump = com.optionslab.app.testing.DumpOnFailure(compose)

@@ -806,6 +806,8 @@ object OrbArms {
                     b.status[arm.source] = s
                 }
             }
+            // Again after the decisions: an entry made in this pass is told now, not a minute later (told once either way).
+            runCatching { liquidityNotices(b, t) }
             save(b)
         }
     }
