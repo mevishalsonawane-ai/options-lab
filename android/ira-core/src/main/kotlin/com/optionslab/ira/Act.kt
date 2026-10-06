@@ -16,7 +16,12 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
                     * said (a name or a number) - one stop each, never all; or, with [keep], the ones that stay on ("stop all except
                     * orb", "orb chhod ke baaki band karo"): every other one that is on is stopped, each by itself ([Commands.stops]).
                     */
-                   val targets: List<String> = emptyList(), val keep: Boolean = false) {
+                   val targets: List<String> = emptyList(), val keep: Boolean = false,
+                   /**
+                    * The [targets] were set apart by a comma or "&" ("stop orb, sweep"): each is its own arm, never read together as
+                    * one name ([Commands.stops]). Not shown in [toString] (the readings kept in tests stay as written).
+                    */
+                   val apart: Boolean = false) {
     /** As before [targets] and [keep] were added (the readings kept in tests stay as written); they are shown only when said. */
     override fun toString(): String = "Command(kind=$kind, target=$target, number=$number, market=$market, above=$above, level=$level, day=$day, pct=$pct, lots=$lots" +
         (if (targets.isNotEmpty() || keep) ", targets=$targets, keep=$keep" else "") + ")"
@@ -191,6 +196,15 @@ object Commands {
         if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
         fun has(r: String) = rx(r).containsMatchIn(s)
         fun num(r: String) = rx(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
+        // The words of a stop as read for the arms: a comma or "&" between names is an "and" here.
+        val sl = (" " + text.lowercase().replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\s*[,&]\\s*"), " and ").replace(rx("\\.(?!\\d)"), " ")
+            .replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " ")
+            .replace(rx(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|for me) "), " ").replace(rx("\\s+"), " ").let { " ${it.trim()} " }
+        // A stop of all but some ("stop all except orb", "orb chhod ke baaki band karo", "stop everything but keep orb running"):
+        // once said, it is that or nothing - the ones kept read as names, or nothing is done (Jarvis asks again). Never the stop
+        // of everything, a close or anything else read from the rest of it ("stop all except orb and close positions", "stop
+        // everything except orb in paper mode", a list too long; review, 6 Oct). Before every other action here.
+        if (keepSaid(sl)) return stopAllBut(sl)
 
         if (rx("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
         // The day's target: "my target today is 3000", "set my daily target to 5k", "clear my target".
@@ -306,13 +320,8 @@ object Commands {
         // chhod ke baaki band karo") and several by name ("stop the arms orb sweep and range fade", "range fade aur sweep band
         // kardo") are read first: each is stopped by itself, never all of them (Boss, 6 Oct: two arms switched off became a stop
         // of everything). A comma or "&" between names is an "and" here.
-        val sl = (" " + text.lowercase().replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\s*[,&]\\s*"), " and ").replace(rx("\\.(?!\\d)"), " ")
-            .replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " ")
-            .replace(rx(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|for me) "), " ").replace(rx("\\s+"), " ").let { " ${it.trim()} " }
-        // "Stop all except" with nothing after it (cut off): never a stop of everything - nothing is done.
-        if (rx("^ $STOP_VERB .*$EXCEPT $").containsMatchIn(sl)) return null
-        stopAllBut(sl)?.let { return it }
-        stopSeveral(sl)?.let { return it }
+        // (All but some was read above, before the other actions.)
+        stopSeveral(sl, rx("[a-z0-9)]\\s*(?:,(?!\\d{3})|&)\\s*[a-z0-9(]").containsMatchIn(text.lowercase()))?.let { return it }
         if (has(" (stop|halt|pause|disarm|switch off|turn off) (all|every|everything)( the| my)?( strategies| arms| bots| algos| scripts| trading)? | stop trading | stop (the |my )?(bots|algos|arms|strategies) ")) return Command(Command.Kind.STOP_ALL)
         if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ") ||
             has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
@@ -416,7 +425,7 @@ object Commands {
         return parts
     }
 
-    /** "Stop all except orb" and its kin: the ones that stay ([Command.keep]), never a stop of everything. */
+    /** "Stop all except orb" and its kin: the ones that stay ([Command.keep]), never a stop of everything; null when unclear. */
     private fun stopAllBut(s: String): Command? {
         for (r in ALL_BUT) {
             val m = r.find(s) ?: continue
@@ -424,6 +433,19 @@ object Commands {
             return Command(Command.Kind.STOP_ONE, targets = kept, keep = true)
         }
         return null
+    }
+
+    /** A stop word, "all" (or "the rest"), and an "except" / "chhod ke" / "keep ... running": all but some said, however it goes on. */
+    private val KEEP_SAID = listOf(
+        rx(" $EXCEPT( |$)"), rx(" $SPARE( |$)"),
+        rx(" (?:keep|leave) (?:.+ )?(?:running|on|going|armed|alive|active|alone|as it is|as they are)( |$)"),
+    )
+
+    /** Is [s] a stop of all but some ([stopAllBut]) - read as that or as nothing, never as anything else? */
+    private fun keepSaid(s: String): Boolean {
+        if (ALL_BUT.any { it.containsMatchIn(s) }) return true
+        if (!rx(" $STOP_VERB ").containsMatchIn(s) || !rx(" (?:$EVERY|$REST)( |$)").containsMatchIn(s)) return false
+        return KEEP_SAID.any { it.containsMatchIn(s) }
     }
 
     /** What is never an arm's name in a stop: Jarvis's own voice and the like (as [body]'s own list). */
@@ -434,7 +456,7 @@ object Commands {
      * sweep" (as normalized), "stop the bots orb sweep", "stop trading orb sweep": each one named is stopped by itself. One
      * name after "the bots" / "trading" is that one arm; "stop trading for today" names none (the stop of everything).
      */
-    private fun stopSeveral(s: String): Command? {
+    private fun stopSeveral(s: String, apart: Boolean): Command? {
         val m = rx("^ $STOP_VERB (?:the |my )?(?:($GROUP) )?(.+?) $").find(s) ?: return null
         val group = m.groupValues[1].isNotEmpty()
         val rest = m.groupValues[2].trim()
@@ -445,7 +467,7 @@ object Commands {
         val parts = names(rest) ?: return null
         if (parts.any { NOT_ARM_NAME.containsMatchIn(it) }) return null
         return when {
-            parts.size >= 2 -> Command(Command.Kind.STOP_ONE, targets = parts)
+            parts.size >= 2 -> Command(Command.Kind.STOP_ONE, targets = parts, apart = apart)
             group -> one(Command.Kind.STOP_ONE, parts.single())
             else -> null
         }
@@ -462,15 +484,19 @@ object Commands {
     )
 
     /**
-     * [c]'s arms among [names] ([on]: whether each is armed or running now). Several named: each must match exactly one (the
-     * whole said as one name first, "buy and hold"); all but some: every one that is on and not kept. A name that matches
-     * none, or several, is [Stops.unclear] - nothing is stopped then (Boss is asked).
+     * [c]'s arms among [names] ([on]: whether each is armed or running now). Several named: each must match exactly one; only
+     * when they do not each name an arm of its own is the whole read as one name ("buy and hold", "range and fade") - never
+     * when set apart by a comma or "&" ([Command.apart]), and never over arms each named ("stop orb and sweep" is ORB and ORB
+     * Sweep, not "ORB Sweep" alone: review, 6 Oct). All but some: every one that is on and not kept. A name that matches none,
+     * or several, is [Stops.unclear] - nothing is stopped then (Boss is asked).
      */
     fun stops(c: Command, names: List<String>, on: List<Boolean>): Stops {
         fun find(t: String): Int? = pick(one(Command.Kind.STOP_ONE, t), names)
         if (!c.keep) {
-            exact(c.targets.joinToString(" and "), names)?.let { return Stops(listOf(it), emptyList(), emptyList()) }
             val found = c.targets.map { it to find(it) }
+            val each = found.map { it.second }
+            val apart = each.all { it != null } && each.distinct().size == each.size
+            if (!apart && !c.apart) exact(c.targets.joinToString(" and "), names)?.let { return Stops(listOf(it), emptyList(), emptyList()) }
             return Stops(found.mapNotNull { it.second }.distinct(), emptyList(), found.filter { it.second == null }.map { it.first })
         }
         val kept = c.targets.map { it to find(it) }

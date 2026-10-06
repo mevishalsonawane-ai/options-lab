@@ -123,4 +123,56 @@ class StopManyTest {
         assertEquals(2, steps?.size)
         assertTrue(Ask.parse(steps!![0]).command!!.keep)
     }
+
+    // ---- review, 6 Oct: two arms said by a short name each, an "except" that goes on, a stop with a time ------------------
+
+    @Test fun twoArmsSaidShortAreBothStoppedNeverReadAsOneName() {
+        for (s in listOf("stop orb and sweep", "stop orb, sweep", "orb aur sweep band karo", "stop the arms orb and sweep", "stop orb & sweep"))
+            assertEquals(listOf("ORB", "ORB Sweep"), stopped(s), s)
+        assertEquals(listOf("ORB", "ORB Fresh"), stopped("stop orb and fresh"))
+        // Two words that do not each name an arm of their own: the whole is the one name ("range" and "fade" are both Range Fade).
+        assertEquals(listOf("Range Fade"), stopped("stop range and fade"))
+        val gap = listOf("Gap and Go", "Gap Fill", "ORB")
+        assertEquals(listOf(0), Commands.stops(cmd("stop gap and go")!!, gap, listOf(true, true, true)).stop)
+        // Set apart by a comma or "&": never read together as one name - each is asked for when it names no arm by itself.
+        val apart = Commands.stops(cmd("stop gap, go")!!, gap, listOf(true, true, true))
+        assertEquals(listOf("gap"), apart.unclear)
+        assertTrue(cmd("stop gap & go")!!.apart)
+        assertFalse(cmd("stop gap and go")!!.apart)
+    }
+
+    @Test fun allExceptThatGoesOnIsThatOrNothingNeverAllOrAClose() {
+        for (s in listOf("stop everything except orb in paper mode", "stop all except the live one", "stop all except orb, close the rest",
+            "stop all except orb and close positions", "stop all except orb and close my positions", "stop all except a b c d e f g h i j",
+            "stop all except orb, sweep, fresh, range fade, hero, a, b, c, d", "stop everything but keep orb and the kill switch on",
+            "stop all except orb if nifty falls", "agar nifty gire to orb chhod ke sab band kar do"))
+            assertNull(cmd(s), s)
+        // Said plainly the stop of all but some still stands; said with a condition it is refused as before ([Conditional]).
+        assertTrue(Conditional.asked("stop all except orb if nifty falls"))
+        assertTrue(cmd("stop all except orb, sweep and range fade")!!.keep)
+    }
+
+    @Test fun aStopWithATimeIsTheTimedCommandNeverDoneNow() {
+        val now = java.time.LocalDateTime.of(2026, 10, 6, 10, 0)
+        assertTrue(Command.Kind.STOP_ONE in Later.ALLOWED)
+        val timed = mapOf(
+            "stop orb and sweep at 2 pm" to listOf("ORB", "ORB Sweep"),
+            "stop orb and sweep tomorrow at 2 pm" to listOf("ORB", "ORB Sweep"),
+            "stop orb sweep and range fade at 3 pm" to listOf("ORB Sweep", "Range Fade"),
+            "in 30 minutes stop orb and sweep" to listOf("ORB", "ORB Sweep"),
+        )
+        for ((s, arms) in timed) {
+            // The hub reads a time first: a command with one is set for that time (confirmed), never done now.
+            assertTrue(Later.mentionsTime(s), s)
+            val w = Later.split(s, now)!!
+            assertTrue(cmd(s) != null || cmd(w.rest) != null, s)
+            assertEquals(arms, stopped(w.rest), s)
+        }
+        val keep = Later.split("stop all except orb at 3 pm", now)!!
+        assertEquals(listOf("ORB"), Commands.stops(cmd(keep.rest)!!, names, on).stay.map { names[it] })
+        // "Tomorrow" with no hour: a time is named, none can be set - the hub asks for one and nothing is done.
+        assertTrue(Later.mentionsTime("stop orb and sweep tomorrow"))
+        assertNull(Later.split("stop orb and sweep tomorrow", now))
+        assertTrue(cmd("stop orb and sweep tomorrow") != null)
+    }
 }
