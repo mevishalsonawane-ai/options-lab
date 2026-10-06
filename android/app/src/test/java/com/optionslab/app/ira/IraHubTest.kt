@@ -605,6 +605,22 @@ class IraHubTest : RobolectricTest() {
         assertTrue(VoiceGuard.blocked() != null)
     }
 
+    @Test fun jarvisTradesTakeAThirtyPointStopAndASixtyTarget() {
+        // Boss, 06 Oct: every new Jarvis trade (paper or Zerodha) rests its stop 30 points under the fill, its target +60.
+        val (stop, target) = IraNewsTrades.protectionFor(100.0)
+        assertEquals(70.0, stop!!, 1e-9); assertEquals(160.0, target, 1e-9)
+        val (stop2, target2) = IraNewsTrades.protectionFor(212.37)
+        assertEquals(182.35, stop2!!, 1e-9); assertEquals(272.37, target2, 1e-9)
+        assertEquals(30.0, IraNewsTrades.STOP_POINTS, 0.0); assertEquals(60.0, IraNewsTrades.TARGET_POINTS, 0.0)
+        // The ladder runs on the target the trade was placed with: +60 now, +40 for one placed before (never changed).
+        val p = IraNewsTrades.Pos("NIFTY26OCT25000CE", false, 100.0, 75, 100.0, 70.0, "news: x", "2026-10-06", target = IraNewsTrades.TARGET_POINTS)
+        assertEquals(60.0, p.ladderPoints, 0.0)
+        assertEquals(40.0, p.copy(target = null).ladderPoints, 0.0)
+        // Sizing: one lot risks 30 points x the lot size.
+        assertEquals("Your risk per trade is smaller than one lot's stop risk (30 points x 75, about Rs 2,250.00): not placed.",
+            com.optionslab.ira.RiskSizing.tooSmall(75))
+    }
+
     @Test fun jarvisSpeaksInANormalMaleVoiceByDefault() {
         assertEquals(JarvisVoice.Style.MAN, JarvisVoice.style)
         assertEquals(JarvisVoice.Style.MAN, JarvisVoice.Style.entries.first())

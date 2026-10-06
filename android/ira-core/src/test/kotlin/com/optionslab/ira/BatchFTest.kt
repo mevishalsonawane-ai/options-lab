@@ -43,11 +43,15 @@ class BatchFTest {
 
     @Test fun lotsFollowTheRupeeRisk() {
         assertEquals(1, RiskSizing.lots(null, 100.0, 75, 10))
-        // 100 premium x 15% x 75 = 1,125 a lot: Rs 3,000 risk -> 2 lots; capped by the app's max lots.
-        assertEquals(2, RiskSizing.lots(3_000.0, 100.0, 75, 10))
-        assertEquals(0, RiskSizing.lots(500.0, 100.0, 75, 10))               // one lot would risk more than allowed
+        // The 30-point stop x 75 = 2,250 a lot, whatever the premium: Rs 3,000 risk -> 1 lot, Rs 4,500 -> 2; capped by the app's max lots.
+        assertEquals(2_250.0, RiskSizing.perLot(75), 1e-9)
+        assertEquals(1, RiskSizing.lots(3_000.0, 100.0, 75, 10))
+        assertEquals(2, RiskSizing.lots(4_500.0, 100.0, 75, 10))
+        assertEquals(2, RiskSizing.lots(4_500.0, 300.0, 75, 10))             // a dearer option risks the same 30 points
+        assertEquals(0, RiskSizing.lots(2_000.0, 100.0, 75, 10))             // one lot would risk more than allowed
         assertEquals(3, RiskSizing.lots(50_000.0, 100.0, 75, 3))
-        assertTrue(RiskSizing.say(2, 100.0, 75).startsWith("2 lots: the 15% stop risks about Rs 2,250"))
+        assertTrue(RiskSizing.say(2, 75).startsWith("2 lots: the 30-point stop risks about Rs 4,500"))
+        assertEquals("Your risk per trade is smaller than one lot's stop risk (30 points x 75, about Rs 2,250.00): not placed.", RiskSizing.tooSmall(75))
     }
 
     @Test fun eventDaysAreComparedWithOtherDays() {

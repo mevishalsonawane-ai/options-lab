@@ -57,7 +57,9 @@ class BatchKTest {
         assertNull(Usage.line(Usage.Day()))
         assertEquals("I heard 12 questions today, did not understand 2, asked you to say \"Jarvis\" first 1 time, 1 thing failed.",
             Usage.line(Usage.Day(heard = 12, misunderstood = 2, nameFirst = 1, failed = 1)))
-        assertEquals("If the stop hits you lose about Rs 1,125.00 (0.6% of your capital).", TradeRisk.say(100.0, 75, 1, 200000.0))
+        // Jarvis's fixed 30-point stop: 30 x 75 = Rs 2,250 a lot, whatever the premium.
+        assertEquals("If the stop hits you lose about Rs 2,250.00 (1.1% of your capital).", TradeRisk.say(100.0, 75, 1, 200000.0))
+        assertEquals("If the stop hits you lose about Rs 4,500.00.", TradeRisk.say(250.0, 75, 2, null))
         val mon = LocalDate.of(2026, 9, 28)
         assertTrue(WeeklyCap.hit(listOf(mon to -5000.0, mon.plusDays(2) to -4500.0), mon.plusDays(3), 9000.0))
         assertFalse(WeeklyCap.hit(listOf(mon.minusDays(3) to -9000.0), mon.plusDays(3), 9000.0))

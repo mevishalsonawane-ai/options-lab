@@ -30,7 +30,7 @@ object Glossary {
         Term(listOf("short covering"), false, "Short covering is sellers buying back to close their positions, often pushing the price up quickly, with open interest falling."),
         Term(listOf("long unwinding"), false, "Long unwinding is buyers selling to close, pulling the price down with open interest falling: weakness from exits, not fresh shorts."),
         Term(listOf("premium"), false, "The premium is an option's price: what the buyer pays and the seller keeps if it expires worthless. Its value is intrinsic (in the money part) plus time value."),
-        Term(listOf("stop loss", "stoploss", "sl"), false, "A stop loss is a price at which a trade is closed to cap the loss. On my trades it is 15% below the option's entry price, and the profit lock moves it up as the trade gains."),
+        Term(listOf("stop loss", "stoploss", "sl"), false, "A stop loss is a price at which a trade is closed to cap the loss. On my own trades it is a fixed 30 points below the option's entry price, with a +60 target, and the profit lock moves it up as the trade gains."),
         Term(listOf("trailing stop", "trailing stop loss", "trail"), false, "A trailing stop follows the price as a trade gains, so a winner is not allowed to turn into a loser. It never moves back against the trade."),
         Term(listOf("support"), true, "Support is a price where buying has stopped falls before, such as the day's low, the previous close or a round number. Below it, sellers often speed up."),
         Term(listOf("resistance"), true, "Resistance is a price where selling has stopped rises before. A clean break above it often brings more buying; a failure there often brings a pullback."),
@@ -61,6 +61,8 @@ object Glossary {
 
     /** The explanation of a trading word asked about in [said], or null. */
     fun explain(said: String): String? {
+        // "What is the stop loss for news trades": the rules Jarvis's own trades follow, not the word.
+        if (JarvisTrades.rulesAsked(said)) return JarvisTrades.rules()
         val plain = spacedWords(said.lowercase())
         // ("Mera stop loss kya hai" is Boss's own stop, not the word.)
         val text = HINDI_MEANING.takeUnless { rx("\\b(mera|meri|mere|apna|apni|apne|hamara|hamari)\\b").containsMatchIn(plain) }.orEmpty()

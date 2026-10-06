@@ -753,8 +753,9 @@ object IraHub {
     }
 
     /**
-     * A trade Jarvis suggests (strong news, or the pattern expert): 1 lot of the index's ATM option, nearest expiry, the
-     * arm's 15% stop, a +40 target and the profit lock - placed only on the owner's yes (aloud, Approve on the pop-up or
+     * A trade Jarvis suggests (strong news, or the pattern expert): 1 lot of the index's ATM option, nearest expiry, a
+     * fixed 30-point stop, a +60 target and the profit lock on it ([com.optionslab.ira.JarvisTrades]) - never an option at
+     * 35 or less - placed only on the owner's yes (aloud, Approve on the pop-up or
      * Confirm on the Ira screen); unanswered in 10 minutes it lapses. [said] opens the spoken question.
      */
     /** [solo]: Solo's setup - its own paper record decides whether the approved trade goes to Zerodha. */
@@ -798,6 +799,8 @@ object IraHub {
         val side = if (idea.call) "call" else "put"
         // Money for it, with room to spare (Zerodha's funds when it would go live, else the paper account's).
         snap?.price?.let { px -> runCatching { IraNewsTrades.marginProblem(idea, px) }.getOrNull() }?.let { why -> reply("$text $why"); return }
+        // Too cheap for the fixed 30-point stop (35 or less): no trade offered (the news itself is still told).
+        snap?.price?.let { px -> runCatching { IraNewsTrades.premiumProblem(idea, px) }.getOrNull() }?.let { why -> reply("$text $why"); return }
         // Are options cheap or dear now? In the dearest tenth of the year, no buy is suggested.
         val iv = snap?.price?.let { runCatching { IraNewsTrades.ivNow(idea, it) }.getOrNull() }
         if (iv != null && iv.first >= com.optionslab.ira.IvRank.BLOCK) {
@@ -811,7 +814,7 @@ object IraHub {
         // long (a slow broker would leave a suggestion registered but unseen while its price went stale).
         val riskAsk = scope.async { runCatching { IraNewsTrades.riskLine(idea, snap?.price ?: 0.0) }.getOrNull() }
         val risk = kotlinx.coroutines.withTimeoutOrNull(3_000) { riskAsk.await() }?.let { " $it" } ?: ""
-        val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
+        val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a ${IraNewsTrades.STOP_POINTS.toInt()}-point stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
         // Independent (Boss's choice, 4 Oct): a sure enough idea that would go to the PAPER account is taken at once and
         // told - never one that would reach Zerodha (that is always asked).
         val goesLive = runCatching { IraNewsTrades.goesLive(solo) }.getOrDefault(true)
@@ -868,7 +871,7 @@ object IraHub {
             "buy 1 lot of the ${m.label} $side", what, com.optionslab.ira.Requests.why(text) ?: idea.why.takeIf { it.isNotBlank() },
             if (goesLive) com.optionslab.ira.Requests.Venue.ZERODHA else com.optionslab.ira.Requests.Venue.PAPER, reqAt, reqAt + NEWS_ANSWER_MS,
             symbol = "${m.label} $side (at the money)", qty = "1 lot",
-            price = snap?.price?.let { "index at " + "%.2f".format(java.util.Locale.ENGLISH, it) + "; 15% stop, +${IraNewsTrades.TARGET_POINTS.toInt()} target" })
+            price = snap?.price?.let { "index at " + "%.2f".format(java.util.Locale.ENGLISH, it) + "; ${IraNewsTrades.STOP_POINTS.toInt()}-point stop, +${IraNewsTrades.TARGET_POINTS.toInt()} target, profit lock" })
         synchronized(actions) {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source,
                 solo = solo, liveApproved = synchronized(actions) { id in liveApproved }, stars = conf.stars) }
