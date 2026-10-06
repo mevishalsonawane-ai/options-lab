@@ -15,6 +15,7 @@ import com.optionslab.engine.orb.ProfitLock
 import com.optionslab.engine.orb.Replay
 import com.optionslab.engine.orb.RangeFadeRules
 import com.optionslab.engine.orb.SweepRules
+import com.optionslab.ira.DayStop
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -284,6 +285,8 @@ object OrbArms {
     data class View(
         val arms: List<ArmView>, val legs: Legs?, val range: Pair<Double, Double>?, val forward: PassRule.Verdict,
         val replay: JSONObject?, val replayDay: String?,
+        /** The day's stop, when the bot is stopped for today: who stopped it and what resumes it ([DayStop.line]); null when it runs. */
+        val stopped: String? = null,
     )
 
     private val marks = java.util.concurrent.ConcurrentHashMap<String, Double>()
@@ -292,7 +295,13 @@ object OrbArms {
 
     private fun mark(sym: String, px: Double, t: LocalDateTime) { marks[sym] = px; markedAt[sym] = t }
 
-    suspend fun view(): View = lock.withLock {
+    suspend fun view(): View {
+        // (Read apart from the arms' lock: the bot's stop is the strategies' own.)
+        val why = runCatching { Strategies.stoppedWhy() }.getOrNull()
+        return viewLocked().copy(stopped = why?.let { DayStop.line(it) })
+    }
+
+    private suspend fun viewLocked(): View = lock.withLock {
         val b = book()
         val day = today()
         val arms = ALL_ARMS.filter { it !in LiquidityRules.BOOKS }.map { a ->
@@ -455,9 +464,20 @@ object OrbArms {
      */
     suspend fun tick() {
         if (!Market.isTradingDay()) return
+        // The Hero arm's NIFTY candles (the index and the ATM straddle's legs, many strikes) are read BEFORE the lock is taken:
+        // read under it they held every pass, the 15-second stop checks and the rows' refresh waiting on the network.
+        val t0 = now()
+        runCatching { heroPrefetch(t0) }
+        try {
+            tickLocked(t0)
+        } finally {
+            heroFed.clear()
+        }
+    }
+
+    private suspend fun tickLocked(t: LocalDateTime) {
         lock.withLock {
             val b = book()
-            val t = now()
             runCatching { priceCheck(b, t) }
             runCatching { liquidityExits(b, t) }
             runCatching { heroKillCheck(b) }
@@ -486,6 +506,18 @@ object OrbArms {
     /** A lighter pass between minutes while a position is open: the stop, the target and the clock. */
     suspend fun priceCheckOnly() = lock.withLock { val b = book(); runCatching { priceCheck(b, now()) }; save(b) }
 
+    /**
+     * An entry left unapproved past its time ([Pending.expires]) is dropped - said once (a notice in place of the approval's,
+     * and a diagnostics line), so an APPROVE arm that did not trade says why instead of going quiet.
+     */
+    private fun lapsed(arm: Arm, pd: Pending) {
+        val mins = java.time.Duration.between(pd.signalBar, pd.expires).toMinutes()
+        val text = "${arm.label}: the ${hhmm(pd.signalBar)} signal (BUY ${pd.right}) was not approved in $mins minutes and lapsed at " +
+            "${hhmm(pd.expires)} - nothing was bought. A new signal asks again."
+        runCatching { Diag.record("orb", text) }
+        runCatching { Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${if (arm.liquidity) arm.label else "ORB"} signal lapsed: not approved in $mins minutes", text, "strategy") }
+    }
+
     private suspend fun cycle(b: Book, arm: Arm, t: LocalDateTime, bars: List<Bar>): String {
         val day = t.toLocalDate()
         val watchKey = "${arm.source}|$day"
@@ -495,7 +527,7 @@ object OrbArms {
         if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return "flat_after_square_off"
         if (Strategies.stoppedToday()) { b.watched.remove(watchKey); return "stopped_for_today" }
         if (arm.hero) return heroCycle(b, t)
-        b.pending[arm.source]?.let { if (t.isAfter(it.expires)) b.pending.remove(arm.source) else { watching(); return "awaiting_approval" } }
+        b.pending[arm.source]?.let { pd -> if (t.isAfter(pd.expires)) { b.pending.remove(arm.source); lapsed(arm, pd) } else { watching(); return "awaiting_approval" } }
         if (arm.liquidity) return liquidityCycle(b, arm, t)
         val rng = OrbRules.openingRange(bars) ?: return "waiting_for_opening_range"
         b.range = rng; b.rangeDay = day
@@ -703,13 +735,60 @@ object OrbArms {
     @Volatile internal var testHeroBars: ((String, LocalDateTime) -> List<Upstox.Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
 
-    /** A feed key's bars today keyed by the minute each one CLOSES (a bar labelled 13:29 closes at 13:30), closed by [t]. */
-    private suspend fun heroMinutes(key: String, t: LocalDateTime): Map<LocalTime, Upstox.Bar> {
-        val raw = testHeroBars?.invoke(key, t) ?: Net.intraday(key)
+    /** The Hero arm's feeds read for this pass before the lock ([heroPrefetch]): feed key -> its bars. Cleared after the pass. */
+    private val heroFed = java.util.concurrent.ConcurrentHashMap<String, List<Upstox.Bar>>()
+
+    /** A feed key's bars as the feed returns them now (the test feed in tests). */
+    private suspend fun heroRead(key: String, t: LocalDateTime): List<Upstox.Bar> = testHeroBars?.invoke(key, t) ?: Net.intraday(key)
+
+    /**
+     * Reads, outside the arms' lock, what the Hero arm's decision at [t] needs every pass: the NIFTY index and both legs of
+     * each minute's ATM strike since 12:00 - only when it is armed, flat, on an expiry day in its window. The decision
+     * itself ([heroCycle]) then runs under the lock on these bars, exactly as before; anything not read here (the chain
+     * on the signal's side, a read that failed) is read there as it always was. Reads only.
+     */
+    private suspend fun heroPrefetch(t: LocalDateTime) {
+        heroFed.clear()
+        val src = HeroRules.ARM.source
+        val day = t.toLocalDate()
+        val at = t.toLocalTime().withSecond(0).withNano(0)
+        if (at.isBefore(HeroRules.FIRST) || at.isAfter(HeroRules.LAST)) return
+        if (Strategies.stoppedToday()) return
+        // Only when [heroCycle] would read them this pass: armed, flat, not stood down, not done, this minute not yet decided.
+        val due = lock.withLock {
+            val b = book()
+            val spent = b.decided["$src|$day"].orEmpty()
+            b.armed[src] == true && b.positions.none { it.arm == src && it.open } && HERO_STOOD_DOWN !in spent && "hero@$at" !in spent &&
+                HeroRules.mayEnter(b.positions.count { it.arm == src && it.day == day })
+        }
+        if (!due) return
+        val master = runCatching { Market.contracts() }.getOrNull()?.filter { it.underlying == HeroRules.UNDERLYING }
+        if (master.isNullOrEmpty() || !HeroRules.isExpiryDay(day, master.map { it.expiry })) return
+        val today = master.filter { it.expiry == day }
+        val spotKey = Upstox.INDEX_KEYS.getValue(HeroRules.UNDERLYING)
+        val spotRaw = runCatching { heroRead(spotKey, t) }.getOrNull() ?: return
+        heroFed[spotKey] = spotRaw
+        val strikes = minutesOf(spotRaw, t).filterKeys { !it.isBefore(HeroRules.LOW_FROM) && !it.isAfter(at) }
+            .values.map { HeroRules.atm(it.close).toDouble() }.distinct()
+        for (k in strikes) for (r in listOf(Right.CE, Right.PE)) {
+            val c = today.firstOrNull { kotlin.math.abs(it.strike - k) < 1e-6 && it.right == r } ?: continue
+            if (heroFed.containsKey(c.instrumentKey)) continue
+            runCatching { heroRead(c.instrumentKey, t) }.getOrNull()?.let { heroFed[c.instrumentKey] = it }
+        }
+    }
+
+    /** [raw] keyed by the minute each bar CLOSES (a bar labelled 13:29 closes at 13:30), today's and closed by [t]. */
+    private fun minutesOf(raw: List<Upstox.Bar>, t: LocalDateTime): Map<LocalTime, Upstox.Bar> {
         val day = t.toLocalDate()
         return raw.filter { it.istDate == day && it.istMinute < 15 * 60 + 30 }
             .associateBy { LocalTime.of(it.istMinute / 60, it.istMinute % 60).plusMinutes(1) }
             .filterKeys { !day.atTime(it).isAfter(t) }
+    }
+
+    /** A feed key's bars today keyed by the minute each one CLOSES (a bar labelled 13:29 closes at 13:30), closed by [t]. */
+    private suspend fun heroMinutes(key: String, t: LocalDateTime): Map<LocalTime, Upstox.Bar> {
+        // (Read before the lock this pass when it could be - [heroPrefetch]; else here, as it always was.)
+        return minutesOf(heroFed[key] ?: heroRead(key, t), t)
     }
 
     /**
@@ -1425,7 +1504,7 @@ object OrbArms {
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
         s == "no_decision_bar" -> "No decision bars now (entries 10:05-13:55; ORB Sweep to 14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."
-        s == "stopped_for_today" -> "Stopped for today by you."
+        s == "stopped_for_today" -> DayStop.line(Strategies.stopHint() ?: DayStop.Why.BOSS)
         s == "awaiting_approval" -> if (liveNow()) "Breakout: waiting for your approval with PIN (live)." else "Breakout: waiting for your approval."
         s == "skipped_by_you" -> "You skipped the last signal."
         s == "no_contract" -> "The day's BANKNIFTY contracts could not be loaded."

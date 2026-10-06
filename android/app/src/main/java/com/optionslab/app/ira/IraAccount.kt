@@ -352,10 +352,17 @@ internal object IraAccount {
                 }
                 runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
                     val closed = a.today.filter { !it.open }
-                    arms += AppFacts.ArmLine(a.arm.label, "ORB", a.armed, a.status.ifBlank { if (a.armed) "armed" else "off" },
+                    // The day's stop said with who made it (never just "stopped_for_today"): Boss, the daily loss limit, the tile.
+                    arms += AppFacts.ArmLine(a.arm.label, "ORB", a.armed, if (a.status == "stopped_for_today") com.optionslab.app.data.OrbArms.describe(a.status)
+                        else a.status.ifBlank { if (a.armed) "armed" else "off" },
                         if (closed.isEmpty()) null else closed.sumOf { (it.grossPnl ?: 0.0) - it.charges }, a.open?.let { "${it.qty} ${it.symbol}" }, a.today.size)
                 }
-                out[Section.STRATEGIES] = AppFacts.arms(arms, rank = true)
+                // While the bot is stopped for today, that comes first: armed arms make no entries, and who stopped it.
+                val dayStop = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()?.let { w ->
+                    "Bot stopped for today ${com.optionslab.ira.DayStop.by(w)}: armed strategies, ORB arms and Pine scripts make no new entries today. " +
+                        if (com.optionslab.ira.DayStop.mayLift(w)) "\"Start all\" (or Start bot on Home) resumes them." else "It holds until tomorrow (\"start all\" does not lift it)."
+                }
+                out[Section.STRATEGIES] = listOfNotNull(dayStop) + AppFacts.arms(arms, rank = true)
             }
 
             if (wants(Section.RISK)) out[Section.RISK] = listOf(

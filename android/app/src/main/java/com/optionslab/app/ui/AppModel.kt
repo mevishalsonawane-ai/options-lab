@@ -593,7 +593,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         broker.value = brokerState()
         account.value = Load.Idle; plan.value = Load.Idle; sending.value = Load.Idle; gttPlan.value = Load.Idle
         paper.value = Load.Idle; stuck.value = null; orb.value = null; strategies.value = emptyList()
-        orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false
+        orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false; botStopWhy.value = null
     }
 
     // ---- protections: stops, trailing stops, targets ------------------------------------------
@@ -1362,7 +1362,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val st = com.optionslab.app.data.Strategies
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             runCatching { orderOwners.value = st.owners() }
-            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday() }
+            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday(); botStopWhy.value = st.stoppedWhy() }
             strategies.value = st.all()
             strategyLog.value = st.log()
             runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
@@ -1408,6 +1408,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The bot stopped for today (TODO A3). */
     val botStopped = MutableStateFlow(false)
+    /** Why it was stopped for today (by Boss, the daily loss limit, the tile), said on Home's bar; null when it is not. */
+    val botStopWhy = MutableStateFlow<com.optionslab.ira.DayStop.Why?>(null)
 
     fun stopBotForToday(stopRunning: Boolean) = strategyDo {
         com.optionslab.app.data.Strategies.stopForToday(stopRunning, compromisedFresh())

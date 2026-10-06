@@ -96,8 +96,11 @@ internal fun OrbRowsContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(a.arm.label, style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
                     Spacer(Modifier.width(8.dp))
+                    // The bot stopped for today: an armed arm never looks normally ARMED (it makes no new entries today).
+                    val dayStopped = view.stopped != null && a.armed
                     val (label, color) = when {
                         a.open != null -> if (a.open.live) "IN TRADE · LIVE" to p.oxblood else "IN TRADE · PAPER" to p.verdigris
+                        dayStopped -> "STOPPED TODAY · ARMED" to p.oxblood
                         a.armed && a.arm.hero -> "ARMED · PAPER ONLY · NOT PROVEN" to p.amber
                         a.armed && a.arm.paperOnly -> "ARMED · PAPER ONLY · AUTO" to p.verdigris
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
@@ -117,6 +120,7 @@ internal fun OrbRowsContent(
                             ?.let { tg -> com.optionslab.engine.orb.ProfitLock.level(o.entry, tg, o.peak ?: o.entry) }
                             ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
+                    view.stopped != null && a.armed -> view.stopped.orEmpty()
                     !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15) or not +5% in 20 min · else at the next liquidity"
                     a.arm.liquidity -> a.status
                     !a.armed && a.arm.hero -> "NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · out 15:05 · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}"
@@ -243,6 +247,7 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
                 v.legs?.let { l -> Text("Strike ${l.strike} (09:20 bar) · expiry ${l.expiry} · lot ${l.ce.lotSize}", style = small) }
                     ?: Text("No strike fixed yet today (set from the 09:20 bar once an arm runs).", style = soft)
                 v.range?.let { r -> Text("Opening range ${px(r.second)} – ${px(r.first)}", style = small) }
+                v.stopped?.let { s -> Text(s, style = small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp)) }
                 for (a in v.arms) {
                     Text(a.arm.label, style = head, modifier = Modifier.padding(top = 12.dp))
                     Text(OrbArms.describe(a.status), style = soft)

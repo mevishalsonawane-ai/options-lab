@@ -169,7 +169,7 @@ object DailyReports {
         val armed = orb?.arms?.filter { it.armed }?.map { it.arm.label }.orEmpty()
         lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE, automatic)" else " (paper)"
         val strat = runCatching { Strategies.all().count { it.def.scheduler?.enabled == true } }.getOrDefault(0)
-        lines += "• Strategies armed: $strat" + if (runCatching { Strategies.stoppedToday() }.getOrDefault(false)) " · bot stopped for today" else ""
+        lines += "• Strategies armed: $strat" + (runCatching { Strategies.stoppedWhy() }.getOrNull()?.let { " · bot stopped for today ${com.optionslab.ira.DayStop.by(it)}" } ?: "")
         ok(!s.guardKill, if (s.guardKill) "Kill switch is ON: every Zerodha order is refused (paper still trades)" else "Kill switch off")
         // Battery-optimized, Android may stop the order watch (and its stops and targets) in the background: said plainly,
         // and the notification's tap opens the Battery row. Only read: the setting is Boss's to change.

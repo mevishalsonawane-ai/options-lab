@@ -112,7 +112,8 @@ object Ask {
 
     private fun parseAs(said: String): Question {
         // Commands and orders: from the words as heard, exactly as strict as ever.
-        val heard = Hinglish.normalize(said)
+        // ("Haan sab band kar do": the yes is left out before the verb is turned round, as [Commands] does.)
+        val heard = Hinglish.normalize(Commands.withoutYes(said))
         val t0 = Spaced.words(heard)
         // (A question mark said - lost when Hinglish is read - still keeps a question from acting, as [Commands] does.)
         Commands.parse(heard)?.takeIf { !said.trim().endsWith("?") || it.kind == Command.Kind.NOTE }

@@ -34,36 +34,64 @@ internal object IraActions {
 
     // ---- what can be acted on, in the order Jarvis lists it ---------------------------------------------------------
 
-    /** Every strategy and arm: the strategy module, then the Pine arms, then the ORB arms (as in "my strategies"). */
-    suspend fun arms(): List<Pair<String, Pair<suspend () -> String, suspend () -> String>>> {
-        val out = ArrayList<Pair<String, Pair<suspend () -> String, suspend () -> String>>>()
+    /**
+     * One strategy, Pine script or ORB arm as Jarvis acts on it: [on] armed or running now; [needsPin] on in Live but not
+     * cleared for Zerodha (Boss's fingerprint or PIN in the app does that, never Jarvis); [hero] the not-proven Hero arm.
+     */
+    class Item(val name: String, val on: Boolean, val needsPin: Boolean, val hero: Boolean,
+               val start: suspend () -> String, val stop: suspend () -> String)
+
+    /**
+     * Every strategy and arm: the strategy module, then the Pine arms, then the ORB arms (as in "my strategies"). Starting
+     * one by voice never clears it for Zerodha (Boss, 6 Oct: real orders only after his fingerprint; Live never via voice):
+     * an ORB arm in Live is refused here and armed with the PIN on Home; a Pine script is switched on without its live
+     * clearance; a strategy in Live waits for his approval at each start. One already on is left exactly as it is.
+     */
+    suspend fun items(): List<Item> {
+        val out = ArrayList<Item>()
         val s = AppSettings.load()
         val mode = if (s.live) RunMode.LIVE else RunMode.SANDBOX
         runCatching { com.optionslab.app.data.Strategies.all() }.getOrDefault(emptyList()).forEach { e ->
             val id = e.def.id
-            out += e.def.name to (suspend {
-                if (s.live && !s.allowRealOrders) "Live mode has real orders switched off: switch it on at the top first."
-                else com.optionslab.app.data.Strategies.setArmed(id, true, mode, automatic = true) ?: "Started ${e.def.name} (${mode.name.lowercase()}, automatic)."
-            } to suspend {
+            val on = e.def.scheduler?.enabled == true || e.running
+            out += Item(e.def.name, on, needsPin = false, hero = false, start = suspend {
+                if (on) "${e.def.name} is already on."
+                else if (s.live && !s.allowRealOrders) "Live mode has real orders switched off: switch it on at the top first."
+                // In Live each start waits for Boss's approval (his PIN or fingerprint in the app); on paper it is automatic.
+                else com.optionslab.app.data.Strategies.setArmed(id, true, mode, automatic = mode != RunMode.LIVE)
+                    ?: "Started ${e.def.name} (${mode.name.lowercase()}, ${if (mode == RunMode.LIVE) "each start waits for your approval with your fingerprint or PIN" else "automatic"})."
+            }, stop = suspend {
                 val a = com.optionslab.app.data.Strategies.setArmed(id, false, mode, automatic = true)
                 val b = if (e.running) com.optionslab.app.data.Strategies.stop(id, "Jarvis", compromised()) else null
                 listOfNotNull(a, b).joinToString(" ").ifBlank { "Stopped ${e.def.name}." }
             })
         }
         com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on || com.optionslab.app.data.PineAuto.todayOf(it.id) != null }.forEach { x ->
-            out += x.name to (suspend { com.optionslab.app.data.PineAuto.arm(x.id, true, pinConfirmed = true).let { r -> if (r == "ok") "Started ${x.name}." else r } } to
-                suspend { com.optionslab.app.data.PineAuto.arm(x.id, false).let { r -> if (r == "ok") "Stopped ${x.name} (what it held is sold)." else r } })
+            out += Item(x.name, x.auto.on, needsPin = false, hero = false, start = suspend {
+                if (x.auto.on) "${x.name} is already on."
+                else com.optionslab.app.data.PineAuto.arm(x.id, true, pinConfirmed = false).let { r ->
+                    if (r != "ok") r else "Started ${x.name}." + if (com.optionslab.app.data.OrbArms.liveNow()) " In Live it trades on Zerodha only once you switch it on in the app with your fingerprint or PIN." else ""
+                }
+            }, stop = suspend { com.optionslab.app.data.PineAuto.arm(x.id, false).let { r -> if (r == "ok") "Stopped ${x.name} (what it held is sold)." else r } })
         }
+        val liveNow = runCatching { com.optionslab.app.data.OrbArms.liveNow() }.getOrDefault(false)
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
             val src = a.arm.source
-            out += a.arm.label to (suspend {
-                val r = com.optionslab.app.data.OrbArms.setArmed(src, true, automatic = true, pinConfirmed = true)
-                ctx()?.let { runCatching { com.optionslab.app.work.Jobs.ensureWatch(it) } }
-                r
-            } to suspend { com.optionslab.app.data.OrbArms.setArmed(src, false, a.automatic) })
+            out += Item(a.arm.label, a.armed, needsPin = liveNow && a.armed && !a.arm.paperOnly && !a.liveOk, hero = a.arm.hero, start = suspend {
+                if (a.armed) "${a.arm.label} is already on."
+                else {
+                    // Never cleared for Zerodha by voice: in Live, OrbArms refuses without the PIN (armed on Home instead).
+                    val r = com.optionslab.app.data.OrbArms.setArmed(src, true, automatic = true, pinConfirmed = false)
+                    ctx()?.let { runCatching { com.optionslab.app.work.Jobs.ensureWatch(it) } }
+                    r
+                }
+            }, stop = suspend { com.optionslab.app.data.OrbArms.setArmed(src, false, a.automatic) })
         }
         return out
     }
+
+    /** [items] as (name, (start, stop)). */
+    suspend fun arms(): List<Pair<String, Pair<suspend () -> String, suspend () -> String>>> = items().map { it.name to (it.start to it.stop) }
 
     /**
      * Where the prepared command [c] would send orders, for the Requests panel's label, worked out from what is open now:
@@ -188,6 +216,25 @@ internal object IraActions {
     // ---- doing it ---------------------------------------------------------------------------------------------------
 
     /**
+     * Several named in one stop ("stop orb sweep and range fade"), or all but some ("stop all except orb"): each stopped by
+     * itself, never all of them; a name that matches none (or several) stops nothing - Boss is asked. The confirm says what
+     * stops and what stays on.
+     */
+    private suspend fun stopSeveral(c: Command): Pair<String, (suspend () -> String)?> {
+        val all = items()
+        if (all.isEmpty()) return "There are no strategies or arms to stop." to null
+        val names = all.map { it.name }
+        val st = Commands.stops(c, names, all.map { it.on })
+        if (st.unclear.isNotEmpty()) return Commands.unclearStops(st, names, c.keep) to null
+        if (st.stop.isEmpty()) return (if (c.keep) "Nothing else is on, Boss: " + st.stay.joinToString(" and ") { names[it] } + " stay as they are. Nothing was stopped."
+            else "Nothing to stop.") to null
+        val picked = st.stop.map { all[it] }
+        return Commands.sayStops(st, names) to suspend {
+            picked.joinToString(" ") { a -> runCatching { a.stop() }.getOrElse { e -> "${a.name}: ${e.message ?: "failed"}." } }
+        }
+    }
+
+    /**
      * What [c] would do, in words, and the action itself - or why it cannot be done (the action is then null).
      * [heard]: Boss said [c] himself, as heard, on an unlocked phone (the hub's own command path only): then, for one arm or
      * one position, his nicknames are read when his words match none or several ([com.optionslab.ira.Nicknames]; exactly one
@@ -197,14 +244,24 @@ internal object IraActions {
     suspend fun prepare(c: Command, heard: Boolean = false): Pair<String, (suspend () -> String)?> {
         fun pick(names: List<String>, what: String): Int? = Commands.pick(c, names)
         val nickOn = heard && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
+        if (c.kind == Command.Kind.STOP_ONE && c.targets.isNotEmpty()) return stopSeveral(c)
         return when (c.kind) {
             Command.Kind.STOP_ALL -> Commands.describe(c) to suspend { com.optionslab.app.data.Strategies.stopForToday(true, compromised()) }
-            Command.Kind.START_ALL -> Commands.describe(c) to suspend {
-                // Lift today's stop, then switch on every strategy, Pine script and arm the app has.
-                val again = runCatching { com.optionslab.app.data.Strategies.startAgain() }.getOrNull()
-                // The Hero arm (not proven) is never started by "start all": only by name ("start hero"), with its confirm.
-                val each = arms().filter { it.first != com.optionslab.engine.orb.HeroRules.ARM.label }.map { (name, act) -> runCatching { act.first() }.getOrElse { e -> "$name: ${e.message ?: "failed"}." } }
-                (listOfNotNull(again) + each).joinToString(" ").ifBlank { "There are no strategies or arms to start." }
+            // "Start all" resumes (Boss, 6 Oct): it lifts his own day stop - what was on when he stopped trades again as it was,
+            // what is off stays off (the Hero arm, not proven, only by name), nothing is cleared for Zerodha by voice - and
+            // never a stop made by the daily loss limit (plans only lower risk). Nothing stopped: said what is on and off.
+            Command.Kind.START_ALL -> {
+                val why = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()
+                val loss = runCatching { com.optionslab.app.data.Strategies.stoppedByLossToday() }.getOrDefault(false)
+                val st = com.optionslab.ira.DayStop.startAll(if (loss) com.optionslab.ira.DayStop.Why.LOSS else why,
+                    items().map { com.optionslab.ira.DayStop.Arm(it.name, it.on, it.needsPin) })
+                if (!st.lift) st.say to null
+                else st.say to suspend {
+                    val r = com.optionslab.app.data.Strategies.startAgain()
+                    ctx()?.let { runCatching { com.optionslab.app.work.Jobs.ensureWatch(it) } }
+                    model()?.refreshStrategies()
+                    r
+                }
             }
             Command.Kind.STOP_ONE, Command.Kind.START_ONE -> {
                 val all = arms()
@@ -219,7 +276,13 @@ internal object IraActions {
                 }
                 if (nickOn && armNick == null) runCatching { IraTools.nickPicked(c.kind, i, armNames) }
                 val (name, act) = all[i]
-                Commands.describe(c, name) + (armNick?.let { " (${it.second})" } ?: "") to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
+                // Started while the bot is stopped for today: said, so it never looks like it will trade today when it won't.
+                val dayNote = if (c.kind != Command.Kind.START_ONE) "" else runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()?.let { w ->
+                    " (the bot is stopped for today ${com.optionslab.ira.DayStop.by(w)}, so it trades only " +
+                        (if (com.optionslab.ira.DayStop.mayLift(w)) "once that stop is lifted - \"start all\")" else "from tomorrow)")
+                } ?: ""
+                val heroNote = if (c.kind == Command.Kind.START_ONE && name == com.optionslab.engine.orb.HeroRules.ARM.label) " - ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}" else ""
+                Commands.describe(c, name) + (armNick?.let { " (${it.second})" } ?: "") + heroNote + dayNote to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
             }
             Command.Kind.CANCEL_ALL -> {
                 val o = openOrders()

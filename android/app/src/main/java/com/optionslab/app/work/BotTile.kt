@@ -108,7 +108,7 @@ class BotTile : TileService() {
             GoldPaper.setArmed(false); GoldTrendPaper.setArmed(false); GoldDipPaper.setArmed(false); GoldTasPaper.setArmed(false)
             runCatching { Diag.record("gold", "tile: all arms stopped (were: ${was.joinToString()})") }
         } else {
-            val msg = Strategies.stopForToday(stopRunning = false, compromised = false)
+            val msg = Strategies.stopForToday(stopRunning = false, compromised = false, why = com.optionslab.ira.DayStop.Why.TILE)
             runCatching { Diag.record("info", "tile: $msg") }
         }
     }

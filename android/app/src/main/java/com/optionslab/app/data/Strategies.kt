@@ -88,6 +88,8 @@ object Strategies {
         val pending: LinkedHashMap<Long, String> = LinkedHashMap(),
         /** The day the owner stopped the bot: no armed strategy starts for the rest of it. */
         var stoppedDay: String? = null,
+        /** Why the day was stopped ([com.optionslab.ira.DayStop.Why.wire]): by Boss, the daily loss limit or the tile. */
+        var stoppedWhy: String? = null,
     )
 
     private var cache: Book? = null
@@ -99,7 +101,21 @@ object Strategies {
     @Volatile var runningHint: Boolean = false
         private set
 
-    private fun hint(b: Book) { runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true } }
+    private fun hint(b: Book) {
+        runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }
+        stopHintDay = b.stoppedDay
+        stopHintWhy = com.optionslab.ira.DayStop.Why.of(b.stoppedWhy)
+    }
+
+    @Volatile private var stopHintDay: String? = null
+    @Volatile private var stopHintWhy: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS
+
+    /**
+     * Why the bot is stopped for today, as of the last load or save (null: it is not), read without the lock - for words on
+     * screen ([OrbArms.describe]) that must never wait on a pass placing orders. [stoppedWhy] reads it under the lock.
+     */
+    fun stopHint(): com.optionslab.ira.DayStop.Why? =
+        if (stopHintDay != null && stopHintDay == runCatching { Market.today().toString() }.getOrNull()) stopHintWhy else null
 
     private fun book(): Book {
         cache?.let { return it }
@@ -123,7 +139,7 @@ object Strategies {
             val pending = LinkedHashMap<Long, String>()
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> pending[k.toLong()] = m.getString(k) } }
             Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending,
-                o.optString("stoppedDay").takeIf { it.isNotBlank() })
+                o.optString("stoppedDay").takeIf { it.isNotBlank() }, o.optString("stoppedWhy").takeIf { it.isNotBlank() })
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -153,6 +169,7 @@ object Strategies {
         o.put("autoApprove", JSONObject().apply { b.autoApprove.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
         b.stoppedDay?.let { o.put("stoppedDay", it) }
+        b.stoppedWhy?.let { o.put("stoppedWhy", it) }
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         hint(b)
@@ -474,14 +491,29 @@ object Strategies {
     /** Whether the owner stopped the bot for today. */
     suspend fun stoppedToday(): Boolean = lock.withLock { book().stoppedDay == Market.today().toString() }
 
+    /** Why the bot is stopped for today (by Boss, the daily loss limit, the tile), or null when it is not. */
+    suspend fun stoppedWhy(): com.optionslab.ira.DayStop.Why? = lock.withLock {
+        val b = book()
+        if (b.stoppedDay == Market.today().toString()) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
+    }
+
+    /** Whether today's stop was made by the daily loss limit (it is then never lifted today). */
+    suspend fun stoppedByLossToday(): Boolean =
+        stoppedWhy() == com.optionslab.ira.DayStop.Why.LOSS || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+
     /**
      * Stop the bot for the rest of today: no armed strategy starts, waiting approvals are dropped,
      * and with [stopRunning] every running strategy is stopped too (its positions closed by its own exits).
+     * [why]: who stopped it (kept and said wherever the stop is described); a stop by the daily loss limit stays one.
+     * ORB arms and Pine scripts read the same stop: they make no new entries and sell what they hold.
      */
-    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean): String {
+    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean, why: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS): String {
         val running = lock.withLock {
             val b = book()
-            b.stoppedDay = Market.today().toString()
+            val today = Market.today().toString()
+            val wasLoss = b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS
+            b.stoppedWhy = (if (wasLoss) com.optionslab.ira.DayStop.Why.LOSS else why).wire
+            b.stoppedDay = today
             b.pending.clear()
             save(b)
             b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
@@ -492,10 +524,21 @@ object Strategies {
         return "Bot stopped for today. " + results.joinToString(" ")
     }
 
-    /** Undo [stopForToday]: armed strategies start at their times again. */
-    suspend fun startAgain(): String = lock.withLock {
-        val b = book(); b.stoppedDay = null; save(b)
-        "Bot running: armed strategies start at their times."
+    /**
+     * Undo [stopForToday]: armed strategies start at their times again (and the ORB arms and Pine scripts that are armed
+     * trade again). Never on a day the daily loss limit stopped: plans only lower risk, so that stop holds until tomorrow.
+     */
+    suspend fun startAgain(): String {
+        val loss = runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+        return lock.withLock {
+            val b = book()
+            val today = Market.today().toString()
+            if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS)) {
+                return@withLock "Not started: the daily loss limit stopped the bot today, so it stays stopped until tomorrow."
+            }
+            b.stoppedDay = null; b.stoppedWhy = null; save(b)
+            "Bot running: armed strategies start at their times."
+        }
     }
 
     suspend fun stop(id: Long, reason: String, compromised: Boolean): String = lock.withLock {
@@ -636,7 +679,7 @@ object Strategies {
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
-    fun wipe() { cache = null; runningHint = false; file.delete() }
+    fun wipe() { cache = null; runningHint = false; stopHintDay = null; file.delete() }
 
     @Suppress("unused") private fun today(): LocalDate = Market.today()
 }

@@ -191,13 +191,30 @@ object PineAuto {
         }
         val s = AppSettings.load()
         // The kill switch guards Zerodha only: in Paper mode the scripts keep trading ("Stop for today" still stops them).
-        val stopped = Strategies.stoppedToday() || (s.guardKill && OrbArms.liveNow())
+        // Who stopped the day is said in the script's log (by Boss, the daily loss limit, the tile) - never just "stopped".
+        val dayWhy = Strategies.stoppedWhy()
+        val stopped = dayWhy != null || (s.guardKill && OrbArms.liveNow())
+        stopSays = dayWhy?.let { "the day's stop (${com.optionslab.ira.DayStop.by(it)})" } ?: "the day's stop (the kill switch is on in Live)"
+        stopResumes = dayWhy?.let { com.optionslab.ira.DayStop.mayLift(it) } ?: false
         for (item in on) runCatching { one(b, item, stopped) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         save(b)
     }
 
     private fun stepSeconds(iv: String): Long = when (iv) { "1m" -> 60; "5m" -> 300; "15m" -> 900; "1h" -> 3600; else -> 86400 }
     private fun lookbackDays(iv: String): Long = when (iv) { "1m" -> 4; "5m" -> 12; "15m" -> 30; "1h" -> 90; else -> 700 }
+
+    /** What holds the scripts this pass ([tick]): "the day's stop (by you)", "... (by the daily loss limit)", the kill switch. */
+    @Volatile private var stopSays = "the day's stop"
+    /** Whether that stop is lifted by "start all" / Start bot (never the daily loss limit's). */
+    @Volatile private var stopResumes = false
+    /** Scripts whose log already says today why they stand still (said once a day for each reason). */
+    private val stopNoted = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    private fun noteStopOnce(b: Book, id: Long) {
+        if (!stopNoted.add("$id|${todayIst()}|$stopSays")) return
+        note(b, id, "Paused by $stopSays: no new entries today" +
+            if (stopResumes) " (\"start all\" to Jarvis, or Start bot on Home, resumes it)." else ".")
+    }
 
     private suspend fun one(b: Book, item: PineScripts.Item, stopped: Boolean) {
         val id = item.id
@@ -212,7 +229,7 @@ object PineAuto {
         // Sold outside the app (a notification's Close, the Trade tab, the broker's square-off).
         if (h != null && !h.unconfirmed && gone(h)) { note(b, id, "${h.symbol} is no longer held (closed outside the auto-trader)"); b.held.remove(id); h = null }
         if (h != null && (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15) || h.day != todayIst().toString())) {
-            exit(b, id, item, h, if (stopped) "the day's stop" else "15:15 square-off"); return
+            exit(b, id, item, h, if (stopped) stopSays else "15:15 square-off"); return
         }
         val a = item.auto
         val today = todayIst().toString()
@@ -255,7 +272,7 @@ object PineAuto {
         }
         if (b.paused[id] == today) { b.lastBar.remove(id); return }
         // Stopped for the day or the kill switch: a real pause - on the way back a signal that changed meanwhile is not chased.
-        if (stopped) { b.lastBar.remove(id); return }
+        if (stopped) { b.lastBar.remove(id); noteStopOnce(b, id); return }
         if (!isOpen() || mins >= 15 * 60 + 15) return
         val script = PineScripts.script(item) ?: run { note(b, id, "The script has errors: nothing traded"); return }
         val step = stepSeconds(item.auto.interval)
