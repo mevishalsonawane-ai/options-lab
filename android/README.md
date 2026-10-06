@@ -140,6 +140,32 @@ uses it on the PC:
   can never trap you in a position. Before an exit is sent the position is
   re-read, and nothing is sent if it changed since you reviewed it.
 
+## Dhan data (More → Dhan data; IraAlgo only)
+
+Dhan is a **market-data source only**: the app can reach Dhan's data paths
+(`/charts/historical`, `/charts/intraday`, `/charts/rollingoption`,
+`/optionchain`, `/optionchain/expirylist`, `/marketfeed/*`) and the scrip
+master, and nothing else (`DhanApi.ALLOWED_PATHS`, unit-tested). No order,
+position, funds or margin call exists.
+
+- Type the Dhan client ID and access token on the page. They are kept in the
+  settings vault (Keystore-encrypted, no-backup storage, never in a backup,
+  log or export); only the token's expiry date is shown.
+- **Download** fetches daily candles (from the earliest Dhan has) and
+  one-minute candles of NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTY NEXT 50,
+  SENSEX, BANKEX and India VIX, their near futures, today's option chain and
+  the expired options 10 strikes either side of the money; then the companies
+  and banks in those indices (static list, see `DhanUniverse.CONSTITUENTS`).
+  Years of minute and option history are chosen on the page.
+- It runs when you tap Download, or (if turned on) by itself once a day on
+  Wi-Fi while charging. Rate-limited, retried with backoff, resumable: each
+  request is one gzip CSV file under the app's private `files/dhan`.
+- Jarvis answers "what Dhan data do you have?" and "how did BankNifty move on
+  the last expiry in the Dhan data?"; the ORB arms' and Strategy Lab replays
+  read the downloaded days ahead of the bundled and harvested ones (paper
+  research only). `ExpiredOptions.scan` (ira-core) reads every stored expired
+  option as one series per (expiry, strike, side) with the index alongside.
+
 ## Protection and everyday tools
 
 - **Margin check:** every reviewed order or basket asks Zerodha's

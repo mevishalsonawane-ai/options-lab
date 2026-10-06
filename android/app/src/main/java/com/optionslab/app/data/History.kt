@@ -72,8 +72,19 @@ object History {
             null
         }
 
+        // Downloaded from Dhan (More, Dhan data): the phone's own daily candles, used first when they cover the whole span.
+        fun dhan(sym: String, index: Boolean): List<DailyBar>? = runCatching {
+            val f = DhanSource.filesOrNull() ?: return@runCatching null
+            val bars = f.candles(if (index) com.optionslab.ira.dhan.Plan.Group.IDX else com.optionslab.ira.dhan.Plan.Group.EQ, sym, "day")
+                .map { c -> DailyBar(Instant.ofEpochSecond(c.t).atZone(IST).toLocalDate(), c.open, c.high, c.low, c.close, c.volume.toDouble()) }
+                .filter { !it.date.isBefore(from) && !it.date.isAfter(to) }
+            bars.takeIf { b -> b.isNotEmpty() && !b.first().date.isAfter(from.plusDays(7)) && !b.last().date.isBefore(to.minusDays(7)) }
+        }.getOrNull()
+
         for ((sym, ex) in holdings) {
             progress("Reading $sym")
+            val fromDhan = if (ex.equals("NSE", ignoreCase = true)) dhan(sym, index = false) else null
+            if (fromDhan != null) { out[sym] = fromDhan; sources += "Dhan daily candles (downloaded)"; continue }
             val k = if (kiteWorks) runCatching { Broker.spec(ex, sym).token }.getOrNull() else null
             val bars = k?.let { viaKite(it) }?.also { sources += "Zerodha daily candles" }
                 ?: run {
@@ -84,7 +95,8 @@ object History {
         }
         if (benchmark != null) {
             progress("Reading $benchmark")
-            val bars = Broker.indexToken(benchmark)?.let { viaKite(it) }?.also { sources += "Zerodha daily candles" }
+            val bars = dhan(benchmark, index = true)?.also { sources += "Dhan daily candles (downloaded)" }
+                ?: Broker.indexToken(benchmark)?.let { viaKite(it) }?.also { sources += "Zerodha daily candles" }
                 ?: Net.daily(Upstox.INDEX_KEYS[benchmark] ?: throw IOException("no index $benchmark"), from, to).map(::toDaily)
                     .also { sources += "Upstox public daily candles" }
             out[benchmark] = bars

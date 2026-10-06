@@ -75,6 +75,7 @@ class IraAlgoApp : Application() {
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
+        com.optionslab.app.data.DhanSource.init(this)
         Market.init(this)
         com.optionslab.app.data.Holidays.init(this)
         Broker.init(this)

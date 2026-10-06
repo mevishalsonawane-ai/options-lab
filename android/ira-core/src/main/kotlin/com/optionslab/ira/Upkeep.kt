@@ -41,7 +41,10 @@ object Upkeep {
         // Whether Jarvis's ears may use Google's speech service (speech may leave the phone): Boss's choice on this phone.
         "jarvis.voice.",
         // The history of this phone's limits: what "Jarvis, undo" puts back, so a file's history could set a limit (round 7).
-        "settings.")
+        "settings.",
+        // Dhan (a market-data source only): the client ID, the access token and its download choices are this phone's alone;
+        // the token is never in a backup, a log, a report or an exported file.
+        "dhan.")
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }

@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || DhanData.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
@@ -102,6 +102,8 @@ class CoverageTest {
             if (WatchAsk.asked(q) != null) return Kind.ACCOUNT
             if (Tour.asked(q)) return Kind.JARVIS
             if (DataAge.asked(q)) return Kind.JARVIS
+            // (What Jarvis keeps from Dhan's market data on this phone: his own data, read only.)
+            if (DhanData.asked(q) != null) return Kind.JARVIS
             if (Honest.asked(q) != null) return Kind.HONEST
             if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
             if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ExpiryHour.asked(q) != null || StraddleDecay.asked(q) != null || AtmBuy.asked(q) != null || OtmReach.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || RoundCloses.asked(q) != null || MonthTurns.asked(q) != null || LunchRange.asked(q) != null || OpenHighLow.asked(q) != null || BigCandles.asked(q) != null || ExtremeCloses.asked(q) != null || WeekRange.asked(q) != null || RelativeMove.asked(q) != null || Comebacks.asked(q) != null || VixBand.asked(q) != null || Overnight.asked(q) != null || DayAfter.asked(q) != null || OpenReach.asked(q) != null || MultiDay.asked(q) != null || MoveTime.asked(q) != null || GiveBack.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
@@ -449,6 +451,8 @@ class CoverageTest {
         // ---- The at-the-money buyer's record (AtmBuy, market intelligence round 41): the market's ----
         "how often does the atm option double from its 9:30 price before the end of the day" to M, "atm option double record for banknifty" to M,
         "atm call kitni baar double hota hai" to M,
+        // ---- What Jarvis keeps from Dhan's market data on this phone (DhanData): his own ----
+        "what dhan data do you have" to J, "dhan se kya data hai" to J, "what have you downloaded from dhan" to J,
         // ---- The out-of-the-money option's record (OtmReach, market intelligence round 43): the market's ----
         "how often does an otm option 100 points away end the day in the money" to M, "otm option record for banknifty" to M,
         "100 point door ka otm call kitni baar itm hota hai" to M,
@@ -585,7 +589,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || DhanData.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
@@ -664,6 +668,7 @@ class CoverageTest {
         if (alone && WatchAsk.asked(q) != null) return "WatchAsk"
         if (alone && Tour.asked(q)) return "Tour"
         if (alone && DataAge.asked(q)) return "DataAge"
+        if (alone && DhanData.asked(q) != null) return "DhanData"
         if (alone && Honest.asked(q) != null) return "Honest"
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
         if (alone && Thinking.asked(q) != null) return "Thinking"
@@ -843,6 +848,10 @@ class CoverageTest {
         "what did you not tell me today" to "Airtime",
         // ---- AlertSense: the alerts he says less often ----
         "which alerts do you hold back" to "AlertSense", "say everything again" to "AlertSense",
+        // ---- DhanData: what is kept from Dhan's market data, and an index's last expiry in it ----
+        "what dhan data do you have" to "DhanData", "what data have you downloaded" to "DhanData",
+        "how did banknifty move on last expiry in the dhan data" to "DhanData", "dhan data mein sensex last expiry pe kaise chala" to "DhanData",
+        "how much space does the dhan data take" to "DhanData",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",

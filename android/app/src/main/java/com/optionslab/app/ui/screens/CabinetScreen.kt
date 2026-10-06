@@ -61,7 +61,10 @@ private val GROUPS = listOf(
     ),
     "Data" to listOf(
         Drawer("data", "Data and harvest", "The record, nightly harvest, provenance"),
-    ),
+    ) + (if (com.optionslab.app.BuildConfig.GOLD) emptyList<Drawer>() else listOf(
+        // Dhan as a market-data source only (never orders): candles, expired options, the chain, for Jarvis to learn from.
+        Drawer("dhan", "Dhan data", "Download history from Dhan: indices, options, futures, companies"),
+    )),
 )
 
 @Composable
@@ -99,6 +102,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "costs" -> CostsPage(model)
             "lots" -> LotsPage()
             "data" -> DataPage(model)
+            "dhan" -> if (com.optionslab.app.BuildConfig.GOLD) Drawers(onPage) else DhanDataPage(model)
             "security" -> SecurityPage(model)
             "schedule" -> SchedulePage(model)
             "notes" -> NotesPage()
