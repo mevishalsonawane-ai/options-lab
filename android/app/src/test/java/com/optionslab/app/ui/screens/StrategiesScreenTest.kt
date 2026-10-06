@@ -617,7 +617,7 @@ class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest
 
     @Test fun orbDetail() {
         // The rows are a card's contents (the card is a Column): shown in one, not stacked on each other.
-        show { Column { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) } }
+        show { Column(androidx.compose.ui.Modifier.verticalScroll(rememberScrollState())) { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) } }   // the page scrolls, as in the app
         compose.onAllNodesWithText("Retired", substring = true).onFirst().areaCClick(); compose.waitForIdle()   // the retired list opens the detail
         top("orb-detail", StrategyLayoutBugs.CARD)
     }
