@@ -60,7 +60,7 @@ object ForwardRecords {
     suspend fun rows(): List<Row> {
         val closed = runCatching { OrbArms.closedPaper() }.getOrDefault(emptyList())
         val heroArmed = runCatching { OrbArms.view().arms.any { it.arm.source == HeroRules.ARM.source && it.armed } }.getOrDefault(false)
-        val solo = runCatching { com.optionslab.app.ira.IraSolo.all().filter { it.midday && it.closed && it.net != null } }   // Solo (midday)'s own forward test only.getOrDefault(emptyList())
+        val solo = runCatching { com.optionslab.app.ira.IraSolo.all().filter { it.midday && it.closed && it.net != null } }.getOrDefault(emptyList())   // Solo (midday)'s own forward test only
             .mapNotNull { t -> runCatching { ForwardCheck.Trade(java.time.LocalDate.parse(t.day), t.net!!) }.getOrNull() }
         val soloOn = runCatching { com.optionslab.app.ira.IraSolo.on }.getOrDefault(false)
         val out = ArrayList<Row>()
