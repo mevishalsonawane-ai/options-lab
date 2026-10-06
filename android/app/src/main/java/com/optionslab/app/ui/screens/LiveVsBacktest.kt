@@ -57,6 +57,8 @@ internal fun LiveVsBacktestCard(rows: List<ForwardRecords.Row>) {
         if (rows.isEmpty()) { Note("No running strategy to compare yet.", Modifier.padding(top = 6.dp)); return@LedgerCard }
         rows.forEach { ForwardBlock(it) }
         Note("Forward paper trades since each strategy's current rules (Liquidity per lot), against the research's TEST period. " +
+            "Liquidity per lot: a trade of several lots counts its net over its lots, and the per-order brokerage it paid is shared " +
+            "among them - such a lot pays a little less in charges than a one-lot trade (the research's). " +
             "The band is the backtest's mean ± 2 spreads / √trades; a run of trades well below it is flagged early.", Modifier.padding(top = 10.dp))
     }
 }

@@ -2,7 +2,6 @@ package com.optionslab.app.data
 
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.LiquidityRules
-import com.optionslab.engine.orb.ShadowRules
 import com.optionslab.ira.ForwardCheck
 
 /**
@@ -33,8 +32,10 @@ object ForwardRecords {
         closed.filter { it.arm == HeroRules.ARM.source && !it.open && !it.live }.map { ForwardCheck.Trade(it.day, net(it, perLot = false)) }
 
     /**
-     * For each retired arm and each new candidate, the shadow with the best net among those with a pinned expectation
-     * ([ShadowRules.bestIndex]; a tie keeps the research's own); a variant shared by two arms (V43) shown once.
+     * For each retired arm and each new candidate, among its shadows with a pinned expectation, the one that holds up best
+     * against ITS OWN research ([ForwardCheck.bestIndex]: the verdict, then how far its mean a trade sits from its research's -
+     * never the raw best net, as their expectations differ; a tie keeps the research's own); a variant shared by two arms
+     * (V43) shown once.
      */
     fun bestShadows(rows: List<ShadowArms.Row>): List<Row> {
         val pinned = rows.filter { it.variant.id in ForwardCheck.SHADOWS }
@@ -44,12 +45,14 @@ object ForwardRecords {
             keys.forEach { k -> groups[k] = groups[k].orEmpty() + r }
         }
         val seen = HashSet<String>()
+        fun check(r: ShadowArms.Row) = ForwardCheck.check(ForwardCheck.SHADOWS.getValue(r.variant.id),
+            r.trades.filter { !it.open }.mapNotNull { t -> t.net?.let { ForwardCheck.Trade(t.day, it) } })
         return groups.values.mapNotNull { mine ->
-            val best = mine.getOrNull(ShadowRules.bestIndex(mine.map { it.summary.net })) ?: return@mapNotNull null
+            val checks = mine.map(::check)
+            val i = ForwardCheck.bestIndex(checks).takeIf { it >= 0 } ?: return@mapNotNull null
+            val best = mine[i]
             if (!seen.add(best.variant.id)) return@mapNotNull null
-            val trades = best.trades.filter { !it.open }.mapNotNull { t -> t.net?.let { ForwardCheck.Trade(t.day, it) } }
-            Row(ForwardCheck.check(ForwardCheck.SHADOWS.getValue(best.variant.id), trades), shadow = true,
-                title = "${best.variant.label} · shadow ${best.variant.name}")
+            Row(checks[i], shadow = true, title = "${best.variant.label} · shadow ${best.variant.name}")
         }
     }
 

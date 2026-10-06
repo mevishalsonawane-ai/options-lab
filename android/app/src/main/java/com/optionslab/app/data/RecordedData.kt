@@ -29,12 +29,17 @@ object RecordedData {
     /** [date]'s file ([size] bytes now) parsed: from memory when the file has not changed. Off the main thread. */
     fun day(date: LocalDate, size: Long): RecorderStats.Day {
         synchronized(lock) { parsed[date]?.takeIf { it.size == size }?.let { return it.day } }
+        return parse(date, size).first
+    }
+
+    /** Reads and parses [date]'s file, keeps both, and returns them (never read back from the maps: a [clear] may run between). */
+    private fun parse(date: LocalDate, size: Long): Pair<RecorderStats.Day, RecorderStats.Summary> {
         // A file that cannot be read at all (the key gone, the folder gone) is an empty day with one unreadable part.
         val r = runCatching { MarketRecorder.dayRecords(date) }.getOrElse { MarketRecord.Read(emptyList(), 1) }
         val day = RecorderStats.parse(r.lines, r.bad)
         val sum = RecorderStats.summary(date, day)
         synchronized(lock) { parsed[date] = Parsed(size, day); summaries[date] = size to sum }
-        return day
+        return day to sum
     }
 
     /** Every day's summary (for the lessons and the cross-day views), [progress] after each; cancellable. Off the main thread. */
@@ -43,7 +48,7 @@ object RecordedData {
         days.forEachIndexed { i, (date, size) ->
             currentCoroutineContext().ensureActive()
             val kept = synchronized(lock) { summaries[date]?.takeIf { it.first == size }?.second }
-            out += kept ?: run { day(date, size); synchronized(lock) { summaries.getValue(date).second } }
+            out += kept ?: parse(date, size).second
             progress(i + 1)
         }
         return out

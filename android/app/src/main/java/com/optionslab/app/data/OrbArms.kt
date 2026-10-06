@@ -619,6 +619,9 @@ object OrbArms {
     /** Any arm (the liquidity books too) switched on - for the words lane's pace only, never a decision on an order. */
     suspend fun anyArmed(): Boolean = lock.withLock { book().armed.values.any { it } }
 
+    /** Liquidity 15+5 armed (either book): the in-memory book only - no marks, shadows or rows built (the heads-up's read each round). */
+    suspend fun liquidityArmed(): Boolean = lock.withLock { book().armed.let { a -> LiquidityRules.BOOKS.any { a[it.source] == true } } }
+
     // ---- arming and approvals ------------------------------------------------------
 
     /**

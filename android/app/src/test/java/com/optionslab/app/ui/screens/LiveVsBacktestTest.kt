@@ -111,6 +111,10 @@ class LiveVsBacktestTest {
         assertTrue(best.all { it.shadow })
         assertEquals(1, best.first().result.trades)
         assertEquals(200.0, best.first().result.net, 1e-9)
+        // Each shadow against its own research, never the raw best net: V43 at −₹300 beats its research (−₹484 a trade),
+        // OP10 at −₹200 is under its own (−₹100) - V43 is the ORB's best though its net is lower (shown once).
+        assertEquals(listOf("orb_v43"), ForwardRecords.bestShadows(listOf(shadowRow(ShadowRules.ORB_V43, -300.0), shadowRow(ShadowRules.ORB_P10, -200.0)))
+            .map { it.result.expectation.key })
     }
 }
 

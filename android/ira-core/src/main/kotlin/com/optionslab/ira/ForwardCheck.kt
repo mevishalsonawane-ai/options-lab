@@ -172,6 +172,22 @@ object ForwardCheck {
             path.lastOrNull() ?: 0.0, alarmAt, cum)
     }
 
+    /**
+     * How well [r] holds up against ITS OWN research (never raw rupees: shadows with different expectations are compared on
+     * this): the verdict first - above expectation, in line, too few trades, below - then how many standard errors its mean
+     * a trade sits from the research's mean (0 with no trades). Larger is better.
+     */
+    fun standing(r: Result): Pair<Int, Double> {
+        val rank = when (r.verdict) { Verdict.ABOVE -> 3; Verdict.IN_LINE -> 2; Verdict.TOO_FEW -> 1; Verdict.BELOW -> 0 }
+        val per = r.perTrade ?: return rank to 0.0
+        val se = r.expectation.sd / sqrt(r.trades.toDouble())
+        return rank to if (se > 0) (per - r.expectation.mean) / se else 0.0
+    }
+
+    /** The index of the result that holds up best against its own research ([standing]; a tie keeps the first), -1 with none. */
+    fun bestIndex(results: List<Result>): Int = results.indices.maxWithOrNull(
+        compareBy<Int> { standing(results[it]).first }.thenBy { standing(results[it]).second }.thenByDescending { it }) ?: -1
+
     /** The verdict in the words the card and Jarvis use. */
     fun words(r: Result): String = when (r.verdict) {
         Verdict.TOO_FEW -> "too few trades (<$MIN_TRADES)"

@@ -50,7 +50,8 @@ internal object Automations {
         BACKUP("Backup reminder", "No backup in 7 days: a reminder in the morning check.", "jarvis.auto.backup"),
         SELFHEAL("Self-healing voice", "No listening for 3 minutes: the microphone is restarted.", "jarvis.auto.selfheal"),
         ACT_PAPER("Act on my own ideas (paper)", "A news or pattern idea with 3/5 confidence or more: Jarvis takes it on the PAPER account by itself and tells you (never real money).", "jarvis.auto.actpaper"),
-        SOLO_IDEAS("Solo's setups as ideas", "Retired 06 Oct: Solo (midday) is paper only and never offers its setups as trade ideas.", "jarvis.auto.soloideas"),
+        // Retired 06 Oct (kept so a saved name still reads): nothing uses it, it has no switch and is always off ([RETIRED]).
+        SOLO_IDEAS("Solo's setups as ideas", "Retired 06 Oct: Solo (midday) is paper only and never offers its setups as trade ideas.", "jarvis.auto.soloideas", byDefault = false),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.quiet"),
     }
 
@@ -67,7 +68,7 @@ internal object Automations {
         HELP("Offer help on my positions", "A position with no stop, or one going nowhere for 45 minutes: Jarvis offers a stop or a close (asks first).",
             "jarvis.group.help", listOf(Auto.RESCUE, Auto.STALE)),
         OWN("Act on his own, on paper", "Takes his own ideas of 3/5 or more on PAPER (raising the bar where he loses) and plans the paper arms each morning.",
-            "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
+            "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, gaps filling, the previous day's high or low passed, fear (VIX) spikes, sharp moves and what coincided with them, the price nearing a Liquidity 15+5 entry level, open interest walls moving, the expiry-day straddle and max pain, and news on indices you hold.",
             "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.SHARPMOVE, Auto.LIQUIDITY, Auto.OI, Auto.EXPIRYDAY, Auto.POSNEWS),
             subs = listOf(Auto.LIQSKIP)),
@@ -79,12 +80,16 @@ internal object Automations {
     /** Always on, no switch: they only warn, cool off or heal (live prices stopped, expiry heads-up, cool-off, backup, voice). */
     val ALWAYS = setOf(Auto.MIS, Auto.RELAY, Auto.FEED, Auto.EXPIRY, Auto.COOLOFF, Auto.BACKUP, Auto.SELFHEAL)
 
+    /** Retired: no switch, never on (the entries stay so a saved name still reads). */
+    val RETIRED = setOf(Auto.SOLO_IDEAS)
+
     fun groupOf(a: Auto): Group? = Group.entries.firstOrNull { a in it.members || a in it.subs }
 
     /** A behaviour with its own switch beneath its group ([Group.subs]). */
     fun isSub(a: Auto): Boolean = Group.entries.any { a in it.subs }
 
     fun on(a: Auto): Boolean {
+        if (a in RETIRED) return false
         if (a in ALWAYS) return true
         val g = groupOf(a) ?: return a.byDefault
         if (isSub(a)) return on(g) && runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(a.key, a.byDefault) }.getOrDefault(a.byDefault)
@@ -98,8 +103,9 @@ internal object Automations {
         val p = com.optionslab.app.security.SecurePrefs
         // Before the groups each behaviour had its own switch: a group starts as Boss left its members (the guard only
         // from its own fingerprint switch, never from the old trail switch, which did not ask for it).
+        // (OWN once had Solo's ideas among its members: their old switch, on by default then, still counts for it.)
         val was = if (g == Group.GUARD) p.getBoolean(Auto.GUARD.key, false)
-            else g.members.any { p.getBoolean(it.key, it.byDefault) }
+            else g.members.any { p.getBoolean(it.key, it.byDefault) } || g == Group.OWN && p.getBoolean(Auto.SOLO_IDEAS.key, true)
         p.getBoolean(g.key, was)
     }.getOrDefault(false)
 

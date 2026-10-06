@@ -24,9 +24,12 @@ internal object IraLiquidity {
         }
     }
 
-    /** Liquidity 15+5 armed (either book), or null when its book cannot be read. */
+    /**
+     * Liquidity 15+5 armed (either book), or null when its book cannot be read: the book's armed flags only
+     * ([com.optionslab.app.data.OrbArms.liquidityArmed]) - not the whole view (marks, shadows, rows), read each round.
+     */
     private suspend fun armed(): Boolean? = runCatching {
-        kotlinx.coroutines.withTimeoutOrNull(3_000) { com.optionslab.app.data.OrbArms.view().arms.firstOrNull { it.arm.liquidity }?.armed }
+        kotlinx.coroutines.withTimeoutOrNull(3_000) { com.optionslab.app.data.OrbArms.liquidityArmed() }
     }.getOrNull()
 
     /** Jarvis's answer to [q]: each book's levels, the arm's state and its entry hours. */

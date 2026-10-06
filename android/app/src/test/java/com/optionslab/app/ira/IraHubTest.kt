@@ -807,7 +807,9 @@ class IraHubTest : RobolectricTest() {
         Automations.set(Automations.Auto.STALE, false); assertTrue(!Automations.on(Automations.Auto.STALE)); Automations.set(Automations.Auto.STALE, true)
         // Boss, 4 Oct: a few grouped switches; the safety helpers have none and stay on.
         assertTrue(Automations.Group.entries.size <= 7)
-        assertTrue(Automations.Auto.entries.all { it in Automations.ALWAYS || Automations.groupOf(it) != null })
+        assertTrue(Automations.Auto.entries.all { it in Automations.ALWAYS || it in Automations.RETIRED || Automations.groupOf(it) != null })
+        // Solo's ideas are retired: in no group, never on.
+        assertTrue(Automations.groupOf(Automations.Auto.SOLO_IDEAS) == null && !Automations.on(Automations.Auto.SOLO_IDEAS))
         Automations.set(Automations.Auto.FEED, false); assertTrue(Automations.on(Automations.Auto.FEED))
         Automations.set(Automations.Group.HELP, false); assertTrue(!Automations.on(Automations.Auto.RESCUE)); Automations.set(Automations.Group.HELP, true)
         IraJournal.targetWatch(); IraJournal.staleWatch()

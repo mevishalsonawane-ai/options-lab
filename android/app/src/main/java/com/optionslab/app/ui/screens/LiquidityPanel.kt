@@ -181,7 +181,8 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
     var trades by remember(underlying) { mutableStateOf<List<LiquidityOverlay.Trade>>(emptyList()) }
     var closedAt by remember(underlying) { mutableStateOf<LocalDateTime?>(null) }
     var error by remember(underlying) { mutableStateOf<String?>(null) }
-    var behind by remember(underlying) { mutableStateOf<String?>(null) }
+    // The bars, not words: a string with "now" in it would change on every poll and redraw the chart each time.
+    var behind by remember(underlying) { mutableStateOf<Behind?>(null) }
     var model by remember(underlying, tf) { mutableStateOf<LiquidityOverlay.Model?>(null) }
 
     LaunchedEffect(underlying, visible) {
@@ -194,7 +195,7 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
                     val b = LiquidityCache.closed(LiquidityCache.toBars(got), now)
                     if (b != input) input = b
                     error = null
-                    val b2 = behindBy(b, now)
+                    val b2 = behindAt(b, now)
                     if (b2 != behind) behind = b2
                 }
                 .onFailure { if (input == null) error = "Could not load the $underlying candles: ${it.message ?: "no data"}" }
@@ -215,20 +216,31 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
         val m = withContext(Dispatchers.Default) { LiquidityOverlay.build(b, tf, underlying, now, trades) }
         if (m != model) model = m
     }
-    LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind)
+    LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind?.let(::behindText))
 }
+
+/** The candles behind: the newest closed 5-minute bar held ([last], its start; null: none) and the one due ([due], its start). */
+internal data class Behind(val last: LocalDateTime?, val due: LocalDateTime)
 
 /**
  * When the newest closed 5-minute candle held is more than one bar older than the last one closed by [now] (in a
  * session): what the layer says about it; null when it is current (or outside a session).
  */
-internal fun behindBy(bars: List<Bar>, now: LocalDateTime): String? {
+internal fun behindBy(bars: List<Bar>, now: LocalDateTime): String? = behindAt(bars, now)?.let(::behindText)
+
+/** [behindBy] as bar times (what the panel keeps: it changes only when a bar does). */
+internal fun behindAt(bars: List<Bar>, now: LocalDateTime): Behind? {
     val need = LiquidityCache.lastClosedStart(now) ?: return null
-    val last = bars.lastOrNull()?.start ?: return "No candles yet"
+    val last = bars.lastOrNull()?.start ?: return Behind(null, need)
     // One bar behind is a read in flight; at 09:20 the bar before the day's first is the last session's.
     val ok = if (need.toLocalTime() == LocalTime.of(9, 15)) true else !last.isBefore(need.minusMinutes(5))
-    return if (ok) null else "Candles behind: the last closed ${hhmm(last.plusMinutes(5))}, now ${hhmm(now)}"
+    return if (ok) null else Behind(last, need)
 }
+
+/** [b] in words, formatted when shown. */
+internal fun behindText(b: Behind): String = b.last?.let {
+    "Candles behind: the last closed ${hhmm(it.plusMinutes(5))}, the ${hhmm(b.due.plusMinutes(5))} close is missing"
+} ?: "No candles yet"
 
 /** The layer from its state (what [LiquidityPanel] shows; tests drive it with a model built from fixed bars). */
 @Composable

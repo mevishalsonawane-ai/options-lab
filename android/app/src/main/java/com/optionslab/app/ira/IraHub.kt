@@ -5175,13 +5175,13 @@ object IraHub {
     }
 
     /**
-     * Can anything use a trade check within the minute (Battery, round 9)? Solo on or its setups offered as ideas (it then
-     * reaches its gate, [IraSolo.tick]), Jarvis taking paper trades alone ([Automations.Auto.ACT_PAPER]), or anything
+     * Can anything use a trade check within the minute (Battery, round 9)? Solo on (it then reaches its gate,
+     * [IraSolo.tick]), Jarvis taking paper trades alone ([Automations.Auto.ACT_PAPER]), or anything
      * held or waiting to fill: the paper book, Solo's or the news trades' own, and in Live with a Zerodha session always
      * (its positions are not read here). A read failing says yes.
      */
     private fun checkKeptFast(): Boolean = runCatching {
-        val soloGate = IraSolo.on || Automations.on(Automations.Auto.SOLO_IDEAS)
+        val soloGate = IraSolo.on
         val alone = Automations.on(Automations.Auto.ACT_PAPER)
         val held = com.optionslab.app.data.Paper.watching() || IraSolo.all().any { !it.closed } || IraNewsTrades.all().any { !it.closed } ||
             (com.optionslab.app.data.AppSettings.load().live && com.optionslab.app.data.Broker.loggedIn)

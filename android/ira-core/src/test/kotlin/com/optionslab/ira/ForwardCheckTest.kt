@@ -155,6 +155,26 @@ class ForwardCheckTest {
         assertTrue(ids.containsAll(ForwardCheck.SHADOWS.keys), "${ForwardCheck.SHADOWS.keys - ids}")
     }
 
+    @Test fun theBestOfSeveralIsJudgedAgainstItsOwnResearch() {
+        val v43 = ForwardCheck.SHADOWS.getValue("orb_v43")      // research −₹484 a trade, sd ₹1,811
+        val p10 = ForwardCheck.SHADOWS.getValue("orb_p10")      // research −₹100 a trade, sd ₹533
+        // −₹300 is better than V43's research; −₹200 is worse than OP10's: V43 holds up, though its raw net is lower.
+        val a = ForwardCheck.check(v43, trades(-300.0))
+        val b = ForwardCheck.check(p10, trades(-200.0))
+        assertEquals(0, ForwardCheck.bestIndex(listOf(a, b)))
+        assertEquals((-300.0 - v43.mean) / v43.sd, ForwardCheck.standing(a).second, 1e-9)
+        // The verdict comes first: a strategy below expectation never beats one in line, however its mean compares.
+        val inLine = ForwardCheck.check(liq, List(10) { ForwardCheck.Trade(day0.plusDays(it.toLong()), 1_100.0) } +
+            List(10) { ForwardCheck.Trade(day0.plusDays(10L + it), -900.0) })
+        val below = ForwardCheck.check(p10, same(25, -400.0))
+        assertEquals(ForwardCheck.Verdict.BELOW, below.verdict)
+        assertEquals(1, ForwardCheck.bestIndex(listOf(below, inLine)))
+        // No trades: 0; a tie keeps the first; none: -1.
+        assertEquals(1 to 0.0, ForwardCheck.standing(ForwardCheck.check(p10, emptyList())))
+        assertEquals(0, ForwardCheck.bestIndex(listOf(ForwardCheck.check(p10, emptyList()), ForwardCheck.check(v43, emptyList()))))
+        assertEquals(-1, ForwardCheck.bestIndex(emptyList()))
+    }
+
     @Test fun expectedPathWidensAsRootN() {
         val p = ForwardCheck.expectedPath(liq, 4)
         assertEquals(5, p.size)

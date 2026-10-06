@@ -237,7 +237,8 @@ fun PnlCalendarScreen(model: AppModel) {
         item { YearStrip(month.year, all, live) }
         item { StrategyComparison(trips, owners) }
         // Live vs backtest: each running strategy's forward paper trades against its research (the arms' own records).
-        item { LiveVsBacktest(tick) }
+        // Jarvis's strategies only (Solo, Liquidity, Hero, the shadows): not in IraGoldAlgo, nor a build without Jarvis.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item { LiveVsBacktest(tick) }
         item { ChargesCard(live, month, tick) }
         item { JournalCard(trips) }
     }

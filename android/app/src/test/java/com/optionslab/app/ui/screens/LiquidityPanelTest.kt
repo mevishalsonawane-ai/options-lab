@@ -297,7 +297,9 @@ class LiquidityPanelTest {
         assertNull(behindBy(bars, day.atTime(11, 3)))
         assertNull(behindBy(bars, day.atTime(11, 6)))
         // Two bars behind: said.
-        assertEquals("Candles behind: the last closed 11:00, now 11:12", behindBy(bars, day.atTime(11, 12)))
+        assertEquals("Candles behind: the last closed 11:00, the 11:10 close is missing", behindBy(bars, day.atTime(11, 12)))
+        // Kept as bar times: the same at 11:12 and 11:14 (no redraw each poll); words only when shown.
+        assertEquals(behindAt(bars, day.atTime(11, 12)), behindAt(bars, day.atTime(11, 14)))
         // Outside a session, or the day's first bar, nothing is said.
         assertNull(behindBy(bars, day.atTime(16, 0)))
         assertNull(behindBy(bars, day.plusDays(1).atTime(9, 21)))
@@ -305,11 +307,11 @@ class LiquidityPanelTest {
         // On the layer: the chip, and the time of the last bar drawn.
         compose.setContent {
             IraAlgoTheme("light") {
-                LiquidityChart("BANKNIFTY", listOf(15, 5), 15, {}, model(), null, behind = "Candles behind: the last closed 11:00, now 11:12")
+                LiquidityChart("BANKNIFTY", listOf(15, 5), 15, {}, model(), null, behind = "Candles behind: the last closed 11:00, the 11:10 close is missing")
             }
         }
         idle()
-        assertTrue(shows("Candles behind: the last closed 11:00, now 11:12"))
+        assertTrue(shows("Candles behind: the last closed 11:00, the 11:10 close is missing"))
         assertTrue(shows("as of 15:30"))
     }
 
