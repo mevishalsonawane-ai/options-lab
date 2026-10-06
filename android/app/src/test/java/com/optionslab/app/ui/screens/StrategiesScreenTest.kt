@@ -104,7 +104,7 @@ internal object StrategyFakes {
             status = "BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone.", open = pos.takeIf { open },
             mark = 220.0, pending = OrbArms.Pending("liquidity5", "CE", bar, bar.plusMinutes(10)).takeIf { pending },
             today = listOfNotNull(closed, pos.takeIf { open }), liveOk = live,
-            shadow = com.optionslab.engine.orb.LiquidityShadow.summarize(listOf(com.optionslab.engine.orb.LiquidityShadow.Trade(today, 1_158.0, true, "liquidity5"))))
+            shadow = com.optionslab.engine.orb.LiquidityShadow.summarize(listOf(com.optionslab.engine.orb.LiquidityShadow.Trade(today, 1_158.0, true, "liquidity5", volSkip = true))))
         val arms = retired + hero + liq
         return OrbArms.View(arms, OrbArms.Legs(today, 52_000, today.plusDays(5), contract(Right.CE), contract(Right.PE)), 52_310.0 to 51_980.0,
             PassRule.judge(listOf(PassRule.Closed(today.minusDays(1), 1_158.0, true))),
@@ -503,6 +503,8 @@ class OrbRowsTest {
         assertTrue(shown("BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone."))
         // Its paper record since 06 Oct, with and without each pre-registered candidate.
         assertTrue(shown(keepNumbersWhole("Since 06 Oct: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades")))
+        // Candidate (c), the volatility risk filter: tracked beside them, its figures whole too.
+        assertTrue(shown(keepNumbersWhole("(c) skip in high volatility: 0 of 1, no trades against +₹1,158 a trade")))
         switches()[1].areaCClick(); compose.waitForIdle()
         assertEquals(listOf("orb arm liquidity on=false auto=true pin=false"), rec.calls)
     }

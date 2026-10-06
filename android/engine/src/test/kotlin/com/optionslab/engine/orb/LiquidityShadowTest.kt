@@ -26,7 +26,8 @@ class LiquidityShadowTest {
     }
 
     private val d = LiquidityShadow.SINCE
-    private fun t(net: Double, near: Boolean?, book: String = "liquidity5", day: LocalDate = d) = LiquidityShadow.Trade(day, net, near, book)
+    private fun t(net: Double, near: Boolean?, book: String = "liquidity5", day: LocalDate = d, vol: Boolean? = null) =
+        LiquidityShadow.Trade(day, net, near, book, vol)
 
     @Test fun theSummaryCountsFromTheSixthWithAndWithoutEachCandidate() {
         val s = LiquidityShadow.summarize(listOf(
@@ -41,16 +42,17 @@ class LiquidityShadowTest {
         assertEquals(100.0, s.all.perTrade)
         assertNull(LiquidityShadow.Cut(0, 0.0).perTrade)
         assertEquals("Since 06 Oct: 4 paper trades, +₹400 net (+₹100 a trade) · (a) skip a level within one index stop: 3, +₹200 a trade · " +
-            "(b) no FINNIFTY 30m: 2, +₹50 a trade · 1 from before (a) was recorded", LiquidityShadow.line(s))
+            "(b) no FINNIFTY 30m: 2, +₹50 a trade · (c) skip in high volatility: tracked from its first trade · 1 from before (a) was recorded",
+            LiquidityShadow.line(s))
         val one = LiquidityShadow.summarize(listOf(t(-50.0, true)))
         assertEquals("Since 06 Oct: 1 paper trade, −₹50 net (−₹50 a trade) · (a) skip a level within one index stop: 0, no trades · " +
-            "(b) no FINNIFTY 30m: 1, −₹50 a trade", LiquidityShadow.line(one))
+            "(b) no FINNIFTY 30m: 1, −₹50 a trade · (c) skip in high volatility: tracked from its first trade", LiquidityShadow.line(one))
     }
 
     @Test fun belowFortyTradesNothingIsJudged() {
         val s = LiquidityShadow.summarize(List(39) { t(10.0, false) })
         val v = LiquidityShadow.verdict(s)
-        assertTrue(v.startsWith("Liquidity 15+5 has 39 of 40 paper trades since 06 Oct; its two candidate rules are judged at 40. So far: Since 06 Oct: 39"), v)
+        assertTrue(v.startsWith("Liquidity 15+5 has 39 of 40 paper trades since 06 Oct; its candidate rules are judged at 40. So far: Since 06 Oct: 39"), v)
     }
 
     @Test fun atFortyTradesJarvisSaysWhichCandidateHelped() {
@@ -60,7 +62,8 @@ class LiquidityShadowTest {
         assertTrue(a.enough)
         val va = LiquidityShadow.verdict(a)
         assertTrue(va.startsWith("Candidate (a) helped, (b) did not, Boss. Liquidity 15+5 made +₹70 a trade over 40 paper trades since 06 Oct;"), va)
-        assertTrue(va.endsWith("Nothing changes by itself: adopting one is yours."), va)
+        assertTrue(va.endsWith("(c) skipping signals in high volatility has 0 of 40 trades since it was added; it is judged at 40. " +
+            "Nothing changes by itself: adopting one is yours."), va)
         val b = LiquidityShadow.summarize(base + List(5) { t(300.0, true) } + List(5) { t(-200.0, false, "liquidity30_fin") })
         assertTrue(LiquidityShadow.verdict(b).startsWith("Candidate (b) helped, (a) did not"))
         val both = LiquidityShadow.summarize(base + List(5) { t(-300.0, true) } + List(5) { t(-200.0, false, "liquidity30_fin") })
@@ -74,5 +77,38 @@ class LiquidityShadowTest {
         assertFalse(LiquidityShadow.helped(LiquidityShadow.Cut(40, -400.0), LiquidityShadow.Cut(0, 0.0)))
         assertTrue(LiquidityShadow.helped(LiquidityShadow.Cut(40, -400.0), LiquidityShadow.Cut(39, 10.0)))
         assertFalse(LiquidityShadow.helped(LiquidityShadow.Cut(40, 400.0), LiquidityShadow.Cut(39, 300.0)))
+    }
+
+    @Test fun candidateCCountsOnlyTheTradesWithItsFlagWithAndWithoutTheSkips() {
+        val s = LiquidityShadow.summarize(listOf(
+            t(-500.0, false, day = d.minusDays(1), vol = true),   // before 06 Oct: not counted
+            t(100.0, false),                                    // before (c) was recorded: not counted for it
+            t(300.0, false, vol = false), t(-200.0, false, vol = true), t(1_100.0, false, vol = false),
+        ))
+        assertEquals(LiquidityShadow.Cut(4, 1_300.0), s.all)
+        assertEquals(LiquidityShadow.Cut(3, 1_200.0), s.volAll)
+        assertEquals(LiquidityShadow.Cut(2, 1_400.0), s.withoutVol)
+        assertFalse(s.volEnough)
+        assertTrue(LiquidityShadow.line(s).endsWith(" · (c) skip in high volatility: 2 of 3, +₹700 a trade against +₹400 a trade"), LiquidityShadow.line(s))
+        // Wide figures stay whole numbers (the row keeps each figure on one line).
+        val wide = LiquidityShadow.summarize(listOf(t(12_345.6, false, vol = true), t(-1_000.4, false, vol = false)))
+        assertTrue(LiquidityShadow.line(wide).endsWith("(c) skip in high volatility: 1 of 2, −₹1,000 a trade against +₹5,673 a trade"), LiquidityShadow.line(wide))
+    }
+
+    @Test fun atFortyTradesOfItsOwnJarvisSaysWhetherCandidateCHelped() {
+        val base = List(30) { t(110.0, false, vol = false) }
+        // The skipped high-volatility trades lost: (c) helped.
+        val helped = LiquidityShadow.summarize(base + List(10) { t(-300.0, false, vol = true) })
+        assertTrue(helped.volEnough)
+        val v = LiquidityShadow.verdict(helped)
+        assertTrue(v.contains("(c) skipping signals in high volatility helped: +₹110 a trade over 30 against +₹8 a trade over 40 since it was added. " +
+            "Nothing changes by itself: adopting one is yours."), v)
+        // They made money: it did not.
+        val not = LiquidityShadow.verdict(LiquidityShadow.summarize(base + List(10) { t(300.0, false, vol = true) }))
+        assertTrue(not.contains("(c) skipping signals in high volatility did not help: +₹110 a trade over 30 against +₹158 a trade over 40"), not)
+        // Forty trades in all but fewer of (c)'s own: (c) is not judged yet; (a) and (b) are.
+        val early = LiquidityShadow.verdict(LiquidityShadow.summarize(List(25) { t(10.0, false) } + List(15) { t(10.0, false, vol = true) }))
+        assertTrue(early.startsWith("Neither helped"), early)
+        assertTrue(early.contains("(c) skipping signals in high volatility has 15 of 40 trades since it was added; it is judged at 40."), early)
     }
 }

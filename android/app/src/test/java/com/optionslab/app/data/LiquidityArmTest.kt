@@ -134,6 +134,9 @@ class LiquidityArmTest : RobolectricTest() {
         assertNull("no liquidity above yet: no target", p.target)
         // Candidate (a)'s shadow (pre-registered 06 Oct) is recorded with every signal: no level ahead, so it would not skip it.
         assertEquals(false, p.near)
+        // Candidate (c), the volatility filter (06 Oct), is recorded too: with no earlier sessions loaded it cannot tell, so
+        // it is recorded as not skipped - and the trade went ahead exactly as before (it never changes what the arm trades).
+        assertEquals(false, p.volSkip)
         assertEquals(day.atTime(13, 0), p.signalBar)
         // The owner's 15% stop rests in the book at 85% of the fill.
         assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), p.stopTrigger)
@@ -151,10 +154,12 @@ class LiquidityArmTest : RobolectricTest() {
         // The row counts it from 06 Oct, with and without each candidate (neither would have dropped it).
         val s = row().shadow!!
         assertEquals(1, s.all.trades); assertEquals(1, s.withoutNear.trades); assertEquals(1, s.withoutFin30.trades)
+        assertEquals(1, s.volAll.trades); assertEquals(1, s.withoutVol.trades)
         assertEquals((closed.grossPnl ?: 0.0) - closed.charges, s.all.net, 0.01)
         // Saved and read back: the flag survives a restart.
         AutomationSupport.reloadFromDisk(OrbArms)
         assertEquals(false, row().today.single().near)
+        assertEquals(false, row().today.single().volSkip)
         assertEquals(1, Paper.state.orders.count { it.action == "SELL" && it.status == "complete" })
         assertEquals("the resting stop was taken out first", "cancelled", Paper.state.orders.single { it.orderId == p.stopOrderId }.status)
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
@@ -254,10 +259,12 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("CE", pd.right); assertEquals(54_000, pd.strike); assertEquals(54_100.0, pd.level!!, 0.0)   // strike: one in the money (liq2)
         assertEquals(day.atTime(13, 10), pd.expires)                         // valid until the next 5-minute bar closes
         assertTrue(r.status, r.status.contains("Breakout: waiting for your approval."))
+        assertEquals("candidate (c)'s flag waits with the signal", false, pd.volSkip)
         val msg = runBlocking { OrbArms.approve("liquidity") }
         assertEquals("Entered (paper).", msg)
         val p = row().today.single()
         assertTrue(p.open); assertEquals("CE", p.right); assertEquals(54_100.0, p.level!!, 0.0)
+        assertEquals(false, p.volSkip)
         assertNull("the approval is used up", row().pending)
         assertEquals(1, Paper.state.orders.count { it.action == "BUY" })
     }

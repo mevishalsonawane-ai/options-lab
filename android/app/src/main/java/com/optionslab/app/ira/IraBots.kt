@@ -135,7 +135,7 @@ internal object IraBots {
         if (SHADOWS.containsMatchIn(question)) return retired + listOf(com.optionslab.app.data.ShadowArms.answer())
         val health = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
             runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
-        // Liquidity 15+5 named: its two pre-registered candidates, judged once it has 40 paper trades since 06 Oct.
+        // Liquidity 15+5 named: its pre-registered candidates (a), (b) and the volatility filter (c), each judged at 40 paper trades.
         val shadow = if (!question.contains("liquidity", ignoreCase = true)) emptyList()
             else listOfNotNull(runCatching { com.optionslab.engine.orb.LiquidityShadow.verdict(com.optionslab.app.data.OrbArms.liquidityShadow()) }.getOrNull())
         return retired + health + shadow
