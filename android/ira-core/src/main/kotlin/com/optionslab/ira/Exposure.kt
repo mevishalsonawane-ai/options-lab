@@ -58,6 +58,13 @@ object Exposure {
     private val SAID = listOf(
         Regex(" (agar|agr|yadi) ") to " if ",
         Regex(" (kya|kia) (hoga|hogi|hoge|hota|hoti)( phir)?( kya)? ") to " what happens ",
+        // Understanding round 29: what it comes to, as Hindi asks it - "to mera kitna loss hoga", "to mujhe kitna nuksan hoga",
+        // "to mere p&l pe kya asar hoga", "to meri positions ka kya haal hoga", "to kitna jayega mera".
+        Regex(" (kitna|kitni|kitne) (loss|nuksan|nuksaan|nuqsan|ghata|profit|fayda|faida|munafa) (hoga|hogi|ho jayega|ho jaega|banega|banegi)( kya)? ") to " what happens ",
+        Regex(" (kya|kitna|kitni) (asar|effect|impact|farak|fark) (hoga|padega|padegi)( kya)? ") to " what happens ",
+        Regex(" (kya|kaisa|kaisi) haal (hoga|hogi|honge) ") to " what happens ",
+        Regex(" (kitna|kitne) (jayega|jaega|jaayega|doobega|dubega|udega) ") to " what happens ",
+        Regex(" (mujhe|mujhko|hume|humein|hamein|hamko) ") to " me ",
         Regex(" (mera|meri|mere|hamara|hamari|hamare|apna|apni|apne) ") to " my ",
         Regex(" (gir|gire|gira|giri|girta|girti|tut|toot|toote|tute)( (jaye|jaaye|jae|jata|jaata|gaya|gayi|jati)( hai)?| hai)?(?= )") to " falls",
         Regex(" (chadh|chadhe|chadha|chadhi|chadhta|badh|badhe|badha|badhta|uchhle|uchhal)( (jaye|jaaye|jae|jata|jaata|gaya|gayi|jati)( hai)?| hai)?(?= )") to " rises",

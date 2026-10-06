@@ -1619,7 +1619,7 @@ object IraHub {
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
                 com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null || com.optionslab.ira.MoreAfter.asked(q) != null ||
-                com.optionslab.ira.SmallTrades.asked(q) != null || com.optionslab.ira.DayIndex.asked(q) != null || com.optionslab.ira.CheckTimes.asked(q) != null ||
+                com.optionslab.ira.SmallTrades.asked(q) != null || com.optionslab.ira.DayIndex.asked(q) != null || com.optionslab.ira.Conditional.asked(q) || com.optionslab.ira.CheckTimes.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1636,6 +1636,15 @@ object IraHub {
         // plan, so the action is never silently dropped ([com.optionslab.ira.Bundle]; review, 5 Oct).
         val bundled = runCatching { com.optionslab.ira.Bundle.acts(q) }.getOrDefault(true)
         val parsed = Ask.parse(q)
+        // "Agar Nifty 100 point gire to sab band kar do", "exit all if Nifty falls below 24000" (understanding round 29): an action
+        // set to wait for a condition, which Jarvis can't do - never a command, an order or a yes ([com.optionslab.ira.Conditional]).
+        // Said so, with the app's own alarm, stop loss and limits in words; nothing is done, nothing about the account is said,
+        // and IraGoldAlgo only talks. Before the plan and every question branch, so no part of it is ever acted on alone.
+        if (parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Conditional.asked(q) }.getOrDefault(false)) {
+            val condSaid = if (com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK) GOLD_TALK_ONLY else com.optionslab.ira.Conditional.SAY
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, condSaid)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "Help me journal today": today's journal drafted from the facts, then a few questions by voice. It holds the
         // account, so the phone must be unlocked. Words only; the answers are kept, never acted on. (Like every question
         // below, never when an order or a command is in the words.)

@@ -122,7 +122,13 @@ object DayIndex {
         LEAD + "why (is|was) $INDEX (first|on top|at the top|leading) $ON_DAY" + TAIL + "|" +
         LEAD + "(which|what) index do i (ask|talk) (you )?about (the )?(most )?$ON_DAY" + TAIL + "|" +
         LEAD + "(kis|kaun se|konse|kon se) din (kaunsa|kaun sa|konsa|kon sa) index pehle( (bolte|batate|lete) ho)?" + TAIL + "|" +
-        LEAD + "(aaj|$HDAY ko) $INDEX pehle (kyun|kyu|kyon)( (bola|bataya|liya|bolte ho|batate ho|lete ho))?" + TAIL)
+        LEAD + "(aaj|$HDAY ko) $INDEX pehle (kyun|kyu|kyon)( (bola|bataya|liya|bolte ho|batate ho|lete ho))?" + TAIL + "|" +
+        // Understanding round 29: "aaj kaunsa index pehle", "which index first today", "which index are you leading with today".
+        LEAD + "(aaj|$HDAY ko) (kaunsa|kaun sa|konsa|kon sa) index pehle( (bologe|bolte ho|batate ho|bataoge|loge|lete ho|hai|hoga|rahega|aayega|aata hai))?" + TAIL + "|" +
+        LEAD + "(kaunsa|kaun sa|konsa|kon sa) index pehle (aaj|$HDAY ko)( (bologe|bolte ho|batate ho|bataoge|loge|lete ho|hai|hoga|rahega))?" + TAIL + "|" +
+        LEAD + "(which|what) index (comes |goes )?first (today|on $DAY)" + TAIL + "|" +
+        LEAD + "(which|what) index (will you|are you going to) (lead|start|open) with (today|on $DAY)" + TAIL + "|" +
+        LEAD + "(which|what) index are you (leading|starting|opening) with (today|on $DAY)" + TAIL)
 
     /**
      * Only a clear undo: "lead with Nifty every day again", "stop leading with BankNifty on Wednesdays", "stop changing the

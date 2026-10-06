@@ -77,6 +77,7 @@ class CollisionTest {
 
     /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
     private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
+        "Conditional" to { q -> Conditional.asked(q) },
         "Requests" to { q -> Requests.listAsked(q) },
         "TrendReads" to { q -> TrendReads.asked(q) },
         "OutsideApp" to { q -> OutsideApp.asked(q) },
@@ -1362,7 +1363,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "NewsMoves",
+    private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
@@ -1394,7 +1395,10 @@ class CollisionTest {
         for (c in calls) {
             if (c.groupValues[1] == "SelfWhy") continue
             val head = body.substring(0, c.range.first).let { it.substring(maxOf(it.lastIndexOf(" if ("), it.lastIndexOf("= if ("))) }
-            for (g in listOf("!bundled", "parsed.order == null", "parsed.command == null")) assertTrue(g in head, "${c.groupValues[1]}: $g")
+            // (Conditional is taken said with an action too - "if Nifty crosses 25000 then square off everything" is what it
+            // answers - so it alone has no `!bundled`; it never acts, and still never with an order or a command.)
+            val guards = if (c.groupValues[1] == "Conditional") listOf("parsed.order == null", "parsed.command == null") else listOf("!bundled", "parsed.order == null", "parsed.command == null")
+            for (g in guards) assertTrue(g in head, "${c.groupValues[1]}: $g")
         }
         // HeardBack is the voice path's own read-back (JarvisVoice), never a question branch of the hub.
         assertTrue("HeardBack" !in body)
@@ -1456,7 +1460,9 @@ class CollisionTest {
         // A change of a limit stays out of Headroom; the orders beside these words still act as before (each its own confirm).
         for (s in listOf("change my loss limit", "increase my trade limit to 10", "set my daily loss limit to 5000")) assertEquals(null, Headroom.asked(s), s)
         for (s in listOf("sell my put", "close my call", "exit my put if it falls 50", "square off my position")) {
-            assertEquals(false, NeedsTrue.asked(s), s); assertEquals(false, PositionHealth.asked(s), s); assertEquals("Act", audit.feature(s), s)
+            assertEquals(false, NeedsTrue.asked(s), s); assertEquals(false, PositionHealth.asked(s), s)
+            // (An exit set on a condition is Jarvis saying he can't set one - understanding round 29 - never the exit done now.)
+            assertEquals(if (s == "exit my put if it falls 50") "Conditional" else "Act", audit.feature(s), s)
         }
         // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
         for (s in listOf("is my put healthy then close all positions", "am i overtrading, then stop all strategies",
@@ -2815,7 +2821,7 @@ class CollisionTest {
         for (s in listOf("exit at breakeven after charges", "sell when breakeven after charges")) assertTrue(audit.feature(s) != "Account:NEED", s)
         // StraddleDecay stays the record: never a forecast, advice, a definition or Boss's own straddle.
         for (s in listOf("will the straddle decay today", "should i sell a straddle", "what is straddle", "how much did my straddle decay",
-            "what is the usual straddle decay tomorrow", "straddle decay"))
+            "what is the usual straddle decay tomorrow"))
             assertEquals(null, StraddleDecay.asked(s), s)
         // SmallTrades is read, never made: a trade asked for is not it.
         for (s in listOf("make a small trade", "place tiny trade", "buy a small lot", "which bot should make small trades"))

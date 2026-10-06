@@ -93,6 +93,12 @@ object StraddleDecay {
     private val NAME = Regex(" (straddle decay|straddle|premium decay|atm decay|intraday decay) (record|records|stats|statistics|history|data) |" +
         // Understanding round 28: "straddle decay on expiry day", "straddle decay on quiet days vs trending days".
         " (straddle|atm straddle|atm premium|straddle premium) (decay|decays) (on|in|for) (expiry day|expiry days|quiet|flat|sideways|range|trending|trend|volatile|big move) ")
+    /**
+     * "Straddle decay" said alone (understanding round 29), an index or "ATM" with it ("Nifty straddle decay", "ATM straddle
+     * decay for BankNifty"): the record - the definition is asked as one ("what is straddle decay", "explain ...": [NOT]).
+     */
+    private val BARE = Regex("^ (the )?((nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|bnf)( s)? )?(atm |at the money )?(straddle|straddles|straddle premium) " +
+        "(decay|time decay)( (of |on |for |in )?(nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|bnf))?( please| boss| jarvis)? $")
     /** "What is the usual straddle decay": the record asked by "usual", never a definition (round 28). */
     private val WHAT_USUAL = Regex(" (what is|whats|what s) the (usual|typical|average|normal|median) ")
     private val QUIET = Regex(" (quiet|flat|sideways|range|rangebound|range bound|dull|slow) (day|days|session|sessions) ")
@@ -117,7 +123,7 @@ object StraddleDecay {
         val t = WHAT_USUAL.replace(norm(text), " the $2 ")
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
-        val ok = NAME.containsMatchIn(t) || (WHAT.containsMatchIn(t) && LOSE.containsMatchIn(t) && HOW.containsMatchIn(t))
+        val ok = NAME.containsMatchIn(t) || BARE.containsMatchIn(t) || (WHAT.containsMatchIn(t) && LOSE.containsMatchIn(t) && HOW.containsMatchIn(t))
         if (!ok) return null
         val q = QUIET.find(t)?.range?.first
         val tr = TREND.find(t)?.range?.first

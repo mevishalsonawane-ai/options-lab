@@ -40,6 +40,7 @@ class AskChainBenchTest {
         "Bundle.acts" to { q -> Bundle.acts(q) },
         "DayJournal.asked" to { q -> DayJournal.asked(q) },
         "Ask.parse" to { q -> Ask.parse(q) },
+        "Conditional.asked" to { q -> Conditional.asked(q) },
         "AlertSense.asked" to { q -> AlertSense.asked(q) },
         "Airtime.asked" to { q -> Airtime.asked(q) },
         "Hearing.asked" to { q -> Hearing.asked(q) },

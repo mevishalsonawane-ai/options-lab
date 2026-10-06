@@ -122,7 +122,9 @@ object Wake {
      */
     fun yesNo(text: String): Boolean? {
         val h = Hinglish.yesNo(text); val e = english(text)
-        return if (h == false || e == false) false else if (h == true || e == true) true else null
+        // A yes with a condition set ("haan, agar Nifty gire to", "yes if it falls", "agar nifty gire to sab band kar do"): unclear,
+        // never a yes (understanding round 29, [Conditional]); a no word still says no.
+        return if (h == false || e == false) false else if (Conditional.hedged(text)) null else if (h == true || e == true) true else null
     }
 
     private fun english(text: String): Boolean? {

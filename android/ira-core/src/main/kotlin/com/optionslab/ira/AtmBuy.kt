@@ -94,6 +94,15 @@ object AtmBuy {
     private val NAME = Regex(" (atm|at the money) (option |call |put )?(buyer|buyers|buying|buy) (record|records|stats|statistics|history|hit rate|success rate) | " +
         "(atm|at the money) (option|call|put) (double|doubling) (record|records|stats|statistics|history) ")
     private val EXPIRY = Regex(" (expiry day|expiry days|on expiry|expiry ke din|expiry wale din) ")
+    /**
+     * Buying the at-the-money option asked whether it works (understanding round 29): "how often does buying ATM work",
+     * "does buying ATM options pay off", "do ATM buyers make money", "atm buying kaam karta hai" - the same record.
+     */
+    private val WORKS = Regex(" (buying|buy) (an |the )?(atm|at the money)( option| options| call| calls| put| puts| ce| pe)? |" +
+        " (atm|at the money) (option |options |call |calls |put |puts )?(buying|buyers?) ")
+    private val PAYS = Regex(" (work|works|working|worth it|pay|pays|pay off|pays off|make money|makes money|profitable|succeed|succeeds|" +
+        "kaam karta|kaam karti|kaam karte|kaam aata|chalta|chalti|kamate|kamata) ")
+    private val ASKS = Regex("^ (does|do|is|are)( |$)| (kya|hai kya|karta hai|karti hai|karte hain) $")
     // A forecast or advice, a seller's or writer's question, Boss's own book, a what-if, alerts, the app's bots, a
     // definition, a reason, today, now or one past day, the straddle (StraddleDecay's) and other spreads, the expected
     // move or IV (ChainIntel's), max pain and OI, gold or VIX, Jarvis or the app.
@@ -117,7 +126,8 @@ object AtmBuy {
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         val d = DOUBLE.find(t)?.range?.first
         val u = UP.find(t)?.range?.first
-        val ok = NAME.containsMatchIn(t) || (ATM.containsMatchIn(t) && (d != null || u != null) && HOW.containsMatchIn(t))
+        val ok = NAME.containsMatchIn(t) || (ATM.containsMatchIn(t) && (d != null || u != null) && HOW.containsMatchIn(t)) ||
+            (WORKS.containsMatchIn(t) && PAYS.containsMatchIn(t) && (HOW.containsMatchIn(t) || ASKS.containsMatchIn(t)))
         if (!ok) return null
         val c = CALL.containsMatchIn(t); val p = PUT.containsMatchIn(t)
         val right = when { c && !p -> Right.CE; p && !c -> Right.PE; else -> null }

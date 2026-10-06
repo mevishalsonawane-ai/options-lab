@@ -144,7 +144,8 @@ object Ask {
         // An order to place names its lots ("buy 2 lots..."); anything else about orders, P&L, strategies, limits or the app
         // is a question about the app.
         // A question ("Did I buy 2 lots of Nifty?") is never an order.
-        val placed = if (said.trim().endsWith("?")) null else order(t0)
+        // (Nor an order said with a condition, "agar nifty gire to 2 lot put kharido": Jarvis can't set one to wait, [Conditional].)
+        val placed = if (said.trim().endsWith("?") || Conditional.asked(said)) null else order(t0)
         // "Where is BankNifty trading?" asks the price, not where something is in the app.
         val priceAsk = Market.mentioned(text).isNotEmpty() && rx("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
             !rx(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)
@@ -172,7 +173,9 @@ object Ask {
             // "What was yesterday's high?" with no index named (round 13: read as Boss's history): the index's prior session.
             Lookback.prevAsked(text) && !rx(" (my|mine|our|i|me|we) ").containsMatchIn(t)
         // ("Wrap up my day" holds the day's P&L: Boss's own, like any account question - review, 4 Oct.)
-        val account = DaySummary.asked(text) || DaySummary.asked(said) || TradeReplay.asked(text) != null || MonthReview.asked(text) || Charges.asked(text) || TaxRecords.asked(text) || Exposure.moveAsked(text) != null || Exposure.rankAsked(text) || PositionHealth.asked(said) || BotHealth.asked(said) || Headroom.asked(said) != null || SaidAbout.asked(said) != null || NeedsTrue.asked(said) || MyStreaks.asked(said) || MyNumbers.asked(said) || !priceAsk && !marketFigure && !payoff && !memory && !marketDay && !marketSpan && !gapFill && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
+        // (The positions' what-if read as said too: "banknifty 300 point gire to kitna jayega mera" loses its "jayega" to the
+        // Hinglish reading - understanding round 29.)
+        val account = DaySummary.asked(text) || DaySummary.asked(said) || TradeReplay.asked(text) != null || MonthReview.asked(text) || Charges.asked(text) || TaxRecords.asked(text) || Exposure.moveAsked(text) != null || Exposure.moveAsked(said) != null || Exposure.rankAsked(text) || PositionHealth.asked(said) || BotHealth.asked(said) || Headroom.asked(said) != null || SaidAbout.asked(said) != null || NeedsTrue.asked(said) || MyStreaks.asked(said) || MyNumbers.asked(said) || !priceAsk && !marketFigure && !payoff && !memory && !marketDay && !marketSpan && !gapFill && (ACCOUNT.containsMatchIn(t) || AppAnswers.about(t) && placed?.lots == null)
         val order = if (account) null else placed
         // "Levels on all indices", "how are all the markets": the four indices.
         // (An order's markets are the words as heard: a misheard name never fills one in.)

@@ -139,6 +139,9 @@ object SmallTrades {
         LEAD + "(where|when) do (my |the most )?$SMALL come from" + TAIL + "|" +
         LEAD + "who (makes|made|places|placed|takes|took) (the most |most |my |so many )?$SMALL" + TAIL + "|" +
         LEAD + "(whats |what is |show me |tell me about )?(my )?$SMALL (record|pattern|habit)" + TAIL + "|" +
+        // Understanding round 29: his small trades named alone ("my small trades", "show my tiny trades", "mere chhote trades dikhao").
+        LEAD + "(show me |show |list |what about |how about |and )?(my|mere|meri|our) $SMALL( dikhao| batao| dikha do| bata do)?" + TAIL + "|" +
+        LEAD + "(how are|how re|hows|how s|how is) (my|our) $SMALL( doing| looking| going)?" + TAIL + "|" +
         "^ (jarvis )?(mere |meri |hamare )?(charges|brokerage|chhote trades|chote trades) ke baare (mein|me|main) (tumne )?kya (seekha|sikha|pata chala|dekha)" + TAIL + "|" +
         "^ (jarvis )?(chhote|chote) trades (kaun|kon|kis|kiske|kahan se|kab) (karta|banata|lagata|aate|hote|wala)( hai| hain)?" + TAIL + "|" +
         // Understanding round 28: one source named ("which bot makes tiny trades", "which strategy is making small trades",
