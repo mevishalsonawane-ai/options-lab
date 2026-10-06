@@ -20,12 +20,15 @@ import com.optionslab.ira.Market as IraMarket
  * Jarvis's weekly review ([WeeklyReview]): the app's side. [prepare] runs from the day report's worker at 15:45 on the week's
  * last trading day (and, as a catch-up, from the morning check's worker - a phone that was off on Friday gets it on
  * Saturday or Monday morning), gathers the week's inputs OFF the main thread, keeps the review (the last
- * [WeeklyReview.KEEP_WEEKS], encrypted with the app's other preferences), notes it in the chat and notifies "Weekly review
- * ready". [answer] says it in three sentences when asked. Reads only: nothing is placed, changed, armed or stopped. Not in
+ * [WeeklyReview.KEEP_WEEKS], in its own encrypted file, [FILE] - not the preferences, which every write re-encrypts whole),
+ * notes it in the chat and notifies "Weekly review ready". [answer] says it in three sentences when asked. Reads only: nothing is placed, changed, armed or stopped. Not in
  * IraGoldAlgo (it only talks of gold).
  */
 internal object IraWeekly {
-    private const val KEY = "jarvis.weekly.reviews"
+    /** Where earlier builds kept the reviews (in the preferences): moved to [FILE] once and removed ([migrate]). */
+    internal const val KEY = "jarvis.weekly.reviews"
+    /** The reviews' own file (sealed with [com.optionslab.app.security.Vault], as the app's other records). */
+    internal const val FILE = "weekly-reviews.vault"
     private const val NOTIFY_ID = 2035
     private val lock = Mutex()
 
@@ -35,9 +38,32 @@ internal object IraWeekly {
 
     private fun on() = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
 
-    /** The kept reviews, read from the vault (off the main thread). */
-    fun kept(): List<WeeklyReview.Review> =
-        runCatching { WeeklyReview.decodeAll(com.optionslab.app.security.SecurePrefs.getString(KEY)) }.getOrDefault(emptyList())
+    internal fun file(): java.io.File? = IraHub.appContext()?.let { java.io.File(it.noBackupFilesDir, FILE) }
+
+    /**
+     * Once: reviews an earlier build kept in the preferences move to [FILE] (unless it already holds them) and the key is
+     * removed from the preferences. A write that fails leaves both as they were, tried again on the next read. (After
+     * that, a look-up in the preferences' in-memory map each read: nothing is written.)
+     */
+    @Synchronized private fun migrate() {
+        val p = com.optionslab.app.security.SecurePrefs
+        val old = runCatching { p.getString(KEY) }.getOrNull() ?: return
+        val f = file() ?: return
+        if (!f.exists() && runCatching { com.optionslab.app.security.Vault.writeFile(f, old.toByteArray(Charsets.UTF_8)) }.isFailure) return
+        runCatching { p.putAll(mapOf(KEY to null)) }
+    }
+
+    /** The kept reviews, read from their file (off the main thread). */
+    fun kept(): List<WeeklyReview.Review> = runCatching {
+        migrate()
+        val f = file() ?: return@runCatching emptyList()
+        WeeklyReview.decodeAll(com.optionslab.app.security.Vault.readFileSteady(f)?.toString(Charsets.UTF_8))
+    }.getOrDefault(emptyList())
+
+    private fun save(rs: List<WeeklyReview.Review>) {
+        migrate()
+        file()?.let { com.optionslab.app.security.Vault.writeFile(it, WeeklyReview.encodeAll(rs).toByteArray(Charsets.UTF_8)) }
+    }
 
     /** Reads the kept reviews into [state] (the Ira page's card). */
     suspend fun refresh() = withContext(Dispatchers.IO) { _state.value = kept() }
@@ -57,7 +83,7 @@ internal object IraWeekly {
                 val monday = WeeklyReview.due(now, all.filter { !it.soFar }.map { it.monday }, ::tradingDay) ?: return@withLock
                 val r = build(monday, now, soFar = false)
                 val keep = WeeklyReview.keep(all, r)
-                runCatching { com.optionslab.app.security.SecurePrefs.put(KEY, WeeklyReview.encodeAll(keep)) }
+                runCatching { save(keep) }
                 _state.value = keep
                 IraHub.note("Your weekly review is ready, Boss (${r.title.lowercase()}). ${r.summary} The whole review is on the Ira page.")
                 IraActivity.add("Made the weekly review (${r.title.lowercase()}).")
