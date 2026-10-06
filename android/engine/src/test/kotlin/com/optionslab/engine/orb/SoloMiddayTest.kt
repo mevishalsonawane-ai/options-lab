@@ -293,6 +293,13 @@ class SoloMiddayTest {
         // Each verdict is acted on once per baseline: a new switch-on is a new key.
         assertEquals("FAILED_DRAWDOWN@5", base.key(SoloMidday.Verdict.FAILED_DRAWDOWN))
         assertEquals("FAILED_DRAWDOWN@0", SoloMidday.Baseline().key(SoloMidday.Verdict.FAILED_DRAWDOWN))
+        // An older build's bare verdict (no baseline) counts as acted on only with no switch-on since.
+        assertTrue(SoloMidday.Baseline().actedOn("FAILED_DRAWDOWN", SoloMidday.Verdict.FAILED_DRAWDOWN))
+        assertTrue(SoloMidday.Baseline().actedOn("FAILED_DRAWDOWN@0", SoloMidday.Verdict.FAILED_DRAWDOWN))
+        assertFalse(SoloMidday.Baseline().actedOn("FAILED_NET", SoloMidday.Verdict.FAILED_DRAWDOWN))
+        assertFalse(SoloMidday.Baseline().actedOn(null, SoloMidday.Verdict.FAILED_DRAWDOWN))
+        assertFalse(base.actedOn("FAILED_DRAWDOWN", SoloMidday.Verdict.FAILED_DRAWDOWN))
+        assertTrue(base.actedOn("FAILED_DRAWDOWN@5", SoloMidday.Verdict.FAILED_DRAWDOWN))
         // The net bar is still judged when the record reaches 60 trades (a baseline before 60).
         val sixty = first + List(55) { if (it % 2 == 0) 100.0 else -100.0 }
         assertEquals(60, sixty.size)

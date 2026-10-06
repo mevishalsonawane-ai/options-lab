@@ -21,10 +21,14 @@ internal object IraTradeLessons {
         return toldHere.add("$day|$key")
     }
 
-    /** Today's closed Liquidity 15+5 positions (the arm's own book; reads only). */
-    private suspend fun closedToday(): List<com.optionslab.app.data.OrbArms.Position> =
-        com.optionslab.app.data.OrbArms.view().arms.firstOrNull { it.arm.liquidity }?.today.orEmpty()
-            .filter { !it.open && !it.unconfirmed && it.exitTime != null }
+    /**
+     * The Liquidity 15+5 paper positions entered on [day] and closed (the arm's own book; reads only). The arms' lock may
+     * be held by their tick across a network read: a short wait, else null (this round says nothing; the next one will).
+     */
+    private suspend fun closedToday(day: java.time.LocalDate): List<com.optionslab.app.data.OrbArms.Position>? =
+        kotlinx.coroutines.withTimeoutOrNull(3_000) {
+            runCatching { com.optionslab.app.data.OrbArms.liquidityToday(day) }.getOrNull()
+        }?.filter { !it.open && !it.unconfirmed && it.exitTime != null }
 
     /**
      * The lines not yet said: one for each Liquidity trade closed today that has not had its lesson (each then marked
@@ -32,7 +36,8 @@ internal object IraTradeLessons {
      */
     internal suspend fun unsaid(brief: Boolean): List<String> {
         val day = com.optionslab.app.data.Market.today()
-        return closedToday().filter { it.exitTime!!.toLocalDate() == day }.mapNotNull { p ->
+        val closed = closedToday(day) ?: return emptyList()
+        return closed.filter { it.exitTime!!.toLocalDate() == day }.mapNotNull { p ->
             val l = BotTrades.lesson(IraBots.tradeOf(p)) ?: return@mapNotNull null
             if (!first(day, "${p.arm}|${p.symbol}|${p.entryTime}|lesson|${p.exitTime}")) return@mapNotNull null
             "${BotTrades.label(p.arm)} trade closed - ${if (brief) l.short else l.text}"
@@ -53,7 +58,8 @@ internal object IraTradeLessons {
     suspend fun wrapLine(): String? {
         if (com.optionslab.app.BuildConfig.GOLD) return null
         val day = com.optionslab.app.data.Market.today()
-        val lessons = closedToday().filter { it.exitTime!!.toLocalDate() == day }.mapNotNull { BotTrades.lesson(IraBots.tradeOf(it)) }
+        val closed = closedToday(day) ?: return null
+        val lessons = closed.filter { it.exitTime!!.toLocalDate() == day }.mapNotNull { BotTrades.lesson(IraBots.tradeOf(it)) }
         return TradeLesson.day(lessons)
     }
 }

@@ -260,6 +260,13 @@ object SoloMidday {
     data class Baseline(val from: Int = 0, val peak: Double = 0.0) {
         /** The key a verdict is acted on once under ([verdict] at this baseline). */
         fun key(v: Verdict): String = "${v.name}@$from"
+
+        /**
+         * True when [acted] (the stored key) already covers [v] at this baseline. An older build stored the bare verdict
+         * name with no baseline; with no switch-on recorded since ([from] 0) that counts as acted on, so Solo does not
+         * switch itself off again after Boss turned it back on.
+         */
+        fun actedOn(acted: String?, v: Verdict): Boolean = acted == key(v) || (from == 0 && acted == v.name)
     }
 
     /** The baseline for a switch-on now, after the closed trades' [nets]. */

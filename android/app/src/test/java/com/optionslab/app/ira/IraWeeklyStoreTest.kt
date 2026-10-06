@@ -37,6 +37,22 @@ class IraWeeklyStoreTest : RobolectricTest() {
         assertEquals(old, IraWeekly.kept())
     }
 
+    /** A restored older backup brings the old key back beside the file: the two are merged (one a week), never dropped. */
+    @Test fun reviewsUnderTheOldKeyBesideTheFileAreMergedNotDropped() {
+        val mine = listOf(review(LocalDate.of(2026, 10, 5)), review(LocalDate.of(2026, 9, 28)))
+        val f = IraWeekly.file()!!
+        Vault.writeFile(f, WeeklyReview.encodeAll(mine).toByteArray(Charsets.UTF_8))
+        val restored = listOf(review(LocalDate.of(2026, 9, 28)).copy(summary = "From the backup."), review(LocalDate.of(2026, 9, 21)))
+        SecurePrefs.put(IraWeekly.KEY, WeeklyReview.encodeAll(restored))
+
+        val kept = IraWeekly.kept()
+        assertEquals(listOf(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 9, 28), LocalDate.of(2026, 9, 21)), kept.map { it.monday })
+        // The same week in both: the file's own is kept.
+        assertEquals("A quiet week.", kept[1].summary)
+        assertNull(SecurePrefs.getString(IraWeekly.KEY))
+        assertEquals(kept, IraWeekly.kept())
+    }
+
     @Test fun noReviewsAnywhereIsEmpty() {
         assertEquals(emptyList<WeeklyReview.Review>(), IraWeekly.kept())
         assertFalse(IraWeekly.file()!!.exists())

@@ -45,8 +45,6 @@ object ForwardRecords {
             keys.forEach { k -> groups[k] = groups[k].orEmpty() + r }
         }
         val seen = HashSet<String>()
-        fun check(r: ShadowArms.Row) = ForwardCheck.check(ForwardCheck.SHADOWS.getValue(r.variant.id),
-            r.trades.filter { !it.open }.mapNotNull { t -> t.net?.let { ForwardCheck.Trade(t.day, it) } })
         return groups.values.mapNotNull { mine ->
             val checks = mine.map(::check)
             val i = ForwardCheck.bestIndex(checks).takeIf { it >= 0 } ?: return@mapNotNull null
@@ -54,6 +52,23 @@ object ForwardRecords {
             if (!seen.add(best.variant.id)) return@mapNotNull null
             Row(checks[i], shadow = true, title = "${best.variant.label} · shadow ${best.variant.name}")
         }
+    }
+
+    /** A pinned shadow's closed trades against its research. */
+    private fun check(r: ShadowArms.Row) = ForwardCheck.check(ForwardCheck.SHADOWS.getValue(r.variant.id),
+        r.trades.filter { !it.open }.mapNotNull { t -> t.net?.let { ForwardCheck.Trade(t.day, it) } })
+
+    /**
+     * The index in [mine] (one arm's shadows) of the shadow [bestShadows] names for that arm - among those with a pinned
+     * expectation, the one that holds up best against its own research; with none pinned, the highest net
+     * ([com.optionslab.engine.orb.ShadowRules.bestIndex], a tie keeps the research's own) - or -1 with none. The Retired
+     * section's line uses it too, so both name the same best shadow.
+     */
+    fun bestShadowIndex(mine: List<ShadowArms.Row>): Int {
+        val pinned = mine.indices.filter { mine[it].variant.id in ForwardCheck.SHADOWS }
+        if (pinned.isEmpty()) return com.optionslab.engine.orb.ShadowRules.bestIndex(mine.map { it.summary.net })
+        val i = ForwardCheck.bestIndex(pinned.map { check(mine[it]) })
+        return if (i < 0) -1 else pinned[i]
     }
 
     /**

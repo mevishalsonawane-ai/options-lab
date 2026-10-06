@@ -458,13 +458,14 @@ class OrbRowsTest {
 
     @Test fun eachRetiredArmShowsTheBestOfItsShadowsOnOneLineAndTheCandidateItsOwn() {
         rows(StrategyFakes.orbView(), live = false)
-        // Two or three shadows an arm: one line each arm, the best record's (the tap lists them all).
-        assertTrue(shown(keepNumbersWhole("Best of 2 shadows · Shadow (OP10, no orders): 20 trades since 06 Oct, net −₹3,000 (−₹150 a trade)")))
+        // Two or three shadows an arm: one line each arm, the best one's as Live vs backtest names it - against its own
+        // research, not the raw net (the tap lists them all). Here each shadow has the same two closed trades: V43 is the
+        // best of ORB's and ORB Fresh's, SH1 of the Sweep's pinned ones, and RP10 the Range Fade's only pinned one.
         val fresh = keepNumbersWhole("Best of 2 shadows · Shadow (V43, no orders): 124 trades since 06 Oct, net −₹12,345 (−₹100 a trade)")
-        assertEquals("under ORB Fresh only (ORB's best is OP10)", 1, compose.onAllNodesWithText(fresh, useUnmergedTree = true).fetchSemanticsNodes().size)
-        assertTrue(shown(keepNumbersWhole("Best of 3 shadows · Shadow (S14, no orders): 12 trades since 06 Oct, net ₹18,000 (₹1,500 a trade)")))
-        assertTrue(shown(keepNumbersWhole("Best of 2 shadows · Shadow (R20, no orders): 37 trades since 06 Oct, net −₹1,776 (−₹48 a trade)")))
-        assertTrue("the others are in the detail only", listOf("Shadow (S17", "Shadow (SH1", "Shadow (RP10", "Shadow (FP10").none { shown(keepNumbersWhole(it)) })
+        assertEquals("under ORB and ORB Fresh", 2, compose.onAllNodesWithText(fresh, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertTrue(shown(keepNumbersWhole("Best of 3 shadows · Shadow (SH1, no orders): 40 trades since 06 Oct, net −₹2,000 (−₹50 a trade)")))
+        assertTrue(shown(keepNumbersWhole("Best of 2 shadows · Shadow (RP10, no orders): 25 trades since 06 Oct, net −₹5,000 (−₹200 a trade)")))
+        assertTrue("the others are in the detail only", listOf("Shadow (S17", "Shadow (S14", "Shadow (R20", "Shadow (OP10", "Shadow (FP10").none { shown(keepNumbersWhole(it)) })
         assertTrue(shown("Midday momentum (NIFTY): new candidate, in the shadow only"))
         assertTrue(shown(keepNumbersWhole("Shadow (O08, no orders): 9 trades since 06 Oct, net ₹21,105 (₹2,345 a trade)")))
         assertTrue(shown("Tap for every shadow's record and why its losers lost"))
@@ -476,7 +477,12 @@ class OrbRowsTest {
     @Test fun theRetiredLineIsTheOnlyShadowOrTheBestOfSeveral() {
         val rows = StrategyFakes.shadowRows()
         assertEquals(null, retiredShadowLine(rows, "liquidity"))
-        assertEquals(rows.single { it.variant.id == "orb_p10" }.line.let { "Best of 2 shadows · $it" }, retiredShadowLine(rows, "orb"))
+        assertEquals(rows.single { it.variant.id == "orb_v43" }.line.let { "Best of 2 shadows · $it" }, retiredShadowLine(rows, "orb"))
+        // The same best as Live vs backtest names for each arm (not the raw best net, OP10's).
+        val named = com.optionslab.app.data.ForwardRecords.bestShadows(rows).map { it.title }
+        assertTrue(named.toString(), named.any { it.endsWith("shadow V43") })
+        assertTrue(named.toString(), named.any { it.endsWith("shadow RP10") })
+        assertTrue(named.toString(), named.any { it.endsWith("shadow SH1") })
         // With only one shadow of an arm: its own line, no "best of".
         assertEquals(rows.single { it.variant.id == "fade_r20" }.line, retiredShadowLine(rows.filter { it.variant.id != "fade_p10" }, "range_fade"))
     }

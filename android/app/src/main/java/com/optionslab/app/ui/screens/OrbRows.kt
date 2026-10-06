@@ -417,12 +417,13 @@ private fun replayable(a: OrbArms.ArmView, t: OrbArms.Position): Boolean =
     a.arm.liquidity && !t.open && !t.live && !com.optionslab.app.BuildConfig.GOLD
 
 /**
- * A retired arm's line under it in the Retired section: its one shadow's line, or with two or three the best record's
- * (highest net; a tie keeps the research's own) as "Best of N shadows · ..."; null with none.
+ * A retired arm's line under it in the Retired section: its one shadow's line, or with two or three the best one's as
+ * "Best of N shadows · ..." - the same best as Live vs backtest's ([com.optionslab.app.data.ForwardRecords.bestShadowIndex]:
+ * against its own research, not the raw net); null with none.
  */
 internal fun retiredShadowLine(shadows: List<com.optionslab.app.data.ShadowArms.Row>, source: String): String? {
     val mine = shadows.filter { s -> s.variant.arms.any { it.source == source } }
-    val best = mine.getOrNull(com.optionslab.engine.orb.ShadowRules.bestIndex(mine.map { it.summary.net })) ?: return null
+    val best = mine.getOrNull(com.optionslab.app.data.ForwardRecords.bestShadowIndex(mine)) ?: return null
     return com.optionslab.engine.orb.ShadowRules.bestOf(mine.size, best.line)
 }
 

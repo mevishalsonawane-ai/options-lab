@@ -197,6 +197,16 @@ class BackupTest : RobolectricTest() {
         assertEquals("light", SecurePrefs.getString("ui.theme"))
     }
 
+    /** Jarvis's weekly reviews moved to their own file: a backup carries it (sealed) and a restore puts it back. */
+    @Test fun theWeeklyReviewsFileIsCarried() = runBlocking {
+        val f = File(context.noBackupFilesDir, "weekly-reviews.vault")
+        Vault.writeFile(f, "the reviews".toByteArray())
+        val bytes = Backup.create(context, pass.copyOf())
+        f.delete()
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals("the reviews", String(Vault.readFile(f)!!))
+    }
+
     @Test fun filesMissingFromTheBackupAreRemovedHere() {
         seedPhone()
         val c = Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject()), pass.copyOf())

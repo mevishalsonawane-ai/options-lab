@@ -126,4 +126,18 @@ class IraTradeLessonsTest : RobolectricTest() {
         val wrap = runBlocking { IraTradeLessons.wrapLine() }
         assertTrue(wrap.toString(), wrap!!.startsWith("Liquidity 15+5 in research terms: 1 trade ("))
     }
+
+    /** The arms' tick may hold their lock across a network read: the lesson waits a short while, then says nothing. */
+    @Test fun aHeldArmsLockNeverStallsTheWordsLane() {
+        val lock = OrbArms::class.java.getDeclaredField("lock").apply { isAccessible = true }.get(null) as kotlinx.coroutines.sync.Mutex
+        runBlocking { lock.lock() }
+        try {
+            val t0 = System.currentTimeMillis()
+            runBlocking { IraTradeLessons.watch() }
+            val wrap = runBlocking { IraTradeLessons.wrapLine() }
+            val waited = System.currentTimeMillis() - t0
+            assertEquals(null, wrap)
+            assertTrue("waited $waited ms", waited < 15_000)
+        } finally { lock.unlock() }
+    }
 }

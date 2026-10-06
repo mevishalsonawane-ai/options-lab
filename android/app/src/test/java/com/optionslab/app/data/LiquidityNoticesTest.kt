@@ -16,6 +16,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -92,8 +94,12 @@ class LiquidityNoticesTest : RobolectricTest() {
     private fun shown(prefix: String): List<Notification> =
         Background.notifications(context).allNotifications.filter { Background.title(it)?.startsWith(prefix) == true }
 
-    private fun words(n: Notification): String =
-        (n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: n.extras.getCharSequence(Notification.EXTRA_TEXT)).toString()
+    /** The whole text: kept in the extras with the plain style and with the chart's custom view alike. */
+    private fun words(n: Notification): String {
+        val big = n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+        assertNotNull("the whole text is in the extras", big)
+        return big.toString()
+    }
 
     private fun trade() {
         val msg = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
@@ -155,6 +161,11 @@ class LiquidityNoticesTest : RobolectricTest() {
         assertEquals("off by default", 0, shown("Liquidity 15+5 skipped").size)
         com.optionslab.app.ira.Automations.set(com.optionslab.app.ira.Automations.Auto.LIQSKIP, true)
         assertTrue(com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.LIQSKIP))
+        // "Other alerts" off (the default): not a buy or sell, so not posted - and not marked told either.
+        AppSettings.save(AppSettings.load().copy(otherAlerts = false))
+        LiquidityNotices.skip(context, "liquidity5", bar, skip, bar.plusMinutes(5))
+        assertEquals("other alerts off", 0, shown("Liquidity 15+5 skipped").size)
+        AppSettings.save(AppSettings.load().copy(otherAlerts = true))
         LiquidityNotices.skip(context, "liquidity5", bar, skip, bar.plusMinutes(5))
         LiquidityNotices.skip(context, "liquidity5", bar, skip, bar.plusMinutes(20))
         val n = shown("Liquidity 15+5 skipped").single()
@@ -165,5 +176,51 @@ class LiquidityNoticesTest : RobolectricTest() {
         assertFalse(com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.LIQSKIP))
         assertTrue(com.optionslab.app.ira.Automations.ownSwitch(com.optionslab.app.ira.Automations.Auto.LIQSKIP))
         com.optionslab.app.ira.Automations.set(com.optionslab.app.ira.Automations.Group.MARKET, true)
+    }
+
+    private fun entry(at: LocalDateTime) = LiquidityNotice.Entry(LiquidityNotice.Book("BANKNIFTY", 5), false, "CE", 54_000.0,
+        "BANKNIFTY-LIQ-54000CE", 30, 1.0, 300.0, at, 54_100.0, 54_300.0, 54_140.0, 255.0, 30.0)
+
+    /** With bars to draw: the chart's custom view, the whole text still in the extras, and no second sound for the entry. */
+    @Test fun anEntryWithAChartDrawsItAndStaysQuiet() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        AppSettings.save(AppSettings.load().copy(hideAmountsOnLockScreen = false))
+        var asked: Pair<Int, Int>? = null
+        val geo = LiquidityNotice.Chart(200, 64, 6f, listOf(LiquidityNotice.Candle(20f, 10f, 50f, 20f, 40f, true),
+            LiquidityNotice.Candle(40f, 12f, 52f, 22f, 44f, false)), 30f, 8f, false, LiquidityNotice.Marker(20f, 20f), null)
+        LiquidityNotices.entry(context, "liquidity5|BANKNIFTY-LIQ-54000CE|chart", entry(day.atTime(13, 5))) { w, h -> asked = w to h; geo }
+        assertNotNull("the chart was asked for", asked)
+        val n = shown("Liquidity 15+5 bought").single()
+        assertEquals(com.optionslab.app.R.layout.notif_liquidity_big, n.bigContentView.layoutId)
+        val w = words(n)
+        assertTrue(w, w.startsWith("BANKNIFTY 5-min · 1 lot (30) @ 300"))
+        assertTrue(w, w.contains("Broke 54,100"))
+        // The fill's BUY card sounded already: this one is silent (one sound an entry).
+        assertEquals(Notification.GROUP_ALERT_SUMMARY, n.groupAlertBehavior)
+        val bmp = LiquidityNotices.draw(geo, 1f)
+        assertEquals(200, bmp.width); assertEquals(64, bmp.height)
+    }
+
+    /** Without permission nothing is marked told: the notice comes once permission is back. */
+    @Test fun aNoticeIsNotLostWhileNotificationsAreNotAllowed() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val e = entry(day.atTime(13, 5))
+        Background.denyNotifications(context)
+        LiquidityNotices.entry(context, "liquidity5|perm", e) { _, _ -> null }
+        Background.grantNotifications(context)
+        assertEquals(0, shown("Liquidity 15+5 bought").size)
+        LiquidityNotices.entry(context, "liquidity5|perm", e) { _, _ -> null }
+        assertEquals(1, shown("Liquidity 15+5 bought").size)
+    }
+
+    /** Two positions of a day whose hashes collide still get ids of their own; a position keeps its id. */
+    @Test fun eachPositionOfADayHasItsOwnNotificationId() {
+        assertEquals("Aa".hashCode(), "BB".hashCode())
+        val a = LiquidityNotices.entryId(context, day, "liquidity5|Aa")
+        val b = LiquidityNotices.entryId(context, day, "liquidity5|BB")
+        assertNotEquals(a, b)
+        assertEquals(a, LiquidityNotices.entryId(context, day, "liquidity5|Aa"))
+        assertEquals(b, LiquidityNotices.entryId(context, day, "liquidity5|BB"))
+        for (id in listOf(a, b)) assertTrue("$id", id in 40_000..47_998 && id % 2 == 0)
     }
 }

@@ -29,15 +29,41 @@ import java.time.LocalDateTime
 object LiquidityNotices {
     private const val PREFS = "liquidity.notices"
     private const val KEY = "told"
+    private const val IDS_KEY = "ids"
+    /** Entries' and exits' ids: 40,000-47,999 (a slot each position, two ids a slot); skipped breaks' 48,000-48,099. */
     private const val ENTRY_IDS = 40_000
+    private const val SLOTS = 4_000
     private const val SKIP_IDS = 48_000
     /** Skipped breaks: at most one a book in this many minutes. */
     private const val SKIP_GAP_MIN = 10L
 
     private val lastSkip = HashMap<String, LocalDateTime>()
 
-    /** The notification ids of a position's entry and exit (the exit's is the entry's + 1). */
-    fun entryId(position: String): Int = ENTRY_IDS + ((position.hashCode() and Int.MAX_VALUE) % 3_000) * 2
+    /**
+     * The notification ids of a position's entry and exit (the exit's is the entry's + 1): a slot of its own for the day,
+     * kept across a restart ([IDS_KEY]: "day|digest|slot", the position as a digest only), so two positions of a day never
+     * share one. A new position's slot is the first free one from its hash.
+     */
+    @Synchronized internal fun entryId(context: Context, day: LocalDate, position: String): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val digest = digest(position)
+        val kept = prefs.getStringSet(IDS_KEY, emptySet()).orEmpty().filterTo(HashSet()) { it.startsWith("$day|") }
+        val taken = HashSet<Int>()
+        for (k in kept) {
+            val parts = k.split('|')
+            val slot = parts.getOrNull(2)?.toIntOrNull() ?: continue
+            if (parts.getOrNull(1) == digest) return ENTRY_IDS + slot * 2
+            taken += slot
+        }
+        val start = (position.hashCode() and Int.MAX_VALUE) % SLOTS
+        val slot = (0 until SLOTS).map { (start + it) % SLOTS }.firstOrNull { it !in taken } ?: start
+        kept += "$day|$digest|$slot"
+        prefs.edit().putStringSet(IDS_KEY, kept).apply()
+        return ENTRY_IDS + slot * 2
+    }
+
+    private fun digest(s: String): String = java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray(Charsets.UTF_8))
+        .take(12).joinToString("") { "%02x".format(it) }
 
     /**
      * True the first time [event] is seen on [day] (then remembered, also across a restart): the dedupe of every notice.
@@ -64,33 +90,40 @@ object LiquidityNotices {
     /** An entry: told once for [position] (the arm, the contract and the entry time). [chart] is drawn when given. */
     fun entry(context: Context, position: String, e: LiquidityNotice.Entry, chart: (Int, Int) -> LiquidityNotice.Chart?) {
         if (com.optionslab.app.BuildConfig.GOLD) return
-        if (!once(context, e.time.toLocalDate(), "$position|entry")) return
+        // No permission: nothing is marked told (it is told once it can be).
+        if (!Notifier.canPost(context)) return
+        val day = e.time.toLocalDate()
+        if (!once(context, day, "$position|entry")) return
         val h = hide()
-        post(context, entryId(position), Notifier.BUY, "BUY", LiquidityNotice.entry(e, h), chart)
+        // The fill's own BUY card has already sounded for this entry: this one shows without a second sound or buzz.
+        post(context, entryId(context, day, position), Notifier.BUY, "BUY", LiquidityNotice.entry(e, h), chart, silent = true)
     }
 
     /** An exit: told once for [position] and its exit time (a part sold earlier is its own exit). */
     fun exit(context: Context, position: String, x: LiquidityNotice.Exit, chart: (Int, Int) -> LiquidityNotice.Chart?) {
         if (com.optionslab.app.BuildConfig.GOLD) return
+        if (!Notifier.canPost(context)) return
         if (!once(context, x.exitTime.toLocalDate(), "$position|exit|${x.exitTime}")) return
         val h = hide()
-        post(context, entryId(position) + 1, Notifier.SELL, "SELL", LiquidityNotice.exit(x, h), chart)
+        post(context, entryId(context, x.entryTime.toLocalDate(), position) + 1, Notifier.SELL, "SELL", LiquidityNotice.exit(x, h), chart)
     }
 
     /**
      * A break skipped for want of room ([com.optionslab.engine.orb.LiquidityRules.hasRoom]): only with its switch on, not
      * while saving battery, once per break and at most once a book in [SKIP_GAP_MIN] minutes. Quiet (no sound, low priority).
+     * Not a buy or sell: like every other notice, only with "other alerts" on ([AppSettings.otherAlerts], as [Notifier.post]).
      */
     fun skip(context: Context, book: String, bar: LocalDateTime, s: LiquidityNotice.Skip, now: LocalDateTime) {
         if (com.optionslab.app.BuildConfig.GOLD) return
         if (!com.optionslab.app.ira.Automations.on(com.optionslab.app.ira.Automations.Auto.LIQSKIP)) return
         if (saving(context)) return
+        if (!Notifier.canPost(context)) return
+        if (!runCatching { AppSettings.load().otherAlerts }.getOrDefault(false)) return
         synchronized(this) { lastSkip[book]?.let { if (now.isBefore(it.plusMinutes(SKIP_GAP_MIN))) return } }
         if (!once(context, bar.toLocalDate(), "$book|skip|$bar")) return
         synchronized(this) { lastSkip[book] = now }
         val said = LiquidityNotice.skip(s)
         runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.LIQSKIP, said.line) }
-        if (!Notifier.canPost(context)) return
         val id = SKIP_IDS + ((book.hashCode() and Int.MAX_VALUE) % 100)
         val b = Notifier.builder(context, Notifier.HEALTH, said.title, said.line, "strategy",
             card = NoticeCard(id, Notifier.HEALTH, said.title, said.body, System.currentTimeMillis(), tab = "strategy"))
@@ -101,13 +134,16 @@ object LiquidityNotices {
     }
 
     private fun post(context: Context, id: Int, channel: String, side: String, said: LiquidityNotice.Said,
-                     chart: (Int, Int) -> LiquidityNotice.Chart?) {
+                     chart: (Int, Int) -> LiquidityNotice.Chart?, silent: Boolean = false) {
         if (!Notifier.canPost(context)) return
         // The plain trade notification (title, the first line collapsed, the whole text expanded), as every fill's.
         val b = Notifier.builder(context, channel, said.title, said.line, "strategy",
             card = NoticeCard(id, channel, said.title, said.body, System.currentTimeMillis(), tab = "strategy"))
             .setContentText(said.line)
             .setStyle(NotificationCompat.BigTextStyle().bigText(said.body))
+            // The whole text stays in the extras even with the chart's custom view (accessibility, a watch).
+            .addExtras(android.os.Bundle().apply { putCharSequence(NotificationCompat.EXTRA_BIG_TEXT, said.body) })
+        if (silent) b.setSilent(true)
         // Expanded: the words over the mini-chart (left out while saving battery, or when there are no bars to draw).
         if (!saving(context)) runCatching {
             val d = context.resources.displayMetrics.density.coerceIn(1f, 2f)

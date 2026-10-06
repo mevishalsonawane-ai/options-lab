@@ -69,6 +69,7 @@ class IraSoloTest : RobolectricTest() {
         upstox = FakeUpstox()                               // (clears Market.testClock: set it after)
         kite = FakeKite()
         TradeFixtures.paperSettings()
+        IraSolo.resetForTest()
         day = AutomationSupport.tradingDayAt(12, 0).toLocalDate()
         at(LocalTime.of(11, 0))
         val expiry = day.plusDays(2)
@@ -254,6 +255,20 @@ class IraSoloTest : RobolectricTest() {
         // Switched off and on by hand (not by itself): the baseline stays.
         IraSolo.on = false; IraSolo.on = true
         assertEquals(SoloMidday.Baseline(1, net), IraSolo.baseline())
+        assertNoKite()
+    }
+
+    /** An older build kept the bare verdict ("FAILED_DRAWDOWN"): Boss's switch-on since then stands, Solo stays on. */
+    @Test fun aLegacyBareVerdictIsNotActedOnAgain() {
+        SecurePrefs.put("jarvis.solo.midday.verdict", "FAILED_DRAWDOWN")
+        upstox.price(ceKey, 1_000.0)
+        IraSolo.on = true
+        pass(LocalTime.of(12, 1))
+        upstox.price(ceKey, 100.0)
+        pass(LocalTime.of(12, 31), seconds = 5)
+        assertTrue(IraSolo.all().single().closed)
+        assertEquals(SoloMidday.Baseline(), IraSolo.baseline())
+        assertTrue("Boss's switch-on stands", IraSolo.on)
         assertNoKite()
     }
 

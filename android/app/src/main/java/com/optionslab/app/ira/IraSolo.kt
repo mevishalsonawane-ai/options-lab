@@ -223,6 +223,12 @@ internal object IraSolo {
         runCatching { expiries(today) }
     }
 
+    /** Tests: forget the day's memory (ATR14s, listed expiries, the early reads, the decision and what Solo saw). */
+    internal fun resetForTest() {
+        synchronized(atrs) { atrs.clear() }
+        listed = null; prefetched = null; decided = null; watch = null
+    }
+
     private suspend fun atr(u: String, day: LocalDate): Double? {
         synchronized(atrs) { atrs[u]?.takeIf { it.first == day }?.let { return it.second } }
         val raw = testDaily?.invoke(u)
@@ -523,7 +529,8 @@ internal object IraSolo {
         val acted = runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY_VERDICT) }.getOrNull()
         // Once per verdict and baseline: after Boss switches it back on (a new baseline), a new failure switches it off again.
         val key = c.base.key(v)
-        if (SoloMidday.switchOff(v) && acted != key) {
+        // (An older build kept the bare verdict: acted on too while no switch-on has been recorded since.)
+        if (SoloMidday.switchOff(v) && !c.base.actedOn(acted, v)) {
             // Switching off only lowers risk: allowed by itself. Turning it back on is Boss's choice.
             runCatching { com.optionslab.app.security.SecurePrefs.putAll(mapOf(KEY_VERDICT to key, KEY_ON to false, KEY_PAUSED to words)) }
             IraActivity.add("Solo switched itself off: the forward test's bar failed.")

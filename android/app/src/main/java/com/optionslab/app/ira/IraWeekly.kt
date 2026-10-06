@@ -41,15 +41,23 @@ internal object IraWeekly {
     internal fun file(): java.io.File? = IraHub.appContext()?.let { java.io.File(it.noBackupFilesDir, FILE) }
 
     /**
-     * Once: reviews an earlier build kept in the preferences move to [FILE] (unless it already holds them) and the key is
-     * removed from the preferences. A write that fails leaves both as they were, tried again on the next read. (After
-     * that, a look-up in the preferences' in-memory map each read: nothing is written.)
+     * Once: reviews an earlier build kept in the preferences move to [FILE] and the key is removed from the preferences.
+     * When the file already holds reviews (the key came back with a restored older backup), the two are merged
+     * ([WeeklyReview.keep]: one a week, the file's own kept over the key's). A read or write that fails leaves both as
+     * they were, tried again on the next read. (After that, a look-up in the preferences' in-memory map each read: nothing
+     * is written.)
      */
     @Synchronized private fun migrate() {
         val p = com.optionslab.app.security.SecurePrefs
         val old = runCatching { p.getString(KEY) }.getOrNull() ?: return
         val f = file() ?: return
-        if (!f.exists() && runCatching { com.optionslab.app.security.Vault.writeFile(f, old.toByteArray(Charsets.UTF_8)) }.isFailure) return
+        val merged = if (!f.exists()) old else {
+            val here = runCatching { com.optionslab.app.security.Vault.readFileSteady(f) }.getOrNull() ?: return
+            val mine = WeeklyReview.decodeAll(here.toString(Charsets.UTF_8))
+            val all = (mine + WeeklyReview.decodeAll(old)).reversed().fold(emptyList<WeeklyReview.Review>()) { acc, r -> WeeklyReview.keep(acc, r) }
+            WeeklyReview.encodeAll(all)
+        }
+        if (runCatching { com.optionslab.app.security.Vault.writeFile(f, merged.toByteArray(Charsets.UTF_8)) }.isFailure) return
         runCatching { p.putAll(mapOf(KEY to null)) }
     }
 

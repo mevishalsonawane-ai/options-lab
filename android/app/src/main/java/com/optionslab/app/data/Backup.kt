@@ -49,7 +49,9 @@ object Backup {
     private val FILES = listOf("f" to "strategies.vault", "f" to "orb.vault", "f" to "paper.vault", "f" to "pine.vault",
         "n" to "ledger.vault", "n" to "alarms.vault", "n" to "live_trades.vault", "n" to "journal.vault",
         // What Ira / Jarvis learned (the pattern book; proposals, review journal and conversation).
-        "n" to "ira-book.vault", "n" to "ira-state.vault")
+        "n" to "ira-book.vault", "n" to "ira-state.vault",
+        // Jarvis's weekly reviews (their own file since they left the preferences: IraWeekly.FILE).
+        "n" to "weekly-reviews.vault")
 
     /**
      * Preferences that stay on this phone only: never written to a backup, never taken from one - the PIN, Live mode and
