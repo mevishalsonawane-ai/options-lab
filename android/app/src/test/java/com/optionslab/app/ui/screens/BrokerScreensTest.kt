@@ -131,8 +131,10 @@ class BrokerScreensTest {
 
     private fun until(what: String, timeoutMs: Long = 20_000, cond: () -> Boolean) = try {
         compose.waitUntil(timeoutMs) {
-            shadowOf(Looper.getMainLooper()).idle()
-            if (!compose.mainClock.autoAdvance) compose.mainClock.advanceTimeByFrame()
+            // The paused main looper runs only what is due now: a frame or a result posted with a small delay waits for
+            // its clock, which real time never moves. Move the looper's clock a frame and the compose clock with it.
+            shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(16))
+            compose.mainClock.advanceTimeByFrame()
             cond()
         }
     } catch (e: Throwable) { throw AssertionError("timed out waiting for $what\n" + workers(), e) }

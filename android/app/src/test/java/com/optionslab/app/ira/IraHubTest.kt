@@ -71,6 +71,7 @@ class IraHubTest : RobolectricTest() {
     @Test fun aBacktestIsOfferedAndApprovedAsAPaperArm() = runBlocking {
         IraHub.testLabBars = { _, _ -> twoYears }
         com.optionslab.app.data.PineScripts.init(context)
+        com.optionslab.app.data.PineScripts.wipe()       // a script another test approved would make this one a duplicate
         IraHub.testHistories = { sixty }
         IraHub.refresh()
         IraHub.ask("Backtest the breakout on BankNifty 15m")
