@@ -898,6 +898,7 @@ class CoverageTest {
         "what if nifty falls 100 points what happens to my positions" to "Account:MOVE",
         "how much do i lose if nifty falls 1%" to "Account:MOVE", "if nifty drops 200 points what happens to my p&l" to "Account:MOVE",
         "what's my exposure if banknifty moves 500 points" to "Account:MOVE",
+        "agar nifty 50 point gire to mera kya hoga" to "Account:MOVE", "agar banknifty 1% chadhe to meri positions ka kya hoga" to "Account:MOVE",
         "what if i had taken that trade" to "Account:WHATIF",
         // ---- DayClock: when the high and low usually come, by now, and the busiest half hour (round 13) ----
         "when does nifty usually make its high" to "DayClock", "what time does banknifty normally make its low" to "DayClock",
@@ -1437,7 +1438,7 @@ class CoverageTest {
             // Round 7: the families added since, each beside the one it sounds like.
             ("what if nifty falls 1%" to "Scenarios") to ("how much do i lose if nifty falls 1%" to "Account:MOVE"),
             ("what if nifty moves 100 points" to "Scenarios") to ("what happens to my p&l if nifty moves 100 points" to "Account:MOVE"),
-            ("agar nifty 1% gir jaye to kya hoga" to "Scenarios") to ("agar nifty 1% gira to mera p&l kya hoga" to "Account:PNL"),
+            ("agar nifty 1% gir jaye to kya hoga" to "Scenarios") to ("agar nifty 1% gira to mera p&l kya hoga" to "Account:MOVE"),
             ("what if nifty swings 300 points" to "Scenarios") to ("nifty swing levels" to "Structure"),
             ("what if nifty opens 1% down" to "Scenarios") to ("what if i had taken that trade" to "Account:WHATIF"),
             ("what's the structure today" to "Structure") to ("how did the day go for nifty" to "DayStory"),

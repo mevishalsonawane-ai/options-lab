@@ -697,20 +697,38 @@ internal object IraCoach {
     internal suspend fun openLegsRead(once: IraAccount.PaperOnce? = null): Pair<List<com.optionslab.ira.Exposure.Leg>, com.optionslab.ira.SinceMorning.Zerodha> {
         val now = java.time.ZonedDateTime.now(IST)
         fun spot(u: String) = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
-        /** Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now. */
-        fun greeks(right: com.optionslab.engine.Right, u: String, strike: Double, expiry: LocalDate, price: Double): Pair<Double, Double>? {
-            if (right == com.optionslab.engine.Right.IX) return 1.0 to 0.0
+        /**
+         * Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now, with what it was
+         * priced from (its IV, strike and time) to reprice it at a move (reasoning, round 32).
+         */
+        fun greeks(right: com.optionslab.engine.Right, u: String, strike: Double, expiry: LocalDate, price: Double): Triple<Double, Double, com.optionslab.ira.Exposure.Model?>? {
+            if (right == com.optionslab.engine.Right.IX) return Triple(1.0, 0.0, null)
             val s = spot(u) ?: return null
             val t = com.optionslab.engine.options.OptionMath.timeToExpiryYears(now, expiry)
-            val g = com.optionslab.engine.options.OptionMath.legGreeks(if (right == com.optionslab.engine.Right.CE) com.optionslab.engine.options.OptionType.CE
-                else com.optionslab.engine.options.OptionType.PE, s, strike, t, price)?.greeks ?: return null
-            return g.delta to g.gamma
+            val call = right == com.optionslab.engine.Right.CE
+            val lg = com.optionslab.engine.options.OptionMath.legGreeks(if (call) com.optionslab.engine.options.OptionType.CE
+                else com.optionslab.engine.options.OptionType.PE, s, strike, t, price) ?: return null
+            val model = if (lg.theoretical || !(lg.ivPct > 0)) null else com.optionslab.ira.Exposure.Model(call, strike, t, lg.ivPct / 100.0, s)
+            return Triple(lg.greeks.delta, lg.greeks.gamma, model)
+        }
+        // Each position's own stop and target as the app keeps them (a protection's, else a strategy's stop): set against
+        // the estimated price at a move asked. Read only.
+        val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
+        val armsOpen = runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).mapNotNull { it.open }
+        fun levels(live: Boolean, symbol: String): Pair<Double?, Double?> {
+            val pr = prot.firstOrNull { it.live == live && it.symbol == symbol }
+            val armStop: Double? = armsOpen.firstOrNull { it.live == live && it.symbol == symbol }?.stopTrigger
+            val stop: Double? = pr?.stop ?: armStop
+            val target: Double? = pr?.target
+            return stop to target
         }
         val out = ArrayList<com.optionslab.ira.Exposure.Leg>()
         runCatching { paperView(once, Paper.SHARED_QUOTE_MS)?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
             val g = c?.let { runCatching { greeks(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() }
-            out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second)
+            val lv = levels(false, p.symbol)
+            out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second,
+                stop = lv.first, target = lv.second, model = g?.third)
         } }
         var zerodha = if (Broker.loggedIn) com.optionslab.ira.SinceMorning.Zerodha.FAILED else com.optionslab.ira.SinceMorning.Zerodha.LOGGED_OUT
         if (Broker.loggedIn) runCatching {
@@ -720,7 +738,9 @@ internal object IraCoach {
             book?.net.orEmpty().filter { it.open }.forEach { p ->
                 val i = ins[p.symbol]
                 val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
-                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second)
+                val lv = levels(true, p.symbol)
+                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second,
+                    stop = lv.first, target = lv.second, model = g?.third)
             }
             if (book != null) zerodha = com.optionslab.ira.SinceMorning.Zerodha.READ
         }
@@ -730,6 +750,8 @@ internal object IraCoach {
     /** "What happens to my P&L if Nifty moves 100 points": a rough figure from the open positions' deltas. Reads only. */
     suspend fun moveLines(question: String, once: IraAccount.PaperOnce? = null): List<String> {
         val s = com.optionslab.ira.Exposure.moveAsked(question) ?: return listOf("Ask it with a size, Boss: \"what happens to my P&L if Nifty moves 100 points\".")
+        // His positions are never said on a locked phone.
+        if (IraHub.locked()) return listOf("Your positions stay out of it on a locked phone, Boss - unlock it for those.")
         val spot = runCatching { IraHub.state.value.snaps[s.market]?.price }.getOrNull()
         return com.optionslab.ira.Exposure.move(s, openLegs(once), spot)
     }
