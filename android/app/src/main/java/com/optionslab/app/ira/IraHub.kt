@@ -1808,7 +1808,7 @@ object IraHub {
         // "Run a self check": each part Jarvis needs, working or not, from what the app knows now (no account figures).
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.SelfCheck.asked(q) }.getOrDefault(false)) {
             val c = app
-            val voiceOn = JarvisVoice.wanted
+            val voiceOn = JarvisVoice.listenOn
             val mic = c?.let { androidx.core.content.ContextCompat.checkSelfPermission(it, android.Manifest.permission.RECORD_AUDIO) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED }
             val relay = com.optionslab.app.data.Relay
@@ -4669,7 +4669,7 @@ object IraHub {
             // (2.5 s at most) - and both passes now share one budget ([com.optionslab.ira.ModelWait]; they were 15 s each).
             // Only for a heard question with the model still to load (review, 5 Oct: a typed question, or one with the
             // model loaded, waited up to 2.5 s here for a line that is not said or not needed - [com.optionslab.ira.ModelWait.waitForHold]).
-            if (com.optionslab.ira.ModelWait.waitForHold(freeHeard, modelLoaded, JarvisVoice.wanted && !JarvisVoice.muted)) {
+            if (com.optionslab.ira.ModelWait.waitForHold(freeHeard, modelLoaded, JarvisVoice.listenOn && !JarvisVoice.muted)) {
                 val since = android.os.SystemClock.elapsedRealtime()
                 kotlinx.coroutines.withTimeoutOrNull(com.optionslab.ira.ModelWait.HOLD_FIRST_MS) {
                     while (JarvisVoice.speechStartedAt < since) kotlinx.coroutines.delay(100)

@@ -224,7 +224,7 @@ object DailyReports {
             // The strongest lesson in the results (part 5), when one stands out.
             if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraAccount.lessons().first.firstOrNull() }.getOrNull()?.let { lines += "• Lesson: ${it.text}" }
             lines += "• Jarvis: AI model ${com.optionslab.app.ira.IraModel.choice.name} ${if (com.optionslab.app.ira.IraModel.state.value.status == com.optionslab.app.ira.IraModel.Status.READY) "ready" else "not on the phone"}, " +
-                "voice ${if (com.optionslab.app.ira.JarvisVoice.wanted) "on" else "off"}"
+                "voice ${if (com.optionslab.app.ira.JarvisVoice.listenOn) "on" else "off"}"
             runCatching { com.optionslab.app.ira.IraHub.tradeCheck() }.getOrNull()?.let { v ->
                 lines += "• Trade check: " + when (v.level) { com.optionslab.ira.TradeCheck.Level.GO -> "normal"; com.optionslab.ira.TradeCheck.Level.CAREFUL -> "careful"; else -> "don't trade yet" } +
                     v.reasons.filter { it.level != com.optionslab.ira.TradeCheck.Level.GO && !it.text.startsWith("The market opens") }.take(2).joinToString("") { " · " + it.text.removeSuffix(".") }
@@ -238,7 +238,7 @@ object DailyReports {
             // Jarvis's own self-check: each part it needs, working or not (a part switched off is not counted).
             run {
                 val vs = com.optionslab.app.ira.JarvisVoice.state.value
-                val voiceOn = com.optionslab.app.ira.JarvisVoice.wanted
+                val voiceOn = com.optionslab.app.ira.JarvisVoice.listenOn
                 val mic = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
                     android.content.pm.PackageManager.PERMISSION_GRANTED
                 val model = com.optionslab.app.ira.IraModel.state.value.status

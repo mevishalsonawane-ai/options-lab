@@ -20,7 +20,7 @@ class UpkeepTest {
         listOf("pin.hash", "pin.salt", "pin.fails", "k.mode", "k.maxLots", "k.allow", "g.kill", "g.loss", "g.v", "sec.bio", "lock.idleSeconds",
             "jarvis.trades.paper.v3", "jarvis.trades.limit", "jarvis.trades.weekly", "jarvis.auto.guard", "jarvis.auto.backup",
             "jarvis.auto.last.GUARD", "jarvis.group.guard", "jarvis.autotrail", "jarvis.autopilot", "jarvis.voice.google",
-            "jarvis.voice.onlyboss", "jarvis.voiceprint", "jarvis.newstrades", "ira.model.verified", "ira.model.verified.fast",
+            "jarvis.voice.onlyboss", "jarvis.voice.nolisten", "jarvis.voiceprint", "jarvis.newstrades", "ira.model.verified", "ira.model.verified.fast",
             "kite.apiKey", "kite.accessToken", "draft.kite.secret", "relay.key", "ui.widgetPnl", "w.pnl", "jarvis.memory")
             .forEach { assertFalse(Upkeep.carried(it), it) }
     }

@@ -73,7 +73,10 @@ class JarvisVoice : Service() {
          */
         fun announce(text: String, prompted: Boolean = false, urgent: Boolean = false, full: Boolean = false,
                      weight: com.optionslab.ira.SpeakChoice.Weight? = null, whole: Boolean = false): Boolean {
-            val v = instance?.get() ?: return false
+            val v = instance?.get()
+            // "Don't listen" (6 Oct): the ears are off, not the voice - with listening set on, his alerts and briefings are
+            // still said, through the plain voice ([JarvisSpeaker.aloud]); a reply he asked for goes its own way there.
+            if (v == null && (prompted || !wanted || !deaf || !com.optionslab.app.BuildConfig.JARVIS)) return false
             // Boss's "Jarvis speaks" choice (a display preference only): a reply, a safety warning, his own reminder or the
             // morning check is always said; an important note unless he chose "only answers"; a minor one only with "everything".
             val w = when {
@@ -90,7 +93,7 @@ class JarvisVoice : Service() {
             // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
             // the chat (every caller has already put the full line there).
             val overheard = if (prompted) shortText else com.optionslab.ira.Overheard.said(shortText, runCatching { IraHub.locked() }.getOrDefault(true))
-            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", overheard) }; return true }
+            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v ?: IraHub.appContext()!!, "Jarvis", overheard) }; return true }
             // A long unasked briefing outside the hours Boss talks to him: its first sentence aloud, the rest in the chat
             // ([com.optionslab.ira.TalkHours]). Never a safety warning (urgent), a reply, the morning check or a
             // reminder (full); the voice only, nothing acts.
@@ -103,6 +106,14 @@ class JarvisVoice : Service() {
                 if (now == null) { note("an unasked note reached quiet hours while it waited: not said"); null }
                 else if (mayShorten) IraTools.talkAloud(now) else now
             })
+            // Not listening: said now through the plain voice (nobody is speaking into a turn), a warning over anything else.
+            if (v == null) {
+                if (muted) return false
+                val c = IraHub.appContext() ?: return false
+                val now = if (recheck == null) said else (runCatching { recheck() }.getOrNull() ?: return true)
+                JarvisSpeaker.aloud(c, now, flush = urgent)
+                return true
+            }
             // Not a reply to Boss's words (never timed as one); unless urgent, not said over him while he is speaking.
             v.main.post { if (urgent) { if (!v.stopped) v.say(said, "answer", reply = false) } else v.sayWhenFree(said, "answer", recheck = recheck) }
             return true
@@ -122,7 +133,7 @@ class JarvisVoice : Service() {
 
         /** For the diagnostics report: Jarvis's ears in full - settings, state, the voice check and the last 60 turns (never words). */
         fun report(context: Context?): String = buildString {
-            append("Listen for Jarvis: $wanted · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart} · battery saver for listening: $listenSaver (resting now: ${restingNow()})\n")
+            append("Listen for Jarvis: $wanted · don't listen: $deaf · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart} · battery saver for listening: $listenSaver (resting now: ${restingNow()})\n")
             append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · only my voice: $onlyBoss · muted: $muted\n")
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
@@ -157,7 +168,8 @@ class JarvisVoice : Service() {
         fun diagnose(context: Context?, hint: Boolean = false): String {
             val out = ArrayList<String>()
             val v = instance?.get()
-            if (wanted && v == null) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
+            if (deaf) out += "\"Don't listen\" is on: my microphone is off and I hear nothing (your choice). I still speak; tap \"Listen again\" under the globe to let me hear you."
+            if (wanted && v == null && !deaf) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
             // No on-device recognizer on the phone: Jarvis cannot hear at all (he listens on the phone only).
             if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(v) }.getOrDefault(false))
                 out += "This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition."
@@ -288,6 +300,58 @@ class JarvisVoice : Service() {
             set(v) { keep(mapOf("jarvis.listen" to v), tightening = !v) }
 
         /**
+         * "Don't listen" (Boss, 6 Oct: "so that he won't listen to all the conversations"): the microphone off altogether,
+         * over [wanted] - no wake word, no follow-ups, no cut-in, no Talk button, no voice teaching; the service stops, so
+         * Android's microphone dot goes off. Jarvis still speaks (his alerts through the plain voice, [announce]) and is
+         * still typed to. Kept on this phone across restarts and reboots, never in a backup or taken from one
+         * ([com.optionslab.ira.Upkeep.PRIVATE]: "jarvis.voice."). Switched on by the globe's button, Settings, or his
+         * words ([com.optionslab.ira.NoListen]); switched OFF by his tap only ([listenAgain]) - never by voice or a file.
+         * Unreadable settings count as "don't listen" (nothing heard rather than heard by mistake).
+         */
+        private const val DEAF_KEY = "jarvis.voice.nolisten"
+        private val _deaf = MutableStateFlow(false)
+        /** The switch as the screens show it (the globe and Settings follow the same one). */
+        val deafState: StateFlow<Boolean> get() { readDeaf(); return _deaf }
+        val deaf: Boolean get() = readDeaf()
+        /** Read from the settings each time (as the other switches are), the screens' copy kept in step. */
+        private fun readDeaf(): Boolean {
+            val d = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(DEAF_KEY, false) }.getOrDefault(true)
+            if (_deaf.value != d) _deaf.value = d
+            return d
+        }
+
+        /** Listening as Boss set it, and not stopped by "Don't listen": what everything that hears goes by. */
+        val listenOn: Boolean get() = wanted && !deaf
+
+        /**
+         * "Don't listen" on: kept at once (flushed - a tightening change), the listening stopped (the service, its recognizer,
+         * the shared capture), a voice teaching not started. [context]: to stop the service (else the running one stops itself).
+         */
+        fun dontListen(context: Context?) {
+            _deaf.value = true
+            keep(mapOf(DEAF_KEY to true), tightening = true)
+            note("don't listen: the microphone is off")
+            val v = instance?.get()
+            v?.main?.post { v.deafened() }
+            val c = context ?: v ?: IraHub.appContext()
+            c?.let { runCatching { stop(it) } }
+        }
+
+        /**
+         * Boss's tap (the globe's button or the Settings switch) - the only way back: listening goes on exactly as it was set
+         * before ([wanted]; off stays off). Never called from words, a file or a schedule.
+         */
+        fun listenAgain(context: Context) {
+            _deaf.value = false
+            keep(mapOf(DEAF_KEY to false), tightening = false)
+            note("listen again (Boss's tap)")
+            if (wanted) start(context)
+        }
+
+        /** Robolectric shares static state between tests: the switch read again from the settings. */
+        internal fun resetDeafForTest() { _deaf.value = false }
+
+        /**
          * Battery saver for listening (Boss's switch, OFF by default: off, listening is exactly as before). On: with the
          * screen off, the market shut, outside his usual hours and a quiet room, the ears rest a few seconds between turns
          * ([com.optionslab.ira.ListenSaver]). Never changed by itself; no safety alert waits on listening.
@@ -343,7 +407,8 @@ class JarvisVoice : Service() {
         private const val EXTRA_VISIBLE = "ol.jarvis.visible"
 
         fun start(context: Context) {
-            if (!available(context) || !permitted(context)) return
+            // "Don't listen": nothing starts the microphone - not the app opening, a settings change or a restart.
+            if (deaf || !available(context) || !permitted(context)) return
             runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis start listening; try the switch again.") }
         }
@@ -355,6 +420,8 @@ class JarvisVoice : Service() {
         fun resume(context: Context) {
             if (!wanted) return
             val v = instance?.get()
+            // "Don't listen": one still running (it should not be) is stopped, never started.
+            if (deaf) { if (v != null) stop(context); return }
             if (v == null) { start(context); return }
             // Running, but started by Android in the background (after an update or a restart): with the microphone
             // allowed "only while using the app", Android gives such a service silence - no error, no sound (Boss,
@@ -368,6 +435,9 @@ class JarvisVoice : Service() {
 
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
 
+        /** What the screens say while "Don't listen" is on. */
+        const val NOT_LISTENING = "Not listening: you switched my microphone off. Tap \"Listen again\" to let me hear you."
+
         const val ACTION_TALK = "com.optionslab.app.ira.JarvisVoice.TALK"
 
         /**
@@ -375,6 +445,8 @@ class JarvisVoice : Service() {
          * With listening off it listens just for that one question, then stops again. False when it cannot listen.
          */
         fun talk(context: Context): Boolean {
+            // "Don't listen": the Talk button does not open the microphone either.
+            if (deaf) { _state.value = VoiceState(problem = NOT_LISTENING); return false }
             if (!available(context) || !permitted(context)) return false
             return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_TALK).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis listen; try again with the app open.") }.isSuccess
@@ -943,6 +1015,14 @@ class JarvisVoice : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { wanted = false; stopSelf(); return START_NOT_STICKY }
+        // "Don't listen": whatever started it (the notification's or lock screen's Talk, Android restarting a sticky
+        // service), no microphone - no recognizer is made, and it stops.
+        if (deaf) {
+            note("a start while \"don't listen\" is on: not listening")
+            _state.value = VoiceState(problem = NOT_LISTENING)
+            if (rec != null) deafened() else stopSelf()
+            return START_NOT_STICKY
+        }
         // The mic button with listening off: this one question only.
         val talkNow = intent?.action == ACTION_TALK
         if (talkNow && rec == null) oneShot = !wanted
@@ -1279,6 +1359,8 @@ class JarvisVoice : Service() {
 
     private fun listen() {
         if (stopped || held || listening) return
+        // "Don't listen" switched on while this ran (it is being stopped): no new turn, not even one.
+        if (deaf) { deafened(); return }
         lastHeard = null                                 // a voice check only ever uses this turn's own audio
         turnInSpeech = speaking
         listenedAt = SystemClock.elapsedRealtime()
@@ -1964,13 +2046,16 @@ class JarvisVoice : Service() {
                 }
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = parsedQ.command?.kind in VOICE_KINDS
-                val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
+                // "Jarvis, don't listen": it only lowers what is heard, so a locked phone takes it too - but with the name
+                // (a stray follow-up must not switch the ears off until Boss's tap).
+                val earsOff = parsedQ.command?.kind == com.optionslab.ira.Command.Kind.LISTEN_OFF && com.optionslab.ira.Topic.ORDER !in topics
+                val acts = !voiceOnly && !earsOff && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
                 // Locked phone: questions only; the account needs Boss's own voice.
                 // Mute, unmute and the voice check are not actions: they work on a locked phone too.
-                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
+                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && !earsOff && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
-                else if (!named && acts) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or tap the mic.") }
+                else if (!named && (acts || earsOff)) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or tap the mic.") }
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
@@ -2438,6 +2523,20 @@ class JarvisVoice : Service() {
 
     private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
 
+    /**
+     * "Don't listen": the microphone let go at once, before the service is gone - the recognizer's turn cancelled, the
+     * shared capture closed, any follow-up or awake window ended - then the service stops (its notification goes, and with
+     * it Android's microphone dot).
+     */
+    internal fun deafened() {
+        main.removeCallbacks(finish)
+        runCatching { rec?.cancel() }; listening = false
+        endTap(); lastHeard = null
+        awakeUntil = 0L; called = false; asking = null
+        _state.value = VoiceState(problem = NOT_LISTENING)
+        stopSelf()
+    }
+
     override fun onDestroy() {
         unmuteNow()
         runCatching { muteWriter.shutdown() }           // the marker's last write (above) still runs
@@ -2450,7 +2549,7 @@ class JarvisVoice : Service() {
         runCatching { rec?.destroy() }; rec = null
         runCatching { tts?.stop(); tts?.shutdown() }; tts = null
         scope.cancel()
-        _state.value = VoiceState(problem = _state.value.problem)
+        _state.value = VoiceState(problem = _state.value.problem ?: (if (deaf) NOT_LISTENING else null))
         super.onDestroy()
     }
 }

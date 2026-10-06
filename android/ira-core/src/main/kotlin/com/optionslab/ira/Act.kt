@@ -57,6 +57,12 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         PACE_SLOWER(true), PACE_FASTER(true), PACE_NORMAL(true),
         /** "Be quiet for 30 minutes": muted for [Command.number] minutes, then speaking again by itself. */
         MUTE_FOR(true),
+        /**
+         * "Don't listen", "mat suno", "sunna band karo" (Boss, 6 Oct): the microphone off altogether - no wake word, no
+         * follow-ups, nothing heard - until Boss taps Listen again on the globe or in Settings. Only ever lowers what is
+         * heard: no words, typed or said, switch listening back on ([NoListen]).
+         */
+        LISTEN_OFF(true),
     }
 }
 
@@ -146,6 +152,8 @@ object Commands {
         if (said.trim().endsWith("?")) return null
         if (MUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MUTE)
         if (UNMUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.UNMUTE)
+        // "Don't listen" (before the negation check: the "don't" is the command): the microphone off, until his button.
+        if (NoListen.asked(said)) return Command(Command.Kind.LISTEN_OFF)
         if (MORE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MORE)
         // An action said with a condition ("agar nifty 100 point gire to sab band kar do", "exit all if Nifty falls below 24000"):
         // Jarvis can't set one to wait, so it is never a command - neither done now nor read as an arm's garbled name
@@ -630,6 +638,7 @@ object Commands {
         Command.Kind.PACE_FASTER -> "speak faster"
         Command.Kind.PACE_NORMAL -> "speak at the normal pace"
         Command.Kind.MUTE_FOR -> "stay quiet for ${c.number} minutes"
+        Command.Kind.LISTEN_OFF -> "stop listening (the microphone off until you tap Listen again)"
         Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }

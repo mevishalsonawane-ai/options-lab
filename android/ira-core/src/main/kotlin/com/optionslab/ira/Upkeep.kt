@@ -39,6 +39,7 @@ object Upkeep {
         // phone only, never run from a file (round 7). His reminders - words only - are a separate key and are carried.
         "jarvis.later",
         // Whether Jarvis's ears may use Google's speech service (speech may leave the phone): Boss's choice on this phone.
+        // So is "Don't listen" (jarvis.voice.nolisten, 6 Oct): a restore never switches the microphone back on behind him.
         "jarvis.voice.",
         // The history of this phone's limits: what "Jarvis, undo" puts back, so a file's history could set a limit (round 7).
         "settings.",

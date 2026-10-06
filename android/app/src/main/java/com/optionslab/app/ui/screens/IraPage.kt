@@ -43,6 +43,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -78,7 +82,7 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && JarvisVoice.wanted) JarvisVoice.start(ctx) }
     // Voice off: the AI model is loaded while Boss reads the page, so the first typed question is answered sooner.
-    LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && !JarvisVoice.wanted) com.optionslab.app.ira.IraModel.preload() }
+    LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && !JarvisVoice.listenOn) com.optionslab.app.ira.IraModel.preload() }
     // And the voice for typed replies, started ahead (the first reply is spoken at once).
     LaunchedEffect(Unit) { runCatching { com.optionslab.app.ira.JarvisSpeaker.warm(ctx) } }
     Column(Modifier.fillMaxSize()) {
@@ -128,6 +132,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
     // The saved conversation is read off the main thread at the start: until then the chat says so (no examples).
     val memoryReady by IraHub.ready.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // "Don't listen" (Boss, 6 Oct): the same switch as in Settings - the globe says so plainly while it is on.
+    val deafNow by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var typed by remember { mutableIntStateOf(0) }
@@ -136,6 +142,7 @@ fun IraPage(orders: IraOrderPaths? = null) {
         JarvisVoice.Mode.AWAKE -> 1; JarvisVoice.Mode.THINKING -> 2; JarvisVoice.Mode.SPEAKING -> 3; else -> 0 }
     // At rest, say plainly whether Jarvis can hear its name ("Idle" read the same with the voice off).
     val restLabel = when {
+        com.optionslab.app.BuildConfig.JARVIS && deafNow -> "Not listening"
         voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
         voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
         else -> "Idle"
@@ -196,9 +203,14 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
                 if (showChat) chat = true
             }
-            Text(orbLabel(orbMode).uppercase(),
-                style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
+            Row(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Not listening: a crossed-out microphone beside the word, so it reads at a glance.
+                if (com.optionslab.app.BuildConfig.JARVIS && deafNow && orbMode == 0) {
+                    MicGlyph(crossed = true, color = Color(0xFF4AA8FF)); Spacer(Modifier.width(6.dp))
+                }
+                Text(orbLabel(orbMode).uppercase(),
+                    style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp))
+            }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 val waiting = waitingCount
@@ -206,8 +218,10 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 var mutedNow by remember { mutableStateOf(JarvisVoice.muted) }
                 com.optionslab.app.ui.PollWhileStarted { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
                 if (mutedNow) BrassButton("🔇  Muted · tap to unmute") { JarvisVoice.muted = false; mutedNow = false }
+                if (com.optionslab.app.BuildConfig.JARVIS) DontListenButton(deafNow)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MicButton("🎙  Talk")
+                    // No Talk while the microphone is off: nothing could hear it.
+                    if (!deafNow) MicButton("🎙  Talk")
                     BrassButton(if (waiting > 0) "Open chat · $waiting waiting" else "Open chat") { chat = true }
                 }
                 RequestsBadge { requestsOpen = true }
@@ -445,10 +459,22 @@ internal fun VoiceSwitch() {
     }
     // The service stopped on its own ("Jarvis, stop listening", or the notification's Stop): the switch follows.
     LaunchedEffect(vs.mode) { if (vs.mode == JarvisVoice.Mode.OFF && !JarvisVoice.wanted) on = false }
+    // "Don't listen": the globe's button and this switch are one setting; while it is on, listening's own switch waits.
+    val deafNow by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LedgerCard(title = "Voice") {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Listen for \"Jarvis\"", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
+            Text("Don't listen (microphone off)", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = deafNow, onCheckedChange = { v ->
+                note = null
+                if (v) JarvisVoice.dontListen(ctx) else JarvisVoice.listenAgain(ctx)
+            }, modifier = Modifier.semantics { contentDescription = if (deafNow) "Don't listen is on: Jarvis's microphone is off" else "Don't listen is off" })
+        }
+        Note(if (deafNow) "Jarvis hears nothing: no \"Jarvis\", no follow-ups, no Talk button, and Android's microphone dot stays off. He still speaks and you can still type. " +
+            "Only this switch or \"Listen again\" on the globe turns listening back on - never your voice, a chat message or a backup."
+            else "Switch the microphone off altogether (also: type \"don't listen\" or \"mat suno\"). Listening comes back only when you tap.")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Listen for \"Jarvis\"", style = Type.label.copy(color = if (deafNow) p.inkSoft else p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = on && !deafNow, enabled = !deafNow, onCheckedChange = { want ->
                 when {
                     !want -> { JarvisVoice.wanted = false; on = false; JarvisVoice.stop(ctx) }
                     !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (it needs Android 12 or later), so Jarvis " +
@@ -992,6 +1018,7 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
  */
 @Composable
 private fun MicButton(label: String) {
+    if (JarvisVoice.deaf) return
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var note by remember { mutableStateOf<String?>(null) }
     val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
@@ -1007,6 +1034,42 @@ private fun MicButton(label: String) {
             }
         }
         note?.let { Text(it, style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 11.sp)) }
+    }
+}
+
+/**
+ * "Don't listen" (Boss, 6 Oct: "like the other button on the globe, add a button 'Don't listen', so that he won't listen
+ * to all the conversations"): one tap switches the microphone off altogether (wake word, follow-ups, Talk, cut-in, voice
+ * teaching) and the service stops; one tap here - or the Settings switch - is the only way back, to listening as set before.
+ */
+@Composable
+internal fun DontListenButton(deaf: Boolean) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val desc = if (deaf) "Not listening: Jarvis's microphone is off. Double-tap to let Jarvis listen again."
+        else "Don't listen: switch Jarvis's microphone off. He still speaks and you can still type."
+    BrassButton(if (deaf) "Not listening · Listen again" else "Don't listen",
+        modifier = Modifier.semantics {
+            contentDescription = desc
+            stateDescription = if (deaf) "Microphone off" else "Microphone on"
+        },
+        leading = if (deaf) ({ c -> MicGlyph(crossed = true, color = c) }) else null) {
+        if (deaf) JarvisVoice.listenAgain(ctx) else JarvisVoice.dontListen(ctx)
+    }
+}
+
+/** A small microphone, [crossed] out when Jarvis is not listening (decorative: its button or label says it in words). */
+@Composable
+internal fun MicGlyph(crossed: Boolean, color: Color) {
+    Canvas(Modifier.width(16.dp).height(18.dp).clearAndSetSemantics { }) {
+        val w = size.width; val h = size.height; val stroke = w * 0.11f
+        // The capsule, its cradle and the stand.
+        drawRoundRect(color, topLeft = Offset(w * 0.32f, 0f), size = androidx.compose.ui.geometry.Size(w * 0.36f, h * 0.58f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.18f, w * 0.18f))
+        drawArc(color, 0f, 180f, useCenter = false, topLeft = Offset(w * 0.16f, h * 0.22f),
+            size = androidx.compose.ui.geometry.Size(w * 0.68f, h * 0.52f), style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+        drawLine(color, Offset(w * 0.5f, h * 0.74f), Offset(w * 0.5f, h * 0.92f), stroke)
+        drawLine(color, Offset(w * 0.3f, h * 0.95f), Offset(w * 0.7f, h * 0.95f), stroke)
+        if (crossed) drawLine(color, Offset(w * 0.05f, h * 0.05f), Offset(w * 0.95f, h * 0.95f), stroke * 1.3f)
     }
 }
 

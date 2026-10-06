@@ -321,7 +321,7 @@ object IraModel {
      */
     private fun idleUnload(): Job = scope.launch {
         // While Jarvis listens, it leaves after a minute (the recognizer needs the memory); otherwise after 10 minutes.
-        delay(if (JarvisVoice.wanted) 60_000L else IDLE_MS)
+        delay(if (JarvisVoice.listenOn) 60_000L else IDLE_MS)
         lock.withLock { unloadLocked() }
     }
 
@@ -331,16 +331,16 @@ object IraModel {
      */
     fun preload() {
         val c = app ?: return
-        if (!usable() || JarvisVoice.wanted) return
+        if (!usable() || JarvisVoice.listenOn) return
         scope.launch {
             lock.withLock {
-                if (handle != 0L || !usable() || JarvisVoice.wanted) return@withLock
+                if (handle != 0L || !usable() || JarvisVoice.listenOn) return@withLock
                 idle?.cancel()
                 if (!LlmNative.ensure()) return@withLock
                 handle = LlmNative.load(file(c).path, threads())
                 if (handle != 0L) _state.update { it.copy(loaded = true, message = null) }
                 // Listening switched on while it loaded (it takes seconds): it leaves at once (review, 4 Oct).
-                if (JarvisVoice.wanted) { unloadLocked(); return@withLock }
+                if (JarvisVoice.listenOn) { unloadLocked(); return@withLock }
                 idle = idleUnload()
             }
             warm()
@@ -359,7 +359,7 @@ object IraModel {
         for (p in com.optionslab.ira.PromptWarm.prefixes(now)) {
             val more = lock.withLock {
                 // Listening wanted meanwhile: the model makes way at once, as preload does (it starved the recognizer, 4 Oct).
-                if (JarvisVoice.wanted) { if (handle != 0L) unloadLocked(); return@withLock false }
+                if (JarvisVoice.listenOn) { if (handle != 0L) unloadLocked(); return@withLock false }
                 if (handle == 0L || !usable()) return@withLock false
                 if (slots.holds(p)) return@withLock true
                 idle?.cancel()
@@ -441,7 +441,7 @@ object IraModel {
         // While Jarvis listens, lower still (nice 5: about a third of the processor share of the phone's speech engine and
         // recognizer when they compete, against four fifths at nice 1) - root cause, 5 Oct: at nice 1 on all the fast
         // cores the model starved them. Not the background level (10), which Android may move to the slow cores.
-        val pri = if (runCatching { JarvisVoice.wanted }.getOrDefault(false)) LISTENING_NICE
+        val pri = if (runCatching { JarvisVoice.listenOn }.getOrDefault(false)) LISTENING_NICE
             else android.os.Process.THREAD_PRIORITY_DEFAULT + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE
         runCatching { android.os.Process.setThreadPriority(pri) }
         try { return f() } finally { runCatching { android.os.Process.setThreadPriority(was) } }

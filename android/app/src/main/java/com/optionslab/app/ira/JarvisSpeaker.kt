@@ -61,7 +61,7 @@ object JarvisSpeaker {
      * at once instead of after the second or so the engine takes to start (Boss, 4 Oct: replies felt slow).
      */
     fun warm(context: Context) {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped || JarvisVoice.muted || JarvisVoice.wanted) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !speakTyped || JarvisVoice.muted || JarvisVoice.listenOn) return
         if (android.os.Build.FINGERPRINT == "robolectric") return
         synchronized(this) {
             idleLater()
@@ -82,11 +82,21 @@ object JarvisSpeaker {
         if (!com.optionslab.app.BuildConfig.JARVIS || JarvisVoice.muted && !text.startsWith("Voice on")) return
         val said = if (sentences != null) words(text, sentences) else words(text)
         if (JarvisVoice.announce(said, prompted = true)) return
-        if (android.os.Build.FINGERPRINT == "robolectric") return
+        aloud(context, said, flush = true)
+    }
+
+    /**
+     * [said] through this voice as it is (already shortened and checked by the caller): Jarvis's own notes and alerts while
+     * "Don't listen" has the listening voice stopped ([JarvisVoice.announce]). [flush]: over what is being said (a reply,
+     * a warning); else after it.
+     */
+    fun aloud(context: Context, said: String, flush: Boolean) {
+        if (!com.optionslab.app.BuildConfig.JARVIS) return
+        if (android.os.Build.FINGERPRINT == "robolectric") { lastAloud = said; return }
         synchronized(this) {
             idleLater()
             val t = tts
-            if (t != null && ready) { JarvisVoice.applyStyle(t); sayNow(t, said); return }
+            if (t != null && ready) { JarvisVoice.applyStyle(t); sayNow(t, said, flush); return }
             waiting = said
             if (t == null) tts = TextToSpeech(context.applicationContext) { status ->
                 synchronized(this) {
@@ -100,13 +110,16 @@ object JarvisSpeaker {
     }
 
     /** The first sentence alone, the rest queued behind it: the voice starts before the whole reply is made into sound. */
-    private fun sayNow(t: TextToSpeech, text: String) {
+    private fun sayNow(t: TextToSpeech, text: String, flush: Boolean = true) {
         com.optionslab.ira.Wake.pieces(text).forEachIndexed { k, p ->
-            t.speak(p, if (k == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "reply.$k")
+            t.speak(p, if (k == 0 && flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "reply.$k")
         }
     }
 
     fun stop() { synchronized(this) { runCatching { tts?.stop() } } }
+
+    /** The last words handed to [aloud] under Robolectric (no speech engine there): what tests check. */
+    @Volatile internal var lastAloud: String? = null
 
     /** After a typed [question]: says Jarvis's reply the moment it is there (never waiting for the model's rewrite). */
     suspend fun replyTo(context: Context, question: String) {
