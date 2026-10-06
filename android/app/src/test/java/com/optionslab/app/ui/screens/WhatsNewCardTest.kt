@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -207,9 +208,11 @@ class WhatsNewCardTest {
         } } }
         text("Show").performClick()
         compose.waitForIdle()
-        val bottom = { t: String -> compose.onNodeWithText(keepNumbersWhole(t)).fetchSemanticsNode().boundsInRoot.bottom }
         val density = compose.density.density
-        assertTrue("the open list is capped", bottom("below") <= (48 + 280 + 40) * density)
+        val list = compose.onNodeWithTag("whatsnew-list").fetchSemanticsNode().boundsInRoot
+        assertTrue("the open list is capped: ${list.height / density} dp", list.height <= 280 * density + 1f)
+        val below = compose.onNodeWithText("below").fetchSemanticsNode().boundsInRoot
+        assertTrue("the page goes on under the list", below.top >= list.bottom - 1f)
         text("Today at a glance").performScrollTo().assertIsDisplayed()
         text("Got it").assertIsDisplayed()
     }

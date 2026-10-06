@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -116,7 +117,7 @@ internal fun WhatsNewHeader(unseen: List<WhatsNew.Entry>, onGotIt: () -> Unit, o
                 modifier = Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) { open = !open }.padding(horizontal = 10.dp, vertical = 14.dp))
             BrassButton("Got it", tone = p.inkSoft, onClick = onGotIt)
         }
-        if (open) Column(Modifier.fillMaxWidth().heightIn(max = listMax).verticalScroll(rememberScrollState())) {
+        if (open) Column(Modifier.fillMaxWidth().heightIn(max = listMax).testTag("whatsnew-list").verticalScroll(rememberScrollState())) {
             unseen.forEach { e ->
                 Rule()
                 WhatsNewRow(e, onGo, here)
