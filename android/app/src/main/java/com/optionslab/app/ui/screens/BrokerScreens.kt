@@ -982,7 +982,14 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     // off the main thread, and whatever is still pending when the form closes is written then.
     // Null until the draft has been read back (the vault is decrypted off the main thread, not while composing).
     var keyWritten by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    // Set (before the keys are saved) once this form's key belongs to the saved keys: its draft is then cleared, and the
+    // form leaving the page must not write it back. Not snapshot state: it is read in onDispose, possibly mid-save.
+    val keysSaved = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    // The form's state is set on the main thread only. Each vault read or write hops to IO and comes back to the main
+    // thread before the state is set: a coroutine of this screen resuming on the worker that finished its IO (as the
+    // Compose test rule's dispatcher does) would write the state there and send the snapshot's apply notifications from
+    // that worker, racing the main thread's own writes - one of those can then reach no observer and never redraw.
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         val k = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             com.optionslab.app.security.SecurePrefs.run {
                 // A secret draft left by an older version is erased.
@@ -992,16 +999,19 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         }
         if (key.isEmpty()) key = k       // anything typed meanwhile wins
         keyWritten = k
-    }
+    } }
     LaunchedEffect(key, keyWritten) {
         if (keyWritten == null || key == keyWritten) return@LaunchedEffect
         kotlinx.coroutines.delay(600)
-        val v = key
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, v) }
-        keyWritten = v
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+            val v = key
+            // Not once the keys are being saved: their save clears the draft, and this must not land after it.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { if (!keysSaved.get()) draft(DRAFT_KEY, v) }
+            keyWritten = v
+        }
     }
     DisposableEffect(Unit) {
-        onDispose { val v = key; if (keyWritten != null && v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
+        onDispose { val v = key; if (!keysSaved.get() && keyWritten != null && v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
     }
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
@@ -1042,16 +1052,23 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
             // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
             val k = key; val s = secret; val pn = pin
             saving = true; err = null
-            fun finish(bioBlob: String?) = scope.launch {
-                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
-                saving = false; err = e; pin = ""
-                if (e == null) {
-                    // Said first: once the keys are saved this form leaves the page and its scope ends, so nothing
-                    // after the next suspension would run. The drafts are cleared even then (NonCancellable).
-                    model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
-                    keyWritten = ""; key = ""; secret = ""; onDone()
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
+            // On the main thread: the save runs off it and the form's state is set back here (see the effects above).
+            fun finish(bioBlob: String?) = scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                // Once the keys are saved this form leaves the page and its scope ends, possibly before the main thread
+                // takes the result back: what must happen after a save (the message, the drafts cleared) happens here,
+                // where cancelling cannot stop it.
+                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.Default) {
+                    keysSaved.set(true)
+                    val why = try { model.saveBrokerCredentials(k, s, pn, bioBlob) } catch (t: Throwable) { keysSaved.set(false); throw t }
+                    if (why != null) keysSaved.set(false)
+                    else {
+                        model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
+                    }
+                    why
                 }
+                saving = false; err = e; pin = ""
+                if (e == null) { keyWritten = ""; key = ""; secret = ""; onDone() }
             }
             if (fingerprint && activity != null && s.isNotBlank()) BiometricGate.sealWithFingerprint(activity, s.trim()) { blob, why ->
                 if (blob == null && pn.isBlank()) { saving = false; err = why?.let { "Fingerprint: $it" } ?: "Cancelled. Use the fingerprint, or enter your PIN." }

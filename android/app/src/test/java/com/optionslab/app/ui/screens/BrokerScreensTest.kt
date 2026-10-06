@@ -498,6 +498,34 @@ class BrokerScreensTest {
         assertTrue(m.askLoginPin.value)
     }
 
+    /**
+     * The intermittent "timed out waiting for the login step" above: the save's continuation resumed on the Default
+     * worker that finished the save (the test rule's effect dispatcher is unconfined), set the form's state there and
+     * sent the snapshot's apply notifications from that worker, while the main thread wrote the new broker state.
+     * A global write recorded as the worker advanced the global snapshot reaches no observer: "Keys saved" never drew.
+     * Every state write of the save must happen on the main thread (this fails on every run if one does not).
+     */
+    @Test fun savingTheKeysSetsTheScreenFromTheMainThreadOnly() {
+        PinLock.setPin(BrokerArea.PIN.toCharArray())
+        val m = model()
+        // Only the writer's thread and the state's class: never its value (the secret is form state).
+        val offMain = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        val watch = androidx.compose.runtime.snapshots.Snapshot.registerGlobalWriteObserver { state ->
+            if (Looper.myLooper() != Looper.getMainLooper()) offMain += "${Thread.currentThread().name}: ${state.javaClass.simpleName}"
+        }
+        try {
+            plain { ConnectZerodhaScreen(m) }
+            click("I already have my API key and secret")
+            fillForm(BrokerArea.KEY, BrokerArea.SECRET, BrokerArea.PIN)
+            until("the login step") { shown("Keys saved ✓") }
+            alerted("Saved, the secret sealed with your PIN. Now log in to Zerodha.")
+            until("the key draft cleared") { SecurePrefs.getString("draft.kite.key") == null }
+            BrokerArea.settle(300)
+        } finally { watch.dispose() }
+        assertTrue("state written off the main thread: ${offMain.distinct()}", offMain.isEmpty())
+        assertNull("never stored readable", SecurePrefs.getString("kite.apiSecret"))
+    }
+
     @Test fun aWrongPinSavesNothing() {
         PinLock.setPin(BrokerArea.PIN.toCharArray())
         val m = model()
