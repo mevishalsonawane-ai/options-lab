@@ -184,8 +184,17 @@ object KiteStream {
     /** Instruments the stream follows now (the diagnostics' battery line). */
     fun following(): Int = synchronized(subscribed) { subscribed.size }
 
+    /**
+     * TEST ONLY: true keeps the stream from ever opening its socket (the fake Kite has no stream, and a connect the
+     * test did not wait for would race its "no test may reach the internet" check). False in the app, always: the
+     * setter throws unless BuildConfig.DEBUG, and only the test application sets it.
+     */
+    @Volatile internal var testOff = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
+
     @Synchronized
     private fun start() {
+        if (testOff) return
         if (loop?.isActive == true) return
         wants["index"] = INDEX_TOKENS
         loop = scope.launch {

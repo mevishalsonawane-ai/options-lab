@@ -6,6 +6,7 @@ import com.optionslab.app.data.Broker
 import com.optionslab.app.data.History
 import com.optionslab.app.data.Holidays
 import com.optionslab.app.data.Journal
+import com.optionslab.app.data.KiteStream
 import com.optionslab.app.data.Ledger
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.OrbArms
@@ -40,6 +41,7 @@ class TestApp : Application() {
         IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()
+        KiteStream.testOff = true          // the fake Kite has no price stream: never open its socket
         FakeAndroidKeyStore.install()
         FakeAndroidKeyStore.reset()
         SecurePrefs.init(this)
