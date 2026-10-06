@@ -1,6 +1,11 @@
 package com.optionslab.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,8 +41,8 @@ import com.optionslab.ira.WhatsNew
 /**
  * Home's "What's new" card: the changes not seen yet ([unseen], newest first), the first [WhatsNew.COLLAPSED] until "Show all",
  * each with where to find it and a question to try with Jarvis; a change with a page to open is a tap away ([onGo]). "Got it"
- * ([onGotIt]) marks them all seen - the caller writes that and stops showing the card. Plain state only: nothing here is
- * written during composition (the "Show all" choice changes on a tap).
+ * ([onGotIt], in the header row, so it is always in view) marks them all seen - the caller writes that and stops showing
+ * the card. Plain state only: nothing here is written during composition (the "Show all" choice changes on a tap).
  */
 @Composable
 internal fun WhatsNewCardContent(unseen: List<WhatsNew.Entry>, onGotIt: () -> Unit, onGo: ((String) -> Unit)?) {
@@ -52,6 +57,7 @@ internal fun WhatsNewCardContent(unseen: List<WhatsNew.Entry>, onGotIt: () -> Un
                 Text(keepNumbersWhole(if (unseen.size == 1) "1 change since you last looked" else "${unseen.size} changes since you last looked"),
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             }
+            BrassButton("Got it", Modifier.padding(start = 8.dp), tone = p.inkSoft, onClick = onGotIt)
         }
         shown.forEach { e ->
             Rule(Modifier.padding(top = 6.dp))
@@ -62,35 +68,71 @@ internal fun WhatsNewCardContent(unseen: List<WhatsNew.Entry>, onGotIt: () -> Un
             Text(keepNumbersWhole("Show all ($more more) ▾"), style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { all = true }.padding(vertical = 14.dp))
         }
-        BrassButton("Got it", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft, onClick = onGotIt)
         Note("The whole list stays in ${com.optionslab.app.ui.Tab.CABINET.label} → What's new.", Modifier.padding(top = 6.dp))
     }
 }
 
 /**
- * The Ira page with the "What's new" card above it (Home opens on the Ira page in Jarvis): the same unseen list as the
- * Dashboard's card ([com.optionslab.app.data.WhatsNewStore.shown]), and the same "Got it", so dismissing either hides both.
- * The card takes at most [maxHeight] and scrolls within it, so the globe and the chat keep the rest; with nothing unseen the
- * page is exactly as before. [onGo]: a change's page (null: the rows open nothing).
+ * The Ira page with "What's new" above it (Home opens on the Ira page in Jarvis): the same unseen list as the Dashboard's
+ * card ([com.optionslab.app.data.WhatsNewStore.shown]), and the same "Got it", so dismissing either hides both. Compact, so
+ * the globe and the question box keep the screen: one row ("What's new · N changes", Show, Got it); "Show" opens the list
+ * under it, at most [LIST_SHARE] of the height there is, scrolling within it. With nothing unseen the page is exactly as
+ * before. [onGo]: a change's page (null: the rows open nothing); a change that points at this page ("ira") opens nothing here.
  */
 @Composable
-internal fun WhatsNewOverPage(onGo: ((String) -> Unit)?, maxHeight: androidx.compose.ui.unit.Dp = 340.dp, content: @Composable () -> Unit) {
+internal fun WhatsNewOverPage(onGo: ((String) -> Unit)?, content: @Composable () -> Unit) {
     val news by remember { com.optionslab.app.data.WhatsNewStore.shown() }.collectAsState()
-    Column(Modifier.fillMaxSize()) {
-        if (news.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 6.dp)) {
-            WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo)
+    // Each time the app comes back to the front: a settings read that failed before is tried again (a flow, not Compose state).
+    com.optionslab.app.ui.PollWhileStarted { com.optionslab.app.data.WhatsNewStore.shown() }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val listMax = maxHeight * LIST_SHARE
+        Column(Modifier.fillMaxSize()) {
+            if (news.isNotEmpty()) WhatsNewHeader(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo,
+                listMax = listMax, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
+            Box(Modifier.weight(1f).fillMaxWidth()) { content() }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) { content() }
     }
 }
 
-/** One change: its title and day, what changed, where to find it and the question to try; a tap opens its page when it has one. */
+/** The open list over the Ira page takes at most this share of the height there is. */
+private const val LIST_SHARE = 0.35f
+
+/**
+ * The Ira page's compact "What's new": one row with the count, "Show"/"Hide" and "Got it" (always in view); open, the
+ * changes under it, at most [listMax] tall and scrolling. A change that points at the Ira page itself ([here]) is no link.
+ * Plain state only: "Show" changes on a tap.
+ */
 @Composable
-private fun WhatsNewRow(e: WhatsNew.Entry, onGo: ((String) -> Unit)?) {
+internal fun WhatsNewHeader(unseen: List<WhatsNew.Entry>, onGotIt: () -> Unit, onGo: ((String) -> Unit)?, listMax: Dp,
+                            modifier: Modifier = Modifier, here: String = "ira") {
+    val p = LocalPalette.current
+    var open by rememberSaveable { mutableStateOf(false) }
+    Column(modifier.fillMaxWidth().background(p.card, RoundedCornerShape(12.dp)).border(1.dp, p.rule, RoundedCornerShape(12.dp))
+        .padding(horizontal = 12.dp, vertical = 2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(keepNumbersWhole(if (unseen.size == 1) "What's new · 1 change" else "What's new · ${unseen.size} changes"),
+                style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            Text(if (open) "Hide" else "Show", style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) { open = !open }.padding(horizontal = 10.dp, vertical = 14.dp))
+            BrassButton("Got it", tone = p.inkSoft, onClick = onGotIt)
+        }
+        if (open) Column(Modifier.fillMaxWidth().heightIn(max = listMax).verticalScroll(rememberScrollState())) {
+            unseen.forEach { e ->
+                Rule()
+                WhatsNewRow(e, onGo, here)
+            }
+            Note("The whole list stays in ${com.optionslab.app.ui.Tab.CABINET.label} → What's new.", Modifier.padding(vertical = 6.dp))
+        }
+    }
+}
+
+/** One change: its title and day, what changed, where to find it and the question to try; a tap opens its page when it has one (not [here]). */
+@Composable
+private fun WhatsNewRow(e: WhatsNew.Entry, onGo: ((String) -> Unit)?, here: String? = null) {
     val p = LocalPalette.current
     val go: ((String) -> Unit)? = onGo
-    val to: String? = if (go != null) e.to else null
+    // A change on the page already open ([here]) is no link (it would open a second copy of it).
+    val to: String? = if (go != null) e.to?.takeIf { it != here } else null
     val tap: Modifier = if (to != null && go != null) Modifier.clickable(role = Role.Button) { go(to) } else Modifier
     Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).then(tap).padding(vertical = 7.dp)) {
         Text(keepNumbersWhole(e.title + if (to != null) " ›" else ""), style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))

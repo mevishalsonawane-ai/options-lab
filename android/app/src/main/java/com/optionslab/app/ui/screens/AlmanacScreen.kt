@@ -100,6 +100,8 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     // "What's new": the changes not seen yet, one list with the Ira page's card (the seen ids are a setting); "Got it" keeps
     // them as seen and hides both cards. Written only on that tap, never while composing. (Not in IraGoldAlgo: [WhatsNewStore.entries].)
     val news by remember { com.optionslab.app.data.WhatsNewStore.shown() }.collectAsState()
+    // Each time the app comes back to the front: a settings read that failed before is tried again (a flow, not Compose state).
+    com.optionslab.app.ui.PollWhileStarted { com.optionslab.app.data.WhatsNewStore.shown() }
     AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
         glance = { TodayGlanceCard(onGo) },

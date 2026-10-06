@@ -28,7 +28,8 @@ internal object WhatsNewStore {
 
     /**
      * The unseen entries every card shows, read from the settings the first time it is asked for (a settings file that could
-     * not be read then is read again next time). A flow, not Compose state: asking for it never writes a screen's state.
+     * not be read then is read again on the next call: the cards call it again each time the app comes back to the front).
+     * A flow, not Compose state: asking for it never writes a screen's state.
      */
     fun shown(): StateFlow<List<WhatsNew.Entry>> {
         if (!loaded) synchronized(this) {
@@ -47,6 +48,17 @@ internal object WhatsNewStore {
             com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(KEY to WhatsNew.encode(now)))
         }
         synchronized(this) { unseenNow.value = emptyList(); loaded = true }
+    }
+
+    /**
+     * Read the seen ids again now (after a backup is restored: the cached list is the old phone's). A settings file that
+     * cannot be read leaves the list as it was and is read again on the next [shown].
+     */
+    fun reload() {
+        synchronized(this) {
+            val seen = seen()
+            if (seen != null) { unseenNow.value = WhatsNew.unseen(entries(), seen); loaded = true } else loaded = false
+        }
     }
 
     /** Read the settings again on the next [shown] (tests, after they set the seen ids). */

@@ -121,8 +121,8 @@ class WhatsNewChangelogTest {
 
     @Test fun theQuestion() {
         for (s in listOf("what's new", "What's new?", "whats new", "what is new", "Jarvis, what's new?", "what's new jarvis", "what's new in the app",
-            "what is new in this update", "what's new in the latest version", "what's new in iraalgo", "show me what's new", "what changed",
-            "what has changed", "what's changed", "what changed in the app", "what has changed in this build", "what are the new features",
+            "what is new in this update", "what's new in the latest version", "what's new in iraalgo", "show me what's new",
+            "what changed in the app", "what's changed in the update", "app me kya naya hai", "what has changed in this build", "what are the new features",
             "any new features", "new features", "what features were added", "what's in the new update", "release notes", "show me the changelog",
             "naya kya hai", "kya naya hai", "naya kya aaya", "app mein naya kya hai", "app mein kya naya hai", "update mein kya badla",
             "is update mein naya kya hai", "naya kya hai app mein"))
@@ -132,7 +132,9 @@ class WhatsNewChangelogTest {
             "what changed since this morning", "what's changed since i last asked", "what changed since last time", "what changed today",
             "what changed in nifty", "what changed in my positions", "what changed in how you work", "what changed in my bots this week",
             "what's the latest", "any updates", "subah se kya badla", "what's new on the news", "what can i ask you", "update the app",
-            "what's up", "what's new with you"))
+            "what's up", "what's new with you",
+            // A bare "what changed" is SinceLast's (the market since Boss last asked).
+            "what changed", "what's changed", "what has changed", "What changed?"))
             assertFalse(WhatsNew.asked(s), s)
     }
 

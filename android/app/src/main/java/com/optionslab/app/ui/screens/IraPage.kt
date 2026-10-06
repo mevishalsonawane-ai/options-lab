@@ -69,8 +69,9 @@ import com.optionslab.ira.Market as IraMarket
 
 /**
  * Jarvis's Home: Ira first, the usual dashboard (prices, P&L, strategies) behind the second switch. The choice is
- * kept while the app runs. Over the Ira page, the "What's new" card while changes are unseen ([WhatsNewOverPage]; the
- * same list and "Got it" as the Dashboard's); [onGo]: a change's page, as Home's shortcuts.
+ * kept while the app runs. Over the Ira page, a one-row "What's new" header while changes are unseen ([WhatsNewOverPage]; the
+ * same list and "Got it" as the Dashboard's); [onGo]: a change's page, as Home's shortcuts (a change for the Ira page itself
+ * is no link there).
  */
 @Composable
 fun IraHome(orders: IraOrderPaths? = null, onGo: ((String) -> Unit)? = null, dashboard: @Composable () -> Unit) {

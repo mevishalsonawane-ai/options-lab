@@ -549,7 +549,10 @@ class CollisionTest {
         "sawal suggest karo" to "Tour", "take me on a tour" to "Tour",
         // ---- WhatsNew: the app's own changelog (what changed in the app, never the market's news) ----
         "what's new" to "WhatsNew", "whats new" to "WhatsNew", "what's new in the app" to "WhatsNew", "what is new in this update" to "WhatsNew",
-        "what changed" to "WhatsNew", "what has changed in the app" to "WhatsNew", "what's changed in this build" to "WhatsNew",
+        "what changed in the app" to "WhatsNew", "what has changed in the app" to "WhatsNew", "what's changed in this build" to "WhatsNew",
+        "what's changed in the update" to "WhatsNew", "app me kya naya hai" to "WhatsNew",
+        // A bare "what changed" stays SinceLast's (the market since Boss last asked).
+        "what changed" to "SinceLast", "what's changed" to "SinceLast", "what has changed" to "SinceLast",
         "naya kya hai" to "WhatsNew", "kya naya hai" to "WhatsNew", "app mein naya kya hai" to "WhatsNew", "naya kya aaya" to "WhatsNew",
         "what are the new features" to "WhatsNew", "show me the changelog" to "WhatsNew", "jarvis what's new" to "WhatsNew",
         // ---- FigureFirst: the figure said first ----
@@ -3195,7 +3198,7 @@ class CollisionTest {
     // ---- WhatsNew: the app's changelog takes only its own words; the news, the market and "since I last asked" keep theirs ----
 
     @Test fun whatsNewLeavesTheNewsAndTheMarketTheirRoutes() {
-        for (s in listOf("what's new", "what's new in the app", "what changed", "what has changed", "naya kya hai", "kya naya hai",
+        for (s in listOf("what's new", "what's new in the app", "what changed in the app", "what's changed in the update", "naya kya hai", "kya naya hai",
             "app mein naya kya hai", "what's new in this update", "what are the new features", "release notes")) {
             assertEquals("WhatsNew", audit.feature(s), s)
             val p = Ask.parse(s)
@@ -3210,6 +3213,7 @@ class CollisionTest {
         assertEquals("SinceMorning", audit.feature("what changed since this morning"))
         assertEquals("SinceLast", audit.feature("what's changed since i last asked"))
         assertEquals("SinceLast", audit.feature("what changed since last time"))
+        for (s in listOf("what changed", "what's changed", "what has changed")) assertEquals("SinceLast", audit.feature(s), s)
         assertEquals("Learnings", audit.feature("what changed in how you work"))
         assertEquals("ArmChange", audit.feature("what changed in my bots this week"))
         assertEquals("Tour", audit.feature("what can i ask you"))

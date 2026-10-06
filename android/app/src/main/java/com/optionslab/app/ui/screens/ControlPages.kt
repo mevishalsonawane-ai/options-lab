@@ -879,7 +879,11 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         model.viewModelScope.launch {
                             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
                                 val done = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                    try { com.optionslab.app.data.Backup.restore(app, c) } catch (e: Exception) { null }
+                                    try {
+                                        com.optionslab.app.data.Backup.restore(app, c)
+                                            // "What's new": the restored seen ids, not the cached ones (a read only; it writes nothing).
+                                            .also { runCatching { com.optionslab.app.data.WhatsNewStore.reload() } }
+                                    } catch (e: Exception) { null }
                                 }
                                 // Files may have been replaced either way: the app always restarts, never runs on half-restored data.
                                 when {

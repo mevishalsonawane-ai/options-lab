@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +25,9 @@ import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.ira.LiquidityOpen
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.Locale
@@ -36,25 +37,33 @@ import java.util.Locale
  * premium and P&L, each exit as it stands with how far away it is, the best and worst premium so far and where the index
  * sits between the index stop and the target.
  *
- * Refreshed on the screen's own refresh of the arms (the same 15 s cadence as the row's mark: a new [open] or [mark]):
- * no loop of its own. Each refresh reads [read] ([OrbArms.liquidityOpenNow] in the app: the position, its mark and the
- * arm's last index price, copied under the arms' lock) and works the figures out on Dispatchers.IO, and the state is
- * written only when they changed. Reads only: it places, closes and changes nothing. Never in the GOLD build.
+ * Refreshed at once on the screen's own refresh of the arms (a new [open] or [mark]), and every [tickMs] (15 s) while the
+ * position is open and the panel is on screen with the app in front ([com.optionslab.app.ui.PollWhileStarted]; it stops
+ * when the panel leaves), so the countdowns and "As of" move on while the premium is flat. Each refresh reads [read]
+ * ([OrbArms.liquidityOpenNow] in the app for this position's book and contract: the position, its mark and its own index's
+ * last price, copied under the arms' lock) and works the figures out on Dispatchers.IO, and the state is written only
+ * when they changed. Reads only: it places, closes and changes nothing. Never in the GOLD build.
  */
 @Composable
 internal fun LiquidityOpenPanel(
     open: OrbArms.Position, mark: Double?,
-    read: (suspend () -> OrbArms.LiquidityOpenNow?)? = null,
+    read: (suspend (OrbArms.Position) -> OrbArms.LiquidityOpenNow?)? = null,
     now: () -> LocalDateTime = { com.optionslab.app.data.Market.now().toLocalDateTime() },
+    tickMs: Long = 15_000,
 ) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     var shown by remember { mutableStateOf<LiquidityOpen.View?>(null) }
-    LaunchedEffect(open, mark) {
-        val v = withContext(Dispatchers.IO) {
-            val r = read?.let { f -> runCatching { f() }.getOrNull() }
-            runCatching { liquidityOpenView(open, mark, r, now()) }.getOrNull()
+    com.optionslab.app.ui.PollWhileStarted(open, mark) {
+        while (true) {
+            val v = withContext(Dispatchers.IO) {
+                val r = read?.let { f -> try { f(open) } catch (e: CancellationException) { throw e } catch (e: Exception) { null } }
+                runCatching { liquidityOpenView(open, mark, r, now()) }.getOrNull()
+            }
+            if (v != null && v != shown) shown = v
+            // Flat (no position open): no ticking.
+            if (!open.open) break
+            delay(tickMs)
         }
-        if (v != null && v != shown) shown = v
     }
     shown?.let { LiquidityOpenContent(it) }
 }

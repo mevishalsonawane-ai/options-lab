@@ -11,7 +11,7 @@ import java.util.Locale
  *
  * Shown on Home as a card while some entries are unseen ([unseen], newest first, [collapsed] to three until "Show all";
  * "Got it" marks them all seen, [markSeen]), in full under Settings → What's new, and said by Jarvis on "what's new" /
- * "what changed" / "naya kya hai" ([asked], [answer]). "What's new in the market", "any news" and the like stay the news.
+ * "what changed in the app" / "naya kya hai" ([asked], [answer]). "What's new in the market", "any news" and the like stay the news.
  * IraGoldAlgo shows only entries flagged [Entry.gold] (none so far, so it shows nothing). Pure.
  */
 object WhatsNew {
@@ -188,9 +188,10 @@ object WhatsNew {
     private val ASKED = rx(
         // "What's new?", "what's new in the app", "what is new in this update", "show me what's new"
         "^ $LEAD(?:show me |so )?(?:what s|whats|what is|wats) new(?: (?:in|with|on) $APP)?$END|" +
-        // "What changed?", "what has changed in the app", "what's changed in this build" ("since I last asked" stays the market's)
-        "^ $LEAD(?:what|wat) (?:s |has |have )?changed(?: (?:in|with) $APP)?$END|" +
-        "^ $LEAD(?:whats|what s) changed(?: (?:in|with) $APP)?$END|" +
+        // "What has changed in the app", "what's changed in this build": only with the app named. A bare "what changed" is
+        // SinceLast's (the market since Boss last asked).
+        "^ $LEAD(?:what|wat) (?:s |has |have )?changed (?:in|with) $APP$END|" +
+        "^ $LEAD(?:whats|what s) changed (?:in|with) $APP$END|" +
         // "What are the new features", "any new features", "new features", "what did you add", "what's in the new update"
         "^ $LEAD(?:what are the |any |show me the |list the )?new features(?: (?:in|of) $APP)?$END|" +
         "^ $LEAD(?:what|which) (?:new )?features (?:were|have been|got) added$END|" +
@@ -201,7 +202,7 @@ object WhatsNew {
         "^ $LEAD(?:app|update|is update|naye update) (?:mein|me|main) kya (?:badla|change hua)(?: hai)?$END"
     )
 
-    /** Does [text] ask what is new in the app? Never "what's new in the market", "any news", "what's changed since I last asked". */
+    /** Does [text] ask what is new in the app? Never "what's new in the market", "any news", a bare "what changed" or "what's changed since I last asked" (SinceLast's). */
     fun asked(text: String): Boolean = askedKept.of(text) { ASKED.containsMatchIn(Spaced.words(text)) }
 
     private val askedKept = Kept<Boolean>(64)

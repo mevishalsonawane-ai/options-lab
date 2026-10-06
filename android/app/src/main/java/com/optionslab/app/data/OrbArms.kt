@@ -616,15 +616,16 @@ object OrbArms {
     }
 
     /**
-     * Liquidity 15+5's open position for its live panel ([com.optionslab.ira.LiquidityOpen]): the position (the same one
+     * Liquidity 15+5's open position of book [arm] in [symbol] for its live panel ([com.optionslab.ira.LiquidityOpen]): the position (the same one
      * [ArmView.open] shows), its last mark, and the last index price the arm's own pass read for its index with that bar's
      * minute (null: none read). Copies under the lock, nothing fetched or built; reads only.
      */
     data class LiquidityOpenNow(val position: Position, val mark: Double?, val index: Double?, val indexAt: LocalDateTime?)
 
-    suspend fun liquidityOpenNow(): LiquidityOpenNow? = lock.withLock {
+    suspend fun liquidityOpenNow(arm: String, symbol: String): LiquidityOpenNow? = lock.withLock {
         val books = LiquidityRules.BOOKS.map { it.source }
-        val p = book().positions.lastOrNull { it.arm in books && it.open } ?: return@withLock null
+        // That book's own open position (BANKNIFTY's and FINNIFTY's can be open at once): each panel reads its own index.
+        val p = book().positions.lastOrNull { it.arm in books && it.arm == arm && it.symbol == symbol && it.open } ?: return@withLock null
         val und = LiquidityRules.BOOKS.firstOrNull { it.source == p.arm }?.let { LiquidityRules.underlyingOf(it) }
         val last = und?.let { liquidityPass[it]?.second?.lastOrNull() }
         LiquidityOpenNow(p, marks[p.symbol], last?.close, last?.start)

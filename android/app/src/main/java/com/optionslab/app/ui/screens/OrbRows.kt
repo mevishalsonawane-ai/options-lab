@@ -70,7 +70,7 @@ fun OrbRows(model: AppModel) {
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) },
         paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() },
-        openRead = { OrbArms.liquidityOpenNow() })
+        openRead = { p -> OrbArms.liquidityOpenNow(p.arm, p.symbol) })
 }
 
 /** What the ORB rows ask the model to do (an interface so tests can record it without an [AppModel]). */
@@ -100,7 +100,7 @@ internal fun OrbRowsContent(
      * Liquidity 15+5's open position as its live panel reads it ([LiquidityOpenPanel]; [OrbArms.liquidityOpenNow] in the
      * app), off the main thread on each refresh of the rows. Null: the panel shows the row's own position and mark. Reads only.
      */
-    openRead: (suspend () -> OrbArms.LiquidityOpenNow?)? = null,
+    openRead: (suspend (OrbArms.Position) -> OrbArms.LiquidityOpenNow?)? = null,
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }

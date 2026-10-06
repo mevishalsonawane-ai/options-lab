@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.WhatsNewStore
 import com.optionslab.app.security.SecurePrefs
@@ -69,7 +70,7 @@ class WhatsNewCardTest {
 
     private fun set(content: @Composable () -> Unit) = compose.setContent { IraAlgoTheme("light") { content() } }
     private fun text(t: String) = compose.onNodeWithText(keepNumbersWhole(t))
-    private fun shows(t: String) = compose.onAllNodesWithText(keepNumbersWhole(t)).fetchSemanticsNodes().isNotEmpty()
+    private fun shows(t: String, sub: Boolean = false) = compose.onAllNodesWithText(keepNumbersWhole(t), substring = sub).fetchSemanticsNodes().isNotEmpty()
 
     @Test fun threeNewestFirstThenShowAll() {
         set { WhatsNewCardContent(NewsFixtures.five, onGotIt = {}, onGo = {}) }
@@ -169,25 +170,63 @@ class WhatsNewCardTest {
         assertFalse(compose.onAllNodesWithText("Show all", substring = true).fetchSemanticsNodes().isNotEmpty())
     }
 
-    /** The Ira page (Home opens on it in Jarvis): the same card above it while changes are unseen; "Got it" hides it. */
-    @Test fun theIraPageShowsTheCardAboveItUntilGotIt() {
+    private fun header(n: Int) = if (n == 1) "What's new · 1 change" else "What's new · $n changes"
+
+    /** The Ira page (Home opens on it in Jarvis): a one-row header above it while changes are unseen; "Got it" hides it. */
+    @Test fun theIraPageShowsTheHeaderAboveItUntilGotIt() {
         val entries = WhatsNewStore.entries()
         org.junit.Assume.assumeTrue("IraGoldAlgo shows none of today's changes", entries.isNotEmpty())
         set { WhatsNewOverPage(onGo = null) { Text("the ira page") } }
         compose.waitForIdle()
-        text("What's new").assertIsDisplayed()
-        text("${entries.size} changes since you last looked").assertIsDisplayed()
+        text(header(entries.size)).assertIsDisplayed()
         text("the ira page").assertIsDisplayed()
-        val top = { t: String -> compose.onNodeWithText(t).fetchSemanticsNode().boundsInRoot.top }
-        assertTrue("the card is above the page", top("What's new") < top("the ira page"))
+        val top = { t: String -> compose.onNodeWithText(keepNumbersWhole(t)).fetchSemanticsNode().boundsInRoot.top }
+        assertTrue("the header is above the page", top(header(entries.size)) < top("the ira page"))
+        // Folded: the changes are behind "Show"; "Got it" is in the same row, always in view.
+        assertFalse(shows(entries[0].title))
+        text("Got it").assertIsDisplayed()
+        text("Show").performClick()
+        compose.waitForIdle()
         // With no page to open from here, a change is no button (nothing navigates).
-        text(entries[0].title).assertIsDisplayed()
+        text(entries[0].title).performScrollTo().assertIsDisplayed()
+        text("Hide").assertIsDisplayed()
+        text("Got it").assertIsDisplayed()
         text("Got it").performClick()
         compose.waitForIdle()
-        assertFalse(shows("What's new"))
+        assertFalse(shows("What's new", sub = true))
         text("the ira page").assertIsDisplayed()
         assertTrue(WhatsNewStore.unseen().isEmpty())
         assertTrue(WhatsNewStore.shown().value.isEmpty())
+    }
+
+    /** Open, the list takes at most about a third of the height: the page below keeps the rest. */
+    @Test fun theOpenListIsCappedAndScrolls() {
+        set { Box(Modifier.height(800.dp)) { Column {
+            WhatsNewHeader(NewsFixtures.five, onGotIt = {}, onGo = {}, listMax = 280.dp)
+            Text("below")
+        } } }
+        text("Show").performClick()
+        compose.waitForIdle()
+        val bottom = { t: String -> compose.onNodeWithText(keepNumbersWhole(t)).fetchSemanticsNode().boundsInRoot.bottom }
+        val density = compose.density.density
+        assertTrue("the open list is capped", bottom("below") <= (48 + 280 + 40) * density)
+        text("Today at a glance").performScrollTo().assertIsDisplayed()
+        text("Got it").assertIsDisplayed()
+    }
+
+    /** A change that points at the Ira page opens nothing from the Ira page (no second Ira page); the others still open. */
+    @Test fun aChangeForTheIraPageIsNoLinkOnIt() {
+        val went = ArrayList<String>()
+        val ira = WhatsNew.Entry("t-ira", java.time.LocalDate.of(2026, 10, 6), "Ask what Solo did today", "Jarvis explains Solo's day.",
+            "Home → Ira", ask = "what did Solo do today", to = "ira")
+        set { WhatsNewHeader(listOf(ira) + NewsFixtures.five.take(1), onGotIt = {}, onGo = { went += it }, listMax = 600.dp) }
+        text("Show").performClick()
+        compose.waitForIdle()
+        assertFalse(shows("Ask what Solo did today ›"))
+        text("Ask what Solo did today").performClick()
+        text("Levels on the chart ›").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("chart"), went)
     }
 
     @Test fun nothingUnseenLeavesTheIraPageAsItWas() {
@@ -195,8 +234,20 @@ class WhatsNewCardTest {
         WhatsNewStore.forget()
         set { WhatsNewOverPage(onGo = null) { Text("the ira page") } }
         compose.waitForIdle()
-        assertFalse(shows("What's new"))
+        assertFalse(shows("What's new", sub = true))
         assertEquals(0f, compose.onNodeWithText("the ira page").fetchSemanticsNode().boundsInRoot.top, 0.5f)
+    }
+
+    /** A settings read that failed is tried again; [WhatsNewStore.reload] (after a restore) reads the seen ids afresh. */
+    @Test fun theListIsReadAgainAfterARestore() {
+        val entries = WhatsNewStore.entries()
+        org.junit.Assume.assumeTrue(entries.size >= 2)
+        assertEquals(entries.size, WhatsNewStore.shown().value.size)
+        // As a restore does: the settings now hold the backup's seen ids.
+        SecurePrefs.put(WhatsNewStore.KEY, WhatsNew.encode(entries.drop(1).map { it.id }.toSet()))
+        assertEquals("cached until read again", entries.size, WhatsNewStore.shown().value.size)
+        WhatsNewStore.reload()
+        assertEquals(listOf(entries[0].id), WhatsNewStore.shown().value.map { it.id })
     }
 
     /** One list for both places: "Got it" on the Ira page hides the Dashboard's card too. */
@@ -209,11 +260,13 @@ class WhatsNewCardTest {
             }
         }
         compose.waitForIdle()
-        assertEquals(2, compose.onAllNodesWithText("What's new").fetchSemanticsNodes().size)
+        // The Dashboard's card and the Ira page's header row.
+        assertEquals(1, compose.onAllNodesWithText("What's new").fetchSemanticsNodes().size)
+        text(header(WhatsNewStore.entries().size)).assertIsDisplayed()
         compose.onAllNodesWithText("Got it").fetchSemanticsNodes().let { assertEquals(2, it.size) }
         compose.onAllNodesWithText("Got it")[0].performClick()
         compose.waitForIdle()
-        assertFalse(shows("What's new"))
+        assertFalse(shows("What's new", sub = true))
         text("the ira page").assertIsDisplayed()
         text("Today at a glance").assertIsDisplayed()
     }

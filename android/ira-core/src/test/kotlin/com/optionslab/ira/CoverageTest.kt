@@ -1424,6 +1424,7 @@ class CoverageTest {
         // ---- WhatsNew: the app's own changelog, newest first, with where to find each change ----
         "what's new in the latest version" to "WhatsNew", "what has changed in the app" to "WhatsNew", "app mein kya naya hai" to "WhatsNew",
         "update mein kya badla" to "WhatsNew", "any new features" to "WhatsNew", "what's in the new update" to "WhatsNew",
+        "what's changed in the update" to "WhatsNew", "what changed" to "SinceLast", "what has changed" to "SinceLast",
         "hammer ke baare mein maine kya bola tha" to "SaidAbout",
         // ---- Clarity (round 11): the answers said shorter aloud, and back to usual ----
         "which answers do you keep short" to "Clarity", "which of your answers do you keep shorter" to "Clarity",

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.OrbArms
+import com.optionslab.app.testing.until
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.ira.LiquidityOpen
@@ -87,19 +88,59 @@ class LiquidityOpenPanelTest {
                 }, now = { clock })
             }
         }
-        compose.waitUntil(10_000) { shows(keepNumbersWhole("index 52,050.00 · 110.0 pts away")) }
+        compose.until(10_000) { shows(keepNumbersWhole("index 52,050.00 · 110.0 pts away")) }
         compose.waitForIdle()
-        assertEquals(1, reads.get())
-        assertEquals(1, offMain.get())
+        // Read at once, then again only on the 15 s tick (an equal view writes nothing, so Compose settles).
+        val n = reads.get()
+        assertTrue("read at once, and not in a loop: $n", n in 1..3)
+        assertEquals("every read off the main thread", n, offMain.get())
         assertEquals(LiquidityOpen.view(LiquidityOpen.Input("BANKNIFTY", "CE", pos.symbol, 60, 2.0, false, 210.0, pos.entryTime, 220.0,
             pos.stopTrigger, true, 51_970.0, 52_200.0, 52_050.0, day.atTime(10, 55), 235.0, 198.0, false, 24.5), clock),
             liquidityOpenView(pos, 219.0, fresh, clock))
     }
 
+    /** The premium flat: the countdowns and "As of" still move on, on the panel's own tick, while the position is open. */
+    @Test fun theClockMovesOnWhileThePremiumIsFlat() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val at = java.util.concurrent.atomic.AtomicReference(clock)
+        compose.setContent { IraAlgoTheme("light") { LiquidityOpenPanel(pos, 219.0, read = { fresh }, now = { at.get() }, tickMs = 50) } }
+        val first = liquidityOpenView(pos, 219.0, fresh, clock).asOf
+        compose.until(10_000) { shows(keepNumbersWhole(first)) }
+        val later = clock.plusMinutes(2)
+        val next = liquidityOpenView(pos, 219.0, fresh, later).asOf
+        assertTrue(first != next)
+        at.set(later)
+        // The tick's delay on whichever clock drives it here (the main looper's or Compose's).
+        compose.until(10_000) {
+            org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100))
+            compose.mainClock.advanceTimeBy(100)
+            shows(keepNumbersWhole(next))
+        }
+        assertFalse(shows(keepNumbersWhole(first)))
+    }
+
+    /** Each panel reads its own book and contract (BANKNIFTY's and FINNIFTY's can be open at once). */
+    @Test fun eachPanelReadsItsOwnPosition() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        val asked = java.util.Collections.synchronizedList(ArrayList<Pair<String, String>>())
+        val fin = pos.copy(arm = LiquidityRules.FIN5.source, symbol = "FINNIFTY26OCT24000CE")
+        compose.setContent {
+            IraAlgoTheme("light") {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    LiquidityOpenPanel(pos, 219.0, read = { p -> asked += p.arm to p.symbol; fresh }, now = { clock })
+                    LiquidityOpenPanel(fin, 219.0, read = { p -> asked += p.arm to p.symbol; null }, now = { clock })
+                }
+            }
+        }
+        compose.until(10_000) { compose.onAllNodesWithText("OPEN POSITION", substring = true).fetchSemanticsNodes().size == 2 }
+        assertTrue(asked.toList().toString(), (pos.arm to pos.symbol) in asked.toList())
+        assertTrue(asked.toList().toString(), (fin.arm to fin.symbol) in asked.toList())
+    }
+
     @Test fun aReadThatFailsShowsTheRowsOwnPosition() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         compose.setContent { IraAlgoTheme("dark") { LiquidityOpenPanel(pos, 219.0, read = { error("unreadable") }, now = { clock }) } }
-        compose.waitUntil(10_000) { shows("OPEN POSITION", sub = true) }
+        compose.until(10_000) { shows("OPEN POSITION", sub = true) }
         assertTrue(shows(keepNumbersWhole("Premium now 219.00 (+4.3% on the price paid)")))
         assertTrue(shows("index not read yet"))
     }
@@ -113,7 +154,7 @@ class LiquidityOpenPanelTest {
                 }
             }
         }
-        compose.waitUntil(10_000) { shows("OPEN POSITION", sub = true) }
+        compose.until(10_000) { shows("OPEN POSITION", sub = true) }
         assertEquals("one panel", 1, compose.onAllNodesWithText("OPEN POSITION", substring = true).fetchSemanticsNodes().size)
         assertTrue(shows(keepNumbersWhole("Premium stop · 170.00, 15% under 210.00 (a resting order)")))
     }
