@@ -56,6 +56,34 @@ class MorningCuesTest {
         assertTrue(MorningCues.gift(flat, flat.at, prev, wedMorning)[0].startsWith("GIFT Nifty points to a roughly flat open (+16 pts, +0.07%)"))
     }
 
+    @Test fun aReadingInMarketHoursIsALevelNotAGap() {
+        val bars = session(mon, 22700.0) + session(tue, 22744.3)
+        // 11:55 on a trading day: GIFT Nifty's level beside Nifty's then, never a gap.
+        val noon = RecorderFeeds.Gift("GIFTNIFTY", null, 22810.0, null, null, null, tue.atTime(11, 55))
+        val prev = MorningCues.prevClose(bars, noon.at!!)
+        assertEquals(MorningCues.Close(tue, 22744.3, tue.atTime(11, 55)), prev)
+        val said = MorningCues.gift(noon, noon.at, prev, tue.atTime(12, 0))
+        assertEquals("GIFT Nifty was 22,810.0 at 11:55 today, during market hours - that is a level, not a gap for the open. Nifty was 22,744.3 at 11:55.", said[0])
+        assertFalse(said.any { it.contains("gap-up") || it.contains("gap-down") || it.contains("flat open") })
+        assertFalse(said.any { NO_TRADE.containsMatchIn(it) })
+        assertNull(MorningCues.giftBrief(noon, noon.at, prev, tue.atTime(12, 0)))
+        // Without Nifty's candles for that day: the level alone, said so.
+        val alone = MorningCues.gift(noon, noon.at, MorningCues.prevClose(session(mon, 22700.0), noon.at!!), tue.atTime(12, 0))
+        assertTrue(alone[0].startsWith("GIFT Nifty was 22,810.0 at 11:55 today, during market hours") && alone[0].contains("I don't have Nifty's price"), alone[0])
+        // After 15:30: against today's close, for tomorrow's gap.
+        val evening = noon.copy(at = tue.atTime(15, 45))
+        val today = MorningCues.prevClose(bars, evening.at!!)
+        assertEquals(MorningCues.Close(tue, 22744.3), today)
+        assertTrue(MorningCues.gift(evening, evening.at, today, tue.atTime(16, 0))[0].startsWith("GIFT Nifty points to a gap-up of ~66 pts"))
+        // Before 09:15: unchanged, against the day before's close.
+        val early = noon.copy(at = tue.atTime(9, 10))
+        assertEquals(mon, MorningCues.prevClose(bars, early.at!!)!!.day)
+        // A weekend reading at noon is not in market hours.
+        assertFalse(MorningCues.inSession(LocalDate.of(2026, 10, 4).atTime(12, 0)))
+        assertTrue(MorningCues.inSession(tue.atTime(9, 15)))
+        assertFalse(MorningCues.inSession(tue.atTime(15, 30)))
+    }
+
     @Test fun giftMissingOrOldIsSaid() {
         assertEquals(listOf(MorningCues.NO_GIFT), MorningCues.gift(null, null, null, wedMorning))
         val g = RecorderFeeds.parseGift(res("nseix_market_rate_derivative.json"))!!
@@ -136,7 +164,9 @@ class MorningCuesTest {
         for (s in listOf("morning cues", "pre market cues", "gift nifty and fii position"))
             assertEquals(MorningCues.Ask.BOTH, MorningCues.asked(s), s)
         for (s in listOf("what did fiis do yesterday", "fii data", "fii dii data", "did fiis buy or sell", "fii ne aaj kitna becha",
-            "news on fii flows", "what is fii", "what does gift nifty mean", "what are my positions", "how is nifty"))
+            "news on fii flows", "what is fii", "what does gift nifty mean", "what are my positions", "how is nifty",
+            // Joined with another topic: not answered as cues alone.
+            "gift nifty and pcr", "fii position and max pain", "gift nifty and the option chain", "pcr and gift nifty", "max pain and fii positioning"))
             assertNull(MorningCues.asked(s), s)
     }
 }

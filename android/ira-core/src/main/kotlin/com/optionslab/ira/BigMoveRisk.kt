@@ -97,13 +97,15 @@ object BigMoveRisk {
     private val VOL = Regex(" (volatile|jumpy|choppy|whipsaw|whippy|swingy) ")
     private val VOL_ASK = Regex(" (is|are|hai|kya|how|kitna|kitni|right now|now|abhi|today|aaj|currently) ")
     /** Risk asked of the market now: "abhi kitna risk hai", "is the market risky right now". */
-    private val RISK = Regex(" (risk|risky|khatra|dangerous) ")
+    private val RISK = Regex(" (risky|khatra|dangerous) ")
+    /** The noun "risk" only with how much ("abhi kitna risk hai"): "market mein risk hai kya" / "what is the risk" stay the account's. */
+    private val RISK_HOW_MUCH = Regex(" (kitna|kitni|how much) risk ")
     private val RISK_NOW = Regex(" (now|right now|abhi|currently|at the moment|market|nifty|banknifty|bank nifty|sensex|finnifty|fin nifty) ")
     /**
      * Not this read: Boss's own book or limits, a trade or its reward, a record of past days, a range or how far, a
      * forecast of direction, why something moved, a definition, VIX or IV themselves, alerts, news, gold.
      */
-    private val NOT = Regex(" (i|me|my|mine|we|our|mera|meri|mere|hamara|position|positions|trade|trades|trading|limit|limits|lot|lots|portfolio|account|capital|" +
+    private val NOT = Regex(" (risk on|risk off|buy|buying|sell|selling|i|me|my|mine|we|our|mera|meri|mere|hamara|position|positions|trade|trades|trading|limit|limits|lot|lots|portfolio|account|capital|" +
         "reward|ratio|appetite|tolerance|order|orders|record|history|how often|usually|usual|typically|generally|past|yesterday|kal|tomorrow|week|month|" +
         "why|kyun|kyon|kyu|what is a|what is an|what s a|what is volatility|what s volatility|mean|means|meaning|define|explain|vix|implied|iv|historical|range|how much can|how far|how big|points|" +
         "up or down|direction|which way|which side|which|when|what time|most|more|than|compared|vs|versus|sabse|zyada|hota|hote|day|days|din|hour|hours|weekday|weekdays|" +
@@ -118,7 +120,7 @@ object BigMoveRisk {
         if (NOT.containsMatchIn(t)) return false
         return BIG.containsMatchIn(t) && NOWISH.containsMatchIn(t) ||
             VOL.containsMatchIn(t) && VOL_ASK.containsMatchIn(t) ||
-            RISK.containsMatchIn(t) && RISK_NOW.containsMatchIn(t)
+            (RISK.containsMatchIn(t) || RISK_HOW_MUCH.containsMatchIn(t)) && RISK_NOW.containsMatchIn(t)
     }
 
     /** The index asked about: the first index named, Nifty when none is; null when only gold or India VIX is. */

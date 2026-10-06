@@ -600,7 +600,10 @@ object MarketRecorder {
     fun participantsRecorded(): List<RecorderFeeds.Participants> {
         if (dirOrNull == null) return emptyList()
         val out = ArrayList<RecorderFeeds.Participants>()
-        for ((d, _) in days().reversed().take(12)) {
+        // Today's file holds no participant rows before NSE publishes them (read from 18:30): not decrypted for nothing.
+        val t = now()
+        val skip = t.toLocalDate().takeIf { t.toLocalTime().isBefore(LocalTime.of(18, 30)) }
+        for ((d, _) in days().reversed().filter { it.first != skip }.take(12)) {
             runCatching { com.optionslab.ira.MorningCues.participants(readDay(d).lines) }.getOrDefault(emptyList())
                 .forEach { p -> if (out.none { it.date == p.date }) out += p }
             if (out.size >= 2) break

@@ -18,6 +18,8 @@ object LiquidityOverlay {
     const val SESSIONS = 3
     /** Zones drawn at most (the most recently formed). */
     const val MAX_ZONES = 40
+    /** Calendar days of history the levels are read from: the arm's own (its read of the ten days before today, and today). */
+    const val LOOKBACK_DAYS = 10L
 
     enum class Kind { SWING, POOL }
 
@@ -83,7 +85,9 @@ object LiquidityOverlay {
     /** The model of [input] at [now] on the [minutes]-minute chart of [underlying], with that index's [trades]. */
     fun build(input: List<Bar>, minutes: Int, underlying: String, now: LocalDateTime, trades: List<Trade>,
               inputMinutes: Int = 5, sessions: Int = SESSIONS, maxZones: Int = MAX_ZONES): Model {
-        val all = closedBars(input, minutes, now, inputMinutes)
+        // The same days the arm reads, so a level from older history the arm never sees is not drawn.
+        val since = now.toLocalDate().minusDays(LOOKBACK_DAYS)
+        val all = closedBars(input.filter { !it.start.toLocalDate().isBefore(since) }, minutes, now, inputMinutes)
         if (all.isEmpty()) return Model(minutes, emptyList(), emptyList(), emptyList(), emptyList())
         val days = all.map { it.start.toLocalDate() }.distinct().takeLast(sessions)
         val first = all.indexOfFirst { it.start.toLocalDate() == days.first() }
@@ -104,9 +108,10 @@ object LiquidityOverlay {
         }
         for (t in trades.sortedBy { it.entryTime }) {
             // Decided on the close of the book's own bar: on a faster chart, the bar that closes with it.
-            val e = barAt(bars, t.signalBar.plusMinutes(t.minutes.toLong()).minusNanos(1)) ?: continue
+            // A moment past the last closed bar draws nothing until its bar has closed.
+            val e = barAt(bars, t.signalBar.plusMinutes(t.minutes.toLong()).minusNanos(1), minutes) ?: continue
             markers += Marker(MarkerKind.ENTRY, t.side, e, above = t.side < 0, text = t.tag, trade = t)
-            val x = t.exitTime?.let { barAt(bars, it) }
+            val x = t.exitTime?.let { barAt(bars, it, minutes) }
             if (x != null) markers += Marker(MarkerKind.EXIT, t.side, x, above = t.side > 0, text = reason(t.why), trade = t)
             val end = x ?: bars.lastIndex
             t.level?.let { lines += Line(it, e, end, dotted = false, label = "${t.tag} level") }
@@ -132,9 +137,13 @@ object LiquidityOverlay {
         return out
     }
 
-    /** The window bar holding moment [t] (the last one starting by then), or null when [t] is before the window. */
-    fun barAt(bars: List<Bar>, t: LocalDateTime): Int? {
+    /**
+     * The window bar ([minutes] wide) holding moment [t] (the last one starting by then), or null when [t] is before the
+     * window or at / after the end of its last bar (that bar has not closed yet, or is not in the window).
+     */
+    fun barAt(bars: List<Bar>, t: LocalDateTime, minutes: Int): Int? {
         if (bars.isEmpty() || t.isBefore(bars.first().start)) return null
+        if (!t.isBefore(bars.last().start.plusMinutes(minutes.toLong()))) return null
         return bars.indexOfLast { !it.start.isAfter(t) }
     }
 

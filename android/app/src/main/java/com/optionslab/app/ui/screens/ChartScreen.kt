@@ -353,7 +353,7 @@ internal fun ChartPane(
                         // Only fatal before the first candles: one runtime error later must not drop the chart for the session.
                         onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
                         // The page's own 5-minute candles feed the liquidity layer, so it reads nothing more while they are fresh.
-                        onBars = { s, iv, list -> if (iv == "5m") liqCache.offer(s, list) }), "IraBridge")
+                        onBars = { s, iv, list -> val clock = liquidity; if (iv == "5m" && clock != null) liqCache.offer(s, list, clock.now()) }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -423,17 +423,33 @@ internal fun ChartPane(
         val liqPanel: @Composable (Modifier) -> Unit = { area ->
             val u = liqUnderlying
             if (u != null && liqOn && liquidity != null) LiquidityPanel(u, visible, bars = { now ->
-                liqCache.fresh(u, now) ?: source.bars(u, "5m", null, null).also { liqCache.offer(u, it, history = true) }
+                liqCache.fresh(u, now) ?: source.bars(u, "5m", null, null).also { liqCache.offer(u, it, liquidity.now(), history = true) }
             }, source = liquidity, modifier = area)
         }
+        // The chart stays at one place in the composition whatever the layer does, so the WebView is never rebuilt: not
+        // when the layer is switched on or off, and not when the keyboard shrinks the height (a Row / Column chosen from
+        // the space left moved the chart between parents, which destroyed and reloaded the page). Beside it only in a
+        // landscape orientation.
+        val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         if (liquidity == null) chartArea(Modifier.weight(1f).fillMaxWidth())
-        else androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            if (maxWidth > maxHeight) Row(Modifier.fillMaxSize()) {
-                chartArea(Modifier.weight(1f).fillMaxHeight())
-                liqPanel(Modifier.weight(1f).fillMaxHeight())
-            } else Column(Modifier.fillMaxSize()) {
-                chartArea(Modifier.weight(1f).fillMaxWidth())
-                liqPanel(Modifier.weight(0.9f).fillMaxWidth())
+        else androidx.compose.ui.layout.Layout(content = {
+            chartArea(Modifier)
+            liqPanel(Modifier)
+        }, modifier = Modifier.weight(1f).fillMaxWidth()) { parts, c ->
+            val w = c.maxWidth; val h = c.maxHeight
+            fun fixed(cw: Int, ch: Int) = androidx.compose.ui.unit.Constraints.fixed(cw, ch)
+            if (parts.size < 2) {
+                val chart = parts.firstOrNull()?.measure(fixed(w, h))
+                layout(w, h) { chart?.place(0, 0) }
+            } else if (landscape) {
+                val cw = w / 2
+                val chart = parts[0].measure(fixed(cw, h)); val layer = parts[1].measure(fixed(w - cw, h))
+                layout(w, h) { chart.place(0, 0); layer.place(cw, 0) }
+            } else {
+                // The chart over the layer, 1 : 0.9.
+                val ch = (h / 1.9f).toInt()
+                val chart = parts[0].measure(fixed(w, ch)); val layer = parts[1].measure(fixed(w, h - ch))
+                layout(w, h) { chart.place(0, 0); layer.place(0, ch) }
             }
         }
     }

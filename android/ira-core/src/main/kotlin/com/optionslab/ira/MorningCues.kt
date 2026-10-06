@@ -26,8 +26,11 @@ import kotlin.math.roundToLong
 object MorningCues {
     enum class Ask { GIFT, FII, BOTH }
 
-    /** A session's close: [day] and the last 1-minute candle's close. */
-    data class Close(val day: LocalDate, val close: Double)
+    /**
+     * A session's close: [day] and the last 1-minute candle's close. With [at]: not a close but Nifty's level during the
+     * session (the 1-minute candle of [at], the last at or before a reading taken in market hours).
+     */
+    data class Close(val day: LocalDate, val close: Double, val at: LocalDateTime? = null)
 
     /** The FIIs' index positions on [date] (contracts): futures long / short, calls long / short, puts long / short. */
     data class Fii(val date: LocalDate, val futLong: Long, val futShort: Long, val callLong: Long, val callShort: Long,
@@ -50,6 +53,11 @@ object MorningCues {
     const val NO_FII = "I have no NSE participant OI file on the phone yet, Boss - NSE publishes it after 18:30 and the market recorder reads it then."
 
     private val CLOSE: LocalTime = LocalTime.of(15, 30)
+    private val OPEN: LocalTime = LocalTime.of(9, 15)
+
+    /** A reading taken in market hours (a weekday, 09:15-15:30): a level beside Nifty's, not a gap. */
+    fun inSession(at: LocalDateTime): Boolean =
+        at.dayOfWeek.value <= 5 && !at.toLocalTime().isBefore(OPEN) && at.toLocalTime().isBefore(CLOSE)
 
     // ---- the question ---------------------------------------------------------------------------------------------
 
@@ -66,12 +74,16 @@ object MorningCues {
         "dii|diis|yesterday|kal|week|month|my|i|me|mera|meri|alert|remind|mean|means|meaning|define|explain|what is a|what is an|who are|kaun) ")
     private val CUES = Regex(" (morning cues|pre open cues|preopen cues|pre market cues|premarket cues|opening cues|subah ke cues) ")
 
+    /** Another topic joined on with "and" ("gift nifty and pcr", "max pain and fii position"): that question is not this one's. */
+    private val JOINED = Regex(" and (the |also |its )?(pcr|put call ratio|max pain|maxpain|option chain|chain|oi chain) | (pcr|put call ratio|max pain|maxpain|chain) and ")
+
     /** What was asked: GIFT Nifty, the FIIs' positioning, or the morning's cues (both); null otherwise. */
     fun asked(text: String): Ask? = askedKept.of(text) { askedFresh(text) }
     private val askedKept = Kept<Ask?>(64)
 
     private fun askedFresh(text: String): Ask? {
         val t = norm(text)
+        if (JOINED.containsMatchIn(t)) return null
         val gift = GIFT.containsMatchIn(t) && !GIFT_NOT.containsMatchIn(t)
         val fii = FII.containsMatchIn(t) && POSITION.containsMatchIn(t) && !FII_NOT.containsMatchIn(t)
         return when {
@@ -99,11 +111,21 @@ object MorningCues {
 
     // ---- GIFT Nifty -----------------------------------------------------------------------------------------------
 
-    /** Nifty's last close before [at], from its 1-minute [bars]: a session of an earlier day, or [at]'s own from 15:30. */
-    fun prevClose(bars: List<Candle>, at: LocalDateTime): Close? =
-        MarketStory.sessions(bars).lastOrNull { s ->
+    /**
+     * Nifty's last close before [at], from its 1-minute [bars]: a session of an earlier day, or [at]'s own from 15:30
+     * (after the close a reading is set against today's close, for tomorrow's gap). For a reading in market hours
+     * ([inSession]): Nifty's level then instead (its candle at or before [at] that day, with [Close.at]), or null without one.
+     */
+    fun prevClose(bars: List<Candle>, at: LocalDateTime): Close? {
+        val sessions = MarketStory.sessions(bars)
+        if (inSession(at)) {
+            val c = sessions.lastOrNull { it.day == at.toLocalDate() }?.bars?.lastOrNull { !it.t.isAfter(at) } ?: return null
+            return Close(at.toLocalDate(), c.c, c.t)
+        }
+        return sessions.lastOrNull { s ->
             s.bars.isNotEmpty() && (s.day.isBefore(at.toLocalDate()) || s.day == at.toLocalDate() && !at.toLocalTime().isBefore(CLOSE))
         }?.let { Close(it.day, it.close) }
+    }
 
     /**
      * GIFT Nifty in sentences, the first the brief's: the last reading [g] (taken at [readAt]; the exchange's own time
@@ -115,6 +137,14 @@ object MorningCues {
         val at = g.at ?: readAt
         val old = Duration.between(at, now).toHours() >= GIFT_OLD_HOURS
         val oldNote = if (old) " That reading is old - there is no newer one on the phone." else ""
+        // Taken while the market was open: GIFT Nifty's level beside Nifty's, never a gap (the open is long past).
+        if (inSession(at)) {
+            val nifty = prev?.takeIf { it.at != null && it.close > 0 }
+                ?.let { " Nifty was ${px(it.close)} at ${hm(it.at!!.toLocalTime())}." }
+                ?: " I don't have Nifty's price from then on the phone to set it beside."
+            return listOf("GIFT Nifty was ${px(g.last)} at ${whenSaid(at, now)}, during market hours - that is a level, not a gap for the open.$nifty$oldNote",
+                GIFT_NOTE.substringBefore(" - read") + ".")
+        }
         if (prev == null || prev.close <= 0)
             return listOf("GIFT Nifty was ${px(g.last)} at ${whenSaid(at, now)}, but I don't have Nifty's previous close on the phone to set it against.$oldNote")
         val gap = g.last - prev.close
@@ -128,7 +158,8 @@ object MorningCues {
 
     /** The morning check's GIFT line, or null when there is no reading, no close or only an old reading. */
     fun giftBrief(g: RecorderFeeds.Gift?, readAt: LocalDateTime?, prev: Close?, now: LocalDateTime): String? {
-        if (g == null || readAt == null || prev == null) return null
+        if (g == null || readAt == null || prev == null || prev.at != null) return null
+        if (inSession(g.at ?: readAt)) return null
         if (Duration.between(g.at ?: readAt, now).toHours() >= GIFT_OLD_HOURS) return null
         return gift(g, readAt, prev, now).first().removeSuffix(".")
     }

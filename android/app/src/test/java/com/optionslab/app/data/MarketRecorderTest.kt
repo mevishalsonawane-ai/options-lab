@@ -333,6 +333,10 @@ class MarketRecorderTest : RobolectricTest() {
         assertTrue(p.contains("P,$day,${day}T18:30:05,oi,FII,29117,331508,3420425,2853437,616526,1175238,982257,586923,129499,245160,237610,105061,5615965,5096796"))
         assertEquals(5, p.count { it.contains(",vol,") })
         assertEquals(day, MarketRecorder.status().participants)
+        assertEquals(listOf(day), MarketRecorder.participantsRecorded().map { it.date })
+        // Before 18:30 today's file is not opened for them.
+        at(18, 0); assertEquals(emptyList<LocalDate>(), MarketRecorder.participantsRecorded().map { it.date })
+        at(18, 30, 5)
         assertEquals(day.dayOfMonth.toString(), MarketRecord.card(MarketRecorder.status(), day).toMap()["Participant OI"]!!.substringBefore(' '))
         // Read once: the evening's later slots and the next morning do not read it again.
         at(19, 30); runBlocking { MarketRecorder.offHours() }

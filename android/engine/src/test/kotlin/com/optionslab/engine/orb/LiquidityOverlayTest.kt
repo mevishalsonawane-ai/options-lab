@@ -67,6 +67,20 @@ class LiquidityOverlayTest {
         assertEquals(75, LiquidityOverlay.build(bars, 5, "BANKNIFTY", close, emptyList(), sessions = 1).bars.size)
     }
 
+    @Test fun theLevelsAreReadFromTheArmsTenDaysOnly() {
+        val bars = sessions()
+        val m = LiquidityOverlay.build(bars, 5, "BANKNIFTY", close, emptyList())
+        // A session 20 days back (with a swing far above everything since) is history the arm never reads: nothing changes.
+        val old = bars.take(75).mapIndexed { i, b ->
+            val h = if (i == 37) b.high + 500 else b.high
+            b.copy(start = LocalDate.of(2026, 9, 15).atTime(b.start.toLocalTime()), high = h)
+        }
+        assertEquals(m, LiquidityOverlay.build(old + bars, 5, "BANKNIFTY", close, emptyList()))
+        // Within the ten days it counts: the same session dated 8 days before is read.
+        val near = old.map { it.copy(start = LocalDate.of(2026, 9, 27).atTime(it.start.toLocalTime())) }
+        assertTrue(LiquidityOverlay.build(near + bars, 5, "BANKNIFTY", close, emptyList()) != m)
+    }
+
     @Test fun nothingAfterTheLastClosedBar() {
         val bars = sessions()
         val now = days[4].atTime(11, 2)
@@ -163,10 +177,19 @@ class LiquidityOverlayTest {
         val m2 = LiquidityOverlay.build(bars, 5, "BANKNIFTY", close, listOf(old, bare))
         assertEquals(listOf(bare), m2.markers.mapNotNull { it.trade })
         assertTrue(m2.lines.isEmpty())
-        // An exit in the bar still forming sits on the last closed bar.
+        // An exit after the last closed bar has no bar yet: no marker (never on an earlier bar); its line runs to the last bar.
         val late = trade(5, 1, d.atTime(15, 0), exitAt = d.atTime(15, 39), why = "session_end")
         val m3 = LiquidityOverlay.build(bars, 5, "BANKNIFTY", close, listOf(late))
-        assertEquals(m3.bars.lastIndex, m3.markers.single { it.kind == LiquidityOverlay.MarkerKind.EXIT }.bar)
+        assertTrue(m3.markers.none { it.kind == LiquidityOverlay.MarkerKind.EXIT })
+        assertEquals(m3.bars.lastIndex, m3.lines.first { it.label == "L5 level" }.to)
+        // Mid-session: an entry and exit in the bar still forming wait for it to close.
+        val at1103 = d.atTime(11, 3)
+        val forming = trade(5, 1, d.atTime(10, 55), exitAt = d.atTime(11, 2), why = "stop")
+        val m4 = LiquidityOverlay.build(bars, 5, "BANKNIFTY", at1103, listOf(forming))
+        assertEquals(d.atTime(10, 55), m4.lastBar)
+        assertEquals(listOf(LiquidityOverlay.MarkerKind.ENTRY), m4.markers.filter { it.trade != null }.map { it.kind })
+        val m5 = LiquidityOverlay.build(bars, 5, "BANKNIFTY", d.atTime(11, 8), listOf(forming))
+        assertEquals(d.atTime(11, 0), m5.bars[m5.markers.single { it.kind == LiquidityOverlay.MarkerKind.EXIT }.bar].start)
     }
 
     @Test fun aTapFindsTheMarkerOnOrBesideTheBar() {
@@ -180,8 +203,12 @@ class LiquidityOverlayTest {
         assertEquals(e, LiquidityOverlay.markerNear(m.markers, e.bar - 1))
         assertNull(LiquidityOverlay.markerNear(m.markers, e.bar - 5))
         assertNull(LiquidityOverlay.markerNear(emptyList(), 3))
-        assertNull(LiquidityOverlay.barAt(emptyList(), d.atTime(10, 0)))
-        assertNull(LiquidityOverlay.barAt(m.bars, days[0].atTime(10, 0)))
+        assertNull(LiquidityOverlay.barAt(emptyList(), d.atTime(10, 0), 5))
+        assertNull(LiquidityOverlay.barAt(m.bars, days[0].atTime(10, 0), 5))
+        // The last bar holds moments up to its end only; past it (its bar not closed) there is no bar.
+        assertEquals(m.bars.lastIndex, LiquidityOverlay.barAt(m.bars, d.atTime(15, 29), 5))
+        assertNull(LiquidityOverlay.barAt(m.bars, d.atTime(15, 30), 5))
+        assertNull(LiquidityOverlay.barAt(m.bars, d.atTime(15, 39), 5))
     }
 
     @Test fun cardsSayWhatHappened() {

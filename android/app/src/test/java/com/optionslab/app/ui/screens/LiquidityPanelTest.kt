@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.security.SecurePrefs
@@ -33,6 +35,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -232,28 +235,120 @@ class LiquidityPanelTest {
         val c = LiquidityCache()
         val day = LiquidityFixtures.last
         val feed = LiquidityFixtures.feed
+        fun at(h: Int, m: Int) = day.atTime(h, m).atZone(com.optionslab.engine.IST).toEpochSecond()
+        val upTo1100 = feed.filter { it.epochSecond < at(11, 0) }
         // Nothing until the first full read; the page's own batches alone are not the arm's ten days.
-        c.offer("BANKNIFTY", feed.takeLast(10))
-        assertNull(c.fresh("BANKNIFTY", day.atTime(15, 40)))
-        val upTo1100 = feed.filter { it.epochSecond < day.atTime(11, 0).atZone(com.optionslab.engine.IST).toEpochSecond() }
-        c.offer("banknifty", upTo1100, history = true)
+        c.offer("BANKNIFTY", upTo1100.takeLast(10), day.atTime(11, 3))
+        assertNull(c.fresh("BANKNIFTY", day.atTime(11, 3)))
+        c.offer("banknifty", upTo1100, day.atTime(11, 3), history = true)
         // At 11:03 the 10:55 bar is the last closed one, and it is held; at 11:06 the 11:00 bar is missing.
-        assertNotNull(c.fresh("BANKNIFTY", day.atTime(11, 3)))
+        assertEquals(upTo1100, c.fresh("BANKNIFTY", day.atTime(11, 3)))
         assertNull(c.fresh("BANKNIFTY", day.atTime(11, 6)))
         // The chart page fetches its 5-minute candles: merged in, so no read is needed.
-        c.offer("BANKNIFTY", feed.filter { it.epochSecond == day.atTime(11, 0).atZone(com.optionslab.engine.IST).toEpochSecond() })
+        c.offer("BANKNIFTY", feed.filter { it.epochSecond == at(11, 0) }, day.atTime(11, 5, 10))
         assertEquals(upTo1100.size + 1, c.fresh("BANKNIFTY", day.atTime(11, 6))?.size)
-        // Outside the session the candles held serve; another symbol starts over.
-        assertNotNull(c.fresh("BANKNIFTY", day.atTime(16, 0)))
-        assertNull(c.fresh("FINNIFTY", day.atTime(16, 0)))
-        c.offer("FINNIFTY", emptyList())
-        assertNull(c.fresh("BANKNIFTY", day.atTime(16, 0)))
+        // Outside the session the candles held serve.
+        assertEquals(c.fresh("BANKNIFTY", day.atTime(11, 6)), c.fresh("BANKNIFTY", day.atTime(9, 0)))
+        assertNotNull(c.fresh("BANKNIFTY", day.atTime(9, 0)))
+        // Another symbol starts over.
+        assertNull(c.fresh("FINNIFTY", day.atTime(11, 6)))
+        c.offer("FINNIFTY", emptyList(), day.atTime(11, 6))
+        assertNull(c.fresh("BANKNIFTY", day.atTime(11, 6)))
         assertNull(LiquidityCache.lastClosedStart(day.atTime(9, 19)))
         assertEquals(day.atTime(9, 15), LiquidityCache.lastClosedStart(day.atTime(9, 20)))
         assertEquals(day.atTime(15, 25), LiquidityCache.lastClosedStart(day.atTime(15, 30)))
         // The feed's candles as the arm's bars: IST, session minutes only.
         val pre = Upstox.Bar(day.atTime(9, 10).atZone(com.optionslab.engine.IST).toEpochSecond(), 1.0, 1.0, 1.0, 1.0, 0, 0)
         assertEquals(LiquidityFixtures.bars.takeLast(3), LiquidityCache.toBars(listOf(pre) + feed.takeLast(3)))
+    }
+
+    @Test fun aFormingBarIsNeverHeldAsClosed() {
+        val c = LiquidityCache()
+        val day = LiquidityFixtures.last
+        val feed = LiquidityFixtures.feed
+        fun at(h: Int, m: Int) = day.atTime(h, m).atZone(com.optionslab.engine.IST).toEpochSecond()
+        // Read at 11:03 with the 11:00 bar still forming: that bar is left out.
+        val withForming = feed.filter { it.epochSecond <= at(11, 0) }
+        c.offer("BANKNIFTY", withForming, day.atTime(11, 3), history = true)
+        assertEquals(at(10, 55), c.fresh("BANKNIFTY", day.atTime(11, 3))!!.last().epochSecond)
+        // At 11:06 the 11:00 bar has closed, but the one held was not: read again (not the forming copy).
+        assertNull(c.fresh("BANKNIFTY", day.atTime(11, 6)))
+        // The page's batch at 11:05:30 carries the closed 11:00 bar (and the forming 11:05 one, left out).
+        c.offer("BANKNIFTY", feed.filter { it.epochSecond in at(11, 0)..at(11, 5) }, day.atTime(11, 5, 30))
+        val held = c.fresh("BANKNIFTY", day.atTime(11, 6))!!
+        assertEquals(at(11, 0), held.last().epochSecond)
+        // After the close: the 15:25 bar must be held, received after 15:30.
+        c.offer("BANKNIFTY", feed.filter { it.epochSecond in at(11, 5)..at(15, 25) }, day.atTime(15, 29))
+        assertNull(c.fresh("BANKNIFTY", day.atTime(15, 45)))
+        c.offer("BANKNIFTY", feed.filter { it.epochSecond == at(15, 25) }, day.atTime(15, 30, 5))
+        assertEquals(at(15, 25), c.fresh("BANKNIFTY", day.atTime(15, 45))!!.last().epochSecond)
+        // A day with no session (the next day is a holiday here): what is held serves.
+        assertNotNull(c.fresh("BANKNIFTY", day.plusDays(1).atTime(16, 0)))
+        // The layer reads closed bars only.
+        val bars = LiquidityCache.toBars(withForming)
+        assertEquals(bars.dropLast(1), LiquidityCache.closed(bars, day.atTime(11, 3)))
+        assertEquals(bars, LiquidityCache.closed(bars, day.atTime(11, 5)))
+    }
+
+    @Test fun theLayerSaysWhenItsCandlesAreBehind() {
+        val day = LiquidityFixtures.last
+        val bars = LiquidityFixtures.bars.filter { !it.start.plusMinutes(5).isAfter(day.atTime(11, 0)) }
+        // At 11:03 (the 10:55 bar held) or 11:06 (one bar behind, a read in flight): fine.
+        assertNull(behindBy(bars, day.atTime(11, 3)))
+        assertNull(behindBy(bars, day.atTime(11, 6)))
+        // Two bars behind: said.
+        assertEquals("Candles behind: the last closed 11:00, now 11:12", behindBy(bars, day.atTime(11, 12)))
+        // Outside a session, or the day's first bar, nothing is said.
+        assertNull(behindBy(bars, day.atTime(16, 0)))
+        assertNull(behindBy(bars, day.plusDays(1).atTime(9, 21)))
+        assertEquals("No candles yet", behindBy(emptyList(), day.atTime(11, 3)))
+        // On the layer: the chip, and the time of the last bar drawn.
+        compose.setContent {
+            IraAlgoTheme("light") {
+                LiquidityChart("BANKNIFTY", listOf(15, 5), 15, {}, model(), null, behind = "Candles behind: the last closed 11:00, now 11:12")
+            }
+        }
+        idle()
+        assertTrue(shows("Candles behind: the last closed 11:00, now 11:12"))
+        assertTrue(shows("as of 15:30"))
+    }
+
+    private fun webViews(): List<android.webkit.WebView> {
+        val out = ArrayList<android.webkit.WebView>()
+        fun walk(v: android.view.View) {
+            if (v is android.webkit.WebView) out += v
+            if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+        }
+        walk(compose.activity.window.decorView)
+        return out
+    }
+
+    @Test fun theChartIsNotRebuiltWhenTheKeyboardOpensOrTheLayerIsToggled() {
+        var height by mutableStateOf(2400.dp)
+        compose.setContent {
+            IraAlgoTheme("light") {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.height(height)) {
+                    ChartPane("BANKNIFTY", "NSE", true, 0, false, LiquidityFixtures.chartSource(), { _, _, _, _ -> }, { _, _ -> }, { _, _, _ -> },
+                        liquidity = LiquidityFixtures.Source())
+                }
+            }
+        }
+        idle()
+        until { shows("▲ L15 11:00") }
+        val web = webViews().single()
+        // The keyboard takes most of the height: the space left is wider than high (it used to switch to a Row).
+        height = 300.dp; idle()
+        assertTrue(shows("Liquidity 15+5 · BANKNIFTY"))
+        assertSame(web, webViews().single())
+        height = 2400.dp; idle()
+        assertSame(web, webViews().single())
+        // The layer off and on again: the same chart.
+        compose.onNodeWithText("✓ Liquidity levels").performClick()
+        until { !shows("Liquidity 15+5 · BANKNIFTY") }
+        assertSame(web, webViews().single())
+        compose.onNodeWithText("Liquidity levels").performClick()
+        until { shows("Liquidity 15+5 · BANKNIFTY") }
+        assertSame(web, webViews().single())
     }
 
     @Test fun theArmsPositionsBecomeTheChartsTrades() {

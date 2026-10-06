@@ -165,6 +165,9 @@ class BigMoveRiskTest {
         "why did nifty make a big move", "how often does a big candle follow through", "will nifty go up or down",
         "what is the expected range today", "how much can nifty move today", "big candle record for banknifty", "is it risky to trade now",
         "what's the risk reward on this", "how volatile was nifty yesterday", "set an alert for a big move",
+        // Risk-on / risk-off, appetite, a buy or a sell: not a big candle's chance. "Risk in the market" stays the account's risk read.
+        "is it risk on or risk off", "risk on hai kya abhi", "risk off in the market now", "market mein risk appetite kaisa hai",
+        "is it risky to sell now", "is it risky to buy calls now", "market mein risk hai kya", "what is the risk in the market now",
     )
 
     @Test fun theQuestion() {

@@ -99,35 +99,54 @@ internal object ArmLiquiditySource : LiquiditySource {
 
 /**
  * The 5-minute candles of the charted index the layer reads, kept from what the chart already loaded: the first full read
- * (the arm's ten days), then every 5-minute batch the chart page fetches for itself ([Bridge.bars]) merged in. A new read
- * is made only when the bar that closed last is missing (another interval on screen, or the basic chart).
+ * (the arm's ten days), then every 5-minute batch the chart page fetches for itself ([Bridge.bars]) merged in. Only bars
+ * that had closed when they were received are kept (a forming bar's high, low and close are not final). A new read is
+ * made only when the bar that closed last is missing (another interval on screen, or the basic chart).
  */
 internal class LiquidityCache {
     private var symbol: String? = null
     private var bars: List<Upstox.Bar> = emptyList()
     private var full = false
 
-    @Synchronized fun offer(sym: String, list: List<Upstox.Bar>, history: Boolean = false) {
+    /** [list] as received at [now] (IST): a bar whose end is after [now] was still forming and is left out. */
+    @Synchronized fun offer(sym: String, list: List<Upstox.Bar>, now: LocalDateTime, history: Boolean = false) {
         val s = sym.uppercase()
         if (s != symbol) { symbol = s; bars = emptyList(); full = false }
-        if (list.isEmpty()) return
-        val m = HashMap<Long, Upstox.Bar>(bars.size + list.size)
-        bars.forEach { m[it.epochSecond] = it }
-        list.forEach { m[it.epochSecond] = it }
-        bars = m.values.sortedBy { it.epochSecond }.takeLast(MAX_BARS)
+        val at = epoch(now)
+        val closed = list.filter { it.epochSecond + BAR_SECONDS <= at }
+        if (closed.isNotEmpty()) {
+            val m = HashMap<Long, Upstox.Bar>(bars.size + closed.size)
+            bars.forEach { m[it.epochSecond] = it }
+            closed.forEach { m[it.epochSecond] = it }
+            bars = m.values.sortedBy { it.epochSecond }.takeLast(MAX_BARS)
+        }
         if (history) full = true
     }
 
-    /** The candles held for [sym] when they include the last 5-minute bar closed by [now]; null: read them again. */
+    /**
+     * The candles held for [sym] when they include the last 5-minute bar closed by [now] (received after it closed: see
+     * [offer]); after 15:30 on a day that traded, the 15:25 bar. Null: read them again.
+     */
     @Synchronized fun fresh(sym: String, now: LocalDateTime): List<Upstox.Bar>? {
         if (sym.uppercase() != symbol || !full || bars.isEmpty()) return null
-        val need = lastClosedStart(now) ?: return bars
-        val at = need.atZone(com.optionslab.engine.IST).toEpochSecond()
+        val need = lastClosedStart(now)
+            ?: now.toLocalDate().atTime(15, 25).takeIf { now.toLocalTime() >= LocalTime.of(15, 30) && tradedOn(now) }
+            ?: return bars
+        val at = epoch(need)
         return bars.takeIf { b -> b.any { it.epochSecond == at } }
+    }
+
+    /** A bar of [now]'s day is held (the day traded; a holiday or weekend has none). */
+    private fun tradedOn(now: LocalDateTime): Boolean {
+        val from = epoch(now.toLocalDate().atStartOfDay())
+        return bars.any { it.epochSecond >= from && it.epochSecond < from + 86_400 }
     }
 
     companion object {
         const val MAX_BARS = 1_500
+        private const val BAR_SECONDS = 300L
+
+        private fun epoch(t: LocalDateTime) = t.atZone(com.optionslab.engine.IST).toEpochSecond()
 
         /** The start of the 5-minute bar that closed last, during a session (09:20-15:30); null outside it. */
         fun lastClosedStart(now: LocalDateTime): LocalDateTime? {
@@ -136,6 +155,9 @@ internal class LiquidityCache {
             val m = (t.hour * 60 + t.minute - (9 * 60 + 15)) / 5 * 5 - 5
             return now.toLocalDate().atTime(9, 15).plusMinutes(m.toLong())
         }
+
+        /** Only the bars closed by [now] (a forming bar would change the input, and so the model, on every read). */
+        fun closed(bars: List<Bar>, now: LocalDateTime): List<Bar> = bars.filter { !it.start.plusMinutes(5).isAfter(now) }
 
         /** The feed's candles as the arm's bars (IST, session minutes only). */
         fun toBars(list: List<Upstox.Bar>): List<Bar> = list.map {
@@ -159,6 +181,7 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
     var trades by remember(underlying) { mutableStateOf<List<LiquidityOverlay.Trade>>(emptyList()) }
     var closedAt by remember(underlying) { mutableStateOf<LocalDateTime?>(null) }
     var error by remember(underlying) { mutableStateOf<String?>(null) }
+    var behind by remember(underlying) { mutableStateOf<String?>(null) }
     var model by remember(underlying, tf) { mutableStateOf<LiquidityOverlay.Model?>(null) }
 
     LaunchedEffect(underlying, visible) {
@@ -166,12 +189,21 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
         while (true) {
             val now = source.now()
             withContext(Dispatchers.IO) { runCatching { bars(now) } }
-                .onSuccess { got -> val b = LiquidityCache.toBars(got); if (b != input) input = b; error = null }
+                .onSuccess { got ->
+                    // The closed bars only: a forming bar changes on every read and would rebuild the model each poll.
+                    val b = LiquidityCache.closed(LiquidityCache.toBars(got), now)
+                    if (b != input) input = b
+                    error = null
+                    val b2 = behindBy(b, now)
+                    if (b2 != behind) behind = b2
+                }
                 .onFailure { if (input == null) error = "Could not load the $underlying candles: ${it.message ?: "no data"}" }
             val t = withContext(Dispatchers.IO) { runCatching { source.trades(underlying) }.getOrNull() }
             if (t != null && t != trades) trades = t
             // The bar that closed last decides what is shown: a new one (or the trades) is all that recomputes.
-            val closed = LiquidityCache.lastClosedStart(now)?.plusMinutes(5) ?: now.withSecond(0).withNano(0)
+            // Outside a session nothing closes: one value until the next session (not a recompute every minute).
+            val closed = LiquidityCache.lastClosedStart(now)?.plusMinutes(5)
+                ?: now.toLocalDate().atTime(if (now.toLocalTime().isBefore(LocalTime.of(9, 20))) LocalTime.MIDNIGHT else LocalTime.of(15, 30))
             if (closed != closedAt) closedAt = closed
             delay(30_000)
         }
@@ -183,7 +215,19 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
         val m = withContext(Dispatchers.Default) { LiquidityOverlay.build(b, tf, underlying, now, trades) }
         if (m != model) model = m
     }
-    LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier)
+    LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind)
+}
+
+/**
+ * When the newest closed 5-minute candle held is more than one bar older than the last one closed by [now] (in a
+ * session): what the layer says about it; null when it is current (or outside a session).
+ */
+internal fun behindBy(bars: List<Bar>, now: LocalDateTime): String? {
+    val need = LiquidityCache.lastClosedStart(now) ?: return null
+    val last = bars.lastOrNull()?.start ?: return "No candles yet"
+    // One bar behind is a read in flight; at 09:20 the bar before the day's first is the last session's.
+    val ok = if (need.toLocalTime() == LocalTime.of(9, 15)) true else !last.isBefore(need.minusMinutes(5))
+    return if (ok) null else "Candles behind: the last closed ${hhmm(last.plusMinutes(5))}, now ${hhmm(now)}"
 }
 
 /** The layer from its state (what [LiquidityPanel] shows; tests drive it with a model built from fixed bars). */
@@ -191,6 +235,8 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
 internal fun LiquidityChart(
     underlying: String, timeframes: List<Int>, tf: Int, onTf: (Int) -> Unit,
     model: LiquidityOverlay.Model?, error: String?, modifier: Modifier = Modifier,
+    /** The candles are more than a bar behind ([behindBy]): said in a chip over the levels. */
+    behind: String? = null,
 ) {
     val p = LocalPalette.current
     var picked by remember(tf) { mutableStateOf<LiquidityOverlay.Marker?>(null) }
@@ -200,6 +246,15 @@ internal fun LiquidityChart(
             Text("Liquidity 15+5 · $underlying", maxLines = 1, softWrap = false,
                 style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(end = 4.dp))
             timeframes.forEach { m -> Token("${m}m", m == tf) { onTf(m) } }
+            // As of the close of the last bar drawn.
+            val last = model?.lastBar
+            if (model != null && last != null) Text("as of ${hhmm(last.plusMinutes(model.minutes.toLong()))}", maxLines = 1, softWrap = false,
+                style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(start = 4.dp))
+        }
+        behind?.let {
+            Text(it, style = Type.label.copy(color = p.oxblood, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).background(p.chip, RoundedCornerShape(50))
+                    .padding(horizontal = 10.dp, vertical = 6.dp).testTag("liquidity-behind"))
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val m = model
