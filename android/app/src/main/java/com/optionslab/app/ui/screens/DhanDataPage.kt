@@ -98,6 +98,19 @@ fun DhanDataPage(model: AppModel) {
     var confirmDelete by remember { mutableStateOf(false) }
     var askNetwork by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
+    // Import from GitHub: the index is read first and shown; the download starts only once Boss confirms it.
+    var checkingGithub by remember { mutableStateOf(false) }
+    var githubOffer by remember { mutableStateOf<DhanSource.GithubOffer.Ready?>(null) }
+    var githubNetwork by remember { mutableStateOf<String?>(null) }      // the confirmed index's sha, asking Wi-Fi or mobile data
+    fun startGithub(sha: String, wifiOnly: Boolean) {
+        scope.launch {
+            when (withContext(Dispatchers.IO) { runCatching { DhanImportWorker.startGithub(context, sha, wifiOnly) }.getOrDefault(DhanImportWorker.Started.NOTHING) }) {
+                DhanImportWorker.Started.STARTED -> model.say(if (wifiOnly) "The data pack will download from GitHub on Wi-Fi, then be imported." else "Downloading the data pack from GitHub on mobile data, then importing it.")
+                DhanImportWorker.Started.BUSY -> model.say("An import is already running or waiting: let it finish (or stop it) first.")
+                DhanImportWorker.Started.NOTHING -> Unit
+            }
+        }
+    }
     // The store's figures walk its folder: read off the main thread on opening, after a run and after a delete.
     var reread by remember { mutableStateOf(0) }
     var manifest by remember { mutableStateOf<Files.Manifest?>(null) }
@@ -204,7 +217,8 @@ fun DhanDataPage(model: AppModel) {
                     Spacer(Modifier.height(6.dp))
                     Text(imp.stage, style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
                     InkProgress(imp.fraction, Modifier.fillMaxWidth().padding(top = 4.dp))
-                    Text("Part ${imp.part} of ${imp.parts} · ${imp.files} files · ${size(imp.bytes)}", style = Type.bodySmall.copy(color = p.inkSoft))
+                    Text(if (imp.downloading) "Part ${imp.part} of ${imp.parts} · ${size(imp.read)} of ${size(imp.size)}"
+                        else "Part ${imp.part} of ${imp.parts} · ${imp.files} files · ${size(imp.bytes)}", style = Type.bodySmall.copy(color = p.inkSoft))
                     Spacer(Modifier.height(10.dp))
                     BrassButton("Stop the import", Modifier.fillMaxWidth()) { DhanImportWorker.stop(context) }
                 } else {
@@ -212,6 +226,19 @@ fun DhanDataPage(model: AppModel) {
                     BrassButton("Import data pack", Modifier.fillMaxWidth(), enabled = !prog.running) {
                         runCatching { pickPack.launch(arrayOf("application/zip", "application/x-zip-compressed")) }
                             .onFailure { model.say("No file picker is available on this phone.") }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Note("Or import the pack published on GitHub: the parts are downloaded over HTTPS from raw.githubusercontent.com (public data - no token or login is sent), checked against their listed checksums, imported the same way and then deleted from the phone.")
+                    BrassButton("Import from GitHub", Modifier.fillMaxWidth(), tone = p.ink, busy = checkingGithub, enabled = !prog.running && !checkingGithub) {
+                        checkingGithub = true
+                        scope.launch {
+                            val o = withContext(Dispatchers.IO) { DhanSource.githubIndex() }
+                            checkingGithub = false
+                            when (o) {
+                                is DhanSource.GithubOffer.Ready -> githubOffer = o
+                                is DhanSource.GithubOffer.None -> model.say(o.message)
+                            }
+                        }
                     }
                 }
             }
@@ -249,6 +276,31 @@ fun DhanDataPage(model: AppModel) {
             DhanWorker.now(context, wifiOnly = false); model.say("Dhan download started on mobile data. It resumes where it stopped.")
         }) { Text("Use mobile data") } },
     )
+    githubOffer?.let { offer ->
+        AlertDialog(
+            onDismissRequest = { githubOffer = null }, properties = dhanSecure,
+            title = { Text("Import the data pack from GitHub?", style = Type.title) },
+            text = { Text("${offer.index.say()} (packed ${offer.index.created}). It needs about " +
+                "${size(com.optionslab.ira.dhan.GithubPack.spaceNeeded(offer.index, 0))} free while it downloads and unpacks; " +
+                "the downloaded parts are deleted after the import. Each part is checked against its checksum, and the import " +
+                "checks every file again.", style = Type.bodySmall) },
+            confirmButton = { TextButton({
+                githubOffer = null
+                // Gigabytes: on mobile data Boss chooses, as for the Download button.
+                if (DhanWorker.metered(context)) githubNetwork = offer.sha else startGithub(offer.sha, wifiOnly = true)
+            }) { Text("Download and import") } },
+            dismissButton = { TextButton({ githubOffer = null }) { Text("Not now") } },
+        )
+    }
+    githubNetwork?.let { sha ->
+        AlertDialog(
+            onDismissRequest = { githubNetwork = null }, properties = dhanSecure,
+            title = { Text("You are on mobile data", style = Type.title) },
+            text = { Text("The data pack can be several gigabytes. Wait for Wi-Fi - it starts by itself when the phone joins one - or use mobile data now.", style = Type.bodySmall) },
+            confirmButton = { TextButton({ githubNetwork = null; startGithub(sha, wifiOnly = true) }) { Text("Wait for Wi-Fi") } },
+            dismissButton = { TextButton({ githubNetwork = null; startGithub(sha, wifiOnly = false) }) { Text("Use mobile data") } },
+        )
+    }
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false }, properties = dhanSecure,
         title = { Text("Delete the Dhan data?", style = Type.title) },

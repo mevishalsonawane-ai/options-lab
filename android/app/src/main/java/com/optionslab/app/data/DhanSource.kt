@@ -5,6 +5,7 @@ import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.dhan.DhanApi
 import com.optionslab.ira.dhan.DhanUniverse
 import com.optionslab.ira.dhan.Files
+import com.optionslab.ira.dhan.GithubPack
 import com.optionslab.ira.dhan.Plan
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -33,6 +34,8 @@ import javax.net.ssl.HttpsURLConnection
  *
  * The data lives under files/dhan ([Files], app-private, plain gzip CSV - market prices only). Downloads run only when Boss
  * taps Download, or - if he turns it on - by themselves on Wi-Fi while charging ([com.optionslab.app.work.DhanWorker]).
+ * A data pack can also be imported from the public GitHub repo ([importFromGithub]): plain HTTPS to raw.githubusercontent.com
+ * alone ([GithubPack.urlAllowed]), with no token or credential of any kind.
  * IraGoldAlgo has none of it.
  */
 object DhanSource {
@@ -323,9 +326,13 @@ object DhanSource {
 
     const val K_IMPORT_LAST = "dhan.importLast"
 
-    /** An import's progress, for the page and the notice: parts done, files and megabytes unpacked. */
+    /**
+     * An import's progress, for the page and the notice: parts done, files and megabytes unpacked. [downloading]: the
+     * parts are being downloaded from GitHub ([read] of [size] bytes) before the import itself.
+     */
     data class ImportProgress(val running: Boolean = false, val stage: String = "", val part: Int = 0, val parts: Int = 0,
-                              val files: Int = 0, val bytes: Long = 0, val read: Long = 0, val size: Long = 0) {
+                              val files: Int = 0, val bytes: Long = 0, val read: Long = 0, val size: Long = 0,
+                              val downloading: Boolean = false) {
         val fraction: Float get() = if (size <= 0) (if (parts <= 0) 0f else (part - 1).coerceAtLeast(0).toFloat() / parts) else (read.toFloat() / size).coerceIn(0f, 1f)
     }
 
@@ -350,21 +357,43 @@ object DhanSource {
         if (com.optionslab.app.BuildConfig.GOLD) return "IraGoldAlgo keeps no Dhan data."
         if (uris.isEmpty()) return "No file was chosen."
         if (!running.tryLock()) return "A Dhan download or import is running: stop it first, then import."
-        val cr = ctx().contentResolver
+        try {
+            val cr = ctx().contentResolver
+            val inputs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                uris.map { u -> PackInput(displayName(u) ?: u.lastPathSegment ?: "", sizeOf(u)) { cr.openInputStream(u) } }
+            }
+            val result = importInputs(inputs)
+            runCatching { SecurePrefs.put(K_IMPORT_LAST, "${Market.today()}: $result") }
+            return result
+        } finally {
+            _importing.value = ImportProgress(false)
+            running.unlock()
+        }
+    }
+
+    /** One part to import: its name (the parts go in name order), its size for the progress (null: unknown) and its bytes. */
+    private class PackInput(val name: String, val size: Long?, val open: () -> java.io.InputStream?)
+
+    /**
+     * The import itself, over [inputs] (picked files, or the parts downloaded from GitHub - plain files in the app's
+     * cache): the caller holds [running]. Returns the summary to show; throws only on cancellation. The staging folder
+     * is removed either way.
+     */
+    private suspend fun importInputs(inputs: List<PackInput>): String {
         val ctxJob = currentCoroutineContext()
         val imp = com.optionslab.ira.dhan.PackImport(Files(root()))
         try {
-            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 // Parts in name order (-01, -02, ...); their sizes for the progress bar.
-                val named = uris.map { u -> Triple(u, displayName(u) ?: u.lastPathSegment ?: "", sizeOf(u)) }.sortedBy { it.second }
-                val total = named.sumOf { it.third ?: 0L }.takeIf { named.all { n -> n.third != null } } ?: 0L
+                val named = inputs.sortedBy { it.name }
+                val total = named.sumOf { it.size ?: 0L }.takeIf { named.all { n -> n.size != null } } ?: 0L
                 var read = 0L
                 val stop = { ctxJob[kotlinx.coroutines.Job]?.isActive == false }
                 imp.begin()
                 _importing.value = ImportProgress(true, "Checking the pack", 1, named.size, 0, 0, 0, total)
                 try {
                     for ((i, n) in named.withIndex()) {
-                        val input = cr.openInputStream(n.first) ?: throw com.optionslab.ira.dhan.PackImport.Refused("part ${i + 1} could not be opened")
+                        val input = n.open() ?: throw com.optionslab.ira.dhan.PackImport.Refused("part ${i + 1} could not be opened")
                         imp.readPart(Counting(input) { read += it }, i + 1, named.size, progress = { pr ->
                             _importing.value = ImportProgress(true, pr.stage, pr.part, pr.parts, pr.files, pr.bytes, read, total)
                         }, cancelled = stop)
@@ -383,12 +412,241 @@ object DhanSource {
                     imp.abort(); "Import failed: the chosen file can no longer be read. Pick it again."
                 }
             }
-            runCatching { SecurePrefs.put(K_IMPORT_LAST, "${Market.today()}: $result") }
-            return result
         } finally {
             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) { runCatching { imp.abort() } }
+        }
+    }
+
+    // ---- importing the data pack from GitHub ----------------------------------------------------------------------------------
+
+    /**
+     * What GitHub offers: the checked index ([index]) with the sha256 of its bytes ([sha], so the run downloads exactly the
+     * pack Boss confirmed), or [None] with a sentence to show.
+     */
+    sealed class GithubOffer {
+        class Ready(val index: GithubPack.Index, val sha: String) : GithubOffer()
+        class None(val message: String) : GithubOffer()
+    }
+
+    private const val NO_PACK = "No data pack on GitHub right now."
+
+    /** The pack (or a part of it) is not on GitHub: 404. */
+    private class NotOnGithub : IOException(NO_PACK)
+
+    /** The parts are downloaded here (app cache: Android may reclaim it, and a part is then fetched again). */
+    private fun packCache(): File = File(ctx().cacheDir, "dhan-pack")
+
+    /**
+     * One GET to the data pack on GitHub: only [GithubPack.urlAllowed] URLs (HTTPS, raw.githubusercontent.com, the pack's
+     * folder, its index and part names), checked by the system's certificate authorities (network_security_config) like any
+     * other host. No token, no credential, no cookie: the only headers are the agent, "identity" (so a Range counts the
+     * file's own bytes) and the Range itself. Redirects are not followed.
+     */
+    private fun githubOpen(url: String, from: Long = 0): HttpsURLConnection {
+        if (!GithubPack.urlAllowed(url)) throw IOException("refusing a download outside the data pack")
+        val u = URL(url)
+        if (u.protocol != "https" || u.host != GithubPack.HOST || u.port != -1 || u.userInfo != null || u.query != null)
+            throw IOException("refusing a download outside the data pack")
+        val c = u.openConnection() as? HttpsURLConnection ?: throw IOException("refusing a non-HTTPS request")
+        c.connectTimeout = 20_000
+        c.readTimeout = 60_000
+        c.instanceFollowRedirects = false
+        c.useCaches = false
+        c.setRequestProperty("User-Agent", "IraAlgo")
+        c.setRequestProperty("Accept-Encoding", "identity")
+        GithubPack.rangeHeader(from)?.let { c.setRequestProperty("Range", it) }
+        return c
+    }
+
+    /** At most [cap] bytes of [input] (closed here), or null when it holds more. */
+    private fun readCapped(input: java.io.InputStream, cap: Int): ByteArray? = input.use { s ->
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(8192)
+        while (true) {
+            val r = s.read(buf); if (r < 0) break
+            if (out.size() + r > cap) return null
+            out.write(buf, 0, r)
+        }
+        out.toByteArray()
+    }
+
+    /** Read and check the pack's index on GitHub (64 KB at most). Blocking: call off the main thread. Never throws. */
+    fun githubIndex(): GithubOffer {
+        if (com.optionslab.app.BuildConfig.GOLD) return GithubOffer.None("IraGoldAlgo keeps no Dhan data.")
+        return try {
+            val c = githubOpen(GithubPack.INDEX_URL)
+            try {
+                when (val code = c.responseCode) {
+                    404 -> GithubOffer.None(NO_PACK)
+                    in 200..299 -> {
+                        val bytes = readCapped(c.inputStream, GithubPack.MAX_INDEX_BYTES)
+                        if (bytes == null) GithubOffer.None("The data pack's list on GitHub is too large; it was not read.")
+                        else GithubOffer.Ready(GithubPack.parseIndex(String(bytes, Charsets.UTF_8)), GithubPack.sha256(java.io.ByteArrayInputStream(bytes)))
+                    }
+                    else -> GithubOffer.None("GitHub did not serve the data pack's list ($code). Try again later.")
+                }
+            } finally { c.disconnect() }
+        } catch (e: GithubPack.Bad) {
+            GithubOffer.None("The data pack on GitHub cannot be used: ${e.message}")
+        } catch (_: Exception) {
+            GithubOffer.None("Could not reach GitHub. Check the connection and try again.")
+        }
+    }
+
+    /**
+     * Download the data pack from GitHub - only if its index is still the one Boss confirmed ([indexSha]) - into the app's
+     * cache, part by part (resumed with a Range where a part stopped; each checked against its listed size and sha256;
+     * retried with backoff), then import the parts exactly as picked ones ([importInputs]) and delete them. Free space for
+     * the parts and their unpacking is checked first. Holds the download/import lock throughout. The Dhan token is never
+     * read here. Returns the summary to show; throws only on cancellation (the parts downloaded so far stay in the cache,
+     * so the next run resumes).
+     */
+    suspend fun importFromGithub(indexSha: String): String {
+        if (com.optionslab.app.BuildConfig.GOLD) return "IraGoldAlgo keeps no Dhan data."
+        if (!running.tryLock()) return "A Dhan download or import is running: stop it first, then import."
+        try {
+            _importing.value = ImportProgress(true, "Reading the data pack's list on GitHub", downloading = true)
+            val result = when (val offer = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { githubIndex() }) {
+                is GithubOffer.None -> offer.message
+                is GithubOffer.Ready ->
+                    if (offer.sha != indexSha) "The data pack on GitHub changed since it was confirmed. Tap Import from GitHub again."
+                    else githubRun(offer.index)
+            }
+            runCatching { SecurePrefs.put(K_IMPORT_LAST, "${Market.today()}: from GitHub: $result") }
+            return result
+        } finally {
             _importing.value = ImportProgress(false)
             running.unlock()
+        }
+    }
+
+    private suspend fun githubRun(index: GithubPack.Index): String {
+        val io = kotlinx.coroutines.Dispatchers.IO
+        val dir = packCache()
+        // Whatever an older pack left in the cache goes; this pack's parts (whole or partial) stay to resume.
+        val cached = kotlinx.coroutines.withContext(io) {
+            dir.mkdirs()
+            for (s in GithubPack.strays(dir.list()?.toList() ?: emptyList(), index)) File(dir, s).deleteRecursively()
+            index.parts.sumOf { p -> File(dir, p.name).length().coerceAtMost(p.size) }
+        }
+        val need = GithubPack.spaceNeeded(index, cached)
+        val free = kotlinx.coroutines.withContext(io) { minOf(dir.usableSpace, ctx().filesDir.usableSpace) }
+        if (free < need) return "Not enough room on this phone: the pack needs about ${Files.sizeText(need)} free, and ${Files.sizeText(free)} is free. Nothing was imported."
+        val got = ArrayList<File>()
+        var before = 0L
+        try {
+            for ((i, p) in index.parts.withIndex()) {
+                got += downloadPart(dir, p, i + 1, index.parts.size, before, index.totalBytes)
+                before += p.size
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: NotOnGithub) {
+            return "A part of the data pack is not on GitHub right now. Nothing was imported; try again later."
+        } catch (_: GithubPack.Bad) {
+            return "A part downloaded from GitHub did not match its checksum, even after trying again. Nothing was imported."
+        } catch (_: IOException) {
+            return "The download from GitHub stopped (connection or room on the phone). Nothing was imported; tap Import from GitHub to resume where it stopped."
+        }
+        try {
+            val inputs = got.map { f -> PackInput(f.name, f.length()) { f.inputStream() } }
+            return "${index.parts.size} part(s) downloaded and checked. " + importInputs(inputs)
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + io) { runCatching { dir.deleteRecursively() } }
+        }
+    }
+
+    /**
+     * Part [n] of [parts] into [dir]: resumed from what is cached, until it is whole and matches its listed sha256. A
+     * dropped connection or a mismatch is tried again with backoff, [GithubPack.MAX_ATTEMPTS] times in all.
+     */
+    private suspend fun downloadPart(dir: File, p: GithubPack.Part, n: Int, parts: Int, before: Long, total: Long): File {
+        val io = kotlinx.coroutines.Dispatchers.IO
+        val f = File(dir, p.name)
+        var last: IOException? = null
+        var attempt = 0
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val have = kotlinx.coroutines.withContext(io) {
+                GithubPack.resumeFrom(f.length(), p.size).also { if (it == 0L && f.exists()) f.delete() }
+            }
+            if (have == p.size) {
+                _importing.value = ImportProgress(true, "Checking part $n of $parts", n, parts, 0, 0, before + have, total, downloading = true)
+                if (kotlinx.coroutines.withContext(io) { GithubPack.partOk(f, p) }) return f
+                kotlinx.coroutines.withContext(io) { f.delete() }
+                last = GithubPack.Bad("part $n did not match its checksum")
+            } else {
+                try {
+                    fetchPart(f, p, have, n, parts, before, total)
+                    continue                                 // whole now: checked at the top
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: NotOnGithub) {
+                    throw e
+                } catch (e: IOException) {
+                    last = e
+                }
+            }
+            if (++attempt >= GithubPack.MAX_ATTEMPTS) throw last ?: IOException("part $n could not be downloaded")
+            delay(GithubPack.backoffMs(attempt - 1, Math.random()))
+        }
+    }
+
+    /**
+     * One request for part [p] from byte [have]: appended on a 206 that continues exactly there, written afresh on a 200.
+     * Returns only when the file holds all [GithubPack.Part.size] bytes; never writes past it. Cancelling closes the
+     * connection at once (a hung read does not run out its timeout).
+     */
+    private suspend fun fetchPart(f: File, p: GithubPack.Part, have: Long, n: Int, parts: Int, before: Long, total: Long) {
+        val job = currentCoroutineContext()[kotlinx.coroutines.Job]
+        val c = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { githubOpen(GithubPack.urlFor(p.name), have) }
+        kotlinx.coroutines.coroutineScope {
+            // Cancelling the run closes the connection at once (as Net does), so a hung read ends now.
+            val closer = launch(kotlinx.coroutines.Dispatchers.Unconfined) {
+                try { kotlinx.coroutines.awaitCancellation() } finally { runCatching { c.disconnect() } }
+            }
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val code = c.responseCode
+                    val append = when (code) {
+                        206 -> {
+                            if (!GithubPack.contentRangeOk(c.getHeaderField("Content-Range"), have, p.size)) { f.delete(); throw IOException("GitHub sent another range") }
+                            true
+                        }
+                        200 -> {
+                            val len = c.contentLengthLong
+                            if (len >= 0 && len != p.size) throw GithubPack.Bad("part $n on GitHub is not the size its list says")
+                            false
+                        }
+                        404 -> throw NotOnGithub()
+                        416 -> { f.delete(); throw IOException("the cached part was out of step") }
+                        else -> throw IOException("GitHub answered $code")
+                    }
+                    var done = if (append) have else 0L
+                    var shown = 0L
+                    java.io.FileOutputStream(f, append).use { out ->
+                        c.inputStream.use { inp ->
+                            val buf = ByteArray(1 shl 16)
+                            while (true) {
+                                if (job?.isActive == false) throw kotlinx.coroutines.CancellationException("stopped")
+                                val r = inp.read(buf); if (r < 0) break
+                                if (done + r > p.size) { out.close(); f.delete(); throw GithubPack.Bad("part $n is larger than its list says") }
+                                out.write(buf, 0, r); done += r
+                                val now = System.currentTimeMillis()
+                                if (now - shown > 500) {
+                                    shown = now
+                                    _importing.value = ImportProgress(true, "Downloading part $n of $parts from GitHub", n, parts, 0, 0, before + done, total, downloading = true)
+                                }
+                            }
+                        }
+                        out.fd.sync()
+                    }
+                    if (done != p.size) throw IOException("the connection dropped")
+                }
+            } finally {
+                closer.cancel()
+                runCatching { c.disconnect() }
+            }
         }
     }
 
@@ -437,7 +695,10 @@ object DhanSource {
             running.lock()
             try {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    Files(root()).deleteAll().also { root().parentFile?.let { p -> File(p, root().name + ".import").deleteRecursively() } }
+                    Files(root()).deleteAll().also {
+                        root().parentFile?.let { p -> File(p, root().name + ".import").deleteRecursively() }
+                        runCatching { packCache().deleteRecursively() }      // parts of a GitHub download that was stopped
+                    }
                 }
             } finally { running.unlock() }
         }
@@ -453,6 +714,7 @@ object DhanSource {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
         app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
         runCatching { Files(root()).deleteAll() }
+        runCatching { packCache().deleteRecursively() }
         runCatching { forget() }
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch { runCatching { deleteData() } }
     }
