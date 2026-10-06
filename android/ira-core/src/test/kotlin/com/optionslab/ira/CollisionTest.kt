@@ -127,6 +127,7 @@ class CollisionTest {
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
+        "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
         "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
         "AtmBuy" to { q -> AtmBuy.asked(q) != null },
         "SinceMorning" to { q -> SinceMorning.asked(q) },
@@ -832,6 +833,11 @@ class CollisionTest {
         "nifty ka straddle din mein kitna girta hai" to "StraddleDecay", "how much do at the money option premiums usually decay intraday" to "StraddleDecay",
         // Its neighbours: the straddle's implied move now, Boss's own book's decay, today's expiry companion.
         "what does the banknifty straddle imply for expiry" to "ChainIntel", "how much is my book losing to theta" to "BookDecay",
+        // ---- ExpiryHour: the expiring at-the-money call and put from 14:30 to the end of expiry day (round 42) ----
+        "how does the atm option's premium behave in the last hour on expiry day" to "ExpiryHour",
+        "how much does the atm call lose in the last hour of expiry" to "ExpiryHour", "how often does the atm put double in the final hour on expiry" to "ExpiryHour",
+        "expiry last hour premium record for banknifty" to "ExpiryHour", "expiry ke aakhri ghante mein atm premium kitna girta hai" to "ExpiryHour",
+        "what usually happens to at the money premiums after 2:30 on expiry days" to "ExpiryHour",
         // ---- AtmBuy: the at-the-money call and put bought at 9:30 and held, how often each ended the day worth more or doubled (round 41) ----
         "how often does the atm option double from its 9:30 price before the end of the day" to "AtmBuy",
         "how often does a bought atm call end the day worth more" to "AtmBuy", "how often does nifty's atm put double on expiry day" to "AtmBuy",
@@ -1341,7 +1347,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -2605,6 +2611,13 @@ class CollisionTest {
             "what is a straddle", "how much does a strangle usually lose in a day", "how much does gold's straddle usually lose",
             "how fast do you answer", "what's my theta", "atm straddle price"))
             assertTrue(audit.feature(s) != "StraddleDecay", "$s: ${audit.feature(s)}")
+        // ExpiryHour stays the record: never today's or one past expiry, a forecast, advice, Boss's own trades, the straddle,
+        // the pin, gold, VIX or the index's own last hour.
+        for (s in listOf("will the atm call double in the last hour of expiry today", "should i hold the atm put into the last hour of expiry",
+            "how did the atm call do in the last hour of last expiry", "how often does my atm call double in the last hour on expiry",
+            "how much does the straddle lose in the last hour on expiry", "how often does gold's atm call double in the last hour of expiry",
+            "does nifty usually reverse in the last hour on expiry day", "how often does nifty pin to max pain in the last hour of expiry"))
+            assertTrue(audit.feature(s) != "ExpiryHour", "$s: ${audit.feature(s)}")
         // AtmBuy stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
         // question, a definition, the straddle, gold, VIX or the quote itself.
         for (s in listOf("will the atm call double today", "should i buy the atm call", "how often does my atm call double",

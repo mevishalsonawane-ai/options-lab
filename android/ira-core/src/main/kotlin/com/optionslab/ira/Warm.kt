@@ -26,7 +26,7 @@ object Warm {
         Briefing::asked, Bundle::acts, Causes::asked, ChainDrift::asked, ChainIntel::asked, Charges::asked, Clarity::asked, CoPilot::asked, Comebacks::asked,
         Compare::asked, Compare::markets, Consistency::asked, Corrections::forgetWordAsked, Corrections::wordsAsked,
         DataAge::asked, DayAfter::asked, DayClock::asked, DayCompare::asked, DayJournal::asked, DayStory::asked, DaySummary::asked,
-        Distance::asked, ExpectedRange::asked, ExpiryDay::asked, ExpiryEve::asked, ExpiryPin::asked, ExtremeCloses::asked,
+        Distance::asked, ExpectedRange::asked, ExpiryDay::asked, ExpiryEve::asked, ExpiryPin::asked, ExpiryHour::asked, ExtremeCloses::asked,
         FigureFirst::asked, FirstMove::asked, Gap::asked, GapRecord::asked, Goals::asked, Goals::clearAsked, Goals::read,
         Habits::asked, Headroom::asked, Hearing::asked, Honest::asked, HonestStars::asked, Improve::asked, InsideDays::asked,
         Intents::mayMean, Intents::prompt, LastHour::asked, Latency::asked, LeadIndex::asked, LeadPart::asked, Learnings::asked, Learnings::undoAsked,

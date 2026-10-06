@@ -1589,7 +1589,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
@@ -3273,7 +3273,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, StraddleDecay, AtmBuy, ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3318,6 +3318,20 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch(Dispatchers.IO) { reply(runCatching { expiryPin(pinAsk, markets) }.getOrElse { "I could not read the past expiry chains just now, Boss." }) }
+            return true
+        }
+        // "How does the ATM option's premium behave in the last hour on expiry day?", "how much does the ATM call lose in the last
+        // hour of expiry?", "how often does the ATM put double in the final hour on expiry?", "expiry ke aakhri ghante mein atm
+        // premium kitna girta hai": the expiring at-the-money call and put from 14:30 to the end of the day on the past expiry
+        // days whose option prices the phone keeps ([com.optionslab.ira.ExpiryHour]), the other days' same hour beside, and
+        // today's legs so far when today is an expiry. A record of past expiries, never a forecast or advice; market data only
+        // (fine on a locked phone); nothing acts. (Before the straddle's record and the buyer's record from 9:30.)
+        val expiryHourAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.ExpiryHour.asked(q) }.getOrNull() else null
+        if (expiryHourAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val expiryHourMarkets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { expiryHour(expiryHourAsk, expiryHourMarkets) }.getOrElse { "I could not read the expiry-day last-hour record just now, Boss." }) }
             return true
         }
         // "How much does the ATM straddle usually lose between 9:30 and 2:30?", "how much does Nifty's straddle decay on a quiet
@@ -5174,6 +5188,27 @@ object IraHub {
             ?: com.optionslab.ira.StraddleDecay.days(Store.barSessions(u), today).also { straddleDays = key to it }
         val todays = runCatching { Store.barSession(u, today) }.getOrNull()
         return com.optionslab.ira.StraddleDecay.answer(a, m, past, todays, today, now)
+    }
+
+    /** The past sessions read for [expiryHour] (the index, its kept days and the day as key), kept until any of them changes. */
+    @Volatile private var expiryHourDays: Pair<String, List<com.optionslab.ira.ExpiryHour.Day>>? = null
+
+    /**
+     * "How does the ATM option's premium behave in the last hour on expiry day?" ([com.optionslab.ira.ExpiryHour]): the index's
+     * sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few numbers,
+     * then today's kept chain. Reads only.
+     */
+    private fun expiryHour(a: com.optionslab.ira.ExpiryHour.Q, markets: List<IraMarket>): String {
+        val m = com.optionslab.ira.ExpiryHour.market(markets) ?: return com.optionslab.ira.ExpiryHour.NOT_HERE
+        val u = m.name
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
+        val key = "$u|$today|${kept.size}|${kept.lastOrNull()}"
+        val past = expiryHourDays?.takeIf { it.first == key }?.second
+            ?: com.optionslab.ira.ExpiryHour.days(Store.barSessions(u), today).also { expiryHourDays = key to it }
+        val todays = runCatching { Store.barSession(u, today) }.getOrNull()
+        return com.optionslab.ira.ExpiryHour.answer(a, m, past, todays, today, now)
     }
 
     /** The past sessions read for [atmBuy] (the index, its kept days and the day as key), kept until any of them changes. */
