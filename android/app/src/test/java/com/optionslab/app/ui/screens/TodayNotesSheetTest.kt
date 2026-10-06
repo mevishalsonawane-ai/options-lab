@@ -39,6 +39,7 @@ import org.junit.runner.RunWith
  * chip sits in the chat's header row, the question box and Ask still on screen on an ordinary phone.
  */
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)   // real text layout: the 3-line collapse is measured
 @RunWith(AndroidJUnit4::class)
 class TodayNotesSheetTest {
     @get:Rule val watchdog = AreaEWatchdog()
