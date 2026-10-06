@@ -294,7 +294,7 @@ class MarketRecorderTest : RobolectricTest() {
         val f = Feeds()
         MarketRecorder.testSource = f
         at(6, 29, 50); runBlocking { MarketRecorder.offHours() }
-        assertTrue("nothing before 06:30", MarketRecorder.days().isEmpty())
+        assertTrue("no GIFT Nifty before 06:30", f.texts.none { "nseix.com" in it } && lines().none { it.startsWith("I,") })
         at(6, 30, 5); runBlocking { MarketRecorder.offHours() }
         assertEquals("H,v1,$day", lines().first())
         assertTrue(lines().contains("I,06:30:05,NIFTY,2026-10-27,22804.5,30.5,0.13,56491,2026-10-06T22:02:01"))

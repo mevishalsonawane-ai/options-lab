@@ -173,6 +173,7 @@ class RecorderFeedsTest {
         assertEquals(tue, RecorderFeeds.oiMissed(at(wed, 9, 0), trading, mon, at(tue, 18, 30), null))
         assertNull(RecorderFeeds.oiMissed(at(wed, 9, 1), trading, mon, tried, tue), "its gap written once")
         assertNull(RecorderFeeds.oiMissed(at(wed, 9, 0), trading, tue, tried, null), "it was read")
+        assertNull(RecorderFeeds.oiMissed(at(wed, 18, 30), trading, mon, at(wed, 18, 30), null), "this evening's try is for today's file")
         assertNull(RecorderFeeds.oiMissed(at(wed, 9, 0), trading, mon, null, null), "never tried (the phone was off): no gap invented")
         assertNull(RecorderFeeds.oiMissed(at(wed, 9, 0), trading, mon, at(tue, 18, 29), null), "a try before it was due is not one")
         val thu = LocalDate.of(2026, 10, 1)

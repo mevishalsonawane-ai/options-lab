@@ -218,7 +218,8 @@ object RecorderFeeds {
         val today = now.toLocalDate()
         if (!trading(today) || now.toLocalTime().isBefore(MarketRecord.FROM)) return null
         val prev = prevTrading(today, trading) ?: return null
-        if (lastTry == null || lastTry.isBefore(prev.atTime(OI_FROM))) return null
+        // A try of the last trading day's file: from its 18:30 up to this evening's own (from which tries are for today's).
+        if (lastTry == null || lastTry.isBefore(prev.atTime(OI_FROM)) || !lastTry.isBefore(today.atTime(OI_FROM))) return null
         if (recorded != null && !recorded.isBefore(prev)) return null
         if (missed != null && !missed.isBefore(prev)) return null
         return prev
