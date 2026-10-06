@@ -432,6 +432,32 @@ object AccountWarmPace {
 }
 
 /**
+ * Battery (round 17): outside market hours the listening loop (a pass every 30 s) read Boss's account ahead - the
+ * Zerodha orders, position book and funds with a session, a paper snapshot (each held contract's day of candles) and
+ * the trade check - every 5 minutes with the screen on and every 30 minutes with it off: about 35 reads through a
+ * weeknight and 96 through a weekend day, screen off, with nothing in the account able to move. Now, market shut and
+ * the screen off: no read ahead (a question then reads afresh, as on a low battery). Screen on: every 5 minutes as
+ * before, and at once on the first pass after the screen comes on - so the Ira page's globe and the first question
+ * after unlocking find figures at least as fresh as before. Market hours: every pass, as before ([AccountWarmPace]
+ * then sets the pace). Words only - stops, targets, the loss limit, the guard, the order watch and every alert read
+ * their own. Unknown screen state counts as on. Pure.
+ */
+object OffHoursWarmPace {
+    /** Market shut, screen on: one read ahead every this many 30 s passes (5 minutes), as before. */
+    const val SCREEN_ON_EVERY = 10
+
+    /**
+     * Read the account ahead on listening pass [pass]? [open]: market hours on a trading day. [screenOn]: now.
+     * [wasOn]: the screen on the last pass (null: no pass has looked yet).
+     */
+    fun due(open: Boolean, screenOn: Boolean, pass: Int, wasOn: Boolean?): Boolean = when {
+        open -> true
+        !screenOn -> false
+        else -> pass % SCREEN_ON_EVERY == 0 || wasOn == false
+    }
+}
+
+/**
  * Battery (round 12): while the "Open" home-screen widget shows Zerodha orders still working, the live watch read
  * Zerodha's order book once a pass only to redraw it - once a minute, and every 15 s while something is held: up to
  * 4 requests a minute (about 1,500 a session), each waking the radio, screen on or off. The widget is display only and

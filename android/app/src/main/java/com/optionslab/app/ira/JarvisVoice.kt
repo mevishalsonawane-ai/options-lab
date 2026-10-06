@@ -1000,6 +1000,7 @@ class JarvisVoice : Service() {
             // when an answer needs it, and leaves memory after 10 minutes unused.)
             scope.launch(Dispatchers.Default) {
                 var n = 0
+                var screenLast: Boolean? = null
                 while (true) {
                     // Market hours on a trading day (battery round 1: an NSE holiday is not one - before, the clock alone was
                     // read, and a holiday weekday fetched prices every minute and the account every 30 s all session).
@@ -1018,10 +1019,13 @@ class JarvisVoice : Service() {
                     // 5 minutes all night). An answer asked meanwhile reads afresh, as on a low battery.
                     // Battery (round 11): with the screen off and the words lane quiet (nothing held or armed), the account is
                     // read ahead about every 2 minutes, not every 30 s ([com.optionslab.ira.AccountWarmPace]). Words only.
-                    if ((open || n % (if (screen) 10 else 60) == 0) && IraHub.online()) runCatching {
+                    // Battery (round 17): market shut and the screen off, not at all (it was every 30 minutes all night and
+                    // weekend); at once on the first pass after the screen comes on ([com.optionslab.ira.OffHoursWarmPace]).
+                    if (com.optionslab.ira.OffHoursWarmPace.due(open, screen, n, screenLast) && IraHub.online()) runCatching {
                         val accountQuiet = !screen && com.optionslab.app.work.Tasks.wordsQuietNow() == true
                         IraHub.warm(accountQuiet)
                     }
+                    screenLast = screen
                     n++
                     // Low battery and not charging: kept ready less often (answers then read afresh when asked).
                     kotlinx.coroutines.delay(com.optionslab.app.work.Battery.gap(this@JarvisVoice, 30_000))
