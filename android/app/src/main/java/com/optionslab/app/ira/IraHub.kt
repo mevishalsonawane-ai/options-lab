@@ -3494,7 +3494,9 @@ object IraHub {
             val said = runCatching {
                 val today = com.optionslab.app.data.Market.today()
                 com.optionslab.ira.Tour.answer(com.optionslab.ira.Tour.part(com.optionslab.app.data.Market.minuteNow(),
-                    com.optionslab.app.data.Market.isTradingDay(today)), today)
+                    com.optionslab.app.data.Market.isTradingDay(today)), today) +
+                    // Where every question is, by topic (the "What can I ask" sheet; 06 Oct): one line, nothing else changes.
+                    " " + com.optionslab.ira.AskGuide.POINTER + "."
             }.getOrDefault("Ask me how the market is doing, what matters right now, or \"what can you do\" for everything, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true

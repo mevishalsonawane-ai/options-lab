@@ -574,6 +574,9 @@ class CollisionTest {
         "open zerodha" to "Account:STATUS", "start orb" to "Act", "play the alert sound" to "Account:ALARMS", "open orders" to "Account:ORDERS",
         // ==== Round 13: round 12's open items, routed ====
         "what all can you do" to "Help", "what else can you do" to "Help", "what can you do" to "Help",
+        // The help answer and the tour, as the question guide points at them (06 Oct): routes unchanged.
+        "help" to "Help", "tum kya kar sakte ho" to "Help", "jarvis tum kya kar sakte ho" to "Help", "what can i ask you" to "Tour",
+        "what can i ask jarvis" to "Tour", "main kya pooch sakta hoon" to "Tour",
         "how was yesterday for nifty" to "DayCompare", "how was nifty yesterday" to "DayCompare", "how did banknifty do yesterday" to "DayCompare",
         "how was the market yesterday" to "DayCompare", "kal nifty kaisa tha" to "DayCompare", "how did sensex close yesterday" to "DayCompare",
         "what is the average price of my put" to "Account:POSITIONS", "what's my average price on the 24500 put" to "Account:POSITIONS",
@@ -3263,5 +3266,23 @@ class CollisionTest {
         for (s in listOf("why didn't solo trade", "why didn't liquidity trade", "what did hero motocorp do today", "is tomorrow a hero day",
             "why didn't hero trade yesterday", "hero ko band karo", "arm hero"))
             assertTrue(audit.feature(s) != "HeroDay", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- AskGuide: "What can I ask?" - every example is the family it is tagged with, and the help words keep their routes ----
+
+    @Test fun theQuestionGuideRoutesAsTaggedAndTheHelpWordsKeepTheirRoutes() {
+        for (e in AskGuide.all()) assertEquals(e.family, audit.feature(e.q), e.q)
+        // "Help", "what can you do", "tum kya kar sakte ho": the help answer, which now ends with where the guide is.
+        for (s in listOf("help", "what can you do", "what all can you do", "tum kya kar sakte ho", "jarvis tum kya kar sakte ho")) {
+            assertEquals("Help", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Ira().answer(s, emptyMap(), emptyList()).text.contains(AskGuide.helpLine()), s)
+        }
+        // "What can I ask you": the tour, as before (the hub adds the guide's line to it).
+        for (s in listOf("what can i ask you", "what can i ask jarvis", "main kya pooch sakta hoon", "tumse kya puchu"))
+            assertEquals("Tour", audit.feature(s), s)
+        // The voice question keeps its own short answer (no guide line there).
+        assertTrue(!Ira().answer("can you hear me", emptyMap(), emptyList(), voice = true).text.contains(AskGuide.POINTER))
     }
 }

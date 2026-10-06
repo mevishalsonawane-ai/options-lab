@@ -66,6 +66,8 @@ private val GROUPS = listOf(
     // What changed in recent updates and where to find it (WhatsNewPage); Home's card shows the unseen ones.
     "App" to listOf(
         Drawer("whatsnew", "What's new", "Recent changes to the app and where to find them"),
+        // Every question Jarvis answers, by topic (AskGuidePage); a tap asks it in the chat. The Ira page has it by the question box.
+        Drawer("askguide", ASK_GUIDE_TITLE, "Every question Jarvis answers, by topic; tap one to ask it"),
     ),
 ) else emptyList())
 
@@ -108,6 +110,9 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "schedule" -> SchedulePage(model)
             "notes" -> NotesPage()
             "whatsnew" -> WhatsNewPage()
+            // A question asked from the guide: the chat opens with it (the guide closes as the page changes).
+            "askguide" -> AskGuidePage(onAsked = { onPage("ira-chat") })
+            "ira-chat" -> IraPage(androidx.compose.runtime.remember(model) { iraOrderPathsFor(model) }, startInChat = true)
             else -> Drawers(onPage)
         }
     }

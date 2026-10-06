@@ -322,7 +322,7 @@ object AppAnswers {
         "The Open widget and the P&L stay blank until you turn on \"Show my P&L on the widget\" in More, then Security - off by default, " +
         "as anyone holding the unlocked phone sees the home screen."
 
-    /** "Can you listen to me?", "what can you do?" - about Ira (Jarvis) itself. */
+    /** "Can you listen to me?", "what can you do?" - about Ira (Jarvis) itself; the latter ends with where the question guide is ([AskGuide.helpLine]). */
     fun help(q: Question, voice: Boolean): Answer {
         val t = q.text.lowercase()
         val aboutVoice = rx("\\b(listen|hear|voice|speak|talk|mic|microphone)").containsMatchIn(t)
@@ -341,6 +341,6 @@ object AppAnswers {
             "\"what is theta\", and \"the usual\". Quick ones: \"price of BankNifty 52000 PE\", \"which strike is ATM\", \"how many lots " +
             "can I buy with 20000\", \"how far is Nifty from 25000\", \"when is the next expiry\", \"is tomorrow a holiday\", \"remind me at 3 pm " +
             "to check Nifty\", \"wrap up my day\", \"how was my last trade\", \"how was my month\", \"how much did I pay in charges this week\", \"what did I miss\", \"run a self check\", \"speak slower\" - Hinglish too. " +
-            "I don't give buy or sell advice. " + Toolbox.say() + " " + voiceLine, emptyList())
+            "I don't give buy or sell advice. " + Toolbox.say() + " " + AskGuide.helpLine() + " " + voiceLine, emptyList())
     }
 }

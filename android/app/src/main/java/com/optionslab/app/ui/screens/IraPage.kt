@@ -122,8 +122,9 @@ internal fun <T> iraSlice(key: Any? = null,
     return remember(all, key) { androidx.compose.runtime.derivedStateOf(policy) { pick(all.value) } }
 }
 
+/** [startInChat]: open on the chat, not the globe (a question asked from Settings → What can I ask? shows its reply). */
 @Composable
-fun IraPage(orders: IraOrderPaths? = null) {
+fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     val p = LocalPalette.current
     // The whole state is read only inside the conversation's list (its own scope); the page itself reads slices.
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -167,19 +168,24 @@ fun IraPage(orders: IraOrderPaths? = null) {
         text = ""
         // The answer is ready at once (it is built from facts); the orb still shows a beat of thinking, then answers.
         // Read off the screen's thread (IraHub.askSoon); the spoken reply waits until the question is taken in, as before.
-        val asked = IraHub.askSoon(q)
-        // Jarvis: the reply to a typed question is said aloud too (the owner's switch, on by default).
-        scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctxSpeak, q) }
+        // Jarvis: the reply to a typed question is said aloud too (the owner's switch, on by default). [askAsTyped]: the
+        // question guide asks the same way.
+        askAsTyped(ctxSpeak, scope, q)
         typed = 2
         scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
 
     // Jarvis: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
-    var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
+    var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(startInChat || !com.optionslab.app.BuildConfig.JARVIS) }
     // The Requests panel (Boss, 5 Oct): what waits for his yes, apart from the chat. Back closes it.
     var requestsOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = requestsOpen) { requestsOpen = false }
     if (requestsOpen) { RequestsPanel(onClose = { requestsOpen = false }); return }
+    // "What can I ask?" (06 Oct): the question guide from the "?" beside the question box. A tap asks the question exactly
+    // as typed ([send]) and closes it, back to the chat with the question in it; Back closes it too.
+    var guideOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = guideOpen) { guideOpen = false }
+    if (guideOpen) { AskGuideSheet(onAsk = { q -> guideOpen = false; send(q) }, onClose = { guideOpen = false }); return }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
@@ -295,7 +301,9 @@ fun IraPage(orders: IraOrderPaths? = null) {
                     modifier = Modifier.clickable { IraHub.forgetConversation(); com.optionslab.ira.ShortAnswer.clearCache() }.padding(6.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(start = 6.dp, end = 14.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // "What can I ask?": every question Jarvis answers, by topic (48dp; the box keeps the rest of the row).
+            AskGuideChip(onOpen = { guideOpen = true })
             OutlinedTextField(text, { text = it.take(300) }, placeholder = { Text("Ask Ira about the market") }, singleLine = true, modifier = Modifier.weight(1f),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send(text) }))
