@@ -131,7 +131,7 @@ object BookDecay {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val DECAY = "(theta|time decay|decay|thetas|time value decay)"
     private const val MINE = "(my|our|mera|meri|mere|hamara|hamari|hamare)"

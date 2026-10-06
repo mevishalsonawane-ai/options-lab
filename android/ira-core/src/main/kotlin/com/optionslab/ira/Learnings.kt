@@ -319,7 +319,7 @@ object Learnings {
 
     enum class Ask { WEEK, CHANGED, ALL }
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?"
     private const val TAIL = "( please| boss| jarvis)* $"

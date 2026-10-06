@@ -145,7 +145,7 @@ object OutlookCheck {
 
     // ---- "how good are your morning outlooks?" --------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val LEAD = "^ (ok |okay |so |jarvis |boss |hey |acha |accha |haan |tell me |be honest |honestly )*"
     private const val TAIL = "( so far| lately| recently| today| this week| this month| really| actually| boss| jarvis| please| yaar| kya| na)* $"

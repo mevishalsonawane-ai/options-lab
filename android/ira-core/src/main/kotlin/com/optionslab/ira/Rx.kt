@@ -81,6 +81,33 @@ internal fun spacedWords(s: String, keep: String = ""): String {
     return out.toString()
 }
 
+/**
+ * The words said, spaced the readers' shared way, made once per words and kept (speed round 11): some sixty readers each
+ * lowercased and spaced the same question again ([spacedWords] after a lowercase and an apostrophe replace or two), about
+ * a seventh of the chain's time per question. Their ways come to two forms: [words] (an apostrophe a space, as a hyphen
+ * is: "don t") and [joined] (apostrophes dropped: "dont"). Each is exactly what that reader made before. Only the words
+ * said are kept, never an account figure; [Kept], pure.
+ */
+internal object Spaced {
+    private val spaced = Kept<String>(64)
+    private val apostrophesDropped = Kept<String>(64)
+    private val made = java.util.concurrent.atomic.AtomicInteger()
+
+    /** " " + [spacedWords] of [text] lowercased + " " (an apostrophe, straight or curly, read as a space). */
+    fun words(text: String): String = spaced.of(text) { made.incrementAndGet(); " " + spacedWords(text.lowercase()) + " " }
+
+    /** As [words], with the apostrophes (straight or curly) dropped first: "don't" is " dont ". */
+    fun joined(text: String): String = apostrophesDropped.of(text) {
+        made.incrementAndGet(); " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    }
+
+    /** How many forms were made rather than found kept (tests: the work a question costs). */
+    val madeCount: Int get() = made.get()
+
+    /** Every kept form forgotten and the count reset (tests). */
+    fun forget() { spaced.clear(); apostrophesDropped.clear(); made.set(0) }
+}
+
 /** Does [s] hold a digit 0-9 (what `\\d` matches in a pattern)? A pattern that needs one cannot match without. */
 internal fun hasDigit(s: CharSequence): Boolean {
     for (i in 0 until s.length) if (s[i] in '0'..'9') return true

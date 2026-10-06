@@ -334,7 +334,7 @@ object BotTrades {
 
     // ---- the question --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val BOT = "((paper bots?|bots?|algos?|arms?|orb fresh|orb sweep|orb|range fade|liquidity( 15 5| 15| 5| 30| bot| arm| books?)?)s?)"
     private const val MY = "(my |our |the |mere |meri |mera |hamare |todays |today s )?"

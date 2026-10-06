@@ -30,7 +30,7 @@ object MyStreaks {
     private fun dname(d: DayOfWeek) = d.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
     private fun date(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " ${d.dayOfMonth} " +
         d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     private val MINE = rx(" (i|my|me|mine|am i|i m|im|i ve|ive|mera|meri|mere|main|maine) ")
     private val RUN = rx(" (winning|losing|win|loss|losses|green|red|profit|profitable|good|bad) (streak|streaks|run|runs|stretch)| (streak|streaks) ")

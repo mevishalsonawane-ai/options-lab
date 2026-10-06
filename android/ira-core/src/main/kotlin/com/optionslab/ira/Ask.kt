@@ -113,13 +113,13 @@ object Ask {
     private fun parseAs(said: String): Question {
         // Commands and orders: from the words as heard, exactly as strict as ever.
         val heard = Hinglish.normalize(said)
-        val t0 = " " + spacedWords(heard.lowercase()) + " "
+        val t0 = Spaced.words(heard)
         // (A question mark said - lost when Hinglish is read - still keeps a question from acting, as [Commands] does.)
         Commands.parse(heard)?.takeIf { !said.trim().endsWith("?") || it.kind == Command.Kind.NOTE }
             ?.let { c -> return Question(heard, Market.mentioned(heard), setOf(Topic.COMMAND), null, command = c) }
         // Everything else is a question, read with misheard and Hinglish words understood.
         val text = reading(said)
-        val t = " " + spacedWords(text.lowercase()) + " "
+        val t = Spaced.words(text)
         // "What should I buy?" - the pattern expert's suggestion (with why), or why there is none now.
         if (SUGGEST.containsMatchIn(t)) return Question(text, Market.mentioned(text), setOf(Topic.SUGGEST), null)
         // "What is a hammer?" - the pattern explained, with its own record.

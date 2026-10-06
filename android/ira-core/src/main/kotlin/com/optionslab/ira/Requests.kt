@@ -331,7 +331,7 @@ object Requests {
     fun listAsked(text: String): Boolean =
         // RequestBook (usefulness 33) answers the same asks more fully (and what was answered): it goes first.
         RequestBook.asked(text) == null &&
-            LIST.containsMatchIn(" " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " ")
+            LIST.containsMatchIn(Spaced.joined(text))
 
     /**
      * What waits, said: each request's heading, where it would act and its countdown, at [now] ([shown]). On a locked phone

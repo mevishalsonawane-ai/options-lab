@@ -127,7 +127,7 @@ object Understand {
         val said = now.trim()
         if (said.isEmpty()) return null
         // Words that could act: never cleaned or split - only the follow-up reading (which never acts) as before.
-        if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(" " + spacedWords(said.lowercase()) + " "))
+        if (FollowUp.acts(said) || Compound.ACTION.containsMatchIn(Spaced.words(said)))
             return FollowUp.resolve(prev, said)?.let { listOf(it) }
         // Numbers and times said in words ("how far is Nifty from twenty five thousand"): as digits, questions only.
         val clean = Spoken.question(Filler.clean(said).ifBlank { return null })

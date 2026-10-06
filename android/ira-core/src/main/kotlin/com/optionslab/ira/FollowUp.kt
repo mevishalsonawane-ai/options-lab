@@ -156,7 +156,7 @@ object FollowUp {
     /** Is [s] only market names ("bank nifty", "the sensex")? */
     internal fun onlyMarkets(s: String): Boolean {
         if (Market.mentioned(s).isEmpty()) return false
-        var r = " " + spacedWords(s.lowercase()) + " "
+        var r = Spaced.words(s)
         Market.ALIASES_LONGEST_FIRST.forEach { r = r.replace(" $it ", " ") }
         return r.replace(rx(" (the|and|aur|or|on|for|in|index) "), " ").replace(rx(" (the|and|aur|or|on|for|in|index) "), " ").isBlank()
     }

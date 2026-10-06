@@ -133,7 +133,7 @@ object Headroom {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", "").replace("’", "").replace("-", " ")) + " "
+    private fun words(s: String) = Spaced.joined(s)
 
     /** Words of changing a limit, an order or a stop: never this question. */
     private val ACTS = rx(" (set|change|raise|increase|lower|reduce|decrease|turn|switch|remove|clear|disable|enable|reset|cancel|buy|sell|square|kar do|karo|badha|ghata|badhao|ghatao) ")

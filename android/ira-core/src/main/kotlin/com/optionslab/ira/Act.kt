@@ -125,10 +125,10 @@ object Commands {
             return Command(Command.Kind.NOTE, target = m.groupValues[1].trim())
         }
         // "Why aren't you speaking?" / "why only in chat?": the voice check (it only explains; nothing changes), asked or typed with "?".
-        if (VOICE_WHY.containsMatchIn(" " + spacedWords(said.lowercase().replace("'", " ")) + " ")) return Command(Command.Kind.VOICE_CHECK)
+        val asSaid = Spaced.words(said)
+        if (VOICE_WHY.containsMatchIn(asSaid)) return Command(Command.Kind.VOICE_CHECK)
         // A question ("is live mode on?") is never a command.
         if (said.trim().endsWith("?")) return null
-        val asSaid = " " + spacedWords(said.lowercase().replace("'", " ")) + " "
         if (MUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MUTE)
         if (UNMUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.UNMUTE)
         if (MORE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MORE)

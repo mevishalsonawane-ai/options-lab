@@ -46,7 +46,7 @@ object Clarity {
     /** The kind of answer [text] gets: its main topic's key, or null (a command, an order, words not understood). */
     fun kind(text: String): String? = runCatching { SelfDoubt.tags(text).firstOrNull { it.dim == SelfDoubt.Dim.TOPIC }?.key }.getOrNull()
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val LEAD = "^ (sorry |umm |um |uh |hmm |jarvis |boss )*"
     private const val TAIL = "( jarvis| boss| please| sorry| again| bhai| yaar)* $"

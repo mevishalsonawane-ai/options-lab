@@ -266,7 +266,7 @@ object NewsMoves {
 
     // ---- what was asked --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     private val ASK_TAGS: List<Pair<NewsDesk.Tag, Regex>> = listOf(
         NewsDesk.Tag.RBI to Regex(" (rbi|reserve bank|repo rate|rate decision|rate decisions|monetary policy|mpc|rbi policy) "),

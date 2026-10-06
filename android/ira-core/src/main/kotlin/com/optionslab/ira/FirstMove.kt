@@ -59,7 +59,7 @@ object FirstMove {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the first-move record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so its day has no opening move of the kind, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
+    private fun norm(text: String) = Spaced.words(text)
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun sp2(x: Double) = (if (x >= 0) "+" else "-") + "%.2f%%".format(Locale.ENGLISH, abs(x))

@@ -26,7 +26,7 @@ object RequestBook {
     /** What he asked: those waiting now, or those already answered or ended ([outcome] the kind named, or null for all; [today]: today's only). */
     data class Asked(val done: Boolean, val outcome: Requests.Outcome? = null, val today: Boolean = false)
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     // (Round 27: the recognizer's "reqests", "requsts", "aprovals".)
     private const val REQ = "(requests?|reqests?|requsts?|approvals?|aprovals?)"

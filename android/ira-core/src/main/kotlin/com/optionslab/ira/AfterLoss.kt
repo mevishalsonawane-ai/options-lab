@@ -136,7 +136,7 @@ object AfterLoss {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val LOSS = "(a loss|a losing trade|a losing one|a loser|losing trades|losses|losing|losing a trade|a stop out|a stop loss hit|my stop is hit|my stop gets hit|i lose|i lost|i take a loss|i book a loss|my losses|my losing trades|a bad trade)"
     private const val WIN = "(a win|a winning trade|a winning one|a winner|winning trades|wins|i win|i won|a good trade|a profit|i book a profit|my wins|my winning trades)"

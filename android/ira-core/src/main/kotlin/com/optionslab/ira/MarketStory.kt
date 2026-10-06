@@ -37,7 +37,7 @@ object MarketStory {
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun times(x: Double) = "%.1f".format(Locale.ENGLISH, x)
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
-    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |tell me |please )*"
     private const val MKT = "(the )?(markets?|stock market|share market|indices|indian market)"

@@ -53,7 +53,7 @@ object GapRecord {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the gap record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so it has no opening gap, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
+    private fun norm(text: String) = Spaced.words(text)
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun p1(x: Double) = "%.1f%%".format(Locale.ENGLISH, x).replace(".0%", "%")

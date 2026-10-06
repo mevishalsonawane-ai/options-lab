@@ -91,7 +91,7 @@ object TrendReads {
 
     // ---- the question ----
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     private const val WHO = "(your|ur|jarvis|jarvis s|jarvis s own|your own|tumhare|tumhari|aapke|aapki|tera|tere)"
     private const val WHAT = "(trend|trend and range|trend or range|range|structure|day type|day kind|trend day|range day)"

@@ -54,7 +54,7 @@ object MoreAfter {
      */
     data class Log(val notes: List<Note> = emptyList(), val resetAt: LocalDateTime? = null, val learnedAt: Map<String, Record> = emptyMap())
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     /** "Repeat", "say it again", "come again", "pardon": hearing it again, not wanting more. */
     private val NOT_MORE = rx(" (repeat|again|pardon|sorry what|what did you say|once more|one more time) ")
