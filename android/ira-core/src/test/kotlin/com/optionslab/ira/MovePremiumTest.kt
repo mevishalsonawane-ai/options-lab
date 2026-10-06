@@ -106,4 +106,15 @@ class MovePremiumTest {
         assertNull(p.order); assertNull(p.command)
         assertFalse(Topic.ACCOUNT in p.topics)
     }
+
+    @Test fun aConditionalExitInAnyMixIsNeverTheWhatIf() {
+        for (q in listOf("agar nifty 100 point gire to mera call sell kar do", "agar nifty 100 point gire to mera position exit kar do",
+            "agar nifty 100 point gire to meri positions band kar do", "agar nifty 100 point gire to mera put square off karo",
+            "agar nifty 100 point gire to mera call close kar dena", "agar nifty 100 point gire to mera put book kar lo",
+            "if nifty falls 100 points close my call", "if nifty falls 100 points book profit on my put"))
+            kotlin.test.assertNull(Exposure.moveAsked(q), q)
+        for (q in listOf("agar nifty 50 point gire to mera kya hoga", "what happens to my book if nifty falls 100 points",
+            "what happens to my P&L if Nifty moves 100 points"))
+            kotlin.test.assertNotNull(Exposure.moveAsked(q), q)
+    }
 }

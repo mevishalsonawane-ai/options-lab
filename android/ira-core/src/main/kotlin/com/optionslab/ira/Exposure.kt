@@ -67,10 +67,18 @@ object Exposure {
     private val HINDI_ACT = Regex(" (bech|becho|bechu|bechun|bechna|bech do|kharid|kharido|kharidu|khareed|khareedo|lagao|lagau|lagana|nikal|nikalo|" +
         "nikaal|nikaalo|katu|kaat|kaato|karu|karun|karoon|karein|karna chahiye|chahiye|band karo|exit karo) ")
 
+    /** An order or exit verb anywhere in the sentence, English or Hinglish ("sell kar do", "square off karo", "close my call"). */
+    private val ACT_ANYWHERE = Regex(" ((sell|exit|close|square ?off|squareoff|cut|nikal|nikaal|kaat|hedge|place|cancel|modify)( (kar|karo|kar do|kardo|kar dena|kar lo|karke|karna|kar dijiye|do|dena))?" +
+        "|buy|(book|band) (kar|karo|kar do|kardo|kar dena|kar lo|karke|karna|kar dijiye|profit|profits|my|the|it)) ")
+
     /** "What happens to my P&L if Nifty moves 100 points", "if BankNifty falls 1% what do I lose": the move, or null. */
     fun moveAsked(text: String): Shock? {
         val n0 = norm(text)
         if (HINDI_ACT.containsMatchIn(n0)) return null
+        // A conditional instruction in any mix ("agar nifty gire to mera call sell kar do", "if nifty falls 100 points close
+        // my call", "... square off karo", "... book kar lo"): never read as the what-if, so Jarvis never answers an exit
+        // Boss means with an estimate he may take for an exit set up.
+        if (ACT_ANYWHERE.containsMatchIn(n0)) return null
         val t = SAID.fold(n0) { a, (r, w) -> r.replace(a, w) }.replace(rx("\\s+"), " ")
         if (!IF.containsMatchIn(t) || !OWNER.containsMatchIn(t)) return null
         // "Should I buy puts if Nifty falls", "if I buy the 24500 CE and Nifty moves": advice or a new trade, not the positions.
