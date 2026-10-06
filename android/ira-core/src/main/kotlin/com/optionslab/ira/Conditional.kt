@@ -43,6 +43,10 @@ object Conditional {
     /** A level: a number never said as a move ("100 points", "1 percent") or an amount. */
     private val LEVEL = rx(" (\\d{2,6}(?:\\.\\d+)?)(?= )(?! (?:points?|pts?|percent|pc|rs|rupees|lots?|lot)(?= ))")
 
+    /** An option named: a call, a put, CE / PE, a premium (Hinglish "pe" before an arrival verb is "at", never a put). */
+    private val OPTION_WORD = rx(" (?:call|calls|put|puts|ce|premium|premiums|option|options|ltp)(?= )" +
+        "| pe(?! (?:aaye|aye|aae|aa jaye|aa jaaye|aate|jaye|jaaye|pahunche|pahunch jaye|ho|ho jaye|cross|hit|touch|tak|gire|jaate|jate))(?= )")
+
     /** The words with a number's thousands commas and a sentence's full stops gone ("24,000." is 24000; "52.5" kept). */
     private fun numbered(text: String): String = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")
         .replace(rx("(\\d),(?=\\d{3})"), "$1").replace("%", " percent ").replace(rx("\\.(?!\\d)"), " "), keep = ".") + " "
@@ -60,6 +64,9 @@ object Conditional {
             val v = if (n.endsWith("k")) n.removeSuffix("k").trim().toDoubleOrNull()?.times(1000) else n.toDoubleOrNull()
             return v?.takeIf { it >= 100 }?.let { Instead(loss = it) }
         }
+        // An option named ("if my banknifty call falls below 1500 exit"): the level is likely its premium or strike, never the
+        // index's, so no alarm is offered (review, 6 Oct) - the plain SAY.
+        if (OPTION_WORD.containsMatchIn(t)) return null
         val m = Market.mentioned(text).singleOrNull()?.takeIf { it != Market.GOLD } ?: return null
         val below = BELOW.containsMatchIn(t)
         if (below == ABOVE.containsMatchIn(t)) return null
@@ -105,17 +112,34 @@ object Conditional {
         "ok|okay|you dont mind|you do not mind|thats ok|its ok|ho sake|possible ho|mumkin ho|zaroori ho|koi ho|koi hai)(?= )" +
         "| (?:what|check|see|ask|wonder|know|find out|even|as|tell me) if(?= )| (?:at|all at|just|only) once(?= )| once (?:more|again|and for all)(?= )" +
         "| (?:since|till|until|from|say|tell me|know|ask) when(?= )| as soon as possible(?= )| asap(?= )")
-    /** A condition: Hindi or English. */
-    private val COND = rx(" (?:agar|agr|yadi|if|only if|jab|jab bhi|jab tak|jaise hi|when|whenever|as soon as|in case|the moment|" +
-        "once (?:nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|vix|it|its|the|my|price|market|loss|profit|mtm|we|i)) " +
-        // Hinglish without "agar" (understanding round 30): "nifty 24000 aaye to exit kar dena", "loss 5000 ho to sab band kar do",
-        // "profit 2000 hua to book kar lena", "banknifty 52000 tod de to put kharid lo" - a condition's verb, then "to"/"tab"...
-        "| (?:aaye|aye|aae|aa jaye|aa jaaye|aa gaya|aa gayi|jaye|jaaye|ho|ho jaye|ho jaaye|hua|hui|ho gaya|ho gayi|kare|kar le|kar jaye|" +
+    /** The English and Hindi condition words: "agar", "if", "jab", "jaise hi", "as soon as"... */
+    private const val COND_WORDS = " (?:agar|agr|yadi|if|only if|jab|jab bhi|jab tak|jaise hi|when|whenever|as soon as|in case|the moment|" +
+        "once (?:nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|vix|it|its|the|my|price|market|loss|profit|mtm|we|i)) "
+    /**
+     * Hinglish without "agar" (understanding round 30): "nifty 24000 aaye to exit kar dena", "loss 5000 ho to sab band kar do",
+     * "profit 2000 hua to book kar lena", "banknifty 52000 tod de to put kharid lo" - a condition's verb, then "to"/"tab".
+     */
+    private const val COND_VERBS = "aaye|aye|aae|aa jaye|aa jaaye|aa gaya|aa gayi|jaye|jaaye|ho|ho jaye|ho jaaye|hua|hui|ho gaya|ho gayi|kare|kar le|kar jaye|" +
         "gire|gira|chadhe|chadha|badhe|tode|toda|tod de|tod deta|toote|tute|toot jaye|tut jaye|pahunche|pahuche|pohche|pohonche|lage|lag jaye|" +
-        "chhue|chhu le|bane|ban jaye|jata hai|jaata hai|jati hai|jaati hai|hota hai|hoti hai|(?<! theek | thik | thick | accha | acha | achha | sahi | ok | okay | haan | han | ha | ji )hai|hain) " +
-        "(?:to|toh|tab|tabhi|to phir|toh phir) " +
-        // ... or "-te hi" ("as soon as"): "nifty 24000 aate hi exit kar dena", "2000 profit hote hi book kar lo", "market khulte hi".
-        "| [a-z]{2,}t[ei] hi ")
+        "chhue|chhu le|bane|ban jaye"
+    /** The present tense before "to": "position hai to", "kal expiry hai to", "jata hai to" - "since" as often as "if". */
+    private const val COND_PRESENT = "jata hai|jaata hai|jati hai|jaati hai|hota hai|hoti hai|" +
+        "(?<! theek | thik | thick | accha | acha | achha | sahi | ok | okay | haan | han | ha | ji )hai|hain"
+    private const val COND_THEN = " (?:to|toh|tab|tabhi|to phir|toh phir) "
+    /** "-te hi" ("as soon as"): "nifty 24000 aate hi exit kar dena", "2000 profit hote hi book kar lo", "market khulte hi". */
+    private const val COND_TE_HI = "| [a-z]{2,}t[ei] hi "
+    /**
+     * A condition that sets one. Never the present or perfect tense before "to" ("loss bahut ho gaya hai to kill switch on
+     * kar do", "market crash ho raha hai to", "nifty gir raha hai to sab band kar do"): in Hinglish that is "since X, do Y
+     * now", said now (review, 6 Oct) - only the subjunctive or future ("aaye to", "ho jaye to", "jaye to", "-te hi") and
+     * "agar", "jab", "jaise hi" set one.
+     */
+    private val COND = rx("$COND_WORDS| (?:$COND_VERBS)$COND_THEN$COND_TE_HI")
+    /**
+     * A condition read widely, the present tense with it: a yes said so is unclear ([hedged]) and Boss's own act said so is a
+     * what-if ([supposed]) - never a reason to refuse a command.
+     */
+    private val COND_HEDGE = rx("$COND_WORDS| (?:$COND_VERBS|$COND_PRESENT)$COND_THEN$COND_TE_HI")
     /** An action Jarvis could otherwise take (or place) in the app. */
     private val ACT = rx(" (?:stop|halt|pause|disarm|exit|sell|buy|square off|squareoff|close|cancel|kill|kill switch|switch off|turn off|" +
         "book (?:profit|profits|it|my|the|kar|karo|kar do|kar lo)|band (?:kar|karo|kardo|kar do|kar dena|kar dijiye|kijiye|karna)|" +
@@ -149,7 +173,7 @@ object Conditional {
     private val ALARM = rx(" (?:alert|alerts|alarm|alarms|notify|remind|reminder|tell me|let me know|ping me|warn me|wake me|batana|bata dena|yaad dila|yaad dilana) ")
 
     /** A condition is set in [text] ("if ...", "agar ...", "jab ..."): the words that make a yes unclear ([Wake.yesNo]). */
-    fun hedged(text: String): Boolean = COND.containsMatchIn(IDIOMS.replace(words(text), " "))
+    fun hedged(text: String): Boolean = COND_HEDGE.containsMatchIn(IDIOMS.replace(words(text), " "))
 
     /** [text] tells Jarvis to do something when a condition is met: never a command, an order or a yes; [SAY] answers it. */
     fun asked(text: String): Boolean = kept.of(text) { fresh(text) }
@@ -162,7 +186,21 @@ object Conditional {
      */
     fun supposed(text: String): Boolean {
         val t = IDIOMS.replace(words(text), " ")
-        return COND.containsMatchIn(t) && MINE.containsMatchIn(t)
+        return COND_HEDGE.containsMatchIn(t) && MINE.containsMatchIn(t)
+    }
+
+    /** What a condition never refuses: it only takes risk off (the kill switch on, stop all, the emergency exit, close all). */
+    private val RISK_OFF = setOf(Command.Kind.KILL_ON, Command.Kind.STOP_ALL, Command.Kind.EXIT_ALL, Command.Kind.CLOSE_ALL)
+
+    /**
+     * [c], read from [text] said with a condition ([asked]), still goes through as itself, to its own confirmation (review,
+     * 6 Oct): the kill switch on, stop all, the emergency exit or close all never adds risk, so a condition is never a reason
+     * to refuse it. Boss only supposing his own act ("if I square off everything") is a what-if, never this, unless he tells
+     * Jarvis beside it ("agar main 5000 loss karu to kill switch on kar do"). An order, a start or one arm's stop: never.
+     */
+    fun passes(text: String, c: Command?): Boolean {
+        if (c == null || c.kind !in RISK_OFF || !asked(text)) return false
+        return !supposed(text) || TOLD.containsMatchIn(IDIOMS.replace(words(text), " "))
     }
 
     private fun fresh(text: String): Boolean {

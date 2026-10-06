@@ -41,6 +41,8 @@ object DayScore {
     const val MIN_USUAL = 5
     /** At most this many of today's trades are read, the newest. */
     const val MAX_TRADES = 12
+    /** An index candle starting more than this many minutes before where it should stand is stale. */
+    const val STALE_MIN = 2L
     /** A price better than the exit by less than this (a tick) is no better. */
     const val TICK = 0.05
 
@@ -166,10 +168,14 @@ object DayScore {
         val day = trip.openedAt.toLocalDate()
         var move: Double? = null; var moveMin: Long? = null; var side: Side? = null
         val ix = index?.filter { it.t.toLocalDate() == day && it.t.isBefore(inMin) }?.sortedBy { it.t }.orEmpty()
-        if (ix.isNotEmpty()) {
+        val from = inMin.minusMinutes(LOOK_BACK)
+        // The candle that closes at [from] starts the minute before it; a candle stopping more than [STALE_MIN] minutes short
+        // of where it should stand is no price for that minute (review, 6 Oct): the direction is then unreadable.
+        val back = ix.lastOrNull { it.t.isBefore(from) }
+        val fresh = ix.isNotEmpty() && !ix.last().t.isBefore(inMin.minusMinutes(STALE_MIN)) &&
+            (back == null || !back.t.isBefore(from.minusMinutes(STALE_MIN)))
+        if (fresh) {
             val at = ix.last().c
-            val from = inMin.minusMinutes(LOOK_BACK)
-            val back = ix.lastOrNull { !it.t.isAfter(from) }
             // An entry within the first minutes: from the session's first price.
             val base = back?.c ?: ix.first().o
             val mins = if (back != null) LOOK_BACK else Duration.between(ix.first().t, inMin).toMinutes()
@@ -283,7 +289,12 @@ object DayScore {
         if (seen.isEmpty()) out += "Exits: no candles after the exits to read."
         else {
             val before = seen.count { it.beforeBest == true }
-            out += "Exits: $before of ${seen.size} came before a better price within $AFTER minutes, ${seen.size - before} at or past anything in the $AFTER minutes after" +
+            // A window cut short by the clock or the close is said, never passed off as the full $AFTER minutes (review, 6 Oct).
+            val short = seen.count { (it.window ?: 0) < AFTER }
+            val within = if (short == 0) "within $AFTER minutes" else "within up to $AFTER minutes"
+            val inThe = if (short == 0) "in the $AFTER minutes after" else "in the up to $AFTER minutes after"
+            out += "Exits: $before of ${seen.size} came before a better price $within, ${seen.size - before} at or past anything $inThe" +
+                (if (short > 0) " (${if (short == seen.size) "each" else "$short of them"} on a shorter window, cut short by the clock or the close)" else "") +
                 (if (seen.size < cards.size) " (${cards.size - seen.size} without candles after)" else "") + "."
         }
         out += cards.map { line(it) }

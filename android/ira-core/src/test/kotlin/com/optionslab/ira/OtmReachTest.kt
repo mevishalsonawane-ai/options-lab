@@ -135,4 +135,26 @@ class OtmReachTest {
         val early = OtmReach.answer(OtmReach.Q(), Market.NIFTY, ds, session(today, 0.0, optionsUntil = 660), today, today.atTime(16, 0))
         assertTrue("Today, the kept chain stops at 11:00; up to there" in early, early)
     }
+
+    /** Review, 6 Oct: each side on its own count - a side kept on fewer than MIN_SESSIONS is said as too few, never a percentage. */
+    @Test fun aSideWithTooFewSessionsIsSaidAsTooFew() {
+        val leg = OtmReach.Leg(strike = 0.0, entry = 20.0, best = 45.0, end = 30.0)
+        fun day(i: Int, put: Boolean) = OtmReach.Day(weekdays(12)[i], false, 25_000.0, 25_200.0, 24_800.0, 25_150.0, 50.0, 25_000.0,
+            mapOf(25_100.0 to leg.copy(strike = 25_100.0)), if (put) mapOf(24_900.0 to leg.copy(strike = 24_900.0)) else emptyMap())
+        val ds = (0 until 12).map { day(it, put = it >= 9) }
+        val a = OtmReach.answer(OtmReach.Q(), Market.NIFTY, ds, null, today, today.atTime(16, 0))
+        assertTrue(a.startsWith("Held from 9:30, Nifty's out-of-the-money call (the nearest expiry) over the last 12 sessions on this phone"), a)
+        assertTrue("The put has a price kept that far out on only 3 sessions - too few to say how often it ended in the money (I need 10)." in a, a)
+        assertFalse("of 3 (" in a || "the put (" in a || "the put's strike" in a, a)
+        // Both sides enough but kept on different sessions: each its own span.
+        val both = (0 until 12).map { day(it, put = it >= 2) }
+        val b = OtmReach.answer(OtmReach.Q(), Market.NIFTY, both, null, today, today.atTime(16, 0))
+        val w = weekdays(12)
+        fun dm(d: LocalDate) = "${d.dayOfMonth} ${d.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)}"
+        assertTrue("over its last 12 sessions on this phone (${dm(w[0])} to ${dm(w[11])})" in b, b)
+        assertTrue("over its last 10 sessions on this phone (${dm(w[2])} to ${dm(w[11])})" in b, b)
+        assertTrue("of 12 (" in b && "of 10 (" in b && "10 sessions is a small record" in b, b)
+        // Neither side enough: too few, as before.
+        assertTrue(OtmReach.answer(OtmReach.Q(), Market.NIFTY, ds.take(9), null, today, today.atTime(16, 0)).startsWith("I have only 9 sessions"))
+    }
 }

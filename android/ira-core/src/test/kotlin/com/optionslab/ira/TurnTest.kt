@@ -94,6 +94,12 @@ class TurnTest {
             assertEquals(600L, Turn.endAfter(w, 600), w)
         }
         assertEquals("Jarvis how is nifty", Turn.early("Jarvis how is nifty", false, 700))
+        // Review, 6 Oct: "at" and "we" also end whole questions; the commands and a yes or a no never wait.
+        for (w in listOf("Jarvis what is nifty trading at", "what is banknifty at", "Jarvis where are we", "how are we doing today so where are we",
+                "Jarvis stop", "kill switch on", "exit all", "sab band kar do", "Jarvis kill switch on", "Jarvis exit all")) {
+            assertFalse(Turn.unfinished(w), w)
+            assertEquals(600L, Turn.endAfter(w, 600), w)
+        }
         // The name alone keeps its own wait (decided before this); a yes or a no is never unfinished, read exactly as before.
         for (w in listOf("Jarvis", "yes", "no", "haan", "nahi", "ya", "yes do it", "no don't", "")) assertFalse(Turn.unfinished(w), w)
         assertFalse(Turn.unfinished(null))

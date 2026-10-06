@@ -16,13 +16,41 @@ class ConditionalTest {
 
     private val CONDITIONAL = listOf(
         "agar nifty 100 point gire to sab band kar do", "agar nifty 100 point gire to sab band karo", "agar nifty gire to orb band kar do",
-        "if nifty falls 100 points stop everything", "if nifty falls below 24000 exit all", "exit all if nifty falls below 24000",
+        "if nifty falls 100 points stop everything", "if nifty falls below 24000 exit all",
         "stop orb if nifty falls 100 points", "when nifty hits 25000 sell my call", "jab nifty 25000 ho jaye tab mera call sell kar do",
-        "agar loss 5000 ho jaye to kill switch on kar do", "turn on kill switch if i lose 5000", "if banknifty breaks 52000 buy 1 lot atm call",
+        "if banknifty breaks 52000 buy 1 lot atm call",
         "agar nifty upar jaye to sab cancel kar do", "if nifty crosses 25000 then square off everything", "agar nifty gire to 2 lot put kharido",
-        "exit my put if it falls 50", "as soon as nifty touches 24000 square off all", "agar banknifty 500 point gire to mera put bech do",
-        "jaise hi nifty 25000 cross kare sab orders cancel kar do", "in case nifty falls 1% stop all strategies", "once nifty breaks 24500 exit everything",
+        "exit my put if it falls 50", "agar banknifty 500 point gire to mera put bech do",
+        "jaise hi nifty 25000 cross kare sab orders cancel kar do",
     )
+
+    /**
+     * Said with a condition, but only taking risk off - the kill switch on, stop all, close all (review, 6 Oct): never refused
+     * for the condition; each goes through as itself, to its own confirmation (still [Conditional.asked], never a yes, never
+     * an order). Moved out of [CONDITIONAL].
+     */
+    private val RISK_OFF = listOf(
+        "exit all if nifty falls below 24000" to Command.Kind.CLOSE_ALL, "agar loss 5000 ho jaye to kill switch on kar do" to Command.Kind.KILL_ON,
+        "turn on kill switch if i lose 5000" to Command.Kind.KILL_ON, "as soon as nifty touches 24000 square off all" to Command.Kind.CLOSE_ALL,
+        "in case nifty falls 1% stop all strategies" to Command.Kind.STOP_ALL, "once nifty breaks 24500 exit everything" to Command.Kind.CLOSE_ALL,
+    )
+
+    @Test fun aRiskReducingCommandIsNeverRefusedForItsCondition() {
+        for ((s, k) in RISK_OFF) {
+            assertTrue(Conditional.asked(s), s)
+            assertEquals(k, Commands.parse(s)?.kind, s)
+            val p = Ask.parse(s)
+            assertEquals(k, p.command?.kind, s); assertEquals(null, p.order, s)
+            assertTrue(Wake.yesNo(s) != true, s)
+        }
+        // A conditional order or one arm's stop stays refused.
+        for (s in listOf("if banknifty breaks 52000 buy 1 lot atm call", "agar nifty gire to 2 lot put kharido", "stop orb if nifty falls 100 points",
+            "when nifty hits 25000 sell my call", "agar banknifty 500 point gire to mera put bech do"))
+            assertTrue(Commands.parse(s) == null && Ask.parse(s).order == null && Ask.parse(s).command == null, s)
+        // Boss only supposing his own act is a what-if, never done; told beside it, the kill switch goes through.
+        assertEquals(null, Commands.parse("if i square off everything"))
+        assertEquals(Command.Kind.KILL_ON, Commands.parse("agar main 5000 loss karu to kill switch on kar do")?.kind)
+    }
 
     @Test fun aConditionalInstructionNeverActsAndIsSaidSo() {
         for (s in CONDITIONAL) {
@@ -154,11 +182,20 @@ class ConditionalTest {
             "if nifty falls below 24000 and banknifty below 51000 exit all", "if gold falls below 4000 sell", "sell my 24500 put if nifty falls below 24000",
             "agar nifty upar jaye to sab cancel kar do"))
             assertEquals(null, alarm(s), s)
+        // An option named: the level is its premium or strike, never the index's - no alarm (review, 6 Oct); still refused.
+        for (s in listOf("if my banknifty call falls below 1500 exit", "if banknifty put premium drops below 1500 exit it",
+            "agar nifty 24500 ce 100 ke neeche jaye to exit kar do", "if my nifty pe falls below 1200 sell it", "if nifty option falls below 1500 exit")) {
+            assertTrue(Conditional.asked(s), s)
+            assertEquals(null, alarm(s), s)
+            assertEquals(null, Commands.parse(s), s)
+        }
+        // Hinglish "pe" as "at" is no option: the alarm is still offered.
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.BANKNIFTY, above = false, level = 51000.0), alarm("agar banknifty 51000 pe gire to sab band karo"))
         // Never for anything that is not a refused condition: a plain command or an alarm already asked for.
         for (s in listOf("exit all", "alert me when nifty goes below 24000", "nifty below 24000"))
             assertEquals(null, Conditional.instead(s), s)
         // Only ever an alarm: the offered command is ALARM_ADD and nothing else.
-        for (s in CONDITIONAL) Conditional.instead(s)?.alarm?.let { assertEquals(Command.Kind.ALARM_ADD, it.kind, s) }
+        for (s in CONDITIONAL + RISK_OFF.map { it.first }) Conditional.instead(s)?.alarm?.let { assertEquals(Command.Kind.ALARM_ADD, it.kind, s) }
         val c = alarm("if nifty falls below 24000 exit all")!!
         assertEquals("Nifty below 24,000", Conditional.alarmWhat(c))
         val said = Conditional.alarmSay(c)
@@ -177,7 +214,7 @@ class ConditionalTest {
         assertEquals(5000.0, loss("agar 5000 ka loss ho to sab band karo"))
         assertEquals(3000.0, loss("if my loss crosses 3,000 exit all"))
         assertEquals(4000.0, loss("stop all strategies if i'm down 4k"))
-        for (s in CONDITIONAL) Conditional.instead(s)?.let { assertTrue(it.alarm == null || it.loss == null, s) }
+        for (s in CONDITIONAL + RISK_OFF.map { it.first }) Conditional.instead(s)?.let { assertTrue(it.alarm == null || it.loss == null, s) }
         val open = Conditional.lossSay(5000.0, 6000.0, "Paper", locked = false)
         assertTrue(open.contains("Rs 6,000") && open.contains("more than the Rs 5,000") && open.contains("Bot settings") && open.contains("haven't changed"), open)
         assertTrue(Conditional.lossSay(5000.0, 2000.0, "Zerodha", false).contains("less than"))

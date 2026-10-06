@@ -56,18 +56,19 @@ class DayScoreTest {
     }
 
     @Test fun boughtCallAgainstAFallingIndexExitBeforeTheBest() {
-        // Nifty falls 2 points a minute from 9:15: at a 10:00 entry it had fallen 28 in the 15 minutes before.
+        // Nifty falls 2 points a minute from 9:15: at a 10:00 entry it had fallen 30 in the 15 minutes before
+        // (the 9:44 candle closes at 9:45, the 9:59 candle at 10:00 - review, 6 Oct: the full 15 minutes, never 14).
         val nifty = bars(at(9, 15), 120, 25000.0, -2.0)
         val t = trip("NIFTY26O1325000CE", 1, 100.0, 110.0, at(10, 0), at(10, 3))
         // After the 10:03 exit the call rises 1 a minute: within 15 minutes the best high is 110 + 15 = 125 at 10:18.
         val opt = bars(at(10, 0), 30, 107.0, 1.0)
         val c = DayScore.card(t, opt, nifty, 600, at(12, 0))
         assertEquals(DayScore.Side.AGAINST, c.side)
-        assertEquals(-28.0, c.move!!, 1e-9)
+        assertEquals(-30.0, c.move!!, 1e-9)
         assertEquals(true, c.beforeBest)
         assertEquals(15L, c.window)
         val line = DayScore.line(c)
-        assertTrue(line.contains("Nifty had fallen 28 points in the 15 minutes before (against the trade)"), line)
+        assertTrue(line.contains("Nifty had fallen 30 points in the 15 minutes before (against the trade)"), line)
         assertTrue(line.contains("held 3 min (your usual 10 min)"), line)
         assertTrue(line.contains("within 15 min after the exit it traded"), line)
     }
@@ -107,6 +108,35 @@ class DayScoreTest {
         assertEquals(DayScore.Side.WITH, c.side)
         assertEquals(true, c.beforeBest)
         assertEquals(82.5, c.best!!, 1e-9)   // the 10:20 low: 90 - 0.5 * 15
+    }
+
+    /** Review, 6 Oct: index candles that stop short of the entry, or of the minute 15 before it, are no direction. */
+    @Test fun staleIndexCandlesAreUnreadable() {
+        val t = trip("NIFTY26O1325000CE", 1, 100.0, 110.0, at(10, 0), at(10, 3))
+        val opt = bars(at(10, 0), 30, 107.0, 1.0)
+        // The index's candles stop at 9:50: ten minutes short of the entry.
+        val early = DayScore.card(t, opt, bars(at(9, 15), 36, 25000.0, -2.0), 600, at(12, 0))
+        assertEquals(null, early.side); assertEquals(null, early.move)
+        assertTrue(DayScore.line(early).contains("Nifty's candles before the entry could not be read"), DayScore.line(early))
+        // Fresh at the entry, but a gap from 9:30 to 9:57: the price 15 minutes before is stale.
+        val gap = bars(at(9, 15), 16, 25000.0, -2.0) + bars(at(9, 57), 3, 24900.0, -2.0)
+        val g = DayScore.card(t, opt, gap, 600, at(12, 0))
+        assertEquals(null, g.side); assertEquals(null, g.move)
+        // A minute's gap at either end is still read (within 2 minutes).
+        val near = bars(at(9, 15), 29, 25000.0, -2.0) + bars(at(9, 45), 14, 24940.0, -2.0)
+        assertEquals(DayScore.Side.AGAINST, DayScore.card(t, opt, near, 600, at(12, 0)).side)
+    }
+
+    /** Review, 6 Oct: the summary never says "within 15 minutes" of a window the clock or the close cut short. */
+    @Test fun aShortWindowIsSaidInTheSummary() {
+        val nifty = bars(at(9, 15), 200, 25000.0, -2.0)
+        val a = trip("NIFTY26O1325000CE", 1, 100.0, 110.0, at(10, 0), at(10, 3))
+        // Only 4 minutes of candles after the exit by "now".
+        val opt = mapOf("NIFTY26O1325000CE" to bars(at(10, 0), 30, 107.0, 1.0))
+        val all = DayScore.lines("Paper", earlier + a, today, opt, mapOf(Market.NIFTY to nifty), at(10, 7)).joinToString("\n")
+        assertTrue(all.contains("Exits: 1 of 1 came before a better price within up to 15 minutes, 0 at or past anything in the up to 15 minutes after " +
+            "(each on a shorter window, cut short by the clock or the close)."), all)
+        assertTrue(all.contains("within 4 min after the exit"), all)
     }
 
     @Test fun theDaysLines() {

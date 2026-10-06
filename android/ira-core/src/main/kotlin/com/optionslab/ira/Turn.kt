@@ -104,13 +104,13 @@ object Turn {
 
     /**
      * Last words that leave a sentence open. Not those that also end a whole question ("on", "in", "off", "up", "do",
-     * "did", "this", "that", "you", "how", "why", "like", "before"): "is the kill switch on", "am I logged in", "what do
-     * I do", "how are you" close as quickly as before.
+     * "did", "this", "that", "you", "how", "why", "like", "before", "at", "we"): "is the kill switch on", "am I logged in", "what do
+     * I do", "how are you", "what is nifty trading at", "where are we" close as quickly as before (review, 6 Oct).
      */
     private val DANGLING = setOf("the", "a", "an", "my", "your", "our", "his", "her", "their", "its", "s",
-        "of", "for", "to", "about", "at", "with", "from", "into", "versus", "vs", "than", "between", "compared", "per",
+        "of", "for", "to", "about", "with", "from", "into", "versus", "vs", "than", "between", "compared", "per",
         "and", "or", "but", "because", "if", "what", "which",
-        "is", "are", "was", "were", "does", "will", "would", "should", "can", "could", "i", "we",
+        "is", "are", "was", "were", "does", "will", "would", "should", "can", "could", "i",
         "ka", "ki", "ke", "ko", "aur", "mera", "meri", "mere", "agar")
 
     /** What a question may be about to be answered from its partial reading. */

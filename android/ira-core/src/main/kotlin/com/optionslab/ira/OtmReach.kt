@@ -286,23 +286,37 @@ object OtmReach {
                 (if (other > 0 && q.expiry) " I have ${count(other)} other sessions; ask without expiry for those." else "") +
                 (if (ds.size >= MIN_SESSIONS) " Ask for a nearer strike." else "")
         }
-        val all = held.values.flatten().map { it.first.day }.distinct().sorted()
-        val span = "${count(n)} ${kind}sessions on this phone (${date(all.first())} to ${date(all.last())})"
+        // Each side on its own count (review, 6 Oct): a side with fewer than MIN_SESSIONS kept is said as too few, never given
+        // percentages; each side's span is its own sessions'.
+        val enough = rights.filter { held.getValue(it).size >= MIN_SESSIONS }
+        val few = rights.filter { it !in enough }
+        fun spanOf(r: Right): String {
+            val h = held.getValue(r)
+            return "${count(h.size)} ${kind}sessions on this phone (${date(h.minOf { it.first.day })} to ${date(h.maxOf { it.first.day })})"
+        }
+        val spans = enough.associateWith { spanOf(it) }
+        val shared = spans.values.distinct().singleOrNull()
         val apart = if (q.expiry) "" else ", expiry days apart"
         val lines = ArrayList<String>()
-        val legs = rights.mapNotNull { r ->
-            val h = held.getValue(r); if (h.isEmpty()) return@mapNotNull null
+        val legs = enough.map { r ->
+            val h = held.getValue(r)
             val c = h.size
             val itm = h.count { (d, l) -> d.itm(r, l) }; val dbl = h.count { (_, l) -> l.doubled }
             val itmPart = "ended the day in the money on ${count(itm)} of ${count(c)} (${share(itm, c)})"
             val dblPart = "doubled from its 9:30 price at some point before the end of the day on ${count(dbl)} (${share(dbl, c)})"
-            "the ${side(r)} (${distance(q, r)}) " + if (q.lead == Aim.DOUBLE) "$dblPart and $itmPart" else "$itmPart and $dblPart"
+            val own = if (shared == null) " over its last ${spans.getValue(r)}" else ""
+            "the ${side(r)} (${distance(q, r)})$own " + if (q.lead == Aim.DOUBLE) "$dblPart and $itmPart" else "$itmPart and $dblPart"
         }
         // The lead carries the key figure (ShortAnswer's line).
-        lines += "Held from 9:30, ${m.label}'s out-of-the-money ${if (rights.size == 1) side(rights[0]) else "call and put"} " +
-            "(the nearest expiry) over the last $span$apart: " + legs.joinToString("; ") + "."
-        val parts = rights.mapNotNull { r ->
-            val h = held.getValue(r); if (h.isEmpty()) return@mapNotNull null
+        lines += "Held from 9:30, ${m.label}'s out-of-the-money ${if (enough.size == 1) side(enough[0]) else "call and put"} " +
+            "(the nearest expiry) " + (if (shared != null) "over the last $shared$apart" else "on this phone$apart") + ": " + legs.joinToString("; ") + "."
+        for (r in few) {
+            val c = held.getValue(r).size
+            val on = if (c == 0) "on no session" else "on only ${count(c)} session${if (c == 1) "" else "s"}"
+            lines += "The ${side(r)} has a price kept that far out $on - too few to say how often it ended in the money (I need $MIN_SESSIONS)."
+        }
+        val parts = enough.map { r ->
+            val h = held.getValue(r)
             val c = h.size
             val reach = h.count { (d, l) -> d.reached(r, l) }
             val up = h.count { (_, l) -> l.up }
@@ -320,8 +334,9 @@ object OtmReach {
             }
             if (said.isNotEmpty()) lines += "On the expiry days, " + said.joinToString(" and ") + "."
         }
-        if (n < FEW_SESSIONS)
-            lines += "${count(n)} sessions is a small record, so a few more would move these figures."
+        val least = enough.minOf { held.getValue(it).size }
+        if (least < FEW_SESSIONS)
+            lines += "${count(least)} sessions is a small record, so a few more would move these figures."
         todayLine(q, rights, todays, today, now)?.let { lines += it }
         lines += NOTE
         return lines.joinToString(" ")

@@ -136,7 +136,15 @@ object Commands {
         // Jarvis can't set one to wait, so it is never a command - neither done now nor read as an arm's garbled name
         // ([Conditional]; understanding round 29). The hub says so and suggests the app's own alarm, stop loss and limits.
         // (Nor Boss supposing his own act, "if I square off now" / "agar main exit karu to margin": a what-if, round 30.)
-        if (Conditional.asked(said) || Conditional.supposed(said)) return null
+        // A risk-reducing command said with one - the kill switch on, stop all, exit all, close all - still goes through as
+        // itself, to its own confirmation: a stop, a kill or an exit never adds risk, so the condition is never a reason to
+        // refuse it (review, 6 Oct; [Conditional.passes]). A conditional order, start or one arm's stop stays refused.
+        if (Conditional.asked(said) || Conditional.supposed(said)) return body(said).takeIf { Conditional.passes(said, it) }
+        return body(said)
+    }
+
+    /** [parseAs] past the voice words and the conditional check. */
+    private fun body(said: String): Command? {
         // "Stop too close?", "SL too tight": his stops asked about, never a STOP of an arm called "too close" ([StopNoise], round 30).
         if (StopNoise.asked(said)) return null
         val text = Hinglish.normalize(said)

@@ -33,8 +33,8 @@ class UnderstandingRound30Test {
         "profit 2000 ho jaye to book kar lo", "profit 2000 hua to book kar lena", "2000 profit hote hi book kar lo",
         "nifty 24000 aate hi exit kar dena", "loss 5000 ho to sab band kar do", "loss 3000 ho jaye to orb band kar dena",
         "nifty 25000 cross kare to call bech do", "banknifty 52000 tod de to put kharid lo", "nifty upar jaye to call kharid lo",
-        "nifty 24000 ke neeche jaye to put bech do", "market khulte hi exit kar do", "position hai to exit kar do",
-        "agar main 5000 loss karu to kill switch on kar do", "if i lose 5000 turn on kill switch",
+        "nifty 24000 ke neeche jaye to put bech do", "market khulte hi exit kar do",
+        "if i lose 5000 turn on kill switch",
     )
 
     @Test fun hinglishConditionalsWithoutAgarNeverAct() {
@@ -46,6 +46,29 @@ class UnderstandingRound30Test {
         // Round 29's still hold.
         for (s in listOf("agar nifty 100 point gire to sab band kar do", "exit all if nifty falls below 24000", "turn on kill switch if i lose 5000"))
             assertTrue(Conditional.asked(s), s)
+    }
+
+    /**
+     * Review, 6 Oct: "X hai to Y", "X ho gaya hai to Y", "X ho raha hai to Y" is "since X, do Y now" in Hinglish - never a
+     * condition, so these read exactly as before round 30 (as at 5ea8594, the garbled one-arm stop included).
+     */
+    @Test fun sinceSaidInThePresentTenseIsNoCondition() {
+        assertEquals(Command(Command.Kind.KILL_ON), Commands.parse("jarvis loss bahut ho gaya hai to kill switch on kar do"))
+        assertEquals(Command(Command.Kind.KILL_ON), Commands.parse("jarvis kill switch on kar do market crash ho raha hai to"))
+        assertEquals(Command(Command.Kind.STOP_ONE, target = "nifty gir raha hai to all"), Commands.parse("nifty gir raha hai to sab band kar do"))
+        assertEquals(Command(Command.Kind.STOP_ONE, target = "bahut volatile hai to all"), Commands.parse("bahut volatile hai to sab band kar do"))
+        for (s in listOf("jarvis loss bahut ho gaya hai to kill switch on kar do", "jarvis kill switch on kar do market crash ho raha hai to",
+            "nifty gir raha hai to sab band kar do", "bahut volatile hai to sab band kar do", "position hai to exit kar do")) {
+            assertTrue(!Conditional.asked(s), s)
+            assertEquals(null, Conditional.instead(s), s)
+            assertEquals(Commands.parse(s), Ask.parse(s).command, s)
+        }
+        // Said with a real condition (subjunctive or future), the kill switch still goes through - a kill is never an added
+        // risk - while an order or one arm's stop stays refused.
+        assertEquals(Command.Kind.KILL_ON, Commands.parse("agar main 5000 loss karu to kill switch on kar do")?.kind)
+        assertEquals(Command.Kind.KILL_ON, Commands.parse("loss 5000 ho jaye to kill switch on kar do")?.kind)
+        for (s in listOf("loss 3000 ho jaye to orb band kar dena", "nifty 25000 cross kare to call bech do", "nifty upar jaye to call kharid lo"))
+            neverActs(s)
     }
 
     @Test fun aYesSaidWithAHinglishConditionIsUnclear() {
