@@ -174,7 +174,7 @@ object SayAs {
     /** "the net move from the open (+120.50)": a signed figure alone in brackets right after the open named. */
     private val FROM_ASIDE = Regex("($FROM \\()($SIGN)($MOVE_FIG)(?=\\))")
     /** The two days' net moves set side by side: "from the open: +85.20 today, -120.40 yesterday." */
-    private val OPPOSITE = Regex("(ways $FROM: )($SIGN)($MOVE_FIG)( [^,.\\d]{1,30}, )($SIGN)($MOVE_FIG)(?= [^\\s\\d])")
+    private val OPPOSITE = Regex("(ways $FROM: )($SIGN)($MOVE_FIG)( (?!points?\\b|पॉइंट)[^,.\\d]{1,30}, )($SIGN)($MOVE_FIG)(?= (?!points?\\b|पॉइंट)[^\\s\\d])")
     /** Gold's moves are in dollars, never points. */
     private val GOLD = Regex("\\bGold\\b|\\$")
 

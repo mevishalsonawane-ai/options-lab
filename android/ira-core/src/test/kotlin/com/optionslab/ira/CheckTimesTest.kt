@@ -147,4 +147,12 @@ class CheckTimesTest {
         val after = Learnings.Inputs(routineLog = l, checkTimes = CheckTimes.reset(LocalDateTime.of(today, java.time.LocalTime.of(11, 30))))
         assertTrue(Learnings.items(after, now).none { it.area == Learnings.Area.CHECK_TIMES })
     }
+
+    @kotlin.test.Test fun stopCheckingAheadIsTheUndoNeverAStrategyStop() {
+        for (q in listOf("stop checking my P&L ahead", "stop checking my account in advance")) {
+            if (CheckTimes.asked(q) == null) continue
+            kotlin.test.assertNull(Commands.parse(q), q)
+        }
+        kotlin.test.assertNotNull(Commands.parse("stop orb"))
+    }
 }

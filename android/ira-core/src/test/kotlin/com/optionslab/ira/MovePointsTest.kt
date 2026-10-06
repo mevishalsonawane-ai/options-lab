@@ -69,4 +69,12 @@ class MovePointsTest {
         val once = Aloud.say(Gap.say(snap(24_000.0, 24_120.0, 24_200.0, 24_050.0, 24_150.0))!!, Aloud.Length.FULL)
         assertEquals(once, Pauses.shape(SayAs.figures(once, Aloud.hindi(once))))
     }
+
+    @Test fun twoDaysSideBySideShapedTwiceKeepsOneUnit() {
+        val line = "They moved opposite ways from the open: +85.20 today, -120.40 yesterday."
+        val once = SayAs.figures(line, false)
+        val twice = SayAs.figures(once, false)
+        assertEquals(once, twice)
+        assertFalse(twice.contains("points points"), twice)
+    }
 }
