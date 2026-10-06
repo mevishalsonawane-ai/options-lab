@@ -56,14 +56,25 @@ internal object IraLiquidity {
         val stopped = runCatching { kotlinx.coroutines.withTimeoutOrNull(3_000) { com.optionslab.app.data.Strategies.stoppedWhy() } }.getOrNull()
         val decisions = runCatching { arms.liquidityDecisions(day) }.getOrDefault(emptyList())
         val reads = if (!tradingDay) emptyList() else runCatching {
-            reads(now, q.underlyings, kept = true).ifEmpty {
-                kotlinx.coroutines.withTimeoutOrNull(8_000) { reads(now, q.underlyings, kept = false) }.orEmpty()
+            keptElseFetched(q.underlyings, { reads(now, it, kept = true) }) {
+                kotlinx.coroutines.withTimeoutOrNull(8_000) { reads(now, it, kept = false) }.orEmpty()
             }
         }.getOrDefault(emptyList())
         val facts = com.optionslab.ira.LiquidityWhyNot.Facts(
             now = now, tradingDay = tradingDay, armed = held?.first?.any { it.armed }, books = held?.first.orEmpty(), stopped = stopped,
             trades = held?.second.orEmpty().map { IraBots.tradeOf(it) }, decisions = decisions, since = arms.liquidityRecordSince, reads = reads)
         return com.optionslab.ira.LiquidityWhyNot.answer(q, facts)
+    }
+
+    /**
+     * Each of [unds]' levels from the arm's own read of the minute ([kept]), and only for an index it has none of, one
+     * read of its candles ([fetch]): one index missing never leaves the other unread, nor reads again the one kept.
+     */
+    internal suspend fun keptElseFetched(unds: List<String>, kept: suspend (List<String>) -> List<LiquidityMap.Read>,
+                                         fetch: suspend (List<String>) -> List<LiquidityMap.Read>): List<LiquidityMap.Read> {
+        val have = kept(unds)
+        val missing = unds.filter { u -> have.none { it.underlying == u } }
+        return if (missing.isEmpty()) have else have + fetch(missing)
     }
 
     /** What was told today (kept in memory; a restart may tell a level again). */

@@ -127,6 +127,24 @@ class IraTradeLessonsTest : RobolectricTest() {
         assertTrue(wrap.toString(), wrap!!.startsWith("Liquidity 15+5 in research terms: 1 trade ("))
     }
 
+    /** The lessons are words only: a live (Zerodha) Liquidity trade closed today has its lesson too, beside a paper one. */
+    @Test fun aLiveLiquidityTradeHasItsLessonToo() {
+        fun closed(arm: String, symbol: String, live: Boolean, h: Int) = org.json.JSONObject().put("arm", arm).put("symbol", symbol)
+            .put("right", "CE").put("qty", 30).put("entry", 200.0).put("entryTime", day.atTime(h, 0).toString())
+            .put("signalBar", day.atTime(h, 0).minusMinutes(5).toString()).put("exit", 230.0).put("exitTime", day.atTime(h, 20).toString())
+            .put("why", "next_liquidity").put("charges", 40.0).put("live", live).put("kite", if (live) "K1" else "").put("lot", 30)
+        AutomationSupport.orbState(context, org.json.JSONObject().put("positions", org.json.JSONArray()
+            .put(closed("liquidity5", "BANKNIFTY-LIQ-PAPER", false, 10))
+            .put(closed("liquidity15", "BANKNIFTY-LIQ-LIVE", true, 11))))
+        assertEquals("the paper reader is unchanged", 1, runBlocking { OrbArms.liquidityToday(day) }.size)
+        assertEquals(2, runBlocking { OrbArms.liquidityTodayWithLive(day) }.size)
+        val lines = runBlocking { IraTradeLessons.unsaid(brief = false) }
+        assertEquals(lines.toString(), 2, lines.size)
+        assertTrue(lines.toString(), lines.any { it.startsWith("Liquidity 15m trade closed - ") })
+        val wrap = runBlocking { IraTradeLessons.wrapLine() }
+        assertTrue(wrap.toString(), wrap!!.startsWith("Liquidity 15+5 in research terms: 2 trades ("))
+    }
+
     /** The arms' tick may hold their lock across a network read: the lesson waits a short while, then says nothing. */
     @Test fun aHeldArmsLockNeverStallsTheWordsLane() {
         val lock = OrbArms::class.java.getDeclaredField("lock").apply { isAccessible = true }.get(null) as kotlinx.coroutines.sync.Mutex

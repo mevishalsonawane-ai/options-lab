@@ -223,4 +223,19 @@ class LiquidityNoticesTest : RobolectricTest() {
         assertEquals(b, LiquidityNotices.entryId(context, day, "liquidity5|BB"))
         for (id in listOf(a, b)) assertTrue("$id", id in 40_000..47_998 && id % 2 == 0)
     }
+
+    /** A call for another day (yesterday's position exiting after a restart) never drops today's slots; old days are pruned. */
+    @Test fun anotherDaysCallKeepsTodaysSlots() {
+        val prefs = context.getSharedPreferences("liquidity.notices", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putStringSet("ids", setOf("${day.minusDays(5)}|old|7")).commit()
+        val a = LiquidityNotices.entryId(context, day, "liquidity5|today")
+        val y = LiquidityNotices.entryId(context, day.minusDays(1), "liquidity15|yesterday")
+        assertNotEquals(a, y)
+        assertEquals(a, LiquidityNotices.entryId(context, day, "liquidity5|today"))
+        assertEquals(y, LiquidityNotices.entryId(context, day.minusDays(1), "liquidity15|yesterday"))
+        val ids = prefs.getStringSet("ids", emptySet()).orEmpty()
+        assertEquals(2, ids.size)
+        assertTrue(ids.toString(), ids.any { it.startsWith("$day|") } && ids.any { it.startsWith("${day.minusDays(1)}|") })
+        assertFalse("days older than two are pruned", ids.any { it.startsWith("${day.minusDays(5)}|") })
+    }
 }

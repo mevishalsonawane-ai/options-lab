@@ -36,6 +36,8 @@ object LiquidityNotices {
     private const val SKIP_IDS = 48_000
     /** Skipped breaks: at most one a book in this many minutes. */
     private const val SKIP_GAP_MIN = 10L
+    /** Notification slots are kept this many days back ([entryId]). */
+    private const val KEEP_DAYS = 2L
 
     private val lastSkip = HashMap<String, LocalDateTime>()
 
@@ -47,12 +49,17 @@ object LiquidityNotices {
     @Synchronized internal fun entryId(context: Context, day: LocalDate, position: String): Int {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val digest = digest(position)
-        val kept = prefs.getStringSet(IDS_KEY, emptySet()).orEmpty().filterTo(HashSet()) { it.startsWith("$day|") }
+        // Every day's slots are kept but those older than [KEEP_DAYS] before [day]: a call for another day (the exit of
+        // yesterday's position, told after a restart) never drops today's. A slot taken on any kept day is not given again.
+        val oldest = day.minusDays(KEEP_DAYS)
+        val kept = prefs.getStringSet(IDS_KEY, emptySet()).orEmpty().filterTo(HashSet()) {
+            runCatching { !LocalDate.parse(it.substringBefore('|')).isBefore(oldest) }.getOrDefault(false)
+        }
         val taken = HashSet<Int>()
         for (k in kept) {
             val parts = k.split('|')
             val slot = parts.getOrNull(2)?.toIntOrNull() ?: continue
-            if (parts.getOrNull(1) == digest) return ENTRY_IDS + slot * 2
+            if (parts[0] == day.toString() && parts.getOrNull(1) == digest) return ENTRY_IDS + slot * 2
             taken += slot
         }
         val start = (position.hashCode() and Int.MAX_VALUE) % SLOTS

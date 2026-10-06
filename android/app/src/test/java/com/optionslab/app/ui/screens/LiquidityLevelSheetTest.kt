@@ -90,6 +90,28 @@ class LiquidityLevelSheetTest {
         until { !shows("54,180 · rises to it · swing-high pool, 15-min") }
     }
 
+    /** An alert at the level switched off on the Alarms page does not block it: the button switches that one back on. */
+    @Test fun anAlertSwitchedOffIsTurnedBackOnNotBlocking() {
+        val level = LevelAlarm.Level(54_180.0, 1, pool = true, from = 10, to = 40, taken = false)
+        Alarms.upsert(PriceAlarm(7L, PriceAlarm.CHART + "BANKNIFTY", true, 54_180.0, enabled = false, note = LevelAlarm.note(level, 15)))
+        flow.value = Alarms.all()
+        compose.setContent {
+            IraAlgoTheme("light") {
+                LevelSheet("BANKNIFTY", PickedLevel(level, null, 53_960.0), 15, day, 53_967.5, store) {}
+            }
+        }
+        idle()
+        assertFalse(shows("An alert at this level is already set."))
+        compose.onNodeWithText("Turn the alert back on").performScrollTo().performClick()
+        until { Alarms.all().single().enabled }
+        // The same alarm switched back on - not a second one.
+        assertEquals(7L, Alarms.all().single().id)
+        until { shows("Alert back on: BANKNIFTY rises to 54,180") }
+        // Now it stands: a second is refused.
+        assertFalse(runBlocking { store.add(PriceAlarm(8L, PriceAlarm.CHART + "BANKNIFTY", true, 54_180.0)) })
+        assertEquals(1, Alarms.all().size)
+    }
+
     @Test fun aLevelBelowFallsToItAndATakenOneSaysWhen() {
         val level = LevelAlarm.Level(54_000.0, -1, pool = false, from = 5, to = 20, taken = true)
         compose.setContent {

@@ -22,12 +22,12 @@ internal object IraTradeLessons {
     }
 
     /**
-     * The Liquidity 15+5 paper positions entered on [day] and closed (the arm's own book; reads only). The arms' lock may
+     * The Liquidity 15+5 positions entered on [day] and closed, paper and live (the arm's own book; reads only). The arms' lock may
      * be held by their tick across a network read: a short wait, else null (this round says nothing; the next one will).
      */
     private suspend fun closedToday(day: java.time.LocalDate): List<com.optionslab.app.data.OrbArms.Position>? =
         kotlinx.coroutines.withTimeoutOrNull(3_000) {
-            runCatching { com.optionslab.app.data.OrbArms.liquidityToday(day) }.getOrNull()
+            runCatching { com.optionslab.app.data.OrbArms.liquidityTodayWithLive(day) }.getOrNull()
         }?.filter { !it.open && !it.unconfirmed && it.exitTime != null }
 
     /**

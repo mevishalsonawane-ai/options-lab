@@ -43,7 +43,10 @@ import java.time.LocalDateTime
 internal interface LevelAlarms {
     /** Every standing alarm (the Alarms page's list). */
     val standing: StateFlow<List<PriceAlarm>>
-    /** Sets [a] unless one on the same symbol, price and direction already stands; true when it was set. */
+    /**
+     * Sets [a] unless one on the same symbol, price and direction already stands (switched on); true when it was set. One
+     * there but switched off (the Alarms page) is switched back on instead of a second being added.
+     */
     suspend fun add(a: PriceAlarm): Boolean
     suspend fun remove(id: Long)
 }
@@ -53,8 +56,12 @@ internal class StoreLevelAlarms(override val standing: MutableStateFlow<List<Pri
     override suspend fun add(a: PriceAlarm): Boolean = withContext(Dispatchers.IO) {
         // Checked and written under the store's own lock: two quick taps never set it twice.
         val added = synchronized(Alarms) {
-            val dup = LevelAlarm.duplicate(Alarms.all().map(::standingOf), a.symbol, a.level, a.above)
-            if (!dup) Alarms.upsert(a)
+            val list = Alarms.all()
+            val dup = LevelAlarm.duplicate(list.filter { it.enabled }.map(::standingOf), a.symbol, a.level, a.above)
+            if (!dup) {
+                val off = switchedOff(list, a.symbol, a.level, a.above)
+                Alarms.upsert(off?.copy(enabled = true) ?: a)
+            }
             !dup
         }
         standing.value = Alarms.all().sortedBy { it.id }
@@ -68,6 +75,10 @@ internal class StoreLevelAlarms(override val standing: MutableStateFlow<List<Pri
         }
     }
 }
+
+/** The alarm on [symbol] at [level] in that direction that stands switched off (null: none). */
+internal fun switchedOff(all: List<PriceAlarm>, symbol: String, level: Double, above: Boolean): PriceAlarm? =
+    all.firstOrNull { !it.enabled && LevelAlarm.duplicate(listOf(standingOf(it)), symbol, level, above) }
 
 /** A stored alarm as [LevelAlarm] reads it. */
 internal fun standingOf(a: PriceAlarm) = LevelAlarm.Standing(a.id, a.symbol, a.above, a.level, a.note)
@@ -101,7 +112,9 @@ internal fun LevelSheet(underlying: String, picked: PickedLevel, minutes: Int, t
     val standing = all.map(::standingOf)
     val mine = LevelAlarm.onLevels(standing, key)
     val above = last?.let { LevelAlarm.above(it, level.price) }
-    val dup = above != null && LevelAlarm.duplicate(standing, key, level.price, above)
+    // Only an alarm switched on counts as set: one switched off on the Alarms page is switched back on from here.
+    val dup = above != null && LevelAlarm.duplicate(all.filter { it.enabled }.map(::standingOf), key, level.price, above)
+    val off = above != null && !dup && switchedOff(all, key, level.price, above) != null
     com.optionslab.app.ui.components.AlertDialog(
         onDismissRequest = onClose,
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -113,14 +126,15 @@ internal fun LevelSheet(underlying: String, picked: PickedLevel, minutes: Int, t
                 }
                 if (alarms != null) {
                     val ready = above != null && level.price > 0
-                    BrassButton("Alert me when price reaches it", Modifier.fillMaxWidth().padding(top = 10.dp),
+                    BrassButton(if (off) "Turn the alert back on" else "Alert me when price reaches it", Modifier.fillMaxWidth().padding(top = 10.dp),
                         enabled = ready && !dup && !saving) {
                         val up = above ?: return@BrassButton
+                        val again = off
                         saving = true
                         val a = PriceAlarm(System.currentTimeMillis(), key, up, level.price, note = LevelAlarm.note(level, minutes))
                         scope.launch(Dispatchers.Main.immediate) {
                             val ok = runCatching { alarms.add(a) }.getOrDefault(false)
-                            said = if (ok) "Alert set: $underlying ${if (up) "rises" else "falls"} to ${LevelAlarm.price(level.price)}"
+                            said = if (ok) "${if (again) "Alert back on" else "Alert set"}: $underlying ${if (up) "rises" else "falls"} to ${LevelAlarm.price(level.price)}"
                                 else "An alert at this level is already set."
                             saving = false
                         }

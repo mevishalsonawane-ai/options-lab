@@ -112,17 +112,27 @@ internal object IraTomorrow {
         val mk = com.optionslab.app.data.Market
         val now = mk.now().toLocalDateTime()
         if (!TomorrowPlan.due(now, mk.isTradingDay(now.toLocalDate()), doneOn())) return
-        // One at a time (the words lane and the harvest may both call): the day is kept as done before the note is put, so a
-        // restart midway never puts it twice.
-        if (!busy.compareAndSet(false, true)) return
-        try {
-            if (doneOn() == now.toLocalDate()) return
-            runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_DONE, now.toLocalDate().toString()) }
-            val ctx = IraHub.appContext()
-            val brief = IraTools.brief || runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)
-            val text = TomorrowPlan.say(facts(), brief)
-            IraHub.note(text)
+        val ctx = IraHub.appContext()
+        val brief = IraTools.brief || runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)
+        if (postOnce(now.toLocalDate(), { TomorrowPlan.say(facts(), brief) }) { IraHub.note(it) })
             Automations.acted(Automations.Auto.TOMORROW, "Put tomorrow's plan in the chat.")
+    }
+
+    /**
+     * Puts [make]'s text with [post] once on [day]. One at a time (the words lane and the harvest may both call). The text
+     * is made first: should that fail or be cancelled, the day is not kept as done and the next round tries again. Then the
+     * day is kept as done before the note is put, so a restart midway never puts it twice. True when it was put.
+     */
+    internal suspend fun postOnce(day: LocalDate, make: suspend () -> String, post: (String) -> Unit): Boolean {
+        if (!busy.compareAndSet(false, true)) return false
+        try {
+            if (doneOn() == day) return false
+            val text = runCatching { make() }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+                .getOrNull() ?: return false
+            runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_DONE, day.toString()) }
+            post(text)
+            return true
         } finally {
             busy.set(false)
         }

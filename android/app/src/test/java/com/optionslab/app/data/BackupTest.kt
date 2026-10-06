@@ -207,6 +207,28 @@ class BackupTest : RobolectricTest() {
         assertEquals("the reviews", String(Vault.readFile(f)!!))
     }
 
+    /**
+     * An older backup (from before the reviews had their own file) has them under the old preferences key and no file:
+     * restored onto a phone that has the file, the phone's reviews stay and the backup's are merged in (IraWeekly.migrate).
+     */
+    @Test fun anOlderBackupsReviewsAreMergedWithThePhonesNotDropped() {
+        fun review(monday: java.time.LocalDate, summary: String = "A quiet week.") = com.optionslab.ira.WeeklyReview.Review(monday,
+            monday.plusDays(4), monday.plusDays(4).atTime(15, 45), summary, "A quiet week, Boss.", "Watch Thursday's expiry.", emptyList())
+        val mine = listOf(review(java.time.LocalDate.of(2026, 10, 5)), review(java.time.LocalDate.of(2026, 9, 28)))
+        val f = com.optionslab.app.ira.IraWeekly.file()!!
+        Vault.writeFile(f, com.optionslab.ira.WeeklyReview.encodeAll(mine).toByteArray(Charsets.UTF_8))
+        val old = listOf(review(java.time.LocalDate.of(2026, 9, 28), "From the backup."), review(java.time.LocalDate.of(2026, 9, 21)))
+        val c = Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!",
+            JSONObject().put(com.optionslab.app.ira.IraWeekly.KEY, com.optionslab.ira.WeeklyReview.encodeAll(old))), pass.copyOf())
+        Backup.restore(context, c)
+        assertTrue("the phone's reviews file is kept", f.exists())
+        val kept = com.optionslab.app.ira.IraWeekly.kept()
+        assertEquals(listOf(java.time.LocalDate.of(2026, 10, 5), java.time.LocalDate.of(2026, 9, 28), java.time.LocalDate.of(2026, 9, 21)),
+            kept.map { it.monday })
+        assertEquals("A quiet week.", kept[1].summary)
+        assertNull(SecurePrefs.getString(com.optionslab.app.ira.IraWeekly.KEY))
+    }
+
     @Test fun filesMissingFromTheBackupAreRemovedHere() {
         seedPhone()
         val c = Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject()), pass.copyOf())

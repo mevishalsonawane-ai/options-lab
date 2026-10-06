@@ -330,4 +330,54 @@ class LiquidityWhyNotTest {
         }
         assertEquals("Unlock the phone for that, Boss.", LiquidityWhyNot.LOCKED)
     }
+
+    // ---- review fixes ---------------------------------------------------------------------------------------------
+
+    @Test fun aBarIsToldByItsLastRecordAndAWaitingSignalIsItsOwnReason() {
+        val asked = Decision(at(10, 16), bn15, "awaiting_approval", at(10, 0), 1, 54_180.0, null, 54_190.0)
+        // Asked, then lapsed (the same bar, recorded again by the arm): the lapse is the bar's story, headline and book alike.
+        val lapsed = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(decided = 3, decisions = listOf(asked,
+            Decision(at(10, 21), bn15, LiquidityWhyNot.LAPSED, at(10, 0), 1, 54_180.0, null, 54_190.0))))
+        assertTrue(lapsed.startsWith("No Liquidity trade today, Boss: 1 signal waited for your approval and was not taken."), lapsed)
+        assertFalse("no close took" in lapsed, lapsed)
+        assertTrue("The 10:00 break above 54,180 waited for your approval and lapsed - nothing was bought" in lapsed, lapsed)
+        assertFalse("none closed through" in lapsed.lines()[1], lapsed)
+        // Skipped by you: the same.
+        val skipped = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(decided = 3, decisions = listOf(asked,
+            Decision(at(10, 18), bn15, "skipped_by_you", at(10, 0), 1, 54_180.0, null, 54_190.0))))
+        assertTrue(skipped.startsWith("No Liquidity trade today, Boss: 1 signal waited for your approval and was not taken."), skipped)
+        assertTrue("You skipped the 10:00 break above 54,180" in skipped, skipped)
+        // Still waiting: its own reason, and the book says so too (not "none closed through a pool").
+        val waiting = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(decided = 3, status = "awaiting_approval", decisions = listOf(asked)))
+        assertTrue(waiting.startsWith("No Liquidity trade today, Boss: a signal is waiting for your approval."), waiting)
+        assertFalse("no close took" in waiting, waiting)
+        assertTrue("BankNifty 15-min: Decided on 3 bars today. The 10:00 break above 54,180 asked for your approval - it is waiting for you (Home)." in waiting, waiting)
+        assertFalse("none closed through" in waiting.lines()[1], waiting)
+    }
+
+    @Test fun breaksNotTakenForAnyOtherReasonAreStillCountedInTheHeadline() {
+        val ds = listOf(
+            Decision(at(10, 5), bn15, "stopped_for_today", at(10, 0), 1, 54_180.0, null, 54_190.0),
+            Decision(at(10, 35), bn15, "something_new", at(10, 30), -1, 53_900.0, null, 53_880.0),
+        )
+        val a = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(decided = 4, decisions = ds))
+        assertTrue(a.startsWith("No Liquidity trade today, Boss: 2 breaks were not entered - see below."), a)
+        assertFalse("Boss: ." in a, a)
+        val err = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(decisions = listOf(Decision(at(10, 5), bn15, "error", at(10, 0)))))
+        assertTrue(err.startsWith("No Liquidity trade today, Boss: 1 break was not entered - see below."), err)
+        // Only bar-less records that explain nothing: never an empty reason.
+        val bare = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(status = "", decisions = listOf(Decision(at(10, 5), bn15, "holding"))))
+        assertTrue(bare.startsWith("No Liquidity trade today, Boss: I have no record of it deciding on a bar today."), bare)
+    }
+
+    @Test fun aTriggerAlreadyPassedIsNotTheNearest() {
+        // BankNifty 15-min's price is already 20 above its 54,180 trigger (bar not closed): the nearest ahead is below, 300 pts.
+        val passed = listOf(read("BANKNIFTY", 15, 54_200.0, 54_180.0, 53_900.0))
+        val (r, s) = assertNotNull(LiquidityWhyNot.nearest(passed))
+        assertEquals(15, r.minutes); assertEquals(-1, s.side)
+        val a = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY")), facts(decided = 2, rs = passed))
+        assertTrue("Nearest trigger: BankNifty 15-min, a close below 53,900 - 300 pts away (it would buy a put)." in a.lines()[0], a)
+        // The only trigger already passed: no nearest at all.
+        assertNull(LiquidityWhyNot.nearest(listOf(read("BANKNIFTY", 15, 54_000.0, 53_950.0, null))))
+    }
 }

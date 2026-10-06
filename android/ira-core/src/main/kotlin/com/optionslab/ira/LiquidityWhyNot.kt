@@ -249,11 +249,21 @@ object LiquidityWhyNot {
         return "$lead (price ${n(price)}$asOf): ${side(r.above, true)}; ${side(r.below, false)}"
     }
 
-    /** The nearest trigger with room across [reads] at [now]: (book, side, level, distance), or null. */
+    /**
+     * The nearest trigger with room still ahead of the price across [reads] (one already passed, its bar not yet closed, is
+     * not "next"): (book, side), or null.
+     */
     internal fun nearest(reads: List<LiquidityMap.Read>): Pair<LiquidityMap.Read, LiquidityMap.Side>? =
         reads.filter { it.state == LiquidityMap.State.OK && it.price != null }.flatMap { r ->
             listOfNotNull(r.above, r.below).filter { it.trigger != null && (it.target == null || it.enough) }.map { r to it }
-        }.minByOrNull { (r, s) -> abs(s.trigger!!.edge - r.price!!) }
+        }.filter { (r, s) -> s.side * (s.trigger!!.edge - r.price!!) >= 0 }.minByOrNull { (r, s) -> abs(s.trigger!!.edge - r.price!!) }
+
+    /**
+     * Each bar's last decision, by book and bar, in the order the bars were first decided: a bar first recorded
+     * "awaiting_approval" and later lapsed, skipped or entered is told by how it ended.
+     */
+    private fun lastPerBar(ds: List<Decision>): List<Decision> =
+        ds.filter { it.bar != null }.sortedBy { it.at }.associateBy { sourceOf(it.book) to it.bar }.values.toList()
 
     /** One book's story today: its trades, the bars it decided, each break not taken and why, data trouble, now, and next. */
     fun bookStory(arm: Arm, f: Facts): String {
@@ -264,15 +274,17 @@ object LiquidityWhyNot {
         val st = f.books.firstOrNull { sourceOf(it.book) == src }
         val out = ArrayList<String>()
         if (trades.isNotEmpty()) out += "Traded: " + trades.joinToString("; ") { tradeWords(it) }
-        val barred = mine.filter { it.bar != null }.distinctBy { it.bar to it.verdict }
+        val barred = lastPerBar(mine)
         val watched = maxOf(st?.decided ?: 0, barred.mapNotNull { it.bar }.distinct().size)
         val missed = barred.filter { kind(it.verdict) in NOT_TAKEN }
+        val pending = barred.filter { kind(it.verdict) == Kind.AWAITING }
         val inHours = barred.count { kind(it.verdict) != Kind.OUTSIDE_HOURS }
         if (watched > 0) out += "Decided on ${plural(watched, "bar")} today" + when {
-            missed.isNotEmpty() || trades.isNotEmpty() -> ""
+            missed.isNotEmpty() || pending.isNotEmpty() || trades.isNotEmpty() -> ""
             barred.isNotEmpty() && inHours == 0 -> ", all outside its entry hours ($HOURS)"
             else -> ": none closed through a liquidity pool sitting on a swing zone"
         }
+        pending.take(MAX_LISTED).forEach { out += notTakenWords(it, und) + " - it is waiting for you (Home)" }
         missed.take(MAX_LISTED).forEach { out += notTakenWords(it, und) }
         if (missed.size > MAX_LISTED) out += "And ${plural(missed.size - MAX_LISTED, "more break")} not taken (${missed.drop(MAX_LISTED).groupBy { kind(it.verdict) }
             .entries.joinToString(", ") { (k, v) -> "${v.size} ${reasonOf(k)}" }})"
@@ -326,7 +338,8 @@ object LiquidityWhyNot {
             else -> "It is in its entry hours now (to ${hm(LiquidityRules.LAST_ENTRY)})."
         }
         val head = ArrayList<String>()
-        val seen = decisions.filter { it.bar != null }.distinctBy { it.book to it.bar }
+        val seen = lastPerBar(decisions)
+        val awaiting = seen.count { kind(it.verdict) == Kind.AWAITING }
         val missed = seen.filter { kind(it.verdict) in NOT_TAKEN }
         if (trades.isNotEmpty()) {
             head += "Liquidity 15+5 did trade today, Boss: ${plural(trades.size, "trade")} - " +
@@ -349,10 +362,13 @@ object LiquidityWhyNot {
                     if (noRoom > 0) reasons += "${plural(noRoom, "break was", "breaks were")} skipped because the next level ahead was too close (the room rule)"
                     if (refused > 0) reasons += "${plural(refused, "break was", "breaks were")} refused before an order"
                     if (lapsed > 0) reasons += "${plural(lapsed, "signal")} waited for your approval and ${if (lapsed == 1) "was" else "were"} not taken"
+                    val others = missed.size - noRoom - refused - lapsed
+                    if (others > 0) reasons += "${plural(others, "break was", "breaks were")} not entered - see below"
+                    if (awaiting > 0) reasons += if (awaiting == 1) "a signal is waiting for your approval" else "$awaiting signals are waiting for your approval"
                     val watched = maxOf(seen.size, f.books.filter { sourceOf(it.book) in scope }.sumOf { it.decided })
-                    if (missed.isEmpty() && watched > 0) reasons += "no close took a liquidity pool sitting on a swing zone - the only break it trades"
+                    if (missed.isEmpty() && awaiting == 0 && watched > 0) reasons += "no close took a liquidity pool sitting on a swing zone - the only break it trades"
                     if (decisions.any { it.bar == null && kind(it.verdict) in TROUBLE }) reasons += "its candles were missing or still loading at times"
-                    if (watched == 0 && decisions.isEmpty()) reasons += "I have no record of it deciding on a bar today" +
+                    if (watched == 0 && (decisions.isEmpty() || reasons.isEmpty())) reasons += "I have no record of it deciding on a bar today" +
                         (if (f.armed == null) " (and I couldn't read its switch)" else "")
                     head += "No Liquidity trade today, Boss: " + reasons.joinToString("; ") + "."
                 }

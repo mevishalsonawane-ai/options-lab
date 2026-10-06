@@ -606,6 +606,15 @@ object OrbArms {
         book().positions.filter { it.arm in books && !it.live && it.day == day }
     }
 
+    /**
+     * Liquidity 15+5's positions entered on [day], paper and live (Zerodha), open and closed - for Jarvis's words only
+     * (the trade lessons). The lock is held only to copy the list. Reads only.
+     */
+    suspend fun liquidityTodayWithLive(day: LocalDate): List<Position> = lock.withLock {
+        val books = LiquidityRules.BOOKS.map { it.source }.toSet()
+        book().positions.filter { it.arm in books && it.day == day }
+    }
+
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
         // The paper-only arms' trades (ORB Sweep, Range Fade) and Liquidity 15+5's are not part of the ORB's pre-registered forward test.

@@ -51,7 +51,8 @@ object Backup {
         // What Ira / Jarvis learned (the pattern book; proposals, review journal and conversation).
         "n" to "ira-book.vault", "n" to "ira-state.vault",
         // Jarvis's weekly reviews (their own file since they left the preferences: IraWeekly.FILE).
-        "n" to "weekly-reviews.vault")
+        "n" to WEEKLY_REVIEWS)
+    private const val WEEKLY_REVIEWS = "weekly-reviews.vault"
 
     /**
      * Preferences that stay on this phone only: never written to a backup, never taken from one - the PIN, Live mode and
@@ -188,8 +189,9 @@ object Backup {
         for ((dir, name) in FILES) {
             val f = file(ctx, dir, name)
             val b64 = files.optString("$dir/$name").ifEmpty { null }
-            // An older backup without Jarvis's learning leaves the phone's own in place.
-            if (b64 == null) { if (!name.startsWith("ira-")) f.delete(); continue }
+            // An older backup without Jarvis's learning leaves the phone's own in place. So with the weekly reviews: an
+            // older backup has them under the old preferences key (IraWeekly.KEY), and IraWeekly.migrate merges the two.
+            if (b64 == null) { if (!name.startsWith("ira-") && name != WEEKLY_REVIEWS) f.delete(); continue }
             val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP), lotsHere)
             try {
                 if (name.endsWith(".vault")) Vault.writeFile(f, bytes) else f.writeBytes(bytes)
