@@ -1590,7 +1590,7 @@ object IraHub {
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
@@ -2721,7 +2721,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2957,6 +2957,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.AfterLoss.LOCKED); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraCoach.afterLoss(q, afterLossSide) }.getOrElse { "I could not read your trades after a loss just now, Boss." }) }
+            return true
+        }
+        // "Is my stop too tight?", "will normal noise hit my stop?", "mera stop bahut tight hai kya" ([com.optionslab.ira.StopNoise]):
+        // each open bought option's stop - its distance in premium and, by its delta, roughly in index points - against how
+        // often the index moved that far against it within 15 and 30 minutes of a quarter-hour start in the whole past
+        // sessions on the phone. Facts only, never a judgement or advice on the stop. His positions, so never on a locked
+        // phone; nothing is placed, changed or cancelled. (After AfterLoss, before RequestBook. Not in IraGoldAlgo.)
+        val stopNoiseAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.StopNoise.asked(q) }.getOrDefault(false) else false
+        if (stopNoiseAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.StopNoise.LOCKED); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { stopNoise() }.getOrElse { "I could not set your stops against the index's swings just now, Boss." }) }
             return true
         }
         // "What requests are waiting?", "anything waiting for my approval?", "what did I approve today?", "koi request hai",
@@ -5209,6 +5222,21 @@ object IraHub {
             ?: com.optionslab.ira.ExpiryHour.days(Store.barSessions(u), today).also { expiryHourDays = key to it }
         val todays = runCatching { Store.barSession(u, today) }.getOrNull()
         return com.optionslab.ira.ExpiryHour.answer(a, m, past, todays, today, now)
+    }
+
+    /**
+     * "Is my stop too tight?" ([com.optionslab.ira.StopNoise]): the open positions as [IraCoach.openLegs] reads them (with
+     * each one's stop), set against the 1-minute candles kept for their indices. Reads only; his positions, so never on a
+     * locked phone.
+     */
+    private suspend fun stopNoise(): String {
+        if (phoneLocked()) return com.optionslab.ira.StopNoise.LOCKED
+        val legs = IraCoach.openLegs()
+        val today = com.optionslab.app.data.Market.today()
+        val hs = histories
+        val noiseRecords = com.optionslab.ira.StopNoise.markets(legs).associateWith { m -> com.optionslab.ira.StopNoise.record(hs[m]?.bars.orEmpty(), today) }
+        val noiseSpots = noiseRecords.keys.associateWith { m -> _state.value.snaps[m]?.price }
+        return com.optionslab.ira.StopNoise.answer(legs, noiseRecords, noiseSpots).joinToString(" ")
     }
 
     /** The past sessions read for [atmBuy] (the index, its kept days and the day as key), kept until any of them changes. */

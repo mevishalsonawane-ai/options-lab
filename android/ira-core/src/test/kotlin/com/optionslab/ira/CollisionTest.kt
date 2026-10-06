@@ -111,6 +111,7 @@ class CollisionTest {
         "WhereIWin" to { q -> WhereIWin.asked(q) != null },
         "TradesADay" to { q -> TradesADay.asked(q) != null },
         "AfterLoss" to { q -> AfterLoss.asked(q) != null },
+        "StopNoise" to { q -> StopNoise.asked(q) },
         "RequestBook" to { q -> RequestBook.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
@@ -967,6 +968,11 @@ class CollisionTest {
         "how do i trade after a loss" to "AfterLoss", "do i revenge trade" to "AfterLoss", "am i a revenge trader" to "AfterLoss",
         "do i chase my losses" to "AfterLoss", "how does my next trade do after a losing trade" to "AfterLoss",
         "do i get careless after a win" to "AfterLoss", "loss ke baad mera agla trade kaisa jaata hai" to "AfterLoss",
+        // ---- StopNoise: each bought option's stop against the index's swings over 15 and 30 minutes (reasoning round 33) ----
+        "is my stop too tight" to "StopNoise", "are my stops too close" to "StopNoise", "isn't my sl a bit tight" to "StopNoise",
+        "is my stop loss too tight" to "StopNoise", "is my nifty call stop too tight" to "StopNoise", "my stop is too tight" to "StopNoise",
+        "is my stop inside the noise" to "StopNoise", "will normal noise hit my stop" to "StopNoise", "how much room does my stop have" to "StopNoise",
+        "my stop noise check" to "StopNoise", "mera stop bahut tight hai kya" to "StopNoise", "meri sl zyada paas hai" to "StopNoise",
         // ---- RequestBook: the Requests panel said, waiting and answered (usefulness round 33) ----
         "what requests are waiting" to "RequestBook", "anything waiting for my approval" to "RequestBook", "what needs my approval" to "RequestBook",
         "koi request hai" to "RequestBook", "what did i approve today" to "RequestBook", "what did i decline today" to "RequestBook",
@@ -1346,7 +1352,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
