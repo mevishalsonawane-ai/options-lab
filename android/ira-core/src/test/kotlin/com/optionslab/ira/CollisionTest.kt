@@ -2707,6 +2707,82 @@ class CollisionTest {
             assertTrue(RequestBook.asked(s) == null && !Requests.listAsked(s), s)
     }
 
+    /**
+     * Round 28: the newest reads as Boss says them - StraddleDecay ("how fast does the straddle decay", "straddle decay on
+     * expiry day", "what is the usual straddle decay"), the breakeven after charges said without "my" ("breakeven after
+     * charges", "charges ke baad breakeven kya hai", "real breakeven", "at what price do I cover my charges"), SmallTrades with
+     * one source named ("which bot makes tiny trades", "kaun sa bot chhote trades karta hai", "who is making tiny trades",
+     * "trades that don't cover charges"), GiveBack asked on its own ("how much does Nifty give back", "Nifty kitna wapas deta
+     * hai"), the charges' exact-or-estimate ("charges exact hai ya estimate", "estimated charges", "how accurate are the
+     * charges") and the Requests panel counted ("requests kitne hain").
+     */
+    private val ROUND28 = listOf(
+        // StraddleDecay
+        "straddle kitna girta hai" to "StraddleDecay", "premium decay record" to "StraddleDecay", "how fast does the straddle decay" to "StraddleDecay",
+        "how quickly does the atm straddle lose value" to "StraddleDecay", "straddle decay on expiry day" to "StraddleDecay",
+        "straddle decay on quiet days" to "StraddleDecay", "straddle decay on trending days" to "StraddleDecay",
+        "what is the usual straddle decay" to "StraddleDecay", "what is the typical straddle decay" to "StraddleDecay",
+        // NeedsTrue: the breakeven after charges
+        "breakeven after charges" to "Account:NEED", "break even after charges" to "Account:NEED", "charges ke baad breakeven kya hai" to "Account:NEED",
+        "breakeven including charges" to "Account:NEED", "breakeven with charges" to "Account:NEED", "breakeven after brokerage" to "Account:NEED",
+        "charges ke saath breakeven kitna hai" to "Account:NEED", "breakeven charges ke baad kitna hai" to "Account:NEED",
+        "real breakeven" to "Account:NEED", "net breakeven" to "Account:NEED", "nifty breakeven after charges" to "Account:NEED",
+        "what price do i need to cover charges" to "Account:NEED", "at what price do i cover my charges" to "Account:NEED",
+        // SmallTrades
+        "which bot makes tiny trades" to "SmallTrades", "which bot makes small trades" to "SmallTrades", "which strategy makes small trades" to "SmallTrades",
+        "which bot makes the most small trades" to "SmallTrades", "which arm makes small trades" to "SmallTrades", "which bot is making tiny trades" to "SmallTrades",
+        "which strategy is making small trades" to "SmallTrades", "which bot made the most tiny trades" to "SmallTrades",
+        "who is making tiny trades" to "SmallTrades", "who is placing tiny trades" to "SmallTrades",
+        "kaun sa bot chhote trades karta hai" to "SmallTrades", "konsa bot chhote trades karta hai" to "SmallTrades",
+        "tiny trades kaun karta hai" to "SmallTrades", "small trades kaun karta hai" to "SmallTrades",
+        "which trades are too small for charges" to "SmallTrades", "which of my trades are too small for their charges" to "SmallTrades",
+        "trades that don't cover charges" to "SmallTrades", "which trades don't cover their charges" to "SmallTrades",
+        // GiveBack asked on its own
+        "how much does nifty give back" to "GiveBack", "does nifty give back its gains" to "GiveBack", "does nifty usually give back its gains" to "GiveBack",
+        "how much does banknifty usually give back" to "GiveBack", "nifty kitna wapas deta hai" to "GiveBack", "banknifty kitna wapas deta hai" to "GiveBack",
+        // The charges, exact or an estimate
+        "charges exact hai ya estimate" to "Account:CHARGES", "estimated charges" to "Account:CHARGES", "charges estimate hai kya" to "Account:CHARGES",
+        "charges approx hai kya" to "Account:CHARGES", "charges approximate hai" to "Account:CHARGES", "charges exact hai kya" to "Account:CHARGES",
+        "kya ye charges exact hain" to "Account:CHARGES", "how accurate are the charges" to "Account:CHARGES",
+        "exact or approximate charges" to "Account:CHARGES", "is that charge approximate" to "Account:CHARGES",
+        // The Requests panel
+        "requests kitne hain" to "RequestBook", "how many requests" to "RequestBook",
+    )
+
+    @Test fun roundTwentyEightWordingsRouteAndNeverAct() {
+        assertEquals(ROUND28.size, ROUND28.map { it.first }.distinct().size)
+        val wrong = ROUND28.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND28) {
+            neverActs(s)
+            // Never heard as a yes to anything waiting.
+            assertTrue(Wake.yesNo(s) != true && Hinglish.yesNo(s) != true, s)
+        }
+        // The charges' exact-or-estimate is the day's detail (each fill on its own schedule, the contract note's figure).
+        for (s in listOf("charges exact hai ya estimate", "estimated charges", "charges estimate hai kya", "how accurate are the charges", "is that charge approximate"))
+            assertTrue(Charges.whyAsked(s), s)
+        // ...never the schedule's one-lot question.
+        for (s in listOf("estimated charges for one lot", "estimated charges per lot")) assertTrue(!Charges.asked(s) && !Charges.whyAsked(s), s)
+        // The breakeven after charges explained, or acted on, is not Boss's positions worked out.
+        for (s in listOf("breakeven after charges kya hota hai", "what does breakeven after charges mean", "what is breakeven after charges meaning",
+            "exit at breakeven after charges", "sell when breakeven after charges", "square off at breakeven after charges", "what is breakeven"))
+            assertTrue(!NeedsTrue.asked(s), s)
+        for (s in listOf("exit at breakeven after charges", "sell when breakeven after charges")) assertTrue(audit.feature(s) != "Account:NEED", s)
+        // StraddleDecay stays the record: never a forecast, advice, a definition or Boss's own straddle.
+        for (s in listOf("will the straddle decay today", "should i sell a straddle", "what is straddle", "how much did my straddle decay",
+            "what is the usual straddle decay tomorrow", "straddle decay"))
+            assertEquals(null, StraddleDecay.asked(s), s)
+        // SmallTrades is read, never made: a trade asked for is not it.
+        for (s in listOf("make a small trade", "place tiny trade", "buy a small lot", "which bot should make small trades"))
+            assertEquals(null, SmallTrades.asked(s), s)
+        // GiveBack asked on its own stays the record: never a forecast, today, Boss's own or Jarvis.
+        for (s in listOf("will nifty give back its gains", "how much did nifty give back today", "how much do you give back",
+            "how much does my stock give back", "should nifty give back"))
+            assertEquals(null, GiveBack.asked(s), s)
+        // The Requests panel is counted, never answered.
+        for (s in listOf("approve requests", "reject requests kitne hain")) assertEquals(null, RequestBook.asked(s), s)
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",

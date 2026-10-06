@@ -108,12 +108,21 @@ object Charges {
         "|(what|kya) (does|did|do) (the |my |today s |todays |aaj ka |aaj ke |aaj ki )?$NOTE (say|show|says|shows)|$NOTE (kya|what) (kehta|kehti|bolta|bolti|batata|batati|says)" +
         // ("The actual charge of a Nifty option" is the schedule's question, not the day's: "for today" and "on my" only.)
         "|(exact|actual|real|final|precise|accurate|asli|sahi) (zerodha |broker )?$CHARGE(?! (of|for|on|per) (?!my |mere |today|todays|the day))" +
-        "|(is|are) (this |that |these |those |the |my |today s |todays )?$CHARGE (figure |number |amount )?(exact|accurate|real|final|an estimate|estimated|just an estimate)" +
+        "|(is|are) (this |that |these |those |the |my |today s |todays )?$CHARGE (figure |number |amount )?(exact|accurate|real|final|an estimate|estimated|just an estimate|approximate|approx|an approximation|rough|a rough figure)" +
+        // Understanding round 28: the exact-or-estimate question as Boss says it - "charges exact hai ya estimate", "estimated
+        // charges", "kya ye charges exact hain", "how accurate are the charges", "exact or approximate charges".
+        "|$CHARGE (exact|accurate|sahi|asli|estimate|estimated|approx|approximate|andaza|andaaza) (hai |hain |he )?(ya|or) (estimate|estimated|exact|approx|approximate|andaza|andaaza|asli|sahi)" +
+        "|(kya )?(ye|yeh|these|this|that|those|mere|my|aaj ke|today s|todays) $CHARGE (exact|sahi|asli|estimate|estimated|approx|approximate|andaza|andaaza) (hai|hain|he|h)" +
+        "|how (accurate|exact|precise|reliable|correct) (are|is) (the |my |these |this |that |those |today s |todays )?$CHARGE" +
+        "|(exact|estimated|estimate|approximate|approx) or (estimated|estimate|approximate|approx|exact) $CHARGE" +
         "|(my|mine|today s|todays|aaj ke|aaj ka|aaj ki|total|how much|kitna|kitne|kitni) (in |on )?$SEG $CHARGE" +
         "|$SEG (ke |ka |ki |wale |par |pe )?$CHARGE (kitne|kitna|kitni|how much|lage|laga|lagi|today|this week|this month|last week|last month|so far)" +
         "|$CHARGE (on|for|of|in) (my|mere|the) $SEG|$CHARGE (on|for|in) $SEG( trades| trade| positions| orders)? (today|this week|this month|last week|last month|so far)) ")
     /** "DP charges", "delivery charges today", "futures charges": the kind of trade and the charges said alone. */
-    private val DETAIL_ALONE = rx("^ $SEG $CHARGE( today| this week| this month| so far)?( please| boss| jarvis)? $|^ $CHARGE (break ?down|breakup|break up)( today| please| boss)? $")
+    private val DETAIL_ALONE = rx("^ $SEG $CHARGE( today| this week| this month| so far)?( please| boss| jarvis)? $|^ $CHARGE (break ?down|breakup|break up)( today| please| boss)? $|" +
+        // Understanding round 28: "estimated charges", "charges estimate hai kya", "charges approx hai".
+        "^ (jarvis )?(are |is )?(the |my |these |today s |todays )?(estimated|approximate|approx) $CHARGE( today| please| boss| jarvis)* $|" +
+        "^ (jarvis )?(ye |yeh |mere |aaj ke )?$CHARGE (estimate|estimated|approx|approximate|andaza|andaaza|exact) (hai|hain|he|h)( kya)?( boss| jarvis)? $")
 
     /**
      * Does [text] ask WHY the charges are so high (what drove them: orders, fills, who placed them, the kinds of charge), or

@@ -140,7 +140,18 @@ object SmallTrades {
         LEAD + "who (makes|made|places|placed|takes|took) (the most |most |my |so many )?$SMALL" + TAIL + "|" +
         LEAD + "(whats |what is |show me |tell me about )?(my )?$SMALL (record|pattern|habit)" + TAIL + "|" +
         "^ (jarvis )?(mere |meri |hamare )?(charges|brokerage|chhote trades|chote trades) ke baare (mein|me|main) (tumne )?kya (seekha|sikha|pata chala|dekha)" + TAIL + "|" +
-        "^ (jarvis )?(chhote|chote) trades (kaun|kon|kis|kiske|kahan se|kab) (karta|banata|lagata|aate|hote|wala)( hai| hain)?" + TAIL)
+        "^ (jarvis )?(chhote|chote) trades (kaun|kon|kis|kiske|kahan se|kab) (karta|banata|lagata|aate|hote|wala)( hai| hain)?" + TAIL + "|" +
+        // Understanding round 28: one source named ("which bot makes tiny trades", "which strategy is making small trades",
+        // "who is making tiny trades"), the Hinglish with the English words ("small trades kaun karta hai", "kaun sa bot chhote
+        // trades karta hai") and the trades by their charges ("which trades are too small for their charges", "trades that
+        // don't cover their charges").
+        LEAD + "(which|what) (of my |my )?(trade|source|strategy|arm|bot|algo|algos|time slot|band) (makes|made|gives|gave|produces|places|placed|takes|took|has|had|is making|is placing|was making) (the most |most |so many |many )?(of my |my )?$SMALL" + TAIL + "|" +
+        LEAD + "(which|what) (of my |my )?(trades|sources|strategies|arms|bots|algos) (are|were) (making|placing|giving|taking|producing) (the most |most |so many |many )?(of my |my )?$SMALL" + TAIL + "|" +
+        LEAD + "who (is|was|keeps) (making|placing|taking) (the most |most |my |so many |these |all these |all the )?$SMALL" + TAIL + "|" +
+        "^ (jarvis )?(kaun sa|kaunsa|konsa|kon sa|kaun si|kaunsi|konsi) (bot|algo|strategy|arm|time|source) (sabse zyada |zyada )?(chhote|chote|small|tiny) trades (karta|karti|banata|banati|lagata|lagati|leta|leti)( hai| hain)?" + TAIL + "|" +
+        "^ (jarvis )?(mere )?(small|tiny) trades (kaun|kon|kis|kiske|kahan se|kab) (karta|banata|lagata|aate|hote|wala)( hai| hain)?" + TAIL + "|" +
+        LEAD + "(which|what) (of my |my )?trades (are|were) too (small|tiny) (for|to cover) (their |its |the |my )?(own )?$CHG" + TAIL + "|" +
+        LEAD + "(which |what )?(of my |my )?trades (that |which )?(dont|do not|didnt|did not|never) (cover|pay for|beat|clear) (their |its |the |my )?(own )?$CHG" + TAIL)
 
     /**
      * Only a clear undo naming his small trades or what was learned about his charges: "stop mentioning my small trades",

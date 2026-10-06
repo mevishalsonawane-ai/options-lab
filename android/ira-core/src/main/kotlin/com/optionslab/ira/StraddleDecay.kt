@@ -84,11 +84,17 @@ object StraddleDecay {
         "kam hota|kam hoti|kam ho jata|kam ho jati|decay hota|decay hoti|kitna girta|kitna ghatta) ")
     /** Asked of the record, or of the stretch of the day it covers. */
     private val HOW = Regex(" (how much|how often|how many times|what share|what percent|what percentage|usually|normally|typically|generally|" +
+        // Understanding round 28: "how fast does the straddle decay", "the usual straddle decay".
+        "how fast|how quickly|how quick|kitni tezi|kitni jaldi|usual|typical|normal|" +
         "tend to|tends to|on average|average|median|historically|kitna|kitni|kitni baar|aksar|mostly|often|" +
         "quiet day|quiet days|flat day|flat days|sideways day|sideways days|range day|range days|trending day|trending days|trend day|trend days|" +
         "intraday|in a day|through the day|during the day|din mein|din me|between 9 30 and 2 30|between 9 30 and 14 30|by 2 30|by 14 30|till 2 30|till 14 30) ")
     /** Named as a record. */
-    private val NAME = Regex(" (straddle decay|straddle|premium decay|atm decay|intraday decay) (record|records|stats|statistics|history|data) ")
+    private val NAME = Regex(" (straddle decay|straddle|premium decay|atm decay|intraday decay) (record|records|stats|statistics|history|data) |" +
+        // Understanding round 28: "straddle decay on expiry day", "straddle decay on quiet days vs trending days".
+        " (straddle|atm straddle|atm premium|straddle premium) (decay|decays) (on|in|for) (expiry day|expiry days|quiet|flat|sideways|range|trending|trend|volatile|big move) ")
+    /** "What is the usual straddle decay": the record asked by "usual", never a definition (round 28). */
+    private val WHAT_USUAL = Regex(" (what is|whats|what s) the (usual|typical|average|normal|median) ")
     private val QUIET = Regex(" (quiet|flat|sideways|range|rangebound|range bound|dull|slow) (day|days|session|sessions) ")
     private val TREND = Regex(" (trending|trend|moving|big move|big|directional|volatile) (day|days|session|sessions) ")
     private val EXPIRY = Regex(" (expiry day|expiry days|on expiry|expiry ke din|expiry wale din) ")
@@ -108,7 +114,7 @@ object StraddleDecay {
     private val askedKept = Kept<Q?>(64)
 
     private fun askedFresh(text: String): Q? {
-        val t = norm(text)
+        val t = WHAT_USUAL.replace(norm(text), " the $2 ")
         if (NOT.containsMatchIn(t)) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         val ok = NAME.containsMatchIn(t) || (WHAT.containsMatchIn(t) && LOSE.containsMatchIn(t) && HOW.containsMatchIn(t))

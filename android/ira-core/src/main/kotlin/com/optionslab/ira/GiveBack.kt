@@ -117,6 +117,13 @@ object GiveBack {
     private val AFTER_RUN = Regex(" (pullback|pullbacks|pull back|give back|retracement) after (a |the )?" +
         // "Give back after a 100 point run" (round 27): the size said before the run.
         "(\\d{1,5}(\\.\\d+)? ?(points|point|pts|pt|%|percent|per cent) )?(run|runs|rally|rallies|move|moves|trend) ")
+    /**
+     * The give-back asked on its own (understanding round 28): "how much does Nifty give back", "does Nifty usually give back
+     * its gains", "Nifty kitna wapas deta hai" - the whole sentence only, the run from the open read at its usual size.
+     */
+    private val BARE = Regex("^ (jarvis |boss )?((how much|kitna) (does|do) (\\w+ ){1,2}(usually |normally |typically |generally )?(give back|giveback|give up)( its gains| of its gains| its run| of its run| its rally| of its rally| from the open)?" +
+        "|(does|do) (\\w+ ){1,2}(usually |normally |typically |generally )?(give back|giveback) (its|the|their) (gains|run|rally)" +
+        "|(\\w+ ){1,2}(usually |aksar )?(kitna|kitni) (wapas|waapas|vapas) (deta|deti|de deta|de deti|kar deta|kar deti)( hai)?)( usually| normally| typically)?( boss| jarvis)? $")
     /** From the open, or a first stretch of the session. */
     private val OPENISH = Regex(" (from the open|from its open|from open|from the opening|open se|first hour|first half hour|first half an hour|" +
         "first \\d+ (minutes|minute|mins|min)|first two hours|first 2 hours|pehle ghante|pehla ghanta|pehle aadhe ghante|pehle adhe ghante|" +
@@ -170,7 +177,7 @@ object GiveBack {
         val p = POINTS.find(t)?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 }
         val pc = SIZE.find(t)?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 }
         val sized = p != null || pc != null
-        val named = NAME.containsMatchIn(t) || AFTER_RUN.containsMatchIn(t)
+        val named = NAME.containsMatchIn(t) || AFTER_RUN.containsMatchIn(t) || BARE.containsMatchIn(t)
         val ok = named || ((GIVE.containsMatchIn(t) && HOW.containsMatchIn(t) || KEEP.containsMatchIn(t)) && (sized || OPENISH.containsMatchIn(t)) &&
             (RUN.containsMatchIn(t) || OPENISH.containsMatchIn(t)))
         if (!ok) return null

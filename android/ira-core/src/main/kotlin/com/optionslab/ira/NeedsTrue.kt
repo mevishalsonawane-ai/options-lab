@@ -89,7 +89,22 @@ object NeedsTrue {
         // Round 22: "at what Nifty level am I in profit", "for me to break even".
         " (level|price) (am i|will i be|would i be) (in profit|profitable|in the green|at breakeven|at break even|making money) | for (me|us) to (break even|get to breakeven|be at breakeven) |" +
         // "Breakeven kitna door hai" (routing round 11): Hinglish asks his own breakeven's distance without "my".
-        "^ (jarvis |boss )?(mera |meri |mere )?(break ?even|breakevens?)( level| point)? ((kitna|kitni|kitne) (door|dur|duur|paas|pass|bacha|baaki|baki)|kahan|kaha)( hai| he| h)?( kya)?( boss| jarvis)? $")
+        "^ (jarvis |boss )?(mera |meri |mere )?(break ?even|breakevens?)( level| point)? ((kitna|kitni|kitne) (door|dur|duur|paas|pass|bacha|baaki|baki)|kahan|kaha)( hai| he| h)?( kya)?( boss| jarvis)? $|" +
+        // Understanding round 28: the breakeven with the round trip's charges in it, said without "my" ("breakeven after
+        // charges", "charges ke baad breakeven kya hai", "real breakeven") - only his own positions have one to work out.
+        "$AFTER_CHARGES")
+    /**
+     * The breakeven after charges (round 28): "breakeven after / including / with charges", "charges ke baad (ka) breakeven",
+     * "breakeven charges ke baad", "real / net breakeven", "at what price do I cover my charges".
+     */
+    private const val AFTER_CHARGES = " (break ?even|breakevens?)( point| level| price)? (after|including|incl|with|plus|net of|inclusive of|covering|counting) (the |all |my |all the )?(charges|brokerage|costs|fees|taxes) |" +
+        " (charges|brokerage|costs) (ke baad|ke bad|ke saath|ke sath|milake|mila ke|jod ke|jodke|joda ke|include karke|lagake|laga ke) (ka |ki |wala |wali |mera |meri )?(break ?even|breakevens?) |" +
+        " (break ?even|breakevens?) (charges|brokerage) (ke baad|ke bad|ke saath|ke sath|milake|mila ke|jod ke|jodke|include karke|lagake|laga ke) |" +
+        "^ (jarvis |boss )?(whats |what is |what s )?(the |my )?(real|true|net|actual|asli|sahi) (break ?even|breakevens?)( point| level| price)?( kya| kya hai| hai| please| boss| jarvis)* $|" +
+        " (what|which|at what) (price|level) (do|does|will|would|should) (i|my [a-z0-9 ]{1,30}) (need to |have to |go to |reach to )?(cover|recover|pay for|pay off) (my |the |its |all the |all my )?(charges|brokerage|costs) "
+    private val AFTER_RX = Regex(AFTER_CHARGES)
+    /** The breakeven after charges explained, not worked out (round 28). */
+    private val DEFINE = Regex(" (mean|means|meaning|matlab|definition|defined|concept|formula|how is|how do you calculate|how to calculate|kaise nikale|kaise nikalte|kya hota hai) ")
     /** Not this question: a what-if, an order or a change, the P&L now, a ranking, a plain list or a word explained. */
     private val NOT = Regex(" (if|suppose|agar|close|exit|square|sell|buy|add|cancel|set|place|move it|modify|worst|best|rank|what is a|what is the meaning|meaning of|define|explain) ")
 
@@ -104,6 +119,8 @@ object NeedsTrue {
             val t = norm(s)
             // (The owner first: the cheap check before the long one - the same answer, speed round 10.)
             if (!(OWNER.containsMatchIn(t) || I_HOLD.containsMatchIn(t)) || NOT.containsMatchIn(t)) return@any false
+            // The breakeven after charges (round 28): his own positions' charges line, never the word explained.
+            if (AFTER_RX.containsMatchIn(t)) return@any !DEFINE.containsMatchIn(t)
             // The breakeven or a holding must be named: "what needs to happen for my day" is not this.
             val held = HOLDING_RX.containsMatchIn(t) || rx(" (break ?even|breakevens?) ").containsMatchIn(t) || rx(" \\d{3,6} ").containsMatchIn(t)
             // "I" alone stands for his book only with the asks made for it; "what do I need to do for my ..." needs the holding itself.

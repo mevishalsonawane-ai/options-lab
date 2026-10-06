@@ -54,6 +54,8 @@ object RequestBook {
     private val WAITING = rx(
         " (any|koi|kitni|kitne|how many|what|whats|which|my|mere|meri|show|list|open|pending|waiting) (\\w+ ){0,3}$REQ " +
         "| $REQ (are |is )?(waiting|pending|open|hai|hain|baaki|baki|left) " +
+        // Understanding round 28: "requests kitne hain", "requests how many".
+        "| $REQ (kitne|kitni|kitna|how many)( hai| hain| he| pending| waiting| baaki)* $" +
         "| (waiting|pending|waits) (for|on) (my|me|boss) ?(approval|yes|ok|okay|answer|reply|decision|sign off|nod) " +
         "| (needs?|requires?) (my|bosss|boss) (approval|yes|ok|okay|sign off|answer) " +
         "| (do|must) i (need|have) to (approve|answer) " +
