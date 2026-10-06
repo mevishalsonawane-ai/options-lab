@@ -100,6 +100,7 @@ class CollisionTest {
         "NextAsk" to { q -> NextAsk.asked(q) != null },
         "MoreAfter" to { q -> MoreAfter.asked(q) != null },
         "SmallTrades" to { q -> SmallTrades.asked(q) != null },
+        "DayIndex" to { q -> DayIndex.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -916,6 +917,20 @@ class CollisionTest {
         "stop mentioning my small trades" to "SmallTrades", "stop telling me about my small trades" to "SmallTrades",
         "don't mention my small trades" to "SmallTrades", "forget what you learned about my charges" to "SmallTrades",
         "reset my small trades count" to "SmallTrades", "chhote trades mat batao" to "SmallTrades",
+        // ---- DayIndex: the index Boss follows on a given weekday, its read first in "how's the market" that day ----
+        "which index do you lead with on wednesdays" to "DayIndex", "which index do you lead with today" to "DayIndex",
+        "what index do you start the market read with" to "DayIndex", "which index do you mention first today" to "DayIndex",
+        "why did you start with banknifty today" to "DayIndex", "why do you lead with bank nifty on wednesdays" to "DayIndex",
+        "why is banknifty first today" to "DayIndex", "which index do i ask about most on wednesdays" to "DayIndex",
+        "kis din kaunsa index pehle" to "DayIndex", "aaj banknifty pehle kyun" to "DayIndex", "budhvar ko banknifty pehle kyun bola" to "DayIndex",
+        "lead with nifty every day again" to "DayIndex", "stop leading with banknifty on wednesdays" to "DayIndex",
+        "stop leading with bank nifty" to "DayIndex", "stop starting with banknifty on wednesdays" to "DayIndex",
+        "stop changing the index by day" to "DayIndex", "don't lead with banknifty on wednesdays" to "DayIndex",
+        "forget which index i ask about on wednesdays" to "DayIndex", "har din nifty pehle lo" to "DayIndex",
+        "budhvar ko banknifty pehle mat lo" to "DayIndex",
+        // ...and its neighbours keep theirs: LeadIndex across all days, the market read itself, the weekday record.
+        "why do you start with banknifty" to "LeadIndex", "stop saying bank nifty first" to "LeadIndex",
+        "how is the market" to "TradeCheck", "how are wednesdays for banknifty" to "Weekdays",
         // ...and its neighbours keep theirs: the charges themselves, why they are high, everything learned.
         "how much did i pay in charges this week" to "Account:CHARGES", "why are my charges so high" to "Account:CHARGES",
         "what have you learned about me" to "AboutBoss",
@@ -1324,7 +1339,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "NewsMoves",
+    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "StraddleDecay", "AtmBuy", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

@@ -18,7 +18,8 @@ import java.util.Locale
  * at the end of the morning check ([MorningAsks]), the reasons he turns Jarvis's trade ideas down for said up front
  * before the next idea they fit ([TurnDowns]), the topics said in a sentence or in full aloud as Boss asks for them
  * ([TopicLength]), the index he means when he names none ([UsualIndex]), the nicknames he uses for his arms and positions
- * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the part of a market read he
+ * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the index he follows on a
+ * given weekday, its read given first in "how's the market" on that weekday ([DayIndex]), the part of a market read he
  * asks for on its own, said right after the price in an overview ([LeadPart]), the question he usually asks next, offered in
  * one short question at the end of an answer ([NextAsk]), the kinds of answer said in full straight away aloud as he
  * usually asks for more after their short line ([MoreAfter]), where his trades that moved less than twice their own charges
@@ -37,7 +38,7 @@ import java.util.Locale
  * in full at any hour again), the morning question offered ([MorningAsks]: no longer offered), his reasons said up front ([TurnDowns]: no longer
  * said), the topics said shorter or in full ([TopicLength]: the usual length again), the index taken when he names none
  * ([UsualIndex]: Nifty again), the nicknames learned this week ([Nicknames]: forgotten), the index named first ([LeadIndex]: Nifty
- * first again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
+ * first again), the index led with on a weekday ([DayIndex]: Nifty first every day again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
  * no longer offered), the answers said in full straight away ([MoreAfter]: the short line first again) and his own goals.
  * (His confidence words set to fit the
  * numbers beside them ([WordFit]) and where his small trades come from ([SmallTrades], a fact of his record) are listed with
@@ -71,6 +72,7 @@ object Learnings {
         USUAL_INDEX("The index I take when you name none", true),
         NICKNAMES("Nicknames you use for your arms and positions", true),
         LEAD_INDEX("The index I name first", true),
+        DAY_INDEX("The index I lead the market read with, by weekday", true),
         LEAD_PART("What I say first in an overview", true),
         NEXT_ASK("The question I offer next, after an answer", true),
         MORE_AFTER("Answers I say in full straight away, as you usually ask for more", true),
@@ -121,6 +123,8 @@ object Learnings {
         val nicknames: Nicknames.Log = Nicknames.Log(),
         /** The day Boss last asked for Nifty first again ([LeadIndex]; read with [tally]). */
         val leadIndex: LeadIndex.Log = LeadIndex.Log(),
+        /** The day Boss last asked for Nifty first every day again ([DayIndex]; read with [tally]). */
+        val dayIndex: DayIndex.Log = DayIndex.Log(),
         /** The day Boss last asked for his overviews in the usual order ([LeadPart]; read with [tally]). */
         val leadPart: LeadPart.Log = LeadPart.Log(),
         /** What Boss asked and when, keys only ([Routine]'s log; read by [NextAsk]). */
@@ -231,6 +235,12 @@ object Learnings {
         // only). Only the order changes: never a figure, which index is answered, or anything that acts.
         LeadIndex.learned(i.tally, i.leadIndex, today)?.let { r ->
             out += Item(Area.LEAD_INDEX, LeadIndex.ledgerWhat(r), r.newest, LeadIndex.ledgerWhy(r), LeadIndex.UNDO)
+        }
+        // The index Boss follows on a given weekday, its read given first in "how's the market" on that weekday ([DayIndex];
+        // from the kinds tally, counts only). Only the order of the index lines changes: never a figure, the verdict, or
+        // anything that acts.
+        DayIndex.learnedAll(i.tally, i.dayIndex, today).forEach { r ->
+            out += Item(Area.DAY_INDEX, DayIndex.ledgerWhat(r), r.newest, DayIndex.ledgerWhy(r), DayIndex.UNDO)
         }
         // The part of a market read Boss asks for on its own, said right after the price in an overview ([LeadPart]; from
         // the kinds tally, counts only). Only the order of the sentences changes: never a figure, or anything that acts.
@@ -396,10 +406,11 @@ object Learnings {
                     val turnDowns: List<TurnDowns.Record> = emptyList(), val lengths: List<TopicLength.Record> = emptyList(),
                     val usualIndex: List<UsualIndex.Record> = emptyList(), val nicknames: List<Nicknames.Note> = emptyList(),
                     val leadIndex: List<LeadIndex.Record> = emptyList(), val leadPart: List<LeadPart.Record> = emptyList(),
-                    val nextAsk: List<NextAsk.Record> = emptyList(), val moreAfter: List<MoreAfter.Record> = emptyList()) {
+                    val nextAsk: List<NextAsk.Record> = emptyList(), val moreAfter: List<MoreAfter.Record> = emptyList(),
+                    val dayIndex: List<DayIndex.Record> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
             stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty() && lengths.isEmpty() && usualIndex.isEmpty() && nicknames.isEmpty() &&
-            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty() && moreAfter.isEmpty()
+            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty() && moreAfter.isEmpty() && dayIndex.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -422,7 +433,8 @@ object Learnings {
             listOfNotNull(LeadIndex.learned(i.tally, i.leadIndex, today)),
             listOfNotNull(LeadPart.learned(i.tally, i.leadPart, today)),
             NextAsk.learned(i.routineLog, i.nextAsk, today),
-            MoreAfter.learned(i.moreAfter, i.tally, now))
+            MoreAfter.learned(i.moreAfter, i.tally, now),
+            DayIndex.learnedAll(i.tally, i.dayIndex, today))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -453,6 +465,7 @@ object Learnings {
         if (u.nicknames.isEmpty()) null else "the nicknames you use for your arms and positions (" + u.nicknames.take(SHOW).joinToString(", ") { "\"${it.words}\"" } +
             (if (u.nicknames.size > SHOW) ", ..." else "") + ") - forgotten",
         if (u.leadIndex.isEmpty()) null else "the index I name first (" + u.leadIndex.joinToString(", ") { it.phrase } + ") - Nifty first again",
+        if (u.dayIndex.isEmpty()) null else "the index I lead the market read with by weekday (" + u.dayIndex.joinToString(", ") { it.phrase } + ") - Nifty first every day again",
         if (u.leadPart.isEmpty()) null else "what I say first in an overview (" + u.leadPart.joinToString(", ") { it.phrase } + ") - the usual order again",
         if (u.nextAsk.isEmpty()) null else "the question I offer next after an answer (" + u.nextAsk.take(SHOW).joinToString(", ") { it.phrase + " after " + it.afterPhrase } + ") - no longer offered",
         if (u.moreAfter.isEmpty()) null else "the answers I say in full straight away (" + u.moreAfter.take(SHOW).joinToString(", ") { it.phrase } + ") - the short line first again",

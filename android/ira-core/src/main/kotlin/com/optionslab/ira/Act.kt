@@ -307,12 +307,12 @@ object Commands {
     }
 
     /** "Stop offering", "stop reminding me", "stop saying", "stop shortening"...: a speech habit of Jarvis's own named after "stop". */
-    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out|mentioning|naming|listing|putting|starting with|starting on|beginning with|beginning on|suggesting|asking|ending|finishing) ")
+    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out|mentioning|naming|listing|putting|starting with|starting on|beginning with|beginning on|leading with|opening with|changing|switching|suggesting|asking|ending|finishing) ")
 
     /**
      * "Stop offering my morning question", "stop shortening your briefings", "stop reminding me why I turn your ideas down":
      * the undo of a speech habit Jarvis learned ([MorningAsks], [TurnDowns], [TalkHours], [HonestStars], [WordFit],
-     * [MorningSense], [TopicLength], [LeadIndex], [LeadPart], [NextAsk], [MoreAfter], [SmallTrades]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
+     * [MorningSense], [TopicLength], [LeadIndex], [LeadPart], [NextAsk], [MoreAfter], [SmallTrades], [DayIndex]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
      * habit's own undo takes the very words: "stop orb", "stop the order watch", "stop offering trades" stay as they were.
      */
     private fun habitUndo(s: String): Boolean = HABIT_VERB.containsMatchIn(s) && (
@@ -321,7 +321,8 @@ object Commands {
             WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET ||
             TopicLength.asked(s) == TopicLength.Request.RESET || LeadIndex.asked(s) == LeadIndex.Request.RESET ||
             LeadPart.asked(s) == LeadPart.Request.RESET || NextAsk.asked(s) == NextAsk.Request.RESET ||
-            MoreAfter.asked(s) == MoreAfter.Request.RESET || SmallTrades.asked(s) == SmallTrades.Request.RESET)
+            MoreAfter.asked(s) == MoreAfter.Request.RESET || SmallTrades.asked(s) == SmallTrades.Request.RESET ||
+            DayIndex.asked(s) == DayIndex.Request.RESET)
 
     private fun one(kind: Command.Kind, what: String): Command {
         val n = rx("^(?:number |no |#)?(\\d{1,2})$").find(what)?.groupValues?.get(1)?.toIntOrNull()

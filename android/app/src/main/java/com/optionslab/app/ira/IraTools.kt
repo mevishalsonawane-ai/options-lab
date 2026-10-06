@@ -1464,6 +1464,55 @@ internal object IraTools {
         return said
     }
 
+    // ---- the index Boss follows on a given weekday, its read first in "how's the market" ([com.optionslab.ira.DayIndex]) ----
+
+    /** Only the day Boss last asked for Nifty first every day again: the learning reads the kinds tally already kept ([askedKinds]). */
+    private const val DAY_INDEX = "jarvis.dayIndex"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun dayIndexLog(): com.optionslab.ira.DayIndex.Log = runCatching {
+        val o = JSONObject(prefs().getString(DAY_INDEX) ?: "{}")
+        com.optionslab.ira.DayIndex.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { java.time.LocalDate.parse(it) })
+    }.getOrDefault(com.optionslab.ira.DayIndex.Log())
+
+    @Synchronized private fun dayIndexSave(log: com.optionslab.ira.DayIndex.Log) {
+        runCatching {
+            val o = JSONObject()
+            log.resetOn?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(DAY_INDEX to o.toString()))
+        }
+    }
+
+    /** Every weekday's learned index now (counts only; nothing here acts). */
+    private fun dayIndexAll(): List<com.optionslab.ira.DayIndex.Record> = runCatching {
+        com.optionslab.ira.DayIndex.learnedAll(askedKinds(), dayIndexLog(), com.optionslab.app.data.Market.today())
+    }.getOrDefault(emptyList())
+
+    /**
+     * The index whose read "how's the market" gives first today, or null: Nifty first, as always. Never on a [locked]
+     * phone, never in IraGoldAlgo. Only the order of the index lines changes - never a figure, the verdict, or anything that acts.
+     */
+    fun dayIndexLead(locked: Boolean): com.optionslab.ira.Market? {
+        if (locked || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        return runCatching { com.optionslab.ira.DayIndex.lead(askedKinds(), dayIndexLog(), com.optionslab.app.data.Market.today(), locked) }.getOrNull()
+    }
+
+    /** "Which index do you lead with on Wednesdays?". */
+    fun dayIndexSay(): String = runCatching { com.optionslab.ira.DayIndex.say(dayIndexAll(), com.optionslab.app.data.Market.today()) }
+        .getOrDefault("I could not read my count of the index you follow on each weekday just now, Boss.")
+
+    /**
+     * "Lead with Nifty every day again": Nifty first every day, the count afresh from tomorrow. On a [locked] phone, one
+     * neutral reply that never names the index or the weekday learned (nor whether one was).
+     */
+    fun dayIndexReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.DayIndex.RESET_LOCKED
+            else runCatching { com.optionslab.ira.DayIndex.sayReset(dayIndexAll()) }.getOrDefault("Done, Boss: Nifty first every day again.")
+        dayIndexSave(com.optionslab.ira.DayIndex.reset(com.optionslab.app.data.Market.today()))
+        IraActivity.add("Leading the market read with Nifty every day again (as asked).")
+        return said
+    }
+
     // ---- the part Boss asks for on its own, said right after the price in an overview ([com.optionslab.ira.LeadPart]) ----
 
     /** Only the day Boss last asked for his overviews in the usual order: the learning reads the kinds tally already kept ([askedKinds]). */
@@ -1842,6 +1891,7 @@ internal object IraTools {
         usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()),
         nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()),
         leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()),
+        dayIndex = runCatching { dayIndexLog() }.getOrDefault(com.optionslab.ira.DayIndex.Log()),
         leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()),
         routineLog = runCatching { routineLog() }.getOrDefault(emptyList()),
         nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()),
@@ -1872,6 +1922,7 @@ internal object IraTools {
         if (u.usualIndex.isNotEmpty()) { indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }; indexLast = null }
         if (u.nicknames.isNotEmpty()) { nickUpdate { com.optionslab.ira.Nicknames.forgetWeek(it, today) }; nickAsked = null }
         if (u.leadIndex.isNotEmpty()) firstIndexSave(com.optionslab.ira.LeadIndex.reset(today))
+        if (u.dayIndex.isNotEmpty()) dayIndexSave(com.optionslab.ira.DayIndex.reset(today))
         if (u.leadPart.isNotEmpty()) leadPartSave(com.optionslab.ira.LeadPart.reset(today))
         if (u.nextAsk.isNotEmpty()) { nextAskSave(com.optionslab.ira.NextAsk.reset(now)); nextAskOffered = null }
         if (u.moreAfter.isNotEmpty()) moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }

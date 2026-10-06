@@ -1619,7 +1619,7 @@ object IraHub {
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
                 com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null || com.optionslab.ira.MoreAfter.asked(q) != null ||
-                com.optionslab.ira.SmallTrades.asked(q) != null ||
+                com.optionslab.ira.SmallTrades.asked(q) != null || com.optionslab.ira.DayIndex.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -2264,7 +2264,13 @@ object IraHub {
         if (Topic.TRADE_CHECK in parsed.topics) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch {
-                val said = runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }
+                // On a weekday Boss follows another index, its read first ([com.optionslab.ira.DayIndex]; unlocked only, never
+                // in IraGoldAlgo): the same lines, only their order - the verdict and its reasons unchanged, nothing acts.
+                val said = runCatching {
+                    val verdict = tradeCheckFast()
+                    val dayLead = runCatching { IraTools.dayIndexLead(phoneLocked()) }.getOrNull()
+                    (if (dayLead == null) verdict else verdict.copy(reads = com.optionslab.ira.DayIndex.leadReads(verdict.reads, dayLead))).say()
+                }.getOrElse { "I could not run the trade check just now." }
                 // What Boss told me about himself that bears on now ("I get greedy after a win" when he is up): his words and
                 // his day, so only on an unlocked phone. Words only - it changes nothing.
                 val about = if (phoneLocked()) null else runCatching { aboutBossNow() }.getOrNull()
@@ -2416,7 +2422,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2696,6 +2702,18 @@ object IraHub {
                     if (smallReq == com.optionslab.ira.SmallTrades.Request.RESET) IraTools.smallTradesReset(smallLocked) else IraTools.smallTradesSay()
                 }.getOrElse { "I couldn't read your trades' record just now, Boss." })
             }
+            return true
+        }
+        // "Which index do you lead with on Wednesdays?" / "lead with Nifty every day again": the index Boss follows on a given
+        // weekday, its read given first in "how's the market" on that weekday ([com.optionslab.ira.DayIndex]; from the kinds
+        // tally, counts only). His habit: named on an unlocked phone only; the undo works locked too, in neutral words. Only
+        // the order of the index lines changes - nothing learned acts. Not in IraGoldAlgo.
+        val dayIndexReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.DayIndex.asked(q) }.getOrNull() else null
+        if (dayIndexReq != null) {
+            val dayIndexSaid = if (dayIndexReq == com.optionslab.ira.DayIndex.Request.RESET) IraTools.dayIndexReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.DayIndex.LOCKED else IraTools.dayIndexSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, dayIndexSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false
