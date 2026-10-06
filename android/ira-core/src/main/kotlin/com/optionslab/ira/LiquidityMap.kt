@@ -29,6 +29,12 @@ object LiquidityMap {
     /** At most one heads-up per index in this many minutes. */
     const val RATE_MINUTES = 10L
 
+    /** A price older than this many minutes is stale: no heads-up from it, and an answer says its time. */
+    const val FRESH_MINUTES = 2L
+
+    /** [r]'s price was read within [FRESH_MINUTES] of [now] (its minute started then or later). */
+    fun fresh(r: Read, now: LocalDateTime): Boolean = r.priceAt?.let { !it.isBefore(now.minusMinutes(FRESH_MINUTES)) } ?: false
+
     // ---- the question ---------------------------------------------------------------------------------------------
 
     /** What was asked: [underlyings] the indices (both when none is named; empty: only an index the arm does not read), [minutes] one book's chart, or all. */
@@ -194,8 +200,15 @@ object LiquidityMap {
             State.LOADING -> "$head: only ${r.bars} closed bars so far - the levels need $MIN_BARS (the last days' candles are still loading)."
             State.OK -> {
                 val price = r.price ?: 0.0
-                val asOf = r.priceAt?.takeIf { it.toLocalDate() != now.toLocalDate() }
-                    ?.let { " (as of ${it.toLocalDate().dayOfMonth} ${it.month.name.lowercase(Locale.ENGLISH).replaceFirstChar { c -> c.uppercase() }.take(3)} ${hm(it.toLocalTime())})" } ?: ""
+                // An earlier day's price with its day; today's older than [FRESH_MINUTES] with its time (the feed is behind).
+                val at = r.priceAt
+                val asOf = when {
+                    at == null -> ""
+                    at.toLocalDate() != now.toLocalDate() ->
+                        " (as of ${at.toLocalDate().dayOfMonth} ${at.month.name.lowercase(Locale.ENGLISH).replaceFirstChar { c -> c.uppercase() }.take(3)} ${hm(at.toLocalTime())})"
+                    !fresh(r, now) -> " (as of ${hm(at.toLocalTime())})"
+                    else -> ""
+                }
                 "$head: price ${n(price)}$asOf. ${sideWords(r.above, price, r.underlying)} ${sideWords(r.below, price, r.underlying)}"
             }
         }
@@ -229,12 +242,13 @@ object LiquidityMap {
     data class Cue(val underlying: String, val minutes: Int, val side: Int, val level: Double, val distance: Double, val text: String, val key: String)
 
     /**
-     * The book's heads-up now, or null: in its entry hours (the bar forming now could enter), the price within [near]
-     * points short of a pool on a swing whose close-through has room ("BankNifty is 12 pts from 54,180 - a 5-min close
-     * above it would make Liquidity buy a call").
+     * The book's heads-up at [now], or null: in its entry hours (the bar forming now could enter), the price - read within
+     * the last [FRESH_MINUTES] minutes ([fresh]; a stale price is never a heads-up) - within [near] points short of a pool
+     * on a swing whose close-through has room ("BankNifty is 12 pts from 54,180 - a 5-min close above it would make
+     * Liquidity buy a call").
      */
-    fun cue(r: Read): Cue? {
-        if (r.state != State.OK || !r.entryOpen) return null
+    fun cue(r: Read, now: LocalDateTime): Cue? {
+        if (r.state != State.OK || !r.entryOpen || !fresh(r, now)) return null
         val price = r.price ?: return null
         return listOfNotNull(r.above, r.below).mapNotNull { s ->
             val t = s.trigger ?: return@mapNotNull null
@@ -259,7 +273,7 @@ object LiquidityMap {
         val out = ArrayList<Cue>()
         for ((und, rs) in reads.groupBy { it.underlying }) {
             if (last[und]?.let { now.isBefore(it.plusMinutes(RATE_MINUTES)) } == true) continue
-            val c = rs.mapNotNull { cue(it) }.filter { it.key.startsWith("$day|") && it.key !in keys }.minByOrNull { it.distance } ?: continue
+            val c = rs.mapNotNull { cue(it, now) }.filter { it.key.startsWith("$day|") && it.key !in keys }.minByOrNull { it.distance } ?: continue
             out += c; keys = keys + c.key; last[und] = now
         }
         return out to Told(keys, last)

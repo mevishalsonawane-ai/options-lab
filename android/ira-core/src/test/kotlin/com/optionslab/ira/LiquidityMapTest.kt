@@ -31,8 +31,10 @@ class LiquidityMapTest {
         z("pool", 1, 54_150.0, 54_140.0, broken = 30), z("swing", 1, 54_140.0, 54_120.0, known = 60),
     )
 
-    private fun read(price: Double, zs: List<Zone> = zones(), und: String = "BANKNIFTY", minutes: Int = 5, open: Boolean = true) =
-        LiquidityMap.read(bars, zs, und, minutes, price, day.atTime(10, 31), open)
+    private fun read(price: Double, zs: List<Zone> = zones(), und: String = "BANKNIFTY", minutes: Int = 5, open: Boolean = true,
+                     at: LocalDateTime = day.atTime(10, 31)) =
+        LiquidityMap.read(bars, zs, und, minutes, price, at, open)
+    private val t31 = day.atTime(10, 31, 40)
 
     @Test fun bothSidesWithRoom() {
         val r = read(54_120.0)
@@ -83,6 +85,10 @@ class LiquidityMapTest {
         // A price from an earlier day is said with its time.
         val old = LiquidityMap.say(read(54_120.0), day.plusDays(1).atTime(9, 1))
         assertTrue(old.startsWith("BankNifty 5-min: price 54,120 (as of 5 Oct 10:31)."), old)
+        // Today's, more than 2 minutes old (the feed behind): with its time; within 2 minutes: none.
+        val late = LiquidityMap.say(read(54_120.0), day.atTime(10, 34))
+        assertTrue(late.startsWith("BankNifty 5-min: price 54,120 (as of 10:31)."), late)
+        assertTrue(LiquidityMap.say(read(54_120.0), day.atTime(10, 33)).startsWith("BankNifty 5-min: price 54,120. "))
     }
 
     /** Three sessions of 1-minute bars on a wavy series. */
@@ -146,19 +152,24 @@ class LiquidityMapTest {
     }
 
     @Test fun theHeadsUpComesNearALevelWithRoomInTheEntryHours() {
-        val c = LiquidityMap.cue(read(54_168.0))
+        val c = LiquidityMap.cue(read(54_168.0), t31)
         assertNotNull(c)
         assertEquals("BankNifty is 12 pts from 54,180 - a 5-min close above it would make Liquidity buy a call.", c.text)
-        assertEquals("BankNifty is 15 pts from 54,000 - a 5-min close below it would make Liquidity buy a put.", LiquidityMap.cue(read(54_015.0))!!.text)
-        assertNull(LiquidityMap.cue(read(54_160.0)))                              // 20 points away
-        assertNull(LiquidityMap.cue(read(54_168.0, open = false)))                // outside the entry hours
-        assertNull(LiquidityMap.cue(read(54_168.0, zones(nextAbove = 54_200.0)))) // no room: never a heads-up
-        assertNull(LiquidityMap.cue(read(54_185.0)))                              // already past it
+        assertEquals("BankNifty is 15 pts from 54,000 - a 5-min close below it would make Liquidity buy a put.", LiquidityMap.cue(read(54_015.0), t31)!!.text)
+        assertNull(LiquidityMap.cue(read(54_160.0), t31))                              // 20 points away
+        assertNull(LiquidityMap.cue(read(54_168.0, open = false), t31))                // outside the entry hours
+        assertNull(LiquidityMap.cue(read(54_168.0, zones(nextAbove = 54_200.0)), t31)) // no room: never a heads-up
+        assertNull(LiquidityMap.cue(read(54_185.0), t31))                              // already past it
         // FINNIFTY: 8 points.
         val fz = listOf(z("swing", 1, 26_100.0, 26_050.0), z("pool", 1, 26_100.0, 26_090.0))
-        assertNotNull(LiquidityMap.cue(read(26_092.0, fz, "FINNIFTY", 30)))
-        assertNull(LiquidityMap.cue(read(26_091.0, fz, "FINNIFTY", 30)))
-        assertNull(LiquidityMap.cue(LiquidityMap.Read("BANKNIFTY", 5, LiquidityMap.State.NO_DATA)))
+        assertNotNull(LiquidityMap.cue(read(26_092.0, fz, "FINNIFTY", 30), t31))
+        assertNull(LiquidityMap.cue(read(26_091.0, fz, "FINNIFTY", 30), t31))
+        assertNull(LiquidityMap.cue(LiquidityMap.Read("BANKNIFTY", 5, LiquidityMap.State.NO_DATA), t31))
+        // A stale price (its minute started more than 2 minutes ago: the feed is behind) is never a heads-up.
+        assertNotNull(LiquidityMap.cue(read(54_168.0), day.atTime(10, 33)))
+        assertNull(LiquidityMap.cue(read(54_168.0), day.atTime(10, 33, 1)))
+        assertNull(LiquidityMap.cue(read(54_168.0, at = day.minusDays(1).atTime(14, 0)), t31))
+        assertTrue(LiquidityMap.cues(listOf(read(54_168.0)), day.atTime(10, 40), LiquidityMap.Told()).first.isEmpty())
     }
 
     @Test fun onceALevelADayAndOncePerIndexInTenMinutes() {
@@ -166,14 +177,14 @@ class LiquidityMapTest {
         val (c1, told1) = LiquidityMap.cues(listOf(read(54_168.0, minutes = 15), read(54_168.0)), t0, LiquidityMap.Told())
         assertEquals(1, c1.size)                                                  // one per index, the two books one level
         // The same level again later: never twice a day.
-        assertTrue(LiquidityMap.cues(listOf(read(54_170.0)), t0.plusMinutes(30), told1).first.isEmpty())
+        assertTrue(LiquidityMap.cues(listOf(read(54_170.0, at = t0.plusMinutes(30))), t0.plusMinutes(30), told1).first.isEmpty())
         // Another level within 10 minutes: held; after 10 minutes: told.
-        assertTrue(LiquidityMap.cues(listOf(read(54_010.0)), t0.plusMinutes(9), told1).first.isEmpty())
-        val (c2, told2) = LiquidityMap.cues(listOf(read(54_010.0)), t0.plusMinutes(10), told1)
+        assertTrue(LiquidityMap.cues(listOf(read(54_010.0, at = t0.plusMinutes(9))), t0.plusMinutes(9), told1).first.isEmpty())
+        val (c2, told2) = LiquidityMap.cues(listOf(read(54_010.0, at = t0.plusMinutes(10))), t0.plusMinutes(10), told1)
         assertEquals(listOf(54_000.0), c2.map { it.level })
         // FINNIFTY has its own limit.
         val fz = listOf(z("swing", -1, 26_010.0, 26_000.0), z("pool", -1, 26_005.0, 26_000.0))
-        assertEquals(1, LiquidityMap.cues(listOf(read(26_004.0, fz, "FINNIFTY")), t0.plusMinutes(11), told2).first.size)
+        assertEquals(1, LiquidityMap.cues(listOf(read(26_004.0, fz, "FINNIFTY", at = t0.plusMinutes(11))), t0.plusMinutes(11), told2).first.size)
         // A new day starts afresh (its own price time).
         val next = LiquidityMap.read(bars, zones(), "BANKNIFTY", 5, 54_168.0, day.plusDays(1).atTime(10, 0), true)
         val (c3, told3) = LiquidityMap.cues(listOf(next), day.plusDays(1).atTime(10, 0), told2)
