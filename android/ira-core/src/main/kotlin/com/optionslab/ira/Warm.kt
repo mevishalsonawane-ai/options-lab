@@ -42,7 +42,7 @@ object Warm {
         RoundCloses::asked, Routine::asked, Routine::forgetAsked, SaidAbout::asked, Scenarios::asked, SelfCalibration::asked,
         SelfCheck::asked, SelfWhy::asked, SharpMove::asked, SinceLast::asked, SinceMorning::asked, Sizing::asked,
         SplitDays::asked, StraddleDecay::asked, Streak::asked, StreamHealth::asked, Structure::asked, SwitchOff::asked, TalkHours::asked,
-        TaxRecords::asked, TaxRecords::exportAsked, Thinking::asked, Together::asked, TopicLength::asked, Tour::asked, TradeCase::asked, TradeReplay::asked, TradeSearch::asked,
+        TaxRecords::asked, TaxRecords::exportAsked, Thinking::asked, Together::asked, TopicLength::asked, Tour::asked, WhatsNew::asked, TradeCase::asked, TradeReplay::asked, TradeSearch::asked,
         TrendReads::asked, TrendReads::span, TurnDowns::asked, UsualIndex::asked, Vetting::asked, VixNext::asked,
         VixBand::asked, VixRank::asked, WatchAsk::asked, WeakLink::asked, WeekAhead::asked, WeeklyReview::asked, LiquidityRecord::asked, LiquidityWhyNot::asked, SoloDay::asked, TomorrowPlan::asked, WeekRange::asked, Weekdays::asked, WhatIf::asked,
         WordFit::asked, WrongThing::asked, WrongThing::objected, ZerodhaSession::asked

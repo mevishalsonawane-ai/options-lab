@@ -575,6 +575,8 @@ internal data class NavState(
         "health" -> copy(tab = Tab.LAB, labPage = "health")
         // "Today at a glance": its live-vs-backtest lines open the P&L tab, where that card is.
         "pnl" -> copy(tab = Tab.PNL)
+        // "What's new": the Pine change opens the Pine scripts page.
+        "pine" -> copy(tab = Tab.LAB, labPage = "pine")
         else -> copy(tab = Tab.CABINET, cabinetPage = dest)
     }
 

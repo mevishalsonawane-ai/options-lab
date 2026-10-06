@@ -1669,7 +1669,7 @@ object IraHub {
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) ||
-                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
+                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
@@ -3463,7 +3463,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on what to ask, how fresh the data is, what the phone has no data for and Jarvis's own
-     * reasons: Tour, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
+     * reasons: Tour, WhatsNew, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfJarvis(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3480,6 +3480,19 @@ object IraHub {
                     com.optionslab.app.data.Market.isTradingDay(today)), today)
             }.getOrDefault("Ask me how the market is doing, what matters right now, or \"what can you do\" for everything, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What's new?", "what changed in the app?", "naya kya hai" ([com.optionslab.ira.WhatsNew]): the newest entries of the app's
+        // own changelog, newest first, each with a question to try or where to find it, and where the full list is (Settings ->
+        // What's new). It holds nothing of the account and acts on nothing, so it is the same on a locked phone. "What's new in
+        // the market", "any news" and "what's changed since I last asked" keep their routes. (Not in IraGoldAlgo.)
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.WhatsNew.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                com.optionslab.ira.WhatsNew.answer(com.optionslab.ira.WhatsNew.forBuild(gold = false, jarvis = com.optionslab.app.BuildConfig.JARVIS))
+            }.getOrDefault("What's new in the app, and where to find each change, is in Settings under What's new, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
             return true
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's

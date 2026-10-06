@@ -136,6 +136,7 @@ class CollisionTest {
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
+        "WhatsNew" to { q -> WhatsNew.asked(q) },
         "MarketRecord" to { q -> MarketRecord.asked(q) },
         "MorningCues" to { q -> MorningCues.asked(q) != null },
         "BigMoveRisk" to { q -> BigMoveRisk.asked(q) },
@@ -545,6 +546,11 @@ class CollisionTest {
         "what should i ask you now" to "Tour", "what else can i ask you" to "Tour", "any questions i should ask" to "Tour",
         "what kind of things can i ask you" to "Tour", "suggest some good questions" to "Tour", "aapse kya pooch sakta hoon" to "Tour",
         "sawal suggest karo" to "Tour", "take me on a tour" to "Tour",
+        // ---- WhatsNew: the app's own changelog (what changed in the app, never the market's news) ----
+        "what's new" to "WhatsNew", "whats new" to "WhatsNew", "what's new in the app" to "WhatsNew", "what is new in this update" to "WhatsNew",
+        "what changed" to "WhatsNew", "what has changed in the app" to "WhatsNew", "what's changed in this build" to "WhatsNew",
+        "naya kya hai" to "WhatsNew", "kya naya hai" to "WhatsNew", "app mein naya kya hai" to "WhatsNew", "naya kya aaya" to "WhatsNew",
+        "what are the new features" to "WhatsNew", "show me the changelog" to "WhatsNew", "jarvis what's new" to "WhatsNew",
         // ---- FigureFirst: the figure said first ----
         "which answers do you start with the number" to "FigureFirst", "why do you start with the number first" to "FigureFirst",
         "don't start with the number" to "FigureFirst", "why are you saying the level first" to "LeadPart",
@@ -1466,7 +1472,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3173,5 +3179,31 @@ class CollisionTest {
         for (s in listOf("why didn't orb trade", "why didn't liquidity trade", "how is solo doing", "solo on", "solo off", "switch on solo",
             "why didn't solo take that trade", "why didn't solo trade yesterday", "what did solo do last week", "solo ko band karo", "solo chalu karo"))
             assertTrue(audit.feature(s) != "SoloDay", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- WhatsNew: the app's changelog takes only its own words; the news, the market and "since I last asked" keep theirs ----
+
+    @Test fun whatsNewLeavesTheNewsAndTheMarketTheirRoutes() {
+        for (s in listOf("what's new", "what's new in the app", "what changed", "what has changed", "naya kya hai", "kya naya hai",
+            "app mein naya kya hai", "what's new in this update", "what are the new features", "release notes")) {
+            assertEquals("WhatsNew", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The news and the market: as before.
+        for (s in listOf("what's new in the market", "any news", "news", "what's happening", "latest news", "what's new today", "what is new today",
+            "what's new with nifty", "what's new in banknifty", "anything new", "naya kya hai market mein", "what's new on the news", "any updates"))
+            assertEquals("Market", audit.feature(s), s)
+        assertEquals("SinceMorning", audit.feature("what's new since the open"))
+        assertEquals("SinceMorning", audit.feature("what changed since this morning"))
+        assertEquals("SinceLast", audit.feature("what's changed since i last asked"))
+        assertEquals("SinceLast", audit.feature("what changed since last time"))
+        assertEquals("Learnings", audit.feature("what changed in how you work"))
+        assertEquals("ArmChange", audit.feature("what changed in my bots this week"))
+        assertEquals("Tour", audit.feature("what can i ask you"))
+        for (s in listOf("what's new in the market", "any news", "news", "what's happening", "what changed today", "what changed in nifty",
+            "what changed in my positions", "what changed in the chain", "what's the latest", "naya kya hai market mein", "subah se kya badla"))
+            assertTrue(audit.feature(s) != "WhatsNew", "$s: ${audit.feature(s)}")
     }
 }

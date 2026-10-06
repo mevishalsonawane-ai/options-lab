@@ -62,7 +62,12 @@ private val GROUPS = listOf(
     "Data" to listOf(
         Drawer("data", "Data and harvest", "The record, nightly harvest, provenance"),
     ),
-)
+) + (if (!com.optionslab.app.BuildConfig.GOLD) listOf(
+    // What changed in recent updates and where to find it (WhatsNewPage); Home's card shows the unseen ones.
+    "App" to listOf(
+        Drawer("whatsnew", "What's new", "Recent changes to the app and where to find them"),
+    ),
+) else emptyList())
 
 @Composable
 fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
@@ -102,6 +107,7 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "security" -> SecurityPage(model)
             "schedule" -> SchedulePage(model)
             "notes" -> NotesPage()
+            "whatsnew" -> WhatsNewPage()
             else -> Drawers(onPage)
         }
     }
