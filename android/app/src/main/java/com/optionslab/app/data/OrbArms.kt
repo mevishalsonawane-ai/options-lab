@@ -615,6 +615,21 @@ object OrbArms {
         book().positions.filter { it.arm in books && it.day == day }
     }
 
+    /**
+     * Liquidity 15+5's open position for its live panel ([com.optionslab.ira.LiquidityOpen]): the position (the same one
+     * [ArmView.open] shows), its last mark, and the last index price the arm's own pass read for its index with that bar's
+     * minute (null: none read). Copies under the lock, nothing fetched or built; reads only.
+     */
+    data class LiquidityOpenNow(val position: Position, val mark: Double?, val index: Double?, val indexAt: LocalDateTime?)
+
+    suspend fun liquidityOpenNow(): LiquidityOpenNow? = lock.withLock {
+        val books = LiquidityRules.BOOKS.map { it.source }
+        val p = book().positions.lastOrNull { it.arm in books && it.open } ?: return@withLock null
+        val und = LiquidityRules.BOOKS.firstOrNull { it.source == p.arm }?.let { LiquidityRules.underlyingOf(it) }
+        val last = und?.let { liquidityPass[it]?.second?.lastOrNull() }
+        LiquidityOpenNow(p, marks[p.symbol], last?.close, last?.start)
+    }
+
     /** The pre-registered forward test on the closed arm trades, operator-closed trades excluded. */
     private fun forward(b: Book): PassRule.Verdict = PassRule.judge(
         // The paper-only arms' trades (ORB Sweep, Range Fade) and Liquidity 15+5's are not part of the ORB's pre-registered forward test.

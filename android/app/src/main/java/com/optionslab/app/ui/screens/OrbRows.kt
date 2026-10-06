@@ -69,7 +69,8 @@ fun OrbRows(model: AppModel) {
             override fun lots(n: Int) { model.liquidityLots(n) }
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) },
-        paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() })
+        paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() },
+        openRead = { OrbArms.liquidityOpenNow() })
 }
 
 /** What the ORB rows ask the model to do (an interface so tests can record it without an [AppModel]). */
@@ -95,6 +96,11 @@ internal fun OrbRowsContent(
      * in the app), read off the main thread. Null: no card. Reads only.
      */
     paperRecord: (suspend () -> com.optionslab.ira.LiquidityEquity.Equity?)? = null,
+    /**
+     * Liquidity 15+5's open position as its live panel reads it ([LiquidityOpenPanel]; [OrbArms.liquidityOpenNow] in the
+     * app), off the main thread on each refresh of the rows. Null: the panel shows the row's own position and mark. Reads only.
+     */
+    openRead: (suspend () -> OrbArms.LiquidityOpenNow?)? = null,
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
@@ -193,6 +199,8 @@ internal fun OrbRowsContent(
                 }
             }
         }
+        // Liquidity 15+5's open position, live: its exits as they stand and how far each is (reads only; never in the GOLD build).
+        if (a.arm.liquidity && a.open != null && !com.optionslab.app.BuildConfig.GOLD) LiquidityOpenPanel(a.open, a.mark, openRead)
         // Liquidity 15+5's paper record since its forward test began, against its backtest; read again when a trade closes.
         // Reads only, never in the GOLD build.
         if (a.arm.liquidity && paperRecord != null && !com.optionslab.app.BuildConfig.GOLD)
