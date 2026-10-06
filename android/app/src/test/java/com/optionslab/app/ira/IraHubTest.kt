@@ -797,7 +797,8 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("clear my target")
         waitFor("cleared") { IraJournal.target() == null }
         IraHub.ask("Jarvis, note: I bought because of the hammer at support")
-        waitFor("the note") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Noted, Boss") == true }
+        // Among the latest lines (a background line of Jarvis's own may land after the reply).
+        waitFor("the note") { IraHub.state.value.messages.takeLast(5).any { it.fromIra && it.text.startsWith("Noted, Boss") } }
         assertTrue(IraJournal.reasons().single().startsWith("Not enough noted trades"))
         assertEquals("No Thursday trades found.", IraJournal.search("how did my thursday trades do").single())
         // Each automation starts at its default: all on, except trailing the owner's own stops (it moves live orders).
