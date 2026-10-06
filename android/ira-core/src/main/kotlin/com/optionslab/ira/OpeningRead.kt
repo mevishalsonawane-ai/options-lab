@@ -201,6 +201,24 @@ object OpeningRead {
         return Place(underlying, open, prevClose != null && open != prevClose, above, below, took)
     }
 
+    /**
+     * [underlying]'s place from each of its books' levels at the open ([books]: one entry a book, null when that book's
+     * levels could not be read - [levelsAtOpen]). Null when no book's levels were read: "levels not read" is never said as
+     * "no levels" (nothing untaken above or below, the gap took none).
+     */
+    fun placeFrom(underlying: String, open: Double, prevClose: Double?, books: List<List<Lvl>?>): Place? {
+        if (books.all { it == null }) return null
+        return place(underlying, open, prevClose, books.filterNotNull().flatten())
+    }
+
+    /**
+     * The opening is on the phone for the scheduled note at [now] ([kept]: each index of [MARKETS] whose kept candles hold
+     * it, [hasOpening]): every index's, or, by the window's last minute ([POST_LAST]), any one's. Otherwise the next round
+     * tries again (nothing is read from the network for it).
+     */
+    fun keptEnough(kept: Map<Market, Boolean>, now: LocalDateTime): Boolean =
+        MARKETS.all { kept[it] == true } || (!now.toLocalTime().isBefore(POST_LAST) && MARKETS.any { kept[it] == true })
+
     // ---- GIFT Nifty -----------------------------------------------------------------------------------------------
 
     /**
@@ -230,12 +248,21 @@ object OpeningRead {
     fun gapWords(g: Gap, gift: Double?): String =
         "${g.market.label} ${signed(g.points)} pts (${signedPct(g.pct)}" + (gift?.let { "; GIFT Nifty pointed to ${signed(it)}" } ?: "") + ")"
 
+    /**
+     * The first line. Every gap against the same session: "yesterday's" only when that session is the calendar day before,
+     * else it is named; gaps against different sessions (one index's candles older): each index's own session named.
+     */
     private fun gapLine(f: Facts): String {
         val day = f.now.toLocalDate().format(DAY)
-        val gaps = f.indices.mapNotNull { i -> i.gap?.let { g -> gapWords(g, if (g.market == Market.NIFTY) giftPointed(f.gift, g, f.now) else null) } }
-        val prev = f.indices.mapNotNull { it.gap?.prevDay }.distinct().singleOrNull()
-        val against = if (prev != null && prev != f.now.toLocalDate().minusDays(1)) "against ${prev.format(DAY)}'s close" else "against yesterday's close"
-        return "Opening read, Boss ($day) - the open $against: ${gaps.joinToString(", ")}."
+        val read = f.indices.mapNotNull { it.gap }
+        val prev = read.map { it.prevDay }.distinct().singleOrNull()
+        fun words(g: Gap) = gapWords(g, if (g.market == Market.NIFTY) giftPointed(f.gift, g, f.now) else null)
+        if (prev == null) {
+            val gaps = read.map { g -> "${words(g)} vs ${g.prevDay.format(DAY)}" }
+            return "Opening read, Boss ($day) - the open against each index's last close: ${gaps.joinToString(", ")}."
+        }
+        val against = if (prev != f.now.toLocalDate().minusDays(1)) "against ${prev.format(DAY)}'s close" else "against yesterday's close"
+        return "Opening read, Boss ($day) - the open $against: ${read.joinToString(", ") { words(it) }}."
     }
 
     private fun lvlWords(l: Lvl, open: Double) = "${n(l.edge)} (${l.name}, ${l.minutes}-min) ${pts(l.edge - open)} pts away"
@@ -289,8 +316,11 @@ object OpeningRead {
         return "Big-move risk for ${r.market.label} now: ${lvl.word}, about ${times(x)} the usual - ${BigMoveRisk.CAVEAT}."
     }
 
-    /** Every line, in the order said (at most [MAX_LINES]; [brief]: the first [BRIEF_LINES]). */
-    fun lines(f: Facts, brief: Boolean = false): List<String> {
+    /**
+     * Every line, in the order said (at most [MAX_LINES]; [brief]: the first [BRIEF_LINES]). [locked] (asked on a locked
+     * phone): the arm's line (its switch, lots and first trigger) left out; the market's facts kept.
+     */
+    fun lines(f: Facts, brief: Boolean = false, locked: Boolean = false): List<String> {
         if (!f.tradingDay) return listOf(CLOSED)
         if (f.now.toLocalTime().isBefore(OPEN)) return listOf(NOT_YET)
         if (!ready(f)) return listOf(NO_CANDLES)
@@ -298,13 +328,13 @@ object OpeningRead {
         out += gapLine(f)
         f.places.forEach { out += placeLine(it) }
         firstLine(f)?.let { out += it }
-        f.arm?.let { out += armLine(it) }
+        if (!locked) f.arm?.let { out += armLine(it) }
         bigMoveLine(f.bigMove)?.let { out += it }
         return out.take(if (brief) BRIEF_LINES else MAX_LINES)
     }
 
     /** The read in words, one line each. */
-    fun say(f: Facts, brief: Boolean = false): String = lines(f, brief).joinToString("\n")
+    fun say(f: Facts, brief: Boolean = false, locked: Boolean = false): String = lines(f, brief, locked).joinToString("\n")
 
     // ---- asked ----------------------------------------------------------------------------------------------------
 

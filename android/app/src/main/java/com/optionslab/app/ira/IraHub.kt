@@ -3370,8 +3370,10 @@ object IraHub {
             runCatching { com.optionslab.ira.OpeningRead.asked(q) }.getOrDefault(false) else false
         if (openingAsk) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            // On a locked phone the Liquidity arm's line (its switch, lots and first trigger) is left out; the market's facts stay.
+            val lockedNow = phoneLocked()
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { IraOpening.answer() }.getOrElse { "I could not read the open just now, Boss." })
+                reply(runCatching { IraOpening.answer(locked = lockedNow) }.getOrElse { "I could not read the open just now, Boss." })
             }
             return true
         }

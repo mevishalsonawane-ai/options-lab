@@ -31,47 +31,56 @@ internal object IraOpening {
 
     private fun candles(bars: List<Bar>): List<Candle> = bars.map { Candle(it.start, it.open, it.high, it.low, it.close) }
 
-    /** An index's 1-minute bars as Liquidity 15+5 reads them: the arm's own read of the minute, else one read now (bounded). */
-    private suspend fun minutes(u: String, now: LocalDateTime): List<Bar>? =
-        com.optionslab.app.data.OrbArms.liquidityMinutesKept(u, now)
-            ?: runCatching { kotlinx.coroutines.withTimeoutOrNull(15_000) { com.optionslab.app.data.OrbArms.liquidityMinutesFor(u, now) } }.getOrNull()
+    /**
+     * An index's 1-minute bars as Liquidity 15+5 reads them: the arm's own read of the minute, else ([fresh]) one read now
+     * (bounded).
+     */
+    private suspend fun minutes(u: String, now: LocalDateTime, fresh: Boolean): List<Bar>? {
+        com.optionslab.app.data.OrbArms.liquidityMinutesKept(u, now)?.let { return it }
+        if (!fresh) return null
+        return runCatching { kotlinx.coroutines.withTimeoutOrNull(15_000) { com.optionslab.app.data.OrbArms.liquidityMinutesFor(u, now) } }.getOrNull()
+    }
 
     /**
      * [m]'s 1-minute candles holding today's opening: those Jarvis last read, else the arm's minutes ([ones]), else one read
-     * of the feed now ([IraHub.freshBars], bounded); whichever is there when none holds it.
+     * of the feed now ([IraHub.freshBars], bounded; only when [read]); whichever is there when none holds it.
      */
-    private suspend fun barsOf(m: IraMarket, ones: List<Bar>?, today: LocalDate, now: LocalDateTime): List<Candle> {
+    private suspend fun barsOf(m: IraMarket, ones: List<Bar>?, today: LocalDate, now: LocalDateTime, read: Boolean): List<Candle> {
         val recent = runCatching { IraHub.recentBars(m) }.getOrDefault(emptyList())
         if (OpeningRead.hasOpening(recent, today, now)) return recent
         val arm = ones?.let { candles(it) }
         if (arm != null && OpeningRead.hasOpening(arm, today, now)) return arm
-        val fresh = runCatching { IraHub.freshBars(m) }.getOrDefault(emptyList())
+        val fresh: List<Candle> = if (!read) emptyList() else runCatching { IraHub.freshBars(m) }.getOrDefault(emptyList())
         return listOf(fresh, arm.orEmpty(), recent).firstOrNull { OpeningRead.hasOpening(it, today, now) } ?: fresh.ifEmpty { recent }
     }
 
-    /** What the read is made of, read now. Each part read on its own: one that fails is left out, never guessed. */
-    suspend fun facts(): OpeningRead.Facts {
+    /**
+     * What the read is made of, read now. Each part read on its own: one that fails is left out, never guessed. [fresh]
+     * false (the scheduled note): only the candles already on the phone, no feed read.
+     */
+    suspend fun facts(fresh: Boolean = true): OpeningRead.Facts {
         val mk = com.optionslab.app.data.Market
         val now = mk.now().toLocalDateTime()
         val today = now.toLocalDate()
         val trading = runCatching { mk.isTradingDay(today) }.getOrDefault(true)
         if (!trading || now.toLocalTime().isBefore(LiquidityRules.SESSION_OPEN)) return OpeningRead.Facts(now = now, tradingDay = trading)
         // Liquidity 15+5's indices: the minutes the arm reads (the levels and the first trigger are read from them).
-        val ones = LiquidityRules.UNDERLYINGS.associateWith { u -> runCatching { minutes(u, now) }.getOrNull() }
-        val bars = OpeningRead.MARKETS.associateWith { m -> runCatching { barsOf(m, ones[m.name], today, now) }.getOrDefault(emptyList()) }
+        val ones = LiquidityRules.UNDERLYINGS.associateWith { u -> runCatching { minutes(u, now, fresh) }.getOrNull() }
+        val bars = OpeningRead.MARKETS.associateWith { m -> runCatching { barsOf(m, ones[m.name], today, now, fresh) }.getOrDefault(emptyList()) }
         val indices = OpeningRead.MARKETS.map { m -> runCatching { OpeningRead.index(m, bars[m].orEmpty(), now) }.getOrElse { OpeningRead.Index(m, null, null) } }
         // GIFT Nifty: the recorder's last reading, as the 09:00 check reads it (nothing fetched).
         val gift = runCatching {
             com.optionslab.app.data.MarketRecorder.lastGift()?.let { (read, g) -> OpeningRead.Gift(g.last, g.at ?: read) }
         }.getOrNull()
-        // Where each Liquidity index opened against its books' levels as they stood at the open.
+        // Where each Liquidity index opened against its books' levels as they stood at the open (left out when no book's
+        // levels could be read: "not read" is never said as "no levels").
         val places = LiquidityRules.UNDERLYINGS.mapNotNull { u ->
             val o = ones[u] ?: return@mapNotNull null
             val gap = indices.firstOrNull { it.market.name == u }?.gap ?: return@mapNotNull null
             runCatching {
-                val levels = LiquidityRules.BOOKS.filter { LiquidityRules.underlyingOf(it) == u }
-                    .mapNotNull { arm -> OpeningRead.levelsAtOpen(o, u, LiquidityRules.minutesOf(arm), today) }.flatten()
-                OpeningRead.place(u, gap.open, gap.prevClose, levels)
+                val books = LiquidityRules.BOOKS.filter { LiquidityRules.underlyingOf(it) == u }
+                    .map { arm -> OpeningRead.levelsAtOpen(o, u, LiquidityRules.minutesOf(arm), today) }
+                OpeningRead.placeFrom(u, gap.open, gap.prevClose, books)
             }.getOrNull()
         }
         // The arm: its switch and size from its book (a short wait on its lock; said as not read otherwise), and its first
@@ -93,8 +102,36 @@ internal object IraOpening {
         return OpeningRead.Facts(now = now, tradingDay = true, indices = indices, gift = gift, places = places, arm = arm, bigMove = bigMove)
     }
 
-    /** The answer to "how did the market open" (the whole read). */
-    suspend fun answer(): String = OpeningRead.say(facts())
+    /** Said when the open cannot be read within [ANSWER_MS]. */
+    private const val SLOW = "The open is taking too long to read just now, Boss - ask again in a moment."
+    /** The asked read's whole time limit. */
+    private const val ANSWER_MS = 30_000L
+    /** The scheduled note's whole time limit (the words lane runs its checks one after another). */
+    private const val WATCH_MS = 15_000L
+
+    /**
+     * The answer to "how did the market open" (the whole read), within [ANSWER_MS] (else a short line to ask again).
+     * [locked] (a locked phone): the Liquidity arm's line (its switch, lots and first trigger) is left out.
+     */
+    suspend fun answer(locked: Boolean = false): String {
+        val f = kotlinx.coroutines.withTimeoutOrNull(ANSWER_MS) { facts() } ?: return SLOW
+        return OpeningRead.say(f, locked = locked)
+    }
+
+    /**
+     * Today's opening already on the phone, read cheaply (nothing from the network): for each index, the candles Jarvis
+     * last read, or the minutes Liquidity 15+5 read this minute, hold the 09:15 and 09:19 minutes ([OpeningRead.hasOpening]).
+     */
+    private fun openingKept(now: LocalDateTime): Boolean {
+        val today = now.toLocalDate()
+        val kept = OpeningRead.MARKETS.associateWith { m ->
+            runCatching {
+                OpeningRead.hasOpening(IraHub.recentBars(m), today, now) ||
+                    com.optionslab.app.data.OrbArms.liquidityMinutesKept(m.name, now)?.let { OpeningRead.hasOpening(candles(it), today, now) } == true
+            }.getOrDefault(false)
+        }
+        return OpeningRead.keptEnough(kept, now)
+    }
 
     /**
      * Each round of the words lane: 09:20-09:25 on a trading day, once, the read in the chat ([OpeningRead.due]). Never in
@@ -107,11 +144,14 @@ internal object IraOpening {
         val mk = com.optionslab.app.data.Market
         val now = mk.now().toLocalDateTime()
         if (!OpeningRead.due(now, mk.isTradingDay(now.toLocalDate()), doneOn())) return
+        // The opening candles not on the phone yet: nothing read now (the next round tries again, within the window).
+        if (!openingKept(now)) return
         val ctx = IraHub.appContext()
         val brief = IraTools.brief || runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)
         val made = postOnce(now.toLocalDate(), {
             // Bounded as a whole (the words lane runs its checks one after another): too slow, the next round tries again.
-            val f: OpeningRead.Facts = kotlinx.coroutines.withTimeoutOrNull(45_000) { facts() } ?: error("the open could not be read in time")
+            // Only what is already on the phone (no feed read in the lane).
+            val f: OpeningRead.Facts = kotlinx.coroutines.withTimeoutOrNull(WATCH_MS) { facts(fresh = false) } ?: error("the open could not be read in time")
             check(OpeningRead.ready(f)) { "the opening candles are not read yet" }
             OpeningRead.say(f, brief)
         }) { IraHub.note(it) }

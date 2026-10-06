@@ -85,14 +85,14 @@ class LiquidityOpenPanelTest {
                     reads.incrementAndGet()
                     if (Looper.myLooper() != Looper.getMainLooper()) offMain.incrementAndGet()
                     fresh
-                }, now = { clock })
+                }, now = { clock }, tickMs = Long.MAX_VALUE)
             }
         }
         compose.until(10_000) { shows(keepNumbersWhole("index 52,050.00 · 110.0 pts away")) }
         compose.waitForIdle()
-        // Read at once, then again only on the 15 s tick (an equal view writes nothing, so Compose settles).
+        // Read at once and, with no tick due, never again (an equal view writes nothing, so Compose settles: no loop).
         val n = reads.get()
-        assertTrue("read at once, and not in a loop: $n", n in 1..3)
+        assertEquals("read once, and not in a loop: $n", 1, n)
         assertEquals("every read off the main thread", n, offMain.get())
         assertEquals(LiquidityOpen.view(LiquidityOpen.Input("BANKNIFTY", "CE", pos.symbol, 60, 2.0, false, 210.0, pos.entryTime, 220.0,
             pos.stopTrigger, true, 51_970.0, 52_200.0, 52_050.0, day.atTime(10, 55), 235.0, 198.0, false, 24.5), clock),

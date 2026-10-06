@@ -197,6 +197,26 @@ class OpeningReadTest {
         assertTrue(OpeningRead.placeLine(many).contains("the gap took 54,050 (pool, 5-min) and 54,080 (swing high, 15-min) and 1 more before the first candle."), OpeningRead.placeLine(many))
     }
 
+    @Test fun levelsNotReadAreNeverSaidAsNoLevels() {
+        // No book's levels read: no place at all (never "nothing untaken above; nothing untaken below; the gap took no level").
+        assertNull(OpeningRead.placeFrom("BANKNIFTY", 54_120.0, 54_000.0, listOf(null, null)))
+        assertNull(OpeningRead.placeFrom("BANKNIFTY", 54_120.0, 54_000.0, emptyList()))
+        // One book read: its levels; read and empty: said as none.
+        assertEquals(OpeningRead.place("BANKNIFTY", 54_120.0, 54_000.0, bnLevels), OpeningRead.placeFrom("BANKNIFTY", 54_120.0, 54_000.0, listOf(null, bnLevels)))
+        assertEquals("BankNifty opened 54,120: nothing untaken above; nothing untaken below; the gap took no level.",
+            OpeningRead.placeLine(OpeningRead.placeFrom("BANKNIFTY", 54_120.0, 54_000.0, listOf(emptyList(), null))!!))
+    }
+
+    @Test fun theScheduledNoteWaitsForTheKeptOpening() {
+        val all = OpeningRead.MARKETS.associateWith { true }
+        val one = mapOf(Market.NIFTY to true, Market.BANKNIFTY to false)
+        assertTrue(OpeningRead.keptEnough(all, at(9, 20)))
+        assertFalse(OpeningRead.keptEnough(one, at(9, 20)))
+        assertFalse(OpeningRead.keptEnough(one, at(9, 24)))
+        assertTrue(OpeningRead.keptEnough(one, at(9, 25)))
+        assertFalse(OpeningRead.keptEnough(emptyMap(), at(9, 25)))
+    }
+
     // ---- the arm --------------------------------------------------------------------------------------------------
 
     private fun read(und: String, minutes: Int, price: Double, up: Double?, down: Double?): LiquidityMap.Read {
@@ -267,6 +287,25 @@ class OpeningReadTest {
         val monday = OpeningRead.Facts(now = at(9, 21, prev), indices = listOf(OpeningRead.Index(Market.NIFTY,
             OpeningRead.Gap(Market.NIFTY, LocalDate.of(2026, 10, 2), 25_000.0, 24_950.0), null)))
         assertEquals("Opening read, Boss (Mon 5 Oct) - the open against Fri 2 Oct's close: Nifty -50 pts (-0.20%).", OpeningRead.lines(monday).single())
+    }
+
+    @Test fun gapsAgainstDifferentSessionsNameEachOne() {
+        val g = OpeningRead.Gap(Market.NIFTY, prev, 25_000.0, 25_062.0)
+        val b = OpeningRead.Gap(Market.BANKNIFTY, LocalDate.of(2026, 10, 2), 54_000.0, 54_120.0)
+        val f = OpeningRead.Facts(now = now, indices = listOf(OpeningRead.Index(Market.NIFTY, g, null), OpeningRead.Index(Market.BANKNIFTY, b, null)))
+        assertEquals("Opening read, Boss (Tue 6 Oct) - the open against each index's last close: Nifty +62 pts (+0.25%) vs Mon 5 Oct, " +
+            "BankNifty +120 pts (+0.22%) vs Fri 2 Oct.", OpeningRead.lines(f).single())
+        assertFalse(OpeningRead.say(f).contains("yesterday"))
+        // The same older session for every index: named, never "yesterday".
+        val old = f.copy(indices = listOf(OpeningRead.Index(Market.NIFTY, g.copy(prevDay = b.prevDay), null), OpeningRead.Index(Market.BANKNIFTY, b, null)))
+        assertTrue(OpeningRead.lines(old).single().startsWith("Opening read, Boss (Tue 6 Oct) - the open against Fri 2 Oct's close: "))
+    }
+
+    @Test fun onALockedPhoneTheArmsLineIsLeftOut() {
+        val locked = OpeningRead.lines(facts(), locked = true)
+        assertTrue(locked.none { it.startsWith("Liquidity 15+5") }, locked.toString())
+        assertEquals(OpeningRead.lines(facts()).filterNot { it.startsWith("Liquidity 15+5") }, locked)
+        assertFalse(OpeningRead.say(facts(), locked = true).contains("lots"))
     }
 
     @Test fun theStatesWithNothingToRead() {
