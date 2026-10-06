@@ -37,6 +37,7 @@ import java.util.zip.Inflater
  *  C,time,underlying,expiry,strike,right,last,volume,oi,iv,bid,ask   the option chain, every 5 minutes
  *  L,time,underlying,expiry,strike,right,last,bid,ask,bidQty,askQty  an option at Rs 1-5 (the Hero spread question)
  *  G,time,what,why                                      a gap: something that could not be recorded, and why
+ *  P,... / I,...                                        NSE participant-wise OI and GIFT Nifty, read off hours ([RecorderFeeds])
  */
 object MarketRecord {
     const val VERSION = "v1"
@@ -326,6 +327,10 @@ object MarketRecord {
     data class Status(
         val on: Boolean, val days: Int, val bytes: Long, val first: LocalDate?, val last: LocalDate?,
         val lastWrite: LocalDateTime?, val gapsToday: Int, val gapsTotal: Int, val overBudget: Boolean,
+        /** The newest trade date whose NSE participant-wise OI is recorded. */
+        val participants: LocalDate? = null,
+        /** The last GIFT Nifty reading and when it was read. */
+        val gift: Pair<LocalDateTime, RecorderFeeds.Gift>? = null,
     )
 
     fun size(b: Long): String = when {
@@ -347,6 +352,8 @@ object MarketRecord {
         "Days recorded" to (if (s.days == 0) "none yet" else "${s.days}" + (s.first?.let { " (since ${date(it)})" } ?: "")),
         "Last write" to (s.lastWrite?.let { whenText(it, today) } ?: "none yet"),
         "Gaps" to "${s.gapsToday} today, ${s.gapsTotal} in all",
+        "Participant OI" to (s.participants?.let { date(it) } ?: "none yet"),
+        "GIFT Nifty" to (s.gift?.let { (read, g) -> RecorderFeeds.giftText(g, read, today) } ?: "none yet"),
     )
 
     private fun norm(text: String) = " " + text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")
@@ -383,7 +390,9 @@ object MarketRecord {
         }
         val budget = if (s.overBudget) " It is over its ${size(BUDGET_BYTES)} budget: the oldest days go first." else ""
         val off = if (!s.on) " The recorder is switched off now." else ""
-        return "${s.days} trading day${if (s.days == 1) "" else "s"} of market data recorded$since, ${size(s.bytes)} on this phone$last.$gaps$budget$off " +
+        val oi = s.participants?.let { " NSE participant-wise OI recorded up to ${date(it)}." } ?: " No NSE participant-wise OI recorded yet."
+        val gift = s.gift?.let { (read, g) -> " Last GIFT Nifty reading ${RecorderFeeds.giftText(g, read, today)}." } ?: " No GIFT Nifty reading yet."
+        return "${s.days} trading day${if (s.days == 1) "" else "s"} of market data recorded$since, ${size(s.bytes)} on this phone$last.$gaps$oi$gift$budget$off " +
             "Export it from More, Data & Harvest, Boss."
     }
 
@@ -401,6 +410,5 @@ object MarketRecord {
         C,time,underlying,expiry,strike,right,last,volume,oi,iv,bid,ask    (option chain every 5 min, ATM +/-$CHAIN_STRIKES; iv in %, from parity)
         L,time,underlying,expiry,strike,right,last,bid,ask,bidQty,askQty   (options at Rs 1-5 inside the chain snapshot)
         G,time,what,why                                      (a gap: what could not be recorded and why)
-        Times are IST. Blank = not available.
-    """.trimIndent()
+    """.trimIndent() + "\n" + RecorderFeeds.README + "\nTimes are IST. Blank = not available."
 }

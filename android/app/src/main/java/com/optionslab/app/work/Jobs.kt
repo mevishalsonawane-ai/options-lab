@@ -118,6 +118,8 @@ object Jobs {
         Heartbeat.schedule(context)
         DailyReports.scheduleAll(context)
         com.optionslab.app.ira.StudyWorker.schedule(context)
+        // The market recorder's off-hours alarm: GIFT Nifty before the open and at night, NSE's participant files after 18:30.
+        runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context) }
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -203,6 +205,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // A command Boss set for this time (any day: it was confirmed when set).
         if (intent.action == com.optionslab.app.ira.IraLater.ACTION) { kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraLater.fire(context) }; return }
         DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
+        if (intent.action == com.optionslab.app.data.MarketRecorder.ACTION) { com.optionslab.app.data.MarketRecorder.fired(context); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
         val s = AppSettings.load()

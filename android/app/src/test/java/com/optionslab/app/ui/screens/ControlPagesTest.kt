@@ -611,6 +611,8 @@ class ControlPagesTest {
         compose.waitForText("none yet")
         compose.onNodeWithText("Storage used").assertExists()
         compose.onNodeWithText("Gaps").assertExists()
+        compose.onNodeWithText("Participant OI").assertExists()
+        compose.onNodeWithText("GIFT Nifty").assertExists()
         // Nothing recorded: nothing to export.
         compose.onNodeWithText("Export recorded data (CSV/zip)").assertIsNotEnabled()
         compose.switchFor("Record market data").assertIsOn()

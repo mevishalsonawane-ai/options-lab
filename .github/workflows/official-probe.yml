@@ -25,6 +25,9 @@ jobs:
             "https://nsearchives.nseindia.com/content/RSS/Financial_Results.xml" \
             "https://www.nseindia.com/api/fiidiiTradeReact" \
             "https://www.nseindia.com/api/marketStatus" \
+            "https://nsearchives.nseindia.com/content/nsccl/fao_participant_oi_$(TZ=Asia/Kolkata date -d '-1 day' +%d%m%Y).csv" \
+            "https://nsearchives.nseindia.com/content/nsccl/fao_participant_vol_$(TZ=Asia/Kolkata date -d '-1 day' +%d%m%Y).csv" \
+            "https://www.nseix.com/api/market-rate?type=derivative" \
             "https://www.bseindia.com/data/xml/notices.xml" \
             "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3" ; do
             code=$(curl -s -o f.xml -w "%{http_code} %{size_download} %{content_type}" -A "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36" -H "Accept: application/rss+xml, application/xml, application/json, */*" --compressed --max-time 20 "$u")

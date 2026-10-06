@@ -10,6 +10,7 @@ import com.optionslab.ira.Events
 import com.optionslab.ira.Flows
 import com.optionslab.ira.Headline
 import com.optionslab.ira.MarketRecord
+import com.optionslab.ira.RecorderFeeds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,7 +41,13 @@ import java.util.zip.ZipOutputStream
  * holds (FII/DII once a day, NSE's page Jarvis already reads); Zerodha's quote call once a minute for ~30 keys and once
  * every 5 minutes for the chain (a key the live stream has a fresh full tick for is answered from it), the futures list
  * once a day (NFO's from the options dump the app downloads anyway), and after the close their 1-minute candles (4 reads).
- * No other host. Nothing about the account and no token, key or URL is ever written ([MarketRecord.scrub]).
+ * Nothing about the account and no token, key or URL is ever written ([MarketRecord.scrub]).
+ *
+ * Outside the window, only two public feeds (Boss, 06 Oct 2026; [RecorderFeeds]): GIFT Nifty from NSE IX's own ticker
+ * (www.nseix.com) every 15 minutes 06:30-09:15 and at 23:30 (every 5 minutes in hours, inside the pass), and NSE's
+ * participant-wise OI and volume files (nsearchives.nseindia.com) once a trade date from 18:30, retried until the next
+ * session opens. They run from one alarm re-armed at its next slot, each firing a short WorkManager run ([fired],
+ * [RecorderWorker]); no service, no other host.
  */
 object MarketRecorder {
     private var dirOrNull: File? = null
@@ -59,7 +66,11 @@ object MarketRecorder {
     /** Boss's switch (default on: approved 06 Oct 2026). */
     var on: Boolean
         get() = runCatching { SecurePrefs.getBoolean(K_ON, true) }.getOrDefault(true)
-        set(v) { SecurePrefs.put(K_ON, v); _status.value = null }
+        set(v) {
+            SecurePrefs.put(K_ON, v); _status.value = null
+            // The off-hours alarm (GIFT Nifty, NSE's participant files) follows the switch.
+            appContext?.let { c -> runCatching { scheduleOffHours(c) } }
+        }
 
     // ---- what it reads (the app's own feeds; tests swap them) ---------------------------------------------------------
 
@@ -79,6 +90,8 @@ object MarketRecorder {
         fun matters(h: Headline): Boolean
         /** Values that must never appear in a record (the session token, the API key). */
         fun secrets(): List<String?>
+        /** A public NSE / NSE IX page as text ([RecorderFeeds]' sources: no login, cookie or key). */
+        suspend fun text(url: String, tries: Int): String
     }
 
     private object Live : Source {
@@ -97,6 +110,10 @@ object MarketRecorder {
         override suspend fun flows() = com.optionslab.app.ira.IraHub.flows()
         override fun matters(h: Headline) = com.optionslab.ira.NewsAnalyst.matters(h)
         override fun secrets() = listOf(Broker.streamToken(), Broker.apiKey)
+        // The same plain HTTPS read as Jarvis's FII/DII and NSE circulars (Net.getText: browser User-Agent, no cookies,
+        // no redirects, 5 s / 10 s timeouts, 1.5 MB at most, errors without the URL or body).
+        // (Jarvis's test feed, null in the app, stands in for every such read in the JVM tests, as for FII/DII.)
+        override suspend fun text(url: String, tries: Int) = com.optionslab.app.ira.IraHub.testFeed?.invoke(url) ?: Net.getText(url, tries)
     }
 
     /** TEST ONLY: the feeds and the clock. Null in the app, always; the setters throw unless BuildConfig.DEBUG. */
@@ -198,6 +215,175 @@ object MarketRecorder {
         val all = (lines + gaps).map { MarketRecord.scrub(it, secrets) }
         if (all.isNotEmpty()) append(day, all)
         if (gaps.isNotEmpty()) countGaps(day, gaps.size)
+        // GIFT Nifty every 5 minutes in hours (one try: the pass has 50 s), and yesterday's participant file's one gap if
+        // it was tried and never read. After the pass's own frame, so the day's file starts with its header.
+        feeds(at, tries = 1)
+    }
+
+    // ---- GIFT Nifty and NSE's participant files: also outside the window ([RecorderFeeds]) ------------------------------
+
+    private const val K_OI_LAST = "recorder.oi.last"
+    private const val K_OI_TRY = "recorder.oi.try"
+    private const val K_OI_MISSED = "recorder.oi.missed"
+    private const val K_GIFT = "recorder.gift.last"
+
+    private fun pref(k: String): String? = runCatching { SecurePrefs.getString(k) }.getOrNull()
+    private fun date(k: String): LocalDate? = pref(k)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    private fun time(k: String): LocalDateTime? = pref(k)?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+
+    /** One reader of the two feeds at a time (the watch's pass and the off-hours worker may meet at 09:00-09:15). */
+    private val feedLock = kotlinx.coroutines.sync.Mutex()
+    /** When GIFT Nifty was last tried (in memory: a failure is not tried again before its next slot). */
+    @Volatile private var giftTriedAt: LocalDateTime? = null
+    /** When each feed last wrote a gap: a broken page is one gap an hour, not one every 5 minutes. */
+    private val gapAt = java.util.concurrent.ConcurrentHashMap<String, LocalDateTime>()
+
+    private fun trading(d: LocalDate): Boolean = runCatching { Market.isTradingDay(d) }.getOrDefault(false)
+    private val isTrading: (LocalDate) -> Boolean = { d -> trading(d) }
+
+    /** NSE answers 404 (or 403) for a participant file not published yet: not a failure, it is tried again later. */
+    private fun notPublished(e: Throwable) = e is Net.HttpFailure && (e.code == 404 || e.code == 403)
+
+    /** A participant file is still to be read for a trade date (the alarm then keeps its evening retries). */
+    private fun oiPending(now: LocalDateTime): Boolean {
+        val d = RecorderFeeds.oiTradeDate(now, isTrading) ?: return false
+        val rec = date(K_OI_LAST)
+        return rec == null || rec.isBefore(d)
+    }
+
+    /**
+     * GIFT Nifty and NSE's participant-wise OI / volume, each only when due ([RecorderFeeds.giftDue], [RecorderFeeds.oiDue]):
+     * read, parsed and written to the day file they belong in (GIFT Nifty: today's; a participant file: its trade date's),
+     * a failure written as a gap (one an hour at most per feed). Never throws but a cancellation; [tries] per read.
+     */
+    internal suspend fun feeds(at: ZonedDateTime, tries: Int) {
+        if (!feedLock.tryLock()) return
+        try {
+            val now = at.toLocalDateTime().withNano(0)
+            val day = at.toLocalDate()
+            val t = now.toLocalTime()
+            val out = LinkedHashMap<LocalDate, MutableList<String>>()
+            val gapsBy = HashMap<LocalDate, Int>()
+            fun add(d: LocalDate, line: String) { out.getOrPut(d) { ArrayList() } += line }
+            fun fail(d: LocalDate, what: String, why: String) {
+                val key = if (what.startsWith("GIFT")) "gift" else "participant"
+                if (!RecorderFeeds.gapAllowed(gapAt[key], now)) return
+                gapAt[key] = now
+                add(d, MarketRecord.gap(t, what, why)); gapsBy[d] = (gapsBy[d] ?: 0) + 1
+            }
+            // GIFT Nifty.
+            val lastGift = RecorderFeeds.giftDecode(pref(K_GIFT))?.first
+            val last = listOfNotNull(lastGift, giftTriedAt).filter { !it.isAfter(now) }.maxOrNull()
+            if (RecorderFeeds.giftDue(trading(day), now, last)) {
+                giftTriedAt = now
+                try {
+                    val g = RecorderFeeds.parseGift(src.text(RecorderFeeds.GIFT_URL, tries))
+                    if (g == null) fail(day, "GIFT Nifty", "no NIFTY future in NSE IX's answer")
+                    else {
+                        add(day, RecorderFeeds.gift(t, g))
+                        runCatching { SecurePrefs.put(K_GIFT, RecorderFeeds.giftEncode(g, now)) }
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                    fail(day, "GIFT Nifty", MarketRecord.why(e))
+                }
+            }
+            // NSE's participant-wise OI (and trading volume), once a trade date, from 18:30.
+            RecorderFeeds.oiDue(now, isTrading, date(K_OI_LAST), time(K_OI_TRY))?.let { d ->
+                runCatching { SecurePrefs.put(K_OI_TRY, now.toString()) }
+                try {
+                    val p = RecorderFeeds.parseParticipants(src.text(RecorderFeeds.oiUrl(d), tries))
+                    if (p.date != d) fail(d, "participant OI $d", "the file is dated ${p.date}")
+                    else {
+                        p.rows.forEach { add(d, RecorderFeeds.participant(p, now, "oi", it)) }
+                        runCatching { SecurePrefs.put(K_OI_LAST, d.toString()) }
+                        // The volume file beside it, once (best effort: a miss is a gap, not a retry).
+                        try {
+                            val v = RecorderFeeds.parseParticipants(src.text(RecorderFeeds.volUrl(d), tries))
+                            if (v.date == d) v.rows.forEach { add(d, RecorderFeeds.participant(v, now, "vol", it)) }
+                            else fail(d, "participant volume $d", "the file is dated ${v.date}")
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                            fail(d, "participant volume $d", if (notPublished(e)) "not published" else MarketRecord.why(e))
+                        }
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                    // Not published yet: tried again at the next slot; the gap only if the next session opens without it.
+                    if (!notPublished(e)) fail(d, "participant OI $d", MarketRecord.why(e))
+                }
+            }
+            RecorderFeeds.oiMissed(now, isTrading, date(K_OI_LAST), time(K_OI_TRY), date(K_OI_MISSED))?.let { d ->
+                runCatching { SecurePrefs.put(K_OI_MISSED, d.toString()) }
+                add(day, MarketRecord.gap(t, "participant OI $d", "not published or not read before the session")); gapsBy[day] = (gapsBy[day] ?: 0) + 1
+            }
+            if (out.isEmpty()) return
+            val secrets = runCatching { src.secrets() }.getOrDefault(emptyList())
+            for ((d, lines) in out) {
+                try {
+                    val head = if (fileOf(d).exists()) emptyList() else listOf(MarketRecord.header(d))
+                    append(d, (head + lines).map { MarketRecord.scrub(it, secrets) })
+                    gapsBy[d]?.let { countGaps(d, it) }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) {
+                    runCatching { countGaps(d, 1) }
+                }
+            }
+        } finally {
+            feedLock.unlock()
+        }
+    }
+
+    /** The off-hours alarm's action (to [com.optionslab.app.work.AlarmReceiver]). */
+    const val ACTION = "ol.recorder.offhours"
+    /** An off-hours run is given this long. */
+    const val OFF_MS = 40_000L
+
+    private fun alarmIntent(context: Context): android.app.PendingIntent = android.app.PendingIntent.getBroadcast(
+        context, 196, android.content.Intent(context, com.optionslab.app.work.AlarmReceiver::class.java).setAction(ACTION),
+        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    /**
+     * Arms the off-hours alarm at the next slot ([RecorderFeeds.nextSlot]: 06:30-09:00 every 15 minutes, 18:30, the
+     * evening's retries while a participant file is missing, 23:30 on trading days; 08:00 on a closed day while one is
+     * missing). Off: cancelled. No service: each firing hands one short run to WorkManager ([fired]).
+     */
+    fun scheduleOffHours(context: Context) {
+        if (com.optionslab.app.BuildConfig.GOLD) return
+        val am = context.getSystemService(android.app.AlarmManager::class.java) ?: return
+        val pi = alarmIntent(context)
+        am.cancel(pi)
+        if (!on) return
+        val now = now().toLocalDateTime()
+        val at = RecorderFeeds.nextSlot(now, isTrading, oiPending(now)).atZone(MarketRecord.IST).toInstant().toEpochMilli()
+        try {
+            if (com.optionslab.app.work.Jobs.canExact(context)) am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+            else am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+        } catch (_: SecurityException) {
+            am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+        }
+    }
+
+    /** The off-hours alarm fired: re-arm, then one short run in WorkManager (with a network; never two at once). */
+    fun fired(context: Context) {
+        runCatching { scheduleOffHours(context) }
+        if (com.optionslab.app.BuildConfig.GOLD || !on) return
+        // Not expedited: no foreground notice for a few seconds' read (minSdk 26 would need one); a run Doze holds back
+        // waits for its next window, and its records carry the time they were read.
+        val req = androidx.work.OneTimeWorkRequestBuilder<RecorderWorker>()
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+            .build()
+        androidx.work.WorkManager.getInstance(context).enqueueUniqueWork("recorder.offhours", androidx.work.ExistingWorkPolicy.KEEP, req)
+    }
+
+    /** One off-hours run: GIFT Nifty and the participant files when due, bounded to [OFF_MS]; never throws. */
+    suspend fun offHours() {
+        try {
+            if (dirOrNull == null || com.optionslab.app.BuildConfig.GOLD || !on) return
+            val at = now()
+            withTimeoutOrNull(OFF_MS) { feeds(at, tries = 2) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            // Never anyone's problem.
+        }
     }
 
     /** One part of a pass: a failure is that part's gap, never the pass's end (a cancellation goes up). */
@@ -398,7 +584,8 @@ object MarketRecorder {
         val last = files.maxOfOrNull { it.second.lastModified() }?.takeIf { it > 0 }
             ?.let { Instant.ofEpochMilli(it).atZone(MarketRecord.IST).toLocalDateTime().withNano(0) }
         return MarketRecord.Status(on, files.size, bytes, files.firstOrNull()?.first, files.lastOrNull()?.first, last,
-            gaps[day] ?: 0, gaps.filterKeys { k -> files.any { it.first == k } || k == day }.values.sum(), bytes > MarketRecord.BUDGET_BYTES)
+            gaps[day] ?: 0, gaps.filterKeys { k -> files.any { it.first == k } || k == day }.values.sum(), bytes > MarketRecord.BUDGET_BYTES,
+            participants = date(K_OI_LAST), gift = RecorderFeeds.giftDecode(pref(K_GIFT)))
             .also { _status.value = it }
     }
 
@@ -431,7 +618,19 @@ object MarketRecorder {
     fun wipe() {
         runCatching { dirOrNull?.deleteRecursively() }
         runCatching { SecurePrefs.put(K_GAPS, null) }
+        for (k in listOf(K_OI_LAST, K_OI_TRY, K_OI_MISSED, K_GIFT)) runCatching { SecurePrefs.put(k, null) }
+        giftTriedAt = null
+        gapAt.clear()
         today = null
         _status.value = null
+    }
+}
+
+/** The market recorder's off-hours run ([MarketRecorder.fired]): GIFT Nifty and NSE's participant files, then the next alarm. */
+class RecorderWorker(ctx: Context, params: androidx.work.WorkerParameters) : androidx.work.CoroutineWorker(ctx, params) {
+    override suspend fun doWork(): Result {
+        MarketRecorder.offHours()
+        runCatching { MarketRecorder.scheduleOffHours(applicationContext) }
+        return Result.success()
     }
 }
