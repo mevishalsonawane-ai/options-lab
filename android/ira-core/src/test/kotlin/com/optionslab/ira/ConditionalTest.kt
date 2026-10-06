@@ -224,4 +224,12 @@ class ConditionalTest {
             assertTrue(!l.contains("6,000") && !l.contains("5,000") && l.contains("unlock") && l.contains("Bot settings"), l)
         }
     }
+
+    @Test fun aStartSetOnAConditionIsNeverDone() {
+        for (q in listOf("start all strategies if nifty falls 100 points", "start orb if nifty falls 100 points",
+            "agar nifty 100 point gire to orb start kar do", "arm orb when nifty crosses 25000"))
+            assertTrue(Conditional.asked(q) && Commands.parse(q) == null, q)
+        for (q in listOf("start all strategies", "start orb", "kill switch on", "exit all", "sab band kar do"))
+            assertTrue(Commands.parse(q) != null, q)
+    }
 }

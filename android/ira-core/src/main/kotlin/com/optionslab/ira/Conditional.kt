@@ -141,7 +141,7 @@ object Conditional {
      */
     private val COND_HEDGE = rx("$COND_WORDS| (?:$COND_VERBS|$COND_PRESENT)$COND_THEN$COND_TE_HI")
     /** An action Jarvis could otherwise take (or place) in the app. */
-    private val ACT = rx(" (?:stop|halt|pause|disarm|exit|sell|buy|square off|squareoff|close|cancel|kill|kill switch|switch off|turn off|" +
+    private val ACT = rx(" (?:stop|halt|pause|disarm|start|arm|resume|unpause|turn on|switch on|chalu|shuru|exit|sell|buy|square off|squareoff|close|cancel|kill|kill switch|switch off|turn off|" +
         "book (?:profit|profits|it|my|the|kar|karo|kar do|kar lo)|band (?:kar|karo|kardo|kar do|kar dena|kar dijiye|kijiye|karna)|" +
         "nikal|nikalo|nikaal|nikaalo|bech|becho|bech do|bech dena|kharid|kharido|khareed|khareedo|kaat|kaato|rok|roko|rok do|hata do|hatao)(?= )")
     /** Words that only look like an action: a stop loss, "close to 25000", a habit of Jarvis's ("stop telling me when..."). */
