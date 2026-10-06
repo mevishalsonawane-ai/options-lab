@@ -527,3 +527,28 @@ object IndexSpark {
     fun requests(wanted: Boolean, keptMinute: Int?, minute: Int, keptEmpty: Boolean): Int =
         1 + if (candles(wanted, keptMinute, minute, keptEmpty)) 1 else 0
 }
+
+/**
+ * Battery (round 18): the order watch's ongoing notice says the paper account's P&L once a pass (once a minute). It
+ * priced the paper book afresh for that line - without a Zerodha stream, a download of each held contract's whole day
+ * of 1-minute candles - seconds after the same pass's paper tick, loss limit and position cards had read the very same
+ * candles (the feed moves once a minute). That line and the calendar's day figure it records are display only (no
+ * stop, target, limit, guard or alert reads them), so they now share a price read in the last [REUSE_MS], as the
+ * position cards already do: one candle download per held contract a minute fewer (about 375 a session each). A price
+ * older than that (the pass's own reads failed), or none, is read afresh as before; with the stream up there was no
+ * download either way. Every money step keeps reading its own, at its own pace. Pure.
+ */
+object NoticePrice {
+    /** How old a price the notice's paper line may share: the position cards' 20 s (Paper.SHARED_QUOTE_MS). */
+    const val REUSE_MS = 20_000L
+
+    /**
+     * Does pricing one contract download its day of candles? [stream]: a stream tick for it now. [readAgoMs]: how long
+     * ago this process last priced it (null: never). [reuseMs]: how old a price the caller may share (0: none).
+     */
+    fun downloads(stream: Boolean, readAgoMs: Long?, reuseMs: Long): Boolean = when {
+        stream -> false
+        reuseMs > 0L && readAgoMs != null && readAgoMs in 0L..reuseMs -> false
+        else -> true
+    }
+}

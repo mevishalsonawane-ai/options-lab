@@ -709,7 +709,10 @@ object Tasks {
             }
         }
         runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
-            runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
+            // Battery (round 18): the line and the calendar's kept figure are display only, so they share the price this
+            // pass's paper tick, loss limit and cards just read (under 20 s), not a fresh download of each held contract's
+            // day of candles ([com.optionslab.ira.NoticePrice]). The stops and limits above read their own, as before.
+            runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.ira.NoticePrice.REUSE_MS) }.getOrNull()?.let { snap ->
                 val pnl = snap.dayPnl
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size, snap.dayCharges) }
                 // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
