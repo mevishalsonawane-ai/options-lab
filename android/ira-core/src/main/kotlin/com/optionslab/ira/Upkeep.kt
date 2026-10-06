@@ -42,7 +42,9 @@ object Upkeep {
         // So is "Don't listen" (jarvis.voice.nolisten, 6 Oct): a restore never switches the microphone back on behind him.
         "jarvis.voice.",
         // The history of this phone's limits: what "Jarvis, undo" puts back, so a file's history could set a limit (round 7).
-        "settings.")
+        "settings.",
+        // The market recorder (06 Oct): its days are this phone's files (never in a backup), so its switch and gap counts stay too.
+        "recorder.")
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }

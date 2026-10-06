@@ -630,6 +630,9 @@ object Tasks {
         // The retired arms' shadows and the new candidate (Boss's 06 Oct choice): what each rule WOULD have done, at live
         // prices - no order, paper or live (until Boss re-arms one on paper). After the money steps; reads only on a decision.
         step("shadow arms") { com.optionslab.app.data.ShadowArms.tick() }
+        // The market recorder (Boss's 06 Oct approval): what the app already reads, kept for a later study. It starts its pass
+        // in its own scope and returns at once - never awaited, never thrown (only in the service: tests' passes skip it).
+        if (lanes != null) runCatching { com.optionslab.app.data.MarketRecorder.kick() }
         // Jarvis's words-only checks in their own lane (outside the service - tests - they run here, in order).
         if (lanes != null) wordsLane(lanes) else wordsSteps()
     }
@@ -1089,6 +1092,8 @@ class WatchService : Service() {
             if (Market.minuteNow() < Market.OPEN) {
                 stepSec = 30
                 show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)
+                // Before the open: the recorder keeps the morning's news (its own scope, never awaited).
+                runCatching { com.optionslab.app.data.MarketRecorder.kick() }
                 delay(30_000)
                 return
             }

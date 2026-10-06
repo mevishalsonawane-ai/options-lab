@@ -105,6 +105,38 @@ object Kite {
         return out
     }
 
+    /** One futures contract from an instruments dump (NFO-FUT or BFO-FUT). */
+    data class Future(val token: Long, val tradingSymbol: String, val name: String, val expiry: LocalDate, val lotSize: Int, val exchange: String) {
+        /** The key Kite's quote call takes ("NFO:NIFTY26OCTFUT"). */
+        val key: String get() = "$exchange:$tradingSymbol"
+    }
+
+    /**
+     * The index futures of [names] in a GET /instruments/{NFO,BFO} dump (the market recorder's NIFTY, BANKNIFTY, FINNIFTY
+     * and SENSEX futures). A row with a missing token, expiry or lot is skipped, never guessed.
+     */
+    fun parseFutures(lines: Sequence<String>, names: Set<String>): List<Future> {
+        val out = ArrayList<Future>()
+        var head: Map<String, Int>? = null
+        for (line in lines) {
+            if (line.isBlank()) continue
+            val c = splitCsv(line)
+            if (head == null) { head = c.withIndex().associate { it.value.trim() to it.index }; continue }
+            fun col(n: String) = c.getOrNull(head[n] ?: -1)?.trim() ?: ""
+            val seg = col("segment")
+            if (col("instrument_type") != "FUT" || col("name") !in names || (seg != "NFO-FUT" && seg != "BFO-FUT")) continue
+            val token = col("instrument_token").toLongOrNull() ?: continue
+            val expiry = runCatching { LocalDate.parse(col("expiry")) }.getOrNull() ?: continue
+            val lot = col("lot_size").toDoubleOrNull()?.toInt() ?: continue
+            out += Future(token, col("tradingsymbol"), col("name"), expiry, lot, seg.substringBefore('-'))
+        }
+        return out
+    }
+
+    /** Each name's nearest future expiring on or after [day] (the current month's contract). */
+    fun nearestFutures(all: List<Future>, day: LocalDate): Map<String, Future> =
+        all.filter { !it.expiry.isBefore(day) }.groupBy { it.name }.mapValues { (_, v) -> v.minBy { it.expiry } }
+
     /** What an order needs to know about any instrument: its lot and its tick. */
     data class Spec(val exchange: String, val tradingSymbol: String, val token: Long, val lotSize: Int, val tickSize: Double)
 

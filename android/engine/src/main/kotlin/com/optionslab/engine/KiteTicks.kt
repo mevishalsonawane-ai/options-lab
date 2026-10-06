@@ -38,6 +38,9 @@ object KiteTicks {
         /** Quantity at the best bid and the best offer (full mode only; null when the packet has no depth). */
         val bidQty: Long? = null,
         val askQty: Long? = null,
+        /** Total quantity bid and offered across the whole book (quote and full mode; null in an LTP or index packet). */
+        val buyQty: Long? = null,
+        val sellQty: Long? = null,
     ) {
         val changePct: Double get() = if (close > 0) (last - close) / close else 0.0
     }
@@ -99,6 +102,7 @@ object KiteTicks {
                     token, last = px(4), volume = int(16), open = px(28), high = px(32), low = px(36), close = px(40),
                     oi = if (p.size == 184) int(48) else 0, bid = bid, ask = ask,
                     exchangeTime = if (p.size == 184) int(60) else null, bidQty = bidQty, askQty = askQty,
+                    buyQty = int(20), sellQty = int(24),
                 )
             }
             else -> null

@@ -85,6 +85,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Strategies.init(this)
         com.optionslab.app.data.OrbArms.init(this)
         com.optionslab.app.data.ShadowArms.init(this)
+        com.optionslab.app.data.MarketRecorder.init(this)
         com.optionslab.app.data.PineScripts.init(this)
         com.optionslab.app.data.PineAuto.init(this)
         com.optionslab.app.data.Protections.init(this)

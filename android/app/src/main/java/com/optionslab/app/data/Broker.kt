@@ -125,6 +125,7 @@ object Broker {
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
         File(app.filesDir, "kite_instruments.json").delete()
+        File(app.filesDir, "kite_futures.json").delete()
         PnlTracker.clear()
     }
 
@@ -520,6 +521,94 @@ object Broker {
         }.toMap()
     }
 
+    /** Kite's quote key for an index by its IraAlgo name ("NIFTY" -> "NSE:NIFTY 50"), null for one Kite has no index of. */
+    fun indexKey(symbol: String): String? = INDEX[symbol]?.first
+
+    /**
+     * The market recorder's read ([MarketRecorder]): every key's last price, volume, OI, best bid and offer with their
+     * quantities and the book's totals. A key with a fresh full-mode tick on the live stream is answered from it (no
+     * network); the rest in ONE quote call per 500 keys. Unlike [quotes] it never adds anything to the stream's follow
+     * list (so the recorder alone never keeps the stream, and the phone's radio, busy). Reads only.
+     */
+    suspend fun recorderQuotes(keys: Map<String, Long?>): Map<String, com.optionslab.ira.MarketRecord.Quote> {
+        if (keys.isEmpty()) return emptyMap()
+        val out = HashMap<String, com.optionslab.ira.MarketRecord.Quote>()
+        for ((k, token) in keys) {
+            val t = (token ?: tokenOf(k))?.let { KiteStream.tick(it) } ?: continue
+            if (t.bid == null && t.ask == null && t.tradable) continue          // no depth on this tick: the quote call has it
+            out[k] = com.optionslab.ira.MarketRecord.Quote(t.last, t.volume.takeIf { t.tradable }, t.oi.takeIf { t.tradable }, t.bid, t.bidQty,
+                t.ask, t.askQty, t.buyQty, t.sellQty, stream = true)
+        }
+        for (chunk in keys.keys.filter { it !in out }.chunked(500)) {
+            val data = call("GET", "/quote?" + chunk.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
+            for (k in chunk) {
+                val q = data.optJSONObject(k) ?: continue
+                val depth = q.optJSONObject("depth")
+                fun top(side: String) = depth?.optJSONArray(side)?.optJSONObject(0)
+                fun px(side: String) = top(side)?.optDouble("price")?.takeIf { it > 0 }
+                fun qty(side: String) = top(side)?.optLong("quantity")?.takeIf { px(side) != null }
+                fun long(name: String) = if (q.has(name)) q.optLong(name) else null
+                out[k] = com.optionslab.ira.MarketRecord.Quote(q.optDouble("last_price"), long("volume"), long("oi"), px("buy"), qty("buy"),
+                    px("sell"), qty("sell"), long("buy_quantity"), long("sell_quantity"))
+            }
+        }
+        return out
+    }
+
+    /** The index futures the market recorder follows, by name. */
+    val FUTURE_NAMES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
+
+    private fun futuresFile() = File(app.filesDir, "kite_futures.json")
+
+    /** The futures kept: (the day NFO's were read, the day BFO's were read, the list). */
+    private fun futuresKept(): Triple<String, String, List<Kite.Future>> = runCatching {
+        val o = JSONObject(futuresFile().readText())
+        val a = o.getJSONArray("f")
+        Triple(o.optString("nfo"), o.optString("bfo"), (0 until a.length()).map { a.getJSONArray(it) }.map {
+            Kite.Future(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getInt(4), it.getString(5))
+        })
+    }.getOrDefault(Triple("", "", emptyList()))
+
+    private fun keepFutures(nfoDay: String, bfoDay: String, list: List<Kite.Future>) {
+        val a = JSONArray()
+        list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.lotSize).put(it.exchange)) }
+        futuresFile().writeText(JSONObject().put("nfo", nfoDay).put("bfo", bfoDay).put("f", a).toString())
+    }
+
+    /** NFO's futures from the day's instruments dump [instruments] has just downloaded (no second download for them). */
+    private fun keepNfoFutures(text: String) {
+        val (_, bfoDay, kept) = futuresKept()
+        val nfo = Kite.parseFutures(text.lineSequence(), FUTURE_NAMES)
+        keepFutures(Market.today().toString(), bfoDay, nfo + kept.filter { it.exchange == "BFO" })
+    }
+
+    @Volatile private var futuresTriedAt = 0L
+
+    /**
+     * Today's index futures (NFO's NIFTY, BANKNIFTY, FINNIFTY; BFO's SENSEX), for the market recorder. NFO's come with the
+     * day's instruments dump; BFO's dump is read once a day. A failed read is tried again after 30 minutes at most.
+     */
+    suspend fun futures(): List<Kite.Future> {
+        val today = Market.today().toString()
+        val (nfoDay, bfoDay, kept) = futuresKept()
+        if (nfoDay == today && bfoDay == today) return kept
+        val now = System.currentTimeMillis()
+        if (now - futuresTriedAt < 30 * 60_000L) return if (nfoDay == today) kept else emptyList()
+        futuresTriedAt = now
+        val nfo: List<Kite.Future> = if (nfoDay == today) kept.filter { it.exchange == "NFO" } else {
+            // The day's options list first: not downloaded yet today, its dump carries the futures too.
+            runCatching { instruments() }
+            val again = futuresKept()
+            if (again.first == today) again.third.filter { it.exchange == "NFO" }
+            else Kite.parseFutures((call("GET", "/instruments/NFO", raw = true) as String).lineSequence(), FUTURE_NAMES)
+        }
+        val bfo = if (bfoDay == today) kept.filter { it.exchange == "BFO" }
+            else runCatching { Kite.parseFutures((call("GET", "/instruments/BFO", raw = true) as String).lineSequence(), setOf("SENSEX")) }.getOrNull()
+        val all = nfo + bfo.orEmpty()
+        keepFutures(today, if (bfo != null) today else bfoDay, all)
+        return all
+    }
+
     private val KITE_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 
     /** 1-minute candles with OI (needs a plan that includes historical data). */
@@ -611,6 +700,8 @@ object Broker {
         instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
         val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
+        // The market recorder's index futures from the same dump (never a second download for them).
+        runCatching { keepNfoFutures(text) }
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
         f.writeText(JSONObject().put("day", Market.today().toString()).put("i", a).toString())

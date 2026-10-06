@@ -131,6 +131,7 @@ class CollisionTest {
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
+        "MarketRecord" to { q -> MarketRecord.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
         "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
@@ -850,6 +851,10 @@ class CollisionTest {
         "atm option double record for banknifty" to "AtmBuy", "atm call kitni baar double hota hai" to "AtmBuy",
         "how often do at the money options end the day worth more than at 9:30" to "AtmBuy", "how many sessions does the at the money call double" to "AtmBuy",
         // ---- OtmReach: the out-of-the-money call and put held from 9:30, how often each ended the day in the money (round 43) ----
+        // ---- MarketRecord: what the market recorder keeps on this phone (days, storage, the last write, the gaps) ----
+        "how much market data have we recorded" to "MarketRecord", "is the market recorder running" to "MarketRecord",
+        "market recorder status" to "MarketRecord", "how many days of market data have you recorded" to "MarketRecord",
+        "kitna market data record hua hai" to "MarketRecord",
         "how often does an otm option 100 points away end the day in the money" to "OtmReach",
         "how often does a call two strikes out of the money finish in the money" to "OtmReach", "how often does nifty's otm put double" to "OtmReach",
         "otm option record for banknifty" to "OtmReach", "100 point door ka otm call kitni baar itm hota hai" to "OtmReach",
@@ -1386,7 +1391,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -2670,6 +2675,12 @@ class CollisionTest {
             "how often does selling the atm option work out", "how often does gold's atm call double", "atm call price",
             "how often does the atm option double if i buy at 9:30"))
             assertTrue(audit.feature(s) != "AtmBuy", "$s: ${audit.feature(s)}")
+        // MarketRecord only says what the recorder keeps: never a change to it, a voice or call recording, a price record or
+        // how fresh the data is.
+        for (s in listOf("delete the recorded market data", "export the recorded market data", "turn off the market recorder",
+            "is my voice being recorded", "what was the record high of nifty", "is your data fresh", "how old is your data",
+            "is the call recording on"))
+            assertTrue(audit.feature(s) != "MarketRecord", "$s: ${audit.feature(s)}")
         // OtmReach stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
         // question, a definition, a conditional, the at-the-money option, gold, VIX or the quote itself.
         for (s in listOf("will the otm call end in the money today", "should i hold the otm call", "how often does my otm call double",

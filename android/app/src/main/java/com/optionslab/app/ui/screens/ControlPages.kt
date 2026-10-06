@@ -210,6 +210,8 @@ fun DataPage(model: AppModel) {
                 BrassButton("Harvest now", Modifier.fillMaxWidth(), busy = job.running) { model.startJob(Jobs.Kind.HARVEST) }
             }
         }
+        // The market recorder (Boss's 06 Oct approval): its switch, what it keeps, and the export.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { MarketRecorderCard(model) }
         for ((u, rows) in manifests) item {
             LedgerCard(title = "Manifest · $u") {
                 val same = rows.count { it.scope == Manifest.SAME_DAY }

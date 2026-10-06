@@ -74,6 +74,33 @@ class KiteCoverageTest {
         assertEquals(emptyList(), Kite.parseInstruments(emptySequence(), setOf("NIFTY")))
     }
 
+    @Test fun `parseFutures keeps the named index futures of NFO and BFO, skipping broken rows`() {
+        val csv = """
+            instrument_token,exchange_token,tradingsymbol,name,last_price,expiry,strike,tick_size,lot_size,instrument_type,segment,exchange
+            201,1,NIFTY26OCTFUT,NIFTY,0,2026-10-27,0,0.1,75,FUT,NFO-FUT,NFO
+            202,1,NIFTY26NOVFUT,NIFTY,0,2026-11-24,0,0.1,75,FUT,NFO-FUT,NFO
+            203,1,NIFTY26SEPFUT,NIFTY,0,2026-09-29,0,0.1,75,FUT,NFO-FUT,NFO
+            204,1,SENSEX26OCTFUT,SENSEX,0,2026-10-29,0,0.05,20,FUT,BFO-FUT,BFO
+            205,1,RELIANCE26OCTFUT,RELIANCE,0,2026-10-27,0,0.05,250,FUT,NFO-FUT,NFO
+            206,1,NIFTY26OCT24500CE,NIFTY,0,2026-10-27,24500,0.05,75,CE,NFO-OPT,NFO
+            207,1,GOLDM26OCTFUT,NIFTY,0,2026-10-27,0,1,10,FUT,MCX-FUT,MCX
+            ,1,BANKNIFTY26OCTFUT,BANKNIFTY,0,2026-10-27,0,0.05,35,FUT,NFO-FUT,NFO
+            209,1,BANKNIFTY26NOVFUT,BANKNIFTY,0,,0,0.05,35,FUT,NFO-FUT,NFO
+            210,1,BANKNIFTY26DECFUT,BANKNIFTY,0,2026-12-29,0,0.05,x,FUT,NFO-FUT,NFO
+        """.trimIndent()
+        val got = Kite.parseFutures(csv.lineSequence(), setOf("NIFTY", "BANKNIFTY", "SENSEX"))
+        assertEquals(listOf("NIFTY26OCTFUT", "NIFTY26NOVFUT", "NIFTY26SEPFUT", "SENSEX26OCTFUT"), got.map { it.tradingSymbol })
+        assertEquals(Kite.Future(204, "SENSEX26OCTFUT", "SENSEX", LocalDate.of(2026, 10, 29), 20, "BFO"), got[3])
+        assertEquals("BFO:SENSEX26OCTFUT", got[3].key)
+        assertEquals("NFO:NIFTY26OCTFUT", got[0].key)
+        val near = Kite.nearestFutures(got, LocalDate.of(2026, 10, 6))
+        assertEquals(setOf("NIFTY", "SENSEX"), near.keys)
+        assertEquals("NIFTY26OCTFUT", near.getValue("NIFTY").tradingSymbol, "the expired September contract is passed over")
+        assertEquals(emptyList(), Kite.parseFutures(emptySequence(), setOf("NIFTY")))
+        // A dump without a segment column has no futures to give.
+        assertEquals(emptyList(), Kite.parseFutures(sequenceOf("instrument_token,name,instrument_type", "1,NIFTY,FUT"), setOf("NIFTY")))
+    }
+
     @Test fun `lookup reads lot and tick for any exchange`() {
         val want = setOf("GOLD,M26OCTFUT", "USDINR26SEPFUT", "RELIANCE", "TCS", "NIFTY26SEP24500PE", "MISSING")
         val got = Kite.lookup(dump.lineSequence(), want)

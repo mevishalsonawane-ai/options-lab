@@ -28,7 +28,9 @@ class UpkeepTest {
     @Test fun round7KeysThatCouldActStayOnThePhone() {
         // Solo's switch and record (its record earns real orders), its brain; timed commands; the limits' undo history.
         listOf("jarvis.solo", "jarvis.solo.trades", "jarvis.solo.paused", "jarvis.solo.from", "jarvis.solo.shadows",
-            "solo.brain.NIFTY", "solo.brain.NIFTY.h30", "solo.brain.BANKNIFTY.at", "jarvis.later", "settings.history", "settings.undone")
+            "solo.brain.NIFTY", "solo.brain.NIFTY.h30", "solo.brain.BANKNIFTY.at", "jarvis.later", "settings.history", "settings.undone",
+            // The market recorder's switch and gap counts belong with its files, on this phone.
+            "recorder.on", "recorder.gaps")
             .forEach { assertFalse(Upkeep.carried(it), it) }
     }
 

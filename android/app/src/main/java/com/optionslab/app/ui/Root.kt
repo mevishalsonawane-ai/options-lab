@@ -334,6 +334,7 @@ fun eraseEverything() {
     com.optionslab.app.data.Paper.wipe()
     com.optionslab.app.data.OrbArms.wipe()
     com.optionslab.app.data.ShadowArms.wipe()
+    com.optionslab.app.data.MarketRecorder.wipe()
     com.optionslab.app.data.PineScripts.wipe()
     com.optionslab.app.data.PineAuto.wipe()
     com.optionslab.app.data.Protections.wipe()
