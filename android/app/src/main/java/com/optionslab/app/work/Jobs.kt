@@ -565,6 +565,8 @@ object Tasks {
         word("trade lessons") { com.optionslab.app.ira.IraTradeLessons.watch() }
         // Jarvis: from 15:45 on a trading day, tomorrow's plan in the chat - once a day (words only; nothing is armed or changed).
         word("tomorrow's plan") { com.optionslab.app.ira.IraTomorrow.watch() }
+        // Jarvis: 09:20-09:25 on a trading day, the opening read in the chat - once a day (words only; nothing is armed or changed).
+        word("opening read") { com.optionslab.app.ira.IraOpening.watch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
         word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }

@@ -259,6 +259,18 @@ object LiquidityWhyNot {
         }.filter { (r, s) -> s.side * (s.trigger!!.edge - r.price!!) >= 0 }.minByOrNull { (r, s) -> abs(s.trigger!!.edge - r.price!!) }
 
     /**
+     * The nearest trigger with room still ahead of the price across [reads] ([nearest]) in words - "BankNifty 5-min, a close
+     * above 54,180 - 60 pts away (it would buy a call)" - or null when there is none (the opening read says it too).
+     */
+    fun nearestWords(reads: List<LiquidityMap.Read>): String? = nearest(reads)?.let { (r, s) ->
+        val tr = s.trigger!!
+        val d = s.side * (tr.edge - r.price!!)
+        if (d < 0) null
+        else "${LiquidityMap.indexName(r.underlying)} ${r.minutes}-min, a close ${if (s.side > 0) "above" else "below"} " +
+            "${n(tr.edge)} - ${pts(d)} pts away (it would buy a ${if (s.side > 0) "call" else "put"})"
+    }
+
+    /**
      * Each bar's last decision, by book and bar, in the order the bars were first decided: a bar first recorded
      * "awaiting_approval" and later lapsed, skipped or entered is told by how it ended.
      */
@@ -373,13 +385,7 @@ object LiquidityWhyNot {
                     head += "No Liquidity trade today, Boss: " + reasons.joinToString("; ") + "."
                 }
             }
-            nearest(f.reads.filter { it.underlying in q.underlyings })?.let { (r, s) ->
-                val tr = s.trigger!!
-                val price = r.price!!
-                val d = s.side * (tr.edge - price)
-                if (d >= 0) head += "Nearest trigger: ${LiquidityMap.indexName(r.underlying)} ${r.minutes}-min, a close ${if (s.side > 0) "above" else "below"} " +
-                    "${n(tr.edge)} - ${pts(d)} pts away (it would buy a ${if (s.side > 0) "call" else "put"})."
-            }
+            nearestWords(f.reads.filter { it.underlying in q.underlyings })?.let { head += "Nearest trigger: $it." }
         }
         head += hours
         val lines = ArrayList<String>()

@@ -130,6 +130,7 @@ class CollisionTest {
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
         "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
+        "OpeningRead" to { q -> OpeningRead.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -917,6 +918,15 @@ class CollisionTest {
         "prepare me for tomorrow" to "TomorrowPlan", "prep me for tomorrow" to "TomorrowPlan", "get me ready for tomorrow" to "TomorrowPlan",
         "brief me for tomorrow" to "TomorrowPlan", "can you prepare me for tomorrow" to "TomorrowPlan", "how should i prepare for tomorrow" to "TomorrowPlan",
         "help me prepare for tomorrow" to "TomorrowPlan", "how do i get ready for tomorrow" to "TomorrowPlan", "jarvis what's the plan for tomorrow" to "TomorrowPlan",
+        // ---- OpeningRead: how the market opened (gaps, the open against Liquidity's levels, the first candle, the arm) ----
+        "how did the market open" to "OpeningRead", "how did the market open today" to "OpeningRead", "how did we open" to "OpeningRead",
+        "how has the market opened" to "OpeningRead", "how did the market open vs the levels" to "OpeningRead", "how did the market open vs the liquidity levels" to "OpeningRead",
+        "where did we open" to "OpeningRead", "where did we open vs the levels" to "OpeningRead", "where did the market open" to "OpeningRead",
+        "how was the open" to "OpeningRead", "how was the opening" to "OpeningRead", "how was today's open" to "OpeningRead", "how did the open go" to "OpeningRead",
+        "opening read" to "OpeningRead", "the opening read" to "OpeningRead", "give me the opening read" to "OpeningRead", "what's the opening read" to "OpeningRead",
+        "opening summary" to "OpeningRead", "today's opening summary" to "OpeningRead", "opening report" to "OpeningRead",
+        "market kaisa khula" to "OpeningRead", "market kaisa khula aaj" to "OpeningRead", "aaj market kaisa khula" to "OpeningRead", "market kaise khula aaj" to "OpeningRead",
+        "market kahan khula" to "OpeningRead", "open kaisa tha" to "OpeningRead", "aaj ki opening kaisi rahi" to "OpeningRead", "jarvis how did the market open" to "OpeningRead",
         // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, from its own records, and what it waits for ----
         "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot", "why didn't liquidity trade today" to "LiquidityWhyNot",
         "why did liquidity not trade today" to "LiquidityWhyNot", "why hasn't liquidity traded" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
@@ -1489,7 +1499,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3284,5 +3294,59 @@ class CollisionTest {
             assertEquals("Tour", audit.feature(s), s)
         // The voice question keeps its own short answer (no guide line there).
         assertTrue(!Ira().answer("can you hear me", emptyMap(), emptyList(), voice = true).text.contains(AskGuide.POINTER))
+    }
+
+    // ---- OpeningRead: how the market opened, never the open / opening / gap questions that already had their answers ----
+
+    @Test fun theOpeningReadLeavesTheOtherOpenQuestionsTheirRoutes() {
+        for (s in listOf("how did the market open", "opening read", "market kaisa khula", "where did we open vs the levels", "how was the open",
+            "aaj market kaisa khula", "how did we open")) {
+            assertEquals("OpeningRead", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The gap plan and the gap's own questions, the opening range and the ORB arm, the session's hours, an index's own
+        // open, another day's open, the open-at-the-high record, the first candle asked alone, "is the market open": as before.
+        assertEquals("Gap", audit.feature("gap plan"))
+        assertEquals("Gap", audit.feature("what's the gap plan"))
+        assertEquals("Gap", audit.feature("did nifty gap up today"))
+        assertEquals("Gap", audit.feature("what was the gap today"))
+        assertEquals("Gap", audit.feature("how big was the gap"))
+        assertEquals("Gap", audit.feature("did the gap fill"))
+        assertEquals("Gap", audit.feature("opening gap"))
+        assertEquals("Gap", audit.feature("what is the opening gap"))
+        assertEquals("OpeningRange", audit.feature("opening range"))
+        assertEquals("OpeningRange", audit.feature("opening range breakout"))
+        assertEquals("Glossary", audit.feature("what's the opening range"))
+        assertEquals("Missed", audit.feature("will it gap up"))
+        assertEquals("Market", audit.feature("will nifty gap up tomorrow"))
+        assertEquals("Account:STUDY", audit.feature("will the market open gap up"))
+        assertEquals("Account:STATUS", audit.feature("is the market open"))
+        assertEquals("Account:STATUS", audit.feature("is market open now"))
+        assertEquals("OptionFacts", audit.feature("when does the market open"))
+        assertEquals("OptionFacts", audit.feature("what time does the market open"))
+        assertEquals("Account:STRATEGIES", audit.feature("orb"))
+        assertEquals("Account:STRATEGIES", audit.feature("how is orb doing"))
+        assertEquals("Account:CHAIN", audit.feature("open interest"))
+        assertEquals("Market", audit.feature("how did nifty open"))
+        assertEquals("Market", audit.feature("how did banknifty open"))
+        assertEquals("Market", audit.feature("where did nifty open"))
+        assertEquals("Market", audit.feature("nifty kaisa khula"))
+        assertEquals("Market", audit.feature("did the market open"))
+        assertEquals("Market", audit.feature("has the market opened"))
+        assertEquals("Market", audit.feature("market khula kya"))
+        assertEquals("Market", audit.feature("nifty opening price"))
+        assertEquals("Lookback", audit.feature("how did the market open yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("how did we open last week"))
+        assertEquals("OpenHighLow", audit.feature("how often does nifty open at its high"))
+        assertEquals("Market", audit.feature("how big was the first candle"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        // Said with something to do: left to the multi-step plan, as every question is; two questions: each its own.
+        assertTrue(Bundle.acts("how did the market open then close all positions"))
+        assertEquals("OpeningRead & Account:PNL", audit.feature("how did the market open and what is my pnl"))
+        for (s in listOf("how did the market open on friday", "how often does the market open flat", "how did my bots do at the open",
+            "open a trade", "when will the market open", "will the market open higher"))
+            assertTrue(audit.feature(s) != "OpeningRead", "$s: ${audit.feature(s)}")
     }
 }

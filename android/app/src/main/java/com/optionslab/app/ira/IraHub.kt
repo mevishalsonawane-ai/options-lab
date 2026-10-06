@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2855,7 +2855,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, OpeningRead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3358,6 +3358,20 @@ object IraHub {
             if (phoneLocked()) { reply(com.optionslab.ira.TomorrowPlan.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { IraTomorrow.answer() }.getOrElse { "I could not put tomorrow's plan together just now, Boss." })
+            }
+            return true
+        }
+        // "How did the market open", "opening read", "market kaisa khula", "where did we open vs the levels"
+        // ([com.optionslab.ira.OpeningRead], [IraOpening]): Nifty's, BankNifty's and FinNifty's gap (and what GIFT Nifty
+        // pointed to), the open against Liquidity 15+5's levels, the first 5-minute candle against the usual, the arm's switch,
+        // lots and first trigger, and the big-move line - the market's facts, at most six lines. Reads only - nothing is
+        // armed, placed, closed or changed. (Not in IraGoldAlgo: no Liquidity arm, no NSE feeds.)
+        val openingAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.OpeningRead.asked(q) }.getOrDefault(false) else false
+        if (openingAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraOpening.answer() }.getOrElse { "I could not read the open just now, Boss." })
             }
             return true
         }

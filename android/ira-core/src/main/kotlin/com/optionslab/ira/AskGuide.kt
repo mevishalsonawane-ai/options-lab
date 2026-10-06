@@ -59,6 +59,7 @@ object AskGuide {
         )),
         Group("market", "Market & levels", "The indices now, the day's shape and the option chain", listOf(
             ex("how is nifty", "Market"),
+            ex("how did the market open", "OpeningRead"),
             ex("is gold up today", "Market", gold = true),
             ex("what's the structure today", "Structure"),
             ex("aaj trend day hai kya", "Structure"),

@@ -43,7 +43,7 @@ class AskGuideTest {
         assertEquals(listOf("liquidity", "solo", "hero", "strategies", "market", "news", "account", "coach", "plans", "app"), groups.map { it.id })
         assertEquals(groups.size, groups.map { it.title }.distinct().size)
         for (g in groups) {
-            assertTrue(g.examples.size in 4..8, "${g.title}: ${g.examples.size}")
+            assertTrue(g.examples.size in 4..9, "${g.title}: ${g.examples.size}")
             assertTrue(g.title.isNotBlank() && g.blurb.isNotBlank() && !g.id.contains(','), g.id)
         }
         val all = AskGuide.all()
@@ -59,6 +59,8 @@ class AskGuideTest {
         assertTrue(groups.first { it.id == "liquidity" }.examples.map { it.family }.containsAll(listOf("LiquidityWhyNot", "LiquidityRecord", "LiquidityMap")))
         assertTrue(groups.first { it.id == "solo" }.examples.any { it.family == "SoloDay" })
         assertTrue(groups.first { it.id == "hero" }.examples.any { it.family == "HeroDay" })
+        // The opening read sits with the market and its levels.
+        assertTrue(groups.first { it.id == "market" }.examples.any { it.q == "how did the market open" && it.family == "OpeningRead" })
     }
 
     @Test fun goldShowsOnlyWhatItAnswers() {
