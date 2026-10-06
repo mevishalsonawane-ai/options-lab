@@ -1641,7 +1641,30 @@ object IraHub {
         // Said so, with the app's own alarm, stop loss and limits in words; nothing is done, nothing about the account is said,
         // and IraGoldAlgo only talks. Before the plan and every question branch, so no part of it is ever acted on alone.
         if (parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Conditional.asked(q) }.getOrDefault(false)) {
-            val condSaid = if (com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK) GOLD_TALK_ONLY else com.optionslab.ira.Conditional.SAY
+            // Usefulness round 38: something concrete instead - a price level on one index offers the app's own price alarm
+            // there (prepared by the same path as "alert me when Nifty goes below 24000", put as a request and set only on
+            // Boss's yes, never alone even with "do it automatically"); a loss amount answers with his daily loss limit and
+            // where to change it (his account: unlocked phone only). Never a stop, an exit, an order or the kill switch.
+            val condGold = com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK
+            val condInstead = if (condGold) null else runCatching { com.optionslab.ira.Conditional.instead(q) }.getOrNull()
+            val condAlarm = condInstead?.alarm
+            if (condAlarm != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                scope.launch {
+                    val (alarmWhat, alarmAct) = runCatching { IraActions.prepare(condAlarm) }.getOrElse { "" to null }
+                    if (alarmAct == null) { reply(com.optionslab.ira.Conditional.SAY); return@launch }
+                    reply(com.optionslab.ira.Conditional.alarmSay(condAlarm), whole = true)
+                    offer(alarmWhat, "Boss, set a price alarm?", com.optionslab.ira.Conditional.alarmAsk(condAlarm),
+                        suspend { IraActions.verified(condAlarm.kind, alarmAct()) }, alwaysAsk = true)
+                }
+                return
+            }
+            val condSaid = if (condGold) GOLD_TALK_ONLY else condInstead?.loss?.let { lossSaid ->
+                val condLocked = phoneLocked()
+                val condSet = if (condLocked) null else runCatching { com.optionslab.app.data.AppSettings.load() }.getOrNull()
+                com.optionslab.ira.Conditional.lossSay(lossSaid, condSet?.let { s -> if (s.live) s.guardDailyLoss else s.guardPaperDailyLoss },
+                    if (condSet?.live == true) "Zerodha" else "Paper", condLocked)
+            } ?: com.optionslab.ira.Conditional.SAY
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, condSaid)).takeLast(MAX_MESSAGES)) }
             return
         }

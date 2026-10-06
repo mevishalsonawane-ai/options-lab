@@ -24,6 +24,82 @@ object Conditional {
 
     private fun words(text: String) = Spaced.joined(text)
 
+    /**
+     * What Jarvis can concretely offer instead (usefulness round 38): [alarm], a price alarm ([Command.Kind.ALARM_ADD]) at the
+     * index level the condition named ("if Nifty falls below 24000 exit all": Nifty below 24,000) - only offered, and set
+     * through the app's own alarm path on Boss's yes, never otherwise; or [loss], the amount of a loss condition ("if I lose
+     * 5000"), answered with his daily loss limit and where to change it. Never a stop, an exit, an order or the kill switch.
+     */
+    data class Instead(val alarm: Command? = null, val loss: Double? = null)
+
+    /** A loss said in the condition: "if I lose 5000", "agar loss 5000 ho jaye", "agar 5000 ka loss ho", "if I'm down 4k". */
+    private val LOSS_WORD = rx(" (?:lose|loose|losing|lost|loss|losses|nuksan|nuksaan|nukhsan|(?:i am|im|we are|were|mtm|pnl) down)(?= )")
+    private const val AMOUNT = "(\\d{3,7}(?:\\.\\d+)?|\\d{1,3}(?:\\.\\d+)? ?k)"
+    private val LOSS_AFTER = rx(" (?:lose|loose|losing|lost|loss|losses|nuksan|nuksaan|nukhsan|down)(?: (?:of|is|crosses|reaches|hits|goes|to|past|above|over|more|than|beyond|exceeds|rs|rupees|inr))* $AMOUNT(?= )")
+    private val LOSS_BEFORE = rx(" (?:rs |rupees |inr )?$AMOUNT(?: rs| rupees| rupaye| rupay| inr)?(?: ka| ki| ke| of| se zyada| tak)? (?:loss|nuksan|nuksaan|nukhsan)(?= )")
+    /** A direction for the index: falling below a level, or rising above one. */
+    private val BELOW = rx(" (?:below|under|beneath|neeche|niche|falls|fall|falling|drops|drop|dips|dip|slips|gire|gira|girta|tute|toote)(?= )")
+    private val ABOVE = rx(" (?:above|over|crosses|cross|crossing|rises|rise|rising|upar|oopar|chadhe|chadh)(?= )")
+    /** A level: a number never said as a move ("100 points", "1 percent") or an amount. */
+    private val LEVEL = rx(" (\\d{2,6}(?:\\.\\d+)?)(?= )(?! (?:points?|pts?|percent|pc|rs|rupees|lots?|lot)(?= ))")
+
+    /** The words with a number's thousands commas and a sentence's full stops gone ("24,000." is 24000; "52.5" kept). */
+    private fun numbered(text: String): String = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")
+        .replace(rx("(\\d),(?=\\d{3})"), "$1").replace("%", " percent ").replace(rx("\\.(?!\\d)"), " "), keep = ".") + " "
+
+    /**
+     * What to offer for a conditional instruction ([asked]): a price alarm on the one index named, with one clear direction
+     * and one level, or the loss amount; null when neither is clear (then [SAY] alone, as before). Gold, two indices, a
+     * move in points or percent, or no direction offers no alarm. Pure.
+     */
+    fun instead(text: String): Instead? {
+        if (!asked(text)) return null
+        val t = numbered(text).replace(rx(" (nifty|sensex) (?:50|30)(?= )"), " $1")
+        if (LOSS_WORD.containsMatchIn(t)) {
+            val n = (LOSS_AFTER.find(t) ?: LOSS_BEFORE.find(t))?.groupValues?.get(1) ?: return null
+            val v = if (n.endsWith("k")) n.removeSuffix("k").trim().toDoubleOrNull()?.times(1000) else n.toDoubleOrNull()
+            return v?.takeIf { it >= 100 }?.let { Instead(loss = it) }
+        }
+        val m = Market.mentioned(text).singleOrNull()?.takeIf { it != Market.GOLD } ?: return null
+        val below = BELOW.containsMatchIn(t)
+        if (below == ABOVE.containsMatchIn(t)) return null
+        val lvl = LEVEL.findAll(t).mapNotNull { it.groupValues[1].toDoubleOrNull() }.toList().singleOrNull() ?: return null
+        if (if (m == Market.VIX) lvl !in 5.0..100.0 else lvl < 1000) return null
+        return Instead(alarm = Command(Command.Kind.ALARM_ADD, market = m, above = !below, level = lvl))
+    }
+
+    private fun figure(v: Double) = if (v % 1.0 == 0.0) "%,.0f".format(java.util.Locale.ENGLISH, v) else "%,.2f".format(java.util.Locale.ENGLISH, v)
+
+    private const val CANT = "I can't set an action to wait for a condition, Boss - I act only when you tell me to, and I've done nothing now."
+
+    /** The alarm in a few words, for the request and the spoken yes or no: "Nifty below 24,000". */
+    fun alarmWhat(c: Command): String = "${c.market?.label ?: "?"} ${if (c.above == false) "below" else "above"} ${c.level?.let { figure(it) } ?: "?"}"
+
+    /** Said with the alarm offered: he can't, nothing was done, and the alarm is put to Boss - set only on his yes. */
+    fun alarmSay(c: Command): String = "$CANT What I can do is set a price alarm, ${alarmWhat(c)}, so you hear when it gets there and decide then - " +
+        "an alarm only rings, it never trades. Shall I set it? Say yes to set it, or no. If you'd rather act now, say it plainly and I'll ask you to confirm."
+
+    /** The question the request carries (the pop-up and the spoken yes or no). */
+    fun alarmAsk(c: Command): String = "Set a price alarm, ${alarmWhat(c)}? It only rings; it never trades."
+
+    /**
+     * Said for a loss condition ("if I lose 5000"): his daily loss limit now ([limit], 0 = off; [account] "Paper" or
+     * "Zerodha") set against the [amount] he said, and where to change it. His account, so on a [locked] phone (or no limit
+     * read) only where it is. Changes nothing.
+     */
+    fun lossSay(amount: Double, limit: Double?, account: String, locked: Boolean): String {
+        val where = "It's in More, then Bot settings, Daily loss limit."
+        if (locked || limit == null) return "$CANT The app's own guard for that is the daily loss limit - unlock the phone and ask me for it, or see it yourself. $where"
+        if (limit <= 0) return "$CANT The app's own guard for that is the daily loss limit, and it's off for $account just now. To have the app stop at a loss of Rs ${figure(amount)}, set it there. $where"
+        val vs = when {
+            limit == amount -> "the same as the Rs ${figure(amount)} you said"
+            limit > amount -> "more than the Rs ${figure(amount)} you said"
+            else -> "less than the Rs ${figure(amount)} you said"
+        }
+        return "$CANT The app's own guard for that is the daily loss limit: for $account it's Rs ${figure(limit)} now, $vs. " +
+            "At that loss the app takes no new entries and stops the bots for the day. To change it: $where I haven't changed anything."
+    }
+
     /** Words that set no condition, taken out before a condition is looked for. */
     private val IDIOMS = rx(" (?:if|agar) (?:possible|you can|u can|you could|needed|need be|required|necessary|any|there are any|there is any|you want|you like|" +
         "ok|okay|you dont mind|you do not mind|thats ok|its ok|ho sake|possible ho|mumkin ho|zaroori ho|koi ho|koi hai)(?= )" +

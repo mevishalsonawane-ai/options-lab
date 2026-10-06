@@ -134,4 +134,57 @@ class ConditionalTest {
         for (s in listOf("make my small trades bigger", "buy small trades")) assertEquals(null, SmallTrades.asked(s), s)
         for (s in listOf("aaj nifty kaisa hai", "which index is strongest today")) assertEquals(null, DayIndex.asked(s), s)
     }
+
+    /**
+     * Usefulness round 38: something concrete instead of a bare refusal - a price alarm offered at the level said (only an
+     * alarm, only one index, one direction and one level; never a stop, exit, order or the kill switch), or the loss limit
+     * for a loss amount (locked: where it is, no figure).
+     */
+    @Test fun aRefusedConditionOffersTheAlarmAtItsLevel() {
+        fun alarm(s: String) = Conditional.instead(s)?.alarm
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.NIFTY, above = false, level = 24000.0), alarm("if nifty falls below 24000 exit all"))
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.NIFTY, above = false, level = 24000.0), alarm("exit all if Nifty falls below 24,000."))
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.NIFTY, above = false, level = 24000.0), alarm("if nifty 50 falls below 24000 exit all"))
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.NIFTY, above = true, level = 25000.0), alarm("if nifty crosses 25000 then square off everything"))
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.NIFTY, above = true, level = 25000.0), alarm("jaise hi nifty 25000 cross kare sab orders cancel kar do"))
+        assertEquals(Command(Command.Kind.ALARM_ADD, market = Market.BANKNIFTY, above = false, level = 51000.0), alarm("agar banknifty 51000 ke neeche jaye to sab band karo"))
+        // Not clear enough: a move in points or percent, no index, two indices, no direction, gold, two levels - the plain SAY.
+        for (s in listOf("agar nifty 100 point gire to sab band kar do", "if nifty falls 100 points stop everything", "in case nifty falls 1% stop all strategies",
+            "exit my put if it falls 50", "when nifty hits 25000 sell my call", "once nifty breaks 24500 exit everything", "as soon as nifty touches 24000 square off all",
+            "if nifty falls below 24000 and banknifty below 51000 exit all", "if gold falls below 4000 sell", "sell my 24500 put if nifty falls below 24000",
+            "agar nifty upar jaye to sab cancel kar do"))
+            assertEquals(null, alarm(s), s)
+        // Never for anything that is not a refused condition: a plain command or an alarm already asked for.
+        for (s in listOf("exit all", "alert me when nifty goes below 24000", "nifty below 24000"))
+            assertEquals(null, Conditional.instead(s), s)
+        // Only ever an alarm: the offered command is ALARM_ADD and nothing else.
+        for (s in CONDITIONAL) Conditional.instead(s)?.alarm?.let { assertEquals(Command.Kind.ALARM_ADD, it.kind, s) }
+        val c = alarm("if nifty falls below 24000 exit all")!!
+        assertEquals("Nifty below 24,000", Conditional.alarmWhat(c))
+        val said = Conditional.alarmSay(c)
+        assertTrue(said.contains("can't") && said.contains("done nothing") && said.contains("never trades") && said.contains("Shall I set it?"), said)
+        assertTrue(Conditional.alarmAsk(c).endsWith("never trades."))
+        // The offer is the very alarm the plain request sets (same command, so the same path and confirmations).
+        assertEquals(Commands.parse("alert me when nifty goes below 24000"), c)
+        // The words of the offer itself are never a yes to it.
+        assertTrue(Wake.yesNo(said) != true)
+    }
+
+    @Test fun aLossConditionAnswersWithTheLossLimit() {
+        fun loss(s: String) = Conditional.instead(s)?.loss
+        assertEquals(5000.0, loss("turn on kill switch if i lose 5000"))
+        assertEquals(5000.0, loss("agar loss 5000 ho jaye to kill switch on kar do"))
+        assertEquals(5000.0, loss("agar 5000 ka loss ho to sab band karo"))
+        assertEquals(3000.0, loss("if my loss crosses 3,000 exit all"))
+        assertEquals(4000.0, loss("stop all strategies if i'm down 4k"))
+        for (s in CONDITIONAL) Conditional.instead(s)?.let { assertTrue(it.alarm == null || it.loss == null, s) }
+        val open = Conditional.lossSay(5000.0, 6000.0, "Paper", locked = false)
+        assertTrue(open.contains("Rs 6,000") && open.contains("more than the Rs 5,000") && open.contains("Bot settings") && open.contains("haven't changed"), open)
+        assertTrue(Conditional.lossSay(5000.0, 2000.0, "Zerodha", false).contains("less than"))
+        assertTrue(Conditional.lossSay(5000.0, 0.0, "Paper", false).contains("off for Paper"))
+        // Locked (or not read): never a figure of his - only where it is.
+        for (l in listOf(Conditional.lossSay(5000.0, 6000.0, "Paper", locked = true), Conditional.lossSay(5000.0, null, "Paper", false))) {
+            assertTrue(!l.contains("6,000") && !l.contains("5,000") && l.contains("unlock") && l.contains("Bot settings"), l)
+        }
+    }
 }
