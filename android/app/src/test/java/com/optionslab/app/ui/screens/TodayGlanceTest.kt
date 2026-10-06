@@ -226,7 +226,7 @@ class TodayGlanceLayoutTest(device: DeviceConfig) : ScreenTest(device) {
 
     @After fun noNetwork() { assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
 
-    private fun home(card: TodayGlance.Card) {
+    @androidx.compose.runtime.Composable private fun home(card: TodayGlance.Card) {
         AlmanacContent(false, false, mapOf("BANKNIFTY" to HomeFixtures.quote), null, HomeFixtures.daily, Load.Idle, Load.Done(HomeFixtures.paper), {}, {},
             glance = { TodayGlanceContent(card, true, {}, {}) }) {}
     }
