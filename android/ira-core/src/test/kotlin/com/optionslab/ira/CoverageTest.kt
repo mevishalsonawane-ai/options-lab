@@ -29,7 +29,7 @@ class CoverageTest {
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || LiquidityMap.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || LiquidityWhyNot.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || WeeklyReview.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
             RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
             ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
@@ -90,6 +90,8 @@ class CoverageTest {
             if (NetLean.asked(q)) return Kind.ACCOUNT
             if (ExpiryEve.asked(q)) return Kind.ACCOUNT
             if (BeforeTomorrow.asked(q)) return Kind.ACCOUNT
+            // (Why Liquidity 15+5 did or did not trade today, from its own records - Boss's own paper trades in it.)
+            if (LiquidityWhyNot.asked(q) != null) return Kind.ACCOUNT
             if (BotTrades.asked(q) != null) return Kind.ACCOUNT
             if (SwitchOff.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
@@ -473,7 +475,7 @@ class CoverageTest {
         "is a big move likely now" to M, "abhi kitna risk hai" to M, "volatile hai kya" to M, "is the market risky right now" to M,
         "bada move aane wala hai kya" to M,
         // ---- Liquidity 15+5's map of the market (LiquidityMap): the market's ----
-        "where are the liquidity levels" to M, "liquidity level kahan hai" to M, "what is liquidity waiting for" to M, "how far is the next pool" to M,
+        "where are the liquidity levels" to M, "liquidity level kahan hai" to M, "how far is the next pool" to M,
         // ---- Jarvis's weekly review (WeeklyReview): the week's paper trading and his strategies - Boss's own record ----
         "weekly review" to A, "is hafte ka review" to A, "how did this week go" to A, "last week's review" to A, "weekly report" to A,
         // ---- Liquidity 15+5's paper record over time (LiquidityRecord): the arm's own book - Boss's own record ----
@@ -482,6 +484,9 @@ class CoverageTest {
         // ---- Tomorrow's plan (TomorrowPlan): the next session prepared - Liquidity's day and levels, Solo, Hero, events ----
         "what's the plan for tomorrow" to A, "tomorrow ka plan" to A, "kal ka plan kya hai" to A, "prepare me for tomorrow" to A,
         "tomorrow's plan" to A, "get me ready for tomorrow" to A,
+        // ---- Why Liquidity 15+5 did or did not trade today (LiquidityWhyNot): the arm's own records - Boss's own paper trades ----
+        "why no liquidity trade today" to A, "why didn't liquidity trade" to A, "liquidity ne trade kyu nahi liya" to A,
+        "what is liquidity waiting for" to A, "why did liquidity skip the break" to A, "why hasn't liquidity traded today" to A,
         "how often does an otm option 100 points away end the day in the money" to M, "otm option record for banknifty" to M,
         "100 point door ka otm call kitni baar itm hota hai" to M,
         // ---- His stops against the index's swings (StopNoise, reasoning round 33): his own (no word of acting in them) ----
@@ -601,7 +606,7 @@ class CoverageTest {
      * ask(): Boss's learned words and routine as said, fillers and follow-ups, then an action set on a condition
      * ([Conditional], said with something to do or not), then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes, CondNeeds, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, NetLean, ExpiryEve, BeforeTomorrow, BotTrades, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, DataAge, Honest, Thinking,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes, CondNeeds, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, NetLean, ExpiryEve, BeforeTomorrow, LiquidityWhyNot, BotTrades, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, DataAge, Honest, Thinking,
      * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, GiveBack, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
@@ -621,7 +626,7 @@ class CoverageTest {
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
             PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || LiquidityMap.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || LiquidityWhyNot.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || WeeklyReview.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
             ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
@@ -686,6 +691,7 @@ class CoverageTest {
         if (alone && NetLean.asked(q)) return "NetLean"
         if (alone && ExpiryEve.asked(q)) return "ExpiryEve"
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
+        if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
         if (alone && SwitchOff.asked(q) != null) return "SwitchOff"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
@@ -895,7 +901,7 @@ class CoverageTest {
         "is the market volatile right now" to "BigMoveRisk", "big move aa sakta hai kya" to "BigMoveRisk",
         // ---- LiquidityMap: Liquidity 15+5's levels and what it waits for ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "how far is the next pool" to "LiquidityMap",
-        "what is liquidity waiting for" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
+        "what is liquidity waiting for" to "LiquidityWhyNot", "banknifty liquidity levels" to "LiquidityMap",
         // ---- WeeklyReview: Jarvis's review of the week (made after its last session, kept 12 weeks) ----
         "weekly review" to "WeeklyReview", "is hafte ka review" to "WeeklyReview", "how did this week go" to "WeeklyReview",
         "how was this week" to "WeeklyReview", "review of the week" to "WeeklyReview", "last week's review" to "WeeklyReview",
@@ -905,6 +911,9 @@ class CoverageTest {
         // ---- TomorrowPlan: the next session prepared (after the close, and asked) ----
         "what's the plan for tomorrow" to "TomorrowPlan", "tomorrow ka plan" to "TomorrowPlan", "kal ka plan kya hai" to "TomorrowPlan",
         "prepare me for tomorrow" to "TomorrowPlan", "tomorrow's plan" to "TomorrowPlan", "plan for the next session" to "TomorrowPlan",
+        // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, and what it waits for ----
+        "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot",
+        "liquidity ne trade kyu nahi liya" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",

@@ -622,6 +622,50 @@ object OrbArms {
     /** Liquidity 15+5 armed (either book): the in-memory book only - no marks, shadows or rows built (the heads-up's read each round). */
     suspend fun liquidityArmed(): Boolean = lock.withLock { book().armed.let { a -> LiquidityRules.BOOKS.any { a[it.source] == true } } }
 
+    /**
+     * Liquidity 15+5's books on [day] for Jarvis's "why no liquidity trade today" ([com.optionslab.ira.LiquidityWhyNot]): each
+     * book's switch, last verdict and how many bars it decided on, and its positions entered that day (paper and Zerodha).
+     * A copy of the in-memory book (no marks, shadows or rows built, nothing fetched); reads only.
+     */
+    suspend fun liquidityDay(day: LocalDate): Pair<List<com.optionslab.ira.LiquidityWhyNot.BookState>, List<Position>> = lock.withLock {
+        val b = book()
+        val books = LiquidityRules.BOOKS.map { it.source }.toSet()
+        LiquidityRules.BOOKS.map { a ->
+            com.optionslab.ira.LiquidityWhyNot.BookState(a.source, b.armed[a.source] == true, b.status[a.source] ?: "", b.decided["${a.source}|$day"]?.size ?: 0)
+        } to b.positions.filter { it.arm in books && it.day == day }
+    }
+
+    // ---- Liquidity 15+5's day in words (Jarvis's "why no liquidity trade today") ----------------
+
+    /**
+     * Today's Liquidity 15+5 decisions, oldest first: each decision bar's verdict (a break's side, level, target and close
+     * with it) and each change of a book's verdict between bars. In memory only, guarded by itself - never the arms' lock -
+     * and never read by a decision, an exit or an order: words for Jarvis. A new day's first record drops the earlier days'.
+     */
+    private val liqDecisions = ArrayList<com.optionslab.ira.LiquidityWhyNot.Decision>()
+    private const val LIQ_DECISIONS_MAX = 600
+
+    /** When this run's record began (the app's start): bars decided before it are counted by the book, not described. */
+    val liquidityRecordSince: LocalDateTime = runCatching { Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
+
+    /** Keeps one Liquidity decision (see [liqDecisions]); an unchanged verdict between bars is kept once. Never throws into a pass. */
+    private fun noteLiquidity(at: LocalDateTime, book: String, verdict: String, bar: LocalDateTime? = null, s: LiquidityRules.Signal? = null,
+                              close: Double? = null) {
+        if (com.optionslab.app.BuildConfig.GOLD) return
+        // An error's own message is never kept (it may carry an address): its kind only.
+        val v = if (verdict.startsWith("error")) "error" else verdict
+        synchronized(liqDecisions) {
+            liqDecisions.removeAll { it.at.toLocalDate() != at.toLocalDate() }
+            if (bar == null && liqDecisions.lastOrNull { it.book == book }?.verdict == v) return
+            liqDecisions += com.optionslab.ira.LiquidityWhyNot.Decision(at, book, v, bar, s?.side, s?.level, s?.target, close)
+            while (liqDecisions.size > LIQ_DECISIONS_MAX) liqDecisions.removeAt(0)
+        }
+    }
+
+    /** Liquidity 15+5's decisions kept in memory for [day], oldest first: a copy, never waiting on the arms' lock. Reads only. */
+    fun liquidityDecisions(day: LocalDate): List<com.optionslab.ira.LiquidityWhyNot.Decision> =
+        synchronized(liqDecisions) { liqDecisions.filter { it.at.toLocalDate() == day } }
+
     // ---- arming and approvals ------------------------------------------------------
 
     /**
@@ -740,6 +784,10 @@ object OrbArms {
     suspend fun skip(source: String): String = lock.withLock {
         val b = book()
         val key = if (source == LiquidityRules.ARM.source) liquidityBook(b) ?: source else source
+        // (Liquidity's skipped signal is kept for Jarvis's words too; the skip itself is exactly as before.)
+        b.pending[key]?.takeIf { pd -> LiquidityRules.BOOKS.any { it.source == pd.arm } }?.let { pd -> runCatching {
+            noteLiquidity(now(), pd.arm, "skipped_by_you", pd.signalBar, pd.level?.let { LiquidityRules.Signal(if (pd.right == "CE") 1 else -1, it, pd.target) })
+        } }
         b.pending.remove(key); b.status[key] = "skipped_by_you"; save(b); "Skipped."
     }
 
@@ -795,6 +843,8 @@ object OrbArms {
                 if (b.armed[arm.source] != true) continue
                 // The Hero arm reads its own NIFTY data: the BANKNIFTY bars are not its concern.
                 val s = if (bars == null && !arm.hero) "no_index_data" else runCatching { cycle(b, arm, t, bars.orEmpty()) }.getOrElse { "error: ${it.message}" }
+                // Liquidity's verdict between its decision bars, kept for Jarvis's words only (a bar's own was kept by its cycle).
+                if (arm.liquidity && s != "no_decision_bar") runCatching { noteLiquidity(t, arm.source, s) }
                 // "no_decision_bar" repeats within a bar; keep the bar's own verdict on screen.
                 if (s != "no_decision_bar" || b.status[arm.source].isNullOrEmpty()) {
                     // Each bar's verdict goes to the diagnostics once (why it did or did not enter), with the range and the bar.
@@ -824,6 +874,10 @@ object OrbArms {
         val text = "${arm.label}: the ${hhmm(pd.signalBar)} signal (BUY ${pd.right}) was not approved in $mins minutes and lapsed at " +
             "${hhmm(pd.expires)} - nothing was bought. A new signal asks again."
         runCatching { Diag.record("orb", text) }
+        if (arm.liquidity) runCatching {
+            noteLiquidity(now(), arm.source, com.optionslab.ira.LiquidityWhyNot.LAPSED, pd.signalBar,
+                pd.level?.let { LiquidityRules.Signal(if (pd.right == "CE") 1 else -1, it, pd.target) })
+        }
         runCatching { Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${if (arm.liquidity) arm.label else "ORB"} signal lapsed: not approved in $mins minutes", text, "strategy") }
     }
 
@@ -1654,8 +1708,14 @@ object OrbArms {
         val day = t.toLocalDate()
         if (last.start.toLocalDate() != day) return "no_decision_bar"
         if (!b.decided.getOrPut("${arm.source}|$day") { HashSet() }.add(last.start.toString())) return "no_decision_bar"
-        if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return "liquidity_outside_entry_hours"
-        val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return "no_liquidity_break"
+        // Each decision bar's verdict (and a break's level, target and close) is kept for Jarvis's words ([noteLiquidity]):
+        // returned exactly as before; nothing reads it back to decide.
+        fun kept(verdict: String, sig: LiquidityRules.Signal? = null): String {
+            runCatching { noteLiquidity(t, arm.source, verdict, last.start, sig, last.close) }
+            return verdict
+        }
+        if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return kept("liquidity_outside_entry_hours")
+        val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return kept("no_liquidity_break")
         // The room filter and the 1-ITM strike (research liq2, adopted on paper 06 Oct by Boss's choice).
         if (!LiquidityRules.hasRoom(s, last.close, und)) {
             // Information only (its own switch, off by default): the skip is told, the decision above is unchanged.
@@ -1664,7 +1724,7 @@ object OrbArms {
                     com.optionslab.ira.LiquidityNotice.Book(und, tf), s.level, s.side * ((s.target ?: last.close) - last.close),
                     LiquidityRules.MIN_ROOM_STOPS * LiquidityRules.indexStopPoints(und)), t)
             }
-            return "liquidity_no_room"
+            return kept("liquidity_no_room", s)
         }
         val strike = LiquidityRules.entryStrike(s.side, last.close, und)
         // Candidate (a)'s shadow (pre-registered 06 Oct): recorded with the trade, never acted on (with the room filter on,
@@ -1689,9 +1749,9 @@ object OrbArms {
                 "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
                     (if (live) "LIVE on Zerodha, ${LiquidityLots.words(lotsOf(b))}: approve it on Home in the app" else "Paper account, ${LiquidityLots.words(lotsOf(b))}") +
                     ". Approve by ${hhmm(expires)} or it lapses.", "almanac", approve = "orb")
-            return "awaiting_approval"
+            return kept("awaiting_approval", s)
         }
-        return enterLiquidity(b, arm, s, last.start, strike, live, near, volSkip, strong)
+        return kept(enterLiquidity(b, arm, s, last.start, strike, live, near, volSkip, strong), s)
     }
 
     /** Candidate (f)'s flag for signal [s] on [und] closing at [close], with the option bought at [strike] ([LiquidityShadow.strongMomentum]). */

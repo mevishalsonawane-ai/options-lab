@@ -39,6 +39,33 @@ internal object IraLiquidity {
         return LiquidityMap.answer(q, reads(now, q.underlyings, kept = false), armed(), now)
     }
 
+    /**
+     * "Why no liquidity trade today?", "what is liquidity waiting for" ([com.optionslab.ira.LiquidityWhyNot]): from the arm's
+     * own records of today - each book's switch, verdict and bars decided and today's trades ([com.optionslab.app.data.OrbArms.liquidityDay],
+     * a short wait on the arms' lock, else said as not read), the decisions it kept in memory
+     * ([com.optionslab.app.data.OrbArms.liquidityDecisions], no lock), the day's stop, and each book's levels (the minutes the
+     * arm read this minute, else one read of them, bounded). Read only: nothing is armed, placed, closed or changed.
+     */
+    suspend fun whyNot(q: com.optionslab.ira.LiquidityWhyNot.Q): String {
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val day = now.toLocalDate()
+        val tradingDay = runCatching { com.optionslab.app.data.Market.isTradingDay(day) }.getOrDefault(true)
+        val arms = com.optionslab.app.data.OrbArms
+        // The arms' lock may be held by their tick across a network read: a short wait, else the book is said as not read.
+        val held = runCatching { kotlinx.coroutines.withTimeoutOrNull(3_000) { arms.liquidityDay(day) } }.getOrNull()
+        val stopped = runCatching { kotlinx.coroutines.withTimeoutOrNull(3_000) { com.optionslab.app.data.Strategies.stoppedWhy() } }.getOrNull()
+        val decisions = runCatching { arms.liquidityDecisions(day) }.getOrDefault(emptyList())
+        val reads = if (!tradingDay) emptyList() else runCatching {
+            reads(now, q.underlyings, kept = true).ifEmpty {
+                kotlinx.coroutines.withTimeoutOrNull(8_000) { reads(now, q.underlyings, kept = false) }.orEmpty()
+            }
+        }.getOrDefault(emptyList())
+        val facts = com.optionslab.ira.LiquidityWhyNot.Facts(
+            now = now, tradingDay = tradingDay, armed = held?.first?.any { it.armed }, books = held?.first.orEmpty(), stopped = stopped,
+            trades = held?.second.orEmpty().map { IraBots.tradeOf(it) }, decisions = decisions, since = arms.liquidityRecordSince, reads = reads)
+        return com.optionslab.ira.LiquidityWhyNot.answer(q, facts)
+    }
+
     /** What was told today (kept in memory; a restart may tell a level again). */
     private var told = LiquidityMap.Told()
 

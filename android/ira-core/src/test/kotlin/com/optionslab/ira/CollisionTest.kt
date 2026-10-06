@@ -120,6 +120,7 @@ class CollisionTest {
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
         "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
+        "LiquidityWhyNot" to { q -> LiquidityWhyNot.asked(q) != null },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
@@ -902,12 +903,21 @@ class CollisionTest {
         "prepare me for tomorrow" to "TomorrowPlan", "prep me for tomorrow" to "TomorrowPlan", "get me ready for tomorrow" to "TomorrowPlan",
         "brief me for tomorrow" to "TomorrowPlan", "can you prepare me for tomorrow" to "TomorrowPlan", "how should i prepare for tomorrow" to "TomorrowPlan",
         "help me prepare for tomorrow" to "TomorrowPlan", "how do i get ready for tomorrow" to "TomorrowPlan", "jarvis what's the plan for tomorrow" to "TomorrowPlan",
+        // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, from its own records, and what it waits for ----
+        "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot", "why didn't liquidity trade today" to "LiquidityWhyNot",
+        "why did liquidity not trade today" to "LiquidityWhyNot", "why hasn't liquidity traded" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
+        "why no trade from liquidity" to "LiquidityWhyNot", "why didn't the liquidity bot trade" to "LiquidityWhyNot", "why didn't liquidity take a trade today" to "LiquidityWhyNot",
+        "why did liquidity skip" to "LiquidityWhyNot", "why did liquidity skip the break" to "LiquidityWhyNot", "how come liquidity didn't trade" to "LiquidityWhyNot",
+        "liquidity ne trade kyu nahi liya" to "LiquidityWhyNot", "liquidity ne trade kyun nahi liya" to "LiquidityWhyNot", "liquidity ne aaj trade kyu nahi liya" to "LiquidityWhyNot",
+        "liquidity kyu nahi chala" to "LiquidityWhyNot", "aaj liquidity ne entry kyun nahi li" to "LiquidityWhyNot", "why no banknifty liquidity trade" to "LiquidityWhyNot",
+        "what's liquidity waiting for" to "LiquidityWhyNot", "what is the liquidity bot waiting for" to "LiquidityWhyNot",
+        "liquidity kis cheez ka wait kar raha hai" to "LiquidityWhyNot", "what would make liquidity trade" to "LiquidityWhyNot", "when will liquidity trade" to "LiquidityWhyNot",
         // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
-        "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityMap",
+        "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityWhyNot",
         "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
         "finnifty liquidity levels kahan hain" to "LiquidityMap", "where is the next liquidity pool for banknifty" to "LiquidityMap",
         "liquidity kis level ka wait kar raha hai" to "LiquidityMap", "next liquidity level kitna door hai" to "LiquidityMap",
-        "what is the liquidity arm waiting for" to "LiquidityMap", "show me the liquidity zones on bank nifty" to "LiquidityMap",
+        "what is the liquidity arm waiting for" to "LiquidityWhyNot", "show me the liquidity zones on bank nifty" to "LiquidityMap",
         "where is the nearest pool on finnifty" to "LiquidityMap", "liquidity map for the 15 minute chart" to "LiquidityMap",
         "how often does an otm option 100 points away end the day in the money" to "OtmReach",
         "how often does a call two strikes out of the money finish in the money" to "OtmReach", "how often does nifty's otm put double" to "OtmReach",
@@ -1445,7 +1455,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3075,5 +3085,44 @@ class CollisionTest {
         for (s in listOf("start all strategies tomorrow", "plan to buy nifty tomorrow", "remind me of the plan tomorrow", "plan for the day after tomorrow",
             "what's the trade plan for tomorrow", "plan my trip for tomorrow"))
             assertTrue(audit.feature(s) != "TomorrowPlan", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- LiquidityWhyNot: why the arm did or did not trade today, never the questions that already had their own answers ----
+
+    @Test fun liquidityWhyNotLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("why no liquidity trade today", "why no liquidity trade today?", "why didn't liquidity trade", "liquidity ne trade kyu nahi liya",
+            "what is liquidity waiting for", "why did liquidity skip the break", "why didn't the liquidity bot trade", "what would make liquidity trade")) {
+            assertEquals("LiquidityWhyNot", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The arm's exits and today's trades, its record, levels, size, health, switch and plan, and the other arms: as before.
+        assertEquals("BotTrades", audit.feature("why did the liquidity bot exit"))
+        assertEquals("BotTrades", audit.feature("liquidity trades today"))
+        assertEquals("BotTrades", audit.feature("what did the liquidity bot do today"))
+        assertEquals("BotTrades", audit.feature("why did my bots trade today"))
+        assertEquals("ArmDay", audit.feature("why did liquidity 15+5 lose today"))
+        assertEquals("Market", audit.feature("how did liquidity do today"))
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("LiquidityMap", audit.feature("where are the liquidity levels"))
+        assertEquals("LiquidityMap", audit.feature("liquidity kis level ka wait kar raha hai"))
+        assertEquals("LiquidityMap", audit.feature("how far is the next liquidity pool"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        assertEquals("Honest", audit.feature("how many lots does liquidity trade"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("SwitchOff", audit.feature("should i switch off liquidity"))
+        assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
+        assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
+        assertEquals("Thinking", audit.feature("why didn't you take that trade"))
+        assertEquals("Thinking", audit.feature("trade kyun nahi liya"))
+        assertEquals("Thinking", audit.feature("why didn't solo take that trade"))
+        // Another arm, another day, a definition: never this answer.
+        for (s in listOf("why didn't orb trade", "why no trade today", "why didn't liquidity trade yesterday", "why didn't liquidity trade last week",
+            "what is a liquidity pool", "why did liquidity trade today", "why did the liquidity bot exit early", "liquidity ne kal trade kyu nahi liya"))
+            assertTrue(audit.feature(s) != "LiquidityWhyNot", "$s: ${audit.feature(s)}")
     }
 }
