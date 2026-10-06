@@ -236,6 +236,8 @@ fun PnlCalendarScreen(model: AppModel) {
         item { Summary(month, days, monthTrips) }
         item { YearStrip(month.year, all, live) }
         item { StrategyComparison(trips, owners) }
+        // Live vs backtest: each running strategy's forward paper trades against its research (the arms' own records).
+        item { LiveVsBacktest(tick) }
         item { ChargesCard(live, month, tick) }
         item { JournalCard(trips) }
     }

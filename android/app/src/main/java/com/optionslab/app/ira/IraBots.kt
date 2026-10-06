@@ -138,8 +138,19 @@ internal object IraBots {
         // Liquidity 15+5 named: its pre-registered candidates (a), (b) and the volatility filter (c), each judged at 40 paper trades.
         val shadow = if (!question.contains("liquidity", ignoreCase = true)) emptyList()
             else listOfNotNull(runCatching { com.optionslab.engine.orb.LiquidityShadow.verdict(com.optionslab.app.data.OrbArms.liquidityShadow()) }.getOrNull())
-        return retired + health + shadow
+        return retired + health + shadow + liveVsBacktest(question)
     }
+
+    /**
+     * Live vs backtest ([com.optionslab.ira.ForwardCheck], the P&L tab's card): one line for the strategy named (Liquidity,
+     * Solo, Hero), else one for each running one ("Liquidity 15+5 - Live vs backtest: ..."). Reads only.
+     */
+    private suspend fun liveVsBacktest(question: String): List<String> = runCatching {
+        val rows = com.optionslab.app.data.ForwardRecords.rows().filter { !it.shadow }
+        val named = rows.filter { r -> Regex("\\b${r.result.expectation.key}\\b", RegexOption.IGNORE_CASE).containsMatchIn(question) }
+        if (named.size == 1) listOf(com.optionslab.ira.ForwardCheck.line(named.single().result))
+        else named.ifEmpty { rows }.map { "${it.title} - ${com.optionslab.ira.ForwardCheck.line(it.result)}" }
+    }.getOrDefault(emptyList())
 
     /** The shadows or the retired arms named ([lines]). */
     private val SHADOWS = Regex("\\b(shadows?|retired)\\b", RegexOption.IGNORE_CASE)
