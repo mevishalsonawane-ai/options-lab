@@ -1401,7 +1401,7 @@ class JarvisVoice : Service() {
             turnEndAt = now
             hushBeep(1_200)                               // the end beep
             if (!speaking) {
-                val wait = com.optionslab.ira.Turn.closeIn(now, finishAt)
+                val wait = com.optionslab.ira.Turn.closeIn(now, finishAt, com.optionslab.ira.Turn.unfinished(turnPartial))
                 main.removeCallbacks(finish); finishAt = now + wait; main.postDelayed(finish, wait)
             }
         }
@@ -1458,7 +1458,8 @@ class JarvisVoice : Service() {
                 val nameOnly = asking == null && com.optionslab.ira.Wake.heard(first, awake()) is com.optionslab.ira.Wake.Heard.Awake
                 // Only the name: still closed, a little later - a lone "Jarvis" left to the recognizer's own silence often
                 // ended as "no match" and was lost (the mic button's turns are always closed, which is why they worked).
-                val wait = if (nameOnly) 1_800L else com.optionslab.ira.BossPace.endAfter(paceGaps)
+                // Words stopping mid-sentence ("Jarvis what is my"): closed no sooner than 1.8 s ([com.optionslab.ira.Turn.endAfter]).
+                val wait = if (nameOnly) 1_800L else com.optionslab.ira.Turn.endAfter(first, com.optionslab.ira.BossPace.endAfter(paceGaps))
                 finishAt = SystemClock.elapsedRealtime() + wait
                 main.postDelayed(finish, wait)
                 main.removeCallbacks(prepareAhead)
