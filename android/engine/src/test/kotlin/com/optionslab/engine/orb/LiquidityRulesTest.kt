@@ -162,4 +162,54 @@ class LiquidityRulesTest {
         val pools = LiquidityRules.poolZones(bars(o, h, l, c))
         assertTrue(pools.none { it.side > 0 && it.top == 110.0 })
     }
+
+    @Test fun aBreakNeedsOneIndexStopOfRoomToTheNextLevel() {
+        assertEquals(1.0, LiquidityRules.MIN_ROOM_STOPS)
+        // BANKNIFTY: the stop unit is 30 points. Long: target above the close.
+        val up = LiquidityRules.Signal(1, 52_000.0, 52_080.0)
+        assertTrue(LiquidityRules.hasRoom(up, 52_050.0, "BANKNIFTY"))           // exactly 30 points: room
+        assertFalse(LiquidityRules.hasRoom(up, 52_050.05, "BANKNIFTY"))         // 29.95: too close
+        assertFalse(LiquidityRules.hasRoom(up, 52_090.0, "BANKNIFTY"))          // already past the level ahead
+        // Short: target below the close.
+        val down = LiquidityRules.Signal(-1, 52_000.0, 51_900.0)
+        assertTrue(LiquidityRules.hasRoom(down, 51_950.0, "BANKNIFTY"))
+        assertFalse(LiquidityRules.hasRoom(down, 51_920.0, "BANKNIFTY"))
+        // FINNIFTY: 15 points.
+        val fin = LiquidityRules.Signal(1, 24_000.0, 24_030.0)
+        assertTrue(LiquidityRules.hasRoom(fin, 24_015.0, "FINNIFTY"))
+        assertFalse(LiquidityRules.hasRoom(fin, 24_016.0, "FINNIFTY"))
+        // No level ahead: room.
+        assertTrue(LiquidityRules.hasRoom(LiquidityRules.Signal(1, 52_000.0, null), 52_010.0, "BANKNIFTY"))
+        assertTrue(LiquidityRules.hasRoom(LiquidityRules.Signal(-1, 52_000.0, null), 51_990.0, "BANKNIFTY"))
+    }
+
+    @Test fun theEntryBuysOneStrikeInTheMoney() {
+        assertEquals(1, LiquidityRules.ITM_STEPS)
+        // BANKNIFTY ATM 52,100 for a close of 52,070: the CE buys 52,000, the PE 52,200.
+        assertEquals(52_000, LiquidityRules.entryStrike(1, 52_070.0, "BANKNIFTY"))
+        assertEquals(52_200, LiquidityRules.entryStrike(-1, 52_070.0, "BANKNIFTY"))
+        // FINNIFTY ATM 24,050 for 24,070: CE 24,000, PE 24,100.
+        assertEquals(24_000, LiquidityRules.entryStrike(1, 24_070.0, "FINNIFTY"))
+        assertEquals(24_100, LiquidityRules.entryStrike(-1, 24_070.0, "FINNIFTY"))
+        // Always on the strike grid, one step from ATM.
+        for (c in listOf(51_949.0, 51_950.0, 52_049.99)) for (side in listOf(1, -1)) {
+            val k = LiquidityRules.entryStrike(side, c, "BANKNIFTY")
+            assertEquals(0, k % 100)
+            assertEquals(-side * 100, k - OrbRules.atmStrike(c, 100))
+        }
+    }
+
+    @Test fun theRoomFilterUsesTheSignalsOwnTarget() {
+        // On the research series every signal either has no level ahead or a target beyond its close.
+        val b = wave()
+        val sigs = (60 until b.size).mapNotNull { i ->
+            val sub = b.subList(0, i + 1)
+            LiquidityRules.signal(sub, LiquidityRules.zones(sub))?.let { it to sub.last().close }
+        }
+        assertTrue(sigs.isNotEmpty())
+        for ((s, close) in sigs) {
+            val room = LiquidityRules.hasRoom(s, close, "BANKNIFTY")
+            if (s.target == null) assertTrue(room) else assertEquals(s.side * (s.target!! - close) >= 30.0, room)
+        }
+    }
 }

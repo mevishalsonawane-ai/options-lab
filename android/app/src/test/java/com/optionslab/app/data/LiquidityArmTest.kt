@@ -73,8 +73,8 @@ class LiquidityArmTest : RobolectricTest() {
         at(LocalTime.of(12, 50))
         val expiry = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54100CE"),
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54100PE")))
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE")))
         upstox.price(ceKey, 300.0)
         upstox.price(peKey, 280.0)
         OrbArms.testIndexBars = { t -> feed(t) }
@@ -251,7 +251,7 @@ class LiquidityArmTest : RobolectricTest() {
         val r = row()
         assertTrue("nothing bought before the approval", Paper.state.orders.isEmpty())
         val pd = r.pending!!
-        assertEquals("CE", pd.right); assertEquals(54_100, pd.strike); assertEquals(54_100.0, pd.level!!, 0.0)
+        assertEquals("CE", pd.right); assertEquals(54_000, pd.strike); assertEquals(54_100.0, pd.level!!, 0.0)   // strike: one in the money (liq2)
         assertEquals(day.atTime(13, 10), pd.expires)                         // valid until the next 5-minute bar closes
         assertTrue(r.status, r.status.contains("Breakout: waiting for your approval."))
         val msg = runBlocking { OrbArms.approve("liquidity") }
@@ -289,10 +289,10 @@ class LiquidityArmTest : RobolectricTest() {
         bankFlat = true
         val expiry = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54100CE"),
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54100PE"),
-            Upstox.Contract("FINNIFTY", expiry, 24_050.0, Right.CE, 65, "NSE_FO|LIQFINCE", "FINNIFTY-LIQ-24050CE"),
-            Upstox.Contract("FINNIFTY", expiry, 24_050.0, Right.PE, 65, "NSE_FO|LIQFINPE", "FINNIFTY-LIQ-24050PE")))
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE"),
+            Upstox.Contract("FINNIFTY", expiry, 24_000.0, Right.CE, 65, "NSE_FO|LIQFINCE", "FINNIFTY-LIQ-24000CE"),
+            Upstox.Contract("FINNIFTY", expiry, 24_100.0, Right.PE, 65, "NSE_FO|LIQFINPE", "FINNIFTY-LIQ-24100PE")))
         upstox.price("NSE_FO|LIQFINCE", 120.0)
         upstox.price("NSE_FO|LIQFINPE", 110.0)
         OrbArms.testOtherIndexBars = { u, t ->
@@ -305,7 +305,7 @@ class LiquidityArmTest : RobolectricTest() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
         val p = row().today.single()
         assertEquals("liquidity5_fin", p.arm)
-        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24050CE"))
+        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24000CE"))                // one strike in the money (liq2)
         assertEquals(65, p.qty)                                              // FINNIFTY's own lot
         assertEquals(24_050.0, p.level!!, 0.0)
         assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop

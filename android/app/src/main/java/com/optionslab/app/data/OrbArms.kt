@@ -1405,8 +1405,11 @@ object OrbArms {
         if (!b.decided.getOrPut("${arm.source}|$day") { HashSet() }.add(last.start.toString())) return "no_decision_bar"
         if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return "liquidity_outside_entry_hours"
         val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return "no_liquidity_break"
-        val strike = OrbRules.atmStrike(last.close, LiquidityRules.strikeStep(und))
-        // Candidate (a)'s shadow (pre-registered 06 Oct): recorded with the trade, never acted on.
+        // The room filter and the 1-ITM strike (research liq2, adopted on paper 06 Oct by Boss's choice).
+        if (!LiquidityRules.hasRoom(s, last.close, und)) return "liquidity_no_room"
+        val strike = LiquidityRules.entryStrike(s.side, last.close, und)
+        // Candidate (a)'s shadow (pre-registered 06 Oct): recorded with the trade, never acted on (with the room filter on,
+        // entered trades no longer carry it).
         val near = LiquidityShadow.nearLevel(und, s.side, last.close, s.target)
         val live = liveNow()
         // As the ORB: automatic unless the owner chose approvals, or it was armed in Paper and now finds the app in Live.
@@ -1667,6 +1670,7 @@ object OrbArms {
         s == "no_liquidity_break" -> "Waiting for a close through a liquidity pool that sits on a swing zone."
         s == "liquidity_history_loading" -> "Loading the last days' BANKNIFTY candles for the liquidity levels."
         s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
+        s == "liquidity_no_room" -> "Skipped a liquidity break: the next level ahead was closer than one index stop (30 BANKNIFTY / 15 FINNIFTY points)."
         s.startsWith("hero_") -> describeHero(s) + " ${HeroRules.NOT_PROVEN}."
         s.startsWith("guard_refused: ") -> "Refused by Bot settings: " + s.removePrefix("guard_refused: ")
         s.startsWith("refused: ") -> "Refused: " + s.removePrefix("refused: ")

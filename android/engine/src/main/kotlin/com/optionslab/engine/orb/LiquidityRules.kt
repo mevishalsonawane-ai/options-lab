@@ -14,7 +14,8 @@ import java.time.LocalTime
  *             10 bars; a close through it before that discards it
  *   taken     a close beyond a level's outer edge (above a high's top, below a low's bottom)
  *   entry     the last completed bar takes a POOL that overlaps a still-active SWING zone of the same side (both
- *             tools agree): above -> BUY the ATM CE, below -> BUY the ATM PE, at the next bar's open, 09:20-14:00
+ *             tools agree): above -> BUY the CE, below -> BUY the PE, one strike in the money ([entryStrike]), at the
+ *             next bar's open, 09:20-14:00; skipped when the next level ahead is too close ([hasRoom])
  *   exits     the first of: the option falls 15% below the price paid (a resting stop, the owner's 2026-10-01 choice);
  *             the index trades 30 points (FINNIFTY 15) back through the broken level (index stop); not +5% after 20 minutes
  *             (time stop);
@@ -200,6 +201,28 @@ object LiquidityRules {
 
     /** True when the option at [ltp] is short of the gain the time stop asks for. */
     fun timeStopFails(entry: Double, ltp: Double): Boolean = ltp < entry * (1 + TIME_STOP_GAIN) - 1e-9
+
+    /**
+     * Room filter (research liq2, 2026-10-06): skip a break whose next liquidity level ahead (the trade's target) is
+     * closer to the deciding bar's close than [MIN_ROOM_STOPS] index-stop units (BANKNIFTY 30 points, FINNIFTY 15).
+     * No level ahead counts as room. Picked by a quarterly walk-forward over Aug 2021 - Oct 2026, together with
+     * [ITM_STEPS]; the one book state it changes is that a skipped break leaves the book flat for the next one.
+     */
+    const val MIN_ROOM_STOPS = 1.0
+
+    fun hasRoom(s: Signal, close: Double, underlying: String): Boolean {
+        val target = s.target ?: return true
+        return s.side * (target - close) >= MIN_ROOM_STOPS * indexStopPoints(underlying)
+    }
+
+    /** Strikes in the money the entry buys (research liq2, 2026-10-06): 1, i.e. the CE one step below ATM, the PE one above. */
+    const val ITM_STEPS = 1
+
+    /** The strike a break on [side] buys when the deciding bar closed at [close]: [ITM_STEPS] steps in the money from ATM. */
+    fun entryStrike(side: Int, close: Double, underlying: String): Int {
+        val step = strikeStep(underlying)
+        return OrbRules.atmStrike(close, step) - (if (side > 0) 1 else -1) * ITM_STEPS * step
+    }
 
     fun mayEnterAt(entry: LocalDateTime): Boolean { val t = entry.toLocalTime(); return !t.isBefore(FIRST_ENTRY) && !t.isAfter(LAST_ENTRY) }
 }
