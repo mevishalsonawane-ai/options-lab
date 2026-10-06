@@ -94,6 +94,38 @@ internal object IraJournal {
         return com.optionslab.ira.TradeReplay.answer(if (live) "Zerodha" else "Paper", scope, replays(picked, owners))
     }
 
+    /**
+     * "My scorecard today" ([com.optionslab.ira.DayScore]): today's own closed trades, each account apart (Zerodha only when it
+     * has trades today), against the index's minute candles before each entry, his usual hold and the contract's minute
+     * candles after each exit. A trade book that could not be read is said so. Reads only: nothing placed or changed.
+     */
+    suspend fun dayScore(): String = kotlinx.coroutines.coroutineScope {
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val today = com.optionslab.app.data.Market.today()
+        val now = LocalDateTime.now(IST)
+        val out = ArrayList<String>()
+        for (live in listOf(true, false)) {
+            val label = if (live) "Zerodha" else "Paper"
+            val book = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrNull()
+            if (book == null) { out += "$label: I could not read your $label trade book just now, so it is left out - not taken as no trades."; continue }
+            if (live && book.none { it.day == today }) continue
+            val scored = book.map { t ->
+                com.optionslab.ira.DayScore.Trip(t.symbol, t.direction, t.qty, t.entry, t.exit, t.openedAt, t.closedAt, t.net,
+                    com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+            }
+            val ownToday = scored.filter { it.closedAt.toLocalDate() == today && it.owner.startsWith("Manual") }
+                .sortedBy { it.closedAt }.takeLast(com.optionslab.ira.DayScore.MAX_TRADES)
+            val optionJobs = ownToday.map { it.symbol }.distinct().map { s -> s to async { minutes(s, today) } }
+            val indexJobs = ownToday.mapNotNull { com.optionslab.ira.DayScore.marketOf(it.symbol) }.distinct()
+                .mapNotNull { m -> IraHub.LIVE[m]?.let { s -> m to async { minutes(s, today) } } }
+            val optionBars = optionJobs.associate { (s, job) -> s to job.await() }
+            val indexBars = indexJobs.associate { (m, job) -> m to job.await() }
+            out += com.optionslab.ira.DayScore.lines(label, scored, today, optionBars, indexBars, now)
+        }
+        out += com.optionslab.ira.DayScore.CLOSING
+        out.joinToString("\n")
+    }
+
     /** The journal's replay of a day's closed trades: a line each, then what the exits show. */
     suspend fun replayLines(trips: List<com.optionslab.engine.RoundTrips.Trip>, owners: Map<String, String>): List<String> {
         val r = replays(trips.sortedBy { it.closedAt }.takeLast(MAX_REPLAYED), owners)

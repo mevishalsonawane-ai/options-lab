@@ -114,6 +114,7 @@ class CollisionTest {
         "TradesADay" to { q -> TradesADay.asked(q) != null },
         "AfterLoss" to { q -> AfterLoss.asked(q) != null },
         "StopNoise" to { q -> StopNoise.asked(q) },
+        "DayScore" to { q -> DayScore.asked(q) },
         "RequestBook" to { q -> RequestBook.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
@@ -992,6 +993,12 @@ class CollisionTest {
         "is my stop loss too tight" to "StopNoise", "is my nifty call stop too tight" to "StopNoise", "my stop is too tight" to "StopNoise",
         "is my stop inside the noise" to "StopNoise", "will normal noise hit my stop" to "StopNoise", "how much room does my stop have" to "StopNoise",
         "my stop noise check" to "StopNoise", "mera stop bahut tight hai kya" to "StopNoise", "meri sl zyada paas hai" to "StopNoise",
+        // ---- DayScore: today's own trades against the index, his usual hold and the price after each exit (reasoning round 34) ----
+        "my scorecard today" to "DayScore", "how's today's scorecard" to "DayScore", "aaj ka scorecard" to "DayScore",
+        "my trades so far today" to "DayScore", "how are my trades today so far" to "DayScore", "did i trade against the trend today" to "DayScore",
+        "how many of my trades were against the trend today" to "DayScore", "how long did i hold my trades today" to "DayScore",
+        "did i hold my trades longer than usual today" to "DayScore", "aaj maine trend ke against trade kiya kya" to "DayScore",
+        "were my exits before the best price today" to "DayScore",
         // ---- RequestBook: the Requests panel said, waiting and answered (usefulness round 33) ----
         "what requests are waiting" to "RequestBook", "anything waiting for my approval" to "RequestBook", "what needs my approval" to "RequestBook",
         "koi request hai" to "RequestBook", "what did i approve today" to "RequestBook", "what did i decline today" to "RequestBook",
@@ -1371,7 +1378,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
