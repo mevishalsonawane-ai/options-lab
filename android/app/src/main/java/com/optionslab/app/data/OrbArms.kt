@@ -120,6 +120,11 @@ object OrbArms {
          * entry from before the size setting (1 lot), or another arm.
          */
         val lot: Int? = null,
+        /**
+         * Liquidity 15+5: the worst premium seen while held (its best is [peak]), kept on each price check for Jarvis's trade
+         * lesson ([com.optionslab.ira.TradeLesson]). Null: not recorded (an entry from before it was kept, or another arm).
+         */
+        val low: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -225,7 +230,7 @@ object OrbArms {
                         sold = p.optInt("sold", 0), soldAt = if (p.has("soldAt")) p.getDouble("soldAt") else null,
                         soldTime = p.optString("soldTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
                         seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty(),
-                        lot = if (p.has("lot")) p.getInt("lot") else null)
+                        lot = if (p.has("lot")) p.getInt("lot") else null, low = if (p.has("low")) p.getDouble("low") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -403,7 +408,7 @@ object OrbArms {
                     .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } }.put("timed", p.timed)
                     .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) } }
                     .apply { if (p.sold > 0) put("sold", p.sold); p.soldAt?.let { put("soldAt", it) }; p.soldTime?.let { put("soldTime", it.toString()) }
-                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) } })
+                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) }; p.low?.let { put("low", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -967,7 +972,8 @@ object OrbArms {
                 continue
             }
             if (ltp == null) continue                                               // no price at all: hold
-            val (seen, locked) = ladder(cur, ltp)
+            val (laddered, locked) = ladder(cur, ltp)
+            val seen = heldRange(laddered, ltp)
             if (seen !== cur) b.positions[i] = seen
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
             // close), checked here every pass; the operator's stop still sells it all at once below.
@@ -1008,6 +1014,16 @@ object OrbArms {
         val trigger = p.stopTrigger ?: return null
         val r = runCatching { Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "SL-M", "MIS", null, trigger) }.getOrNull()
         return r?.takeIf { it.ok }?.orderId?.also { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · stop") }
+    }
+
+    /**
+     * Liquidity 15+5 (not under the ladder): the best and worst premium seen while held ([Position.peak], [Position.low]) at
+     * [ltp], for Jarvis's trade lesson. Every other position comes back as it is. Never changes an exit or an order.
+     */
+    private fun heldRange(p: Position, ltp: Double): Position {
+        if (p.ladder || !runCatching { armOf(p.arm).liquidity }.getOrDefault(false)) return p
+        val hi = maxOf(p.peak ?: p.entry, ltp); val lo = minOf(p.low ?: p.entry, ltp)
+        return if (hi == p.peak && lo == p.low) p else p.copy(peak = hi, low = lo)
     }
 
     /**
@@ -1515,7 +1531,8 @@ object OrbArms {
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
-            val (seen, locked) = ladder(cur, ltp)
+            val (laddered, locked) = ladder(cur, ltp)
+            val seen = heldRange(laddered, ltp)
             if (seen !== cur) b.positions[i] = seen
             val why = when {
                 stopped -> "operator_stop"

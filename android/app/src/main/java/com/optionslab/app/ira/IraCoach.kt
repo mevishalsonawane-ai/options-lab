@@ -1094,7 +1094,10 @@ internal object IraCoach {
         // a pointer only: nothing is set, armed or placed. One learned line a wrap-up: on a day the small-trades fact is said, it waits.
         val condNeeds = if (review && small == null && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { IraTools.condNeedsWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
+        // Today's Liquidity 15+5 trades in research terms ([com.optionslab.ira.TradeLesson]): one line, facts only.
+        val lessons = runCatching { IraTradeLessons.wrapLine() }.getOrNull()
         return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, small, condNeeds, agenda, improve, IraSolo.daySummary(),
+            lessons,
             IraHub.marketWrapLine(),
             // The 09:00 outlook against the close, owned (only at 15:35, when the day is in and the check is kept).
             if (review) IraHub.outlookCheckLine() else null,
