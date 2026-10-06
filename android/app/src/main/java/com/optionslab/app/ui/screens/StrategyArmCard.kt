@@ -299,7 +299,7 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text(when { killOn -> "Clear the kill switch?"; stopped && lossStop -> "Stopped by the daily loss limit"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(when {
                     killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
                         if (stopped) " once the bot is started too." else "."
@@ -308,10 +308,8 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
                         "Tomorrow the armed strategies, ORB arms and Pine scripts run as usual."
                     stopped -> "Armed strategies start at their scheduled times again today, and the armed ORB arms and Pine scripts trade again. " +
                         "Nothing that is switched off is switched on."
-                    else -> "This stops everything the app trades by itself for the rest of today: no armed strategy starts, the ORB arms " +
-                        "(ORB, ORB Fresh, ORB Sweep, Range Fade, Liquidity) and the Pine scripts make no new entries, and waiting approvals " +
-                        "are dropped. What the ORB arms and Pine scripts hold is sold now (as on the desktop). Their switches stay on: " +
-                        "Start bot here, or \"start all\" to Jarvis, resumes them today. Tomorrow the bot runs as usual."
+                    else -> "Stops everything the app trades by itself today: strategies, ORB arms and Pine scripts. What the ORB arms " +
+                        "and Pine scripts hold is sold now. Switches stay on; Start bot (or \"start all\") resumes them today."
                 }, style = Type.bodySmall)
                 if (!killOn && !stopped && anyRunning) Row(Modifier.padding(top = 10.dp).clickable { alsoStop = !alsoStop }, verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(alsoStop, { alsoStop = it })
