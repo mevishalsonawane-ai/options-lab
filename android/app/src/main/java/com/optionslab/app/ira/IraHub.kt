@@ -5273,8 +5273,14 @@ object IraHub {
         return listOfNotNull(note, com.optionslab.ira.ChainIntel.answer(a, now, IraAccount.chainBook.first(u, today), today)).joinToString(" ")
     }
 
-    /** The past sessions read for [straddleDecay] (the index, its kept days and the day as key), kept until any of them changes. */
-    @Volatile private var straddleDays: Pair<String, List<com.optionslab.ira.StraddleDecay.Day>>? = null
+    /**
+     * The index's past sessions read down for [straddleDecay], [expiryHour] and [atmBuy] in one stream
+     * ([com.optionslab.ira.PastReads]), kept until the day or the phone's kept days change.
+     */
+    private fun pastReads(u: String, today: java.time.LocalDate): com.optionslab.ira.PastReads.Read {
+        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
+        return com.optionslab.ira.PastReads.of(u, "$today|${kept.size}|${kept.lastOrNull()}", today) { Store.barSessions(u) }
+    }
 
     /**
      * "How much does the ATM straddle usually lose between 9:30 and 2:30?" ([com.optionslab.ira.StraddleDecay]): the index's
@@ -5286,16 +5292,10 @@ object IraHub {
         val u = m.name
         val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         val today = com.optionslab.app.data.Market.today()
-        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
-        val key = "$u|$today|${kept.size}|${kept.lastOrNull()}"
-        val past = straddleDays?.takeIf { it.first == key }?.second
-            ?: com.optionslab.ira.StraddleDecay.days(Store.barSessions(u), today).also { straddleDays = key to it }
+        val past = pastReads(u, today).straddleDays
         val todays = runCatching { Store.barSession(u, today) }.getOrNull()
         return com.optionslab.ira.StraddleDecay.answer(a, m, past, todays, today, now)
     }
-
-    /** The past sessions read for [expiryHour] (the index, its kept days and the day as key), kept until any of them changes. */
-    @Volatile private var expiryHourDays: Pair<String, List<com.optionslab.ira.ExpiryHour.Day>>? = null
 
     /**
      * "How does the ATM option's premium behave in the last hour on expiry day?" ([com.optionslab.ira.ExpiryHour]): the index's
@@ -5307,10 +5307,7 @@ object IraHub {
         val u = m.name
         val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         val today = com.optionslab.app.data.Market.today()
-        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
-        val key = "$u|$today|${kept.size}|${kept.lastOrNull()}"
-        val past = expiryHourDays?.takeIf { it.first == key }?.second
-            ?: com.optionslab.ira.ExpiryHour.days(Store.barSessions(u), today).also { expiryHourDays = key to it }
+        val past = pastReads(u, today).expiryHourDays
         val todays = runCatching { Store.barSession(u, today) }.getOrNull()
         return com.optionslab.ira.ExpiryHour.answer(a, m, past, todays, today, now)
     }
@@ -5351,9 +5348,6 @@ object IraHub {
         return com.optionslab.ira.OtmReach.answer(a, m, past, todays, today, now)
     }
 
-    /** The past sessions read for [atmBuy] (the index, its kept days and the day as key), kept until any of them changes. */
-    @Volatile private var atmBuyDays: Pair<String, List<com.optionslab.ira.AtmBuy.Day>>? = null
-
     /**
      * "How often does the ATM option double from its 9:30 price before the end of the day?" ([com.optionslab.ira.AtmBuy]): the
      * index's sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few
@@ -5364,10 +5358,7 @@ object IraHub {
         val u = m.name
         val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         val today = com.optionslab.app.data.Market.today()
-        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
-        val key = "$u|$today|${kept.size}|${kept.lastOrNull()}"
-        val past = atmBuyDays?.takeIf { it.first == key }?.second
-            ?: com.optionslab.ira.AtmBuy.days(Store.barSessions(u), today).also { atmBuyDays = key to it }
+        val past = pastReads(u, today).atmBuyDays
         val todays = runCatching { Store.barSession(u, today) }.getOrNull()
         return com.optionslab.ira.AtmBuy.answer(a, m, past, todays, today, now)
     }

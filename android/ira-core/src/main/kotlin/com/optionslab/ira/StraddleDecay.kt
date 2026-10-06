@@ -182,14 +182,17 @@ object StraddleDecay {
      * Each session before [today] in [sessions] read down to its [Day] (streamed: each session is let go once read), the
      * newest [MAX_SESSIONS], oldest first.
      */
-    fun days(sessions: Sequence<Session>, today: LocalDate): List<Day> {
-        val out = java.util.TreeMap<LocalDate, Day>()
-        for (s in sessions) {
-            if (!s.day.isBefore(today)) continue
+    fun days(sessions: Sequence<Session>, today: LocalDate): List<Day> = Reader(today).apply { sessions.forEach(::add) }.days()
+
+    /** [days] one session at a time, so one stream of the kept sessions can feed several reads ([PastReads]). */
+    class Reader(private val today: LocalDate) : PastReads.Part<List<Day>> {
+        private val out = java.util.TreeMap<LocalDate, Day>()
+        override fun add(s: Session) {
+            if (!s.day.isBefore(today)) return
             day(s)?.let { out[s.day] = it }
             if (out.size > MAX_SESSIONS) out.remove(out.firstKey())
         }
-        return out.values.toList()
+        override fun days(): List<Day> = out.values.toList()
     }
 
     private fun median(xs: List<Double>): Double? = if (xs.isEmpty()) null else xs.sorted().let { s ->

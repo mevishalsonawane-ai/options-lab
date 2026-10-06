@@ -183,17 +183,20 @@ object ExpiryHour {
      * Each session before [today] in [sessions] read down to its [Day] (streamed: each session is let go once read), the
      * newest [MAX_DAYS] expiry days and as many other days, oldest first.
      */
-    fun days(sessions: Sequence<Session>, today: LocalDate): List<Day> {
-        val ex = java.util.TreeMap<LocalDate, Day>()
-        val other = java.util.TreeMap<LocalDate, Day>()
-        for (s in sessions) {
-            if (!s.day.isBefore(today)) continue
-            val d = day(s) ?: continue
+    fun days(sessions: Sequence<Session>, today: LocalDate): List<Day> = Reader(today).apply { sessions.forEach(::add) }.days()
+
+    /** [days] one session at a time, so one stream of the kept sessions can feed several reads ([PastReads]). */
+    class Reader(private val today: LocalDate) : PastReads.Part<List<Day>> {
+        private val ex = java.util.TreeMap<LocalDate, Day>()
+        private val other = java.util.TreeMap<LocalDate, Day>()
+        override fun add(s: Session) {
+            if (!s.day.isBefore(today)) return
+            val d = day(s) ?: return
             val into = if (d.expiry) ex else other
             into[s.day] = d
             if (into.size > MAX_DAYS) into.remove(into.firstKey())
         }
-        return (ex.values + other.values).sortedBy { it.day }
+        override fun days(): List<Day> = (ex.values + other.values).sortedBy { it.day }
     }
 
     private fun median(xs: List<Double>): Double? = if (xs.isEmpty()) null else xs.sorted().let { s ->
