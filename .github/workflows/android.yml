@@ -71,6 +71,13 @@ jobs:
           test -n "$ANDROID_HOME"
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
+          # The default NDK (AGP's 27.0.12077973, for the Jarvis voice library) is fetched here with retries: a corrupt
+          # download from Google ("Archive is not a ZIP archive") failed whole builds before any code compiled.
+          for i in 1 2 3; do
+            "$SDKM" --install "ndk;27.0.12077973" > /dev/null && test -f "$ANDROID_HOME/ndk/27.0.12077973/source.properties" && break
+            echo "NDK install failed (try $i); clearing and retrying"
+            rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
+          done
       - uses: gradle/actions/setup-gradle@v4
       - name: Release keystore (optional)
         env:
@@ -221,6 +228,13 @@ jobs:
           test -n "$ANDROID_HOME"
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
+          # The default NDK (AGP's 27.0.12077973, for the Jarvis voice library) is fetched here with retries: a corrupt
+          # download from Google ("Archive is not a ZIP archive") failed whole builds before any code compiled.
+          for i in 1 2 3; do
+            "$SDKM" --install "ndk;27.0.12077973" > /dev/null && test -f "$ANDROID_HOME/ndk/27.0.12077973/source.properties" && break
+            echo "NDK install failed (try $i); clearing and retrying"
+            rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
+          done
       - uses: gradle/actions/setup-gradle@v4
       # Robolectric fetches its Android runtime jar from Maven Central on first use, into ~/.m2; kept between runs
       # so four shards do not each download it (Maven Central rate-limits them: HTTP 429 failed every test once).
