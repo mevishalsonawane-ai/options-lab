@@ -99,12 +99,14 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
     AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
+        glance = { TodayGlanceCard(onGo) },
         strategies = { StrategyArmCard(model) { onGo("strategy") } })
 }
 
 /**
  * Home from plain state and callbacks (what [AlmanacScreen] shows; tests drive it without an [AppModel]).
- * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart.
+ * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart; [glance]: the
+ * "Today at a glance" card at the top ([TodayGlanceCard]; null: none).
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -119,9 +121,10 @@ internal fun AlmanacContent(
     onGo: (String) -> Unit,
     onRow: (RowTarget) -> Unit,
     owners: Map<String, String> = emptyMap(),
+    glance: (@Composable () -> Unit)? = null,
     strategies: @Composable () -> Unit,
 ) {
-    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, strategies)
+    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, glance, strategies)
 }
 
 /** Home's money figures, its live-orders rows and the note under the money, from the books of the mode shown. */
@@ -188,6 +191,7 @@ private fun AlmanacBody(
     onGo: (String) -> Unit,
     onRow: (RowTarget) -> Unit,
     owners: Map<String, String>,
+    glance: (@Composable () -> Unit)?,
     strategies: @Composable () -> Unit,
 ) {
     val p = LocalPalette.current
@@ -199,6 +203,9 @@ private fun AlmanacBody(
         homeBooks(live, loggedIn, account(), paper(), owners, p) } }
 
     Page {
+        // ---- today at a glance: the market, the cues or the risk, the strategies, the events -----------------
+        if (glance != null) item { glance() }
+
         // ---- the money: capital first and largest --------------------------------------
         item {
             val (money, _, moneyNote) = books.value

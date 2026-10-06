@@ -154,7 +154,9 @@ class RootNavigationTest {
         assertEquals(NavState(tab = Tab.TOOLS, toolsView = "expiryput"), h.home("ticket"))
         assertEquals(NavState(tab = Tab.CHART), h.home("chart"))
         assertEquals(NavState(tab = Tab.LAB, labPage = "health"), h.home("health"))
-        for (page in listOf("alarms", "broker", "risk", "security", "schedule", "data")) assertEquals(NavState(tab = Tab.CABINET, cabinetPage = page), h.home(page))
+        // "Today at a glance": its live-vs-backtest lines open the P&L tab; Solo opens Jarvis settings, Jarvis's trades the Ira page.
+        assertEquals(NavState(tab = Tab.PNL), h.home("pnl"))
+        for (page in listOf("alarms", "broker", "risk", "security", "schedule", "data", "jarvis", "ira")) assertEquals(NavState(tab = Tab.CABINET, cabinetPage = page), h.home(page))
         val away = NavState(tab = Tab.PNL)
         assertEquals(Tab.ALMANAC, away.tour("orb").tab)
         assertEquals(Tab.CHART, away.tour("chart").tab)

@@ -573,6 +573,8 @@ internal data class NavState(
         "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
         "chart" -> copy(tab = Tab.CHART)
         "health" -> copy(tab = Tab.LAB, labPage = "health")
+        // "Today at a glance": its live-vs-backtest lines open the P&L tab, where that card is.
+        "pnl" -> copy(tab = Tab.PNL)
         else -> copy(tab = Tab.CABINET, cabinetPage = dest)
     }
 
