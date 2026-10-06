@@ -592,6 +592,15 @@ object MarketRecorder {
     /** The last GIFT Nifty reading kept (when it was read, and the reading), or null. Read only. */
     fun lastGift(): Pair<LocalDateTime, RecorderFeeds.Gift>? = RecorderFeeds.giftDecode(pref(K_GIFT))
 
+    /** The recorded days with each file's size in bytes, newest first (the folder listing only; nothing decrypted). */
+    fun recordedDays(): List<Pair<LocalDate, Long>> = days().reversed().map { it.first to it.second.length() }
+
+    /**
+     * [day]'s records for the "Market data" viewer (decrypted here, on this phone; nothing written or sent). A missing
+     * day is empty; frames that cannot be opened are counted. Call off the main thread.
+     */
+    fun dayRecords(day: LocalDate): MarketRecord.Read = if (dirOrNull == null) MarketRecord.Read(emptyList(), 0) else readDay(day)
+
     /**
      * NSE's participant-wise OI of the two newest trade dates in the recorded day files ([com.optionslab.ira.MorningCues]:
      * the FIIs' positioning and its change), newest first; at most the newest 12 day files are opened. Read only (the
@@ -645,6 +654,7 @@ object MarketRecorder {
         gapAt.clear()
         today = null
         _status.value = null
+        RecordedData.clear()
     }
 }
 

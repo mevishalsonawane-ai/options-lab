@@ -28,7 +28,8 @@ import kotlinx.coroutines.withContext
 /**
  * The market recorder's card (Data & Harvest): its switch (on by default, Boss's 06 Oct approval), what is kept - storage
  * used, days recorded, the last write, the gaps - and "Export recorded data (CSV/zip)" to a file Boss picks with the system
- * file picker (the days are decrypted into that file on this phone; nothing is sent anywhere by the app).
+ * file picker (the days are decrypted into that file on this phone; nothing is sent anywhere by the app), and "Open recorded
+ * data": the read-only [MarketDataScreen].
  */
 @Composable
 fun MarketRecorderCard(model: AppModel) {
@@ -38,6 +39,7 @@ fun MarketRecorderCard(model: AppModel) {
     var status by remember { mutableStateOf<MarketRecord.Status?>(null) }
     var reread by remember { mutableStateOf(0) }
     var busy by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf(false) }
     // The figures list the folder: read off the main thread, on opening, after the switch and after an export.
     LaunchedEffect(reread) {
         status = withContext(Dispatchers.IO) { runCatching { MarketRecorder.status() }.getOrNull() }
@@ -73,8 +75,13 @@ fun MarketRecorderCard(model: AppModel) {
         else MarketRecord.card(s, today).forEach { (label, value) ->
             LedgerLine(label, value, if (label == "Storage used" && s.overBudget) p.oxblood else null)
         }
+        // What is kept, read back on this phone: the day's headlines and the moves after them, the futures, the book, the lessons.
+        BrassButton("Open recorded data", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = (s?.days ?: 0) > 0, tone = p.inkSoft) {
+            viewing = true
+        }
         BrassButton("Export recorded data (CSV/zip)", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = (s?.days ?: 0) > 0, busy = busy) {
             save.launch("iraalgo-market-data-$today.zip")
         }
     }
+    if (viewing) MarketDataScreen { viewing = false }
 }
