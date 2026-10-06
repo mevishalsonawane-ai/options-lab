@@ -128,8 +128,16 @@ internal object IraBots {
     }
 
     /** "How are my bots doing?", "is the ORB arm behaving?", "which strategy is losing?". Reads only. */
-    suspend fun lines(question: String): List<String> = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
-        runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
+    suspend fun lines(question: String): List<String> {
+        // A retired arm named (Boss's 06 Oct choice, [com.optionslab.engine.orb.RetiredArms]): said first that it is retired, and why.
+        val retired = com.optionslab.engine.orb.RetiredArms.named(question).map { com.optionslab.engine.orb.RetiredArms.answer(it) }
+        val health = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
+            runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
+        // Liquidity 15+5 named: its two pre-registered candidates, judged once it has 40 paper trades since 06 Oct.
+        val shadow = if (!question.contains("liquidity", ignoreCase = true)) emptyList()
+            else listOfNotNull(runCatching { com.optionslab.engine.orb.LiquidityShadow.verdict(com.optionslab.app.data.OrbArms.liquidityShadow()) }.getOrNull())
+        return retired + health + shadow
+    }
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
@@ -153,7 +161,10 @@ internal object IraBots {
         val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
         val paper = bots().filter { it.where == "Paper" && it.name in armed }.associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
         val arms = armed.map { (name, on) -> com.optionslab.ira.SwitchOff.arm(name, on, paper[name].orEmpty()) }
-        val a = com.optionslab.ira.SwitchOff.answer(q, arms)
+        val a0 = com.optionslab.ira.SwitchOff.answer(q, arms)
+        // Asked about a retired arm: said first that it is retired for good, and why.
+        val retired = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { com.optionslab.engine.orb.RetiredArms.answer(it) }
+        val a = if (retired.isEmpty()) a0 else a0.copy(text = "$retired ${a0.text}")
         return a to a.offer.firstOrNull()?.let { n -> arms.firstOrNull { it.name == n } }
     }
 
@@ -201,7 +212,8 @@ internal object IraBots {
      * armed, stopped, placed or closed.
      */
     suspend fun armFit(bankNifty: List<com.optionslab.ira.Candle>, vix: List<com.optionslab.ira.Candle>): String {
-        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        // A retired arm is never put forward for a day: it can no longer be armed.
+        val armed = com.optionslab.app.data.OrbArms.view().arms.filter { it.retired == null }.associate { it.arm.label to it.armed }
         val paper = bots().filter { it.where == "Paper" && it.name in armed }
             .associate { b -> b.name to com.optionslab.ira.ArmFit.daily(b.trades.map { it.openedAt.toLocalDate() to it.net }) }
         val tested = armTestedDays()
@@ -340,11 +352,15 @@ internal object IraBots {
         val closed = com.optionslab.app.data.OrbArms.closedPaper()
         val liquidity = com.optionslab.engine.orb.LiquidityRules.BOOKS.map { it.source }.toSet()
         for (a in orb) {
-            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity else it.arm == a.arm.source }
+            // Liquidity 15+5, switched back on on paper on 06 Oct: judged only on its trades from then, and only from 40 of them
+            // (its six-year record is the deciding evidence, not 15 trades).
+            val since = com.optionslab.engine.orb.LiquidityShadow.SINCE
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) else it.arm == a.arm.source }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
             val src = a.arm.source; val auto = a.automatic
             val act: suspend () -> String = { com.optionslab.app.data.OrbArms.setArmed(src, false, automatic = auto) }
-            out += Pair(com.optionslab.ira.ArmCutoff.Arm(a.arm.label, a.armed, mine), act)
+            out += Pair(com.optionslab.ira.ArmCutoff.Arm(a.arm.label, a.armed, mine,
+                if (a.arm.liquidity) com.optionslab.ira.ArmCutoff.LIQUIDITY_MIN_TRADES else com.optionslab.ira.ArmCutoff.MIN_TRADES), act)
         }
         val paper = runCatching { bots() }.getOrDefault(emptyList()).filter { it.where == "Paper" && it.kind == "Pine script" }
             .associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }

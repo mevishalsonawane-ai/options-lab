@@ -13,11 +13,21 @@ import kotlin.math.abs
 object ArmCutoff {
     const val MIN_TRADES = 15
 
-    /** One arm: its [name] as the app shows it, [armed] now, and its closed paper trades' net rupees after charges. */
-    data class Arm(val name: String, val armed: Boolean, val paper: List<Double>)
+    /**
+     * Liquidity 15+5, switched back on on paper by Boss on 06 Oct (its six-year record is the deciding evidence, not 15
+     * trades): asked about only once it has this many closed paper trades entered from then
+     * ([com.optionslab.engine.orb.LiquidityShadow.SINCE]), judged on those.
+     */
+    const val LIQUIDITY_MIN_TRADES = com.optionslab.engine.orb.LiquidityShadow.MIN_TRADES
 
-    /** Whether [a] is to be put to Boss now: armed, at least [MIN_TRADES] closed paper trades, and a net below zero. */
-    fun due(a: Arm): Boolean = a.armed && a.paper.size >= MIN_TRADES && a.paper.sum() < 0
+    /**
+     * One arm: its [name] as the app shows it, [armed] now, its closed paper trades' net rupees after charges, and how many
+     * of them it needs before it is asked about ([minTrades]: [MIN_TRADES], or [LIQUIDITY_MIN_TRADES] for Liquidity 15+5).
+     */
+    data class Arm(val name: String, val armed: Boolean, val paper: List<Double>, val minTrades: Int = MIN_TRADES)
+
+    /** Whether [a] is to be put to Boss now: armed, at least [Arm.minTrades] closed paper trades, and a net below zero. */
+    fun due(a: Arm): Boolean = a.armed && a.paper.size >= a.minTrades && a.paper.sum() < 0
 
     /** The armed arms due ([due]), the deepest loss first. */
     fun dueOf(arms: List<Arm>): List<Arm> = arms.filter { due(it) }.sortedBy { it.paper.sum() }

@@ -47,10 +47,11 @@ private fun rs(x: Double) = (if (x < 0) "−₹" else "₹") + String.format(Loc
 private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
 
 /**
- * The two built-in ORB arms on Home's Strategies card: an arm switch each, what
- * the arm is doing now, a waiting approval, and a tap for the day's detail and the
- * forward test. New entries follow the Paper/Live switch; in Live each one is
- * approved with the PIN. An open position shows the account it is in.
+ * The built-in arms on Home's Strategies card: Liquidity 15+5 and the Hero arm with a switch each, what
+ * the arm is doing now, a waiting approval, and a tap for the day's detail. New entries follow the Paper/Live
+ * switch; in Live each one is approved with the PIN. An open position shows the account it is in. The
+ * retired arms (ORB, ORB Fresh, ORB Sweep, Range Fade: Boss's 06 Oct choice) have no switch: a Retired
+ * section lists them with what they lost (a row only while one still holds a position, managed to its exit).
  */
 @Composable
 fun OrbRows(model: AppModel) {
@@ -89,7 +90,8 @@ internal fun OrbRowsContent(
     // Arming the Hero arm (not proven): its own confirmation, with the record, before it is switched on.
     var heroConfirm by remember { mutableStateOf<String?>(null) }
 
-    view.arms.forEachIndexed { i, a ->
+    // A retired arm is a row only while it still holds a position (or a signal it raised before it was retired) - no switch.
+    view.arms.filter { it.retired == null || it.open != null || it.pending != null }.forEachIndexed { i, a ->
         if (i > 0) Rule()
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).clickable { detail = true }) {
@@ -132,14 +134,17 @@ internal fun OrbRowsContent(
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                // Liquidity 15+5's pre-registered candidates, tracked in its shadow (they never change what it trades).
+                a.shadow?.let { s -> Text(com.optionslab.engine.orb.LiquidityShadow.line(s), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
                 val closed = a.today.filter { !it.open }
                 if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             }
-            Switch(
+            // A retired arm has no switch: it can never be armed again.
+            if (a.retired == null) Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
-                // ORB Sweep, Range Fade and Liquidity 15+5 are paper only and always automatic: nothing to choose, no PIN.
+                // The Hero arm takes its own confirmation (not proven); Liquidity 15+5 chooses automatic or approve.
                 onCheckedChange = { on -> if (on && a.arm.hero) heroConfirm = a.arm.source
                     else if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
                     else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
@@ -161,9 +166,18 @@ internal fun OrbRowsContent(
             }
         }
     }
-    val f = view.forward
-    Text("Forward test: ${f.trades}/60 trades · ${f.days}/40 days · net ${rs(f.net)}" + (f.t?.let { " · t %.2f".format(Locale.ENGLISH, it) } ?: ""),
-        style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(bottom = 6.dp).clickable { detail = true })
+    // Retired (Boss's 06 Oct choice after six years of real data): one line each, never a switch.
+    val retired = view.arms.mapNotNull { it.retired }
+    if (retired.isNotEmpty()) {
+        Rule()
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { detail = true }) {
+            Text("Retired", style = Type.label.copy(color = p.inkFaint, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+            retired.forEach { r ->
+                Text("${r.arm.label}: ${com.optionslab.engine.orb.RetiredArms.line(r)}", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                    modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+    }
 
     choosing?.let { src ->
         val label = view.arms.first { it.arm.source == src }.arm.label
@@ -239,7 +253,7 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
     AlertDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
-        title = { Text("ORB arms · today", style = Type.title) },
+        title = { Text("Arms · today", style = Type.title) },
         text = {
             Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
                 val small = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp)
@@ -249,7 +263,8 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
                     ?: Text("No strike fixed yet today (set from the 09:20 bar once an arm runs).", style = soft)
                 v.range?.let { r -> Text("Opening range ${px(r.second)} – ${px(r.first)}", style = small) }
                 v.stopped?.let { s -> Text(s, style = small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp)) }
-                for (a in v.arms) {
+                // A retired arm only on a day it still traded (a position held when it was retired).
+                for (a in v.arms.filter { it.retired == null || it.today.isNotEmpty() }) {
                     Text(a.arm.label, style = head, modifier = Modifier.padding(top = 12.dp))
                     Text(OrbArms.describe(a.status), style = soft)
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)
@@ -272,7 +287,7 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
                     }
                 }
                 val f = v.forward
-                Text("Forward test (pre-registered)", style = head, modifier = Modifier.padding(top = 14.dp))
+                Text("ORB forward test (pre-registered; ORB retired 06 Oct)", style = head, modifier = Modifier.padding(top = 14.dp))
                 Text("${f.trades} of 60 trades · ${f.days} of 40 days · net ${rs(f.net)} after charges" + if (f.finished) " · FINISHED" else "", style = small)
                 f.checks.forEach { (name, ok) -> Text("${if (ok) "✓" else "✗"} $name", style = small.copy(color = if (ok) p.verdigris else p.oxblood)) }
                 Note("A pass earns a longer forward test at the same size, not real money. Trades you close with Stop for today are left out.",

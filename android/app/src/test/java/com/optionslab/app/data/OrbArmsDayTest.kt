@@ -111,7 +111,7 @@ class OrbArmsDayTest : RobolectricTest() {
 
     private fun armOrb(t: LocalTime) {
         at(t)
-        val msg = runBlocking { OrbArms.setArmed("orb", true, automatic = true) }
+        val msg = runBlocking { OrbArms.armForTest("orb", true, automatic = true) }
         assertTrue(msg, msg.startsWith("ORB armed on paper, fully automatic"))
     }
 
@@ -304,7 +304,7 @@ class OrbArmsDayTest : RobolectricTest() {
     @Test fun orbSweepFadesAFailedBreakOfTheRangeOnPaper() {
         sweepDay = true
         at(LocalTime.of(9, 50))
-        val msg = runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }
+        val msg = runBlocking { OrbArms.armForTest("orb_sweep", true, automatic = true) }
         assertTrue(msg, msg.startsWith("ORB Sweep armed on paper (it never trades on Zerodha)"))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 34))
         assertTrue("no sweep before the 10:30 bar closes", arm("orb_sweep").today.isEmpty())
@@ -323,7 +323,7 @@ class OrbArmsDayTest : RobolectricTest() {
         // 06 Oct: ORB Sweep bought a BankNifty put, then ORB a call five minutes later. Now the call is refused.
         sweepDay = true; breakAt = 10 * 60 + 45                    // the 10:30 failed break, then a real break from 10:45
         at(LocalTime.of(9, 50))
-        runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }
+        runBlocking { OrbArms.armForTest("orb_sweep", true, automatic = true) }
         armOrb(LocalTime.of(9, 50))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 40))
         val put = arm("orb_sweep").open!!
@@ -339,7 +339,7 @@ class OrbArmsDayTest : RobolectricTest() {
         // The 10:30 failed break is a signal for ORB Sweep and for Range Fade alike: the first buys the put, the second is refused.
         sweepDay = true
         at(LocalTime.of(9, 50))
-        runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true); OrbArms.setArmed("range_fade", true, automatic = true) }
+        runBlocking { OrbArms.armForTest("orb_sweep", true, automatic = true); OrbArms.armForTest("range_fade", true, automatic = true) }
         passes(LocalTime.of(9, 50), LocalTime.of(10, 39))                  // (the 10:35 bar, decided at 10:40, is not a signal)
         val put = arm("orb_sweep").today.single()
         assertEquals("PE", put.right)
@@ -354,28 +354,147 @@ class OrbArmsDayTest : RobolectricTest() {
         val books = listOf("orb_sweep", "range_fade", "liquidity15", "liquidity5", "orb")
         fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
         val t = day.atTime(9, 50)
-        // Saved before this update: no "migrated" mark; Range Fade holds a put.
-        AutomationSupport.orbState(context, org.json.JSONObject()
+        // Saved before both 06 Oct updates: no one-time change marked; Range Fade holds a put.
+        AutomationSupport.orbState(context, org.json.JSONObject().put("migrated", org.json.JSONArray())
             .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "range_fade")
                 .put("symbol", "BANKNIFTY-ORB-${strike}PE").put("right", "PE").put("qty", 30).put("entry", 280.0)
                 .put("entryTime", t.minusMinutes(5).toString()).put("signalBar", t.minusMinutes(10).toString()))))
         at(LocalTime.of(9, 50))
         val v = runBlocking { OrbArms.view() }
+        // The first switch-off (paper record negative) took ORB Sweep and Range Fade; the retirement then took ORB.
         for (src in listOf("orb_sweep", "range_fade")) {
             val a = v.arms.single { it.arm.source == src }
             assertTrue("$src switched off", !a.armed)
             assertEquals(OrbArms.SWITCHED_OFF, a.status)
         }
+        val orb = v.arms.single { it.arm.source == "orb" }
+        assertTrue("ORB is retired", !orb.armed)
+        assertEquals(com.optionslab.engine.orb.RetiredArms.SWITCHED_OFF, orb.status)
+        // ... and the retirement switched Liquidity 15+5 back on, on paper only.
         val liq = v.arms.single { it.arm.source == "liquidity" }
-        assertTrue("both liquidity books switched off", !liq.armed)
-        assertTrue(liq.status, liq.status.contains("switched off: paper record negative"))
-        assertTrue("ORB itself stays armed", v.arms.single { it.arm.source == "orb" }.armed)
+        assertTrue("both liquidity books back on", liq.armed)
+        assertTrue("paper only: never cleared for Zerodha", !liq.liveOk)
+        assertTrue(liq.status, liq.status.contains("switched back on, paper only (Boss's choice 06 Oct)"))
         assertNotNull("Range Fade's open put is kept, managed to its exit", v.arms.single { it.arm.source == "range_fade" }.open)
-        // Boss arms ORB Sweep again: the switch-off does not run a second time, even after a restart.
-        runBlocking { OrbArms.setArmed("orb_sweep", true, automatic = true) }
+        // Armed again (by the tests' own hook: the app refuses it): neither change runs a second time, even after a restart.
+        runBlocking { OrbArms.armForTest("orb_sweep", true, automatic = true) }
         AutomationSupport.reloadFromDisk(OrbArms)
         assertTrue("never switched off twice", arm("orb_sweep").armed)
+    }
+
+    // ---- the retirement (Boss's choice after six years of real data, 06 Oct) -----------------------------
+
+    /** The book as the first 06 Oct update left it: its switch-off done, ORB and ORB Fresh armed, ORB holding a call. */
+    private fun savedAfterTheFirstUpdate(extra: (org.json.JSONObject) -> Unit = {}) {
+        val t = day.atTime(9, 50)
+        fun flags(on: Boolean, vararg src: String) = org.json.JSONObject().apply { src.forEach { put(it, on) } }
+        val o = org.json.JSONObject()
+            .put("armed", flags(true, "orb", "orb_fresh").put("liquidity15", false).put("liquidity5", false).put("liquidity30_fin", false).put("liquidity5_fin", false))
+            .put("auto", flags(true, "orb", "orb_fresh")).put("liveOk", flags(true, "orb"))
+            .put("status", org.json.JSONObject().put("liquidity5", OrbArms.SWITCHED_OFF))
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS))
+            .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "orb")
+                .put("symbol", "BANKNIFTY-ORB-${strike}CE").put("right", "CE").put("qty", 30).put("entry", 300.0)
+                .put("entryTime", t.minusMinutes(5).toString()).put("signalBar", t.minusMinutes(10).toString())))
+        extra(o)
+        AutomationSupport.orbState(context, o)
+    }
+
+    @Test fun theRetirementSwitchesOrbOffAndLiquidityBackOnOnPaperOnlyOnce() {
+        savedAfterTheFirstUpdate()
+        at(LocalTime.of(9, 50))
+        val v = runBlocking { OrbArms.view() }
+        for (src in listOf("orb", "orb_fresh")) {
+            val a = v.arms.single { it.arm.source == src }
+            assertTrue("$src switched off", !a.armed)
+            assertTrue("$src no longer cleared for Zerodha", !a.liveOk)
+            assertEquals(com.optionslab.engine.orb.RetiredArms.SWITCHED_OFF, a.status)
+            assertEquals(src, a.retired!!.arm.source)
+        }
+        assertNotNull("ORB's open call is kept, managed to its exit", v.arms.single { it.arm.source == "orb" }.open)
+        val liq = v.arms.single { it.arm.source == "liquidity" }
+        assertTrue(liq.armed); assertTrue("automatic", liq.automatic); assertTrue("paper only", !liq.liveOk)
+        assertNull("Liquidity is not retired", liq.retired)
+        assertTrue(liq.status, liq.status.contains("BANKNIFTY 5-min: switched back on, paper only (Boss's choice 06 Oct)"))
+        val log = Diag.lines()
+        assertTrue(log.toString(), log.any { it.contains("ORB: switched off: lost on 6 years of real data (Boss's choice 06 Oct); its open position is still managed to its exit") })
+        assertTrue(log.toString(), log.any { it.contains("ORB Fresh: switched off: lost on 6 years of real data (Boss's choice 06 Oct)") })
+        assertTrue(log.toString(), log.any { it.contains("Liquidity 5m: switched back on, paper only (Boss's choice 06 Oct)") })
+        // Boss switches Liquidity off: it stays off, even after a restart (the change ran once).
+        runBlocking { OrbArms.setArmed("liquidity", false, automatic = true) }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertTrue("never switched on twice", !arm("liquidity").armed)
+        assertTrue("ORB stays off", !arm("orb").armed)
+    }
+
+    @Test fun aRestoreNotYetDisarmedSwitchesNothingOn() {
+        savedAfterTheFirstUpdate()
+        com.optionslab.app.security.SecurePrefs.put(Backup.DISARM, true)
+        try {
+            at(LocalTime.of(9, 50))
+            val v = runBlocking { OrbArms.view() }
+            assertTrue("nothing restored is armed", v.arms.none { it.armed })
+        } finally {
+            com.optionslab.app.security.SecurePrefs.put(Backup.DISARM, null)
+        }
+        // The change is done: the next start arms nothing either.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertTrue(!arm("liquidity").armed)
+        assertTrue(!arm("orb").armed)
+    }
+
+    @Test fun aNewBookArmsNothingByItself() {
+        at(LocalTime.of(9, 50))
+        assertTrue(runBlocking { OrbArms.view() }.arms.none { it.armed })
+    }
+
+    @Test fun aRetiredArmIsNeverArmedAgainBySwitchOrByJarvis() {
+        at(LocalTime.of(9, 50))
+        for (src in listOf("orb", "orb_fresh", "orb_sweep", "range_fade")) {
+            val said = runBlocking { OrbArms.setArmed(src, true, automatic = true) }
+            val r = com.optionslab.engine.orb.RetiredArms.of(src)!!
+            assertEquals(com.optionslab.engine.orb.RetiredArms.refusal(r), said)
+            assertTrue("$src stays off", !arm(src).armed)
+        }
+        assertTrue(runBlocking { OrbArms.setArmed("orb", true, automatic = true) }.startsWith("ORB is retired: it lost ₹9.77 lakh over 2021–2026 on real data"))
+        // "Start Range Fade": Jarvis says why, with nothing to confirm.
+        val (said, act) = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.START_ONE, target = "range fade")) }
+        assertNull("nothing to confirm", act)
+        assertTrue(said, said.startsWith("Range Fade is retired, Boss: it lost ₹2.74 lakh over 2021–2026"))
+        // A plan's or a voice start's arm call is refused the same way; the Hero arm and Liquidity still arm on paper.
+        assertTrue(runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }.startsWith("Liquidity 15+5 armed on paper"))
+        assertTrue(runBlocking { OrbArms.setArmed("hero", true, automatic = true) }.startsWith("Hero (expiry) armed on paper"))
+    }
+
+    @Test fun liquidityIsAskedAboutOnlyFromFortyPaperTradesSinceTheSixth() {
+        val t = day.atTime(9, 50)
+        fun trades(n: Int, from: LocalDateTime) = org.json.JSONArray().apply {
+            repeat(n) { i ->
+                val at = from.plusMinutes(i.toLong())
+                put(org.json.JSONObject().put("arm", "liquidity5").put("symbol", "BANKNIFTY-LIQ-${strike}CE").put("right", "CE").put("qty", 30)
+                    .put("entry", 300.0).put("exit", 290.0).put("entryTime", at.toString()).put("signalBar", at.minusMinutes(5).toString())
+                    .put("exitTime", at.plusMinutes(5).toString()).put("why", "stop").put("charges", 60.0).put("near", i % 2 == 0))
+            }
+        }
+        fun state(positions: org.json.JSONArray) = AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", org.json.JSONObject().put("liquidity5", true)).put("auto", org.json.JSONObject().put("liquidity5", true))
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)).put("positions", positions))
+        at(LocalTime.of(9, 50))
+        // 39 losing trades since 06 Oct (and older ones before it, which do not count): not yet asked.
+        val before = com.optionslab.engine.orb.LiquidityShadow.SINCE.minusDays(3).atTime(10, 0)
+        state(trades(20, before).also { a -> val more = trades(39, t.minusHours(1)); for (i in 0 until more.length()) a.put(more.get(i)) })
+        val (liq, _) = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.first { it.first.name == "Liquidity 15+5" }
+        assertEquals(39, liq.paper.size)
+        assertEquals(40, liq.minTrades)
+        assertTrue("39 is too few for Liquidity", !com.optionslab.ira.ArmCutoff.due(liq))
+        // The row shows the shadow: 39 trades, half of them flagged by candidate (a).
+        val s = arm("liquidity").shadow!!
+        assertEquals(39, s.all.trades)
+        assertEquals(19, s.withoutNear.trades)
+        state(trades(40, t.minusHours(1)))
+        val (liq40, _) = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.first { it.first.name == "Liquidity 15+5" }
+        assertTrue("40 losing trades: asked", com.optionslab.ira.ArmCutoff.due(liq40))
     }
 
     @Test fun anArmWithFifteenLosingPaperTradesIsPutToBossAndHisYesOnlySwitchesItOff() {
@@ -391,7 +510,8 @@ class OrbArmsDayTest : RobolectricTest() {
         }
         AutomationSupport.orbState(context, org.json.JSONObject()
             .put("armed", org.json.JSONObject().put("orb", true)).put("auto", org.json.JSONObject().put("orb", true))
-            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS)).put("positions", closed))
+            // Saved after both 06 Oct changes (ORB armed again through the tests' own hook: the app refuses it).
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)).put("positions", closed))
         at(LocalTime.of(9, 50))
         val arms = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }
         val (orb, act) = arms.first { it.first.name == "ORB" }
@@ -409,7 +529,7 @@ class OrbArmsDayTest : RobolectricTest() {
     @Test fun rangeFadeBuysThePutWhenABarAtTheTopEdgeClosesBackInside() {
         sweepDay = true                                     // 10:05-10:25 sit mid-range; the 10:30 bar touches 54,060
         at(LocalTime.of(9, 50))
-        val msg = runBlocking { OrbArms.setArmed("range_fade", true, automatic = true) }
+        val msg = runBlocking { OrbArms.armForTest("range_fade", true, automatic = true) }
         assertTrue(msg, msg.startsWith("Range Fade armed on paper (it never trades on Zerodha)"))
         passes(LocalTime.of(9, 50), LocalTime.of(10, 34))
         assertTrue("nothing while the bars sit mid-range", arm("range_fade").today.isEmpty())

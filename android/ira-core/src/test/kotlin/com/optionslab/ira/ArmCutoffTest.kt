@@ -18,6 +18,14 @@ class ArmCutoffTest {
         assertTrue(ArmCutoff.due(ArmCutoff.Arm("Range Fade", true, List(14) { 15.0 } + (-300.0))))
     }
 
+    @Test fun liquidityIsAskedAboutOnlyFromFortyTrades() {
+        assertEquals(40, ArmCutoff.LIQUIDITY_MIN_TRADES)
+        val losing = List(39) { -10.0 }
+        assertFalse(ArmCutoff.due(ArmCutoff.Arm("Liquidity 15+5", true, losing, ArmCutoff.LIQUIDITY_MIN_TRADES)), "39 trades since 06 Oct are too few")
+        assertTrue(ArmCutoff.due(ArmCutoff.Arm("Liquidity 15+5", true, losing + (-10.0), ArmCutoff.LIQUIDITY_MIN_TRADES)))
+        assertTrue(ArmCutoff.due(ArmCutoff.Arm("ORB", true, List(15) { -10.0 })), "every other arm keeps the 15")
+    }
+
     @Test fun theDeepestLossIsAskedFirst() {
         val due = ArmCutoff.dueOf(listOf(arm("A", 20, -5.0), arm("B", 20, -50.0), arm("C", 20, 5.0), arm("D", 3, -500.0)))
         assertEquals(listOf("B", "A"), due.map { it.name })

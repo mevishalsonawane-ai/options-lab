@@ -132,6 +132,8 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("CE", p.right); assertEquals(30, p.qty); assertFalse("paper, never live", p.live)
         assertEquals(54_100.0, p.level!!, 0.0)
         assertNull("no liquidity above yet: no target", p.target)
+        // Candidate (a)'s shadow (pre-registered 06 Oct) is recorded with every signal: no level ahead, so it would not skip it.
+        assertEquals(false, p.near)
         assertEquals(day.atTime(13, 0), p.signalBar)
         // The owner's 15% stop rests in the book at 85% of the fill.
         assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), p.stopTrigger)
@@ -146,6 +148,13 @@ class LiquidityArmTest : RobolectricTest() {
         val closed = row().today.single()
         assertFalse(closed.open)
         assertEquals("failed_break", closed.why)
+        // The row counts it from 06 Oct, with and without each candidate (neither would have dropped it).
+        val s = row().shadow!!
+        assertEquals(1, s.all.trades); assertEquals(1, s.withoutNear.trades); assertEquals(1, s.withoutFin30.trades)
+        assertEquals((closed.grossPnl ?: 0.0) - closed.charges, s.all.net, 0.01)
+        // Saved and read back: the flag survives a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(false, row().today.single().near)
         assertEquals(1, Paper.state.orders.count { it.action == "SELL" && it.status == "complete" })
         assertEquals("the resting stop was taken out first", "cancelled", Paper.state.orders.single { it.orderId == p.stopOrderId }.status)
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
@@ -311,7 +320,7 @@ class LiquidityArmTest : RobolectricTest() {
         AutomationSupport.orbState(context, org.json.JSONObject()
             .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
             // Saved after the 06 Oct update (its one-time switch-off already done): armed again by Boss.
-            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS))
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "liquidity15_fin")
                 .put("symbol", "FINNIFTY-LIQ-24050CE").put("right", "CE").put("qty", 65).put("entry", 120.0)
                 .put("entryTime", t.minusMinutes(20).toString()).put("signalBar", t.minusMinutes(50).toString())

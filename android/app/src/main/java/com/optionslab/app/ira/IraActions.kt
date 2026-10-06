@@ -36,10 +36,11 @@ internal object IraActions {
 
     /**
      * One strategy, Pine script or ORB arm as Jarvis acts on it: [on] armed or running now; [needsPin] on in Live but not
-     * cleared for Zerodha (Boss's fingerprint or PIN in the app does that, never Jarvis); [hero] the not-proven Hero arm.
+     * cleared for Zerodha (Boss's fingerprint or PIN in the app does that, never Jarvis); [hero] the not-proven Hero arm;
+     * [retired] a retired arm's answer ([com.optionslab.engine.orb.RetiredArms]: it is never started again), else null.
      */
     class Item(val name: String, val on: Boolean, val needsPin: Boolean, val hero: Boolean,
-               val start: suspend () -> String, val stop: suspend () -> String)
+               val start: suspend () -> String, val stop: suspend () -> String, val retired: String? = null)
 
     /**
      * Every strategy and arm: the strategy module, then the Pine arms, then the ORB arms (as in "my strategies"). Starting
@@ -77,8 +78,11 @@ internal object IraActions {
         val liveNow = runCatching { com.optionslab.app.data.OrbArms.liveNow() }.getOrDefault(false)
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
             val src = a.arm.source
-            out += Item(a.arm.label, a.armed, needsPin = liveNow && a.armed && !a.arm.paperOnly && !a.liveOk, hero = a.arm.hero, start = suspend {
+            out += Item(a.arm.label, a.armed, needsPin = liveNow && a.armed && !a.arm.paperOnly && !a.liveOk, hero = a.arm.hero,
+                retired = a.retired?.let { com.optionslab.engine.orb.RetiredArms.answer(it) }, start = suspend {
                 if (a.armed) "${a.arm.label} is already on."
+                // Retired (Boss's 06 Oct choice): never armed again, by voice or otherwise (OrbArms refuses it too).
+                else if (a.retired != null) com.optionslab.engine.orb.RetiredArms.refusal(a.retired)
                 else {
                     // Never cleared for Zerodha by voice: in Live, OrbArms refuses without the PIN (armed on Home instead).
                     val r = com.optionslab.app.data.OrbArms.setArmed(src, true, automatic = true, pinConfirmed = false)
@@ -255,8 +259,9 @@ internal object IraActions {
             Command.Kind.START_ALL -> {
                 val why = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()
                 val loss = runCatching { com.optionslab.app.data.Strategies.stoppedByLossToday() }.getOrDefault(false)
+                // A retired arm is never resumed (and, being off, not listed as one left off either).
                 val st = com.optionslab.ira.DayStop.startAll(if (loss) com.optionslab.ira.DayStop.Why.LOSS else why,
-                    items().map { com.optionslab.ira.DayStop.Arm(it.name, it.on, it.needsPin) })
+                    items().filter { it.retired == null || it.on }.map { com.optionslab.ira.DayStop.Arm(it.name, it.on, it.needsPin) })
                 if (!st.lift) st.say to null
                 else st.say to suspend {
                     val r = com.optionslab.app.data.Strategies.startAgain()
@@ -266,7 +271,8 @@ internal object IraActions {
                 }
             }
             Command.Kind.STOP_ONE, Command.Kind.START_ONE -> {
-                val all = arms()
+                val listed = items()
+                val all = listed.map { it.name to (it.start to it.stop) }
                 if (all.isEmpty()) return "There are no strategies or arms to ${if (c.kind == Command.Kind.START_ONE) "start" else "stop"}." to null
                 val armNames = all.map { it.first }
                 val armDirect = pick(armNames, "strategy")
@@ -277,6 +283,8 @@ internal object IraActions {
                         ". Say its number, like \"${if (c.kind == Command.Kind.START_ONE) "start" else "stop"} strategy 1\".") to null
                 }
                 if (nickOn && armNick == null) runCatching { IraTools.nickPicked(c.kind, i, armNames) }
+                // "Start ORB": retired (Boss's 06 Oct choice) - said why, nothing to confirm.
+                if (c.kind == Command.Kind.START_ONE) listed[i].retired?.let { return it to null }
                 val (name, act) = all[i]
                 // Started while the bot is stopped for today: said, so it never looks like it will trade today when it won't.
                 val dayNote = if (c.kind != Command.Kind.START_ONE) "" else runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()?.let { w ->

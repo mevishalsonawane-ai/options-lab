@@ -88,15 +88,24 @@ internal object StrategyFakes {
     private val today: LocalDate = LocalDate.now(IST)
     private fun contract(r: Right) = Paper.Contract("BANKNIFTY-TEST-52000$r", "BANKNIFTY", today.plusDays(5), 52_000.0, r, 30, "NSE_FO|$r")
 
-    fun orbView(armed: Boolean = false, pending: Boolean = false, open: Boolean = false, live: Boolean = false): OrbArms.View {
+    /** The rows as the app builds them: the four retired arms (no switch), the Hero arm, then Liquidity 15+5 ([retiredOpen]: ORB still holds a call). */
+    fun orbView(armed: Boolean = false, pending: Boolean = false, open: Boolean = false, live: Boolean = false, retiredOpen: Boolean = false): OrbArms.View {
         val bar = today.atTime(10, 40)
-        val pos = OrbArms.Position("orb", "BANKNIFTY-TEST-52000CE", "CE", 30, 210.0, bar.plusMinutes(6), bar, "E1", "S1", 170.0, live = live, kite = "BANKNIFTY26OCT52000CE")
-        val closed = pos.copy(exit = 250.0, exitTime = bar.plusMinutes(40), why = "target", charges = 42.0)
-        val arms = OrbRules.ARMS.mapIndexed { i, a ->
-            OrbArms.ArmView(a, armed = armed && i == 0, automatic = true, status = if (i == 0) "inside_range" else "", open = pos.takeIf { open && i == 0 },
-                mark = 220.0, pending = OrbArms.Pending(a.source, "CE", bar, bar.plusMinutes(10)).takeIf { pending && i == 0 },
-                today = if (i == 0) listOfNotNull(closed, pos.takeIf { open }) else emptyList(), liveOk = live)
+        val pos = OrbArms.Position("liquidity5", "BANKNIFTY-TEST-52000CE", "CE", 30, 210.0, bar.plusMinutes(6), bar, "E1", "S1", 170.0, live = live, kite = "BANKNIFTY26OCT52000CE")
+        val closed = pos.copy(exit = 250.0, exitTime = bar.plusMinutes(40), why = "next_liquidity", charges = 42.0, near = true)
+        val retired = com.optionslab.engine.orb.RetiredArms.ALL.map { r ->
+            val held = pos.copy(arm = r.arm.source, live = false).takeIf { retiredOpen && r.arm == OrbRules.ORB }
+            OrbArms.ArmView(r.arm, armed = false, automatic = true, status = com.optionslab.engine.orb.RetiredArms.SWITCHED_OFF, open = held, mark = 220.0,
+                pending = null, today = listOfNotNull(held), retired = r)
         }
+        val hero = OrbArms.ArmView(com.optionslab.engine.orb.HeroRules.ARM, armed = false, automatic = true, status = "", open = null, mark = null,
+            pending = null, today = emptyList())
+        val liq = OrbArms.ArmView(com.optionslab.engine.orb.LiquidityRules.ARM, armed = armed, automatic = true,
+            status = "BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone.", open = pos.takeIf { open },
+            mark = 220.0, pending = OrbArms.Pending("liquidity5", "CE", bar, bar.plusMinutes(10)).takeIf { pending },
+            today = listOfNotNull(closed, pos.takeIf { open }), liveOk = live,
+            shadow = com.optionslab.engine.orb.LiquidityShadow.summarize(listOf(com.optionslab.engine.orb.LiquidityShadow.Trade(today, 1_158.0, true, "liquidity5"))))
+        val arms = retired + hero + liq
         return OrbArms.View(arms, OrbArms.Legs(today, 52_000, today.plusDays(5), contract(Right.CE), contract(Right.PE)), 52_310.0 to 51_980.0,
             PassRule.judge(listOf(PassRule.Closed(today.minusDays(1), 1_158.0, true))),
             org.json.JSONObject().put("up", true).put("orb", org.json.JSONArray().put(org.json.JSONObject().put("bar", "10:40").put("exitBar", "11:20")
@@ -401,31 +410,55 @@ class OrbRowsTest {
     private fun tap(text: String) { compose.onAllNodesWithText(text, substring = true).onFirst().areaCClick(); compose.waitForIdle() }
     private fun shown(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
 
+    /** The switches on screen: the Hero arm's (0) and Liquidity 15+5's (1) - never a retired arm's. */
+    private fun switches() = compose.onAllNodes(isToggleable())
+
+    @Test fun theRetiredArmsAreListedWithoutASwitch() {
+        rows(StrategyFakes.orbView(), live = false)
+        assertEquals("only the Hero arm and Liquidity 15+5 have a switch", 2, switches().fetchSemanticsNodes().size)
+        assertTrue(shown("Retired"))
+        assertTrue(shown("ORB: lost ₹9.77 lakh over 2021–2026 on real data; no fix held up out of sample"))
+        assertTrue(shown("ORB Fresh: lost ₹2.53 lakh over 2021–2026"))
+        assertTrue(shown("ORB Sweep: lost ₹2.91 lakh over 2021–2026"))
+        assertTrue(shown("Range Fade: lost ₹2.74 lakh over 2021–2026"))
+        assertTrue("no retired arm's switch", !shown("BANKNIFTY opening-range break"))
+        // The Hero arm stays off and says it is not proven.
+        assertTrue(shown(com.optionslab.engine.orb.HeroRules.NOT_PROVEN))
+    }
+
+    @Test fun aRetiredArmStillHoldingAPositionShowsItButHasNoSwitch() {
+        rows(StrategyFakes.orbView(retiredOpen = true), live = false)
+        assertTrue(shown("IN TRADE · PAPER"))
+        assertEquals(2, switches().fetchSemanticsNodes().size)
+    }
+
     @Test fun armingInPaper() {
         rows(StrategyFakes.orbView(), live = false)
-        assertTrue(shown("BANKNIFTY opening-range break, fresh breaks only"))
-        compose.onAllNodes(isToggleable())[0].areaCClick(); compose.waitForIdle()
-        assertTrue(shown("Arm ORB (paper)"))
+        assertTrue(shown("BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool"))
+        switches()[1].areaCClick(); compose.waitForIdle()
+        assertTrue(shown("Arm Liquidity 15+5 (paper)"))
         tap("Automatic")
-        assertEquals(listOf("orb arm orb on=true auto=true pin=false"), rec.calls)
+        assertEquals(listOf("orb arm liquidity on=true auto=true pin=false"), rec.calls)
     }
 
     @Test fun armingInLiveTakesThePinWithItsReason() {
         rows(StrategyFakes.orbView(), live = true)
-        compose.onAllNodes(isToggleable())[1].areaCClick(); compose.waitForIdle()
-        assertTrue(shown("Arm ORB Fresh (LIVE)"))
+        switches()[1].areaCClick(); compose.waitForIdle()
+        assertTrue(shown("Arm Liquidity 15+5 (LIVE)"))
         tap("Ask me to approve")
-        assertTrue(shown("Enter your app PIN to arm ORB on Zerodha"))
+        assertTrue(shown("Enter your app PIN to arm Liquidity 15+5 on Zerodha"))
         tap("PIN OK")
-        assertEquals(listOf("orb arm orb_fresh on=true auto=false pin=true"), rec.calls)
+        assertEquals(listOf("orb arm liquidity on=true auto=false pin=true"), rec.calls)
     }
 
     @Test fun anArmedArmSaysWhatItWaitsForAndDisarms() {
         rows(StrategyFakes.orbView(armed = true), live = false)
         assertTrue(shown("ARMED · PAPER · AUTO"))
-        assertTrue(shown("Waiting for a breakout: the last bar closed inside the range. Range 51980.00–52310.00."))
-        compose.onAllNodes(isToggleable())[0].areaCClick(); compose.waitForIdle()
-        assertEquals(listOf("orb arm orb on=false auto=true pin=false"), rec.calls)
+        assertTrue(shown("BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone."))
+        // Its paper record since 06 Oct, with and without each pre-registered candidate.
+        assertTrue(shown("Since 06 Oct: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades"))
+        switches()[1].areaCClick(); compose.waitForIdle()
+        assertEquals(listOf("orb arm liquidity on=false auto=true pin=false"), rec.calls)
     }
 
     @Test fun aPaperBreakoutIsApprovedOrSkipped() {
@@ -433,7 +466,7 @@ class OrbRowsTest {
         assertTrue(shown("Breakout on the 10:40 bar: BUY CE, 1 lot, paper. Lapses at 10:50."))
         tap("Approve entry")
         tap("Skip")
-        assertEquals(listOf("orb approve orb pin=false", "orb skip orb"), rec.calls)
+        assertEquals(listOf("orb approve liquidity pin=false", "orb skip liquidity"), rec.calls)
     }
 
     @Test fun aLiveBreakoutIsApprovedOnlyWithThePin() {
@@ -441,7 +474,7 @@ class OrbRowsTest {
         tap("Approve with PIN")
         assertTrue(rec.calls.isEmpty())
         tap("PIN OK")
-        assertEquals(listOf("orb approve orb pin=true"), rec.calls)
+        assertEquals(listOf("orb approve liquidity pin=true"), rec.calls)
     }
 
     @Test fun anOpenPositionAndTheDaysDetail() {
@@ -449,12 +482,12 @@ class OrbRowsTest {
         assertTrue(shown("IN TRADE · LIVE"))
         assertTrue(shown("in 210.00 · now 220.00 · ₹300 · stop 170.00"))
         assertTrue(shown("Today: 1 closed · ₹1,158 after charges"))
-        tap("Forward test: 1/60 trades")
-        assertTrue(shown("ORB arms · today"))
+        tap("Liquidity 15+5")
+        assertTrue(shown("Arms · today"))
         assertTrue(shown("Strike 52000 (09:20 bar)"))
         assertTrue(shown("Evening replay"))
         tap("Close")
-        assertTrue(!shown("ORB arms · today"))
+        assertTrue(!shown("Arms · today"))
     }
 }
 

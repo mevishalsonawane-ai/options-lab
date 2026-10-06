@@ -87,8 +87,13 @@ object AutomationSupport {
         File(context.filesDir, "contracts.json").writeText(JSONObject().put("day", Market.today().toString()).put("c", arr).toString())
     }
 
-    /** Write the ORB arms' encrypted state as the app would have saved it, and make the arms read it. */
+    /**
+     * Write the ORB arms' encrypted state as the app would have saved it, and make the arms read it. Without a "migrated"
+     * list it is a book saved after every one-time change (06 Oct's switch-off and retirement), so loading it changes
+     * nothing; a test of a change passes its own list (an empty one: saved before both).
+     */
     fun orbState(context: Context, o: JSONObject) {
+        if (!o.has("migrated")) o.put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION))
         OrbArms.wipe()
         Vault.writeFile(File(context.filesDir, "orb.vault"), o.toString().toByteArray(Charsets.UTF_8))
     }
