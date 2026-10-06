@@ -124,6 +124,7 @@ object OrbArms {
 
     private fun book(): Book {
         cache?.let { return it }
+        writtenText = null; writtenStat = null
         val b = Book()
         val ok = runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
@@ -214,10 +215,23 @@ object OrbArms {
         o.put("status", JSONObject(b.status as Map<*, *>))
         o.put("replays", JSONObject().apply { b.replays.entries.toList().takeLast(120).forEach { (k, v) -> put(k, v) } })
         o.put("upDays", JSONObject(b.upDays as Map<*, *>))
-        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        val text = o.toString()
+        // Battery: an idle book (nothing armed, open or waiting) whose bytes are already on disk, as this process last
+        // wrote them, is not encrypted and synced again ([com.optionslab.ira.OrbIdleSave]); anything else is, as before.
+        val idle = b.armed.values.none { it } && b.positions.none { it.open } && b.pending.isEmpty()
+        val untouched = writtenStat != null && file.exists() && writtenStat == (file.length() to file.lastModified())
+        if (com.optionslab.ira.OrbIdleSave.writes(idle, text == writtenText, untouched)) {
+            writtenText = null; writtenStat = null
+            Vault.writeFile(file, text.toByteArray(Charsets.UTF_8))
+            writtenText = text; writtenStat = file.length() to file.lastModified()
+        }
         cache = b
         holdingHint = b.positions.any { it.open }
     }
+
+    /** The book's text as this process last wrote it, and the file's size and time just after (null: not since a load). */
+    private var writtenText: String? = null
+    private var writtenStat: Pair<Long, Long>? = null
 
     /**
      * ORB and ORB Fresh (the pre-registered forward test), plus ORB Sweep, Range Fade and the two books of Liquidity 15+5
@@ -1221,5 +1235,8 @@ object OrbArms {
         else -> s
     }
 
-    @Synchronized fun wipe() { cache = null; holdingHint = false; if (::file.isInitialized) file.delete() }
+    @Synchronized fun wipe() {
+        cache = null; holdingHint = false; writtenText = null; writtenStat = null
+        if (::file.isInitialized) file.delete()
+    }
 }

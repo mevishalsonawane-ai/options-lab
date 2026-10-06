@@ -552,3 +552,22 @@ object NoticePrice {
         else -> true
     }
 }
+
+/**
+ * Battery (round 19): the ORB arms' book is an encrypted file (a Keystore encryption, the file and its folder synced).
+ * Every watch pass of a trading day (about once a minute) and every 15-second stop check while anything at all is held
+ * wrote it again - even with no arm switched on and nothing of the arms' own open or waiting for approval, when the
+ * pass changes nothing and the bytes written are the very ones already on disk. Now an idle book whose text is the one
+ * this process last wrote, to a file not touched since, is not written again: about 375 encrypted, synced writes a
+ * session fewer with nothing armed, about 1,500 when something else is held. Anything armed, open or waiting is
+ * written every time exactly as before, so the arms' stops, targets, entries and their records keep their cadence and
+ * inputs; the reads and decisions of a pass are unchanged either way. Pure.
+ */
+object OrbIdleSave {
+    /**
+     * Is the book written? [idle]: no arm on, no open position, no entry waiting for approval. [sameText]: the text is
+     * the one this process last wrote. [fileUntouched]: the file still has the size and time that write left (not set
+     * aside, deleted, restored or changed since).
+     */
+    fun writes(idle: Boolean, sameText: Boolean, fileUntouched: Boolean): Boolean = !(idle && sameText && fileUntouched)
+}
