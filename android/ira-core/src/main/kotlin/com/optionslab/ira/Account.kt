@@ -81,6 +81,25 @@ object AppFacts {
             "; charges $about${amt(c)}${if (estimate) " (an estimate from today's trades)" else ""}, so $about${rs(PnlCharges.net(day, c))} after charges."
     }
 
+    /**
+     * A Pine arm's own exits on the option, for "my strategies": its premium stop and target (points) and the profit lock
+     * (com.optionslab.engine.orb.ProfitLock: on the target, else on twice the stop, else none).
+     */
+    fun pineExits(stopPts: Double, targetPts: Double, profitLock: Boolean): String {
+        val n = { x: Double -> if (x == Math.floor(x)) x.toLong().toString() else "%.1f".format(Locale.ENGLISH, x) }
+        val parts = ArrayList<String>()
+        parts += if (stopPts > 0) "stop -${n(stopPts)}" else "no stop"
+        parts += if (targetPts > 0) "target +${n(targetPts)}" else "no target"
+        val ref = com.optionslab.engine.orb.ProfitLock.pineReference(targetPts, stopPts)
+        parts += when {
+            !profitLock -> "profit lock off"
+            ref == null -> "profit lock on but idle (no stop or target to measure by)"
+            targetPts > 0 -> "profit lock on"
+            else -> "profit lock on (measured on twice the stop, ${n(ref)})"
+        }
+        return parts.joinToString(", ")
+    }
+
     fun arms(a: List<ArmLine>, rank: Boolean): List<String> {
         if (a.isEmpty()) return listOf("No strategies or arms are set up.")
         val on = a.filter { it.on }

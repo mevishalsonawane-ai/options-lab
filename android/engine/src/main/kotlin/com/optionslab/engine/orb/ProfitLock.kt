@@ -22,6 +22,17 @@ object ProfitLock {
         else -> OrbRules.TARGET_POINTS
     }
 
+    /**
+     * The ladder's reference for a Pine auto-trade script (2026-10-06), whose premium stop and target are the owner's own
+     * numbers: its target in points when set; with no target but a stop, twice the stop (the same 1 : 2 the ORB arms use,
+     * -40 / +80); with neither, null - no lock, as there is nothing to measure the way to the target by.
+     */
+    fun pineReference(targetPts: Double, stopPts: Double): Double? = when {
+        targetPts.isFinite() && targetPts > 0 -> targetPts
+        stopPts.isFinite() && stopPts > 0 -> 2 * stopPts
+        else -> null
+    }
+
     /** The locked stop for a buy at [entry] whose best price so far is [peak], or null below the first rung. */
     fun level(entry: Double, target: Double, peak: Double): Double? =
         LADDER.lastOrNull { peak >= entry + it.first * target - EPS }?.let { entry + it.second * target }

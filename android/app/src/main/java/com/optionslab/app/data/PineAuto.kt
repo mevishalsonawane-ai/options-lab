@@ -5,6 +5,7 @@ import com.optionslab.app.security.Vault
 import com.optionslab.app.work.Notifier
 import com.optionslab.engine.Right
 import com.optionslab.engine.orb.OrbRules
+import com.optionslab.engine.orb.ProfitLock
 import com.optionslab.engine.pine.Pine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,9 +37,11 @@ object PineAuto {
     /**
      * [since] > 0: a live buy Zerodha has not confirmed (since then, epoch ms), its order [order] (null when even the
      * id was lost). [qty] is then at most what may have filled; it is settled from the order book on the next passes.
+     * [peak]: the option's best price seen since it was bought (the profit lock's high-water mark; the buy price at first).
+     * Every holding is a bought option (a CALL or a PUT), never a sold one, so the lock is only ever a long's.
      */
     data class Held(val symbol: String, val right: String, val qty: Int, val lotSize: Int, val entry: Double, val day: String,
-                    val live: Boolean, val kite: String?, val order: String? = null, val since: Long = 0L) {
+                    val live: Boolean, val kite: String?, val order: String? = null, val since: Long = 0L, val peak: Double = entry) {
         val unconfirmed: Boolean get() = since > 0
     }
     data class Line(val at: Long, val script: Long, val text: String)
@@ -74,7 +77,9 @@ object PineAuto {
             o.optJSONObject("held")?.let { m -> m.keys().forEach { k -> val h = m.getJSONObject(k)
                 bk.held[k.toLong()] = Held(h.getString("symbol"), h.getString("right"), h.getInt("qty"), h.optInt("lot", 1), h.getDouble("entry"),
                     h.getString("day"), h.optBoolean("live"), h.optString("kite").ifBlank { null }, h.optString("order").ifBlank { null },
-                    h.optLong("since", 0L)) } }
+                    h.optLong("since", 0L),
+                    // Saved before the profit lock: the buy price, so no rung counts as reached that was never seen.
+                    h.optDouble("peak", Double.NaN).takeIf { it.isFinite() && it > 0 } ?: h.getDouble("entry")) } }
             o.optJSONObject("lastBar")?.let { m -> m.keys().forEach { k -> bk.lastBar[k.toLong()] = m.getLong(k) } }
             o.optJSONObject("lastTarget")?.let { m -> m.keys().forEach { k -> bk.lastTarget[k.toLong()] = m.getInt(k) } }
             o.optJSONObject("liveOk")?.let { m -> m.keys().forEach { k -> bk.liveOk[k.toLong()] = m.getBoolean(k) } }
@@ -94,7 +99,7 @@ object PineAuto {
         val o = JSONObject()
         o.put("held", JSONObject().apply { b.held.forEach { (k, h) -> put(k.toString(), JSONObject().put("symbol", h.symbol).put("right", h.right)
             .put("qty", h.qty).put("lot", h.lotSize).put("entry", h.entry).put("day", h.day).put("live", h.live).put("kite", h.kite ?: "")
-            .put("order", h.order ?: "").put("since", h.since)) } })
+            .put("order", h.order ?: "").put("since", h.since).put("peak", h.peak)) } })
         o.put("lastBar", JSONObject().apply { b.lastBar.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("lastTarget", JSONObject().apply { b.lastTarget.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("liveOk", JSONObject().apply { b.liveOk.forEach { (k, v) -> put(k.toString(), v) } })
@@ -211,21 +216,37 @@ object PineAuto {
         }
         val a = item.auto
         val today = todayIst().toString()
-        // The held option's own stop-loss, target and the script's daily loss limit: checked every pass.
+        // The held option's own stop-loss, target, profit lock and the script's daily loss limit: checked every pass.
+        // The profit lock (on only with a target or a stop to measure by) only ever sells sooner: it is read from the best
+        // price seen BEFORE this look, as the ORB arms do, and the stop, 15:15 and the day's stop above come first.
+        val lockRef = if (a.profitLock) ProfitLock.pineReference(a.targetPts, a.stopPts) else null
         if (h != null && isOpen() && (a.stopPts > 0 || a.targetPts > 0 || a.maxDayLoss > 0)) {
             val ltp = runCatching { optionLtp(h) }.getOrNull()
             if (ltp != null) {
                 val why = when {
                     a.stopPts > 0 && ltp <= h.entry - a.stopPts -> "stop-loss"
                     a.targetPts > 0 && ltp >= h.entry + a.targetPts -> "target"
+                    lockRef != null && ProfitLock.exits(h.entry, lockRef, h.peak, ltp) -> "profit lock"
                     a.maxDayLoss > 0 && realizedToday(b, id) + (ltp - h.entry) * h.qty <= -a.maxDayLoss -> "daily loss limit"
                     else -> null
                 }
                 if (why != null) {
-                    note(b, id, "${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, ltp)}: $why")
+                    val locked = if (why == "profit lock" && lockRef != null) ProfitLock.level(h.entry, lockRef, h.peak) else null
+                    note(b, id, "${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, ltp)}: $why" +
+                        (locked?.let { " (locked at ${"%.2f".format(java.util.Locale.ENGLISH, it)})" } ?: ""))
                     exit(b, id, item, h, why)
                     if (why == "daily loss limit") { b.paused[id] = today; note(b, id, "Daily loss limit reached: no more trades today") }
                     return
+                }
+                // Still held: a new best price raises the high-water mark (kept with the holding, so it survives a restart).
+                if (ltp > h.peak) {
+                    val was = lockRef?.let { ProfitLock.level(h.entry, it, h.peak) }
+                    val raised = h.copy(peak = ltp)
+                    b.held[id] = raised
+                    val rung = lockRef?.let { ProfitLock.level(raised.entry, it, raised.peak) }
+                    if (rung != null && rung != was) note(b, id, "${raised.symbol}: profit lock now at ${"%.2f".format(java.util.Locale.ENGLISH, rung)} " +
+                        "(best ${"%.2f".format(java.util.Locale.ENGLISH, ltp)})")
+                    h = raised
                 }
             }
         }
@@ -466,7 +487,7 @@ object PineAuto {
         if (st.filled <= 0) { note(b, id, "The unconfirmed buy of $sym did not fill (${st.status.lowercase()}): nothing held"); return null }
         val px = st.avgPrice.takeIf { it > 0 } ?: h.entry
         note(b, id, "Zerodha confirmed the buy: ${st.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} (LIVE)")
-        return h.copy(qty = st.filled, entry = px, order = null, since = 0L)
+        return h.copy(qty = st.filled, entry = px, order = null, since = 0L, peak = maxOf(h.peak, px))
     }
 
     /** Sell what the script holds. Removes it from [b] once sold (or found gone). */

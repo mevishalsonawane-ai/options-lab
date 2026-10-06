@@ -1014,6 +1014,19 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
             }
             Text("Checked every pass on the option's own price: below the stop or above the target it is sold at once; past the day's loss it is sold and the script trades no more today. 0 = off. The Bot settings daily loss limit also stops every bot.",
                 style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Profit lock", style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(a.profitLock, { on -> if (!locked) set { au -> if (au.on) au else au.copy(profitLock = on) } },
+                    enabled = !locked, modifier = Modifier.semantics { contentDescription = "Profit lock" })
+            }
+            val lockRef = com.optionslab.engine.orb.ProfitLock.pineReference(a.targetPts, a.stopPts)
+            Text("Profit lock: at 25% of the target the stop moves to entry, at 50% it locks 25%, at 75% it locks 50%. " +
+                when {
+                    a.targetPts > 0 -> "Measured on the target above (${fmtPts(a.targetPts)} pts)."
+                    lockRef != null -> "No target set: measured on twice the stop-loss (${fmtPts(lockRef)} pts)."
+                    else -> "With no target and no stop-loss set there is nothing to measure by: no lock."
+                } + if (a.byJarvis) " On by default for the strategies Jarvis wrote." else "",
+                style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
         }
         val mine = log.filter { it.script == item.id }.takeLast(40).asReversed()
         if (mine.isNotEmpty()) LedgerCard(title = "Activity") {
@@ -1029,6 +1042,8 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     if (auth) env.reauth("Enter your app PIN to let this Pine script trade on Zerodha. It then places real orders by itself until you switch it off.",
         { auth = false; arm(true, true) }, { auth = false })
 }
+
+private fun fmtPts(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else String.format(Locale.ENGLISH, "%.1f", v)
 
 /** A number box for an auto-trade setting: reported when it parses, 0 when cleared (the panel saves it). */
 @Composable

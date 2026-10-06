@@ -84,6 +84,7 @@ class IraHubTest : RobolectricTest() {
         assertTrue(said, said.startsWith("Added"))
         val item = com.optionslab.app.data.PineScripts.items.value.single { it.name == p.result.name }
         assertTrue(item.auto.on); assertEquals("BANKNIFTY", item.auto.symbol); assertEquals("15m", item.auto.interval); assertEquals(1, item.auto.lots)
+        assertTrue("Jarvis's strategies carry the profit lock", item.auto.profitLock && item.auto.byJarvis)
         assertEquals(p.result.script, item.code)
         assertEquals(IraHub.Proposal.APPROVED, IraHub.state.value.proposals.single().status)
         assertEquals("Already approved.", IraHub.approve(p.id))

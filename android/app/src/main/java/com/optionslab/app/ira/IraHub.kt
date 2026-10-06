@@ -602,7 +602,9 @@ object IraHub {
         val r = p.result
         val item = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, r.name, r.script))
         com.optionslab.app.data.PineScripts.setAuto(item.id, com.optionslab.app.data.PineScripts.Auto(
-            on = false, symbol = r.market.name, interval = if (r.minutes == 60) "1h" else "${r.minutes}m", lots = 1, shortWith = "put"))
+            on = false, symbol = r.market.name, interval = if (r.minutes == 60) "1h" else "${r.minutes}m", lots = 1, shortWith = "put",
+            // Jarvis's own strategies carry the profit lock (on by default; Boss can switch it off in Research → Pine).
+            profitLock = true, byJarvis = true))
         val armed = com.optionslab.app.data.PineAuto.arm(item.id, on = true, pinConfirmed = false)
         val text = if (armed == "ok") "Added ${r.name} as an arm and switched it on: on paper it trades 1 lot; in Live it waits for your PIN in Research → Pine. " +
             "You can switch it off there any time." else "Saved ${r.name} in Research → Pine, but could not switch it on ($armed)."

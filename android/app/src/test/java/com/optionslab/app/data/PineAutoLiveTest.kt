@@ -286,4 +286,71 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(side("SELL").isEmpty())
         assertTrue(log(), log().contains("is no longer held"))
     }
+
+    @Test fun theProfitLockSellsWhatGaveBackPastItsLockedLevel() {
+        auto { it.copy(targetPts = 100.0, profitLock = true) }
+        bought()                                                   // 30 at 300
+        kite.quote("NFO:$ce", 355.0, 354.95, 355.05)              // 55% of the way: 25 locked from the next look on
+        pass(52_010.0)
+        assertTrue("not sold on the look that set the best", side("SELL").isEmpty())
+        assertEquals(355.0, held()!!.peak, 0.0)
+        assertTrue(log(), log().contains("profit lock now at 325.00"))
+        kite.quote("NFO:$ce", 320.0, 319.95, 320.05)              // below 300 + 25% of 100
+        pass(52_010.0)
+        assertEquals(1, side("SELL").size)
+        assertTrue(log(), log().contains("profit lock (locked at 325.00)"))
+        assertNull(held())
+        assertEquals("nothing new is bought by the lock", 1, side("BUY").size)
+    }
+
+    @Test fun withTheProfitLockOffTheSameMoveIsHeld() {
+        auto { it.copy(targetPts = 100.0, profitLock = false) }
+        bought()
+        kite.quote("NFO:$ce", 355.0, 354.95, 355.05)
+        pass(52_010.0)
+        kite.quote("NFO:$ce", 320.0, 319.95, 320.05)
+        pass(52_010.0)
+        assertTrue(side("SELL").isEmpty())
+        assertEquals(30, held()!!.qty)
+        assertFalse(log(), log().contains("profit lock"))
+    }
+
+    @Test fun aHoldingSavedBeforeTheProfitLockStartsItsBestAtTheBuyPriceThenTheLtp() {
+        auto { it.copy(targetPts = 100.0, profitLock = true) }
+        bought()
+        val f = java.io.File(context.noBackupFilesDir, "pine_auto.vault")
+        val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        o.getJSONObject("held").getJSONObject(id.toString()).remove("peak")      // as an older app saved it
+        PineAuto.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, o.toString().toByteArray(Charsets.UTF_8))
+        runBlocking { PineAuto.load() }
+        assertEquals(300.0, held()!!.peak, 0.0)
+        kite.quote("NFO:$ce", 340.0, 339.95, 340.05)
+        pass(52_010.0)
+        assertEquals("the first look sets the best to max(entry, LTP)", 340.0, held()!!.peak, 0.0)
+        assertTrue(side("SELL").isEmpty())
+    }
+
+    @Test fun scriptsSavedBeforeTheProfitLockAreMigrated() {
+        val jarvisCode = "//@version=5\nstrategy(\"x\")\n// Written by Jarvis from the Hammer pattern: entry after the pattern's candle closes"
+        val text = org.json.JSONArray()
+            .put(org.json.JSONObject().put("id", 1).put("name", "Jarvis: Hammer NIFTY 5m").put("code", jarvisCode)
+                .put("auto", org.json.JSONObject().put("on", true).put("symbol", "NIFTY")))
+            .put(org.json.JSONObject().put("id", 2).put("name", "Renamed by Boss").put("code", jarvisCode)
+                .put("auto", org.json.JSONObject().put("on", false)))
+            .put(org.json.JSONObject().put("id", 3).put("name", "Mine with a stop").put("code", code)
+                .put("auto", org.json.JSONObject().put("on", true).put("stopPts", 30.0)))
+            .put(org.json.JSONObject().put("id", 4).put("name", "Mine, bare").put("code", code)
+                .put("auto", org.json.JSONObject().put("on", false)))
+            .put(org.json.JSONObject().put("id", 5).put("name", "Switched off by Boss").put("code", code)
+                .put("auto", org.json.JSONObject().put("targetPts", 80.0).put("profitLock", false)))
+            .toString()
+        val items = PineScripts.parse(text).associateBy { it.id }
+        assertTrue("Jarvis's, armed now", items.getValue(1).auto.profitLock); assertTrue(items.getValue(1).auto.byJarvis)
+        assertTrue("Jarvis's by its own comment", items.getValue(2).auto.profitLock); assertTrue(items.getValue(2).auto.byJarvis)
+        assertTrue("the owner's with a stop", items.getValue(3).auto.profitLock); assertFalse(items.getValue(3).auto.byJarvis)
+        assertFalse("nothing to measure by", items.getValue(4).auto.profitLock)
+        assertFalse("a saved choice is kept", items.getValue(5).auto.profitLock)
+        assertFalse("a new script starts with it off", PineScripts.Auto().profitLock)
+    }
 }

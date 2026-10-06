@@ -38,6 +38,16 @@ object PineScripts {
         val targetPts: Double = 0.0,
         /** Sell and stop for the day once this script has lost this many rupees today (0 = none). */
         val maxDayLoss: Double = 0.0,
+        /**
+         * The profit-lock ladder (com.optionslab.engine.orb.ProfitLock, as the ORB arms): at 25% of the way to the target
+         * the stop moves to the buy price, at 50% it locks 25% of the target, at 75% 50%. The target is [targetPts]; with
+         * none, twice [stopPts]; with neither there is no lock. It only ever sells sooner, never buys or widens a stop.
+         * On for the scripts Jarvis wrote ([byJarvis]); off for a new script of the owner's own unless he turns it on (a
+         * save from before the lock is migrated: see [parse]).
+         */
+        val profitLock: Boolean = false,
+        /** Written by Jarvis's Strategy Lab and armed on the owner's approval (set by IraHub when it arms one). */
+        val byJarvis: Boolean = false,
     )
 
     data class Item(
@@ -66,21 +76,36 @@ object PineScripts {
     }
 
     private fun load(): List<Item> = runCatching {
-        val a = JSONArray(String(Vault.readFileSteady(file) ?: return emptyList(), Charsets.UTF_8))
-        (0 until a.length()).map { i ->
+        parse(String(Vault.readFileSteady(file) ?: return emptyList(), Charsets.UTF_8))
+    }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList() }
+
+    /**
+     * The saved scripts from the vault's text. A save from before the profit lock (no "profitLock" field) is migrated
+     * (2026-10-06, the owner's rule): the lock is ON for every script Jarvis wrote - armed now or not - and for any
+     * script with a premium stop or target set, as it only ever sells sooner; OFF only where there is neither (it
+     * would have nothing to measure by). A save from before [Auto.byJarvis] is known as Jarvis's by what the Strategy
+     * Lab writes into every script it makes: its first comment ("// Written by Jarvis from the ... pattern") or its
+     * name ("Jarvis: <pattern> <market> <chart>", StrategyLab.name).
+     */
+    internal fun parse(text: String): List<Item> {
+        val a = JSONArray(text)
+        return (0 until a.length()).map { i ->
             val o = a.getJSONObject(i)
             val ins = o.optJSONObject("inputs")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } } ?: emptyMap()
             val au = o.optJSONObject("auto")?.let { x ->
+                val jarvis = if (x.has("byJarvis")) x.optBoolean("byJarvis") else jarvisWrote(o.getString("name"), o.getString("code"))
+                val stop = x.optDouble("stopPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0
+                val target = x.optDouble("targetPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0
                 Auto(x.optBoolean("on"), x.optString("symbol", "BANKNIFTY"), x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
                     x.optString("buy", "strategy"), x.optString("sell", "strategy"), x.optBoolean("squareOff", true),
                     x.optString("shortWith", "put"), x.optString("mode", "trade").takeIf { it == "alert" } ?: "trade",
-                    x.optDouble("stopPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
-                    x.optDouble("targetPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
-                    x.optDouble("maxDayLoss", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0)
+                    stop, target,
+                    x.optDouble("maxDayLoss", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
+                    profitLock = if (x.has("profitLock")) x.optBoolean("profitLock") else jarvis || stop > 0 || target > 0, byJarvis = jarvis)
             } ?: Auto()
             Item(o.getLong("id"), o.getString("name"), o.getString("code"), o.optBoolean("onChart"), ins, au, o.optLong("updated"))
         }
-    }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList() }
+    }
 
     @Synchronized private fun save(list: List<Item>) {
         val a = JSONArray()
@@ -89,10 +114,14 @@ object PineScripts {
             .put("inputs", JSONObject().apply { it.inputs.forEach { (k, v) -> put(k, v) } })
             .put("auto", JSONObject().put("on", it.auto.on).put("symbol", it.auto.symbol).put("interval", it.auto.interval)
                 .put("lots", it.auto.lots).put("buy", it.auto.buy).put("sell", it.auto.sell).put("squareOff", it.auto.squareOff).put("shortWith", it.auto.shortWith)
-                .put("mode", it.auto.mode).put("stopPts", it.auto.stopPts).put("targetPts", it.auto.targetPts).put("maxDayLoss", it.auto.maxDayLoss)))
+                .put("mode", it.auto.mode).put("stopPts", it.auto.stopPts).put("targetPts", it.auto.targetPts).put("maxDayLoss", it.auto.maxDayLoss)
+                .put("profitLock", it.auto.profitLock).put("byJarvis", it.auto.byJarvis)))
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
         _items.value = list
     }
+
+    /** A script saved before [Auto.byJarvis] existed that the Strategy Lab wrote: its own first comment, or its name. */
+    internal fun jarvisWrote(name: String, code: String): Boolean = code.contains("// Written by Jarvis from the ") || name.startsWith("Jarvis: ")
 
     @Synchronized fun wipe() { if (::file.isInitialized) file.delete(); _items.value = emptyList(); loaded = true; _chartRev.value++ }
 
