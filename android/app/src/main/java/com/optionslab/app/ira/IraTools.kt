@@ -18,10 +18,17 @@ internal object IraTools {
 
     private const val MISTAKES = "jarvis.mistakes"
 
-    fun mistakes(): List<com.optionslab.ira.Mistakes.Entry> = runCatching {
-        val a = JSONArray(prefs().getString(MISTAKES) ?: "[]")
+    fun mistakes(): List<com.optionslab.ira.Mistakes.Entry> = runCatching { mistakesRead.of(prefs().getString(MISTAKES)) }.getOrDefault(emptyList())
+
+    /**
+     * The mistakes list read out of its JSON once and kept while the stored text is the same (speed round 12): every
+     * answer's caution ([doubt]) read and parsed the whole list (up to 100 entries) before the first word, though it
+     * changes only when Boss says "that was wrong". Any write - a wipe or a restore too - is other text, read afresh.
+     */
+    private val mistakesRead = com.optionslab.ira.StoredOnce<List<com.optionslab.ira.Mistakes.Entry>> { text ->
+        val a = JSONArray(text ?: "[]")
         (0 until a.length()).map { a.getJSONObject(it).let { o -> com.optionslab.ira.Mistakes.Entry(LocalDateTime.parse(o.getString("t")), o.getString("s"), o.getString("a")) } }
-    }.getOrDefault(emptyList())
+    }
 
     /** "That was wrong": the last question and answer before it are kept. */
     @Synchronized fun markWrong(): String {
@@ -500,10 +507,20 @@ internal object IraTools {
     private const val ROUTINE_OFFERED = "jarvis.routine.offered"
 
     /** What Boss asked and when (keys only, never his words), the last eight weeks. */
-    fun routineLog(): List<com.optionslab.ira.Routine.Seen> = runCatching {
-        val a = JSONArray(prefs().getString(ROUTINE_LOG) ?: "[]")
+    fun routineLog(): List<com.optionslab.ira.Routine.Seen> = runCatching { routineRead.of(prefs().getString(ROUTINE_LOG)) }.getOrDefault(emptyList())
+
+    /**
+     * The routine log read out of its JSON once and kept while the stored text is the same (speed round 12): the
+     * next-question offer at the end of an answer read the whole log (up to [com.optionslab.ira.Routine.LOG_MAX] lines)
+     * twice before the answer was shown. Any write (a question noted, "forget my routine", a wipe) is other text, read afresh.
+     */
+    private val routineRead = com.optionslab.ira.StoredOnce<List<com.optionslab.ira.Routine.Seen>> { text ->
+        val a = JSONArray(text ?: "[]")
         (0 until a.length()).mapNotNull { com.optionslab.ira.Routine.decode(a.optString(it)) }
-    }.getOrDefault(emptyList())
+    }
+
+    /** The kept readings of the mistakes list and the routine log forgotten (tests; static state). */
+    internal fun forgetReadsForTest() { mistakesRead.forget(); routineRead.forget() }
 
     /** The routines Boss said yes to (said at their time, words only). */
     fun routineKept(): List<com.optionslab.ira.Routine.Kept> = runCatching {
