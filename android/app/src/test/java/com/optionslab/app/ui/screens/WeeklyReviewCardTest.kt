@@ -66,7 +66,7 @@ class WeeklyReviewCardTest {
         assertTrue(shows("Jarvis's weekly review", sub = true))
         assertTrue(shows("Week of 5 Oct"))
         assertTrue(shows("1 of 2"))
-        assertTrue(shows("Live vs backtest: Liquidity 15+5 in line", sub = true))
+        assertTrue(shows(keepNumbersWhole("Live vs backtest: Liquidity 15+5 in line"), sub = true))   // the card keeps figures whole ("15+5" carries word joiners)
         // The parts open on "The whole review".
         assertTrue(!shows("Money (paper)"))
         compose.onNodeWithText("The whole review").performClick(); compose.waitForIdle()
