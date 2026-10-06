@@ -80,7 +80,7 @@ internal object IraImprove {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         val today = com.optionslab.app.data.Market.today()
         val c = lock.withLock { runCatching { cycleLocked(Improve.nextWeek(today)) }.getOrNull() } ?: return
-        IraHub.note(c.said)
+        IraHub.note(c.said, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         IraActivity.add("Reviewed my own week and set ${c.plan.goals.size} goal${if (c.plan.goals.size == 1) "" else "s"} for next week.")
         if (Automations.on(Automations.Auto.WEEK)) JarvisVoice.announce(com.optionslab.ira.Wake.spoken(c.spoken, 4))
     }

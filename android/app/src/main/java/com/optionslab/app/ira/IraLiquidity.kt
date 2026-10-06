@@ -99,7 +99,7 @@ internal object IraLiquidity {
         val ctx = IraHub.appContext()
         val silent = IraTools.brief || runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)
         for (c in cues) {
-            IraHub.note(c.text); Automations.acted(Automations.Auto.LIQUIDITY, c.text)
+            IraHub.note(c.text, from = Automations.Auto.LIQUIDITY); Automations.acted(Automations.Auto.LIQUIDITY, c.text)
             if (!silent && ctx != null) runCatching { JarvisPopup.show(ctx, "${LiquidityMap.indexName(c.underlying)}: near a Liquidity level", c.text) }
         }
     }

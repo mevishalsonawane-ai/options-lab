@@ -421,6 +421,15 @@ private fun Main(model: AppModel) {
         }
     }
 
+    // A Settings row asked for from inside the app (Today's notes' "Turn these off"): its page opens, the row is brought
+    // into view and pulses ([com.optionslab.app.ui.SettingSpot]). Navigation only: nothing is switched.
+    val settingPage by com.optionslab.app.ui.SettingFocus.pageWanted.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    LaunchedEffect(settingPage) {
+        val pg = settingPage ?: return@LaunchedEffect
+        go(navNow().setting(pg))
+        com.optionslab.app.ui.SettingFocus.pageWanted.value = null
+    }
+
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
     LaunchedEffect(Unit) { model.ensureWatch() }
     // Price the NIFTY chain in the background, so the Options tab opens with it ready (Battery, round 7: a chain read in the

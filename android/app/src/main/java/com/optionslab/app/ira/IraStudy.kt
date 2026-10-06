@@ -190,7 +190,7 @@ internal object IraStudy {
         // A locked phone may be overheard or seen: the card's figures stay in the chat; only that it is there is said.
         val locked = runCatching { IraHub.locked() }.getOrDefault(true)
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", if (locked) "It's in the chat." else lines.joinToString(" ")) }
-        IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")))
+        IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")), from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         JarvisVoice.announce(if (locked) "Good morning, Boss. Your week's report card is in the chat."
             else "Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
         IraActivity.add("Gave the weekly report card.")
@@ -232,7 +232,7 @@ internal object IraStudy {
         val slipping = checks.filter { it.slipping }
         if (slipping.isNotEmpty()) {
             IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, an arm is slipping", slipping.joinToString(" ") { s -> s.text() }) }
-            IraHub.noteAloud(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")), com.optionslab.ira.SpeakChoice.Weight.MINOR)
+            IraHub.noteAloud(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")), com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         }
     }
 

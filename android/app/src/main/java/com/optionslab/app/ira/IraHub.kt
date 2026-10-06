@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2855,7 +2855,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, OpeningRead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3375,6 +3375,20 @@ object IraHub {
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { IraOpening.answer(locked = lockedNow) }.getOrElse { "I could not read the open just now, Boss." })
             }
+            return true
+        }
+        // "What did you tell me today", "today's notes", "aaj kya bataya" ([com.optionslab.ira.TodayNotes], [IraNotes]): how many
+        // notes Jarvis posted by himself today, by category, and the three most recent headlines with their time - every one is
+        // under Today's notes on the Ira page. Kept today only, in memory. May name the account: the phone must be unlocked.
+        // Reads only - nothing is said again in full, placed, closed, armed or switched. (Not in IraGoldAlgo: its chat posts
+        // no automations' notes.)
+        val notesAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TodayNotes.asked(q) }.getOrDefault(false) else false
+        if (notesAsk) {
+            val said = if (phoneLocked()) com.optionslab.ira.TodayNotes.LOCKED
+                else runCatching { com.optionslab.ira.TodayNotes.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today()) }
+                    .getOrDefault(com.optionslab.ira.TodayNotes.NONE)
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
         // "Why was I logged out of Zerodha?", "why did Kite log me out?", "when does my Zerodha session end?", "zerodha se
@@ -5838,18 +5852,32 @@ object IraHub {
     private val unaskedIds: MutableSet<Long> = java.util.Collections.synchronizedSet(LinkedHashSet())
 
     /** [whole]: shown and said whole, never as a short line (the guard's report; [Msg.whole]). */
-    fun note(text: String, whole: Boolean = false) {
+    fun note(text: String, whole: Boolean = false) = noteFrom(text, whole, null, null)
+
+    /**
+     * As [note], with the automation that posted it ([from]) or its category ([kind]) for Today's notes ([IraNotes]): the
+     * note itself is the same, said and shown just the same and at the same time.
+     */
+    internal fun note(text: String, from: Automations.Auto?, kind: com.optionslab.ira.TodayNotes.Category? = null, whole: Boolean = false) =
+        noteFrom(text, whole, from, kind)
+
+    private fun noteFrom(text: String, whole: Boolean, from: Automations.Auto?, kind: com.optionslab.ira.TodayNotes.Category?) {
         val m = Msg(true, text, whole = whole)
         synchronized(unaskedIds) { unaskedIds += m.id; while (unaskedIds.size > 200) unaskedIds.remove(unaskedIds.first()) }
         _state.update { it.copy(messages = (it.messages + m).takeLast(MAX_MESSAGES)) }
+        // Kept for Today's notes (in memory, today only; never logged).
+        IraNotes.add(text, from, kind)
     }
 
     /**
      * A note in the chat that is also said aloud, as its one line, when Boss's "Jarvis speaks" choice takes a note of
      * [weight] ([JarvisVoice.offerNote]; muted, quiet hours and a locked phone as always). Words only.
      */
-    fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight) {
-        note(text)
+    fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight) = noteAloud(text, weight, null, null)
+
+    /** As [noteAloud], tagged for Today's notes as [note] is. */
+    internal fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight, from: Automations.Auto?, kind: com.optionslab.ira.TodayNotes.Category? = null) {
+        noteFrom(text, false, from, kind)
         runCatching { JarvisVoice.offerNote(text, weight) }
     }
 
@@ -5859,7 +5887,7 @@ object IraHub {
     }
 
     /** Wipes the conversation (the owner's button). */
-    fun forgetConversation() { if (!loaded.isCompleted) wipedWhileLoading = true; dropPending(); synchronized(askedAt) { askedAt.clear() }; _state.update { it.copy(messages = emptyList()) } }
+    fun forgetConversation() { if (!loaded.isCompleted) wipedWhileLoading = true; dropPending(); synchronized(askedAt) { askedAt.clear() }; IraNotes.clear(); _state.update { it.copy(messages = emptyList()) } }
 
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
     suspend fun forgetAll() { awaitLoaded(); forgetAllLoaded() }
@@ -5884,6 +5912,7 @@ object IraHub {
         stateFile?.delete()
         // Boss chose to forget everything: the unreadable files are gone, so saving starts again.
         stateReadFailed = false; bookReadFailed = false
+        IraNotes.clear()
         _state.update { State() }
     }
 

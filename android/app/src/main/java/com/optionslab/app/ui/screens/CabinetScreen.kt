@@ -68,7 +68,10 @@ private val GROUPS = listOf(
         Drawer("whatsnew", "What's new", "Recent changes to the app and where to find them"),
         // Every question Jarvis answers, by topic (AskGuidePage); a tap asks it in the chat. The Ira page has it by the question box.
         Drawer("askguide", ASK_GUIDE_TITLE, "Every question Jarvis answers, by topic; tap one to ask it"),
-    ),
+    ) + (if (todayNotesShown()) listOf(
+        // What Jarvis said in the chat by himself today, by category (TodayNotesPage). The Ira page has it in the chat's header.
+        Drawer("todaynotes", TODAY_NOTES_TITLE, "What Jarvis said by himself today, newest first, by category"),
+    ) else emptyList()),
 ) else emptyList())
 
 @Composable
@@ -112,6 +115,8 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "whatsnew" -> WhatsNewPage()
             // A question asked from the guide: the chat opens with it (the guide closes as the page changes).
             "askguide" -> AskGuidePage(onAsked = { onPage("ira-chat") })
+            // "Turn these off": Settings → Jarvis with that switch's row brought into view (navigation only).
+            "todaynotes" -> TodayNotesPage(onTurnOff = { key -> com.optionslab.app.ui.SettingFocus.ask(key); onPage("jarvis") })
             "ira-chat" -> IraPage(androidx.compose.runtime.remember(model) { iraOrderPathsFor(model) }, startInChat = true)
             else -> Drawers(onPage)
         }

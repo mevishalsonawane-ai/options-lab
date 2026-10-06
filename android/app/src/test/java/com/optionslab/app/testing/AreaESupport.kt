@@ -52,6 +52,7 @@ object AreaE {
         com.optionslab.app.ira.JarvisVoice.resetForTest()
         // The Requests panel's recent list and views start empty in each test.
         com.optionslab.app.ira.IraHub.clearRequests()
+        com.optionslab.app.ira.IraNotes.clear()
         SessionLock.lock()
     }
 

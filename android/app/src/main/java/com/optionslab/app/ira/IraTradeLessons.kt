@@ -51,7 +51,7 @@ internal object IraTradeLessons {
         val brief = IraTools.brief || runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)
         val lines = runCatching { unsaid(brief) }.getOrDefault(emptyList())
         if (lines.isEmpty()) return
-        IraHub.note(lines.joinToString("\n"))
+        IraHub.note(lines.joinToString("\n"), from = null, kind = com.optionslab.ira.TodayNotes.Category.LIQUIDITY)
     }
 
     /** The wrap-up's line on today's Liquidity trades in research terms, or null when none closed today. */

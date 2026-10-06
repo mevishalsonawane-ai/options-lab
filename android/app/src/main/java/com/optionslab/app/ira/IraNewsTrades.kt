@@ -326,7 +326,7 @@ internal object IraNewsTrades {
     /** The stop could not be set: the owner is told at once (the position is still tracked). */
     private fun unguarded(symbol: String, why: String) {
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, set a stop on $symbol", why) }
-        IraHub.note("$symbol has no stop: $why Set one from the position.")
+        IraHub.note("$symbol has no stop: $why Set one from the position.", from = null, kind = com.optionslab.ira.TodayNotes.Category.NEWS)
     }
 
     /**
@@ -376,7 +376,7 @@ internal object IraNewsTrades {
                 } else {
                     // Already at or under the locked profit: out now.
                     val said = closeNow(p)
-                    IraHub.note("${p.symbol}: back to the profit lock, so I closed it. $said")
+                    IraHub.note("${p.symbol}: back to the profit lock, so I closed it. $said", from = null, kind = com.optionslab.ira.TodayNotes.Category.NEWS)
                 }
             }
             p.copy(peak = peak, stop = stop)

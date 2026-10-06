@@ -112,6 +112,7 @@ object AskGuide {
             ex("what can i ask you", "Tour"),
             ex("main kya pooch sakta hoon", "Tour"),
             ex("what's new in the app", "WhatsNew"),
+            ex("what did you tell me today", "TodayNotes"),
             ex("is your data fresh", "DataAge"),
             ex("what is theta", "Glossary", gold = true),
             ex("what have you learned this week", "Learnings"),

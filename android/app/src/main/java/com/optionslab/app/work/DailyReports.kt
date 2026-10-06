@@ -163,7 +163,7 @@ object DailyReports {
         }
         runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
             (if (brief.isEmpty()) "" else " From my night's study: " + brief.take(2).joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })) }
-        com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }))
+        com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }), from = null, kind = com.optionslab.ira.TodayNotes.Category.PLANS)
         // Saturday: the week's report card comes with the morning (not left to the hourly study worker).
         runCatching { com.optionslab.app.ira.IraStudy.reportCardIfDue() }
         return title to lines
@@ -320,7 +320,7 @@ object DailyReports {
             com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +
                 (if (bad == 0) "We are set for today's trading. " else "$bad thing${if (bad > 1) "s" else ""} need you before 09:15. ") +
                 lines.joinToString(" ") { it.removePrefix("✓ ").removePrefix("✗ ").removePrefix("• ").trimEnd('.') + "." } + (saver?.let { " $it" } ?: "") +
-                (usual?.let { " $it" } ?: "")))
+                (usual?.let { " $it" } ?: "")), from = null, kind = com.optionslab.ira.TodayNotes.Category.PLANS)
             return title to lines
         }
         val title = "Morning check · ${Market.today().format(DAY)}" + if (bad == 0) " · all set" else " · $bad to fix"
@@ -398,7 +398,7 @@ object DailyReports {
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) == today.toString() }.getOrDefault(false)) return
         val said = com.optionslab.app.ira.IraBots.armWeek(today) ?: return
         runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, today.toString()) }
-        com.optionslab.app.ira.IraHub.note(said.chat)
+        com.optionslab.app.ira.IraHub.note(said.chat, from = com.optionslab.app.ira.Automations.Auto.WEEK)
         runCatching { com.optionslab.app.ira.JarvisVoice.announce(said.aloud) }
         runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.WEEK, said.aloud) }
     }

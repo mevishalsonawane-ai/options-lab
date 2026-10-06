@@ -208,14 +208,14 @@ internal object IraDayJournal {
         val (live, d) = runCatching { draft() }.getOrNull() ?: return
         if (d.trades == 0) return
         keepDraft(live, d)
-        IraHub.note(com.optionslab.ira.Address.boss("Your journal for today, drafted from the facts.\n" + d.lines.joinToString("\n")))
+        IraHub.note(com.optionslab.ira.Address.boss("Your journal for today, drafted from the facts.\n" + d.lines.joinToString("\n")), from = Automations.Auto.JOURNAL)
         // The wrap-up is said first: wait (at most 90 s) until Jarvis has finished speaking, so this never cuts it off.
         kotlinx.coroutines.delay(2_000)
         var waited = 0
         while (JarvisVoice.speakingNow && waited < 90) { kotlinx.coroutines.delay(1_000); waited++ }
         val locked = runCatching { IraHub.locked() }.getOrDefault(true)
         val first = if (locked) null else start(live, d)
-        first?.let { IraHub.note(it) }
+        first?.let { IraHub.note(it, from = Automations.Auto.JOURNAL) }
         val said = if (first != null) "${d.spoken} $first"
             else d.spoken + if (d.questions.isNotEmpty()) " Unlock the phone and say \"help me journal today\" for them." else ""
         JarvisVoice.announce(com.optionslab.ira.Overheard.said(said, locked, "Boss, today's journal is drafted in the chat."))

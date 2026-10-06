@@ -131,6 +131,7 @@ class CollisionTest {
         "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "OpeningRead" to { q -> OpeningRead.asked(q) },
+        "TodayNotes" to { q -> TodayNotes.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -927,6 +928,14 @@ class CollisionTest {
         "opening summary" to "OpeningRead", "today's opening summary" to "OpeningRead", "opening report" to "OpeningRead",
         "market kaisa khula" to "OpeningRead", "market kaisa khula aaj" to "OpeningRead", "aaj market kaisa khula" to "OpeningRead", "market kaise khula aaj" to "OpeningRead",
         "market kahan khula" to "OpeningRead", "open kaisa tha" to "OpeningRead", "aaj ki opening kaisi rahi" to "OpeningRead", "jarvis how did the market open" to "OpeningRead",
+        // ---- TodayNotes: what Jarvis posted by himself today (counted by category, the latest three named) ----
+        "what did you tell me today" to "TodayNotes", "what have you told me today" to "TodayNotes", "what did you say today" to "TodayNotes",
+        "what all did you tell me today" to "TodayNotes", "what did you tell me this morning" to "TodayNotes", "what did you post today" to "TodayNotes",
+        "what notes did you post today" to "TodayNotes", "jarvis what did you tell me today" to "TodayNotes", "what have you told me so far today" to "TodayNotes",
+        "today's notes" to "TodayNotes", "todays notes" to "TodayNotes", "show today's notes" to "TodayNotes", "today's notes please" to "TodayNotes",
+        "your notes today" to "TodayNotes", "notes for today" to "TodayNotes", "show me your notes from today" to "TodayNotes",
+        "aaj kya bataya" to "TodayNotes", "aaj kya bataya tumne" to "TodayNotes", "aaj tumne kya bataya" to "TodayNotes", "tumne aaj kya bataya" to "TodayNotes",
+        "aaj kya kya bataya" to "TodayNotes", "aaj ke notes" to "TodayNotes", "aaj ke notes dikhao" to "TodayNotes",
         // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, from its own records, and what it waits for ----
         "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot", "why didn't liquidity trade today" to "LiquidityWhyNot",
         "why did liquidity not trade today" to "LiquidityWhyNot", "why hasn't liquidity traded" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
@@ -1499,7 +1508,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3348,5 +3357,40 @@ class CollisionTest {
         for (s in listOf("how did the market open on friday", "how often does the market open flat", "how did my bots do at the open",
             "open a trade", "when will the market open", "will the market open higher"))
             assertTrue(audit.feature(s) != "OpeningRead", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- TodayNotes: what Jarvis posted by himself today, never the questions that already had their answers ----
+
+    @Test fun todaysNotesLeaveTheOtherSaidAndNotesQuestionsTheirRoutes() {
+        for (s in listOf("what did you tell me today", "today's notes", "aaj kya bataya", "what have you told me today", "your notes today")) {
+            assertEquals("TodayNotes", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // What was just said, said again; what Boss asked; what he missed; his own notes and journal; another day's or a
+        // topic's words: as before.
+        assertEquals("Missed", audit.feature("what did you say"))
+        assertEquals("Act", audit.feature("repeat that"))
+        assertEquals("Missed", audit.feature("what did i miss"))
+        assertEquals("Market", audit.feature("what did i ask"))
+        assertEquals("Market", audit.feature("what did you tell me"))
+        assertEquals("Market", audit.feature("what did you say about nifty"))
+        assertEquals("Market", audit.feature("what did you tell me about liquidity"))
+        assertEquals("Account:HISTORY", audit.feature("what did you tell me yesterday"))
+        assertEquals("Account:REASONS", audit.feature("my notes"))
+        assertEquals("Account:REASONS", audit.feature("show my notes"))
+        assertEquals("Account:HISTORY", audit.feature("my journal"))
+        assertEquals("Account:HISTORY", audit.feature("journal"))
+        assertEquals("Account:HISTORY", audit.feature("today's journal"))
+        assertEquals("Missed", audit.feature("notes"))
+        assertEquals("DayStory", audit.feature("recap today's notes"))
+        assertEquals("OpeningRead", audit.feature("how did the market open"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        // Two questions: each its own.
+        assertEquals("TodayNotes & Account:PNL", audit.feature("what did you tell me today and what is my pnl"))
+        for (s in listOf("what did you tell me yesterday", "my notes today", "what did i tell you today", "delete today's notes",
+            "what did you tell me about nifty today", "kal kya bataya", "remind me of today's notes"))
+            assertTrue(audit.feature(s) != "TodayNotes", "$s: ${audit.feature(s)}")
     }
 }

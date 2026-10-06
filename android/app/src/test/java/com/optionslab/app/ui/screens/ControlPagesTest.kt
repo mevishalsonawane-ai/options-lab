@@ -750,7 +750,7 @@ class ControlPagesTest {
         var page by mutableStateOf<String?>(null)
         show { CabinetScreen(model, page) { page = it } }
         for (t in listOf("Zerodha", "Alerts", "Security", "Schedules", "Bot settings", "Signal lab", "IC table", "Sizing and tail risk",
-            "Cost calculator", "Lot sizes", "Research notes", "Data and harvest", "What's new", "What can I ask?")) {
+            "Cost calculator", "Lot sizes", "Research notes", "Data and harvest", "What's new", "What can I ask?", "Today's notes")) {
             compose.reveal(t)
             compose.onNodeWithText(t).assertExists()
         }
@@ -759,7 +759,8 @@ class ControlPagesTest {
             "Schedules" to ("schedule" to "The strategy's day, kept by the phone"), "Bot settings" to ("risk" to "Limits on every order the bot or you place, paper and live"),
             "Data and harvest" to ("data" to "No free source serves expired contracts: a day not collected is gone"),
             "What's new" to ("whatsnew" to "What changed in recent updates, and where to find it"),
-            "What can I ask?" to ("askguide" to "Search questions"))
+            "What can I ask?" to ("askguide" to "Search questions"),
+            "Today's notes" to ("todaynotes" to "No notes from Jarvis yet today. When he posts one by himself in the chat, it is listed here."))
         for ((title, target) in pages) {
             val (key, marker) = target
             compose.reveal(title)

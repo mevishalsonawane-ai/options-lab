@@ -114,7 +114,7 @@ internal object IraTomorrow {
         if (!TomorrowPlan.due(now, mk.isTradingDay(now.toLocalDate()), doneOn())) return
         val ctx = IraHub.appContext()
         val brief = IraTools.brief || runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)
-        if (postOnce(now.toLocalDate(), { TomorrowPlan.say(facts(), brief) }) { IraHub.note(it) })
+        if (postOnce(now.toLocalDate(), { TomorrowPlan.say(facts(), brief) }) { IraHub.note(it, from = Automations.Auto.TOMORROW) })
             Automations.acted(Automations.Auto.TOMORROW, "Put tomorrow's plan in the chat.")
     }
 

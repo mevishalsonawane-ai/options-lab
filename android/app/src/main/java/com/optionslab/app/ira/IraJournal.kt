@@ -201,7 +201,7 @@ internal object IraJournal {
         val locked = runCatching { IraHub.locked() }.getOrDefault(true)
         val plain = "Boss, you've reached your day's target. The figures are in the chat."
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, target reached", if (locked) plain else text) }
-        IraHub.note(text); JarvisVoice.announce(if (locked) plain else text); Automations.acted(Automations.Auto.TARGET, text)
+        IraHub.note(text, from = Automations.Auto.TARGET); JarvisVoice.announce(if (locked) plain else text); Automations.acted(Automations.Auto.TARGET, text)
     }
 
     // ---- trades going nowhere ------------------------------------------------------------------------------------
@@ -268,6 +268,6 @@ internal object IraJournal {
         if (!synchronized(newsTold) { newsTold.add(h.title).also { com.optionslab.ira.Upkeep.trimOldest(newsTold, 1_000) } }) return
         val text = com.optionslab.ira.PositionNews.say(h.title, h.tone, held(), h.markets) ?: return
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, news on your position", text) }
-        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.POSNEWS, text)
+        IraHub.note(text, from = Automations.Auto.POSNEWS); JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.POSNEWS, text)
     }
 }

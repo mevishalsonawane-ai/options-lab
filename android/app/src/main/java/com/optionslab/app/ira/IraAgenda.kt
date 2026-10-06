@@ -119,7 +119,7 @@ internal object IraAgenda {
         IraHub.appContext() ?: return                    // made and told when it can be shown, not before
         val (items, made) = lock.withLock { todayLocked() }
         if (made) {
-            Agenda.morning(items)?.let { IraHub.noteAloud(it, com.optionslab.ira.SpeakChoice.Weight.MINOR) }
+            Agenda.morning(items)?.let { IraHub.noteAloud(it, com.optionslab.ira.SpeakChoice.Weight.MINOR, from = Automations.Auto.AGENDA) }
             IraActivity.add("Made my plan for the day: ${items.size} thing${if (items.size == 1) "" else "s"}.")
             Automations.acted(Automations.Auto.AGENDA, "Made my plan for the day.")
         }
@@ -151,7 +151,7 @@ internal object IraAgenda {
         val what = Agenda.summary(i)
         mark(i.id, what)
         runCatching { IraThinking.add(com.optionslab.ira.Thinking.agenda(IraThinking.now(), i, done = true)) }
-        IraHub.note(said)
+        IraHub.note(said, from = Automations.Auto.AGENDA)
         IraActivity.add("My plan: $what.")
         // Said aloud only what holds nothing of Boss's account or words - or anything once the phone is unlocked.
         if (i.kind.means == Agenda.Means.SPEAK && (i.kind.open || !locked)) JarvisVoice.announce(com.optionslab.ira.Wake.spoken(said, 2))
@@ -167,7 +167,7 @@ internal object IraAgenda {
         val w = i.words.firstOrNull() ?: return
         val guess = i.guess
         if (guess == null || Agenda.lessons(i).isEmpty()) {
-            IraHub.note(text)
+            IraHub.note(text, from = Automations.Auto.AGENDA)
             JarvisVoice.announce(com.optionslab.ira.Wake.spoken(text, 2))
             runCatching { IraTools.expectRephrase(w) }
             return

@@ -93,7 +93,7 @@ internal object IraWeekly {
                 val keep = WeeklyReview.keep(all, r)
                 runCatching { save(keep) }
                 _state.value = keep
-                IraHub.note("Your weekly review is ready, Boss (${r.title.lowercase()}). ${r.summary} The whole review is on the Ira page.")
+                IraHub.note("Your weekly review is ready, Boss (${r.title.lowercase()}). ${r.summary} The whole review is on the Ira page.", from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
                 IraActivity.add("Made the weekly review (${r.title.lowercase()}).")
                 // No rupee figure in the notification: it may show on a locked screen.
                 val (title, text) = WeeklyReview.notice(r)

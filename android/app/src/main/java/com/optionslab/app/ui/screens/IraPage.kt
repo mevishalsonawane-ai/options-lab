@@ -186,6 +186,15 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     var guideOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = guideOpen) { guideOpen = false }
     if (guideOpen) { AskGuideSheet(onAsk = { q -> guideOpen = false; send(q) }, onClose = { guideOpen = false }); return }
+    // "Today's notes" (06 Oct): what Jarvis posted by himself today, from the chip in the chat's header row. "Turn these off"
+    // only opens that switch in Settings → Jarvis (the row brought into view); Back closes it. Read only.
+    var notesOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = notesOpen) { notesOpen = false }
+    if (notesOpen) {
+        TodayNotesSheet(rememberTodayNotes(), onTurnOff = { key -> notesOpen = false; com.optionslab.app.ui.SettingFocus.open("jarvis", key) },
+            onClose = { notesOpen = false })
+        return
+    }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
@@ -244,6 +253,8 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
             if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
                 modifier = Modifier.weight(1f).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
             else Spacer(Modifier.weight(1f))
+            // Today's notes: what Jarvis said by himself today (in the header, so the question box keeps its room).
+            if (todayNotesShown()) TodayNotesChip(onOpen = { notesOpen = true }, modifier = Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp))
             RequestsBadge(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) { requestsOpen = true }
         }
         // The keyboard is up: the globe steps aside so the question box and Ask keep their room.
@@ -1091,7 +1102,7 @@ fun JarvisSettingsPage() {
     com.optionslab.app.ui.Page {
         item { PageTitle("Jarvis settings", "Voice and the on-device AI model. Nothing you say or type leaves the phone.") }
         item { com.optionslab.app.ui.SettingSpot("jarvis.voice") { VoiceSwitch() } }
-        item { SoloCard() }
+        item { com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.SOLO_KEY) { SoloCard() } }
         item { com.optionslab.app.ui.SettingSpot("jarvis.automations") { AutomationsCard() } }
         item { com.optionslab.app.ui.SettingSpot("jarvis.model") { ModelCard() } }
     }
@@ -1170,24 +1181,27 @@ private fun AutomationsCard() {
         com.optionslab.app.ira.Automations.Group.entries.forEach { g ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(g)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(g) }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                    Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
-                    Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
-                        style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+            // Its row a key of its own, so Today's notes' "Turn these off" brings this very switch into view.
+            com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.groupKey(g)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                        Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                        Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                    }
+                    androidx.compose.material3.Switch(checked = on, onCheckedChange = { v ->
+                        // The guard places real stop orders: switched on only with Boss's fingerprint (off needs nothing).
+                        if (v && g.fingerprint) {
+                            if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
+                                com.optionslab.app.work.Alerts.error("${g.label} is switched on with your fingerprint: set one up on the phone first.")
+                            else com.optionslab.app.security.BiometricGate.verify(act, g.label, "Jarvis may place stop orders on your positions") { ok ->
+                                if (ok) { on = true; com.optionslab.app.ira.Automations.set(g, true) } }
+                        } else { on = v; com.optionslab.app.ira.Automations.set(g, v) }
+                    })
                 }
-                androidx.compose.material3.Switch(checked = on, onCheckedChange = { v ->
-                    // The guard places real stop orders: switched on only with Boss's fingerprint (off needs nothing).
-                    if (v && g.fingerprint) {
-                        if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
-                            com.optionslab.app.work.Alerts.error("${g.label} is switched on with your fingerprint: set one up on the phone first.")
-                        else com.optionslab.app.security.BiometricGate.verify(act, g.label, "Jarvis may place stop orders on your positions") { ok ->
-                            if (ok) { on = true; com.optionslab.app.ira.Automations.set(g, true) } }
-                    } else { on = v; com.optionslab.app.ira.Automations.set(g, v) }
-                })
             }
-            g.subs.forEach { a -> AutomationSubRow(a, groupOn = on) }
+            g.subs.forEach { a -> com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.subKey(a)) { AutomationSubRow(a, groupOn = on) } }
         }
         Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
     }

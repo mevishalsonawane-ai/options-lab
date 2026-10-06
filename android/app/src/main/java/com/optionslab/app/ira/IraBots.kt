@@ -339,7 +339,7 @@ internal object IraBots {
         // The figures go in the chat; what is said and shown unasked has no amount.
         val names = fresh.map { it.bot }.toSet()
         val lines = BotHealth.lines(bots.filter { it.name in names }, m.now().toLocalDateTime())
-        IraHub.note(lines.joinToString("\n")); IraActivity.add(fresh.joinToString(" ") { it.text })
+        IraHub.note(lines.joinToString("\n"), from = Automations.Auto.BOTS); IraActivity.add(fresh.joinToString(" ") { it.text })
         Automations.acted(Automations.Auto.BOTS, "Told a strategy behaving unusually.")
         val paper = runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
         val liveHeld = liveNames()
