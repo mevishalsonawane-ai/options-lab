@@ -34,7 +34,7 @@ object Warm {
         MarketMemory::asked, MarketStory::asked, Memory::forgetAsked, Memory::recallAsked, Memory::toKeep, MindChange::asked,
         Momentum::asked, MonthReview::asked, MonthTurns::asked, MorningAsks::asked, MorningSense::asked, MoreAfter::asked, SmallTrades::asked, DayIndex::asked, CheckTimes::asked, { Moves.asked(it) }, MultiDay::asked, MoveTime::asked, GiveBack::asked, MyNumbers::asked, NextAsk::asked, MyStreaks::asked, NeedsTrue::asked,
         NetLean::asked, NetLean::market, NewsDesk::asked, NewsMoves::asked, Nicknames::asked, Odds::asked,
-        OpenHighLow::asked, OpenReach::asked, OpeningRange::asked, OptionFacts::asked, OptionQuote::asked, OrderWhy::asked, Outlook::asked, OutlookCheck::asked, Overnight::asked,
+        OpenHighLow::asked, OpenReach::asked, OpeningRange::asked, OptionFacts::asked, OptionQuote::asked, OtmReach::asked, OrderWhy::asked, Outlook::asked, OutlookCheck::asked, Overnight::asked,
         OutsideApp::asked, OutsideApp::say, PatternCalls::asked, Payoff::asked, PeriodMove::asked, Pivots::asked,
         Plan::pronounAfter, Plan::pronounUnclear, PnlGap::asked, PositionHealth::asked, Practice::asked, PreMarket::asked, PriorDay::asked, RangeBreaks::asked,
         Realised::asked, RelativeMove::asked, RelayHealth::asked, Reminder::daily, Reminder::heardAsked, Reminder::missedAsked,

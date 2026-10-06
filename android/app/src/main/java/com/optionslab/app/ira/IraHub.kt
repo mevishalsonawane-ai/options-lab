@@ -1589,7 +1589,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
@@ -3330,7 +3330,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3416,6 +3416,20 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val atmMarkets = parsed.markets
             scope.launch(Dispatchers.IO) { reply(runCatching { atmBuy(atmBuyAsk, atmMarkets) }.getOrElse { "I could not read the at-the-money buyer's record just now, Boss." }) }
+            return true
+        }
+        // "How often does an OTM option 100 points away end the day in the money?", "how often does a call two strikes out of
+        // the money finish in the money?", "OTM option record for BankNifty", "100 point door ka otm call kitni baar itm hota
+        // hai": the out-of-the-money call and put held from 9:30 in the past sessions whose option prices the phone keeps
+        // ([com.optionslab.ira.OtmReach]) - how often each strike ended the day in the money, how often the index reached it and
+        // how often the option doubled, expiry days apart, beside today's legs so far. A record of past sessions, never a
+        // forecast or advice; market data only; nothing acts.
+        val otmReachAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.OtmReach.asked(q) }.getOrNull() else null
+        if (otmReachAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val otmMarkets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { otmReach(otmReachAsk, otmMarkets) }.getOrElse { "I could not read the out-of-the-money option record just now, Boss." }) }
             return true
         }
         // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
@@ -5281,6 +5295,27 @@ object IraHub {
         val noiseRecords = com.optionslab.ira.StopNoise.markets(legs).associateWith { m -> com.optionslab.ira.StopNoise.record(hs[m]?.bars.orEmpty(), today) }
         val noiseSpots = noiseRecords.keys.associateWith { m -> _state.value.snaps[m]?.price }
         return com.optionslab.ira.StopNoise.answer(legs, noiseRecords, noiseSpots).joinToString(" ")
+    }
+
+    /** The past sessions read for [otmReach] (the index, its kept days and the day as key), kept until any of them changes. */
+    @Volatile private var otmReachDays: Pair<String, List<com.optionslab.ira.OtmReach.Day>>? = null
+
+    /**
+     * "How often does an OTM option 100 points away end the day in the money?" ([com.optionslab.ira.OtmReach]): the index's
+     * sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few numbers
+     * a strike, then today's kept chain. Reads only.
+     */
+    private fun otmReach(a: com.optionslab.ira.OtmReach.Q, markets: List<IraMarket>): String {
+        val m = com.optionslab.ira.OtmReach.market(markets) ?: return com.optionslab.ira.OtmReach.NOT_HERE
+        val u = m.name
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
+        val key = "$u|$today|${kept.size}|${kept.lastOrNull()}"
+        val past = otmReachDays?.takeIf { it.first == key }?.second
+            ?: com.optionslab.ira.OtmReach.days(Store.barSessions(u), today).also { otmReachDays = key to it }
+        val todays = runCatching { Store.barSession(u, today) }.getOrNull()
+        return com.optionslab.ira.OtmReach.answer(a, m, past, todays, today, now)
     }
 
     /** The past sessions read for [atmBuy] (the index, its kept days and the day as key), kept until any of them changes. */
