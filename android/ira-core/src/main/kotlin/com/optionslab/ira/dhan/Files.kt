@@ -18,6 +18,8 @@ import java.util.zip.GZIPOutputStream
  *   opt/<U>/<WEEK|MONTH>/<from>/<CE|PE><+-n>.csv.gz
  *                                              expired options, n strikes from the money:  t,o,h,l,c,v,oi,iv,k,s
  *                                              (k the strike it was that minute, s the index then)
+ *   fetched.csv                                the fetch ledger ([FETCHED]): "<store path>,<yyyy-MM-dd>" per line, the IST
+ *                                              date that file was last fetched from Dhan - what says a chunk is complete
  *
  * t is epoch seconds. One file is one request's reply (or just the header when Dhan had nothing), written whole and
  * renamed into place, so a file is either complete or absent. Plain gzip CSV: one pass reads it, any tool opens it.
@@ -27,8 +29,22 @@ class Files(val root: File) {
     companion object {
         const val CANDLE_HEADER = "t,o,h,l,c,v,oi"
         const val OPTION_HEADER = "t,o,h,l,c,v,oi,iv,k,s"
+        /**
+         * The fetch ledger, at the store root (and, in a data pack, at dhan/fetched.csv). Plain UTF-8 text, one line per
+         * candle/option file: `<store path>,<yyyy-MM-dd>` - the path relative to the store root exactly as the file's own
+         * (e.g. `opt/NIFTY/WEEK/2026-08-27/CE+3.csv.gz`) and the IST calendar date the file's data was fetched from Dhan.
+         * Later lines win; `<store path>,` (no date) forgets an entry. No header; blank and unreadable lines are ignored.
+         * A chunk whose window is [from, to) is complete - "done" - when its file exists and its date is on or after `to`
+         * (fetched once every session of the window was over). See [completeThrough] for a file with no line.
+         */
+        const val FETCHED = "fetched.csv"
+
         /** Option-chain snapshots older than this many days are deleted. */
         const val KEEP_CHAINS_DAYS = 30L
+
+        /** Bytes for the screen: "812.4 MB", "3.62 GB". */
+        fun sizeText(bytes: Long): String =
+            if (bytes >= 1_000_000_000L) "%.2f GB".format(java.util.Locale.ENGLISH, bytes / 1e9) else "%.1f MB".format(java.util.Locale.ENGLISH, bytes / 1e6)
 
         /** A price as short as it can be written: "24612.4", "100", "0.05". */
         fun num(x: Double): String {
@@ -67,6 +83,128 @@ class Files(val root: File) {
             r.readLine() ?: return@use
             while (true) { val l = r.readLine() ?: break; if (l.isNotBlank()) yield(l) }
         }
+    }
+
+    // ---- the fetch ledger -------------------------------------------------------------------------------------------
+
+    private var ledger: HashMap<String, LocalDate>? = null
+
+    /** Parse ledger text: path -> date; later lines win, a line with no date forgets. */
+    fun parseLedger(text: String, into: MutableMap<String, LocalDate> = HashMap()): MutableMap<String, LocalDate> {
+        for (raw in text.lineSequence()) {
+            val l = raw.trim()
+            val c = l.lastIndexOf(',')
+            if (c <= 0) continue
+            val path = l.substring(0, c)
+            val d = l.substring(c + 1)
+            if (d.isEmpty()) { into.remove(path); continue }
+            runCatching { LocalDate.parse(d) }.getOrNull()?.let { into[path] = it }
+        }
+        return into
+    }
+
+    @Synchronized private fun ledgerMap(): HashMap<String, LocalDate> =
+        ledger ?: HashMap<String, LocalDate>().also { m -> file(FETCHED).takeIf { it.isFile }?.let { parseLedger(it.readText(), m) }; ledger = m }
+
+    /** The date [path] was last fetched from Dhan (the ledger), or null when not recorded. */
+    @Synchronized fun fetchedOn(path: String): LocalDate? = ledgerMap()[path]
+
+    /** Every recorded fetch date. */
+    @Synchronized fun fetched(): Map<String, LocalDate> = HashMap(ledgerMap())
+
+    /** Read the ledger again from disk (another writer may have added to it). */
+    @Synchronized fun reloadLedger() { ledger = null }
+
+    /**
+     * Record fetch dates ([entries]: path -> date, or null to forget a path), appended to the ledger and synced. A line cut
+     * short by a crash is ignored when read (and the next append starts on a new line). The file is rewritten whole when
+     * it has grown to over twice its entries.
+     */
+    @Synchronized fun markFetched(entries: Map<String, LocalDate?>) {
+        if (entries.isEmpty()) return
+        val m = ledgerMap()
+        val f = file(FETCHED)
+        f.parentFile?.mkdirs()
+        val needsNl = f.isFile && f.length() > 0 && java.io.RandomAccessFile(f, "r").use { it.seek(it.length() - 1); it.read() != '\n'.code }
+        val text = buildString {
+            if (needsNl) append('\n')
+            for ((p, d) in entries) { append(p).append(',').append(d?.toString() ?: "").append('\n') }
+        }
+        java.io.FileOutputStream(f, true).use { it.write(text.toByteArray(Charsets.UTF_8)); it.fd.sync() }
+        for ((p, d) in entries) if (d == null) m.remove(p) else m[p] = d
+        val lines = runCatching { f.length() / 40 }.getOrDefault(0L)
+        if (lines > 2L * m.size + 1000) writeText(FETCHED, m.toSortedMap().entries.joinToString("") { "${it.key},${it.value}\n" }, gzip = false)
+    }
+
+    fun markFetched(path: String, date: LocalDate?) = markFetched(mapOf(path to date))
+
+    /** The first field (epoch seconds) of the last row of a gzip CSV, or null when it has none. Streams. */
+    fun lastT(path: String): Long? {
+        var last: Long? = null
+        for (l in lines(path)) l.substringBefore(',').toLongOrNull()?.let { last = it }
+        return last
+    }
+
+    /**
+     * The last day through which the file at [path] - the chunk of window [from] .. [toExclusive] - is complete, or null
+     * when nothing of it is known complete (absent, or empty and unrecorded):
+     *  - with a ledger date F ([FETCHED]): the day before F, at most the window's last day (a session is over once its
+     *    day has passed);
+     *  - with none (a file from before the ledger, or imported without one), from its last candle: a minute or option
+     *    file whose last candle is the closing minute (15:29 or later) of the window's last trading day ([tradingDay]: the
+     *    exchange calendar when the app has it) is whole; otherwise it is complete only through the day BEFORE its last
+     *    candle's day (that day may have been fetched mid-session). A daily file cannot tell a final close from a
+     *    mid-session one, so it too counts only through the day before its last candle. When [record] and the check finds
+     *    the window whole, the ledger gets the window's end as its date, so the file is not read again for this.
+     */
+    fun completeThrough(path: String, from: LocalDate, toExclusive: LocalDate, tradingDay: (LocalDate) -> Boolean = Plan.WEEKDAYS,
+                        record: Boolean = false): LocalDate? {
+        if (!has(path)) return null
+        val last = toExclusive.minusDays(1)
+        fetchedOn(path)?.let { f -> return minOf(last, f.minusDays(1)).takeIf { !it.isBefore(from) } }
+        val lastT = lastT(path) ?: return null
+        val lastDay = day(lastT)
+        val minutes = path.contains("/min/") || path.startsWith("opt/")
+        val lastSession = Plan.lastTradingDay(from, toExclusive, tradingDay)
+        val closing = java.time.Instant.ofEpochSecond(lastT).atZone(com.optionslab.engine.IST).toLocalTime() >= java.time.LocalTime.of(15, 29)
+        if (minutes && lastSession != null && (lastDay.isAfter(lastSession) || (lastDay == lastSession && closing))) {
+            if (record) runCatching { markFetched(path, toExclusive) }
+            return last
+        }
+        return minOf(lastDay.minusDays(1), last).takeIf { !it.isBefore(from) }
+    }
+
+    /**
+     * Is [t] done: its window has ended (not open on [today]) and its file holds the whole window ([completeThrough]
+     * reaches the window's last day)? An EXPIRIES / CHAIN task is never done (refreshed each run). A file with no ledger
+     * line that checks whole gets one ([completeThrough]'s record), so each old file is read for this once.
+     */
+    fun done(t: Plan.Task, today: LocalDate, tradingDay: (LocalDate) -> Boolean = Plan.WEEKDAYS): Boolean {
+        if (t.open(today)) return false
+        val through = completeThrough(t.path, t.from, t.to, tradingDay, record = true) ?: return false
+        return !through.isBefore(t.to.minusDays(1))
+    }
+
+    /** The day a refresh of [path] (window from [from]) is asked from: its last stored candle's day, else [from]. */
+    fun resumeFrom(path: String, from: LocalDate): LocalDate = lastT(path)?.let { day(it) }?.takeIf { it.isAfter(from) } ?: from
+
+    /**
+     * The stored rows of [path] and [fresh]'s, each minute once (a fresh row replaces the stored one of its minute), oldest
+     * first: a refresh asked from the last stored day appends to the file and never loses a stored row (a reply that came
+     * back empty leaves the file as it was).
+     */
+    fun mergedCandles(path: String, fresh: List<DhanApi.Candle>): List<DhanApi.Candle> {
+        val m = java.util.TreeMap<Long, DhanApi.Candle>()
+        for (l in lines(path)) parseCandle(l)?.let { m[it.t] = it }
+        for (c in fresh) m[c.t] = c
+        return m.values.toList()
+    }
+
+    fun mergedOptions(path: String, fresh: List<DhanApi.OptionCandle>): List<DhanApi.OptionCandle> {
+        val m = java.util.TreeMap<Long, DhanApi.OptionCandle>()
+        for (l in lines(path)) parseOption(l)?.let { m[it.t] = it }
+        for (c in fresh) m[c.t] = c
+        return m.values.toList()
     }
 
     // ---- writing replies --------------------------------------------------------------------------------------------
@@ -187,5 +325,5 @@ class Files(val root: File) {
     fun dropPartials() { root.walkTopDown().filter { it.isFile && it.name.endsWith(".part") }.forEach { it.delete() } }
 
     /** Everything downloaded goes. */
-    fun deleteAll(): Boolean = !root.exists() || root.deleteRecursively()
+    fun deleteAll(): Boolean { synchronized(this) { ledger = null }; return !root.exists() || root.deleteRecursively() }
 }

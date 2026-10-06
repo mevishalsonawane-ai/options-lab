@@ -32,20 +32,28 @@ import java.util.zip.ZipInputStream
  * when ALL of it passes is it merged into the store, file by file, each by rename (a file is complete or absent, as the
  * downloader writes them). Anything refused leaves the store untouched.
  *
- * The merge follows the store's own rules ([Plan], [Files]): an imported chunk is a file on its grid path, so a chunk
- * whose window has ended counts as done and the downloader skips it; a window that reaches today is refetched as always.
- * An existing file is never replaced by an older one ([decide]). Market prices only; nothing here reaches the network or
+ * The merge follows the store's own rules ([Plan], [Files]): an imported chunk is a file on its grid path, and it counts
+ * as done - the downloader skips it - only when its data is complete ([Files.done]): the pack's own fetch ledger
+ * (`dhan/fetched.csv`, the store's [Files.FETCHED] format: `<store path>,<yyyy-MM-dd>` per line, the IST date the file
+ * was fetched from Dhan) dates it on or after its window's end. Each file the import adds or replaces takes the pack's
+ * ledger line for it, or - with none - loses the phone's (then only its last candle can show it whole, [Files.completeThrough]);
+ * a file fetched before its window ended is fetched again from its last candle. A window that reaches today is refreshed
+ * as always. An existing file is never replaced by an older one ([decide]). Market prices only; nothing here reaches the network or
  * the token. Pure JVM (java.io / java.util.zip), tested on the JVM.
  */
 class PackImport(val files: Files, val limits: Limits = Limits()) {
 
     /** The caps. Totals count bytes as they are inflated, never the sizes the zip declares. */
     data class Limits(
-        val maxTotalBytes: Long = 6L * 1024 * 1024 * 1024,
+        /** A full six-year NIFTY weekly + monthly ATM+-10 set is about 3-4 GB of gzip CSV: room for that and more. */
+        val maxTotalBytes: Long = 12L * 1024 * 1024 * 1024,
         val maxEntryBytes: Long = 256L * 1024 * 1024,
         /** The two plain lists (master.csv, expiries/<U>.csv) are small text. */
         val maxTextBytes: Long = 8L * 1024 * 1024,
-        val maxManifestBytes: Long = 32L * 1024 * 1024,
+        /** The manifest is parsed whole: ~120 bytes a file, so 8 MB lists ~65,000 files (a six-year index pack has ~10,000). */
+        val maxManifestBytes: Long = 8L * 1024 * 1024,
+        /** Free space kept on the phone's disk while staging (a part that would leave less is refused). */
+        val minFreeBytes: Long = 200L * 1024 * 1024,
         val maxEntries: Int = 500_000,
         /** Inflating a stored .csv.gz to compare it with the one on the phone: at most this much, lines at most [maxLine]. */
         val maxInflatedBytes: Long = 1024L * 1024 * 1024,
@@ -67,7 +75,7 @@ class PackImport(val files: Files, val limits: Limits = Limits()) {
     data class Report(val added: Int, val replaced: Int, val kept: Int, val merged: Int, val missing: Int, val bytes: Long, val checked: Boolean) {
         val files: Int get() = added + replaced + kept + merged
         fun say(): String = buildString {
-            append("$files file(s) imported (${"%.1f".format(java.util.Locale.ENGLISH, bytes / 1e6)} MB): ")
+            append("$files file(s) imported (${Files.sizeText(bytes)}): ")
             append("$added new")
             if (replaced > 0) append(", $replaced newer than the phone's")
             if (kept > 0) append(", $kept already on the phone (kept)")
@@ -92,6 +100,7 @@ class PackImport(val files: Files, val limits: Limits = Limits()) {
         private val DATE = "\\d{4}-\\d{2}-\\d{2}"
         private val LAYOUT = listOf(
             Regex("master\\.csv"),
+            Regex("fetched\\.csv"),
             Regex("expiries/$SYM\\.csv"),
             Regex("chain/$SYM/($DATE)\\.json\\.gz"),
             Regex("(idx|fut|eq)/$SYM/(day|min)/($DATE)\\.csv\\.gz"),
@@ -172,7 +181,7 @@ class PackImport(val files: Files, val limits: Limits = Limits()) {
          */
         fun decide(rel: String, existingPresent: Boolean, existing: Stat?, incoming: Stat?): Action {
             if (!existingPresent) return Action.ADD
-            if (rel.startsWith("expiries/")) return Action.UNION
+            if (rel.startsWith("expiries/") || rel == Files.FETCHED) return Action.UNION
             if (rel == "master.csv" || rel.startsWith("chain/")) return Action.KEEP
             if (incoming == null) return Action.KEEP
             if (existing == null) return Action.REPLACE      // the phone's file is unreadable: the pack's checked one wins
@@ -255,6 +264,7 @@ class PackImport(val files: Files, val limits: Limits = Limits()) {
                             n += r; total += r
                             if (n > cap) throw Refused("dhan/$rel is larger than the per-file limit")
                             if (total > limits.maxTotalBytes) throw Refused("the pack unpacks to more than ${limits.maxTotalBytes / (1L shl 30)} GB")
+                            if ((n and 0xFFFFF) < r && staging.usableSpace in 1 until limits.minFreeBytes) throw IOException("not enough room on the phone")
                             for (k in 0 until minOf(r, 2)) { val v = buf[k].toInt() and 0xff; if (h0 < 0) h0 = v else if (h1 < 0) h1 = v }
                             if (text) for (i in 0 until r) { val c = buf[i].toInt() and 0xff; if (c < 9 || (c in 14..31) || c == 11 || c == 12 || c >= 0x7f) throw Refused("dhan/$rel is not plain text") }
                             md.update(buf, 0, r)
@@ -352,30 +362,46 @@ class PackImport(val files: Files, val limits: Limits = Limits()) {
                 if (header(File(staging, s.rel)) != h) throw Refused("dhan/${s.rel} is not a ${if (h == Files.OPTION_HEADER) "options" else "candles"} file")
             }
             files.root.mkdirs()
+            // The pack's fetch ledger: the date each of its files was fetched (merged per file below, never as a file).
+            val packLedger: Map<String, LocalDate> = staged[Files.FETCHED]?.let { files.parseLedger(File(staging, it.rel).readText()) } ?: emptyMap()
+            val dated = LinkedHashMap<String, LocalDate?>()
             var added = 0; var replaced = 0; var kept = 0; var merged = 0; var bytes = 0L; var i = 0
             for (s in staged.values) {
                 if (cancelled()) throw Cancelled()
+                if (s.rel == Files.FETCHED) { i++; continue }
                 val src = File(staging, s.rel)
                 val dest = files.file(s.rel)
                 inside(files.root, dest)
                 val present = dest.isFile
                 val gz = headerFor(s.rel) != null
-                val action = decide(s.rel, present, if (present && gz) stat(dest) else null, if (present && gz) stat(src) else null)
+                val have = if (present && gz) stat(dest) else null
+                val incoming = if (present && gz) stat(src) else null
+                val action = decide(s.rel, present, have, incoming)
                 when (action) {
                     Action.ADD, Action.REPLACE -> {
                         dest.parentFile?.mkdirs()
                         if (!src.renameTo(dest)) { dest.delete(); if (!src.renameTo(dest)) throw IOException("could not store dhan/${s.rel}") }
                         if (action == Action.ADD) added++ else replaced++
                         bytes += s.size
+                        // Its fetch date comes with it (none in the pack: the phone's line no longer applies).
+                        if (gz) dated[s.rel] = packLedger[s.rel]
                     }
                     Action.UNION -> {
                         files.writeText(s.rel, unionExpiries(dest.readText(), src.readText()), gzip = false)
                         merged++; bytes += s.size
                     }
-                    Action.KEEP -> kept++
+                    Action.KEEP -> {
+                        kept++
+                        // The same rows on both sides: the later fetch date (the pack's, when it saw the window end) holds.
+                        val packDate = packLedger[s.rel]
+                        val phoneDate = files.fetchedOn(s.rel)
+                        if (gz && have != null && have == incoming && packDate != null && (phoneDate == null || packDate.isAfter(phoneDate))) dated[s.rel] = packDate
+                    }
                 }
                 if (++i % 50 == 0 || i == staged.size) progress(Progress(0, 0, i, bytes, "Storing $i of ${staged.size} files"))
+                if (dated.size >= 500) { files.markFetched(dated); dated.clear() }
             }
+            files.markFetched(dated)
             val missing = mf?.keys?.count { it !in staged } ?: 0
             return Report(added, replaced, kept, merged, missing, bytes, mf != null)
         } finally {

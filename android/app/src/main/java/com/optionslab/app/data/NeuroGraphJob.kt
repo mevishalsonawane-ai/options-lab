@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
@@ -30,6 +31,12 @@ object NeuroGraphJob {
     val progress: StateFlow<Progress> get() = _progress
 
     private val running = Mutex()
+
+    /**
+     * Run [block] while no graph build runs (waiting for one that is stopping to let go): deleting the Dhan data
+     * ([DhanSource.deleteData]) takes this, so a build never reads or writes beside a delete.
+     */
+    suspend fun <T> whileStopped(block: suspend () -> T): T = running.withLock { block() }
 
     /** files/neuro, beside the Dhan store; null before the app has started it. */
     private fun dir(): File? = runCatching { File(DhanSource.root().parentFile, "neuro") }.getOrNull()

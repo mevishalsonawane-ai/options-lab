@@ -31,7 +31,8 @@ data class DayRow(val day: Int, val mask: Int, val cov: Int, val regime: Int, va
  */
 class NeuroState {
     companion object {
-        const val VERSION = 1
+        /** 2: the windows' signatures ([sigs]) and the open-to-close bits of [DayRow.mask] ([Rules.OC_UP] / [Rules.OC_DOWN]). */
+        const val VERSION = 2
         private const val MAGIC = 0x4E475354 // "NGST"
 
         fun read(input: DataInputStream): NeuroState {
@@ -63,6 +64,7 @@ class NeuroState {
             repeat(input.readInt()) { s.marks[input.readUTF()] = input.readInt() }
             repeat(input.readInt()) { val k = input.readUTF(); s.seen[k] = IntArray(input.readInt()) { input.readInt() } }
             repeat(input.readInt()) { val k = input.readUTF(); s.expiries[k] = TreeSet<Int>().apply { repeat(input.readInt()) { add(input.readInt()) } } }
+            repeat(input.readInt()) { s.sigs[input.readUTF()] = input.readLong() }
             return s
         }
     }
@@ -77,6 +79,12 @@ class NeuroState {
     val seen = TreeMap<String, IntArray>()
     /** Index -> its expiry days (listed by Dhan, and read from the options themselves). */
     val expiries = TreeMap<String, TreeSet<Int>>()
+    /**
+     * Window (a candle file's store path, or an option window's folder) -> its signature (sizes and modification times,
+     * [NeuroBuilder.signature]) for every window whose days were ALL read into the state: one rewritten later means the
+     * state learned from data that has since changed, and [NeuroBuilder.needsFull] asks for a rebuild.
+     */
+    val sigs = TreeMap<String, Long>()
     var builds = 0
 
     fun write(out: DataOutputStream) {
@@ -97,6 +105,7 @@ class NeuroState {
         out.writeInt(marks.size); for ((k, v) in marks) { out.writeUTF(k); out.writeInt(v) }
         out.writeInt(seen.size); for ((k, v) in seen) { out.writeUTF(k); out.writeInt(v.size); for (x in v) out.writeInt(x) }
         out.writeInt(expiries.size); for ((k, v) in expiries) { out.writeUTF(k); out.writeInt(v.size); for (x in v) out.writeInt(x) }
+        out.writeInt(sigs.size); for ((k, v) in sigs) { out.writeUTF(k); out.writeLong(v) }
         out.flush()
     }
 

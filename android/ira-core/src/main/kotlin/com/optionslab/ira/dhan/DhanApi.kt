@@ -155,13 +155,14 @@ object DhanApi {
         AUTH,
         /** Nothing for that range or instrument: the chunk is done, and empty. */
         NO_DATA,
-        /** Refused for another reason: this chunk is skipped this run and counted. */
+        /** Refused for another reason (DH-905, an input error, among them): no file is written; counted failed, tried next run. */
         REFUSED,
     }
 
     /**
      * What an HTTP [code] with error [body] means. Dhan's error codes: DH-901 invalid or expired token, DH-902 no data
-     * API subscription, DH-904 / 805 too many requests, DH-905 / DH-907 no data for the input.
+     * API subscription, DH-904 / 805 too many requests, DH-905 an input exception (a bad or unserved field - REFUSED: it
+     * must not be stored as an empty "done" chunk), DH-907 no data for the input (NO_DATA).
      */
     fun classify(code: Int, body: String?): Failure {
         val b = body.orEmpty()
@@ -169,7 +170,8 @@ object DhanApi {
             code == 429 || b.contains("DH-904") || b.contains("\"805\"") -> Failure.RETRY
             code in 500..599 -> Failure.RETRY
             code == 401 || code == 403 || b.contains("DH-901") || b.contains("DH-902") -> Failure.AUTH
-            b.contains("DH-905") || b.contains("DH-907") || code == 404 -> Failure.NO_DATA
+            b.contains("DH-905") -> Failure.REFUSED
+            b.contains("DH-907") || code == 404 -> Failure.NO_DATA
             else -> Failure.REFUSED
         }
     }

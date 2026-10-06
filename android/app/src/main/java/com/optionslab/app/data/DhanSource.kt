@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import java.io.File
 import java.io.IOException
@@ -185,7 +186,9 @@ object DhanSource {
     /** The scrip master's few rows the store needs: downloaded again once a week (streamed, never held whole). */
     private suspend fun master(files: Files, today: LocalDate): DhanUniverse.Master? {
         val kept = files.file("master.csv")
-        val fresh = kept.isFile && System.currentTimeMillis() - kept.lastModified() < 7L * 24 * 3600 * 1000
+        // A kept subset from before the IDX_I fix (no "v2" header) is read again: its index IDs were the options' underlying ones.
+        val fresh = kept.isFile && System.currentTimeMillis() - kept.lastModified() < 7L * 24 * 3600 * 1000 &&
+            runCatching { kept.bufferedReader().use { it.readLine() }?.trim() == DhanUniverse.MASTER_HEADER }.getOrDefault(false)
         if (fresh) return runCatching { DhanUniverse.readMaster(kept.readText()) }.getOrNull()
         val got = runCatching {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -204,7 +207,10 @@ object DhanSource {
 
     // ---- the download -----------------------------------------------------------------------------------------------------
 
-    /** How a run ended, in words for the page (no secret in it). */
+    /**
+     * How a run ended, in words for the page (no secret in it): [left] is every chunk still not done after the run - the
+     * failed ones and any not reached - so "all done" is said only when nothing is left.
+     */
     data class Summary(val fetched: Int, val failed: Int, val left: Int, val stopped: String?) {
         fun say(today: LocalDate): String = "$today: $fetched chunk(s) downloaded" +
             (if (failed > 0) ", $failed failed (tried again next time)" else "") + (if (left > 0) ", $left left" else ", all done") +
@@ -226,13 +232,17 @@ object DhanSource {
             _progress.value = Progress(true, "Reading Dhan's instrument list", 0, 1)
             val master = master(files, today)
             val tasks = Plan.tasks(master, choice(), today)
-            val todo = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Plan.todo(tasks, today) { files.has(it) } }
+            // Done = complete: fetched after its window ended (the fetch ledger), on the exchange calendar ([Files.done]).
+            val todo = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                Plan.todo(tasks, today) { t -> files.done(t, today) { d -> runCatching { Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) } }
+            }
             val before = tasks.size - todo.size
-            var fetched = 0; var failed = 0
+            var fetched = 0; var failed = 0; var reached = 0
             var stopped: String? = null
             for ((i, t) in todo.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 _progress.value = Progress(true, stage(t), before + i, tasks.size, failed)
+                reached = i + 1
                 try {
                     one(files, t, today)
                     fetched++
@@ -247,7 +257,8 @@ object DhanSource {
                 }
             }
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { files.pruneChains(today) }
-            val s = Summary(fetched, failed, 0, stopped)
+            // Left: the failed chunks and any the run did not reach (the open windows fetched now are refreshed again anyway).
+            val s = Summary(fetched, failed, failed + (todo.size - reached), stopped)
             runCatching { SecurePrefs.put(K_LAST, s.say(today)) }
             runCatching { NeuroGraphJob.afterData(ctx()) }
             return s
@@ -268,10 +279,16 @@ object DhanSource {
         Plan.Kind.OPT -> "${t.symbol} expired options, ${t.from}"
     }
 
-    /** One chunk: one request, one file (written whole). */
+    /**
+     * One chunk: one request, one file (written whole), and its fetch date in the ledger ([Files.markFetched]). A candle or
+     * option file already stored (a window still open, or fetched before it ended) is refreshed from its last stored
+     * candle's day and the reply merged in ([Files.mergedCandles]): not the whole window again.
+     */
     private suspend fun one(files: Files, t: Plan.Task, today: LocalDate) {
         val to = minOf(t.to, today.plusDays(1))
         val io = kotlinx.coroutines.Dispatchers.IO
+        val from = if (t.kind == Plan.Kind.DAY || t.kind == Plan.Kind.MIN || t.kind == Plan.Kind.OPT)
+            kotlinx.coroutines.withContext(io) { files.resumeFrom(t.path, t.from) } else t.from
         when (t.kind) {
             Plan.Kind.EXPIRIES -> {
                 val dates = DhanApi.parseExpiries(fetch(DhanApi.EXPIRY_LIST, DhanApi.expiryListBody(t.id, t.segment)))
@@ -283,17 +300,17 @@ object DhanSource {
                 if (text.isNotBlank()) kotlinx.coroutines.withContext(io) { files.writeText(t.path, text) }
             }
             Plan.Kind.DAY -> {
-                val c = DhanApi.parseCandles(fetch(DhanApi.HISTORICAL, DhanApi.historicalBody(t.id, t.segment, t.instrument, t.from, to, oi = t.group == Plan.Group.FUT)))
-                kotlinx.coroutines.withContext(io) { files.writeText(t.path, files.candlesCsv(c)) }
+                val c = DhanApi.parseCandles(fetch(DhanApi.HISTORICAL, DhanApi.historicalBody(t.id, t.segment, t.instrument, from, to, oi = t.group == Plan.Group.FUT)))
+                kotlinx.coroutines.withContext(io) { files.writeText(t.path, files.candlesCsv(files.mergedCandles(t.path, c))); files.markFetched(t.path, today) }
             }
             Plan.Kind.MIN -> {
-                val c = DhanApi.parseCandles(fetch(DhanApi.INTRADAY, DhanApi.intradayBody(t.id, t.segment, t.instrument, t.from, to, oi = t.group == Plan.Group.FUT)))
-                kotlinx.coroutines.withContext(io) { files.writeText(t.path, files.candlesCsv(c)) }
+                val c = DhanApi.parseCandles(fetch(DhanApi.INTRADAY, DhanApi.intradayBody(t.id, t.segment, t.instrument, from, to, oi = t.group == Plan.Group.FUT)))
+                kotlinx.coroutines.withContext(io) { files.writeText(t.path, files.candlesCsv(files.mergedCandles(t.path, c))); files.markFetched(t.path, today) }
             }
             Plan.Kind.OPT -> {
                 val rows = DhanApi.parseRolling(fetch(DhanApi.ROLLING_OPTION,
-                    DhanApi.rollingBody(t.id, t.segment, t.instrument, t.flag, Plan.EXPIRY_CODE, t.offset, t.call, t.from, to)))
-                kotlinx.coroutines.withContext(io) { files.writeText(t.path, files.optionsCsv(rows)) }
+                    DhanApi.rollingBody(t.id, t.segment, t.instrument, t.flag, Plan.EXPIRY_CODE, t.offset, t.call, from, to)))
+                kotlinx.coroutines.withContext(io) { files.writeText(t.path, files.optionsCsv(files.mergedOptions(t.path, rows))); files.markFetched(t.path, today) }
             }
         }
     }
@@ -352,7 +369,7 @@ object DhanSource {
                     val r = imp.finish(progress = { pr -> _importing.value = _importing.value.copy(stage = pr.stage, files = pr.files) }, cancelled = stop)
                     runCatching { NeuroGraphJob.afterData(ctx()) }
                     val size = runCatching { Files(root()).bytes() }.getOrDefault(0L)
-                    r.say() + ". The Dhan data now takes " + "%.1f MB".format(java.util.Locale.ENGLISH, size / 1e6) + "."
+                    r.say() + ". The Dhan data now takes " + Files.sizeText(size) + "."
                 } catch (_: com.optionslab.ira.dhan.PackImport.Cancelled) {
                     imp.abort(); "Import stopped. Files already stored stay; nothing half-written was kept."
                 } catch (e: com.optionslab.ira.dhan.PackImport.Refused) {
@@ -402,18 +419,44 @@ object DhanSource {
 
     // ---- deleting -------------------------------------------------------------------------------------------------------------
 
-    /** Delete everything downloaded (the token stays until forgotten). Stops any download first. */
-    fun deleteData(): Boolean {
+    /** How long [deleteData] waits for a running download, import or graph build to stop. */
+    private const val STOP_WAIT_MS = 60_000L
+
+    /**
+     * Delete everything downloaded (the token stays until forgotten). Stops any download, import and graph build first and
+     * WAITS until each has let go (their locks), so nothing they were writing reappears after the delete. False when they
+     * did not stop in time (nothing deleted) or the folder could not be removed.
+     */
+    suspend fun deleteData(): Boolean {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
         app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
-        app?.let { runCatching { com.optionslab.app.work.NeuroWorker.stop(it); NeuroGraphJob.forget() } }
-        return Files(root()).deleteAll()
+        app?.let { runCatching { com.optionslab.app.work.NeuroWorker.stop(it) } }
+        val ok = kotlinx.coroutines.withTimeoutOrNull(STOP_WAIT_MS) {
+            running.lock()
+            try {
+                NeuroGraphJob.whileStopped {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        NeuroGraphJob.forget()
+                        Files(root()).deleteAll().also { root().parentFile?.let { p -> File(p, root().name + ".import").deleteRecursively() } }
+                    }
+                }
+            } finally { running.unlock() }
+        }
+        return ok == true
     }
 
-    /** Erase: the data, the token and the automatic download. */
+    /**
+     * Erase: the data, the token and the automatic download. Not suspending (it is part of erasing everything): the work is
+     * stopped and the folder deleted at once, then deleted again once the stopped work has let go ([deleteData]).
+     */
     fun wipe() {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.auto(it, false) } }
-        runCatching { deleteData() }
+        app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
+        app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
+        app?.let { runCatching { com.optionslab.app.work.NeuroWorker.stop(it) } }
+        runCatching { Files(root()).deleteAll() }
+        runCatching { NeuroGraphJob.forget() }
         runCatching { forget() }
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch { runCatching { deleteData() } }
     }
 }

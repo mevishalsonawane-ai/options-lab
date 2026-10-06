@@ -64,42 +64,65 @@ object History {
         var kiteWorks = kite
         val keys by lazy { upstoxKeys(holdings.map { (s, e) -> e to s }) }
 
-        suspend fun viaKite(token: Long): List<DailyBar>? = if (!kiteWorks) null else try {
-            Broker.dailyBars(token, from, to).map(::toDaily)
+        suspend fun viaKite(token: Long, start: LocalDate = from): List<DailyBar>? = if (!kiteWorks) null else try {
+            Broker.dailyBars(token, start, to).map(::toDaily)
         } catch (e: Broker.KiteError) {
             if (e.type == "TokenException") throw e
             kiteWorks = false   // no historical-data add-on on this Kite plan
             null
         }
 
-        // Downloaded from Dhan (More, Dhan data): the phone's own daily candles, used first when they cover the whole span.
+        // Downloaded from Dhan (More, Dhan data): the phone's own daily candles, used when they reach back to the span's start.
         fun dhan(sym: String, index: Boolean): List<DailyBar>? = runCatching {
             val f = DhanSource.filesOrNull() ?: return@runCatching null
             val bars = f.candles(if (index) com.optionslab.ira.dhan.Plan.Group.IDX else com.optionslab.ira.dhan.Plan.Group.EQ, sym, "day")
                 .map { c -> DailyBar(Instant.ofEpochSecond(c.t).atZone(IST).toLocalDate(), c.open, c.high, c.low, c.close, c.volume.toDouble()) }
                 .filter { !it.date.isBefore(from) && !it.date.isAfter(to) }
-            bars.takeIf { b -> b.isNotEmpty() && !b.first().date.isAfter(from.plusDays(7)) && !b.last().date.isBefore(to.minusDays(7)) }
+            bars.takeIf { b -> b.isNotEmpty() && !b.first().date.isAfter(from.plusDays(7)) }
         }.getOrNull()
+
+        // The last session the span can hold: [to] or the last trading day before it (today's bar only once it is in).
+        val lastSession = generateSequence(minOf(to, Market.today())) { it.minusDays(1) }.take(15)
+            .firstOrNull { runCatching { Market.isTradingDay(it) }.getOrDefault(it.dayOfWeek.value <= 5) } ?: to
+        val prevSession = generateSequence(lastSession.minusDays(1)) { it.minusDays(1) }.take(15)
+            .firstOrNull { runCatching { Market.isTradingDay(it) }.getOrDefault(it.dayOfWeek.value <= 5) } ?: lastSession.minusDays(1)
+
+        /**
+         * Dhan's candles up to its last day, then the other source's after it: Dhan's alone only when its last day is within
+         * one trading day of the span's end (stale downloaded data is never preferred over a fresher source).
+         */
+        suspend fun withTail(dhanBars: List<DailyBar>, other: suspend (LocalDate) -> List<DailyBar>?): List<DailyBar>? {
+            val last = dhanBars.last().date
+            if (!last.isBefore(prevSession)) return dhanBars
+            val tail = runCatching { other(last.plusDays(1)) }.getOrNull() ?: return null
+            return dhanBars + tail.filter { it.date.isAfter(last) && !it.date.isAfter(to) }
+        }
+
+        suspend fun otherStock(sym: String, ex: String, start: LocalDate): List<DailyBar> {
+            val k = if (kiteWorks) runCatching { Broker.spec(ex, sym).token }.getOrNull() else null
+            return k?.let { viaKite(it, start) }?.also { sources += "Zerodha daily candles" }
+                ?: run {
+                    val key = keys["$ex:$sym"] ?: throw IOException("$ex:$sym is not in the instrument list")
+                    Net.daily(key, start, to).map(::toDaily).also { sources += "Upstox public daily candles" }
+                }
+        }
+
+        suspend fun otherIndex(name: String, start: LocalDate): List<DailyBar> =
+            Broker.indexToken(name)?.let { viaKite(it, start) }?.also { sources += "Zerodha daily candles" }
+                ?: Net.daily(Upstox.INDEX_KEYS[name] ?: throw IOException("no index $name"), start, to).map(::toDaily)
+                    .also { sources += "Upstox public daily candles" }
 
         for ((sym, ex) in holdings) {
             progress("Reading $sym")
             val fromDhan = if (ex.equals("NSE", ignoreCase = true)) dhan(sym, index = false) else null
-            if (fromDhan != null) { out[sym] = fromDhan; sources += "Dhan daily candles (downloaded)"; continue }
-            val k = if (kiteWorks) runCatching { Broker.spec(ex, sym).token }.getOrNull() else null
-            val bars = k?.let { viaKite(it) }?.also { sources += "Zerodha daily candles" }
-                ?: run {
-                    val key = keys["$ex:$sym"] ?: throw IOException("$ex:$sym is not in the instrument list")
-                    Net.daily(key, from, to).map(::toDaily).also { sources += "Upstox public daily candles" }
-                }
-            out[sym] = bars
+            val joined = fromDhan?.let { withTail(it) { s -> otherStock(sym, ex, s) } }
+            if (joined != null) { out[sym] = joined; sources += "Dhan daily candles (downloaded)"; continue }
+            out[sym] = otherStock(sym, ex, from)
         }
         if (benchmark != null) {
             progress("Reading $benchmark")
-            val bars = dhan(benchmark, index = true)?.also { sources += "Dhan daily candles (downloaded)" }
-                ?: Broker.indexToken(benchmark)?.let { viaKite(it) }?.also { sources += "Zerodha daily candles" }
-                ?: Net.daily(Upstox.INDEX_KEYS[benchmark] ?: throw IOException("no index $benchmark"), from, to).map(::toDaily)
-                    .also { sources += "Upstox public daily candles" }
-            out[benchmark] = bars
+            val joined = dhan(benchmark, index = true)?.let { withTail(it) { s -> otherIndex(benchmark, s) } }
+            out[benchmark] = joined?.also { sources += "Dhan daily candles (downloaded)" } ?: otherIndex(benchmark, from)
         }
         return Fetched(out, sources)
     }

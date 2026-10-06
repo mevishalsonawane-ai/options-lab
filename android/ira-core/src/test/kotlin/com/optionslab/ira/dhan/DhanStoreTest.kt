@@ -62,11 +62,11 @@ class DhanStoreTest {
         assertTrue(tasks.any { it.group == Plan.Group.FUT && it.id == "35001" })
         // Resuming: a chunk on disk whose window has ended is not fetched again; an open one is.
         val have = tasks.filter { !it.open(today) }.map { it.path }.toSet()
-        val todo = Plan.todo(tasks, today) { it in have }
+        val todo = Plan.todo(tasks, today) { it.path in have }
         assertTrue(todo.isNotEmpty() && todo.all { it.open(today) })
         // Without a master: the indices by their fallback IDs, no companies.
         val bare = Plan.tasks(null, Plan.Choice(), today)
-        assertTrue(bare.none { it.symbol == "NIFTYNXT50" } && bare.none { it.group == Plan.Group.EQ } && bare.any { it.symbol == "NIFTY" && it.id == "13" })
+        assertTrue(bare.any { it.symbol == "NIFTYNXT50" && it.id == "38" } && bare.none { it.group == Plan.Group.EQ } && bare.any { it.symbol == "NIFTY" && it.id == "13" })
     }
 
     @Test fun readsTheScripMasterAsAStream() {
@@ -82,14 +82,16 @@ class DhanStoreTest {
             NSE,E,2031,INE101A01026,EQUITY,,M&M,MAHINDRA & MAHINDRA LTD,"Mahindra, Mahindra",ES,EQ,1,,,
         """.trimIndent()
         val m = DhanUniverse.parseMaster(csv.reader().buffered(), setOf("HDFCBANK", "M&M"), LocalDate.of(2026, 10, 6))
-        assertEquals("13", m.indexIds["NIFTY"]); assertEquals("26000", m.indexIds["NIFTYNXT50"])
+        // The index's own IDX_I row gives its ID; an option's UNDERLYING_SECURITY_ID (26000) never does - Dhan's
+        // rollingoption serves no data for it (NIFTYNXT50 has no INDEX row here: its IDX_I fallback, 38, is used).
+        assertEquals("13", m.indexIds["NIFTY"]); assertNull(m.indexIds["NIFTYNXT50"])
         assertEquals(mapOf("HDFCBANK" to "1333", "M&M" to "2031"), m.equityIds)
         assertEquals("35001", m.nearFutures["NIFTY"]?.id)
         val back = DhanUniverse.readMaster(DhanUniverse.writeMaster(m))
         assertEquals(m, back)
         assertEquals(listOf("a", "b,c", "d\"e"), DhanUniverse.splitCsv("a,\"b,c\",\"d\"\"e\""))
-        assertEquals("26000", DhanUniverse.indexId(DhanUniverse.index("NIFTYNXT50")!!, m))
-        assertNull(DhanUniverse.indexId(DhanUniverse.index("NIFTYNXT50")!!, null))
+        assertEquals("38", DhanUniverse.indexId(DhanUniverse.index("NIFTYNXT50")!!, m))
+        assertEquals("38", DhanUniverse.indexId(DhanUniverse.index("NIFTYNXT50")!!, null))
         assertTrue(DhanUniverse.allConstituents().containsAll(listOf("HDFCBANK", "RELIANCE", "INFY")))
         assertEquals(DhanUniverse.allConstituents().size, DhanUniverse.allConstituents().distinct().size)
     }

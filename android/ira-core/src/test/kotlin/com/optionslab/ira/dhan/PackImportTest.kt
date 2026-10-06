@@ -195,6 +195,8 @@ class PackImportTest {
             "dhan/chain/NIFTY/2026-10-05.json.gz" to gz("{\"pack\":1}"),
             "dhan/master.csv" to "pack\n".toByteArray(),
             "dhan/expiries/NIFTY.csv" to "2026-09-30\n2026-10-07\n".toByteArray(),
+            // The pack's fetch ledger: the closed daily window was fetched after it ended.
+            "dhan/fetched.csv" to "idx/NIFTY/day/2025-01-24.csv.gz,2026-02-01\nidx/NIFTY/min/2026-08-01.csv.gz,2026-09-20\n".toByteArray(),
         ))
         assertEquals(1, r.added); assertEquals(1, r.replaced); assertEquals(3, r.kept); assertEquals(1, r.merged)
         assertEquals(listOf("500,1,1,1,1,1,0", "600,1,1,1,1,1,0"), f.lines("idx/NIFTY/min/2026-05-08.csv.gz").toList(), "the newer phone file stays")
@@ -204,9 +206,12 @@ class PackImportTest {
         assertEquals(listOf("2026-09-30", "2026-10-07"), f.listedExpiries("NIFTY").map { it.toString() })
         assertFalse(f.root.walkTopDown().any { it.name.endsWith(".part") })
         assertFalse(PackImport(f).staging.exists())
-        // The imported closed chunk is done: the downloader's plan skips it.
+        // The imported closed chunk, fetched (the pack's ledger says) after its window ended, is done: the plan skips it.
         val t = Plan.Task(Plan.Kind.DAY, Plan.Group.IDX, "NIFTY", "13", "IDX_I", "INDEX", java.time.LocalDate.of(2025, 1, 24), java.time.LocalDate.of(2026, 1, 23))
-        assertEquals(emptyList(), Plan.todo(listOf(t), today) { f.has(it) })
+        assertEquals(java.time.LocalDate.of(2026, 2, 1), f.fetchedOn(t.path))
+        assertEquals(java.time.LocalDate.of(2026, 9, 20), f.fetchedOn("idx/NIFTY/min/2026-08-01.csv.gz"), "the replaced file takes the pack's date")
+        assertFalse(f.has(Files.FETCHED + ".part"))
+        assertEquals(emptyList(), Plan.todo(listOf(t), today) { f.done(it, today) })
         // Importing the same pack again changes nothing.
         val again = run(f, zip("dhan/idx/NIFTY/min/2026-08-01.csv.gz" to newer))
         assertEquals(1, again.kept)

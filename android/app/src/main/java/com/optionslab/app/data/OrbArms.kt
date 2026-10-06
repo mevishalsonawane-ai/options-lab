@@ -468,8 +468,13 @@ object OrbArms {
         // read under it they held every pass, the 15-second stop checks and the rows' refresh waiting on the network.
         val t0 = now()
         runCatching { heroPrefetch(t0) }
+        // The prefetch read the network: the pass time is taken again, so the stops, the time exits and the decisions under
+        // the lock use a fresh time. The prefetched bars are still used - unless the minute has turned meanwhile (they were
+        // read for t0's minute; the new minute's decision reads its own, as it always did).
+        val t = now()
+        if (t.truncatedTo(java.time.temporal.ChronoUnit.MINUTES) != t0.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)) heroFed.clear()
         try {
-            tickLocked(t0)
+            tickLocked(t)
         } finally {
             heroFed.clear()
         }

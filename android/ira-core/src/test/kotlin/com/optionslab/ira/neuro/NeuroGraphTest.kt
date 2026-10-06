@@ -166,6 +166,128 @@ class NeuroGraphTest {
         assertEquals(NeuroLearn.graph(NeuroBuilder.update(fx.files, null, today), 1L).edges.r(), NeuroLearn.graph(resumed, 1L).edges.r())
     }
 
+    // ---- complete data only ---------------------------------------------------------------------------------------------------
+
+    @Test fun incompleteOptionWindowsHoldTheWatermarkUntilTheyAreWhole() {
+        val fx = NeuroFixture(NeuroFixture.tmp()).writeAll()
+        val dir = "opt/NIFTY/WEEK"
+        val newest = fx.files.dated(dir).last()
+        val missing = fx.files.file("$dir/$newest/PE-7.csv.gz")
+        val kept = missing.readBytes()
+        assertTrue(missing.delete())
+        // A strike/side file of the newest window is missing: its days are not read, the watermark stops before it.
+        val partial = NeuroBuilder.update(fx.files, null, today)
+        assertEquals(newest.toEpochDay().toInt() - 1, partial.marks["idx|NIFTY"])
+        assertTrue(partial.rows.getValue("NIFTY").lastKey() < newest.toEpochDay())
+        // The file arrives: the next incremental update reads those days and ends where a full build ends.
+        missing.writeBytes(kept)
+        val inc = NeuroBuilder.update(fx.files, partial, today)
+        assertEquals(NeuroFixture.LAST.toEpochDay().toInt(), inc.marks["idx|NIFTY"])
+        assertEquals(NeuroLearn.graph(NeuroBuilder.update(fx.files, null, today), 1L).edges.r(), NeuroLearn.graph(inc, 1L).edges.r())
+        // A window fetched before its days were over (the ledger's date): read only through the day before that fetch.
+        val idx = fx.files.dated("idx/NIFTY/day").last()
+        fx.files.markFetched("idx/NIFTY/day/$idx.csv.gz", java.time.LocalDate.of(2026, 9, 1))
+        val stale = NeuroBuilder.update(fx.files, null, today)
+        assertEquals(java.time.LocalDate.of(2026, 8, 31).toEpochDay().toInt(), stale.marks["idx|NIFTY"])
+    }
+
+    @Test fun aWindowAlreadyReadThatIsRewrittenAsksForAFullRebuild() {
+        val fx = NeuroFixture(NeuroFixture.tmp()).writeAll()
+        val s = NeuroBuilder.update(fx.files, null, today)
+        assertNull(NeuroBuilder.needsFull(fx.files, s))
+        val first = fx.files.dated("opt/NIFTY/WEEK").first()
+        assertTrue(s.sigs.containsKey("opt/NIFTY/WEEK/$first"), "a window wholly read is sealed")
+        assertFalse(s.sigs.keys.any { it.startsWith("opt/NIFTY/WEEK/${fx.files.dated("opt/NIFTY/WEEK").last()}") }, "the newest is not")
+        // Rewritten (a refetch or an imported replacement): its size or time changed.
+        val f = fx.files.file("opt/NIFTY/WEEK/$first/CE+0.csv.gz")
+        f.setLastModified(f.lastModified() + 60_000)
+        assertTrue(NeuroBuilder.needsFull(fx.files, s)!!.startsWith("a window already read was rewritten"))
+        // The newest window grows each day: that is no reason to rebuild.
+        val s2 = NeuroBuilder.update(fx.files, null, today)
+        val last = fx.files.file("opt/NIFTY/WEEK/${fx.files.dated("opt/NIFTY/WEEK").last()}/CE+0.csv.gz")
+        last.setLastModified(last.lastModified() + 60_000)
+        assertNull(NeuroBuilder.needsFull(fx.files, s2))
+    }
+
+    @Test fun incrementalAndFullAgreeOnTheOldestPairQuarterOverMoreThanFiveYears() {
+        val files = NeuroFixture.tmp()
+        val rnd = java.util.Random(11)
+        var b = 30000.0; var h = 1000.0
+        val bo = ArrayList<DhanApi.Candle>(); val ho = ArrayList<DhanApi.Candle>()
+        for (d in NeuroFixture.sessions(java.time.LocalDate.of(2019, 1, 1), NeuroFixture.LAST)) {
+            val rb = rnd.nextGaussian() * 0.01; val rh = 1.1 * rb + rnd.nextGaussian() * 0.003
+            bo += DhanApi.Candle(NeuroFixture.t0(d), b, b * 1.01, b * 0.99, b * (1 + rb), 0, 0); b *= 1 + rb
+            ho += DhanApi.Candle(NeuroFixture.t0(d), h, h * 1.01, h * 0.99, h * (1 + rh), 0, 0); h *= 1 + rh
+        }
+        fun write(sym: String, group: Plan.Group, cs: List<DhanApi.Candle>) {
+            for ((w, part) in cs.groupBy { NeuroFixture.window(java.time.Instant.ofEpochSecond(it.t).atZone(com.optionslab.engine.IST).toLocalDate(), Plan.DAY_WINDOW_DAYS, Plan.DAY_FROM) }) {
+                val path = "${group.dir}/$sym/day/$w.csv.gz"
+                files.writeText(path, files.candlesCsv(part)); files.markFetched(path, today)
+            }
+        }
+        write("BANKNIFTY", Plan.Group.IDX, bo); write("HDFCBANK", Plan.Group.EQ, ho)
+        // Built mid-quarter in February, then brought up to October; and built at once in October.
+        val early = NeuroBuilder.update(files, null, java.time.LocalDate.of(2026, 2, 15))
+        val inc = NeuroBuilder.update(files, early, today)
+        val full = NeuroBuilder.update(files, null, today)
+        assertEquals(java.time.LocalDate.of(2021, 10, 1), NeuroBuilder.pairStart(today))
+        val key = "D|eq:HDFCBANK|BANKNIFTY"
+        val a = inc.pairs.getValue(key); val c = full.pairs.getValue(key)
+        assertEquals(c.keys, a.keys)
+        assertEquals(NeuroBuilder.quarter(NeuroBuilder.pairStart(today).toEpochDay().toInt()), c.firstKey())
+        for (q in c.keys) assertEquals(c.getValue(q).map { "%.9f".format(java.util.Locale.ENGLISH, it) }, a.getValue(q).map { "%.9f".format(java.util.Locale.ENGLISH, it) }, "quarter $q")
+        assertEquals(NeuroLearn.graph(full, 1L).edges.r(), NeuroLearn.graph(inc, 1L).edges.r())
+    }
+
+    // ---- same-session links, false discoveries, the embargo ---------------------------------------------------------------
+
+    @Test fun theFalseDiscoveryCutAndTheEmbargo() {
+        assertEquals(1.0, Stats.binomUpper(0, 10, 0.3))
+        assertEquals(1.0 / 1024, Stats.binomUpper(10, 10, 0.5), 1e-12)
+        assertEquals(11.0 / 1024, Stats.binomUpper(9, 10, 0.5), 1e-12)
+        assertTrue(Stats.binomUpper(24, 30, 0.2) < 1e-9)
+        assertEquals(0.0, Stats.binomUpper(11, 10, 0.5))
+        // Benjamini-Hochberg at 5% on ten p-values: only the first two survive.
+        assertEquals(0.008, Stats.bhCutoff(listOf(0.001, 0.008, 0.039, 0.041, 0.042, 0.06, 0.074, 0.205, 0.212, 0.216)))
+        assertEquals(-1.0, Stats.bhCutoff(listOf(0.5, 0.6)))
+        assertEquals(-1.0, Stats.bhCutoff(emptyList()))
+        // The test part starts [lag] samples after the fit part ends.
+        assertEquals(7 to 7, Stats.splitWithGap(10, 0))
+        assertEquals(7 to 9, Stats.splitWithGap(10, 2))
+        assertEquals(7 to 10, Stats.splitWithGap(10, 5))
+        val v = Stats.judge(24, 30, 0.2, 10, 13, 0.2)!!
+        assertEquals(Stats.binomUpper(24, 30, 0.2), v.pValue)
+    }
+
+    @Test fun aSameSessionLinkIsMeasuredFromTheOpen() {
+        // Up 1.2% on the previous close, all of it the gap: a big up day, but the session itself did not move.
+        val gapOnly = Rules.daily(100.0, 101.2, 101.3, 101.1, 101.2, 1.0, vix = false)
+        assertTrue(gapOnly and Ev.GAP_UP.bit != 0 && gapOnly and Ev.BIG_UP.bit != 0 && gapOnly and Rules.OC_UP == 0)
+        // A small gap down, then up 1.5% from the open: the session moved.
+        val session = Rules.daily(100.0, 99.0, 100.6, 98.9, 100.5, 1.0, vix = false)
+        assertTrue(session and Rules.OC_UP != 0 && session and Ev.BIG_UP.bit == 0)
+        // A state where every gap up "is followed" the same session by a big up day only because of the gap itself.
+        val s = NeuroState()
+        val rows = java.util.TreeMap<Int, DayRow>()
+        val rnd = java.util.Random(5)
+        var c = 100.0
+        val d0 = java.time.LocalDate.of(2020, 1, 1).toEpochDay().toInt()
+        for (i in 0 until 600) {
+            val gap = rnd.nextDouble() < 0.25
+            val o = if (gap) c * 1.012 else c * (1 + rnd.nextGaussian() * 0.001)
+            val close = if (gap) o else o * (1 + rnd.nextGaussian() * 0.006)
+            val mask = Rules.daily(c, o, maxOf(o, close) * 1.001, minOf(o, close) * 0.999, close, 1.0, vix = false)
+            rows[d0 + i] = DayRow(d0 + i, mask, DayRow.COV_DAILY, -1, false, -1, Float.NaN, (close / c - 1).toFloat())
+            c = close
+        }
+        s.rows["NIFTY"] = rows
+        val g = NeuroLearn.graph(s, 1L)
+        val same = g.edges.firstOrNull { it.type == EdgeType.PRECEDES && it.from == "EV:NIFTY:GAP_UP" && it.to == "EV:NIFTY:BIG_UP" && it.lag == 0 }
+        assertTrue(same == null || !same.proven, "the gap is not its own consequence: $same")
+        // Pure noise proves nothing once every candidate is cut for false discoveries.
+        assertTrue(g.edges.none { it.proven && it.type == EdgeType.PRECEDES && it.from.endsWith("BIG_DOWN") }, "${g.edges.filter { it.proven }}")
+    }
+
     // ---- storage and pruning ------------------------------------------------------------------------------------------------
 
     @Test fun theGraphAndStateRoundTripAndTheFileIsCapped() {

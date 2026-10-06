@@ -19,7 +19,7 @@ import com.optionslab.app.security.SecurePrefs
 
 /**
  * The Dhan market-data download, in WorkManager. It runs only:
- *  - when Boss taps Download (any connection; in the foreground with a quiet progress notice, so it is not cut at ten
+ *  - when Boss taps Download (on Wi-Fi; over mobile data only when he chooses it on the page; in the foreground with a quiet progress notice, so it is not cut at ten
  *    minutes), or
  *  - when he has turned on the automatic download: once a day at most, and only on an unmetered (Wi-Fi) network while
  *    the phone is charging and its battery is not low.
@@ -32,12 +32,15 @@ class DhanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
         private const val MANUAL = "manual"
         private const val NOTICE_ID = Notifier.ID_HARVEST + 40
 
-        /** Boss tapped Download. */
-        fun now(context: Context) {
+        /**
+         * Boss tapped Download. [wifiOnly]: wait for an unmetered (Wi-Fi) network - the page asks first when the phone is
+         * on mobile data, and only Boss's explicit "use mobile data" sends it over any connection.
+         */
+        fun now(context: Context, wifiOnly: Boolean = true) {
             if (com.optionslab.app.BuildConfig.GOLD || !DhanSource.configured) return
             val req = OneTimeWorkRequestBuilder<DhanWorker>()
                 .setInputData(workDataOf(MANUAL to true))
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED).build())
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, req)
         }
@@ -57,6 +60,11 @@ class DhanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             wm.enqueueUniquePeriodicWork(AUTO, ExistingPeriodicWorkPolicy.UPDATE, req)
             SecurePrefs.put(DhanSource.K_AUTO, true)
         }
+
+        /** Is the phone's current network metered (mobile data)? True when it cannot tell. */
+        fun metered(context: Context): Boolean = runCatching {
+            (context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).isActiveNetworkMetered
+        }.getOrDefault(true)
 
         /** Stop a download that is running now (the automatic one stays scheduled). */
         fun stopNow(context: Context) { WorkManager.getInstance(context).cancelUniqueWork(NOW) }

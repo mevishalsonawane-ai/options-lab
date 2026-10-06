@@ -8,7 +8,10 @@ import kotlin.math.sqrt
 
 /**
  * Turns the builder's sums ([NeuroState]) into the [NeuroGraph]: nodes, the structural edges from the dated static lists,
- * and every learned edge judged by [Stats] (fit on the older 70%, checked on the newest 30%; proven only when it held).
+ * and every learned edge judged by [Stats] (fit on the older 70%, checked on the newest 30% after an embargo of the
+ * link's lag; proven only when it held AND its fit survived the Benjamini-Hochberg cut across every probability candidate
+ * of the build). A same-session link after a gap is judged on the session's own move from the open ([Rules.OC_UP] /
+ * [Rules.OC_DOWN]), never on the close against the previous close, which contains the gap.
  * The split is made afresh here at every build, so a relation proven last month can fall back to a hypothesis when new
  * days stop supporting it. Deterministic: the same state gives the same graph. Pure.
  */
@@ -36,9 +39,27 @@ object NeuroLearn {
 
     // ---- the build -----------------------------------------------------------------------------------------------------
 
+    /**
+     * The probability candidates of one build, for the false-discovery cut: every p-value tested ([test]: each candidate
+     * with enough fit samples, whether or not it became an edge) and the PROVEN edges' places in the list ([proven]).
+     */
+    private class Fdr {
+        val ps = ArrayList<Double>()
+        val proven = ArrayList<Pair<Int, Double>>()
+        fun test(k: Int, n: Int, base: Double) { if (n >= Stats.MIN_FIT && base > 0 && base < 1 && !base.isNaN()) ps += Stats.binomUpper(k, n, base) }
+        /** Adds [e] to [edges]; a proven one is remembered with its p-value [p] for the cut. */
+        fun add(edges: MutableList<Edge>, e: Edge, p: Double) { if (e.status == Status.PROVEN) proven += edges.size to p; edges += e }
+        /** Proven edges whose p-value does not survive Benjamini-Hochberg at [Stats.FDR_Q] fall back to hypotheses. */
+        fun apply(edges: MutableList<Edge>) {
+            val cut = Stats.bhCutoff(ps)
+            for ((i, p) in proven) if (p.isNaN() || p > cut) edges[i] = edges[i].copy(status = Status.HYPOTHESIS)
+        }
+    }
+
     fun graph(state: NeuroState, builtAt: Long, maxEdges: Int = NeuroGraph.MAX_EDGES): NeuroGraph {
         val nodes = TreeMap<String, Node>()
         val edges = ArrayList<Edge>()
+        val fdr = Fdr()
         fun node(id: String, type: NodeType, label: String, count: Int = 0, rate: Double = Double.NaN) {
             val cur = nodes[id]
             if (cur == null || (cur.count == 0 && count > 0)) nodes[id] = Node(id, type, label, count, rate)
@@ -64,9 +85,10 @@ object NeuroLearn {
         }
         for ((u, m) in state.rows) {
             if (u == NeuroBuilder.VIX || m.isEmpty()) continue
-            sessions(u, m.values.toList(), vixRows, state.expiries[u], ::node, edges)
+            sessions(u, m.values.toList(), vixRows, state.expiries[u], ::node, edges, fdr)
         }
-        pairs(state, ::node, edges)
+        pairs(state, ::node, edges, fdr)
+        fdr.apply(edges)
 
         val days = state.rows.values.flatMap { it.keys }.toSortedSet()
         val g = NeuroGraph(builtAt, days.firstOrNull()?.let { LocalDate.ofEpochDay(it.toLong()) },
@@ -75,9 +97,10 @@ object NeuroLearn {
         return g.pruned(maxEdges)
     }
 
-    private fun bothSplit(flags: List<BooleanArray>): Pair<List<BooleanArray>, List<BooleanArray>> {
-        val s = Stats.split(flags.size)
-        return flags.subList(0, s) to flags.subList(s, flags.size)
+    /** Fit on the older 70%, test on the rest after an embargo of [gap] samples ([Stats.splitWithGap]). */
+    private fun bothSplit(flags: List<BooleanArray>, gap: Int): Pair<List<BooleanArray>, List<BooleanArray>> {
+        val (s, t) = Stats.splitWithGap(flags.size, gap)
+        return flags.subList(0, s) to flags.subList(t, flags.size)
     }
 
     /** Hits of a condition: [0] the condition, [1] the outcome; returns (k, n, base) over [part]. */
@@ -87,17 +110,30 @@ object NeuroLearn {
         return Triple(k, n, if (part.isEmpty()) Double.NaN else b.toDouble() / part.size)
     }
 
-    private fun probEdge(type: EdgeType, from: String, to: String, flags: List<BooleanArray>, lag: Int = 0): Edge? {
-        val (fit, test) = bothSplit(flags)
+    /** A probability edge on [flags] (oldest first), the test part kept [lag] samples clear of the fit part. */
+    private fun probEdge(type: EdgeType, from: String, to: String, flags: List<BooleanArray>, edges: MutableList<Edge>, fdr: Fdr, lag: Int = 0) {
+        val (fit, test) = bothSplit(flags, lag)
         val (k, n, base) = tally(fit)
         val (tk, tn, tBase) = tally(test)
-        val v = Stats.judge(k, n, base, tk, tn, tBase) ?: return null
-        return Edge(type, from, to, if (v.proven) Status.PROVEN else Status.HYPOTHESIS, v.fitP, v.fitBase, v.lift, v.lo, v.hi, n, tn,
-            v.testP, v.testBase, lag)
+        fdr.test(k, n, base)
+        val v = Stats.judge(k, n, base, tk, tn, tBase) ?: return
+        fdr.add(edges, Edge(type, from, to, if (v.proven) Status.PROVEN else Status.HYPOTHESIS, v.fitP, v.fitBase, v.lift, v.lo, v.hi, n, tn,
+            v.testP, v.testBase, lag), v.pValue)
+    }
+
+    /**
+     * Did [b] happen on [r], as a link of [lag] sessions sees it: on the same session (lag 0) a big up / down day is the
+     * session's own move from its open ([Rules.OC_UP] / [Rules.OC_DOWN]) - the close against the previous close already
+     * holds the opening gap it would be linked to.
+     */
+    private fun outcome(r: DayRow, b: Ev, lag: Int): Boolean = when {
+        lag == 0 && b == Ev.BIG_UP -> r.mask and Rules.OC_UP != 0
+        lag == 0 && b == Ev.BIG_DOWN -> r.mask and Rules.OC_DOWN != 0
+        else -> r.has(b)
     }
 
     private fun sessions(u: String, rows: List<DayRow>, vixRows: TreeMap<Int, DayRow>, expiries: java.util.TreeSet<Int>?,
-                         node: (String, NodeType, String, Int, Double) -> Unit, edges: MutableList<Edge>) {
+                         node: (String, NodeType, String, Int, Double) -> Unit, edges: MutableList<Edge>, fdr: Fdr) {
         val own = Ev.values().filter { !it.vix }
         for (e in own) {
             val covered = rows.count { it.covers(e) }
@@ -120,9 +156,9 @@ object NeuroLearn {
                     rows.subList(i + 1, i + 1 + lag)
                 }
                 if (window.any { !it.covers(b) }) continue
-                flags += booleanArrayOf(aRow.has(a.e), window.any { it.has(b) })
+                flags += booleanArrayOf(aRow.has(a.e), window.any { outcome(it, b, lag) })
             }
-            probEdge(EdgeType.PRECEDES, a.id, ev(u, b), flags, lag)?.let { edges += it }
+            probEdge(EdgeType.PRECEDES, a.id, ev(u, b), flags, edges, fdr, lag)
         }
         // OCCURS_IN: an event in a context (weekday, expiry day, regime).
         val hasOptions = DhanUniverse.index(u)?.options == true
@@ -147,7 +183,7 @@ object NeuroLearn {
                 val c = inCtx(r) ?: continue
                 flags += booleanArrayOf(c, r.has(e))
             }
-            probEdge(EdgeType.OCCURS_IN, ev(u, e), ctx, flags)?.let { edges += it }
+            probEdge(EdgeType.OCCURS_IN, ev(u, e), ctx, flags, edges, fdr)
         }
         // OCCURS_IN a time of day: when the zero-to-hero moves reached their multiple, against the bucket's share of the session.
         val zth = rows.filter { it.zthMinute >= 0 }
@@ -157,9 +193,10 @@ object NeuroLearn {
             for ((b, span) in Rules.TOD.withIndex()) {
                 val base = (span.second - span.first) / 376.0
                 val k = fit.count { Rules.tod(it.zthMinute) == b }; val tk = test.count { Rules.tod(it.zthMinute) == b }
+                fdr.test(k, fit.size, base)
                 val v = Stats.judge(k, fit.size, base, tk, test.size, base) ?: continue
-                edges += Edge(EdgeType.OCCURS_IN, ev(u, Ev.ZERO_TO_HERO), tod(b), if (v.proven) Status.PROVEN else Status.HYPOTHESIS,
-                    v.fitP, base, v.lift, v.lo, v.hi, fit.size, test.size, v.testP, base)
+                fdr.add(edges, Edge(EdgeType.OCCURS_IN, ev(u, Ev.ZERO_TO_HERO), tod(b), if (v.proven) Status.PROVEN else Status.HYPOTHESIS,
+                    v.fitP, base, v.lift, v.lo, v.hi, fit.size, test.size, v.testP, base), v.pValue)
             }
         }
     }
@@ -185,7 +222,7 @@ object NeuroLearn {
         return if (g == "idx") idx(sym) else stk(sym)
     }
 
-    private fun pairs(state: NeuroState, node: (String, NodeType, String, Int, Double) -> Unit, edges: MutableList<Edge>) {
+    private fun pairs(state: NeuroState, node: (String, NodeType, String, Int, Double) -> Unit, edges: MutableList<Edge>, fdr: Fdr) {
         for ((key, m) in state.pairs) {
             if (m.isEmpty()) continue
             val parts = key.split('|')
@@ -194,13 +231,13 @@ object NeuroLearn {
             val u = idx(parts[2])
             if (parts[1].startsWith("idx:")) node(p, NodeType.INDEX, label(parts[1].removePrefix("idx:")), 0, Double.NaN)
             when (parts[0]) {
-                "D" -> if (m.values.first().size == NeuroBuilder.D_LEN) daily(p, u, parts[1].startsWith("eq:"), m, edges)
+                "D" -> if (m.values.first().size == NeuroBuilder.D_LEN) daily(p, u, parts[1].startsWith("eq:"), m, edges, fdr)
                 "L" -> if (m.values.first().size == NeuroBuilder.L_LEN) lead(p, u, m, edges)
             }
         }
     }
 
-    private fun daily(p: String, u: String, stock: Boolean, m: TreeMap<Int, DoubleArray>, edges: MutableList<Edge>) {
+    private fun daily(p: String, u: String, stock: Boolean, m: TreeMap<Int, DoubleArray>, edges: MutableList<Edge>, fdr: Fdr) {
         val (f, t) = splitQuarters(m, 0)
         val r = Stats.pearson(f[0], f[1], f[2], f[3], f[4], f[5])
         val tr = Stats.pearson(t[0], t[1], t[2], t[3], t[4], t[5])
@@ -211,11 +248,12 @@ object NeuroLearn {
         if (!stock) return
         val base = if (f[0] > 0) f[9] / f[0] else Double.NaN
         val tBase = if (t[0] > 0) t[9] / t[0] else Double.NaN
+        fdr.test(f[7].toInt(), f[6].toInt(), base)
         val v = Stats.judge(f[7].toInt(), f[6].toInt(), base, t[7].toInt(), t[6].toInt(), tBase) ?: return
         val bigDays = f[6] + t[6]
         val beta = if (bigDays > 0) (f[8] + t[8]) / bigDays else Double.NaN
-        edges += Edge(EdgeType.CONTRIBUTES, p, u, if (v.proven) Status.PROVEN else Status.HYPOTHESIS, v.fitP, v.fitBase, v.lift, v.lo, v.hi,
-            f[6].toInt(), t[6].toInt(), v.testP, v.testBase, extra = beta)
+        fdr.add(edges, Edge(EdgeType.CONTRIBUTES, p, u, if (v.proven) Status.PROVEN else Status.HYPOTHESIS, v.fitP, v.fitBase, v.lift, v.lo, v.hi,
+            f[6].toInt(), t[6].toInt(), v.testP, v.testBase, extra = beta), v.pValue)
     }
 
     /** A lead of at least this mean daily correlation, ahead of the mirror lag by [LEAD_EDGE], with a t of [LEAD_T]. */

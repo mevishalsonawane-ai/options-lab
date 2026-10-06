@@ -15,6 +15,9 @@ import kotlin.math.sqrt
  *    lift of at least [MIN_LIFT] over the base rate;
  *  - it is PROVEN only when the 95% Wilson lower bound of the fit rate is above the fit base rate AND, on the newest 30%
  *    (at least [MIN_TEST] samples), the 80% Wilson lower bound is still above that part's base rate;
+ *  - and every probability edge is tested together: no edge is PROVEN unless its fit part's one-sided exact binomial
+ *    p-value survives the Benjamini-Hochberg false-discovery-rate cut at [FDR_Q] across ALL the probability candidates of
+ *    the build ([binomUpper], [bhCutoff]) - many relations are tried, so some would pass by chance alone;
  *  - a correlation is a hypothesis at |r| >= [MIN_CORR] on [MIN_CORR_N] days, proven when the Fisher 95% interval of the
  *    fit r stays beyond [PROVEN_CORR] and the newest 30% (at least [MIN_CORR_TEST] days) has the same sign beyond it too.
  *
@@ -32,6 +35,9 @@ object Stats {
     /** z for a two-sided 95% interval, and for the 80% one the newest 30% is checked with. */
     const val Z95 = 1.96
     const val Z80 = 1.2816
+    /** The false-discovery rate the probability edges are held to, together (Benjamini-Hochberg). */
+    const val FDR_Q = 0.05
+
     /** The share of samples (oldest first) the edge is fitted on. */
     const val FIT_SHARE = 0.7
 
@@ -65,12 +71,55 @@ object Stats {
         return ((sxy - sx * sy / n) / sqrt(vx * vy)).coerceIn(-1.0, 1.0)
     }
 
+    /**
+     * P(X >= [k]) for X ~ Binomial([n], [p]): the one-sided exact p-value of seeing [k] or more hits in [n] trials at the
+     * base rate [p]. Summed in log space (n of a few thousand is fine).
+     */
+    fun binomUpper(k: Int, n: Int, p: Double): Double {
+        if (k <= 0) return 1.0
+        if (k > n || p <= 0.0) return 0.0
+        if (p >= 1.0) return 1.0
+        var logC = 0.0
+        for (i in 0 until k) logC += ln((n - i).toDouble()) - ln((i + 1).toDouble())
+        var logPmf = logC + k * ln(p) + (n - k) * ln(1 - p)
+        val step = ln(p) - ln(1 - p)
+        var sum = 0.0
+        var x = k
+        while (x <= n) {
+            val term = exp(logPmf)
+            sum += term
+            if (term < sum * 1e-15 && x > n * p) break
+            logPmf += ln((n - x).toDouble()) - ln((x + 1).toDouble()) + step
+            x++
+        }
+        return sum.coerceIn(0.0, 1.0)
+    }
+
+    /**
+     * The Benjamini-Hochberg cut for [ps] at false-discovery rate [q]: the largest p(i) (sorted ascending, i from 1) with
+     * p(i) <= i / m * q - every p at or under it is a discovery. -1 when there is none (nothing may be proven).
+     */
+    fun bhCutoff(ps: List<Double>, q: Double = FDR_Q): Double {
+        val m = ps.size
+        if (m == 0) return -1.0
+        val sorted = ps.filter { !it.isNaN() }.sorted()
+        var cut = -1.0
+        for ((i, p) in sorted.withIndex()) if (p <= (i + 1).toDouble() / m * q) cut = p
+        return cut
+    }
+
     /** The index that splits [n] samples, oldest first, into the fitted 70% (before it) and the checked 30%. */
     fun split(n: Int): Int = Math.floor(n * FIT_SHARE).toInt().coerceIn(0, n)
 
-    /** A probability edge's verdict: null (no edge), or proven / not. */
+    /**
+     * Split [n] samples into the fit part (before the first index) and the test part (from the second), leaving an EMBARGO
+     * of [gap] samples between them: a sample whose outcome looks [gap] sessions ahead overlaps the test part's first days.
+     */
+    fun splitWithGap(n: Int, gap: Int): Pair<Int, Int> { val s = split(n); return s to (s + gap.coerceAtLeast(0)).coerceAtMost(n) }
+
+    /** A probability edge's verdict: null (no edge), or proven / not ([pValue]: the fit part's, for the FDR cut). */
     data class Verdict(val proven: Boolean, val fitP: Double, val fitBase: Double, val lift: Double, val lo: Double, val hi: Double,
-                       val testP: Double, val testBase: Double)
+                       val testP: Double, val testBase: Double, val pValue: Double = Double.NaN)
 
     /**
      * [k] hits of [n] samples in the fit part against [base] (that part's base rate), [tk] of [tn] in the test part against
@@ -84,7 +133,7 @@ object Stats {
         val (lo, hi) = wilson(k, n, Z95)
         val tp = if (tn > 0) tk.toDouble() / tn else Double.NaN
         val proven = lo > base && tn >= MIN_TEST && !tBase.isNaN() && wilson(tk, tn, Z80).first > tBase
-        return Verdict(proven, p, base, lift, lo, hi, tp, tBase)
+        return Verdict(proven, p, base, lift, lo, hi, tp, tBase, binomUpper(k, n, base))
     }
 
     /** A correlation's verdict on the fit [r]/[n] and the test [tr]/[tn]; null when there is no edge. */

@@ -5,9 +5,11 @@ import java.time.temporal.ChronoUnit
 
 /**
  * The download, as a list of chunks ([Task]) each of which is one request and one file. Windows sit on a fixed grid of
- * dates, so the same chunk always has the same file: a chunk whose file exists - and whose window has ended - is done,
- * which is what makes a stopped download resume where it was (the "progress manifest" is the store itself, summed in
- * [Files.manifest]). A window that reaches today is fetched again on each run until it has ended.
+ * dates, so the same chunk always has the same file. A chunk is DONE only when its data is complete ([Files.done]): its
+ * file exists, its window has ended, and the store's fetch ledger ([Files.FETCHED]) says it was fetched on or after the
+ * window's end (a file fetched while its window was still open is fetched again - from its last stored candle - once the
+ * window has ended, so no window keeps a permanent hole). That is what makes a stopped download resume where it was. A
+ * window that reaches today is refreshed on each run (from its last stored candle, appended) until it has ended.
  *
  * Dhan's limits: one-minute candles at most 90 days a call (windows of [MIN_WINDOW_DAYS]); expired options at most 30
  * days a call ([OPT_WINDOW_DAYS]); daily candles from the earliest Dhan has (windows of [DAY_WINDOW_DAYS] from [DAY_FROM]).
@@ -20,11 +22,23 @@ object Plan {
     val DAY_FROM: LocalDate = LocalDate.of(2000, 1, 1)
     /** Grid anchor for the minute and option windows. */
     val ANCHOR: LocalDate = LocalDate.of(2015, 1, 1)
-    /** Strikes either side of the money for index options (Dhan serves +-10 near expiry, +-3 otherwise). */
+    /**
+     * Strikes either side of the money asked of Dhan's rolling (expired) options. Dhan's v2 docs (Expired Options Data):
+     * "ATM+10 / ATM-10 for index options near expiry, ATM+3 / ATM-3 for all other contracts". The plan only ever asks the
+     * near series ([EXPIRY_CODE], as Dhan's own example asks it) - so index options get +-10 and company options +-3, and
+     * nothing beyond what Dhan serves is requested. A strike Dhan refuses (DH-905, an input error) is counted failed, not
+     * stored as an empty "done" file ([DhanApi.classify]).
+     */
     const val INDEX_OFFSETS = 10
     const val STOCK_OFFSETS = 3
-    /** The near contract ("1") of the rolling series. */
+    /** The near contract ("1") of the rolling series, as Dhan's documented example asks it. */
     const val EXPIRY_CODE = 1
+
+    /** The strike offsets asked for an option window of [group] (IDX: index options; EQ: company options). */
+    fun offsets(group: Group): IntRange = if (group == Group.EQ) -STOCK_OFFSETS..STOCK_OFFSETS else -INDEX_OFFSETS..INDEX_OFFSETS
+
+    /** The file names an option window of [group] holds when complete: CE/PE at every offset ("CE+0.csv.gz", ...). */
+    fun optionFiles(group: Group): List<String> = offsets(group).flatMap { o -> listOf(true, false).map { "${side(it)}${sign(o)}.csv.gz" } }
 
     enum class Kind { EXPIRIES, CHAIN, DAY, MIN, OPT }
 
@@ -46,7 +60,7 @@ object Plan {
             Kind.MIN -> "${group.dir}/${safe(symbol)}/min/$from.csv.gz"
             Kind.OPT -> "opt/${safe(symbol)}/$flag/$from/${side(call)}${sign(offset)}.csv.gz"
         }
-        /** The window reaches [today]: fetched again each run until it has ended. */
+        /** The window reaches [today]: refreshed each run until it has ended. */
         fun open(today: LocalDate): Boolean = kind == Kind.EXPIRIES || kind == Kind.CHAIN || to.isAfter(today)
         /** Days in the window. */
         val days: Long get() = ChronoUnit.DAYS.between(from, to)
@@ -107,7 +121,7 @@ object Plan {
         for (ix in DhanUniverse.INDICES) {
             if (!ix.options) continue
             val id = DhanUniverse.indexId(ix, master) ?: continue
-            for ((f, t) in optWindows(choice.optionYears)) for (off in -INDEX_OFFSETS..INDEX_OFFSETS) for (call in listOf(true, false)) {
+            for ((f, t) in optWindows(choice.optionYears)) for (off in offsets(Group.IDX)) for (call in listOf(true, false)) {
                 out += Task(Kind.OPT, Group.IDX, ix.name, id, ix.optSegment, "OPTIDX", f, t, ix.flag, off, call)
             }
         }
@@ -116,13 +130,23 @@ object Plan {
             for ((s, id) in stocks) for ((f, t) in dayWindows) out += Task(Kind.DAY, Group.EQ, s, id, "NSE_EQ", "EQUITY", f, t)
             for ((s, id) in stocks) for ((f, t) in minWindows(choice.stockMinuteYears)) out += Task(Kind.MIN, Group.EQ, s, id, "NSE_EQ", "EQUITY", f, t)
             if (choice.stockOptions) for ((s, id) in stocks) for ((f, t) in optWindows(choice.stockOptionYears))
-                for (off in -STOCK_OFFSETS..STOCK_OFFSETS) for (call in listOf(true, false)) {
+                for (off in offsets(Group.EQ)) for (call in listOf(true, false)) {
                     out += Task(Kind.OPT, Group.EQ, s, id, "NSE_FNO", "OPTSTK", f, t, "MONTH", off, call)
                 }
         }
         return out
     }
 
-    /** The chunks still to fetch: not on disk ([have]), or open. */
-    fun todo(tasks: List<Task>, today: LocalDate, have: (String) -> Boolean): List<Task> = tasks.filter { it.open(today) || !have(it.path) }
+    /** The chunks still to fetch: open, or not [done] (absent, or fetched before its window ended - see [Files.done]). */
+    fun todo(tasks: List<Task>, today: LocalDate, done: (Task) -> Boolean): List<Task> = tasks.filter { it.open(today) || !done(it) }
+
+    /** Monday to Friday: the calendar used when no exchange holiday list is given. */
+    val WEEKDAYS: (LocalDate) -> Boolean = { it.dayOfWeek.value <= 5 }
+
+    /** The last trading day in [from] .. [toExclusive] (per [tradingDay]), or null when there is none. */
+    fun lastTradingDay(from: LocalDate, toExclusive: LocalDate, tradingDay: (LocalDate) -> Boolean = WEEKDAYS): LocalDate? {
+        var d = toExclusive.minusDays(1)
+        while (!d.isBefore(from)) { if (tradingDay(d)) return d; d = d.minusDays(1) }
+        return null
+    }
 }

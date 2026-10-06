@@ -19,9 +19,11 @@ import kotlin.math.min
  *  3. their one-minute returns are cross-correlated day by day at lags of up to [MAX_LAG] minutes - per quarter.
  *
  * INCREMENTAL: every source keeps a watermark (the last day read into the state), and a run reads only the days after it
- * (a day only once all of an index's parts for it are stored, and never today). If older data arrives later (a backfilled
- * window, options added after their index's days were read, data deleted), [needsFull] says so and a full rebuild starts
- * from an empty state. DETERMINISTIC: sources in sorted order, sums only, no clock beyond [update]'s `today`. A run that
+ * - and only days whose data is COMPLETE ([readyThrough]): every window up to the day stored, fetched after the day was
+ * over (the store's fetch ledger, [Files.completeThrough]) and, for an options window, every strike/side file the plan
+ * asks ([Plan.optionFiles]) present. A watermark never moves past an incomplete day, and never past today. If older data
+ * arrives later (a backfilled window, options added after their index's days were read, a window already read rewritten -
+ * [NeuroState.sigs] - or data deleted), [needsFull] says so and a full rebuild starts from an empty state. DETERMINISTIC: sources in sorted order, sums only, no clock beyond [update]'s `today`. A run that
  * is stopped ([update]'s `active`) leaves a consistent state: a watermark moves only after its source's days are in.
  * Market data only: nothing here can place, arm or change anything.
  */
@@ -44,6 +46,13 @@ object NeuroBuilder {
     private const val OPEN = 555
 
     fun quarter(day: Int): Int = LocalDate.ofEpochDay(day.toLong()).let { it.year * 4 + (it.monthValue - 1) / 3 }
+
+    /**
+     * The first day the pair statistics keep on [today]: the first day of the calendar quarter [PAIR_LOOKBACK_YEARS] back.
+     * Whole quarters, so a quarter's sums hold the same days whether built in one run or over many (the rolling cut drops
+     * whole quarters only).
+     */
+    fun pairStart(today: LocalDate): LocalDate = today.minusYears(PAIR_LOOKBACK_YEARS).let { LocalDate.of(it.year, ((it.monthValue - 1) / 3) * 3 + 1, 1) }
 
     private fun epochDay(t: Long) = OptionDays.epochDay(t)
 
@@ -74,13 +83,118 @@ object NeuroBuilder {
         return out
     }
 
+    // ---- completeness and signatures ------------------------------------------------------------------------------------
+
+    /** A dated folder's grid: window length and anchor ([Plan]). */
+    private fun grid(dir: String): Pair<Int, LocalDate> = when {
+        dir.startsWith("opt/") -> Plan.OPT_WINDOW_DAYS.toInt() to Plan.ANCHOR
+        dir.endsWith("/day") -> Plan.DAY_WINDOW_DAYS.toInt() to Plan.DAY_FROM
+        else -> Plan.MIN_WINDOW_DAYS.toInt() to Plan.ANCHOR
+    }
+
+    /** The window's store path: an option window's folder, else its candle file. */
+    fun windowPath(dir: String, w: LocalDate): String = if (dir.startsWith("opt/")) "$dir/$w" else "$dir/$w.csv.gz"
+
     /**
-     * Why the next build must start from scratch (null: an incremental update is enough): no state yet, data deleted, or
-     * older data arrived after the days around it were read (a window older than the newest seen, options for days
-     * already read).
+     * The last day through which window [w] of [dir] is complete (null: none of it): the candle file's
+     * [Files.completeThrough]; for an options window, the least of its files' - and null unless every strike/side file the
+     * plan asks for it ([Plan.optionFiles]) is there.
+     */
+    fun windowThrough(files: Files, dir: String, w: LocalDate, tradingDay: (LocalDate) -> Boolean = Plan.WEEKDAYS): LocalDate? {
+        val to = w.plusDays(grid(dir).first.toLong())
+        if (!dir.startsWith("opt/")) return files.completeThrough(windowPath(dir, w), w, to, tradingDay)
+        val u = dir.split('/').getOrNull(1) ?: return null
+        val group = if (DhanUniverse.INDICES.any { Plan.safe(it.name) == u }) Plan.Group.IDX else Plan.Group.EQ
+        var least = to.minusDays(1)
+        for (name in Plan.optionFiles(group)) {
+            val c = files.completeThrough("$dir/$w/$name", w, to, tradingDay) ?: return null
+            if (c.isBefore(least)) least = c
+        }
+        return least
+    }
+
+    /**
+     * The last day (epoch day) after [after] up to which [dir]'s data is complete: windows are walked from the one holding
+     * the day after [after]; the first incomplete window (or a window missing between two stored ones) stops it.
+     * Int.MAX_VALUE when every stored window from there on is whole (the data's own last day then bounds the read).
+     */
+    fun readyThrough(files: Files, dir: String, after: Int, tradingDay: (LocalDate) -> Boolean = Plan.WEEKDAYS): Int {
+        val (len, anchor) = grid(dir)
+        val ws = files.dated(dir).map { it.toEpochDay().toInt() }
+        if (ws.isEmpty()) return Int.MAX_VALUE
+        val a0 = anchor.toEpochDay().toInt()
+        var expect: Int? = if (ws.first() <= after + 1) a0 + Math.floorDiv(after + 1 - a0, len) * len else null
+        var cur = after
+        for (w in ws) {
+            val end = w + len - 1
+            if (end <= after) continue
+            if (expect != null && w != expect) return cur
+            val through = windowThrough(files, dir, LocalDate.ofEpochDay(w.toLong()), tradingDay)?.toEpochDay()?.toInt() ?: (w - 1)
+            if (through < end) return max(cur, through)
+            cur = end
+            expect = w + len
+        }
+        return Int.MAX_VALUE
+    }
+
+    /** A window's signature: its file's (or, for an options window, every file's) name, size and modification time. */
+    fun signature(files: Files, path: String): Long? {
+        val f = files.file(path)
+        fun one(x: java.io.File, h: Long) = ((h * 31 + x.name.hashCode()) * 1_000_003 + x.length()) * 31 + x.lastModified()
+        return when {
+            f.isFile -> one(f, 17)
+            f.isDirectory -> (f.listFiles() ?: return null).filter { it.isFile && !it.name.endsWith(".part") }.sortedBy { it.name }.fold(17L) { h, x -> one(x, h) }
+            else -> null
+        }
+    }
+
+    /**
+     * The furthest watermark of the sources that read [dir] (null: none yet): an index's daily candles and options by its
+     * own sessions ("idx|U") and as the base of daily pairs; a company's or index's daily / minute candles by its pairs.
+     */
+    fun dirMark(state: NeuroState, dir: String): Int? {
+        val p = dir.split('/')
+        if (p.size < 3) return null
+        var best: Int? = null
+        fun take(v: Int) { best = max(best ?: Int.MIN_VALUE, v) }
+        for ((k, v) in state.marks) {
+            val parts = k.split('|')
+            when (parts[0]) {
+                "idx" -> if (parts.size == 2 && Plan.safe(parts[1]) == p[1] && (p[0] == "opt" || (p[0] == "idx" && p[2] == "day"))) take(v)
+                "D", "L" -> {
+                    if (parts.size != 3 || p[0] == "opt" || p[2] != (if (parts[0] == "D") "day" else "min")) continue
+                    val partner = parts[1].split(':', limit = 2)
+                    if ((partner.size == 2 && partner[0] == p[0] && Plan.safe(partner[1]) == p[1]) || (p[0] == "idx" && Plan.safe(parts[2]) == p[1])) take(v)
+                }
+            }
+        }
+        return best
+    }
+
+    /** Note the signature of every window all of whose days the state has read (by the furthest watermark of its readers). */
+    private fun seal(files: Files, s: NeuroState) {
+        s.sigs.clear()
+        for ((dir, ws) in windows(files)) {
+            val m = dirMark(s, dir) ?: continue
+            val len = grid(dir).first
+            for (w in ws) if (w + len - 1 <= m) {
+                val path = windowPath(dir, LocalDate.ofEpochDay(w.toLong()))
+                signature(files, path)?.let { s.sigs[path] = it }
+            }
+        }
+    }
+
+    /**
+     * Why the next build must start from scratch (null: an incremental update is enough): no state yet, data deleted, a
+     * window already read rewritten (its size or time changed: a refetch, an imported replacement), or older data arrived
+     * after the days around it were read (a window older than the newest seen, options for days already read).
      */
     fun needsFull(files: Files, state: NeuroState?): String? {
         if (state == null) return "no graph yet"
+        for ((path, sig) in state.sigs) {
+            val cur = signature(files, path) ?: return "data was deleted ($path)"
+            if (cur != sig) return "a window already read was rewritten ($path)"
+        }
         val now = windows(files)
         for ((dir, prior) in state.seen) {
             val cur = now[dir] ?: return "data was deleted ($dir)"
@@ -113,7 +227,7 @@ object NeuroBuilder {
         val s = if (state == null || full) NeuroState() else state
         val t = today.toEpochDay().toInt()
         val dayStart = today.minusYears(DAY_LOOKBACK_YEARS).toEpochDay().toInt()
-        val pairStart = today.minusYears(PAIR_LOOKBACK_YEARS).toEpochDay().toInt()
+        val pairStart = pairStart(today).toEpochDay().toInt()
         val ixs = indices(files)
         if (ixs.isEmpty()) { s.seen.clear(); return s }
         // A fresh state notes what it starts from, so a stopped full rebuild resumes incrementally instead of starting over.
@@ -146,6 +260,7 @@ object NeuroBuilder {
         s.pairs.entries.removeIf { it.value.isEmpty() }
         for (e in s.expiries.values) e.headSet(dayStart).clear()
         s.seen.clear(); s.seen.putAll(windows(files))
+        seal(files, s)
         s.builds++
         progress("Learned", 1f)
         return s
@@ -187,15 +302,20 @@ object NeuroBuilder {
         val bars = dailyBars(files, Plan.Group.IDX, u, wm - 60)
         if (bars.size < 2) return
         val isVix = u == VIX
-        var end = min(today - 1, bars.last().day)
+        // Only days whose daily candles are complete (fetched after the day was over).
+        var end = min(min(today - 1, bars.last().day), readyThrough(files, "idx/${Plan.safe(u)}/day", wm))
         val opt = TreeMap<Int, OptDay>()
         val flag = optionFlag(files, u)
         if (flag != null && !isVix) {
-            val ws = files.dated("opt/${Plan.safe(u)}/$flag")
+            val optDir = "opt/${Plan.safe(u)}/$flag"
+            val ws = files.dated(optDir)
             if (ws.isNotEmpty()) {
                 val optLast = lastOptionDay(files, u, flag, ws.last())
-                // Wait for the options of the newest days (both come with each download) - unless they stopped long ago.
+                // Wait for the options of the newest days (both come with each download) - unless they stopped long ago -
+                // and never read past an options window that is not complete (a strike/side file missing, or fetched
+                // before its days were over): its days wait until it is.
                 if (optLast != null && optLast >= end - 10) end = min(end, optLast)
+                if (ws.last().toEpochDay() + Plan.OPT_WINDOW_DAYS - 1 >= end - 10) end = min(end, readyThrough(files, optDir, wm))
                 for (w in ws) {
                     val w0 = w.toEpochDay().toInt()
                     if (w0 + Plan.OPT_WINDOW_DAYS <= wm || w0 > end) continue
@@ -284,7 +404,8 @@ object NeuroBuilder {
                 val wm = mark(p)
                 val ir = idxRet[p.third] ?: continue
                 if (bars.size < 2 || ir.isEmpty()) continue
-                val end = min(today - 1, min(bars.last().day, ir.lastKey()))
+                val end = minOf(today - 1, min(bars.last().day, ir.lastKey()),
+                    readyThrough(files, "${p.first.dir}/${Plan.safe(p.second)}/day", wm), readyThrough(files, "idx/${Plan.safe(p.third)}/day", wm))
                 if (end <= wm) continue
                 val acc = s.pairs.getOrPut(key) { TreeMap() }
                 for (i in 1 until bars.size) {
@@ -378,7 +499,9 @@ object NeuroBuilder {
             val wms = partners.associateWith { s.marks[keys.getValue(it)] ?: (pairStart - 1) }
             val ends = partners.associateWith { p ->
                 val pl = files.lastDay(p.first, p.second, "min")?.toEpochDay()?.toInt() ?: Int.MIN_VALUE
-                min(today - 1, min(uLast, pl))
+                val wm = wms.getValue(p)
+                minOf(today - 1, min(uLast, pl), readyThrough(files, "idx/${Plan.safe(u)}/min", wm),
+                    readyThrough(files, "${p.first.dir}/${Plan.safe(p.second)}/min", wm))
             }
             val todo = partners.filter { ends.getValue(it) > wms.getValue(it) }
             if (todo.isEmpty()) continue

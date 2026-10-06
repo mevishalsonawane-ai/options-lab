@@ -78,7 +78,13 @@ fun DhanDataPage(model: AppModel) {
     val pickPack = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult       // Boss closed the picker
         if (prog.running) { model.say("A Dhan download is running: stop it first, then import."); return@rememberLauncherForActivityResult }
-        if (DhanImportWorker.start(context, uris)) model.say("Importing ${uris.size} part(s) of the Dhan data pack.")
+        scope.launch {
+            when (withContext(Dispatchers.IO) { runCatching { DhanImportWorker.start(context, uris) }.getOrDefault(DhanImportWorker.Started.NOTHING) }) {
+                DhanImportWorker.Started.STARTED -> model.say("Importing ${uris.size} part(s) of the Dhan data pack.")
+                DhanImportWorker.Started.BUSY -> model.say("An import is already running: let it finish (or stop it), then pick the parts again.")
+                DhanImportWorker.Started.NOTHING -> Unit
+            }
+        }
     }
     var configured by remember { mutableStateOf(DhanSource.configured) }
     var editing by remember { mutableStateOf(false) }
@@ -90,6 +96,7 @@ fun DhanDataPage(model: AppModel) {
     var auto by remember { mutableStateOf(SecurePrefs.getBoolean(DhanSource.K_AUTO, false)) }
     var research by remember { mutableStateOf(DhanSource.research) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var askNetwork by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     // The store's figures walk its folder: read off the main thread on opening, after a run and after a delete.
     var reread by remember { mutableStateOf(0) }
@@ -175,7 +182,9 @@ fun DhanDataPage(model: AppModel) {
                 Spacer(Modifier.height(10.dp))
                 if (prog.running) BrassButton("Stop", Modifier.fillMaxWidth()) { DhanWorker.stopNow(context) }
                 else BrassButton("Download", Modifier.fillMaxWidth(), enabled = configured && !imp.running) {
-                    DhanWorker.now(context); model.say("Dhan download started. It resumes where it stopped.")
+                    // A download is gigabytes: on mobile data Boss chooses (wait for Wi-Fi, or use mobile data).
+                    if (DhanWorker.metered(context)) askNetwork = true
+                    else { DhanWorker.now(context, wifiOnly = true); model.say("Dhan download started. It resumes where it stopped.") }
                 }
                 ToggleRow("Download by itself", "Once a day at most, only on Wi-Fi while the phone is charging", auto) { on ->
                     auto = on
@@ -189,7 +198,7 @@ fun DhanDataPage(model: AppModel) {
         }
         item {
             LedgerCard(title = "Import a data pack") {
-                Note("A Dhan data pack prepared on a computer (IraAlgo-dhan-pack-01.zip, -02.zip, ...): pick all its parts at once. Each part is checked - only Dhan market-data files, within the size limits, matching the pack's checksums - and merged with what is here: a newer file on this phone is never replaced, and the download skips what was imported. No internet is used and the token is not touched.")
+                Note("A Dhan data pack prepared on a computer (IraAlgo-dhan-pack-01.zip, -02.zip, ...): pick all its parts at once. Each part is checked - only Dhan market-data files, within the size limits, matching the pack's checksums - and merged with what is here: a newer file on this phone is never replaced, and the download skips what was imported once the pack's fetch dates show it complete (the rest is fetched again from its last candle). No internet is used and the token is not touched.")
                 SecurePrefs.getString(DhanSource.K_IMPORT_LAST)?.let { LedgerLine("Last import", it) }
                 if (imp.running) {
                     Spacer(Modifier.height(6.dp))
@@ -228,6 +237,19 @@ fun DhanDataPage(model: AppModel) {
             BrassButton("Delete downloaded data", Modifier.fillMaxWidth(), tone = p.oxblood, busy = deleting) { if (!deleting) confirmDelete = true }
         }
     }
+    if (askNetwork) AlertDialog(
+        onDismissRequest = { askNetwork = false }, properties = dhanSecure,
+        title = { Text("You are on mobile data", style = Type.title) },
+        text = { Text("The Dhan download can be several gigabytes (expired options most of all). Wait for Wi-Fi - it starts by itself when the phone joins one - or use mobile data now.", style = Type.bodySmall) },
+        confirmButton = { TextButton({
+            askNetwork = false
+            DhanWorker.now(context, wifiOnly = true); model.say("The Dhan download will start on Wi-Fi.")
+        }) { Text("Wait for Wi-Fi") } },
+        dismissButton = { TextButton({
+            askNetwork = false
+            DhanWorker.now(context, wifiOnly = false); model.say("Dhan download started on mobile data. It resumes where it stopped.")
+        }) { Text("Use mobile data") } },
+    )
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false }, properties = dhanSecure,
         title = { Text("Delete the Dhan data?", style = Type.title) },

@@ -65,7 +65,9 @@ class DhanApiTest {
         assertEquals(DhanApi.Failure.RETRY, DhanApi.classify(503, ""))
         assertEquals(DhanApi.Failure.AUTH, DhanApi.classify(401, ""))
         assertEquals(DhanApi.Failure.AUTH, DhanApi.classify(400, """{"errorCode":"DH-901"}"""))
-        assertEquals(DhanApi.Failure.NO_DATA, DhanApi.classify(400, """{"errorCode":"DH-905"}"""))
+        // DH-905 is an input error (refused: no file, counted failed); DH-907 is "no data" (an empty, done chunk).
+        assertEquals(DhanApi.Failure.REFUSED, DhanApi.classify(400, """{"errorCode":"DH-905"}"""))
+        assertEquals(DhanApi.Failure.NO_DATA, DhanApi.classify(400, """{"errorCode":"DH-907"}"""))
         assertEquals(DhanApi.Failure.REFUSED, DhanApi.classify(400, """{"errorCode":"DH-906"}"""))
         assertEquals(1_000L, DhanApi.backoffMs(0))
         assertEquals(8_000L, DhanApi.backoffMs(3))

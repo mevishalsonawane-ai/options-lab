@@ -70,6 +70,14 @@ object Rules {
     fun todLabel(b: Int): String = TOD[b].let { (a, z) -> "${hm(a)}-${hm(z - if (z == 931) 1 else 0)}" }
     private fun hm(m: Int) = "%d:%02d".format(m / 60, m % 60)
     fun tod(minute: Int): Int = TOD.indexOfFirst { minute >= it.first && minute < it.second }
+    /**
+     * Beside the [Ev] bits in a [DayRow.mask]: the session itself moved [BIG_MOVE_PCT] or more from its OPEN (close / open).
+     * The same-session (lag 0) links after a gap are judged on these, never on BIG_UP / BIG_DOWN (close against the previous
+     * close), which already contain the gap they would be "predicted" by.
+     */
+    const val OC_UP = 1 shl 24
+    const val OC_DOWN = 1 shl 25
+
     /** The expiry-day mark read from the data (as [com.optionslab.ira.dhan.ExpiredOptions.EXPIRY_TIME_VALUE]). */
     const val EXPIRY_TIME_VALUE = 0.0012
 
@@ -84,6 +92,11 @@ object Rules {
         if (gap <= -GAP_PCT) m = m or Ev.GAP_DOWN.bit
         if (move >= BIG_MOVE_PCT) m = m or Ev.BIG_UP.bit
         if (move <= -BIG_MOVE_PCT) m = m or Ev.BIG_DOWN.bit
+        if (o > 0) {
+            val session = (c / o - 1) * 100
+            if (session >= BIG_MOVE_PCT) m = m or OC_UP
+            if (session <= -BIG_MOVE_PCT) m = m or OC_DOWN
+        }
         val range = (h - l) / prev * 100
         if (!avgRangePct.isNaN() && avgRangePct > 0 && range >= BIG_RANGE_X * avgRangePct) m = m or Ev.BIG_RANGE.bit
         return m

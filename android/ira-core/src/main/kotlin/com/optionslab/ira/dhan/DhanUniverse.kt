@@ -6,9 +6,11 @@ import java.time.LocalDate
 /**
  * What the Dhan store downloads: the indices (and their options and futures) and the companies and banks in them.
  *
- * Security IDs are read from Dhan's scrip master ([parseMaster]) - an index's ID from its options' underlying ID, a
- * company's from its NSE equity row, the near future's from the futures rows. The [Index.fallbackId]s are used only
- * when the master could not be read. Index MEMBERSHIP is not in the scrip master, so [CONSTITUENTS] is a static list -
+ * Security IDs are read from Dhan's scrip master ([parseMaster]) - an index's ID from its own INDEX row (segment IDX_I:
+ * NIFTY 13, BANKNIFTY 25, ...), a company's from its NSE equity row, the near future's from the futures rows. An index
+ * is NEVER asked by its options' UNDERLYING_SECURITY_ID (NIFTY 26000, BANKNIFTY 26009, SENSEX 1, ...): tested live,
+ * charts/rollingoption returns no data for those, it needs the IDX_I ID. The [Index.fallbackId]s (the IDX_I IDs) are
+ * used when the master has no INDEX row for it or could not be read. Index MEMBERSHIP is not in the scrip master, so [CONSTITUENTS] is a static list -
  * see its date; a symbol the master does not know (a renamed or demerged company) is skipped and named on the screen.
  */
 object DhanUniverse {
@@ -25,7 +27,7 @@ object DhanUniverse {
         Index("BANKNIFTY", listOf("BANKNIFTY", "NIFTY BANK", "BANK NIFTY"), "25", "NSE_FNO", "MONTH"),
         Index("FINNIFTY", listOf("FINNIFTY", "NIFTY FIN SERVICE", "NIFTY FINANCIAL SERVICES"), "27", "NSE_FNO", "MONTH"),
         Index("MIDCPNIFTY", listOf("MIDCPNIFTY", "NIFTY MID SELECT", "NIFTY MIDCAP SELECT"), "442", "NSE_FNO", "MONTH"),
-        Index("NIFTYNXT50", listOf("NIFTYNXT50", "NIFTY NEXT 50", "NIFTY NXT 50", "NIFTYNEXT50"), null, "NSE_FNO", "MONTH"),
+        Index("NIFTYNXT50", listOf("NIFTYNXT50", "NIFTY NEXT 50", "NIFTY NXT 50", "NIFTYNEXT50"), "38", "NSE_FNO", "MONTH"),
         Index("SENSEX", listOf("SENSEX", "BSE SENSEX", "S&P BSE SENSEX"), "51", "BSE_FNO", "WEEK"),
         Index("BANKEX", listOf("BANKEX", "BSE BANKEX", "S&P BSE BANKEX"), "69", "BSE_FNO", "MONTH"),
         Index("INDIAVIX", listOf("INDIA VIX", "INDIAVIX"), "21", "NSE_FNO", "MONTH", options = false),
@@ -81,7 +83,6 @@ object DhanUniverse {
     private val C_SEG = listOf("SEGMENT", "SEM_SEGMENT")
     private val C_ID = listOf("SECURITY_ID", "SEM_SMST_SECURITY_ID")
     private val C_INSTR = listOf("INSTRUMENT", "SEM_INSTRUMENT_NAME")
-    private val C_UNDER_ID = listOf("UNDERLYING_SECURITY_ID")
     private val C_UNDER = listOf("UNDERLYING_SYMBOL")
     private val C_SYMBOL = listOf("SYMBOL_NAME", "SM_SYMBOL_NAME")
     private val C_TRADING = listOf("SEM_TRADING_SYMBOL", "TRADING_SYMBOL")
@@ -118,11 +119,10 @@ object DhanUniverse {
         val header = reader.readLine()?.let { splitCsv(it.removePrefix("﻿")).map(::upper) } ?: return Master(emptyMap(), emptyMap(), emptyMap())
         fun col(names: List<String>) = names.firstNotNullOfOrNull { n -> header.indexOf(n).takeIf { it >= 0 } } ?: -1
         val cExch = col(C_EXCH); val cSeg = col(C_SEG); val cId = col(C_ID); val cInstr = col(C_INSTR)
-        val cUnderId = col(C_UNDER_ID); val cUnder = col(C_UNDER); val cSym = col(C_SYMBOL); val cTrading = col(C_TRADING)
+        val cUnder = col(C_UNDER); val cSym = col(C_SYMBOL); val cTrading = col(C_TRADING)
         val cSeries = col(C_SERIES); val cExpiry = col(C_EXPIRY)
         val wantedIndex = INDICES.flatMap { ix -> ix.masterNames.map { upper(it) to ix.name } }.toMap()
         val indexIds = HashMap<String, String>()
-        val indexFromOptions = HashMap<String, String>()
         val equities = HashMap<String, String>()
         val futures = HashMap<String, Future>()
         while (true) {
@@ -136,12 +136,13 @@ object DhanUniverse {
             if (id.isEmpty()) continue
             val names = listOf(upper(at(cUnder)), upper(at(cSym)), upper(at(cTrading))).filter { it.isNotEmpty() }
             when (instr) {
-                "INDEX" -> names.firstNotNullOfOrNull { wantedIndex[it] }?.let { indexIds.putIfAbsent(it, id) }
-                "OPTIDX", "FUTIDX" -> {
+                // The index's own row (segment I, Dhan's IDX_I): the ID every chart and rolling-option request needs.
+                "INDEX" -> if (cSeg < 0 || upper(at(cSeg)) in setOf("I", "IDX_I")) {
+                    names.firstNotNullOfOrNull { wantedIndex[it] }?.let { indexIds.putIfAbsent(it, id) }
+                }
+                "FUTIDX" -> {
                     val app = wantedIndex[upper(at(cUnder))] ?: wantedIndex[upper(at(cSym)).substringBefore('-')]
-                    val under = at(cUnderId).removeSuffix(".0")
-                    if (app != null && under.isNotEmpty() && under != "0") indexFromOptions.putIfAbsent(app, under)
-                    if (instr == "FUTIDX" && app != null) future(app, id, exch, instr, at(cExpiry), today, futures)
+                    if (app != null) future(app, id, exch, instr, at(cExpiry), today, futures)
                 }
                 "EQUITY" -> if (exch == "NSE" && (cSeries < 0 || upper(at(cSeries)) in setOf("EQ", "BE", ""))) {
                     names.firstOrNull { it in symbols }?.let { equities.putIfAbsent(it, id) }
@@ -152,8 +153,8 @@ object DhanUniverse {
                 }
             }
         }
-        // The options' underlying ID is what the expired-options endpoint is asked with: preferred over the INDEX row's.
-        return Master(indexIds + indexFromOptions, equities, futures)
+        // Only the IDX_I rows' IDs: the options' UNDERLYING_SECURITY_ID (26000, 26009, ...) gets no rolling-option data.
+        return Master(indexIds, equities, futures)
     }
 
     private fun future(key: String, id: String, exch: String, instr: String, expiryText: String, today: LocalDate, into: HashMap<String, Future>) {
@@ -171,19 +172,24 @@ object DhanUniverse {
 
     /** The master's subset, as the few lines the store keeps (so a resumed run does not download the master again). */
     fun writeMaster(m: Master): String = buildString {
-        append("kind,key,id,segment,instrument,expiry\n")
+        append("$MASTER_HEADER\n")
         for ((k, v) in m.indexIds.toSortedMap()) append("I,$k,$v,,,\n")
         for ((k, v) in m.equityIds.toSortedMap()) append("E,$k,$v,,,\n")
         for ((k, v) in m.nearFutures.toSortedMap()) append("F,$k,${v.id},${v.segment},${v.instrument},${v.expiry}\n")
     }
 
+    /** The kept subset's header; "v2": its index IDs are the IDX_I ones (an older file's are options' underlying IDs). */
+    const val MASTER_HEADER = "kind,key,id,segment,instrument,expiry,v2"
+
+    /** The kept subset. An older file (no "v2") may hold the options' underlying IDs: its index IDs are dropped (fallbacks used). */
     fun readMaster(text: String): Master {
         val ix = HashMap<String, String>(); val eq = HashMap<String, String>(); val fut = HashMap<String, Future>()
+        val current = text.lineSequence().firstOrNull()?.trim() == MASTER_HEADER
         for (line in text.lineSequence().drop(1)) {
             val f = line.split(',')
             if (f.size < 6) continue
             when (f[0]) {
-                "I" -> ix[f[1]] = f[2]
+                "I" -> if (current) ix[f[1]] = f[2]
                 "E" -> eq[f[1]] = f[2]
                 "F" -> runCatching { LocalDate.parse(f[5]) }.getOrNull()?.let { fut[f[1]] = Future(f[2], f[3], f[4], it) }
             }

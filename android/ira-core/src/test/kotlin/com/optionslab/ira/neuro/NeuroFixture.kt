@@ -26,7 +26,9 @@ import kotlin.math.roundToLong
  *  - NIFTY weekly options from Jul 2025: every Tuesday is an expiry (the ATM straddle ends at intrinsic value) and a
  *    5-strikes-out call goes from 1 to 30 at 13:40 (ZERO_TO_HERO, OCCURS_IN expiry day, Tuesday and 13:00-14:30).
  *
- * Every session is a weekday from 2025-01-06 to 2026-10-05; "today" is 2026-10-06. Seeded: always the same store.
+ * Every session is a weekday from 2025-01-06 to 2026-10-05; "today" is 2026-10-06. Seeded: always the same store. As a
+ * real store: every options window holds every strike/side file the plan asks (those nothing is planted in hold just the
+ * header), and the fetch ledger dates every file (by default the day after the last session: all complete).
  */
 class NeuroFixture(val files: Files, seed: Long = 7) {
     companion object {
@@ -52,13 +54,21 @@ class NeuroFixture(val files: Files, seed: Long = 7) {
 
     val niftyClose = HashMap<LocalDate, Double>()
 
-    fun writeAll(upTo: LocalDate = LAST): NeuroFixture {
+    fun writeAll(upTo: LocalDate = LAST, fetchedOn: LocalDate = TODAY): NeuroFixture {
         val days = sessions(FIRST, upTo)
         nifty(days)
         bank(days)
         minutes(sessions(MINUTES_FROM, minOf(MINUTES_TO, upTo)))
         options(sessions(OPTIONS_FROM, upTo))
+        ledger(fetchedOn)
         return this
+    }
+
+    /** Every candle/option file in the fetch ledger, fetched on [on] (as a download records it). */
+    fun ledger(on: LocalDate) {
+        val root = files.root
+        files.markFetched(root.walkTopDown().filter { it.isFile && it.name.endsWith(".csv.gz") }
+            .associate { it.relativeTo(root).invariantSeparatorsPath to on })
     }
 
     private fun writeDaily(group: Plan.Group, sym: String, candles: List<DhanApi.Candle>) {
@@ -149,5 +159,8 @@ class NeuroFixture(val files: Files, seed: Long = 7) {
             if (expiry) add(d, "CE+5", DhanApi.OptionCandle(t(d, 820), 1.1, 30.0, 1.0, 29.0, 10, 500_000, 20.0, k + 250, spot))
         }
         for ((path, cs) in rows) files.writeText(path, files.optionsCsv(cs))
+        // The rest of each window's strike/side files: Dhan had nothing there (header only), as a download stores it.
+        for (w in rows.keys.map { it.substringBeforeLast('/') }.distinct()) for (name in Plan.optionFiles(Plan.Group.IDX))
+            if (!files.has("$w/$name")) files.writeText("$w/$name", files.optionsCsv(emptyList()))
     }
 }
