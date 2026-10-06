@@ -75,7 +75,7 @@ object SelfDoubt {
         // levels - not tallied, so an undo never counts toward what it undoes ([LeadPart], [FigureFirst]).
         val ours = runCatching { LeadPart.asked(text) != null || FigureFirst.asked(text) != null || NextAsk.asked(text) != null ||
             MoreAfter.asked(text) != null || SmallTrades.asked(text) != null || DayIndex.asked(text) != null ||
-            CheckTimes.asked(text) != null }.getOrDefault(false)
+            CheckTimes.asked(text) != null || CondNeeds.asked(text) != null }.getOrDefault(false)
         val keys = if (ours) emptyList() else tags(text).map { it.key }
         val kept = tally.filterKeys { !it.isBefore(day.minusDays(WINDOW_DAYS)) }
         if (keys.isEmpty()) return kept

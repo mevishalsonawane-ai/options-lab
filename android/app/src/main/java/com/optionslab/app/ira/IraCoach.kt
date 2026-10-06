@@ -1086,7 +1086,12 @@ internal object IraCoach {
         // IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
         val small = if (review && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { IraTools.smallTradesWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
-        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, small, agenda, improve, IraSolo.daySummary(),
+        // The conditional instructions Boss keeps trying to give ([com.optionslab.ira.CondNeeds]): the app's own alarm, stop
+        // loss or limit for that need named once - only at 15:35, never on a locked phone, never in IraGoldAlgo. A fact and
+        // a pointer only: nothing is set, armed or placed. One learned line a wrap-up: on a day the small-trades fact is said, it waits.
+        val condNeeds = if (review && small == null && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { IraTools.condNeedsWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
+        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, small, condNeeds, agenda, improve, IraSolo.daySummary(),
             IraHub.marketWrapLine(),
             // The 09:00 outlook against the close, owned (only at 15:35, when the day is in and the check is kept).
             if (review) IraHub.outlookCheckLine() else null,

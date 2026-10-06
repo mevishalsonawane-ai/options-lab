@@ -1619,7 +1619,7 @@ object IraHub {
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
                 com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null || com.optionslab.ira.MoreAfter.asked(q) != null ||
-                com.optionslab.ira.SmallTrades.asked(q) != null || com.optionslab.ira.DayIndex.asked(q) != null || com.optionslab.ira.Conditional.asked(q) || com.optionslab.ira.CheckTimes.asked(q) != null ||
+                com.optionslab.ira.SmallTrades.asked(q) != null || com.optionslab.ira.DayIndex.asked(q) != null || com.optionslab.ira.Conditional.asked(q) || com.optionslab.ira.CheckTimes.asked(q) != null || com.optionslab.ira.CondNeeds.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1647,6 +1647,10 @@ object IraHub {
             // where to change it (his account: unlocked phone only). Never a stop, an exit, an order or the kill switch.
             val condGold = com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK
             val condInstead = if (condGold) null else runCatching { com.optionslab.ira.Conditional.instead(q) }.getOrNull()
+            // Learning (round 32): its kind and minute kept, never the words ([com.optionslab.ira.CondNeeds]) - after enough
+            // of them the 15:35 wrap-up names the app's own tool for that need once. Jarvis only; nothing is set or done.
+            if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !GOLD_ONLY_TALK)
+                scope.launch(Dispatchers.IO) { runCatching { IraTools.condNeedsNote(q) } }
             val condAlarm = condInstead?.alarm
             if (condAlarm != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
@@ -2454,7 +2458,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes, CondNeeds - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2758,6 +2762,18 @@ object IraHub {
             val checkTimesSaid = if (checkTimesReq == com.optionslab.ira.CheckTimes.Request.RESET) IraTools.checkTimesReset(phoneLocked())
                 else if (phoneLocked()) com.optionslab.ira.CheckTimes.LOCKED else IraTools.checkTimesSay()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, checkTimesSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What have you learned about my conditional orders?" / "stop mentioning my conditional orders": the conditional
+        // instructions Boss keeps trying to give, the app's own alarm, stop loss or limit named once in the 15:35 wrap-up
+        // ([com.optionslab.ira.CondNeeds]; kinds and minutes only). His own words' record: named on an unlocked phone only;
+        // the undo works locked too, in neutral words. A pointer only - nothing is set, nothing learned acts. Not in IraGoldAlgo.
+        val condNeedsReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.CondNeeds.asked(q) }.getOrNull() else null
+        if (condNeedsReq != null) {
+            val condNeedsSaid = if (condNeedsReq == com.optionslab.ira.CondNeeds.Request.RESET) IraTools.condNeedsReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.CondNeeds.LOCKED else IraTools.condNeedsSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, condNeedsSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
         return false

@@ -1580,6 +1580,81 @@ internal object IraTools {
         return said
     }
 
+    // ---- the conditional instructions Boss keeps trying to give ([com.optionslab.ira.CondNeeds]) ----------------------
+
+    /** Each conditional instruction's kind and minute (never his words, a level or an amount), the undo time and the kinds told. */
+    private const val COND_NEEDS = "jarvis.condNeeds"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun condNeedsLog(): com.optionslab.ira.CondNeeds.Log = runCatching {
+        val o = JSONObject(prefs().getString(COND_NEEDS) ?: "{}")
+        val s = o.optJSONArray("s") ?: JSONArray()
+        val t = o.optJSONArray("t") ?: JSONArray()
+        com.optionslab.ira.CondNeeds.Log(
+            seen = (0 until s.length()).mapNotNull { i ->
+                val parts = s.getString(i).split("|")
+                runCatching { com.optionslab.ira.CondNeeds.Seen(com.optionslab.ira.CondNeeds.Need.valueOf(parts[0]), LocalDateTime.parse(parts[1])) }.getOrNull()
+            },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) },
+            told = (0 until t.length()).map { i -> t.getString(i) }.toSet())
+    }.getOrDefault(com.optionslab.ira.CondNeeds.Log())
+
+    @Synchronized private fun condNeedsSave(log: com.optionslab.ira.CondNeeds.Log) {
+        runCatching {
+            val o = JSONObject()
+                .put("s", JSONArray().apply { log.seen.forEach { x -> put(x.need.name + "|" + x.at) } })
+                .put("t", JSONArray().apply { log.told.sorted().forEach { k -> put(k) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(COND_NEEDS to o.toString()))
+        }
+    }
+
+    /**
+     * A conditional instruction Boss just gave ([com.optionslab.ira.Conditional]: answered, nothing done): its kind and
+     * minute kept, nothing else. Never in IraGoldAlgo. Nothing here acts.
+     */
+    @Synchronized fun condNeedsNote(text: String) {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        runCatching {
+            val log = condNeedsLog()
+            val next = com.optionslab.ira.CondNeeds.noted(log, text, minuteNow())
+            if (next != log) condNeedsSave(next)
+        }
+    }
+
+    private fun condNeedsNow(): List<com.optionslab.ira.CondNeeds.Record> =
+        runCatching { com.optionslab.ira.CondNeeds.learned(condNeedsLog(), minuteNow()) }.getOrDefault(emptyList())
+
+    /**
+     * The 15:35 wrap-up's one pointer to the app's own tool for a conditional instruction Boss keeps giving, said once
+     * ([com.optionslab.ira.CondNeeds.next]) and kept as told - or null. Never on a [locked] phone (nothing kept as told then),
+     * never in IraGoldAlgo. A fact and a pointer only: nothing is set, armed or placed.
+     */
+    @Synchronized fun condNeedsWrapLine(locked: Boolean): String? {
+        if (locked || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        val log = condNeedsLog()
+        val r = com.optionslab.ira.CondNeeds.next(condNeedsNow(), log) ?: return null
+        condNeedsSave(com.optionslab.ira.CondNeeds.told(log, r))
+        IraActivity.add(com.optionslab.ira.CondNeeds.toldNote(r))
+        return com.optionslab.ira.CondNeeds.wrapLine(r)
+    }
+
+    /** "What have you learned about my conditional orders?". */
+    fun condNeedsSay(): String = runCatching { com.optionslab.ira.CondNeeds.say(condNeedsNow()) }
+        .getOrDefault("I could not read my count of your conditional orders just now, Boss.")
+
+    /**
+     * "Stop mentioning my conditional orders": nothing before now counts, nothing kept as told. On a [locked] phone, one
+     * neutral reply that never names what was learned (nor whether).
+     */
+    fun condNeedsReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.CondNeeds.RESET_LOCKED
+            else runCatching { com.optionslab.ira.CondNeeds.sayReset(condNeedsNow()) }.getOrDefault("Done, Boss: my count of your conditional orders starts afresh from now.")
+        condNeedsSave(com.optionslab.ira.CondNeeds.reset(minuteNow()))
+        IraActivity.add("Forgot what I noted about Boss's conditional orders (as asked).")
+        return said
+    }
+
     // ---- the part Boss asks for on its own, said right after the price in an overview ([com.optionslab.ira.LeadPart]) ----
 
     /** Only the day Boss last asked for his overviews in the usual order: the learning reads the kinds tally already kept ([askedKinds]). */
@@ -1965,7 +2040,8 @@ internal object IraTools {
         moreAfter = runCatching { moreAfterLog() }.getOrDefault(com.optionslab.ira.MoreAfter.Log()),
         smallBooks = smallBooks,
         smallTrades = runCatching { smallTradesLog() }.getOrDefault(com.optionslab.ira.SmallTrades.Log()),
-        checkTimes = runCatching { checkTimesLog() }.getOrDefault(com.optionslab.ira.CheckTimes.Log()))
+        checkTimes = runCatching { checkTimesLog() }.getOrDefault(com.optionslab.ira.CheckTimes.Log()),
+        condNeeds = runCatching { condNeedsLog() }.getOrDefault(com.optionslab.ira.CondNeeds.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1995,6 +2071,7 @@ internal object IraTools {
         if (u.nextAsk.isNotEmpty()) { nextAskSave(com.optionslab.ira.NextAsk.reset(now)); nextAskOffered = null }
         if (u.moreAfter.isNotEmpty()) moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }
         if (u.checkTimes.isNotEmpty()) checkTimesSave(com.optionslab.ira.CheckTimes.reset(now))
+        if (u.condNeeds.isNotEmpty()) condNeedsSave(com.optionslab.ira.CondNeeds.reset(now))
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -2007,7 +2084,8 @@ internal object IraTools {
             (if (u.leadPart.isNotEmpty()) "overviews in the usual order again, " else "overviews unchanged, ") +
             (if (u.nextAsk.isNotEmpty()) "no question offered next, " else "next-question offers unchanged, ") +
             (if (u.moreAfter.isNotEmpty()) "every answer with its short line first again, " else "short lines unchanged, ") +
-            (if (u.checkTimes.isNotEmpty()) "the account read ahead at the usual pace again." else "the account's read ahead unchanged."))
+            (if (u.checkTimes.isNotEmpty()) "the account read ahead at the usual pace again, " else "the account's read ahead unchanged, ") +
+            (if (u.condNeeds.isNotEmpty()) "conditional orders counted afresh." else "conditional orders' count unchanged."))
         return u
     }
 

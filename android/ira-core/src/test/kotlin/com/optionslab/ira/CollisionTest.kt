@@ -103,6 +103,7 @@ class CollisionTest {
         "SmallTrades" to { q -> SmallTrades.asked(q) != null },
         "DayIndex" to { q -> DayIndex.asked(q) != null },
         "CheckTimes" to { q -> CheckTimes.asked(q) != null },
+        "CondNeeds" to { q -> CondNeeds.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -958,6 +959,13 @@ class CollisionTest {
         "stop preparing my p&l in advance" to "CheckTimes", "don't read my account ahead" to "CheckTimes",
         "forget when i check my p&l" to "CheckTimes", "forget the times i check my p&l" to "CheckTimes",
         "read my p&l only when i ask" to "CheckTimes", "p&l pehle se mat padho" to "CheckTimes",
+        // ---- CondNeeds: the conditional instructions Boss keeps trying to give, the app's own tool named once ----
+        "what have you learned about my conditional orders" to "CondNeeds", "my conditional orders" to "CondNeeds",
+        "which conditional orders do i keep giving you" to "CondNeeds", "show my conditional orders" to "CondNeeds",
+        "how often do i give you conditional orders" to "CondNeeds", "mere conditional orders ke baare mein kya seekha" to "CondNeeds",
+        "stop mentioning my conditional orders" to "CondNeeds", "dont tell me about my conditional orders" to "CondNeeds",
+        "forget what you learned about my conditional orders" to "CondNeeds", "reset my conditional orders" to "CondNeeds",
+        "conditional orders wali baat mat batao" to "CondNeeds",
         // ...and its neighbours keep theirs: the charges themselves, why they are high, everything learned.
         "how much did i pay in charges this week" to "Account:CHARGES", "why are my charges so high" to "Account:CHARGES",
         "what have you learned about me" to "AboutBoss",
@@ -1377,7 +1385,7 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "NewsMoves",
+    private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")

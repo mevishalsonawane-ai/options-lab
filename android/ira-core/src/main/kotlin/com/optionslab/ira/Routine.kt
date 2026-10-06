@@ -70,6 +70,8 @@ object Routine {
         // "When do I usually check my P&L?" / "stop getting my P&L ready": about Jarvis's read-ahead ([CheckTimes]), never a
         // P&L ask - not logged, so asking or undoing it never counts toward it.
         if (runCatching { CheckTimes.asked(text) != null }.getOrDefault(false)) return null
+        // "What have you learned about my conditional orders?" / its undo ([CondNeeds]): about Jarvis, never an orders ask.
+        if (runCatching { CondNeeds.asked(text) != null }.getOrDefault(false)) return null
         Habits.key(text)?.let { return it }
         val q = Ask.parse(text)
         if (q.command != null || q.order != null || q.topics.any { it in NEVER }) return null
