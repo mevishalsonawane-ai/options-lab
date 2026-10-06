@@ -90,7 +90,7 @@ object ForwardCheck {
     /**
      * Solo, midday and risk-reduced, 1 lot (Solo buys one lot). solo2/out/riskreduced_trades.csv, rows with day >= 2024-07-01
      * (TEST): 196 trades, net +₹31,330, ₹159.85 a trade, sd ₹3,107.56, win 50.0%, PF 1.14, max DD −₹24,589 (trade order).
-     * No start day pinned: every closed Solo paper trade counts until the risk-reduced rules' day is set here.
+     * Only Solo (midday)'s own trades are given to it (the app filters on the tag), from 06 Oct 2026.
      */
     val SOLO = Expectation("solo", "Solo", 196, 31_330.0, 159.85, 3_107.56, 0.50, 1.14, -24_589.30,
         "scratchpad/solo2/out/riskreduced_trades.csv (TEST rows, Jul 2024 - Oct 2026)")
