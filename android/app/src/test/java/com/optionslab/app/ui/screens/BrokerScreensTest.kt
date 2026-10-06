@@ -135,7 +135,13 @@ class BrokerScreensTest {
             if (!compose.mainClock.autoAdvance) compose.mainClock.advanceTimeByFrame()
             cond()
         }
-    } catch (e: Throwable) { throw AssertionError("timed out waiting for $what", e) }
+    } catch (e: Throwable) { throw AssertionError("timed out waiting for $what\n" + workers(), e) }
+
+    /** On a timeout: what the background threads were doing (a read stuck behind other work shows here). */
+    private fun workers(): String = Thread.getAllStackTraces().entries
+        .filter { (t, _) -> t.name.startsWith("DefaultDispatcher") || t.name.contains("draft", true) || t.name.startsWith("Thread-") }
+        .joinToString("\n") { (t, st) -> "${t.name} ${t.state}: " + st.take(6).joinToString(" < ") }
+        .ifEmpty { "(no background workers)" }
 
     private fun frames(n: Int = 12) = repeat(n) { compose.mainClock.advanceTimeByFrame() }
 
