@@ -17,6 +17,7 @@ object ProfitLock {
     /** The arm's premium target in points, or null for an arm without one. */
     fun targetOf(arm: Arm): Double? = when {
         arm.liquidity -> null
+        arm.hero -> null              // the Hero arm has no target: it holds to its exit time
         arm.sweep -> SweepRules.TARGET_POINTS
         else -> OrbRules.TARGET_POINTS
     }

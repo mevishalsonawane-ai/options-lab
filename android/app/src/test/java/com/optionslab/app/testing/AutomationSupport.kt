@@ -68,7 +68,7 @@ object AutomationSupport {
 
     /** Every test clock back to the real one. */
     fun realClocks() {
-        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
+        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
     }
 
     fun clearAlerts() = Alerts.queue.value.forEach { Alerts.dismiss(it.id) }

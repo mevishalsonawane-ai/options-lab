@@ -86,6 +86,8 @@ internal fun OrbRowsContent(
     var reauthFor by remember { mutableStateOf<String?>(null) }
     // Arming while in Live: (source, automatic), after the PIN or fingerprint.
     var armAuth by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    // Arming the Hero arm (not proven): its own confirmation, with the record, before it is switched on.
+    var heroConfirm by remember { mutableStateOf<String?>(null) }
 
     view.arms.forEachIndexed { i, a ->
         if (i > 0) Rule()
@@ -96,6 +98,7 @@ internal fun OrbRowsContent(
                     Spacer(Modifier.width(8.dp))
                     val (label, color) = when {
                         a.open != null -> if (a.open.live) "IN TRADE · LIVE" to p.oxblood else "IN TRADE · PAPER" to p.verdigris
+                        a.armed && a.arm.hero -> "ARMED · PAPER ONLY · NOT PROVEN" to p.amber
                         a.armed && a.arm.paperOnly -> "ARMED · PAPER ONLY · AUTO" to p.verdigris
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
                         a.armed && live -> "ARMED · LIVE · APPROVE (re-arm for auto)" to p.oxblood
@@ -116,6 +119,8 @@ internal fun OrbRowsContent(
                 } ?: when {
                     !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15) or not +5% in 20 min · else at the next liquidity"
                     a.arm.liquidity -> a.status
+                    !a.armed && a.arm.hero -> "NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · out 15:05 · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}"
+                    a.arm.hero -> OrbArms.describe(a.status)
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock"
                     !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock"
@@ -130,7 +135,8 @@ internal fun OrbRowsContent(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
                 // ORB Sweep, Range Fade and Liquidity 15+5 are paper only and always automatic: nothing to choose, no PIN.
-                onCheckedChange = { on -> if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
+                onCheckedChange = { on -> if (on && a.arm.hero) heroConfirm = a.arm.source
+                    else if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
                     else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
             )
@@ -188,6 +194,27 @@ internal fun OrbRowsContent(
         else "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
+    heroConfirm?.let { src ->
+        AlertDialog(
+            onDismissRequest = { heroConfirm = null },
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text("Arm Hero (expiry) (paper)", style = Type.title) },
+            text = {
+                Column {
+                    Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". It never trades on Zerodha.",
+                        style = Type.body.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold))
+                    Text("On NIFTY expiry days only, from 13:30 to 14:45: when the ATM straddle is 15% above its low since 12:00 and " +
+                        "NIFTY has moved 0.25% in 15 minutes, it buys the nearest OTM option on that side priced Rs 1–5 with a LIMIT " +
+                        "order, up to Rs 5,000 of premium, once a day, and sells at 15:05.", style = Type.bodySmall.copy(color = p.inkSoft))
+                    Note("The study: +Rs 4.4 lakh in 2023–24, but three trades made all of it; 2025–26 out of sample lost on all 13 " +
+                        "trades (−Rs 64,190). Expect about Rs 5,000 lost on most firing days. It disarms itself after 12 losing expiry " +
+                        "days in a row or Rs 50,000 lost.", Modifier.padding(top = 8.dp))
+                }
+            },
+            confirmButton = { TextButton({ heroConfirm = null; actions.arm(src, true, true, false) }) { Text("Arm on paper") } },
+            dismissButton = { TextButton({ heroConfirm = null }) { Text("Cancel") } },
+        )
+    }
     if (detail) OrbDetail(view) { detail = false }
 }
 
