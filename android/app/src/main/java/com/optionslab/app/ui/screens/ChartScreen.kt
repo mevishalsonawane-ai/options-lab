@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +46,7 @@ import com.optionslab.app.data.ChartFeed
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import com.optionslab.engine.orb.LiquidityRules
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -71,7 +73,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     ChartPane(symbol, exchange, visible, ask, live = appSettings.live, source = FeedChartSource,
         orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, area = "Chart", onClose = close) },
         alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
-        chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) })
+        chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) },
+        liquidity = if (com.optionslab.app.BuildConfig.GOLD) null else ArmLiquiditySource)
 }
 
 /**
@@ -116,6 +119,8 @@ internal fun ChartPane(
     chainDialog: @Composable (String, () -> Unit, (ChainPick) -> Unit) -> Unit,
     trading: Boolean = true,
     marketOpen: () -> Boolean = { com.optionslab.app.data.Market.isOpen() },
+    /** Liquidity 15+5's layer on BANKNIFTY / FINNIFTY ([LiquidityPanel]); null: none (the gold build, most tests). */
+    liquidity: LiquiditySource? = null,
 ) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
@@ -144,6 +149,10 @@ internal fun ChartPane(
     var paintedOk by remember { mutableStateOf(false) }
     var autoBasic by remember { mutableStateOf<String?>(null) }      // why the basic chart was switched in
     val basic = basicChosen || autoBasic != null
+    // Liquidity 15+5's levels and trades on the index it runs on: on unless the owner switched them off (remembered).
+    var liqOn by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.liq", true)) }
+    val liqCache = remember { LiquidityCache() }
+    val liqUnderlying = current.first.uppercase().takeIf { liquidity != null && it in LiquidityRules.UNDERLYINGS }
 
     fun openOrder(buy: Boolean, price: Double?, type: String = if (price == null) "MARKET" else "LIMIT") {
         // IraGoldAlgo: paper only, its strategy buys by itself; the chart can place nothing.
@@ -282,6 +291,15 @@ internal fun ChartPane(
                     if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to false)); if (failed) { failed = false; retried = false; ready = false; gen++ } }
                     else { basicChosen = true; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to true)) }
                 }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // The Liquidity 15+5 layer under the chart (beside it in landscape), on the two indices it trades.
+            if (liqUnderlying != null) Box(Modifier.align(Alignment.CenterVertically).heightIn(min = 48.dp)
+                .toggleable(value = liqOn, role = androidx.compose.ui.semantics.Role.Switch) {
+                    liqOn = it; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.liq" to it))
+                }, contentAlignment = Alignment.Center) {
+                Text(if (liqOn) "✓ Liquidity levels" else "Liquidity levels", textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                    style = Type.label.copy(color = if (liqOn) p.onPrimary else p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.background(if (liqOn) p.brass else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 8.dp))
+            }
             // A price alert on whatever is charted, at a level you choose.
             if (trading) Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
@@ -298,7 +316,8 @@ internal fun ChartPane(
                 }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        // The chart, and under it (beside it in landscape) the Liquidity 15+5 layer when shown.
+        val chartArea: @Composable (Modifier) -> Unit = { area -> Box(area) {
         androidx.compose.runtime.key(gen) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -332,7 +351,9 @@ internal fun ChartPane(
                         } },
                         onFail = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
                         // Only fatal before the first candles: one runtime error later must not drop the chart for the session.
-                        onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } }), "IraBridge")
+                        onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
+                        // The page's own 5-minute candles feed the liquidity layer, so it reads nothing more while they are fresh.
+                        onBars = { s, iv, list -> if (iv == "5m") liqCache.offer(s, list) }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -398,6 +419,22 @@ internal fun ChartPane(
                         .clickable { failed = false; retried = false; ready = false; gen++ }.padding(horizontal = 18.dp, vertical = 8.dp))
             }
         }
+        } }
+        val liqPanel: @Composable (Modifier) -> Unit = { area ->
+            val u = liqUnderlying
+            if (u != null && liqOn && liquidity != null) LiquidityPanel(u, visible, bars = { now ->
+                liqCache.fresh(u, now) ?: source.bars(u, "5m", null, null).also { liqCache.offer(u, it, history = true) }
+            }, source = liquidity, modifier = area)
+        }
+        if (liquidity == null) chartArea(Modifier.weight(1f).fillMaxWidth())
+        else androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            if (maxWidth > maxHeight) Row(Modifier.fillMaxSize()) {
+                chartArea(Modifier.weight(1f).fillMaxHeight())
+                liqPanel(Modifier.weight(1f).fillMaxHeight())
+            } else Column(Modifier.fillMaxSize()) {
+                chartArea(Modifier.weight(1f).fillMaxWidth())
+                liqPanel(Modifier.weight(0.9f).fillMaxWidth())
+            }
         }
     }
     if (alerting) alertDialog(current.first) { alerting = false }
@@ -480,6 +517,8 @@ internal class Bridge(
     private val onFail: (String) -> Unit = {},
     private val onPageError: (String) -> Unit = {},
     private val onPainted: (Int, Int, Int) -> Unit = { _, _, _ -> },
+    /** Every batch of candles the page was given (symbol, interval, candles), on the reading thread. */
+    private val onBars: (String, String, List<com.optionslab.engine.Upstox.Bar>) -> Unit = { _, _, _ -> },
 ) {
     /** terminal.mjs: the chart drew its first candles at this size. */
     @JavascriptInterface
@@ -506,6 +545,7 @@ internal class Bridge(
                         .put("low", b.low).put("close", b.close).put("volume", b.volume))
                 }
                 reply(id, true, a.toString())
+                runCatching { onBars(symbol, interval, bars) }
                 web.post { onData() }
             } catch (e: Exception) {
                 // Say why on the cover at once, instead of waiting for the watchdog to give up.
