@@ -61,6 +61,8 @@ class AskGuideTest {
         assertTrue(groups.first { it.id == "hero" }.examples.any { it.family == "HeroDay" })
         // The opening read sits with the market and its levels.
         assertTrue(groups.first { it.id == "market" }.examples.any { it.q == "how did the market open" && it.family == "OpeningRead" })
+        // The forward-test watch sits with the strategies.
+        assertTrue(groups.first { it.id == "strategies" }.examples.any { it.q == "is anything drifting" && it.family == "ForwardWatch" })
         // Today's notes sit with Jarvis himself (App).
         assertTrue(groups.first { it.id == "app" }.examples.any { it.q == "what did you tell me today" && it.family == "TodayNotes" })
     }

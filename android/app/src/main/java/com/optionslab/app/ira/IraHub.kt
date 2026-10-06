@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2855,7 +2855,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, ForwardWatch, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3389,6 +3389,21 @@ object IraHub {
                 else runCatching { com.optionslab.ira.TodayNotes.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today()) }
                     .getOrDefault(com.optionslab.ira.TodayNotes.NONE)
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Is anything drifting", "how are my arms vs backtest", "forward test status", "live vs backtest", "kya koi arm drift
+        // kar raha hai" ([com.optionslab.ira.ForwardWatch], [IraForwardWatch]): one line an arm - Liquidity 15+5, Solo (midday),
+        // Hero - its forward paper trades against its backtest (the Live vs backtest card's own line), Solo's with its own
+        // switch-off line. An arm named keeps its own answer (Liquidity's record, Solo, Hero). Boss's paper records, so never on
+        // a locked phone; reads only - nothing is switched, sized or changed. (Not in IraGoldAlgo: no such arms.)
+        val forwardAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.ForwardWatch.asked(q) }.getOrDefault(false) else false
+        if (forwardAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.ForwardWatch.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraForwardWatch.answer() }.getOrElse { "I could not read the arms' records just now, Boss." })
+            }
             return true
         }
         // "Why was I logged out of Zerodha?", "why did Kite log me out?", "when does my Zerodha session end?", "zerodha se

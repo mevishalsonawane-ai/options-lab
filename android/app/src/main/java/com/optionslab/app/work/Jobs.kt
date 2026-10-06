@@ -563,6 +563,9 @@ object Tasks {
         word("liquidity heads-up") { com.optionslab.app.ira.IraLiquidity.watch() }
         // Jarvis: each closed Liquidity 15+5 trade against its research - one chat line a trade, never spoken (words only).
         word("trade lessons") { com.optionslab.app.ira.IraTradeLessons.watch() }
+        // Jarvis: a paper arm's live-vs-backtest verdict changed (or reached 20 trades; 40 and 60 for Solo) - one chat note
+        // an arm, the round after its trade closed (words only; nothing is switched, sized or changed).
+        word("forward-test watch") { com.optionslab.app.ira.IraForwardWatch.watch() }
         // Jarvis: from 15:45 on a trading day, tomorrow's plan in the chat - once a day (words only; nothing is armed or changed).
         word("tomorrow's plan") { com.optionslab.app.ira.IraTomorrow.watch() }
         // Jarvis: 09:20-09:25 on a trading day, the opening read in the chat - once a day (words only; nothing is armed or changed).

@@ -56,6 +56,7 @@ object AskGuide {
             ex("are my bots fighting each other", "BotTrades"),
             ex("why did my bots lose today", "ArmDay"),
             ex("orb aaj kyun fail hua", "ArmDay"),
+            ex("is anything drifting", "ForwardWatch"),
         )),
         Group("market", "Market & levels", "The indices now, the day's shape and the option chain", listOf(
             ex("how is nifty", "Market"),

@@ -132,6 +132,7 @@ class CollisionTest {
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "OpeningRead" to { q -> OpeningRead.asked(q) },
         "TodayNotes" to { q -> TodayNotes.asked(q) },
+        "ForwardWatch" to { q -> ForwardWatch.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -928,6 +929,16 @@ class CollisionTest {
         "opening summary" to "OpeningRead", "today's opening summary" to "OpeningRead", "opening report" to "OpeningRead",
         "market kaisa khula" to "OpeningRead", "market kaisa khula aaj" to "OpeningRead", "aaj market kaisa khula" to "OpeningRead", "market kaise khula aaj" to "OpeningRead",
         "market kahan khula" to "OpeningRead", "open kaisa tha" to "OpeningRead", "aaj ki opening kaisi rahi" to "OpeningRead", "jarvis how did the market open" to "OpeningRead",
+        // ---- ForwardWatch: the paper arms against their backtests (Liquidity 15+5, Solo, Hero), one line an arm ----
+        "is anything drifting" to "ForwardWatch", "is anything drifting?" to "ForwardWatch", "jarvis is anything drifting" to "ForwardWatch",
+        "is any arm drifting" to "ForwardWatch", "are my arms drifting" to "ForwardWatch", "are my bots drifting" to "ForwardWatch",
+        "anything drifting from the backtest" to "ForwardWatch", "drift check" to "ForwardWatch", "any drift" to "ForwardWatch",
+        "how are my arms vs backtest" to "ForwardWatch", "how are my arms doing vs the backtest" to "ForwardWatch", "arms vs backtest" to "ForwardWatch",
+        "how are my arms doing against the backtest" to "ForwardWatch", "are my arms in line with the backtest" to "ForwardWatch",
+        "live vs backtest" to "ForwardWatch", "live vs backtest status" to "ForwardWatch", "paper vs backtest" to "ForwardWatch",
+        "forward test status" to "ForwardWatch", "what's the forward test status" to "ForwardWatch", "how is the forward test going" to "ForwardWatch",
+        "status of my forward tests" to "ForwardWatch", "forward test ka haal" to "ForwardWatch", "kya koi arm drift kar raha hai" to "ForwardWatch",
+        "koi bot drift ho raha hai kya" to "ForwardWatch", "mere arms backtest ke hisaab se kaise hain" to "ForwardWatch",
         // ---- TodayNotes: what Jarvis posted by himself today (counted by category, the latest three named) ----
         "what did you tell me today" to "TodayNotes", "what have you told me today" to "TodayNotes", "what did you say today" to "TodayNotes",
         "what all did you tell me today" to "TodayNotes", "what did you tell me this morning" to "TodayNotes", "what did you post today" to "TodayNotes",
@@ -1508,7 +1519,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3392,5 +3403,46 @@ class CollisionTest {
         for (s in listOf("what did you tell me yesterday", "my notes today", "what did i tell you today", "delete today's notes",
             "what did you tell me about nifty today", "kal kya bataya", "remind me of today's notes"))
             assertTrue(audit.feature(s) != "TodayNotes", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- ForwardWatch: the paper arms against their backtests, never the questions that already had their answers ----
+
+    @Test fun forwardWatchLeavesTheOtherArmAndBacktestQuestionsTheirRoutes() {
+        // Before it, these went to a pattern's backtest ("live vs backtest", "how are my arms vs backtest"), nothing ("is
+        // anything drifting", "forward test ka haal"), the market ("forward test status") or the strategies' list ("is any
+        // arm drifting"): now one line an arm against its research - reads only, never an order, a command or a plan.
+        for (s in listOf("is anything drifting", "how are my arms vs backtest", "forward test status", "live vs backtest", "is any arm drifting",
+            "are my arms in line with the backtest", "forward test ka haal", "kya koi arm drift kar raha hai")) {
+            assertEquals("ForwardWatch", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // One arm named: its own answers, as before (Liquidity's record and "on track", Solo's status and record, Hero's
+        // words); the bots' health; a backtest to run; the shadows; the weekly review.
+        assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
+        assertEquals("Backtest", audit.feature("how is liquidity doing vs backtest"))
+        assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
+        assertEquals("Solo", audit.feature("solo forward test"))
+        assertEquals("Solo", audit.feature("is solo on track"))
+        assertEquals("Solo", audit.feature("solo record"))
+        assertEquals("Missed", audit.feature("hero forward test"))
+        assertEquals("Missed", audit.feature("is hero on track"))
+        assertEquals("Account:BOTS", audit.feature("how are my bots doing"))
+        assertEquals("Account:BOTS", audit.feature("how are my arms doing"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("Account:BOTS", audit.feature("how are the shadows doing"))
+        assertEquals("Backtest", audit.feature("how are my shadows vs backtest"))
+        assertEquals("Backtest", audit.feature("backtest orb"))
+        assertEquals("Backtest", audit.feature("backtest my strategy"))
+        assertEquals("WeeklyReview", audit.feature("weekly review"))
+        assertEquals("Missed", audit.feature("forward test"))
+        assertEquals("Market", audit.feature("is nifty drifting"))
+        assertEquals("Market", audit.feature("is the market drifting"))
+        // Two questions: each its own.
+        assertEquals("ForwardWatch & Account:PNL", audit.feature("forward test status and what is my pnl"))
+        for (s in listOf("switch off the arm that is drifting", "stop the drifting arm", "how did my arms do last week vs backtest", "what is drift",
+            "liquidity forward test status", "is solo drifting", "is hero drifting"))
+            assertTrue(audit.feature(s) != "ForwardWatch", "$s: ${audit.feature(s)}")
     }
 }

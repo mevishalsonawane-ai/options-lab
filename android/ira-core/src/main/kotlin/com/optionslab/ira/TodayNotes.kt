@@ -48,7 +48,7 @@ object TodayNotes {
         for (s in listOf("LIQUIDITY", "LIQSKIP")) put(s, Category.LIQUIDITY)
         put(SOLO, Category.SOLO_HERO)
         for (s in listOf("OVERTRADE", "TARGET", "HEADSUP", "USUAL", "PRETRADE", "WORDS", "BOTS", "HEALTH", "MIS", "EXPIRY", "TRAIL", "GUARD",
-            "RESCUE", "STALE", "COOLOFF", "WEEK", "MONTH", "JOURNAL", "SUMMARY")) put(s, Category.COACH)
+            "RESCUE", "STALE", "COOLOFF", "WEEK", "MONTH", "JOURNAL", "SUMMARY", "FORWARD")) put(s, Category.COACH)
         for (s in listOf("TOMORROW", "AGENDA", "PLAN", "MORNING_VOICE")) put(s, Category.PLANS)
         for (s in listOf("POSNEWS", "ACT_PAPER")) put(s, Category.NEWS)
         for (s in listOf("RELAY", "FEED", "BACKUP", "SELFHEAL", "QUIET")) put(s, Category.OTHER)
