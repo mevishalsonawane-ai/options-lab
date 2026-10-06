@@ -778,6 +778,7 @@ object OrbArms {
             val b = book()
             runCatching { priceCheck(b, t) }
             runCatching { liquidityExits(b, t) }
+            runCatching { liquidityNotices(b, t) }
             runCatching { heroKillCheck(b) }
             val anyArmed = ALL_ARMS.any { b.armed[it.source] == true }
             if (!anyArmed || !OrbRules.inWindow(t.toLocalTime())) { save(b); return@withLock }
@@ -802,7 +803,7 @@ object OrbArms {
     }
 
     /** A lighter pass between minutes while a position is open: the stop, the target and the clock. */
-    suspend fun priceCheckOnly() = lock.withLock { val b = book(); runCatching { priceCheck(b, now()) }; save(b) }
+    suspend fun priceCheckOnly() = lock.withLock { val b = book(); val t = now(); runCatching { priceCheck(b, t) }; runCatching { liquidityNotices(b, t) }; save(b) }
 
     /**
      * An entry left unapproved past its time ([Pending.expires]) is dropped - said once (a notice in place of the approval's,
@@ -1634,7 +1635,15 @@ object OrbArms {
         if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return "liquidity_outside_entry_hours"
         val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return "no_liquidity_break"
         // The room filter and the 1-ITM strike (research liq2, adopted on paper 06 Oct by Boss's choice).
-        if (!LiquidityRules.hasRoom(s, last.close, und)) return "liquidity_no_room"
+        if (!LiquidityRules.hasRoom(s, last.close, und)) {
+            // Information only (its own switch, off by default): the skip is told, the decision above is unchanged.
+            runCatching {
+                com.optionslab.app.work.LiquidityNotices.skip(app, arm.source, last.start, com.optionslab.ira.LiquidityNotice.Skip(
+                    com.optionslab.ira.LiquidityNotice.Book(und, tf), s.level, s.side * ((s.target ?: last.close) - last.close),
+                    LiquidityRules.MIN_ROOM_STOPS * LiquidityRules.indexStopPoints(und)), t)
+            }
+            return "liquidity_no_room"
+        }
         val strike = LiquidityRules.entryStrike(s.side, last.close, und)
         // Candidate (a)'s shadow (pre-registered 06 Oct): recorded with the trade, never acted on (with the room filter on,
         // entered trades no longer carry it).
@@ -1723,6 +1732,56 @@ object OrbArms {
             lot = c.lotSize.takeIf { it > 0 })
         marks[c.symbol] = fill.price
         return "entered"
+    }
+
+    /** Entries and exits told no later than this after they happened (an upgrade or a restart never tells an old trade). */
+    private const val NOTICE_WINDOW_MIN = 15L
+
+    /**
+     * Liquidity 15+5's trade notices ([com.optionslab.app.work.LiquidityNotices]), after the pass: each position of the
+     * arm that entered (confirmed) or exited in the last [NOTICE_WINDOW_MIN] minutes is told once, with the book's last bars
+     * from the minutes this pass already read (nothing is fetched). Words and a picture only: it reads the book, never
+     * changes it, and places nothing.
+     */
+    private fun liquidityNotices(b: Book, t: LocalDateTime) {
+        val since = t.minusMinutes(NOTICE_WINDOW_MIN)
+        val mine = b.positions.filter { p -> !p.unconfirmed && runCatching { armOf(p.arm).liquidity }.getOrDefault(false) &&
+            (!p.entryTime.isBefore(since) || p.exitTime?.isBefore(since) == false) }
+        if (mine.isEmpty()) return
+        val day = t.toLocalDate()
+        val closedToday = b.positions.filter { p -> !p.open && p.exitTime?.toLocalDate() == day &&
+            runCatching { armOf(p.arm).liquidity }.getOrDefault(false) }
+        for (p in mine) runCatching {
+            val arm = armOf(p.arm)
+            val und = LiquidityRules.underlyingOf(arm)
+            val tf = LiquidityRules.minutesOf(arm)
+            val book = com.optionslab.ira.LiquidityNotice.Book(und, tf)
+            val bars = (liquidityPass[und]?.second ?: liquidityMinutesKept(und, t)).orEmpty()
+                .let { LiquidityRules.completed(LiquidityRules.fold(it, tf), tf, t) }
+            val strike = Paper.contractOf(p.symbol)?.strike
+            val lots = p.lot?.let { p.lots }
+            val key = "${p.arm}|${p.symbol}|${p.entryTime}"
+            val level = p.level
+            if (!p.entryTime.isBefore(since) && level != null) {
+                val e = com.optionslab.ira.LiquidityNotice.Entry(book, p.live, p.right, strike, p.symbol, p.qty + p.sold, lots, p.entry,
+                    p.entryTime, level, p.target, bars.firstOrNull { it.start == p.signalBar }?.close, p.stopTrigger,
+                    LiquidityRules.indexStopPoints(und), LiquidityRules.TIME_STOP_MINUTES, LiquidityRules.TIME_STOP_GAIN)
+                com.optionslab.app.work.LiquidityNotices.entry(app, key, e) { w, h ->
+                    com.optionslab.ira.LiquidityNotice.chart(bars, tf, level, p.target, p.entryTime, null, w, h)
+                }
+            }
+            val exit = p.exit; val exitTime = p.exitTime
+            if (exit != null && exitTime != null && !exitTime.isBefore(since)) {
+                val tally = com.optionslab.ira.LiquidityNotice.tally(closedToday.filter { !it.exitTime!!.isAfter(exitTime) }
+                    .map { (it.grossPnl ?: 0.0) - it.charges })
+                val x = com.optionslab.ira.LiquidityNotice.Exit(book, p.live, p.right, strike, p.symbol, p.qty + p.sold, lots, p.entry, exit,
+                    p.entryTime, exitTime, p.why ?: "exit", level, p.target, LiquidityRules.indexStopPoints(und),
+                    p.grossPnl ?: 0.0, p.charges, tally)
+                com.optionslab.app.work.LiquidityNotices.exit(app, key, x) { w, h ->
+                    com.optionslab.ira.LiquidityNotice.chart(bars, tf, level, p.target, p.entryTime, exitTime, w, h)
+                }
+            }
+        }
     }
 
     /**

@@ -1117,6 +1117,20 @@ private fun SoloCard() {
  * Jarvis's health (the owner's wish, 2026-10-03): everything it does by itself, each with its own switch and when it
  * last acted - one place to see and stop any of it.
  */
+/** A behaviour with its own switch beneath its group (e.g. Market alerts → skipped Liquidity breaks): on only while the group is. */
+@Composable
+private fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
+    val p = LocalPalette.current
+    var own by remember { mutableStateOf(com.optionslab.app.ira.Automations.ownSwitch(a)) }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(a.label, style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
+            Text(a.what + (if (groupOn) "" else " (Market alerts is off: this stays quiet.)"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+        }
+        androidx.compose.material3.Switch(checked = own, onCheckedChange = { v -> own = v; com.optionslab.app.ira.Automations.set(a, v) })
+    }
+}
+
 @Composable
 private fun AutomationsCard() {
     val p = LocalPalette.current
@@ -1161,6 +1175,7 @@ private fun AutomationsCard() {
                     } else { on = v; com.optionslab.app.ira.Automations.set(g, v) }
                 })
             }
+            g.subs.forEach { a -> AutomationSubRow(a, groupOn = on) }
         }
         Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
     }

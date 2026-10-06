@@ -31,6 +31,8 @@ internal object Automations {
         MOMENTS("Market moments", "Nifty or BankNifty filling its opening gap, or going past the previous session's high or low: told once each a day.", "jarvis.auto.moments"),
         SHARPMOVE("Sharp moves: what coincided", "Nifty or BankNifty moving 0.3% or more, and 3 times its usual, within 10 minutes: the headlines published around then, India VIX and the other indices over the same minutes - timing only, never a cause. Each move told once.", "jarvis.auto.sharpmove"),
         LIQUIDITY("Liquidity levels heads-up", "09:20-14:00, Liquidity 15+5 armed: BankNifty within 15 points (FinNifty 8) of a level whose close-through would be its entry with room - told once per level a day, at most once in 10 minutes per index; in the chat only when saving battery or on short answers (words only; the arm decides on its own).", "jarvis.auto.liquidity"),
+        // Off until Boss switches it on (06 Oct): a quiet notification, information only - the arm's decision is its own.
+        LIQSKIP("Skipped Liquidity breaks", "A Liquidity 15+5 break the arm skipped because the next level was too close (BankNifty under 30 points, FinNifty 15): a quiet notification, e.g. \"Skipped: BankNifty 5-min break of 54,180 - only 22 pts to the next level (needs 30)\". Off by default; never while saving battery (information only).", "jarvis.auto.liqskip", byDefault = false),
         OI("Open interest walls", "The biggest call / put open interest moving to a new strike.", "jarvis.auto.oi"),
         EXPIRYDAY("Expiry day companion", "On Nifty's or BankNifty's expiry day at 09:30, 12:00, 13:30, 14:30 and 15:20: the at-the-money straddle and how much of it has gone, spot against max pain, and the last hour's range (facts only).", "jarvis.auto.expiryday"),
         MORNING_VOICE("Morning check aloud", "09:00: the morning check is spoken even with listening off (never when muted or in quiet hours).", "jarvis.auto.morningvoice"),
@@ -57,7 +59,9 @@ internal object Automations {
      * behaviour belongs to one group with one switch; the safety helpers have none and are always on.
      */
     enum class Group(val label: String, val what: String, val key: String, val members: List<Auto>, val byDefault: Boolean = true,
-                     /** Switched on only with the fingerprint (it touches real stop orders). */ val fingerprint: Boolean = false) {
+                     /** Switched on only with the fingerprint (it touches real stop orders). */ val fingerprint: Boolean = false,
+                     /** Behaviours under this group with a switch of their own (shown beneath it), each on only while the group is. */
+                     val subs: List<Auto> = emptyList()) {
         GUARD("Guard my positions", "Your own bought options: a stop set by itself when one has none for 2 minutes (15% under what you paid), then trailed up - to what you paid at +20%, then 15% under the best price. Zerodha positions too; it only adds or raises stops that close, never opens or adds.",
             "jarvis.group.guard", listOf(Auto.GUARD, Auto.TRAIL), byDefault = false, fingerprint = true),
         HELP("Offer help on my positions", "A position with no stop, or one going nowhere for 45 minutes: Jarvis offers a stop or a close (asks first).",
@@ -65,7 +69,8 @@ internal object Automations {
         OWN("Act on his own, on paper", "Takes his own ideas of 3/5 or more on PAPER (raising the bar where he loses) and plans the paper arms each morning.",
             "jarvis.group.own", listOf(Auto.ACT_PAPER, Auto.PLAN, Auto.SOLO_IDEAS)),
         MARKET("Market alerts", "Opening gap plan, opening range breaks, gaps filling, the previous day's high or low passed, fear (VIX) spikes, sharp moves and what coincided with them, the price nearing a Liquidity 15+5 entry level, open interest walls moving, the expiry-day straddle and max pain, and news on indices you hold.",
-            "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.SHARPMOVE, Auto.LIQUIDITY, Auto.OI, Auto.EXPIRYDAY, Auto.POSNEWS)),
+            "jarvis.group.market", listOf(Auto.GAP, Auto.ORB, Auto.MOMENTS, Auto.VIX, Auto.SHARPMOVE, Auto.LIQUIDITY, Auto.OI, Auto.EXPIRYDAY, Auto.POSNEWS),
+            subs = listOf(Auto.LIQSKIP)),
         COACH("Coach me", "A word when you overtrade or before an order sent just after a loss or past your usual day, your day's target reached, a position losing a big share of your daily loss limit or a sold option mostly decayed, your usual question answered at its hour, the 09:00 check, Jarvis's own plan for the day, the 15:35 wrap-up, your day's journal drafted with a few questions, the 14:45 check on positions expiring that day, a strategy of yours behaving unusually against its tested record, the week's and the month's reviews spoken, and your own words against today's trades (a rule or trade goal you set) pointed out once, on an unlocked phone.",
             "jarvis.group.coach", listOf(Auto.OVERTRADE, Auto.TARGET, Auto.HEADSUP, Auto.USUAL, Auto.MORNING_VOICE, Auto.AGENDA, Auto.SUMMARY, Auto.JOURNAL, Auto.WEEK, Auto.MONTH, Auto.PRETRADE, Auto.HEALTH, Auto.WORDS, Auto.BOTS)),
         QUIET("Quiet hours", "Nothing said unasked from 22:00 to 07:00.", "jarvis.group.quiet", listOf(Auto.QUIET)),
@@ -74,13 +79,20 @@ internal object Automations {
     /** Always on, no switch: they only warn, cool off or heal (live prices stopped, expiry heads-up, cool-off, backup, voice). */
     val ALWAYS = setOf(Auto.MIS, Auto.RELAY, Auto.FEED, Auto.EXPIRY, Auto.COOLOFF, Auto.BACKUP, Auto.SELFHEAL)
 
-    fun groupOf(a: Auto): Group? = Group.entries.firstOrNull { a in it.members }
+    fun groupOf(a: Auto): Group? = Group.entries.firstOrNull { a in it.members || a in it.subs }
+
+    /** A behaviour with its own switch beneath its group ([Group.subs]). */
+    fun isSub(a: Auto): Boolean = Group.entries.any { a in it.subs }
 
     fun on(a: Auto): Boolean {
         if (a in ALWAYS) return true
         val g = groupOf(a) ?: return a.byDefault
+        if (isSub(a)) return on(g) && runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(a.key, a.byDefault) }.getOrDefault(a.byDefault)
         return on(g)
     }
+
+    /** A sub-switch's own setting, whatever its group's ([on] also needs the group on). */
+    fun ownSwitch(a: Auto): Boolean = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(a.key, a.byDefault) }.getOrDefault(a.byDefault)
 
     fun on(g: Group): Boolean = runCatching {
         val p = com.optionslab.app.security.SecurePrefs
@@ -98,7 +110,10 @@ internal object Automations {
     }
 
     /** A behaviour's switch is its group's (an always-on one has none). */
-    fun set(a: Auto, v: Boolean) { groupOf(a)?.let { set(it, v) } }
+    fun set(a: Auto, v: Boolean) {
+        if (isSub(a)) { runCatching { com.optionslab.app.security.SecurePrefs.put(a.key, v) }; return }
+        groupOf(a)?.let { set(it, v) }
+    }
 
     /** When the group last acted and what it did (the latest of its members). */
     fun last(g: Group): Pair<LocalDateTime, String>? = g.members.mapNotNull { last(it) }.maxByOrNull { it.first }
