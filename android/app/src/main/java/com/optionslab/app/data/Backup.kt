@@ -225,6 +225,22 @@ object Backup {
         return o
     }
 
+    /**
+     * A restored Pine file: every script switched off, and under Boss's 06 Oct rule ([com.optionslab.ira.PineProtection])
+     * a stop-loss and a target on each (a 0 or none in the backup becomes 30 / 60; a nonzero stop is kept) and the profit
+     * lock on - a backup can never bring back a script without them. PineScripts.parse applies the same rule on reading.
+     */
+    internal fun pineRestored(text: String): String {
+        val a = org.json.JSONArray(text)
+        for (i in 0 until a.length()) {
+            val o = a.getJSONObject(i)
+            val au = o.optJSONObject("auto") ?: JSONObject().also { o.put("auto", it) }
+            val e = com.optionslab.ira.PineProtection.normalise(au.optDouble("stopPts", 0.0), au.optDouble("targetPts", 0.0), au.optBoolean("profitLock", true))
+            au.put("on", false).put("stopPts", e.stopPts).put("targetPts", e.targetPts).put("profitLock", true)
+        }
+        return a.toString()
+    }
+
     private fun disarmed(name: String, bytes: ByteArray, lotsHere: Int? = null): ByteArray = runCatching {
         val text = String(bytes, Charsets.UTF_8)
         val out: String = when (name) {
@@ -244,11 +260,7 @@ object Backup {
             "orb.vault" -> liquidityLots(JSONObject(text).put("armed", JSONObject()).put("auto", JSONObject()).put("liveOk", JSONObject())
                 .put("pending", JSONObject()), lotsHere).toString()
             // PineScripts.save: an array of scripts, each with an "auto" object whose "on" starts it trading.
-            "pine.vault" -> {
-                val a = org.json.JSONArray(text)
-                for (i in 0 until a.length()) a.getJSONObject(i).optJSONObject("auto")?.put("on", false)
-                a.toString()
-            }
+            "pine.vault" -> pineRestored(text)
             else -> return@runCatching bytes
         }
         out.toByteArray(Charsets.UTF_8)

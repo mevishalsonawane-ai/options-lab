@@ -619,7 +619,9 @@ object IraHub {
         val item = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, r.name, r.script))
         com.optionslab.app.data.PineScripts.setAuto(item.id, com.optionslab.app.data.PineScripts.Auto(
             on = false, symbol = r.market.name, interval = interval, lots = 1, shortWith = "put",
-            // Jarvis's own strategies carry the profit lock (on by default; Boss can switch it off in Research → Pine).
+            // Boss's 06 Oct rule: every Pine strategy, Jarvis's included, has a stop-loss, a target and the profit lock
+            // (30 / 60 points to start; PineScripts.protect keeps them on whatever is written).
+            stopPts = com.optionslab.ira.PineProtection.STOP, targetPts = com.optionslab.ira.PineProtection.TARGET,
             profitLock = true, byJarvis = true))
         val armed = com.optionslab.app.data.PineAuto.arm(item.id, on = true, pinConfirmed = false)
         val text = if (armed == "ok") "Added ${r.name} as an arm and switched it on: on paper it trades 1 lot; in Live it waits for your PIN in Research → Pine. " +

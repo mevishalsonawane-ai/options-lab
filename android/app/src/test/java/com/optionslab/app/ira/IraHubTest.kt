@@ -86,6 +86,8 @@ class IraHubTest : RobolectricTest() {
         val item = com.optionslab.app.data.PineScripts.items.value.single { it.name == p.result.name }
         assertTrue(item.auto.on); assertEquals("BANKNIFTY", item.auto.symbol); assertEquals("15m", item.auto.interval); assertEquals(1, item.auto.lots)
         assertTrue("Jarvis's strategies carry the profit lock", item.auto.profitLock && item.auto.byJarvis)
+        // Boss's 06 Oct rule: a stop-loss and a target on every Pine strategy, Jarvis's too.
+        assertEquals(30.0, item.auto.stopPts, 0.0); assertEquals(60.0, item.auto.targetPts, 0.0)
         assertEquals(p.result.script, item.code)
         assertEquals(IraHub.Proposal.APPROVED, IraHub.state.value.proposals.single().status)
         assertEquals("Already approved.", IraHub.approve(p.id))
@@ -700,6 +702,12 @@ class IraHubTest : RobolectricTest() {
         waitFor("the refusal") { IraHub.state.value.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra } + 1).any { it.fromIra && it.text.contains("only in Settings") } } }
         assertTrue(IraHub.state.value.pending.isEmpty())
         com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxLots = before.guardMaxLots))
+    }
+
+    @Test fun switchingAPineProfitLockOffIsPolitelyRefused() = runBlocking {
+        IraHub.ask("switch off profit lock for ema crossover")
+        waitFor("the refusal") { IraHub.state.value.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra } + 1).any { it.fromIra && it.text.contains("06 Oct rule") } } }
+        assertTrue("nothing to confirm", IraHub.state.value.pending.isEmpty())
     }
 
     @Test fun aChangeIsLoggedAndUndone() = runBlocking {

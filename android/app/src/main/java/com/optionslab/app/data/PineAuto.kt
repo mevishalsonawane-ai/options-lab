@@ -222,7 +222,17 @@ object PineAuto {
         save(b); publish(b)
     }
 
-    suspend fun load() = lock.withLock { book(); Unit }
+    suspend fun load() = lock.withLock { val b = book(); if (ruleNotes(b)) save(b); Unit }
+
+    /**
+     * The lines Boss's 06 Oct rule left when it protected an armed script on load ("Pine 'EMA': stop-loss 30 and target 60
+     * added, profit lock on — Boss's 06 Oct rule"), written to its log once. True when any was.
+     */
+    private fun ruleNotes(b: Book): Boolean {
+        val notes = PineScripts.takeRuleNotes()
+        notes.forEach { (id, text) -> note(b, id, text) }
+        return notes.isNotEmpty()
+    }
 
     /**
      * Switch a script's auto-trading on or off. Off sells what it holds. [pinConfirmed]
@@ -230,6 +240,8 @@ object PineAuto {
      */
     suspend fun arm(id: Long, on: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val item = PineScripts.get(id) ?: return@withLock "not found"
+        // Boss's 06 Oct rule: a script that places orders switches on only with a stop-loss and a target.
+        if (on) com.optionslab.ira.PineProtection.armRefusal(item.auto.mode, item.auto.stopPts, item.auto.targetPts)?.let { return@withLock it }
         val b = book()
         b.winding.remove(id)
         if (on) {
@@ -252,6 +264,7 @@ object PineAuto {
         // A restore not yet disarmed: every script counts as switched off (what it holds is still sold).
         val disarm = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         val b = book()
+        if (ruleNotes(b)) save(b)
         // The one-time switch-off of duplicate scripts (Boss's 06 Oct diagnostics), before anything trades.
         if (!disarm && dedupe(b)) save(b)
         val all = PineScripts.items.value
@@ -311,7 +324,9 @@ object PineAuto {
         }
         val a = item.auto
         val today = todayIst().toString()
-        // The held option's own stop-loss, target, profit lock and the script's daily loss limit: checked every pass.
+        // The held option's own stop-loss, target, profit lock and the script's daily loss limit: checked every pass, on every
+        // Pine trade (paper and live), on top of whatever exits the script itself has (strategy.exit or none). The stop,
+        // target and lock are compulsory (Boss's 06 Oct rule, PineScripts.protect), so they are always there.
         // The profit lock only ever sells sooner: the higher of the target ladder (on the target, else twice the stop) and
         // the percentage trail on the gain (2026-10-06: every script, no stop or target needed), read from the best price
         // seen BEFORE this look, as the ORB arms do; the stop, 15:15 and the day's stop above come first.

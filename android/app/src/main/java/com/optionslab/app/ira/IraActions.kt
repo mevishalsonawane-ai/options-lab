@@ -368,7 +368,9 @@ internal object IraActions {
                 }
             }
             // The app's limits: said back old -> new and confirmed; security settings never change by voice.
-            Command.Kind.SET_REFUSED -> "Boss, the PIN, fingerprint, real orders, one-tap orders and the lock change only in Settings, never through me." to null
+            // Boss's 06 Oct rule: a Pine strategy's stop-loss, target and profit lock never go off.
+            Command.Kind.SET_REFUSED -> if (c.target == com.optionslab.ira.PineProtection.REFUSED_TARGET) com.optionslab.ira.PineProtection.JARVIS_REFUSAL to null
+                else "Boss, the PIN, fingerprint, real orders, one-tap orders and the lock change only in Settings, never through me." to null
             Command.Kind.SET_LIMIT -> {
                 val key = c.target?.let { runCatching { SettingsTalk.Key.valueOf(it) }.getOrNull() } ?: return "I could not tell which setting." to null
                 val v = c.level ?: return "Tell me the new value for ${key.label}." to null

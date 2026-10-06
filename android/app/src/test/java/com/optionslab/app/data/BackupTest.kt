@@ -113,6 +113,30 @@ class BackupTest : RobolectricTest() {
         assertEquals(0, orb.getJSONObject("auto").length())
         val pine = JSONArray(String(Vault.readFile(pineFile())!!))
         assertFalse(pine.getJSONObject(0).getJSONObject("auto").getBoolean("on"))
+        // Boss's 06 Oct rule: the backup's script had no stop or target: restored with 30 / 60 and the lock on.
+        assertEquals(30.0, pine.getJSONObject(0).getJSONObject("auto").getDouble("stopPts"), 0.0)
+        assertEquals(60.0, pine.getJSONObject(0).getJSONObject("auto").getDouble("targetPts"), 0.0)
+        assertTrue(pine.getJSONObject(0).getJSONObject("auto").getBoolean("profitLock"))
+    }
+
+    @Test fun aRestoreNeverBringsBackAPineScriptWithoutItsStopTargetOrLock() {
+        val text = JSONArray()
+            .put(JSONObject().put("id", 1).put("name", "Bare").put("code", "x")
+                .put("auto", JSONObject().put("on", true).put("stopPts", 0.0).put("targetPts", 0.0).put("profitLock", false).put("profitLockChosen", true)))
+            .put(JSONObject().put("id", 2).put("name", "Narrow").put("code", "x")
+                .put("auto", JSONObject().put("stopPts", 12.0).put("targetPts", 90.0)))
+            .put(JSONObject().put("id", 3).put("name", "No auto").put("code", "x"))
+            .toString()
+        val out = JSONArray(Backup.pineRestored(text))
+        val bare = out.getJSONObject(0).getJSONObject("auto")
+        assertFalse(bare.getBoolean("on"))
+        assertEquals(30.0, bare.getDouble("stopPts"), 0.0); assertEquals(60.0, bare.getDouble("targetPts"), 0.0); assertTrue(bare.getBoolean("profitLock"))
+        val narrow = out.getJSONObject(1).getJSONObject("auto")
+        assertEquals("a nonzero stop is kept", 12.0, narrow.getDouble("stopPts"), 0.0); assertEquals(90.0, narrow.getDouble("targetPts"), 0.0)
+        assertEquals(30.0, out.getJSONObject(2).getJSONObject("auto").getDouble("stopPts"), 0.0)
+        // And read back as the app reads it.
+        val items = PineScripts.parse(out.toString())
+        assertTrue(items.all { it.auto.stopPts > 0 && it.auto.targetPts > 0 && it.auto.profitLock && !it.auto.on })
     }
 
     @Test fun aCraftedFileCannotSwitchOnLiveTradingOrLoosenTheGuard() {

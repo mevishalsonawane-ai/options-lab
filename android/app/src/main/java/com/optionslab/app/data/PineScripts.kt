@@ -32,10 +32,13 @@ object PineScripts {
         val shortWith: String = "put",
         /** "trade" places orders; "alert" only notifies on each signal change. */
         val mode: String = "trade",
-        /** Sell the option when it falls this many points below its buy price (0 = none). */
-        val stopPts: Double = 0.0,
-        /** Sell the option when it rises this many points above its buy price (0 = none). */
-        val targetPts: Double = 0.0,
+        /**
+         * Sell the option when it falls this many points below its buy price. Compulsory (Boss's 06 Oct rule,
+         * [com.optionslab.ira.PineProtection]): 30 to start, never 0 - a 0 is never saved ([protect]).
+         */
+        val stopPts: Double = com.optionslab.ira.PineProtection.STOP,
+        /** Sell the option when it rises this many points above its buy price. Compulsory as [stopPts]: 60 to start. */
+        val targetPts: Double = com.optionslab.ira.PineProtection.TARGET,
         /** Sell and stop for the day once this script has lost this many rupees today (0 = none). */
         val maxDayLoss: Double = 0.0,
         /**
@@ -44,16 +47,26 @@ object PineScripts {
          * none, twice [stopPts]; with neither there is no ladder. Beside it the percentage trail on the gain ([trail]),
          * which needs no stop or target; the higher of the two levels counts. It only ever sells sooner, never buys or
          * widens a stop. On for every script, the owner's own included (2026-10-06: "my profit went from 10 percent to
-         * 2"); he can switch it off per script ([profitLockChosen], and the choice is kept: see [parse]).
+         * 2"), and compulsory since Boss's 06 Oct rule: it can no longer be switched off ([protect] turns it on).
          */
         val profitLock: Boolean = true,
         /** Written by Jarvis's Strategy Lab and armed on the owner's approval (set by IraHub when it arms one). */
         val byJarvis: Boolean = false,
-        /** The owner set [profitLock] himself on the Pine screen (after 2026-10-06): his choice is kept as it is. */
+        /** The owner once switched [profitLock] himself on the Pine screen: kept for older saves, no longer counts (the lock is always on). */
         val profitLockChosen: Boolean = false,
         /** The profit lock's percentage trail (start % and keep %), the owner's numbers for this script. */
         val trail: com.optionslab.engine.orb.ProfitLock.Trail = com.optionslab.engine.orb.ProfitLock.Trail(),
     )
+
+    /**
+     * [a] under Boss's 06 Oct rule ([com.optionslab.ira.PineProtection]): a stop and a target above 0 (a 0 or an unusable
+     * number keeps [before]'s, else 30 / 60) and the profit lock on. A nonzero stop is never changed.
+     */
+    fun protect(a: Auto, before: Auto? = null): Auto {
+        val e = com.optionslab.ira.PineProtection.Exits.of(a.stopPts, a.targetPts, a.profitLock, before?.stopPts, before?.targetPts)
+        return if (e.stopPts == a.stopPts && e.targetPts == a.targetPts && a.profitLock) a
+            else a.copy(stopPts = e.stopPts, targetPts = e.targetPts, profitLock = true)
+    }
 
     data class Item(
         val id: Long, val name: String, val code: String, val onChart: Boolean = false,
@@ -77,43 +90,73 @@ object PineScripts {
 
     @Synchronized private fun ensure() {
         if (loaded) return
-        _items.value = load(); loaded = true
+        val (list, notes) = load()
+        _items.value = list; loaded = true
+        // Boss's 06 Oct rule filled in a stop, a target or the lock: written back (so it is said once) and told in the log.
+        if (notes.isNotEmpty() || needsRewrite) runCatching { save(list) }
+        needsRewrite = false
+        synchronized(ruleNotes) { ruleNotes += notes }
     }
 
-    private fun load(): List<Item> = runCatching {
-        parse(String(Vault.readFileSteady(file) ?: return emptyList(), Charsets.UTF_8))
-    }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList() }
+    /** The saved file held a script without a stop, a target or the lock (rewritten once read). */
+    @Volatile private var needsRewrite = false
+
+    /** Armed scripts the rule protected on load: (script, the line for its activity log), taken by [PineAuto] once. */
+    private val ruleNotes = ArrayList<Pair<Long, String>>()
+
+    /** The lines [ensure] left for the auto-trader's log (each given once). */
+    fun takeRuleNotes(): List<Pair<Long, String>> = synchronized(ruleNotes) { ruleNotes.toList().also { ruleNotes.clear() } }
+
+    private fun load(): Pair<List<Item>, List<Pair<Long, String>>> = runCatching {
+        val r = parseNoting(String(Vault.readFileSteady(file) ?: return emptyList<Item>() to emptyList<Pair<Long, String>>(), Charsets.UTF_8))
+        needsRewrite = r.third
+        r.first to r.second
+    }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList<Item>() to emptyList<Pair<Long, String>>() }
 
     /**
-     * The saved scripts from the vault's text. The profit lock is ON for every script (2026-10-06, the owner's rule after a
-     * +10% that fell to +2%): a saved "profitLock" counts only with "profitLockChosen" (the owner switched it himself on
-     * the Pine screen since then); an earlier save of false was the old default written for his own scripts without a
-     * stop or target, not his choice, so it is turned on. The trail's numbers ("trail": {"be", "steps": [[start, keep]]})
+     * The saved scripts from the vault's text. Boss's 06 Oct rule ([protect]): every script has a stop-loss and a target
+     * (a saved 0 or none becomes 30 / 60; a nonzero stop is kept as it is) and the profit lock ON - a saved false, even
+     * one he chose ("profitLockChosen"), no longer counts. An armed script stays armed, now protected. The trail's numbers ("trail": {"be", "steps": [[start, keep]]})
      * are cleaned ([com.optionslab.engine.orb.ProfitLock.Trail.clean]); none saved: the defaults.
      * A save from before [Auto.byJarvis] is known as Jarvis's by what the Strategy
      * Lab writes into every script it makes: its first comment ("// Written by Jarvis from the ... pattern") or its
      * name ("Jarvis: <pattern> <market> <chart>", StrategyLab.name).
      */
-    internal fun parse(text: String): List<Item> {
+    internal fun parse(text: String): List<Item> = parseNoting(text).first
+
+    /**
+     * [parse], with the activity-log lines for armed scripts the rule protected (once each: the file is rewritten) and
+     * whether anything was changed at all.
+     */
+    internal fun parseNoting(text: String): Triple<List<Item>, List<Pair<Long, String>>, Boolean> {
         val a = JSONArray(text)
-        return (0 until a.length()).map { i ->
+        val notes = ArrayList<Pair<Long, String>>()
+        var changed = false
+        val list = (0 until a.length()).map { i ->
             val o = a.getJSONObject(i)
             val ins = o.optJSONObject("inputs")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } } ?: emptyMap()
             val au = o.optJSONObject("auto")?.let { x ->
                 val jarvis = if (x.has("byJarvis")) x.optBoolean("byJarvis") else jarvisWrote(o.getString("name"), o.getString("code"))
-                val stop = x.optDouble("stopPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0
-                val target = x.optDouble("targetPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0
+                val e = com.optionslab.ira.PineProtection.normalise(x.optDouble("stopPts", 0.0), x.optDouble("targetPts", 0.0),
+                    x.optBoolean("profitLock", true))
+                val stop = e.stopPts
+                val target = e.targetPts
                 val chosen = x.optBoolean("profitLockChosen")
+                if (e.stopAdded || e.targetAdded || e.lockForced) {
+                    changed = true
+                    if (x.optBoolean("on")) com.optionslab.ira.PineProtection.addedNote(o.getString("name"), e)?.let { notes += o.getLong("id") to it }
+                }
                 Auto(x.optBoolean("on"), x.optString("symbol", "BANKNIFTY"), x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
                     x.optString("buy", "strategy"), x.optString("sell", "strategy"), x.optBoolean("squareOff", true),
                     x.optString("shortWith", "put"), x.optString("mode", "trade").takeIf { it == "alert" } ?: "trade",
                     stop, target,
                     x.optDouble("maxDayLoss", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
-                    profitLock = if (chosen) x.optBoolean("profitLock", true) else true, byJarvis = jarvis,
+                    profitLock = true, byJarvis = jarvis,
                     profitLockChosen = chosen, trail = trailOf(x.optJSONObject("trail")))
             } ?: Auto()
             Item(o.getLong("id"), o.getString("name"), o.getString("code"), o.optBoolean("onChart"), ins, au, o.optLong("updated"))
         }
+        return Triple(list, notes, changed)
     }
 
     @Synchronized private fun save(list: List<Item>) {
@@ -163,7 +206,8 @@ object PineScripts {
      * Save (a new script when [item] has id 0); returns the saved script. The auto-trade
      * settings are never taken from [item]: a screen holding an older copy must not switch
      * auto-trading back on after the kill switch or a restore turned it off. Only
-     * [setAuto] changes them, and a new script starts with auto-trade off.
+     * [setAuto] changes them, and a new script starts with auto-trade off. Whatever the path (the Pine screen, an import,
+     * a template, Jarvis's Strategy Lab), what is written has a stop, a target and the profit lock ([protect]).
      */
     @Synchronized fun put(item: Item): Item = write(item, keepAuto = true)
 
@@ -172,8 +216,8 @@ object PineScripts {
         val list = _items.value.toMutableList()
         val drawn = get(item.id)
         val saved = if (item.id == 0L || drawn == null) item.copy(id = if (item.id == 0L) (list.maxOfOrNull { it.id } ?: 0) + 1 else item.id,
-                auto = if (keepAuto) item.auto.copy(on = false) else item.auto, updated = System.currentTimeMillis())
-            else item.copy(auto = if (keepAuto) drawn.auto else item.auto, updated = System.currentTimeMillis())
+                auto = protect(if (keepAuto) item.auto.copy(on = false) else item.auto), updated = System.currentTimeMillis())
+            else item.copy(auto = if (keepAuto) protect(drawn.auto) else protect(item.auto, drawn.auto), updated = System.currentTimeMillis())
         val i = list.indexOfFirst { it.id == saved.id }
         if (i >= 0) list[i] = saved else list += saved
         save(list)

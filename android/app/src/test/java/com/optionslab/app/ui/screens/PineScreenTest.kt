@@ -332,6 +332,29 @@ class PineScreenTest {
         compose.pineWaitFor("Auto-trading")
     }
 
+    @Test fun theStopAndTargetAreRequiredAndTheProfitLockIsAlwaysOn() {
+        // Boss's 06 Oct rule: no profit-lock switch, a note in its place; a stop or target cleared is never saved.
+        saved(auto = PineScripts.Auto(buy = "Buy", sell = "Sell"))
+        page()
+        open("Level")
+        compose.pineTap("Auto-trade")
+        compose.pineWaitFor("Stop-loss and target are required")
+        assertTrue(compose.pineShown("always on (Boss's rule)"))
+        assertTrue("no profit-lock switch", compose.onAllNodes(isToggleable() and androidx.compose.ui.test.hasContentDescription("Profit lock"))
+            .fetchSemanticsNodes().isEmpty())
+        assertFalse(compose.pineShown("0 = off"))
+        val a = PineScripts.items.value.single().auto
+        assertEquals(30.0, a.stopPts, 0.0); assertEquals(60.0, a.targetPts, 0.0); assertTrue(a.profitLock)
+        compose.onAllNodes(hasText("Stop-loss (pts)")).onFirst().performTextReplacement("")
+        compose.pineWaitFor("Required")
+        compose.onAllNodes(hasText("Target (pts)")).onFirst().performTextReplacement("0")
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitForIdle(); Thread.sleep(300); compose.waitForIdle()
+        val after = PineScripts.items.value.single().auto
+        assertEquals("a cleared stop is not saved", 30.0, after.stopPts, 0.0)
+        assertEquals("a zero target is not saved", 60.0, after.targetPts, 0.0)
+    }
+
     @Test fun protectionSettingsTypedAreSaved() {
         saved(auto = PineScripts.Auto(buy = "Buy", sell = "Sell"))
         page()

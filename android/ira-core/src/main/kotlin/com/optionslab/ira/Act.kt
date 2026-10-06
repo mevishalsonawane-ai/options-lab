@@ -246,6 +246,8 @@ object Commands {
         rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_WEEKLY, level = m.groupValues[1].toDouble())
         }
+        // Boss's 06 Oct rule: a Pine strategy's stop-loss, target and profit lock never go off (refused, [PineProtection]).
+        if (PineProtection.breaksRule(s)) return Command(Command.Kind.SET_REFUSED, target = PineProtection.REFUSED_TARGET)
         // The app's limits ("set max lots to 3"); never the PIN, real orders or the lock.
         if (SettingsTalk.forbidden(s)) return Command(Command.Kind.SET_REFUSED)
         if (!rx(" (your|jarvis s) | jarvis (own )?(trades? )?(daily )?(loss limit|risk) ").containsMatchIn(t)) SettingsTalk.parse(s)?.let { return it }
