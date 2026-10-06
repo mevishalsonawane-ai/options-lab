@@ -166,6 +166,12 @@ fun ComposeTestRule.reveal(text: String, substring: Boolean = false) {
 fun ComposeTestRule.switchFor(title: String): SemanticsNodeInteraction {
     reveal(title)
     val t = onAllNodesWithText(title, useUnmergedTree = true).fetchSemanticsNodes().first()
+    // A row that is itself the switch (ToggleRow): the toggleable holding the title, found from the same fetch. Matching
+    // by position took a second fetch, whose idle sync could apply a late layout change in between (the page's device
+    // check lands from IO and grows the card above): the title's old line then fell on another row's switch.
+    generateSequence(t.parent) { it.parent }.firstOrNull { isToggleable().matches(it) }?.let { row ->
+        return onNode(SemanticsMatcher("node ${row.id}") { it.id == row.id }, useUnmergedTree = true)
+    }
     val y = t.boundsInRoot.center.y
     val all = onAllNodes(isToggleable(), useUnmergedTree = true).fetchSemanticsNodes()
     // A row that is itself the switch holds its title; otherwise the switch nearest the title's line.
