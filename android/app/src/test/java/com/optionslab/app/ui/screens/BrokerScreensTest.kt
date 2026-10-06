@@ -551,7 +551,13 @@ class BrokerScreensTest {
         // An earlier test's form writes its own draft as it closes (off the main thread): let that land first, so it
         // cannot overwrite the draft this test leaves.
         BrokerArea.settle(800)
-        SecurePrefs.put("draft.kite.key", "draftkey1")
+        // That write runs on its own thread and can land late on a slow runner: write ours until it has stayed put
+        // through a quiet half second, so the form below reads this test's draft and no other.
+        repeat(10) {
+            SecurePrefs.put("draft.kite.key", "draftkey1")
+            BrokerArea.settle(500)
+            if (SecurePrefs.getString("draft.kite.key") == "draftkey1") return@repeat
+        }
         until("the draft kept") { SecurePrefs.getString("draft.kite.key") == "draftkey1" }
         val m = model()
         show { CredentialsForm(m) {} }
