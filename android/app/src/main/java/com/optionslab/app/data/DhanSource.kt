@@ -249,6 +249,7 @@ object DhanSource {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { files.pruneChains(today) }
             val s = Summary(fetched, failed, 0, stopped)
             runCatching { SecurePrefs.put(K_LAST, s.say(today)) }
+            runCatching { NeuroGraphJob.afterData(ctx()) }
             return s
         } catch (e: TokenRefused) {
             runCatching { SecurePrefs.put(K_LAST, "${Market.today()}: stopped - Dhan refused the access token (renew it)") }
@@ -349,6 +350,7 @@ object DhanSource {
                     }
                     _importing.value = _importing.value.copy(stage = "Storing on this phone")
                     val r = imp.finish(progress = { pr -> _importing.value = _importing.value.copy(stage = pr.stage, files = pr.files) }, cancelled = stop)
+                    runCatching { NeuroGraphJob.afterData(ctx()) }
                     val size = runCatching { Files(root()).bytes() }.getOrDefault(0L)
                     r.say() + ". The Dhan data now takes " + "%.1f MB".format(java.util.Locale.ENGLISH, size / 1e6) + "."
                 } catch (_: com.optionslab.ira.dhan.PackImport.Cancelled) {
@@ -404,6 +406,7 @@ object DhanSource {
     fun deleteData(): Boolean {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
         app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
+        app?.let { runCatching { com.optionslab.app.work.NeuroWorker.stop(it); NeuroGraphJob.forget() } }
         return Files(root()).deleteAll()
     }
 

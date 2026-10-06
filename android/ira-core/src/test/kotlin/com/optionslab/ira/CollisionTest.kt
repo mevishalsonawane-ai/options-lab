@@ -131,6 +131,7 @@ class CollisionTest {
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
+        "NeuroAsk" to { q -> NeuroAsk.asked(q) != null },
         "DhanData" to { q -> DhanData.asked(q) != null },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
@@ -850,6 +851,11 @@ class CollisionTest {
         "how often does a bought atm call end the day worth more" to "AtmBuy", "how often does nifty's atm put double on expiry day" to "AtmBuy",
         "atm option double record for banknifty" to "AtmBuy", "atm call kitni baar double hota hai" to "AtmBuy",
         "how often do at the money options end the day worth more than at 9:30" to "AtmBuy", "how many sessions does the at the money call double" to "AtmBuy",
+        // ---- NeuroAsk: the NeuroGraph learned from the Dhan data (the graph named, or learning from the data asked) ----
+        "how big is the neurograph" to "NeuroAsk", "zero to hero kab hota hai graph ke hisaab se" to "NeuroAsk",
+        "what does the graph know about reliance" to "NeuroAsk", "what have you learned from the dhan data" to "NeuroAsk",
+        "dhan data se kya seekha" to "NeuroAsk", "is the graph built" to "NeuroAsk",
+        "what usually follows a vix spike according to the graph" to "NeuroAsk", "graph mein hdfcbank aur banknifty ka rishta" to "NeuroAsk",
         // ---- DhanData: what is kept from Dhan's market data on this phone, and an index's last expiry in it ----
         "what data do you have" to "DhanData", "how many stocks have you downloaded" to "DhanData",
         "how did nifty do on its last expiry per dhan" to "DhanData", "dhan ka data kitna hai" to "DhanData", "which data do you have" to "DhanData",
@@ -1390,7 +1396,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "DhanData", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "NeuroAsk", "DhanData", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -2674,6 +2680,11 @@ class CollisionTest {
             "how often does selling the atm option work out", "how often does gold's atm call double", "atm call price",
             "how often does the atm option double if i buy at 9:30"))
             assertTrue(audit.feature(s) != "AtmBuy", "$s: ${audit.feature(s)}")
+        // NeuroAsk takes the graph named or learning from the data asked: never a chart to show, Boss's own learnings, the
+        // market's own record asked plainly, or what the Dhan store keeps.
+        for (s in listOf("show me the nifty graph", "nifty ka graph dikhao", "what have you learned about me", "what moves banknifty most",
+            "what happens after a gap up", "what dhan data do you have", "how did banknifty move on last expiry in the dhan data"))
+            assertTrue(audit.feature(s) != "NeuroAsk", "$s: ${audit.feature(s)}")
         // DhanData reads only what Dhan's data holds, named: never the market's own expiry record, a thank-you, Jarvis's model or a change to the store.
         for (s in listOf("how did banknifty move on last expiry", "thank you dhanyavad", "is the model downloaded", "delete the dhan data",
             "what did nifty do on expiry day", "is my dhan token valid"))

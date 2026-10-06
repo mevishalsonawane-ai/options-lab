@@ -165,6 +165,20 @@ position, funds or margin call exists.
   read the downloaded days ahead of the bundled and harvested ones (paper
   research only). `ExpiredOptions.scan` (ira-core) reads every stored expired
   option as one series per (expiry, strike, side) with the index alongside.
+- **NeuroGraph** (ira-core `com.optionslab.ira.neuro`): after every finished
+  download or data-pack import the app learns a small graph from the stored
+  data in `files/neuro` - indices, companies (banks apart), sectors, expiries,
+  weekdays, times of day, regimes and events (gaps, big days, big ranges, VIX
+  moves, zero-to-hero / hero-to-zero options, OI build-up / unwind, IV spikes,
+  late straddle expansion) linked by CONSTITUENT_OF, IN_SECTOR, CORRELATES,
+  LEADS, PRECEDES, OCCURS_IN and CONTRIBUTES. Incremental (watermarks; only
+  new days are read, a full rebuild waits for the charger), streamed file by
+  file. Each learned link is fitted on the older 70% and is **proven** only if
+  it held on the newest 30% (Wilson / Fisher bounds); the rest stay
+  hypotheses. Jarvis answers "graph stats", "what does the graph say happens
+  after a gap down?", "graph se batao BankNifty ko kaun hilata hai", and the
+  Strategy Lab can read the proven links as paper-research hints. It never
+  arms, trades or changes risk.
 
 ## Protection and everyday tools
 

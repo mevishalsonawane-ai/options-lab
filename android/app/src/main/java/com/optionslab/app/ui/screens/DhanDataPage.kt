@@ -223,6 +223,7 @@ fun DhanDataPage(model: AppModel) {
                 }
             }
         }
+        item { NeuroGraphCard() }
         item {
             BrassButton("Delete downloaded data", Modifier.fillMaxWidth(), tone = p.oxblood, busy = deleting) { if (!deleting) confirmDelete = true }
         }
