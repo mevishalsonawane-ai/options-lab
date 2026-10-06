@@ -112,7 +112,7 @@ class TodayGlanceTest {
         text("Today: 1 trade, +₹1,240").assertIsDisplayed()
         text("Open BANKNIFTY26OCT52000PE · bought 210.50 · stop 180.00").assertIsDisplayed()
         text("on · 12 of 60").assertIsDisplayed()
-        text("No trade today").assertIsDisplayed()
+        text("Decides at 12:00").assertIsDisplayed()   // 11:05: Solo has not decided yet
         text("NIFTY expiry today · may trade 13:30-14:45").assertIsDisplayed()
         text("1 open").assertIsDisplayed()
         text("Liquidity 15+5: too few trades (<20) · 0 so far").assertIsDisplayed()
