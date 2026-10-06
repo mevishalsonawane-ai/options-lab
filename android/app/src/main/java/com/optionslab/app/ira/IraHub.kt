@@ -689,7 +689,7 @@ object IraHub {
         if (!com.optionslab.ira.NightNewsPace.due(local, nextOpen)) return
         val got = newsIfDue() ?: return
         _state.update { it.copy(news = got.first, newsAt = Instant.now(), newsMissing = got.second) }
-        val fresh = synchronized(newsSeen) { got.first.filter { newsSeen.add(it.link.ifBlank { it.title }) }.also { com.optionslab.ira.Upkeep.trimOldest(newsSeen, NEWS_SEEN_MAX) } }
+        val fresh = synchronized(newsSeen) { got.first.filter { newsSeen.firstTime(it) } }
         newsPrimed = true
         val cut = now.minusSeconds(18 * 3600)
         fresh.filter { h -> h.at?.isAfter(cut) == true && com.optionslab.ira.NewsAnalyst.matters(h) }.take(6).forEach { h ->
@@ -699,15 +699,18 @@ object IraHub {
 
     @Volatile private var widgetKey: String? = null
 
-    /** Headlines already judged (link or title), the newest [NEWS_SEEN_MAX] only: the app can run for days. */
-    private val newsSeen = LinkedHashSet<String>()
+    /**
+     * Stories already judged, the newest [NEWS_SEEN_MAX] only (the app can run for days): the same link (tracking parts
+     * removed), or the same or nearly the same title from another site or a reworded update, is told once.
+     */
     private const val NEWS_SEEN_MAX = 3_000
+    private val newsSeen = com.optionslab.ira.NewsDedup(NEWS_SEEN_MAX)
     @Volatile private var newsPrimed = false
 
     /** New headlines that matter, told once (a pop-up and a line in the conversation); the first read only primes. */
     private suspend fun judgeNews(heads: List<Headline>) {
         val c = app ?: return
-        val fresh = synchronized(newsSeen) { heads.filter { newsSeen.add(it.link.ifBlank { it.title }) }.also { com.optionslab.ira.Upkeep.trimOldest(newsSeen, NEWS_SEEN_MAX) } }
+        val fresh = synchronized(newsSeen) { heads.filter { newsSeen.firstTime(it) } }
         if (!newsPrimed) { newsPrimed = true; return }
         val recent = fresh.filter { h -> h.at?.isAfter(Instant.now().minusSeconds(30 * 60)) != false }.filter { com.optionslab.ira.NewsAnalyst.matters(it) }.take(3)
         if (recent.isEmpty()) return
