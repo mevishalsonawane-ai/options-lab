@@ -1616,7 +1616,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.BigMoveRisk.asked(q) ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.DayScore.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
@@ -3415,10 +3415,28 @@ object IraHub {
 
     /**
      * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * BigMoveRisk, Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
+        // "Is a big move likely now?", "abhi kitna risk hai", "volatile hai kya" ([com.optionslab.ira.BigMoveRisk]): how likely a
+        // big 5-minute candle is in the next minutes for the index asked (Nifty when none is), from the real-data study's
+        // signals - the time of day, a big candle just now, volatility and today's range against recent days, a falling
+        // market, India VIX since the open - on the phone's own 1-minute candles ended before now. Its level and rough
+        // multiple of the usual chance, the top reasons, and always that the direction can't be told from it. Market data
+        // only (fine on a locked phone); information only, never a trade suggestion; nothing acts. Not in IraGoldAlgo.
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.BigMoveRisk.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.BigMoveRisk.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.BigMoveRisk.NOT_HERE
+                else com.optionslab.ira.BigMoveRisk.answer(mk, histories[mk]?.bars.orEmpty(), histories[IraMarket.VIX]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.now().toLocalDateTime(), com.optionslab.app.data.Market.isTradingDay(com.optionslab.app.data.Market.today()))
+            }.getOrElse { "I could not read the big-move risk just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
         // "Any contradictions?", "do the facts agree?", "what's pulling different ways?", "am I going against my own rules?"
         // ([com.optionslab.ira.Consistency]): market facts pointing different ways, his own numbers disagreeing (and which he
         // goes by), and - on an unlocked phone only - Boss's words against today's trades. Words only, never advice.

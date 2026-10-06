@@ -132,6 +132,7 @@ class CollisionTest {
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "MarketRecord" to { q -> MarketRecord.asked(q) },
+        "BigMoveRisk" to { q -> BigMoveRisk.asked(q) },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
         "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
@@ -858,6 +859,12 @@ class CollisionTest {
         "how much market data have we recorded" to "MarketRecord", "is the market recorder running" to "MarketRecord",
         "market recorder status" to "MarketRecord", "how many days of market data have you recorded" to "MarketRecord",
         "kitna market data record hua hai" to "MarketRecord",
+        // ---- BigMoveRisk: how likely a big 5-minute candle is now (level, rough multiple, reasons; never the direction) ----
+        "is a big move likely now" to "BigMoveRisk", "is a big move coming" to "BigMoveRisk", "any chance of a big move right now" to "BigMoveRisk",
+        "big move aa sakta hai kya" to "BigMoveRisk", "kya abhi bada move aayega" to "BigMoveRisk", "bada move aane wala hai kya" to "BigMoveRisk",
+        "abhi kitna risk hai" to "BigMoveRisk", "finnifty mein abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
+        "banknifty abhi volatile hai kya" to "BigMoveRisk", "is nifty volatile now" to "BigMoveRisk", "is the market volatile right now" to "BigMoveRisk",
+        "how risky is the market now" to "BigMoveRisk", "market risky hai kya abhi" to "BigMoveRisk", "is a sharp move likely in sensex" to "BigMoveRisk",
         "how often does an otm option 100 points away end the day in the money" to "OtmReach",
         "how often does a call two strikes out of the money finish in the money" to "OtmReach", "how often does nifty's otm put double" to "OtmReach",
         "otm option record for banknifty" to "OtmReach", "100 point door ka otm call kitni baar itm hota hai" to "OtmReach",
@@ -1395,7 +1402,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "BigMoveRisk", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -2684,6 +2691,13 @@ class CollisionTest {
             "is my voice being recorded", "what was the record high of nifty", "is your data fresh", "how old is your data",
             "is the call recording on"))
             assertTrue(audit.feature(s) != "MarketRecord", "$s: ${audit.feature(s)}")
+        // BigMoveRisk only reads how likely a big candle is now: never Boss's own risk or limits, a trade's risk, a definition,
+        // the big-candle record of past days, a direction, the expected range or an alert.
+        for (s in listOf("how much risk am i taking", "what are my risk limits", "what is volatility", "is my position risky",
+            "how often does a big candle follow through", "will nifty go up or down", "how much can nifty move today",
+            "big candle record for banknifty", "is it risky to trade now", "how volatile was nifty yesterday", "set an alert for a big move",
+            "why did nifty make a big move"))
+            assertTrue(audit.feature(s) != "BigMoveRisk", "$s: ${audit.feature(s)}")
         // OtmReach stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
         // question, a definition, a conditional, the at-the-money option, gold, VIX or the quote itself.
         for (s in listOf("will the otm call end in the money today", "should i hold the otm call", "how often does my otm call double",
