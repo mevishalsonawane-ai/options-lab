@@ -107,7 +107,15 @@ object Conditional {
         "| (?:since|till|until|from|say|tell me|know|ask) when(?= )| as soon as possible(?= )| asap(?= )")
     /** A condition: Hindi or English. */
     private val COND = rx(" (?:agar|agr|yadi|if|only if|jab|jab bhi|jab tak|jaise hi|when|whenever|as soon as|in case|the moment|" +
-        "once (?:nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|vix|it|its|the|my|price|market|loss|profit|mtm|we|i)) ")
+        "once (?:nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|vix|it|its|the|my|price|market|loss|profit|mtm|we|i)) " +
+        // Hinglish without "agar" (understanding round 30): "nifty 24000 aaye to exit kar dena", "loss 5000 ho to sab band kar do",
+        // "profit 2000 hua to book kar lena", "banknifty 52000 tod de to put kharid lo" - a condition's verb, then "to"/"tab"...
+        "| (?:aaye|aye|aae|aa jaye|aa jaaye|aa gaya|aa gayi|jaye|jaaye|ho|ho jaye|ho jaaye|hua|hui|ho gaya|ho gayi|kare|kar le|kar jaye|" +
+        "gire|gira|chadhe|chadha|badhe|tode|toda|tod de|tod deta|toote|tute|toot jaye|tut jaye|pahunche|pahuche|pohche|pohonche|lage|lag jaye|" +
+        "chhue|chhu le|bane|ban jaye|jata hai|jaata hai|jati hai|jaati hai|hota hai|hoti hai|(?<! theek | thik | thick | accha | acha | achha | sahi | ok | okay | haan | han | ha | ji )hai|hain) " +
+        "(?:to|toh|tab|tabhi|to phir|toh phir) " +
+        // ... or "-te hi" ("as soon as"): "nifty 24000 aate hi exit kar dena", "2000 profit hote hi book kar lo", "market khulte hi".
+        "| [a-z]{2,}t[ei] hi ")
     /** An action Jarvis could otherwise take (or place) in the app. */
     private val ACT = rx(" (?:stop|halt|pause|disarm|exit|sell|buy|square off|squareoff|close|cancel|kill|kill switch|switch off|turn off|" +
         "book (?:profit|profits|it|my|the|kar|karo|kar do|kar lo)|band (?:kar|karo|kardo|kar do|kar dena|kar dijiye|kijiye|karna)|" +
@@ -123,6 +131,20 @@ object Conditional {
     private val ASKED = rx(" (?:what|whats|how|why|which|should|shall|would|could|can i|can we|do i|do we|does|did|is it|will i|will it|will my|will the|" +
         "kya|chahiye|kitna|kitne|kitni|kaun|kaunsa|konsa|kab|kyun|kyu|kyon|explain|suppose|imagine|scenario|hypothetically|matlab|mean|means|" +
         "kiya|kiye|liya|liye|becha|kharida|tha|thi|buy or sell|sell or buy|or not) ")
+    /**
+     * Boss supposing his own act ("if I buy 2 lots", "agar main exit karu", "when I sell my call"): a what-if about himself,
+     * never an instruction to Jarvis (understanding round 30). Said with a figure he wants ("if I buy 2 lots margin", "agar
+     * main call bechu to brokerage"), it is that question's; said alone it is still never acted on ([supposed]).
+     */
+    private val MINE = rx(" (?:agar|agr|yadi|if|when|jab) (?:i|main|mai|mein|hum|we)(?: (?:just|now|abhi|ab|today|aaj|only|sirf|also|bhi))? " +
+        "(?:stop|exit|sell|buy|square off|squareoff|close|cancel|book|band|nikal|nikalo|bech|kharid|khareed|kaat|hold|keep|take|add|enter|go|switch|turn)(?= )" +
+        "| (?:karu|karun|karoon|karein|karen|kharidu|kharidun|khareedu|bechu|bechun|bechoon|nikalu|nikaalu|kaatu|lu|loon|rakhu|rakhun|chhodu)(?= )")
+    /** A figure he may want about his own supposed act. */
+    private val FIGURE = rx(" (?:margin|margins|breakeven|break even|risk|charges|charge|brokerage|cost|costs|tax|taxes|payoff|premium|pnl|p l|p and l|mtm|" +
+        "loss|profit|nuksan|nuksaan|fayda|faida|munafa|paisa|paise|kharcha|max loss|max profit|greeks|delta|theta|lot size|capital|funds|money) ")
+    /** Told, not supposed: an action addressed to Jarvis beside his own ("agar main 5000 loss karu to kill switch on kar do"). */
+    private val TOLD = rx(" (?:kar do|kardo|kar dena|kar dijiye|karo|kar lo|kar lena|do na|bech do|becho|kharido|khareedo|nikalo|nikaalo|kaato|roko|hatao|" +
+        "kill switch|turn on|turn off|switch on|switch off|then (?:stop|exit|sell|buy|square off|close|cancel|book)|please (?:stop|exit|sell|buy|square off|close|cancel|book)) ")
     /** An alarm or a reminder: the app sets those itself, as before. */
     private val ALARM = rx(" (?:alert|alerts|alarm|alarms|notify|remind|reminder|tell me|let me know|ping me|warn me|wake me|batana|bata dena|yaad dila|yaad dilana) ")
 
@@ -134,12 +156,23 @@ object Conditional {
 
     private val kept = Kept<Boolean>(64)
 
+    /**
+     * Boss supposing his own act with a condition ("if I buy 2 lots", "agar main exit karu to margin"): never a command or an
+     * order ([Commands], [Ask]) whether it is [asked] or a question about a figure; Jarvis never acts on a what-if.
+     */
+    fun supposed(text: String): Boolean {
+        val t = IDIOMS.replace(words(text), " ")
+        return COND.containsMatchIn(t) && MINE.containsMatchIn(t)
+    }
+
     private fun fresh(text: String): Boolean {
         if (text.trim().endsWith("?")) return false
         var t = IDIOMS.replace(words(text), " ")
         if (!COND.containsMatchIn(t)) return false
         if (rx("^ (?:hey |ok |okay )?(?:jarvis )?(?:note|journal)(?= )").containsMatchIn(t)) return false
         if (ASKED.containsMatchIn(t) || ALARM.containsMatchIn(t)) return false
+        // His own act supposed, with a figure he wants about it ("if I buy 2 lots margin"): a question, never this one.
+        if (MINE.containsMatchIn(t) && FIGURE.containsMatchIn(t) && !TOLD.containsMatchIn(t)) return false
         for ((r, w) in NOT_ACT) t = r.replace(t, w)
         if (!ACT.containsMatchIn(t)) return false
         // A time alone ("close all when it's 3:15"): the timed request's ([Later]), never this.

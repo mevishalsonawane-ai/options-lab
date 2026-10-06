@@ -349,7 +349,7 @@ class CollisionTest {
         "what was the high today" to "Market", "meaning of theta" to "Glossary", "which alerts do you hold back" to "AlertSense",
         "how much did i lose today" to "Account:PNL", "how is my position doing" to "Account:EXPLAIN_POS",
         "what if nifty falls 100 points what happens to my put" to "Account:MOVE", "what's the worst position" to "Account:RANK",
-        "are my stops okay" to "Account:PROTECTIONS", "where was today's high" to "Market", "when did nifty make its high today" to "Market",
+        "are my stops okay" to "StopNoise", "where was today's high" to "Market", "when did nifty make its high today" to "Market",
         "what is the day high" to "Market", "nifty day low" to "Market", "when does the market open" to "OptionFacts",
         "how much time is left in the session" to "OptionFacts", "how much time till close" to "OptionFacts",
         "market kitne baje band hoga" to "OptionFacts", "when is the best time to trade" to "Account:TIMEOFDAY",

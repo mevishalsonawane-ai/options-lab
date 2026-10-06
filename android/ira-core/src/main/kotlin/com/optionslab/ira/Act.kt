@@ -135,7 +135,10 @@ object Commands {
         // An action said with a condition ("agar nifty 100 point gire to sab band kar do", "exit all if Nifty falls below 24000"):
         // Jarvis can't set one to wait, so it is never a command - neither done now nor read as an arm's garbled name
         // ([Conditional]; understanding round 29). The hub says so and suggests the app's own alarm, stop loss and limits.
-        if (Conditional.asked(said)) return null
+        // (Nor Boss supposing his own act, "if I square off now" / "agar main exit karu to margin": a what-if, round 30.)
+        if (Conditional.asked(said) || Conditional.supposed(said)) return null
+        // "Stop too close?", "SL too tight": his stops asked about, never a STOP of an arm called "too close" ([StopNoise], round 30).
+        if (StopNoise.asked(said)) return null
         val text = Hinglish.normalize(said)
         // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
         val t = " " + text.lowercase().replace("%", " percent ").replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\.(?!\\d)"), " ")

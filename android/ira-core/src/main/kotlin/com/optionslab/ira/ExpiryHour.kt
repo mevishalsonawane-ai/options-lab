@@ -94,6 +94,11 @@ object ExpiryHour {
     private val CALL = Regex(" (call|calls|ce) ")
     private val PUT = Regex(" (put|puts) ")
     private val DOUBLE = Regex(" (double|doubles|doubled|doubling|2x|two times|twice its|twice the|do guna|dugna|double hota|double hoti) ")
+    /** The words of the topic alone: the last hour, an expiry day, the at-the-money option, an index, and the joins. */
+    private val TOPIC = Regex("(?<= )(last hour|final hour|closing hour|last one hour|aakhri ghanta|aakhri ghante|akhri ghanta|akhri ghante|last ghanta|last ghante|" +
+        "expiry day|expiry days|expiry|expiries|expiring|atm|at the money|option|options|premium|premiums|call|calls|put|puts|ce|pe|" +
+        "nifty|bank nifty|banknifty|finnifty|fin nifty|sensex|index|of|on|the|in|an|a|for|at|during|day|din|ke|ka|ki|ko|mein|me|main|wale|wala|par|pe|" +
+        "jarvis|boss|please|record|stats)(?= )")
     /** Asked of the record. */
     private val HOW = Regex(" (how often|how many times|how many|how much|how does|how do|what happens|what usually happens|" +
         "usually|normally|typically|generally|tend to|tends to|historically|on average|median|behave|behaves|behaviour|behavior|" +
@@ -118,7 +123,10 @@ object ExpiryHour {
     private fun askedFresh(text: String): Q? {
         val t = norm(text)
         if (NOT.containsMatchIn(t)) return null
-        if (!LAST.containsMatchIn(t) || !EXPIRY.containsMatchIn(t) || !OPT.containsMatchIn(t) || !HOW.containsMatchIn(t)) return null
+        if (!LAST.containsMatchIn(t) || !EXPIRY.containsMatchIn(t) || !OPT.containsMatchIn(t)) return null
+        // The topic said alone ("expiry ke last hour mein premium", "ATM premium last hour expiry", understanding round 30)
+        // asks the record too; with any other words, only a question of it ([HOW]).
+        if (!HOW.containsMatchIn(t) && TOPIC.replace(t, " ").isNotBlank()) return null
         if (Market.mentioned(text).any { it == Market.GOLD || it == Market.VIX }) return null
         val c = CALL.containsMatchIn(t); val p = PUT.containsMatchIn(t)
         val right = when { c && !p -> Right.CE; p && !c -> Right.PE; else -> null }

@@ -145,7 +145,8 @@ object Ask {
         // is a question about the app.
         // A question ("Did I buy 2 lots of Nifty?") is never an order.
         // (Nor an order said with a condition, "agar nifty gire to 2 lot put kharido": Jarvis can't set one to wait, [Conditional].)
-        val placed = if (said.trim().endsWith("?") || Conditional.asked(said)) null else order(t0)
+        // ("If I buy 2 lots, margin?" supposes his own order, never places it - understanding round 30.)
+        val placed = if (said.trim().endsWith("?") || Conditional.asked(said) || Conditional.supposed(said)) null else order(t0)
         // "Where is BankNifty trading?" asks the price, not where something is in the app.
         val priceAsk = Market.mentioned(text).isNotEmpty() && rx("^ (where is|where s|wheres|where) ").containsMatchIn(t) &&
             !rx(" (my|mine|our|order|orders|position|positions|chain|page|tab|screen|see|find|do i|can i) ").containsMatchIn(t)

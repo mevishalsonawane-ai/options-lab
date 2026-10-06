@@ -123,7 +123,7 @@ object CheckTimes {
     private const val TAIL = "( please| boss| jarvis| now| again| from now on| for me| every day| each day)* $"
     private const val PNL = "(p l|pnl|p and l|profit and loss|mtm|m2m)"
     private const val MY = "(my |the )"
-    private const val ACCOUNT = "($MY$PNL|${MY}account|${MY}positions?|${MY}p l and positions|${MY}pnl and positions)"
+    private const val ACCOUNT = "($MY?$PNL|${MY}account|${MY}positions?|${MY}p l and positions|${MY}pnl and positions)"
     private const val AHEAD = "(ahead|in advance|before i ask|early|beforehand|ahead of time)"
     private const val READY = "(ready|prepared|loaded|warmed up|warm)"
     private const val HCHECK = "(check|dekh|dekhta|dekhte|check kar|check karta|check karte|poochta|puchta|poochte|puchte)"
@@ -134,7 +134,10 @@ object CheckTimes {
         LEAD + "(why|how) (is|was) $ACCOUNT (already |always )?$READY( so fast| so quickly| before i asked)?" + TAIL + "|" +
         LEAD + "(do|did|why do|why did) you (get|keep) $ACCOUNT $READY( for me)?( before i ask| in advance| ahead)?" + TAIL + "|" +
         LEAD + "(main |mai |me )?$PNL (kab|kitne baje) $HCHECK( karta hoon| karta hu| hoon| hu)?" + TAIL + "|" +
-        LEAD + "(main |mai |me )?(kab|kitne baje) $PNL $HCHECK( karta hoon| karta hu| hoon| hu)?" + TAIL)
+        LEAD + "(main |mai |me )?(kab|kitne baje) $PNL $HCHECK( karta hoon| karta hu| hoon| hu)?" + TAIL + "|" +
+        // Understanding round 30: "p&l kab dekhta hu main", "kab dekhta hoon pnl", "main kab check karta hoon apna p&l".
+        LEAD + "(main |mai |me )?(mera |apna )?$PNL (kab|kitne baje) $HCHECK( karta hoon| karta hu| hoon| hu)?( main| mai)?" + TAIL + "|" +
+        LEAD + "(main |mai |me )?(kab|kitne baje) $HCHECK( karta hoon| karta hu| hoon| hu)? (mera |apna )?$PNL( main| mai)?" + TAIL)
 
     /**
      * Only a clear undo: "stop getting my P&L ready", "stop reading my account ahead", "don't prepare my P&L in advance",

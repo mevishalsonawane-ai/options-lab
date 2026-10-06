@@ -52,6 +52,9 @@ object StopNoise {
     private const val SET = "((set|placed|kept|sitting) )?"
     private const val VERY = "(too |very |so |a bit |a little |bit |quite |really |way too |rather |overly )"
 
+    private const val OK = "(ok|okay|fine|alright|all right|right|good|sensible|safe|reasonable|correct|well placed)"
+    private const val OK_HI = "(sahi|sahee|theek|thik|thick|ok|okay|fine|barabar|sahi jagah|theek jagah)( jagah)?"
+
     private val ASK = rx(
         // "Is my stop too tight?", "are my stops too close?", "isn't my SL a bit tight?"
         " (is|are|isnt|arent) (my|our) (\\w+ ){0,3}?$STOP $SET$VERY?$TIGHT " +
@@ -66,7 +69,13 @@ object StopNoise {
         // Named: "my stop noise check", "check my stops against the noise" (a bare "stop ..." stays the command it reads as)
         "| (my|our) $STOP (noise|tightness|room) (check|record|read) | (check|compare) (my|our) $STOP (against|with|to) (the )?(normal |usual )?(noise|swings) " +
         // Hinglish: "mera stop bahut tight hai kya", "kya meri SL zyada paas hai", "mera sl tight to nahi"
-        "| (mera|meri|mere|apna|apni|apne) $STOP (bahut |bohot |bahot |zyada |jyada |kaafi |kafi |thoda |thodi |jada )?(tight|close|paas|pass|nazdeek|najdeek|kareeb|karib|chhota|chota)( (hai|he|h|hain|to nahi|toh nahi|nahi))? ")
+        "| (mera|meri|mere|apna|apni|apne) $STOP (bahut |bohot |bahot |zyada |jyada |kaafi |kafi |thoda |thodi |jada )?(tight|close|paas|pass|nazdeek|najdeek|kareeb|karib|chhota|chota)( (hai|he|h|hain|to nahi|toh nahi|nahi))? " +
+        // Whether it is right at all (understanding round 30): "is my SL ok", "are my stops fine", "mera stoploss sahi hai kya",
+        // "kya mera SL theek hai" - set against the same swings.
+        "| (is|are|isnt|arent) (my|our) (\\w+ ){0,3}?$STOP $SET($VERY)?$OK( (where it is|where they are|for now|for today|here))? $" +
+        "| (kya )?(mera|meri|mere|apna|apni|apne) $STOP (\\w+ )?$OK_HI( (hai|he|h|hain))?( (kya|na|naa))? $" +
+        // Said short: "stop too close?", "SL too tight", "my stops too tight?" (the "too" kept: a bare "stop close" stays the command).
+        "|^ (hey |ok |okay )?(jarvis )?(my |our |mera |meri )?$STOP $VERY$TIGHT( (boss|jarvis|hai|hai kya|kya))? $")
 
     /** Something else is meant: advice or an order, a bot's stop, gold, a definition, a past stop hit, or the worst case. */
     private val NOT = rx(" (should|shall|recommend|suggest|advise|advice|ideal|best|where to|where should|how far should|kahan rakhu|kaha rakhu|kahan lagau|" +

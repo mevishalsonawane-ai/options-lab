@@ -124,7 +124,8 @@ object Wake {
         val h = Hinglish.yesNo(text); val e = english(text)
         // A yes with a condition set ("haan, agar Nifty gire to", "yes if it falls", "agar nifty gire to sab band kar do"): unclear,
         // never a yes (understanding round 29, [Conditional]); a no word still says no.
-        return if (h == false || e == false) false else if (Conditional.hedged(text)) null else if (h == true || e == true) true else null
+        // Nor is a question about his stops with an "ok" in it ("is my SL ok", "mera sl theek hai kya": StopNoise's, round 30).
+        return if (h == false || e == false) false else if (Conditional.hedged(text) || StopNoise.asked(text)) null else if (h == true || e == true) true else null
     }
 
     private fun english(text: String): Boolean? {
