@@ -87,6 +87,8 @@ internal interface OrbActions {
 internal fun OrbRowsContent(
     view: OrbArms.View, live: Boolean, actions: OrbActions,
     reauth: @Composable (why: String?, onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+    /** A closed Liquidity 15+5 paper trade's replay (the detail's tap on it; [LiquidityReplayData] in the app). Reads only. */
+    replay: suspend (OrbArms.Position) -> com.optionslab.ira.LiquidityReplay.Replay? = { LiquidityReplayData.load(it) },
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
@@ -284,7 +286,7 @@ internal fun OrbRowsContent(
             dismissButton = { TextButton({ lotsConfirm = null }) { Text("Cancel") } },
         )
     }
-    if (detail) OrbDetail(view, onShadowOff = { actions.shadowOff(it) }) { detail = false }
+    if (detail) OrbDetail(view, onShadowOff = { actions.shadowOff(it) }, replay = replay) { detail = false }
 }
 
 /** "Lots: 1 · 2 · 3": the size chosen in bold; each figure a 48 dp target. */
@@ -322,8 +324,11 @@ private fun OrbChoice(title: String, detail: String, onClick: () -> Unit) {
 
 /** The day in full: strike, contracts, range, every trade of both arms, the evening replay and the pass rule. */
 @Composable
-private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClose: () -> Unit) {
+private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
+                      replay: suspend (OrbArms.Position) -> com.optionslab.ira.LiquidityReplay.Replay? = { null }, onClose: () -> Unit) {
     val p = LocalPalette.current
+    // A closed Liquidity 15+5 paper trade tapped: its replay over the detail (never in the GOLD build).
+    var replaying by remember { mutableStateOf<OrbArms.Position?>(null) }
     AlertDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
@@ -342,11 +347,16 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClo
                     Text(a.arm.label, style = head, modifier = Modifier.padding(top = 12.dp))
                     Text(OrbArms.describe(a.status), style = soft)
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)
+                    // Liquidity 15+5: a closed paper trade opens its replay (the chart around it, the result and its lesson).
+                    if (a.today.any { replayable(a, it) }) Text("Tap a closed trade to replay it.", style = soft)
                     a.today.forEach { t ->
                         val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs((t.grossPnl ?: 0.0) - t.charges)}"
                         // Liquidity 15+5's quantity said (its size can be 1-3 lots); the rupees are the trade's own at that quantity.
                         val qty = if (a.arm.liquidity) " ×${t.qty}" else ""
-                        Text("%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute), style = small)
+                        val line = "%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute)
+                        if (replayable(a, t)) Text(line, style = small.copy(color = p.verdigris),
+                            modifier = Modifier.heightIn(min = 48.dp).clickable(onClickLabel = "Replay this trade") { replaying = t }.padding(vertical = 4.dp))
+                        else Text(line, style = small)
                         // The Hero arm: the half sold at 5x, and the book (bid / ask / quantities, or the last price) at the signal and each exit.
                         t.soldAt?.takeIf { t.sold > 0 }?.let { s ->
                             Text(keepNumbersWhole("  ${t.sold} sold @ ${px(s)} at 5×" + (t.soldTime?.let { " (%02d:%02d)".format(it.hour, it.minute) } ?: "") +
@@ -399,7 +409,12 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClo
         },
         confirmButton = { TextButton(onClose) { Text("Close") } },
     )
+    replaying?.let { t -> LiquidityReplayDialog(t, replay) { replaying = null } }
 }
+
+/** A trade the detail can replay: a closed Liquidity 15+5 paper trade (never in the GOLD build). */
+private fun replayable(a: OrbArms.ArmView, t: OrbArms.Position): Boolean =
+    a.arm.liquidity && !t.open && !t.live && !com.optionslab.app.BuildConfig.GOLD
 
 /**
  * A retired arm's line under it in the Retired section: its one shadow's line, or with two or three the best record's
