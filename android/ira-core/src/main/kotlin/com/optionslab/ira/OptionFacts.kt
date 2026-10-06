@@ -21,19 +21,22 @@ object OptionFacts {
 
     fun asked(text: String): Asked? {
         val t = text.lowercase(Locale.ENGLISH).replace("'", " ")
+        // Voice, round 27: the option as the recognizer writes it ("bank nifty 52,000 p e", "niftee 25000 foot") read as
+        // meant - for the quote only; an order's words are still looked for in the words as heard ([Heard.option]).
+        val read = Heard.option(Heard.fix(t)).replace(rx("\\b(bank|fin)\\s+nifty\\b"), "$1nifty")
         // "When does the market open tomorrow / on Monday?" is the calendar's answer (MarketDays), not today's clock.
         val dayNamed = MarketDays.namesAnotherDay(text) ||
             rx("\\b(tomorrow|tmrw|kal|parso|monday|tuesday|wednesday|thursday|friday|saturday|sunday|somvar|mangalvar|budhvar|guruvar|shukravar|shanivar|ravivar)\\b").containsMatchIn(t)
         if (!dayNamed && rx("\\b(how long|how much time|time left|minutes left)\\b.*\\b(close|market|session|trading)\\b|\\bwhen does (the )?market close\\b|\\bmarket band hone (mein|me) kitna (time|samay)\\b|\\bkitna (time|samay) (bacha|baaki)\\b|\\bwhen (does|will) (the )?market (open|start)\\b|\\bmarket kab (khulega|khulta|open hoga)\\b|\\bmarket kitne baje (khulega|khulta|khulti|open hota|open hoga|shuru hota)\\b|\\bwhat time (does|will) (the )?market (open|close)\\b|\\bmarket (kitne baje|kab) band (hoga|hota|hogi)\\b").containsMatchIn(t))
             return Asked.TimeLeft
-        val m = Market.mentioned(text).firstOrNull { it in CHAIN }
+        val m = Market.mentioned(read).firstOrNull { it in CHAIN }
         if (!rx("\\b(buy|sell|order|place)\\b").containsMatchIn(t) &&
             rx("\\blot size\\b|\\bek lot (mein|me) kitne\\b|\\bone lot (is|has) how many\\b|\\bhow many (units|shares|quantity) in (a|one) lot\\b").containsMatchIn(t))
             return Asked.LotSize(m ?: Market.NIFTY)
         // An order's words are never a quote ("buy 2 lots Nifty 25000 CE" is the order review).
-        if (ORDER_WORDS.containsMatchIn(t)) return null
-        RIGHT.find(t)?.let { r ->
-            if (m == null || !QUOTE.containsMatchIn(t) && !rx("^\\s*\\S+\\s+\\d{4,6}\\s*(ce|pe|call|put)\\s*\\??\\s*$").containsMatchIn(t)) return null
+        if (ORDER_WORDS.containsMatchIn(t) || ORDER_WORDS.containsMatchIn(read)) return null
+        RIGHT.find(read)?.let { r ->
+            if (m == null || !QUOTE.containsMatchIn(read) && !rx("^\\s*\\S+\\s+\\d{4,6}\\s*(ce|pe|call|put)\\s*\\??\\s*$").containsMatchIn(read)) return null
             val right = if (r.groupValues[2].startsWith("c")) "CE" else "PE"
             return Asked.Quote(m, r.groupValues[1].toInt(), right)
         }

@@ -55,3 +55,58 @@ class MarketOpenAskTest {
         assertEquals("The market is closed today, Boss. It opens next on Mon 6 Oct at 09:15.", OptionFacts.timeLeft(11 * 60, tradingDay = false, nextDay = "Mon 6 Oct"))
     }
 }
+
+/** Voice, round 27: an option's strike and side as the recognizer writes them - read as meant, for the quote only. */
+class OptionHeardTest {
+    @Test fun slipsOfTheStrikeAndSideAreQuoted() {
+        for ((s, want) in listOf(
+            "price of banknifty 52,000 pe" to OptionFacts.Asked.Quote(Market.BANKNIFTY, 52000, "PE"),
+            "what's the nifty 25,000 call premium" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "CE"),
+            "nifty 25000 p e" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "PE"),
+            "nifty 25000 c e" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "CE"),
+            "what is nifty 25000 p.e. price" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "PE"),
+            "what is nifty 25000 pee premium" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "PE"),
+            "what is nifty 25000 see premium" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "CE"),
+            "nifty 25000 foot" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "PE"),
+            "what's the nifty 24500 putt price" to OptionFacts.Asked.Quote(Market.NIFTY, 24500, "PE"),
+            "premium of nifty 25000 strike call" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "CE"),
+            "bank nifty 52000 pe" to OptionFacts.Asked.Quote(Market.BANKNIFTY, 52000, "PE"),
+            "bank nifty 52,000 pee" to OptionFacts.Asked.Quote(Market.BANKNIFTY, 52000, "PE"),
+            "what is the bank fifty 52000 ce price" to OptionFacts.Asked.Quote(Market.BANKNIFTY, 52000, "CE"),
+            "what is niftee 25000 ce price" to OptionFacts.Asked.Quote(Market.NIFTY, 25000, "CE"),
+            "what is fine nifty 24000 pe price" to OptionFacts.Asked.Quote(Market.FINNIFTY, 24000, "PE"),
+        )) assertEquals(want, OptionFacts.asked(s), s)
+        assertEquals("nifty 25000 pe", Heard.option("nifty 25,000 p e"))
+        assertEquals("nifty 125000 ce", Heard.option("nifty 1,25,000 see"))
+        assertEquals("25000 call", Heard.option("25000 strike call"))
+    }
+
+    @Test fun onlyRightAfterAStrike() {
+        // Words without a strike before them, a price with paise, a figure with lakh grouping in rupees: untouched.
+        for (s in listOf("see you boss", "my foot hurts", "pee", "yes", "no", "nahi", "haan", "no thanks", "yes go ahead", "nifty at 25000 see you",
+            "my p&l is 1,23,456.50", "nifty is at 25,000.50", "ce pe explained", "what is a put", "is the call good", "nifty 250 see", "rs 1,200 see"))
+            assertEquals(s, Heard.option(s), s)
+    }
+
+    @Test fun neverAnOrderNeverAYes() {
+        // An order said with a slip is still no quote - and still read as heard (the slip never makes it an order).
+        for (s in listOf("buy 2 lots nifty 25,000 see", "sell bank nifty 52,000 pee", "buy nifty 25000 foot", "exit nifty 25000 p e",
+            "place order nifty 25000 strike call", "nifty 25000 ce kharido"))
+            assertNull(OptionFacts.asked(s), s)
+        // What it reads holds no word that acts, nor a yes or a no, that the words as heard did not.
+        val acts = Regex("(?i)\\b(buy|sell|order|place|exit|close|square|cancel|stop|start|kill|approve|confirm|yes|no|haan|nahi)\\b")
+        for (s in listOf("nifty 25,000 see", "nifty 25000 foot", "nifty 25000 p e", "bank nifty 52,000 pee", "nifty 25000 strike call",
+            "nifty 25000 cal", "nifty 25000 col", "nifty 24500 poot", "nifty 25000 pea", "nifty 25000 sea", "nifty 25000 si", "nifty 25000 cee")) {
+            val r = Heard.option(s)
+            assertTrue(r != s, s)
+            assertEquals(acts.findAll(s).map { it.value }.toList(), acts.findAll(r).map { it.value }.toList(), s)
+            val q = Ask.parse(r)
+            assertNull(q.command, s); assertNull(q.order, s)
+            assertNull(Wake.yesNo(r), s)
+            assertEquals(Ask.parse(s).order, q.order, s)
+        }
+        // A yes or a no is never changed, nor read any differently.
+        for (s in listOf("yes", "no", "yes 25000 pe", "no 25000 pe", "no nifty 25000 foot"))
+            assertEquals(Wake.yesNo(s), Wake.yesNo(Heard.option(s)), s)
+    }
+}
