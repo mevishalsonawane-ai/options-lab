@@ -470,6 +470,13 @@ internal fun PlanCard(
             if (m.charges > 0) LedgerLine("Charges, estimated", rs(m.charges))
             com.optionslab.app.ui.components.AlertOn(if (m.short) "Short of margin by ${rs(m.required - m.available)}: not sendable." else null)
         }
+        // Beside Zerodha's one-way charges: getting in and out at this price, and the move that pays for it - shown even
+        // when the margin read failed. Words only: the order, its price and whether it can be sent are unchanged.
+        if (!plan.exit) plan.legs.forEachIndexed { i, leg ->
+            val tripPrice = leg.price ?: plan.quotes["${leg.exchange}:${leg.tradingSymbol}"]?.last
+            com.optionslab.ira.RoundTrip.line(leg.side.name, tripPrice, leg.quantity, leg.tradingSymbol, leg.exchange, leg.product)
+                ?.let { Note(if (plan.legs.size > 1) "Leg ${i + 1}: $it." else "$it.") }
+        }
         plan.marginNote?.let { Note(it) }
         Spacer(Modifier.height(8.dp))
         if (plan.exit) Note("Closing orders only: each reduces what you hold, so the lot, value and daily-count caps do not block them. Before sending, the position is re-read; if it changed, nothing is sent." +
