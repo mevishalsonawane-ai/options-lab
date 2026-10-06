@@ -125,6 +125,7 @@ class CollisionTest {
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
+        "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -882,6 +883,15 @@ class CollisionTest {
         "weekly report" to "WeeklyReview", "weekly recap" to "WeeklyReview", "review of the week" to "WeeklyReview", "week in review" to "WeeklyReview",
         "is hafta kaisa raha" to "WeeklyReview", "last week's review" to "WeeklyReview", "pichle hafte ka review" to "WeeklyReview",
         "how did last week go" to "WeeklyReview", "what's in the weekly review" to "WeeklyReview",
+        // ---- LiquidityRecord: Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
+        "how did liquidity do this week" to "LiquidityRecord", "how did liquidity do last week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord",
+        "how did liquidity do on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord", "liquidity's last 10 trades" to "LiquidityRecord",
+        "which index works best for liquidity" to "LiquidityRecord", "liquidity win streak" to "LiquidityRecord", "is liquidity on track" to "LiquidityRecord",
+        "liquidity ne is hafte kaisa kiya" to "LiquidityRecord", "liquidity ke last 10 trades" to "LiquidityRecord", "liquidity ki streak" to "LiquidityRecord",
+        "liquidity kis index pe accha chalta hai" to "LiquidityRecord", "liquidity track pe hai kya" to "LiquidityRecord", "liquidity ka record" to "LiquidityRecord",
+        "pichle hafte liquidity ne kitna kamaya" to "LiquidityRecord", "liquidity track record" to "LiquidityRecord", "liquidity best trade" to "LiquidityRecord",
+        "liquidity by exit reason" to "LiquidityRecord", "how did liquidity do yesterday" to "LiquidityRecord", "liquidity this month" to "LiquidityRecord",
+        "how has liquidity done so far" to "LiquidityRecord", "liquidity win rate" to "LiquidityRecord", "is liquidity in line with research" to "LiquidityRecord",
         // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityMap",
         "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
@@ -1425,7 +1435,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -2980,5 +2990,37 @@ class CollisionTest {
         for (s in listOf("how did my bots do this week", "how was the week for the bots", "how did nifty do this week", "how was the month",
             "monthly review", "is this an expiry week", "how are my bots doing"))
             assertTrue(audit.feature(s) != "WeeklyReview", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- LiquidityRecord: the arm's record over time, never the questions that already had their own answers ----
+
+    @Test fun liquiditysRecordLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("how did liquidity do this week", "liquidity on 3 oct", "liquidity last 10 trades", "which index works best for liquidity",
+            "liquidity win streak", "is liquidity on track", "liquidity ne is hafte kaisa kiya")) {
+            assertEquals("LiquidityRecord", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The weekly reviews, the arm's levels, today's trades and why, its size, health, switch and backtest: as before.
+        assertEquals("Account:REVIEW", audit.feature("my weekly review"))
+        assertEquals("WeeklyReview", audit.feature("weekly review"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("LiquidityMap", audit.feature("where are the liquidity levels"))
+        assertEquals("BotTrades", audit.feature("why did the liquidity bot exit"))
+        assertEquals("BotTrades", audit.feature("what did the liquidity bot do today"))
+        assertEquals("BotTrades", audit.feature("liquidity trades today"))
+        assertEquals("ArmDay", audit.feature("why did liquidity 15+5 lose today"))
+        assertEquals("ArmFit", audit.feature("how did liquidity fare on sessions like today"))
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("Market", audit.feature("how did liquidity do today"))
+        assertEquals("Honest", audit.feature("how many lots does liquidity trade"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("SwitchOff", audit.feature("should i switch off liquidity"))
+        assertEquals("SwitchOff", audit.feature("should i turn off liquidity 15+5"))
+        assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
+        assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
+        for (s in listOf("how did my bots do this week", "how did nifty do this week", "how did my week go", "how was the month", "what is a liquidity pool"))
+            assertTrue(audit.feature(s) != "LiquidityRecord", "$s: ${audit.feature(s)}")
     }
 }

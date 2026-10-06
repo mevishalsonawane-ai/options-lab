@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2855,7 +2855,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LiquidityRecord, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3276,6 +3276,22 @@ object IraHub {
             val weeklyLocked = phoneLocked()
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { IraWeekly.answer(weeklyAsk, weeklyLocked) }.getOrElse { "I could not put the week's review together just now, Boss." })
+            }
+            return true
+        }
+        // "How did liquidity do this week", "liquidity on 3 Oct", "liquidity last 10 trades", "which index works best for
+        // liquidity", "liquidity win streak", "is liquidity on track", "liquidity ne is hafte kaisa kiya"
+        // ([com.optionslab.ira.LiquidityRecord]): Liquidity 15+5's paper record over time from the arm's own book - trades, wins
+        // and losses, net after charges (in all and per lot), best and worst, by index, by exit reason, the streak - against
+        // its backtest (the live-vs-backtest verdict) and the losing-trades study; too few trades said plainly. Boss's paper
+        // record, so never on a locked phone; reads only - nothing is armed, stopped, placed or closed. (Not in IraGoldAlgo.)
+        val liqRecordAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityRecord.asked(q) }.getOrNull() else null
+        if (liqRecordAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityRecord.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraBots.liquidityRecord(liqRecordAsk) }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
             }
             return true
         }

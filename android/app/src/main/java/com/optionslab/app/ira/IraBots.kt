@@ -172,6 +172,16 @@ internal object IraBots {
     }
 
     /**
+     * "How did liquidity do this week", "liquidity last 10 trades", "is liquidity on track" ([com.optionslab.ira.LiquidityRecord]):
+     * Liquidity 15+5's record over time from the arms' own book of closed paper trades ([com.optionslab.app.data.OrbArms.closedPaper],
+     * every day it keeps). Reads only.
+     */
+    suspend fun liquidityRecord(q: com.optionslab.ira.LiquidityRecord.Q): String {
+        val rows = com.optionslab.ira.LiquidityRecord.rows(com.optionslab.app.data.OrbArms.closedPaper().map { tradeOf(it) })
+        return com.optionslab.ira.LiquidityRecord.answer(q, rows, com.optionslab.app.data.Market.today())
+    }
+
+    /**
      * "What should I switch off?" ([com.optionslab.ira.SwitchOff]): each arm's switch and two-year test beside its closed paper
      * trades. Reads only. With the answer, the first armed arm that lost in both records (null: none), for [offerSwitchOff].
      */
