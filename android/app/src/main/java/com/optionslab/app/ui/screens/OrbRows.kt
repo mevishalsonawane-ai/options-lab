@@ -135,7 +135,7 @@ internal fun OrbRowsContent(
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                 // Liquidity 15+5's pre-registered candidates, tracked in its shadow (they never change what it trades).
-                a.shadow?.let { s -> Text(com.optionslab.engine.orb.LiquidityShadow.line(s), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
+                a.shadow?.let { s -> Text(keepNumbersWhole(com.optionslab.engine.orb.LiquidityShadow.line(s)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
                 val closed = a.today.filter { !it.open }
                 if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -186,7 +186,7 @@ internal fun OrbRowsContent(
             properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(if (live) "The app is in LIVE: entries go to Zerodha, 1 lot MIS. Arming takes your PIN or fingerprint once. " +
                         "An open position always exits in the account it entered."
                         else "The app is in Paper: entries go to the paper account. To trade automatically on Zerodha, switch to Live and arm it again (PIN once).",
@@ -219,7 +219,7 @@ internal fun OrbRowsContent(
             properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Arm Hero (expiry) (paper)", style = Type.title) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(com.optionslab.engine.orb.HeroRules.NOT_PROVEN + ". It never trades on Zerodha.",
                         style = Type.body.copy(color = p.oxblood, fontWeight = FontWeight.SemiBold))
                     Text("On NIFTY expiry days only, from 13:30 to 14:45: when the ATM straddle is 15% above its low since 12:00 and " +
@@ -297,3 +297,7 @@ private fun OrbDetail(v: OrbArms.View, onClose: () -> Unit) {
         confirmButton = { TextButton(onClose) { Text("Close") } },
     )
 }
+
+/** Money and counts never break across lines (word joiners inside each figure, e.g. "(+₹1,158"). */
+private val FIGURE = Regex("""[(]?[+−-]?₹?\d[\d,.]*""")
+internal fun keepNumbersWhole(s: String): String = FIGURE.replace(s) { m -> m.value.toList().joinToString("\u2060") }

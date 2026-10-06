@@ -456,7 +456,7 @@ class OrbRowsTest {
         assertTrue(shown("ARMED · PAPER · AUTO"))
         assertTrue(shown("BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone."))
         // Its paper record since 06 Oct, with and without each pre-registered candidate.
-        assertTrue(shown("Since 06 Oct: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades"))
+        assertTrue(shown(keepNumbersWhole("Since 06 Oct: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades")))
         switches()[1].areaCClick(); compose.waitForIdle()
         assertEquals(listOf("orb arm liquidity on=false auto=true pin=false"), rec.calls)
     }
@@ -618,7 +618,7 @@ class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest
     @Test fun orbDetail() {
         // The rows are a card's contents (the card is a Column): shown in one, not stacked on each other.
         show { Column { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) } }
-        compose.onAllNodesWithText("Forward test", substring = true).onFirst().areaCClick(); compose.waitForIdle()
+        compose.onAllNodesWithText("Retired", substring = true).onFirst().areaCClick(); compose.waitForIdle()   // the retired list opens the detail
         top("orb-detail", StrategyLayoutBugs.CARD)
     }
 }
