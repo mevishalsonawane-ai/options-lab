@@ -1806,8 +1806,25 @@ object OrbArms {
         Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(com.optionslab.engine.IST).toLocalDateTime(), it.open, it.high, it.low, it.close)
     }.filter { val m = it.start.hour * 60 + it.start.minute; m in (9 * 60 + 15)..(15 * 60 + 29) }
 
-    /** An index's 1-minute bars (BANKNIFTY or FINNIFTY): the last ten calendar days' sessions plus today's. */
-    private suspend fun liquidityMinutes(t: LocalDateTime, underlying: String = OrbRules.UNDERLYING): List<Bar> {
+    /**
+     * Jarvis's liquidity map (read only, [com.optionslab.ira.LiquidityMap]): an index's 1-minute bars as Liquidity 15+5 reads
+     * them - the arm's own read of this minute when it made one, else the same candles read now. Never kept as the arm's
+     * read of the minute, so the arm's own decision reads its candles exactly as before. Nothing is decided or traded.
+     */
+    suspend fun liquidityMinutesFor(underlying: String, t: LocalDateTime): List<Bar> = liquidityMinutes(t, underlying, keep = false)
+
+    /**
+     * The 1-minute bars Liquidity 15+5 read for [underlying] within the two minutes before [t] (earlier sessions and today's),
+     * or null when it did not (not armed, or not run): Jarvis's heads-up shares the arm's read. Reads nothing.
+     */
+    fun liquidityMinutesKept(underlying: String, t: LocalDateTime): List<Bar>? =
+        liquidityPass[underlying]?.takeIf { !it.first.isBefore(t.withSecond(0).withNano(0).minusMinutes(2)) }?.second
+
+    /**
+     * An index's 1-minute bars (BANKNIFTY or FINNIFTY): the last ten calendar days' sessions plus today's. [keep] false: a
+     * read for Jarvis, not kept as this minute's pass (the arm's own read stays its own).
+     */
+    private suspend fun liquidityMinutes(t: LocalDateTime, underlying: String = OrbRules.UNDERLYING, keep: Boolean = true): List<Bar> {
         val minute = t.withSecond(0).withNano(0)
         // The test feeds are read fresh every time (a cached pass must never carry one test's bars into another).
         val testing = testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null
@@ -1826,7 +1843,7 @@ object OrbArms {
             else -> testOtherIndexBars?.invoke(underlying, t).orEmpty()
         }
         val today = toBars(raw).filter { it.start.toLocalDate() == day }
-        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (!testing) liquidityPass[underlying] = minute to it }
+        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (!testing && keep) liquidityPass[underlying] = minute to it }
     }
 
     // ---- data ------------------------------------------------------------------

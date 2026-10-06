@@ -27,7 +27,7 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || LiquidityMap.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
@@ -110,6 +110,8 @@ class CoverageTest {
             if (Thinking.asked(q) != null) return Kind.JARVIS
             // (How likely a big 5-minute candle is now: the market's, information only.)
             if (BigMoveRisk.asked(q)) return Kind.MARKET
+            // (Liquidity 15+5's map of the market - its levels, what it waits for: the market's, information only.)
+            if (LiquidityMap.asked(q) != null) return Kind.MARKET
             if (Consistency.asked(q)) return Kind.JARVIS
             if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ExpiryHour.asked(q) != null || StraddleDecay.asked(q) != null || AtmBuy.asked(q) != null || OtmReach.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || RoundCloses.asked(q) != null || MonthTurns.asked(q) != null || LunchRange.asked(q) != null || OpenHighLow.asked(q) != null || BigCandles.asked(q) != null || ExtremeCloses.asked(q) != null || WeekRange.asked(q) != null || RelativeMove.asked(q) != null || Comebacks.asked(q) != null || VixBand.asked(q) != null || Overnight.asked(q) != null || DayAfter.asked(q) != null || OpenReach.asked(q) != null || MultiDay.asked(q) != null || MoveTime.asked(q) != null || GiveBack.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
@@ -464,6 +466,8 @@ class CoverageTest {
         // ---- How likely a big 5-minute candle is now (BigMoveRisk): the market's ----
         "is a big move likely now" to M, "abhi kitna risk hai" to M, "volatile hai kya" to M, "is the market risky right now" to M,
         "bada move aane wala hai kya" to M,
+        // ---- Liquidity 15+5's map of the market (LiquidityMap): the market's ----
+        "where are the liquidity levels" to M, "liquidity level kahan hai" to M, "what is liquidity waiting for" to M, "how far is the next pool" to M,
         "how often does an otm option 100 points away end the day in the money" to M, "otm option record for banknifty" to M,
         "100 point door ka otm call kitni baar itm hota hai" to M,
         // ---- His stops against the index's swings (StopNoise, reasoning round 33): his own (no word of acting in them) ----
@@ -601,7 +605,7 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || LiquidityMap.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
             ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
             SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
@@ -686,6 +690,7 @@ class CoverageTest {
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
         if (alone && Thinking.asked(q) != null) return "Thinking"
         if (alone && BigMoveRisk.asked(q)) return "BigMoveRisk"
+        if (alone && LiquidityMap.asked(q) != null) return "LiquidityMap"
         if (alone && Consistency.asked(q)) return "Consistency"
         if (alone && CoPilot.asked(q)) return "CoPilot"
         if (alone && SinceMorning.asked(q)) return "SinceMorning"
@@ -871,6 +876,9 @@ class CoverageTest {
         // ---- BigMoveRisk: how likely a big 5-minute candle is now ----
         "is a big move likely now" to "BigMoveRisk", "abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
         "is the market volatile right now" to "BigMoveRisk", "big move aa sakta hai kya" to "BigMoveRisk",
+        // ---- LiquidityMap: Liquidity 15+5's levels and what it waits for ----
+        "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "how far is the next pool" to "LiquidityMap",
+        "what is liquidity waiting for" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",

@@ -557,6 +557,8 @@ object Tasks {
         word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
         word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
         word("moments") { com.optionslab.app.ira.IraCoach.momentsWatch() }
+        // Jarvis: the price nearing a Liquidity 15+5 entry level with room (09:20-14:00, the arm armed): one line a level a day.
+        word("liquidity heads-up") { com.optionslab.app.ira.IraLiquidity.watch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
         word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }

@@ -134,6 +134,7 @@ class CollisionTest {
         "MarketRecord" to { q -> MarketRecord.asked(q) },
         "MorningCues" to { q -> MorningCues.asked(q) != null },
         "BigMoveRisk" to { q -> BigMoveRisk.asked(q) },
+        "LiquidityMap" to { q -> LiquidityMap.asked(q) != null },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
         "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
@@ -873,6 +874,13 @@ class CollisionTest {
         "abhi kitna risk hai" to "BigMoveRisk", "finnifty mein abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
         "banknifty abhi volatile hai kya" to "BigMoveRisk", "is nifty volatile now" to "BigMoveRisk", "is the market volatile right now" to "BigMoveRisk",
         "how risky is the market now" to "BigMoveRisk", "market risky hai kya abhi" to "BigMoveRisk", "is a sharp move likely in sensex" to "BigMoveRisk",
+        // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
+        "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityMap",
+        "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
+        "finnifty liquidity levels kahan hain" to "LiquidityMap", "where is the next liquidity pool for banknifty" to "LiquidityMap",
+        "liquidity kis level ka wait kar raha hai" to "LiquidityMap", "next liquidity level kitna door hai" to "LiquidityMap",
+        "what is the liquidity arm waiting for" to "LiquidityMap", "show me the liquidity zones on bank nifty" to "LiquidityMap",
+        "where is the nearest pool on finnifty" to "LiquidityMap", "liquidity map for the 15 minute chart" to "LiquidityMap",
         "how often does an otm option 100 points away end the day in the money" to "OtmReach",
         "how often does a call two strikes out of the money finish in the money" to "OtmReach", "how often does nifty's otm put double" to "OtmReach",
         "otm option record for banknifty" to "OtmReach", "100 point door ka otm call kitni baar itm hota hai" to "OtmReach",
@@ -1410,7 +1418,7 @@ class CollisionTest {
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
         "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
-        "SelfWhy", "BigMoveRisk", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+        "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -2710,6 +2718,20 @@ class CollisionTest {
             "big candle record for banknifty", "is it risky to trade now", "how volatile was nifty yesterday", "set an alert for a big move",
             "why did nifty make a big move"))
             assertTrue(audit.feature(s) != "BigMoveRisk", "$s: ${audit.feature(s)}")
+        // LiquidityMap only reads the arm's levels: never its health, size, trades, record, switch or a change to it, a
+        // definition, an option's own liquidity, or the market's other levels.
+        for (s in listOf("how is liquidity doing", "liquidity ko 3 lot karo", "how many lots is liquidity trading", "is liquidity healthy",
+            "liquidity bot health", "why did the liquidity bot exit", "what trades did liquidity take", "should i turn off liquidity 15+5",
+            "what is a liquidity pool", "what does liquidity mean", "is there liquidity in the 52000 ce", "what are the levels", "nifty levels",
+            "where is support", "how are my bots doing", "liquidity backtest record"))
+            assertTrue(audit.feature(s) != "LiquidityMap", "$s: ${audit.feature(s)}")
+        // Liquidity's own questions keep their routes.
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
+        assertEquals("Honest", audit.feature("how many lots is liquidity trading"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("BotTrades", audit.feature("why did the liquidity bot exit"))
+        assertEquals("SwitchOff", audit.feature("should i turn off liquidity 15+5"))
         // OtmReach stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
         // question, a definition, a conditional, the at-the-money option, gold, VIX or the quote itself.
         for (s in listOf("will the otm call end in the money today", "should i hold the otm call", "how often does my otm call double",

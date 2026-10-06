@@ -1663,7 +1663,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.MorningCues.asked(q) != null || com.optionslab.ira.BigMoveRisk.asked(q) ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.MorningCues.asked(q) != null || com.optionslab.ira.BigMoveRisk.asked(q) || com.optionslab.ira.LiquidityMap.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.DayScore.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
@@ -3476,7 +3476,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
-     * BigMoveRisk, Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * BigMoveRisk, LiquidityMap, Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3496,6 +3496,21 @@ object IraHub {
             }.getOrElse { "I could not read the big-move risk just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             reply(said)
+            return true
+        }
+        // "Where are the liquidity levels?", "liquidity level kahan hai", "what is liquidity waiting for", "how far is the next
+        // pool" ([com.optionslab.ira.LiquidityMap]): Liquidity 15+5's map from the very rules the arm decides with, on the
+        // candles it reads - per book (BankNifty 15/5-min, FinNifty 30/5-min) the nearest pool on a swing above and below,
+        // how far, which side a close through it would buy, the next level beyond and whether that leaves the arm's room;
+        // armed or not and in its entry hours or not, said either way. Market data only; information only, nothing acts.
+        // Not in IraGoldAlgo (no Liquidity arm).
+        val liqMap = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.LiquidityMap.asked(q) }.getOrNull() else null
+        if (liqMap != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidity.answer(liqMap) }.getOrElse { "I could not read the liquidity levels just now, Boss." })
+            }
             return true
         }
         // "Any contradictions?", "do the facts agree?", "what's pulling different ways?", "am I going against my own rules?"

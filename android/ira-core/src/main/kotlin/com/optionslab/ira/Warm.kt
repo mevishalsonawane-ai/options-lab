@@ -25,7 +25,7 @@ object Warm {
         BatteryUse::asked, BeforeTomorrow::asked, BigCandles::asked, BookDecay::asked, WhereIWin::asked, TradesADay::asked, AfterLoss::asked, StopNoise::asked, DayScore::asked, RequestBook::asked, BigPicture::asked, BotHealth::asked, BotTrades::asked, Breadth::asked,
         Briefing::asked, Bundle::acts, Causes::asked, ChainDrift::asked, ChainIntel::asked, Charges::asked, Clarity::asked, CoPilot::asked, Comebacks::asked,
         Compare::asked, Compare::markets, Conditional::asked, Consistency::asked, Corrections::forgetWordAsked, Corrections::wordsAsked,
-        DataAge::asked, MarketRecord::asked, MorningCues::asked, BigMoveRisk::asked, DayAfter::asked, DayClock::asked, DayCompare::asked, DayJournal::asked, DayStory::asked, DaySummary::asked,
+        DataAge::asked, MarketRecord::asked, MorningCues::asked, BigMoveRisk::asked, LiquidityMap::asked, DayAfter::asked, DayClock::asked, DayCompare::asked, DayJournal::asked, DayStory::asked, DaySummary::asked,
         Distance::asked, ExpectedRange::asked, ExpiryDay::asked, ExpiryEve::asked, ExpiryPin::asked, ExpiryHour::asked, ExtremeCloses::asked,
         FigureFirst::asked, FirstMove::asked, Gap::asked, GapRecord::asked, Goals::asked, Goals::clearAsked, Goals::read,
         Habits::asked, Headroom::asked, Hearing::asked, Honest::asked, HonestStars::asked, Improve::asked, InsideDays::asked,
