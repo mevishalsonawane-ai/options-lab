@@ -126,6 +126,7 @@ class CollisionTest {
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
         "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
+        "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -892,6 +893,15 @@ class CollisionTest {
         "pichle hafte liquidity ne kitna kamaya" to "LiquidityRecord", "liquidity track record" to "LiquidityRecord", "liquidity best trade" to "LiquidityRecord",
         "liquidity by exit reason" to "LiquidityRecord", "how did liquidity do yesterday" to "LiquidityRecord", "liquidity this month" to "LiquidityRecord",
         "how has liquidity done so far" to "LiquidityRecord", "liquidity win rate" to "LiquidityRecord", "is liquidity in line with research" to "LiquidityRecord",
+        // ---- TomorrowPlan: the next session prepared (Liquidity's day and levels, Solo, Hero, events, cues) ----
+        "what's the plan for tomorrow" to "TomorrowPlan", "what is the plan for tomorrow" to "TomorrowPlan", "plan for tomorrow" to "TomorrowPlan",
+        "tomorrow's plan" to "TomorrowPlan", "what's tomorrow's plan" to "TomorrowPlan", "what's the game plan for tomorrow" to "TomorrowPlan",
+        "give me the plan for tomorrow" to "TomorrowPlan", "plan for the next session" to "TomorrowPlan", "what's the plan for the next trading day" to "TomorrowPlan",
+        "tomorrow ka plan" to "TomorrowPlan", "tomorrow ka plan kya hai" to "TomorrowPlan", "kal ka plan" to "TomorrowPlan", "kal ka plan kya hai" to "TomorrowPlan",
+        "kal ka plan batao" to "TomorrowPlan", "kal ki taiyari" to "TomorrowPlan", "kal ke liye plan" to "TomorrowPlan", "mera kal ka plan" to "TomorrowPlan",
+        "prepare me for tomorrow" to "TomorrowPlan", "prep me for tomorrow" to "TomorrowPlan", "get me ready for tomorrow" to "TomorrowPlan",
+        "brief me for tomorrow" to "TomorrowPlan", "can you prepare me for tomorrow" to "TomorrowPlan", "how should i prepare for tomorrow" to "TomorrowPlan",
+        "help me prepare for tomorrow" to "TomorrowPlan", "how do i get ready for tomorrow" to "TomorrowPlan", "jarvis what's the plan for tomorrow" to "TomorrowPlan",
         // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityMap",
         "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
@@ -1435,7 +1445,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3022,5 +3032,48 @@ class CollisionTest {
         assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
         for (s in listOf("how did my bots do this week", "how did nifty do this week", "how did my week go", "how was the month", "what is a liquidity pool"))
             assertTrue(audit.feature(s) != "LiquidityRecord", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- TomorrowPlan: the next session prepared, never the questions that already had their own answers ----
+
+    @Test fun tomorrowsPlanLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("what's the plan for tomorrow", "tomorrow ka plan", "kal ka plan kya hai", "prepare me for tomorrow", "tomorrow's plan",
+            "get me ready for tomorrow", "plan for the next session")) {
+            assertEquals("TomorrowPlan", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The day's plans, the weekly review, Liquidity's record and levels, the checklist, expiries, the calendar: as before.
+        assertEquals("Missed", audit.feature("plan for the day"))
+        assertEquals("Missed", audit.feature("morning plan"))
+        assertEquals("Missed", audit.feature("what's the morning plan"))
+        assertEquals("Market", audit.feature("today's plan"))
+        assertEquals("Agenda", audit.feature("aaj ka plan"))
+        assertEquals("Agenda", audit.feature("what's the plan for today"))
+        assertEquals("Agenda", audit.feature("what's the plan"))
+        assertEquals("Agenda", audit.feature("what's your plan today"))
+        assertEquals("WeeklyReview", audit.feature("weekly review"))
+        assertEquals("WeekAhead", audit.feature("plan for next week"))
+        assertEquals("Market", audit.feature("how did liquidity do"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("BeforeTomorrow", audit.feature("what do i need to do before tomorrow"))
+        assertEquals("BeforeTomorrow", audit.feature("checklist for tomorrow"))
+        assertEquals("BeforeTomorrow", audit.feature("kal se pehle kya karna hai"))
+        assertEquals("ExpiryEve", audit.feature("what expires tomorrow"))
+        assertEquals("MarketDays", audit.feature("is tomorrow a holiday"))
+        assertEquals("DaySummary", audit.feature("wrap up my day"))
+        // The market's outlook for tomorrow (and Jarvis's own plan asked of him) keep the outlook's answer; an index named, its own.
+        assertEquals("Tomorrow", audit.feature("how does tomorrow look"))
+        assertEquals("Tomorrow", audit.feature("outlook for tomorrow"))
+        assertEquals("Tomorrow", audit.feature("what about tomorrow"))
+        assertEquals("Tomorrow", audit.feature("what's your plan for tomorrow"))
+        assertEquals("Market", audit.feature("what's the plan for nifty tomorrow"))
+        // Said with something to do: left to the multi-step plan, as every question is.
+        assertTrue(Bundle.acts("what's the plan for tomorrow then close all positions"))
+        for (s in listOf("start all strategies tomorrow", "plan to buy nifty tomorrow", "remind me of the plan tomorrow", "plan for the day after tomorrow",
+            "what's the trade plan for tomorrow", "plan my trip for tomorrow"))
+            assertTrue(audit.feature(s) != "TomorrowPlan", "$s: ${audit.feature(s)}")
     }
 }

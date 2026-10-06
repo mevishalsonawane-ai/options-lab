@@ -353,6 +353,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
         // Jarvis: Ira reads the day's candles, learns them and reviews how its patterns did. No orders.
         runCatching { com.optionslab.app.ira.IraHub.evening() }
+        // Jarvis: then tomorrow's plan in the chat, once a day (the words lane's own check, should the watch run this late).
+        runCatching { com.optionslab.app.ira.IraTomorrow.watch() }
     }
 
     fun healthCheck(context: Context, s: AppSettings) {
@@ -561,6 +563,8 @@ object Tasks {
         word("liquidity heads-up") { com.optionslab.app.ira.IraLiquidity.watch() }
         // Jarvis: each closed Liquidity 15+5 trade against its research - one chat line a trade, never spoken (words only).
         word("trade lessons") { com.optionslab.app.ira.IraTradeLessons.watch() }
+        // Jarvis: from 15:45 on a trading day, tomorrow's plan in the chat - once a day (words only; nothing is armed or changed).
+        word("tomorrow's plan") { com.optionslab.app.ira.IraTomorrow.watch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
         word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
