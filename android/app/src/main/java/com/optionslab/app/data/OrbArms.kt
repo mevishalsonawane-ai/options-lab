@@ -690,6 +690,47 @@ object OrbArms {
     fun liquidityDecisions(day: LocalDate): List<com.optionslab.ira.LiquidityWhyNot.Decision> =
         synchronized(liqDecisions) { liqDecisions.filter { it.at.toLocalDate() == day } }
 
+    // ---- the Hero arm's day in words (Jarvis's "what did hero do today") -------------------------
+
+    /**
+     * Today's Hero decisions, oldest first: each minute it decided with what it read (NIFTY, the ATM straddle, its legs and
+     * low, the 15-minute move; a signal's pick, limit and lots) and each change of its verdict between minutes. In memory
+     * only, guarded by itself - never the arms' lock - and never read by a decision, an exit or an order: words for Jarvis.
+     * A new day's first record drops the earlier days'.
+     */
+    private val heroDecided = ArrayList<com.optionslab.ira.HeroDay.Decision>()
+
+    /**
+     * Keeps one Hero verdict (see [heroDecided]): at [minute] with the [scan] and the minutes it was made from, else (null) a
+     * verdict between its minutes, kept once while unchanged; a minute's unchanged verdict (a stale minute looked at again)
+     * is kept once too. Never throws into a pass.
+     */
+    private fun noteHero(at: LocalDateTime, verdict: String, minute: LocalTime? = null, scan: HeroRules.Scan? = null,
+                         spot: Map<LocalTime, Double>? = null, straddle: Map<LocalTime, Double>? = null,
+                         legs: Map<Pair<Double, Right>, Map<LocalTime, HeroRules.Leg>>? = null,
+                         pick: HeroRules.Candidate? = null, limit: Double? = null, lots: Int? = null) {
+        if (com.optionslab.app.BuildConfig.GOLD) return
+        // An error's own message is never kept (it may carry an address): its kind only.
+        val v = if (verdict.startsWith("error")) "error" else verdict.take(200)
+        val x = minute?.let { spot?.get(it) }
+        val k = x?.let { HeroRules.atm(it) }
+        fun leg(r: Right): Double? = if (k == null || minute == null) null else legs?.get(k.toDouble() to r)?.let { HeroRules.legPrice(it, minute) }
+        val d = com.optionslab.ira.HeroDay.Decision(at, v, minute, scan?.spot ?: x, k, leg(Right.CE), leg(Right.PE),
+            minute?.let { straddle?.get(it) }, minute?.let { m -> straddle?.filterKeys { !it.isAfter(m) }?.values?.minOrNull() },
+            scan?.stExp, scan?.mom, scan?.signal ?: 0, pick?.strike, pick?.ltp, limit, lots)
+        synchronized(heroDecided) {
+            heroDecided.removeAll { it.at.toLocalDate() != at.toLocalDate() }
+            val last = heroDecided.lastOrNull()
+            if (last?.verdict == v && (minute == null || last?.minute == minute)) return
+            heroDecided += d
+            while (heroDecided.size > com.optionslab.ira.HeroDay.MAX_DECISIONS) heroDecided.removeAt(0)
+        }
+    }
+
+    /** The Hero arm's decisions kept in memory for [day], oldest first: a copy, never waiting on the arms' lock. Reads only. */
+    fun heroDecisions(day: LocalDate): List<com.optionslab.ira.HeroDay.Decision> =
+        synchronized(heroDecided) { heroDecided.filter { it.at.toLocalDate() == day } }
+
     // ---- arming and approvals ------------------------------------------------------
 
     /**
@@ -869,6 +910,8 @@ object OrbArms {
                 val s = if (bars == null && !arm.hero) "no_index_data" else runCatching { cycle(b, arm, t, bars.orEmpty()) }.getOrElse { "error: ${it.message}" }
                 // Liquidity's verdict between its decision bars, kept for Jarvis's words only (a bar's own was kept by its cycle).
                 if (arm.liquidity && s != "no_decision_bar") runCatching { noteLiquidity(t, arm.source, s) }
+                // Hero's verdict between its decision minutes, kept for Jarvis's words only (a minute's own was kept by its cycle).
+                if (arm.hero && s != "no_decision_bar") runCatching { noteHero(t, s) }
                 // "no_decision_bar" repeats within a bar; keep the bar's own verdict on screen.
                 if (s != "no_decision_bar" || b.status[arm.source].isNullOrEmpty()) {
                     // Each bar's verdict goes to the diagnostics once (why it did or did not enter), with the range and the bar.
@@ -1239,17 +1282,23 @@ object OrbArms {
             straddle[u] = ce + pe
         }
         val scan = HeroRules.scan(spot, straddle, at)
+        // Each minute's verdict (with what it read: the straddle, its legs and low, the move; a signal's pick, limit and lots)
+        // is kept for Jarvis's words ([noteHero]): returned exactly as before; nothing reads it back to decide.
+        fun kept(verdict: String, pick: HeroRules.Candidate? = null, limit: Double? = null, lots: Int? = null): String {
+            runCatching { noteHero(t, verdict, at, scan, spot, straddle, legs, pick, limit, lots) }
+            return verdict
+        }
         if (scan.standDown) {
             spent += HERO_STOOD_DOWN
             runCatching { Diag.record("orb", "${HeroRules.ARM.label}: stood down for today: more than ${HeroRules.MAX_SKIPPED} minutes in a row of stale NIFTY or straddle data") }
-            return HERO_STOOD_DOWN
+            return kept(HERO_STOOD_DOWN)
         }
         // A stale minute is looked at again on the next pass (the data may still arrive); the scan counts it if it never does.
-        if (scan.why == "skipped_stale_bar") return "hero_skipped_stale_bar"
+        if (scan.why == "skipped_stale_bar") return kept("hero_skipped_stale_bar")
         spent += "hero@$at"
-        if (scan.signal == 0) return "hero_" + scan.why
+        if (scan.signal == 0) return kept("hero_" + scan.why)
         val right = if (scan.signal > 0) Right.CE else Right.PE
-        val s0 = scan.spot ?: return "hero_skipped_stale_bar"
+        val s0 = scan.spot ?: return kept("hero_skipped_stale_bar")
         // The chain on the signal side within 3% of spot, nearest the money first.
         val side = today.filter { it.right == right && kotlin.math.abs(it.strike - s0) <= s0 * HeroRules.SPOT_BAND }
             .filter { if (scan.signal > 0) it.strike > s0 else it.strike < s0 }.sortedBy { kotlin.math.abs(it.strike - s0) }
@@ -1261,27 +1310,27 @@ object OrbArms {
             // The paper feed has no depth: the last price stands in for the ask (as the paper fill does).
             chain += HeroRules.Candidate(o.strike, ltp, ltp.takeIf { it > 0 }, traded)
         }
-        val pick = HeroRules.pick(scan.signal, s0, chain) ?: return "hero_no_strike"
-        val c = Paper.contractFor(HeroRules.UNDERLYING, day, pick.strike, right) ?: return "no_contract"
+        val pick = HeroRules.pick(scan.signal, s0, chain) ?: return kept("hero_no_strike")
+        val c = Paper.contractFor(HeroRules.UNDERLYING, day, pick.strike, right) ?: return kept("no_contract", pick)
         // The lot size comes from the master, never a constant; unknown: no trade.
-        if (c.lotSize <= 0) return "hero_lot_unknown"
+        if (c.lotSize <= 0) return kept("hero_lot_unknown", pick)
         // The kill switch and Stop for today win (paper too, for this arm: plans only lower risk).
-        if (runCatching { AppSettings.load().guardKill }.getOrDefault(true)) return "refused: the kill switch is on"
-        if (Strategies.stoppedToday()) return "stopped_for_today"
+        if (runCatching { AppSettings.load().guardKill }.getOrDefault(true)) return kept("refused: the kill switch is on", pick)
+        if (Strategies.stoppedToday()) return kept("stopped_for_today", pick)
         val q = runCatching { Paper.quote(c) }.getOrNull()
         val ask = q?.ask?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 } ?: pick.ltp
         val limit = HeroRules.limitPrice(ask, pick.ltp)
         val lots = HeroRules.lots(limit, c.lotSize)
-        if (lots <= 0) return "hero_zero_lots"
-        exposureRefusal(b, c)?.let { return it }
+        if (lots <= 0) return kept("hero_zero_lots", pick, limit, lots)
+        exposureRefusal(b, c)?.let { return kept(it, pick, limit, lots) }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
-        if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
+        if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
         // Never a market order on these strikes: a LIMIT BUY on the PAPER account. Not filled at once, it is cancelled
         // (nothing held), and the arm may decide again on a later bar until 14:45.
         val buy = Paper.place(c, "BUY", lots, "LIMIT", "MIS", limit, null, known = q)
-        val fill = filledOrCancelled(buy) ?: return "order_refused: " +
-            (if (buy.ok) "the limit %.2f did not fill; the order was cancelled".format(Locale.ENGLISH, limit) else buy.message)
+        val fill = filledOrCancelled(buy) ?: return kept("order_refused: " +
+            (if (buy.ok) "the limit %.2f did not fill; the order was cancelled".format(Locale.ENGLISH, limit) else buy.message), pick, limit, lots)
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") }
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${HeroRules.OWNER} · entry", buy.orderId)
         val text = ("NIFTY %s %.2f%% in 15 min, straddle %.0f%% above its low: bought %d %s @ %.2f on PAPER (limit %.2f). " +
@@ -1295,7 +1344,7 @@ object OrbArms {
         b.positions += Position(src, c.symbol, c.right.name, fill.quantity, fill.price, now(), day.atTime(at), buy.orderId, null, null,
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         marks[c.symbol] = fill.price
-        return "entered"
+        return kept("entered", pick, limit, lots)
     }
 
     /**

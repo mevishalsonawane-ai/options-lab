@@ -122,6 +122,7 @@ class CollisionTest {
         "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
         "LiquidityWhyNot" to { q -> LiquidityWhyNot.asked(q) != null },
         "SoloDay" to { q -> SoloDay.asked(q) != null },
+        "HeroDay" to { q -> HeroDay.asked(q) != null },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
@@ -929,6 +930,16 @@ class CollisionTest {
         "why did solo pick banknifty" to "SoloDay", "why did solo skip nifty" to "SoloDay", "what did solo see at 12" to "SoloDay",
         "what is solo waiting for" to "SoloDay", "what will solo look at" to "SoloDay", "when will solo decide" to "SoloDay",
         "solo kya karega aaj" to "SoloDay", "did solo trade today" to "SoloDay", "what did solo buy today" to "SoloDay",
+        // ---- HeroDay: the Hero arm's day - is today its expiry day, what it read and decided, its trade or why none ----
+        "what did hero do today" to "HeroDay", "what has hero done today" to "HeroDay", "why no hero trade" to "HeroDay",
+        "why no hero trade today" to "HeroDay", "why didn't hero trade" to "HeroDay", "why didn't hero trade today" to "HeroDay",
+        "why hasn't hero traded today" to "HeroDay", "why didn't hero fire today" to "HeroDay", "hero ne aaj kya kiya" to "HeroDay",
+        "hero ne kya kiya" to "HeroDay", "hero ne trade kyu nahi liya" to "HeroDay", "hero ne aaj trade kyun nahi liya" to "HeroDay",
+        "is today a hero day" to "HeroDay", "is this a hero day" to "HeroDay", "aaj hero day hai kya" to "HeroDay",
+        "is today an expiry day for hero" to "HeroDay", "when is the next hero day" to "HeroDay", "next hero day kab hai" to "HeroDay",
+        "agla hero day kab hai" to "HeroDay", "is hero trading today" to "HeroDay", "will hero trade today" to "HeroDay",
+        "did hero trade today" to "HeroDay", "what is hero waiting for" to "HeroDay", "what did hero see" to "HeroDay",
+        "how did hero decide" to "HeroDay", "hero kab trade karega" to "HeroDay", "did the hero arm fire today" to "HeroDay",
         // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityWhyNot",
         "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
@@ -1472,7 +1483,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3205,5 +3216,48 @@ class CollisionTest {
         for (s in listOf("what's new in the market", "any news", "news", "what's happening", "what changed today", "what changed in nifty",
             "what changed in my positions", "what changed in the chain", "what's the latest", "naya kya hai market mein", "subah se kya badla"))
             assertTrue(audit.feature(s) != "WhatsNew", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- HeroDay: the Hero arm's day from its own records, never the Hero questions that already had their own answers ----
+
+    @Test fun heroDayLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("what did hero do today", "why no hero trade", "is today a hero day", "hero ne aaj kya kiya",
+            "when is the next hero day", "why didn't hero trade today?", "hero ne trade kyu nahi liya", "what is hero waiting for")) {
+            assertEquals("HeroDay", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // Every question that named Hero before keeps its route: its status, its switch, its size and budget, its record and
+        // results, its exits, another day, "that trade", what it is - and Hero MotoCorp, the stock.
+        val kept = listOf(
+            "hero status" to "Market", "hero arm status" to "Account:STRATEGIES+STATUS", "how is hero doing" to "Market",
+            "how did hero do today" to "Market", "is hero on" to "Missed", "is hero armed" to "Missed", "is hero live" to "Missed",
+            "hero on" to "Missed", "hero off" to "Missed", "switch on hero" to "Act", "switch off hero" to "Act", "stop hero" to "Act",
+            "start hero" to "Act", "hero band karo" to "Act", "hero chalu karo" to "Act",
+            "hero lots" to "Missed", "set hero to 2 lots" to "Missed", "how many lots does hero buy" to "Honest",
+            "hero budget" to "Account:EVENTS", "what is hero's budget" to "Account:EVENTS",
+            "what is hero" to "Missed", "explain the hero arm" to "Account:STRATEGIES", "hero record" to "Missed",
+            "hero paper record" to "Missed", "hero forward test" to "Missed", "hero net so far" to "Account:HISTORY",
+            "how much has hero made" to "Account:PNL", "hero trades today" to "Account:ORDERS", "why did hero exit" to "Why",
+            "what are hero's exits" to "Missed", "hero ki exits kya hai" to "Missed", "hero expiry" to "Missed",
+            "why didn't hero trade yesterday" to "Account:HISTORY", "what did hero do last week" to "Account:HISTORY",
+            "why didn't hero take that trade" to "Why", "hero ka straddle kitna hai" to "ChainIntel",
+            "hero motocorp news" to "Market", "how is hero motocorp doing" to "Market",
+            // The expiry questions without Hero: the calendar's, as before.
+            "is today expiry" to "MarketDays", "expiry today" to "MarketDays", "is today expiry day" to "MarketDays",
+            "aaj expiry hai kya" to "MarketDays", "when is the next expiry" to "MarketDays", "next expiry kab hai" to "MarketDays",
+            "kal expiry hai kya" to "MarketDays")
+        for ((s, want) in kept) {
+            assertEquals(want, audit.feature(s), s)
+            assertEquals(null, HeroDay.asked(s), s)
+        }
+        // The other arms keep theirs.
+        assertEquals("SoloDay", audit.feature("what did solo do today"))
+        assertEquals("LiquidityWhyNot", audit.feature("why didn't liquidity trade"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        for (s in listOf("why didn't solo trade", "why didn't liquidity trade", "what did hero motocorp do today", "is tomorrow a hero day",
+            "why didn't hero trade yesterday", "hero ko band karo", "arm hero"))
+            assertTrue(audit.feature(s) != "HeroDay", "$s: ${audit.feature(s)}")
     }
 }
