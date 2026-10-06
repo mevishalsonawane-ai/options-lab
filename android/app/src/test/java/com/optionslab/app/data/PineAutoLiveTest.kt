@@ -290,15 +290,37 @@ class PineAutoLiveTest : RobolectricTest() {
     @Test fun theProfitLockSellsWhatGaveBackPastItsLockedLevel() {
         auto { it.copy(targetPts = 100.0, profitLock = true) }
         bought()                                                   // 30 at 300
-        kite.quote("NFO:$ce", 355.0, 354.95, 355.05)              // 55% of the way: 25 locked from the next look on
+        // 55% of the way: the ladder locks 25 (325); the trail at +18.3% keeps half of 55 (327.50): the higher counts,
+        // from the next look on.
+        kite.quote("NFO:$ce", 355.0, 354.95, 355.05)
         pass(52_010.0)
         assertTrue("not sold on the look that set the best", side("SELL").isEmpty())
         assertEquals(355.0, held()!!.peak, 0.0)
-        assertTrue(log(), log().contains("profit lock now at 325.00"))
-        kite.quote("NFO:$ce", 320.0, 319.95, 320.05)              // below 300 + 25% of 100
+        assertTrue(log(), log().contains("profit lock now at 327.50"))
+        kite.quote("NFO:$ce", 320.0, 319.95, 320.05)
         pass(52_010.0)
         assertEquals(1, side("SELL").size)
-        assertTrue(log(), log().contains("profit lock (locked at 325.00)"))
+        assertTrue(log(), log().contains("profit lock (locked at 327.50)"))
+        assertNull(held())
+        assertEquals("nothing new is bought by the lock", 1, side("BUY").size)
+    }
+
+    @Test fun withNoStopOrTargetTheTrailSellsATenPercentGainThatFalls() {
+        // Boss's case (2026-10-06): his own script, no stop, no target; +10% fell back to +2%. The lock is on by default.
+        assertTrue(PineScripts.get(id)!!.auto.profitLock)
+        bought()                                                   // 30 at 300
+        kite.quote("NFO:$ce", 330.0, 329.95, 330.05)              // +10%: half of the 30 gained is kept (315)
+        pass(52_010.0)
+        assertTrue("not sold on the look that set the best", side("SELL").isEmpty())
+        assertEquals(330.0, held()!!.peak, 0.0)
+        assertTrue(log(), log().contains("profit lock now at 315.00"))
+        kite.quote("NFO:$ce", 320.0, 319.95, 320.05)              // still above 315: held
+        pass(52_010.0)
+        assertTrue(side("SELL").isEmpty())
+        kite.quote("NFO:$ce", 306.0, 305.95, 306.05)              // +2%: below the lock
+        pass(52_010.0)
+        assertEquals(1, side("SELL").size)
+        assertTrue(log(), log().contains("at 306.00: profit lock (locked at 315.00)"))
         assertNull(held())
         assertEquals("nothing new is bought by the lock", 1, side("BUY").size)
     }
@@ -342,15 +364,32 @@ class PineAutoLiveTest : RobolectricTest() {
                 .put("auto", org.json.JSONObject().put("on", true).put("stopPts", 30.0)))
             .put(org.json.JSONObject().put("id", 4).put("name", "Mine, bare").put("code", code)
                 .put("auto", org.json.JSONObject().put("on", false)))
-            .put(org.json.JSONObject().put("id", 5).put("name", "Switched off by Boss").put("code", code)
+            .put(org.json.JSONObject().put("id", 5).put("name", "Saved off by the old default").put("code", code)
                 .put("auto", org.json.JSONObject().put("targetPts", 80.0).put("profitLock", false)))
+            .put(org.json.JSONObject().put("id", 6).put("name", "Switched off by Boss").put("code", code)
+                .put("auto", org.json.JSONObject().put("profitLock", false).put("profitLockChosen", true)))
+            .put(org.json.JSONObject().put("id", 7).put("name", "His own trail").put("code", code)
+                .put("auto", org.json.JSONObject().put("trail", org.json.JSONObject().put("be", 4.0)
+                    .put("steps", org.json.JSONArray().put(org.json.JSONArray().put(6.0).put(140.0)).put(org.json.JSONArray().put(-1.0).put(70.0))))))
+            .put(org.json.JSONObject().put("id", 8).put("name", "No auto at all").put("code", code))
             .toString()
         val items = PineScripts.parse(text).associateBy { it.id }
         assertTrue("Jarvis's, armed now", items.getValue(1).auto.profitLock); assertTrue(items.getValue(1).auto.byJarvis)
         assertTrue("Jarvis's by its own comment", items.getValue(2).auto.profitLock); assertTrue(items.getValue(2).auto.byJarvis)
         assertTrue("the owner's with a stop", items.getValue(3).auto.profitLock); assertFalse(items.getValue(3).auto.byJarvis)
-        assertFalse("nothing to measure by", items.getValue(4).auto.profitLock)
-        assertFalse("a saved choice is kept", items.getValue(5).auto.profitLock)
-        assertFalse("a new script starts with it off", PineScripts.Auto().profitLock)
+        assertTrue("the owner's with no stop or target: the trail protects it", items.getValue(4).auto.profitLock)
+        assertTrue("a false the old default wrote is not his choice", items.getValue(5).auto.profitLock)
+        assertFalse("his own choice is kept", items.getValue(6).auto.profitLock); assertTrue(items.getValue(6).auto.profitLockChosen)
+        assertEquals(com.optionslab.engine.orb.ProfitLock.Trail(), items.getValue(4).auto.trail)
+        assertEquals(com.optionslab.engine.orb.ProfitLock.Trail(4.0, listOf(com.optionslab.engine.orb.ProfitLock.Trail.Step(6.0, 95.0),
+            com.optionslab.engine.orb.ProfitLock.Trail.Step(0.0, 70.0))), items.getValue(7).auto.trail)
+        assertTrue(items.getValue(8).auto.profitLock)
+        assertTrue("a new script starts with it on", PineScripts.Auto().profitLock)
+        // Saved and read back: the choice and the trail survive.
+        val mine = PineScripts.Auto(profitLock = false, profitLockChosen = true,
+            trail = com.optionslab.engine.orb.ProfitLock.Trail(6.0, listOf(com.optionslab.engine.orb.ProfitLock.Trail.Step(12.0, 60.0))))
+        PineScripts.setAuto(id, mine)
+        val saved = String(com.optionslab.app.security.Vault.readFileSteady(java.io.File(context.filesDir, "pine.vault"))!!, Charsets.UTF_8)
+        assertEquals(mine, PineScripts.parse(saved).single { it.id == id }.auto)
     }
 }

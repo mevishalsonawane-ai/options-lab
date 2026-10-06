@@ -913,7 +913,13 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     val typed = remember { mutableStateMapOf<String, Double>() }
     fun withTyped(au: PineScripts.Auto, m: Map<String, Double>) =
         if (au.on) au    // switched on meanwhile: its settings stay as they were armed
-        else au.copy(stopPts = m["stop"] ?: au.stopPts, targetPts = m["target"] ?: au.targetPts, maxDayLoss = m["day"] ?: au.maxDayLoss)
+        else au.copy(stopPts = m["stop"] ?: au.stopPts, targetPts = m["target"] ?: au.targetPts, maxDayLoss = m["day"] ?: au.maxDayLoss,
+            trail = if (m.keys.none { it == "be" || it.startsWith("trail") }) au.trail else com.optionslab.engine.orb.ProfitLock.Trail(
+                m["be"] ?: au.trail.breakevenPct,
+                (0 until TRAIL_BOXES).map { i ->
+                    val s = au.trail.steps.getOrNull(i) ?: com.optionslab.engine.orb.ProfitLock.Trail.Step(0.0, 0.0)
+                    com.optionslab.engine.orb.ProfitLock.Trail.Step(m["trailStart$i"] ?: s.startPct, m["trailKeep$i"] ?: s.keepPct)
+                }).clean())
     suspend fun flushTyped() {
         val m = typed.toMap()
         if (m.isEmpty()) return
@@ -1016,16 +1022,29 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
                 style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                 Text("Profit lock", style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f))
-                androidx.compose.material3.Switch(a.profitLock, { on -> if (!locked) set { au -> if (au.on) au else au.copy(profitLock = on) } },
+                androidx.compose.material3.Switch(a.profitLock, { on -> if (!locked) set { au -> if (au.on) au else au.copy(profitLock = on, profitLockChosen = true) } },
                     enabled = !locked, modifier = Modifier.semantics { contentDescription = "Profit lock" })
             }
+            if (a.profitLock) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AutoNum("Breakeven from +%", a.trail.breakevenPct, locked, Modifier.weight(1f)) { typed["be"] = it }
+                    Spacer(Modifier.weight(1f))
+                }
+                for (i in 0 until TRAIL_BOXES) {
+                    val st = a.trail.steps.getOrNull(i)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AutoNum("From +% (step ${i + 1})", st?.startPct ?: 0.0, locked, Modifier.weight(1f)) { typed["trailStart$i"] = it }
+                        AutoNum("Keep % of best gain", st?.keepPct ?: 0.0, locked, Modifier.weight(1f)) { typed["trailKeep$i"] = it }
+                    }
+                }
+            }
             val lockRef = com.optionslab.engine.orb.ProfitLock.pineReference(a.targetPts, a.stopPts)
-            Text("Profit lock: at 25% of the target the stop moves to entry, at 50% it locks 25%, at 75% it locks 50%. " +
+            Text("Profit lock: sells when the option gives back its gain, on every script. Trail: ${a.trail.describe()}. " +
                 when {
-                    a.targetPts > 0 -> "Measured on the target above (${fmtPts(a.targetPts)} pts)."
-                    lockRef != null -> "No target set: measured on twice the stop-loss (${fmtPts(lockRef)} pts)."
-                    else -> "With no target and no stop-loss set there is nothing to measure by: no lock."
-                } + if (a.byJarvis) " On by default for the strategies Jarvis wrote." else "",
+                    a.targetPts > 0 -> "With the target (${fmtPts(a.targetPts)} pts) also the ladder: at 25% of it the stop moves to entry, at 50% it locks 25%, at 75% 50%; the higher counts."
+                    lockRef != null -> "With the stop-loss also the ladder on twice it (${fmtPts(lockRef)} pts): at 25% the stop moves to entry, at 50% it locks 25%, at 75% 50%; the higher counts."
+                    else -> "0 = that step off."
+                },
                 style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
         }
         val mine = log.filter { it.script == item.id }.takeLast(40).asReversed()
@@ -1042,6 +1061,9 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     if (auth) env.reauth("Enter your app PIN to let this Pine script trade on Zerodha. It then places real orders by itself until you switch it off.",
         { auth = false; arm(true, true) }, { auth = false })
 }
+
+/** The profit lock's trail steps shown as number boxes (start %, keep %): the default three. */
+private const val TRAIL_BOXES = 3
 
 private fun fmtPts(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else String.format(Locale.ENGLISH, "%.1f", v)
 

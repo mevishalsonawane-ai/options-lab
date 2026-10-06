@@ -234,21 +234,24 @@ object PineAuto {
         val a = item.auto
         val today = todayIst().toString()
         // The held option's own stop-loss, target, profit lock and the script's daily loss limit: checked every pass.
-        // The profit lock (on only with a target or a stop to measure by) only ever sells sooner: it is read from the best
-        // price seen BEFORE this look, as the ORB arms do, and the stop, 15:15 and the day's stop above come first.
+        // The profit lock only ever sells sooner: the higher of the target ladder (on the target, else twice the stop) and
+        // the percentage trail on the gain (2026-10-06: every script, no stop or target needed), read from the best price
+        // seen BEFORE this look, as the ORB arms do; the stop, 15:15 and the day's stop above come first.
         val lockRef = if (a.profitLock) ProfitLock.pineReference(a.targetPts, a.stopPts) else null
-        if (h != null && isOpen() && (a.stopPts > 0 || a.targetPts > 0 || a.maxDayLoss > 0)) {
+        val trail = if (a.profitLock) a.trail else null
+        if (h != null && isOpen() && (a.stopPts > 0 || a.targetPts > 0 || a.maxDayLoss > 0 || a.profitLock)) {
             val ltp = runCatching { optionLtp(h) }.getOrNull()
+            val cost = ProfitLock.roundTripPerUnit(h.entry, h.qty)
             if (ltp != null) {
                 val why = when {
                     a.stopPts > 0 && ltp <= h.entry - a.stopPts -> "stop-loss"
                     a.targetPts > 0 && ltp >= h.entry + a.targetPts -> "target"
-                    lockRef != null && ProfitLock.exits(h.entry, lockRef, h.peak, ltp) -> "profit lock"
+                    ProfitLock.lockExits(h.entry, lockRef, trail, cost, h.peak, ltp) -> "profit lock"
                     a.maxDayLoss > 0 && realizedToday(b, id) + (ltp - h.entry) * h.qty <= -a.maxDayLoss -> "daily loss limit"
                     else -> null
                 }
                 if (why != null) {
-                    val locked = if (why == "profit lock" && lockRef != null) ProfitLock.level(h.entry, lockRef, h.peak) else null
+                    val locked = if (why == "profit lock") ProfitLock.lockLevel(h.entry, lockRef, trail, cost, h.peak) else null
                     note(b, id, "${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, ltp)}: $why" +
                         (locked?.let { " (locked at ${"%.2f".format(java.util.Locale.ENGLISH, it)})" } ?: ""))
                     exit(b, id, item, h, why)
@@ -257,11 +260,13 @@ object PineAuto {
                 }
                 // Still held: a new best price raises the high-water mark (kept with the holding, so it survives a restart).
                 if (ltp > h.peak) {
-                    val was = lockRef?.let { ProfitLock.level(h.entry, it, h.peak) }
+                    val was = ProfitLock.lockLevel(h.entry, lockRef, trail, cost, h.peak)
                     val raised = h.copy(peak = ltp)
                     b.held[id] = raised
-                    val rung = lockRef?.let { ProfitLock.level(raised.entry, it, raised.peak) }
-                    if (rung != null && rung != was) note(b, id, "${raised.symbol}: profit lock now at ${"%.2f".format(java.util.Locale.ENGLISH, rung)} " +
+                    val rung = ProfitLock.lockLevel(raised.entry, lockRef, trail, cost, raised.peak)
+                    // Said when it first locks and then on each rise of 1% of the buy price or more (the trail moves with
+                    // every new best: not a line a pass).
+                    if (rung != null && (was == null || rung >= was + maxOf(0.01 * h.entry, 0.05))) note(b, id, "${raised.symbol}: profit lock now at ${"%.2f".format(java.util.Locale.ENGLISH, rung)} " +
                         "(best ${"%.2f".format(java.util.Locale.ENGLISH, ltp)})")
                     h = raised
                 }

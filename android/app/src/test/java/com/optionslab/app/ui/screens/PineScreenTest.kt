@@ -344,6 +344,14 @@ class PineScreenTest {
         compose.waitMain(5_000) { PineScripts.items.value.single().auto.shortWith == "exit" }
         compose.pineTap("3")
         compose.waitMain(5_000) { PineScripts.items.value.single().auto.lots == 3 }
+        // The profit lock's trail (on by default): its numbers are the script's own.
+        compose.onAllNodes(hasText("Breakeven from +%")).onFirst().performTextReplacement("6")
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.trail.breakevenPct == 6.0 }
+        compose.onAllNodes(hasText("Keep % of best gain")).onFirst().performTextReplacement("60")
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.trail.steps.first().keepPct == 60.0 }
+        assertTrue(PineScripts.items.value.single().auto.trail.steps.first().startPct == 8.0)
     }
 }
 

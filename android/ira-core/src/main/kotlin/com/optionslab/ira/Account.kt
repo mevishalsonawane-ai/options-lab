@@ -83,19 +83,26 @@ object AppFacts {
 
     /**
      * A Pine arm's own exits on the option, for "my strategies": its premium stop and target (points) and the profit lock
-     * (com.optionslab.engine.orb.ProfitLock: on the target, else on twice the stop, else none).
+     * (com.optionslab.engine.orb.ProfitLock: the ladder on the target, else on twice the stop, else none; and the
+     * percentage trail on the gain, [trail], which needs neither - the higher of the two counts).
      */
-    fun pineExits(stopPts: Double, targetPts: Double, profitLock: Boolean): String {
+    fun pineExits(stopPts: Double, targetPts: Double, profitLock: Boolean,
+                  trail: com.optionslab.engine.orb.ProfitLock.Trail = com.optionslab.engine.orb.ProfitLock.Trail()): String {
         val n = { x: Double -> if (x == Math.floor(x)) x.toLong().toString() else "%.1f".format(Locale.ENGLISH, x) }
         val parts = ArrayList<String>()
         parts += if (stopPts > 0) "stop -${n(stopPts)}" else "no stop"
         parts += if (targetPts > 0) "target +${n(targetPts)}" else "no target"
         val ref = com.optionslab.engine.orb.ProfitLock.pineReference(targetPts, stopPts)
+        val trailOn = trail.breakevenPct > 0 || trail.steps.any { it.startPct > 0 }
+        val trailSays = "the trail on the gain: ${trail.describe()}"
         parts += when {
             !profitLock -> "profit lock off"
-            ref == null -> "profit lock on but idle (no stop or target to measure by)"
-            targetPts > 0 -> "profit lock on"
-            else -> "profit lock on (measured on twice the stop, ${n(ref)})"
+            ref == null && !trailOn -> "profit lock on but idle (no stop or target, and the trail is off)"
+            ref == null -> "profit lock on ($trailSays)"
+            !trailOn && targetPts > 0 -> "profit lock on (the target's ladder)"
+            !trailOn -> "profit lock on (the ladder on twice the stop, ${n(ref)})"
+            targetPts > 0 -> "profit lock on (the target's ladder and $trailSays)"
+            else -> "profit lock on (the ladder on twice the stop, ${n(ref)}, and $trailSays)"
         }
         return parts.joinToString(", ")
     }

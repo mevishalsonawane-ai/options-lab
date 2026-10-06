@@ -41,13 +41,18 @@ object PineScripts {
         /**
          * The profit-lock ladder (com.optionslab.engine.orb.ProfitLock, as the ORB arms): at 25% of the way to the target
          * the stop moves to the buy price, at 50% it locks 25% of the target, at 75% 50%. The target is [targetPts]; with
-         * none, twice [stopPts]; with neither there is no lock. It only ever sells sooner, never buys or widens a stop.
-         * On for the scripts Jarvis wrote ([byJarvis]); off for a new script of the owner's own unless he turns it on (a
-         * save from before the lock is migrated: see [parse]).
+         * none, twice [stopPts]; with neither there is no ladder. Beside it the percentage trail on the gain ([trail]),
+         * which needs no stop or target; the higher of the two levels counts. It only ever sells sooner, never buys or
+         * widens a stop. On for every script, the owner's own included (2026-10-06: "my profit went from 10 percent to
+         * 2"); he can switch it off per script ([profitLockChosen], and the choice is kept: see [parse]).
          */
-        val profitLock: Boolean = false,
+        val profitLock: Boolean = true,
         /** Written by Jarvis's Strategy Lab and armed on the owner's approval (set by IraHub when it arms one). */
         val byJarvis: Boolean = false,
+        /** The owner set [profitLock] himself on the Pine screen (after 2026-10-06): his choice is kept as it is. */
+        val profitLockChosen: Boolean = false,
+        /** The profit lock's percentage trail (start % and keep %), the owner's numbers for this script. */
+        val trail: com.optionslab.engine.orb.ProfitLock.Trail = com.optionslab.engine.orb.ProfitLock.Trail(),
     )
 
     data class Item(
@@ -80,10 +85,12 @@ object PineScripts {
     }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList() }
 
     /**
-     * The saved scripts from the vault's text. A save from before the profit lock (no "profitLock" field) is migrated
-     * (2026-10-06, the owner's rule): the lock is ON for every script Jarvis wrote - armed now or not - and for any
-     * script with a premium stop or target set, as it only ever sells sooner; OFF only where there is neither (it
-     * would have nothing to measure by). A save from before [Auto.byJarvis] is known as Jarvis's by what the Strategy
+     * The saved scripts from the vault's text. The profit lock is ON for every script (2026-10-06, the owner's rule after a
+     * +10% that fell to +2%): a saved "profitLock" counts only with "profitLockChosen" (the owner switched it himself on
+     * the Pine screen since then); an earlier save of false was the old default written for his own scripts without a
+     * stop or target, not his choice, so it is turned on. The trail's numbers ("trail": {"be", "steps": [[start, keep]]})
+     * are cleaned ([com.optionslab.engine.orb.ProfitLock.Trail.clean]); none saved: the defaults.
+     * A save from before [Auto.byJarvis] is known as Jarvis's by what the Strategy
      * Lab writes into every script it makes: its first comment ("// Written by Jarvis from the ... pattern") or its
      * name ("Jarvis: <pattern> <market> <chart>", StrategyLab.name).
      */
@@ -96,12 +103,14 @@ object PineScripts {
                 val jarvis = if (x.has("byJarvis")) x.optBoolean("byJarvis") else jarvisWrote(o.getString("name"), o.getString("code"))
                 val stop = x.optDouble("stopPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0
                 val target = x.optDouble("targetPts", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0
+                val chosen = x.optBoolean("profitLockChosen")
                 Auto(x.optBoolean("on"), x.optString("symbol", "BANKNIFTY"), x.optString("interval", "5m"), x.optInt("lots", 1).coerceIn(1, 50),
                     x.optString("buy", "strategy"), x.optString("sell", "strategy"), x.optBoolean("squareOff", true),
                     x.optString("shortWith", "put"), x.optString("mode", "trade").takeIf { it == "alert" } ?: "trade",
                     stop, target,
                     x.optDouble("maxDayLoss", 0.0).takeIf { it.isFinite() && it >= 0 } ?: 0.0,
-                    profitLock = if (x.has("profitLock")) x.optBoolean("profitLock") else jarvis || stop > 0 || target > 0, byJarvis = jarvis)
+                    profitLock = if (chosen) x.optBoolean("profitLock", true) else true, byJarvis = jarvis,
+                    profitLockChosen = chosen, trail = trailOf(x.optJSONObject("trail")))
             } ?: Auto()
             Item(o.getLong("id"), o.getString("name"), o.getString("code"), o.optBoolean("onChart"), ins, au, o.optLong("updated"))
         }
@@ -115,9 +124,22 @@ object PineScripts {
             .put("auto", JSONObject().put("on", it.auto.on).put("symbol", it.auto.symbol).put("interval", it.auto.interval)
                 .put("lots", it.auto.lots).put("buy", it.auto.buy).put("sell", it.auto.sell).put("squareOff", it.auto.squareOff).put("shortWith", it.auto.shortWith)
                 .put("mode", it.auto.mode).put("stopPts", it.auto.stopPts).put("targetPts", it.auto.targetPts).put("maxDayLoss", it.auto.maxDayLoss)
-                .put("profitLock", it.auto.profitLock).put("byJarvis", it.auto.byJarvis)))
+                .put("profitLock", it.auto.profitLock).put("byJarvis", it.auto.byJarvis).put("profitLockChosen", it.auto.profitLockChosen)
+                .put("trail", JSONObject().put("be", it.auto.trail.breakevenPct)
+                    .put("steps", JSONArray().apply { it.auto.trail.steps.forEach { s -> put(JSONArray().put(s.startPct).put(s.keepPct)) } }))))
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
         _items.value = list
+    }
+
+    /** The trail's numbers as saved (cleaned); none saved, or unreadable: the defaults. */
+    private fun trailOf(t: JSONObject?): com.optionslab.engine.orb.ProfitLock.Trail {
+        val d = com.optionslab.engine.orb.ProfitLock.Trail()
+        if (t == null) return d
+        val steps = t.optJSONArray("steps")?.let { a ->
+            (0 until a.length()).mapNotNull { i -> a.optJSONArray(i)?.let { p ->
+                com.optionslab.engine.orb.ProfitLock.Trail.Step(p.optDouble(0, 0.0), p.optDouble(1, 0.0)) } }
+        } ?: d.steps
+        return com.optionslab.engine.orb.ProfitLock.Trail(t.optDouble("be", d.breakevenPct), steps).clean()
     }
 
     /** A script saved before [Auto.byJarvis] existed that the Strategy Lab wrote: its own first comment, or its name. */

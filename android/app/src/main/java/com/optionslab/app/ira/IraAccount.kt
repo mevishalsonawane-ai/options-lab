@@ -347,7 +347,7 @@ internal object IraAccount {
                 val held = com.optionslab.app.data.PineAuto.held.value
                 com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on || com.optionslab.app.data.PineAuto.todayOf(it.id) != null }.forEach { x ->
                     arms += AppFacts.ArmLine(x.name, "Pine", x.auto.on, "${x.auto.symbol} ${x.auto.interval}, ${x.auto.mode}, " +
-                        AppFacts.pineExits(x.auto.stopPts, x.auto.targetPts, x.auto.profitLock),
+                        AppFacts.pineExits(x.auto.stopPts, x.auto.targetPts, x.auto.profitLock, x.auto.trail),
                         com.optionslab.app.data.PineAuto.todayOf(x.id), held[x.id]?.let { h -> "${h.qty} ${h.symbol}" })
                 }
                 runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
