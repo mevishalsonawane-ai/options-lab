@@ -50,7 +50,12 @@ object DhanSource {
 
     private var app: Context? = null
 
-    fun init(context: Context) { app = context.applicationContext }
+    fun init(context: Context) {
+        val c = context.applicationContext
+        app = c
+        // Older versions kept a learned graph beside the store: its folder and any queued build go, off the main thread.
+        kotlin.concurrent.thread(name = "dhan-cleanup") { runCatching { File(c.filesDir, "neuro").deleteRecursively(); listOf("neuro.after", "neuro.full", "neuro.now").forEach { androidx.work.WorkManager.getInstance(c).cancelUniqueWork(it) } } }
+    }
 
     private fun ctx(): Context = app ?: throw IllegalStateException("not started")
 
@@ -260,7 +265,6 @@ object DhanSource {
             // Left: the failed chunks and any the run did not reach (the open windows fetched now are refreshed again anyway).
             val s = Summary(fetched, failed, failed + (todo.size - reached), stopped)
             runCatching { SecurePrefs.put(K_LAST, s.say(today)) }
-            runCatching { NeuroGraphJob.afterData(ctx()) }
             return s
         } catch (e: TokenRefused) {
             runCatching { SecurePrefs.put(K_LAST, "${Market.today()}: stopped - Dhan refused the access token (renew it)") }
@@ -367,7 +371,6 @@ object DhanSource {
                     }
                     _importing.value = _importing.value.copy(stage = "Storing on this phone")
                     val r = imp.finish(progress = { pr -> _importing.value = _importing.value.copy(stage = pr.stage, files = pr.files) }, cancelled = stop)
-                    runCatching { NeuroGraphJob.afterData(ctx()) }
                     val size = runCatching { Files(root()).bytes() }.getOrDefault(0L)
                     r.say() + ". The Dhan data now takes " + Files.sizeText(size) + "."
                 } catch (_: com.optionslab.ira.dhan.PackImport.Cancelled) {
@@ -419,26 +422,22 @@ object DhanSource {
 
     // ---- deleting -------------------------------------------------------------------------------------------------------------
 
-    /** How long [deleteData] waits for a running download, import or graph build to stop. */
+    /** How long [deleteData] waits for a running download or import to stop. */
     private const val STOP_WAIT_MS = 60_000L
 
     /**
-     * Delete everything downloaded (the token stays until forgotten). Stops any download, import and graph build first and
+     * Delete everything downloaded (the token stays until forgotten). Stops any download and import first and
      * WAITS until each has let go (their locks), so nothing they were writing reappears after the delete. False when they
      * did not stop in time (nothing deleted) or the folder could not be removed.
      */
     suspend fun deleteData(): Boolean {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
         app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
-        app?.let { runCatching { com.optionslab.app.work.NeuroWorker.stop(it) } }
         val ok = kotlinx.coroutines.withTimeoutOrNull(STOP_WAIT_MS) {
             running.lock()
             try {
-                NeuroGraphJob.whileStopped {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        NeuroGraphJob.forget()
-                        Files(root()).deleteAll().also { root().parentFile?.let { p -> File(p, root().name + ".import").deleteRecursively() } }
-                    }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    Files(root()).deleteAll().also { root().parentFile?.let { p -> File(p, root().name + ".import").deleteRecursively() } }
                 }
             } finally { running.unlock() }
         }
@@ -453,9 +452,7 @@ object DhanSource {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.auto(it, false) } }
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
         app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
-        app?.let { runCatching { com.optionslab.app.work.NeuroWorker.stop(it) } }
         runCatching { Files(root()).deleteAll() }
-        runCatching { NeuroGraphJob.forget() }
         runCatching { forget() }
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch { runCatching { deleteData() } }
     }

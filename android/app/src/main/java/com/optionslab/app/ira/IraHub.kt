@@ -1592,7 +1592,7 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.NeuroAsk.asked(q) != null || com.optionslab.ira.DhanData.asked(q) != null ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.DhanData.asked(q) != null ||
                 com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.DayScore.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
@@ -3312,7 +3312,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on what to ask, how fresh the data is, what the phone has no data for and Jarvis's own
-     * reasons: Tour, DataAge, NeuroAsk, DhanData, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
+     * reasons: Tour, DataAge, DhanData, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfJarvis(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3337,21 +3337,6 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch { reply(freshAsked(markets)) }
-            return true
-        }
-        // "What does the graph say happens after a gap up?", "according to the graph what moves BankNifty most?", "when do zero to
-        // hero moves happen per the graph?", "what's proven in the graph?", "graph stats", "data se kya seekha": the NeuroGraph
-        // learned from the Dhan data kept on this phone ([com.optionslab.ira.NeuroAsk], built by NeuroGraphJob after a download or
-        // an import). Rates against base rates, proven out of sample or only hypotheses; read only, nothing acts. Not in IraGoldAlgo.
-        val neuroAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
-            runCatching { com.optionslab.ira.NeuroAsk.asked(q) }.getOrNull() else null
-        if (neuroAsk != null) {
-            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            scope.launch(Dispatchers.IO) {
-                reply(runCatching {
-                    com.optionslab.ira.NeuroAsk.answer(neuroAsk, com.optionslab.app.data.NeuroGraphJob.graphOrNull())
-                }.getOrElse { "I could not read the NeuroGraph just now, Boss." })
-            }
             return true
         }
         // "What Dhan data do you have?", "what have you downloaded?", "dhan se kya data hai", "how did BankNifty move on the last
