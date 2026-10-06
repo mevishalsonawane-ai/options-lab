@@ -230,7 +230,9 @@ internal object IraActions {
             else "Nothing to stop.") to null
         val picked = st.stop.map { all[it] }
         return Commands.sayStops(st, names) to suspend {
-            picked.joinToString(" ") { a -> runCatching { a.stop() }.getOrElse { e -> "${a.name}: ${e.message ?: "failed"}." } }
+            val said = mutableListOf<String>()
+            for (a in picked) said += try { a.stop() } catch (e: Exception) { "${a.name}: ${e.message ?: "failed"}." }
+            said.joinToString(" ")
         }
     }
 
