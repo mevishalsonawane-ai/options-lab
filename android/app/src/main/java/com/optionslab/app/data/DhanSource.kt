@@ -297,6 +297,91 @@ object DhanSource {
         }
     }
 
+    // ---- importing a data pack -------------------------------------------------------------------------------------------------
+
+    const val K_IMPORT_LAST = "dhan.importLast"
+
+    /** An import's progress, for the page and the notice: parts done, files and megabytes unpacked. */
+    data class ImportProgress(val running: Boolean = false, val stage: String = "", val part: Int = 0, val parts: Int = 0,
+                              val files: Int = 0, val bytes: Long = 0, val read: Long = 0, val size: Long = 0) {
+        val fraction: Float get() = if (size <= 0) (if (parts <= 0) 0f else (part - 1).coerceAtLeast(0).toFloat() / parts) else (read.toFloat() / size).coerceIn(0f, 1f)
+    }
+
+    private val _importing = MutableStateFlow(ImportProgress())
+    val importing: StateFlow<ImportProgress> get() = _importing
+
+    /** Counts the compressed bytes read from the picked file, for the progress bar. */
+    private class Counting(input: java.io.InputStream, val onRead: (Long) -> Unit) : java.io.FilterInputStream(input) {
+        override fun read(): Int = super.read().also { if (it >= 0) onRead(1) }
+        override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) onRead(it.toLong()) }
+        override fun skip(n: Long): Long = super.skip(n).also { if (it > 0) onRead(it) }
+    }
+
+    /**
+     * Import a Dhan data pack from the zip parts Boss picked ([uris], read through the system file picker's grant; nothing
+     * is fetched from the network and the token is never read). Every part is streamed and checked ([com.optionslab.ira.dhan.PackImport]):
+     * only the store's own files under dhan/, within the size caps, matching pack-manifest.json's checksums when it is
+     * there; then merged into files/dhan without replacing a newer file. One run at a time, never beside a download.
+     * Returns the summary to show; throws only on cancellation.
+     */
+    suspend fun importPack(uris: List<android.net.Uri>): String {
+        if (com.optionslab.app.BuildConfig.GOLD) return "IraGoldAlgo keeps no Dhan data."
+        if (uris.isEmpty()) return "No file was chosen."
+        if (!running.tryLock()) return "A Dhan download or import is running: stop it first, then import."
+        val cr = ctx().contentResolver
+        val ctxJob = currentCoroutineContext()
+        val imp = com.optionslab.ira.dhan.PackImport(Files(root()))
+        try {
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                // Parts in name order (-01, -02, ...); their sizes for the progress bar.
+                val named = uris.map { u -> Triple(u, displayName(u) ?: u.lastPathSegment ?: "", sizeOf(u)) }.sortedBy { it.second }
+                val total = named.sumOf { it.third ?: 0L }.takeIf { named.all { n -> n.third != null } } ?: 0L
+                var read = 0L
+                val stop = { ctxJob[kotlinx.coroutines.Job]?.isActive == false }
+                imp.begin()
+                _importing.value = ImportProgress(true, "Checking the pack", 1, named.size, 0, 0, 0, total)
+                try {
+                    for ((i, n) in named.withIndex()) {
+                        val input = cr.openInputStream(n.first) ?: throw com.optionslab.ira.dhan.PackImport.Refused("part ${i + 1} could not be opened")
+                        imp.readPart(Counting(input) { read += it }, i + 1, named.size, progress = { pr ->
+                            _importing.value = ImportProgress(true, pr.stage, pr.part, pr.parts, pr.files, pr.bytes, read, total)
+                        }, cancelled = stop)
+                    }
+                    _importing.value = _importing.value.copy(stage = "Storing on this phone")
+                    val r = imp.finish(progress = { pr -> _importing.value = _importing.value.copy(stage = pr.stage, files = pr.files) }, cancelled = stop)
+                    val size = runCatching { Files(root()).bytes() }.getOrDefault(0L)
+                    r.say() + ". The Dhan data now takes " + "%.1f MB".format(java.util.Locale.ENGLISH, size / 1e6) + "."
+                } catch (_: com.optionslab.ira.dhan.PackImport.Cancelled) {
+                    imp.abort(); "Import stopped. Files already stored stay; nothing half-written was kept."
+                } catch (e: com.optionslab.ira.dhan.PackImport.Refused) {
+                    imp.abort(); "Import refused - nothing was changed: ${e.message}"
+                } catch (_: java.io.IOException) {
+                    imp.abort(); "Import failed (is there room on the phone?) - files already stored stay whole."
+                } catch (_: SecurityException) {
+                    imp.abort(); "Import failed: the chosen file can no longer be read. Pick it again."
+                }
+            }
+            runCatching { SecurePrefs.put(K_IMPORT_LAST, "${Market.today()}: $result") }
+            return result
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) { runCatching { imp.abort() } }
+            _importing.value = ImportProgress(false)
+            running.unlock()
+        }
+    }
+
+    private fun displayName(u: android.net.Uri): String? = runCatching {
+        ctx().contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+    }.getOrNull()
+
+    private fun sizeOf(u: android.net.Uri): Long? = runCatching {
+        ctx().contentResolver.query(u, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+        }
+    }.getOrNull()
+
     // ---- reading for the replays ----------------------------------------------------------------------------------------------
 
     /**
@@ -318,6 +403,7 @@ object DhanSource {
     /** Delete everything downloaded (the token stays until forgotten). Stops any download first. */
     fun deleteData(): Boolean {
         app?.let { runCatching { com.optionslab.app.work.DhanWorker.stopNow(it) } }
+        app?.let { runCatching { com.optionslab.app.work.DhanImportWorker.stop(it) } }
         return Files(root()).deleteAll()
     }
 

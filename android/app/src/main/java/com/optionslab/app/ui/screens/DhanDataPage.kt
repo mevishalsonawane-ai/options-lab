@@ -1,5 +1,7 @@
 package com.optionslab.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +40,7 @@ import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.components.TextButton
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import com.optionslab.app.work.DhanImportWorker
 import com.optionslab.app.work.DhanWorker
 import com.optionslab.ira.dhan.DhanUniverse
 import com.optionslab.ira.dhan.Files
@@ -70,6 +73,13 @@ fun DhanDataPage(model: AppModel) {
         return
     }
     val prog by DhanSource.progress.collectAsState()
+    val imp by DhanSource.importing.collectAsState()
+    // Import a data pack: the zip parts picked with the system file picker (several at once), read only through its grant.
+    val pickPack = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult       // Boss closed the picker
+        if (prog.running) { model.say("A Dhan download is running: stop it first, then import."); return@rememberLauncherForActivityResult }
+        if (DhanImportWorker.start(context, uris)) model.say("Importing ${uris.size} part(s) of the Dhan data pack.")
+    }
     var configured by remember { mutableStateOf(DhanSource.configured) }
     var editing by remember { mutableStateOf(false) }
     var clientId by remember { mutableStateOf("") }
@@ -84,7 +94,7 @@ fun DhanDataPage(model: AppModel) {
     // The store's figures walk its folder: read off the main thread on opening, after a run and after a delete.
     var reread by remember { mutableStateOf(0) }
     var manifest by remember { mutableStateOf<Files.Manifest?>(null) }
-    LaunchedEffect(prog.running, reread) {
+    LaunchedEffect(prog.running, imp.running, reread) {
         manifest = withContext(Dispatchers.IO) { runCatching { DhanSource.filesOrNull()?.manifest() }.getOrNull() }
     }
 
@@ -164,7 +174,7 @@ fun DhanDataPage(model: AppModel) {
                 }
                 Spacer(Modifier.height(10.dp))
                 if (prog.running) BrassButton("Stop", Modifier.fillMaxWidth()) { DhanWorker.stopNow(context) }
-                else BrassButton("Download", Modifier.fillMaxWidth(), enabled = configured) {
+                else BrassButton("Download", Modifier.fillMaxWidth(), enabled = configured && !imp.running) {
                     DhanWorker.now(context); model.say("Dhan download started. It resumes where it stopped.")
                 }
                 ToggleRow("Download by itself", "Once a day at most, only on Wi-Fi while the phone is charging", auto) { on ->
@@ -174,6 +184,26 @@ fun DhanDataPage(model: AppModel) {
                 ToggleRow("Use it in the strategy replays", "The ORB arms' and Strategy Lab replays also read the downloaded days (paper research only)", research) { on ->
                     research = on
                     scope.launch(Dispatchers.IO) { runCatching { SecurePrefs.put(DhanSource.K_RESEARCH, on) } }
+                }
+            }
+        }
+        item {
+            LedgerCard(title = "Import a data pack") {
+                Note("A Dhan data pack prepared on a computer (IraAlgo-dhan-pack-01.zip, -02.zip, ...): pick all its parts at once. Each part is checked - only Dhan market-data files, within the size limits, matching the pack's checksums - and merged with what is here: a newer file on this phone is never replaced, and the download skips what was imported. No internet is used and the token is not touched.")
+                SecurePrefs.getString(DhanSource.K_IMPORT_LAST)?.let { LedgerLine("Last import", it) }
+                if (imp.running) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(imp.stage, style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                    InkProgress(imp.fraction, Modifier.fillMaxWidth().padding(top = 4.dp))
+                    Text("Part ${imp.part} of ${imp.parts} · ${imp.files} files · ${size(imp.bytes)}", style = Type.bodySmall.copy(color = p.inkSoft))
+                    Spacer(Modifier.height(10.dp))
+                    BrassButton("Stop the import", Modifier.fillMaxWidth()) { DhanImportWorker.stop(context) }
+                } else {
+                    Spacer(Modifier.height(10.dp))
+                    BrassButton("Import data pack", Modifier.fillMaxWidth(), enabled = !prog.running) {
+                        runCatching { pickPack.launch(arrayOf("application/zip", "application/x-zip-compressed")) }
+                            .onFailure { model.say("No file picker is available on this phone.") }
+                    }
                 }
             }
         }
