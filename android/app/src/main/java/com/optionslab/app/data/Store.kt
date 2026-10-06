@@ -74,24 +74,6 @@ object Store {
         return bundled + device.asSequence().flatMap { d -> Olx.sequence(File(barsDir(u), "$d.olx").inputStream()) }
     }
 
-    /**
-     * [barSessions] with the days downloaded from Dhan before the first of them in front ([DhanSource.researchSessions]),
-     * oldest first: the longer record the replays learn from (the ORB arms, the Strategy Lab presets). Paper research only.
-     * A Dhan file that cannot be read ends the Dhan part there; the bundled and harvested days always follow.
-     */
-    fun researchSessions(u: String): Sequence<Session> {
-        val first = barDays(u).firstOrNull() ?: Market.today()
-        val older = sequence {
-            try {
-                yieldAll(DhanSource.researchSessions(u, first))
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (_: Exception) {
-            }
-        }
-        return older + barSessions(u)
-    }
-
     fun barDays(u: String): List<LocalDate> {
         val out = sortedSetOf<LocalDate>()
         val asset = "bars_${u.lowercase()}.olx"

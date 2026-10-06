@@ -344,7 +344,6 @@ fun eraseEverything() {
     com.optionslab.app.data.Market.wipe()
     runCatching { com.optionslab.app.data.Broker.forget() }
     runCatching { com.optionslab.app.data.Store.wipeDeviceData() }
-    runCatching { com.optionslab.app.data.DhanSource.wipe() }
     // WebView state (the Zerodha login's cookies and storage) must be cleared on the main thread;
     // eraseEverything can be called from a background dispatcher, where these calls fail silently.
     val web = Runnable {

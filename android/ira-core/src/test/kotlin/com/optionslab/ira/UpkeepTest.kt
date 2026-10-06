@@ -32,11 +32,6 @@ class UpkeepTest {
             .forEach { assertFalse(Upkeep.carried(it), it) }
     }
 
-    @Test fun dhanCredentialsNeverTravel() {
-        listOf("dhan.token", "dhan.clientId", "dhan.auto", "dhan.optionYears", "dhan.last")
-            .forEach { assertFalse(Upkeep.carried(it), it) }
-    }
-
     @Test fun learningAndWordsStillTravel() {
         listOf("jarvis.reminders", "jarvis.daybook", "jarvis.learned", "jarvis.study", "jarvis.routine.kept", "jarvis.thinking",
             "jarvis.alertSense", "jarvis.dataAge", "jarvis.askedKinds", "jarvis.improve", "jarvis.notes", "jarvis.goals", "ui.theme", "jarvis.hindi")

@@ -446,12 +446,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Replay every ORB arm over the bundled month plus every BANKNIFTY day the phone has harvested (and, before them, the days downloaded from Dhan), on the real option bars. */
+    /** Replay every ORB arm over the bundled month plus every BANKNIFTY day the phone has harvested, on the real option bars. */
     fun runArmsBacktest() {
         armsBacktest.value = Load.Busy("Replaying the arms")
         viewModelScope.launch(Dispatchers.Default) {
             armsBacktest.value = try {
-                val r = com.optionslab.engine.orb.ArmsBacktest.run(Store.researchSessions("BANKNIFTY"))
+                val r = com.optionslab.engine.orb.ArmsBacktest.run(Store.barSessions("BANKNIFTY"))
                 if (r.days == 0) Load.Failed("No BANKNIFTY day with index and option bars yet.") else Load.Done(r)
             } catch (e: Exception) {
                 Load.Failed(e.message ?: "The replay failed")
@@ -466,7 +466,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.Default) {
             preset.value = try {
                 val total = Store.barDays(underlying).size.coerceAtLeast(1)
-                val r = com.optionslab.engine.strategy.Presets.backtest(p, Store.researchSessions(underlying),
+                val r = com.optionslab.engine.strategy.Presets.backtest(p, Store.barSessions(underlying),
                     { s -> s.lotHint ?: runCatching { com.optionslab.engine.Lots.lotSizeOn(underlying, s.day) }.getOrNull() },
                     lots, entry.hour * 60 + entry.minute, exit.hour * 60 + exit.minute, stop, target,
                 ) { n -> preset.value = Load.Busy("Session $n of $total", n.toFloat() / total) }

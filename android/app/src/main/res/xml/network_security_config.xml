@@ -3,10 +3,6 @@
     HTTPS only, and only the system's certificate authorities. A user-installed
     CA - the usual way to read an app's traffic - is NOT trusted, so the
     requests this app makes cannot be intercepted by adding one.
-    No host is pinned here (Zerodha's pinning is in code, KitePin, on its own
-    connections only), so the Dhan data pack's download from
-    raw.githubusercontent.com is checked by these system CAs like any other
-    host; the app itself fetches nothing else there (GithubPack.urlAllowed).
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">

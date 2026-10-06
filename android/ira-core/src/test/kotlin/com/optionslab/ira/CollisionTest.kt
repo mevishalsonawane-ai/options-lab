@@ -131,7 +131,6 @@ class CollisionTest {
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
-        "DhanData" to { q -> DhanData.asked(q) != null },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
         "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
         "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
@@ -850,9 +849,6 @@ class CollisionTest {
         "how often does a bought atm call end the day worth more" to "AtmBuy", "how often does nifty's atm put double on expiry day" to "AtmBuy",
         "atm option double record for banknifty" to "AtmBuy", "atm call kitni baar double hota hai" to "AtmBuy",
         "how often do at the money options end the day worth more than at 9:30" to "AtmBuy", "how many sessions does the at the money call double" to "AtmBuy",
-        // ---- DhanData: what is kept from Dhan's market data on this phone, and an index's last expiry in it ----
-        "what data do you have" to "DhanData", "how many stocks have you downloaded" to "DhanData",
-        "how did nifty do on its last expiry per dhan" to "DhanData", "dhan ka data kitna hai" to "DhanData", "which data do you have" to "DhanData",
         // ---- OtmReach: the out-of-the-money call and put held from 9:30, how often each ended the day in the money (round 43) ----
         "how often does an otm option 100 points away end the day in the money" to "OtmReach",
         "how often does a call two strikes out of the money finish in the money" to "OtmReach", "how often does nifty's otm put double" to "OtmReach",
@@ -1390,7 +1386,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "DhanData", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
         "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -2674,10 +2670,6 @@ class CollisionTest {
             "how often does selling the atm option work out", "how often does gold's atm call double", "atm call price",
             "how often does the atm option double if i buy at 9:30"))
             assertTrue(audit.feature(s) != "AtmBuy", "$s: ${audit.feature(s)}")
-        // DhanData reads only what Dhan's data holds, named: never the market's own expiry record, a thank-you, Jarvis's model or a change to the store.
-        for (s in listOf("how did banknifty move on last expiry", "thank you dhanyavad", "is the model downloaded", "delete the dhan data",
-            "what did nifty do on expiry day", "is my dhan token valid"))
-            assertTrue(audit.feature(s) != "DhanData", "$s: ${audit.feature(s)}")
         // OtmReach stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
         // question, a definition, a conditional, the at-the-money option, gold, VIX or the quote itself.
         for (s in listOf("will the otm call end in the money today", "should i hold the otm call", "how often does my otm call double",
