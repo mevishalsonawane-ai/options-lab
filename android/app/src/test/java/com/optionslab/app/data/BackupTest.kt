@@ -130,6 +130,28 @@ class BackupTest : RobolectricTest() {
         assertEquals(5.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
     }
 
+    /** Liquidity 15+5's size: a restore never raises it above this phone's; the backup's higher size waits for Boss. */
+    @Test fun aRestoreNeverRaisesLiquiditysLots() {
+        fun restoreWith(here: Int?, backup: Int?): JSONObject {
+            orbFile().delete()
+            if (here != null) Vault.writeFile(orbFile(), JSONObject().put("liqLots", here).toString().toByteArray())
+            val orb = JSONObject().put("armed", JSONObject().put("liquidity5", true)).apply { backup?.let { put("liqLots", it) } }
+            Backup.restore(context, Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject(),
+                JSONObject().put("f/orb.vault", b64(orb.toString()))), pass.copyOf()))
+            return JSONObject(String(Vault.readFile(orbFile())!!))
+        }
+        restoreWith(here = 1, backup = 3).let { o ->
+            assertEquals("kept at this phone's size", 1, o.getInt("liqLots"))
+            assertEquals("the backup's 3 waits for Boss", 3, o.getInt("liqLotsAsk"))
+            assertEquals(0, o.getJSONObject("armed").length())
+        }
+        restoreWith(here = 3, backup = 1).let { o -> assertEquals("lowering restores as it was", 1, o.getInt("liqLots")); assertFalse(o.has("liqLotsAsk")) }
+        // A new phone (no book here) holds at Boss's default of 2.
+        restoreWith(here = null, backup = 3).let { o -> assertEquals(2, o.getInt("liqLots")); assertEquals(3, o.getInt("liqLotsAsk")) }
+        // A backup from before the setting: 2, never above this phone's 1.
+        restoreWith(here = 1, backup = null).let { o -> assertEquals(1, o.getInt("liqLots")); assertEquals(2, o.getInt("liqLotsAsk")) }
+    }
+
     @Test fun oldPassphraseFilesStillOpen() {
         val bytes = craft("IRABK2", 310_000, "Test-Passphrase-42!", JSONObject().put("s.capital", 7.0),
             JSONObject().put("n/ledger.vault", b64("[]")))

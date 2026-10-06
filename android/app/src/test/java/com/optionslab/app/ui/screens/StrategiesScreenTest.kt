@@ -89,7 +89,8 @@ internal object StrategyFakes {
     private fun contract(r: Right) = Paper.Contract("BANKNIFTY-TEST-52000$r", "BANKNIFTY", today.plusDays(5), 52_000.0, r, 30, "NSE_FO|$r")
 
     /** The rows as the app builds them: the four retired arms (no switch), the Hero arm, then Liquidity 15+5 ([retiredOpen]: ORB still holds a call). */
-    fun orbView(armed: Boolean = false, pending: Boolean = false, open: Boolean = false, live: Boolean = false, retiredOpen: Boolean = false): OrbArms.View {
+    fun orbView(armed: Boolean = false, pending: Boolean = false, open: Boolean = false, live: Boolean = false, retiredOpen: Boolean = false,
+                lots: Int? = null, lotsAsk: Int? = null): OrbArms.View {
         val bar = today.atTime(10, 40)
         val pos = OrbArms.Position("liquidity5", "BANKNIFTY-TEST-52000CE", "CE", 30, 210.0, bar.plusMinutes(6), bar, "E1", "S1", 170.0, live = live, kite = "BANKNIFTY26OCT52000CE")
         val closed = pos.copy(exit = 250.0, exitTime = bar.plusMinutes(40), why = "next_liquidity", charges = 42.0, near = true)
@@ -105,7 +106,8 @@ internal object StrategyFakes {
             mark = 220.0, pending = OrbArms.Pending("liquidity5", "CE", bar, bar.plusMinutes(10)).takeIf { pending },
             today = listOfNotNull(closed, pos.takeIf { open }), liveOk = live,
             shadow = com.optionslab.engine.orb.LiquidityShadow.summarize(listOf(com.optionslab.engine.orb.LiquidityShadow.Trade(today, 1_158.0, true, "liquidity5", volSkip = true,
-                exit1430 = 2_345.6, itm2 = -12_345.4))))
+                exit1430 = 2_345.6, itm2 = -12_345.4))),
+            lots = lots, lotsAsk = lotsAsk, lotSizes = if (lots == null) emptyMap() else mapOf("BANKNIFTY" to 30, "FINNIFTY" to 65))
         val arms = retired + hero + liq
         return OrbArms.View(arms, OrbArms.Legs(today, 52_000, today.plusDays(5), contract(Right.CE), contract(Right.PE)), 52_310.0 to 51_980.0,
             PassRule.judge(listOf(PassRule.Closed(today.minusDays(1), 1_158.0, true))),
@@ -170,6 +172,7 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun approve(source: String, pinConfirmed: Boolean) { calls += "orb approve $source pin=$pinConfirmed" }
     override fun skip(source: String) { calls += "orb skip $source" }
     override fun shadowOff(id: String) { calls += "shadow off $id" }
+    override fun lots(n: Int) { calls += "orb lots $n" }
 }
 
 /** A click through the node's semantics action (as TalkBack does): works wherever the node is, on screen or not. */
@@ -523,7 +526,7 @@ class OrbRowsTest {
         assertTrue(shown("ARMED · PAPER · AUTO"))
         assertTrue(shown("BANKNIFTY 15-min: Waiting for a close through a liquidity pool that sits on a swing zone."))
         // Its paper record since 06 Oct, with and without each pre-registered candidate.
-        assertTrue(shown(keepNumbersWhole("Since 06 Oct: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades")))
+        assertTrue(shown(keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade, +₹1,158 net (+₹1,158 a trade) · (a) skip a level within one index stop: 0, no trades")))
         // Candidate (c), the volatility risk filter: tracked beside them, its figures whole too.
         assertTrue(shown(keepNumbersWhole("(c) skip in high volatility: 0 of 1, no trades against +₹1,158 a trade")))
         // Candidates (d) all out by 14:30 and (e) 2 strikes in the money: on the same trade, never what it trades.
@@ -531,6 +534,56 @@ class OrbRowsTest {
         assertTrue(shown(keepNumbersWhole("(e) 2 strikes in the money: 1, −₹12,345 a trade against +₹1,158 a trade")))
         switches()[1].areaCClick(); compose.waitForIdle()
         assertEquals(listOf("orb arm liquidity on=false auto=true pin=false"), rec.calls)
+    }
+
+    // ---- Liquidity's size ----------------------------------------------------------------------------------------------
+
+    private fun lotsTap(n: Int) {
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity $n lot", substring = true)).onFirst().areaCClick(); compose.waitForIdle()
+    }
+
+    @Test fun theLiquidityRowShowsItsLotsAndEachBooksQuantity() {
+        rows(StrategyFakes.orbView(armed = true, lots = 2), live = false)
+        assertTrue(shown("Lots:"))
+        assertEquals(1, compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Liquidity 2 lots, chosen")).fetchSemanticsNodes().size)
+        assertTrue(shown(keepNumbersWhole("Size: 2 lots a trade (BANKNIFTY 60, FINNIFTY 130 qty) · an open position keeps its own")))
+        // The candidates' record is per lot, so the size never moves it.
+        assertTrue(shown(keepNumbersWhole("Since 06 Oct, per lot: 1 paper trade")))
+    }
+
+    @Test fun aCutInLotsAppliesAtOnceARaiseAsksFirst() {
+        rows(StrategyFakes.orbView(armed = true, lots = 2), live = false)
+        lotsTap(1)
+        assertEquals("fewer lots: at once", listOf("orb lots 1"), rec.calls)
+        rec.calls.clear()
+        lotsTap(3)
+        assertTrue("a raise asks first", rec.calls.isEmpty())
+        assertTrue(shown("Liquidity 15+5: 3 lots?"))
+        tap("Cancel")
+        assertTrue("cancelled: nothing changes", rec.calls.isEmpty())
+        lotsTap(3)
+        tap("Trade 3 lots")
+        assertEquals(listOf("orb lots 3"), rec.calls)
+    }
+
+    @Test fun theSameSizeTappedAgainChangesNothing() {
+        rows(StrategyFakes.orbView(armed = true, lots = 2), live = false)
+        lotsTap(2)
+        assertTrue(rec.calls.isEmpty())
+    }
+
+    @Test fun aRestoredHigherSizeWaitsForBoss() {
+        rows(StrategyFakes.orbView(armed = false, lots = 2, lotsAsk = 3), live = false)
+        assertTrue(shown(keepNumbersWhole("The backup had 3 lots: it trades 2 lots until you choose 3.")))
+        lotsTap(3)
+        assertTrue("choosing the backup's size is still a raise: asked first", rec.calls.isEmpty())
+        tap("Trade 3 lots")
+        assertEquals(listOf("orb lots 3"), rec.calls)
+    }
+
+    @Test fun aWaitingApprovalSaysTheLots() {
+        rows(StrategyFakes.orbView(armed = true, pending = true, lots = 2), live = false)
+        assertTrue(shown("Breakout on the 10:40 bar: BUY CE, 2 lots, paper. Lapses at 10:50."))
     }
 
     @Test fun aPaperBreakoutIsApprovedOrSkipped() {

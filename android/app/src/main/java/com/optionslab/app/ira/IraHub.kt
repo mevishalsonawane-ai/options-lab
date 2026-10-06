@@ -3370,7 +3370,21 @@ object IraHub {
         // no budget: said honestly, never answered with Nifty's figures ([com.optionslab.ira.Honest]; nothing of the account).
         if (parsed.order == null && parsed.command == null && !bundled)
             runCatching { com.optionslab.ira.Honest.asked(q) }.getOrNull()?.let { a ->
-                val follows = if (com.optionslab.app.BuildConfig.GOLD) listOf(com.optionslab.ira.Market.GOLD) else com.optionslab.ira.Market.entries
+                // "How many lots is Liquidity trading?": its size from the arms' book (reads only; changing it is its own
+                // command, and a raise waits for Boss's yes). Not in IraGoldAlgo (no Liquidity arm).
+                if (a == com.optionslab.ira.Honest.Asked.LiquidityLots && !com.optionslab.app.BuildConfig.GOLD) {
+                    _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                    scope.launch(Dispatchers.IO) {
+                        reply(runCatching {
+                            val row = com.optionslab.app.data.OrbArms.view().arms.first { it.arm.liquidity }
+                            com.optionslab.ira.Honest.liquidityLots(row.lots ?: com.optionslab.engine.orb.LiquidityLots.DEFAULT, row.lotSizes,
+                                com.optionslab.app.data.AppSettings.load().guardMaxLots) +
+                                (row.lotsAsk?.let { w -> " The backup you restored had $w lots; that waits for your choice on the row." } ?: "")
+                        }.getOrElse { com.optionslab.ira.Honest.say(a) })
+                    }
+                    return true
+                }
+                val follows =if (com.optionslab.app.BuildConfig.GOLD) listOf(com.optionslab.ira.Market.GOLD) else com.optionslab.ira.Market.entries
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Honest.say(a, follows))).takeLast(MAX_MESSAGES)) }
                 return true
             }

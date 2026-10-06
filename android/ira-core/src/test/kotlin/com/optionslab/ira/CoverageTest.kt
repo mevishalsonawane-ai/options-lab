@@ -460,6 +460,8 @@ class CoverageTest {
         "is my sl too tight" to A, "mera sl bahut tight hai kya" to A, "is my sl inside the noise" to A,
         // ---- Today's own trades scored (DayScore, reasoning round 34): his own ----
         "my trades so far today" to A, "aaj ka scorecard" to A,
+        // ---- Liquidity 15+5's size asked (Honest's LiquidityLots, 06 Oct): read from the arms' book, never the budget sum ----
+        "how many lots is liquidity trading" to H, "liquidity kitne lot mein trade kar raha hai" to H, "what size is liquidity trading" to H,
     )
 
     /**

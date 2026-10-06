@@ -59,8 +59,11 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
-    /** The arms' saved state: both liquidity books armed in Live, the 5-minute book with a signal waiting for approval. */
-    private fun state(expires: LocalDateTime = now.plusMinutes(9)) {
+    /**
+     * The arms' saved state: both liquidity books armed in Live, the 5-minute book with a signal waiting for approval, at
+     * [lots] a trade (null: no size saved, a book from before the setting).
+     */
+    private fun state(expires: LocalDateTime = now.plusMinutes(9), lots: Int? = 1) {
         val books = listOf("liquidity15", "liquidity5")
         fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
         val bar = maxOf(now.minusMinutes(1), now.toLocalDate().atStartOfDay())
@@ -70,7 +73,8 @@ class LiquidityArmLiveTest : RobolectricTest() {
             .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION))
             .put("positions", JSONArray())
             .put("pending", JSONObject().put("liquidity5", JSONObject().put("right", "CE").put("bar", bar.toString())
-                .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0))))
+                .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0)))
+            .apply { lots?.let { put("liqLots", it) } })
     }
 
     private fun row() = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "liquidity" }
@@ -99,6 +103,36 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertTrue(p.live); assertEquals("liquidity5", p.arm)
         assertEquals(170.0, p.stopTrigger!!, 0.0); assertEquals(52_050.0, p.level!!, 0.0)
         assertNull("the approval is used up", row().pending)
+    }
+
+    @Test fun twoLotsAtZerodhaBuyTwiceTheLotAndTheStopCoversThemAll() {
+        state(lots = 2)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val (buy, stop) = kite.placed
+        assertEquals("60", buy.form["quantity"]); assertEquals("BUY", buy.form["transaction_type"])
+        assertEquals("60", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
+        val p = row().open!!
+        assertEquals(60, p.qty); assertEquals(30, p.lot)
+    }
+
+    @Test fun aBookSavedBeforeTheSizeTradesTwoLotsWithinTheBotSettings() {
+        state(lots = null)
+        assertEquals(2, row().lots)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("60", kite.placed.first().form["quantity"])
+    }
+
+    @Test fun threeLotsOverTheBotSettingsTwoAreRefusedByNameNeverSentSmaller() {
+        state(lots = 3)
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.startsWith("Refused: Bot settings allow 2 lots; Liquidity is set to 3."))
+        assertTrue("nothing sent, not even 2 lots", kite.placed.isEmpty())
+        assertNull(row().open)
+        // Raised in Bot settings: the same size goes.
+        SecurePrefs.put("g.lots", 3)
+        state(lots = 3)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("90", kite.placed.first().form["quantity"])
     }
 
     @Test fun inLiveAnApprovalWithoutThePinSendsNothing() {

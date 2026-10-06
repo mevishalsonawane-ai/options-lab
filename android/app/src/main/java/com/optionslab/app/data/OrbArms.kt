@@ -8,6 +8,7 @@ import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Arm
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.HeroRules
+import com.optionslab.engine.orb.LiquidityLots
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.LiquidityShadow
 import com.optionslab.engine.orb.OrbRules
@@ -114,12 +115,19 @@ object OrbArms {
         val sold: Int = 0, val soldAt: Double? = null, val soldTime: LocalDateTime? = null,
         /** The Hero arm only: the option's bid / ask / quantities (or last price alone) at the signal and at each exit. */
         val seen: List<HeroRules.Seen> = emptyList(),
+        /**
+         * Liquidity 15+5: its contract's lot size at the entry ([LiquidityLots]: [qty] is the lots bought times it). Null: an
+         * entry from before the size setting (1 lot), or another arm.
+         */
+        val lot: Int? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
         val points: Double? get() = exit?.let { it - entry }
         /** The whole trade's P&L before charges: what is held now at [exit], plus any part sold early at [soldAt]. */
         val grossPnl: Double? get() = points?.let { it * qty + ((soldAt ?: entry) - entry) * sold }
+        /** Lots bought ([lot] known): [qty] plus any part sold early, over the lot; 1 when not known (before the size setting). */
+        val lots: Double get() = lot?.takeIf { it > 0 }?.let { (qty + sold).toDouble() / it } ?: 1.0
     }
 
     /** A signal waiting for approval. Liquidity 15+5 also keeps its strike and the index levels (the ORB uses the day's legs). */
@@ -149,6 +157,10 @@ object OrbArms {
         val since: MutableMap<String, String> = HashMap(),
         /** The one-time changes this book has been through ([switchOffLosers]): each runs once, never again. */
         val migrated: MutableSet<String> = HashSet(),
+        /** Liquidity 15+5's size: lots a NEW entry buys ([LiquidityLots]); null until set (then [LiquidityLots.DEFAULT]). */
+        var liqLots: Int? = null,
+        /** A restore's higher size, waiting for Boss to choose it ([LiquidityLots.restored]); null: nothing waits. */
+        var liqLotsAsk: Int? = null,
     )
 
     private var cache: Book? = null
@@ -212,7 +224,8 @@ object OrbArms {
                         if (p.has("strong")) p.getBoolean("strong") else null,
                         sold = p.optInt("sold", 0), soldAt = if (p.has("soldAt")) p.getDouble("soldAt") else null,
                         soldTime = p.optString("soldTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
-                        seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty())
+                        seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty(),
+                        lot = if (p.has("lot")) p.getInt("lot") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -225,6 +238,8 @@ object OrbArms {
             o.optJSONObject("upDays")?.let { m -> m.keys().forEach { b.upDays[it] = m.getBoolean(it) } }
             o.optJSONObject("since")?.let { m -> m.keys().forEach { b.since[it] = m.getString(it) } }
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
+            b.liqLots = LiquidityLots.of(if (o.has("liqLots")) o.optInt("liqLots") else null)
+            b.liqLotsAsk = LiquidityLots.of(if (o.has("liqLotsAsk")) o.optInt("liqLotsAsk") else null)
         }.isSuccess
         if (!ok) {
             // Never overwrite what could not be read: set it aside and start clean, and say so.
@@ -242,8 +257,9 @@ object OrbArms {
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
         if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
-        // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone.
-        if (switchOffLosers(b) or retire(b, restoring)) save(b)
+        // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone; then
+        // Liquidity's size, when none was saved (Boss's 06 Oct choice: 2 lots).
+        if (switchOffLosers(b) or retire(b, restoring) or sizeLiquidity(b)) save(b)
         return b
     }
 
@@ -261,9 +277,21 @@ object OrbArms {
     @Volatile var exposureHint: List<com.optionslab.ira.AutoSide.Held> = emptyList()
         private set
 
+    /**
+     * Liquidity 15+5's size (lots a new entry buys), as of the last load or save: read without the lock by Jarvis's limits
+     * ([com.optionslab.app.ira.IraActions.setting]); never a decision on an order (the entry reads the book itself). Until the
+     * book is read it holds the fewest lots, so any raise asked for is still treated as one (Boss's own voice, his yes).
+     */
+    @Volatile var liquidityLotsHint: Int = LiquidityLots.CHOICES.first()
+        private set
+
+    /** Liquidity 15+5's size now, from the book itself (Jarvis's "set liquidity to 3 lots" reads it before asking). */
+    suspend fun liquidityLots(): Int = lock.withLock { lotsOf(book()) }
+
     private fun hints(b: Book) {
         holdingHint = b.positions.any { it.open }
         exposureHint = exposureOf(b)
+        liquidityLotsHint = lotsOf(b)
     }
 
     /** The open positions of [b] for [com.optionslab.ira.AutoSide]: who holds what, on which index. */
@@ -336,6 +364,21 @@ object OrbArms {
         return true
     }
 
+    /**
+     * Once, for a book with no size saved (one from before the setting, or a new one): Liquidity 15+5 takes
+     * [LiquidityLots.DEFAULT] (2 lots, Boss's 06 Oct choice), said in the arm log. True when [b] changed (it is then saved).
+     */
+    private fun sizeLiquidity(b: Book): Boolean {
+        if (b.liqLots != null) return false
+        b.liqLots = LiquidityLots.DEFAULT
+        b.migrated += LiquidityLots.MIGRATION
+        if (!com.optionslab.app.BuildConfig.GOLD) runCatching { Diag.record("orb", LiquidityLots.MIGRATED) }
+        return true
+    }
+
+    /** Liquidity 15+5's size in [b]: lots a new entry buys. */
+    private fun lotsOf(b: Book): Int = b.liqLots ?: LiquidityLots.DEFAULT
+
     private fun save(b: Book) {
         val o = JSONObject()
         o.put("armed", JSONObject(b.armed as Map<*, *>))
@@ -360,7 +403,7 @@ object OrbArms {
                     .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } }.put("timed", p.timed)
                     .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) } }
                     .apply { if (p.sold > 0) put("sold", p.sold); p.soldAt?.let { put("soldAt", it) }; p.soldTime?.let { put("soldTime", it.toString()) }
-                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)) })
+                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -371,6 +414,8 @@ object OrbArms {
         o.put("upDays", JSONObject(b.upDays as Map<*, *>))
         o.put("since", JSONObject(b.since as Map<*, *>))
         o.put("migrated", JSONArray(b.migrated.sorted()))
+        b.liqLots?.let { o.put("liqLots", it) }
+        b.liqLotsAsk?.let { o.put("liqLotsAsk", it) }
         val text = o.toString()
         // Battery: an idle book (nothing armed, open or waiting) whose bytes are already on disk, as this process last
         // wrote them, is not encrypted and synced again ([com.optionslab.ira.OrbIdleSave]); anything else is, as before.
@@ -434,6 +479,12 @@ object OrbArms {
         val retired: RetiredArms.Retired? = null,
         /** Liquidity 15+5 only: its paper trades since 06 Oct with and without each pre-registered candidate ([LiquidityShadow]). */
         val shadow: LiquidityShadow.Summary? = null,
+        /** Liquidity 15+5 only: lots each new entry buys ([LiquidityLots]); null for the other arms. */
+        val lots: Int? = null,
+        /** Liquidity 15+5 only: a restore's higher size waiting for Boss to choose it; null: nothing waits. */
+        val lotsAsk: Int? = null,
+        /** Liquidity 15+5 only: each index's lot size, when the contract list is on the phone (underlying -> lot). */
+        val lotSizes: Map<String, Int> = emptyMap(),
     )
 
     data class View(
@@ -483,7 +534,36 @@ object OrbArms {
             "${LiquidityRules.underlyingOf(a)} ${LiquidityRules.minutesOf(a)}-min: ${describe(b.status[a.source] ?: "")}" }
         return ArmView(LiquidityRules.ARM, books.any { b.armed[it] == true }, books.all { b.auto[it] != false }, status, open,
             open?.let { marks[it.symbol] }, books.firstNotNullOfOrNull { b.pending[it] }, b.positions.filter { it.arm in books && it.day == day },
-            books.all { b.liveOk[it] == true }, shadow = shadowOf(b))
+            books.all { b.liveOk[it] == true }, shadow = shadowOf(b), lots = lotsOf(b), lotsAsk = b.liqLotsAsk, lotSizes = lotSizes())
+    }
+
+    /** Each Liquidity index's lot size from the contract list already on the phone (never a download); empty when none is. */
+    private fun lotSizes(): Map<String, Int> = runCatching {
+        val listed = Market.cachedContracts()?.second.orEmpty()
+        LiquidityRules.UNDERLYINGS.mapNotNull { u -> listed.firstOrNull { it.underlying == u && it.lotSize > 0 }?.let { u to it.lotSize } }.toMap()
+    }.getOrDefault(emptyMap())
+
+    /**
+     * Liquidity 15+5's size: [lots] (1, 2 or 3) for every NEW entry of its four books; an open position keeps its own
+     * quantity. Raising it is Boss's alone: the row asks before it, and Jarvis only on his confirmed yes ([by] says who; the
+     * arm log keeps it). A restore's waiting size is answered by this too. Paper takes it as it is; Live still goes through
+     * the account guard, and a size the Bot settings do not allow is said now and refused at the entry, never traded smaller.
+     */
+    suspend fun setLiquidityLots(lots: Int, by: String): String = lock.withLock {
+        if (!LiquidityLots.valid(lots)) return@withLock "Liquidity 15+5 trades 1, 2 or 3 lots, not $lots."
+        val b = book()
+        val old = lotsOf(b)
+        val waited = b.liqLotsAsk
+        b.liqLots = lots; b.liqLotsAsk = null
+        if (old == lots && waited == null) return@withLock "Liquidity 15+5 already trades ${LiquidityLots.words(lots)}."
+        save(b)
+        runCatching { Diag.record("orb", "Liquidity 15+5: size ${LiquidityLots.words(old)} -> ${LiquidityLots.words(lots)} ($by)" +
+            (waited?.let { "; the restored ${LiquidityLots.words(it)} no longer waits" } ?: "")) }
+        val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
+        val max = runCatching { AppSettings.load().guardMaxLots }.getOrDefault(0)
+        "Liquidity 15+5 now buys ${LiquidityLots.words(lots)} of each contract's lot on every new entry" +
+            (if (holding) "; the open position keeps its own quantity." else ".") +
+            (LiquidityLots.liveRefusal(lots, max)?.let { " On Zerodha, Bot settings allow ${LiquidityLots.words(max)}: a live entry would be refused until you raise that." } ?: "")
     }
 
     /**
@@ -498,9 +578,10 @@ object OrbArms {
             val net = (it.grossPnl ?: 0.0) - it.charges
             val alt = alts[ShadowArms.liqKey(it.arm, it.entryTime, it.symbol)]
             val exitTime = it.exitTime
+            // Per lot ([LiquidityShadow.Trade.lots]): a 2- or 3-lot trade's rupees, and its candidates', count as one lot's.
             LiquidityShadow.Trade(it.day, net, it.near, it.arm, it.volSkip,
                 exit1430 = if (alt == null || exitTime == null) null else LiquidityShadow.exitAllNet(net, exitTime, it.entry, it.qty, alt.at1430),
-                itm2 = alt?.itm2, strong = it.strong)
+                itm2 = alt?.itm2, strong = it.strong, lots = it.lots)
         })
     }
 
@@ -568,7 +649,7 @@ object OrbArms {
             val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
             return@withLock if (on) "${LiquidityRules.ARM.label} armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
                 (if (automatic) "fully automatic" else "you approve each entry") + ": on the 15-minute and the 5-minute BANKNIFTY and FINNIFTY charts, " +
-                "when a close takes a liquidity pool that sits on a swing zone, it buys the ATM call (up) or put (down), 1 lot, with a stop " +
+                "when a close takes a liquidity pool that sits on a swing zone, it buys the ATM call (up) or put (down), ${LiquidityLots.words(lotsOf(b))}, with a stop " +
                 "15% below the price paid, and sells at the next liquidity level, when new liquidity forms, when the break fails, or at " +
                 "15:10. Entries 09:20-14:00, one position per chart."
             else "${LiquidityRules.ARM.label} disarmed." + if (holding) " Its open position is still managed to its exit." else ""
@@ -1272,15 +1353,17 @@ object OrbArms {
     }
 
     /**
-     * A live entry: MARKET BUY 1 lot MIS at Zerodha, then a resting SL SELL 40 below the
+     * A live entry: MARKET BUY 1 lot MIS at Zerodha (Liquidity 15+5: its [lots]), then a resting SL SELL 40 below the
      * fill. Only reached after the owner approved with the PIN (see [approve]).
      */
     private suspend fun enterLive(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal? = null,
-                                  near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null): String {
+                                  near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null, lots: Int = 1): String {
         // A paper-only arm (the Hero arm among them) never reaches Zerodha, whatever called this.
         liveRefusal(arm.source)?.let { return it }
         val s = AppSettings.load()
         if (s.guardKill) return "refused: the kill switch is on"
+        // Liquidity's size over the Bot settings' max lots: said by name, never sent smaller (the guard's own checks follow).
+        LiquidityLots.liveRefusal(lots, s.guardMaxLots)?.let { return it }
         // A phone that failed the security check never sends a real order on its own.
         val findings = runCatching { com.optionslab.app.security.Integrity.reportWithin(app, 60_000) }.getOrDefault(emptyList())
         if (com.optionslab.app.security.Integrity.compromised(findings)) return "refused: this phone failed the security check; no live order sent"
@@ -1293,7 +1376,7 @@ object OrbArms {
         val last = runCatching { Broker.quotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: return "refused: no quote"
         if (liquidity == null && OrbRules.stopTrigger(last) == null) return "refused: premium %.2f is at or below 40, a 40-point stop has no level".format(Locale.ENGLISH, last)
         if (Strategies.stoppedToday()) return "stopped_for_today"
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
+        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize * lots.coerceAtLeast(1), ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "iraorb")
         val acct = Broker.accountNow()      // positions, funds and orders read in parallel
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = last), acct)
@@ -1322,7 +1405,7 @@ object OrbArms {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
             b.positions += Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
                 live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ProfitLock.targetOf(arm) != null,
-                near = near, volSkip = volSkip, strong = strong)
+                near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 })
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
                 "until the order book shows what filled.", "ORB live")
@@ -1334,7 +1417,8 @@ object OrbArms {
         val (stopId, trigger) = placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id), liquidity = liquidity != null)
         b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
-            ladder = ProfitLock.targetOf(arm) != null, near = near, volSkip = volSkip, strong = strong)
+            ladder = ProfitLock.targetOf(arm) != null, near = near, volSkip = volSkip, strong = strong,
+            lot = ins.lotSize.takeIf { liquidity != null && it > 0 })
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
@@ -1572,7 +1656,7 @@ object OrbArms {
             b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target, near, volSkip, strong)
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
                 "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
-                    (if (live) "LIVE on Zerodha, 1 lot: approve it on Home in the app" else "Paper account, 1 lot") +
+                    (if (live) "LIVE on Zerodha, ${LiquidityLots.words(lotsOf(b))}: approve it on Home in the app" else "Paper account, ${LiquidityLots.words(lotsOf(b))}") +
                     ". Approve by ${hhmm(expires)} or it lapses.", "almanac", approve = "orb")
             return "awaiting_approval"
         }
@@ -1603,7 +1687,7 @@ object OrbArms {
     }
 
     /**
-     * A MARKET BUY of 1 lot of the ATM option on the break (paper, or Zerodha when [live]), with its resting stop 15% below
+     * A MARKET BUY of Liquidity's lots ([LiquidityLots], 1-3 of the contract's own lot) of the option on the break (paper, or Zerodha when [live]), with its resting stop 15% below
      * the fill. [near], [volSkip]: candidates (a)'s and (c)'s shadow flags, kept with the position.
      */
     private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, live: Boolean,
@@ -1615,25 +1699,28 @@ object OrbArms {
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
         val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
         exposureRefusal(b, c)?.let { return it }
-        if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong)
+        // Boss's size (1, 2 or 3 lots of this contract's own lot): read at the entry, so a change applies to new entries only.
+        val lots = lotsOf(b)
+        if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong, lots = lots)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val snap = runCatching { Paper.snapshot() }.getOrNull()
-        val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
+        val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
-        val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
+        val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${LiquidityRules.ARM.label} · entry", buy.orderId)
-        // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40).
+        // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40), for all that filled.
         val trigger = LiquidityRules.stopTrigger(fill.price)
         var stopId: String? = null
         if (trigger != null) {
-            val stop = Paper.place(c, "SELL", 1, "SL-M", "MIS", null, trigger)
+            val stop = Paper.place(c, "SELL", (fill.quantity / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "SL-M", "MIS", null, trigger)
             if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · stop") } }
         }
         b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
-            charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip, strong = strong)
+            charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip, strong = strong,
+            lot = c.lotSize.takeIf { it > 0 })
         marks[c.symbol] = fill.price
         return "entered"
     }
@@ -1865,7 +1952,7 @@ object OrbArms {
     }
 
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; exposureHint = emptyList(); writtenText = null; writtenStat = null
+        cache = null; holdingHint = false; exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         if (::file.isInitialized) file.delete()
     }
 }

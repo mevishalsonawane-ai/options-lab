@@ -370,6 +370,9 @@ class CollisionTest {
         "help me journal today" to "DayJournal", "why so quiet" to "Airtime", "what's crude doing" to "Honest",
         "what time do i lose most" to "Account:TIMEOFDAY", "how did i do this week" to "Account:HISTORY", "mera pnl kitna hai" to "Account:PNL",
         "aaj kitne trade hue" to "Account:ORDERS",
+        // Liquidity 15+5's size asked (06 Oct): its own answer from the arms' book, never "how many lots can I buy" without a budget.
+        "how many lots is liquidity trading" to "Honest", "liquidity kitne lot mein trade kar raha hai" to "Honest",
+        "how many lots does liquidity trade" to "Honest",
         // ==== Round 11: round 10's open items, routed ====
         "talk me through my put" to "Account:EXPLAIN_POS", "explain my put" to "Account:EXPLAIN_POS", "how did my put do" to "Account:EXPLAIN_POS",
         "my put" to "Account:EXPLAIN_POS", "holiday kab hai" to "MarketDays", "how many trading days left this month" to "MarketDays",

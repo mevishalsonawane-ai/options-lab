@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,6 +66,7 @@ fun OrbRows(model: AppModel) {
             override fun approve(source: String, pinConfirmed: Boolean) { model.approveOrb(source, pinConfirmed) }
             override fun skip(source: String) { model.skipOrb(source) }
             override fun shadowOff(id: String) { model.shadowOff(id) }
+            override fun lots(n: Int) { model.liquidityLots(n) }
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) })
 }
@@ -76,6 +78,8 @@ internal interface OrbActions {
     fun skip(source: String)
     /** A shadow re-armed on paper on Boss's yes ([OrbArms.View.shadows]) switched off again. */
     fun shadowOff(id: String) {}
+    /** Liquidity 15+5's size for its new entries ([OrbArms.setLiquidityLots]): a raise only after Boss's yes in the dialog. */
+    fun lots(n: Int) {}
 }
 
 /** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
@@ -92,6 +96,8 @@ internal fun OrbRowsContent(
     var armAuth by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     // Arming the Hero arm (not proven): its own confirmation, with the record, before it is switched on.
     var heroConfirm by remember { mutableStateOf<String?>(null) }
+    // Liquidity's size raised: (from, to), asked before it applies (more lots is more risk); lowering applies at once.
+    var lotsConfirm by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
     // A retired arm is a row only while it still holds a position (or a signal it raised before it was retired) - no switch.
     view.arms.filter { it.retired == null || it.open != null || it.pending != null }.forEachIndexed { i, a ->
@@ -139,7 +145,16 @@ internal fun OrbRowsContent(
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                // Liquidity 15+5's pre-registered candidates, tracked in its shadow (they never change what it trades).
+                // Liquidity 15+5's size for new entries; an open position keeps its own quantity.
+                a.lots?.let { n ->
+                    // "Lots: 1 · 2 · 3" (a raise asks first, a cut applies at once).
+                    LotsChooser(n) { pick -> if (com.optionslab.engine.orb.LiquidityLots.raises(n, pick)) lotsConfirm = n to pick else if (pick != n || a.lotsAsk != null) actions.lots(pick) }
+                    Text(keepNumbersWhole(com.optionslab.engine.orb.LiquidityLots.line(n, a.lotSizes)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                    // A restore's higher size waits for Boss: it never raised the size by itself.
+                    a.lotsAsk?.let { w -> Text(keepNumbersWhole("The backup had ${com.optionslab.engine.orb.LiquidityLots.words(w)}: it trades " +
+                        "${com.optionslab.engine.orb.LiquidityLots.words(n)} until you choose $w."), style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp)) }
+                }
+                // Liquidity 15+5's pre-registered candidates, tracked in its shadow per lot (they never change what it trades).
                 a.shadow?.let { s -> Text(keepNumbersWhole(com.optionslab.engine.orb.LiquidityShadow.line(s)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
                 val closed = a.today.filter { !it.open }
                 if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
@@ -158,7 +173,7 @@ internal fun OrbRowsContent(
         }
         a.pending?.let { pd ->
             Column(Modifier.fillMaxWidth().padding(bottom = 10.dp).background(p.amber.copy(alpha = 0.12f), RoundedCornerShape(12.dp)).padding(12.dp)) {
-                Text("Breakout on the %02d:%02d bar: BUY ${pd.right}, 1 lot, ${if (live) "LIVE on Zerodha" else "paper"}. Lapses at %02d:%02d."
+                Text("Breakout on the %02d:%02d bar: BUY ${pd.right}, ${a.lots?.let { com.optionslab.engine.orb.LiquidityLots.words(it) } ?: "1 lot"}, ${if (live) "LIVE on Zerodha" else "paper"}. Lapses at %02d:%02d."
                     .format(pd.signalBar.hour, pd.signalBar.minute, pd.expires.hour, pd.expires.minute),
                     style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
                 Row(Modifier.padding(top = 8.dp)) {
@@ -205,7 +220,7 @@ internal fun OrbRowsContent(
             title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(if (live) "The app is in LIVE: entries go to Zerodha, 1 lot MIS. Arming takes your PIN or fingerprint once. " +
+                    Text(if (live) "The app is in LIVE: entries go to Zerodha, ${view.arms.first { it.arm.source == src }.lots?.let { com.optionslab.engine.orb.LiquidityLots.words(it) } ?: "1 lot"} MIS. Arming takes your PIN or fingerprint once. " +
                         "An open position always exits in the account it entered."
                         else "The app is in Paper: entries go to the paper account. To trade automatically on Zerodha, switch to Live and arm it again (PIN once).",
                         style = Type.bodySmall.copy(color = p.inkSoft))
@@ -254,7 +269,46 @@ internal fun OrbRowsContent(
             dismissButton = { TextButton({ heroConfirm = null }) { Text("Cancel") } },
         )
     }
+    lotsConfirm?.let { (from, to) ->
+        AlertDialog(
+            onDismissRequest = { lotsConfirm = null },
+            properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+            title = { Text("Liquidity 15+5: ${com.optionslab.engine.orb.LiquidityLots.words(to)}?", style = Type.title) },
+            text = {
+                Text(keepNumbersWhole("Each new entry will buy ${com.optionslab.engine.orb.LiquidityLots.words(to)} of its contract's lot instead of " +
+                    "${com.optionslab.engine.orb.LiquidityLots.words(from)} - ${to}x the rupees won or lost a trade, the 15% stop and every exit on all of it. " +
+                    "An open position keeps its own quantity." + if (live) " On Zerodha the Bot settings' max lots and daily loss still apply." else ""),
+                    style = Type.bodySmall.copy(color = p.inkSoft))
+            },
+            confirmButton = { TextButton({ lotsConfirm = null; actions.lots(to) }) { Text("Trade ${com.optionslab.engine.orb.LiquidityLots.words(to)}") } },
+            dismissButton = { TextButton({ lotsConfirm = null }) { Text("Cancel") } },
+        )
+    }
     if (detail) OrbDetail(view, onShadowOff = { actions.shadowOff(it) }) { detail = false }
+}
+
+/** "Lots: 1 · 2 · 3": the size chosen in bold; each figure a 48 dp target. */
+@Composable
+private fun LotsChooser(lots: Int, onPick: (Int) -> Unit) {
+    val p = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Lots:", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+        com.optionslab.engine.orb.LiquidityLots.CHOICES.forEachIndexed { i, n ->
+            if (i > 0) Text("·", style = Type.bodySmall.copy(color = p.inkFaint))
+            val on = n == lots
+            androidx.compose.foundation.layout.Box(
+                Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    .semantics { contentDescription = "Liquidity $n lot${if (n == 1) "" else "s"}" + if (on) ", chosen" else "" }
+                    .clickable { onPick(n) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(keepNumbersWhole("$n"), style = Type.body.copy(color = if (on) p.verdigris else p.inkSoft, fontSize = 15.sp,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.Normal),
+                    modifier = if (on) Modifier.background(p.verdigris.copy(alpha = 0.12f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp)
+                        else Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+            }
+        }
+    }
 }
 
 @Composable
@@ -290,7 +344,9 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {}, onClo
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)
                     a.today.forEach { t ->
                         val tail = if (t.open) "open" else "${px(t.exit ?: 0.0)} ${t.why?.replace('_', ' ')} · ${rs((t.grossPnl ?: 0.0) - t.charges)}"
-                        Text("%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right} @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute), style = small)
+                        // Liquidity 15+5's quantity said (its size can be 1-3 lots); the rupees are the trade's own at that quantity.
+                        val qty = if (a.arm.liquidity) " ×${t.qty}" else ""
+                        Text("%02d:%02d ${if (t.live) "LIVE" else "paper"} BUY ${t.right}$qty @ ${px(t.entry)} → $tail".format(t.entryTime.hour, t.entryTime.minute), style = small)
                         // The Hero arm: the half sold at 5x, and the book (bid / ask / quantities, or the last price) at the signal and each exit.
                         t.soldAt?.takeIf { t.sold > 0 }?.let { s ->
                             Text(keepNumbersWhole("  ${t.sold} sold @ ${px(s)} at 5×" + (t.soldTime?.let { " (%02d:%02d)".format(it.hour, it.minute) } ?: "") +

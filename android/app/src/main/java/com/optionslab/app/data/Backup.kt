@@ -181,12 +181,14 @@ object Backup {
         SecurePrefs.put(DISARM, true)
         if (SecurePrefs.unreadable) throw IllegalStateException("The settings vault is unreadable; nothing was restored.")
         val files = c.json.getJSONObject("files")
+        // Liquidity 15+5's size in this phone's book now (before it is replaced): a restore never raises it ([liquidityLots]).
+        val lotsHere = currentLiquidityLots(ctx)
         for ((dir, name) in FILES) {
             val f = file(ctx, dir, name)
             val b64 = files.optString("$dir/$name").ifEmpty { null }
             // An older backup without Jarvis's learning leaves the phone's own in place.
             if (b64 == null) { if (!name.startsWith("ira-")) f.delete(); continue }
-            val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP))
+            val bytes = disarmed(name, Base64.decode(b64, Base64.NO_WRAP), lotsHere)
             try {
                 if (name.endsWith(".vault")) Vault.writeFile(f, bytes) else f.writeBytes(bytes)
             } finally { bytes.fill(0) }
@@ -205,7 +207,25 @@ object Backup {
      * [DISARM]: if a file is not in the expected shape it is kept as it is and the flag alone
      * disarms it at the next start.
      */
-    private fun disarmed(name: String, bytes: ByteArray): ByteArray = runCatching {
+    /** Liquidity 15+5's size in this phone's arms' book (null: no book, or none saved, or it cannot be read). */
+    private fun currentLiquidityLots(ctx: Context): Int? = runCatching {
+        val o = JSONObject(String(Vault.readFileSteady(file(ctx, "f", "orb.vault")) ?: return@runCatching null, Charsets.UTF_8))
+        if (o.has("liqLots")) o.optInt("liqLots") else null
+    }.getOrNull()
+
+    /**
+     * Liquidity 15+5's size in a restored arms' book [o]: never above [lotsHere], what this phone's book has (Boss's 06 Oct
+     * rule: more lots only on his yes, as arming only on his switch). A higher size in the backup is kept aside
+     * ("liqLotsAsk"): the row says so, and it applies only when Boss chooses it.
+     */
+    internal fun liquidityLots(o: JSONObject, lotsHere: Int?): JSONObject {
+        val (kept, ask) = com.optionslab.engine.orb.LiquidityLots.restored(lotsHere, if (o.has("liqLots")) o.optInt("liqLots") else null)
+        o.put("liqLots", kept)
+        if (ask != null) o.put("liqLotsAsk", ask) else o.remove("liqLotsAsk")
+        return o
+    }
+
+    private fun disarmed(name: String, bytes: ByteArray, lotsHere: Int? = null): ByteArray = runCatching {
         val text = String(bytes, Charsets.UTF_8)
         val out: String = when (name) {
             // Strategies.save: defs are StrategyCodec strings; runs / autoApprove / pending as in Strategies.disarmAll.
@@ -221,8 +241,8 @@ object Backup {
                 o.put("defs", clean).put("runs", JSONObject()).put("autoApprove", JSONObject()).put("pending", JSONObject()).toString()
             }
             // OrbArms.save: maps keyed by arm, as cleared by OrbArms.disarmAll.
-            "orb.vault" -> JSONObject(text).put("armed", JSONObject()).put("auto", JSONObject()).put("liveOk", JSONObject())
-                .put("pending", JSONObject()).toString()
+            "orb.vault" -> liquidityLots(JSONObject(text).put("armed", JSONObject()).put("auto", JSONObject()).put("liveOk", JSONObject())
+                .put("pending", JSONObject()), lotsHere).toString()
             // PineScripts.save: an array of scripts, each with an "auto" object whose "on" starts it trading.
             "pine.vault" -> {
                 val a = org.json.JSONArray(text)

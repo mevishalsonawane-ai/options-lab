@@ -15,6 +15,11 @@ object Honest {
         data class Vwap(val market: Market?) : Asked
         data class Target(val market: Market?) : Asked
         data object LotsNoBudget : Asked
+        /**
+         * "How many lots is Liquidity trading?" ([SettingsTalk.liquidityLotsAsked]): not a budget sum - the app answers it from
+         * the arms' book (Liquidity 15+5's size, [liquidityLots]); [say] is only the words when that book cannot be read.
+         */
+        data object LiquidityLots : Asked
     }
 
     /** Words that act or are Boss's own: never read here. */
@@ -47,6 +52,8 @@ object Honest {
     private val BOTTOM = Regex("(?i)\\b(where is the (bottom|top)(?! (gainers?|losers?|strike|oi|open interest))|bottom kahan|top kahan|how low (can|will)|how high (can|will)|kitna aur girega|kitna aur gir(e|ega)|kitna aur (upar )?jayega)\\b")
 
     fun asked(text: String): Asked? {
+        // (Liquidity 15+5's size asked - "how many lots is liquidity trading" - is its own answer, never the budget sum.)
+        if (SettingsTalk.liquidityLotsAsked(text)) return Asked.LiquidityLots
         // ("How many lots can I buy?" is arithmetic asked without its budget, never an order: the hub reads orders first.)
         if (Sizing.needsBudget(text)) return Asked.LotsNoBudget
         if (NOT_HERE.containsMatchIn(text)) return null
@@ -79,5 +86,19 @@ object Honest {
             "I can give you its levels: support, resistance and the pivots."
         Asked.LotsNoBudget -> "Tell me the budget, Boss - like \"how many lots can I buy with 20000\" - and I'll work it out from the " +
             "at-the-money premium. Your margin is under Funds."
+        Asked.LiquidityLots -> "Liquidity 15+5's lots are on its row on Home, Boss: Lots 1, 2 or 3."
     }
+
+    private val INDEX_NAMES = mapOf("BANKNIFTY" to "BankNifty", "FINNIFTY" to "FinNifty")
+
+    /**
+     * Liquidity 15+5's size said: [lots] a new entry, each index's quantity ([lotSizes]: underlying -> its lot, when known), and
+     * whether the Bot settings' [maxLots] would refuse it on Zerodha (0: no cap). Nothing changes from here.
+     */
+    fun liquidityLots(lots: Int, lotSizes: Map<String, Int>, maxLots: Int): String =
+        "Liquidity 15+5 buys $lots lot${if (lots == 1) "" else "s"} on each new entry, Boss" +
+            (if (lotSizes.isEmpty()) "" else " (" + lotSizes.entries.joinToString(", ") { (u, l) -> "${lots * l} on ${INDEX_NAMES[u] ?: u}" } + ")") +
+            "; an open position keeps the quantity it was bought with, and its 15% stop and exits cover all of it. " +
+            (if (maxLots in 1 until lots) "On Zerodha the Bot settings allow $maxLots lot${if (maxLots == 1) "" else "s"}, so a live entry would be refused until one of them changes. " else "") +
+            "Say \"set liquidity to 2 lots\" to change it - more lots waits for your yes."
 }

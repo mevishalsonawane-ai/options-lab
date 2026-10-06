@@ -28,7 +28,9 @@ import kotlin.math.abs
  *       after the study had looked at its TEST period, so it is NOT validated: this is a pre-registered forward test,
  *       judged like (c) on the trades it flagged, at [MIN_TRADES] of them.
  *
- * Counted from [SINCE] (the day Boss switched it back on, paper only). Pure: no clock, no storage.
+ * Counted from [SINCE] (the day Boss switched it back on, paper only), PER LOT: each trade's rupees (and each candidate's)
+ * divided by the lots it bought ([Trade.lots], [LiquidityLots]), so changing Liquidity's size never moves the comparison.
+ * Pure: no clock, no storage.
  */
 object LiquidityShadow {
     val SINCE: LocalDate = LocalDate.of(2026, 10, 6)
@@ -108,7 +110,16 @@ object LiquidityShadow {
                      /** Candidate (e)'s net on the 2-ITM option; null: not priced (not counted for it). */
                      val itm2: Double? = null,
                      /** Candidate (f)'s flag as recorded at the signal; null: not recorded (not counted for it). */
-                     val strong: Boolean? = null)
+                     val strong: Boolean? = null,
+                     /**
+                      * The lots the trade bought ([LiquidityLots]; 1 before the setting existed): [net], [exit1430] and [itm2] are
+                      * that many lots' rupees, counted per lot ([perLot]).
+                      */
+                     val lots: Double = 1.0) {
+        /** This trade per lot: its rupees and each candidate's divided by [lots]. */
+        fun perLot(): Trade = if (lots == 1.0) this else copy(net = LiquidityLots.perLot(net, lots),
+            exit1430 = exit1430?.let { LiquidityLots.perLot(it, lots) }, itm2 = itm2?.let { LiquidityLots.perLot(it, lots) }, lots = 1.0)
+    }
 
     /** A set of trades: how many, and their net. */
     data class Cut(val trades: Int, val net: Double) {
@@ -134,7 +145,8 @@ object LiquidityShadow {
     }
 
     fun summarize(trades: List<Trade>): Summary {
-        val since = trades.filter { !it.day.isBefore(SINCE) }
+        // Per lot: a 2- or 3-lot trade counts as one lot's rupees, so the size Boss trades never moves the comparison.
+        val since = trades.filter { !it.day.isBefore(SINCE) }.map { it.perLot() }
         fun cut(x: List<Trade>) = Cut(x.size, x.sumOf { it.net })
         val vol = since.filter { it.volSkip != null }
         val d = since.filter { it.exit1430 != null }
@@ -150,9 +162,9 @@ object LiquidityShadow {
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
     private fun per(c: Cut) = c.perTrade?.let { rs(it) + " a trade" } ?: "no trades"
 
-    /** The Liquidity row's line: the trades so far, net, net a trade, and net a trade without each candidate's trades. */
+    /** The Liquidity row's line, per lot: the trades so far, net, net a trade, and net a trade without each candidate's trades. */
     fun line(s: Summary): String =
-        "Since 06 Oct: ${s.all.trades} paper trade${if (s.all.trades == 1) "" else "s"}, ${rs(s.all.net)} net (${per(s.all)}) · " +
+        "Since 06 Oct, per lot: ${s.all.trades} paper trade${if (s.all.trades == 1) "" else "s"}, ${rs(s.all.net)} net (${per(s.all)}) · " +
             "(a) skip a level within one index stop: ${s.withoutNear.trades}, ${per(s.withoutNear)} · " +
             "(b) no FINNIFTY 30m: ${s.withoutFin30.trades}, ${per(s.withoutFin30)} · " +
             "(c) skip in high volatility: " + (if (s.volAll.trades == 0) "tracked from its first trade"
@@ -188,7 +200,7 @@ object LiquidityShadow {
         val c = if (s.volEnough) "(c) skipping signals in high volatility ${if (helped(s.volAll, s.withoutVol)) "helped" else "did not help"}: " +
                 "${per(s.withoutVol)} over ${s.withoutVol.trades} against ${per(s.volAll)} over ${s.volAll.trades} since it was added. "
             else "(c) skipping signals in high volatility has ${s.volAll.trades} of $MIN_TRADES trades since it was added; it is judged at $MIN_TRADES. "
-        return "$which, Boss. Liquidity 15+5 made ${per(s.all)} over ${s.all.trades} paper trades since 06 Oct; " +
+        return "$which, Boss. Per lot, Liquidity 15+5 made ${per(s.all)} over ${s.all.trades} paper trades since 06 Oct; " +
             "(a) skipping signals with the next level within one index stop: ${per(s.withoutNear)} over ${s.withoutNear.trades}; " +
             "(b) without FINNIFTY 30m: ${per(s.withoutFin30)} over ${s.withoutFin30.trades}. $c" +
             same("(d) selling everything at 14:30", s.exitAll, s.at1430) + same("(e) buying 2 strikes in the money", s.itm1, s.itm2) +

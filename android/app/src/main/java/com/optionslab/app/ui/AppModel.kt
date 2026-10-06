@@ -1386,6 +1386,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** A shadow re-armed on paper (Boss's yes) switched off again: back to recording only. */
     fun shadowOff(id: String) = strategyDo { com.optionslab.app.data.ShadowArms.disarm(id) }
+    /** Liquidity 15+5's size from its row (a raise was confirmed in the row's dialog first). */
+    fun liquidityLots(n: Int) = strategyDo { com.optionslab.app.data.OrbArms.setLiquidityLots(n, "Boss on the row") }
 
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -82,6 +82,8 @@ class LiquidityArmTest : RobolectricTest() {
         upstox.price(peKey, 280.0)
         OrbArms.testIndexBars = { t -> feed(t) }
         OrbArms.testHistoryBars = { emptyList() }
+        // The day's figures below are one lot's: the size is set to 1 here (Boss's default is 2; its own tests set it).
+        runBlocking { OrbArms.setLiquidityLots(1, "test") }
     }
 
     @After fun down() {
@@ -298,6 +300,20 @@ class LiquidityArmTest : RobolectricTest() {
     }
 
     @Test fun finniftyIsTradedTooOnItsOwnChartAndOptions() {
+        finniftyDay()
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_fin", p.arm)
+        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24000CE"))                // one strike in the money (liq2)
+        assertEquals(65, p.qty)                                              // FINNIFTY's own lot
+        assertEquals(24_050.0, p.level!!, 0.0)
+        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
+        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
+    }
+
+    /** Only FINNIFTY breaks today (at 13:00, its own lot 65). */
+    private fun finniftyDay() {
         bankFlat = true
         val expiry = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
@@ -313,15 +329,108 @@ class LiquidityArmTest : RobolectricTest() {
                 .map { start -> val b = finBar((start.hour * 60 + start.minute - (9 * 60 + 15)) / 5)
                     Upstox.Bar(start.atZone(IST).toEpochSecond(), b[0], b[1], b[2], b[3], 1000, 0) }
         }
+    }
+
+    // ---- Liquidity's size (Boss's 06 Oct choice: 2-3 lots) ----------------------------------------------------------------
+
+    @Test fun twoLotsBuyTwiceTheContractsLotAndTheStopAndExitCoverIt() {
+        assertTrue(runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }.startsWith("Liquidity 15+5 now buys 2 lots"))
+        assertEquals(2, row().lots)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("2 x BANKNIFTY's lot of 30", 60, p.qty)
+        assertEquals(30, p.lot); assertEquals(2.0, p.lots, 0.0)
+        // The 15% resting stop covers the full quantity.
+        val stop = Paper.state.orders.single { it.action == "SELL" }
+        assertEquals(60, stop.quantity); assertEquals(p.stopOrderId, stop.orderId)
+        assertEquals(60, Paper.state.orders.single { it.action == "BUY" }.quantity)
+        tick(LocalTime.of(13, 10))                                          // the failed break sells it all
+        val closed = row().today.single()
+        assertEquals("failed_break", closed.why)
+        assertEquals(60, Paper.state.orders.single { it.action == "SELL" && it.status == "complete" }.quantity)
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+        // The row's P&L is the trade's rupees at its real quantity; the shadow counts it per lot.
+        val net = (closed.grossPnl ?: 0.0) - closed.charges
+        assertEquals((closed.exit!! - closed.entry) * 60, closed.grossPnl!!, 0.001)
+        assertEquals(net / 2, row().shadow!!.all.net, 0.01)
+        // Saved and read back: the lot and the size survive a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(30, row().today.single().lot); assertEquals(2, row().lots)
+    }
+
+    @Test fun aNewSizeLeavesTheOpenPositionAsItWasAndAppliesToTheNextEntry() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        assertEquals(30, row().today.single().qty)
+        upstox.price(ceKey, row().today.single().entry * 1.10)              // +10%: past the 20-minute time stop's +5%
+        val msg =runBlocking { OrbArms.setLiquidityLots(3, "Boss on the row") }
+        assertTrue(msg, msg.contains("the open position keeps its own quantity"))
+        assertEquals(3, row().lots)
+        val held = row().today.single()
+        assertTrue(held.open); assertEquals("bought 1 lot: still 1 lot", 30, held.qty)
+        tick(LocalTime.of(15, 10))
+        val closed = row().today.single()
+        assertEquals("session_end", closed.why)
+        assertEquals("its exit sells what it holds, no more", 30, Paper.state.orders.filter { it.action == "SELL" && it.status == "complete" }.sumOf { it.quantity })
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+    }
+
+    @Test fun finniftyTakesItsOwnLotTimesTheSize() {
+        finniftyDay()
+        runBlocking { OrbArms.setLiquidityLots(3, "Boss on the row") }
         armLiquidity()
         passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
         val p = row().today.single()
         assertEquals("liquidity5_fin", p.arm)
-        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24000CE"))                // one strike in the money (liq2)
-        assertEquals(65, p.qty)                                              // FINNIFTY's own lot
-        assertEquals(24_050.0, p.level!!, 0.0)
-        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
-        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
+        assertEquals("3 x FINNIFTY's lot of 65", 195, p.qty)
+        assertEquals(195, Paper.state.orders.single { it.action == "SELL" }.quantity)
+    }
+
+    @Test fun aBookSavedBeforeTheSizeTakesTwoLotsOnceAndTheArmLogSaysSo() {
+        AutomationSupport.orbState(context, org.json.JSONObject().put("positions", org.json.JSONArray()))
+        assertEquals(2, row().lots)
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains(com.optionslab.engine.orb.LiquidityLots.MIGRATED) })
+        // Boss's own choice afterwards stays: the change ran once.
+        runBlocking { OrbArms.setLiquidityLots(1, "Boss on the row") }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(1, row().lots)
+        assertTrue(Diag.lines().any { it.contains("Liquidity 15+5: size 2 lots -> 1 lot (Boss on the row)") })
+    }
+
+    /** "Liquidity ko 3 lot karo": said back and asked; nothing changes until Boss's yes, and a raise counts as more risk. */
+    @Test fun jarvisAsksBeforeRaisingTheLotsAndChangesNothingUntilTheYes() {
+        val raise = com.optionslab.ira.Ask.parse("liquidity ko 3 lot karo").command!!
+        assertEquals(com.optionslab.ira.Command.Kind.SET_LIMIT, raise.kind)
+        assertTrue("a raise needs Boss's own voice", com.optionslab.app.ira.IraActions.loosens(raise))
+        val (said, act) = runBlocking { com.optionslab.app.ira.IraActions.prepare(raise) }
+        assertTrue(said, said.startsWith("change Liquidity 15+5's lots a trade from 1 to 3 (this allows more risk"))
+        assertEquals("nothing changed before the yes", 1, row().lots)
+        val done = runBlocking { act!!() }
+        assertTrue(done, done.startsWith("Liquidity 15+5 now buys 3 lots"))
+        assertEquals(3, row().lots)
+        assertTrue(Diag.lines().any { it.contains("Liquidity 15+5: size 1 lot -> 3 lots (Jarvis, on Boss's yes)") })
+        // Fewer lots: still said back and confirmed, but no more risk.
+        val cut = com.optionslab.ira.Ask.parse("set liquidity to 2 lots").command!!
+        assertFalse(com.optionslab.app.ira.IraActions.loosens(cut))
+        val (cutSaid, cutAct) = runBlocking { com.optionslab.app.ira.IraActions.prepare(cut) }
+        assertEquals("change Liquidity 15+5's lots a trade from 3 to 2", cutSaid)
+        // Changed on the row meanwhile: the yes applies nothing.
+        runBlocking { OrbArms.setLiquidityLots(1, "Boss on the row") }
+        assertTrue(runBlocking { cutAct!!() }.contains("changed since you asked"))
+        assertEquals(1, row().lots)
+        // Only 1, 2 or 3; the same size is said, not asked.
+        assertEquals("Liquidity 15+5 trades 1, 2 or 3 lots, Boss - not 5." to null,
+            runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 5 lots").command!!) })
+        assertEquals("Liquidity 15+5 already trades 1 lot." to null,
+            runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 1 lot").command!!) })
+    }
+
+    @Test fun onlyOneTwoOrThreeLots() {
+        assertEquals("Liquidity 15+5 trades 1, 2 or 3 lots, not 4.", runBlocking { OrbArms.setLiquidityLots(4, "test") })
+        assertEquals(1, row().lots)
+        assertEquals("Liquidity 15+5 already trades 1 lot.", runBlocking { OrbArms.setLiquidityLots(1, "test") })
     }
 
     /** A build that ran FINNIFTY on 15 + 5 minutes saved its 15-minute book as "liquidity15_fin": it carries on as the 30-minute book. */

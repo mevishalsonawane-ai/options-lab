@@ -41,13 +41,13 @@ class LiquidityShadowTest {
         assertFalse(s.enough)
         assertEquals(100.0, s.all.perTrade)
         assertNull(LiquidityShadow.Cut(0, 0.0).perTrade)
-        assertEquals("Since 06 Oct: 4 paper trades, +₹400 net (+₹100 a trade) · (a) skip a level within one index stop: 3, +₹200 a trade · " +
+        assertEquals("Since 06 Oct, per lot: 4 paper trades, +₹400 net (+₹100 a trade) · (a) skip a level within one index stop: 3, +₹200 a trade · " +
             "(b) no FINNIFTY 30m: 2, +₹50 a trade · (c) skip in high volatility: tracked from its first trade · (d) all out by 14:30: tracked " +
             "from its first trade · (e) 2 strikes in the money: tracked from its first trade · (f) only strong close + momentum: tracked " +
             "from its first trade · 1 from before (a) was recorded",
             LiquidityShadow.line(s))
         val one = LiquidityShadow.summarize(listOf(t(-50.0, true)))
-        assertEquals("Since 06 Oct: 1 paper trade, −₹50 net (−₹50 a trade) · (a) skip a level within one index stop: 0, no trades · " +
+        assertEquals("Since 06 Oct, per lot: 1 paper trade, −₹50 net (−₹50 a trade) · (a) skip a level within one index stop: 0, no trades · " +
             "(b) no FINNIFTY 30m: 1, −₹50 a trade · (c) skip in high volatility: tracked from its first trade · (d) all out by 14:30: tracked " +
             "from its first trade · (e) 2 strikes in the money: tracked from its first trade · (f) only strong close + momentum: tracked " +
             "from its first trade", LiquidityShadow.line(one))
@@ -56,7 +56,7 @@ class LiquidityShadowTest {
     @Test fun belowFortyTradesNothingIsJudged() {
         val s = LiquidityShadow.summarize(List(39) { t(10.0, false) })
         val v = LiquidityShadow.verdict(s)
-        assertTrue(v.startsWith("Liquidity 15+5 has 39 of 40 paper trades since 06 Oct; its candidate rules are judged at 40. So far: Since 06 Oct: 39"), v)
+        assertTrue(v.startsWith("Liquidity 15+5 has 39 of 40 paper trades since 06 Oct; its candidate rules are judged at 40. So far: Since 06 Oct, per lot: 39"), v)
     }
 
     @Test fun atFortyTradesJarvisSaysWhichCandidateHelped() {
@@ -65,7 +65,7 @@ class LiquidityShadowTest {
         val a = LiquidityShadow.summarize(base + List(5) { t(-300.0, true) } + List(5) { t(200.0, false, "liquidity30_fin") })
         assertTrue(a.enough)
         val va = LiquidityShadow.verdict(a)
-        assertTrue(va.startsWith("Candidate (a) helped, (b) did not, Boss. Liquidity 15+5 made +₹70 a trade over 40 paper trades since 06 Oct;"), va)
+        assertTrue(va.startsWith("Candidate (a) helped, (b) did not, Boss. Per lot, Liquidity 15+5 made +₹70 a trade over 40 paper trades since 06 Oct;"), va)
         assertTrue(va.endsWith("(c) skipping signals in high volatility has 0 of 40 trades since it was added; it is judged at 40. " +
             "(d) selling everything at 14:30 has 0 of 40 trades priced; it is judged at 40. (e) buying 2 strikes in the money has 0 of 40 " +
             "trades priced; it is judged at 40. (f) only a strong close with premium momentum (a forward test) has 0 of 40 trades since it " +

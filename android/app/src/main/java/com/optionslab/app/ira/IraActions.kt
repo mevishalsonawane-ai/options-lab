@@ -372,6 +372,7 @@ internal object IraActions {
             Command.Kind.SET_LIMIT -> {
                 val key = c.target?.let { runCatching { SettingsTalk.Key.valueOf(it) }.getOrNull() } ?: return "I could not tell which setting." to null
                 val v = c.level ?: return "Tell me the new value for ${key.label}." to null
+                if (key == SettingsTalk.Key.LIQUIDITY_LOTS) return liquidityLots(v)
                 val old = setting(key, AppSettings.load())
                 if (old == v) return "${key.label.replaceFirstChar { it.uppercase() }} is already ${SettingsTalk.show(key, v)}." to null
                 val more = if (SettingsTalk.loosens(key, old, v)) " (this allows more risk)" else ""
@@ -594,6 +595,28 @@ internal object IraActions {
         SettingsTalk.Key.PRODUCT -> if (s.orderProduct == "MIS") 0.0 else 1.0
         SettingsTalk.Key.EXPIRY_SQUARE_OFF -> if (s.expirySquareOff) 1.0 else 0.0
         SettingsTalk.Key.NAKED_SHORTS -> if (s.guardNakedShort) 1.0 else 0.0
+        // Kept in the arms' book, not the settings (as of its last load or save): never in the settings' change log.
+        SettingsTalk.Key.LIQUIDITY_LOTS -> com.optionslab.app.data.OrbArms.liquidityLotsHint.toDouble()
+    }
+
+    /**
+     * "Set liquidity to 3 lots": Liquidity 15+5's size, said back old -> new and done only on Confirm ([Command.Kind.SET_LIMIT]
+     * waits for one tap); more lots is more risk ([loosens]), so a raise also needs Boss's own voice. Lowering is the same
+     * confirmed step. Only 1, 2 or 3 lots; never part of a plan ([com.optionslab.ira.Plan.ALLOWED]).
+     */
+    private suspend fun liquidityLots(v: Double): Pair<String, (suspend () -> String)?> {
+        val key = SettingsTalk.Key.LIQUIDITY_LOTS
+        val n = v.toInt()
+        if (v % 1.0 != 0.0 || !com.optionslab.engine.orb.LiquidityLots.valid(n)) return "Liquidity 15+5 trades 1, 2 or 3 lots, Boss - not ${SettingsTalk.show(key, v)}." to null
+        val old = com.optionslab.app.data.OrbArms.liquidityLots()
+        if (old == n) return "Liquidity 15+5 already trades ${com.optionslab.engine.orb.LiquidityLots.words(n)}." to null
+        val more = if (com.optionslab.engine.orb.LiquidityLots.raises(old, n)) " (this allows more risk: each trade wins or loses ${"%.1f".format(java.util.Locale.ENGLISH, n.toDouble() / old).removeSuffix(".0")}x as much)" else ""
+        return SettingsTalk.describe(key, old.toDouble(), v) + more to suspend {
+            // Checked again at Confirm: changed meanwhile (on the row, or another request), nothing is applied.
+            val now = com.optionslab.app.data.OrbArms.liquidityLots()
+            if (now != old) "Liquidity 15+5's lots changed since you asked (now ${com.optionslab.engine.orb.LiquidityLots.words(now)}), so I left it. Ask again."
+            else com.optionslab.app.data.OrbArms.setLiquidityLots(n, "Jarvis, on Boss's yes")
+        }
     }
 
     private fun applySetting(k: SettingsTalk.Key, v: Double, s: AppSettings): AppSettings = when (k) {
@@ -614,6 +637,8 @@ internal object IraActions {
         SettingsTalk.Key.PRODUCT -> s.copy(orderProduct = if (v == 0.0) "MIS" else "NRML")
         SettingsTalk.Key.EXPIRY_SQUARE_OFF -> s.copy(expirySquareOff = v != 0.0)
         SettingsTalk.Key.NAKED_SHORTS -> s.copy(guardNakedShort = v != 0.0)
+        // Not a setting: changed in the arms' book ([liquidityLots]), never here.
+        SettingsTalk.Key.LIQUIDITY_LOTS -> s
     }
 
     /** Would [c] loosen one of the app's limits (so only Boss's voice may ask for it)? */
