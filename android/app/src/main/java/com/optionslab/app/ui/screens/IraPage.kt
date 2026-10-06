@@ -271,6 +271,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
             // Its own slice (speed round 3): a new message or a busy flag no longer recomposes this card.
             item { val record by iraSlice { IraRecord.of(it) }; HowIraIsDoing(record) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
+            // Jarvis's weekly review: the newest week's three sentences, the whole review and the last 12 weeks (not IraGoldAlgo).
+            if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item { WeeklyReviewSlot() }
             if (st.messages.isEmpty() && memoryReady) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

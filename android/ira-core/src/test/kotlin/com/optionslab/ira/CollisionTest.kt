@@ -124,6 +124,7 @@ class CollisionTest {
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
+        "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -874,6 +875,13 @@ class CollisionTest {
         "abhi kitna risk hai" to "BigMoveRisk", "finnifty mein abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
         "banknifty abhi volatile hai kya" to "BigMoveRisk", "is nifty volatile now" to "BigMoveRisk", "is the market volatile right now" to "BigMoveRisk",
         "how risky is the market now" to "BigMoveRisk", "market risky hai kya abhi" to "BigMoveRisk", "is a sharp move likely in sensex" to "BigMoveRisk",
+        // ---- WeeklyReview: Jarvis's review of the week (money by strategy, live vs backtest, shadows, the market, next week) ----
+        "weekly review" to "WeeklyReview", "jarvis weekly review" to "WeeklyReview", "show me the weekly review" to "WeeklyReview",
+        "is hafte ka review" to "WeeklyReview", "hafte ka review" to "WeeklyReview", "week ka review" to "WeeklyReview",
+        "how did this week go" to "WeeklyReview", "how did the week go" to "WeeklyReview", "how was this week" to "WeeklyReview",
+        "weekly report" to "WeeklyReview", "weekly recap" to "WeeklyReview", "review of the week" to "WeeklyReview", "week in review" to "WeeklyReview",
+        "is hafta kaisa raha" to "WeeklyReview", "last week's review" to "WeeklyReview", "pichle hafte ka review" to "WeeklyReview",
+        "how did last week go" to "WeeklyReview", "what's in the weekly review" to "WeeklyReview",
         // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
         "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityMap",
         "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
@@ -1417,7 +1425,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -2949,5 +2957,28 @@ class CollisionTest {
         // A plain "repeat that" stays "tell me more"; "speak slower" stays the lasting pace change.
         assertEquals(Command.Kind.MORE, Ask.parse("repeat that").command?.kind)
         assertEquals(Command.Kind.PACE_SLOWER, Ask.parse("speak slower").command?.kind)
+    }
+
+    // ---- WeeklyReview: Jarvis's review of the week, never the questions that already had their own answers ----
+
+    @Test fun theWeeklyReviewLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("weekly review", "is hafte ka review", "how did this week go", "last week's review")) {
+            assertEquals("WeeklyReview", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+        }
+        // A strategy's own question, the day's wrap-up and summary, Boss's own week, the week ahead: as before.
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("Solo", audit.feature("how is solo doing"))
+        assertEquals("Market", audit.feature("today's summary"))
+        assertEquals("DaySummary", audit.feature("wrap up"))
+        assertEquals("DayStory", audit.feature("how did today go"))
+        assertEquals("Account:REVIEW", audit.feature("my weekly review"))
+        assertEquals("Account:REVIEW", audit.feature("how did my week go"))
+        assertEquals("WeekAhead", audit.feature("what does this week look like"))
+        assertEquals("WeekAhead", audit.feature("plan for next week"))
+        for (s in listOf("how did my bots do this week", "how was the week for the bots", "how did nifty do this week", "how was the month",
+            "monthly review", "is this an expiry week", "how are my bots doing"))
+            assertTrue(audit.feature(s) != "WeeklyReview", "$s: ${audit.feature(s)}")
     }
 }

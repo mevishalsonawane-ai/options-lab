@@ -31,7 +31,8 @@ import kotlin.math.abs
  *   15:45  day report      paper and Zerodha P&L, trades, the ORB arms, anything that went wrong
  *
  * and, for Jarvis, one on Sunday evening (18:00): the paper arms' week ([com.optionslab.ira.ArmWeek]) - said once, kept in
- * the chat, no notification; nothing acts.
+ * the chat, no notification; nothing acts - and one after each week's last session (15:47): Jarvis's weekly review
+ * ([com.optionslab.ira.WeeklyReview]), kept for the Ira page's card with a "Weekly review ready" notice; nothing acts.
  *
  * They run in a worker (the contract list can take a while to download), from
  * their own exact alarms, re-armed for the next trading day each time.
@@ -43,6 +44,11 @@ object DailyReports {
         EVENING("ol.report.evening", LocalTime.of(15, 45), 2022),
         /** Sundays only, Jarvis only (not IraGoldAlgo): the paper arms' week. */
         WEEK("ol.report.week", LocalTime.of(18, 0), 2023),
+        /**
+         * Jarvis only (not IraGoldAlgo): after the week's last session by the exchange calendar (Friday, or the last trading
+         * day of a week with a holiday), Jarvis's weekly review ([com.optionslab.app.ira.IraWeekly]). One alarm a week.
+         */
+        WEEKLY("ol.report.weekly", LocalTime.of(15, 47), 2024),
     }
 
     /** The Sunday report runs in Jarvis (not IraGoldAlgo) whether or not Zerodha is set up: the arms trade on paper. */
@@ -61,6 +67,24 @@ object DailyReports {
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = intent(context, k)
         am.cancel(pi)
+        if (k == Kind.WEEKLY) {
+            if (!weekOn()) return
+            val now = Market.now()
+            var d = now.toLocalDate()
+            if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
+            // The week's last session (at most three weeks ahead: a calendar with no session at all arms nothing).
+            var n = 0
+            while (!com.optionslab.ira.WeeklyReview.isLastSession(d) { Market.isTradingDay(it) } && n < 21) { d = d.plusDays(1); n++ }
+            if (n >= 21) return
+            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
+            try {
+                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            } catch (_: SecurityException) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            }
+            return
+        }
         if (k == Kind.WEEK) {
             if (!weekOn()) return
             val now = Market.now()
@@ -96,6 +120,7 @@ object DailyReports {
     fun fired(context: Context, k: Kind) {
         schedule(context, k)
         if (k == Kind.WEEK) { if (!weekOn() || Market.today().dayOfWeek != java.time.DayOfWeek.SUNDAY) return }
+        else if (k == Kind.WEEKLY) { if (!weekOn() || !com.optionslab.ira.WeeklyReview.isLastSession(Market.today()) { Market.isTradingDay(it) }) return }
         else if (!Market.isTradingDay() && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val req = OneTimeWorkRequestBuilder<ReportWorker>()
             .setInputData(workDataOf("kind" to k.name))
@@ -391,13 +416,19 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val k = runCatching { DailyReports.Kind.valueOf(inputData.getString("kind") ?: "") }.getOrNull() ?: return Result.failure()
         return try {
             when (k) {
-                DailyReports.Kind.MORNING -> DailyReports.morning(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                DailyReports.Kind.MORNING -> {
+                    DailyReports.morning(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                    // Jarvis: a weekly review missed (the phone was off after the week's last session) is made now, once.
+                    if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraWeekly.prepare(applicationContext) }
+                }
                 // The reminder speaks only if the session is still missing.
                 DailyReports.Kind.LOGIN -> if (!Broker.loggedIn) DailyReports.post(applicationContext, k, "Log in to Zerodha now",
                     listOf("The market opens at 09:15 and there is no Zerodha session today. Open the app → ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha."))
                 DailyReports.Kind.EVENING -> DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
                 // Said and kept in the chat only: no notification.
                 DailyReports.Kind.WEEK -> DailyReports.week()
+                // Kept for the Ira page, noted in the chat, "Weekly review ready" notified (no rupee figure in it).
+                DailyReports.Kind.WEEKLY -> com.optionslab.app.ira.IraWeekly.prepare(applicationContext)
             }
             Result.success()
         } catch (e: Exception) {

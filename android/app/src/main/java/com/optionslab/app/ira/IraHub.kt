@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2855,7 +2855,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3261,6 +3261,21 @@ object IraHub {
                         runCatching { IraEvents.owner() }.getOrDefault(emptyList()), unlocked)
                 }.getOrElse { "I could not read the calendar just now, Boss." }
                 reply(said)
+            }
+            return true
+        }
+        // "Weekly review", "is hafte ka review", "how did this week go", "last week's review" ([com.optionslab.ira.WeeklyReview]):
+        // Jarvis's review of the week in three sentences - the paper P&L, each running strategy against its backtest and the
+        // one line to watch - the whole of it on the Ira page's card ([IraWeekly]). Before the week's review is made, the week
+        // so far. On a locked phone no rupee figure is said. Reads only; nothing acts. ("My weekly review" / "how did my week
+        // go" stay the review of Boss's own trades.) Not in IraGoldAlgo.
+        val weeklyAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.WeeklyReview.asked(q) }.getOrNull() else null
+        if (weeklyAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val weeklyLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraWeekly.answer(weeklyAsk, weeklyLocked) }.getOrElse { "I could not put the week's review together just now, Boss." })
             }
             return true
         }
