@@ -74,7 +74,10 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, area = "Chart", onClose = close) },
         alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
         chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) },
-        liquidity = if (com.optionslab.app.BuildConfig.GOLD) null else ArmLiquiditySource)
+        liquidity = if (com.optionslab.app.BuildConfig.GOLD) null else ArmLiquiditySource,
+        // A level's alert is one of the app's own price alarms (the Alarms page's store, the watch's minute check); the
+        // gold build has no NSE watch to ring it, and no layer.
+        levelAlarms = if (com.optionslab.app.BuildConfig.GOLD) null else remember(model) { StoreLevelAlarms(model.alarms) })
 }
 
 /**
@@ -121,6 +124,8 @@ internal fun ChartPane(
     marketOpen: () -> Boolean = { com.optionslab.app.data.Market.isOpen() },
     /** Liquidity 15+5's layer on BANKNIFTY / FINNIFTY ([LiquidityPanel]); null: none (the gold build, most tests). */
     liquidity: LiquiditySource? = null,
+    /** The price alarms a tapped liquidity level sets and lists ([LevelSheet]); null: the level's sheet has no alert button. */
+    levelAlarms: LevelAlarms? = null,
 ) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
@@ -424,7 +429,11 @@ internal fun ChartPane(
             val u = liqUnderlying
             if (u != null && liqOn && liquidity != null) LiquidityPanel(u, visible, bars = { now ->
                 liqCache.fresh(u, now) ?: source.bars(u, "5m", null, null).also { liqCache.offer(u, it, liquidity.now(), history = true) }
-            }, source = liquidity, modifier = area)
+            }, source = liquidity, modifier = area, levelAlarms = levelAlarms, lastPrice = {
+                // The last traded price, as the chart's own alert reads it (the 1-minute feed).
+                val t = System.currentTimeMillis() / 1000
+                source.bars(u, "1m", t - 3 * 86400, t).lastOrNull()?.close
+            })
         }
         // The chart stays at one place in the composition whatever the layer does, so the WebView is never rebuilt: not
         // when the layer is switched on or off, and not when the keyboard shrinks the height (a Row / Column chosen from

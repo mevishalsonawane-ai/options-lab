@@ -174,7 +174,11 @@ internal class LiquidityCache {
  */
 @Composable
 internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend (LocalDateTime) -> List<Upstox.Bar>,
-                            source: LiquiditySource, modifier: Modifier = Modifier) {
+                            source: LiquiditySource, modifier: Modifier = Modifier,
+                            /** The app's price alarms a tapped level's sheet sets and lists ([LevelSheet]); null: none. */
+                            levelAlarms: LevelAlarms? = null,
+                            /** The index's last traded price (the chart's 1-minute feed); null: not known. */
+                            lastPrice: suspend () -> Double? = { null }) {
     val tfs = remember(underlying) { LiquidityOverlay.timeframes(underlying) }
     var tf by remember(underlying) { mutableIntStateOf(tfs.first()) }
     var input by remember(underlying) { mutableStateOf<List<Bar>?>(null) }
@@ -216,7 +220,8 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
         val m = withContext(Dispatchers.Default) { LiquidityOverlay.build(b, tf, underlying, now, trades) }
         if (m != model) model = m
     }
-    LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind?.let(::behindText))
+    LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind?.let(::behindText),
+        levelAlarms = levelAlarms, lastPrice = lastPrice, today = source.now().toLocalDate())
 }
 
 /** The candles behind: the newest closed 5-minute bar held ([last], its start; null: none) and the one due ([due], its start). */
@@ -249,9 +254,17 @@ internal fun LiquidityChart(
     model: LiquidityOverlay.Model?, error: String?, modifier: Modifier = Modifier,
     /** The candles are more than a bar behind ([behindBy]): said in a chip over the levels. */
     behind: String? = null,
+    /** The app's price alarms a tapped level's sheet sets and lists; null: the sheet has no alarm button. */
+    levelAlarms: LevelAlarms? = null,
+    /** The index's last traded price for a tapped level's sheet; null (or no answer): the last closed bar's close. */
+    lastPrice: suspend () -> Double? = { null },
+    /** The session's day ("taken today"); null: the last bar's. */
+    today: java.time.LocalDate? = null,
 ) {
     val p = LocalPalette.current
     var picked by remember(tf) { mutableStateOf<LiquidityOverlay.Marker?>(null) }
+    var level by remember(tf) { mutableStateOf<PickedLevel?>(null) }
+    var levelLast by remember(tf) { mutableStateOf<Double?>(null) }
     Column(modifier.background(p.paper)) {
         Row(Modifier.fillMaxWidth().background(p.paperDeep).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -274,7 +287,7 @@ internal fun LiquidityChart(
                 modifier = Modifier.align(Alignment.Center).padding(12.dp))
             else if (m.bars.isEmpty()) Text("No closed ${tf}-minute bars yet.", style = Type.bodySmall.copy(color = p.inkSoft),
                 modifier = Modifier.align(Alignment.Center).padding(12.dp))
-            else LevelsCanvas(m) { picked = it }
+            else LevelsCanvas(m, onLevel = { s -> levelLast = null; level = pickedOf(s, m) }) { picked = it }
         }
         // Every marker as a chip too (newest first): a tap opens its card, as a tap on the chart does.
         val marks = model?.markers.orEmpty().sortedByDescending { it.bar }
@@ -288,6 +301,16 @@ internal fun LiquidityChart(
                 }
             }
         }
+    }
+    // A level's last price: the chart's own when it answers, else the last closed bar's close.
+    LaunchedEffect(level) {
+        val l = level ?: return@LaunchedEffect
+        val got = withContext(Dispatchers.IO) { runCatching { lastPrice() }.getOrNull() }
+        levelLast = got ?: l.lastClose
+    }
+    level?.let { l ->
+        LevelSheet(underlying, l, tf, today ?: model?.lastBar?.toLocalDate() ?: java.time.LocalDate.now(com.optionslab.engine.IST), levelLast,
+            levelAlarms) { level = null }
     }
     picked?.let { mk ->
         val lines = mk.trade?.let { LiquidityOverlay.card(it) } ?: mk.skip?.let { LiquidityOverlay.card(it) } ?: emptyList()
@@ -323,9 +346,12 @@ private fun markColor(mk: LiquidityOverlay.Marker, p: com.optionslab.app.ui.them
     LiquidityOverlay.MarkerKind.NO_ROOM -> p.inkSoft
 }
 
-/** The candles, levels, lines and markers; a tap near a marker picks it. */
+/**
+ * The candles, levels, lines and markers; a tap near a marker picks it, else a tap (or a long press) on a level, or on its
+ * label at the right, opens that level ([onLevel]).
+ */
 @Composable
-private fun LevelsCanvas(model: LiquidityOverlay.Model, onPick: (LiquidityOverlay.Marker) -> Unit) {
+private fun LevelsCanvas(model: LiquidityOverlay.Model, onLevel: (LiquidityOverlay.Shape) -> Unit = {}, onPick: (LiquidityOverlay.Marker) -> Unit) {
     val p = LocalPalette.current
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -333,16 +359,29 @@ private fun LevelsCanvas(model: LiquidityOverlay.Model, onPick: (LiquidityOverla
     val bars = model.bars
     Canvas(Modifier.fillMaxSize().semantics { contentDescription = "Liquidity levels chart" }
         .pointerInput(model) {
-            detectTapGestures { pos ->
+            // The level drawn within 12 dp of a touch: over the bars it spans, or beside its label in the right column.
+            fun levelAt(pos: Offset): LiquidityOverlay.Shape? {
+                val g = Geometry.of(bars.size, size.width.toFloat(), 3.dp.toPx(), 52.dp.toPx())
+                val (lo, hi) = priceRange(bars, g.start)
+                val h = size.height.toDouble()
+                val shapes = model.shapes.filter { it.to >= g.start }
+                val price = com.optionslab.ira.LevelAlarm.priceAt(pos.y.toDouble(), lo, hi, h)
+                val tol = com.optionslab.ira.LevelAlarm.tolerance(12.dp.toPx().toDouble(), lo, hi, h)
+                val levels = shapes.map(::levelOf)
+                val i = if (pos.x > g.plotW) com.optionslab.ira.LevelAlarm.hit(levels, price, tol, activeOnly = true)
+                    else com.optionslab.ira.LevelAlarm.hit(levels, price, tol, bar = g.start + (pos.x / g.w).toInt())
+                return i?.let { shapes[it] }
+            }
+            detectTapGestures(onLongPress = { pos -> levelAt(pos)?.let(onLevel) }) { pos ->
                 val g = Geometry.of(bars.size, size.width.toFloat(), 3.dp.toPx(), 52.dp.toPx())
                 val i = g.start + ((pos.x / g.w).toInt())
-                LiquidityOverlay.markerNear(model.markers, i)?.let(onPick)
+                val mk = if (pos.x <= g.plotW) LiquidityOverlay.markerNear(model.markers, i) else null
+                if (mk != null) onPick(mk) else levelAt(pos)?.let(onLevel)
             }
         }) {
         val g = Geometry.of(bars.size, size.width, 3.dp.toPx(), 52.dp.toPx())
         val view = bars.subList(g.start, bars.size)
-        var lo = view.minOf { it.low }; var hi = view.maxOf { it.high }
-        val pad = max(hi - lo, 1.0) * 0.08; lo -= pad; hi += pad
+        val (lo, hi) = priceRange(bars, g.start)
         val plotH = size.height
         fun y(v: Double) = (plotH * (1 - (v - lo) / (hi - lo))).toFloat()
         fun x(i: Int) = (i - g.start) * g.w
@@ -407,6 +446,14 @@ private fun LevelsCanvas(model: LiquidityOverlay.Model, onPick: (LiquidityOverla
             lastTop = top
         }
     }
+}
+
+/** The prices the plot shows: the visible bars' low to high, 8% spare each side. */
+private fun priceRange(bars: List<Bar>, start: Int): Pair<Double, Double> {
+    val view = bars.subList(start, bars.size)
+    val lo = view.minOf { it.low }; val hi = view.maxOf { it.high }
+    val pad = max(hi - lo, 1.0) * 0.08
+    return (lo - pad) to (hi + pad)
 }
 
 /** How many of the window's bars fit at no less than [minW] px each beside a [gutter] px label column. */
