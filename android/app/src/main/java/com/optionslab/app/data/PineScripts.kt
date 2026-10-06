@@ -150,6 +150,16 @@ object PineScripts {
     fun get(id: Long): Item? = _items.value.firstOrNull { it.id == id }
 
     /**
+     * Every saved script, read from the vault first if the loader has not yet (never on the main thread); null before
+     * [init] (nothing can be read yet).
+     */
+    fun loadNow(): List<Item>? {
+        if (!::file.isInitialized) return null
+        ensure()
+        return _items.value
+    }
+
+    /**
      * Save (a new script when [item] has id 0); returns the saved script. The auto-trade
      * settings are never taken from [item]: a screen holding an older copy must not switch
      * auto-trading back on after the kill switch or a restore turned it off. Only

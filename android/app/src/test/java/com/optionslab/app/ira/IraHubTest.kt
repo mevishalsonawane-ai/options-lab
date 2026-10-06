@@ -91,6 +91,27 @@ class IraHubTest : RobolectricTest() {
         assertEquals("That strategy is gone.", IraHub.approve(99))
     }
 
+    @Test fun aStrategyAlreadySavedIsRefusedNotAddedTwice() = runBlocking {
+        // Boss's 06 Oct diagnostics: the same "Jarvis: ..." strategy was added again at 09:50 and every trade doubled.
+        IraHub.testLabBars = { _, _ -> twoYears }
+        com.optionslab.app.data.PineScripts.init(context)
+        com.optionslab.app.data.PineScripts.wipe()
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        IraHub.ask("Backtest the breakout on BankNifty 15m")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        // Already saved and armed: another header comment and layout, the same code, symbol and chart.
+        val earlier = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, p.result.name,
+            "// added at 09:50\n" + p.result.script.replace("\n", "\n\n")))
+        com.optionslab.app.data.PineScripts.setAuto(earlier.id, com.optionslab.app.data.PineScripts.Auto(on = true, symbol = "BANKNIFTY", interval = "15m"))
+        val said = IraHub.approve(p.id)
+        assertEquals("Not added: ${p.result.name} is already armed as #${earlier.id} (the same code, symbol and chart) - " +
+            "a second copy would double every trade.", said)
+        assertEquals("nothing added", 1, com.optionslab.app.data.PineScripts.items.value.size)
+        assertEquals(IraHub.Proposal.DISMISSED, IraHub.state.value.proposals.single().status)
+    }
+
     @Test fun dismissedAndNothingToTest() = runBlocking {
         IraHub.testLabBars = { _, _ -> twoYears }
         IraHub.testHistories = { sixty }

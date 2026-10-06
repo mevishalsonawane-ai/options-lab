@@ -158,10 +158,30 @@ class Learner(private val cfg: Cfg = Cfg()) {
         true
     }.getOrDefault(false)
 
-    /** In words: "Nifty: 312 guesses scored, 54% right lately; ready to trade" (or still learning). */
+    /**
+     * In words: "Nifty: 54% of its last 312 confident guesses were right - watching: ..." (or still learning). Solo's own
+     * bar ([SoloGate], 06 Oct: 58% over at least 200) says when it is watching, and why.
+     */
     fun say(label: String): String = if (record.isEmpty()) "$label: still learning (no confident guess scored yet)"
         else "$label: %.0f%% of its last %d confident guesses were right - %s".format(java.util.Locale.ENGLISH, hitRate * 100, record.size,
-            if (ready) "trading on paper when it is sure" else "watching until its record is good enough")
+            SoloGate.overall(label, record.size, hitRate) ?: if (ready) "trading on paper when it is sure (and its band of sureness has earned it)"
+                else "watching until its record is good enough")
+
+    /** The band of sureness [p] falls in, in words: "60-65% sure", "65-70% sure", "70-100% sure". */
+    fun bandName(p: Double): String {
+        val b = band(p)
+        val lo = 50 + (BANDS[b] * 100).toInt()
+        val hi = if (b + 1 < BANDS.size) 50 + (BANDS[b + 1] * 100).toInt() else 100
+        return "$lo-$hi% sure"
+    }
+
+    /**
+     * Solo's gate for a trade at [p] on this view's record ([SoloGate], Boss's 06 Oct rule): null when its rolling record
+     * and the band [p] falls in have both earned a trade, else why it is watching.
+     */
+    fun gate(p: Double, label: String): String? = band(p).let { b ->
+        SoloGate.why(label, SoloGate.Record(record.size, hitRate, bandName(p), bandN[b], bandHit[b]))
+    }
 
     /**
      * What it has learned, in words (Boss: "what has Solo learned?"): the readings that weigh most in its guess, each

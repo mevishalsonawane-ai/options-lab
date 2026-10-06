@@ -323,6 +323,71 @@ internal object IraBots {
         BotHealth.spoken(said)?.let { JarvisVoice.announce(com.optionslab.ira.Overheard.said(it, IraHub.locked()), urgent = true) }
     }
 
+    // ---- switching off a losing arm (Boss's 06 Oct rule, [com.optionslab.ira.ArmCutoff]) ---------------------------
+
+    private const val CUTOFF_KEY = "jarvis.bots.cutoff"
+    @Volatile private var lastCutoff = 0L
+
+    /**
+     * The arms Boss could be asked about: each ORB-family arm (its own book's closed paper trades, after charges) and each
+     * Pine auto-trade script, Strategy Lab arms among them (its closed paper round trips, after charges), with its switch now
+     * and how to switch it off - an ORB arm disarmed, a script wound down; an open position is managed to its exit either
+     * way, and nothing is ever switched on. Reads only.
+     */
+    internal suspend fun cutoffArms(): List<Pair<com.optionslab.ira.ArmCutoff.Arm, suspend () -> String>> {
+        val out = ArrayList<Pair<com.optionslab.ira.ArmCutoff.Arm, suspend () -> String>>()
+        val orb = com.optionslab.app.data.OrbArms.view().arms
+        val closed = com.optionslab.app.data.OrbArms.closedPaper()
+        val liquidity = com.optionslab.engine.orb.LiquidityRules.BOOKS.map { it.source }.toSet()
+        for (a in orb) {
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity else it.arm == a.arm.source }
+                .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
+            val src = a.arm.source; val auto = a.automatic
+            val act: suspend () -> String = { com.optionslab.app.data.OrbArms.setArmed(src, false, automatic = auto) }
+            out += Pair(com.optionslab.ira.ArmCutoff.Arm(a.arm.label, a.armed, mine), act)
+        }
+        val paper = runCatching { bots() }.getOrDefault(emptyList()).filter { it.where == "Paper" && it.kind == "Pine script" }
+            .associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
+        for (x in com.optionslab.app.data.PineScripts.items.value.filter { it.auto.mode != "alert" }) {
+            val trades = paper[x.name].orEmpty()
+            val arm = com.optionslab.ira.ArmCutoff.Arm(x.name, x.auto.on, trades)
+            val id = x.id
+            val name = x.name
+            val act: suspend () -> String = {
+                val r = com.optionslab.app.data.PineAuto.windDown(id, "paper record negative (${trades.size} trades after charges; Boss approved)")
+                if (r == "ok") com.optionslab.ira.ArmCutoff.done(arm) else "$name: $r."
+            }
+            out += Pair(arm, act)
+        }
+        return out
+    }
+
+    /**
+     * Market days, every 30 minutes at most: an arm with at least 15 closed paper trades and a net below zero after charges
+     * is put to Boss - approve or reject, in the Requests panel - once a day an arm. Done by itself only when Boss chose
+     * automatic stops in chat ([IraHub.offer]). Never arms anything again.
+     */
+    suspend fun cutoffLosers() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        val today = m.today()
+        if (!m.isTradingDay(today)) return
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastCutoff < 30 * 60_000L) return
+        lastCutoff = nowMs
+        val due = cutoffArms().filter { com.optionslab.ira.ArmCutoff.due(it.first) }.sortedBy { it.first.paper.sum() }
+        if (due.isEmpty()) return
+        val saved = runCatching { com.optionslab.app.security.SecurePrefs.getString(CUTOFF_KEY) }.getOrNull().orEmpty()
+        val asked = if (saved.substringBefore('|') == today.toString()) saved.split('|').drop(1).toMutableSet() else mutableSetOf()
+        val fresh = due.filter { it.first.name !in asked }
+        if (fresh.isEmpty()) return
+        for ((arm, act) in fresh) {
+            asked += arm.name
+            IraHub.offer("switch off ${arm.name}", "Boss, switch off ${arm.name}?", com.optionslab.ira.ArmCutoff.ask(arm), act)
+        }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(CUTOFF_KEY, (listOf(today.toString()) + asked).joinToString("|")) }
+    }
+
     // ---- what Boss does with his bots after losing days ([com.optionslab.ira.ArmHabits]) --------------------------
 
     /** Each trading day's switches and day signs (bot names, armed, ended down or up - never an amount). */

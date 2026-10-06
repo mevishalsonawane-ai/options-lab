@@ -101,7 +101,44 @@ object Strategies {
     @Volatile var runningHint: Boolean = false
         private set
 
+    /**
+     * The running strategies' open legs as [com.optionslab.ira.AutoSide] reads them (one lean a strategy: its legs' net), as of
+     * the last load or save: read without the lock by the other automatic traders ([AutoExposure]).
+     */
+    @Volatile var exposureHint: List<com.optionslab.ira.AutoSide.Held> = emptyList()
+        private set
+
+    /** An open leg's lean: an option by its right and side, a future by its side; 0 when unknown. */
+    private fun legLean(symbol: String, buy: Boolean): Int = com.optionslab.ira.AutoSide.rightOf(symbol)?.let { com.optionslab.ira.AutoSide.direction(it, buy) }
+        ?: if (symbol.uppercase().endsWith("FUT")) (if (buy) 1 else -1) else 0
+
+    private fun exposureOf(b: Book): List<com.optionslab.ira.AutoSide.Held> = b.defs.mapNotNull { d ->
+        val run = b.runs[d.id]?.takeIf { Entry(d, it).running } ?: return@mapNotNull null
+        val legs = run.openLegs().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+        val lean = com.optionslab.ira.AutoSide.net(legs.map { legLean(it.symbol, it.position == "B") })
+        val one = legs.singleOrNull()
+        val what = when {
+            one != null && com.optionslab.ira.AutoSide.rightOf(one.symbol) != null ->
+                if (one.position == "B") "a ${if (one.symbol.uppercase().endsWith("CE")) "call" else "put"}" else "a short ${if (one.symbol.uppercase().endsWith("CE")) "call" else "put"}"
+            lean > 0 -> "a bullish position"
+            lean < 0 -> "a bearish position"
+            else -> "a neutral position"
+        }
+        com.optionslab.ira.AutoSide.Held(d.name, legs.joinToString("+") { it.symbol }, d.underlying.uppercase(), lean, what)
+    }
+
+    /** A strategy's planned lean from its legs (options by right and side, futures by side); 0 for a neutral one. */
+    private fun planned(def: StrategyDef): Int = com.optionslab.ira.AutoSide.net(def.legs.map { l ->
+        when {
+            l.optionType != null && l.position != null -> com.optionslab.ira.AutoSide.direction(l.optionType!!.wire, l.position == com.optionslab.engine.strategy.Position.B)
+            l.side == com.optionslab.engine.strategy.LegSide.LONG -> 1
+            l.side == com.optionslab.engine.strategy.LegSide.SHORT -> -1
+            else -> 0
+        }
+    })
+
     private fun hint(b: Book) {
+        exposureHint = runCatching { exposureOf(b) }.getOrDefault(emptyList())
         runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }
         stopHintDay = b.stoppedDay
         stopHintWhy = com.optionslab.ira.DayStop.Why.of(b.stoppedWhy)
@@ -636,6 +673,14 @@ object Strategies {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (b.autoApprove[def.id] ?: (d.mode != RunMode.LIVE)) {
                             // Automatic: the owner chose this when arming (live arming needed the PIN or fingerprint).
+                            // One index, one side, for every automatic trader (Boss's 06 Oct rule): a strategy leaning the other
+                            // way from - or the same way as - another automatic position on its index does not start.
+                            val side = AutoExposure.check(AutoExposure.Source.STRATEGIES, def.underlying.uppercase(), planned(def), exposureOf(b))
+                            if (side != null) {
+                                record(b, def.name, Event("start_refused", "Scheduled start refused: $side", "warn"), true)
+                                notes += "${def.name}: $side"
+                                continue
+                            }
                             val v = venueFor(d.mode)
                             if (v == null) { record(b, def.name, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
                             val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
@@ -679,7 +724,7 @@ object Strategies {
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
-    fun wipe() { cache = null; runningHint = false; stopHintDay = null; file.delete() }
+    fun wipe() { cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete() }
 
     @Suppress("unused") private fun today(): LocalDate = Market.today()
 }

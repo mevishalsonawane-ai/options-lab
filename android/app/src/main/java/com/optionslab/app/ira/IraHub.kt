@@ -600,9 +600,25 @@ object IraHub {
         val p = _state.value.proposals.firstOrNull { it.id == id } ?: return "That strategy is gone."
         if (p.status != Proposal.NEW) return "Already ${p.status}."
         val r = p.result
+        val interval = if (r.minutes == 60) "1h" else "${r.minutes}m"
+        // The same strategy already saved (Boss's 06 Oct diagnostics: #3 and #4 were one script added twice, so every
+        // trade was doubled): the same code - comments and whitespace aside - on the same symbol and chart is refused.
+        val saved = com.optionslab.app.data.PineScripts.loadNow().orEmpty().map {
+            com.optionslab.ira.PineDupes.Script(it.id, it.code, it.auto.symbol, it.auto.interval, it.auto.on)
+        }
+        com.optionslab.ira.PineDupes.duplicateOf(r.script, r.market.name, interval, saved)?.let { dup ->
+            val text = "Not added: ${r.name} is ${com.optionslab.ira.PineDupes.refusal(dup)} (the same code, symbol and chart) - " +
+                "a second copy would double every trade."
+            _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id) it.copy(status = Proposal.DISMISSED) else it },
+                messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+            saveState()
+            IraActivity.add(text)
+            strategyDone(p, com.optionslab.ira.Requests.Outcome.FAILED, text)
+            return text
+        }
         val item = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, r.name, r.script))
         com.optionslab.app.data.PineScripts.setAuto(item.id, com.optionslab.app.data.PineScripts.Auto(
-            on = false, symbol = r.market.name, interval = if (r.minutes == 60) "1h" else "${r.minutes}m", lots = 1, shortWith = "put",
+            on = false, symbol = r.market.name, interval = interval, lots = 1, shortWith = "put",
             // Jarvis's own strategies carry the profit lock (on by default; Boss can switch it off in Research → Pine).
             profitLock = true, byJarvis = true))
         val armed = com.optionslab.app.data.PineAuto.arm(item.id, on = true, pinConfirmed = false)

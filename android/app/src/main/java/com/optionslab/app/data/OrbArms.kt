@@ -116,6 +116,8 @@ object OrbArms {
         val upDays: MutableMap<String, Boolean> = HashMap(),
         /** arm -> when it was last armed (the Hero arm's self-disarm counts its firing days from then). */
         val since: MutableMap<String, String> = HashMap(),
+        /** The one-time changes this book has been through ([switchOffLosers]): each runs once, never again. */
+        val migrated: MutableSet<String> = HashSet(),
     )
 
     private var cache: Book? = null
@@ -167,20 +169,22 @@ object OrbArms {
             o.optJSONObject("replays")?.let { m -> m.keys().forEach { b.replays[it] = m.getJSONObject(it) } }
             o.optJSONObject("upDays")?.let { m -> m.keys().forEach { b.upDays[it] = m.getBoolean(it) } }
             o.optJSONObject("since")?.let { m -> m.keys().forEach { b.since[it] = m.getString(it) } }
+            o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
         }.isSuccess
         if (!ok) {
             // Never overwrite what could not be read: set it aside and start clean, and say so.
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
-            return Book().also { cache = it; holdingHint = false }
+            return Book().also { cache = it; hints(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
             b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear()
         }
         cache = b
-        holdingHint = b.positions.any { it.open }
+        hints(b)
+        if (switchOffLosers(b)) save(b)
         return b
     }
 
@@ -190,6 +194,62 @@ object OrbArms {
      */
     @Volatile var holdingHint: Boolean = false
         private set
+
+    /**
+     * The arms' open positions as [com.optionslab.ira.AutoSide] reads them (each a bought option on its index), as of the
+     * last load or save: read without the lock by the other automatic traders ([AutoExposure]).
+     */
+    @Volatile var exposureHint: List<com.optionslab.ira.AutoSide.Held> = emptyList()
+        private set
+
+    private fun hints(b: Book) {
+        holdingHint = b.positions.any { it.open }
+        exposureHint = exposureOf(b)
+    }
+
+    /** The open positions of [b] for [com.optionslab.ira.AutoSide]: who holds what, on which index. */
+    private fun exposureOf(b: Book): List<com.optionslab.ira.AutoSide.Held> = b.positions.filter { it.open }.map { p ->
+        val arm = (ALL_ARMS + LiquidityRules.ARM).firstOrNull { it.source == p.arm }
+        val und = com.optionslab.ira.AutoSide.underlyingOf(p.symbol) ?: when {
+            arm == null -> OrbRules.UNDERLYING
+            arm.liquidity -> LiquidityRules.underlyingOf(arm)
+            arm.hero -> HeroRules.UNDERLYING
+            else -> OrbRules.UNDERLYING
+        }
+        com.optionslab.ira.AutoSide.Held.option(arm?.let { ownerOf(it) } ?: p.arm, p.symbol, und, p.right, long = true)
+    }
+
+    /**
+     * Boss's 06 Oct rule ([com.optionslab.ira.AutoSide]): no automatic entry against another automatic position on the same
+     * index, and at most one automatic position an index a side - the arms' own open positions (fresh from [b]) and every
+     * other automatic trader's. Null when [c] may be bought, else the refusal the row and the log show.
+     */
+    private fun exposureRefusal(b: Book, c: Paper.Contract): String? =
+        AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true), exposureOf(b))
+
+    /** The one-time switch-off on this update (Boss's choice, 06 Oct): its key in [Book.migrated]. */
+    internal const val OFF_LOSERS = "off_losers_2026_10_06"
+    /** What the switched-off arms' rows and the diagnostics say. */
+    const val SWITCHED_OFF = "switched off: paper record negative (Boss's choice 06 Oct)"
+
+    /**
+     * Once, on this update (Boss's 06 Oct paper diagnostics): ORB Sweep, Range Fade and both Liquidity 15+5 books are
+     * switched off - their paper record was negative. An open position is still managed to its exit (as any disarm);
+     * nothing is sold here. Never armed again by the app: only Boss arms them. True when [b] changed (it is then saved).
+     */
+    private fun switchOffLosers(b: Book): Boolean {
+        if (OFF_LOSERS in b.migrated) return false
+        for (src in listOf(SweepRules.ARM.source, RangeFadeRules.ARM.source) + LiquidityRules.BOOKS.map { it.source }) {
+            if (b.armed[src] != true) continue
+            b.armed[src] = false; b.liveOk[src] = false; b.pending.remove(src)
+            b.status[src] = SWITCHED_OFF
+            val label = (ALL_ARMS + LiquidityRules.ARM).firstOrNull { it.source == src }?.label ?: src
+            runCatching { Diag.record("orb", "$label: $SWITCHED_OFF" +
+                (if (b.positions.any { it.arm == src && it.open }) "; its open position is still managed to its exit" else "")) }
+        }
+        b.migrated += OFF_LOSERS
+        return true
+    }
 
     private fun save(b: Book) {
         val o = JSONObject()
@@ -221,6 +281,7 @@ object OrbArms {
         o.put("replays", JSONObject().apply { b.replays.entries.toList().takeLast(120).forEach { (k, v) -> put(k, v) } })
         o.put("upDays", JSONObject(b.upDays as Map<*, *>))
         o.put("since", JSONObject(b.since as Map<*, *>))
+        o.put("migrated", JSONArray(b.migrated.sorted()))
         val text = o.toString()
         // Battery: an idle book (nothing armed, open or waiting) whose bytes are already on disk, as this process last
         // wrote them, is not encrypted and synced again ([com.optionslab.ira.OrbIdleSave]); anything else is, as before.
@@ -232,7 +293,7 @@ object OrbArms {
             writtenText = text; writtenStat = file.length() to file.lastModified()
         }
         cache = b
-        holdingHint = b.positions.any { it.open }
+        hints(b)
     }
 
     /** The book's text as this process last wrote it, and the file's size and time just after (null: not since a load). */
@@ -413,7 +474,7 @@ object OrbArms {
         b.watched.keys.removeAll { it.substringBefore('|') !in live }
         b.status.keys.removeAll { it !in live }
         save(b)
-        holdingHint = b.positions.any { it.open }
+        hints(b)
     }
 
     /** The book whose signal the Liquidity 15+5 row shows (the row approves and skips for it). */
@@ -609,6 +670,8 @@ object OrbArms {
 
     /** [live] is decided once by the caller, so the account cannot change between the check and the order. */
     private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, live: Boolean): String {
+        // One index, one side, for every automatic trader (Boss's 06 Oct rule): paper and live alike.
+        exposureRefusal(b, c)?.let { return it }
         if (live) return enterLive(b, arm, c, signalBar)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"             // never enter blind
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
@@ -871,6 +934,7 @@ object OrbArms {
         val limit = HeroRules.limitPrice(ask, pick.ltp)
         val lots = HeroRules.lots(limit, c.lotSize)
         if (lots <= 0) return "hero_zero_lots"
+        exposureRefusal(b, c)?.let { return it }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
@@ -1288,6 +1352,7 @@ object OrbArms {
         val listed = Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
         val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
+        exposureRefusal(b, c)?.let { return it }
         if (live) return enterLive(b, arm, c, signalBar, liquidity = s)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"
         if (Strategies.stoppedToday()) return "stopped_for_today"
@@ -1524,11 +1589,13 @@ object OrbArms {
         s.startsWith("refused: ") -> "Refused: " + s.removePrefix("refused: ")
         s.startsWith("order_refused: ") -> "The order was refused: " + s.removePrefix("order_refused: ")
         s.startsWith("error: ") -> "Could not check: " + s.removePrefix("error: ")
+        // Boss's 06 Oct rule: the refusal as it is ("opposite_position_open: ORB Sweep holds ..."), then in words.
+        com.optionslab.ira.AutoSide.refused(s) -> "$s. " + com.optionslab.ira.AutoSide.describe(s)
         else -> s
     }
 
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; writtenText = null; writtenStat = null
+        cache = null; holdingHint = false; exposureHint = emptyList(); writtenText = null; writtenStat = null
         if (::file.isInitialized) file.delete()
     }
 }

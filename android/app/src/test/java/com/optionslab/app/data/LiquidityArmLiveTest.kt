@@ -66,6 +66,8 @@ class LiquidityArmLiveTest : RobolectricTest() {
         val bar = maxOf(now.minusMinutes(1), now.toLocalDate().atStartOfDay())
         AutomationSupport.orbState(context, JSONObject()
             .put("armed", flags(true)).put("auto", flags(false)).put("liveOk", flags(true))
+            // Saved after the 06 Oct update (its one-time switch-off already done): armed again by Boss.
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS))
             .put("positions", JSONArray())
             .put("pending", JSONObject().put("liquidity5", JSONObject().put("right", "CE").put("bar", bar.toString())
                 .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0))))

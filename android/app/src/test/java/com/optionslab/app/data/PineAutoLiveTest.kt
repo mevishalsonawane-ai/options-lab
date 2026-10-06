@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -276,6 +277,78 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals(1, side("SELL").size)
         assertNull(held())
         assertFalse(PineScripts.get(id)!!.auto.on)
+    }
+
+    // ---- Boss's 06 Oct fixes ------------------------------------------------------------------------------------
+
+    /** A second script on the same symbol and chart, armed, with [code2] (another strategy unless it is the same code). */
+    private fun second(code2: String, name: String = "Level 2"): Long {
+        val id2 = PineScripts.put(PineScripts.Item(0, name, code2)).id
+        PineScripts.setAuto(id2, PineScripts.Auto(on = true, symbol = "BANKNIFTY", interval = "5m", lots = 1, buy = "Buy", sell = "Sell", shortWith = "exit"))
+        runBlocking { PineAuto.arm(id2, true, pinConfirmed = true) }
+        return id2
+    }
+
+    @Test fun twoScriptsNeverHoldTheSameSideOfOneIndexAtOnce() {
+        // Another strategy (its level differs) on the same index: both say BUY on the same candle; only the first buys.
+        val id2 = second(code.replace("52000", "51950"))
+        switchOn()
+        pass(51_900.0)
+        pass(52_010.0)
+        assertEquals("one buy, never two", 1, side("BUY").size)
+        assertTrue(held() != null)
+        assertNull(PineAuto.held.value[id2])
+        val log2 = PineAuto.log.value.filter { it.script == id2 }.joinToString("\n") { it.text }
+        assertTrue(log2, log2.contains("Not bought: same_side_already_held: Pine #$id · Level holds "))
+    }
+
+    @Test fun anIdenticalScriptSavedBeforeThisUpdateIsSwitchedOffAndItsHoldingManagedToItsExit() {
+        bought()                                                   // #id holds the call
+        val id2 = second("// the same strategy, added again at 09:50\n" + code.replace("\n", "\n\n"), name = "Level again")
+        // As saved before this update: the newer copy holds the call and the duplicates switch-off has not run yet.
+        val f = java.io.File(context.noBackupFilesDir, "pine_auto.vault")
+        val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
+        val h = o.getJSONObject("held").getJSONObject(id.toString())
+        o.put("held", org.json.JSONObject().put(id2.toString(), h))
+        o.remove("migrated")
+        PineAuto.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, o.toString().toByteArray(Charsets.UTF_8))
+        runBlocking { PineAuto.load() }
+        pass(52_010.0)
+        assertTrue("the oldest stays armed", PineScripts.get(id)!!.auto.on)
+        assertFalse("the repeat is switched off", PineScripts.get(id2)!!.auto.on)
+        assertNotNull("never deleted", PineScripts.get(id2))
+        val log2 = { PineAuto.log.value.filter { it.script == id2 }.joinToString("\n") { it.text } }
+        assertTrue(log2(), log2().contains("Switched off: the same strategy as #$id"))
+        assertNotNull("its call is still held, managed to its exit", PineAuto.held.value[id2])
+        assertTrue("not dumped", side("SELL").isEmpty())
+        assertEquals("nothing new bought", 1, side("BUY").size)
+        pass(51_900.0)                                             // its signal turns: the held call is sold (its exit)
+        assertEquals(1, side("SELL").size)
+        assertNull(PineAuto.held.value[id2])
+        pass(52_010.0)                                             // BUY again: only the armed original buys
+        assertEquals(2, side("BUY").size)
+        assertNotNull(held())
+        assertNull(PineAuto.held.value[id2])
+        pass(51_900.0); pass(52_010.0)
+        assertTrue("the switch-off runs once and never re-arms", !PineScripts.get(id2)!!.auto.on)
+    }
+
+    @Test fun aLosingScriptSwitchedOffOnBosssYesKeepsItsHoldingToItsExit() {
+        bought()
+        assertEquals("ok", runBlocking { PineAuto.windDown(id, "paper record negative (15 trades after charges; Boss approved)") })
+        assertFalse(PineScripts.get(id)!!.auto.on)
+        assertNotNull("not sold now", held())
+        assertTrue(side("SELL").isEmpty())
+        assertTrue(log(), log().contains("Switched off: paper record negative"))
+        pass(52_020.0)
+        assertEquals("nothing more bought", 1, side("BUY").size)
+        pass(51_900.0)                                             // its exit: the signal turns
+        assertEquals(1, side("SELL").size)
+        assertNull(held())
+        pass(52_010.0)
+        assertEquals("never switched back on", 1, side("BUY").size)
+        assertEquals("already off", runBlocking { PineAuto.windDown(id, "again") })
     }
 
     @Test fun aHoldingClosedOutsideTheAppIsForgotten() {

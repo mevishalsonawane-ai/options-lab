@@ -69,6 +69,16 @@ internal object IraNewsTrades {
 
     fun today(): Int { val d = com.optionslab.app.data.Market.today().toString(); return all().count { it.day == d } }
 
+    /**
+     * Jarvis's open trades (his own, and the ideas Boss approved, which Jarvis manages) as [com.optionslab.ira.AutoSide]
+     * reads them, for the other automatic traders ([com.optionslab.app.data.AutoExposure]).
+     */
+    fun exposure(): List<com.optionslab.ira.AutoSide.Held> = all().filter { !it.closed }.mapNotNull { p ->
+        val und = p.underlying ?: com.optionslab.ira.AutoSide.underlyingOf(p.symbol) ?: return@mapNotNull null
+        val right = p.call?.let { if (it) "CE" else "PE" } ?: com.optionslab.ira.AutoSide.rightOf(p.symbol) ?: return@mapNotNull null
+        com.optionslab.ira.AutoSide.Held.option(if (p.headline.startsWith("pattern: solo")) "Jarvis (Solo's setup)" else "Jarvis", p.symbol, und, right, long = true)
+    }
+
     // ---- the owner's rules for Jarvis's own trades --------------------------------------------------------------------
 
     /**
@@ -233,6 +243,10 @@ internal object IraNewsTrades {
         IraAccount.invalidate()
         val u = idea.market.name
         val c = contract(u, spot, idea.call) ?: return "No ${u} option is listed for the next expiry."
+        // Taken by himself ([paperOnly]): one index, one side, for every automatic trader (Boss's 06 Oct rule) - never against
+        // another automatic position on this index, never a second one the same way. Boss's own yes is his call.
+        if (paperOnly) com.optionslab.app.data.AutoExposure.check(com.optionslab.app.data.AutoExposure.Source.JARVIS, u,
+                com.optionslab.ira.AutoSide.direction(if (idea.call) "CE" else "PE", true), exposure())?.let { return "Not placed: $it." }
         val s = AppSettings.load()
         val day = com.optionslab.app.data.Market.today().toString()
         val quote = runCatching { Paper.quote(c) }.getOrNull()

@@ -56,6 +56,14 @@ object PineAuto {
         val dayPnl: HashMap<Long, String> = HashMap(),
         /** Script -> the day it hit its own daily loss limit (no new trades until tomorrow). */
         val paused: HashMap<Long, String> = HashMap(),
+        /**
+         * Scripts switched off by the app's own rules (a duplicate of an older script, Boss's yes to switching a losing
+         * one off) that still hold an option: script -> why. Their holding is managed to its exit (its stop, target, profit
+         * lock, 15:15, a change of signal), and they buy nothing more.
+         */
+        val winding: HashMap<Long, String> = HashMap(),
+        /** The one-time changes this book has been through ([dedupe]): each runs once, never again. */
+        val migrated: HashSet<String> = HashSet(),
     )
 
     private val _held = MutableStateFlow<Map<Long, Held>>(emptyMap())
@@ -86,6 +94,8 @@ object PineAuto {
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) { val l = a.getJSONArray(i); bk.log += Line(l.getLong(0), l.getLong(1), l.getString(2)) } }
             o.optJSONObject("dayPnl")?.let { m -> m.keys().forEach { k -> bk.dayPnl[k.toLong()] = m.getString(k) } }
             o.optJSONObject("paused")?.let { m -> m.keys().forEach { k -> bk.paused[k.toLong()] = m.getString(k) } }
+            o.optJSONObject("winding")?.let { m -> m.keys().forEach { k -> bk.winding[k.toLong()] = m.getString(k) } }
+            o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) bk.migrated += a.getString(i) }
             // A restore not yet disarmed (the app clears the flag once it has): no script may trade live on restored approvals.
             if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
             bk
@@ -106,6 +116,8 @@ object PineAuto {
         o.put("log", JSONArray().apply { b.log.forEach { put(JSONArray().put(it.at).put(it.script).put(it.text)) } })
         o.put("dayPnl", JSONObject().apply { b.dayPnl.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("paused", JSONObject().apply { b.paused.forEach { (k, v) -> put(k.toString(), v) } })
+        o.put("winding", JSONObject().apply { b.winding.forEach { (k, v) -> put(k.toString(), v) } })
+        o.put("migrated", JSONArray(b.migrated.sorted()))
         Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         publish(b)
@@ -114,6 +126,64 @@ object PineAuto {
     private fun publish(b: Book) { _held.value = HashMap(b.held); _log.value = b.log.toList() }
 
     private fun note(b: Book, id: Long, text: String) { b.log += Line(System.currentTimeMillis(), id, text) }
+
+    // ---- one index, one side (Boss's 06 Oct rule, [com.optionslab.ira.AutoSide]) ----------------------------------
+
+    /** Who holds a script's option, for the other traders' refusals: "Pine #4 · Jarvis: bullish engulfing Nifty 15m". */
+    private fun whoOf(id: Long): String = "Pine #$id" + (PineScripts.get(id)?.name?.let { " · $it" } ?: "")
+
+    private fun exposureOf(held: Map<Long, Held>): List<com.optionslab.ira.AutoSide.Held> = held.map { (id, h) ->
+        com.optionslab.ira.AutoSide.Held.option(whoOf(id), h.symbol,
+            com.optionslab.ira.AutoSide.underlyingOf(h.symbol) ?: PineScripts.get(id)?.auto?.symbol ?: h.symbol, h.right, long = true)
+    }
+
+    /** The scripts' open options as of the last load or save, read without the lock by the other traders ([AutoExposure]). */
+    fun exposure(): List<com.optionslab.ira.AutoSide.Held> = exposureOf(_held.value)
+
+    // ---- the same script saved twice (Boss's 06 Oct diagnostics, [com.optionslab.ira.PineDupes]) -------------------
+
+    /** The one-time duplicates switch-off: its key in [Book.migrated]. */
+    internal const val DUPES = "dupes_2026_10_06"
+
+    /**
+     * Once, on this update: of the armed scripts with the same code (comments and whitespace aside), symbol and chart, the
+     * oldest keeps trading and the others are switched off - never deleted; an option one of them holds is managed to its
+     * exit ([Book.winding]) - each said in its log. True when [b] changed (it is then saved).
+     */
+    private fun dedupe(b: Book): Boolean {
+        if (DUPES in b.migrated) return false
+        val items = PineScripts.loadNow() ?: return false
+        val extra = com.optionslab.ira.PineDupes.extraArmed(items.map {
+            com.optionslab.ira.PineDupes.Script(it.id, it.code, it.auto.symbol, it.auto.interval, it.auto.on)
+        })
+        for ((s, kept) in extra) {
+            val item = PineScripts.get(s.id) ?: continue
+            PineScripts.setAuto(s.id, item.auto.copy(on = false))
+            b.liveOk.remove(s.id)
+            if (b.held.containsKey(s.id)) b.winding[s.id] = "the same strategy as #$kept"
+            note(b, s.id, com.optionslab.ira.PineDupes.note(kept))
+        }
+        b.migrated += DUPES
+        return true
+    }
+
+    /**
+     * Switch a script off by the app's own rule (Boss's yes to switching a losing script off, [com.optionslab.ira.ArmCutoff]):
+     * unlike [arm] off, what it holds is NOT sold now - it is managed to its exit, and nothing more is bought. Never
+     * switches anything on. Returns "ok", or why not.
+     */
+    suspend fun windDown(id: Long, why: String): String = lock.withLock {
+        val item = PineScripts.get(id) ?: return@withLock "not found"
+        if (!item.auto.on) return@withLock "already off"
+        val b = book()
+        PineScripts.setAuto(id, item.auto.copy(on = false))
+        b.liveOk.remove(id)
+        val holding = b.held.containsKey(id)
+        if (holding) b.winding[id] = why
+        note(b, id, "Switched off: $why." + if (holding) " Its open option is managed to its exit; nothing more is bought." else "")
+        save(b)
+        "ok"
+    }
 
     private fun label(item: PineScripts.Item) = "Pine · ${item.name}"
 
@@ -161,6 +231,7 @@ object PineAuto {
     suspend fun arm(id: Long, on: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val item = PineScripts.get(id) ?: return@withLock "not found"
         val b = book()
+        b.winding.remove(id)
         if (on) {
             b.liveOk[id] = pinConfirmed
             b.lastTarget.remove(id); b.lastBar.remove(id)
@@ -178,14 +249,19 @@ object PineAuto {
 
     /** Called by the market watch every pass. */
     suspend fun tick() = lock.withLock {
-        val all = PineScripts.items.value
         // A restore not yet disarmed: every script counts as switched off (what it holds is still sold).
         val disarm = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
-        val on = if (disarm) emptyList() else all.filter { it.auto.on }
         val b = book()
+        // The one-time switch-off of duplicate scripts (Boss's 06 Oct diagnostics), before anything trades.
+        if (!disarm && dedupe(b)) save(b)
+        val all = PineScripts.items.value
+        val on = if (disarm) emptyList() else all.filter { it.auto.on }
+        // Switched off by the app's own rule while holding: managed to its exit, buying nothing more.
+        b.winding.keys.removeAll { it !in b.held || all.firstOrNull { x -> x.id == it }?.auto?.on == true }
+        val winding = if (disarm) emptyList() else all.filter { it.id in b.winding }
         if (on.isEmpty() && b.held.isEmpty()) return@withLock
         // Held by a script that is no longer on (turned off elsewhere, a restore, deleted): sell it.
-        for ((id, h) in b.held.toMap()) if (on.none { it.id == id }) {
+        for ((id, h) in b.held.toMap()) if (on.none { it.id == id } && winding.none { it.id == id }) {
             val item = all.firstOrNull { it.id == id } ?: PineScripts.Item(id, "deleted script", "")
             runCatching { exit(b, id, item, h, "no longer auto-trading") }
         }
@@ -197,6 +273,7 @@ object PineAuto {
         stopSays = dayWhy?.let { "the day's stop (${com.optionslab.ira.DayStop.by(it)})" } ?: "the day's stop (the kill switch is on in Live)"
         stopResumes = dayWhy?.let { com.optionslab.ira.DayStop.mayLift(it) } ?: false
         for (item in on) runCatching { one(b, item, stopped) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
+        for (item in winding) runCatching { one(b, item, stopped, entries = false) }.onFailure { e -> note(b, item.id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         save(b)
     }
 
@@ -216,7 +293,8 @@ object PineAuto {
             if (stopResumes) " (\"start all\" to Jarvis, or Start bot on Home, resumes it)." else ".")
     }
 
-    private suspend fun one(b: Book, item: PineScripts.Item, stopped: Boolean) {
+    /** [entries] false: a script switched off by the app's rule ([Book.winding]) - its holding managed to its exit, nothing bought. */
+    private suspend fun one(b: Book, item: PineScripts.Item, stopped: Boolean, entries: Boolean = true) {
         val id = item.id
         val t = clock()
         val mins = t.hour * 60 + t.minute
@@ -322,7 +400,7 @@ object PineAuto {
             return
         }
         note(b, id, "Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
-        if (a.mode == "alert") {
+        if (a.mode == "alert" && entries) {
             // Alerts only: tell the owner, place nothing.
             Notifier.post(app, 5000 + (id % 1000).toInt(), Notifier.RISK, "${item.name}: ${describe(target)}",
                 "${a.symbol} ${a.interval} at ${"%,.2f".format(java.util.Locale.ENGLISH, last.close)} · Pine signal (alerts only, no order placed)", "pine")
@@ -331,6 +409,8 @@ object PineAuto {
         if (h?.right == want) return
         if (h != null) { exit(b, id, item, h, "signal changed"); if (b.held.containsKey(id)) return }
         if (want == null) return
+        // Switched off by the app's rule: the holding was managed to its exit; nothing new is bought.
+        if (!entries) return
         val live = OrbArms.liveNow()
         if (live && b.liveOk[id] != true) {
             note(b, id, "Live needs your PIN once: switch auto-trade off and on again for this script. Nothing was sent.")
@@ -407,6 +487,10 @@ object PineAuto {
         val listed = Market.contracts().filter { it.underlying == u }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(today, listed) ?: run { note(b, id, "No $u expiry after today is listed: nothing bought"); return }
         val c = Paper.contractFor(u, expiry, strike.toDouble(), right) ?: run { note(b, id, "$u $strike $right is not listed: nothing bought"); return }
+        // One index, one side, for every automatic trader (Boss's 06 Oct rule): never against another automatic position on
+        // this index, and never a second one the same way - two identical scripts never hold together. Paper and live alike.
+        AutoExposure.check(AutoExposure.Source.PINE, c.underlying, com.optionslab.ira.AutoSide.direction(right.name, true), exposureOf(b.held))
+            ?.let { note(b, id, "Not bought: $it"); return }
         val lots = item.auto.lots.coerceIn(1, 50)
         if (!live) {
             val ltp = Paper.lastPrice(c) ?: run { note(b, id, "No price for ${c.symbol}: nothing bought"); return }

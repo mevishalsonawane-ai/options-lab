@@ -359,13 +359,35 @@ internal object IraSolo {
         val level = runCatching { IraHub.tradeCheckFast().level }.getOrNull() ?: return@withLock
         if (level == com.optionslab.ira.TradeCheck.Level.STOP) return@withLock
         val seen = ArrayList<String>()
+        val clockNow = LocalTime.now(IST)
         for (m in MARKETS) {
             val b = synchronized(brains) { brains[m] } ?: continue
             if (b.day != today || b.done < com.optionslab.ira.Learner.FIRST) continue
             seen += b.best.l.say(m.label)
             watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
-            // No setup made in advance: of its views that would trade now, the one with the best record (it tunes itself).
-            val pick = synchronized(brains) { com.optionslab.ira.Learner.pick(b.minds.map { v -> v.l.hitRate to v.lastP?.let { v.l.decide(it) } }) } ?: continue
+            // Boss's 06 Oct gate ([SoloGate]): never on this index's expiry day (from the instrument master, as the Hero arm
+            // and the expiry square-off read it), never after 14:45 - it watches, and says why.
+            val closed = com.optionslab.ira.SoloGate.clock(m.label, clockNow, expiryToday(m, today))
+            if (closed != null) {
+                seen[seen.lastIndex] = "${m.label}: $closed"
+                watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
+                continue
+            }
+            // No setup made in advance: of its views that would trade now, the one with the best record (it tunes itself) -
+            // and only a view whose own rolling record AND the band of sureness it would trade in have earned it ([SoloGate]:
+            // 58% over at least 200 guesses, the band 58% over at least 50).
+            val pick = synchronized(brains) {
+                com.optionslab.ira.Learner.pick(b.minds.map { v -> v.l.hitRate to v.lastP?.let { p -> v.l.decide(p)?.takeIf { v.l.gate(p, m.label) == null } } })
+            }
+            if (pick == null) {
+                // Watching: why, from the view it follows (its record, or the band its last guess falls in).
+                val why = synchronized(brains) { b.best.let { v -> v.lastP?.let { p -> v.l.gate(p, m.label) } ?: com.optionslab.ira.SoloGate.overall(m.label, v.l.scored, v.l.hitRate) } }
+                if (why != null) {
+                    seen[seen.lastIndex] = "${m.label}: $why"
+                    watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
+                }
+                continue
+            }
             val mind = b.minds[pick]
             val p = mind.lastP ?: continue
             val call = mind.l.decide(p) ?: continue
@@ -402,10 +424,32 @@ internal object IraSolo {
         }
     }
 
+    /**
+     * Whether today is [m]'s expiry day by the instrument master (as the Hero arm reads it: the nearest listed expiry is
+     * today); null when the master could not be read.
+     */
+    private fun expiryToday(m: IraMarket, today: LocalDate): Boolean? = runCatching {
+        val listed = com.optionslab.app.data.Market.contracts().filter { it.underlying == m.name }.map { it.expiry }
+        if (listed.isEmpty()) null else com.optionslab.engine.orb.HeroRules.isExpiryDay(today, listed)
+    }.getOrNull()
+
+    /** Solo's open paper trade as [com.optionslab.ira.AutoSide] reads it, for the other automatic traders ([com.optionslab.app.data.AutoExposure]). */
+    fun exposure(): List<com.optionslab.ira.AutoSide.Held> = all().filter { !it.closed }.map { t ->
+        com.optionslab.ira.AutoSide.Held.option("Jarvis solo", t.symbol, t.market, if (t.call) "CE" else "PE", long = true)
+    }
+
     private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate, read: String,
                               cond: SelfCalibration.Conditions? = null, careful: String? = null) {
         val u = m.name
         val c = IraNewsTrades.contract(u, sig.index, sig.call) ?: return
+        // One index, one side, for every automatic trader (Boss's 06 Oct rule): never against another automatic position on
+        // this index, never a second one the same way.
+        com.optionslab.app.data.AutoExposure.check(com.optionslab.app.data.AutoExposure.Source.SOLO, u,
+            com.optionslab.ira.AutoSide.direction(if (sig.call) "CE" else "PE", true), exposure())?.let { why ->
+            IraActivity.add("Solo skipped ${c.symbol}: $why")
+            watch = java.time.LocalDateTime.now(IST) to "${m.label}: $why"
+            return
+        }
         // Boss's own paper position in this contract is never mixed with Solo's (its stop and close would touch it).
         if (runCatching { Paper.snapshot().positions.positions.any { it.symbol == c.symbol && it.quantity != 0 } }.getOrDefault(true)) return
         val q = runCatching { Paper.quote(c) }.getOrNull() ?: return
@@ -540,8 +584,13 @@ internal object IraSolo {
         Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, on && paused != null, why)
     }.getOrNull()
 
-    /** "How is Solo doing": on or off, paused or not, and the record. */
-    fun status(): String = (if (on) "Solo is on, Boss (on paper until its record is proven; then in Live it asks you each time; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper until proven).") +
+    /**
+     * "How is Solo doing": on or off, paused or not, the record, and - while it is watching - why ([SoloGate]: its rolling
+     * record and the band it would trade in must both be 58%; never on an expiry day nor after 14:45).
+     */
+    fun status(): String = (if (on) "Solo is on, Boss (on paper until its record is proven; then in Live it asks you each time; switch it off in Jarvis settings). " +
+        "It trades only while its last 200+ confident guesses on that index, and the band of sureness it trades in (50+ guesses), are 58% right or better; " +
+        "never on that index's expiry day, never after 14:45 - otherwise it is watching." else "Solo is off, Boss: switch it on in Jarvis settings (paper until proven).") +
         (paused?.let { " $it" } ?: "") + " " + record() + " Learning: ${learning()}." + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
             all().none { t -> !t.closed } }?.let { (at, w) ->
             if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " At %02d:%02d Solo saw: ".format(at.hour, at.minute) + w + "."

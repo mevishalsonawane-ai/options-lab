@@ -540,6 +540,9 @@ object Tasks {
         // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
         // stopping it asked first (reads the app's own books, every five minutes at most).
         word("bot review") { com.optionslab.app.ira.IraBots.watch() }
+        // Jarvis: an arm with 15+ closed paper trades and a net below zero after charges - switching it off is asked
+        // (Boss's 06 Oct rule; by itself only with automatic stops chosen in chat). Never arms anything.
+        word("arm cutoff") { com.optionslab.app.ira.IraBots.cutoffLosers() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.

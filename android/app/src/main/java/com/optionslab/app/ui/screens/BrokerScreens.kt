@@ -382,6 +382,7 @@ private fun OrderReviewBody(model: AppModel) {
         is Load.Failed -> { com.optionslab.app.ui.components.AlertOn(pl.why); LaunchedEffect(pl) { model.dismissPlan() } }
         is Load.Done -> {
             PreTradeNote(pl.value)
+            AgainstArmsNote(pl.value)
             PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
@@ -409,6 +410,22 @@ private fun PreTradeNote(plan: OrderPlan) {
         note = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.ira.IraCoach.preTrade(symbols, plan.exit) }
     }
     note?.let { LedgerCard(title = "Jarvis: a moment, Boss", accent = p.amber, modifier = Modifier.padding(bottom = 10.dp)) { Note(it) } }
+}
+
+/**
+ * Boss's own order against an automatic position (Boss's 06 Oct rule, [com.optionslab.ira.AutoSide]): "ORB holds a call on
+ * BankNifty; this put works against it." Words only - his order is never blocked or changed.
+ */
+@Composable
+private fun AgainstArmsNote(plan: OrderPlan) {
+    val p = LocalPalette.current
+    val legs = plan.legs.map { it.tradingSymbol to (it.side == Kite.Side.BUY) }
+    var note by remember(legs, plan.exit) { mutableStateOf<String?>(null) }
+    LaunchedEffect(legs, plan.exit) {
+        note = if (plan.exit) null
+            else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.AutoExposure.warnFor(legs) }.getOrNull() }
+    }
+    note?.let { LedgerCard(title = "Against an automatic position", accent = p.amber, modifier = Modifier.padding(bottom = 10.dp)) { Note(it) } }
 }
 
 /** A leg still working at Zerodha after the send stopped: the owner decides, the rest wait. (`internal` for the JVM tests only.) */
