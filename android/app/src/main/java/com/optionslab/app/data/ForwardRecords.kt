@@ -3,6 +3,7 @@ package com.optionslab.app.data
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.ira.ForwardCheck
+import com.optionslab.ira.LiquidityEquity
 
 /**
  * Live vs backtest ([ForwardCheck]): each running strategy's closed forward paper trades, read from its own record, set
@@ -26,6 +27,25 @@ object ForwardRecords {
         val books = LiquidityRules.BOOKS.map { it.source }.toSet()
         return closed.filter { it.arm in books && !it.open && !it.live }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
     }
+
+    /**
+     * Liquidity 15+5's closed paper trades for its "Paper record" chart ([LiquidityEquity]): per lot as [liquidity], with the
+     * index its book trades and the entry time (the order on a day).
+     */
+    fun liquidityEquityTrades(closed: List<OrbArms.Position>): List<LiquidityEquity.Trade> {
+        val books = LiquidityRules.BOOKS.associateBy { it.source }
+        return closed.filter { it.arm in books && !it.open && !it.live }.map { p ->
+            LiquidityEquity.Trade(p.day, net(p, perLot = true), books[p.arm]?.let { LiquidityRules.underlyingOf(it) } ?: "", p.entryTime.toLocalTime())
+        }
+    }
+
+    /**
+     * Liquidity 15+5's paper record since its forward test began, against its backtest. Reads only, through the arms' own
+     * reader ([OrbArms.closedPaper]: its lock is held only to copy the book, never across this work); a book that cannot be
+     * read counts as no trade.
+     */
+    suspend fun liquidityEquity(): LiquidityEquity.Equity =
+        LiquidityEquity.of(liquidityEquityTrades(runCatching { OrbArms.closedPaper() }.getOrDefault(emptyList())))
 
     /** The Hero arm's closed paper trades (one ₹5,000 ticket each, as its research). */
     fun hero(closed: List<OrbArms.Position>): List<ForwardCheck.Trade> =

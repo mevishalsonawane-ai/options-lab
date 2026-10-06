@@ -68,7 +68,8 @@ fun OrbRows(model: AppModel) {
             override fun shadowOff(id: String) { model.shadowOff(id) }
             override fun lots(n: Int) { model.liquidityLots(n) }
         },
-        reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) })
+        reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) },
+        paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() })
 }
 
 /** What the ORB rows ask the model to do (an interface so tests can record it without an [AppModel]). */
@@ -89,6 +90,11 @@ internal fun OrbRowsContent(
     reauth: @Composable (why: String?, onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
     /** A closed Liquidity 15+5 paper trade's replay (the detail's tap on it; [LiquidityReplayData] in the app). Reads only. */
     replay: suspend (OrbArms.Position) -> com.optionslab.ira.LiquidityReplay.Replay? = { LiquidityReplayData.load(it) },
+    /**
+     * Liquidity 15+5's paper record under its row ([LiquidityEquityCard]; [com.optionslab.app.data.ForwardRecords.liquidityEquity]
+     * in the app), read off the main thread. Null: no card. Reads only.
+     */
+    paperRecord: (suspend () -> com.optionslab.ira.LiquidityEquity.Equity?)? = null,
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
@@ -187,6 +193,10 @@ internal fun OrbRowsContent(
                 }
             }
         }
+        // Liquidity 15+5's paper record since its forward test began, against its backtest; read again when a trade closes.
+        // Reads only, never in the GOLD build.
+        if (a.arm.liquidity && paperRecord != null && !com.optionslab.app.BuildConfig.GOLD)
+            LiquidityEquityCard(a.today.count { !it.open && !it.live }, paperRecord)
     }
     // Retired (Boss's 06 Oct choice after six years of real data): one line each, never a switch.
     val retired = view.arms.mapNotNull { it.retired }
