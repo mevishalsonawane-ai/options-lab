@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib
 
 MODULES = ["liquidity", "solo", "orb", "straddle", "hero", "bigbar", "random_entry", "ga_opening", "ga_timeofday", "ga_levels",
-           "gb_trend", "gb_meanrev"]
+           "gb_trend", "gb_meanrev", "gc_expiry", "gc_oi", "gc_vol", "gc_event", "gc_pos"]
 _EXTRA = {}
 
 

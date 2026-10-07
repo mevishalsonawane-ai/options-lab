@@ -263,8 +263,10 @@ def prepare_many(jobs, seed=7, store=None, pool_cap=30000, pool_total=400000):
             raise ValueError("a signal set is either all single-leg or all straddles")
         nlegs.append(nl)
     metas = [([], []) for _ in jobs]
-    allsig = pd.concat([s.assign(jobid=j) for j, s in enumerate(sigs)], ignore_index=True) if sigs else pd.DataFrame()
-    if allsig.empty:
+    multi = [j for j, s in enumerate(sigs) if "exit_day" in s.columns]    # multi-day holds: see multiday.py
+    single = [s.assign(jobid=j) for j, s in enumerate(sigs) if j not in multi]
+    allsig = pd.concat(single, ignore_index=True) if single else pd.DataFrame()
+    if allsig.empty and not multi:
         return [(Pack(pd.DataFrame(columns=["cand"]), store.done(), nl), None) for nl in nlegs]
 
     def cut(j, kind, und, d, ch, I, irow, lot_day, bse, step, sm, side, ref, strike, istop, itgt, xat, lot_o, book, gate,
@@ -332,7 +334,10 @@ def prepare_many(jobs, seed=7, store=None, pool_cap=30000, pool_total=400000):
     tot = max(sum(len(s) for s, job in zip(sigs, jobs) if job[3]), 1)
     kcap = [min(job[3], max(3, pool_cap // max(len(s), 1), 0), max(3, pool_total // tot)) if job[3] else 0
             for job, s in zip(jobs, sigs)]
-    for und, g in allsig.groupby("und", sort=False):
+    if multi:
+        from .multiday import build_multi
+        build_multi(jobs, sigs, kcap, multi, store, rng, metas)
+    for und, g in (allsig.groupby("und", sort=False) if not allsig.empty else []):
         ix = mk.index(und)
         opts = mk.options(und)
         M = ix.mat()
