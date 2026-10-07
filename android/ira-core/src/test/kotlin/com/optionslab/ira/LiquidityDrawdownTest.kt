@@ -70,8 +70,8 @@ class LiquidityDrawdownTest {
     @Test fun theAnswer() {
         val a = LiquidityDrawdown.answer(rows(*nets))
         assertTrue(a.startsWith("Boss, over its 8 closed paper trades Liquidity 15+5 stands at -Rs 100 a lot. Its best was +Rs 450, at trade 5 (25 Sep)."), a)
-        assertTrue("Drawdown now: -Rs 550 from that best (122% of that best), 3 trades since; its low in this fall -Rs 550 at trade 8 (28 Sep)." in a, a)
-        assertTrue("Worst drawdown ever: -Rs 550 (122% of that best), from +Rs 450 at trade 5 (25 Sep) down to -Rs 100 at trade 8 (28 Sep), 3 trades down; " +
+        assertTrue("Drawdown now: -Rs 550 from that best (all of that best and more), 3 trades since; its low in this fall -Rs 550 at trade 8 (28 Sep)." in a, a)
+        assertTrue("Worst drawdown ever: -Rs 550 (all of that best and more), from +Rs 450 at trade 5 (25 Sep) down to -Rs 100 at trade 8 (28 Sep), 3 trades down; " +
             "it has not climbed back to that best yet." in a, a)
         assertTrue("Longest losing streak: 3 losses in a row from 26 Sep to 28 Sep, -Rs 550 a lot between them; it is on 3 losses in a row now." in a, a)
         assertTrue("At the backtest's 41% win rate, a run of 3 or more losses within 8 trades comes in" in a, a)

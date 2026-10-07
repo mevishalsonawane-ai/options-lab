@@ -136,7 +136,7 @@ object LiquidityDrawdown {
     /** Trade [i] (1-based) of [rows] as a day, or "its start" for 0. */
     private fun at(rows: List<LiquidityRecord.Row>, i: Int) = if (i <= 0) "its start" else "trade $i (${date(rows[i - 1].day)})"
 
-    private fun share(x: Double, peak: Double) = pctOf(x, peak)?.let { " ($it% of that best)" }.orEmpty()
+    private fun share(x: Double, peak: Double) = pctOf(x, peak)?.let { if (it > 100) " (all of that best and more)" else " ($it% of that best)" }.orEmpty()
 
     /** Whether today's state is unusual against the arm's own history: the fall now among its past falls, the losing run. */
     fun unusual(r: Read): String {
