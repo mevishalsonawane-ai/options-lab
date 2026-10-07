@@ -30,6 +30,8 @@ class GlobeThinkingUiTest {
 
     @Before fun up() {
         AreaE.resetGlobals()
+        // Robolectric shares static state between tests: "Don't listen" left on would read "MIC OFF" at rest.
+        JarvisVoice.resetDeafForTest()
         JarvisVoice.stateForTest(JarvisVoice.VoiceState())
         IraHub.loadingForTest(false)
     }

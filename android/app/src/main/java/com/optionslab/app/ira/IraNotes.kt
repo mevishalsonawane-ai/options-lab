@@ -45,9 +45,16 @@ internal object IraNotes {
     /**
      * When this run of the app started keeping notes (the notes live in memory only, the anchors in the vault): an anchor
      * before it means the notes in between are gone ([com.optionslab.ira.CatchUp.restarted]). Null when the clock could not
-     * be read. Settable by the tests.
+     * be read. Settable by the tests. The process's own start, not when this object was first used (the first note or
+     * look may come long after the start): otherwise "I restarted at" would name that later moment.
      */
-    @Volatile internal var keptSince: java.time.LocalDateTime? = now()
+    @Volatile internal var keptSince: java.time.LocalDateTime? = processStart()
+
+    /** When this process started, on the market clock; now when that can't be read. Never throws. */
+    private fun processStart(): java.time.LocalDateTime? = runCatching {
+        val up = android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime()
+        now()?.minus(java.time.Duration.ofMillis(up.coerceAtLeast(0L)))
+    }.getOrNull() ?: now()
 
     /** Now, to the nanosecond (null when the clock can't be read). Never throws. */
     fun now(): java.time.LocalDateTime? = runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrNull()
