@@ -1,0 +1,68 @@
+{
+ "pre": {
+  "trades": 2203,
+  "days": 1026,
+  "net": 80515,
+  "gross": 231219,
+  "charges": 150704,
+  "rs_day": 78,
+  "t": 1.03,
+  "win_trades": 0.386,
+  "worst_day": -12413,
+  "best_day": 21430,
+  "worst_month": -19090,
+  "green_months": "27/50",
+  "max_dd": -40326,
+  "p_mean_le0": 0.14,
+  "p_losing_month": 0.494
+ },
+ "holdout": {
+  "trades": 722,
+  "days": 250,
+  "net": 44917,
+  "gross": 112475,
+  "charges": 67558,
+  "rs_day": 180,
+  "t": 0.74,
+  "win_trades": 0.417,
+  "worst_day": -9077,
+  "best_day": 27258,
+  "worst_month": -24194,
+  "green_months": "9/13",
+  "max_dd": -36489,
+  "p_mean_le0": 0.32,
+  "p_losing_month": 0.488
+ },
+ "all": {
+  "trades": 2925,
+  "days": 1276,
+  "net": 125432,
+  "gross": 343694,
+  "charges": 218262,
+  "rs_day": 98,
+  "t": 1.26,
+  "win_trades": 0.394,
+  "worst_day": -12413,
+  "best_day": 27258,
+  "worst_month": -24194,
+  "green_months": "36/63",
+  "max_dd": -40326,
+  "p_mean_le0": 0.1216,
+  "p_losing_month": 0.489
+ },
+ "per_year": {
+  "2021": -10314.0,
+  "2022": -13317.0,
+  "2023": 2310.0,
+  "2024": 22701.0,
+  "2025": 59077.0,
+  "2026": 64976.0
+ },
+ "random": {
+  "draws": 30,
+  "pre_mean": -151743,
+  "hold_mean": -128704,
+  "p_pre": 0.0,
+  "p_hold": 0.0
+ }
+}
