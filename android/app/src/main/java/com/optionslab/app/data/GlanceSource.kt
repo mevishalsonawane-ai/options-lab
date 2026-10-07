@@ -70,8 +70,10 @@ internal object GlanceSource {
         val solo = if (!jarvis) null else runCatching {
             val all = com.optionslab.app.ira.IraSolo.all()
             val mine = all.lastOrNull { it.midday && it.day == today.toString() }
-            TodayGlance.Solo(com.optionslab.app.ira.IraSolo.on, mine?.let { TodayGlance.SoloTrade(it.symbol, !it.closed, it.net) },
-                com.optionslab.app.ira.IraSolo.forward(all).trades)
+            val on = com.optionslab.app.ira.IraSolo.on
+            val fwd = com.optionslab.app.ira.IraSolo.forward(all)
+            TodayGlance.Solo(on, mine?.let { TodayGlance.SoloTrade(it.symbol, !it.closed, it.net) }, fwd.trades, net = fwd.net,
+                switchedOff = !on && com.optionslab.app.ira.IraSolo.paused != null)
         }.getOrNull()
         val jarvisOpen = if (!jarvis) null else runCatching { com.optionslab.app.ira.IraNewsTrades.all().count { !it.closed } }.getOrNull()
         val events = runCatching { com.optionslab.app.ira.IraEvents.upcoming(2) }.getOrDefault(emptyList())

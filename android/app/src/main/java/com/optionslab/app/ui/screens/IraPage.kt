@@ -1110,7 +1110,8 @@ fun JarvisSettingsPage() {
 
 /**
  * Solo (the owner's wish, 2026-10-03; Solo (midday) since 06 Oct): Jarvis trades by himself on paper; the switch, the
- * "not proven" label, the forward test ("x of 60") and the research line.
+ * forward test at a glance ([SoloForwardGlance]: "x of 60" with its bar, the net, the drawdown against the switch-off line,
+ * today's state, the research line), the "not proven" label and the bar set in advance.
  */
 @Composable
 private fun SoloCard() {
@@ -1127,9 +1128,11 @@ private fun SoloCard() {
             }
             androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.on = v })
         }
-        // The forward test set in advance, and the "not proven" label with the research line.
+        // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
+        SoloForwardGlance(on) { readSoloGlance(on) }
+        // The forward test set in advance, and the "not proven" label (the lines the glance shows are left out under it).
         val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
-        lines.forEach { Note(it) }
+        lines.filter { com.optionslab.app.BuildConfig.GOLD || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
         val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
         Note(rec)
         com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }

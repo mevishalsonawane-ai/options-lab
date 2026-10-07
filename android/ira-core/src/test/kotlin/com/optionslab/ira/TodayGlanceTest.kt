@@ -91,6 +91,12 @@ class TodayGlanceTest {
         assertEquals(listOf("Today: N · +₹450"), TodayGlance.solo(s.copy(today = TodayGlance.SoloTrade("N", false, 450.0)), at(15, 0), true).lines)
         val off = TodayGlance.solo(TodayGlance.Solo(false, null, 0), at(10, 0), true)
         assertEquals("off · 0 of 60", off.state); assertEquals(emptyList(), off.lines); assertEquals(TodayGlance.TO_SOLO, off.to)
+        // With its net so far; switched off by itself (the forward test's bar): switching back on is Boss's.
+        assertEquals("on · 12 of 60 · net +₹3,200", TodayGlance.solo(s.copy(net = 3_200.0), at(10, 0), true).state)
+        assertEquals("off · 0 of 60", TodayGlance.solo(TodayGlance.Solo(false, null, 0, net = 0.0), at(10, 0), true).state)
+        val selfOff = TodayGlance.solo(TodayGlance.Solo(false, null, 9, net = -26_000.0, switchedOff = true), at(10, 0), true)
+        assertEquals("switched itself off · 9 of 60 · net −₹26,000", selfOff.state)
+        assertEquals(listOf("Switching it back on is Boss's switch"), selfOff.lines)
     }
 
     @Test fun heroAndJarvisRows() {

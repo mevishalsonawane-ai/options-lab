@@ -44,8 +44,12 @@ object TodayGlance {
     /** An open position: what was bought, at [entry], its resting [stop] (null: none yet). */
     data class Open(val symbol: String, val entry: Double, val stop: Double?)
 
-    /** Solo (midday): [on], today's trade (null: none), its forward test's closed trades ([closed] of [target]). */
-    data class Solo(val on: Boolean, val today: SoloTrade?, val closed: Int, val target: Int = 60)
+    /**
+     * Solo (midday): [on], today's trade (null: none), its forward test's closed trades ([closed] of [target]), their [net]
+     * after charges (null: not given), and [switchedOff] when Solo switched itself off (its forward test's bar).
+     */
+    data class Solo(val on: Boolean, val today: SoloTrade?, val closed: Int, val target: Int = 60, val net: Double? = null,
+                    val switchedOff: Boolean = false)
 
     /** Solo's trade today: [symbol], still [open], its [net] once closed. */
     data class SoloTrade(val symbol: String, val open: Boolean, val net: Double?)
@@ -163,12 +167,14 @@ object TodayGlance {
     }
 
     fun solo(s: Solo, now: LocalDateTime, tradingToday: Boolean): Row {
-        val state = (if (s.on) "on" else "off") + " · ${s.closed} of ${s.target}"
+        val state = (if (s.on) "on" else if (s.switchedOff) "switched itself off" else "off") + " · ${s.closed} of ${s.target}" +
+            (s.net?.takeIf { s.closed > 0 }?.let { " · net ${signed(it)}" } ?: "")
         val t = s.today
         val minute = now.hour * 60 + now.minute
         val line = when {
             t != null && t.open -> "Today: ${t.symbol} · open"
             t != null -> "Today: ${t.symbol}" + (t.net?.let { " · ${signed(it)}" } ?: " · closed")
+            !s.on && s.switchedOff -> "Switching it back on is Boss's switch"
             !s.on -> null
             !tradingToday -> "No session today"
             minute < SOLO_DECIDES -> "Decides at 12:00"
