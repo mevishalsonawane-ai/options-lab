@@ -62,15 +62,15 @@ class PatternExpertTest {
         assertTrue(bare.held && !bare.tradable, bare.text()); assertTrue(bare.text().contains("Not enough real option prices"))
         val e = PatternExpert.edges(Market.BANKNIFTY, 15, c, ds.mapIndexed { i, d -> options(d, spots[i], up = true) }.asSequence())
         val eng = e.single { it.kind == PatternKind.BULLISH_ENGULFING }
-        assertTrue(eng.tradable, eng.text()); assertEquals(1.0, eng.rate); assertTrue(eng.text().contains("(ATM, 15% stop, +40 target, profit lock, 1 point for costs)"), eng.text())
-        assertEquals(eng.cases, eng.priced); assertEquals(39.0, eng.optAvg, 1e-9)   // the +40 target less 1 point of costs
+        assertTrue(eng.tradable, eng.text()); assertEquals(1.0, eng.rate); assertTrue(eng.text().contains("(ATM, 30-point stop, +60 target, profit lock, 1 point for costs)"), eng.text())
+        assertEquals(eng.cases, eng.priced); assertEquals(59.0, eng.optAvg, 1e-9)   // the +60 target less 1 point of costs
         // Today: the engulfing has just closed (11:30 close, now 11:31).
         val today = session(LocalDate.of(2026, 10, 1), p, true).take(9)
         val now = today.last().t.plusMinutes(16)
         val v = PatternExpert.judge(15, c + today, snap(today.last().c, up = true), e, TradeCheck.Level.GO, now, 0)
         val idea = assertNotNull(v.idea, v.reasons.toString())
         assertTrue(idea.call)
-        assertTrue(idea.why.contains("a bullish engulfing just closed") && idea.why.contains("What can go wrong") && idea.why.contains("the stop 15% below the price paid") && idea.why.endsWith("History, not a promise."), idea.why)
+        assertTrue(idea.why.contains("a bullish engulfing just closed") && idea.why.contains("What can go wrong") && idea.why.contains("the stop 30 points below the price paid") && idea.why.endsWith("History, not a promise."), idea.why)
         // Against the trend, too close to a level, too late, a stop from the trade check, or the day's limit: none.
         assertNull(PatternExpert.judge(15, c + today, snap(today.last().c, up = false), e, TradeCheck.Level.GO, now, 0).idea)
         assertNull(PatternExpert.judge(15, c + today, snap(today.last().c, up = true, above = today.last().c + 20), e, TradeCheck.Level.GO, now, 0).idea)

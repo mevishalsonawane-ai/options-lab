@@ -11,17 +11,19 @@ import java.util.Locale
 
 /**
  * The rules every trade Jarvis suggests follows, and how they are judged (the owner's wishes, 2026-10-02): the option
- * as the Liquidity arm picks it, played on REAL option minute prices with the arm's 15% premium stop, a +40 target
- * (the ORB arms' [OrbRules.TARGET_POINTS]) and the profit lock on that 40, out by 15:15 ([OptionSim]); no new suggestion
- * after 13:00 on that index's expiry day; trades stay on paper until their own paper record is good ([proven]); and
- * each evening's scorecard of every suggestion - taken or not - on what it would have made. (Boss, 07 Oct: back to
- * these rules after the 06 Oct 30-point stop / +60 target; a trade placed under 30 / 60 keeps its stop and target.) Pure.
+ * as the Liquidity arm picks it, played on REAL option minute prices with a fixed 30-point stop, a +60 target (1 : 2 on
+ * every index; Boss, 06 Oct) and the profit lock on that 60, out by 15:15 ([OptionSim]); never an option at
+ * [MIN_PREMIUM] or less (a 30-point stop would be most of it); no new suggestion after 13:00 on that index's expiry
+ * day; trades stay on paper until their own paper record is good ([proven]); and each evening's scorecard of every suggestion - taken or
+ * not - on what it would have made. Pure.
  */
 object JarvisTrades {
-    /** Jarvis's own stop: the Liquidity arm's resting stop, this share of the premium below the price paid (15%). */
-    const val STOP_SHARE = LiquidityRules.PREMIUM_STOP
-    /** Jarvis's own target: +40 premium points (the ORB arms' target); the profit-lock ladder is measured on it. */
-    const val TARGET_POINTS = OrbRules.TARGET_POINTS
+    /** Jarvis's own stop: a fixed 30 premium points below the price paid (not the Liquidity arm's 15%). */
+    const val STOP_POINTS = 30.0
+    /** Jarvis's own target: +60 premium points (1 : 2 on the stop); the profit-lock ladder is measured on it. */
+    const val TARGET_POINTS = 60.0
+    /** An option at this premium or less is neither suggested nor bought: a 30-point stop would be most of it. */
+    const val MIN_PREMIUM = 35.0
     /** Points taken off every simulated trade for charges and slippage (one lot, both ways). */
     const val COST_POINTS = 1.0
     const val EXIT_MINUTE = 15 * 60 + 15
@@ -31,29 +33,40 @@ object JarvisTrades {
     const val PROVEN_TRADES = 20
 
     /**
-     * The resting stop for a buy at [entry]: [STOP_SHARE] below it, rounded down to the 0.05 tick (the Liquidity arm's
-     * [LiquidityRules.stopTrigger]); null when that leaves no room.
+     * The resting stop for a buy at [entry]: [STOP_POINTS] below, rounded down to the 0.05 tick; null when that leaves
+     * no room (0.05 or less, or not below the entry).
      */
-    fun stopFor(entry: Double): Double? = if (entry > 0) LiquidityRules.stopTrigger(entry) else null
+    fun stopFor(entry: Double): Double? {
+        if (!(entry > 0)) return null
+        val t = kotlin.math.floor((entry - STOP_POINTS) / OrbRules.TICK + 1e-9) * OrbRules.TICK
+        val r = kotlin.math.round(t * 100) / 100.0
+        return r.takeIf { it > OrbRules.TICK + 1e-9 && it < entry }
+    }
 
     /** The target for a buy at [entry]: [TARGET_POINTS] above. */
     fun targetFor(entry: Double): Double = entry + TARGET_POINTS
 
-    /** The profit-lock stop on the 40 target ([ProfitLock.level]; [costPerUnit]: the first rung is breakeven after charges). */
+    /** The profit-lock stop on the 60 target ([ProfitLock.level]; [costPerUnit]: the first rung is breakeven after charges). */
     fun lockFor(entry: Double, peak: Double, costPerUnit: Double = 0.0): Double? = ProfitLock.level(entry, TARGET_POINTS, peak, costPerUnit)
 
+    /** An option at [premium] that is too cheap for the 30-point stop: why it is not bought, else null. */
+    fun premiumBlock(premium: Double): String? =
+        if (premium.isFinite() && premium > 0 && premium <= MIN_PREMIUM)
+            "The option costs %.2f, %.0f or less: my 30-point stop would be most of it, so I do not buy it.".format(Locale.ENGLISH, premium, MIN_PREMIUM)
+        else null
+
     /**
-     * The rules of Jarvis's own trades in words ("what is the stop loss for news trades"): the 15% stop, the +40 target,
-     * the profit lock's rungs on it and the 15:15 exit.
+     * The rules of Jarvis's own trades in words ("what is the stop loss for news trades"): the 30-point stop, the +60
+     * target, the profit lock's rungs on it, the 15:15 exit and the cheapest premium bought.
      */
     fun rules(): String {
         fun n(x: Double) = "%.0f".format(Locale.ENGLISH, x)
         val (a, b, c) = ProfitLock.LADDER.map { it.first * TARGET_POINTS to it.second * TARGET_POINTS }.let { Triple(it[0], it[1], it[2]) }
         return "My own trades (news trades, pattern ideas, and Solo's setups when offered to you) buy 1 lot of the at-the-money option, nearest expiry, " +
-            "with a stop ${n(STOP_SHARE * 100)}% below the price paid and a +${n(TARGET_POINTS)} target. " +
+            "with a fixed ${n(STOP_POINTS)}-point stop below the price paid and a +${n(TARGET_POINTS)} target - 1 : 2 on every index. " +
             "The profit lock then moves the stop up: at +${n(a.first)} to breakeven after charges, at +${n(b.first)} to +${n(b.second)}, " +
-            "at +${n(c.first)} to +${n(c.second)}. Out by 15:15 at the latest. " +
-            "A trade already open keeps the stop and target it was placed with."
+            "at +${n(c.first)} to +${n(c.second)}. Out by 15:15 at the latest, and never an option at ${n(MIN_PREMIUM)} or less " +
+            "(the stop would be most of it). A trade already open keeps the stop it was placed with."
     }
 
     private val RULES_WHO = Regex("\\b(news|pattern|jarvis'?s?|your|your own|ai) (trades?|ideas?|setups?|suggestions?)\\b")
@@ -79,8 +92,9 @@ object JarvisTrades {
         /**
          * The trade Jarvis would place at [at] (IST) on [s]'s day: the ATM call (put) on [step] around [spot], the next
          * expiry after the day (else that day's), bought at the first minute's close at or after [at]; out at the stop
-         * 15% below, the +40 target, the profit-lock stop on that 40 (its first rung breakeven after [COST_POINTS]), or
-         * 15:15. Points per unit after [COST_POINTS]; null when the contract has no prices.
+         * 30 points below, the +60 target, the profit-lock stop on that 60 (its first rung breakeven after [COST_POINTS]),
+         * or 15:15. Points per unit after [COST_POINTS]; null when the contract has no prices, or its price is
+         * [MIN_PREMIUM] or less (Jarvis would not buy it).
          */
         fun trade(s: Session, at: LocalDateTime, call: Boolean, spot: Double, step: Int): Double? {
             val strike = Math.round(spot / step) * step.toDouble()
@@ -92,8 +106,8 @@ object JarvisTrades {
             var i = (0 until o.size).firstOrNull { o.minutes[it] >= start } ?: return null
             if (o.minutes[i] > start + 5 || o.minutes[i] >= EXIT_MINUTE) return null
             val entry = o.close[i]
-            if (entry <= 0) return null
-            val stop = stopFor(entry) ?: entry * (1 - STOP_SHARE)
+            if (entry <= MIN_PREMIUM) return null
+            val stop = stopFor(entry) ?: return null
             val target = targetFor(entry)
             var peak = entry
             i++

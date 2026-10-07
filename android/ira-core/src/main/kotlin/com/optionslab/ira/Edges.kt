@@ -62,27 +62,25 @@ object IvRank {
 }
 
 /**
- * How many lots a Jarvis trade takes for the owner's rupee risk: each lot risks its 15% stop on the premium
- * ([JarvisTrades.STOP_SHARE] x the premium x the lot size); 1 when no risk is set.
+ * How many lots a Jarvis trade takes for the owner's rupee risk: each lot risks its fixed 30-point stop
+ * ([JarvisTrades.STOP_POINTS] x the lot size, whatever the premium); 1 when no risk is set.
  */
 object RiskSizing {
-    const val STOP_SHARE = JarvisTrades.STOP_SHARE
-
-    /** Rupees one lot at [premium] risks at Jarvis's 15% stop. */
-    fun perLot(premium: Double, lotSize: Int): Double = premium * STOP_SHARE * lotSize
+    /** Rupees one lot risks at Jarvis's 30-point stop. */
+    fun perLot(lotSize: Int): Double = JarvisTrades.STOP_POINTS * lotSize
 
     /** Lots within [riskRs]: 1 when no risk is set; 0 when even one lot would risk more than the owner allows. */
     fun lots(riskRs: Double?, premium: Double, lotSize: Int, maxLots: Int): Int {
         if (riskRs == null || riskRs <= 0 || premium <= 0 || lotSize <= 0) return 1
-        return kotlin.math.floor(riskRs / perLot(premium, lotSize) + 1e-9).toInt().coerceIn(0, maxOf(1, maxLots))
+        return kotlin.math.floor(riskRs / perLot(lotSize) + 1e-9).toInt().coerceIn(0, maxOf(1, maxLots))
     }
 
-    fun say(lots: Int, premium: Double, lotSize: Int): String =
-        "$lots lot${if (lots > 1) "s" else ""}: the 15%% stop risks about Rs %,.0f.".format(Locale.ENGLISH, lots * perLot(premium, lotSize))
+    fun say(lots: Int, lotSize: Int): String =
+        "$lots lot${if (lots > 1) "s" else ""}: the 30-point stop risks about Rs %,.0f.".format(Locale.ENGLISH, lots * perLot(lotSize))
 
-    /** The words when the owner's risk per trade came out at 0 lots for an option at [premium]. */
-    fun tooSmall(premium: Double, lotSize: Int): String =
-        "Your risk per trade is smaller than one lot's stop risk (15% of the premium x $lotSize, about ${AppFacts.amt(perLot(premium, lotSize))}): not placed."
+    /** The words when the owner's risk per trade came out at 0 lots. */
+    fun tooSmall(lotSize: Int): String =
+        "Your risk per trade is smaller than one lot's stop risk (30 points x $lotSize, about ${AppFacts.amt(perLot(lotSize))}): not placed."
 }
 
 /**

@@ -14,18 +14,16 @@ import kotlinx.coroutines.sync.withLock
 /**
  * News trades (Jarvis): an idea from [NewsTrade] becomes a trade only on the owner's Approve. The option is picked as
  * the Liquidity 15+5 arm picks it (ATM on the index's strike step, the next expiry after today, 1 lot, a market buy);
- * it gets Jarvis's own rules ([JarvisTrades]; Boss, 07 Oct: back to them after the 06 Oct 30 / 60): the arm's resting
- * stop 15% below the price paid, a target of the ORB arms' +40 premium points, and the owner's profit-lock ladder
- * ([ProfitLock]) on that 40 moves the stop up as the option gains - all through the app's own protections. A trade
- * keeps the stop and target it was placed with: one placed under the 30 / 60 rules ([Pos.target] 60) keeps its +60 and
- * its ladder on 60; one with no recorded target has the +40. Every trade is recorded with its result, so news trades
- * can be judged on their own record.
+ * it gets Jarvis's own rules (Boss, 06 Oct; [JarvisTrades]): a resting stop a fixed 30 premium points below the price
+ * paid, a +60 target (1 : 2 on every index), and the owner's profit-lock ladder ([ProfitLock]) on that 60 moves the stop
+ * up as the option gains - all through the app's own protections. An option at [JarvisTrades.MIN_PREMIUM] or less is not
+ * bought. A trade placed before the change keeps its stop and its +40 ladder ([Pos.target] unset). Every trade is
+ * recorded with its result, so news trades can be judged on their own record.
  */
 internal object IraNewsTrades {
-    /** Jarvis's stop: this share of the premium below the price paid (15%). */
-    const val STOP_SHARE = JarvisTrades.STOP_SHARE
+    const val STOP_POINTS = JarvisTrades.STOP_POINTS
     const val TARGET_POINTS = JarvisTrades.TARGET_POINTS
-    /** The target (and ladder) of a trade recorded without one: the ORB arms' +40 it was placed with. */
+    /** The target (and ladder) of a trade recorded before the 30 / 60 rules: the ORB arms' +40 it was placed with. */
     const val LEGACY_TARGET_POINTS = OrbRules.TARGET_POINTS
     private const val KEY = "jarvis.newstrades"
 
@@ -37,15 +35,15 @@ internal object IraNewsTrades {
                    val spotOut: Double? = null, val minuteOut: Int? = null,
                    /** How sure Jarvis was (1-5) when it was suggested, for the bar it sets itself ([com.optionslab.ira.ActAlone.bar]). */
                    val stars: Int? = null,
-                   /** The target in premium points it was placed with (its ladder too: 40, or 60 under the 06 Oct rules); null: +40. */
+                   /** The target in premium points it was placed with (its ladder too); null: placed before the 30 / 60 rules (+40). */
                    val target: Double? = null) {
         /** The points its target and profit-lock ladder are measured on. */
         val ladderPoints: Double get() = target?.takeIf { it.isFinite() && it > 0 } ?: LEGACY_TARGET_POINTS
     }
 
     /**
-     * A new trade's protection for a buy at [entry]: (the resting stop 15% below, tick-rounded - null with no room -,
-     * the +40 target price). Paper and Zerodha use the same.
+     * A new trade's protection for a buy at [entry]: (the resting stop 30 points below, tick-rounded - null with no room -,
+     * the +60 target price). Paper and Zerodha use the same.
      */
     internal fun protectionFor(entry: Double): Pair<Double?, Double> = JarvisTrades.stopFor(entry) to JarvisTrades.targetFor(entry)
 
@@ -115,7 +113,7 @@ internal object IraNewsTrades {
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.trades.limit")?.toDouble() }.getOrNull() ?: DEFAULT_LIMIT
         set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.limit", v.toString()) } }
 
-    /** Rupees one Jarvis trade may risk (its 15% stop on the premium x the lot size, per lot), or null for 1 lot; used only once the paper record is proven. */
+    /** Rupees one Jarvis trade may risk (its 30-point stop x the lot size, per lot), or null for 1 lot; used only once the paper record is proven. */
     var riskPerTrade: Double?
         get() = runCatching { com.optionslab.app.security.SecurePrefs.getString("jarvis.trades.risk")?.toDouble() }.getOrNull()
         set(v) { runCatching { com.optionslab.app.security.SecurePrefs.put("jarvis.trades.risk", v?.toString()) } }
@@ -140,6 +138,16 @@ internal object IraNewsTrades {
         val iv = com.optionslab.ira.IvRank.now(px, idea.call, spot, c.strike, maxOf(0.05, days)) ?: return null
         val rank = com.optionslab.ira.IvRank.rank(IraStudy.ivHistory(u), iv, now.toLocalDate()) ?: return null
         return rank to iv
+    }
+
+    /**
+     * The option Jarvis would buy for [idea] costs [JarvisTrades.MIN_PREMIUM] or less (a 30-point stop would be most of
+     * it): why it is not suggested, else null (also when its price cannot be read now - [place] checks again).
+     */
+    suspend fun premiumProblem(idea: NewsTrade.Idea, spot: Double): String? {
+        val c = contract(idea.market.name, spot, idea.call) ?: return null
+        val px = runCatching { Paper.lastPrice(c) }.getOrNull()?.takeIf { it > 0 } ?: return null
+        return JarvisTrades.premiumBlock(px)
     }
 
     /** Today's closed Jarvis trades have lost [dailyLimit] or more. */
@@ -268,12 +276,14 @@ internal object IraNewsTrades {
         val day = com.optionslab.app.data.Market.today().toString()
         val quote = runCatching { Paper.quote(c) }.getOrNull()
         val premium = quote?.ltp ?: 0.0
+        // Too cheap for the fixed 30-point stop (35 or less): not bought. (Checked on the price read now, else the last.)
+        JarvisTrades.premiumBlock(premium.takeIf { it > 0 } ?: runCatching { Paper.lastPrice(c) }.getOrNull() ?: 0.0)?.let { return "$it Not placed." }
         // A thin strike (a wide gap between buyers and sellers, or hardly traded) is not bought: the fill and the exit would be poor.
         quote?.let { q -> com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize) }?.let { return "$it Not placed." }
         // [shrink]: his own record where this idea came is losing - half size, one lot at least (it only ever lowers).
         val lots = lotsFor(premium, c.lotSize).let { if (shrink) com.optionslab.ira.SelfCalibration.lots(it, com.optionslab.ira.SelfCalibration.Action.SHRINK) else it }
         val nowMin = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute }
-        if (lots < 1) return com.optionslab.ira.RiskSizing.tooSmall(premium, c.lotSize)
+        if (lots < 1) return com.optionslab.ira.RiskSizing.tooSmall(c.lotSize)
         // Paper first: until their own record is proven (checked again now), Jarvis's trades go on paper even in Live mode.
         if (!s.live || !earned(solo)) {
             val r = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null, quote)
@@ -353,7 +363,7 @@ internal object IraNewsTrades {
                 else Paper.contractOf(p.symbol)?.let { Paper.lastPrice(it) } }.getOrNull() ?: return@map p
             val peak = maxOf(p.peak, ltp)
             // Breakeven after charges (Boss's 06 Oct fix): the first rung never locks a certain small loss. The ladder is on
-            // the target the trade was placed with (+40; +60 for one placed under the 06 Oct 30 / 60 rules - never changed after).
+            // the target the trade was placed with (+60; +40 for one placed before the 30 / 60 rules - never changed after).
             val ref = p.ladderPoints
             val lock = ProfitLock.level(p.entry, ref, peak, ProfitLock.roundTripPerUnit(p.entry, p.qty))
             var stop = p.stop
@@ -444,7 +454,7 @@ internal object IraNewsTrades {
             ?: return listOf("$what: that option has no prices for the time, so I cannot replay it.")
         val lot = sess.lotHint ?: sess.options.firstOrNull()?.lot
         return listOf("$what would have made %+.1f points".format(java.util.Locale.ENGLISH, p) + (lot?.let { " (${com.optionslab.ira.AppFacts.rs(p * it)} a lot)" } ?: "") +
-            ", with the ${Math.round(STOP_SHARE * 100)}% stop, the +${TARGET_POINTS.toInt()} target, the profit lock and the 15:15 exit, after costs.")
+            ", with the ${STOP_POINTS.toInt()}-point stop, the +${TARGET_POINTS.toInt()} target, the profit lock and the 15:15 exit, after costs.")
     }
 
     /** The index's latest price as Jarvis last read it. */

@@ -8,7 +8,7 @@ import java.util.Locale
  * for the owner's Approve: a headline that reads strongly good or bad for an index, fresh, while that index's 15-minute
  * trend and its last 15 minutes both already move the news's way, in entry hours, with the trade check not saying stop.
  * The option is chosen as the app's Liquidity 15+5 arm chooses (the app does that): ATM, next expiry, 1 lot, a resting
- * stop 15% below the price paid, a +40 target and the profit lock on it ([JarvisTrades]). UNTESTED as a strategy: each one is recorded so its results can be judged. Pure.
+ * stop a fixed 30 points below the price paid, a +60 target and the profit lock on it ([JarvisTrades]). UNTESTED as a strategy: each one is recorded so its results can be judged. Pure.
  */
 object NewsTrade {
     const val MIN_TONE = 0.6

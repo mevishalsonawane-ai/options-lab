@@ -21,56 +21,60 @@ class JarvisTradesTest {
     @Test fun theOptionTradeHitsTargetStopLockOrTheEnd() {
         val at = LocalDateTime.of(day, java.time.LocalTime.of(11, 0))   // minute 660
         fun upThenDown(top: Int) = session({ m -> val k = m - 660; 100.0 + if (k <= 0) 0.0 else if (k <= top) k.toDouble() else 2.0 * top - k })
-        // +1 a minute: the +40 target (Boss, 07 Oct: back to 15% / +40 on Jarvis's own trades).
-        assertEquals(39.0, JarvisTrades.OptionSim.trade(session({ m -> 100.0 + maxOf(0, m - 660) }), at, true, 25_010.0, 50)!!, 1e-9)
-        // -1 a minute: the stop 15% below 100.
-        assertEquals(85.0 - 100 - 1, JarvisTrades.OptionSim.trade(session({ m -> 100.0 - maxOf(0, m - 660) }), at, true, 25_010.0, 50)!!, 1e-9)
-        // A dear option risks 15% of its price: 45 points at 300.
-        assertEquals(255.0 - 300 - 1, JarvisTrades.OptionSim.trade(session({ m -> 300.0 - maxOf(0, m - 660) }), at, true, 25_010.0, 50)!!, 1e-9)
-        // The profit lock on the 40: up 10 (a quarter) then back -> breakeven after the costs; up 20 -> +10; up 30 -> +20.
-        assertEquals(0.0, JarvisTrades.OptionSim.trade(upThenDown(15), at, true, 25_010.0, 50)!!, 1e-9)
-        assertEquals(10.0 - 1, JarvisTrades.OptionSim.trade(upThenDown(25), at, true, 25_010.0, 50)!!, 1e-9)
-        assertEquals(20.0 - 1, JarvisTrades.OptionSim.trade(upThenDown(35), at, true, 25_010.0, 50)!!, 1e-9)
-        // Up 9 only: no rung yet, so back down to the 15% stop.
-        assertEquals(-16.0, JarvisTrades.OptionSim.trade(upThenDown(9), at, true, 25_010.0, 50)!!, 1e-9)
+        // +1 a minute: the +60 target (Boss, 06 Oct: 30 / 60 on Jarvis's own trades).
+        assertEquals(59.0, JarvisTrades.OptionSim.trade(session({ m -> 100.0 + maxOf(0, m - 660) }), at, true, 25_010.0, 50)!!, 1e-9)
+        // -1 a minute: the fixed stop 30 points below 100.
+        assertEquals(70.0 - 100 - 1, JarvisTrades.OptionSim.trade(session({ m -> 100.0 - maxOf(0, m - 660) }), at, true, 25_010.0, 50)!!, 1e-9)
+        // A dear option risks the same 30 points, not 15% of it.
+        assertEquals(270.0 - 300 - 1, JarvisTrades.OptionSim.trade(session({ m -> 300.0 - maxOf(0, m - 660) }), at, true, 25_010.0, 50)!!, 1e-9)
+        // The profit lock on the 60: up 15 (a quarter) then back -> breakeven after the costs; up 30 -> +15; up 45 -> +30.
+        assertEquals(0.0, JarvisTrades.OptionSim.trade(upThenDown(25), at, true, 25_010.0, 50)!!, 1e-9)
+        assertEquals(15.0 - 1, JarvisTrades.OptionSim.trade(upThenDown(35), at, true, 25_010.0, 50)!!, 1e-9)
+        assertEquals(30.0 - 1, JarvisTrades.OptionSim.trade(upThenDown(50), at, true, 25_010.0, 50)!!, 1e-9)
+        // Up 14 only: no rung yet, so back down to the 30-point stop.
+        assertEquals(-31.0, JarvisTrades.OptionSim.trade(upThenDown(14), at, true, 25_010.0, 50)!!, 1e-9)
         // Flat: out at 15:15 with only the costs.
         assertEquals(-1.0, JarvisTrades.OptionSim.trade(session({ 100.0 }), at, true, 25_010.0, 50)!!, 1e-9)
-        // No premium floor: a cheap option is bought and scored too (the 35 floor was only for the 30-point stop).
-        assertEquals(-1.0, JarvisTrades.OptionSim.trade(session({ 35.0 }), at, true, 25_010.0, 50)!!, 1e-9)
-        // A price too small for a tick-rounded stop: 15% below it all the same.
-        assertEquals(-1.0, JarvisTrades.OptionSim.trade(session({ 0.05 }), at, true, 25_010.0, 50)!!, 1e-9)
+        // An option at 35 or less is never bought, so never scored; just above it is.
+        assertNull(JarvisTrades.OptionSim.trade(session({ 35.0 }), at, true, 25_010.0, 50))
+        assertEquals(-1.0, JarvisTrades.OptionSim.trade(session({ 36.0 }), at, true, 25_010.0, 50)!!, 1e-9)
         // No such contract: nothing.
         assertNull(JarvisTrades.OptionSim.trade(session({ 100.0 }, right = Right.PE), at, true, 25_010.0, 50))
     }
 
-    @Test fun fifteenPercentStopFortyTargetAndTheLadderOnIt() {
-        assertEquals(0.15, JarvisTrades.STOP_SHARE, 0.0)
-        assertEquals(40.0, JarvisTrades.TARGET_POINTS, 0.0)
-        // The Liquidity arm's own stop and the ORB arms' target, unchanged.
+    @Test fun thirtyPointStopSixtyTargetAndTheLadderOnIt() {
+        assertEquals(30.0, JarvisTrades.STOP_POINTS, 0.0)
+        assertEquals(60.0, JarvisTrades.TARGET_POINTS, 0.0)
+        // Liquidity 15+5 and the ORB arms keep their own.
         assertEquals(0.15, com.optionslab.engine.orb.LiquidityRules.PREMIUM_STOP, 0.0)
         assertEquals(40.0, com.optionslab.engine.orb.OrbRules.TARGET_POINTS, 0.0)
-        // The stop: 15% below, down to the 0.05 tick; none with no room.
-        assertEquals(85.0, JarvisTrades.stopFor(100.0)!!, 1e-9)
-        assertEquals(85.05, JarvisTrades.stopFor(100.07)!!, 1e-9)
-        assertEquals(29.75, JarvisTrades.stopFor(35.0)!!, 1e-9)
-        assertNull(JarvisTrades.stopFor(0.05))
+        // The stop: 30 below, down to the 0.05 tick, never 0.05 or less.
+        assertEquals(70.0, JarvisTrades.stopFor(100.0)!!, 1e-9)
+        assertEquals(70.05, JarvisTrades.stopFor(100.07)!!, 1e-9)
+        assertEquals(5.0, JarvisTrades.stopFor(35.0)!!, 1e-9)
+        assertEquals(0.1, JarvisTrades.stopFor(30.1)!!, 1e-9)
+        assertNull(JarvisTrades.stopFor(30.05))
+        assertNull(JarvisTrades.stopFor(20.0))
         assertNull(JarvisTrades.stopFor(0.0))
-        assertEquals(140.0, JarvisTrades.targetFor(100.0), 1e-9)
-        // The ladder's rungs on the 40: +10 -> breakeven after charges, +20 -> +10, +30 -> +20.
-        assertNull(JarvisTrades.lockFor(100.0, 109.9, 1.5))
-        assertEquals(101.5, JarvisTrades.lockFor(100.0, 110.0, 1.5)!!, 1e-9)
-        assertEquals(110.0, JarvisTrades.lockFor(100.0, 120.0, 1.5)!!, 1e-9)
-        assertEquals(120.0, JarvisTrades.lockFor(100.0, 130.0, 1.5)!!, 1e-9)
-        assertEquals(120.0, JarvisTrades.lockFor(100.0, 139.0, 1.5)!!, 1e-9)
-        assertEquals(110.0, JarvisTrades.lockFor(100.0, 120.0)!!, 1e-9)
+        assertEquals(160.0, JarvisTrades.targetFor(100.0), 1e-9)
+        // The ladder's rungs on the 60: +15 -> breakeven after charges, +30 -> +15, +45 -> +30.
+        assertNull(JarvisTrades.lockFor(100.0, 114.9, 1.5))
+        assertEquals(101.5, JarvisTrades.lockFor(100.0, 115.0, 1.5)!!, 1e-9)
+        assertEquals(115.0, JarvisTrades.lockFor(100.0, 130.0, 1.5)!!, 1e-9)
+        assertEquals(130.0, JarvisTrades.lockFor(100.0, 145.0, 1.5)!!, 1e-9)
+        assertEquals(130.0, JarvisTrades.lockFor(100.0, 159.0, 1.5)!!, 1e-9)
+        // Too cheap for a 30-point stop: refused at 35 or less.
+        assertEquals("The option costs 35.00, 35 or less: my 30-point stop would be most of it, so I do not buy it.", JarvisTrades.premiumBlock(35.0))
+        assertNotNull(JarvisTrades.premiumBlock(12.5))
+        assertNull(JarvisTrades.premiumBlock(35.05))
+        assertNull(JarvisTrades.premiumBlock(0.0))          // no price: not judged here
     }
 
     @Test fun theRulesOfJarvisTradesAreSaidAsTheyTrade() {
         val r = JarvisTrades.rules()
-        assertTrue(r.contains("with a stop 15% below the price paid and a +40 target."), r)
-        assertTrue(r.contains("at +10 to breakeven after charges, at +20 to +10, at +30 to +20"), r)
-        assertTrue(r.contains("A trade already open keeps the stop and target it was placed with."), r)
-        assertTrue(!r.contains("30-point") && !r.contains("+60") && !r.contains("35 or less"), r)
+        assertTrue(r.contains("a fixed 30-point stop below the price paid and a +60 target - 1 : 2 on every index"), r)
+        assertTrue(r.contains("at +15 to breakeven after charges, at +30 to +15, at +45 to +30"), r)
+        assertTrue(r.contains("never an option at 35 or less"), r)
         for (q in listOf("what is the stop loss for news trades", "What's the target on news trades?", "news trade ka stop loss kya hai",
                 "what are the rules of your trades", "what stop do pattern ideas use", "Jarvis, what is the SL for AI trades")) {
             assertTrue(JarvisTrades.rulesAsked(q), q)
@@ -80,7 +84,7 @@ class JarvisTradesTest {
                 "what is a stop loss", "what is the target for nifty"))
             assertTrue(!JarvisTrades.rulesAsked(q), q)
         // The word itself is still explained, with Jarvis's own numbers.
-        assertTrue(Glossary.explain("what is a stop loss")!!.contains("15% below the option's entry price, with a +40 target"))
+        assertTrue(Glossary.explain("what is a stop loss")!!.contains("a fixed 30 points below the option's entry price, with a +60 target"))
     }
 
     @Test fun expiryAfterOneAndTheProvenRule() {
