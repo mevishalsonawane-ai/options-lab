@@ -89,6 +89,29 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertTrue("arming sends nothing", kite.placed.isEmpty())
     }
 
+    /**
+     * Research h4 (07 Oct): the MIDCPNIFTY books join a switch armed in Live on paper terms only - never cleared for
+     * Zerodha by the update; only Boss arming it again with his PIN clears every book, theirs too.
+     */
+    @Test fun theMidcpniftyBooksJoiningALiveSwitchAreNotClearedForZerodha() {
+        // The four books of the update before, all armed in Live with the PIN.
+        fun flags(v: Boolean) = JSONObject().apply { listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin").forEach { put(it, v) } }
+        AutomationSupport.orbState(context, JSONObject()
+            .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(true)).put("liqLots", 1)
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", JSONArray()))
+        val books = runBlocking { OrbArms.liquidityDay(now.toLocalDate()) }.first
+        assertTrue(books.toString(), books.filter { it.book.endsWith("_mid") }.let { m -> m.size == 2 && m.all { it.armed } })
+        assertFalse("not cleared for Zerodha by the update", row().liveOk)
+        assertTrue("the update sends nothing", kite.placed.isEmpty())
+        val refused = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, pinConfirmed = false) }
+        assertEquals("The app is in Live: arm it with your PIN or fingerprint.", refused)
+        assertFalse(row().liveOk)
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, pinConfirmed = true) }
+        assertTrue("Boss's PIN clears all six books", row().liveOk)
+        assertTrue("arming sends nothing", kite.placed.isEmpty())
+    }
+
     @Test fun anApprovedLiveEntryBuysOneLotAndRestsA15PercentStop() {
         state()
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })

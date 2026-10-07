@@ -15,7 +15,7 @@ import kotlin.math.abs
  * The opening read (Boss, 06 Oct 2026): once a trading day, just after the first 5-minute candle closes (from [POST_AT]
  * through [POST_LAST], in the words lane), one short note in the chat on how the market opened; and the same when asked
  * ("how did the market open", "opening read", "market kaisa khula", "where did we open vs the levels"). For Nifty and
- * Liquidity 15+5's two indices, BankNifty and FinNifty:
+ * Liquidity 15+5's indices, BankNifty, FinNifty and Midcap Nifty:
  *
  *  - the gap against the previous session's close, in points and %, and for Nifty what GIFT Nifty pointed to in the
  *    morning (the market recorder's last reading, as the 09:00 check reads it - [MorningCues]; never fetched here);
@@ -85,7 +85,7 @@ object OpeningRead {
 
     /**
      * What the read is made of at [now]: [tradingDay] today a session; [indices] each index read; [gift] the recorder's
-     * last GIFT Nifty reading (null: none); [places] BankNifty's and FinNifty's place against the levels; [arm] Liquidity
+     * last GIFT Nifty reading (null: none); [places] BankNifty's, FinNifty's and Midcap Nifty's place against the levels; [arm] Liquidity
      * 15+5's switch, lots and first trigger (null: not read); [bigMove] Nifty's big-move read now.
      */
     data class Facts(

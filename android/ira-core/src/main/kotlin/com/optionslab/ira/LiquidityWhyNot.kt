@@ -10,7 +10,7 @@ import kotlin.math.abs
 /**
  * Why Liquidity 15+5 did or did not trade today (Boss, 06 Oct 2026): "why no liquidity trade today?", "why didn't
  * liquidity trade", "liquidity ne trade kyu nahi liya", "what is liquidity waiting for". Answered from the arm's own
- * records of the day, book by book (BANKNIFTY 15 and 5, FINNIFTY 30 and 5 - [LiquidityRules.BOOKS]): its switch, the day's
+ * records of the day, book by book (BANKNIFTY 15 and 5, FINNIFTY 30 and 5, MIDCPNIFTY 15 and 5 - [LiquidityRules.BOOKS]): its switch, the day's
  * stop ([DayStop]) and its entry hours; the bars it decided on and every break it saw with why it was not taken - the room
  * rule ([LiquidityRules.hasRoom]: the next level too close), Bot settings or the one-position-a-side rule refusing it, a
  * signal left unapproved, no option price, candles missing or still loading; the trades it did take (and where to ask
@@ -23,7 +23,7 @@ import kotlin.math.abs
 object LiquidityWhyNot {
     // ---- the question ---------------------------------------------------------------------------------------------
 
-    /** What was asked: [underlyings] the indices (both when none is named), [waiting] "what is it waiting for" (else "why no trade"). */
+    /** What was asked: [underlyings] the indices (all when none is named), [waiting] "what is it waiting for" (else "why no trade"). */
     data class Q(val underlyings: List<String> = LiquidityRules.UNDERLYINGS, val waiting: Boolean = false)
 
     const val LOCKED = "Unlock the phone for that, Boss."
@@ -53,6 +53,7 @@ object LiquidityWhyNot {
         "orb|solo|hero|sweep|range fade|fade|nifty 50|sensex) ")
     private val BANK = Regex(" (bank ?nifty|banknifty|bnf|nifty bank|bank) ")
     private val FIN = Regex(" (fin ?nifty|finnifty|finnfty|nifty fin|nifty financial|fin) ")
+    private val MID = Regex(" (midcap nifty|midcpnifty|midcp nifty|mid cap nifty|midcap|midcp|nifty mid select|nifty midcap select|midcap select) ")
 
     /** Is why Liquidity 15+5 did or did not trade today asked (or what it waits for)? Null when not. */
     fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
@@ -66,7 +67,9 @@ object LiquidityWhyNot {
         if (!why && !waiting) return null
         val bank = BANK.containsMatchIn(t)
         val fin = FIN.containsMatchIn(t)
-        val unds = if (bank || fin) listOfNotNull("BANKNIFTY".takeIf { bank }, "FINNIFTY".takeIf { fin }) else LiquidityRules.UNDERLYINGS
+        val mid = MID.containsMatchIn(t)
+        val unds = if (bank || fin || mid) listOfNotNull("BANKNIFTY".takeIf { bank }, "FINNIFTY".takeIf { fin }, "MIDCPNIFTY".takeIf { mid })
+            else LiquidityRules.UNDERLYINGS
         return Q(unds, waiting)
     }
 
@@ -336,7 +339,7 @@ object LiquidityWhyNot {
         val books = LiquidityRules.BOOKS.filter { LiquidityRules.underlyingOf(it) in q.underlyings }.ifEmpty { LiquidityRules.BOOKS }
         val day = f.now.toLocalDate()
         if (!f.tradingDay) return "Today isn't a trading day, Boss, so Liquidity 15+5 had nothing to trade. " +
-            "It decides on BankNifty and FinNifty bars in market hours, entries $HOURS."
+            "It decides on BankNifty, FinNifty and Midcap Nifty bars in market hours, entries $HOURS."
         val scope = books.map { it.source }.toSet()
         val trades = f.trades.filter { sourceOf(it.source) in scope && it.entryTime.toLocalDate() == day }
         val decisions = f.decisions.filter { sourceOf(it.book) in scope && it.at.toLocalDate() == day }
@@ -365,7 +368,8 @@ object LiquidityWhyNot {
                     (if (decisions.isNotEmpty()) " It was armed earlier today: what it saw is below." else "")
                 f.stopped != null -> head += "No Liquidity trade today, Boss: ${DayStop.line(f.stopped)}"
                 q.waiting -> head += "Boss, Liquidity 15+5 waits for a close through a liquidity pool that sits on a swing zone, with room to the next " +
-                    "level (one index stop: BankNifty 30 pts, FinNifty 15) - then it buys the call (up) or put (down)."
+                    "level (one index stop: BankNifty 30 pts, FinNifty 15, Midcap Nifty 8) - then it buys the call (up) or put (down)."
+
                 before && decisions.isEmpty() -> head += "No Liquidity trade yet, Boss - it is early."
                 else -> {
                     val noRoom = missed.count { kind(it.verdict) == Kind.NO_ROOM }

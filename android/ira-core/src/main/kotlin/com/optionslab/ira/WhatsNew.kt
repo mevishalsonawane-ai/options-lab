@@ -49,6 +49,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-07-liquidity-midcpnifty", OCT7, "Liquidity 15+5 now also trades Midcap Nifty",
+            "Liquidity 15+5 also runs on Midcap Nifty's 15-minute and 5-minute charts, on paper, with its rules unchanged and an " +
+                "8-point index stop. It was positive before and in the research's locked holdout; Zerodha still needs your PIN or fingerprint.",
+            "Home → Dashboard → Strategies card → Liquidity 15+5 row (one switch for all its charts)"),
         Entry("2026-10-07-orb-arms-back", OCT7, "ORB, ORB Fresh, ORB Sweep and Range Fade are back",
             "You brought the four arms back: each is switched on again on paper and has its own switch beside Liquidity 15+5. " +
                 "Zerodha still needs your PIN or fingerprint, and their 2021–2026 record stays in the arms' detail.",

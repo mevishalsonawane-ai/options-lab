@@ -56,7 +56,7 @@ object LiquidityDrawdown {
     private val NOT = Regex(" (should|shall|set|change|changes|changing|switch|switched|turn on|turn off|disable|enable|karo|kar do|kardo|band karo|" +
         "limit|limits|kill switch|guard|breaker|today|todays|aaj|tomorrow|kal|why|kyun|kyon|kyu|will|would|" +
         "backtest|back test|backtested|shadow|shadows|candidate|candidates|what is a|define|meaning|mean by|hero|solo|orb|gold|pine|" +
-        "my|mera|meri|mere|i|main|mai|nifty|banknifty|bank nifty|finnifty|level|levels|pool|pools|zone|zones|sweep|sweeps|grab|vix|stock|stocks) ")
+        "my|mera|meri|mere|i|main|mai|nifty|banknifty|bank nifty|finnifty|midcpnifty|midcap|level|levels|pool|pools|zone|zones|sweep|sweeps|grab|vix|stock|stocks) ")
     /** A second question said after it: left to the splitter, each answered on its own. */
     private val AND = Regex(" (and|aur|also|then|phir) (what|whats|how|hows|is|are|when|why|tell|show|give|check|kya|kitna|nifty|banknifty|my|mera|meri|mere) ")
 

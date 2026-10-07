@@ -79,7 +79,7 @@ object LiquidityWhen {
         "backtest|back test|backtested|research|shadow|shadows|candidate|candidates|what is a|define|meaning|mean by|" +
         "hero|solo|orb|gold|pine|my|mera|meri|mere|i|main|mai|level|levels|pool|pools|lot|lots|size|" +
         "hold|holds|held|how long|drawdown|streak|which expiry|what expiry|buy|buys|bought|contract|contracts|strike|strikes|" +
-        "enter|enters|entering|start|starts|when|nifty|banknifty|bank nifty|finnifty|fin nifty|" +
+        "enter|enters|entering|start|starts|when|nifty|banknifty|bank nifty|finnifty|fin nifty|midcpnifty|midcap|" +
         "(does|do|can) (liquidity|it) (trade|take) (on|during|at)) ")
     /** A second question said after it: left to the splitter, each answered on its own. */
     private val AND = Regex(" (and|aur|also|then|phir) (what|whats|how|hows|is|are|when|why|tell|show|give|check|kya|kitna|nifty|banknifty|my|mera|meri|mere) ")

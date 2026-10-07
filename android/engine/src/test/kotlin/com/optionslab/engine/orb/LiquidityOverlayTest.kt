@@ -31,6 +31,7 @@ class LiquidityOverlayTest {
     @Test fun eachIndexShowsItsBooksCharts() {
         assertEquals(listOf(15, 5), LiquidityOverlay.timeframes("BANKNIFTY"))
         assertEquals(listOf(30, 5), LiquidityOverlay.timeframes("FINNIFTY"))
+        assertEquals(listOf(15, 5), LiquidityOverlay.timeframes("MIDCPNIFTY"))
         assertEquals(emptyList(), LiquidityOverlay.timeframes("NIFTY"))
     }
 

@@ -201,6 +201,14 @@ class LiquidityMapTest {
         assertEquals(LiquidityMap.Q(listOf("BANKNIFTY"), 15), LiquidityMap.asked("bank nifty 15 min liquidity levels"))
         assertEquals(LiquidityMap.Q(LiquidityRules.UNDERLYINGS, 5), LiquidityMap.asked("liquidity levels on the five minute chart"))
         assertEquals(LiquidityMap.Q(emptyList()), LiquidityMap.asked("nifty liquidity levels"))
+        assertEquals(LiquidityMap.Q(emptyList()), LiquidityMap.asked("sensex liquidity levels"))
+        // MIDCPNIFTY: its own books since research h4 (07 Oct).
+        assertEquals(LiquidityMap.Q(listOf("MIDCPNIFTY")), LiquidityMap.asked("midcap nifty liquidity levels"))
+        assertEquals(LiquidityMap.Q(listOf("MIDCPNIFTY"), 15), LiquidityMap.asked("midcpnifty 15 min liquidity level kahan hai"))
+        assertEquals(LiquidityMap.Q(listOf("FINNIFTY", "MIDCPNIFTY")), LiquidityMap.asked("finnifty and midcap liquidity levels"))
+        assertEquals("Midcap Nifty", LiquidityMap.indexName("MIDCPNIFTY"))
+        assertEquals(4.0, LiquidityMap.near("MIDCPNIFTY"))
+        assertTrue(LiquidityMap.NOT_HERE.contains("Midcap Nifty"))
         for (s in listOf("what is liquidity waiting for", "how far is the next pool", "liquidity kis level ka wait kar raha hai",
             "next liquidity level kitna door hai", "where is the nearest pool on finnifty")) assertNotNull(LiquidityMap.asked(s), s)
         for (s in listOf("how is liquidity doing", "liquidity ko 3 lot karo", "set liquidity to 2 lots", "how many lots is liquidity trading",

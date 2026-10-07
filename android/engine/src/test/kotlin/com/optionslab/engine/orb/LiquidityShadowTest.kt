@@ -125,6 +125,7 @@ class LiquidityShadowTest {
         assertEquals(51_800, LiquidityShadow.itm2Strike(1, 51_900, "BANKNIFTY"), "a CE one step lower")
         assertEquals(52_000, LiquidityShadow.itm2Strike(-1, 51_900, "BANKNIFTY"))
         assertEquals(23_950, LiquidityShadow.itm2Strike(-1, 23_900, "FINNIFTY"))
+        assertEquals(12_775, LiquidityShadow.itm2Strike(1, 12_800, "MIDCPNIFTY"))
         assertFalse(LiquidityShadow.exitAllDue(d.atTime(14, 29, 59)))
         assertTrue(LiquidityShadow.exitAllDue(d.atTime(14, 30)))
         assertEquals((220.0 - 200.0) * 30 - ShadowRules.charges(200.0, 220.0, 30), LiquidityShadow.net(200.0, 220.0, 30), 1e-9)

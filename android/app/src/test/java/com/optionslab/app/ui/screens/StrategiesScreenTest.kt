@@ -566,7 +566,7 @@ class OrbRowsTest {
 
     @Test fun armingInPaper() {
         rows(StrategyFakes.orbView(), live = false)
-        assertTrue(shown("BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool"))
+        assertTrue(shown("BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool"))
         tapSwitch("Liquidity 15+5")
         assertTrue(shown("Arm Liquidity 15+5 (paper)"))
         tap("Automatic")

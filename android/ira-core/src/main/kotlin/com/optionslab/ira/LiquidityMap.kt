@@ -10,21 +10,21 @@ import kotlin.math.abs
 
 /**
  * Liquidity 15+5's map of the market, said in words (2026-10-06): "where are the liquidity levels", "liquidity level kahan
- * hai", "what is liquidity waiting for", "how far is the next pool" - for BANKNIFTY (15- and 5-minute books) and FINNIFTY
- * (30- and 5-minute books). Read from the very code the arm decides with ([LiquidityRules.zones], the pool-on-a-swing rule
+ * hai", "what is liquidity waiting for", "how far is the next pool" - for BANKNIFTY (15- and 5-minute books), FINNIFTY
+ * (30- and 5-minute books) and MIDCPNIFTY (15- and 5-minute books). Read from the very code the arm decides with ([LiquidityRules.zones], the pool-on-a-swing rule
  * of [LiquidityRules.signal], [LiquidityRules.hasRoom]) on the chart's closed bars as the arm folds them
  * ([LiquidityOverlay.closedBars] on the 1-minute bars it reads): on each side of the price, the nearest pool sitting on a
  * still-active swing zone of its side (a close through it is the arm's entry: above buys a call, below a put), how far
  * it is, the next level beyond it (the trade's target) and whether that leaves the room the arm asks for (one index stop:
- * BANKNIFTY 30 points, FINNIFTY 15); and the nearest level of any kind when it is not that one.
+ * BANKNIFTY 30 points, FINNIFTY 15, MIDCPNIFTY 8); and the nearest level of any kind when it is not that one.
  *
  * And a heads-up ([cues]): in the entry hours, the 1-minute price within [near] points of such a level with room - one
  * line, once per level a day, at most one per index in [RATE_MINUTES]. Information only: nothing here places, changes or
  * suggests an order; the arm decides on its own. Pure: no clock, no network.
  */
 object LiquidityMap {
-    /** The heads-up's distance: BANKNIFTY 15 points, FINNIFTY 8. */
-    fun near(underlying: String): Double = if (underlying == "FINNIFTY") 8.0 else 15.0
+    /** The heads-up's distance, about half the index stop: BANKNIFTY 15 points, FINNIFTY 8, MIDCPNIFTY 4. */
+    fun near(underlying: String): Double = when (underlying) { "FINNIFTY" -> 8.0; "MIDCPNIFTY" -> 4.0; else -> 15.0 }
 
     /** At most one heads-up per index in this many minutes. */
     const val RATE_MINUTES = 10L
@@ -53,7 +53,8 @@ object LiquidityMap {
         "what is a|what is an|what are pools|what is liquidity pool|what is a liquidity|kya hota|kya hai liquidity|option|options|ce|pe|strike|oi|volume|spread|stock|stocks) ")
     private val BANK = Regex(" (bank ?nifty|banknifty|bnf|nifty bank|bank) ")
     private val FIN = Regex(" (fin ?nifty|finnifty|finnfty|nifty fin|nifty financial|fin) ")
-    private val OTHER = Regex(" (nifty|sensex|midcap nifty|midcpnifty) ")
+    private val MID = Regex(" (midcap nifty|midcpnifty|midcp nifty|mid cap nifty|midcap|midcp|nifty mid select|nifty midcap select|midcap select) ")
+    private val OTHER = Regex(" (nifty|sensex) ")
     private val BOOK = Regex(" (5|15|30|five|fifteen|thirty) ?(min|mins|minute|minutes|m) ")
 
     /** Is Liquidity 15+5's map asked (its levels, what it waits for, how far the next pool is)? Null when not. */
@@ -67,9 +68,10 @@ object LiquidityMap {
         if (!(liq && (LEVEL.containsMatchIn(t) || WAIT.containsMatchIn(t)) || POOL.containsMatchIn(t) && FAR.containsMatchIn(t))) return null
         val bank = BANK.containsMatchIn(t)
         val fin = FIN.containsMatchIn(t)
-        val rest = t.replace(BANK, " ").replace(FIN, " ")
+        val mid = MID.containsMatchIn(t)
+        val rest = t.replace(BANK, " ").replace(FIN, " ").replace(MID, " ")
         val unds = when {
-            bank || fin -> listOfNotNull("BANKNIFTY".takeIf { bank }, "FINNIFTY".takeIf { fin })
+            bank || fin || mid -> listOfNotNull("BANKNIFTY".takeIf { bank }, "FINNIFTY".takeIf { fin }, "MIDCPNIFTY".takeIf { mid })
             OTHER.containsMatchIn(rest) -> emptyList()
             else -> LiquidityRules.UNDERLYINGS
         }
@@ -77,7 +79,7 @@ object LiquidityMap {
         return Q(unds, minutes)
     }
 
-    const val NOT_HERE = "Liquidity 15+5 reads BankNifty and FinNifty only, Boss: ask for their liquidity levels."
+    const val NOT_HERE = "Liquidity 15+5 reads BankNifty, FinNifty and Midcap Nifty only, Boss: ask for their liquidity levels."
 
     // ---- the read -------------------------------------------------------------------------------------------------
 
@@ -161,7 +163,9 @@ object LiquidityMap {
 
     // ---- the words ------------------------------------------------------------------------------------------------
 
-    fun indexName(underlying: String): String = when (underlying) { "BANKNIFTY" -> "BankNifty"; "FINNIFTY" -> "FinNifty"; else -> underlying }
+    fun indexName(underlying: String): String = when (underlying) {
+        "BANKNIFTY" -> "BankNifty"; "FINNIFTY" -> "FinNifty"; "MIDCPNIFTY" -> "Midcap Nifty"; else -> underlying
+    }
     private fun n(x: Double) = String.format(Locale.ENGLISH, "%,.0f", x)
     private fun pts(x: Double) = String.format(Locale.ENGLISH, "%.0f", abs(x))
     private fun hm(t: LocalTime) = String.format(Locale.ENGLISH, "%02d:%02d", t.hour, t.minute)
@@ -215,7 +219,8 @@ object LiquidityMap {
     }
 
     /**
-     * Jarvis's answer to [q]: each book asked (BANKNIFTY 15 and 5, FINNIFTY 30 and 5) from [reads], with whether the arm is
+     * Jarvis's answer to [q]: each book asked (BANKNIFTY 15 and 5, FINNIFTY 30 and 5, MIDCPNIFTY 15 and 5) from [reads], with whether the arm is
+
      * [armed] (null: not known) and whether it is in its entry hours at [now] - said either way, the levels described.
      */
     fun answer(q: Q, reads: List<Read>, armed: Boolean?, now: LocalDateTime): String {

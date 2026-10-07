@@ -66,7 +66,7 @@ object LotsWhatIf {
         "capital|rupees|rs|inr|how many|currently|right now|abhi|is it trading|is liquidity trading|does liquidity trade|does it trade|" +
         "remind|alert|alarm|backtest|back test|shadow|shadows) ")
     /** Said without the arm's name: another arm, an index, an option or Boss's own trades are not the arm's what-if. */
-    private val OTHER = Regex(" (hero|solo|orb|straddle|strangle|condor|spread|nifty|banknifty|bank nifty|finnifty|fin nifty|sensex|gold|" +
+    private val OTHER = Regex(" (hero|solo|orb|straddle|strangle|condor|spread|nifty|banknifty|bank nifty|finnifty|fin nifty|midcpnifty|midcap|sensex|gold|" +
         "ce|call|calls|put|puts|strike|premium|option|options|stock|stocks|future|futures|fut|i|im|ive|my|mine|me|mera|mere|meri|maine|mujhe|" +
         "we|our|hum|humne|strategy|strategies|bot|bots) ")
     private val BIG_NUMBER = Regex(" \\d{4,} ")

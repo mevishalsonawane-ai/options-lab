@@ -23,7 +23,7 @@ object LiquidityNotice {
         val body: String get() = lines.joinToString("\n")
     }
 
-    /** One book of the arm: BANKNIFTY 5-min, BANKNIFTY 15-min, FINNIFTY 30-min, FINNIFTY 5-min. */
+    /** One book of the arm: BANKNIFTY 5-min, BANKNIFTY 15-min, FINNIFTY 30-min, FINNIFTY 5-min, MIDCPNIFTY 15-min, MIDCPNIFTY 5-min. */
     data class Book(val underlying: String, val minutes: Int) {
         val label: String get() = "$underlying $minutes-min"
     }
@@ -35,7 +35,7 @@ object LiquidityNotice {
         val level: Double, val target: Double?,
         /** The deciding bar's close (the room is measured from it, as the arm's room filter does); null: from [level]. */
         val close: Double?,
-        /** The option's resting stop (15% under the fill) and the index stop's points (BANKNIFTY 30, FINNIFTY 15). */
+        /** The option's resting stop (15% under the fill) and the index stop's points (BANKNIFTY 30, FINNIFTY 15, MIDCPNIFTY 8). */
         val stop: Double?, val indexStopPoints: Double,
         val timeStopMinutes: Long = 20, val timeStopGain: Double = 0.05,
     ) {

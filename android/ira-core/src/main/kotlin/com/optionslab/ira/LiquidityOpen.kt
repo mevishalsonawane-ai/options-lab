@@ -19,7 +19,7 @@ import kotlin.math.abs
  *  - premium stop  the position's own [Input.stopTrigger] (15% below the fill, [LiquidityRules.stopTrigger]); it rests as
  *                  an order, and with no resting order the app sells when the premium is at or below it
  *  - index stop    a 1-minute bar trading beyond the broken level by [LiquidityRules.indexStopPoints] (BANKNIFTY 30,
- *                  FINNIFTY 15): below level − pts for a call, above level + pts for a put
+ *                  FINNIFTY 15, MIDCPNIFTY 8): below level − pts for a call, above level + pts for a put
  *  - target        a 1-minute bar touching the next liquidity level ([Input.target]); none when there was no level ahead
  *  - time stop     at entry + [LiquidityRules.TIME_STOP_MINUTES], out unless the premium is [LiquidityRules.TIME_STOP_GAIN]
  *                  above the price paid ([LiquidityRules.timeStopFails]); decided once, then held ([Input.timed])

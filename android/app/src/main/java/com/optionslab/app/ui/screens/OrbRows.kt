@@ -148,7 +148,8 @@ internal fun OrbRowsContent(
                             ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
                     view.stopped != null && a.armed -> view.stopped.orEmpty()
-                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15) or not +5% in 20 min · else at the next liquidity"
+                    !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15, MIDCPNIFTY 8) or not +5% in 20 min · else at the next liquidity"
+
                     a.arm.liquidity -> a.status
                     !a.armed && a.arm.hero -> keepNumbersWhole("NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}")
                     a.arm.hero -> OrbArms.describe(a.status)

@@ -1,8 +1,8 @@
 package com.optionslab.engine.orb
 
 /**
- * Liquidity 15+5's size (Boss's choice, 06 Oct: run only Liquidity, at 2-3 lots): how many lots each NEW entry of its four
- * books buys - 1, 2 or 3 - each book's quantity being that many of its own contract's lot (BANKNIFTY's, FINNIFTY's). An open
+ * Liquidity 15+5's size (Boss's choice, 06 Oct: run only Liquidity, at 2-3 lots): how many lots each NEW entry of its six
+ * books buys - 1, 2 or 3 - each book's quantity being that many of its own contract's lot (BANKNIFTY's, FINNIFTY's, MIDCPNIFTY's). An open
  * position keeps the quantity it was bought with; its 15% resting stop and every exit always cover all of it.
  *
  *  - A book saved before the setting existed takes [DEFAULT] (2, Boss's 06 Oct choice), said once in the arm log ([MIGRATED]).

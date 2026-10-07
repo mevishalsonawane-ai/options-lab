@@ -89,7 +89,7 @@ object Honest {
         Asked.LiquidityLots -> "Liquidity 15+5's lots are on its row on Home, Boss: Lots 1, 2 or 3."
     }
 
-    private val INDEX_NAMES = mapOf("BANKNIFTY" to "BankNifty", "FINNIFTY" to "FinNifty")
+    private val INDEX_NAMES = mapOf("BANKNIFTY" to "BankNifty", "FINNIFTY" to "FinNifty", "MIDCPNIFTY" to "Midcap Nifty")
 
     /**
      * Liquidity 15+5's size said: [lots] a new entry, each index's quantity ([lotSizes]: underlying -> its lot, when known), and

@@ -122,7 +122,7 @@ internal fun ChartPane(
     chainDialog: @Composable (String, () -> Unit, (ChainPick) -> Unit) -> Unit,
     trading: Boolean = true,
     marketOpen: () -> Boolean = { com.optionslab.app.data.Market.isOpen() },
-    /** Liquidity 15+5's layer on BANKNIFTY / FINNIFTY ([LiquidityPanel]); null: none (the gold build, most tests). */
+    /** Liquidity 15+5's layer on BANKNIFTY / FINNIFTY / MIDCPNIFTY ([LiquidityPanel]); null: none (the gold build, most tests). */
     liquidity: LiquiditySource? = null,
     /** The price alarms a tapped liquidity level sets and lists ([LevelSheet]); null: the level's sheet has no alert button. */
     levelAlarms: LevelAlarms? = null,

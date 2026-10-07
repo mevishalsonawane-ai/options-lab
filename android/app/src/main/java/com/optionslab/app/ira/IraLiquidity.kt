@@ -11,7 +11,7 @@ import java.time.LocalDateTime
  * or closes an order, and the arm decides on its own. Not in IraGoldAlgo (no Liquidity arm).
  */
 internal object IraLiquidity {
-    /** Each book's map at [now]: BANKNIFTY 15 and 5, FINNIFTY 30 and 5; [kept] true: only the arm's own read (no network). */
+    /** Each book's map at [now]: BANKNIFTY 15 and 5, FINNIFTY 30 and 5, MIDCPNIFTY 15 and 5; [kept] true: only the arm's own read (no network). */
     private suspend fun reads(now: LocalDateTime, unds: List<String>, kept: Boolean): List<LiquidityMap.Read> {
         val ones = unds.associateWith { u ->
             if (kept) com.optionslab.app.data.OrbArms.liquidityMinutesKept(u, now)
@@ -82,7 +82,7 @@ internal object IraLiquidity {
 
     /**
      * The heads-up (each round of the words lane, market hours, [Automations.Auto.LIQUIDITY] on, Liquidity 15+5 armed):
-     * the price within 15 points (FinNifty 8) of a level whose close-through would be the arm's entry with room - one line,
+     * the price within 15 points (FinNifty 8, Midcap Nifty 4) of a level whose close-through would be the arm's entry with room - one line,
      * once per level a day, at most once in 10 minutes per index. A pop-up and a line in the chat; in the chat only while
      * saving battery or on short answers. Words only.
      */

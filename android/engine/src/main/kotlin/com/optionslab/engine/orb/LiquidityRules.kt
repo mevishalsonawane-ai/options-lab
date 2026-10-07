@@ -4,8 +4,9 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
- * Liquidity 15+5: the owner's liquidity-break idea, run on BANKNIFTY and FINNIFTY, each on two charts side by side
- * (BANKNIFTY 15-minute and 5-minute, FINNIFTY 30-minute and 5-minute, one position per chart). Like the ORB it follows the app's Paper / Live switch (Live is armed with the PIN). Levels as in research/liquidity_break.py and indicator/liquidity.py, written from
+ * Liquidity 15+5: the owner's liquidity-break idea, run on BANKNIFTY, FINNIFTY and MIDCPNIFTY, each on two charts side by
+ * side (BANKNIFTY 15-minute and 5-minute, FINNIFTY 30-minute and 5-minute, MIDCPNIFTY 15-minute and 5-minute, one position
+ * per chart). Like the ORB it follows the app's Paper / Live switch (Live is armed with the PIN). Levels as in research/liquidity_break.py and indicator/liquidity.py, written from
  * the published descriptions of LuxAlgo's Liquidity Swings (pivot lookback 20, full range) and Liquidity Pools
  * (2 contacts, 5 bars apart, 10 confirmation bars):
  *
@@ -17,7 +18,7 @@ import java.time.LocalTime
  *             tools agree): above -> BUY the CE, below -> BUY the PE, one strike in the money ([entryStrike]), at the
  *             next bar's open, 09:20-14:00; skipped when the next level ahead is too close ([hasRoom])
  *   exits     the first of: the option falls 15% below the price paid (a resting stop, the owner's 2026-10-01 choice);
- *             the index trades 30 points (FINNIFTY 15) back through the broken level (index stop); not +5% after 20 minutes
+ *             the index trades 30 points (FINNIFTY 15, MIDCPNIFTY 8) back through the broken level (index stop); not +5% after 20 minutes
  *             (time stop);
  *             the index touches the next active liquidity level beyond the entry (target); a completed bar closes back
  *             through the broken level (failed break); a new level forms on the trade's side (new liquidity); 15:10
@@ -38,13 +39,48 @@ object LiquidityRules {
      */
     val FIN30 = Arm("liquidity30_fin", "Liquidity 30m FINNIFTY", liquidity = true)
     val FIN5 = Arm("liquidity5_fin", "Liquidity 5m FINNIFTY", liquidity = true)
-    /** The books behind the one switch: BANKNIFTY 15-minute and 5-minute, FINNIFTY 30-minute and 5-minute, one position per book. */
-    val BOOKS = listOf(ARM15, ARM5, FIN30, FIN5)
+    /**
+     * MIDCPNIFTY too (research/HUNT_H4.md, 07 Oct 2026): the same rules UNCHANGED on its own 15-minute and 5-minute charts and
+     * options, as the h4 research ran them (research/hunt/h4/comps.py BOOKS_EXT). Positive before and in the locked holdout,
+     * beats random entries (p 0.001), and none of its periods was used for tuning. Its only new setting is the index stop,
+     * fixed in advance at the arms' ~0.065% of the index: 8 points ([indexStopPoints]). Paper first: it joins the one switch
+     * and is never cleared for Zerodha by this change ([joinMidcp]); Live still takes Boss's PIN or fingerprint.
+     */
+    val MID15 = Arm("liquidity15_mid", "Liquidity 15m MIDCPNIFTY", liquidity = true)
+    val MID5 = Arm("liquidity5_mid", "Liquidity 5m MIDCPNIFTY", liquidity = true)
+    /**
+     * The books behind the one switch: BANKNIFTY 15-minute and 5-minute, FINNIFTY 30-minute and 5-minute, MIDCPNIFTY
+     * 15-minute and 5-minute, one position per book.
+     */
+    val BOOKS = listOf(ARM15, ARM5, FIN30, FIN5, MID15, MID5)
     /** Books renamed since a build saved them (FINNIFTY's 15-minute book became its 30-minute book). */
     val RENAMED = mapOf("liquidity15_fin" to FIN30.source)
-    val UNDERLYINGS = listOf("BANKNIFTY", "FINNIFTY")
+    val UNDERLYINGS = listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")
     /** Upstox index keys for the charts the levels are read from. */
-    val INDEX_KEYS = mapOf("BANKNIFTY" to "NSE_INDEX|Nifty Bank", "FINNIFTY" to "NSE_INDEX|Nifty Fin Service")
+    val INDEX_KEYS = mapOf("BANKNIFTY" to "NSE_INDEX|Nifty Bank", "FINNIFTY" to "NSE_INDEX|Nifty Fin Service",
+        "MIDCPNIFTY" to "NSE_INDEX|NIFTY MID SELECT")
+
+    /** The one-time change that brings the MIDCPNIFTY books into a book saved before they existed: its key in the arms' book. */
+    const val MIDCP_JOIN = "liquidity_midcp_2026_10_07"
+    /** What a MIDCPNIFTY book's row and the arm log say when it joins the switch. */
+    const val MIDCP_JOINED = "joined Liquidity 15+5 on paper (Boss's 07 Oct choice, research h4); never cleared for Zerodha by this change"
+
+    /** One MIDCPNIFTY book switched on by [joinMidcp] (on paper: never cleared for Zerodha), and its arm-log line. */
+    data class Join(val source: String, val log: String)
+
+    /**
+     * The MIDCPNIFTY books joining the one switch, once: when the switch is on now (any of the other books [armed]), each
+     * MIDCPNIFTY book not armed is switched on, ON PAPER (the caller never clears it for Zerodha: Live still takes Boss's PIN
+     * or fingerprint, and in Live its entry waits for his approval with it). Nothing when [done] (it ran in this book
+     * already), when [restoring] (a restore not yet disarmed: everything stays off) or when the switch is off (they come on
+     * with it, the next time Boss switches it on).
+     */
+    fun joinMidcp(armed: Map<String, Boolean>, done: Boolean, restoring: Boolean): List<Join> {
+        if (done || restoring) return emptyList()
+        val mid = BOOKS.filter { underlyingOf(it) == "MIDCPNIFTY" }
+        if (BOOKS.filter { it !in mid }.none { armed[it.source] == true }) return emptyList()
+        return mid.filter { armed[it.source] != true }.map { Join(it.source, "${it.label}: $MIDCP_JOINED") }
+    }
 
     const val SWING_LOOKBACK = 20
     const val CONTACTS = 2
@@ -71,9 +107,13 @@ object LiquidityRules {
         arm.source.startsWith("liquidity15") -> 15
         else -> 5
     }
-    fun underlyingOf(arm: Arm): String = if (arm.source.endsWith("_fin")) "FINNIFTY" else "BANKNIFTY"
-    /** Strike spacing of the index's options: BANKNIFTY 100, FINNIFTY 50. */
-    fun strikeStep(underlying: String): Int = if (underlying == "FINNIFTY") 50 else 100
+    fun underlyingOf(arm: Arm): String = when {
+        arm.source.endsWith("_fin") -> "FINNIFTY"
+        arm.source.endsWith("_mid") -> "MIDCPNIFTY"
+        else -> "BANKNIFTY"
+    }
+    /** Strike spacing of the index's options: BANKNIFTY 100, FINNIFTY 50, MIDCPNIFTY 25. */
+    fun strikeStep(underlying: String): Int = when (underlying) { "FINNIFTY" -> 50; "MIDCPNIFTY" -> 25; else -> 100 }
 
     class Zone(val kind: String, val side: Int, val top: Double, val bottom: Double, val origin: Int, val known: Int) {
         var broken: Int = -1
@@ -190,8 +230,11 @@ object LiquidityRules {
     const val TIME_STOP_MINUTES = 20L
     const val TIME_STOP_GAIN = 0.05
 
-    /** BANKNIFTY 30 points; FINNIFTY, about half its size, 15. */
-    fun indexStopPoints(underlying: String): Double = if (underlying == "FINNIFTY") 15.0 else 30.0
+    /**
+     * BANKNIFTY 30 points; FINNIFTY, about half its size, 15; MIDCPNIFTY 8 (fixed in advance at the arms' ~0.065% of the
+     * index, research/hunt/h4/comps.py IDX_STOP_EXT; not tuned).
+     */
+    fun indexStopPoints(underlying: String): Double = when (underlying) { "FINNIFTY" -> 15.0; "MIDCPNIFTY" -> 8.0; else -> 30.0 }
 
     /** True when a 1-minute bar since the entry traded [points] back through [level] against [side]. */
     fun indexStopHit(side: Int, level: Double, points: Double, minutesSince: List<Bar>): Boolean =
@@ -204,7 +247,7 @@ object LiquidityRules {
 
     /**
      * Room filter (research liq2, 2026-10-06): skip a break whose next liquidity level ahead (the trade's target) is
-     * closer to the deciding bar's close than [MIN_ROOM_STOPS] index-stop units (BANKNIFTY 30 points, FINNIFTY 15).
+     * closer to the deciding bar's close than [MIN_ROOM_STOPS] index-stop units (BANKNIFTY 30 points, FINNIFTY 15, MIDCPNIFTY 8).
      * No level ahead counts as room. Picked by a quarterly walk-forward over Aug 2021 - Oct 2026, together with
      * [ITM_STEPS]; the one book state it changes is that a skipped break leaves the book flat for the next one.
      */

@@ -18,7 +18,7 @@ import kotlin.math.abs
  * is there:
  *
  *  - the next session's date (weekends and the exchange's holidays skipped, those named) and the index expiries that day;
- *  - Liquidity 15+5: today's paper result in one line, the levels it carries into tomorrow for BankNifty and FinNifty (the
+ *  - Liquidity 15+5: today's paper result in one line, the levels it carries into tomorrow for BankNifty, FinNifty and Midcap Nifty (the
  *    nearest untaken level above and below the close, and how far, from [LiquidityMap]'s read), its switch and its lots;
  *    today's trades in research terms ([TradeLesson.day]'s line);
  *  - Solo (midday): on or off and its forward test's count of [SoloMidday.FORWARD_TRADES]; Hero: whether the next session
@@ -88,7 +88,7 @@ object TomorrowPlan {
     // ---- the levels -----------------------------------------------------------------------------------------------
 
     /**
-     * Each index's levels from Liquidity 15+5's books ([LiquidityMap.read]: BankNifty 15 and 5, FinNifty 30 and 5): the
+     * Each index's levels from Liquidity 15+5's books ([LiquidityMap.read]: BankNifty 15 and 5, FinNifty 30 and 5, Midcap Nifty 15 and 5): the
      * close is the newest price the books read, and on each side the nearest untaken level of any book (a level the price
      * already sits past is not one). Indices in the arm's order; one with no book read is left out.
      */
@@ -258,7 +258,7 @@ object TomorrowPlan {
         "^ $LEAD(how (should|do|can|must) i |help me |lets )(prepare|prep|get ready|get prepared|plan) (for|ahead of) $NEXT$TAIL"
     )
     /** Never this: an index named (its own outlook), Jarvis's own plan, an act, a reminder, a forecast, the day after, a checklist. */
-    private val NOT = Regex(" (nifty|banknifty|finnifty|sensex|bank|fin|bnf|vix|gold|your|yours|buy|sell|trade|trades|order|orders|close|exit|square|" +
+    private val NOT = Regex(" (nifty|banknifty|finnifty|midcpnifty|midcap|sensex|bank|fin|bnf|vix|gold|your|yours|buy|sell|trade|trades|order|orders|close|exit|square|" +
         "stop|start|arm|disarm|switch|remind|reminder|alert|alarm|outlook|forecast|expect|predict|day after|checklist|check list|to do|todo|book|" +
         "trip|holiday|leave|vacation|meeting|lunch|dinner|gym) ")
 

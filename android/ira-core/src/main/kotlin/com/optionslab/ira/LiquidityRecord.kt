@@ -58,7 +58,7 @@ object LiquidityRecord {
     private val ON_TRACK = Regex(" (on track|on course|in line|going to plan|going as planned|as expected|track pe|track par|sahi chal|sahi ja|" +
         "(meeting|matching|living up to|keeping up with) (its |the )?(research|expectations?)|(vs|versus|against|compared to|compared with) (the |its )?research) ")
     private val BY_INDEX = Regex(" ((which|what|kaun sa|kaunsa|konsa|kis) (index|indices|book|books)|by (index|book)|(index|book) wise|per (index|book)|" +
-        "(banknifty|bank nifty|finnifty|fin nifty) (or|vs|versus|aur|ya) (banknifty|bank nifty|finnifty|fin nifty)|works? best|does best|better on|best on|accha chalta) ")
+        "(banknifty|bank nifty|finnifty|fin nifty|midcpnifty|midcap nifty|midcap) (or|vs|versus|aur|ya) (banknifty|bank nifty|finnifty|fin nifty|midcpnifty|midcap nifty|midcap)|works? best|does best|better on|best on|accha chalta) ")
     private val BY_EXIT = Regex(" ((by|per) (exit|exits|exit reason|exit reasons)|exit reasons?|exit wise|exits? breakdown|breakdown of (its |the )?exits|how (do|did|are|were) (its |the )?(trades? )?(exit|exits|end|close|closed|exited)) ")
     private val BEST_WORST = Regex(" ((best|worst|biggest|largest) (trade|trades|win|wins|loss|losses|winner|winners|loser|losers)|" +
         "sabse (bada|badi|accha|acchi|bura|buri) (trade|win|loss|profit|nuksan)) ")
@@ -139,10 +139,10 @@ object LiquidityRecord {
         val why: String get() = trade.why ?: "exit"
     }
 
-    private fun indexName(u: String) = if (u == "FINNIFTY") "FinNifty" else "BankNifty"
+    private fun indexName(u: String) = when (u) { "FINNIFTY" -> "FinNifty"; "MIDCPNIFTY" -> "Midcap Nifty"; else -> "BankNifty" }
 
     /**
-     * The arm's closed paper trades among [trades] (any arm's; Liquidity 15+5's four books kept, renamed books included),
+     * The arm's closed paper trades among [trades] (any arm's; Liquidity 15+5's six books kept, renamed books included),
      * oldest exit first: each with its net after charges, in all and per lot (its lots bought: [BotTrades.Trade.qty] over the
      * contract's lot, 1 when not known).
      */

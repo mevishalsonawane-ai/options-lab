@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 import java.util.Locale
 
 /**
- * What the live chart draws for Liquidity 15+5 on BANKNIFTY / FINNIFTY, from the very code the arm decides with
+ * What the live chart draws for Liquidity 15+5 on BANKNIFTY / FINNIFTY / MIDCPNIFTY, from the very code the arm decides with
  * ([LiquidityRules.zones], [LiquidityRules.signal], [LiquidityRules.hasRoom]): the swing zones (bands), the liquidity
  * pools (dashed lines), the arm's trades of the day (entry / exit markers, the broken level and, while open, the target)
  * and the breaks the room filter skipped ("liquidity_no_room").
@@ -70,7 +70,7 @@ object LiquidityOverlay {
         val lastBar: LocalDateTime? get() = bars.lastOrNull()?.start
     }
 
-    /** The chart a book reads: BANKNIFTY 15 and 5, FINNIFTY 30 and 5 (the slower one first). */
+    /** The chart a book reads: BANKNIFTY 15 and 5, FINNIFTY 30 and 5, MIDCPNIFTY 15 and 5 (the slower one first). */
     fun timeframes(underlying: String): List<Int> =
         LiquidityRules.BOOKS.filter { LiquidityRules.underlyingOf(it) == underlying }.map { LiquidityRules.minutesOf(it) }
 

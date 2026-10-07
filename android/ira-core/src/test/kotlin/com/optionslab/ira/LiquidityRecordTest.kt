@@ -6,6 +6,7 @@ import java.time.MonthDay
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -52,6 +53,20 @@ class LiquidityRecordTest {
         assertEquals(listOf("BankNifty 15-min", "FinNifty 30-min"), renamed.map { it.book })
         assertEquals(1.0, renamed[1].lots)
         assertEquals("time_stop", renamed[1].why)
+        // MIDCPNIFTY's books (research h4, 07 Oct): their own index and name.
+        val mid = LiquidityRecord.rows(listOf(t("liquidity5_mid", d6, 11, 0, 100.0, 110.0, "next_liquidity", lot = 140),
+            t("liquidity15_mid", d6, 12, 0, 100.0, 95.0, "index_stop", lot = 140)))
+        assertEquals(listOf("Midcap Nifty 5-min", "Midcap Nifty 15-min"), mid.map { it.book })
+        assertEquals(listOf("MIDCPNIFTY", "MIDCPNIFTY"), mid.map { it.index })
+        assertEquals(8.0, LiquidityInsight.roomStops(mid[0].copy(trade = mid[0].trade.copy(level = 12_800.0, target = 12_864.0)))!!, 1e-9)
+    }
+
+    @Test fun aMidcpniftyTradeIsReadOnItsOwnIndex() {
+        val x = t("liquidity5_mid", d6, 11, 0, 100.0, 92.0, "index_stop", lot = 140).copy(symbol = "MIDCPNIFTY26OCT12850CE", level = 12_850.0)
+        assertEquals("MIDCPNIFTY", BotTrades.underlying(x))
+        // Another arm's trade on a MIDCPNIFTY option reads its index from the symbol.
+        assertEquals("MIDCPNIFTY", BotTrades.underlying(x.copy(source = "manual")))
+        assertNotNull(BotTrades.lesson(x))
     }
 
     @Test fun tallyRunsAndTheChanceOfALosingRun() {

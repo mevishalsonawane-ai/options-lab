@@ -76,8 +76,9 @@ object BotTrades {
     /** The arm group's name as its tested record names it ("orb" -> "ORB", "liquidity" -> "Liquidity 15+5"), or null. */
     internal fun groupName(bot: String): String? = ARMS.firstOrNull { group(it.source) == bot }?.let { recordName(it.source) }
     internal fun underlying(t: Trade): String = armOf(t.source)?.takeIf { it.liquidity }?.let { LiquidityRules.underlyingOf(it) }
-        ?: if (t.symbol.uppercase(Locale.ENGLISH).startsWith("FINNIFTY")) "FINNIFTY" else OrbRules.UNDERLYING
-    private fun index(u: String) = if (u == "FINNIFTY") "FinNifty" else "BankNifty"
+        ?: t.symbol.uppercase(Locale.ENGLISH).let { s -> listOf("FINNIFTY", "MIDCPNIFTY").firstOrNull { s.startsWith(it) } } ?: OrbRules.UNDERLYING
+    private fun index(u: String) = when (u) { "FINNIFTY" -> "FinNifty"; "MIDCPNIFTY" -> "Midcap Nifty"; else -> "BankNifty" }
+
 
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun pts(x: Double) = "%+,.2f".format(Locale.ENGLISH, x)

@@ -47,7 +47,8 @@ class RetiredArmsTest {
         val sw = listOf(RetiredArms.Switch("orb", true, open = true), RetiredArms.Switch("orb_fresh", true), RetiredArms.Switch("orb_sweep", false),
             RetiredArms.Switch("liquidity5", true), RetiredArms.Switch("hero", true))
         val ch = RetiredArms.migrate(sw, books, done = false, restoring = false)
-        assertEquals(listOf("orb" to false, "orb_fresh" to false, "liquidity15" to true, "liquidity30_fin" to true, "liquidity5_fin" to true),
+        assertEquals(listOf("orb" to false, "orb_fresh" to false, "liquidity15" to true, "liquidity30_fin" to true, "liquidity5_fin" to true,
+            "liquidity15_mid" to true, "liquidity5_mid" to true),
             ch.map { it.source to it.armed })
         assertEquals("ORB: switched off: lost on 6 years of real data (Boss's choice 06 Oct); its open position is still managed to its exit", ch[0].log)
         assertEquals("ORB Fresh: switched off: lost on 6 years of real data (Boss's choice 06 Oct)", ch[1].log)
@@ -58,7 +59,7 @@ class RetiredArmsTest {
         assertEquals(emptyList(), RetiredArms.migrate(listOf(RetiredArms.Switch("orb", true)), books, done = true, restoring = false))
         val r = RetiredArms.migrate(listOf(RetiredArms.Switch("orb", true), RetiredArms.Switch("range_fade", true)), books, done = false, restoring = true)
         assertEquals(listOf("orb" to false, "range_fade" to false), r.map { it.source to it.armed })
-        // A fresh book (nothing saved): only the liquidity books, all four.
+        // A fresh book (nothing saved): only the liquidity books, all six.
         assertEquals(books.map { it.source }, RetiredArms.migrate(emptyList(), books, done = false, restoring = false).map { it.source })
     }
 

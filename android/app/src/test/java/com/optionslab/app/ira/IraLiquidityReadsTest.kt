@@ -27,4 +27,15 @@ class IraLiquidityReadsTest {
         assertEquals(listOf(unds), asked)
         assertEquals(2, both.size)
     }
+
+    @Test fun midcpniftyIsTheThirdIndexReadOnItsOwnWhenTheArmHasNone() = runBlocking {
+        val unds = com.optionslab.engine.orb.LiquidityRules.UNDERLYINGS
+        assertEquals(listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), unds)
+        val asked = ArrayList<List<String>>()
+        val rs = IraLiquidity.keptElseFetched(unds, { listOf(read("BANKNIFTY", 15), read("FINNIFTY", 30)) }) { u ->
+            asked.add(u); u.flatMap { listOf(read(it, 15), read(it, 5)) }
+        }
+        assertEquals(listOf(listOf("MIDCPNIFTY")), asked)
+        assertEquals(listOf("BANKNIFTY" to 15, "FINNIFTY" to 30, "MIDCPNIFTY" to 15, "MIDCPNIFTY" to 5), rs.map { it.underlying to it.minutes })
+    }
 }

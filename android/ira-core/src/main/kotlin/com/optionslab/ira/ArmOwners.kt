@@ -5,8 +5,8 @@ import java.util.Locale
 
 /**
  * Who a paper or Zerodha trade belongs to, as the app shows its arms (usefulness round 21, 2026-10-05). Liquidity 15+5 is
- * one switch and one row, but its four books tag their own orders: entries "Liquidity 15+5 · entry", while exits and live
- * orders carry the book's own name - "Liquidity 15m", "Liquidity 5m", "Liquidity 30m FINNIFTY", "Liquidity 5m FINNIFTY" (and
+ * one switch and one row, but its six books tag their own orders: entries "Liquidity 15+5 · entry", while exits and live
+ * orders carry the book's own name - "Liquidity 15m", "Liquidity 5m", "Liquidity 30m FINNIFTY", "Liquidity 5m FINNIFTY", "Liquidity 15m MIDCPNIFTY", "Liquidity 5m MIDCPNIFTY" (and
  * "Liquidity 15m FINNIFTY", the 30-minute book's name before it was renamed). A trade under any of them is Liquidity 15+5's,
  * so "how are my bots doing?" ([BotHealth]), "what should I switch off?" ([SwitchOff]) and the calendar's strategy filter
  * see one arm with all its trades, never "no closed paper trades yet". Every other name is returned as it is. Pure.

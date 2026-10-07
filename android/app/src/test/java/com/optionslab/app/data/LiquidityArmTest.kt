@@ -331,6 +331,79 @@ class LiquidityArmTest : RobolectricTest() {
         }
     }
 
+    /** MIDCPNIFTY's day (research h4): the FINNIFTY shape at 12,800 - swing high 12,850 at 10:55, second rejection 11:25, break at 13:00. */
+    private fun midBar(k: Int): DoubleArray = finBar(k).map { it - 24_000.0 + 12_800.0 }.toDoubleArray()
+
+    /** Only MIDCPNIFTY breaks today (at 13:00, its own lot 140, monthly expiry, 25-point strikes). */
+    private fun midcpniftyDay() {
+        bankFlat = true
+        val expiry = day.plusDays(20)
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE"),
+            Upstox.Contract("MIDCPNIFTY", expiry, 12_850.0, Right.CE, 140, "NSE_FO|LIQMIDCE", "MIDCPNIFTY-LIQ-12850CE"),
+            Upstox.Contract("MIDCPNIFTY", expiry, 12_875.0, Right.CE, 140, "NSE_FO|LIQMIDCE2", "MIDCPNIFTY-LIQ-12875CE")))
+        upstox.price("NSE_FO|LIQMIDCE", 120.0)
+        upstox.price("NSE_FO|LIQMIDCE2", 100.0)
+        OrbArms.testOtherIndexBars = { u, t ->
+            if (u != "MIDCPNIFTY") emptyList() else (9 * 60 + 15 until 15 * 60 + 30).map { day.atTime(it / 60, it % 60) }
+                .filter { !it.plusMinutes(1).isAfter(t) }
+                .map { start -> val b = midBar((start.hour * 60 + start.minute - (9 * 60 + 15)) / 5)
+                    Upstox.Bar(start.atZone(IST).toEpochSecond(), b[0], b[1], b[2], b[3], 1000, 0) }
+        }
+    }
+
+    @Test fun midcpniftyIsTradedOnItsOwnChartAndOptionsOnPaper() {
+        midcpniftyDay()
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_mid", p.arm)
+        // One strike in the money on its 25-point grid: ATM 12,875 for the 12,870 close, the call one step below.
+        assertTrue(p.symbol, p.symbol.startsWith("MIDCPNIFTY") && p.symbol.endsWith("12850CE"))
+        assertEquals("MIDCPNIFTY's own lot from the instrument master", 140, p.qty)
+        assertEquals(12_850.0, p.level!!, 0.0)
+        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
+        assertFalse("paper only", p.live)
+        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
+        assertTrue(row().status, row().status.contains("MIDCPNIFTY 15-min:") && row().status.contains("MIDCPNIFTY 5-min:"))
+    }
+
+    /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
+    @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
+        val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")
+        fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(true))
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", org.json.JSONArray()))
+        val r = row()
+        assertTrue(r.armed); assertTrue(r.automatic)
+        assertFalse("the MIDCPNIFTY books are never cleared for Zerodha by this change", r.liveOk)
+        val joined = com.optionslab.engine.orb.LiquidityRules.MIDCP_JOINED
+        assertTrue(r.status, r.status.contains("MIDCPNIFTY 15-min: $joined") && r.status.contains("MIDCPNIFTY 5-min: $joined"))
+        val states = runBlocking { OrbArms.liquidityDay(day) }.first
+        assertTrue(states.toString(), states.filter { it.book.endsWith("_mid") }.let { m -> m.size == 2 && m.all { it.armed } })
+        assertEquals(2, Diag.lines().count { it.contains(joined) })
+        // Once: switched off afterwards, a restart leaves them off and says nothing again.
+        runBlocking { OrbArms.setArmed("liquidity", false, automatic = true) }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertFalse(row().armed)
+        assertEquals(2, Diag.lines().count { it.contains(joined) })
+    }
+
+    @Test fun aSwitchedOffBookLeavesTheMidcpniftyBooksOffUntilTheSwitchComesOn() {
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", org.json.JSONArray()))
+        assertFalse(row().armed)
+        assertTrue(runBlocking { OrbArms.liquidityDay(day) }.first.none { it.armed })
+        armLiquidity()
+        assertTrue(runBlocking { OrbArms.liquidityDay(day) }.first.all { it.armed })
+    }
+
     // ---- Liquidity's size (Boss's 06 Oct choice: 2-3 lots) ----------------------------------------------------------------
 
     @Test fun twoLotsBuyTwiceTheContractsLotAndTheStopAndExitCoverIt() {

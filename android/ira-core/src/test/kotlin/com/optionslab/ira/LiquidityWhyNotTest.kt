@@ -73,6 +73,8 @@ class LiquidityWhyNotTest {
         assertEquals(Q(listOf("BANKNIFTY")), LiquidityWhyNot.asked("why no banknifty liquidity trade"))
         assertEquals(Q(listOf("FINNIFTY"), waiting = true), LiquidityWhyNot.asked("what is finnifty liquidity waiting for"))
         assertEquals(Q(listOf("BANKNIFTY", "FINNIFTY")), LiquidityWhyNot.asked("why didn't liquidity trade on bank nifty or fin nifty"))
+        assertEquals(Q(listOf("MIDCPNIFTY")), LiquidityWhyNot.asked("why no midcap nifty liquidity trade"))
+        assertEquals(Q(listOf("MIDCPNIFTY"), waiting = true), LiquidityWhyNot.asked("what is midcpnifty liquidity waiting for"))
     }
 
     @Test fun neverItsExitsRecordLevelsSizeSwitchAnotherDayOrAnotherArm() {
@@ -186,8 +188,11 @@ class LiquidityWhyNotTest {
         assertTrue(lines[2].startsWith("BankNifty 5-min: Decided on 6 bars today: none closed"), lines[2])
         assertTrue(lines[3].startsWith("FinNifty 30-min: "), lines[3])
         assertTrue(lines[4].startsWith("FinNifty 5-min: "), lines[4])
+        // MIDCPNIFTY's books (research h4), told even with no levels read for them.
+        assertTrue(lines[5].startsWith("Midcap Nifty 15-min: "), lines[5])
+        assertTrue(lines[6].startsWith("Midcap Nifty 5-min: "), lines[6])
         assertEquals("From the arm's own records - information only: nothing was armed, placed or changed.", lines.last())
-        assertEquals(6, lines.size)
+        assertEquals(8, lines.size)
     }
 
     @Test fun aBreakSkippedForNoRoomIsToldWithItsLevelAndDistance() {
@@ -294,7 +299,7 @@ class LiquidityWhyNotTest {
     @Test fun waitingLeadsWithWhatItWaitsFor() {
         val a = LiquidityWhyNot.answer(Q(waiting = true), facts(decided = 4))
         assertTrue(a.startsWith("Boss, Liquidity 15+5 waits for a close through a liquidity pool that sits on a swing zone, with room to the next level " +
-            "(one index stop: BankNifty 30 pts, FinNifty 15) - then it buys the call (up) or put (down). Nearest trigger: FinNifty 5-min, a close below " +
+            "(one index stop: BankNifty 30 pts, FinNifty 15, Midcap Nifty 8) - then it buys the call (up) or put (down). Nearest trigger: FinNifty 5-min, a close below " +
             "25,470 - 30 pts away (it would buy a put)."), a)
         // Asked of BankNifty: its nearest (15-min, 60 up; the 5-min's 30 up has no room).
         val bank = LiquidityWhyNot.answer(Q(listOf("BANKNIFTY"), waiting = true), facts())

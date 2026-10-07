@@ -251,7 +251,7 @@ object OrbArms {
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
-            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE); cache = it; hints(it) }
+            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN); cache = it; hints(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -260,12 +260,13 @@ object OrbArms {
         cache = b
         hints(b)
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
-        if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE)
+        if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
-        // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then Liquidity's size, when
-        // none was saved (Boss's 06 Oct choice: 2 lots).
-        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or sizeLiquidity(b)) save(b)
+        // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then the MIDCPNIFTY books
+        // joining Liquidity's switch (on paper, when it is on); then Liquidity's size, when none was saved (Boss's 06 Oct
+        // choice: 2 lots).
+        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b)) save(b)
         return b
     }
 
@@ -391,6 +392,32 @@ object OrbArms {
             runCatching { Diag.record("orb", c.log) }
         }
         b.migrated += RetiredArms.UNRETIRE
+        return true
+    }
+
+    /**
+     * Once, on this update (Boss's 07 Oct choice, research/HUNT_H4.md): Liquidity 15+5's MIDCPNIFTY books join its one switch
+     * ([LiquidityRules.joinMidcp]). When the switch is on, each MIDCPNIFTY book not armed is switched on with the other books'
+     * automatic / approve choice, ON PAPER: liveOk stays false, so it is never cleared for Zerodha by this change - in Live
+     * its entry waits for Boss's approval with his PIN or fingerprint, and every guard applies as to the other books. When the
+     * switch is off nothing changes (they come on with it). A restore not yet disarmed ([restoring]) and IraGoldAlgo (which
+     * only talks) switch nothing on. True when [b] changed (it is then saved).
+     */
+    private fun joinMidcp(b: Book, restoring: Boolean): Boolean {
+        if (LiquidityRules.MIDCP_JOIN in b.migrated) return false
+        val changes = if (com.optionslab.app.BuildConfig.GOLD) emptyList()
+            else LiquidityRules.joinMidcp(b.armed, done = false, restoring = restoring)
+        // The switch's own choice: automatic unless one of its armed books asks for approvals.
+        val automatic = LiquidityRules.BOOKS.filter { b.armed[it.source] == true }.all { b.auto[it.source] != false }
+        for (c in changes) {
+            b.armed[c.source] = true; b.auto[c.source] = automatic; b.liveOk[c.source] = false; b.pending.remove(c.source)
+            b.since[c.source] = now().toString()
+            // Armed just now: the next decision takes only a fresh break, never one already under way.
+            b.watched.keys.removeAll { it.startsWith("${c.source}|") }
+            b.status[c.source] = LiquidityRules.MIDCP_JOINED
+            runCatching { Diag.record("orb", c.log) }
+        }
+        b.migrated += LiquidityRules.MIDCP_JOIN
         return true
     }
 
@@ -577,7 +604,7 @@ object OrbArms {
     }.getOrDefault(emptyMap())
 
     /**
-     * Liquidity 15+5's size: [lots] (1, 2 or 3) for every NEW entry of its four books; an open position keeps its own
+     * Liquidity 15+5's size: [lots] (1, 2 or 3) for every NEW entry of its six books; an open position keeps its own
      * quantity. Raising it is Boss's alone: the row asks before it, and Jarvis only on his confirmed yes ([by] says who; the
      * arm log keeps it). A restore's waiting size is answered by this too. Paper takes it as it is; Live still goes through
      * the account guard, and a size the Bot settings do not allow is said now and refused at the entry, never traded smaller.
@@ -652,7 +679,7 @@ object OrbArms {
 
     suspend fun liquidityOpenNow(arm: String, symbol: String): LiquidityOpenNow? = lock.withLock {
         val books = LiquidityRules.BOOKS.map { it.source }
-        // That book's own open position (BANKNIFTY's and FINNIFTY's can be open at once): each panel reads its own index.
+        // That book's own open position (BANKNIFTY's, FINNIFTY's and MIDCPNIFTY's can be open at once): each panel reads its own index.
         val p = book().positions.lastOrNull { it.arm in books && it.arm == arm && it.symbol == symbol && it.open } ?: return@withLock null
         val und = LiquidityRules.BOOKS.firstOrNull { it.source == p.arm }?.let { LiquidityRules.underlyingOf(it) }
         val last = und?.let { liquidityPass[it]?.second?.lastOrNull() }
@@ -779,7 +806,8 @@ object OrbArms {
             save(b)
             val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
             return@withLock if (on) "${LiquidityRules.ARM.label} armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
-                (if (automatic) "fully automatic" else "you approve each entry") + ": on the 15-minute and the 5-minute BANKNIFTY and FINNIFTY charts, " +
+                (if (automatic) "fully automatic" else "you approve each entry") + ": on the BANKNIFTY 15- and 5-minute, FINNIFTY 30- and 5-minute " +
+                "and MIDCPNIFTY 15- and 5-minute charts, " +
                 "when a close takes a liquidity pool that sits on a swing zone, it buys the ATM call (up) or put (down), ${LiquidityLots.words(lotsOf(b))}, with a stop " +
                 "15% below the price paid, and sells at the next liquidity level, when new liquidity forms, when the break fails, or at " +
                 "15:10. Entries 09:20-14:00, one position per chart."
@@ -2012,7 +2040,7 @@ object OrbArms {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test history feed exists only in debug builds" }; field = v }
 
     /**
-     * TEST ONLY: today's 1-minute bars of an index other than BANKNIFTY (FINNIFTY) at a given moment. Null in the app,
+     * TEST ONLY: today's 1-minute bars of an index other than BANKNIFTY (FINNIFTY, MIDCPNIFTY) at a given moment. Null in the app,
      * always. While [testIndexBars] is set and this is not, the other indices have no bars (a test never reaches the network).
      */
     @Volatile internal var testOtherIndexBars: ((String, LocalDateTime) -> List<Upstox.Bar>)? = null
@@ -2049,7 +2077,7 @@ object OrbArms {
         liquidityPass[underlying]?.takeIf { !it.first.isBefore(t.withSecond(0).withNano(0).minusMinutes(2)) }?.second
 
     /**
-     * An index's 1-minute bars (BANKNIFTY or FINNIFTY): the last ten calendar days' sessions plus today's. [keep] false: a
+     * An index's 1-minute bars (BANKNIFTY, FINNIFTY or MIDCPNIFTY): the last ten calendar days' sessions plus today's. [keep] false: a
      * read for Jarvis, not kept as this minute's pass (the arm's own read stays its own).
      */
     private suspend fun liquidityMinutes(t: LocalDateTime, underlying: String = OrbRules.UNDERLYING, keep: Boolean = true): List<Bar> {
@@ -2183,9 +2211,10 @@ object OrbArms {
         s == "no_contract" -> "The day's BANKNIFTY contracts could not be loaded."
         s == "no_index_data" -> "No BANKNIFTY bars yet."
         s == "no_liquidity_break" -> "Waiting for a close through a liquidity pool that sits on a swing zone."
-        s == "liquidity_history_loading" -> "Loading the last days' BANKNIFTY candles for the liquidity levels."
+        s == "liquidity_history_loading" -> "Loading the last days' index candles for the liquidity levels."
         s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
-        s == "liquidity_no_room" -> "Skipped a liquidity break: the next level ahead was closer than one index stop (30 BANKNIFTY / 15 FINNIFTY points)."
+        s == "liquidity_no_room" -> "Skipped a liquidity break: the next level ahead was closer than one index stop " +
+            "(30 BANKNIFTY / 15 FINNIFTY / 8 MIDCPNIFTY points)."
         s.startsWith("hero_") -> describeHero(s) + " ${HeroRules.NOT_PROVEN}."
         s.startsWith("guard_refused: ") -> "Refused by Bot settings: " + s.removePrefix("guard_refused: ")
         s.startsWith("refused: ") -> "Refused: " + s.removePrefix("refused: ")

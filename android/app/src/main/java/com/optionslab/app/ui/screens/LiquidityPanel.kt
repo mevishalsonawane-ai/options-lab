@@ -188,7 +188,7 @@ internal class LiquidityCache {
 }
 
 /**
- * The Liquidity 15+5 layer under (or beside) the chart of BANKNIFTY or FINNIFTY: its books' charts, the swing zones and
+ * The Liquidity 15+5 layer under (or beside) the chart of BANKNIFTY, FINNIFTY or MIDCPNIFTY: its books' charts, the swing zones and
  * pools as the arm sees them on the closed bars, the arm's trades today and the breaks it skipped for want of room.
  * [bars]: the index's 5-minute candles (cached; see [LiquidityCache]). Reads every 30 s while [visible]; the levels are
  * worked out again only when a bar has closed or the trades changed.

@@ -19,7 +19,7 @@ import kotlin.math.sqrt
  * morning, when at least [MIN_NEW] trades closed since the last look) the same as one note.
  *
  * The cuts ([Dim]): the entry's time of day (09:20-10:30, 10:30-12:00, 12:00-13:30, 13:30-14:00, and after 14:00 for
- * trades from before the 14:00 last entry), the index and book (BankNifty 5/15-min, FinNifty 5/30-min), the side (CE/PE),
+ * trades from before the 14:00 last entry), the index and book (BankNifty 5/15-min, FinNifty 5/30-min, Midcap Nifty 5/15-min), the side (CE/PE),
  * the exit reason, the room from the level broken to the next liquidity level at the entry (in index-stop units, when the
  * levels were recorded, on trades closed since the room filter went on - [ROOM_SINCE]) and the day of the week. A group is
  * shown only with at least [MIN_CUT] trades: its trades, win rate and net a lot a trade after charges.
@@ -151,7 +151,7 @@ object LiquidityInsight {
     private val TIMES = listOf("09:20-10:30", "10:30-12:00", "12:00-13:30", "13:30-14:00", AFTER_LAST)
 
     /**
-     * The room from the level the entry broke to the next level ahead, in index-stop units (BankNifty 30 points, FinNifty 15),
+     * The room from the level the entry broke to the next level ahead, in index-stop units (BankNifty 30 points, FinNifty 15, Midcap Nifty 8),
      * at the entry; +infinity with no level ahead; null when the levels were not recorded. (The room filter measures from
      * the deciding bar's close, which the book does not keep: this is the room from the level broken.)
      */
@@ -171,7 +171,7 @@ object LiquidityInsight {
         else -> "4+ index stops"
     }
     private val ROOMS = listOf("under 2 index stops", "2-4 index stops", "4+ index stops", "no level ahead")
-    private val BOOKS = listOf("BankNifty 5-min", "BankNifty 15-min", "FinNifty 5-min", "FinNifty 30-min")
+    private val BOOKS = listOf("BankNifty 5-min", "BankNifty 15-min", "FinNifty 5-min", "FinNifty 30-min", "Midcap Nifty 5-min", "Midcap Nifty 15-min")
     private val DAYS = listOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY,
         DayOfWeek.SATURDAY, DayOfWeek.SUNDAY).map { it.getDisplayName(TextStyle.FULL, Locale.ENGLISH) }
 

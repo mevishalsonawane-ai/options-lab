@@ -124,7 +124,7 @@ object SettingsIndex {
         member("MARKET", "Market alerts", "Market moments", "A gap filling, or the previous session's high or low passed.", "gap fill", "high", "low"),
         member("MARKET", "Market alerts", "Fear spikes", "India VIX up 10% or more on the day.", "vix", "fear"),
         member("MARKET", "Market alerts", "Sharp moves: what coincided", "A sharp 10-minute move, with the headlines and VIX around it.", "news", "sharp move"),
-        member("MARKET", "Market alerts", "Liquidity levels heads-up", "BankNifty or FinNifty near a Liquidity 15+5 entry level.", "liquidity", "levels"),
+        member("MARKET", "Market alerts", "Liquidity levels heads-up", "BankNifty, FinNifty or Midcap Nifty near a Liquidity 15+5 entry level.", "liquidity", "levels"),
         member("MARKET", "Market alerts", "Open interest walls", "The biggest call or put open interest moving to a new strike.", "oi", "open interest"),
         member("MARKET", "Market alerts", "Expiry day companion", "Expiry day: the straddle, max pain and the last hour's range.", "expiry", "straddle", "max pain"),
         member("MARKET", "Market alerts", "News on your positions", "A headline on an index you hold: good or bad for your side.", "news", "headlines"),
