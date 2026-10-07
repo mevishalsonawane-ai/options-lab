@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import importlib
 
-MODULES = ["liquidity", "solo", "orb", "straddle", "hero", "bigbar", "random_entry"]
+MODULES = ["liquidity", "solo", "orb", "straddle", "hero", "bigbar", "random_entry", "ga_opening", "ga_timeofday", "ga_levels"]
 _EXTRA = {}
 
 
