@@ -448,8 +448,23 @@ class JarvisVoice : Service() {
             // "Don't listen": the Talk button does not open the microphone either.
             if (deaf) { _state.value = VoiceState(problem = NOT_LISTENING); return false }
             if (!available(context) || !permitted(context)) return false
+            talkDropped = false
             return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_TALK).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis listen; try again with the app open.") }.isSuccess
+        }
+
+        /** The mic was let go before Jarvis asked (a quick tap, a finger slid off): "Yes, Boss?" is then not said. */
+        @Volatile private var talkDropped = false
+
+        /**
+         * Hold to talk (Boss, 7 Oct): the mic let go. [send]: the turn [talk] opened closes now, so what was heard is
+         * answered the usual way (nothing heard: nothing is asked). False (a quick tap, the finger slid off): dropped -
+         * the turn is cancelled, nothing is sent, and a one-question listen stops. The wake word and switches are untouched.
+         */
+        fun talkEnd(send: Boolean) {
+            if (!send) talkDropped = true
+            val v = instance?.get() ?: return
+            v.main.post { v.endTalk(send) }
         }
 
         /**
@@ -1116,8 +1131,11 @@ class JarvisVoice : Service() {
         }
         if (talkNow) {
             talkAt = SystemClock.elapsedRealtime()
-            // Wait for the voice to be ready (the first time), then ask.
-            main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; called = true; say("Yes, Boss?") }, if (voiceReady) 0L else 800L)
+            // Wait for the voice to be ready (the first time), then ask - unless the mic was already let go (hold to talk).
+            main.postDelayed({
+                if (talkDropped) { if (oneShot) stopSelf(); return@postDelayed }
+                awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; called = true; say("Yes, Boss?")
+            }, if (voiceReady) 0L else 800L)
         }
         return if (oneShot) START_NOT_STICKY else START_STICKY
     }
@@ -1845,6 +1863,25 @@ class JarvisVoice : Service() {
         again(50)
     }
 
+    /**
+     * The mic let go ([talkEnd]). [send]: the open turn is closed now ([finish]: the words read so far, or the
+     * recognizer's final reading), answered as any spoken question. Otherwise the press is dropped: "Yes, Boss?" stops,
+     * the turn is cancelled unread, the awake window ends, and a one-question listen stops.
+     */
+    private fun endTalk(send: Boolean) {
+        if (stopped) return
+        if (send) {
+            if (listening && !speaking) { main.removeCallbacks(finish); finish.run() }
+            return
+        }
+        main.removeCallbacks(finish); main.removeCallbacks(prepareAhead)
+        awakeUntil = 0L; called = false
+        if (speaking && utterance?.substringBefore('#') == "say") hush()
+        if (listening) { runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null }
+        if (oneShot) { stopSelf(); return }
+        again(300)
+    }
+
     /** Cut in on: Jarvis stops talking and waits for the owner's question. */
     private fun interrupt() {
         if (!speaking) return
@@ -2055,7 +2092,7 @@ class JarvisVoice : Service() {
                 val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && !earsOff && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
-                else if (!named && (acts || earsOff)) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or tap the mic.") }
+                else if (!named && (acts || earsOff)) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or hold the mic.") }
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and

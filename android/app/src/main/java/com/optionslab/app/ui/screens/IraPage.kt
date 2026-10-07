@@ -130,7 +130,6 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val snaps by iraSlice(policy = androidx.compose.runtime.referentialEqualityPolicy()) { it.snaps }
     val working by iraSlice { it.busy || it.loading }
-    val waitingCount by iraSlice { it.pending.size }
     val newest by iraSlice { s -> s.messages.lastOrNull()?.let { it.id to it.text } }
     // The saved conversation is read off the main thread at the start: until then the chat says so (no examples).
     val memoryReady by IraHub.ready.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -230,18 +229,11 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
             }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                val waiting = waitingCount
-                // Muted: said plainly on the globe, one tap to hear Jarvis again.
-                var mutedNow by remember { mutableStateOf(JarvisVoice.muted) }
-                com.optionslab.app.ui.PollWhileStarted { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
-                if (mutedNow) BrassButton("🔇  Muted · tap to unmute") { JarvisVoice.muted = false; mutedNow = false }
                 if (com.optionslab.app.BuildConfig.JARVIS) DontListenButton(deafNow)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // No Talk while the microphone is off: nothing could hear it.
-                    if (!deafNow) MicButton("🎙  Talk")
-                    BrassButton(if (waiting > 0) "Open chat · $waiting waiting" else "Open chat") { chat = true }
-                }
-                RequestsBadge { requestsOpen = true }
+                // Boss, 7 Oct: the mic (hold to talk), mute and the chat as small icons in one row, no words; no Talk
+                // while the microphone is off. (No Requests below the globe: Boss, 7 Oct - it is in the chat's header
+                // and on Home.)
+                JarvisControlRow(chatOpen = false, onChat = { chat = true }, showMic = !deafNow)
             }
         }
         if (com.optionslab.app.BuildConfig.JARVIS) ModelAsk()
@@ -250,9 +242,10 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().background(if (com.optionslab.app.BuildConfig.JARVIS) Color.Black else Color.Transparent),
             verticalAlignment = Alignment.CenterVertically) {
-            if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
-                modifier = Modifier.weight(1f).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
-            else Spacer(Modifier.weight(1f))
+            // Jarvis: the same icon row as on the globe (the chat icon closes the chat, back to the globe).
+            if (com.optionslab.app.BuildConfig.JARVIS) JarvisControlRow(chatOpen = true, onChat = { chat = false }, showMic = !deafNow,
+                modifier = Modifier.padding(start = 4.dp))
+            Spacer(Modifier.weight(1f))
             // Today's notes: what Jarvis said by himself today (in the header, so the question box keeps its room).
             if (todayNotesShown()) TodayNotesChip(onOpen = { notesOpen = true }, modifier = Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp))
             RequestsBadge(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) { requestsOpen = true }
@@ -319,8 +312,8 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send(text) }))
             Spacer(Modifier.width(8.dp))
-            if (com.optionslab.app.BuildConfig.JARVIS && text.isBlank()) MicButton("🎙")
-            else BrassButton("Ask", enabled = text.isNotBlank()) { send(text) }
+            // (The mic is in the icon row above: Boss, 7 Oct.)
+            BrassButton("Ask", enabled = text.isNotBlank()) { send(text) }
         }
     }
 }
@@ -494,7 +487,7 @@ internal fun VoiceSwitch() {
                 }, modifier = Modifier.semantics { contentDescription = if (deafNow) "Don't listen is on: Jarvis's microphone is off" else "Don't listen is off" })
             }
         }
-        Note(if (deafNow) "Jarvis hears nothing: no \"Jarvis\", no follow-ups, no Talk button, and Android's microphone dot stays off. He still speaks and you can still type. " +
+        Note(if (deafNow) "Jarvis hears nothing: no \"Jarvis\", no follow-ups, no mic button, and Android's microphone dot stays off. He still speaks and you can still type. " +
             "Only this switch or \"Listen again\" on the globe turns listening back on - never your voice, a chat message or a backup."
             else "Switch the microphone off altogether (also: type \"don't listen\" or \"mat suno\"). Listening comes back only when you tap.")
         com.optionslab.app.ui.SettingSpot("jarvis.voice.wake") {
@@ -1064,31 +1057,6 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs); v?.onPause() }
-    }
-}
-
-/**
- * The mic: tap and talk to Jarvis, no "Jarvis" needed - it says "Yes, Boss?" and answers aloud. With listening off it
- * listens for that one question only. Asks for the microphone the first time.
- */
-@Composable
-private fun MicButton(label: String) {
-    if (JarvisVoice.deaf) return
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    var note by remember { mutableStateOf<String?>(null) }
-    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) JarvisVoice.talk(ctx) else note = "Jarvis needs the microphone to hear you."
-    }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        BrassButton(label) {
-            note = null
-            when {
-                !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (Android 12 or later needed)."
-                !JarvisVoice.permitted(ctx) -> ask.launch(android.Manifest.permission.RECORD_AUDIO)
-                !JarvisVoice.talk(ctx) -> note = "Jarvis could not start listening; try again."
-            }
-        }
-        note?.let { Text(it, style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 11.sp)) }
     }
 }
 
