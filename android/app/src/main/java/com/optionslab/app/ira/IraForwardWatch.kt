@@ -17,7 +17,7 @@ import java.time.LocalDate
  * lock held by the arms' tick is waited on a few seconds at most), Solo's own record and baseline through its public
  * readers ([IraSolo.all], [IraSolo.baseline]). Words only: nothing here switches an arm, changes its lots or its rules;
  * Solo's own switch-off stays Solo's own. What was last told for each arm is kept under [ForwardWatch.KEY_PREFIX]
- * (carried in a backup with the records it was read from - not a secret, nothing that trades). In the chat only (never
+ * (this phone's alone, never in a backup: Solo's record it is read from never leaves the phone). In the chat only (never
  * spoken); never in quiet hours (a change found then is told after them). Not in IraGoldAlgo.
  */
 internal object IraForwardWatch {
@@ -27,8 +27,16 @@ internal object IraForwardWatch {
     private const val WATCH_MS = 8_000L
     private val busy = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    /** Solo (midday)'s own closed forward trades, oldest first (the forward test's; the retired Solo's are not its). */
-    private fun soloClosed(): List<IraSolo.T>? = runCatching { IraSolo.midday(IraSolo.all()).filter { it.closed && it.net != null } }.getOrNull()
+    /**
+     * Solo (midday)'s own closed forward trades, oldest first (the forward test's; the retired Solo's are not its); null
+     * when its store could not be read - [IraSolo.all] answers an empty list then, so an unreadable vault is checked
+     * after it (never taken as "no trades"; [ForwardWatch.decide] also takes "too few" after a told verdict as unreadable).
+     */
+    private fun soloClosed(): List<IraSolo.T>? = runCatching {
+        val all = IraSolo.all()
+        if (com.optionslab.app.security.SecurePrefs.unreadable) return@runCatching null
+        IraSolo.midday(all).filter { it.closed && it.net != null }
+    }.getOrNull()
 
     /**
      * Each watched arm ([ForwardWatch.ARMS]) with its check now - null for an arm whose record could not be read in time

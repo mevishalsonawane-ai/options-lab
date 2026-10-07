@@ -1148,7 +1148,8 @@ private fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {
         Column(Modifier.weight(1f)) {
             Text(a.label, style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
-            Text(a.what + (if (groupOn) "" else " (Market alerts is off: this stays quiet.)"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            val group = com.optionslab.app.ira.Automations.groupOf(a)?.label ?: "Its group"
+            Text(a.what + (if (groupOn) "" else " ($group is off: this stays quiet.)"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         }
         androidx.compose.material3.Switch(checked = own, onCheckedChange = { v -> own = v; com.optionslab.app.ira.Automations.set(a, v) })
     }

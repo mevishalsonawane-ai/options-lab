@@ -47,11 +47,24 @@ internal fun todayNotesShown(): Boolean = !com.optionslab.app.BuildConfig.GOLD
 /** A note collapsed shows this many lines; a tap opens it whole. */
 internal const val TODAY_NOTES_LINES = 3
 
-/** Today's notes, newest first, from what [IraNotes] keeps (read only; the list changes as Jarvis posts). */
+/**
+ * Today's notes, newest first, from what [IraNotes] keeps (read only; the list changes as Jarvis posts, and the day as
+ * midnight passes - yesterday's notes never stay listed as today's on a page left open overnight).
+ */
 @Composable
 internal fun rememberTodayNotes(): List<TodayNotes.Note> {
     val all by IraNotes.notes.collectAsState()
-    return remember(all) { TodayNotes.of(all, com.optionslab.app.data.Market.today()) }
+    var day by remember { mutableStateOf(com.optionslab.app.data.Market.today()) }
+    // The day, checked once a minute while the page shows (paused off screen); the state is written only when the day
+    // changes - never otherwise, never during composition.
+    com.optionslab.app.ui.PollWhileStarted {
+        while (true) {
+            val now = runCatching { com.optionslab.app.data.Market.today() }.getOrNull()
+            if (now != null && now != day) day = now
+            kotlinx.coroutines.delay(60_000L)
+        }
+    }
+    return remember(all, day) { TodayNotes.of(all, day) }
 }
 
 /**

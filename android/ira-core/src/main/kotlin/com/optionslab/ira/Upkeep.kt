@@ -44,7 +44,10 @@ object Upkeep {
         // The history of this phone's limits: what "Jarvis, undo" puts back, so a file's history could set a limit (round 7).
         "settings.",
         // The market recorder (06 Oct): its days are this phone's files (never in a backup), so its switch and gap counts stay too.
-        "recorder.")
+        "recorder.",
+        // The forward-test watch's last told verdicts (jarvis.forward.told.): read from Solo's record, which never leaves
+        // the phone - restored over a fresh record they would silence its milestones (07 Oct).
+        ForwardWatch.KEY_PREFIX)
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }

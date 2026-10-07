@@ -14,8 +14,11 @@ import com.optionslab.engine.orb.SoloMidday
  *              [KEY_PREFIX])
  *   note       one chat note when the category changes from the last told one ("in line" -> "below expectation", the
  *              CUSUM's alarm first raised, back to "in line") or a milestone is reached: 20 trades (enough to judge), and
- *              for Solo's forward test 40 and 60 ([decide]); never for "too few trades" by itself (a first look, or a record
- *              that shrank, is kept silently)
+ *              for Solo's forward test 40 and 60 ([decide]); never for "too few trades" by itself (a first look is kept
+ *              silently; once a real verdict was told at 20+ trades, "too few" - an empty or shrunk read - is taken as
+ *              unreadable and the told verdict kept). A flip between in line / above / below is told only once it has held
+ *              for two evaluations in a row with new trades (a record near a band's edge would otherwise flip a note a trade); a
+ *              sustained run below and a drawdown deeper than the worst are told at once
  *
  * Each note says the arm, its trades, its net a trade (per lot; Hero per ₹5,000 ticket) against the backtest's, the band,
  * what changed and what it means in plain words - and for Solo how far it is from its own −₹25,000 switch-off line
@@ -30,9 +33,9 @@ object ForwardWatch {
     val ARMS: List<ForwardCheck.Expectation> = listOf(ForwardCheck.LIQUIDITY, ForwardCheck.SOLO, ForwardCheck.HERO)
 
     /**
-     * Where the app keeps each arm's last told category ("jarvis.forward.told.<arm>"): not a secret and nothing that
-     * trades - carried in a backup ([Upkeep.carried]) with the arms' own records it was read from, so a restored phone
-     * does not tell the same change again.
+     * Where the app keeps each arm's last told category ("jarvis.forward.told.<arm>"): this phone's alone, never in a
+     * backup ([Upkeep.PRIVATE]) - Solo's record it is read from stays on the phone, so a restored told milestone would
+     * silence the restored phone's own milestones. A restored phone starts afresh (its first look is told once).
      */
     const val KEY_PREFIX = "jarvis.forward.told."
 
@@ -55,18 +58,27 @@ object ForwardWatch {
         DEEPER("a drawdown deeper than the backtest's worst"),
     }
 
-    /** What was last told for an arm: its [category] and the highest [milestone] told (0: none). */
-    data class Told(val category: Category, val milestone: Int = 0) {
-        /** As kept: "IN_LINE|20". */
-        fun encode(): String = "${category.name}|$milestone"
+    /** The band's verdicts: a flip between two of these is told only once it has held for two evaluations with new trades. */
+    private val BAND = setOf(Category.IN_LINE, Category.ABOVE, Category.BELOW)
+
+    /**
+     * What was last told for an arm: its [category] and the highest [milestone] told (0: none); [pending] a band flip
+     * seen but not yet told, first seen at [pendingAt] trades (null: none).
+     */
+    data class Told(val category: Category, val milestone: Int = 0, val pending: Category? = null, val pendingAt: Int = 0) {
+        /** As kept: "IN_LINE|20", or with a flip pending "IN_LINE|20|BELOW|31". */
+        fun encode(): String = "${category.name}|$milestone" + (pending?.let { "|${it.name}|$pendingAt" } ?: "")
 
         companion object {
             /** A kept [encode]d value, or null (none, or not one this build reads). */
             fun decode(s: String?): Told? {
                 if (s.isNullOrBlank()) return null
-                val c = Category.entries.firstOrNull { it.name == s.substringBefore('|') } ?: return null
-                val m = s.substringAfter('|', "0").toIntOrNull()?.coerceAtLeast(0) ?: 0
-                return Told(c, m)
+                val parts = s.split('|')
+                val c = Category.entries.firstOrNull { it.name == parts[0] } ?: return null
+                val m = parts.getOrNull(1)?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+                val p = parts.getOrNull(2)?.let { n -> Category.entries.firstOrNull { it.name == n } }
+                val at = parts.getOrNull(3)?.toIntOrNull()?.coerceAtLeast(0)
+                return if (p != null && at != null) Told(c, m, p, at) else Told(c, m)
             }
         }
     }
@@ -114,15 +126,28 @@ object ForwardWatch {
      * After [r] (an arm's check now) with [before] last told (null: never): null when nothing is new; else what to keep
      * and, when it is worth a word, the note. A word when the category changed from the last told one (but never into
      * "too few trades"), when a first look already has something to judge, or when a milestone is reached; the highest
-     * milestone told is kept even when the record shrinks. [solo]: Solo's switch-off line, said in Solo's note.
+     * milestone told is kept even when the record shrinks. "Too few trades" after a real verdict told at 20+ trades is
+     * taken as an unreadable record (an empty or failed read): null, the told state kept. A flip between in line, above
+     * and below is kept as [Told.pending] and told only when seen again with more trades (two evaluations in a row) - or at once when a
+     * milestone is reached; back to the told category, the pending flip is dropped silently. [solo]: Solo's switch-off
+     * line, said in Solo's note.
      */
     fun decide(r: ForwardCheck.Result, before: Told?, solo: SoloBar? = null): Decision? {
         val c = category(r)
         val m = milestone(r.expectation, r.trades)
-        val keep = Told(c, maxOf(m, before?.milestone ?: 0))
+        val toldM = before?.milestone ?: 0
+        if (c == Category.TOO_FEW && before != null && before.category != Category.TOO_FEW && toldM >= ForwardCheck.MIN_TRADES) return null
+        val reached = m > toldM
+        if (before != null && c != before.category && c in BAND && before.category in BAND && !reached) {
+            val held = before.pending == c && r.trades > before.pendingAt
+            if (!held) {
+                val wait = if (before.pending == c) before else before.copy(pending = c, pendingAt = r.trades)
+                return if (wait == before) null else Decision(wait, null)
+            }
+        }
+        val keep = Told(c, maxOf(m, toldM))
         if (keep == before) return null
         val changed = before != null && before.category != c
-        val reached = m > (before?.milestone ?: 0)
         val speak = c != Category.TOO_FEW && (changed || before == null || reached)
         return Decision(keep, if (speak) note(r, before?.category?.takeIf { changed }, if (reached) m else null, solo, still = before != null && !changed) else null)
     }
@@ -267,6 +292,8 @@ object ForwardWatch {
         // "hero against the research", "how is hero doing compared to the backtest"
         "^ $LEAD(how (is|s) |hows |how s |is |show |show me |whats |what is |what s )?$ARM( doing| holding up| performing| running| looking)?" +
             "( live| paper| forward)? $VS $BT( status| check| summary| update)?$TAIL|" +
+        // "how did liquidity do vs the backtest", "how has solo done vs backtest", "how has hero been doing against the research"
+        "^ $LEAD(how (did|has|have|is|s) |hows |how s )$ARM( do| done| doing| been doing)( so far)?( live| paper| forward)? $VS $BT$TAIL|" +
         // "live vs backtest for liquidity", "live vs backtest of hero"
         "^ $LEAD(show |show me |whats |what is |what s )?(the )?(live|paper|forward) $VS $BT( status| check| summary| update)? (for|of|on) $ARM$TAIL|" +
         // "is liquidity in line with the backtest", "is hero keeping up with the research"
@@ -294,7 +321,8 @@ object ForwardWatch {
         ForwardCheck.LIQUIDITY to Regex(" liquidity "), ForwardCheck.SOLO to Regex(" solo "), ForwardCheck.HERO to Regex(" hero "))
 
     /**
-     * One arm asked against its backtest - "liquidity live vs backtest", "how is liquidity doing vs backtest", "is liquidity in
+     * One arm asked against its backtest - "liquidity live vs backtest", "how is liquidity doing vs backtest", "how did
+     * liquidity do vs the backtest", "how has solo done vs backtest", "is liquidity in
      * line with the backtest", "solo vs backtest", "is hero drifting", "hero forward test": that arm ([armAnswer]); null when
      * not (none or two named, another arm, another day, an act - and "solo forward test", Solo's own status).
      */

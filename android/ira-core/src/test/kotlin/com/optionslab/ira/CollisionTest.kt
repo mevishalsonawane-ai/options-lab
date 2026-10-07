@@ -3424,6 +3424,11 @@ class CollisionTest {
         // bots' health; a backtest to run; the shadows; the weekly review.
         assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
         assertEquals("ForwardWatch", audit.feature("how is liquidity doing vs backtest"))
+        assertEquals("ForwardWatch", audit.feature("how did liquidity do vs the backtest"))
+        assertEquals("ForwardWatch", audit.feature("how has solo done vs backtest"))
+        // Without the backtest, Liquidity's day and record keep their own answers.
+        assertEquals("Market", audit.feature("how did liquidity do today"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
         assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
         assertEquals("Solo", audit.feature("solo forward test"))
         assertEquals("Solo", audit.feature("is solo on track"))
@@ -3459,7 +3464,11 @@ class CollisionTest {
             "liquidity forward test status" to ForwardCheck.LIQUIDITY,
             "solo vs backtest" to ForwardCheck.SOLO, "is solo drifting" to ForwardCheck.SOLO, "how is solo doing against the backtest" to ForwardCheck.SOLO,
             "hero vs backtest" to ForwardCheck.HERO, "is hero drifting" to ForwardCheck.HERO, "hero forward test" to ForwardCheck.HERO,
-            "kya hero drift kar raha hai" to ForwardCheck.HERO)
+            "kya hero drift kar raha hai" to ForwardCheck.HERO,
+            // Asked in the past: before, still a pattern's backtest to run.
+            "how did liquidity do vs the backtest" to ForwardCheck.LIQUIDITY, "how did liquidity do vs backtest" to ForwardCheck.LIQUIDITY,
+            "how has solo done vs backtest" to ForwardCheck.SOLO, "how has solo done against the backtest so far" to ForwardCheck.SOLO,
+            "how has hero been doing vs the backtest" to ForwardCheck.HERO)
         for ((s, e) in arms) {
             assertEquals("ForwardWatch", audit.feature(s), s)
             assertEquals(e, ForwardWatch.armAsked(s), s)

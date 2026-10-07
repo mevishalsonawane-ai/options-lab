@@ -1016,7 +1016,7 @@ object IraHub {
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
             // (Only told when offering is on: the guard alone never sets a stop on these, so it says nothing.)
-            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); note(text, whole = true)
+            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); note(text, from = Automations.Auto.RESCUE, whole = true)
                 runCatching { JarvisVoice.offerNote(text, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) } }; continue }
             // Set alone only when nothing else could close it too: no working order on it at all and, at Zerodha, no GTT
             // on it (a GTT or a resting exit filling alongside the stop would leave a short). Otherwise only offered.
@@ -1037,7 +1037,7 @@ object IraHub {
                 val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
                 JarvisPopup.show(c, if (com.optionslab.ira.Rescue.failed(result)) "Boss, ${p.symbol} is NOT guarded" else "Boss, I guarded ${p.symbol}", said)
                 // Said and shown whole: a "Not protected: ..." in it is never cut to the line "I set one" (review, 5 Oct).
-                note(said, whole = true); IraActivity.add(said)
+                note(said, from = Automations.Auto.GUARD, whole = true); IraActivity.add(said)
                 runCatching { JarvisVoice.offerNote(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) }
                 Automations.acted(Automations.Auto.GUARD, said)
                 continue

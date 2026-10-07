@@ -19,6 +19,8 @@ class IraNotesTest : RobolectricTest() {
     @Before fun up() {
         com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
             java.time.LocalDate.of(2026, 10, 6).atTime(15, 50).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        // The hub's chat starts empty too: an earlier test in this JVM may have left messages in it.
+        runBlocking { IraHub.forgetAll() }
         IraNotes.clear()
     }
 
@@ -33,11 +35,12 @@ class IraNotesTest : RobolectricTest() {
         IraHub.note("Opening read, Boss (06 Oct) - the open against yesterday's close: Nifty +0.4%.")
         IraHub.note("Your weekly review is ready, Boss.", from = null, kind = TodayNotes.Category.COACH)
         IraHub.note("Muted by voice, for today only.")
-        // The chat has each note exactly as posted, as Jarvis's own.
-        val chat = IraHub.state.value.messages.map { it.text }
+        // The chat has each note exactly as posted, as Jarvis's own (its newest four: the notes just posted).
+        val posted = IraHub.state.value.messages.takeLast(4)
+        val chat = posted.map { it.text }
         assertEquals(listOf("BankNifty is 12 pts from 54,180 (swing high, 15-min).", "Opening read, Boss (06 Oct) - the open against yesterday's close: Nifty +0.4%.",
             "Your weekly review is ready, Boss.", "Muted by voice, for today only."), chat)
-        assertTrue(IraHub.state.value.messages.all { it.fromIra })
+        assertTrue(posted.all { it.fromIra })
         val today = IraNotes.today()
         assertEquals(listOf(TodayNotes.Category.OTHER, TodayNotes.Category.COACH, TodayNotes.Category.MARKET, TodayNotes.Category.LIQUIDITY), today.map { it.category })
         assertEquals(listOf(null, null, "OPENING", "LIQUIDITY"), today.map { it.source })

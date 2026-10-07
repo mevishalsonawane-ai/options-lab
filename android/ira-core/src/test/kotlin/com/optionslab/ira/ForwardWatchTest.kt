@@ -68,8 +68,13 @@ class ForwardWatchTest {
         assertEquals("jarvis.forward.told.liquidity", ForwardWatch.key(ForwardCheck.LIQUIDITY))
         assertEquals("jarvis.forward.told.solo", ForwardWatch.key(ForwardCheck.SOLO))
         assertEquals("jarvis.forward.told.hero", ForwardWatch.key(ForwardCheck.HERO))
-        // Not a secret and nothing that trades: it travels in a backup with the records it was read from.
-        assertTrue(Upkeep.carried(ForwardWatch.key(ForwardCheck.SOLO)))
+        // This phone's alone: Solo's record it is read from never leaves the phone, so the told state never travels either.
+        for (e in ForwardWatch.ARMS) assertFalse(Upkeep.carried(ForwardWatch.key(e)), e.key)
+        // With a flip pending, read back whole; an unknown pending is dropped.
+        assertEquals("IN_LINE|20|BELOW|31", Told(Category.IN_LINE, 20, Category.BELOW, 31).encode())
+        assertEquals(Told(Category.IN_LINE, 20, Category.BELOW, 31), Told.decode("IN_LINE|20|BELOW|31"))
+        assertEquals(Told(Category.IN_LINE, 20), Told.decode("IN_LINE|20|SIDEWAYS|31"))
+        assertEquals(Told(Category.IN_LINE, 20), Told.decode("IN_LINE|20|BELOW"))
     }
 
     // ---- when a word is said --------------------------------------------------------------------------------------
@@ -95,15 +100,23 @@ class ForwardWatchTest {
     }
 
     @Test fun inLineToBelowIsToldAndBackToInLineToo() {
-        val d = assertNotNull(ForwardWatch.decide(liq(30 to -600.0), Told(Category.IN_LINE, 20)))
+        // First seen below at 29 trades: kept pending, nothing said; the same read again: nothing new.
+        val first = assertNotNull(ForwardWatch.decide(liq(29 to -600.0), Told(Category.IN_LINE, 20)))
+        assertEquals(Told(Category.IN_LINE, 20, Category.BELOW, 29), first.told)
+        assertNull(first.text)
+        assertNull(ForwardWatch.decide(liq(29 to -600.0), first.told))
+        // Still below with a new trade: told.
+        val d = assertNotNull(ForwardWatch.decide(liq(30 to -600.0), first.told))
         assertEquals(Told(Category.BELOW, 20), d.told)
         val t = assertNotNull(d.text)
         assertTrue(t.startsWith("Forward-test watch - Liquidity 15+5: now below expectation (was in line with the backtest)."), t)
         assertTrue("30 trades, −₹600 a trade per lot vs the backtest's ₹228" in t, t)
         assertTrue("Below what the backtest allows for 30 trades - worth watching; nothing has been changed." in t, t)
         assertFalse("enough to judge" in t, t)
-        // Back in line.
-        val back = assertNotNull(ForwardWatch.decide(liq(30 to -600.0, 30 to 800.0), d.told))
+        // Back in line (held over two reads with new trades).
+        val pend = assertNotNull(ForwardWatch.decide(liq(30 to -600.0, 29 to 800.0), d.told))
+        assertNull(pend.text)
+        val back = assertNotNull(ForwardWatch.decide(liq(30 to -600.0, 30 to 800.0), pend.told))
         assertEquals(Told(Category.IN_LINE, 20), back.told)
         assertTrue(assertNotNull(back.text).contains("now in line with the backtest (was below expectation)"))
         assertTrue(back.text!!.contains("Back within what the backtest allows for 60 trades - the research describes it again; nothing has been changed."))
@@ -124,14 +137,40 @@ class ForwardWatchTest {
     }
 
     @Test fun neverTellsADropIntoTooFewAndKeepsTheHighestMilestone() {
-        // The record shrank (a book trimmed): kept, never said, the milestone kept.
-        val d = assertNotNull(ForwardWatch.decide(liq(5 to 300.0), Told(Category.IN_LINE, 20)))
-        assertEquals(Told(Category.TOO_FEW, 20), d.told)
+        // After a real verdict told at 20+: an empty or shrunk read is taken as unreadable - nothing kept, nothing said.
+        val told = Told(Category.IN_LINE, 20)
+        assertNull(ForwardWatch.decide(liq(), told))
+        assertNull(ForwardWatch.decide(liq(5 to 300.0), told))
+        // So one failed read then a good one never re-posts "now in line ... (was too few trades to judge)".
+        assertNull(ForwardWatch.decide(liq(21 to 300.0), told))
+        // A told "too few" (before 20) shrinking stays silent too, the milestone kept.
+        val d = assertNotNull(ForwardWatch.decide(liq(5 to 300.0), Told(Category.RUN_BELOW, 0)))
+        assertEquals(Told(Category.TOO_FEW, 0), d.told)
         assertNull(d.text)
-        // Back to 20 in line: a change, but the milestone was told before.
-        val again = assertNotNull(ForwardWatch.decide(liq(20 to 300.0), d.told))
-        assertEquals(Told(Category.IN_LINE, 20), again.told)
-        assertFalse(assertNotNull(again.text).contains("enough to judge"))
+    }
+
+    @Test fun aBandFlipIsToldOnlyOnceItHolds() {
+        // In line at 29, then below at 30 (one read), back in line at 31: never a note.
+        val inLine = Told(Category.IN_LINE, 20)
+        val below = assertNotNull(ForwardWatch.decide(liq(30 to -600.0), inLine))
+        assertNull(below.text)
+        assertEquals(Category.BELOW, below.told.pending)
+        val back = assertNotNull(ForwardWatch.decide(liq(30 to -600.0, 30 to 800.0), below.told))
+        assertNull(back.text)
+        assertEquals(inLine, back.told)
+        // Above after in line: also held.
+        val up = assertNotNull(ForwardWatch.decide(liq(20 to 1_500.0), Told(Category.IN_LINE, 20)))
+        assertNull(up.text)
+        val upAgain = assertNotNull(ForwardWatch.decide(liq(21 to 1_500.0), up.told))
+        assertTrue(assertNotNull(upAgain.text).contains("now above expectation (was in line with the backtest)"), upAgain.text)
+        // A sustained run below is told at once, from in line.
+        val run = assertNotNull(ForwardWatch.decide(liq(20 to 300.0, 6 to -3_000.0), inLine))
+        assertEquals(Category.RUN_BELOW, run.told.category)
+        assertNotNull(run.text)
+        // A milestone reached during a flip is told at once (Solo at 40).
+        val at40 = assertNotNull(ForwardWatch.decide(solo(40 to 1_200.0), Told(Category.IN_LINE, 20)))
+        assertEquals(Told(Category.ABOVE, 40), at40.told)
+        assertNotNull(at40.text)
     }
 
     @Test fun soloIsToldAtTwentyFortyAndSixtyWithItsOwnLine() {
