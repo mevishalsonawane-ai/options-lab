@@ -101,6 +101,12 @@ class LiquidityNoticesTest : RobolectricTest() {
         return big.toString()
     }
 
+    /** Shown in the shade, but with no sound, no buzz and no pop-up (NotificationCompat's setSilent, at low priority). */
+    private fun assertSilent(n: Notification) {
+        assertEquals(Background.title(n), Notification.GROUP_ALERT_SUMMARY, n.groupAlertBehavior)
+        assertEquals(Background.title(n), androidx.core.app.NotificationCompat.PRIORITY_LOW, n.priority)
+    }
+
     private fun trade() {
         val msg = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
         assertTrue(msg, msg.startsWith("Liquidity 15+5 armed on paper"))
@@ -119,12 +125,19 @@ class LiquidityNoticesTest : RobolectricTest() {
         assertTrue(ew, ew.contains("Broke 54,100 · no level ahead (no target)"))
         assertTrue(ew, ew.contains("index 54,070 (30 pts back below)"))
         assertTrue(ew, ew.contains("Time stop: out at 13:25 unless up 5%"))
+        // Boss (07 Oct 2026): both the entry notice and the fill's own card show, and neither sounds, buzzes or pops up.
+        assertSilent(e)
+        val fill = shown("BUY filled · Paper").single()
+        assertSilent(fill)
         assertEquals(0, shown("Liquidity 15+5 sold").size)
         passes(LocalTime.of(13, 6), LocalTime.of(13, 10))
         val exits = shown("Liquidity 15+5 sold")
         assertEquals(1, exits.size)
         val x = exits.single()
         assertEquals("Liquidity 15+5 sold BANKNIFTY 54,000 CE · failed break", Background.title(x))
+        assertSilent(x)
+        // Any fill card still up for the exit is silent too (a sell that squares the position off takes the card down).
+        shown("SELL filled · Paper").forEach { assertSilent(it) }
         val xw = words(x)
         assertTrue(xw, xw.startsWith("Failed break: a bar closed back below 54,100"))
         assertTrue(xw, xw.contains("held 5 min"))
@@ -181,7 +194,7 @@ class LiquidityNoticesTest : RobolectricTest() {
     private fun entry(at: LocalDateTime) = LiquidityNotice.Entry(LiquidityNotice.Book("BANKNIFTY", 5), false, "CE", 54_000.0,
         "BANKNIFTY-LIQ-54000CE", 30, 1.0, 300.0, at, 54_100.0, 54_300.0, 54_140.0, 255.0, 30.0)
 
-    /** With bars to draw: the chart's custom view, the whole text still in the extras, and no second sound for the entry. */
+    /** With bars to draw: the chart's custom view, the whole text still in the extras, and no sound for the entry. */
     @Test fun anEntryWithAChartDrawsItAndStaysQuiet() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         AppSettings.save(AppSettings.load().copy(hideAmountsOnLockScreen = false))
@@ -195,8 +208,8 @@ class LiquidityNoticesTest : RobolectricTest() {
         val w = words(n)
         assertTrue(w, w.startsWith("BANKNIFTY 5-min · 1 lot (30) @ 300"))
         assertTrue(w, w.contains("Broke 54,100"))
-        // The fill's BUY card sounded already: this one is silent (one sound an entry).
-        assertEquals(Notification.GROUP_ALERT_SUMMARY, n.groupAlertBehavior)
+        // Silent (Boss, 07 Oct 2026): in the shade, no sound, buzz or pop-up.
+        assertSilent(n)
         val bmp = LiquidityNotices.draw(geo, 1f)
         assertEquals(200, bmp.width); assertEquals(64, bmp.height)
     }

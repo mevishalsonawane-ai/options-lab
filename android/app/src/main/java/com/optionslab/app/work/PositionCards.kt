@@ -72,7 +72,9 @@ object PositionCards {
      * the position ("ORB + Manual"); the last one given is kept for the card's silent updates.
      */
     fun card(context: Context, venue: String, symbol: String, qty: Int, avg: Double, ltp: Double?, pnl: Double,
-             alert: Boolean = false, headline: String? = null, source: String? = null) {
+             alert: Boolean = false, headline: String? = null, source: String? = null,
+             /** A fill shown without sound, buzz or pop-up (a Liquidity 15+5 paper fill, [Notifier.quietFill]): low priority. */
+             quiet: Boolean = false) {
         // A position closed (squared off, stopped out, settled): its card is taken down, not left as a result.
         if (qty == 0) { dismiss(context, venue, symbol); return }
         if (source != null) sources["$venue|$symbol"] = source
@@ -91,6 +93,7 @@ object PositionCards {
             card = NoticeCard(idOf(venue, symbol), if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, System.currentTimeMillis(),
                 tab = "trade", close = if (open) "$venue|$symbol" else null))
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
+        if (quiet) b.setPriority(NotificationCompat.PRIORITY_LOW)
         if (open) b.addAction(closeAction(context, venue, symbol))
         try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
         if (open) shown["$venue|$symbol"] = true

@@ -147,6 +147,38 @@ class NotifierTest : RobolectricTest() {
         assertEquals("Close…", s.actions.single().title.toString())
     }
 
+    /**
+     * Boss (07 Oct 2026): a Liquidity 15+5 PAPER fill is in the shade but silent - no sound, no buzz, no pop-up - while a
+     * manual paper order, another strategy's paper fill and a live order (a live Liquidity order too) sound as before.
+     */
+    @Test fun aLiquidityPaperFillIsSilentAndEveryOtherFillSounds() {
+        fun card(venue: String, symbol: String) = posted(PositionCards.idOf(venue, symbol))!!
+        fun silent(n: Notification) = n.groupAlertBehavior == Notification.GROUP_ALERT_SUMMARY
+        Notifier.orderFilled(context, "BUY", 30, "BANKNIFTYLIQCE", 300.0, "Paper", "Liquidity 15+5 · entry", "PAPER-00000001")
+        val e = card("Paper", "BANKNIFTYLIQCE")
+        assertTrue("the same fill card, words unchanged", Background.title(e)!!.startsWith("BUY filled · Paper · "))
+        assertTrue("a Liquidity paper entry is silent", silent(e))
+        assertEquals("and does not pop up", NotificationCompat.PRIORITY_LOW, e.priority)
+        // A book's own name (its exits and stops) is Liquidity 15+5's too.
+        Notifier.orderFilled(context, "SELL", 30, "BANKNIFTYLIQPE", 280.0, "Paper", "Liquidity 5m FINNIFTY · stop", "PAPER-00000002")
+        assertTrue(silent(card("Paper", "BANKNIFTYLIQPE")))
+        assertTrue(Notifier.quietFill("Paper", "Liquidity 5m · exit"))
+        // Everything else sounds as before.
+        Notifier.orderFilled(context, "BUY", 75, "NIFTYMANUALCE", 101.5, "Paper", null)
+        Notifier.orderFilled(context, "BUY", 75, "NIFTYORBCE", 101.5, "Paper", "ORB")
+        Notifier.orderFilled(context, "BUY", 30, "BANKNIFTYLIVECE", 300.0, "Live", "Liquidity 15+5 · entry", "250101000000001")
+        Notifier.orderFilled(context, "SELL", 75, "NIFTYZERODHAPE", 80.0, "Zerodha", null)
+        for ((venue, symbol) in listOf("Paper" to "NIFTYMANUALCE", "Paper" to "NIFTYORBCE", "Live" to "BANKNIFTYLIVECE", "Live" to "NIFTYZERODHAPE")) {
+            val n = card(venue, symbol)
+            assertFalse("$venue $symbol sounds", silent(n))
+            assertEquals("$venue $symbol", NotificationCompat.PRIORITY_HIGH, n.priority)
+        }
+        assertFalse(Notifier.quietFill("Live", "Liquidity 15+5 · entry"))
+        assertFalse(Notifier.quietFill("Paper", "Manual"))
+        assertFalse(Notifier.quietFill("Paper", "Pine · Liquidity sweep"))
+        assertFalse(Notifier.quietFill("Paper", null))
+    }
+
     @Test fun theBannerQueueKeepsTheLatestFourAndFiltersRepeats() {
         for (i in 1..6) Alerts.post("event $i")
         assertEquals((3..6).map { "event $it" }, Alerts.queue.value.map { it.text })

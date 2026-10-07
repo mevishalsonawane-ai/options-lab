@@ -19,7 +19,8 @@ import java.time.LocalDateTime
 /**
  * Liquidity 15+5's own trade notifications (Boss, 06 Oct 2026): the entry and the exit in words with a small chart of the
  * book's last bars, and - only with its switch on (Market alerts → "Skipped Liquidity breaks", off by default) - a quiet
- * line for a break the arm skipped for want of room. The words are [LiquidityNotice]'s; this only posts them.
+ * line for a break the arm skipped for want of room. The words are [LiquidityNotice]'s; this only posts them. All are
+ * silent (Boss, 07 Oct 2026): in the shade, with no sound, no buzz and no pop-up.
  *
  * Each event is told once ([once]: by the position and the event, kept across restarts for the day). With "hide figures
  * on the lock screen" on, the text carries no option price and no rupee amount, and the notification is private (the
@@ -102,7 +103,8 @@ object LiquidityNotices {
         val day = e.time.toLocalDate()
         if (!once(context, day, "$position|entry")) return
         val h = hide()
-        // The fill's own BUY card has already sounded for this entry: this one shows without a second sound or buzz.
+        // Liquidity 15+5's paper trades are told silently (Boss, 07 Oct 2026): shown in the shade, no sound, buzz or pop-up.
+        // Its fill card is silent too ([Notifier.quietFill]).
         post(context, entryId(context, day, position), Notifier.BUY, "BUY", LiquidityNotice.entry(e, h), chart, silent = true)
     }
 
@@ -112,7 +114,8 @@ object LiquidityNotices {
         if (!Notifier.canPost(context)) return
         if (!once(context, x.exitTime.toLocalDate(), "$position|exit|${x.exitTime}")) return
         val h = hide()
-        post(context, entryId(context, x.entryTime.toLocalDate(), position) + 1, Notifier.SELL, "SELL", LiquidityNotice.exit(x, h), chart)
+        // Silent like the entry (Boss, 07 Oct 2026).
+        post(context, entryId(context, x.entryTime.toLocalDate(), position) + 1, Notifier.SELL, "SELL", LiquidityNotice.exit(x, h), chart, silent = true)
     }
 
     /**
@@ -150,7 +153,8 @@ object LiquidityNotices {
             .setStyle(NotificationCompat.BigTextStyle().bigText(said.body))
             // The whole text stays in the extras even with the chart's custom view (accessibility, a watch).
             .addExtras(android.os.Bundle().apply { putCharSequence(NotificationCompat.EXTRA_BIG_TEXT, said.body) })
-        if (silent) b.setSilent(true)
+        // Silent: no sound or buzz, and low priority so it does not pop up over the screen (it still shows in the shade).
+        if (silent) b.setSilent(true).setPriority(NotificationCompat.PRIORITY_LOW)
         // Expanded: the words over the mini-chart (left out while saving battery, or when there are no bars to draw).
         if (!saving(context)) runCatching {
             val d = context.resources.displayMetrics.density.coerceIn(1f, 2f)
