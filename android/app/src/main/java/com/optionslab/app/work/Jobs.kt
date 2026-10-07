@@ -566,6 +566,10 @@ object Tasks {
         // Jarvis: a paper arm's live-vs-backtest verdict changed (or reached 20 trades; 40 and 60 for Solo) - one chat note
         // an arm, the round after its trade closed (words only; nothing is switched, sized or changed).
         word("forward-test watch") { com.optionslab.app.ira.IraForwardWatch.watch() }
+        // Jarvis: Saturday morning, once a week, Liquidity 15+5's patterns when 10+ paper trades closed since the last look
+        // (words only; nothing is switched, sized or changed). The lane rarely runs on a Saturday: the closed day's morning
+        // and the hourly study worker call it too.
+        word("what's working") { com.optionslab.app.ira.IraLiquidityInsight.watch() }
         // Jarvis: from 15:45 on a trading day, tomorrow's plan in the chat - once a day (words only; nothing is armed or changed).
         word("tomorrow's plan") { com.optionslab.app.ira.IraTomorrow.watch() }
         // Jarvis: 09:20-09:25 on a trading day, the opening read in the chat - once a day (words only; nothing is armed or changed).

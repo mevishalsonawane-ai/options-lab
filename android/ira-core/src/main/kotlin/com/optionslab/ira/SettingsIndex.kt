@@ -112,6 +112,8 @@ object SettingsIndex {
             "gift", "opening", "gap", "liquidity"),
         sub("FORWARD", "Coach me", "Forward-test watch", "Liquidity 15+5, Solo and Hero against their backtests: a note when an arm's verdict changes.",
             "hero", "solo", "liquidity", "backtest", "drifting"),
+        sub("LIQINSIGHT", "Coach me", "What's working (Liquidity)", "Saturday morning: Liquidity 15+5's paper trades cut by time, book, side, exit, room and weekday - what stands out beyond noise.",
+            "liquidity", "patterns", "working", "insight"),
         member("GUARD", "Guard my positions", "Trail my stops", "Your own bought options: stop to what you paid at +20%, then 15% under the best price.", "trail", "stop"),
         member("HELP", "Offer help on my positions", "Offer a stop", "A position of yours with no stop for 2 minutes: Jarvis offers one.", "stop loss"),
         member("HELP", "Offer help on my positions", "Trades going nowhere", "Open 45 minutes and within 5% of what you paid: Jarvis offers to close it.", "stale"),

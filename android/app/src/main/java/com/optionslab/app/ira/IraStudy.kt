@@ -311,6 +311,8 @@ class StudyWorker(ctx: android.content.Context, params: androidx.work.WorkerPara
         runCatching { IraHub.nightNews() }
         runCatching { IraStudy.studyIfDue() }
         runCatching { IraStudy.reportCardIfDue() }
+        // Saturday morning: Liquidity 15+5's weekly patterns, once (the words lane does not run on a closed day).
+        runCatching { IraLiquidityInsight.watch() }
         // Battery (round 4): every 6 hours through the dead stretch of a weekend or a holiday, hourly again before anything
         // of this job can fall due ([com.optionslab.ira.StudyPace]). The run in progress is never cut short (UPDATE).
         runCatching { schedule(applicationContext, IraStudy.paceHours()) }

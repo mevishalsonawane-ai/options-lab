@@ -129,6 +129,7 @@ class CollisionTest {
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
         "LotsWhatIf" to { q -> LotsWhatIf.asked(q) != null },
+        "LiquidityInsight" to { q -> LiquidityInsight.asked(q) != null },
         "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "OpeningRead" to { q -> OpeningRead.asked(q) },
@@ -911,6 +912,14 @@ class CollisionTest {
         "how much would 3 lots have made last week" to "LotsWhatIf", "liquidity with 2 lots last month" to "LotsWhatIf", "compare 2 lots vs 3 lots for liquidity" to "LotsWhatIf",
         "is 2 lots better than 3 for liquidity" to "LotsWhatIf", "agar 3 lot hota toh kitna banta" to "LotsWhatIf", "what if liquidity traded 1 lot this week" to "LotsWhatIf",
         "what if liquidity had traded 2 lots over the last 10 trades" to "LotsWhatIf", "liquidity 1 lot vs 2 lots this month" to "LotsWhatIf",
+        // ---- LiquidityInsight: what's working for Liquidity 15+5 - its paper trades cut six ways, beside the research ----
+        "what's working for liquidity" to "LiquidityInsight", "what is working for liquidity" to "LiquidityInsight", "whats working for liquidity" to "LiquidityInsight",
+        "what's working in liquidity" to "LiquidityInsight", "liquidity what's working" to "LiquidityInsight", "when does liquidity win" to "LiquidityInsight",
+        "where does liquidity make money" to "LiquidityInsight", "where does liquidity lose" to "LiquidityInsight", "where is liquidity losing" to "LiquidityInsight",
+        "where does liquidity lose money" to "LiquidityInsight", "what's not working for liquidity" to "LiquidityInsight", "liquidity weak spots" to "LiquidityInsight",
+        "liquidity patterns" to "LiquidityInsight", "liquidity insights" to "LiquidityInsight", "patterns in liquidity trades" to "LiquidityInsight",
+        "liquidity ka pattern kya hai" to "LiquidityInsight", "liquidity kahan loss karta hai" to "LiquidityInsight", "liquidity kab loss karta hai" to "LiquidityInsight",
+        "liquidity kahan jeetta hai" to "LiquidityInsight", "what works and what doesn't for liquidity" to "LiquidityInsight",
         // ---- LiquidityRecord:Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
         "how did liquidity do this week" to "LiquidityRecord", "how did liquidity do last week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord",
         "how did liquidity do on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord", "liquidity's last 10 trades" to "LiquidityRecord",
@@ -1558,7 +1567,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3177,6 +3186,40 @@ class CollisionTest {
         // The arm's record without a size: still its own.
         assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
         assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
+    }
+
+    // ---- LiquidityInsight: what's working, from the arm's own paper trades; the arm's other questions keep their routes ----
+
+    @Test fun liquidityInsightTakesOnlyItsQuestionsAndLeavesTheArmsOtherRoutes() {
+        for (s in listOf("what's working for liquidity", "where does liquidity lose", "liquidity patterns", "liquidity kahan loss karta hai")) {
+            assertEquals("LiquidityInsight", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        assertEquals(LiquidityInsight.Focus.WORKING, LiquidityInsight.asked("what's working for liquidity"))
+        assertEquals(LiquidityInsight.Focus.LOSING, LiquidityInsight.asked("where does liquidity lose"))
+        assertEquals(LiquidityInsight.Focus.LOSING, LiquidityInsight.asked("liquidity kahan loss karta hai"))
+        assertEquals(LiquidityInsight.Focus.PATTERNS, LiquidityInsight.asked("liquidity patterns"))
+        assertEquals(LiquidityInsight.Focus.PATTERNS, LiquidityInsight.asked("what works and what doesn't for liquidity"))
+        // The arm's other questions keep theirs (pinned as they routed before it).
+        assertEquals("Market", audit.feature("how did liquidity do"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity win streak"))
+        assertEquals("LiquidityRecord", audit.feature("which index works best for liquidity"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityWhyNot", audit.feature("why no liquidity trade"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("ForwardWatch", audit.feature("is liquidity drifting"))
+        assertEquals("LotsWhatIf", audit.feature("what if liquidity traded 3 lots"))
+        // Never a change, a switch, today alone, a backtest, a level, another arm, or a definition.
+        for (s in listOf("how did liquidity do", "liquidity win streak", "why no liquidity trade", "liquidity levels", "is liquidity drifting",
+            "what if liquidity traded 3 lots", "which index works best for liquidity", "should liquidity stop trading in the afternoon",
+            "change liquidity's rules to skip mornings", "switch off liquidity on fridays", "what's working for liquidity today",
+            "liquidity backtest patterns", "where does hero lose", "what's working for solo", "what is a liquidity pattern", "why did liquidity lose today",
+            "nifty patterns", "what's working", "where do i lose", "liquidity patterns kar do"))
+            assertEquals(null, LiquidityInsight.asked(s), "$s: ${audit.feature(s)}")
+        // Said with a second question: each its own.
+        assertTrue(audit.feature("what's working for liquidity and what is my pnl") != "LiquidityInsight")
     }
 
     // ---- TomorrowPlan: the next session prepared, never the questions that already had their own answers ----

@@ -166,6 +166,8 @@ object DailyReports {
         com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }), from = null, kind = com.optionslab.ira.TodayNotes.Category.PLANS)
         // Saturday: the week's report card comes with the morning (not left to the hourly study worker).
         runCatching { com.optionslab.app.ira.IraStudy.reportCardIfDue() }
+        // Saturday: Liquidity 15+5's weekly patterns too, when enough paper trades closed since the last look (words only).
+        runCatching { com.optionslab.app.ira.IraLiquidityInsight.watch() }
         return title to lines
     }
 
