@@ -137,6 +137,7 @@ object Background {
         clearAlerts()
         clearCards()
         com.optionslab.app.widget.OpenWidget.resetForTest()
+        com.optionslab.app.widget.IraWidget.resetForTest()
     }
 
     fun clearChartCache() {

@@ -6,13 +6,19 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
+import com.optionslab.app.BuildConfig
 import com.optionslab.app.MainActivity
 import com.optionslab.app.R
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Market
+import com.optionslab.app.data.OrbArms
 import com.optionslab.app.security.SecurePrefs
+import com.optionslab.engine.orb.LiquidityRules
+import com.optionslab.ira.LiquidityMap
+import com.optionslab.ira.WidgetLiquidity
 import java.util.Locale
 
 /**
@@ -20,9 +26,27 @@ import java.util.Locale
  * The account P&L appears only if the owner turned it on (More → Security),
  * because a home screen is seen by anyone holding the unlocked phone. Tapping
  * it opens the app, which still asks for the PIN or fingerprint.
+ *
+ * Liquidity 15+5 (not in IraGoldAlgo) has a row of its own ([WidgetLiquidity]): its state and lots, its open position or
+ * today's paper result, and - where the widget is tall enough - the contract's premium or the next trigger. Its rupee
+ * figures follow the same switch as the account P&L. Read from the arm's in-memory book with short waits on its lock
+ * ([refreshLiquidity]) on the widget's own updates (no timer, no network); tapping the row opens the Strategies card.
+ * Nothing on it arms, places or closes anything.
  */
 class IraWidget : AppWidgetProvider() {
-    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = render(context, manager, ids)
+    override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        render(context, manager, ids)
+        val pending = runCatching { goAsync() }.getOrNull()
+        refreshLiquidity(context, ids) { runCatching { pending?.finish() } }
+    }
+
+    /** Resized: the Liquidity row's second line shows only where it fits. */
+    override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle?) {
+        runCatching {
+            val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
+            if (ids.isNotEmpty()) render(context, appWidgetManager, ids)
+        }
+    }
 
     companion object {
         private const val K_NIFTY = "w.nifty"
@@ -34,6 +58,24 @@ class IraWidget : AppWidgetProvider() {
          * fields were an estimate) - another day's is never shown ([com.optionslab.ira.ExactCharges.decodeDay]).
          */
         private const val K_CHG = "w.chg"
+
+        /** Liquidity 15+5 as last read for the row ([refreshLiquidity]), or null: not read yet (or unreadable) - no row. */
+        @Volatile private var liquidity: WidgetLiquidity.Facts? = null
+        /** When the arm's book was last read for the row (ms): at most every [LIQ_EVERY_MS], however often the widget redraws. */
+        @Volatile private var liquidityAt = 0L
+        private const val LIQ_EVERY_MS = 30_000L
+        private val liquidityBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+        /** The Liquidity read, off the caller's thread (it waits on the arms' lock), one at a time. */
+        private val liquidityWorker = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "ira-widget").apply { isDaemon = true } }
+        /** Tests: the read on the caller's thread, every time ([liquidityFake], when set, in place of the arm's book). */
+        @Volatile internal var inlineForTest = false
+        @Volatile internal var liquidityFake: WidgetLiquidity.Facts? = null
+
+        /** Tests share this process: back to a fresh start. */
+        internal fun resetForTest() {
+            runCatching { liquidityWorker.submit(Runnable {}).get(5, java.util.concurrent.TimeUnit.SECONDS) }
+            liquidity = null; liquidityAt = 0L; liquidityBusy.set(false); inlineForTest = false; liquidityFake = null
+        }
 
         /** The account P&L last published (the live watch refreshes it every minute), or null. */
         fun lastPnl(): Double? = pnlNow()
@@ -101,8 +143,90 @@ class IraWidget : AppWidgetProvider() {
             if (toVault != null) SecurePrefs.putAll(toVault)
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
-            if (ids.isNotEmpty()) render(context, mgr, ids)
+            if (ids.isNotEmpty()) { render(context, mgr, ids); refreshLiquidity(context, ids) }
         }
+
+        /**
+         * Liquidity 15+5's row, read again on the widget's own update path (a publish, the launcher's update): at most every
+         * [LIQ_EVERY_MS], off the caller's thread, one read at a time, and redrawn only when the row changed. Never in
+         * IraGoldAlgo; [done] always runs (a receiver's goAsync finish).
+         */
+        private fun refreshLiquidity(context: Context, ids: IntArray, done: (() -> Unit)? = null) {
+            if (BuildConfig.GOLD || ids.isEmpty()) { done?.invoke(); return }
+            val app = context.applicationContext ?: context
+            val work = {
+                val was = liquidity
+                val read = liquidityFake ?: runCatching { kotlinx.coroutines.runBlocking { readLiquidity() } }.getOrNull()
+                // A busy lock or a failed read keeps what was shown (nothing shown before: no row).
+                if (read != null) {
+                    liquidity = read
+                    if (was == null || WidgetLiquidity.row(was, true) != WidgetLiquidity.row(read, true)) {
+                        val mgr = AppWidgetManager.getInstance(app)
+                        val placed = mgr.getAppWidgetIds(ComponentName(app, IraWidget::class.java))
+                        if (placed.isNotEmpty()) render(app, mgr, placed)
+                    }
+                }
+            }
+            if (inlineForTest) { runCatching { work() }; done?.invoke(); return }
+            val t = System.currentTimeMillis()
+            if (t - liquidityAt < LIQ_EVERY_MS || !liquidityBusy.compareAndSet(false, true)) { done?.invoke(); return }
+            liquidityAt = t
+            val queued = runCatching {
+                liquidityWorker.execute { try { runCatching { work() } } finally { liquidityBusy.set(false); done?.invoke() } }
+            }.isSuccess
+            if (!queued) { liquidityBusy.set(false); done?.invoke() }
+        }
+
+        /**
+         * Liquidity 15+5 now, from the arm's in-memory book only - each read a short wait on its lock, nothing fetched: its
+         * books' switches and today's positions ([OrbArms.liquidityDay]), its lots, the day's stop, the open position's mark
+         * and index ([OrbArms.liquidityOpenNow]), and, flat and armed, each armed book's levels from the minutes the arm
+         * itself read this minute ([OrbArms.liquidityMinutesKept]; none kept: no next trigger). Null when its book could
+         * not be read in time.
+         */
+        private suspend fun readLiquidity(): WidgetLiquidity.Facts? {
+            val now = Market.now().toLocalDateTime()
+            val day = now.toLocalDate()
+            val held = kotlinx.coroutines.withTimeoutOrNull(3_000) { OrbArms.liquidityDay(day) } ?: return null
+            val books = held.first
+            val positions = held.second
+            val lots = runCatching { kotlinx.coroutines.withTimeoutOrNull(2_000) { OrbArms.liquidityLots() } }.getOrNull()
+            val dayStop = runCatching { kotlinx.coroutines.withTimeoutOrNull(2_000) { com.optionslab.app.data.Strategies.stoppedWhy() } }.getOrNull()
+            val stopped = dayStop != null ||
+                books.any { com.optionslab.ira.LiquidityWhyNot.kind(it.status) == com.optionslab.ira.LiquidityWhyNot.Kind.STOPPED }
+            val state = when {
+                books.none { it.armed } -> WidgetLiquidity.State.OFF
+                stopped -> WidgetLiquidity.State.STOPPED
+                else -> WidgetLiquidity.State.ARMED
+            }
+            val paper = positions.filter { !it.live }
+            val closed = paper.filter { !it.open }
+            val net: Double? = if (closed.isEmpty()) null else closed.sumOf { (it.grossPnl ?: 0.0) - it.charges }
+            val pos = positions.lastOrNull { it.open }
+            var open: WidgetLiquidity.Open? = null
+            if (pos != null) {
+                val src = LiquidityRules.RENAMED[pos.arm] ?: pos.arm
+                val und = LiquidityRules.BOOKS.firstOrNull { it.source == src }?.let { LiquidityRules.underlyingOf(it) }
+                if (und != null) {
+                    val read = runCatching { kotlinx.coroutines.withTimeoutOrNull(2_000) { OrbArms.liquidityOpenNow(pos.arm, pos.symbol) } }.getOrNull()
+                    open = WidgetLiquidity.Open(und, pos.right, pos.symbol, pos.live, pos.qty, pos.entry, read?.mark, pos.level, pos.target,
+                        read?.index, read?.indexAt)
+                }
+            }
+            val reads: List<LiquidityMap.Read> = if (open != null || state != WidgetLiquidity.State.ARMED) emptyList() else runCatching {
+                val on = books.filter { it.armed }.map { LiquidityRules.RENAMED[it.book] ?: it.book }.toSet()
+                LiquidityRules.BOOKS.filter { it.source in on }.mapNotNull { arm ->
+                    val u = LiquidityRules.underlyingOf(arm)
+                    OrbArms.liquidityMinutesKept(u, now)?.let { LiquidityMap.read(it, u, LiquidityRules.minutesOf(arm), now) }
+                }
+            }.getOrDefault(emptyList())
+            return WidgetLiquidity.Facts(now, state, lots, paper.size, net, open, reads)
+        }
+
+        /** The smallest placed widget's height in dp (0: the launcher did not say). */
+        private fun heightDp(manager: AppWidgetManager, ids: IntArray): Int = ids.minOfOrNull { id ->
+            runCatching { manager.getAppWidgetOptions(id)?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0) ?: 0 }.getOrDefault(0)
+        } ?: 0
 
         /**
          * Today's Zerodha charges: estimated from today's trades (the app's account read has them), or - [exact] - Zerodha's
@@ -154,12 +278,34 @@ class IraWidget : AppWidgetProvider() {
             val chargesLine = if (showPnl && pnl != null) chargesToday()?.let { com.optionslab.ira.PnlCharges.line(it.value, it.estimate) } else null
             if (chargesLine == null) v.setViewVisibility(R.id.w_charges, View.GONE)
             else { v.setViewVisibility(R.id.w_charges, View.VISIBLE); v.setTextViewText(R.id.w_charges, chargesLine) }
+            liquidityRow(context, manager, ids, v, showPnl)
             val at = textNow(K_AT)
             v.setTextViewText(R.id.w_status, (if (Market.isOpen()) "Market open" else "Market shut") + (at?.let { " · $it IST" } ?: ""))
             val open = PendingIntent.getActivity(context, 9, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "almanac").putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             v.setOnClickPendingIntent(R.id.w_root, open)
             manager.updateAppWidget(ids, v)
+        }
+
+        /** Liquidity 15+5's row: none in IraGoldAlgo or before its book was read; its rupee figures only with [figures]. */
+        private fun liquidityRow(context: Context, manager: AppWidgetManager, ids: IntArray, v: RemoteViews, figures: Boolean) {
+            val f = liquidity
+            val row = if (BuildConfig.GOLD || f == null) null else runCatching { WidgetLiquidity.row(f, figures) }.getOrNull()
+            if (row == null) { v.setViewVisibility(R.id.w_liq_box, View.GONE); return }
+            v.setViewVisibility(R.id.w_liq_box, View.VISIBLE)
+            v.setTextViewText(R.id.w_liq, row.line)
+            v.setTextColor(R.id.w_liq, context.getColor(when (row.tone) {
+                WidgetLiquidity.Tone.GAIN -> R.color.widget_gain
+                WidgetLiquidity.Tone.LOSS -> R.color.widget_loss
+                WidgetLiquidity.Tone.PLAIN -> R.color.widget_ink
+            }))
+            val detail = row.detail?.takeIf { WidgetLiquidity.detailFits(heightDp(manager, ids)) }
+            if (detail == null) v.setViewVisibility(R.id.w_liq2, View.GONE)
+            else { v.setViewVisibility(R.id.w_liq2, View.VISIBLE); v.setTextViewText(R.id.w_liq2, detail) }
+            // Its own tap: the Strategies card (the deep link Liquidity's notices use), never an action.
+            val strategies = PendingIntent.getActivity(context, 10, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "strategy")
+                .putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            v.setOnClickPendingIntent(R.id.w_liq_box, strategies)
         }
     }
 }

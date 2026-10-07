@@ -8,6 +8,7 @@ import com.optionslab.app.data.AppSettings
 import com.optionslab.app.testing.Background
 import com.optionslab.app.testing.Background.WED
 import com.optionslab.app.testing.RobolectricTest
+import com.optionslab.ira.WidgetLiquidity
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,6 +31,7 @@ class IraWidgetTest : RobolectricTest() {
     @Before fun up() {
         Background.calendar(WED)
         Background.at(WED, 11, 0)
+        IraWidget.inlineForTest = true
         id = widgets.createWidget(IraWidget::class.java, R.layout.widget_iraalgo)
     }
 
@@ -113,5 +115,71 @@ class IraWidgetTest : RobolectricTest() {
         assertTrue(other.getViewFor(id).findViewById<TextView>(R.id.w_nifty).text.contains("24,900.00"))
         IraWidget().onUpdate(context, AppWidgetManager.getInstance(context), intArrayOf(id))
         assertTrue(text(R.id.w_nifty).contains("24,900.00"))
+    }
+
+    // ---- Liquidity 15+5's row ------------------------------------------------------------------------------------
+
+    private fun liq() = view().findViewById<TextView>(R.id.w_liq)
+    private fun liqBox() = view().findViewById<View>(R.id.w_liq_box)
+    private fun liqDetail() = view().findViewById<TextView>(R.id.w_liq2)
+    private fun now() = com.optionslab.app.data.Market.now().toLocalDateTime()
+    private val call get() = WidgetLiquidity.Open("BANKNIFTY", "CE", "BANKNIFTY25OCT54000CE", live = false, qty = 70, entry = 120.0, ltp = 140.0,
+        level = 54_000.0, target = 54_200.0, index = 54_120.0, indexAt = now())
+
+    @Test fun theLiquidityRowSaysTheArmAndHidesRupeesUnlessTheOwnerShowsThem() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        IraWidget.liquidityFake = WidgetLiquidity.Facts(now(), WidgetLiquidity.State.ARMED, lots = 2, paperTrades = 3, paperNet = 1_240.0)
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals(View.VISIBLE, liqBox().visibility)
+        assertEquals("the net is a rupee figure: hidden with the P&L", "Liquidity: armed 2 lots · 3 paper trades", liq().text.toString())
+        assertEquals(context.getColor(R.color.widget_ink), liq().currentTextColor)
+
+        AppSettings.save(AppSettings.load().copy(widgetPnl = true))
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals("Liquidity: armed 2 lots · 3 paper trades +₹1,240 net", liq().text.toString())
+        assertEquals(context.getColor(R.color.widget_gain), liq().currentTextColor)
+        assertTrue("the index lines are unchanged", text(R.id.w_nifty).contains("24,800.00"))
+
+        IraWidget.liquidityFake = WidgetLiquidity.Facts(now(), WidgetLiquidity.State.STOPPED, lots = 2)
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals("Liquidity: stopped for today", liq().text.toString())
+        IraWidget.liquidityFake = WidgetLiquidity.Facts(now(), WidgetLiquidity.State.OFF, lots = 2)
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals("Liquidity: off", liq().text.toString())
+    }
+
+    @Test fun anOpenLiquidityPositionAndItsSecondLineWhereItFits() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        AppSettings.save(AppSettings.load().copy(widgetPnl = true))
+        IraWidget.liquidityFake = WidgetLiquidity.Facts(now(), WidgetLiquidity.State.ARMED, lots = 1, paperTrades = 1, open = call)
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals("Liquidity: CE +₹1,400 · stop 150 · target 80 pts", liq().text.toString())
+        assertEquals("the launcher did not say its height: one line", View.GONE, liqDetail().visibility)
+
+        AppWidgetManager.getInstance(context).updateAppWidgetOptions(id, android.os.Bundle().apply {
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, WidgetLiquidity.DETAIL_MIN_DP + 20)
+        })
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals(View.VISIBLE, liqDetail().visibility)
+        assertEquals("BANKNIFTY25OCT54000CE 140.00 vs 120.00 (+16.7%)", liqDetail().text.toString())
+
+        AppSettings.save(AppSettings.load().copy(widgetPnl = false))
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals("Liquidity: CE open · stop 150 · target 80 pts", liq().text.toString())
+        assertTrue(listOf(R.id.w_liq, R.id.w_liq2, R.id.w_nifty, R.id.w_bank, R.id.w_status).none { text(it).contains("₹") })
+    }
+
+    @Test fun theArmsOwnBookIsReadWhenNothingIsFaked() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals(View.VISIBLE, liqBox().visibility)
+        assertTrue(liq().text.toString(), liq().text.startsWith("Liquidity: "))
+    }
+
+    @Test fun noLiquidityRowInTheGoldBuild() {
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.GOLD)
+        IraWidget.liquidityFake = WidgetLiquidity.Facts(now(), WidgetLiquidity.State.ARMED, lots = 2)
+        IraWidget.publish(context, 24_800.0 to 0.01, null, null)
+        assertEquals(View.GONE, liqBox().visibility)
     }
 }
