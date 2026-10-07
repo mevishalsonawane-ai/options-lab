@@ -338,6 +338,10 @@ private fun GoldSettings(model: AppModel) {
     val scope = rememberCoroutineScope()
     var resetAsk by remember { mutableStateOf<Double?>(null) }
     var security by rememberSaveable { mutableStateOf(false) }
+    // Settings search (07 Oct): IraGoldAlgo's own settings only (SettingsIndex's gold entries). A tap opens the row's place -
+    // here, or Security - highlighted; nothing is switched from the list.
+    var query by rememberSaveable { mutableStateOf("") }
+    val found = remember(query) { if (query.isBlank()) emptyList() else settingsFound(query, gold = true, pages = null) }
     if (security) {
         Column(Modifier.fillMaxSize()) {
             Text("‹ Settings", style = Type.label.copy(color = p.brass, fontSize = 15.sp),
@@ -348,29 +352,40 @@ private fun GoldSettings(model: AppModel) {
         return
     }
     Page {
+        item { SettingsSearchField(query) { query = it } }
+        if (query.isNotBlank()) {
+            item { SettingsResults(found, query) { e -> openSetting(e) { pg -> query = ""; if (pg == "security") security = true } } }
+            return@Page
+        }
         item {
-            LedgerCard(title = "Paper") {
-                val sizes = listOf(0.01, 0.05, 0.10, 0.50, 1.0)
-                ParamTokens("Lot size", sizes.map { "%.2f".format(Locale.ENGLISH, it) to (it == b.lots) }) { i -> scope.launch(Dispatchers.IO) { GoldPaper.setLots(sizes[i]) } }
-                val amounts = listOf(300.0, 1_000.0, 5_000.0, 10_000.0)
-                ParamTokens("Start again with", amounts.map { "$%,.0f".format(Locale.ENGLISH, it) to false }) { i -> resetAsk = amounts[i] }
-                resetAsk?.let { amt ->
-                    Note("Reset the paper account to $%,.0f? Its trades and any open trade go.".format(Locale.ENGLISH, amt))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BrassButton("Reset", Modifier.weight(1f), tone = p.oxblood) { scope.launch(Dispatchers.IO) { GoldPaper.reset(amt) }; resetAsk = null }
-                        BrassButton("Cancel", Modifier.weight(1f), tone = p.inkFaint) { resetAsk = null }
+            com.optionslab.app.ui.SettingSpot("gold.paper") {
+                LedgerCard(title = "Paper") {
+                    val sizes = listOf(0.01, 0.05, 0.10, 0.50, 1.0)
+                    ParamTokens("Lot size", sizes.map { "%.2f".format(Locale.ENGLISH, it) to (it == b.lots) }) { i -> scope.launch(Dispatchers.IO) { GoldPaper.setLots(sizes[i]) } }
+                    val amounts = listOf(300.0, 1_000.0, 5_000.0, 10_000.0)
+                    ParamTokens("Start again with", amounts.map { "$%,.0f".format(Locale.ENGLISH, it) to false }) { i -> resetAsk = amounts[i] }
+                    resetAsk?.let { amt ->
+                        Note("Reset the paper account to $%,.0f? Its trades and any open trade go.".format(Locale.ENGLISH, amt))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            BrassButton("Reset", Modifier.weight(1f), tone = p.oxblood) { scope.launch(Dispatchers.IO) { GoldPaper.reset(amt) }; resetAsk = null }
+                            BrassButton("Cancel", Modifier.weight(1f), tone = p.inkFaint) { resetAsk = null }
+                        }
                     }
+                    Note("Paper only: IraGoldAlgo never sends an order. Act on its notifications in your own broker app if you choose to.")
                 }
-                Note("Paper only: IraGoldAlgo never sends an order. Act on its notifications in your own broker app if you choose to.")
             }
         }
         item {
-            LedgerCard(title = "Running in the background") { GoldBackgroundCheck(compact = false) }
+            com.optionslab.app.ui.SettingSpot("gold.background") {
+                LedgerCard(title = "Running in the background") { GoldBackgroundCheck(compact = false) }
+            }
         }
         item {
-            LedgerCard(title = "Look") {
-                val themes = listOf("system" to "Phone", "light" to "Light", "dark" to "Dark")
-                ParamTokens("Theme", themes.map { it.second to (it.first == s.theme) }) { i -> model.update { it.copy(theme = themes[i].first) } }
+            com.optionslab.app.ui.SettingSpot("gold.look") {
+                LedgerCard(title = "Look") {
+                    val themes = listOf("system" to "Phone", "light" to "Light", "dark" to "Dark")
+                    ParamTokens("Theme", themes.map { it.second to (it.first == s.theme) }) { i -> model.update { it.copy(theme = themes[i].first) } }
+                }
             }
         }
         item {
@@ -380,17 +395,19 @@ private fun GoldSettings(model: AppModel) {
             }
         }
         item {
-            LedgerCard(title = "Help") {
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                com.optionslab.app.ui.components.TextButton({
-                    scope.launch(Dispatchers.Main) {
-                        val text = withContext(Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
-                        ctx.getSystemService(android.content.ClipboardManager::class.java)
-                            ?.setPrimaryClip(android.content.ClipData.newPlainText("IraGoldAlgo diagnostics", text))
-                        com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
-                    }
-                }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
-                Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
+            com.optionslab.app.ui.SettingSpot("gold.help") {
+                LedgerCard(title = "Help") {
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    com.optionslab.app.ui.components.TextButton({
+                        scope.launch(Dispatchers.Main) {
+                            val text = withContext(Dispatchers.IO) { com.optionslab.app.data.Diag.report() }
+                            ctx.getSystemService(android.content.ClipboardManager::class.java)
+                                ?.setPrimaryClip(android.content.ClipData.newPlainText("IraGoldAlgo diagnostics", text))
+                            com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
+                        }
+                    }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
+                    Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
+                }
             }
         }
     }

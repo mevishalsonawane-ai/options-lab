@@ -139,6 +139,7 @@ class CollisionTest {
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
+        "SettingWhere" to { q -> SettingWhere.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "WhatsNew" to { q -> WhatsNew.asked(q) },
         "MarketRecord" to { q -> MarketRecord.asked(q) },
@@ -947,6 +948,22 @@ class CollisionTest {
         "your notes today" to "TodayNotes", "notes for today" to "TodayNotes", "show me your notes from today" to "TodayNotes",
         "aaj kya bataya" to "TodayNotes", "aaj kya bataya tumne" to "TodayNotes", "aaj tumne kya bataya" to "TodayNotes", "tumne aaj kya bataya" to "TodayNotes",
         "aaj kya kya bataya" to "TodayNotes", "aaj ke notes" to "TodayNotes", "aaj ke notes dikhao" to "TodayNotes",
+        // ---- SettingWhere: where a setting is, from the Settings search's catalogue (a reply only; nothing is switched) ----
+        "where is the quiet hours setting" to "SettingWhere", "where's the mute switch" to "SettingWhere", "where do i find the backup option" to "SettingWhere",
+        "where is the backup setting" to "SettingWhere", "where can i find the fingerprint setting" to "SettingWhere", "where is the pin setting" to "SettingWhere",
+        "where is the setting for quiet hours" to "SettingWhere", "where is quiet hours in settings" to "SettingWhere", "where is the mute setting" to "SettingWhere",
+        "where are the alert settings" to "SettingWhere", "where is the liquidity setting" to "SettingWhere", "where is the recorder setting" to "SettingWhere",
+        "where is the news setting" to "SettingWhere", "where is the theme setting" to "SettingWhere", "where is the voice setting" to "SettingWhere",
+        "how do i turn off quiet hours" to "SettingWhere", "how do i turn off market alerts" to "SettingWhere", "how do i turn off liquidity alerts" to "SettingWhere",
+        "how do i turn off liquidity" to "SettingWhere", "how do i turn off solo" to "SettingWhere", "how do i switch off solo" to "SettingWhere",
+        "how do i turn on fingerprint" to "SettingWhere", "how do i change my pin" to "SettingWhere", "how to turn off notifications" to "SettingWhere",
+        "how do i stop jarvis talking" to "SettingWhere", "how do i mute jarvis" to "SettingWhere", "how to mute jarvis" to "SettingWhere",
+        "how do i turn off the widget" to "SettingWhere", "how can i disable screenshots" to "SettingWhere", "how do i turn off the guard" to "SettingWhere",
+        "how do i turn quiet hours off" to "SettingWhere", "how do i change the theme" to "SettingWhere", "how do i turn off the recorder" to "SettingWhere",
+        "how do i turn off the opening read" to "SettingWhere", "how do i turn off news alerts" to "SettingWhere", "how do i turn off hero" to "SettingWhere",
+        "liquidity setting kahan hai" to "SettingWhere", "quiet hours setting kahan hai" to "SettingWhere", "backup ki setting kahan hai" to "SettingWhere",
+        "notification setting kahan hai" to "SettingWhere", "fingerprint ki setting kahan hai" to "SettingWhere", "solo kaise band karu" to "SettingWhere",
+        "market alerts kaise off karte hai" to "SettingWhere", "jarvis where is the backup setting" to "SettingWhere",
         // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, from its own records, and what it waits for ----
         "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot", "why didn't liquidity trade today" to "LiquidityWhyNot",
         "why did liquidity not trade today" to "LiquidityWhyNot", "why hasn't liquidity traded" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
@@ -1519,7 +1536,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3488,5 +3505,37 @@ class CollisionTest {
         assertEquals("Solo", audit.feature("how is solo doing"))
         assertEquals("Solo", audit.feature("solo forward test"))
         assertEquals("ForwardWatch", audit.feature("live vs backtest"))
+    }
+
+    // ---- SettingWhere: where / how-to questions about a setting; the commands and the other questions keep their routes ----
+
+    @Test fun whereASettingIsLeavesTheCommandsAndTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("where is the quiet hours setting", "how do i turn off market alerts", "backup ki setting kahan hai", "how do i stop jarvis talking",
+            "how do i turn off liquidity", "where's the mute switch", "how do i change my pin")) {
+            assertEquals("SettingWhere", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // The commands said as commands: as before (they act elsewhere, each with its own confirm).
+        for (s in listOf("turn off liquidity", "switch off solo", "stop jarvis talking", "mute", "jarvis mute", "unmute", "kill switch on karo")) {
+            assertEquals("Act", audit.feature(s), s)
+            assertEquals(null, SettingWhere.asked(s), s)
+        }
+        // The kill switch asked about keeps the account's own answer (its state and its place).
+        assertEquals("Account:RISK+HOWTO", audit.feature("where is the kill switch"))
+        assertTrue(audit.feature("how do i turn off the kill switch") != "SettingWhere")
+        // The battery setting asked is the order watch's own read (WatchAsk, earlier in the hub).
+        assertEquals("WatchAsk", audit.feature("battery setting kya hai"))
+        assertEquals("WatchAsk", audit.feature("what is my battery setting"))
+        assertEquals("WatchAsk", audit.feature("battery setting kahan hai"))
+        // An arm, a trade, a position, the market, a GIFT Nifty read: not a setting.
+        assertEquals("Market", audit.feature("where is nifty"))
+        for (s in listOf("how do i turn off orb", "how do i stop orb", "where is the strategies switch", "how do i close my position",
+            "how do i turn off my position", "how do i buy a call", "where is my stop loss", "where is the settings", "how do i turn off cricket",
+            "where is the gift nifty setting", "is the kill switch on", "what are my settings", "is quiet hours on"))
+            assertTrue(audit.feature(s) != "SettingWhere", "$s: ${audit.feature(s)}")
+        // Two questions: each its own.
+        assertEquals("SettingWhere & Account:PNL", audit.feature("where is the backup setting and what is my pnl"))
     }
 }

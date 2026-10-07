@@ -739,30 +739,34 @@ fun BrokerPage(
             }
         } }
         item {
-            LedgerCard(title = "Mode") {
-                ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
-                    if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
-                    else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
+            com.optionslab.app.ui.SettingSpot("broker.mode") {
+                LedgerCard(title = "Mode") {
+                    ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
+                        if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
+                        else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
+                    }
+                    Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
+                    else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
                 }
-                Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
-                else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
             }
         }
         item {
-            LedgerCard(title = "Real orders") {
-                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
-                    if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
-                ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
-                    model.update { it.copy(prepareRealOrder = on) }
+            com.optionslab.app.ui.SettingSpot("broker.orders") {
+                LedgerCard(title = "Real orders") {
+                    Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
+                        if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
+                    ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
+                        model.update { it.copy(prepareRealOrder = on) }
+                    }
+                    ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
+                        if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
+                    }
+                    ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
+                    if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
+                    // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.
+                    LedgerLine("Sent today", "${Broker.sentToday()}" + if (s.guardMaxTrades > 0) " of ${s.guardMaxTrades}" else "")
+                    Note("Order limits (trades per day, lots, order value) are set in More → Bot → Bot settings and apply to paper and live alike.")
                 }
-                ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
-                    if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
-                }
-                ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
-                if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
-                // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.
-                LedgerLine("Sent today", "${Broker.sentToday()}" + if (s.guardMaxTrades > 0) " of ${s.guardMaxTrades}" else "")
-                Note("Order limits (trades per day, lots, order value) are set in More → Bot → Bot settings and apply to paper and live alike.")
             }
         }
         if (b.loggedIn) {

@@ -1670,7 +1670,7 @@ object IraHub {
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
-                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
+                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -3534,10 +3534,24 @@ object IraHub {
 
     /**
      * [ask]'s question branches on what to ask, how fresh the data is, what the phone has no data for and Jarvis's own
-     * reasons: Tour, WhatsNew, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
+     * reasons (and where a setting is): SettingWhere, Tour, WhatsNew, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfJarvis(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
+        // "Where is the quiet hours setting?", "how do I turn off market alerts?", "backup ki setting kahan hai"
+        // ([com.optionslab.ira.SettingWhere], the Settings search's catalogue [com.optionslab.ira.SettingsIndex]): the setting's
+        // path and that the search at the top of Settings opens it, highlighted. A reply only: nothing is switched, set or
+        // opened, and a guarded switch keeps its PIN, fingerprint or confirmation. No account in it, so the same on a locked
+        // phone. "Turn off liquidity", "switch off solo", "stop jarvis talking" and "mute" are commands and never reach here.
+        // (IraGoldAlgo: its own Settings' entries.)
+        val settingAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SettingWhere.asked(q) }.getOrNull() else null
+        if (settingAsk != null) {
+            val said = runCatching { com.optionslab.ira.SettingWhere.answer(settingAsk, com.optionslab.app.BuildConfig.GOLD) }
+                .getOrDefault("The search at the top of Settings finds every setting by its name, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
         // "What can I ask you?", "what should I ask now?", "main kya pooch sakta hoon" ([com.optionslab.ira.Tour]): five questions
         // worth asking for the part of the day (before the open, market hours, after the close, a day with no session) - two
         // fixed, three turning with the date. It only names questions (each one Jarvis answers as said), holds nothing of the

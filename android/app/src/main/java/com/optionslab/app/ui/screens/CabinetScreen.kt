@@ -20,6 +20,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -123,11 +128,21 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
     }
 }
 
+/** The pages this build's Settings shows (the drawers' keys): the search lists only settings on them. */
+private val SHOWN_PAGES: Set<String> by lazy { GROUPS.flatMap { (_, items) -> items.map { it.key } }.toSet() }
+
 @Composable
 private fun Drawers(onPage: (String) -> Unit) {
     val p = LocalPalette.current
+    // Settings search (07 Oct): typing lists the matching settings across every page; a tap opens that page with the row
+    // highlighted. Navigation only: nothing is switched from the list.
+    var query by rememberSaveable { mutableStateOf("") }
+    val found = remember(query) { if (query.isBlank()) emptyList() else settingsFound(query, gold = false, pages = SHOWN_PAGES) }
     Page {
-        GROUPS.forEach { (group, items) ->
+        item { SettingsSearchField(query) { query = it } }
+        if (query.isNotBlank()) {
+            item { SettingsResults(found, query) { e -> openSetting(e, onPage) } }
+        } else GROUPS.forEach { (group, items) ->
             item {
                 Text(group, style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp), modifier = Modifier.padding(start = 4.dp, top = 6.dp))
             }

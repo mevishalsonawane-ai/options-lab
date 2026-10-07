@@ -108,12 +108,13 @@ object AskGuide {
             ex("what if nifty falls 1%", "Scenarios"),
             ex("make the case for trading now", "TradeCase"),
         )),
-        Group("app", "App", "Jarvis himself: what's new, how fresh the data is, a word explained", listOf(
+        Group("app", "App", "Jarvis himself: what's new, how fresh the data is, where a setting is, a word explained", listOf(
             ex("what can you do", "Help", gold = true),
             ex("what can i ask you", "Tour"),
             ex("main kya pooch sakta hoon", "Tour"),
             ex("what's new in the app", "WhatsNew"),
             ex("what did you tell me today", "TodayNotes"),
+            ex("where is the quiet hours setting", "SettingWhere"),
             ex("is your data fresh", "DataAge"),
             ex("what is theta", "Glossary", gold = true),
             ex("what have you learned this week", "Learnings"),

@@ -107,49 +107,55 @@ fun AlarmsPage(model: AppModel) {
     Page {
         item { PageTitle("Alarms", "Checked every minute by the market watch, and whenever the Home screen is open") }
         item {
-            LedgerCard(title = "Set an alarm") {
-                val idx = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")
-                ParamTokens("On", idx.map { it to (it == symbol) } + ("Any instrument" to (symbol !in idx))) { i ->
-                    symbol = if (i < idx.size) idx[i] else "NSE:"
-                }
-                if (symbol !in idx) {
-                    OutlinedTextField(symbol, { symbol = it.uppercase().filter { c -> c.isLetterOrDigit() || c in ":-&_" }.take(40) },
-                        label = { Text("EXCHANGE:SYMBOL, e.g. NSE:INFY or NFO:NIFTY26SEP24500PE") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Note("Priced from Zerodha, so it rings only in LIVE mode while you are logged in.")
-                }
-                ParamTokens("When it", listOf("falls below" to !above, "rises above" to above)) { above = it == 1 }
-                quotes[symbol]?.let { Note("Now ${num(it.last, 2)}") }
-                OutlinedTextField(level, { level = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Level") }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(note, { note = it.take(80) }, label = { Text("Note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(10.dp))
-                val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || ALARM_SYMBOL.matches(symbol)
-                BrassButton("Set alarm", Modifier.fillMaxWidth(), enabled = level.toDoubleOrNull() != null && symbolOk) {
-                    model.saveAlarm(PriceAlarm(System.currentTimeMillis(), symbol, above, level.toDouble(), note = note.trim()))
-                    level = ""; note = ""
-                    model.say("Alarm set. It rings once, then rests 30 minutes.")
+            com.optionslab.app.ui.SettingSpot("alarms.set") {
+                LedgerCard(title = "Set an alarm") {
+                    val idx = listOf("NIFTY", "BANKNIFTY", "INDIAVIX")
+                    ParamTokens("On", idx.map { it to (it == symbol) } + ("Any instrument" to (symbol !in idx))) { i ->
+                        symbol = if (i < idx.size) idx[i] else "NSE:"
+                    }
+                    if (symbol !in idx) {
+                        OutlinedTextField(symbol, { symbol = it.uppercase().filter { c -> c.isLetterOrDigit() || c in ":-&_" }.take(40) },
+                            label = { Text("EXCHANGE:SYMBOL, e.g. NSE:INFY or NFO:NIFTY26SEP24500PE") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Note("Priced from Zerodha, so it rings only in LIVE mode while you are logged in.")
+                    }
+                    ParamTokens("When it", listOf("falls below" to !above, "rises above" to above)) { above = it == 1 }
+                    quotes[symbol]?.let { Note("Now ${num(it.last, 2)}") }
+                    OutlinedTextField(level, { level = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("Level") }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(note, { note = it.take(80) }, label = { Text("Note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(10.dp))
+                    val symbolOk = symbol in listOf("NIFTY", "BANKNIFTY", "INDIAVIX") || ALARM_SYMBOL.matches(symbol)
+                    BrassButton("Set alarm", Modifier.fillMaxWidth(), enabled = level.toDoubleOrNull() != null && symbolOk) {
+                        model.saveAlarm(PriceAlarm(System.currentTimeMillis(), symbol, above, level.toDouble(), note = note.trim()))
+                        level = ""; note = ""
+                        model.say("Alarm set. It rings once, then rests 30 minutes.")
+                    }
                 }
             }
         }
         item {
-            LedgerCard(title = "Standing alarms") {
-                if (alarms.isEmpty()) Note("None yet.")
-                alarms.forEachIndexed { i, a ->
-                    if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
-                    ToggleRow(a.describe(), a.note.ifBlank { null } ?: if (a.firedAtMillis > 0) "last rang ${java.time.Instant.ofEpochMilli(a.firedAtMillis).atZone(com.optionslab.engine.IST).format(DateTimeFormatter.ofPattern("d MMM HH:mm"))}" else null,
-                        a.enabled) { on -> model.saveAlarm(a.copy(enabled = on)) }
-                    BrassButton("Remove", tone = p.inkFaint) { model.removeAlarm(a.id) }
+            com.optionslab.app.ui.SettingSpot("alarms.standing") {
+                LedgerCard(title = "Standing alarms") {
+                    if (alarms.isEmpty()) Note("None yet.")
+                    alarms.forEachIndexed { i, a ->
+                        if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
+                        ToggleRow(a.describe(), a.note.ifBlank { null } ?: if (a.firedAtMillis > 0) "last rang ${java.time.Instant.ofEpochMilli(a.firedAtMillis).atZone(com.optionslab.engine.IST).format(DateTimeFormatter.ofPattern("d MMM HH:mm"))}" else null,
+                            a.enabled) { on -> model.saveAlarm(a.copy(enabled = on)) }
+                        BrassButton("Remove", tone = p.inkFaint) { model.removeAlarm(a.id) }
+                    }
                 }
             }
         }
         item {
             val st by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-            LedgerCard(title = "Account P&L alerts") {
-                val losses = listOf(0.0, 2_000.0, 5_000.0, 10_000.0, 25_000.0)
-                ParamTokens("When today's loss reaches", losses.map { (if (it == 0.0) "off" else "-" + rs(it)) to (it == st.pnlLossAlert) }) { i -> model.update { it.copy(pnlLossAlert = losses[i]) } }
-                val gains = listOf(0.0, 5_000.0, 10_000.0, 25_000.0, 50_000.0)
-                ParamTokens("When today's profit reaches", gains.map { (if (it == 0.0) "off" else rs(it)) to (it == st.pnlProfitAlert) }) { i -> model.update { it.copy(pnlProfitAlert = gains[i]) } }
-                Note("Checked every minute by the market watch from your Zerodha positions (LIVE mode, logged in). Each alert rings once a day.")
+            com.optionslab.app.ui.SettingSpot("alarms.pnl") {
+                LedgerCard(title = "Account P&L alerts") {
+                    val losses = listOf(0.0, 2_000.0, 5_000.0, 10_000.0, 25_000.0)
+                    ParamTokens("When today's loss reaches", losses.map { (if (it == 0.0) "off" else "-" + rs(it)) to (it == st.pnlLossAlert) }) { i -> model.update { it.copy(pnlLossAlert = losses[i]) } }
+                    val gains = listOf(0.0, 5_000.0, 10_000.0, 25_000.0, 50_000.0)
+                    ParamTokens("When today's profit reaches", gains.map { (if (it == 0.0) "off" else rs(it)) to (it == st.pnlProfitAlert) }) { i -> model.update { it.copy(pnlProfitAlert = gains[i]) } }
+                    Note("Checked every minute by the market watch from your Zerodha positions (LIVE mode, logged in). Each alert rings once a day.")
+                }
             }
         }
         item {
@@ -188,30 +194,34 @@ fun DataPage(model: AppModel) {
     Page {
         item { PageTitle("Data & Harvest", "No free source serves expired contracts: a day not collected is gone") }
         item {
-            LedgerCard(title = "The Record") {
-                LedgerLine("Bundled expiry chains", "170 (2023-01-05 .. 2026-04-13)")
-                LedgerLine("Captured on this phone", device?.let { d -> "${d.size}" + (d.lastOrNull()?.let { ", latest $it" } ?: "") } ?: "…")
-                LedgerLine("Stored on device", bytes?.let { "%.1f MB".format(it / 1e6) } ?: "…")
-                ToggleRow("Include this phone's captures", "They extend the record forward - genuinely out of sample", s.includeDeviceSessions) { on ->
-                    model.update { it.copy(includeDeviceSessions = on) }; Store.invalidate()
+            com.optionslab.app.ui.SettingSpot("data.record") {
+                LedgerCard(title = "The Record") {
+                    LedgerLine("Bundled expiry chains", "170 (2023-01-05 .. 2026-04-13)")
+                    LedgerLine("Captured on this phone", device?.let { d -> "${d.size}" + (d.lastOrNull()?.let { ", latest $it" } ?: "") } ?: "…")
+                    LedgerLine("Stored on device", bytes?.let { "%.1f MB".format(it / 1e6) } ?: "…")
+                    ToggleRow("Include this phone's captures", "They extend the record forward - genuinely out of sample", s.includeDeviceSessions) { on ->
+                        model.update { it.copy(includeDeviceSessions = on) }; Store.invalidate()
+                    }
                 }
             }
         }
         item {
-            LedgerCard(title = "The Harvest") {
-                Note("After the close: the instrument master, then every NIFTY and BANKNIFTY option on the nearest three expiries, plus both indices and India VIX, one-minute bars with open interest. On an expiry day the expiring chain is also kept for the backtest.")
-                SecurePrefs.getString("harvest.last")?.let { LedgerLine("Last", it) }
-                if (job.running) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(job.stage, style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
-                    if (job.progress >= 0) InkProgress(job.progress, Modifier.fillMaxWidth().padding(top = 4.dp))
+            com.optionslab.app.ui.SettingSpot("data.harvest") {
+                LedgerCard(title = "The Harvest") {
+                    Note("After the close: the instrument master, then every NIFTY and BANKNIFTY option on the nearest three expiries, plus both indices and India VIX, one-minute bars with open interest. On an expiry day the expiring chain is also kept for the backtest.")
+                    SecurePrefs.getString("harvest.last")?.let { LedgerLine("Last", it) }
+                    if (job.running) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(job.stage, style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
+                        if (job.progress >= 0) InkProgress(job.progress, Modifier.fillMaxWidth().padding(top = 4.dp))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    BrassButton("Harvest now", Modifier.fillMaxWidth(), busy = job.running) { model.startJob(Jobs.Kind.HARVEST) }
                 }
-                Spacer(Modifier.height(10.dp))
-                BrassButton("Harvest now", Modifier.fillMaxWidth(), busy = job.running) { model.startJob(Jobs.Kind.HARVEST) }
             }
         }
         // The market recorder (Boss's 06 Oct approval): its switch, what it keeps, and the export.
-        if (!com.optionslab.app.BuildConfig.GOLD) item { MarketRecorderCard(model) }
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recorder") { MarketRecorderCard(model) } }
         for ((u, rows) in manifests) item {
             LedgerCard(title = "Manifest · $u") {
                 val same = rows.count { it.scope == Manifest.SAME_DAY }
@@ -223,21 +233,23 @@ fun DataPage(model: AppModel) {
             }
         }
         item {
-            LedgerCard(title = "Provenance") {
-                Note("Re-reads every bundled chain and checks it against the recorded row count, strike count and settlement bars. A silently truncated or edited file would otherwise move every result with no trace.")
-                Spacer(Modifier.height(8.dp))
-                BrassButton("Verify the record", Modifier.fillMaxWidth(), busy = prov is Load.Busy) { model.verifyProvenance() }
-                when (val v = prov) {
-                    is Load.Busy -> FullSpinner(v.label, v.progress)
-                    is Load.Failed -> com.optionslab.app.ui.components.AlertOn(v.why)
-                    is Load.Done -> if (v.value.isEmpty()) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Stamp("Intact", p.verdigris); Spacer(Modifier.width(10.dp)); Note("All 170 sessions match their provenance.")
-                    } else v.value.forEach { d -> LedgerLine(d.kind, d.why, p.oxblood) }
-                    Load.Idle -> Unit
+            com.optionslab.app.ui.SettingSpot("data.provenance") {
+                LedgerCard(title = "Provenance") {
+                    Note("Re-reads every bundled chain and checks it against the recorded row count, strike count and settlement bars. A silently truncated or edited file would otherwise move every result with no trace.")
+                    Spacer(Modifier.height(8.dp))
+                    BrassButton("Verify the record", Modifier.fillMaxWidth(), busy = prov is Load.Busy) { model.verifyProvenance() }
+                    when (val v = prov) {
+                        is Load.Busy -> FullSpinner(v.label, v.progress)
+                        is Load.Failed -> com.optionslab.app.ui.components.AlertOn(v.why)
+                        is Load.Done -> if (v.value.isEmpty()) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Stamp("Intact", p.verdigris); Spacer(Modifier.width(10.dp)); Note("All 170 sessions match their provenance.")
+                        } else v.value.forEach { d -> LedgerLine(d.kind, d.why, p.oxblood) }
+                        Load.Idle -> Unit
+                    }
                 }
             }
         }
-        item { BrassButton("Delete this phone's harvested data", Modifier.fillMaxWidth(), tone = p.oxblood, busy = wiping) { if (!wiping) confirmWipe = true } }
+        item { com.optionslab.app.ui.SettingSpot("data.delete") { BrassButton("Delete this phone's harvested data", Modifier.fillMaxWidth(), tone = p.oxblood, busy = wiping) { if (!wiping) confirmWipe = true } } }
     }
     if (confirmWipe) AlertDialog(
         onDismissRequest = { confirmWipe = false }, properties = secure,
@@ -284,30 +296,34 @@ fun SecurityPage(model: AppModel) {
     Page {
         item { PageTitle("Security", "Nothing personal leaves this phone, and nothing is logged") }
         // The Zerodha PIN and IraAlgo's backup are IraAlgo's; the gold build has neither.
-        if (!com.optionslab.app.BuildConfig.GOLD) item { KitePinCard(model) }
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("security.certificate") { KitePinCard(model) } }
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("security.backup") { BackupCard(model, s.wipeOnExhaustion) } }
         item {
-            LedgerCard(title = "Home-screen widget") {
-                ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown; the Open widget shows nothing else without it.", s.widgetPnl) { on ->
-                    model.update { it.copy(widgetPnl = on) }
-                    runCatching { com.optionslab.app.widget.OpenWidget.refresh(context, on) }
+            com.optionslab.app.ui.SettingSpot("security.widget") {
+                LedgerCard(title = "Home-screen widget") {
+                    ToggleRow("Show my P&L on the widget", "Off by default: a home screen is seen by anyone holding the unlocked phone. Index levels are always shown; the Open widget shows nothing else without it.", s.widgetPnl) { on ->
+                        model.update { it.copy(widgetPnl = on) }
+                        runCatching { com.optionslab.app.widget.OpenWidget.refresh(context, on) }
+                    }
                 }
             }
         }
         item {
-            LedgerCard(title = "Device integrity") {
-                findings.forEach { f ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(f.name, style = Type.body.copy(color = p.ink))
-                            Text(f.detail, style = Type.italic.copy(color = p.inkSoft, fontSize = 13.sp))
+            com.optionslab.app.ui.SettingSpot("security.integrity") {
+                LedgerCard(title = "Device integrity") {
+                    findings.forEach { f ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(f.name, style = Type.body.copy(color = p.ink))
+                                Text(f.detail, style = Type.italic.copy(color = p.inkSoft, fontSize = 13.sp))
+                            }
+                            Stamp(f.severity.name, when (f.severity) { Integrity.Severity.OK -> p.verdigris; Integrity.Severity.NOTICE -> p.amber; else -> p.oxblood }, animate = false)
                         }
-                        Stamp(f.severity.name, when (f.severity) { Integrity.Severity.OK -> p.verdigris; Integrity.Severity.NOTICE -> p.amber; else -> p.oxblood }, animate = false)
                     }
-                }
-                BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
-                ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on ->
-                    if (on) model.update { it.copy(refuseCompromised = true) } else guard("Enter your app PIN to let IraAlgo open on a compromised phone.") { model.update { it.copy(refuseCompromised = false) } }
+                    BrassButton("Check again", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.inkSoft) { model.refreshIntegrity() }
+                    ToggleRow("Refuse compromised devices", "Do not open on a rooted, hooked or debugged phone", s.refuseCompromised) { on ->
+                        if (on) model.update { it.copy(refuseCompromised = true) } else guard("Enter your app PIN to let IraAlgo open on a compromised phone.") { model.update { it.copy(refuseCompromised = false) } }
+                    }
                 }
             }
         }
@@ -402,7 +418,7 @@ fun SecurityPage(model: AppModel) {
                 ).forEach { Text("◆  $it", style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(vertical = 3.dp)) }
             }
         }
-        item { BrassButton("Erase everything personal", Modifier.fillMaxWidth(), tone = p.oxblood) { erasing = true } }
+        item { com.optionslab.app.ui.SettingSpot("security.erase") { BrassButton("Erase everything personal", Modifier.fillMaxWidth(), tone = p.oxblood) { erasing = true } } }
     }
     if (changing) {
         var cur by remember { mutableStateOf("") }
@@ -475,47 +491,49 @@ fun SchedulePage(model: AppModel) {
             }
         } }
         item {
-            LedgerCard(title = "The Day") {
-                val rows = listOf(
-                    Triple(Jobs.Kind.REMIND, "Entry reminder 10:55", "Expiry days only"),
-                    Triple(Jobs.Kind.TICKET, "Paper ticket 11:01", "Expiry days: records the ticket for you"),
-                    Triple(Jobs.Kind.SETTLE, "Settle 15:35", "Settles today's open ticket at the official window"),
-                    Triple(Jobs.Kind.HARVEST, "Harvest 15:45", "Then re-runs the health check"),
-                )
-                rows.forEach { (k, title, sub) ->
-                    val on = Jobs.enabled(k, s)
-                    // The switch shows the owner's choice; whether the job can run yet is said beside it. (It showed
-                    // whether the job runs: without Zerodha linked a switched-on job read "off", and tapping it
-                    // changed nothing.)
-                    val chosen = when (k) {
-                        Jobs.Kind.LIVE -> true
-                        Jobs.Kind.REMIND -> s.entryReminder
-                        Jobs.Kind.TICKET -> s.autoTicket
-                        Jobs.Kind.SETTLE -> s.autoSettle
-                        Jobs.Kind.HARVEST -> s.nightlyHarvest
-                    }
-                    val note = when {
-                        on -> "$sub · next ${Jobs.nextRun(k).format(fmt)}"
-                        chosen -> "$sub · runs once Zerodha is linked"
-                        else -> sub
-                    }
-                    ToggleRow(title, note, chosen) { v ->
-                        model.update {
-                            when (k) {
-                                Jobs.Kind.LIVE -> it.copy(liveWatch = v)
-                                Jobs.Kind.REMIND -> it.copy(entryReminder = v)
-                                Jobs.Kind.TICKET -> it.copy(autoTicket = v)
-                                Jobs.Kind.SETTLE -> it.copy(autoSettle = v)
-                                Jobs.Kind.HARVEST -> it.copy(nightlyHarvest = v)
+            com.optionslab.app.ui.SettingSpot("schedule.day") {
+                LedgerCard(title = "The Day") {
+                    val rows = listOf(
+                        Triple(Jobs.Kind.REMIND, "Entry reminder 10:55", "Expiry days only"),
+                        Triple(Jobs.Kind.TICKET, "Paper ticket 11:01", "Expiry days: records the ticket for you"),
+                        Triple(Jobs.Kind.SETTLE, "Settle 15:35", "Settles today's open ticket at the official window"),
+                        Triple(Jobs.Kind.HARVEST, "Harvest 15:45", "Then re-runs the health check"),
+                    )
+                    rows.forEach { (k, title, sub) ->
+                        val on = Jobs.enabled(k, s)
+                        // The switch shows the owner's choice; whether the job can run yet is said beside it. (It showed
+                        // whether the job runs: without Zerodha linked a switched-on job read "off", and tapping it
+                        // changed nothing.)
+                        val chosen = when (k) {
+                            Jobs.Kind.LIVE -> true
+                            Jobs.Kind.REMIND -> s.entryReminder
+                            Jobs.Kind.TICKET -> s.autoTicket
+                            Jobs.Kind.SETTLE -> s.autoSettle
+                            Jobs.Kind.HARVEST -> s.nightlyHarvest
+                        }
+                        val note = when {
+                            on -> "$sub · next ${Jobs.nextRun(k).format(fmt)}"
+                            chosen -> "$sub · runs once Zerodha is linked"
+                            else -> sub
+                        }
+                        ToggleRow(title, note, chosen) { v ->
+                            model.update {
+                                when (k) {
+                                    Jobs.Kind.LIVE -> it.copy(liveWatch = v)
+                                    Jobs.Kind.REMIND -> it.copy(entryReminder = v)
+                                    Jobs.Kind.TICKET -> it.copy(autoTicket = v)
+                                    Jobs.Kind.SETTLE -> it.copy(autoSettle = v)
+                                    Jobs.Kind.HARVEST -> it.copy(nightlyHarvest = v)
+                                }
                             }
                         }
                     }
+                    ToggleRow("Tell me when health changes", "PASS → WARN → FAIL, after each harvest", s.healthAlerts) { v -> model.update { it.copy(healthAlerts = v) } }
+                    val risks = listOf(0.001, 0.0025, 0.005, 0.01)
+                    ParamTokens("Warn when the index is within", risks.map { pct(it) to (it == s.riskAlertPct) }) { i -> model.update { it.copy(riskAlertPct = risks[i]) } }
+                    val expiries by androidx.compose.runtime.produceState(-1) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Market.upcomingExpiries().size } }
+                    Note("The expiry calendar comes from the instrument master; " + (if (expiries < 0) "reading it…" else "$expiries upcoming NIFTY expiries are known."))
                 }
-                ToggleRow("Tell me when health changes", "PASS → WARN → FAIL, after each harvest", s.healthAlerts) { v -> model.update { it.copy(healthAlerts = v) } }
-                val risks = listOf(0.001, 0.0025, 0.005, 0.01)
-                ParamTokens("Warn when the index is within", risks.map { pct(it) to (it == s.riskAlertPct) }) { i -> model.update { it.copy(riskAlertPct = risks[i]) } }
-                val expiries by androidx.compose.runtime.produceState(-1) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Market.upcomingExpiries().size } }
-                Note("The expiry calendar comes from the instrument master; " + (if (expiries < 0) "reading it…" else "$expiries upcoming NIFTY expiries are known."))
             }
         }
         item { com.optionslab.app.ui.SettingSpot("schedule.permissions") {
@@ -548,10 +566,12 @@ fun SchedulePage(model: AppModel) {
             }
         } }
         item {
-            LedgerCard(title = "Appearance") {
-                val themes = listOf("system" to "Follow the phone", "light" to "Light", "dark" to "Dark")
-                ParamTokens("Theme", themes.map { it.second to (it.first == s.theme) }) { i -> model.update { it.copy(theme = themes[i].first) } }
-                ToggleRow("Calm motion", "Fewer and shorter animations", s.reduceMotion) { v -> model.update { it.copy(reduceMotion = v) } }
+            com.optionslab.app.ui.SettingSpot("schedule.appearance") {
+                LedgerCard(title = "Appearance") {
+                    val themes = listOf("system" to "Follow the phone", "light" to "Light", "dark" to "Dark")
+                    ParamTokens("Theme", themes.map { it.second to (it.first == s.theme) }) { i -> model.update { it.copy(theme = themes[i].first) } }
+                    ToggleRow("Calm motion", "Fewer and shorter animations", s.reduceMotion) { v -> model.update { it.copy(reduceMotion = v) } }
+                }
             }
         }
     }
