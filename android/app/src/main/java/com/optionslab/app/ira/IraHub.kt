@@ -160,6 +160,8 @@ object IraHub {
     private val tested = HashSet<String>()
     @Volatile private var lastBackground: Instant? = null
     val state: StateFlow<State> = _state
+    /** Tests only: a market read under way (background work), as the screens see it. */
+    internal fun loadingForTest(on: Boolean) { _state.update { it.copy(loading = on) } }
     private val lock = Mutex()
     @Volatile private var book = PatternBook()
     private var bookFile: File? = null
@@ -4590,9 +4592,12 @@ object IraHub {
         }
         _state.update { it.copy(busy = true, messages = (it.messages + Msg(false, q) + Msg(true, "Backtesting ${StrategyLab.name(kind, m, minutes)} on the candles I have...")).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val r = lab(kind, m, minutes)
-            if (r == null) _state.update { it.copy(busy = false, messages = (it.messages + Msg(true, "I have no ${m.label} candles to backtest on yet.")).takeLast(MAX_MESSAGES)) }
-            else { propose(r, ""); _state.update { it.copy(busy = false) } }
+            // Never left busy (the globe shows Boss's backtest as thinking): a failed run ends it too.
+            try {
+                val r = lab(kind, m, minutes)
+                if (r == null) _state.update { it.copy(busy = false, messages = (it.messages + Msg(true, "I have no ${m.label} candles to backtest on yet.")).takeLast(MAX_MESSAGES)) }
+                else { propose(r, ""); _state.update { it.copy(busy = false) } }
+            } finally { if (_state.value.busy) _state.update { it.copy(busy = false) } }
         }
     }
 

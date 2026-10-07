@@ -350,6 +350,8 @@ class JarvisVoice : Service() {
 
         /** Robolectric shares static state between tests: the switch read again from the settings. */
         internal fun resetDeafForTest() { _deaf.value = false }
+        /** Tests only: the voice's state as the globe reads it (nothing listens or speaks). */
+        internal fun stateForTest(s: VoiceState) { _state.value = s }
 
         /**
          * Battery saver for listening (Boss's switch, OFF by default: off, listening is exactly as before). On: with the
@@ -912,6 +914,11 @@ class JarvisVoice : Service() {
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
             if (oneShot && !speaking && !awake() && !lateWaiting && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
+            // Thinking never sticks (Boss, 7 Oct): no answer left to wait for, or thinking for 45 s - back to listening.
+            if (_state.value.mode == Mode.THINKING && com.optionslab.ira.GlobeThinking.stale(now, thinkingAt, working(), speaking)) {
+                note("thinking had nothing left to wait for: back to listening")
+                _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
+            }
             // (Not inside a battery-saver rest: its own restart is already queued.)
             if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING && now >= restUntil) again()
             // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
@@ -2124,8 +2131,8 @@ class JarvisVoice : Service() {
                 // Whether a "no"'s words may be read for Boss's reason: his voice when enrolled (judged now, on this turn's audio).
                 val bossNo = !yes && (!VoiceGuard.enrolled || (lastHeard != null && VoiceGuard.isBoss(lastHeard)))
                 asking = null
-                _state.value = VoiceState(Mode.THINKING)
-                scope.launch {
+                think()
+                confirmJob = scope.launch {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
                     val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id), by = com.optionslab.ira.Requests.By.VOICE) } ?: IraHub.alreadyLine(id, "That had already lapsed; nothing was placed.")
                         // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
@@ -2348,6 +2355,32 @@ class JarvisVoice : Service() {
 
     /** The answer being worked out (cancelled by "Jarvis, stop"). */
     private var answerJob: kotlinx.coroutines.Job? = null
+    /** A spoken yes or no being carried out (its result is said when done). */
+    private var confirmJob: kotlinx.coroutines.Job? = null
+    /** When the voice began thinking about Boss's question ([com.optionslab.ira.GlobeThinking]: it never sticks). */
+    @Volatile private var thinkingAt = 0L
+
+    /** Thinking about Boss's own question (only then: background work never shows it). */
+    private fun think() { thinkingAt = SystemClock.elapsedRealtime(); _state.value = VoiceState(Mode.THINKING) }
+
+    /** Boss's question or his yes or no is still being worked out. */
+    private fun working(): Boolean = answerJob?.isActive == true || confirmJob?.isActive == true
+
+    /**
+     * The answer was a news trade's yes-or-no question ([IraHub.asksYesNo]): it is asked aloud by [askYesNo] when the hub
+     * made it while Jarvis listened (queued on this thread before now). Nobody asked it (made while he was not listening)
+     * and no other question waits: asked here, the same way. Either way thinking ends now - never left stuck in it.
+     */
+    private fun yesNoAfterAnswer(id: Long) {
+        main.post {
+            if (stopped) return@post
+            if (asking == null) IraHub.requestAsk(id)?.let { shall ->
+                asking = id; askingText = shall; askingNeedsBoss = true; askingUntil = 0
+                sayWhenFree(shall, "question")
+            }
+            if (_state.value.mode == Mode.THINKING && !speaking) { _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING); if (!listening) again() }
+        }
+    }
     /** A slow answer Boss was told is coming: the mic button's one-question listen is not ended before it. */
     @Volatile private var lateWaiting = false
 
@@ -2356,7 +2389,7 @@ class JarvisVoice : Service() {
         // From Boss's last word (Boss, 5 Oct): the turn's closing wait and the recognizer's final reading count too.
         heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
         learnPace()
-        _state.value = VoiceState(Mode.THINKING)
+        think()
         // Speed, round 4: this question's stages timed from Boss's last word ([com.optionslab.ira.AskStages]; durations only).
         val timed = IraHub.askStages.begin(heardAt, voice = true)
         askTimed = timed
@@ -2399,8 +2432,10 @@ class JarvisVoice : Service() {
             // How long Boss waited, for the diagnostics (Boss, 4 Oct: "getting late response").
             if (a != null) note("answer ready %.1f s after the words".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - heardAt) / 1000.0))
             val o = a?.order
-            // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
-            if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch
+            // A suggested trade is asked aloud by itself (yes or no): nothing more to say here. Never left thinking (Boss,
+            // 7 Oct): the question is asked now if nobody has asked it (asked by the hub only while Jarvis listened), and
+            // thinking ends either way - queued behind this answer, the hub's own asking is said as before.
+            if (a?.action != null && IraHub.asksYesNo(a.action)) { yesNoAfterAnswer(a.action); return@launch }
             // The answer's full text (as in the chat), kept with what is said so "go on" can say the rest after a cut.
             var full: String? = null
             // The words already shaped for the speech engine ([com.optionslab.ira.SpokenReply.Said.shaped]): not shaped again.

@@ -128,7 +128,6 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     // The whole state is read only inside the conversation's list (its own scope); the page itself reads slices.
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val snaps by iraSlice(policy = androidx.compose.runtime.referentialEqualityPolicy()) { it.snaps }
-    val working by iraSlice { it.busy || it.loading }
     val newest by iraSlice { s -> s.messages.lastOrNull()?.let { it.id to it.text } }
     // The saved conversation is read off the main thread at the start: until then the chat says so (no examples).
     val memoryReady by IraHub.ready.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -139,16 +138,9 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     var text by remember { mutableStateOf("") }
     var typed by remember { mutableIntStateOf(0) }
     // The orb shows the typed exchange first, else what the voice is doing (plain listening for the name is "idle").
-    val mode = if (typed != 0) typed else when (voice.mode) {
-        JarvisVoice.Mode.AWAKE -> 1; JarvisVoice.Mode.THINKING -> 2; JarvisVoice.Mode.SPEAKING -> 3; else -> 0 }
-    // At rest, say plainly whether Jarvis can hear its name ("Idle" read the same with the voice off).
-    val restLabel = when {
-        com.optionslab.app.BuildConfig.JARVIS && deafNow -> "Mic off"
-        voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
-        voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
-        else -> "Idle"
-    }
-    fun orbLabel(m: Int) = if (m == 0) restLabel else listOf("Idle", "Listening", "Thinking", "Answering")[m]
+    // Thinking only for Boss's own question ([rememberGlobeMode]): background work never shows it, and it never sticks.
+    val mode = rememberGlobeMode(typed, drafting = false, askedWork = false)
+    fun orbLabel(m: Int) = globeWord(m, voice, deafNow)
     var focus by remember { mutableStateOf(IraMarket.NIFTY) }
     // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub). Battery (round 10): a
     // read begun under 50 s ago (the listening loop's, the feed check's) is shared, not made again ([com.optionslab.ira.LiveReadPace]).
@@ -206,13 +198,9 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     if (!chat) {
         var quick by remember { mutableStateOf(false) }
         val ctx = androidx.compose.ui.platform.LocalContext.current
-        val writing by com.optionslab.app.ira.IraModel.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-        // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
-        val orbMode = when {
-            mode == 0 && text.isNotEmpty() -> 1
-            mode == 0 && (working || writing.writing) -> 2
-            else -> mode
-        }
+        // Boss, 7 Oct: thinking is Boss's own question only (his backtest too) - the market read every minute and the
+        // model writing in the background show nothing ([com.optionslab.ira.GlobeThinking]).
+        val orbMode = rememberGlobeMode(typed, drafting = text.isNotEmpty(), askedWork = true)
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.Center)) {
                 Orb(vol = orbVol(snaps), trend = orbTrend(snaps[focus]), mode = orbMode,
@@ -226,14 +214,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
                 scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
                 if (showChat) chat = true
             }
-            Row(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Mic off ("Don't listen"): a crossed-out microphone beside the word, so it reads at a glance.
-                if (com.optionslab.app.BuildConfig.JARVIS && deafNow && orbMode == 0) {
-                    MicGlyph(crossed = true, color = Color(0xFF4AA8FF)); Spacer(Modifier.width(6.dp))
-                }
-                Text(orbLabel(orbMode).uppercase(),
-                    style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp))
-            }
+            GlobeLabel(orbMode, Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Boss, 7 Oct: "Don't listen" (an ear), the mic (hold to talk), mute and the chat as small icons in one
@@ -1066,6 +1047,58 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
     }
 }
 
+
+/** The voice's state as the globe draws it (0 rest, 1 listening, 2 thinking, 3 answering; listening for the name is rest). */
+internal fun voiceGlobe(m: JarvisVoice.Mode): Int = when (m) {
+    JarvisVoice.Mode.AWAKE -> com.optionslab.ira.GlobeThinking.LISTENING
+    JarvisVoice.Mode.THINKING -> com.optionslab.ira.GlobeThinking.THINKING
+    JarvisVoice.Mode.SPEAKING -> com.optionslab.ira.GlobeThinking.ANSWERING
+    else -> com.optionslab.ira.GlobeThinking.REST
+}
+
+/**
+ * The globe's state (Boss, 7 Oct: THINKING showed at 09:05, market closed, nothing asked): the typed exchange ([typed]),
+ * else the voice; thinking only for Boss's own question - and [askedWork], his own backtest he waits on - never for
+ * the market read every minute or the model writing in the background ([com.optionslab.ira.GlobeThinking.globe]).
+ * The voice's thinking never sticks on the globe: after [com.optionslab.ira.GlobeThinking.MAX_MS] it rests (written once,
+ * by an effect after the wait - never in composition). [drafting]: a question being typed (listening).
+ */
+@Composable
+internal fun rememberGlobeMode(typed: Int, drafting: Boolean, askedWork: Boolean): Int {
+    val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val backtest by iraSlice { it.busy }
+    var staleOf by remember { mutableStateOf<JarvisVoice.VoiceState?>(null) }
+    LaunchedEffect(voice) {
+        if (voice.mode == JarvisVoice.Mode.THINKING) { delay(com.optionslab.ira.GlobeThinking.MAX_MS); staleOf = voice }
+    }
+    val stale = voice.mode == JarvisVoice.Mode.THINKING && staleOf === voice
+    return com.optionslab.ira.GlobeThinking.globe(typed, voiceGlobe(voice.mode), stale, drafting, askedWork && backtest)
+}
+
+/** The globe's word for state [m]: at rest, plainly whether Jarvis can hear his name ("Mic off" with listening off). */
+internal fun globeWord(m: Int, voice: JarvisVoice.VoiceState, deaf: Boolean): String = when (m) {
+    1 -> "Listening"; 2 -> "Thinking"; 3 -> "Answering"
+    else -> when {
+        com.optionslab.app.BuildConfig.JARVIS && deaf -> "Mic off"
+        voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
+        voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
+        else -> "Idle"
+    }
+}
+
+/** The word above the globe for state [mode]; mic off ("Don't listen") at rest adds a crossed-out microphone beside it. */
+@Composable
+internal fun GlobeLabel(mode: Int, modifier: Modifier = Modifier) {
+    val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val deaf by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (com.optionslab.app.BuildConfig.JARVIS && deaf && mode == 0) {
+            MicGlyph(crossed = true, color = Color(0xFF4AA8FF)); Spacer(Modifier.width(6.dp))
+        }
+        Text(globeWord(mode, voice, deaf).uppercase(),
+            style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp))
+    }
+}
 
 /** A small microphone, [crossed] out when Jarvis is not listening (decorative: its button or label says it in words). */
 @Composable
