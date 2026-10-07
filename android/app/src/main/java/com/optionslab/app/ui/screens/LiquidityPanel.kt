@@ -350,8 +350,12 @@ internal fun LiquidityChart(
             // The timeout runs on IO's real clock (inside a LaunchedEffect a Compose test's clock is virtual).
             withContext(Dispatchers.IO) { withTimeoutOrNull(3_000) { positionOf?.invoke(t) } }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
-        resolving = null
-        if (found != null) replaying = found else picked = mk
+        // Back on the main thread before the state that opens a dialog changes (a dialog needs a Looper; under a test
+        // dispatcher the effect could otherwise resume on the IO worker and compose the dialog there).
+        withContext(Dispatchers.Main.immediate) {
+            resolving = null
+            if (found != null) replaying = found else picked = mk
+        }
     }
     replaying?.let { pos -> LiquidityReplayDialog(pos, replay) { replaying = null } }
     level?.let { l ->
