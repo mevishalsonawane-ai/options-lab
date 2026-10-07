@@ -80,6 +80,12 @@ class JarvisControlsTest {
         compose.frames()
     }
 
+    /** The press lasts past a quick tap: the hold begins. */
+    private fun held() {
+        compose.mainClock.advanceTimeBy(JarvisControls.QUICK_TAP_MS + 100)
+        compose.frames()
+    }
+
     @Test fun threeIconButtonsInOneRowAndNoWords() {
         row()
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC).assert(button).fetchSemanticsNode().boundsInRoot
@@ -104,6 +110,8 @@ class JarvisControlsTest {
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
         mic.performTouchInput { down(center) }
         compose.frames()
+        assertEquals("not yet a hold: nothing starts", emptyList<String>(), fake.calls)
+        held()
         assertEquals(listOf("start"), fake.calls)
         mic.assert(listening)
         mic.performTouchInput { advanceEventTime(1_500); up() }
@@ -119,6 +127,7 @@ class JarvisControlsTest {
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
         mic.performTouchInput { down(center) }
         compose.frames()
+        held()
         compose.mainClock.advanceTimeBy(com.optionslab.ira.HoldTalk.CAP_MS - 1_000); compose.frames()
         assertEquals("still held at 59 s", listOf("start"), fake.calls)
         compose.mainClock.advanceTimeBy(2_000); compose.frames()
@@ -133,7 +142,8 @@ class JarvisControlsTest {
         row()
         compose.onNodeWithContentDescription(JarvisControls.MIC).performTouchInput { down(center); advanceEventTime(100); up() }
         compose.frames()
-        assertEquals(listOf("start", "drop"), fake.calls)
+        // Nothing starts or stops: Jarvis is not interrupted and his follow-up window is left alone.
+        assertEquals(emptyList<String>(), fake.calls)
         compose.onNodeWithText(JarvisControls.HOLD_HINT).assertIsDisplayed()
         // Brief: gone a couple of seconds later.
         compose.mainClock.advanceTimeBy(JarvisControls.HINT_MS + 500); compose.frames()
@@ -143,7 +153,10 @@ class JarvisControlsTest {
     @Test fun slidingOffTheMicSendsNothing() {
         row()
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
-        mic.performTouchInput { down(center); advanceEventTime(600); moveTo(Offset(width * 6f, centerY)); advanceEventTime(600); up() }
+        mic.performTouchInput { down(center) }
+        compose.frames()
+        held()
+        mic.performTouchInput { advanceEventTime(600); moveTo(Offset(width * 6f, centerY)); advanceEventTime(600); up() }
         compose.frames()
         assertEquals(listOf("start", "drop"), fake.calls)
         assertFalse(compose.has(JarvisControls.HOLD_HINT))

@@ -53,6 +53,8 @@ internal object JarvisControls {
     const val CLOSE_CHAT = "Close chat"
     /** The only words the row adds: a quick tap on the mic says how it works. */
     const val HOLD_HINT = "Hold to talk"
+    /** The microphone just allowed: said under the row (no turn is started). */
+    const val MIC_ALLOWED = "Microphone allowed - hold to talk"
     /** A press shorter than this is a tap, not a hold. */
     const val QUICK_TAP_MS = 300L
     /** How long [HOLD_HINT] stays. */
@@ -99,7 +101,7 @@ internal object VoiceTalkPath : TalkPath {
 internal fun JarvisControlRow(chatOpen: Boolean, onChat: () -> Unit, modifier: Modifier = Modifier, showMic: Boolean = true) {
     var note by remember { mutableStateOf<String?>(null) }
     // The hold hint is brief; a reason it could not listen stays until the next press.
-    LaunchedEffect(note) { if (note == JarvisControls.HOLD_HINT) { kotlinx.coroutines.delay(JarvisControls.HINT_MS); note = null } }
+    LaunchedEffect(note) { if (note == JarvisControls.HOLD_HINT || note == JarvisControls.MIC_ALLOWED) { kotlinx.coroutines.delay(JarvisControls.HINT_MS); note = null } }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showMic) HoldToTalkMic(onNote = { note = it })
@@ -140,7 +142,8 @@ private fun MuteIcon() {
 /**
  * Hold to talk (Boss, 7 Oct): pressed, Jarvis listens silently ([JarvisVoice.holdTalk]: the Talk checks, recognizer
  * and speech choice, no "Yes, Boss?"), a pause sending nothing; let go (or after 60 s), all that was heard is asked
- * once and Jarvis replies. A quick tap says "Hold to talk"; a finger slid off
+ * once and Jarvis replies. A quick tap (under [JarvisControls.QUICK_TAP_MS]) only says "Hold to talk" - nothing starts,
+ * Jarvis is not interrupted; a finger slid off
  * sends nothing. TalkBack, which cannot hold: a double tap starts, the next one stops and sends.
  */
 @Composable
@@ -151,7 +154,8 @@ private fun HoldToTalkMic(onNote: (String?) -> Unit) {
     val talking = remember { mutableStateOf(false) }
     val noteNow = rememberUpdatedState(onNote)
     val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) JarvisVoice.talk(ctx) else noteNow.value("Jarvis needs the microphone to hear you.")
+        // Allowed: a brief note only - no turn is started (the next hold talks).
+        noteNow.value(if (ok) JarvisControls.MIC_ALLOWED else "Jarvis needs the microphone to hear you.")
     }
     val begin = rememberUpdatedState<() -> Boolean> {
         noteNow.value(null)
@@ -174,15 +178,19 @@ private fun HoldToTalkMic(onNote: (String?) -> Unit) {
             awaitEachGesture {
                 val down = awaitFirstDown()
                 down.consume()
+                // The hold begins only once the press has lasted [JarvisControls.QUICK_TAP_MS]: a quick tap only says "Hold to
+                // talk" - Jarvis is not interrupted, his follow-up window stays open, nothing starts or stops.
+                // (Wrapped: null is the timeout - still pressed; a null inside is the finger sliding off.)
+                val early = withTimeoutOrNull(JarvisControls.QUICK_TAP_MS) { listOf(waitForUpOrCancellation()) }
+                if (early != null) {
+                    early[0]?.let { up -> up.consume(); noteNow.value(JarvisControls.HOLD_HINT) }
+                    return@awaitEachGesture
+                }
                 val started = begin.value()
                 // Null: the finger slid off the button (or the press was taken): nothing is sent.
                 val up = waitForUpOrCancellation()
                 if (!started) return@awaitEachGesture
-                when {
-                    up == null -> end.value(false)
-                    up.uptimeMillis - down.uptimeMillis < JarvisControls.QUICK_TAP_MS -> { up.consume(); end.value(false); noteNow.value(JarvisControls.HOLD_HINT) }
-                    else -> { up.consume(); end.value(true) }
-                }
+                if (up == null) end.value(false) else { up.consume(); end.value(true) }
             }
         },
         contentAlignment = Alignment.Center) { IconFace(JarvisControls.Mic, on) }

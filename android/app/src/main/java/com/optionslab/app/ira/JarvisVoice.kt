@@ -890,7 +890,8 @@ class JarvisVoice : Service() {
             // A shared-capture turn that the recognizer opened and then never heard anything with (no words, no error) for
             // 12 s: this phone's recognizer cannot take our audio - back to its own microphone, for good.
             // (Not when speech began: the recognizer then did get our audio - a slow reading is not a broken capture.)
-            if (listening && tap != null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
+            // (Never mid-hold: a quiet hold - Boss thinking with the mic held - is no broken capture.)
+            if (listening && tap != null && hold == null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
                 tapFailed = true
                 val n = silentShared + 1; silentShared = n
                 if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
@@ -1604,7 +1605,10 @@ class JarvisVoice : Service() {
             // Held: the recognizer closed its turn by itself (or for the release) - its words kept, then listen on or ask.
             hold?.let { h ->
                 endTap()
-                holdTurnEnded(h, results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() })
+                val held = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+                // (The segment's audio, score and readings go with its words: the voice check, "faint" and read-backs.)
+                holdTurnEnded(h, held.firstOrNull { it.isNotBlank() },
+                    com.optionslab.ira.Sure.best(results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES), held.size), held)
                 return
             }
             loudNoMatch = 0
@@ -1637,8 +1641,28 @@ class JarvisVoice : Service() {
             main.removeCallbacks(finish)
             if (answeredEarly) { answeredEarly = false; return }      // the cancelled turn already answered: not a failure
             listening = false
-            // Held: a timeout or "no match" mid-hold is not the end (the words read mid-turn are kept); listen on, or ask.
-            hold?.let { h -> endTap(); note("held turn ended (error $error)"); holdTurnEnded(h, null); return }
+            // Held: a timeout or "no match" mid-hold is not the end (the words read mid-turn are kept); listen on after a
+            // growing wait (300, 600 ms), or ask once let go. Any other error, or a third in a row, ends the hold: its words
+            // heard so far are asked; none, "I didn't catch that." and the usual error handling below (the shared-audio
+            // fallback, the errors-in-row pace, a new recognizer) takes over.
+            var heldShared = false
+            hold?.let { h ->
+                heldShared = tap != null
+                endTap(); note("held turn ended (error $error)")
+                if (h.released) { holdTurnEnded(h, null); return }
+                // Our own close of the turn before the hold racing its error (as below): not a failure - listen on.
+                if (error == SpeechRecognizer.ERROR_CLIENT && SystemClock.elapsedRealtime() - stoppedAt < 3_000) { again(300); return }
+                // A timeout, "no match" (a pause) or a busy recognizer may pass: retried, at most 3 in a row.
+                val timeout = error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || error == SpeechRecognizer.ERROR_NO_MATCH ||
+                    error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY
+                val wait = h.turnFailed(timeout, lastHeard)
+                if (wait != null) { again(wait); return }
+                if (h.text() != null) { note("hold to talk: ended by errors"); sendHold(); return }
+                hold = null; main.removeCallbacks(holdCap); main.removeCallbacks(holdGiveUp); h.take()
+                awakeUntil = 0L; called = false
+                note("hold to talk: ended by errors, nothing heard")
+                say(com.optionslab.ira.HoldTalk.NOT_CAUGHT)
+            }
             // Boss, 4 Oct: "Jarvis" alone was caught while he spoke, then the final answer said "no match" (error 7) and
             // the name was lost - every turn. The name read mid-turn counts: as if the recognizer had said it.
             val partial = com.optionslab.ira.Wake.lostTurn(error, turnPartial, awake())
@@ -1652,7 +1676,7 @@ class JarvisVoice : Service() {
                 heard(listOf(partial), recovered = true)
                 return
             }
-            val shared = tap != null
+            val shared = tap != null || heldShared
             endTap(); lastHeard = null
             if (stopped) return
             // The recognizer would not take our audio: back to its own microphone (voice can ask, not trade).
@@ -1925,8 +1949,11 @@ class JarvisVoice : Service() {
     private val holdCap = Runnable { if (hold?.released == false) { note("hold to talk: 60 s reached"); releaseHold() } }
     /** Let go, and the recognizer's final reading never came: the words read so far are asked. */
     private val holdGiveUp = Runnable {
-        if (hold?.released == true) {
+        val h = hold
+        if (h?.released == true) {
             runCatching { rec?.cancel() }; listening = false; endTap()
+            // The open turn's words read mid-turn are its segment (with its audio for the voice check).
+            h.turnEnded(null, lastHeard)
             sendHold()
         }
     }
@@ -1943,15 +1970,20 @@ class JarvisVoice : Service() {
         talkAt = now
         awakeUntil = now + com.optionslab.ira.HoldTalk.CAP_MS + AWAKE_MS; called = true
         main.removeCallbacks(holdCap); main.postDelayed(holdCap, com.optionslab.ira.HoldTalk.CAP_MS)
-        if (listening) { runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null }
+        // (The cancelled turn's own late "client" error, if the phone sends one, is not one of the hold's errors.)
+        if (listening) { stoppedAt = now; runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null }
         _state.value = VoiceState(Mode.AWAKE)
         // (On a first start the recognizer is made next, and that start listens.)
         if (rec != null) listen()
     }
 
-    /** A held turn closed by the recognizer: [final] its reading (null: none). Listen on while held; let go, ask. */
-    private fun holdTurnEnded(h: com.optionslab.ira.HoldTalk.Buffer, final: String?) {
-        when (h.turnEnded(final)) {
+    /**
+     * A held turn closed by the recognizer: [final] its reading (null: none), [sure] its score, [readings] all its readings;
+     * the turn's own audio ([lastHeard], just kept by [endTap]) goes with it - [listen] clears it for the next turn.
+     * Listen on while held; let go, ask.
+     */
+    private fun holdTurnEnded(h: com.optionslab.ira.HoldTalk.Buffer, final: String?, sure: Float? = null, readings: List<String> = emptyList()) {
+        when (h.turnEnded(final, lastHeard, sure, readings)) {
             com.optionslab.ira.HoldTalk.Next.LISTEN -> again(if (final == null) 300L else 0L)
             com.optionslab.ira.HoldTalk.Next.SEND -> sendHold()
         }
@@ -1978,8 +2010,18 @@ class JarvisVoice : Service() {
         if (q == null) { note("hold to talk: nothing heard"); awakeUntil = 0L; called = false; again(); return }
         // (A count only in the trace, never the words.)
         note("hold to talk: asked, " + q.split(' ').size + " words")
+        // A yes-or-no question waiting: only a short hold is its answer ([com.optionslab.ira.HoldTalk.shortAnswer]) - a long
+        // ramble with an "ok" in it is never a yes. Asked to say yes or no; the question stays open.
+        if (asking != null && SystemClock.elapsedRealtime() < askingUntil && !com.optionslab.ira.HoldTalk.shortAnswer(q)) {
+            note("hold to talk: too long for a yes or no")
+            awakeUntil = 0L; called = false
+            say(com.optionslab.ira.HoldTalk.SAY_YES_OR_NO, "question")
+            return
+        }
         remember(q)
-        heard(listOf(q))
+        // The voice check hears the hold's segment with the most words (each new turn of the hold cleared the last's).
+        lastHeard = h.audio
+        heard(h.alternatives().ifEmpty { listOf(q) }, sure = h.sure, spliced = h.spliced())
     }
 
     /** Cut in on: Jarvis stops talking and waits for the owner's question. */
@@ -2028,8 +2070,11 @@ class JarvisVoice : Service() {
     /**
      * [sure]: the recognizer's score for its best reading ([com.optionslab.ira.Sure]; null: none, or words read mid-turn).
      * A faint one only ever lets words go (a follow-up without the name, a soft misreading of the name, a yes).
+     * [spliced]: a hold whose words came from more than one recognizer turn - the voice check heard only one of them, so
+     * an order, a risky command or a yes that needs Boss's voice is never taken as voice-verified (the on-screen
+     * Approve, or saying it again in one go, instead).
      */
-    private fun heard(alternatives: List<String>, recovered: Boolean = false, sure: Float? = null) {
+    private fun heard(alternatives: List<String>, recovered: Boolean = false, sure: Float? = null, spliced: Boolean = false) {
         // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
         val cutIn = speaking || turnInSpeech
         // Just woken ("Yes, Boss?" said, now finished): the question may have started over those two words - it is
@@ -2075,7 +2120,7 @@ class JarvisVoice : Service() {
                 // Only Boss's voice approves a trade; a no from anyone is still a no.
                 // "Answer only my voice": a yes in another voice never approves anything (a no from anyone still cancels).
                 if (yes && onlyBoss && VoiceGuard.enrolled && lastHeard != null && !VoiceGuard.isBoss(lastHeard)) { note("a yes in another voice: ignored"); again(); return }
-                if (yes && askingNeedsBoss && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
+                if (yes && askingNeedsBoss && (spliced || !boss())) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
                 // Whether a "no"'s words may be read for Boss's reason: his voice when enrolled (judged now, on this turn's audio).
                 val bossNo = !yes && (!VoiceGuard.enrolled || (lastHeard != null && VoiceGuard.isBoss(lastHeard)))
                 asking = null
@@ -2201,7 +2246,8 @@ class JarvisVoice : Service() {
                     // Loosening one of the app's limits (more lots, a bigger loss limit, a limit off) is Boss's alone.
                     val loosens = cmd != null && runCatching { IraActions.loosens(cmd) }.getOrDefault(true)
                     val risky = cmd != null && (!cmd.kind.reduces || loosens)
-                    val verified = (com.optionslab.ira.Topic.ORDER in topics || risky) && boss()
+                    // A hold spliced from several recognizer turns is never voice-verified (the check heard one of them).
+                    val verified = (com.optionslab.ira.Topic.ORDER in topics || risky) && !spliced && boss()
                     when {
                         com.optionslab.ira.Topic.ORDER in topics && !verified ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")

@@ -166,6 +166,7 @@ class IraWidgetTest : RobolectricTest() {
         AppSettings.save(AppSettings.load().copy(widgetPnl = false))
         IraWidget.publish(context, 24_800.0 to 0.01, null, null)
         assertEquals("Liquidity: CE open · stop 150 · target 80 pts", liq().text.toString())
+        assertEquals("the percent change goes with the rupees", "BANKNIFTY25OCT54000CE 140.00 vs 120.00", liqDetail().text.toString())
         assertTrue(listOf(R.id.w_liq, R.id.w_liq2, R.id.w_nifty, R.id.w_bank, R.id.w_status).none { text(it).contains("₹") })
     }
 

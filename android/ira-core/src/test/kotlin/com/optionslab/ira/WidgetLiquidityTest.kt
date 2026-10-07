@@ -60,7 +60,23 @@ class WidgetLiquidityTest {
         val o = WidgetLiquidity.row(Facts(at(11, 0), State.ARMED, open = call), figures = false)
         assertEquals("Liquidity: CE open · stop 150 · target 80 pts", o.line)
         assertFalse(o.line.contains("₹") || o.detail!!.contains("₹"))
+        // The percent change says how the account is doing: left out with the rupees (the prices stay).
+        assertEquals("BANKNIFTY26OCT54000CE 140.00 vs 120.00", o.detail)
         assertEquals(Tone.PLAIN, o.tone)
+        // A live position: the word "LIVE" is left out too.
+        val live = WidgetLiquidity.row(Facts(at(11, 0), State.ARMED, open = call.copy(live = true)), figures = false)
+        assertEquals("Liquidity: CE open · stop 150 · target 80 pts", live.line)
+        assertFalse(live.line.contains("LIVE") || live.detail!!.contains("%"))
+        assertTrue(WidgetLiquidity.row(Facts(at(11, 0), State.ARMED, open = call.copy(live = true)), figures = true).line.startsWith("Liquidity: LIVE CE"))
+    }
+
+    @Test fun aReadFromAnotherDayOrTooLongAgoInMarketHoursIsNotShown() {
+        val f = Facts(at(11, 0), State.ARMED, lots = 2)
+        assertTrue(WidgetLiquidity.fresh(f, at(11, 10), marketOpen = true))
+        assertFalse(WidgetLiquidity.fresh(f, at(11, 11), marketOpen = true), "over 10 minutes old while the market is open")
+        assertTrue(WidgetLiquidity.fresh(f, at(20, 0), marketOpen = false), "the market shut: today's read stands")
+        assertFalse(WidgetLiquidity.fresh(f, at(11, 0).plusDays(1), marketOpen = false), "another day's read is never shown")
+        assertFalse(WidgetLiquidity.fresh(f, at(9, 30).plusDays(1), marketOpen = true))
     }
 
     @Test fun anOpenPositionSaysItsPnlAndHowFarTheIndexStopAndTargetAre() {

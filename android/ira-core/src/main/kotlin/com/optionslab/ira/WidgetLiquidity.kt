@@ -13,7 +13,8 @@ import kotlin.math.abs
  * armed, before the last entry) the nearest trigger with room ahead and how far away it is ([LiquidityWhyNot.nearest]).
  *
  * [row]'s `figures` false (the owner has not turned on "Show my P&L on the widget") leaves out every rupee figure - the
- * P&L and the net - exactly as the widget hides the account P&L; prices and points stay. Words only: nothing here arms,
+ * P&L and the net - exactly as the widget hides the account P&L, and with them the percent change and the word "LIVE";
+ * prices and points stay. Words only: nothing here arms,
  * places, closes or changes anything. Pure: no clock, no storage, no network.
  */
 object WidgetLiquidity {
@@ -97,16 +98,29 @@ object WidgetLiquidity {
         "Next: ${LiquidityMap.indexName(r.underlying)} ${r.minutes}-min close ${if (s.side > 0) "above" else "below"} ${n(edge)} · ${pts(d)} pts away"
     }
 
+    /** How old a read may be while the market is open before its row is hidden ([fresh]). */
+    const val STALE_MINUTES = 10L
+
+    /**
+     * Is the read [f] still good to show at [now]? Only one from today; while the market is open ([marketOpen]), only one
+     * at most [STALE_MINUTES] old. An older read hides the row (a stale position or result is never shown as current).
+     */
+    fun fresh(f: Facts, now: LocalDateTime, marketOpen: Boolean): Boolean {
+        if (f.now.toLocalDate() != now.toLocalDate()) return false
+        return !marketOpen || !f.now.isBefore(now.minusMinutes(STALE_MINUTES))
+    }
+
     /** The widget's Liquidity row for [f]; rupee figures only with [figures]. */
     fun row(f: Facts, figures: Boolean): Row {
         val o = f.open
         if (o != null) {
             val gross = o.ltp?.let { (it - o.entry) * o.qty }
             val money = gross?.takeIf { figures }?.let { " ${LiquidityOpen.rupees(it)}" } ?: if (figures) "" else " open"
-            val line = "Liquidity: ${if (o.live) "LIVE " else ""}${o.right.uppercase()}$money · ${distances(o, f.now)}"
+            // Without figures the word "LIVE" and the percent change are left out too (they say how the account is doing).
+            val line = "Liquidity: ${if (o.live && figures) "LIVE " else ""}${o.right.uppercase()}$money · ${distances(o, f.now)}"
             val ltp = o.ltp
             val detail = if (ltp == null) "${o.symbol} bought at ${px(o.entry)} · no price yet"
-            else "${o.symbol} ${px(ltp)} vs ${px(o.entry)} (${pct((ltp - o.entry) / o.entry)})"
+            else "${o.symbol} ${px(ltp)} vs ${px(o.entry)}" + if (figures) " (${pct((ltp - o.entry) / o.entry)})" else ""
             return Row(line, detail, gross?.takeIf { figures }?.let(::tone) ?: Tone.PLAIN)
         }
         val res = result(f, figures)
