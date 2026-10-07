@@ -88,9 +88,13 @@ object LiquidityRecord {
     fun asked(text: String): Q? = askedKept.of(text) { askedFresh(text) }
     private val askedKept = Kept<Q?>(64)
 
-    private fun askedFresh(text: String): Q? {
-        val t = norm(text)
-        if (!LIQ.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
+    /**
+     * The span [text] names (a day, the last N trades, this or last week or month, yesterday; every closed trade when none),
+     * as a [Q] with the summary focus - the same reading [asked] makes, for another reader of the arm's book ([LotsWhatIf]).
+     */
+    fun spanOf(text: String): Q = spanIn(norm(text))
+
+    private fun spanIn(t: String): Q {
         val day = DAY_MONTH.find(t)?.let { m -> monthDay(month(m.groupValues[4]), m.groupValues[1].toInt()) }
             ?: MONTH_DAY.find(t)?.let { m -> monthDay(month(m.groupValues[1]), m.groupValues[2].toInt()) }
         val lastN = LAST_N.find(t)
@@ -104,6 +108,15 @@ object LiquidityRecord {
             YESTERDAY.containsMatchIn(t) -> Span.YESTERDAY
             else -> Span.ALL
         }
+        val n = lastN?.groupValues?.get(2)?.let { it.toIntOrNull() ?: NUMBERS[it] }?.takeIf { it > 0 } ?: if (lastN != null) 1 else null
+        return Q(span, Focus.SUMMARY, if (span == Span.DAY) day else null, if (span == Span.LAST_N) n else null)
+    }
+
+    private fun askedFresh(text: String): Q? {
+        val t = norm(text)
+        if (!LIQ.containsMatchIn(t) || NOT.containsMatchIn(t)) return null
+        val sp = spanIn(t)
+        val span = sp.span
         val focus = when {
             STREAK.containsMatchIn(t) -> Focus.STREAK
             ON_TRACK.containsMatchIn(t) -> Focus.ON_TRACK
@@ -114,8 +127,7 @@ object LiquidityRecord {
         }
         // The whole record with no word of a record is not asked ("how is liquidity doing" stays the arm's own answer).
         if (span == Span.ALL && focus == Focus.SUMMARY && !RECORD.containsMatchIn(t)) return null
-        val n = lastN?.groupValues?.get(2)?.let { it.toIntOrNull() ?: NUMBERS[it] }?.takeIf { it > 0 } ?: if (lastN != null) 1 else null
-        return Q(span, focus, if (span == Span.DAY) day else null, if (span == Span.LAST_N) n else null)
+        return sp.copy(focus = focus)
     }
 
     // ---- the record ------------------------------------------------------------------------------------------------
@@ -247,7 +259,7 @@ object LiquidityRecord {
         else -> why.replace('_', ' ')
     }
 
-    private fun spanWords(q: Q, today: LocalDate, shown: List<Row>): String = when (q.span) {
+    internal fun spanWords(q: Q, today: LocalDate, shown: List<Row>): String = when (q.span) {
         Span.ALL -> "so far"
         Span.THIS_WEEK -> "this week (from ${date(today.with(DayOfWeek.MONDAY))})"
         Span.LAST_WEEK -> window(q, today)!!.let { "last week (${date(it.first)} - ${date(it.second)})" }

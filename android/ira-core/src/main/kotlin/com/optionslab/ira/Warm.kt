@@ -44,7 +44,7 @@ object Warm {
         SplitDays::asked, StraddleDecay::asked, Streak::asked, StreamHealth::asked, Structure::asked, SwitchOff::asked, TalkHours::asked,
         TaxRecords::asked, TaxRecords::exportAsked, Thinking::asked, Together::asked, TopicLength::asked, Tour::asked, WhatsNew::asked, TradeCase::asked, TradeReplay::asked, TradeSearch::asked,
         TrendReads::asked, TrendReads::span, TurnDowns::asked, UsualIndex::asked, Vetting::asked, VixNext::asked,
-        VixBand::asked, VixRank::asked, WatchAsk::asked, SettingWhere::asked, WeakLink::asked, WeekAhead::asked, WeeklyReview::asked, LiquidityRecord::asked, LiquidityWhyNot::asked, SoloDay::asked, HeroDay::asked, TomorrowPlan::asked, OpeningRead::asked, ForwardWatch::asked, ForwardWatch::armAsked, DayRecap::asked, TodayNotes::asked, WeekRange::asked, Weekdays::asked, WhatIf::asked,
+        VixBand::asked, VixRank::asked, WatchAsk::asked, SettingWhere::asked, WeakLink::asked, WeekAhead::asked, WeeklyReview::asked, LotsWhatIf::asked, LiquidityRecord::asked, LiquidityWhyNot::asked, SoloDay::asked, HeroDay::asked, TomorrowPlan::asked, OpeningRead::asked, ForwardWatch::asked, ForwardWatch::armAsked, DayRecap::asked, TodayNotes::asked, WeekRange::asked, Weekdays::asked, WhatIf::asked,
         WordFit::asked, WrongThing::asked, WrongThing::objected, ZerodhaSession::asked
     )
 

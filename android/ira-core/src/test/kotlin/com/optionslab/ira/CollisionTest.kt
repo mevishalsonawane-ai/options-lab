@@ -128,6 +128,7 @@ class CollisionTest {
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
         "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
+        "LotsWhatIf" to { q -> LotsWhatIf.asked(q) != null },
         "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "OpeningRead" to { q -> OpeningRead.asked(q) },
@@ -904,7 +905,13 @@ class CollisionTest {
         "weekly report" to "WeeklyReview", "weekly recap" to "WeeklyReview", "review of the week" to "WeeklyReview", "week in review" to "WeeklyReview",
         "is hafta kaisa raha" to "WeeklyReview", "last week's review" to "WeeklyReview", "pichle hafte ka review" to "WeeklyReview",
         "how did last week go" to "WeeklyReview", "what's in the weekly review" to "WeeklyReview",
-        // ---- LiquidityRecord: Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
+        // ---- LotsWhatIf: Liquidity 15+5 at another size, from its own book and its research (nothing changes) ----
+        "what if liquidity traded 3 lots" to "LotsWhatIf", "how much with 1 lot this week" to "LotsWhatIf", "3 lot pe kitna banta" to "LotsWhatIf",
+        "is 2 lots better than 3" to "LotsWhatIf", "what would liquidity have made with 3 lots" to "LotsWhatIf", "liquidity 3 lots pe kitna banta" to "LotsWhatIf",
+        "how much would 3 lots have made last week" to "LotsWhatIf", "liquidity with 2 lots last month" to "LotsWhatIf", "compare 2 lots vs 3 lots for liquidity" to "LotsWhatIf",
+        "is 2 lots better than 3 for liquidity" to "LotsWhatIf", "agar 3 lot hota toh kitna banta" to "LotsWhatIf", "what if liquidity traded 1 lot this week" to "LotsWhatIf",
+        "what if liquidity had traded 2 lots over the last 10 trades" to "LotsWhatIf", "liquidity 1 lot vs 2 lots this month" to "LotsWhatIf",
+        // ---- LiquidityRecord:Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
         "how did liquidity do this week" to "LiquidityRecord", "how did liquidity do last week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord",
         "how did liquidity do on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord", "liquidity's last 10 trades" to "LiquidityRecord",
         "which index works best for liquidity" to "LiquidityRecord", "liquidity win streak" to "LiquidityRecord", "is liquidity on track" to "LiquidityRecord",
@@ -1551,7 +1558,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3138,6 +3145,38 @@ class CollisionTest {
         assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
         for (s in listOf("how did my bots do this week", "how did nifty do this week", "how did my week go", "how was the month", "what is a liquidity pool"))
             assertTrue(audit.feature(s) != "LiquidityRecord", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- LotsWhatIf: a what-if on the arm's size only; every lots change keeps its own confirmed route ----
+
+    @Test fun lotsWhatIfTakesOnlyTheHypotheticalAndLeavesTheLotsRoutes() {
+        for (s in listOf("what if liquidity traded 3 lots", "how much with 1 lot this week", "3 lot pe kitna banta", "is 2 lots better than 3")) {
+            assertEquals("LotsWhatIf", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The lots change stays a command (Act: its own route and its confirmation), as does the Hinglish one.
+        for (s in listOf("set liquidity to 2 lots", "set liquidity to 3 lots", "liquidity ko 3 lot karo")) {
+            assertEquals("Act", audit.feature(s), s)
+            assertEquals(SettingsTalk.Key.LIQUIDITY_LOTS.name, Ask.parse(s).command?.target, s)
+            assertEquals(null, LotsWhatIf.asked(s), s)
+        }
+        // The size asked, and a change said without the arm: as before.
+        assertEquals("Honest", audit.feature("liquidity lots"))
+        assertEquals("Honest", audit.feature("how many lots is liquidity trading"))
+        assertEquals("Honest", audit.feature("how many lots does liquidity trade"))
+        assertEquals("Missed", audit.feature("increase lots"))
+        assertEquals("Missed", audit.feature("change lots to 3"))
+        assertEquals("Sizing", audit.feature("how many lots can i buy with 20000"))
+        assertEquals("Scenarios", audit.feature("what if nifty falls 1%"))
+        for (s in listOf("liquidity lots", "how many lots is liquidity trading", "increase lots", "change lots to 3", "increase liquidity to 3 lots",
+            "change liquidity lots to 3", "should liquidity trade 3 lots", "can i buy 3 lots with 20000", "what if i traded 3 lots", "buy 2 lots of nifty ce",
+            "what if hero traded 2 lots", "is liquidity trading 2 lots", "liquidity 3 lots kar do", "make liquidity 3 lots", "go with 3 lots"))
+            assertEquals(null, LotsWhatIf.asked(s), "$s: ${audit.feature(s)}")
+        // The arm's record without a size: still its own.
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
     }
 
     // ---- TomorrowPlan: the next session prepared, never the questions that already had their own answers ----

@@ -30,6 +30,7 @@ object AskGuide {
             ex("how did liquidity do this week", "LiquidityRecord"),
             ex("liquidity win rate", "LiquidityRecord"),
             ex("liquidity ke last 10 trades", "LiquidityRecord"),
+            ex("what if liquidity traded 3 lots", "LotsWhatIf"),
             ex("where are the liquidity levels", "LiquidityMap"),
             ex("how many lots does liquidity trade", "Honest"),
         )),
