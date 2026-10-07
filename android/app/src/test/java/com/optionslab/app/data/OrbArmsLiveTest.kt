@@ -5,6 +5,7 @@ import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.FakeKite.Outcome
 import com.optionslab.app.testing.FakeKite.Reply
+import com.optionslab.app.testing.FakeUpstox
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.engine.Kite
@@ -232,6 +233,101 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertTrue(kite.requests.any { it.method == "DELETE" && it.path == "/orders/regular/$s1" })
         assertTrue("a sell now would open a short", kite.placed.isEmpty())
         assertEquals("closed_by_you", arm().today.single().why)
+    }
+
+    // ---- the profit lock moves the stop at Zerodha (07 Oct, research/HUNT_H20.md F1-F3, F5) ------------------------
+
+    /** A laddered ORB-family position (as every new entry is) with its stop resting at Zerodha; [peak]: its best so far. */
+    private fun laddered(arm: String, entry: Double, stopId: String, stop: Double, peak: Double? = null) =
+        position(arm, 30, entry, "E1", stopId, stop).put("ladder", true).apply { peak?.let { put("peak", it) } }
+
+    /** The paper feed's candles (the best price without a stream), served by a fake so no test reaches the internet. */
+    private fun <T> withUpstox(body: () -> T): T {
+        val u = FakeUpstox()
+        try { u.price("NSE_FO|TESTCE", 1.0); return body() } finally { u.close() }
+    }
+
+    @Test fun theLockModifiesTheStopAtZerodhaUpAndNeverDown() = withUpstox {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(positions = listOf(laddered("orb", 200.0, s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 222.0)                                     // +22: +10 is locked
+        kite.requests.clear()
+        pass()
+        val o = kite.order(s1)
+        assertEquals("the same order, still resting", "TRIGGER PENDING", o.status)
+        assertEquals(210.0, o.trigger, 1e-9)
+        assertEquals("SL", o.type)
+        assertTrue("its limit sits under the trigger", o.price < 210.0)
+        assertTrue("modified, never cancelled", kite.requests.none { it.method == "DELETE" })
+        assertTrue("never a new sell", kite.placed.isEmpty())
+        assertEquals(210.0, arm().open!!.stopTrigger!!, 1e-9)
+        kite.quote("NFO:$sym", 215.0)                                     // lower again: the stop stays where it is
+        kite.requests.clear()
+        pass()
+        assertEquals(210.0, kite.order(s1).trigger, 1e-9)
+        assertTrue("never moved down", kite.requests.none { it.method == "PUT" })
+        // Zerodha sells at the lock by itself (the app need not be running): booked as the profit lock.
+        kite.fill(s1, 209.5)
+        kite.quote("NFO:$sym", 205.0)
+        pass()
+        val closed = arm().today.single()
+        assertEquals("profit_lock", closed.why)
+        assertEquals(209.5, closed.exit!!, 1e-9)
+        assertTrue("no second sell", kite.placed.isEmpty())
+    }
+
+    @Test fun aRefusedModifyKeepsTheOldStopAndIsTriedAgainOnTheNextCheck() = withUpstox {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(positions = listOf(laddered("orb", 200.0, s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 222.0)
+        kite.down += "/orders/regular/$s1"
+        kite.requests.clear()
+        pass()
+        assertEquals("the old stop still works", 160.0, kite.order(s1).trigger, 1e-9)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertEquals(160.0, arm().open!!.stopTrigger!!, 1e-9)
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { it.contains("did not move the stop on $sym up to the profit lock 210.00") })
+        assertTrue("nothing sold, nothing cancelled", kite.placed.isEmpty())
+        kite.down.clear()
+        pass()
+        assertEquals(210.0, kite.order(s1).trigger, 1e-9)
+        assertEquals(210.0, arm().open!!.stopTrigger!!, 1e-9)
+    }
+
+    @Test fun aLockExitThatFailsPutsTheStopBackAtTheLockNotTheMinus40() = withUpstox {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        // Its best (222) earned +10 (210), but the stop still rests at 160 (the modify was refused); the price is back at 205.
+        state(positions = listOf(laddered("orb", 200.0, s1, 160.0, peak = 222.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 205.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Markets are closed right now.")
+        kite.requests.clear()
+        pass()
+        assertEquals("the -40 stop came out first", "CANCELLED", kite.order(s1).status)
+        assertEquals("the market sell was tried", "MARKET", kite.placed.first().form["order_type"])
+        val restop = kite.placed.last()
+        assertEquals("SL", restop.form["order_type"])
+        assertEquals("back at the lock, not at 160", "210.00", restop.form["trigger_price"])
+        val p = arm().open!!
+        assertEquals(210.0, p.stopTrigger!!, 1e-9)
+        assertEquals(kite.orders.keys.last(), p.stopOrderId)
+    }
+
+    @Test fun liveExitsTakeEachArmsOwnTarget() {
+        // F5: the live path used the ORB's +40 for every arm. ORB Sweep's own target is +80.
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(positions = listOf(position("orb_sweep", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 245.0)                                     // +45: the ORB's target, not ORB Sweep's
+        kite.requests.clear()
+        pass()
+        assertNotNull("held", arm("orb_sweep").open)
+        assertTrue(kite.placed.isEmpty())
+        kite.quote("NFO:$sym", 281.0)                                     // +81: ORB Sweep's +80
+        pass()
+        assertEquals("target", arm("orb_sweep").today.single().why)
     }
 
     // ---- arming ---------------------------------------------------------------------------------

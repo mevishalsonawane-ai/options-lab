@@ -105,6 +105,15 @@ object KiteStream {
         return wants.values.flatten().toSet() + touched.keys
     }
 
+    /** Each instrument's traded prices of the last few minutes ([com.optionslab.engine.TickPath]): the profit lock's best price and resting stops. */
+    private val paths = ConcurrentHashMap<Long, com.optionslab.engine.TickPath>()
+
+    /** The highest price [token] traded on the stream after [sinceMs] (epoch ms), or null when the stream has none kept. */
+    fun highSince(token: Long, sinceMs: Long): Double? = paths[token]?.highSince(sinceMs)
+
+    /** Where a resting SELL stop at [trigger] on [token], resting since [sinceMs], filled on the stream's ticks, or null. */
+    fun sellStopFill(token: Long, sinceMs: Long, trigger: Double): Double? = paths[token]?.sellStopFill(sinceMs, trigger)
+
     /** The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). */
     fun tick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
         ticks[token]?.takeIf { System.currentTimeMillis() - it.at <= maxAgeMs }?.tick
@@ -378,7 +387,10 @@ object KiteStream {
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
         c.ticks.addAndGet(got.size.toLong())
-        got.forEach { ticks[it.token] = Seen(it, now) }
+        got.forEach {
+            ticks[it.token] = Seen(it, now)
+            if (it.last > 0) paths.getOrPut(it.token) { com.optionslab.engine.TickPath() }.record(it.last, now)
+        }
         if (now - lastBump >= 500) { lastBump = now; _version.value = now }
     }
 

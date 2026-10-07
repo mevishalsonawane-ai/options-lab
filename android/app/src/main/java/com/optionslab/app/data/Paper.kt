@@ -133,8 +133,47 @@ object Paper {
         streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
         val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isEmpty()) return null
+        candleBars[c.symbol] = System.currentTimeMillis() to bars
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
             volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
+    }
+
+    /** Today's 1-minute candles per symbol as [quote] last read them (when, bars): the minutes' highs and lows. */
+    private val candleBars = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Upstox.Bar>>>()
+
+    private fun epochMs(t: java.time.LocalDateTime): Long = t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+
+    /** The day's candles of [c] that STARTED after the minute holding [since] (IST), from the ones [quote] read. */
+    private fun barsAfter(c: Contract, since: java.time.LocalDateTime): List<Upstox.Bar>? {
+        val bars = candleBars[c.symbol]?.second ?: return null
+        val from = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        return bars.filter { it.epochSecond > from }.sortedBy { it.epochSecond }
+    }
+
+    /**
+     * The highest price [c] traded after [since] (IST), for the profit lock's best price (research/HUNT_H20.md F2): every
+     * tick of Zerodha's stream while it streams this contract, else the highs of the 1-minute candles that started after
+     * [since]'s minute (the paper feed's; read again when the copy [quote] kept is older than [maxAgeMs]). Null: no price.
+     */
+    suspend fun highSince(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = SHARED_QUOTE_MS): Double? {
+        runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+            ?.let { tok -> KiteStream.highSince(tok, epochMs(since))?.let { return it } }
+        val kept = candleBars[c.symbol]
+        if (kept == null || System.currentTimeMillis() - kept.first !in 0..maxAgeMs) runCatching { quote(c) }
+        return barsAfter(c, since)?.filter { it.istDate == Market.today() }?.maxOfOrNull { it.high }
+    }
+
+    /**
+     * Where a resting SELL SL-M at [trigger], resting since [since] (placed or last moved), filled between two looks, as an
+     * exchange fills it: at the trigger, or at the price that was already under it (a minute's open, a stream tick) - F1/F6.
+     * The stream's ticks when it streams the contract, else the 1-minute candles [quote] read this pass; null: not reached
+     * (or nothing to tell by), and the regular pass fills it on the last price as before.
+     */
+    private fun restingFill(c: Contract, since: java.time.LocalDateTime, trigger: Double): Double? {
+        val tok = runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+        if (tok != null) return KiteStream.sellStopFill(tok, epochMs(since), trigger)
+        val bars = barsAfter(c, since)?.filter { it.istDate == Market.today() } ?: return null
+        return bars.firstNotNullOfOrNull { com.optionslab.engine.orb.ProfitLock.sellStopFill(trigger, it.open, it.low) }
     }
 
     /** The last price per symbol read from the day's candles (not the stream), and when: what [tick] may hand on. */
@@ -344,6 +383,15 @@ object Paper {
             val events = ArrayList<SandboxEvent>()
             var s = b.state
             e.catchUp(s, now).also { s = it.state; events += it.events }
+            // A resting SELL SL-M (a stop, or one the profit lock moved up) touched between two looks fills where it would
+            // have at the exchange - its trigger, or the price already under it - not at whatever the price is now.
+            for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
+                val c = b.contracts[o.symbol] ?: continue
+                if (q[Sandbox.key(o.symbol, "NFO")] == null) continue          // only on a pass that read this contract's price
+                val trig = o.triggerPrice?.toDouble() ?: continue
+                val px = runCatching { restingFill(c, o.updateTimestamp, trig) }.getOrNull() ?: continue
+                e.fillRestingStop(s, o.orderId, px, now).also { if (it.result.ok) { s = it.state; events += it.events } }
+            }
             e.onQuotes(s, q, now).also { s = it.state; events += it.events }
             // Marks positions to the fresh LTP, which expiry settlement prices from.
             e.positionBook(s, now, q).also { s = it.state; events += it.events }
@@ -450,5 +498,5 @@ object Paper {
     fun reset(capital: BigDecimal) { save(fresh(capital, book().contracts)) }
 
     @Synchronized
-    fun wipe() { cache = null; file.delete(); lastQuotes.clear(); candleQuotes.clear(); tickCandles = emptyMap() }
+    fun wipe() { cache = null; file.delete(); lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap() }
 }

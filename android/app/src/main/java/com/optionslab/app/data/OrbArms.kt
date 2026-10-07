@@ -1116,8 +1116,9 @@ object OrbArms {
             // The resting stop filled in the paper book: that is the exit.
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "complete") {
-                b.positions[i] = p.copy(exit = so.averagePrice?.toDouble() ?: p.stopTrigger, exitTime = so.updateTimestamp, why = "stop",
-                    charges = p.charges + chargesOf(so.orderId))
+                // A stop the profit lock had moved up is the lock's exit (F1: the lock IS the resting stop).
+                b.positions[i] = p.copy(exit = so.averagePrice?.toDouble() ?: p.stopTrigger, exitTime = so.updateTimestamp,
+                    why = if (lockedStop(p)) "profit_lock" else "stop", charges = p.charges + chargesOf(so.orderId))
                 continue
             }
             // A stop found cancelled or rejected is gone, not retried.
@@ -1140,7 +1141,9 @@ object OrbArms {
                 continue
             }
             if (ltp == null) continue                                               // no price at all: hold
-            val (laddered, locked) = ladder(cur, ltp)
+            // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms only.
+            val high = if (ladderTarget(cur) != null) runCatching { Paper.highSince(c, cur.entryTime) }.getOrNull() else null
+            val (laddered, locked) = ladder(cur, ltp, high)
             val seen = heldRange(laddered, ltp)
             if (seen !== cur) b.positions[i] = seen
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
@@ -1152,9 +1155,16 @@ object OrbArms {
                 // Liquidity 15+5 exits on index levels (liquidityExits); its 15% stop rests in the book, and if that order is
                 // gone the app sells at the stop level itself.
                 armOf(cur.arm).liquidity -> "stop".takeIf { cur.stopOrderId == null && cur.stopTrigger?.let { ltp <= it } == true }
+                // The lock rests as the paper stop (moved up below), which the paper book fills; this sells at market only
+                // when that stop is not there or has not filled (no fresh price in the book's own pass).
                 locked -> "profit_lock"
-                else -> (if (armOf(cur.arm).sweep) SweepRules.exitReason(cur.entry, ltp, t) else OrbRules.exitReason(cur.entry, ltp, t))
-                    .takeIf { it == "target" || (it == "stop" && cur.stopOrderId == null) }
+                // The arm's own target (ORB Sweep +80), reached on the price now or on a high since the entry (F2).
+                targetHit(cur, ltp, high) -> "target"
+                else -> OrbRules.exitReasonFor(armOf(cur.arm), cur.entry, ltp, t).takeIf { it == "stop" && cur.stopOrderId == null }
+            } ?: run {
+                // Held: the profit lock moves the resting stop up to what the best price has earned (F1).
+                b.positions[i] = raisePaperStop(seen, ltp)
+                null
             } ?: continue
             b.positions[i] = if (armOf(cur.arm).hero) heroExit(seen, c, why) else exit(seen, c, why)
         }
@@ -1165,23 +1175,64 @@ object OrbArms {
         p.stopOrderId?.let { id ->
             Paper.cancel(id, "exit:$why")
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
-            if (so?.status == "complete") return p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp, why = "stop",
-                charges = p.charges + chargesOf(id))
+            if (so?.status == "complete") return p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp,
+                why = if (lockedStop(p)) "profit_lock" else "stop", charges = p.charges + chargesOf(id))
         }
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
         // Nothing sold (no price): the resting stop goes back in the book so the position is never left without one; the
         // sale is tried again on the next pass.
-        val fill = filledOrCancelled(sell) ?: return p.copy(stopOrderId = p.stopOrderId?.let { restop(p, c) })
+        val fill = filledOrCancelled(sell) ?: return p.stopOrderId?.let { restop(p, c) } ?: p.copy(stopOrderId = null)
         sell.orderId?.let { Strategies.tagOwner("paper:$it", "${ownerOf(armOf(p.arm))} · $why") }
         Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${ownerOf(armOf(p.arm))} · exit", sell.orderId)
         return p.copy(stopOrderId = null, exit = fill.price, exitTime = now(), why = why, charges = p.charges + chargesOf(sell.orderId))
     }
 
-    /** The resting stop placed again at its trigger after an exit sold nothing; null when it cannot be. */
-    private suspend fun restop(p: Position, c: Paper.Contract): String? {
-        val trigger = p.stopTrigger ?: return null
+    /**
+     * The resting stop placed again after an exit sold nothing (F3): at the profit lock its best price has earned when that
+     * is above its own trigger (never back at the -40 once a rung is earned), else at its trigger. The position without a
+     * stop order when it cannot be placed (the app then watches it, and the sale is tried again on the next pass).
+     */
+    private suspend fun restop(p: Position, c: Paper.Contract): Position {
+        val trigger = lockOrStop(p) ?: return p.copy(stopOrderId = null)
         val r = runCatching { Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "SL-M", "MIS", null, trigger) }.getOrNull()
-        return r?.takeIf { it.ok }?.orderId?.also { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · stop") }
+        val id = r?.takeIf { it.ok }?.orderId?.also { Strategies.tagOwner("paper:$it", "${armOf(p.arm).label} · stop") }
+        return if (id == null) p.copy(stopOrderId = null) else p.copy(stopOrderId = id, stopTrigger = trigger)
+    }
+
+    /** Where a laddered position's stop belongs now: the higher of its trigger and the lock its best price earned (F3). */
+    private fun lockOrStop(p: Position, tick: Double = OrbRules.TICK): Double? =
+        ProfitLock.restingStop(p.entry, p.stopTrigger, ladderTarget(p), p.peak ?: p.entry, ProfitLock.roundTripPerUnit(p.entry, p.qty), tick)
+
+    /** The profit-lock ladder's target for a laddered position ([ProfitLock.targetOf] its arm), or null for none. */
+    private fun ladderTarget(p: Position): Double? = if (!p.ladder) null else runCatching { ProfitLock.targetOf(armOf(p.arm)) }.getOrNull()
+
+    /** True when the position's resting stop is a profit lock (moved up to the price paid or higher), not its own stop. */
+    private fun lockedStop(p: Position): Boolean = p.ladder && (p.stopTrigger ?: Double.NEGATIVE_INFINITY) >= p.entry - 1e-9
+
+    /** The arm's own +target (ORB Sweep +80, F5) reached on the price now or on the highest price since the entry (F2). */
+    private fun targetHit(p: Position, ltp: Double, high: Double?): Boolean {
+        val arm = runCatching { armOf(p.arm) }.getOrNull() ?: return false
+        if (arm.liquidity || arm.hero) return false
+        return maxOf(ltp, high ?: ltp) >= p.entry + OrbRules.targetFor(arm) - 1e-9
+    }
+
+    /**
+     * F1: the profit lock MOVES THE RESTING STOP. A laddered paper position's SL-M is modified up to the lock its best price
+     * has earned ([ProfitLock.raise]: never down, never to or above the price now), so the paper book fills it where the
+     * price reaches it. A refused modify leaves the stop where it was, is said (throttled), and is asked again next look.
+     */
+    private fun raisePaperStop(p: Position, ltp: Double): Position {
+        val target = ladderTarget(p) ?: return p
+        val id = p.stopOrderId ?: return p
+        val to = ProfitLock.raise(p.entry, target, p.peak ?: p.entry, p.stopTrigger, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty)) ?: return p
+        val r = runCatching { Paper.modify(id, null, null, to) }
+        if (r.getOrNull()?.ok == true) return p.copy(stopTrigger = to)
+        val why = r.getOrNull()?.message ?: r.exceptionOrNull()?.javaClass?.simpleName ?: "an error"
+        com.optionslab.app.work.Alerts.post("${armOf(p.arm).label}: the profit lock could not move the paper stop up to " +
+            "%.2f (%s). The stop stays at %s; it is tried again on the next check.".format(Locale.ENGLISH, to, why,
+                p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"),
+            com.optionslab.app.work.Alerts.Kind.ERROR, "ORB", throttle = true)
+        return p
     }
 
     /**
@@ -1195,17 +1246,20 @@ object OrbArms {
     }
 
     /**
-     * The profit-lock ladder ([ProfitLock], its breakeven after charges) for a laddered position at [ltp]: the position with its best price updated,
-     * and whether [ltp] gave back to the lock its earlier best had earned (then the app sells at market; the resting
-     * -40 stop stays in place underneath until that sale takes it out).
+     * The profit-lock ladder ([ProfitLock], its breakeven after charges) for a laddered position at [ltp]: the position with
+     * its best price updated from [ltp] and [high] (the highest price traded since the entry: every stream tick, else the
+     * 1-minute candles' highs, F2), and whether [ltp] gave back to the lock its best BEFORE this look had earned (a rung
+     * counts from the next price). The lock itself rests as the stop ([raisePaperStop], live [raiseLiveStop]); this is the
+     * app's own check behind it.
      */
-    private fun ladder(p: Position, ltp: Double): Pair<Position, Boolean> {
-        val target = ProfitLock.targetOf(armOf(p.arm))?.takeIf { p.ladder } ?: return p to false
+    private fun ladder(p: Position, ltp: Double, high: Double? = null): Pair<Position, Boolean> {
+        val target = ladderTarget(p) ?: return p to false
         val before = p.peak ?: p.entry
         // The breakeven rung sits at the price paid plus the round trip's charges (Boss's 06 Oct fix): a profit-lock exit is
         // never a certain small loss after charges.
         val locked = ProfitLock.exits(p.entry, target, before, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty))
-        return (if (ltp > before) p.copy(peak = ltp) else p) to locked
+        val peak = ProfitLock.nextPeak(before, ltp, high)
+        return (if (peak > before) p.copy(peak = peak) else p) to locked
     }
 
     // ---- the expiry-day Hero arm (paper only, not proven) -------------------------------
@@ -1528,9 +1582,9 @@ object OrbArms {
      * placed (the app then watches the stop itself). A lost reply is looked for before it counts as unplaced.
      */
     private suspend fun placeStop(label: String, sym: String, qty: Int, lot: Int, tick: Double, fill: Double, known: Collection<String>,
-                                  liquidity: Boolean = false): Pair<String?, Double?> {
-        // The ORB's stop is 40 points below the fill; Liquidity 15+5's is 15% below it.
-        val trigger = (if (liquidity) LiquidityRules.stopTrigger(fill) else OrbRules.stopTrigger(fill))
+                                  liquidity: Boolean = false, at: Double? = null): Pair<String?, Double?> {
+        // The ORB's stop is 40 points below the fill; Liquidity 15+5's is 15% below it; [at]: a given trigger (the lock, F3).
+        val trigger = (at ?: if (liquidity) LiquidityRules.stopTrigger(fill) else OrbRules.stopTrigger(fill))
             ?.let { com.optionslab.engine.Kite.onTick(it, tick, com.optionslab.engine.Kite.Side.SELL) }
             ?: return null to null
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, lot, "MIS", "SL",
@@ -1539,7 +1593,8 @@ object OrbArms {
             if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
         }
         if (id != null) Strategies.tagOwner("kite:$id", "$label · stop")
-        else com.optionslab.app.work.Alerts.error("$label: the ${if (liquidity) "15%" else "−40"} stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
+        else com.optionslab.app.work.Alerts.error("$label: the ${if (at != null) "%.2f".format(Locale.ENGLISH, trigger) else if (liquidity) "15%" else "−40"} " +
+            "stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
         return id to trigger
     }
 
@@ -1675,8 +1730,10 @@ object OrbArms {
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "COMPLETE") {
                 val px = so.avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
-                Notifier.orderFilled(app, "SELL", so.filled, sym, px, "Live", "${armOf(p.arm).label} · stop", p.stopOrderId)
-                b.positions[i] = p.copy(exit = px, exitTime = t, why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
+                // The stop the profit lock had moved up filled at Zerodha: that is the lock's exit (F1).
+                val why = if (lockedStop(p)) "profit_lock" else "stop"
+                Notifier.orderFilled(app, "SELL", so.filled, sym, px, "Live", "${armOf(p.arm).label} · ${why.replace('_', ' ')}", p.stopOrderId)
+                b.positions[i] = p.copy(exit = px, exitTime = t, why = why, stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty))
                 continue
             }
             // A stop taken out at Zerodha (refused, or cancelled by hand or by Zerodha) leaves the position without one: say so.
@@ -1705,7 +1762,14 @@ object OrbArms {
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
-            val (laddered, locked) = ladder(cur, ltp)
+            // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms only.
+            val leg = b.legs?.let { l -> listOf(l.ce, l.pe) }?.firstOrNull { it.symbol == cur.symbol }
+            val high = if (ladderTarget(cur) != null && leg != null) runCatching { Paper.highSince(leg, cur.entryTime) }.getOrNull() else null
+            // The lock the best price BEFORE this look earned, on the tick: when the stop already rests there, Zerodha sells it.
+            val lockNow = ladderTarget(cur)?.let { ProfitLock.level(cur.entry, it, cur.peak ?: cur.entry, ProfitLock.roundTripPerUnit(cur.entry, cur.qty)) }
+                ?.let { ProfitLock.onTick(it, tick) }
+            val lockResting = lockNow != null && cur.stopOrderId != null && (cur.stopTrigger ?: Double.NEGATIVE_INFINITY) >= lockNow - 1e-9
+            val (laddered, locked) = ladder(cur, ltp, high)
             val seen = heldRange(laddered, ltp)
             if (seen !== cur) b.positions[i] = seen
             val why = when {
@@ -1713,8 +1777,16 @@ object OrbArms {
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
                 // Liquidity 15+5: its 15% stop rests at Zerodha; the app sells only if that is gone or the price ran through it.
                 armOf(cur.arm).liquidity -> "stop".takeIf { (cur.stopOrderId == null || runThrough) && cur.stopTrigger?.let { ltp <= it } == true }
-                locked -> "profit_lock"
-                else -> OrbRules.exitReason(cur.entry, ltp, t).takeIf { it == "target" || (it == "stop" && (cur.stopOrderId == null || runThrough)) }
+                // The lock rests at Zerodha as the moved-up stop (F1); the app sells at market only when it is not resting
+                // there (a refused modify, no stop order) or the price ran through its limit.
+                locked && (!lockResting || runThrough) -> "profit_lock"
+                // Each arm's own target (F5: ORB Sweep +80, not the ORB's +40), on the price now or a high since the entry (F2).
+                targetHit(cur, ltp, high) -> "target"
+                else -> OrbRules.exitReasonFor(armOf(cur.arm), cur.entry, ltp, t).takeIf { it == "stop" && (cur.stopOrderId == null || runThrough) }
+            } ?: run {
+                // Held: the profit lock moves the resting SL at Zerodha up to what the best price has earned (F1).
+                b.positions[i] = raiseLiveStop(seen, sym, so, ltp, tick)
+                null
             } ?: continue
             val (done, rest) = exitLive(b, seen, sym, why)
             b.positions[i] = done
@@ -1724,24 +1796,54 @@ object OrbArms {
     }
 
     /**
+     * F1 live: the profit lock MOVES the resting SL at Zerodha up to the lock the best price has earned - a modify of that
+     * same order (trigger, and its limit under it), never a cancel and a new sell, never down, never to or above the price
+     * now ([ProfitLock.raise]). Zerodha then sells at the lock by itself, the app running or not. A refused modify leaves
+     * the old stop working, is said (throttled; Zerodha's own words, never a key or token) and is asked again next look.
+     */
+    private suspend fun raiseLiveStop(p: Position, sym: String, so: Broker.OrderRow?, ltp: Double, tick: Double): Position {
+        val target = ladderTarget(p) ?: return p
+        if (so == null || !so.working || so.id != p.stopOrderId) return p
+        val to = ProfitLock.raise(p.entry, target, p.peak ?: p.entry, p.stopTrigger, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty), tick) ?: return p
+        val r = runCatching {
+            if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, to) else Broker.modify(so, so.qty, "SL", stopLimit(to, tick), to)
+        }
+        if (r.isSuccess) return p.copy(stopTrigger = to)
+        com.optionslab.app.work.Alerts.post("${armOf(p.arm).label}: Zerodha did not move the stop on $sym up to the profit lock " +
+            "%.2f (%s). The stop stays at %s; it is tried again on the next check.".format(Locale.ENGLISH, to,
+                r.exceptionOrNull()?.message?.take(160) ?: "an error", p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none"),
+            com.optionslab.app.work.Alerts.Kind.ERROR, "ORB live", throttle = true)
+        return p
+    }
+
+    /**
      * Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit.
      * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
      */
     private suspend fun exitLive(b: Book, p: Position, sym: String, why: String): Pair<Position, Position?> {
         val label = armOf(p.arm).label
         // The sell certainly did not go: a stop that was taken out is placed again so the position is never left unprotected.
+        // F3: back at the lock its best price has earned when that is above its own trigger - never the -40 once a rung is
+        // earned; if Zerodha refuses that (a sell stop must rest below the price), at its own trigger as before.
         suspend fun unsold(): Pair<Position, Position?> {
             if (p.stopOrderId == null) return p to null
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
-            val (id, _) = placeStop(label, sym, p.qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = armOf(p.arm).liquidity)
-            return p.copy(stopOrderId = id) to null
+            val liq = armOf(p.arm).liquidity
+            val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
+            if (lock != null) {
+                val (id, trig) = placeStop(label, sym, p.qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock)
+                if (id != null) return p.copy(stopOrderId = id, stopTrigger = trig ?: lock) to null
+            }
+            val (id, trig) = placeStop(label, sym, p.qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger)
+            return p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger) to null
         }
         p.stopOrderId?.let { id ->
             runCatching { Broker.cancel(id) }
             val st = runCatching { Broker.orderState(id) }.getOrNull()
             if (st?.status == "COMPLETE") {
                 val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
-                return p.copy(exit = px, exitTime = now(), why = "stop", stopOrderId = null, charges = p.charges + kiteCharge("SELL", px, p.qty)) to null
+                return p.copy(exit = px, exitTime = now(), why = if (lockedStop(p)) "profit_lock" else "stop", stopOrderId = null,
+                    charges = p.charges + kiteCharge("SELL", px, p.qty)) to null
             }
             // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
             if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p to null

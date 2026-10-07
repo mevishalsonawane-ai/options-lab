@@ -153,9 +153,10 @@ internal fun OrbRowsContent(
                     a.arm.liquidity -> a.status
                     !a.armed && a.arm.hero -> keepNumbersWhole("NIFTY expiry days only · 13:30–14:45 straddle +15% and a 0.25% move in 15 min · buys a Rs 1–5 OTM option, Rs 5,000 · ${com.optionslab.engine.orb.HeroRules.EXITS} · ${com.optionslab.engine.orb.HeroRules.NOT_PROVEN}")
                     a.arm.hero -> OrbArms.describe(a.status)
-                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock"
-                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock"
-                    !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock"
+                    // The profit lock's rungs on the arm's own target (ORB Sweep's +80: +20 / +40 / +60), as the stop moves up.
+                    !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock ${rungsOf(a.arm)}"
+                    !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock ${rungsOf(a.arm)}"
+                    !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock ${rungsOf(a.arm)}"
                     else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -248,7 +249,11 @@ internal fun OrbRowsContent(
                     }
                     Note(if (view.arms.first { it.arm.source == src }.arm.liquidity)
                         "Either way the stop 15% below the price paid rests as an order (paper book, or an SL order at Zerodha), and the exits at the next liquidity, on a failed break, on new liquidity and at 15:10 run by themselves."
-                        else "Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha), and the +40 target, the profit lock (a quarter of the way up the stop moves to the price paid, half way to +10, three quarters to +20) and the 15:10 square-off run by themselves.", Modifier.padding(top = 8.dp))
+                        else view.arms.first { it.arm.source == src }.arm.let { arm ->
+                            "Either way the −40 stop rests as an order (paper book, or an SL order at Zerodha) and the profit lock moves that order up, " +
+                                "never down (${rungsOf(arm)}; breakeven is after charges), so at Zerodha it sells at the lock even with the app closed. " +
+                                "The +${com.optionslab.engine.orb.OrbRules.targetFor(arm).toInt()} target and the 15:10 square-off run by themselves."
+                        }, Modifier.padding(top = 8.dp))
                 }
             },
             confirmButton = {},
@@ -452,3 +457,7 @@ internal fun armShadowLine(shadows: List<com.optionslab.app.data.ShadowArms.Row>
 /** Money and counts never break across lines (word joiners inside each figure, e.g. "(+₹1,158"). */
 private val FIGURE = Regex("""[(]?[+−-]?₹?\d[\d,.]*""")
 internal fun keepNumbersWhole(s: String): String = FIGURE.replace(s) { m -> m.value.toList().joinToString("\u2060") }
+
+/** The profit lock's rungs for [arm] in words ("+10 → breakeven, +20 → +10, +30 → +20"; ORB Sweep's on its +80). */
+internal fun rungsOf(arm: com.optionslab.engine.orb.Arm): String =
+    com.optionslab.engine.orb.ProfitLock.describeRungs(com.optionslab.engine.orb.OrbRules.targetFor(arm))

@@ -49,6 +49,11 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-07-profit-lock-stop", OCT7, "The profit lock now moves the stop itself",
+            "When ORB, ORB Fresh, ORB Sweep or Range Fade reach a profit-lock rung, their resting stop order is moved up to the lock " +
+                "(never down), so at Zerodha it sells there even with the app closed, and the best price counts every tick or each minute's high. " +
+                "ORB Sweep's rungs are on its +80 target: +20, +40 and +60, as before.",
+            "Home → Dashboard → Strategies card → an arm's open trade (its stop shows the lock)"),
         Entry("2026-10-07-liquidity-midcpnifty", OCT7, "Liquidity 15+5 now also trades Midcap Nifty",
             "Liquidity 15+5 also runs on Midcap Nifty's 15-minute and 5-minute charts, on paper, with its rules unchanged and an " +
                 "8-point index stop. It was positive before and in the research's locked holdout; Zerodha still needs your PIN or fingerprint.",

@@ -91,6 +91,25 @@ class Sandbox(
         tx(state, now) { modifyOrder(orderId, change) }
 
     /**
+     * A resting SELL SL-M (still trigger pending) filled as an exchange fills it, at [price]: its trigger, or the open of
+     * the minute that opened under it (the caller reads that from the minute candles or the stream's ticks since the stop
+     * last rested, [com.optionslab.engine.orb.ProfitLock.sellStopFill]). The stop slippage and the charges apply as on any
+     * stop fill. Not in the Python (an app addition, 07 Oct): the regular pass ([onQuotes]) fills a stop only at the last
+     * price it is handed, which missed a stop touched and left between two looks. Any other order is refused untouched.
+     */
+    fun fillRestingStop(state: SandboxState, orderId: String, price: Double, now: ZonedDateTime): Outcome<OrderResult> =
+        tx(state, now) {
+            val o = order(orderId)
+            when {
+                o == null -> err("Order $orderId not found", 404)
+                o.status != OrderStatus.TRIGGER_PENDING || o.priceType != "SL-M" || o.action != "SELL" ->
+                    err("Only a resting SELL SL-M can be filled at its stop")
+                !(price.isFinite() && price > 0) -> err("Invalid fill price")
+                else -> { executeOrder(orderId, pyDec(price)); OrderResult(true, 200, orderId, "Stop filled") }
+            }
+        }
+
+    /**
      * cancel_order: releases the margin the order blocked. [quote] is used only
      * by the Python's fallback for an order that blocked nothing and has no
      * price (an SL-M), where it recomputes a margin to release from the LTP.

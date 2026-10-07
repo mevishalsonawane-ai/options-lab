@@ -270,7 +270,9 @@ class OrbArmsDayTest : RobolectricTest() {
         tick(LocalTime.of(10, 38))
         val closed = arm().today.single()
         assertEquals("profit_lock", closed.why)
-        assertTrue("the resting -40 stop is never lowered or moved", closed.stopTrigger == p.stopTrigger)
+        // The lock moved the resting stop up (07 Oct, F1) to breakeven after charges on the tick - never down.
+        assertEquals(com.optionslab.engine.orb.ProfitLock.onTick(p.entry + cost), closed.stopTrigger!!, 1e-9)
+        assertTrue("moved up from the -40", closed.stopTrigger!! > p.stopTrigger!!)
     }
 
     @Test fun threeQuartersOfTheWayLocksHalfTheTarget() {
@@ -287,6 +289,50 @@ class OrbArmsDayTest : RobolectricTest() {
         val closed = arm().today.single()
         assertEquals("profit_lock", closed.why)
         assertTrue("sold with a profit, not at the -40 stop", closed.exit!! > p.entry + 15)
+    }
+
+    @Test fun reachingARungMovesTheRestingPaperStopUpAndNeverDown() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        val stopId = p.stopOrderId!!
+        fun resting() = Paper.state.orders.single { it.orderId == stopId }
+        upstox.price(ceKey, p.entry + 22)                           // +22: past 50%, so +10 is locked
+        tick(LocalTime.of(10, 36))
+        assertEquals("the same stop order, modified (not cancelled)", "trigger pending", resting().status)
+        assertEquals(p.entry + 10, resting().triggerPrice!!.toDouble(), 0.051)
+        assertEquals(resting().triggerPrice!!.toDouble(), arm().open!!.stopTrigger!!, 1e-9)
+        upstox.price(ceKey, p.entry + 14)                           // above the lock, below the best: the stop stays where it is
+        tick(LocalTime.of(10, 37))
+        assertEquals(p.entry + 10, resting().triggerPrice!!.toDouble(), 0.051)
+        assertTrue(arm().open != null)
+    }
+
+    @Test fun aSpikeInsideAMinuteEarnsTheRungFromItsHighAndThePaperStopFillsAtTheLock() {
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm().open!!
+        val be = com.optionslab.engine.orb.ProfitLock.onTick(p.entry + com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(p.entry, p.qty))
+        // 10:36: the option spiked to +15 inside the minute and closed at +6. The old sampled close never earned the first rung.
+        val spike = FakeUpstox.Candle(LocalTime.of(10, 36), p.entry + 1, p.entry + 15, p.entry, p.entry + 6)
+        upstox.minutes[ceKey] = listOf(spike)
+        tick(LocalTime.of(10, 37))
+        val held = arm().open!!
+        assertEquals("the best price is the minute's high", p.entry + 15, held.peak!!, 1e-6)
+        assertEquals("the resting stop moved up to breakeven after charges", be, held.stopTrigger!!, 1e-9)
+        val so = Paper.state.orders.single { it.orderId == p.stopOrderId }
+        assertEquals("trigger pending", so.status)
+        assertEquals(be, so.triggerPrice!!.toDouble(), 1e-9)
+        // 10:38 opened at +4 and traded down to -3 before the next look: the paper book fills the stop at its trigger, as an
+        // SL-M at the exchange would (less its 10 bps stop slippage), not at the price the next look sees.
+        upstox.minutes[ceKey] = listOf(spike, FakeUpstox.Candle(LocalTime.of(10, 38), p.entry + 4, p.entry + 4, p.entry - 3, p.entry - 2))
+        at(LocalTime.of(10, 39))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(10, 39))
+        val closed = arm().today.single()
+        assertEquals("profit_lock", closed.why)
+        assertEquals(be * 0.999, closed.exit!!, 0.06)
+        assertTrue("sold at the lock, not at the -2 close", closed.exit!! > p.entry)
     }
 
     @Test fun belowTheFirstRungTheTradeKeepsItsUsualStop() {

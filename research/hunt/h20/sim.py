@@ -7,6 +7,9 @@ simulator with two modes:
         close before this minute), sold at the NEXT minute's open - what OrbArms.priceCheck does on a sampled LTP.
   tick  optimistic: peak from minute highs, lock and target rest on the low / high and fill at the level (or gap open)
         - what ArmsBacktest / research/PROFIT_LOCK.md assume.
+  fixed the app after the 07 Oct fix (F1-F3, F6): ONE resting SL-M at max(-40, lock), the lock earned by the best minute
+        HIGH before this minute, filled on the low at the trigger or the gap open (-10 bps); the +target is the app's own
+        check on the minute HIGH, sold at the NEXT minute's open (market). See fixed.py.
 
     OBUY_CACHE=<scratch>/hunt/h20/cache flock <scratch>/obuy.lock python3 -I research/hunt/h20/sim.py prep
 """
@@ -156,7 +159,7 @@ def _sim(pk, sl, sp, exe, mode):
     trig_m = np.where(np.isnan(trig), NEG, trig)[:, None]
     tgt = e + sp.tgt if sp.tgt else np.full(N, np.inf)
     be = e + np.maximum(exe.costs.rt_per_unit(e, qty, dn, False), 0.0) if sp.be_floor else e.copy()
-    src = H if mode == "tick" else Cl
+    src = H if mode in ("tick", "fixed") else Cl
     hm = np.where(barok, src, NEG)
     inc = np.maximum.accumulate(hm, axis=1)
     peak = np.empty_like(inc)
@@ -193,6 +196,11 @@ def _sim(pk, sl, sp, exe, mode):
         rest = np.maximum(trig_m, lock)
         kb = first(barok & ((L <= rest) | (H >= tgt[:, None])))
         k_lk = k_tg = np.full(N, BIG)
+    elif mode == "fixed":
+        rest = np.maximum(trig_m, lock)
+        kb = first(barok & (L <= rest))             # the stop the lock moved up rests and fills intrabar
+        k_lk = np.full(N, BIG)
+        k_tg = first(okc & (H >= tgt[:, None]))     # target: app-side on the minute's high, sold next minute
     else:
         kb = first(barok & (L <= trig_m))            # only the resting -40 stop fills intrabar
         k_lk = first(okc & (Cl <= lock))
@@ -210,7 +218,7 @@ def _sim(pk, sl, sp, exe, mode):
         b = np.nonzero(bar)[0]
         k = kb[b]
         o = O[b, k]
-        if mode == "tick":
+        if mode in ("tick", "fixed"):
             r_at = np.maximum(trig_m[b, 0], lock[b, k])
             hr = L[b, k] <= r_at
             is_stop = hr & (trig_m[b, 0] >= lock[b, k])
@@ -245,7 +253,7 @@ def _sim(pk, sl, sp, exe, mode):
     mfe_h = np.max(np.where(upto, H, NEG), axis=1) - e
     mfe_c = np.max(np.where(upto, Cl, NEG), axis=1) - e
     lk_at = np.where(why == "lock", lock[rows, np.minimum(km, C.W - 1)], np.nan)
-    if mode == "tick":
+    if mode in ("tick", "fixed"):
         lk_at = np.where(why == "lock", lock[rows, np.minimum(xcol, C.W - 1)], np.nan)
     res = meta[["cand", "parent", "und", "book", "day", "sig_min", "gate", "side", "strike", "lot", "qty"]].copy() \
         if "parent" in meta.columns else meta[["cand", "und", "book", "day", "sig_min", "gate", "side", "strike", "lot", "qty"]].copy()

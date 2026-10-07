@@ -8,7 +8,10 @@ import java.util.Locale
  * The owner's profit-lock ladder (2026-10-01) for the arms with a fixed premium target (ORB, ORB Fresh, ORB Sweep,
  * Range Fade): once the option has traded 25% of the way to its target the stop moves to the price paid, at 50% to
  * price paid + 25% of the target, at 75% to price paid + 50%. A trade that got most of the way and turned back no
- * longer runs to the full -40 stop. Backtest (research/PROFIT_LOCK.md, two BANKNIFTY years): ORB -218k / -194k ->
+ * longer runs to the full -40 stop. Since 07 Oct (research/HUNT_H20.md) the lock MOVES THE RESTING STOP ([raise]): the
+ * -40 SL order is modified up to the lock (never down), so the exit happens at the exchange / in the paper book when the
+ * price reaches it, with the app closed too; the best price is every stream tick or the 1-minute candles' highs.
+ * ORB Sweep's rungs are on its +80 target: +20 / +40 / +60 ([rungs]). Backtest (research/PROFIT_LOCK.md, two BANKNIFTY years): ORB -218k / -194k ->
  * -77k / -70k, ORB Fresh -69k / -57k -> -17k / -6k; Sweep and Range Fade about unchanged.
  * Liquidity 15+5 has no fixed target (it sells at the next liquidity level), so it is not laddered.
  * The Pine scripts add a percentage trail on the gain ([Trail], 2026-10-06), so a script with no stop or target is
@@ -61,6 +64,64 @@ object ProfitLock {
      */
     fun exits(entry: Double, target: Double, peakBefore: Double, ltp: Double, costPerUnit: Double = 0.0): Boolean =
         level(entry, target, peakBefore, costPerUnit)?.let { ltp <= it + EPS } == true
+
+    // ---- the lock as the resting stop (2026-10-07, research/HUNT_H20.md F1-F6) ---------------------------------------
+
+    /**
+     * The rungs on [target] in premium points: (how far up, what is locked). ORB / ORB Fresh / Range Fade (+40):
+     * +10 -> breakeven, +20 -> +10, +30 -> +20; ORB Sweep (+80): +20 -> breakeven, +40 -> +20, +60 -> +40.
+     */
+    fun rungs(target: Double): List<Pair<Double, Double>> = LADDER.map { it.first * target to it.second * target }
+
+    /** The rungs in words for the screens: "+10 → breakeven, +20 → +10, +30 → +20" (+40), "+20 → breakeven, ..." (+80). */
+    fun describeRungs(target: Double): String =
+        rungs(target).joinToString(", ") { (up, kept) -> "+${n(up)} → " + if (kept == 0.0) "breakeven" else "+${n(kept)}" }
+
+    /** A sell stop's trigger on the [tick] for a lock [level]: rounded UP, so it never sits under the breakeven it locks. */
+    fun onTick(level: Double, tick: Double = OrbRules.TICK): Double {
+        val n = Math.ceil(level / tick - 1e-6)            // a float hair over a tick is that tick
+        return BigDecimal.valueOf(tick).multiply(BigDecimal.valueOf(n.toLong())).toDouble()
+    }
+
+    /**
+     * The lock as a resting sell stop: the trigger the stop moves UP to for a buy at [entry] whose best price so far is
+     * [peak] ([level] on [target], on the [tick]), or null when it must not move: no rung reached, the lock is not above
+     * the stop resting now ([current]; a stop is never moved down), or it does not sit below the price now ([ltp]): a sell
+     * stop must rest below the price (Zerodha refuses one above it), and a price already at or under the lock is sold by
+     * the app's own check instead.
+     */
+    fun raise(entry: Double, target: Double, peak: Double, current: Double?, ltp: Double, costPerUnit: Double = 0.0,
+              tick: Double = OrbRules.TICK): Double? {
+        val lock = level(entry, target, peak, costPerUnit)?.let { onTick(it, tick) } ?: return null
+        if (current != null && lock <= current + EPS) return null
+        return lock.takeIf { it < ltp - EPS }
+    }
+
+    /**
+     * The best price since the entry after one more look: the best before it ([peakBefore]), the price now ([ltp]) and the
+     * highest price traded since the last look ([high]: every stream tick, else the 1-minute candles' highs; null: none
+     * known). The lock this earns counts from the NEXT look ([exits] and [raise] read the best from before it).
+     */
+    fun nextPeak(peakBefore: Double, ltp: Double?, high: Double?): Double =
+        listOfNotNull(peakBefore, ltp?.takeIf { it.isFinite() }, high?.takeIf { it.isFinite() }).max()
+
+    /**
+     * The stop resting for a laddered buy: the higher of its own stop ([base], -40; null: none) and the lock its best
+     * price [peak] has earned ([level] on [target], on the [tick]); null when it has neither. What the backtests rest, and
+     * where a failed exit puts the stop back (never the -40 once a rung is earned).
+     */
+    fun restingStop(entry: Double, base: Double?, target: Double?, peak: Double, costPerUnit: Double = 0.0,
+                    tick: Double = OrbRules.TICK): Double? {
+        val lock = target?.let { level(entry, it, peak, costPerUnit) }?.let { onTick(it, tick) }
+        return listOfNotNull(base, lock).maxOrNull()
+    }
+
+    /**
+     * A resting sell stop at [trigger] over one bar ([open], [low]): filled at the trigger, or at the open when the bar
+     * opened under it (a gap through the stop); null when the bar never reached it. As an SL-M fills at an exchange.
+     */
+    fun sellStopFill(trigger: Double, open: Double, low: Double): Double? =
+        if (low <= trigger + EPS) minOf(trigger, open) else null
 
     // ---- the percentage trail (2026-10-06): every Pine script, with or without a stop or target ----------------------
 

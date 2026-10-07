@@ -152,3 +152,38 @@ ORB Fresh is the only arm that is gross-positive in the holdout. It loses its wh
 Caveats: the data has no bid/ask, so fills are modelled ("app" +-5 bps, -10 bps on stops; the spread version is shown).
 The app's "one index, one side" exposure rule between arms is not modelled (each arm is on its own). Lots follow the
 date: 15-25 before the holdout, 30-35 in it.
+
+---
+
+## Follow-up (07 Oct): fixes F1-F6 applied, and the fixed lock replayed
+
+Boss approved the fixes. The app now: (F1) moves the resting -40 stop UP to the lock (paper: the paper stop is modified;
+live: the Zerodha SL order is modified, never cancelled and re-sold; never moved down; a refused modify keeps the old
+stop, is said and is retried next look); (F2) takes the best price from every stream tick, else the 1-minute candle
+HIGHS after the entry minute (a rung still counts from the next look), and checks the +target on those highs too; (F3)
+puts a stop back at the current lock, not -40, after a failed exit; (F4) shows ORB Sweep's rungs as they are (+20 / +40 /
++60 on its +80, no rule change); (F5) gives each arm its own target live (Sweep +80); (F6) the paper book fills a resting
+SELL SL-M at its trigger or the gap open from the minute candles / stream ticks, and ArmsBacktest / Replay rest one stop
+at max(-40, lock) filled at the trigger or gap open.
+
+Replay (`research/hunt/h20/fixed.py`, sim mode `fixed` = the fixed app: resting stop at max(-40, lock from minute highs),
+fill at trigger / gap open -10 bps; +target an app check on the minute high, sold next minute). Same signals, lots, app
+costs (net) and position rule as above; the app's own rules, nothing chosen. Output `research/hunt/h20/fixed.csv`.
+
+**Locked holdout (1 Oct 2025 - 5 Oct 2026, 248 sessions), Rs/day at 1 lot, net:**
+
+| arm | before (app until 07 Oct) | after (fixed lock) | change | trades before / after | lock exits after |
+|---|---|---|---|---|---|
+| ORB | -857 | -733 | +124 | 1559 / 1904 | 65% |
+| ORB Fresh | -98 | -150 | -52 | 458 / 474 | 66% |
+| ORB Sweep | -300 | -318 | -18 | 328 / 331 | 53% |
+| Range Fade | -272 | -250 | +22 | 368 / 376 | 66% |
+| Liquidity 15+5 | not laddered: unchanged | unchanged | 0 | - | - |
+| **four arms** | **-1,527** | **-1,451** | **+76** | | |
+
+Pre-holdout (996 sessions): ORB -635 -> -636, Fresh -218 -> -195, Sweep -218 -> -195, Fade -229 -> -199 Rs/day.
+
+The fix does what Boss asked: lock exits now fill at the lock (or the gap), not 3-6 points under it, and they happen
+without the app looking. It does not create an edge: every arm still loses after costs, before and in the holdout. ORB
+Fresh is worse in the holdout because exits come sooner (fewer +40 targets, 25% -> 14%). Liquidity 15+5 has no ladder,
+so its exits are unchanged; only its paper 15% stop now fills at its trigger / gap open like the others' resting stops.

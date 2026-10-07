@@ -15,8 +15,9 @@ import kotlin.math.abs
  *   bars      5-minute BANKNIFTY bars folded from the index minutes
  *   contract  ATM from the 09:20 bar (nearest recorded strike), the nearest expiry on or after the day, as the arms trade
  *   entry     the option's first minute after the signal bar closes, plus [slip]
- *   exits     each arm's own stop / target and the profit-lock ladder on the option minute lows and highs, 15:10
- *             square-off, minus [slip]; a premium at or under 40 is not bought (the arms refuse it)
+ *   exits     each arm's own stop / target and the profit-lock ladder as the app rests them (one sell stop moved up to
+ *             the lock, the best price from the minute highs, filled at the trigger or a gap open), 15:10 square-off,
+ *             minus [slip]; a premium at or under 40 is not bought (the arms refuse it)
  *   costs     [charges] rupees a round trip, one lot
  *
  * Rows also split the days in two halves (first / second): an arm that only works in one half is not an edge.
@@ -35,7 +36,7 @@ object ArmsBacktest {
     data class Result(val days: Int, val firstDay: LocalDate?, val lastDay: LocalDate?, val rows: List<Row>, val trades: List<Trade>)
 
     fun stopOf(arm: Arm) = if (arm.sweep) SweepRules.STOP_POINTS else OrbRules.STOP_POINTS
-    fun targetOf(arm: Arm) = if (arm.sweep) SweepRules.TARGET_POINTS else OrbRules.TARGET_POINTS
+    fun targetOf(arm: Arm) = OrbRules.targetFor(arm)
 
     fun run(sessions: Sequence<Session>, slip: Double = 0.5, charges: Double = 40.0): Result {
         val trades = ArrayList<Trade>()
@@ -103,7 +104,7 @@ object ArmsBacktest {
             val leg = if (dir > 0) ce else pe
             val signal = bars[k].start
             val from = signal.hour * 60 + signal.minute + 5
-            val t = fill(leg, from, stopOf(arm), targetOf(arm), slip, ProfitLock.targetOf(arm))
+            val t = fill(leg, from, stopOf(arm), targetOf(arm), slip, ProfitLock.targetOf(arm), charges / leg.lot.coerceAtLeast(1))
             if (t == null) { k++; continue }
             val (entry, exit, why, exitMinute) = t
             out += Trade(day, arm.source, if (dir > 0) "CE" else "PE", "%02d:%02d".format(signal.hour, signal.minute),
@@ -116,23 +117,32 @@ object ArmsBacktest {
 
     private data class Fill(val entry: Double, val exit: Double, val why: String, val minute: Int)
 
-    /** Bought at the first minute at or after [from]; exits on the stop, the profit lock, the target, or the 15:10 square-off. */
-    private fun fill(leg: Series, from: Int, stop: Double, target: Double, slip: Double, ladder: Double? = null): Fill? {
+    /**
+     * Bought at the first minute at or after [from]; exits on the resting stop, the target, or the 15:10 square-off. The
+     * stop is the app's since 07 Oct (research/HUNT_H20.md F6): ONE resting sell stop at the higher of -[stop] and the
+     * profit lock ([ProfitLock.restingStop], its breakeven floored at the round trip's charges, [costPerUnit]), the lock
+     * earned on an earlier minute's HIGH (a rung counts from the next minute), filled as an SL-M fills: at the trigger, or
+     * at the minute's open when it opened under it ([ProfitLock.sellStopFill]).
+     */
+    private fun fill(leg: Series, from: Int, stop: Double, target: Double, slip: Double, ladder: Double? = null,
+                     costPerUnit: Double = 0.0): Fill? {
         var i = leg.lastAtOrBefore(from - 1) + 1
         if (i >= leg.size) return null
         val squareOff = OrbRules.SQUARE_OFF.hour * 60 + OrbRules.SQUARE_OFF.minute
         if (leg.minutes[i] >= squareOff) return null
         val e = (leg.open?.get(i) ?: leg.close[i]) + slip
         if (OrbRules.stopTrigger(e) == null) return null                    // at or under 40: the arms refuse the entry
+        val base = (e - stop).takeIf { it > 0 }
         var peak = e
         while (i < leg.size) {
             val m = leg.minutes[i]
+            val op = leg.open?.get(i) ?: leg.close[i]
             val lo = leg.low?.get(i) ?: leg.close[i]
             val hi = leg.high?.get(i) ?: leg.close[i]
-            if (e - stop > 0 && lo <= e - stop) return Fill(e, e - stop - slip, "stop", m)
-            // A rung earned on an earlier minute's high: out at the lock (as research/PROFIT_LOCK.md).
-            val lock = ladder?.let { ProfitLock.level(e, it, peak) }
-            if (lock != null && lo <= lock) return Fill(e, lock - slip, "profit_lock", m)
+            val rest = ProfitLock.restingStop(e, base, ladder, peak, costPerUnit)
+            if (rest != null) ProfitLock.sellStopFill(rest, op, lo)?.let { px ->
+                return Fill(e, px - slip, if (base != null && rest <= base) "stop" else "profit_lock", m)
+            }
             if (hi >= e + target) return Fill(e, e + target - slip, "target", m)
             peak = maxOf(peak, hi)
             if (m >= squareOff) return Fill(e, leg.close[i] - slip, "session_end", m)

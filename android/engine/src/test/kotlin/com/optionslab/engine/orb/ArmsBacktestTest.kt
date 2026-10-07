@@ -60,7 +60,11 @@ class ArmsBacktestTest {
         val pe = series(Right.PE, 54_000.0, all, { 200.0 })
         val fall = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else 250.0 })
         val t1 = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, fall)), 0.0, 0.0)!!.first { it.arm == "orb" }
-        assertEquals("stop", t1.why); assertEquals(-40.0 * 30, t1.net, 1e-9)
+        // The minute opened at 250, under the 260 stop: a resting SL-M fills at that open, not at its trigger.
+        assertEquals("stop", t1.why); assertEquals(-50.0 * 30, t1.net, 1e-9)
+        val touch = series(Right.CE, 54_000.0, all, { 300.0 }, lo = { m -> if (m == 620) 255.0 else 300.0 })
+        val t1b = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, touch)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals("stop", t1b.why); assertEquals(-40.0 * 30, t1b.net, 1e-9)
         val flat = series(Right.CE, 54_000.0, all, { m -> 300.0 + (m % 2) })
         val t2 = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, flat)), 0.0, 0.0)!!.first { it.arm == "orb" }
         assertEquals("session_end", t2.why)
@@ -75,7 +79,18 @@ class ArmsBacktestTest {
         val pe = series(Right.PE, 54_000.0, all, { 200.0 })
         val ce = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 290.0 })
         val t = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, ce)), 0.0, 0.0)!!.first { it.arm == "orb" }
-        assertEquals("profit_lock", t.why); assertEquals(10.0 * 30, t.net, 1e-9)              // 25% of 40 locked
+        // The stop rests at 310 (+10 locked); the 10:30 minute opened at 290, under it: filled at that open, as an SL-M.
+        assertEquals("profit_lock", t.why); assertEquals(-10.0 * 30, t.net, 1e-9)
+        // Touched inside a minute that opened above it: out at the lock itself.
+        val turn = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 315.0 },
+            lo = { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 305.0 })
+        val tl = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, turn)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals("profit_lock", tl.why); assertEquals(10.0 * 30, tl.net, 1e-9)              // 25% of 40 locked
+        // With charges, the breakeven rung is floored at entry + the round trip per unit (Rs 60 / 30 = 2 points).
+        val be = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 312.0 else 303.0 },
+            lo = { m -> if (m < 620) 300.0 else if (m < 630) 312.0 else 299.0 })
+        val tb = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, be)), 0.0, 60.0)!!.first { it.arm == "orb" }
+        assertEquals("profit_lock", tb.why); assertEquals(302.0, tb.exit, 1e-9)
         // A premium of 40 or less has no 40-point stop: the arms refuse it, so the backtest does too.
         val cheap = series(Right.CE, 54_000.0, all, { 35.0 })
         assertTrue(ArmsBacktest.day(Session(day, 30, listOf(ix, pe, cheap)), 0.0, 0.0)!!.none { it.arm == "orb" })

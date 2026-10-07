@@ -456,7 +456,9 @@ class OrbRowsTest {
         for (label in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade", "Hero (expiry)", "Liquidity 15+5"))
             assertEquals(label, 1, compose.onAllNodes(isToggleable() and androidx.compose.ui.test.hasContentDescription("Arm $label")).fetchSemanticsNodes().size)
         assertTrue(!shown("Retired")); assertTrue(!shown("retired"))
-        assertTrue(shown("BANKNIFTY opening-range break · profit lock"))
+        assertTrue(shown("BANKNIFTY opening-range break · profit lock +10 → breakeven, +20 → +10, +30 → +20"))
+        // ORB Sweep's rungs are on its own +80 target (F4, 07 Oct): said as they are, not as +10 / +20 / +30.
+        assertTrue(shown("-40 / +80 · profit lock +20 → breakeven, +40 → +20, +60 → +40"))
         assertTrue(shown("BANKNIFTY opening-range break, fresh breaks only"))
         assertTrue(shown("BANKNIFTY failed break of the opening range, faded · paper only"))
         assertTrue(shown("BANKNIFTY touch of the range edge, faded to the middle · paper only"))
