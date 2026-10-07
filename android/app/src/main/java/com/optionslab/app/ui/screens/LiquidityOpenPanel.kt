@@ -59,7 +59,8 @@ internal fun LiquidityOpenPanel(
                 val r = read?.let { f -> try { f(open) } catch (e: CancellationException) { throw e } catch (e: Exception) { null } }
                 runCatching { liquidityOpenView(open, mark, r, now()) }.getOrNull()
             }
-            if (v != null && v != shown) shown = v
+            // Written on the main thread (under a test dispatcher the loop could resume on the IO worker and lay out there).
+            if (v != null && v != shown) withContext(Dispatchers.Main.immediate) { shown = v }
             // Flat (no position open): no ticking.
             if (!open.open) break
             delay(tickMs)
