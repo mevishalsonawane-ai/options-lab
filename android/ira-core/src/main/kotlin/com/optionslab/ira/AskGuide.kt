@@ -113,6 +113,7 @@ object AskGuide {
             ex("anything to do before tomorrow", "BeforeTomorrow"),
             ex("what if nifty falls 1%", "Scenarios"),
             ex("make the case for trading now", "TradeCase"),
+            ex("which day does liquidity do best", "LiquidityWhen"),
         )),
         Group("app", "App", "Jarvis himself: what's new, how fresh the data is, where a setting is, a word explained", listOf(
             ex("what can you do", "Help", gold = true),
