@@ -159,6 +159,14 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     LaunchedEffect(newest) {
         if (newest != null) list.animateScrollToItem((list.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
     }
+    // "Catch me up" ([com.optionslab.ira.CatchUp]): the page was in front of Boss until it paused (screen off, another app)
+    // or was left - what was posted after that is what he missed. Only the moment is kept, never a note.
+    val seenOwner = LocalLifecycleOwner.current
+    DisposableEffect(seenOwner) {
+        val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_PAUSE) com.optionslab.app.ira.IraNotes.seen() }
+        seenOwner.lifecycle.addObserver(obs)
+        onDispose { seenOwner.lifecycle.removeObserver(obs); com.optionslab.app.ira.IraNotes.seen() }
+    }
 
     val ctxSpeak = androidx.compose.ui.platform.LocalContext.current
     fun send(q: String) {

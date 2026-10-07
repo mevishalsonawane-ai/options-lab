@@ -134,6 +134,7 @@ class CollisionTest {
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "OpeningRead" to { q -> OpeningRead.asked(q) },
         "TodayNotes" to { q -> TodayNotes.asked(q) },
+        "CatchUp" to { q -> CatchUp.asked(q) },
         "ForwardWatch" to { q -> ForwardWatch.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
@@ -979,6 +980,11 @@ class CollisionTest {
         "your notes today" to "TodayNotes", "notes for today" to "TodayNotes", "show me your notes from today" to "TodayNotes",
         "aaj kya bataya" to "TodayNotes", "aaj kya bataya tumne" to "TodayNotes", "aaj tumne kya bataya" to "TodayNotes", "tumne aaj kya bataya" to "TodayNotes",
         "aaj kya kya bataya" to "TodayNotes", "aaj ke notes" to "TodayNotes", "aaj ke notes dikhao" to "TodayNotes",
+        // ---- CatchUp: the notes Jarvis posted since Boss last looked, said short ("what did I miss" keeps its own answer) ----
+        "catch me up" to "CatchUp", "jarvis catch me up" to "CatchUp", "catch me up please" to "CatchUp", "catch me up on your notes" to "CatchUp",
+        "read my notes" to "CatchUp", "read me my notes" to "CatchUp", "read your notes" to "CatchUp", "read out my notes" to "CatchUp",
+        "notes padh do" to "CatchUp", "mere notes padh do" to "CatchUp", "notes sunao" to "CatchUp", "notes padh ke sunao" to "CatchUp",
+        "kya hua jab main nahi tha" to "CatchUp", "kya hua jab mai nahi tha" to "CatchUp", "jab main nahi tha tab kya hua" to "CatchUp",
         // ---- SettingWhere: where a setting is, from the Settings search's catalogue (a reply only; nothing is switched) ----
         "where is the quiet hours setting" to "SettingWhere", "where's the mute switch" to "SettingWhere", "where do i find the backup option" to "SettingWhere",
         "where is the backup setting" to "SettingWhere", "where can i find the fingerprint setting" to "SettingWhere", "where is the pin setting" to "SettingWhere",
@@ -1567,7 +1573,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3517,6 +3523,39 @@ class CollisionTest {
         for (s in listOf("what did you tell me yesterday", "my notes today", "what did i tell you today", "delete today's notes",
             "what did you tell me about nifty today", "kal kya bataya", "remind me of today's notes"))
             assertTrue(audit.feature(s) != "TodayNotes", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- CatchUp: the notes since Boss last looked; "what did I miss", his own notes, the briefing keep their routes ----
+
+    @Test fun catchUpTakesItsOwnWordsAndLeavesWhatDidIMissItsAnswer() {
+        // "catch me up" was CoPilot's ("what matters right now") and "kya hua jab main nahi tha" the missed-messages answer:
+        // both are the catch-up now; "read my notes" was Boss's own trade reasons.
+        for (s in listOf("catch me up", "jarvis catch me up", "read my notes", "read me my notes", "notes padh do", "mere notes padh do",
+            "kya hua jab main nahi tha", "kya hua jab mai nahi tha")) {
+            assertEquals("CatchUp", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // "What did I miss": what Jarvis said by himself since Boss last asked (its own answer, kept).
+        for (s in listOf("what did i miss", "what have i missed", "did i miss anything", "maine kya miss kiya")) {
+            assertEquals("Missed", audit.feature(s), s)
+            assertTrue(Reminder.missedAsked(s), s)
+            assertTrue(!CatchUp.asked(s), s)
+        }
+        // The briefing's other words, today's notes, his own notes, the market: as before.
+        assertEquals("CoPilot", audit.feature("brief me"))
+        assertEquals("CoPilot", audit.feature("bring me up to speed"))
+        assertEquals("CoPilot", audit.feature("what matters right now"))
+        assertEquals("TodayNotes", audit.feature("what did you tell me today"))
+        assertEquals("TodayNotes", audit.feature("read today's notes"))
+        assertEquals("Account:REASONS", audit.feature("my notes"))
+        assertEquals("Account:REASONS", audit.feature("show my notes"))
+        assertEquals("DayRecap", audit.feature("kal kya hua"))
+        assertEquals("Market", audit.feature("catch me up on nifty"))
+        // Said with something to do: never the catch-up (left to the multi-step plan).
+        assertTrue(audit.feature("read my notes then close all positions") != "CatchUp")
+        assertTrue(audit.feature("catch me up then close all positions") != "CatchUp")
     }
 
     // ---- ForwardWatch: the paper arms against their backtests, never the questions that already had their answers ----

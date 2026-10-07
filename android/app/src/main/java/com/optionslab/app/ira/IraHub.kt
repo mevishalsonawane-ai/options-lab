@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.CatchUp.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2857,7 +2857,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LotsWhatIf, LiquidityInsight, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, ForwardWatch, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LotsWhatIf, LiquidityInsight, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, CatchUp, ForwardWatch, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3421,6 +3421,23 @@ object IraHub {
             val said = if (phoneLocked()) com.optionslab.ira.TodayNotes.LOCKED
                 else runCatching { com.optionslab.ira.TodayNotes.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today()) }
                     .getOrDefault(com.optionslab.ira.TodayNotes.NONE)
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Catch me up", "read my notes", "notes padh do", "kya hua jab main nahi tha" ([com.optionslab.ira.CatchUp], [IraNotes]):
+        // the notes Jarvis posted by himself since Boss last had the Ira page in front of him, or since the last catch-up - at
+        // most five headlines, by category (Liquidity's first), the rest counted. A reply like any other: said aloud when asked
+        // by voice, as the voice's own quiet hours and mute allow. On a locked phone only how many of each category, never a
+        // note's words (and the catch-up is not marked as heard). "What did I miss" keeps its own answer. Reads only. (Not in
+        // IraGoldAlgo: its chat posts no automations' notes.)
+        val catchUpAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.CatchUp.asked(q) }.getOrDefault(false) else false
+        if (catchUpAsk) {
+            val lockedNow = phoneLocked()
+            val said = runCatching {
+                com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today(), IraNotes.catchUpFrom(), locked = lockedNow)
+            }.getOrDefault("I couldn't read my notes just now, Boss - they're under Today's notes on the Ira page.")
+            if (!lockedNow) IraNotes.caughtUp()
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

@@ -22,6 +22,7 @@ class IraNotesTest : RobolectricTest() {
         // The hub's chat starts empty too: an earlier test in this JVM may have left messages in it.
         runBlocking { IraHub.forgetAll() }
         IraNotes.clear()
+        IraNotes.forgetCatchUp()
     }
 
     @After fun down() {
@@ -84,5 +85,35 @@ class IraNotesTest : RobolectricTest() {
         assertEquals(2, IraNotes.today().size)
         IraHub.forgetConversation()
         assertTrue(IraNotes.today().isEmpty())
+    }
+
+    private fun clockAt(h: Int, m: Int) {
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
+            java.time.LocalDate.of(2026, 10, 6).atTime(h, m).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+    }
+
+    @Test fun caughtUpOnTheNotesSinceThePageWasLastSeen() {
+        // The question is Jarvis's (CI's app tests run with Jarvis off: the hub's branch is not there then).
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
+        clockAt(9, 30)
+        IraHub.note("Opening read, Boss: Nifty opened flat.")
+        clockAt(10, 0)
+        IraNotes.seen()
+        assertEquals(java.time.LocalDate.of(2026, 10, 6).atTime(10, 0), IraNotes.catchUpFrom())
+        clockAt(10, 5)
+        IraHub.note("BankNifty is 12 pts from 54,180.", from = Automations.Auto.LIQUIDITY)
+        IraHub.note("Tomorrow, Wed 07 Oct: no expiry.", from = Automations.Auto.TOMORROW)
+        clockAt(10, 10)
+        IraHub.ask("catch me up")
+        val said = IraHub.state.value.messages.last()
+        assertTrue(said.fromIra)
+        assertEquals("Since you last looked, Boss, I posted 2 notes. Liquidity: BankNifty is 12 pts from 54,180. Plans: Tomorrow, Wed 07 Oct: no expiry.", said.text)
+        // Said in full: the next catch-up counts from now.
+        assertEquals(java.time.LocalDate.of(2026, 10, 6).atTime(10, 10), IraNotes.catchUpFrom())
+        IraHub.ask("notes padh do")
+        assertEquals(com.optionslab.ira.CatchUp.NOTHING, IraHub.state.value.messages.last().text)
+        // The catch-up is an answer, not a note.
+        assertEquals(3, IraNotes.today().size)
     }
 }

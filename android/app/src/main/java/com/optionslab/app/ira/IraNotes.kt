@@ -34,6 +34,49 @@ internal object IraNotes {
         TodayNotes.of(_notes.value, com.optionslab.app.data.Market.today())
     }.getOrDefault(emptyList())
 
+    // ---- "Catch me up" ([com.optionslab.ira.CatchUp]): when the Ira page was last seen, and the last catch-up ----------
+
+    /** When the Ira page last stopped being in front of Boss, and when the last catch-up was said (null: not known). */
+    private var seenAt: java.time.LocalDateTime? = null
+    private var caughtAt: java.time.LocalDateTime? = null
+    private var anchorsRead = false
+
+    /** The two moments from the vault, once (this phone's only: [com.optionslab.ira.Upkeep.PRIVATE]). Never throws. */
+    private fun readAnchors() {
+        if (anchorsRead) return
+        anchorsRead = true
+        fun at(key: String) = runCatching { com.optionslab.app.security.SecurePrefs.getString(key)?.let { java.time.LocalDateTime.parse(it) } }.getOrNull()
+        if (seenAt == null) seenAt = at(com.optionslab.ira.CatchUp.KEY_SEEN)
+        if (caughtAt == null) caughtAt = at(com.optionslab.ira.CatchUp.KEY_DONE)
+    }
+
+    private fun stamp(key: String): java.time.LocalDateTime? = runCatching {
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0)
+        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(key to now.toString())) }
+        now
+    }.getOrNull()
+
+    /** The Ira page just stopped being in front of Boss (paused or left): what he saw runs to now. Never throws. */
+    @Synchronized fun seen() {
+        readAnchors()
+        stamp(com.optionslab.ira.CatchUp.KEY_SEEN)?.let { seenAt = it }
+    }
+
+    /** A catch-up was just said in full (unlocked). Never throws. */
+    @Synchronized fun caughtUp() {
+        readAnchors()
+        stamp(com.optionslab.ira.CatchUp.KEY_DONE)?.let { caughtAt = it }
+    }
+
+    /** From when the catch-up counts: the later of [seen] and [caughtUp]; null (all of today's) when neither is known. */
+    @Synchronized fun catchUpFrom(): java.time.LocalDateTime? {
+        readAnchors()
+        return com.optionslab.ira.CatchUp.anchor(seenAt, caughtAt)
+    }
+
+    /** Tests: both moments forgotten (in memory; the vault is not read again). */
+    @Synchronized internal fun forgetCatchUp() { seenAt = null; caughtAt = null; anchorsRead = true }
+
     /** Forgotten with the conversation (Boss's own button) and by the tests. */
     fun clear() { _notes.value = emptyList() }
 

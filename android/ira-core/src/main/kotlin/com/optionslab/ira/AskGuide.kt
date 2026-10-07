@@ -71,7 +71,7 @@ object AskGuide {
             ex("where is the most call writing", "ChainIntel"),
             ex("do gap downs usually fill", "GapRecord"),
         )),
-        Group("news", "News & events", "The headlines, why the market moved, the week and the calendar", listOf(
+        Group("news", "News & events", "The headlines, why the market moved, the week, the calendar and what you missed", listOf(
             ex("what's the main news", "NewsDesk"),
             ex("aaj ki main news kya hai", "NewsDesk"),
             ex("why is nifty falling", "Causes"),
@@ -80,6 +80,7 @@ object AskGuide {
             ex("what does this week look like", "WeekAhead"),
             ex("is tomorrow a holiday", "MarketDays"),
             ex("kal expiry hai kya", "MarketDays"),
+            ex("catch me up", "CatchUp"),
         )),
         Group("account", "Your account & P&L", "Your P&L, positions, limits and streaks", listOf(
             ex("what is my p&l", "Account:PNL"),

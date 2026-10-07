@@ -50,7 +50,10 @@ object Upkeep {
         ForwardWatch.KEY_PREFIX,
         // The weekly "what's working" note's day and newest counted exit (jarvis.liqinsight.): read from the arms' book,
         // which never leaves the phone - restored over a fresh book they would hold back or skip its notes (07 Oct).
-        LiquidityInsight.KEY_PREFIX)
+        LiquidityInsight.KEY_PREFIX,
+        // When the Ira page was last seen and the last "catch me up" (jarvis.catchup.): this phone's own moments - restored
+        // from a file they would hide today's notes from the catch-up (07 Oct).
+        CatchUp.KEY_PREFIX)
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }
