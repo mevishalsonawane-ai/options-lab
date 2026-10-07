@@ -3424,20 +3424,24 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
-        // "Catch me up", "read my notes", "notes padh do", "kya hua jab main nahi tha" ([com.optionslab.ira.CatchUp], [IraNotes]):
+        // "Catch me up", "read your notes", "notes padh do", "kya hua jab main nahi tha" ([com.optionslab.ira.CatchUp], [IraNotes]):
         // the notes Jarvis posted by himself since Boss last had the Ira page in front of him, or since the last catch-up - at
         // most five headlines, by category (Liquidity's first), the rest counted. A reply like any other: said aloud when asked
         // by voice, as the voice's own quiet hours and mute allow. On a locked phone only how many of each category, never a
-        // note's words (and the catch-up is not marked as heard). "What did I miss" keeps its own answer. Reads only. (Not in
-        // IraGoldAlgo: its chat posts no automations' notes.)
+        // note's words (and the catch-up is not marked as heard, nor when the digest could not be made). After a restart it
+        // says the older notes aren't kept. "What did I miss" keeps its own answer. Reads only. (Not in IraGoldAlgo: its chat
+        // posts no automations' notes.)
         val catchUpAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.CatchUp.asked(q) }.getOrDefault(false) else false
         if (catchUpAsk) {
             val lockedNow = phoneLocked()
-            val said = runCatching {
-                com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today(), IraNotes.catchUpFrom(), locked = lockedNow)
-            }.getOrDefault("I couldn't read my notes just now, Boss - they're under Today's notes on the Ira page.")
-            if (!lockedNow) IraNotes.caughtUp()
+            // Taken before the notes are read: one posted while the digest is made is said again next time, never lost.
+            val at = IraNotes.now()
+            val d = runCatching {
+                com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today(), IraNotes.catchUpFrom(), locked = lockedNow, keptSince = IraNotes.keptSince)
+            }.getOrNull()
+            val said = d ?: "I couldn't read my notes just now, Boss - they're under Today's notes on the Ira page."
+            if (d != null && !lockedNow && at != null) IraNotes.caughtUp(at)
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }

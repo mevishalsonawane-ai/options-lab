@@ -116,4 +116,75 @@ class IraNotesTest : RobolectricTest() {
         // The catch-up is an answer, not a note.
         assertEquals(3, IraNotes.today().size)
     }
+
+    // ---- The catch-up's anchors (no Jarvis needed: IraNotes and CatchUp only) ----
+
+    private val oct6 = java.time.LocalDate.of(2026, 10, 6)
+
+    /** The clock at [h]:[m]:[s] and [nanos] into that second. */
+    private fun clockAt(h: Int, m: Int, s: Int, nanos: Int) {
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
+            oct6.atTime(h, m, s, nanos).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+    }
+
+    @Test fun seenAndCaughtUpSetTheAnchorTheLaterOfTheTwo() {
+        assertNull(IraNotes.catchUpFrom())
+        clockAt(10, 0, 5, 700_000_000)
+        IraNotes.seen()
+        // To the nanosecond, not cut to the second.
+        assertEquals(oct6.atTime(10, 0, 5, 700_000_000), IraNotes.catchUpFrom())
+        // A catch-up counts from the moment it was given (taken before the notes were read), not from when it was marked.
+        clockAt(10, 30, 0, 0)
+        IraNotes.caughtUp(oct6.atTime(10, 20))
+        assertEquals(oct6.atTime(10, 20), IraNotes.catchUpFrom())
+        // The page seen again later: that is the anchor now.
+        clockAt(10, 40, 0, 0)
+        IraNotes.seen()
+        assertEquals(oct6.atTime(10, 40), IraNotes.catchUpFrom())
+        // An older catch-up doesn't move it back.
+        IraNotes.caughtUp(oct6.atTime(10, 35))
+        assertEquals(oct6.atTime(10, 40), IraNotes.catchUpFrom())
+    }
+
+    @Test fun aNotePostedInTheSameSecondAfterTheLookIsStillNew() {
+        clockAt(10, 0, 5, 300_000_000)
+        IraNotes.add("Before the look: Nifty at the day's high.", kind = TodayNotes.Category.MARKET)
+        clockAt(10, 0, 5, 700_000_000)
+        IraNotes.seen()
+        clockAt(10, 0, 5, 900_000_000)
+        IraNotes.add("After the look: BankNifty broke its range.", kind = TodayNotes.Category.MARKET)
+        val said = com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, oct6, IraNotes.catchUpFrom(), locked = false, keptSince = IraNotes.keptSince)
+        assertEquals("Since you last looked, Boss, I posted 1 note. Market: After the look: BankNifty broke its range.", said)
+    }
+
+    @Test fun afterARestartTheCatchUpSaysTheOlderNotesAreGone() {
+        // Looked at 9:00 (kept in the vault), the app restarted at 11:05: the notes in between were in memory only.
+        clockAt(9, 0, 0, 0)
+        IraNotes.seen()
+        IraNotes.keptSince = oct6.atTime(11, 5, 12)
+        val anchor = IraNotes.catchUpFrom()
+        assertEquals(oct6.atTime(9, 0), anchor)
+        assertEquals("I restarted at 11:05 - notes from before then aren't kept. Nothing new since then, Boss.",
+            com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, oct6, anchor, locked = false, keptSince = IraNotes.keptSince))
+        clockAt(11, 20, 0, 0)
+        IraNotes.add("BankNifty is 12 pts from 54,180.", from = Automations.Auto.LIQUIDITY)
+        assertEquals("I restarted at 11:05 - notes from before then aren't kept. Since then, Boss, I posted 1 note. Liquidity: BankNifty is 12 pts from 54,180.",
+            com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, oct6, IraNotes.catchUpFrom(), locked = false, keptSince = IraNotes.keptSince))
+        // Looked after the restart: as usual.
+        clockAt(11, 30, 0, 0)
+        IraNotes.seen()
+        assertEquals(com.optionslab.ira.CatchUp.NOTHING,
+            com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, oct6, IraNotes.catchUpFrom(), locked = false, keptSince = IraNotes.keptSince))
+    }
+
+    @Test fun aLockedCatchUpSaysOnlyTheCounts() {
+        clockAt(10, 0, 0, 0)
+        IraNotes.seen()
+        clockAt(10, 5, 0, 0)
+        IraNotes.add("BankNifty is 12 pts from 54,180.", from = Automations.Auto.LIQUIDITY)
+        IraNotes.add("Tomorrow, Wed 07 Oct: no expiry.", from = Automations.Auto.TOMORROW)
+        val said = com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, oct6, IraNotes.catchUpFrom(), locked = true, keptSince = IraNotes.keptSince)
+        assertEquals("Since you last looked, Boss: 1 Liquidity note and 1 plan note. Unlock the phone to hear them.", said)
+        assertTrue("54,180" !in said && "expiry" !in said)
+    }
 }

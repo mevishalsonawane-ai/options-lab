@@ -89,16 +89,50 @@ class CatchUpTest {
         assertEquals(CatchUp.NOTHING, CatchUp.digest(notes, day, at(12, 0), locked = true))
     }
 
+    @Test fun aNotePostedLaterInTheAnchorsSecondIsStillNew() {
+        val anchor = at(10, 0).withSecond(5).withNano(700_000_000)
+        val before = Note(at(10, 0).withSecond(5).withNano(300_000_000), "Before the look.", Category.MARKET)
+        val after = Note(at(10, 0).withSecond(5).withNano(900_000_000), "After the look.", Category.MARKET)
+        assertEquals(listOf(after), CatchUp.since(listOf(before, after), day, anchor))
+        assertEquals("Since you last looked, Boss, I posted 1 note. Market: After the look.", CatchUp.digest(listOf(before, after), day, anchor, locked = false))
+    }
+
+    @Test fun afterARestartTheDigestSaysTheOlderNotesAreNotKept() {
+        val started = at(11, 5).withSecond(30)
+        // Last looked at 9:00, the app restarted at 11:05: the notes in between are gone, so not "nothing new".
+        assertEquals("I restarted at 11:05 - notes from before then aren't kept.", CatchUp.restarted(at(9, 0), started, day))
+        assertEquals("I restarted at 11:05 - notes from before then aren't kept. Nothing new since then, Boss.",
+            CatchUp.digest(emptyList(), day, at(9, 0), locked = false, keptSince = started))
+        val kept = notes.filter { it.at.isAfter(started) }
+        assertEquals("I restarted at 11:05 - notes from before then aren't kept. Since then, Boss, I posted 4 notes. Liquidity: Liquidity 15+5 trade closed at 131 - a win of 19 points. " +
+            "Solo and Hero: Solo is watching BankNifty for the midday window. Market: Gap fill done on Sensex; Nifty at the day's high.",
+            CatchUp.digest(kept, day, at(9, 0), locked = false, keptSince = started))
+        // Locked: the counts only, still after the restart line.
+        val locked = CatchUp.digest(kept, day, at(9, 0), locked = true, keptSince = started)
+        assertEquals("I restarted at 11:05 - notes from before then aren't kept. Since then, Boss: 1 Liquidity note, 1 Solo and Hero note and 2 market notes. Unlock the phone to hear them.", locked)
+        for (n in kept) assertFalse(TodayNotes.headline(n.text) in locked, locked)
+        // Looked after the restart, never looked, or running since before today: as before.
+        assertEquals(null, CatchUp.restarted(at(11, 30), started, day))
+        assertEquals(null, CatchUp.restarted(null, started, day))
+        assertEquals(null, CatchUp.restarted(at(9, 0), started.minusDays(1), day))
+        assertEquals(null, CatchUp.restarted(at(9, 0), null, day))
+        assertEquals(CatchUp.NOTHING, CatchUp.digest(notes, day, at(12, 0), locked = false, keptSince = started))
+        assertTrue(CatchUp.digest(notes, day, null, locked = false, keptSince = started).startsWith("Today so far, Boss,"))
+    }
+
     @Test fun askedAsBossSaysIt() {
         for (q in listOf("catch me up", "Jarvis, catch me up", "catch me up please", "catch me up boss", "hey jarvis catch me up on your notes",
-            "catch me up on what I missed", "read my notes", "read me my notes", "read your notes", "read out my notes", "read my notes aloud",
-            "read me your notes please", "notes padh do", "mere notes padh do", "notes padho", "notes padh ke sunao", "notes suna do", "notes sunao",
+            "catch me up on what I missed", "read your notes", "read the notes", "read out your notes", "read your notes aloud",
+            "read me your notes please", "notes padh do", "tumhare notes padh do", "aapke notes padh do", "notes padho", "notes padh ke sunao", "notes suna do", "notes sunao",
             "kya hua jab main nahi tha", "kya hua jab mai nahi tha?", "Jarvis kya hua jab main nahin tha", "jab main nahi tha tab kya hua",
             "main nahi tha to kya hua"))
             assertTrue(CatchUp.asked(q), q)
         for (q in listOf("what did i miss", "catch me up on nifty", "catch me up on the market", "my notes", "show my notes", "today's notes",
             "read today's notes", "read the news", "what did you tell me today", "brief me", "bring me up to speed", "read my notes and close all",
-            "delete my notes", "kya hua", "kal kya hua", "notes", "write a note", "read the levels", "catch up"))
+            "delete my notes", "kya hua", "kal kya hua", "notes", "write a note", "read the levels", "catch up",
+            // Boss's own trade notes (Account's reasons), not Jarvis's.
+            "read my notes", "read me my notes", "read out my notes", "read my notes aloud", "catch me up on my notes",
+            "mere notes padh do", "mera notes padh do", "apne notes padh do", "mere notes sunao", "apne notes padho"))
             assertFalse(CatchUp.asked(q), q)
     }
 }

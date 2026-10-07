@@ -6,12 +6,15 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
- * "Catch me up" (Boss, 07 Oct 2026): Boss comes back to the phone, holds the mic and says "catch me up", "read my notes",
+ * "Catch me up" (Boss, 07 Oct 2026): Boss comes back to the phone, holds the mic and says "catch me up", "read your notes",
  * "notes padh do" or "kya hua jab main nahi tha" - Jarvis says a short digest of the notes he posted by himself
  * ([TodayNotes]) since Boss last had the Ira page in front of him, or since the last catch-up, whichever is later: at
  * most [MAX_SAID] headlines ([TodayNotes.headline]), grouped by category in [ORDER] (Liquidity's trades first), each
  * category's newest first, and a count of the rest ("and 3 more market notes - they're in Today's notes"). Nothing new:
- * [NOTHING]. On a locked phone, only how many of each category - never a note's words.
+ * [NOTHING]. On a locked phone, only how many of each category - never a note's words. The notes are kept in memory only:
+ * when the anchor is before the app last started ([restarted]), the digest says so first rather than "nothing new".
+ *
+ * "Read my notes", "mere notes" are Boss's own trade notes ([Account]'s reasons), not these.
  *
  * "What did I miss" keeps its own answer (everything Jarvis said by himself since Boss last asked, [Reminder.missedAsked]).
  *
@@ -32,6 +35,8 @@ object CatchUp {
     const val KEY_DONE = KEY_PREFIX + "done"
 
     const val NOTHING = "Nothing new since you last looked, Boss."
+    /** After a restart with nothing posted since. */
+    const val NOTHING_SINCE = "Nothing new since then, Boss."
     const val WHERE = "they're in Today's notes"
 
     /** The digest's group name for [c], as said. */
@@ -58,7 +63,10 @@ object CatchUp {
     /** From when: the later of when the page was last seen and the last catch-up; null (all of today's) when neither is known. */
     fun anchor(lastSeen: LocalDateTime?, lastCatchUp: LocalDateTime?): LocalDateTime? = listOfNotNull(lastSeen, lastCatchUp).maxOrNull()
 
-    /** [day]'s notes posted after [anchor] (all of [day]'s when null), newest first. */
+    /**
+     * [day]'s notes posted after [anchor] (all of [day]'s when null), newest first. Compared to the nanosecond, as kept: a
+     * note posted later in the same second as the anchor is still after it.
+     */
     fun since(notes: List<Note>, day: LocalDate, anchor: LocalDateTime?): List<Note> =
         TodayNotes.of(notes, day).filter { anchor == null || it.at.isAfter(anchor) }
 
@@ -91,13 +99,28 @@ object CatchUp {
     private fun said(n: Note): String = TodayNotes.headline(n.text).removeSuffix("…").trimEnd('.', ',', ';', ':', '-', ' ')
 
     /**
-     * The catch-up on [day]'s [notes] posted after [anchor] ([CatchUp.anchor]). [locked]: only the counts by category, never
-     * a note's words. Words only.
+     * "I restarted at 10:05 - notes from before then aren't kept.": the notes live in memory only, so when [anchor] is before
+     * [keptSince] (when this run of the app started keeping them) on [day], the ones in between are gone. Null otherwise
+     * (no anchor: "today so far"; started before [day]: all of [day]'s are kept).
      */
-    fun digest(notes: List<Note>, day: LocalDate, anchor: LocalDateTime?, locked: Boolean): String {
+    fun restarted(anchor: LocalDateTime?, keptSince: LocalDateTime?, day: LocalDate): String? =
+        if (anchor != null && keptSince != null && keptSince.toLocalDate() == day && anchor.isBefore(keptSince))
+            "I restarted at ${TodayNotes.time(keptSince)} - notes from before then aren't kept."
+        else null
+
+    /**
+     * The catch-up on [day]'s [notes] posted after [anchor] ([CatchUp.anchor]). [locked]: only the counts by category, never
+     * a note's words. [keptSince]: when this run of the app started keeping notes ([restarted]). Words only.
+     */
+    fun digest(notes: List<Note>, day: LocalDate, anchor: LocalDateTime?, locked: Boolean, keptSince: LocalDateTime? = null): String {
         val fresh = since(notes, day, anchor)
-        if (fresh.isEmpty()) return NOTHING
-        val lead = if (anchor == null) "Today so far" else "Since you last looked"
+        val restart = restarted(anchor, keptSince, day)
+        if (fresh.isEmpty()) return if (restart == null) NOTHING else "$restart $NOTHING_SINCE"
+        val lead = when {
+            restart != null -> "$restart Since then"
+            anchor == null -> "Today so far"
+            else -> "Since you last looked"
+        }
         val total = if (fresh.size == 1) "1 note" else "${fresh.size} notes"
         if (locked) {
             val counts = ORDER.map { c -> c to fresh.count { it.category == c } }.filter { it.second > 0 }.map { (c, n) -> notes(n, c, more = false) }
@@ -115,17 +138,17 @@ object CatchUp {
     private const val TAIL = "( boss| jarvis| please| now| yaar| na| bhai| jaldi se)* $"
     private val ASKED = Regex(
         // "catch me up", "catch me up on your notes", "catch me up on what i missed"
-        "^ ${LEAD}catch me up( on (your |my |the )?notes| on what i missed| quickly)?$TAIL|" +
-        // "read my notes", "read me my notes", "read out my notes", "read your notes to me", "read my notes out"
-        "^ ${LEAD}read (me |out |out to me )?(my|your|the) notes( out| to me| out to me| aloud)?$TAIL|" +
-        // "notes padh do", "mere notes padh do", "notes padho", "notes padh ke sunao", "notes suna do", "notes sunao"
-        "^ $LEAD(mere |mera |apne |tumhare |aapke )?notes (padh|parh|padh ke|parh ke) ?(do|dena|ke sunao|sunao|ke suna do|suna do)$TAIL|" +
-        "^ $LEAD(mere |mera |apne |tumhare |aapke )?notes (padho|parho|sunao|suna do)$TAIL|" +
+        "^ ${LEAD}catch me up( on (your |the )?notes| on what i missed| quickly)?$TAIL|" +
+        // "read your notes", "read me your notes", "read out the notes", "read your notes to me" ("read my notes" is Boss's own: Account)
+        "^ ${LEAD}read (me |out |out to me )?(your|the) notes( out| to me| out to me| aloud)?$TAIL|" +
+        // "notes padh do", "tumhare notes padh do", "notes padho", "notes padh ke sunao", "notes suna do", "notes sunao" ("mere notes": Boss's own)
+        "^ $LEAD(tumhare |aapke )?notes (padh|parh|padh ke|parh ke) ?(do|dena|ke sunao|sunao|ke suna do|suna do)$TAIL|" +
+        "^ $LEAD(tumhare |aapke )?notes (padho|parho|sunao|suna do)$TAIL|" +
         // "kya hua jab main nahi tha", "jab main nahi tha tab kya hua", "main nahi tha tab kya hua"
         "^ $LEAD(mere peeche |mere piche )?kya (kya )?hua jab (main|mai|mein|me) (nahi|nahin|nai) (tha|thi)$TAIL|" +
         "^ $LEAD(jab )?(main|mai|mein|me) (nahi|nahin|nai) (tha|thi) (tab|to|toh) kya (kya )?hua$TAIL"
     )
 
-    /** "Catch me up", "read my notes", "notes padh do", "kya hua jab main nahi tha". */
+    /** "Catch me up", "read your notes", "notes padh do", "kya hua jab main nahi tha" (not "read my notes": Boss's own). */
     fun asked(text: String): Boolean = ASKED.containsMatchIn(Spaced.joined(text))
 }

@@ -522,7 +522,7 @@ class CoverageTest {
         // ---- Today's notes (TodayNotes): what Jarvis posted by himself today - his own words ----
         "what did you tell me today" to J, "today's notes" to J, "aaj kya bataya" to J, "what have you told me today" to J,
         // ---- Catch me up (CatchUp): the notes Jarvis posted since Boss last looked, said short - his own words ----
-        "catch me up" to J, "read my notes" to J, "notes padh do" to J, "kya hua jab main nahi tha" to J,
+        "catch me up" to J, "read your notes" to J, "notes padh do" to J, "kya hua jab main nahi tha" to J, "read my notes" to A,
         // ---- Where a setting is (SettingWhere): the Settings search's catalogue - Jarvis's own answer, nothing switched ----
         "where is the quiet hours setting" to J, "where is the backup setting" to J, "how do i turn off quiet hours" to J,
         "backup ki setting kahan hai" to J, "where can i find the fingerprint setting" to J, "how do i change the theme" to J,
@@ -992,8 +992,10 @@ class CoverageTest {
         "what did you tell me today" to "TodayNotes", "today's notes" to "TodayNotes", "aaj kya bataya" to "TodayNotes",
         "what have you told me today" to "TodayNotes", "your notes today" to "TodayNotes", "aaj tumne kya bataya" to "TodayNotes",
         // ---- CatchUp: the notes Jarvis posted since Boss last looked (at most five headlines, by category, the rest counted) ----
-        "catch me up" to "CatchUp", "jarvis catch me up" to "CatchUp", "read my notes" to "CatchUp", "read me your notes" to "CatchUp",
-        "notes padh do" to "CatchUp", "mere notes padh do" to "CatchUp", "kya hua jab main nahi tha" to "CatchUp", "jab main nahi tha tab kya hua" to "CatchUp",
+        "catch me up" to "CatchUp", "jarvis catch me up" to "CatchUp", "read your notes" to "CatchUp", "read me your notes" to "CatchUp",
+        "notes padh do" to "CatchUp", "tumhare notes padh do" to "CatchUp", "kya hua jab main nahi tha" to "CatchUp", "jab main nahi tha tab kya hua" to "CatchUp",
+        // (Boss's own notes keep the routes they had before the catch-up.)
+        "read my notes" to "Account:REASONS", "read me my notes" to "Account:REASONS", "mere notes padh do" to "Missed",
         // ---- SettingWhere: where a setting is (the Settings search's catalogue), a reply only ----
         "where is the quiet hours setting" to "SettingWhere", "where is the backup setting" to "SettingWhere", "how do i turn off quiet hours" to "SettingWhere",
         "backup ki setting kahan hai" to "SettingWhere", "where can i find the fingerprint setting" to "SettingWhere", "how do i change the theme" to "SettingWhere",

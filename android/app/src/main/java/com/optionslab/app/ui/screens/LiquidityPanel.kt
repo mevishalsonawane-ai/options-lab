@@ -347,7 +347,8 @@ internal fun LiquidityChart(
         val mk = resolving ?: return@LaunchedEffect
         val t = mk.trade ?: return@LaunchedEffect
         val found = try {
-            withTimeoutOrNull(3_000) { withContext(Dispatchers.IO) { positionOf?.invoke(t) } }
+            // The timeout runs on IO's real clock (inside a LaunchedEffect a Compose test's clock is virtual).
+            withContext(Dispatchers.IO) { withTimeoutOrNull(3_000) { positionOf?.invoke(t) } }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
         resolving = null
         if (found != null) replaying = found else picked = mk

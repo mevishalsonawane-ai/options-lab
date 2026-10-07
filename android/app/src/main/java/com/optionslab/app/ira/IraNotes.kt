@@ -23,7 +23,8 @@ internal object IraNotes {
     fun add(text: String, from: Automations.Auto? = null, kind: TodayNotes.Category? = null) {
         runCatching {
             if (text.isBlank()) return
-            val at = com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0)
+            // To the nanosecond, like the catch-up's anchors ([seen], [caughtUp]): a note in the same second still compares.
+            val at = com.optionslab.app.data.Market.now().toLocalDateTime()
             val tag = TodayNotes.tag(text, from?.name, kind)
             _notes.update { TodayNotes.keep(it, TodayNotes.Note(at, text, tag.category, tag.source)) }
         }
@@ -41,31 +42,53 @@ internal object IraNotes {
     private var caughtAt: java.time.LocalDateTime? = null
     private var anchorsRead = false
 
-    /** The two moments from the vault, once (this phone's only: [com.optionslab.ira.Upkeep.PRIVATE]). Never throws. */
+    /**
+     * When this run of the app started keeping notes (the notes live in memory only, the anchors in the vault): an anchor
+     * before it means the notes in between are gone ([com.optionslab.ira.CatchUp.restarted]). Null when the clock could not
+     * be read. Settable by the tests.
+     */
+    @Volatile internal var keptSince: java.time.LocalDateTime? = now()
+
+    /** Now, to the nanosecond (null when the clock can't be read). Never throws. */
+    fun now(): java.time.LocalDateTime? = runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrNull()
+
+    /**
+     * The two moments from the vault, once it has been read (this phone's only: [com.optionslab.ira.Upkeep.PRIVATE]); a
+     * failed read is tried again next time. A moment already set here is newer and kept. Never throws.
+     */
     private fun readAnchors() {
         if (anchorsRead) return
-        anchorsRead = true
-        fun at(key: String) = runCatching { com.optionslab.app.security.SecurePrefs.getString(key)?.let { java.time.LocalDateTime.parse(it) } }.getOrNull()
-        if (seenAt == null) seenAt = at(com.optionslab.ira.CatchUp.KEY_SEEN)
-        if (caughtAt == null) caughtAt = at(com.optionslab.ira.CatchUp.KEY_DONE)
+        runCatching {
+            val seen = com.optionslab.app.security.SecurePrefs.getString(com.optionslab.ira.CatchUp.KEY_SEEN)
+            val done = com.optionslab.app.security.SecurePrefs.getString(com.optionslab.ira.CatchUp.KEY_DONE)
+            fun parse(v: String?) = v?.let { runCatching { java.time.LocalDateTime.parse(it) }.getOrNull() }
+            if (seenAt == null) seenAt = parse(seen)
+            if (caughtAt == null) caughtAt = parse(done)
+            anchorsRead = true
+        }
     }
 
-    private fun stamp(key: String): java.time.LocalDateTime? = runCatching {
-        val now = com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0)
-        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(key to now.toString())) }
-        now
-    }.getOrNull()
+    private fun stamp(key: String, at: java.time.LocalDateTime) {
+        runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(key to at.toString())) }
+    }
 
-    /** The Ira page just stopped being in front of Boss (paused or left): what he saw runs to now. Never throws. */
+    /**
+     * The Ira page just stopped being in front of Boss (paused or left): what he saw runs to now. Reads nothing from the
+     * vault (it runs on the main thread); the write is queued. Never throws.
+     */
     @Synchronized fun seen() {
-        readAnchors()
-        stamp(com.optionslab.ira.CatchUp.KEY_SEEN)?.let { seenAt = it }
+        val at = now() ?: return
+        seenAt = at
+        stamp(com.optionslab.ira.CatchUp.KEY_SEEN, at)
     }
 
-    /** A catch-up was just said in full (unlocked). Never throws. */
-    @Synchronized fun caughtUp() {
-        readAnchors()
-        stamp(com.optionslab.ira.CatchUp.KEY_DONE)?.let { caughtAt = it }
+    /**
+     * A catch-up was just said in full (unlocked): the next one counts from [at] - taken before the notes were read, so a
+     * note posted while the digest was made is said again rather than lost. Never throws.
+     */
+    @Synchronized fun caughtUp(at: java.time.LocalDateTime) {
+        caughtAt = at
+        stamp(com.optionslab.ira.CatchUp.KEY_DONE, at)
     }
 
     /** From when the catch-up counts: the later of [seen] and [caughtUp]; null (all of today's) when neither is known. */
@@ -74,8 +97,8 @@ internal object IraNotes {
         return com.optionslab.ira.CatchUp.anchor(seenAt, caughtAt)
     }
 
-    /** Tests: both moments forgotten (in memory; the vault is not read again). */
-    @Synchronized internal fun forgetCatchUp() { seenAt = null; caughtAt = null; anchorsRead = true }
+    /** Tests: both moments forgotten (in memory; the vault is not read again), and no restart known. */
+    @Synchronized internal fun forgetCatchUp() { seenAt = null; caughtAt = null; anchorsRead = true; keptSince = null }
 
     /** Forgotten with the conversation (Boss's own button) and by the tests. */
     fun clear() { _notes.value = emptyList() }

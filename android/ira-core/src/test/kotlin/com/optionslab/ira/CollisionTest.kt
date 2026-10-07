@@ -982,8 +982,10 @@ class CollisionTest {
         "aaj kya kya bataya" to "TodayNotes", "aaj ke notes" to "TodayNotes", "aaj ke notes dikhao" to "TodayNotes",
         // ---- CatchUp: the notes Jarvis posted since Boss last looked, said short ("what did I miss" keeps its own answer) ----
         "catch me up" to "CatchUp", "jarvis catch me up" to "CatchUp", "catch me up please" to "CatchUp", "catch me up on your notes" to "CatchUp",
-        "read my notes" to "CatchUp", "read me my notes" to "CatchUp", "read your notes" to "CatchUp", "read out my notes" to "CatchUp",
-        "notes padh do" to "CatchUp", "mere notes padh do" to "CatchUp", "notes sunao" to "CatchUp", "notes padh ke sunao" to "CatchUp",
+        "read your notes" to "CatchUp", "read the notes" to "CatchUp", "read me your notes" to "CatchUp", "tumhare notes padh do" to "CatchUp",
+        "notes padh do" to "CatchUp", "aapke notes padh do" to "CatchUp", "notes sunao" to "CatchUp", "notes padh ke sunao" to "CatchUp",
+        // (Boss's own notes keep the routes they had before the catch-up.)
+        "read my notes" to "Account:REASONS", "read me my notes" to "Account:REASONS", "read out my notes" to "Account:REASONS", "mere notes padh do" to "Missed",
         "kya hua jab main nahi tha" to "CatchUp", "kya hua jab mai nahi tha" to "CatchUp", "jab main nahi tha tab kya hua" to "CatchUp",
         // ---- SettingWhere: where a setting is, from the Settings search's catalogue (a reply only; nothing is switched) ----
         "where is the quiet hours setting" to "SettingWhere", "where's the mute switch" to "SettingWhere", "where do i find the backup option" to "SettingWhere",
@@ -3529,8 +3531,8 @@ class CollisionTest {
 
     @Test fun catchUpTakesItsOwnWordsAndLeavesWhatDidIMissItsAnswer() {
         // "catch me up" was CoPilot's ("what matters right now") and "kya hua jab main nahi tha" the missed-messages answer:
-        // both are the catch-up now; "read my notes" was Boss's own trade reasons.
-        for (s in listOf("catch me up", "jarvis catch me up", "read my notes", "read me my notes", "notes padh do", "mere notes padh do",
+        // both are the catch-up now.
+        for (s in listOf("catch me up", "jarvis catch me up", "read your notes", "read me your notes", "notes padh do", "tumhare notes padh do",
             "kya hua jab main nahi tha", "kya hua jab mai nahi tha")) {
             assertEquals("CatchUp", audit.feature(s), s)
             val p = Ask.parse(s)
@@ -3552,6 +3554,13 @@ class CollisionTest {
         assertEquals("Account:REASONS", audit.feature("my notes"))
         assertEquals("Account:REASONS", audit.feature("show my notes"))
         assertEquals("DayRecap", audit.feature("kal kya hua"))
+        // "Read my notes" is Boss's own trade notes (his reasons), as before the catch-up; "mere notes padh do" the missed answer.
+        for (s in listOf("read my notes", "read me my notes", "read out my notes", "read my notes aloud", "catch me up on my notes")) {
+            assertEquals("Account:REASONS", audit.feature(s), s); assertTrue(!CatchUp.asked(s), s)
+        }
+        for (s in listOf("mere notes padh do", "apne notes padh do", "mere notes sunao")) {
+            assertEquals("Missed", audit.feature(s), s); assertTrue(!CatchUp.asked(s), s)
+        }
         assertEquals("Market", audit.feature("catch me up on nifty"))
         // Said with something to do: never the catch-up (left to the multi-step plan).
         assertTrue(audit.feature("read my notes then close all positions") != "CatchUp")
