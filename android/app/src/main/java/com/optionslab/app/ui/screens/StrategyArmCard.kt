@@ -138,7 +138,7 @@ internal fun StrategyArmContent(
             BrassButton(botAction, tone = botTone) { confirmBot = true }
         }
         orbRows()
-        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the ORB rules are retired (they lost on six years of real data). They stay in Trade → Strategies, blocked.",
+        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
             if (i == 0) Rule()

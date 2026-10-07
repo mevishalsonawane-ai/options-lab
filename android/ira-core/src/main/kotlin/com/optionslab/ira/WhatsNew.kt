@@ -44,10 +44,15 @@ object WhatsNew {
     const val FULL_LIST = "Settings → What's new"
 
     private val OCT6: LocalDate = LocalDate.of(2026, 10, 6)
+    private val OCT7: LocalDate = LocalDate.of(2026, 10, 7)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-07-orb-arms-back", OCT7, "ORB, ORB Fresh, ORB Sweep and Range Fade are back",
+            "You brought the four arms back: each is switched on again on paper and has its own switch beside Liquidity 15+5. " +
+                "Zerodha still needs your PIN or fingerprint, and their 2021–2026 record stays in the arms' detail.",
+            "Home → Dashboard → Strategies card: each arm's row and switch (tap a row for its record)"),
         Entry("2026-10-06-solo-day", OCT6, "Ask what Solo did today",
             "Jarvis explains Solo (midday)'s day: what it looked at, which index it picked, or why it took no trade.",
             JARVIS_CHAT, ask = "what did Solo do today", jarvisOnly = true, to = "ira"),
@@ -132,9 +137,9 @@ object WhatsNew {
         Entry("2026-10-06-liquidity-lots", OCT6, "Liquidity 15+5 size: 1 to 3 lots",
             "Choose 1, 2 or 3 lots for Liquidity 15+5 (2 at first). A raise asks you first, a cut applies at once, and an open trade keeps its size.",
             "Home → Dashboard → Strategies card → Liquidity 15+5 row → \"Lots: 1 · 2 · 3\"", ask = "how many lots is liquidity trading"),
-        Entry("2026-10-06-liquidity-only", OCT6, "Only Liquidity 15+5 runs now",
-            "After six years of real data, ORB, ORB Fresh, ORB Sweep and Range Fade are retired and can't be switched on. Liquidity 15+5 is back on, on paper only.",
-            "Home → Dashboard → Strategies card: the Liquidity 15+5 row, and the Retired list under it (tap for details)"),
+        Entry("2026-10-06-liquidity-only", OCT6, "Liquidity 15+5 back on, on paper",
+            "After six years of real data, Liquidity 15+5 went back on, on paper only, while the other four arms were set aside for a day.",
+            "Home → Dashboard → Strategies card: the Liquidity 15+5 row"),
     )
 
     /** The entries this build shows: IraGoldAlgo only those marked [Entry.gold]; without Jarvis no Jarvis-only entry and no question. */

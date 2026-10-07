@@ -7,13 +7,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RetiredArmsTest {
-    @Test fun theFourLosersAreRetiredAndLiquidityAndHeroAreNot() {
+    @Test fun theFourHaveARecordAndLiquidityAndHeroHaveNone() {
         assertEquals(listOf("orb", "orb_fresh", "orb_sweep", "range_fade"), RetiredArms.ALL.map { it.arm.source })
-        RetiredArms.ALL.forEach { assertTrue(RetiredArms.isRetired(it.arm.source)) }
-        for (s in listOf("liquidity", "liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin", "hero", "nope")) {
-            assertFalse(RetiredArms.isRetired(s), s)
-            assertNull(RetiredArms.of(s))
-        }
+        RetiredArms.ALL.forEach { assertEquals(it, RetiredArms.of(it.arm.source)) }
+        for (s in listOf("liquidity", "liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin", "hero", "nope"))
+            assertNull(RetiredArms.of(s), s)
         assertEquals(OrbRules.ORB_FRESH, RetiredArms.of("orb_fresh")!!.arm)
     }
 
@@ -23,11 +21,13 @@ class RetiredArmsTest {
         assertEquals("lost ₹2.53 lakh over 2021–2026 on real data; no fix held up out of sample", RetiredArms.line(RetiredArms.of("orb_fresh")!!))
         assertEquals("₹53,000", RetiredArms.rupees(53_000.0))
         assertEquals("₹1.00 lakh", RetiredArms.rupees(100_000.0))
-        assertEquals("ORB is retired: it lost ₹9.77 lakh over 2021–2026 on real data; no fix held up out of sample. " +
-            "Only Liquidity 15+5 stays on, on paper (Boss's choice 06 Oct).", RetiredArms.refusal(orb))
-        val a = RetiredArms.answer(RetiredArms.of("range_fade")!!)
-        assertTrue(a.startsWith("Range Fade is retired, Boss: it lost ₹2.74 lakh over 2021–2026"), a)
-        assertTrue(a.contains("cannot be armed"), a)
+        // Un-retired 07 Oct: the record is information, never a refusal.
+        assertEquals("ORB is back on paper, Boss: you un-retired it on 07 Oct 2026. For the record, it lost ₹9.77 lakh over " +
+            "2021–2026 on real data; no fix held up out of sample. Its own rules are unchanged, and Zerodha still takes your PIN or fingerprint.",
+            RetiredArms.history(orb))
+        val a = RetiredArms.history(RetiredArms.of("range_fade")!!)
+        assertTrue(a.startsWith("Range Fade is back on paper, Boss: you un-retired it on 07 Oct 2026. For the record, it lost ₹2.74 lakh"), a)
+        for (w in listOf("is retired", "cannot be armed", "can't be", "stays retired")) assertFalse(a.contains(w), w)
     }
 
     @Test fun theArmsNamedInAQuestion() {
@@ -60,5 +60,23 @@ class RetiredArmsTest {
         assertEquals(listOf("orb" to false, "range_fade" to false), r.map { it.source to it.armed })
         // A fresh book (nothing saved): only the liquidity books, all four.
         assertEquals(books.map { it.source }, RetiredArms.migrate(emptyList(), books, done = false, restoring = false).map { it.source })
+    }
+
+    @Test fun theUnretirementSwitchesTheFourBackOnOnPaperOnce() {
+        val sw = listOf(RetiredArms.Switch("orb", false, open = true), RetiredArms.Switch("orb_fresh", false), RetiredArms.Switch("orb_sweep", true),
+            RetiredArms.Switch("liquidity5", true), RetiredArms.Switch("hero", false))
+        val ch = RetiredArms.unretire(sw, done = false, restoring = false)
+        // ORB Sweep, already armed, is left as it is; Liquidity and Hero are never touched.
+        assertEquals(listOf("orb" to true, "orb_fresh" to true, "range_fade" to true), ch.map { it.source to it.armed })
+        assertEquals("ORB: switched back on, paper only (Boss un-retired it 07 Oct 2026)", ch[0].log)
+        assertEquals("Range Fade: switched back on, paper only (Boss un-retired it 07 Oct 2026)", ch[2].log)
+        // A book with nothing saved for them: all four.
+        assertEquals(RetiredArms.ALL.map { it.arm.source }, RetiredArms.unretire(emptyList(), done = false, restoring = false).map { it.source })
+        // Once only, and a restore not yet disarmed switches nothing on.
+        assertEquals(emptyList(), RetiredArms.unretire(emptyList(), done = true, restoring = false))
+        assertEquals(emptyList(), RetiredArms.unretire(emptyList(), done = false, restoring = true))
+        assertEquals("unretire_2026_10_07", RetiredArms.UNRETIRE)
+        assertTrue(RetiredArms.UNRETIRE != RetiredArms.MIGRATION)
+        assertEquals(java.time.LocalDate.of(2026, 10, 7), RetiredArms.UNRETIRED_ON)
     }
 }

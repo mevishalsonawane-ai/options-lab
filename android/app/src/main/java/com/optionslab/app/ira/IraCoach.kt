@@ -177,8 +177,7 @@ internal object IraCoach {
         // A parked arm found armed: Boss armed it again himself, so it is left alone while this regime holds.
         views.filter { it.armed && parked.containsKey(it.arm.source) }.forEach { parked.remove(it.arm.source); kept[it.arm.source] = now.name }
         kept.entries.removeAll { it.value != now.name }
-        // A retired arm (Boss's 06 Oct choice) is never in a plan: it is never armed again.
-        val now0 = views.filter { it.retired == null }.map { v -> com.optionslab.ira.DayPlan.ArmNow(v.arm.source, v.arm.label, v.armed,
+        val now0 = views.map { v -> com.optionslab.ira.DayPlan.ArmNow(v.arm.source, v.arm.label, v.armed,
             paper = (v.arm.paperOnly || !liveNow) && !v.liveOk, parked = parked.containsKey(v.arm.source),
             kept = kept[v.arm.source]?.let { k -> runCatching { com.optionslab.ira.Regime.Kind.valueOf(k) }.getOrNull() }) }
         val stopped = s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday() ||

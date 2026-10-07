@@ -251,7 +251,7 @@ object OrbArms {
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
-            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION); cache = it; hints(it) }
+            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE); cache = it; hints(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -260,11 +260,12 @@ object OrbArms {
         cache = b
         hints(b)
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
-        if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION)
+        if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
-        // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone; then
-        // Liquidity's size, when none was saved (Boss's 06 Oct choice: 2 lots).
-        if (switchOffLosers(b) or retire(b, restoring) or sizeLiquidity(b)) save(b)
+        // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
+        // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then Liquidity's size, when
+        // none was saved (Boss's 06 Oct choice: 2 lots).
+        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or sizeLiquidity(b)) save(b)
         return b
     }
 
@@ -346,8 +347,8 @@ object OrbArms {
 
     /**
      * Once, on this update (Boss's choice after six years of real data, 06 Oct: "Keep only Liquidity on paper",
-     * [RetiredArms]): ORB and ORB Fresh - and ORB Sweep or Range Fade, if armed again since - are switched off for good
-     * ("switched off: lost on 6 years of real data"), an open position still managed to its exit; and Liquidity 15+5's
+     * [RetiredArms]): ORB and ORB Fresh - and ORB Sweep or Range Fade, if armed again since - are switched off
+     * ("switched off: lost on 6 years of real data"; Boss un-retired them on 07 Oct, [unretire], run right after), an open position still managed to its exit; and Liquidity 15+5's
      * books are switched back on, ON PAPER ONLY and automatic (never cleared for Zerodha: Live still takes Boss's PIN or
      * fingerprint), reversing [switchOffLosers] for Liquidity alone. A restore not yet disarmed ([restoring]) switches
      * nothing on. Nothing is switched on in IraGoldAlgo. True when [b] changed (it is then saved).
@@ -366,6 +367,30 @@ object OrbArms {
             runCatching { Diag.record("orb", c.log) }
         }
         b.migrated += RetiredArms.MIGRATION
+        return true
+    }
+
+    /**
+     * Once, on this update (Boss's explicit choice, 07 Oct 2026: [RetiredArms.unretire]): ORB, ORB Fresh, ORB Sweep and
+     * Range Fade come out of retirement - each not armed now is switched on, automatic, ON PAPER ONLY (liveOk false: never
+     * cleared for Zerodha; Live still takes Boss's PIN or fingerprint, and in Live an entry waits for his approval with it),
+     * logged "switched back on, paper only (Boss un-retired it 07 Oct 2026)". Their own rules, the account guard, the daily
+     * loss limit, the day stop and the expiry square-off apply as to any arm. A restore not yet disarmed ([restoring]) and
+     * IraGoldAlgo (which only talks) switch nothing on. True when [b] changed (it is then saved).
+     */
+    private fun unretire(b: Book, restoring: Boolean): Boolean {
+        if (RetiredArms.UNRETIRE in b.migrated) return false
+        val switches = RetiredArms.ALL.map { r -> RetiredArms.Switch(r.arm.source, b.armed[r.arm.source] == true) }
+        val changes = if (com.optionslab.app.BuildConfig.GOLD) emptyList() else RetiredArms.unretire(switches, done = false, restoring = restoring)
+        for (c in changes) {
+            b.armed[c.source] = true; b.auto[c.source] = true; b.liveOk[c.source] = false; b.pending.remove(c.source)
+            b.since[c.source] = now().toString()
+            // Armed just now: the next decision takes only a fresh break, never one already under way.
+            b.watched.keys.removeAll { it.startsWith("${c.source}|") }
+            b.status[c.source] = RetiredArms.UNRETIRED
+            runCatching { Diag.record("orb", c.log) }
+        }
+        b.migrated += RetiredArms.UNRETIRE
         return true
     }
 
@@ -480,8 +505,11 @@ object OrbArms {
     data class ArmView(
         val arm: Arm, val armed: Boolean, val automatic: Boolean, val status: String, val open: Position?, val mark: Double?,
         val pending: Pending?, val today: List<Position>, val liveOk: Boolean = false,
-        /** Retired (Boss's 06 Oct choice, [RetiredArms]): never armed again; shown in the Retired section, no switch. */
-        val retired: RetiredArms.Retired? = null,
+        /**
+         * ORB, ORB Fresh, ORB Sweep and Range Fade: their 2021–2026 real-data record ([RetiredArms]), shown in the day's
+         * detail as information only (Boss un-retired them 07 Oct: each has its switch like any arm); null for the others.
+         */
+        val record: RetiredArms.Retired? = null,
         /** Liquidity 15+5 only: its paper trades since 06 Oct with and without each pre-registered candidate ([LiquidityShadow]). */
         val shadow: LiquidityShadow.Summary? = null,
         /** Liquidity 15+5 only: lots each new entry buys ([LiquidityLots]); null for the other arms. */
@@ -497,7 +525,7 @@ object OrbArms {
         val replay: JSONObject?, val replayDay: String?,
         /** The day's stop, when the bot is stopped for today: who stopped it and what resumes it ([DayStop.line]); null when it runs. */
         val stopped: String? = null,
-        /** The retired arms' shadows and the new candidate ([ShadowArms]: no orders), one row a variant. */
+        /** The research shadows of ORB, ORB Fresh, ORB Sweep and Range Fade and the new candidate ([ShadowArms]: no orders), one row a variant. */
         val shadows: List<ShadowArms.Row> = emptyList(),
     )
 
@@ -522,7 +550,7 @@ object OrbArms {
             val open = b.positions.lastOrNull { it.arm == a.source && it.open }
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
                 b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true,
-                retired = RetiredArms.of(a.source))
+                record = RetiredArms.of(a.source))
         } + liquidityView(b, day)
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
@@ -735,25 +763,10 @@ object OrbArms {
     // ---- arming and approvals ------------------------------------------------------
 
     /**
-     * [pinConfirmed]: the UI took the PIN or fingerprint (required to arm while the app is in Live). A retired arm
-     * ([RetiredArms]: ORB, ORB Fresh, ORB Sweep, Range Fade) is never armed, whoever asks (a switch, Jarvis, a plan): the
-     * refusal says why. Switching one off still works.
+     * [pinConfirmed]: the UI took the PIN or fingerprint (required to arm while the app is in Live). Every arm - ORB, ORB
+     * Fresh, ORB Sweep and Range Fade too, since Boss un-retired them on 07 Oct - is armed and disarmed the same way.
      */
-    suspend fun setArmed(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false): String {
-        if (on) RetiredArms.of(source)?.let { return RetiredArms.refusal(it) }
-        return setArmedAny(source, on, automatic, pinConfirmed)
-    }
-
-    /**
-     * TEST ONLY: arms (or disarms) any arm, a retired one too, so the tests still run the retired arms' engine paths (the
-     * backtests and the evening replay keep their rules). Throws unless BuildConfig.DEBUG; no app code calls it.
-     */
-    internal suspend fun armForTest(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false): String {
-        check(com.optionslab.app.BuildConfig.DEBUG) { "arming a retired arm exists only in debug builds" }
-        return setArmedAny(source, on, automatic, pinConfirmed)
-    }
-
-    private suspend fun setArmedAny(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean): String = lock.withLock {
+    suspend fun setArmed(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false): String = lock.withLock {
         val b = book()
         if (source == LiquidityRules.ARM.source) {
             // Both books follow the one switch, with the ORB's rules: the Paper / Live switch, the PIN for Live, automatic or approve.

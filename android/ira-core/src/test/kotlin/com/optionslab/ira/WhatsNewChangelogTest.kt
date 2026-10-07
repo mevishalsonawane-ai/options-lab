@@ -21,8 +21,9 @@ class WhatsNewChangelogTest {
         assertTrue(all.size >= 20, "${all.size}")
         assertEquals(all.size, all.map { it.id }.distinct().size, "ids are unique")
         for (x in all) {
-            assertTrue(Regex("^2026-10-06-[a-z0-9-]+$").matches(x.id), x.id)
-            assertEquals(LocalDate.of(2026, 10, 6), x.date, x.id)
+            // Each id starts with its own day (06 Oct, or 07 Oct for the un-retired arms).
+            assertTrue(Regex("^2026-10-0[67]-[a-z0-9-]+$").matches(x.id), x.id)
+            assertEquals(LocalDate.parse(x.id.take(10)), x.date, x.id)
             assertTrue(x.title.isNotBlank() && x.title.length <= 60, x.id)
             assertTrue(x.what.isNotBlank() && x.where.isNotBlank(), x.id)
             // One or two plain sentences.
@@ -45,9 +46,22 @@ class WhatsNewChangelogTest {
             "market-data-viewer", "weekly-review", "tomorrow-plan", "liquidity-record", "liquidity-why-not", "solo-day", "liquidity-levels",
             "pine-30-60", "jarvis-trades-30-60"))
             assertTrue(want in ids, want)
-        // Written newest first: the last change of the day leads, the first one closes.
-        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES.first().id)
+        // Written newest first: 07 Oct's leads, then 06 Oct's last change of the day; the first one closes.
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES.first().id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[1].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
+        assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
+    }
+
+    @Test fun theFourArmsAreBackOnPaperAndNothingSaysRetired() {
+        val back = WhatsNew.ENTRIES.first { it.id == "2026-10-07-orb-arms-back" }
+        assertEquals(LocalDate.of(2026, 10, 7), back.date)
+        for (arm in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade")) assertTrue(arm in back.title, arm)
+        assertTrue("on paper" in back.what && "PIN or fingerprint" in back.what, back.what)
+        assertTrue("Strategies card" in back.where, back.where)
+        // No entry still says they are retired or can't be switched on, nor points to a Retired list.
+        for (x in WhatsNew.ENTRIES) for (t in listOf(x.title, x.what, x.where))
+            assertFalse(Regex("(?i)retired|can't be switched on|cannot be armed").containsMatchIn(t), "${x.id}: $t")
     }
 
     @Test fun eachQuestionToTryIsAnsweredByItsOwnFeature() {
@@ -141,12 +155,15 @@ class WhatsNewChangelogTest {
     @Test fun jarvisSaysTheNewestSixWithTheirQuestions() {
         val t = WhatsNew.answer(WhatsNew.ENTRIES)
         val lines = t.lines()
-        assertEquals("What's new in the app (6 Oct), newest first:", lines.first())
+        // Two days among the newest six: each line says its day.
+        assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
-        assertEquals("• Ask what Solo did today: try \"what did Solo do today\".", lines[1])
-        assertEquals("• Liquidity level sheet with a price alert: Chart tab → BANKNIFTY or FINNIFTY with Liquidity levels on → tap a level → " +
-            "\"Alert me when price reaches it\". Your alerts are also in Settings → Alerts.", lines[2])
-        assertEquals("• Why no Liquidity trade today: try \"why no liquidity trade today\".", lines[3])
+        assertEquals("• ORB, ORB Fresh, ORB Sweep and Range Fade are back (7 Oct): Home → Dashboard → Strategies card: each arm's row " +
+            "and switch (tap a row for its record).", lines[1])
+        assertEquals("• Ask what Solo did today (6 Oct): try \"what did Solo do today\".", lines[2])
+        assertEquals("• Liquidity level sheet with a price alert (6 Oct): Chart tab → BANKNIFTY or FINNIFTY with Liquidity levels on → tap a level → " +
+            "\"Alert me when price reaches it\". Your alerts are also in Settings → Alerts.", lines[3])
+        assertEquals("• Why no Liquidity trade today (6 Oct): try \"why no liquidity trade today\".", lines[4])
         assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.
         assertFalse(Regex("(?i)\\b(placed|bought|sold|armed|switched on)\\b").containsMatchIn(lines.first() + lines.last()))

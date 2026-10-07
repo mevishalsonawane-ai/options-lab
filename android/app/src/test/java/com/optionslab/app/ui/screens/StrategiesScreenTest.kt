@@ -88,16 +88,20 @@ internal object StrategyFakes {
     private val today: LocalDate = LocalDate.now(IST)
     private fun contract(r: Right) = Paper.Contract("BANKNIFTY-TEST-52000$r", "BANKNIFTY", today.plusDays(5), 52_000.0, r, 30, "NSE_FO|$r")
 
-    /** The rows as the app builds them: the four retired arms (no switch), the Hero arm, then Liquidity 15+5 ([retiredOpen]: ORB still holds a call). */
-    fun orbView(armed: Boolean = false, pending: Boolean = false, open: Boolean = false, live: Boolean = false, retiredOpen: Boolean = false,
-                lots: Int? = null, lotsAsk: Int? = null): OrbArms.View {
+    /**
+     * The rows as the app builds them: ORB, ORB Fresh, ORB Sweep and Range Fade (un-retired 07 Oct: a switch each, their
+     * record in the detail; [fourArmed]: armed on paper as the un-retirement leaves them; [orbOpen]: ORB holds a paper
+     * call), the Hero arm, then Liquidity 15+5.
+     */
+    fun orbView(armed: Boolean = false, pending: Boolean = false, open: Boolean = false, live: Boolean = false, orbOpen: Boolean = false,
+                lots: Int? = null, lotsAsk: Int? = null, fourArmed: Boolean = false): OrbArms.View {
         val bar = today.atTime(10, 40)
         val pos = OrbArms.Position("liquidity5", "BANKNIFTY-TEST-52000CE", "CE", 30, 210.0, bar.plusMinutes(6), bar, "E1", "S1", 170.0, live = live, kite = "BANKNIFTY26OCT52000CE")
         val closed = pos.copy(exit = 250.0, exitTime = bar.plusMinutes(40), why = "next_liquidity", charges = 42.0, near = true)
-        val retired = com.optionslab.engine.orb.RetiredArms.ALL.map { r ->
-            val held = pos.copy(arm = r.arm.source, live = false).takeIf { retiredOpen && r.arm == OrbRules.ORB }
-            OrbArms.ArmView(r.arm, armed = false, automatic = true, status = com.optionslab.engine.orb.RetiredArms.SWITCHED_OFF, open = held, mark = 220.0,
-                pending = null, today = listOfNotNull(held), retired = r)
+        val four = com.optionslab.engine.orb.RetiredArms.ALL.map { r ->
+            val held = pos.copy(arm = r.arm.source, live = false).takeIf { orbOpen && r.arm == OrbRules.ORB }
+            OrbArms.ArmView(r.arm, armed = fourArmed, automatic = true, status = if (fourArmed) com.optionslab.engine.orb.RetiredArms.UNRETIRED else "",
+                open = held, mark = 220.0, pending = null, today = listOfNotNull(held), record = r)
         }
         val hero = OrbArms.ArmView(com.optionslab.engine.orb.HeroRules.ARM, armed = false, automatic = true, status = "", open = null, mark = null,
             pending = null, today = emptyList())
@@ -108,7 +112,7 @@ internal object StrategyFakes {
             shadow = com.optionslab.engine.orb.LiquidityShadow.summarize(listOf(com.optionslab.engine.orb.LiquidityShadow.Trade(today, 1_158.0, true, "liquidity5", volSkip = true,
                 exit1430 = 2_345.6, itm2 = -12_345.4))),
             lots = lots, lotsAsk = lotsAsk, lotSizes = if (lots == null) emptyMap() else mapOf("BANKNIFTY" to 30, "FINNIFTY" to 65))
-        val arms = retired + hero + liq
+        val arms = four + hero + liq
         return OrbArms.View(arms, OrbArms.Legs(today, 52_000, today.plusDays(5), contract(Right.CE), contract(Right.PE)), 52_310.0 to 51_980.0,
             PassRule.judge(listOf(PassRule.Closed(today.minusDays(1), 1_158.0, true))),
             org.json.JSONObject().put("up", true).put("orb", org.json.JSONArray().put(org.json.JSONObject().put("bar", "10:40").put("exitBar", "11:20")
@@ -118,7 +122,7 @@ internal object StrategyFakes {
 
     /**
      * The shadow tracker's rows (no orders): wide figures (124 trades, five-figure nets) to hold on one line; [armedSweep]: S17
-     * re-armed on paper. The best of each retired arm's shadows: ORB OP10, ORB Fresh V43, ORB Sweep S14, Range Fade R20.
+     * re-armed on paper. The best of each arm's shadows: ORB OP10, ORB Fresh V43, ORB Sweep S14, Range Fade R20.
      */
     fun shadowRows(armedSweep: Boolean = false): List<com.optionslab.app.data.ShadowArms.Row> {
         val since = LocalDate.of(2026, 10, 6)
@@ -440,29 +444,47 @@ class OrbRowsTest {
     private fun tap(text: String) { compose.onAllNodesWithText(text, substring = true).onFirst().areaCClick(); compose.waitForIdle() }
     private fun shown(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
 
-    /** The switches on screen: the Hero arm's (0) and Liquidity 15+5's (1) - never a retired arm's. */
+    /** The switches on screen: ORB, ORB Fresh, ORB Sweep, Range Fade (0-3), the Hero arm (4) and Liquidity 15+5 (5). */
     private fun switches() = compose.onAllNodes(isToggleable())
+    /** One arm's switch, by its label ("Arm ORB" is ORB's alone, never ORB Fresh's). */
+    private fun switchOf(label: String) = compose.onAllNodes(isToggleable() and androidx.compose.ui.test.hasContentDescription("Arm $label")).onFirst()
+    private fun tapSwitch(label: String) { switchOf(label).areaCClick(); compose.waitForIdle() }
 
-    @Test fun theRetiredArmsAreListedWithoutASwitch() {
+    @Test fun theFourArmsAreRowsWithASwitchAndNothingSaysRetired() {
         rows(StrategyFakes.orbView(), live = false)
-        assertEquals("only the Hero arm and Liquidity 15+5 have a switch", 2, switches().fetchSemanticsNodes().size)
-        assertTrue(shown("Retired"))
-        assertTrue(shown("ORB: lost ₹9.77 lakh over 2021–2026 on real data; no fix held up out of sample"))
-        assertTrue(shown("ORB Fresh: lost ₹2.53 lakh over 2021–2026"))
-        assertTrue(shown("ORB Sweep: lost ₹2.91 lakh over 2021–2026"))
-        assertTrue(shown("Range Fade: lost ₹2.74 lakh over 2021–2026"))
-        assertTrue("no retired arm's switch", !shown("BANKNIFTY opening-range break"))
+        assertEquals("every arm has its switch", 6, switches().fetchSemanticsNodes().size)
+        for (label in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade", "Hero (expiry)", "Liquidity 15+5"))
+            assertEquals(label, 1, compose.onAllNodes(isToggleable() and androidx.compose.ui.test.hasContentDescription("Arm $label")).fetchSemanticsNodes().size)
+        assertTrue(!shown("Retired")); assertTrue(!shown("retired"))
+        assertTrue(shown("BANKNIFTY opening-range break · profit lock"))
+        assertTrue(shown("BANKNIFTY opening-range break, fresh breaks only"))
+        assertTrue(shown("BANKNIFTY failed break of the opening range, faded · paper only"))
+        assertTrue(shown("BANKNIFTY touch of the range edge, faded to the middle · paper only"))
         // The Hero arm stays off and says it is not proven.
         assertTrue(shown(com.optionslab.engine.orb.HeroRules.NOT_PROVEN))
     }
 
-    @Test fun eachRetiredArmShowsTheBestOfItsShadowsOnOneLineAndTheCandidateItsOwn() {
+    @Test fun theFourArmedOnPaperShowItAndTheirRecordIsInTheDetailAsInformation() {
+        rows(StrategyFakes.orbView(fourArmed = true), live = false)
+        assertEquals("ORB and ORB Fresh", 2, compose.onAllNodesWithText("ARMED · PAPER · AUTO").fetchSemanticsNodes().size)
+        assertEquals("ORB Sweep and Range Fade", 2, compose.onAllNodesWithText("ARMED · PAPER ONLY · AUTO").fetchSemanticsNodes().size)
+        tap("ORB Fresh")
+        assertTrue(shown("Arms · today"))
+        for (r in com.optionslab.engine.orb.RetiredArms.ALL) assertTrue(r.arm.label, shown(keepNumbersWhole(recordLine(r))))
+        assertTrue(shown(keepNumbersWhole("You un-retired it on 07 Oct 2026. Its record: lost ₹9.77 lakh over 2021–2026 on real data; no fix held up out of sample.")))
+        assertTrue(shown("ORB forward test (pre-registered)"))
+        assertTrue(!shown("retired 06 Oct"))
+    }
+
+    @Test fun eachArmShowsTheBestOfItsShadowsOnOneLineAndTheCandidateItsOwn() {
         rows(StrategyFakes.orbView(), live = false)
+        assertTrue(shown("Shadows · no orders"))
         // Two or three shadows an arm: one line each arm, the best one's as Live vs backtest names it - against its own
         // research, not the raw net (the tap lists them all). Here each shadow has the same two closed trades: V43 is the
         // best of ORB's and ORB Fresh's, SH1 of the Sweep's pinned ones, and RP10 the Range Fade's only pinned one.
         val fresh = keepNumbersWhole("Best of 2 shadows · Shadow (V43, no orders): 124 trades since 06 Oct, net −₹12,345 (−₹100 a trade)")
-        assertEquals("under ORB and ORB Fresh", 2, compose.onAllNodesWithText(fresh, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertEquals("under ORB and ORB Fresh", 2, compose.onAllNodesWithText(fresh, substring = true, useUnmergedTree = true).fetchSemanticsNodes().size)
+        assertTrue(shown("ORB Fresh: " + fresh))
         assertTrue(shown(keepNumbersWhole("Best of 3 shadows · Shadow (SH1, no orders): 40 trades since 06 Oct, net −₹2,000 (−₹50 a trade)")))
         assertTrue(shown(keepNumbersWhole("Best of 2 shadows · Shadow (RP10, no orders): 25 trades since 06 Oct, net −₹5,000 (−₹200 a trade)")))
         assertTrue("the others are in the detail only", listOf("Shadow (S17", "Shadow (S14", "Shadow (R20", "Shadow (OP10", "Shadow (FP10").none { shown(keepNumbersWhole(it)) })
@@ -471,25 +493,27 @@ class OrbRowsTest {
         assertTrue(shown("Tap for every shadow's record and why its losers lost"))
         // No figure breaks across lines: each is joined (word joiners), e.g. "(−₹100".
         assertTrue(fresh.contains("(\u2060−\u2060₹\u20601\u20600\u20600"))
-        assertEquals("still only the Hero arm and Liquidity 15+5 have a switch", 2, switches().fetchSemanticsNodes().size)
+        assertEquals("the shadows have no switch of their own", 6, switches().fetchSemanticsNodes().size)
     }
 
-    @Test fun theRetiredLineIsTheOnlyShadowOrTheBestOfSeveral() {
+    @Test fun theShadowLineIsTheOnlyShadowOrTheBestOfSeveral() {
         val rows = StrategyFakes.shadowRows()
-        assertEquals(null, retiredShadowLine(rows, "liquidity"))
-        assertEquals(rows.single { it.variant.id == "orb_v43" }.line.let { "Best of 2 shadows · $it" }, retiredShadowLine(rows, "orb"))
+        assertEquals(null, armShadowLine(rows, "liquidity"))
+        assertEquals(null, armShadowLine(rows, "hero"))
+        assertEquals(rows.single { it.variant.id == "orb_v43" }.line.let { "Best of 2 shadows · $it" }, armShadowLine(rows, "orb"))
         // The same best as Live vs backtest names for each arm (not the raw best net, OP10's).
         val named = com.optionslab.app.data.ForwardRecords.bestShadows(rows).map { it.title }
         assertTrue(named.toString(), named.any { it.endsWith("shadow V43") })
         assertTrue(named.toString(), named.any { it.endsWith("shadow RP10") })
         assertTrue(named.toString(), named.any { it.endsWith("shadow SH1") })
         // With only one shadow of an arm: its own line, no "best of".
-        assertEquals(rows.single { it.variant.id == "fade_r20" }.line, retiredShadowLine(rows.filter { it.variant.id != "fade_p10" }, "range_fade"))
+        assertEquals(rows.single { it.variant.id == "fade_r20" }.line, armShadowLine(rows.filter { it.variant.id != "fade_p10" }, "range_fade"))
     }
 
     @Test fun theDetailListsTheShadowTradesAndARearmedOneSwitchesOff() {
         rows(StrategyFakes.orbView(armed = true), live = false)
-        tap("Retired")
+        tap("Tap for every shadow's record")
+        assertTrue(shown("Arms · today"))
         assertTrue(shown("Shadows · no orders"))
         assertTrue(shown("ORB / ORB Fresh · V43"))
         // Every shadow is in the detail, the study's too, each with why its losers lost.
@@ -502,16 +526,48 @@ class OrbRowsTest {
         assertEquals(listOf("shadow off sweep_s17"), rec.calls)
     }
 
-    @Test fun aRetiredArmStillHoldingAPositionShowsItButHasNoSwitch() {
-        rows(StrategyFakes.orbView(retiredOpen = true), live = false)
+    @Test fun orbHoldingAPositionShowsItWithItsSwitch() {
+        rows(StrategyFakes.orbView(orbOpen = true), live = false)
         assertTrue(shown("IN TRADE · PAPER"))
-        assertEquals(2, switches().fetchSemanticsNodes().size)
+        assertEquals(6, switches().fetchSemanticsNodes().size)
+    }
+
+    @Test fun theFourArmLikeAnyArmOnPaper() {
+        rows(StrategyFakes.orbView(), live = false)
+        // ORB and ORB Fresh choose automatic or approve, as before their retirement.
+        tapSwitch("ORB")
+        assertTrue(shown("Arm ORB (paper)"))
+        tap("Automatic")
+        tapSwitch("ORB Fresh")
+        assertTrue(shown("Arm ORB Fresh (paper)"))
+        tap("Ask me to approve")
+        // ORB Sweep and Range Fade are paper only and automatic: armed at once, no PIN.
+        tapSwitch("ORB Sweep"); tapSwitch("Range Fade")
+        assertEquals(listOf("orb arm orb on=true auto=true pin=false", "orb arm orb_fresh on=true auto=false pin=false",
+            "orb arm orb_sweep on=true auto=true pin=false", "orb arm range_fade on=true auto=true pin=false"), rec.calls)
+    }
+
+    @Test fun inLiveArmingOrbStillTakesThePin() {
+        rows(StrategyFakes.orbView(), live = true)
+        tapSwitch("ORB")
+        assertTrue(shown("Arm ORB (LIVE)"))
+        tap("Automatic")
+        assertTrue("nothing armed before the PIN", rec.calls.isEmpty())
+        assertTrue(shown("Enter your app PIN to arm ORB on Zerodha"))
+        tap("PIN OK")
+        assertEquals(listOf("orb arm orb on=true auto=true pin=true"), rec.calls)
+    }
+
+    @Test fun anArmedOrbDisarmsWithItsSwitch() {
+        rows(StrategyFakes.orbView(fourArmed = true), live = false)
+        tapSwitch("ORB")
+        assertEquals(listOf("orb arm orb on=false auto=true pin=false"), rec.calls)
     }
 
     @Test fun armingInPaper() {
         rows(StrategyFakes.orbView(), live = false)
         assertTrue(shown("BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) liquidity pool"))
-        switches()[1].areaCClick(); compose.waitForIdle()
+        tapSwitch("Liquidity 15+5")
         assertTrue(shown("Arm Liquidity 15+5 (paper)"))
         tap("Automatic")
         assertEquals(listOf("orb arm liquidity on=true auto=true pin=false"), rec.calls)
@@ -519,7 +575,7 @@ class OrbRowsTest {
 
     @Test fun armingInLiveTakesThePinWithItsReason() {
         rows(StrategyFakes.orbView(), live = true)
-        switches()[1].areaCClick(); compose.waitForIdle()
+        tapSwitch("Liquidity 15+5")
         assertTrue(shown("Arm Liquidity 15+5 (LIVE)"))
         tap("Ask me to approve")
         assertTrue(shown("Enter your app PIN to arm Liquidity 15+5 on Zerodha"))
@@ -538,7 +594,7 @@ class OrbRowsTest {
         // Candidates (d) all out by 14:30 and (e) 2 strikes in the money: on the same trade, never what it trades.
         assertTrue(shown(keepNumbersWhole("(d) all out by 14:30: 1, +₹2,346 a trade against +₹1,158 a trade")))
         assertTrue(shown(keepNumbersWhole("(e) 2 strikes in the money: 1, −₹12,345 a trade against +₹1,158 a trade")))
-        switches()[1].areaCClick(); compose.waitForIdle()
+        tapSwitch("Liquidity 15+5")
         assertEquals(listOf("orb arm liquidity on=false auto=true pin=false"), rec.calls)
     }
 
@@ -664,7 +720,7 @@ class StrategiesScreensLayoutTest(private val config: DeviceConfig) : ScreenTest
 }
 
 /**
- * The Retired section (every retired arm with the best of its two or three shadows, the candidate, the tap line) and the
+ * The Shadows section (every arm with the best of its two or three shadows, the candidate, the tap line) and the
  * Liquidity 15+5 row with its five candidates, at the largest font on every size and theme: nothing cut, nothing overlapping.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -678,13 +734,13 @@ class ShadowRowsLayoutTest(private val config: DeviceConfig) : ScreenTest(config
 
     private val rec = RecordingStrategyActions()
 
-    @Test fun retiredSectionAndLiquidityRowAtFontTwo() = checkScreen("orb-rows-shadows", knownBugs = StrategyLayoutBugs.CARD) {
+    @Test fun shadowsSectionAndLiquidityRowAtFontTwo() = checkScreen("orb-rows-shadows", knownBugs = StrategyLayoutBugs.CARD) {
         Column(Modifier.verticalScroll(rememberScrollState())) { OrbRowsContent(StrategyFakes.orbView(armed = true), false, rec, StrategyFakes.reauthWhy) }
     }
 
     @Test fun shadowDetailAtFontTwo() {
         show { Column(Modifier.verticalScroll(rememberScrollState())) { OrbRowsContent(StrategyFakes.orbView(armed = true), false, rec, StrategyFakes.reauthWhy) } }
-        compose.onAllNodesWithText("Retired", substring = true).onFirst().areaCClick(); compose.waitForIdle()
+        compose.onAllNodesWithText("Tap for every shadow's record", substring = true).onFirst().areaCClick(); compose.waitForIdle()
         areaCCaptureTop(compose, "orb-shadow-detail", config); lint("orb-shadow-detail", knownBugs = StrategyLayoutBugs.CARD)
     }
 }
@@ -775,7 +831,7 @@ class StrategiesDialogsLayoutTest(private val config: DeviceConfig) : ScreenTest
     @Test fun orbDetail() {
         // The rows are a card's contents (the card is a Column): shown in one, not stacked on each other.
         show { Column(androidx.compose.ui.Modifier.verticalScroll(rememberScrollState())) { OrbRowsContent(StrategyFakes.orbView(armed = true, open = true, live = true), true, rec, StrategyFakes.reauthWhy) } }   // the page scrolls, as in the app
-        compose.onAllNodesWithText("Retired", substring = true).onFirst().areaCClick(); compose.waitForIdle()   // the retired list opens the detail
+        compose.onAllNodesWithText("Tap for every shadow's record", substring = true).onFirst().areaCClick(); compose.waitForIdle()   // the shadows' tap opens the detail
         top("orb-detail", StrategyLayoutBugs.CARD)
     }
 }

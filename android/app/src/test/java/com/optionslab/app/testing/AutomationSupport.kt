@@ -89,11 +89,11 @@ object AutomationSupport {
 
     /**
      * Write the ORB arms' encrypted state as the app would have saved it, and make the arms read it. Without a "migrated"
-     * list it is a book saved after every one-time change (06 Oct's switch-off and retirement), so loading it changes
-     * nothing; a test of a change passes its own list (an empty one: saved before both).
+     * list it is a book saved after every one-time change (06 Oct's switch-off and retirement, 07 Oct's un-retirement), so loading it changes
+     * nothing; a test of a change passes its own list (an empty one: saved before all three).
      */
     fun orbState(context: Context, o: JSONObject) {
-        if (!o.has("migrated")) o.put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION))
+        if (!o.has("migrated")) o.put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
         OrbArms.wipe()
         Vault.writeFile(File(context.filesDir, "orb.vault"), o.toString().toByteArray(Charsets.UTF_8))
     }

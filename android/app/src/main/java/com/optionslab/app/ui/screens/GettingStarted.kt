@@ -52,7 +52,7 @@ fun GettingStarted(onGo: (String) -> Unit) {
             "Start on Paper until you trust a strategy.",
         )),
         TourPage("Start automated trading", listOf(
-            "On Home, find the Strategies card with Liquidity 15+5 (ORB, ORB Fresh, ORB Sweep and Range Fade are retired: they lost on six years of real data).",
+            "On Home, find the Strategies card with Liquidity 15+5 (ORB, ORB Fresh, ORB Sweep and Range Fade have their own switches there too, on paper).",
             "Tap the switch next to Liquidity 15+5 to turn it on, and choose Automatic.",
             "From then on it trades BANKNIFTY and FINNIFTY by itself every trading day: it buys when a liquidity pool is taken (09:20-14:00) and sells at its stop, the next liquidity level or 15:10.",
             "In Live, turning it on asks for your PIN or fingerprint once. Turn the switch off to stop it.",

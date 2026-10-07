@@ -23,7 +23,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
- * The shadow tracker (Boss's choice, 06 Oct 2026): beside each retired arm ([com.optionslab.engine.orb.RetiredArms]) the
+ * The shadow tracker (Boss's choice, 06 Oct 2026): beside ORB, ORB Fresh, ORB Sweep and Range Fade ([com.optionslab.engine.orb.RetiredArms]; un-retired 07 Oct, research rows here) the
  * research's best variant, and one new candidate, run on the app's live index and option prices - recording what each
  * WOULD have done, never placing an order (paper or live). The rules are [ShadowRules]'s (pinned there); entries and exits
  * are priced at the option's LTP with the paper account's fills and the real charges. Nothing here calls [Paper.place],
@@ -668,7 +668,7 @@ object ShadowArms {
     }
 
     /**
-     * Boss's yes to Jarvis's request ([com.optionslab.app.ira.IraBots.shadowPromotions]): the retired arm runs the variant's
+     * Boss's yes to Jarvis's request ([com.optionslab.app.ira.IraBots.shadowPromotions]): the shadowed arm's variant runs its
      * rules from now, ON PAPER ONLY (never Zerodha: no live path exists here), until he switches it off ([disarm]).
      */
     suspend fun promote(id: String): String = lock.withLock {
@@ -692,7 +692,7 @@ object ShadowArms {
 
     // ---- what the screen and Jarvis read ---------------------------------------------------------------------
 
-    /** One variant's record: its closed trades since the shadow started, the line the Retired section shows, its trades. */
+    /** One variant's record: its closed trades since the shadow started, the line the Shadows section shows, its trades. */
     data class Row(val variant: ShadowRules.Variant, val summary: ShadowRules.Summary, val since: LocalDate, val line: String,
                    val armed: Boolean, val promoted: Boolean, val asked: Boolean, val trades: List<Trade>, val status: String,
                    /** Why each closed losing trade lost ([ShadowStudy.lossGroup]). */
@@ -717,7 +717,7 @@ object ShadowArms {
         return try { rowsOf(book()) } finally { lock.unlock() }
     }
 
-    /** What Jarvis says when asked how the shadows (the retired arms) are doing. */
+    /** What Jarvis says when asked how the shadows (the research rows of ORB, ORB Fresh, ORB Sweep and Range Fade) are doing. */
     suspend fun answer(): String {
         val rows = rows()
         return ShadowRules.answer(rows.map { Triple(it.variant, it.summary, it.since) }, rows.filter { it.armed }.map { it.variant.id }.toSet(),

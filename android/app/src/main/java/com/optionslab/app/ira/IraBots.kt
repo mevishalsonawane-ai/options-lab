@@ -129,16 +129,17 @@ internal object IraBots {
 
     /** "How are my bots doing?", "is the ORB arm behaving?", "which strategy is losing?". Reads only. */
     suspend fun lines(question: String): List<String> {
-        // A retired arm named (Boss's 06 Oct choice, [com.optionslab.engine.orb.RetiredArms]): said first that it is retired, and why.
-        val retired = com.optionslab.engine.orb.RetiredArms.named(question).map { com.optionslab.engine.orb.RetiredArms.answer(it) }
+        // ORB, ORB Fresh, ORB Sweep or Range Fade named: said first that Boss un-retired it on 07 Oct (on paper), with its
+        // 2021-2026 record as information ([com.optionslab.engine.orb.RetiredArms.history]).
+        val record = com.optionslab.engine.orb.RetiredArms.named(question).map { com.optionslab.engine.orb.RetiredArms.history(it) }
         // "How are the shadows doing?", "how are the retired arms doing?": the shadow tracker's record (no orders), on its own.
-        if (SHADOWS.containsMatchIn(question)) return retired + listOf(com.optionslab.app.data.ShadowArms.answer())
+        if (SHADOWS.containsMatchIn(question)) return record + listOf(com.optionslab.app.data.ShadowArms.answer())
         val health = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
             runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
         // Liquidity 15+5 named: its pre-registered candidates (a), (b) and the volatility filter (c), each judged at 40 paper trades.
         val shadow = if (!question.contains("liquidity", ignoreCase = true)) emptyList()
             else listOfNotNull(runCatching { com.optionslab.engine.orb.LiquidityShadow.verdict(com.optionslab.app.data.OrbArms.liquidityShadow()) }.getOrNull())
-        return retired + health + shadow + liveVsBacktest(question)
+        return record + health + shadow + liveVsBacktest(question)
     }
 
     /**
@@ -152,7 +153,7 @@ internal object IraBots {
         else named.ifEmpty { rows }.map { "${it.title} - ${com.optionslab.ira.ForwardCheck.line(it.result)}" }
     }.getOrDefault(emptyList())
 
-    /** The shadows or the retired arms named ([lines]). */
+    /** The shadows, or "the retired arms" (their research shadows), named ([lines]). */
     private val SHADOWS = Regex("\\b(shadows?|retired)\\b", RegexOption.IGNORE_CASE)
 
     /** An arm position as [com.optionslab.ira.BotTrades] reads it (also [IraTradeLessons]'s, so both say the same lesson). */
@@ -190,9 +191,9 @@ internal object IraBots {
         val paper = bots().filter { it.where == "Paper" && it.name in armed }.associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
         val arms = armed.map { (name, on) -> com.optionslab.ira.SwitchOff.arm(name, on, paper[name].orEmpty()) }
         val a0 = com.optionslab.ira.SwitchOff.answer(q, arms)
-        // Asked about a retired arm: said first that it is retired for good, and why.
-        val retired = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { com.optionslab.engine.orb.RetiredArms.answer(it) }
-        val a = if (retired.isEmpty()) a0 else a0.copy(text = "$retired ${a0.text}")
+        // Asked about ORB, ORB Fresh, ORB Sweep or Range Fade: said first that Boss un-retired it on 07 Oct, with its record.
+        val record = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { com.optionslab.engine.orb.RetiredArms.history(it) }
+        val a = if (record.isEmpty()) a0 else a0.copy(text = "$record ${a0.text}")
         return a to a.offer.firstOrNull()?.let { n -> arms.firstOrNull { it.name == n } }
     }
 
@@ -237,8 +238,7 @@ internal object IraBots {
      * armed, stopped, placed or closed.
      */
     suspend fun armFit(bankNifty: List<com.optionslab.ira.Candle>, vix: List<com.optionslab.ira.Candle>): String {
-        // A retired arm is never put forward for a day: it can no longer be armed.
-        val armed = com.optionslab.app.data.OrbArms.view().arms.filter { it.retired == null }.associate { it.arm.label to it.armed }
+        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
         val paper = bots().filter { it.where == "Paper" && it.name in armed }
             .associate { b -> b.name to com.optionslab.ira.ArmFit.daily(b.trades.map { it.openedAt.toLocalDate() to it.net }) }
         val tested = armTestedDays()
@@ -380,7 +380,11 @@ internal object IraBots {
             // Liquidity 15+5, switched back on on paper on 06 Oct: judged only on its trades from then, and only from 40 of them
             // (its six-year record is the deciding evidence, not 15 trades).
             val since = com.optionslab.engine.orb.LiquidityShadow.SINCE
-            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) else it.arm == a.arm.source }
+            // ORB, ORB Fresh, ORB Sweep and Range Fade, un-retired on paper by Boss on 07 Oct: judged only on their trades from
+            // then (their record from before is what he already weighed), from the same 15 trades as any arm.
+            val back = com.optionslab.engine.orb.RetiredArms.of(a.arm.source)?.let { com.optionslab.engine.orb.RetiredArms.UNRETIRED_ON }
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since)
+                    else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
             val src = a.arm.source; val auto = a.automatic
             val act: suspend () -> String = { com.optionslab.app.data.OrbArms.setArmed(src, false, automatic = auto) }

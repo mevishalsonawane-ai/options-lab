@@ -441,7 +441,7 @@ class LiquidityArmTest : RobolectricTest() {
         AutomationSupport.orbState(context, org.json.JSONObject()
             .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
             // Saved after the 06 Oct update (its one-time switch-off already done): armed again by Boss.
-            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION))
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "liquidity15_fin")
                 .put("symbol", "FINNIFTY-LIQ-24050CE").put("right", "CE").put("qty", 65).put("entry", 120.0)
                 .put("entryTime", t.minusMinutes(20).toString()).put("signalBar", t.minusMinutes(50).toString())

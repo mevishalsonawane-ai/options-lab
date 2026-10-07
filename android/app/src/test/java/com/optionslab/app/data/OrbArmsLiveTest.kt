@@ -238,13 +238,10 @@ class OrbArmsLiveTest : RobolectricTest() {
 
     @Test fun armingInLiveTakesThePinAndDisarmingKeepsThePositionManaged() = runBlocking {
         state(armed = false, positions = listOf(position("orb", 30, 200.0, "E1")))
-        // Retired (Boss's 06 Oct choice): the app never arms ORB again, not even with the PIN; the tests' own hook still can.
-        val refused = OrbArms.setArmed("orb", true, automatic = true, pinConfirmed = true)
-        assertTrue(refused, refused.startsWith("ORB is retired: it lost"))
+        // Un-retired by Boss on 07 Oct: ORB arms like any arm - in Live only with the PIN or fingerprint, exactly as before.
+        assertEquals("The app is in Live: arm it with your PIN or fingerprint.", OrbArms.setArmed("orb", true, automatic = true))
         assertFalse(arm().armed)
-        assertEquals("The app is in Live: arm it with your PIN or fingerprint.", OrbArms.armForTest("orb", true, automatic = true))
-        assertFalse(arm().armed)
-        val on = OrbArms.armForTest("orb", true, automatic = true, pinConfirmed = true)
+        val on = OrbArms.setArmed("orb", true, automatic = true, pinConfirmed = true)
         assertTrue(on, on.startsWith("ORB armed on ZERODHA (live), fully automatic"))
         assertTrue(arm().liveOk)
         assertEquals("ORB disarmed. Its open position is still managed to its exit.", OrbArms.setArmed("orb", false, automatic = true))

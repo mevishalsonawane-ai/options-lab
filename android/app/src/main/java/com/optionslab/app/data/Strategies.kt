@@ -622,7 +622,7 @@ object Strategies {
      * the real ORB rules are ported (TODO A1) they can be kept and viewed, never armed or started.
      */
     fun needsBreakoutRules(def: StrategyDef): Boolean = Regex("(^|[^a-z])orb([^a-z]|$)").containsMatchIn(def.name.lowercase())
-    const val BREAKOUT_BLOCK = "Imported ORB strategies are plain timed baskets with no opening-range breakout check: armed, they would enter at the start time whatever the market did. The built-in ORB arms are retired too: they lost on six years of real data (Boss's choice 06 Oct)."
+    const val BREAKOUT_BLOCK = "Imported ORB strategies are plain timed baskets with no opening-range breakout check: armed, they would enter at the start time whatever the market did. Use the built-in ORB and ORB Fresh arms on Home, which run the real rules."
 
     /** Whether an armed strategy places its entry by itself (true) or asks first (false). */
     suspend fun automatic(): Map<Long, Boolean> = lock.withLock { HashMap(book().autoApprove) }

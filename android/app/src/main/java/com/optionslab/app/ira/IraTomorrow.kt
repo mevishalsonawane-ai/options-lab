@@ -94,7 +94,7 @@ internal object IraTomorrow {
         return TomorrowPlan.Facts(
             today = today, next = next, holidays = holidays, expiries = expiries, expiriesKnown = known,
             liquidity = day, levels = levels, armed = liq?.armed, lots = liq?.lots,
-            soloOn = soloOn, soloTrades = soloTrades, heroArmed = hero?.let { it.armed && it.retired == null },
+            soloOn = soloOn, soloTrades = soloTrades, heroArmed = hero?.armed,
             events = events, fii = fii, flows = flows, bigMove = bigMove, lesson = lesson,
         )
     }

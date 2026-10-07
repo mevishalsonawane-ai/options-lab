@@ -97,7 +97,7 @@ object ShadowRules {
     /** The index of the best record among [nets] (the highest net; a tie keeps the first), or -1 with none. */
     fun bestIndex(nets: List<Double>): Int = nets.indices.maxWithOrNull(compareBy<Int> { nets[it] }.thenByDescending { it }) ?: -1
 
-    /** The Retired section's one line for an arm with [n] shadows: the best one's [line], and that there are more. */
+    /** The Shadows section's one line for an arm with [n] shadows: the best one's [line], and that there are more. */
     fun bestOf(n: Int, line: String): String = if (n <= 1) line else "Best of $n shadows · $line"
 
     // ---- pinned constants ---------------------------------------------------------------------------------------------

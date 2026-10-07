@@ -9,7 +9,7 @@ import com.optionslab.ira.LiquidityEquity
  * Live vs backtest ([ForwardCheck]): each running strategy's closed forward paper trades, read from its own record, set
  * against its research. Liquidity 15+5 and Hero from the arms' book ([OrbArms.closedPaper]; Liquidity per lot: a trade's
  * net over the lots it bought), Solo from its own record ([com.optionslab.app.ira.IraSolo]; one lot a trade), and for each
- * retired arm (and the midday candidate) the best of its shadows that has a research expectation pinned ([ShadowArms],
+ * of ORB, ORB Fresh, ORB Sweep and Range Fade (and the midday candidate) the best of its research shadows that has a research expectation pinned ([ShadowArms],
  * 1 lot, no orders). Reads only: nothing is armed, stopped or changed.
  */
 object ForwardRecords {
@@ -52,7 +52,7 @@ object ForwardRecords {
         closed.filter { it.arm == HeroRules.ARM.source && !it.open && !it.live }.map { ForwardCheck.Trade(it.day, net(it, perLot = false)) }
 
     /**
-     * For each retired arm and each new candidate, among its shadows with a pinned expectation, the one that holds up best
+     * For each of ORB, ORB Fresh, ORB Sweep and Range Fade and each new candidate, among its shadows with a pinned expectation, the one that holds up best
      * against ITS OWN research ([ForwardCheck.bestIndex]: the verdict, then how far its mean a trade sits from its research's -
      * never the raw best net, as their expectations differ; a tie keeps the research's own); a variant shared by two arms
      * (V43) shown once.
@@ -81,7 +81,7 @@ object ForwardRecords {
     /**
      * The index in [mine] (one arm's shadows) of the shadow [bestShadows] names for that arm - among those with a pinned
      * expectation, the one that holds up best against its own research; with none pinned, the highest net
-     * ([com.optionslab.engine.orb.ShadowRules.bestIndex], a tie keeps the research's own) - or -1 with none. The Retired
+     * ([com.optionslab.engine.orb.ShadowRules.bestIndex], a tie keeps the research's own) - or -1 with none. The Shadows
      * section's line uses it too, so both name the same best shadow.
      */
     fun bestShadowIndex(mine: List<ShadowArms.Row>): Int {
