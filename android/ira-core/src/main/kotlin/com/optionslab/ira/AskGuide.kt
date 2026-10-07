@@ -92,6 +92,7 @@ object AskGuide {
             ex("how close am i to my limits", "Headroom"),
             ex("kitne trade bache hain", "Headroom"),
             ex("am i on a winning streak", "Account:STREAKS"),
+            ex("how deep has liquidity fallen from its best", "LiquidityDrawdown"),
         )),
         Group("coach", "Coach & reviews", "Your day, your week and your habits, reviewed", listOf(
             ex("what matters right now", "CoPilot"),

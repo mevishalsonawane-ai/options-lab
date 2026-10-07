@@ -69,6 +69,8 @@ class AskGuideTest {
         assertTrue(groups.first { it.id == "strategies" }.examples.any { it.q == "what's working for liquidity" && it.family == "LiquidityInsight" })
         // How long Liquidity 15+5 holds its trades sits with the strategies too (the Liquidity group is full).
         assertTrue(groups.first { it.id == "strategies" }.examples.any { it.q == "how long does liquidity hold its trades" && it.family == "LiquidityHold" })
+        // How far Liquidity 15+5 has fallen from its best sits with the P&L and streaks (the Liquidity and strategies groups are full).
+        assertTrue(groups.first { it.id == "account" }.examples.any { it.q == "how deep has liquidity fallen from its best" && it.family == "LiquidityDrawdown" })
         // A what-if on Liquidity 15+5's lots sits with the arm (its size is never changed from it).
         assertTrue(groups.first { it.id == "liquidity" }.examples.any { it.q == "what if liquidity traded 3 lots" && it.family == "LotsWhatIf" })
         // A past day's recap sits with the day and the week reviewed (Coach).

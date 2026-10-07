@@ -131,6 +131,7 @@ class CollisionTest {
         "LotsWhatIf" to { q -> LotsWhatIf.asked(q) != null },
         "LiquidityInsight" to { q -> LiquidityInsight.asked(q) != null },
         "LiquidityHold" to { q -> LiquidityHold.asked(q) != null },
+        "LiquidityDrawdown" to { q -> LiquidityDrawdown.asked(q) },
         "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
         "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
         "OpeningRead" to { q -> OpeningRead.asked(q) },
@@ -929,6 +930,14 @@ class CollisionTest {
         "do liquidity's losers last longer than its winners" to "LiquidityHold", "does liquidity hold its losers longer" to "LiquidityHold",
         "liquidity ke trades kitni der chalte hain" to "LiquidityHold", "liquidity kitni der trade rakhta hai" to "LiquidityHold",
         "liquidity time in trade" to "LiquidityHold", "liquidity hold times over the last 10 trades" to "LiquidityHold",
+        // ---- LiquidityDrawdown: how far Liquidity 15+5 has fallen from its best, from its own paper book (nothing changes) ----
+        "how deep has liquidity fallen from its best" to "LiquidityDrawdown", "liquidity drawdown" to "LiquidityDrawdown",
+        "liquidity's current drawdown" to "LiquidityDrawdown", "what is liquidity's drawdown" to "LiquidityDrawdown", "liquidity max drawdown" to "LiquidityDrawdown",
+        "how far is liquidity below its peak" to "LiquidityDrawdown", "liquidity's worst losing streak" to "LiquidityDrawdown",
+        "liquidity longest losing streak" to "LiquidityDrawdown", "how long did liquidity take to recover" to "LiquidityDrawdown",
+        "has liquidity recovered from its drawdown" to "LiquidityDrawdown", "liquidity worst drawdown ever" to "LiquidityDrawdown",
+        "liquidity peak se kitna neeche hai" to "LiquidityDrawdown", "liquidity kitna gira hai" to "LiquidityDrawdown",
+        "is liquidity underwater" to "LiquidityDrawdown", "how much is liquidity down from its high" to "LiquidityDrawdown",
         // ---- LiquidityRecord:Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
         "how did liquidity do this week" to "LiquidityRecord", "how did liquidity do last week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord",
         "how did liquidity do on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord", "liquidity's last 10 trades" to "LiquidityRecord",
@@ -1583,7 +1592,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3270,6 +3279,40 @@ class CollisionTest {
             "hold to talk", "read my notes", "how long is the liquidity backtest", "what is liquidity", "liquidity hold time kar do"))
             assertEquals(null, LiquidityHold.asked(s), "$s: ${audit.feature(s)}")
         assertTrue(audit.feature("how long does liquidity hold its trades and what is my pnl") != "LiquidityHold")
+    }
+
+    // ---- LiquidityDrawdown: the arm's fall from its best, from its own paper book; its other questions keep their routes ----
+
+    @Test fun liquidityDrawdownTakesOnlyTheFallFromItsBestAndLeavesTheArmsOtherRoutes() {
+        for (s in listOf("how deep has liquidity fallen from its best", "liquidity's worst losing streak", "liquidity's current drawdown",
+            "how long did liquidity take to recover", "liquidity peak se kitna neeche hai")) {
+            assertEquals("LiquidityDrawdown", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // The arm's other questions keep theirs (pinned as they routed before it).
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity win streak"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity ki streak"))
+        assertEquals("LiquidityHold", audit.feature("how long does liquidity hold its trades"))
+        assertEquals("LiquidityInsight", audit.feature("what's working for liquidity"))
+        assertEquals("LotsWhatIf", audit.feature("what if liquidity traded 3 lots"))
+        assertEquals("LiquidityWhyNot", audit.feature("why no liquidity trade"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("Headroom", audit.feature("how close is my drawdown to my daily loss limit"))
+        // Boss's own notes and the catch-up keep theirs.
+        assertEquals("Account:REASONS", audit.feature("read my notes"))
+        assertEquals("CatchUp", audit.feature("catch me up"))
+        // Never a change, a limit, Boss's own drawdown, today alone, another arm, the backtest, a definition, or two questions.
+        for (s in listOf("how did liquidity do", "liquidity win streak", "liquidity ki streak", "why no liquidity trade", "liquidity levels",
+            "how long does liquidity hold its trades", "what is my drawdown", "how close is my drawdown to my daily loss limit",
+            "set liquidity's drawdown limit", "should liquidity stop after this drawdown", "turn off liquidity in a drawdown",
+            "liquidity drawdown today", "solo drawdown", "hero's worst losing streak", "liquidity backtest drawdown", "what is a drawdown",
+            "why is liquidity in a drawdown", "liquidity drawdown and what is my pnl", "is nifty down from its high", "read my notes", "catch me up"))
+            assertTrue(!LiquidityDrawdown.asked(s), "$s: ${audit.feature(s)}")
+        assertTrue(audit.feature("liquidity drawdown and what is my pnl") != "LiquidityDrawdown")
     }
 
     // ---- TomorrowPlan: the next session prepared, never the questions that already had their own answers ----
