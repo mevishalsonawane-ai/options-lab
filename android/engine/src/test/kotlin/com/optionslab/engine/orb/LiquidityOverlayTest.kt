@@ -153,6 +153,8 @@ class LiquidityOverlayTest {
         val open = trade(5, -1, d.atTime(10, 0))
         val closed = trade(15, 1, d.atTime(11, 0), exitAt = d.atTime(11, 47), why = "next_liquidity")
         val m = LiquidityOverlay.build(bars, 5, "BANKNIFTY", close, listOf(closed, open))
+        // Only a closed paper trade is replayed on a tap: not an open one, not a live (broker) one.
+        assertTrue(closed.replayable); assertFalse(open.replayable); assertFalse(closed.copy(live = true).replayable)
         fun at(i: Int) = m.bars[i].start
         val trades = m.markers.filter { it.trade != null }
         // Entries in time order, each tagged with its book's chart; a down break's marker above the bar.

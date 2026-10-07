@@ -35,14 +35,19 @@ object LiquidityOverlay {
     /**
      * One of the arm's trades on the index ([book]: the book's source, [minutes]: its chart; [strike]: e.g. "52000 CE").
      * [pnl]: net of charges once closed (null while open). [near], [volSkip], [strong]: the shadow flags, when recorded.
+     * [live]: entered at the broker (no replay); [symbol]: the option's trading symbol, when known (what a tap matches the
+     * book's position by).
      */
     data class Trade(
         val book: String, val minutes: Int, val side: Int, val signalBar: LocalDateTime, val entryTime: LocalDateTime,
         val entry: Double, val qty: Int, val strike: String, val exit: Double? = null, val exitTime: LocalDateTime? = null,
         val why: String? = null, val level: Double? = null, val target: Double? = null, val pnl: Double? = null,
         val near: Boolean? = null, val volSkip: Boolean? = null, val strong: Boolean? = null,
+        val live: Boolean = false, val symbol: String? = null,
     ) {
         val open: Boolean get() = exit == null
+        /** A closed paper trade: the one kind a tap replays. */
+        val replayable: Boolean get() = !open && !live
         val tag: String get() = "L$minutes"
     }
 

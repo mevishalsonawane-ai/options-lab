@@ -58,6 +58,7 @@ import com.optionslab.engine.orb.LiquidityRules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -73,6 +74,10 @@ internal interface LiquiditySource {
     /** Today's Liquidity 15+5 trades on [underlying], open and closed. */
     suspend fun trades(underlying: String): List<LiquidityOverlay.Trade>
     fun now(): LocalDateTime
+    /** The book's closed paper position behind [t] (a tapped marker's replay); null: none found (the marker's card instead). */
+    suspend fun position(t: LiquidityOverlay.Trade): com.optionslab.app.data.OrbArms.Position? = null
+    /** [p]'s replay ([LiquidityReplayData] in the app); null: none. Reads only. */
+    suspend fun replay(p: com.optionslab.app.data.OrbArms.Position): com.optionslab.ira.LiquidityReplay.Replay? = null
 }
 
 /** The app's: the arm's own book ([com.optionslab.app.data.OrbArms.view]) and the market clock. Reads only. */
@@ -85,6 +90,22 @@ internal object ArmLiquiditySource : LiquiditySource {
 
     override fun now(): LocalDateTime = com.optionslab.app.data.Market.now().toLocalDateTime()
 
+    /** A copy of the day's Liquidity positions (the lock held only to copy), read off the main thread and given up after 2 s. */
+    override suspend fun position(t: LiquidityOverlay.Trade): com.optionslab.app.data.OrbArms.Position? {
+        if (!t.replayable || com.optionslab.app.BuildConfig.GOLD) return null
+        val day = t.entryTime.toLocalDate()
+        val list = withTimeoutOrNull(2_000) {
+            withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.OrbArms.liquidityTodayWithLive(day) }.getOrNull() }
+        } ?: return null
+        return positionOf(list, t)
+    }
+
+    override suspend fun replay(p: com.optionslab.app.data.OrbArms.Position): com.optionslab.ira.LiquidityReplay.Replay? = LiquidityReplayData.load(p)
+
+    /** The closed paper position [t] was drawn from: the same book, entry time and (when known) symbol; null when none is. */
+    fun positionOf(list: List<com.optionslab.app.data.OrbArms.Position>, t: LiquidityOverlay.Trade): com.optionslab.app.data.OrbArms.Position? =
+        list.lastOrNull { !it.open && !it.live && it.arm == t.book && it.entryTime == t.entryTime && (t.symbol == null || it.symbol == t.symbol) }
+
     /** A liquidity book's position as the chart shows it, or null when it is another arm's or another index's. */
     fun tradeOf(p: com.optionslab.app.data.OrbArms.Position, underlying: String): LiquidityOverlay.Trade? {
         val arm = LiquidityRules.BOOKS.firstOrNull { it.source == p.arm } ?: return null
@@ -93,7 +114,7 @@ internal object ArmLiquiditySource : LiquiditySource {
         val strike = c?.let { "${String.format(Locale.ENGLISH, "%.0f", it.strike)} ${p.right}" } ?: p.symbol
         return LiquidityOverlay.Trade(p.arm, LiquidityRules.minutesOf(arm), if (p.right == "CE") 1 else -1, p.signalBar, p.entryTime,
             p.entry, p.qty + p.sold, strike, p.exit, p.exitTime, p.why, p.level, p.target, p.grossPnl?.let { it - p.charges },
-            p.near, p.volSkip, p.strong)
+            p.near, p.volSkip, p.strong, live = p.live, symbol = p.symbol)
     }
 }
 
@@ -221,7 +242,8 @@ internal fun LiquidityPanel(underlying: String, visible: Boolean, bars: suspend 
         if (m != model) model = m
     }
     LiquidityChart(underlying, tfs, tf, { tf = it }, model, error, modifier, behind?.let(::behindText),
-        levelAlarms = levelAlarms, lastPrice = lastPrice, today = source.now().toLocalDate())
+        levelAlarms = levelAlarms, lastPrice = lastPrice, today = source.now().toLocalDate(),
+        positionOf = { source.position(it) }, replay = { source.replay(it) })
 }
 
 /** The candles behind: the newest closed 5-minute bar held ([last], its start; null: none) and the one due ([due], its start). */
@@ -260,9 +282,22 @@ internal fun LiquidityChart(
     lastPrice: suspend () -> Double? = { null },
     /** The session's day ("taken today"); null: the last bar's. */
     today: java.time.LocalDate? = null,
+    /**
+     * A tapped closed paper trade's book position ([LiquiditySource.position]): found, the tap opens its replay; null here
+     * (or none found), the trade's card. Open and live trades, and skipped breaks, always show their card.
+     */
+    positionOf: (suspend (LiquidityOverlay.Trade) -> com.optionslab.app.data.OrbArms.Position?)? = null,
+    /** The replay of the position [positionOf] found ([LiquidityReplayData] in the app). Reads only. */
+    replay: suspend (com.optionslab.app.data.OrbArms.Position) -> com.optionslab.ira.LiquidityReplay.Replay? = { null },
 ) {
     val p = LocalPalette.current
     var picked by remember(tf) { mutableStateOf<LiquidityOverlay.Marker?>(null) }
+    // A closed paper trade's marker tapped: its position being looked up, then its replay (never in the GOLD build).
+    var resolving by remember(tf) { mutableStateOf<LiquidityOverlay.Marker?>(null) }
+    var replaying by remember(tf) { mutableStateOf<com.optionslab.app.data.OrbArms.Position?>(null) }
+    val pick: (LiquidityOverlay.Marker) -> Unit = { mk ->
+        if (positionOf != null && mk.trade?.replayable == true && !com.optionslab.app.BuildConfig.GOLD) resolving = mk else picked = mk
+    }
     var level by remember(tf) { mutableStateOf<PickedLevel?>(null) }
     var levelLast by remember(tf) { mutableStateOf<Double?>(null) }
     Column(modifier.background(p.paper)) {
@@ -287,14 +322,14 @@ internal fun LiquidityChart(
                 modifier = Modifier.align(Alignment.Center).padding(12.dp))
             else if (m.bars.isEmpty()) Text("No closed ${tf}-minute bars yet.", style = Type.bodySmall.copy(color = p.inkSoft),
                 modifier = Modifier.align(Alignment.Center).padding(12.dp))
-            else LevelsCanvas(m, onLevel = { s -> levelLast = null; level = pickedOf(s, m) }) { picked = it }
+            else LevelsCanvas(m, onLevel = { s -> levelLast = null; level = pickedOf(s, m) }) { pick(it) }
         }
         // Every marker as a chip too (newest first): a tap opens its card, as a tap on the chart does.
         val marks = model?.markers.orEmpty().sortedByDescending { it.bar }
         if (model != null && marks.isNotEmpty()) Row(Modifier.fillMaxWidth().background(p.paperDeep).horizontalScroll(rememberScrollState())
             .padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             marks.forEach { mk ->
-                Box(Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp).clickable(role = Role.Button) { picked = mk }, contentAlignment = Alignment.Center) {
+                Box(Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp).clickable(role = Role.Button) { pick(mk) }, contentAlignment = Alignment.Center) {
                     Text(chipText(mk, model), maxLines = 1, softWrap = false,
                         style = Type.label.copy(color = markColor(mk, p), fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
                         modifier = Modifier.background(p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 6.dp))
@@ -308,6 +343,16 @@ internal fun LiquidityChart(
         val got = withContext(Dispatchers.IO) { runCatching { lastPrice() }.getOrNull() }
         levelLast = got ?: l.lastClose
     }
+    LaunchedEffect(resolving) {
+        val mk = resolving ?: return@LaunchedEffect
+        val t = mk.trade ?: return@LaunchedEffect
+        val found = try {
+            withTimeoutOrNull(3_000) { withContext(Dispatchers.IO) { positionOf?.invoke(t) } }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+        resolving = null
+        if (found != null) replaying = found else picked = mk
+    }
+    replaying?.let { pos -> LiquidityReplayDialog(pos, replay) { replaying = null } }
     level?.let { l ->
         LevelSheet(underlying, l, tf, today ?: model?.lastBar?.toLocalDate() ?: java.time.LocalDate.now(com.optionslab.engine.IST), levelLast,
             levelAlarms) { level = null }

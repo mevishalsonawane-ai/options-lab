@@ -79,6 +79,15 @@ internal object LiquidityFixtures {
     val open = LiquidityOverlay.Trade("liquidity5", 5, -1, last.atTime(10, 0), last.atTime(10, 5), 98.0, 30, "52200 PE",
         level = 1012.0, target = 990.5, near = true, volSkip = false, strong = true)
 
+    /** The book's position the closed trade was drawn from (as [ArmLiquiditySource.tradeOf] reads it). */
+    val closedPosition = com.optionslab.app.data.OrbArms.Position("liquidity15", "BANKNIFTY26OCT52000CE", "CE", 30, 120.5, last.atTime(11, 15),
+        last.atTime(11, 0), null, null, 102.4, exit = 140.0, exitTime = last.atTime(11, 47), why = "next_liquidity", charges = 65.0,
+        level = 1050.0, target = 1077.25, near = false, volSkip = true)
+
+    /** A replay of [p] with no candles on the phone (the words and the lesson only). */
+    fun replayOf(p: com.optionslab.app.data.OrbArms.Position): com.optionslab.ira.LiquidityReplay.Replay =
+        com.optionslab.ira.LiquidityReplay.of(com.optionslab.app.ira.IraBots.tradeOf(p), 52_000.0, emptyList(), emptyList())!!
+
     class Source(var trades: List<LiquidityOverlay.Trade> = listOf(closed, open)) : LiquiditySource {
         val asked = java.util.concurrent.CopyOnWriteArrayList<String>()
         override suspend fun trades(underlying: String): List<LiquidityOverlay.Trade> { asked += underlying; return if (underlying == "BANKNIFTY") trades else emptyList() }
@@ -351,6 +360,118 @@ class LiquidityPanelTest {
         compose.onNodeWithText("Liquidity levels").performClick()
         until { shows("Liquidity 15+5 · BANKNIFTY") }
         assertSame(web, webViews().single())
+    }
+
+    /** The layer with a book to look a tapped trade up in: [found] what the lookup answers; every lookup and replay read kept. */
+    private class Book(val found: com.optionslab.app.data.OrbArms.Position? = LiquidityFixtures.closedPosition) {
+        val looked = java.util.concurrent.CopyOnWriteArrayList<LiquidityOverlay.Trade>()
+        val replayed = java.util.concurrent.CopyOnWriteArrayList<com.optionslab.app.data.OrbArms.Position>()
+        val positionOf: suspend (LiquidityOverlay.Trade) -> com.optionslab.app.data.OrbArms.Position? = { t -> looked += t; found }
+        val replay: suspend (com.optionslab.app.data.OrbArms.Position) -> com.optionslab.ira.LiquidityReplay.Replay? =
+            { p -> replayed += p; LiquidityFixtures.replayOf(p) }
+    }
+
+    private fun chartWithBook(model: LiquidityOverlay.Model, book: Book) = compose.setContent {
+        IraAlgoTheme("light") {
+            LiquidityChart("BANKNIFTY", listOf(15, 5), 15, {}, model, null, positionOf = book.positionOf, replay = book.replay)
+        }
+    }
+
+    private val replayTitle get() = keepNumbersWhole(LiquidityFixtures.replayOf(LiquidityFixtures.closedPosition).title)
+
+    @Test fun aTapOnAClosedPaperTradeOpensItsReplay() {
+        val book = Book()
+        chartWithBook(model(), book)
+        idle()
+        // The chip of its entry: the replay, with its title (figures kept whole), not the trade's card.
+        compose.onNodeWithText("▲ L15 11:00").performScrollTo().performClick()
+        until { shows(replayTitle) }
+        assertFalse(shows("Liquidity trade"))
+        assertEquals(listOf(LiquidityFixtures.closed), book.looked.toList())
+        assertEquals(listOf(LiquidityFixtures.closedPosition), book.replayed.toList())
+        compose.onNodeWithText("Close").performClick()
+        until { !shows(replayTitle) }
+        // Its exit marker too.
+        compose.onNodeWithText("■ 11:45 next liquidity").performScrollTo().performClick()
+        until { shows(replayTitle) }
+        compose.onNodeWithText("Close").performClick()
+        until { !shows(replayTitle) }
+    }
+
+    @Test fun aTapOnTheChartAtAClosedPaperTradeOpensItsReplay() {
+        val m = model()
+        val entry = m.markers.first { it.kind == LiquidityOverlay.MarkerKind.ENTRY && it.trade == LiquidityFixtures.closed }
+        chartWithBook(m, Book())
+        idle()
+        compose.onNodeWithContentDescription("Liquidity levels chart").performTouchInput {
+            val plotW = max(1f, width - 52.dp.toPx())
+            val w = max(3.dp.toPx(), plotW / m.bars.size)
+            val start = max(0, m.bars.size - max(1, (plotW / w).toInt()))
+            click(Offset((entry.bar - start + 0.5f) * w, height / 2f))
+        }
+        until { shows(replayTitle) }
+        assertFalse(shows("Liquidity trade"))
+    }
+
+    @Test fun openLiveAndSkippedMarkersKeepTheirCard() {
+        val book = Book()
+        var shown by mutableStateOf(model())
+        compose.setContent {
+            IraAlgoTheme("light") {
+                LiquidityChart("BANKNIFTY", listOf(15, 5), 15, {}, shown, null, positionOf = book.positionOf, replay = book.replay)
+            }
+        }
+        idle()
+        // The open trade: its card, never looked up.
+        compose.onNodeWithText("▼ L5 10:00").performScrollTo().performClick()
+        until { shows("Open · target 990.50") }
+        assertTrue(shows("Liquidity trade"))
+        compose.onNodeWithText("Close").performClick()
+        until { !shows("Liquidity trade") }
+        // A skipped break: its card.
+        compose.onNodeWithText("△ skipped 10:15").performScrollTo().performClick()
+        until { shows("Skipped: too little room") }
+        compose.onNodeWithText("Close").performClick()
+        until { !shows("Skipped break") }
+        assertTrue(book.looked.isEmpty())
+        // A live (broker) trade, closed: its card, no replay.
+        val live = LiquidityOverlay.build(LiquidityFixtures.bars, 15, "BANKNIFTY", LiquidityFixtures.now, listOf(LiquidityFixtures.closed.copy(live = true)))
+        androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot { shown = live }
+        until { !shows("▼ L5 10:00") }
+        compose.onNodeWithText("▲ L15 11:00").performScrollTo().performClick()
+        until { shows("Entry ₹120.50 at 11:15") }
+        assertTrue(shows("Liquidity trade"))
+        assertFalse(shows(replayTitle))
+        assertTrue(book.looked.isEmpty())
+        assertTrue(book.replayed.isEmpty())
+    }
+
+    @Test fun aClosedTradeNotFoundInTheBookShowsItsCard() {
+        val book = Book(found = null)
+        chartWithBook(model(), book)
+        idle()
+        compose.onNodeWithText("▲ L15 11:00").performScrollTo().performClick()
+        until { shows("Entry ₹120.50 at 11:15") }
+        assertTrue(shows("Liquidity trade"))
+        assertEquals(1, book.looked.size)
+        assertTrue(book.replayed.isEmpty())
+    }
+
+    @Test fun aChartTradeIsMatchedToItsBooksPosition() {
+        val p = LiquidityFixtures.closedPosition
+        val t = ArmLiquiditySource.tradeOf(p, "BANKNIFTY")!!
+        assertEquals(p.symbol, t.symbol); assertFalse(t.live); assertTrue(t.replayable)
+        assertTrue(ArmLiquiditySource.tradeOf(p.copy(live = true), "BANKNIFTY")!!.live)
+        val other = p.copy(arm = "liquidity5", entryTime = p.entryTime.plusMinutes(1))
+        assertSame(p, ArmLiquiditySource.positionOf(listOf(other, p), t))
+        // Not a live one, not an open one, not another symbol, book or entry.
+        assertNull(ArmLiquiditySource.positionOf(listOf(p.copy(live = true)), t))
+        assertNull(ArmLiquiditySource.positionOf(listOf(p.copy(exit = null, exitTime = null)), t))
+        assertNull(ArmLiquiditySource.positionOf(listOf(p.copy(symbol = "BANKNIFTY26OCT52100CE")), t))
+        assertNull(ArmLiquiditySource.positionOf(listOf(p.copy(arm = "liquidity5")), t))
+        assertNull(ArmLiquiditySource.positionOf(listOf(other), t))
+        // A trade with no symbol recorded matches on the book and the entry.
+        assertSame(p, ArmLiquiditySource.positionOf(listOf(p), t.copy(symbol = null)))
     }
 
     @Test fun theArmsPositionsBecomeTheChartsTrades() {
