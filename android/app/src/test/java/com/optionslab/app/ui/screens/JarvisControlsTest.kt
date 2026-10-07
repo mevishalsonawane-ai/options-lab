@@ -25,7 +25,6 @@ import com.optionslab.app.ira.IraHub
 import com.optionslab.app.ira.JarvisVoice
 import com.optionslab.app.testing.AreaE
 import com.optionslab.app.testing.AreaEWatchdog
-import com.optionslab.app.testing.frames
 import com.optionslab.app.testing.has
 import com.optionslab.app.testing.until
 import com.optionslab.app.testing.waitForText
@@ -71,19 +70,28 @@ class JarvisControlsTest {
         AreaE.resetGlobals()
     }
 
+    /**
+     * One frame at a time, the paused main looper run each time: a tap's state write is applied to Compose by a
+     * main-thread post (the global snapshot's apply), which the compose clock alone never runs.
+     */
+    private fun step(n: Int = 8) = repeat(n) {
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        compose.mainClock.advanceTimeByFrame()
+    }
+
     private val listening = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Listening")
     private val button = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button)
 
     private fun row(chatOpen: Boolean = false, onChat: () -> Unit = {}) {
         compose.setContent { IraAlgoTheme("dark") { JarvisControlRow(chatOpen = chatOpen, onChat = onChat) } }
         compose.mainClock.autoAdvance = false
-        compose.frames()
+        step()
     }
 
     /** The press lasts past a quick tap: the hold begins. */
     private fun held() {
         compose.mainClock.advanceTimeBy(JarvisControls.QUICK_TAP_MS + 100)
-        compose.frames()
+        step()
     }
 
     @Test fun threeIconButtonsInOneRowAndNoWords() {
@@ -109,13 +117,13 @@ class JarvisControlsTest {
         row()
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
         mic.performTouchInput { down(center) }
-        compose.frames()
+        step()
         assertEquals("not yet a hold: nothing starts", emptyList<String>(), fake.calls)
         held()
         assertEquals(listOf("start"), fake.calls)
         mic.assert(listening)
         mic.performTouchInput { advanceEventTime(1_500); up() }
-        compose.frames()
+        step()
         assertEquals(listOf("start", "send"), fake.calls)
         assertFalse(compose.has(JarvisControls.HOLD_HINT))
         compose.onNodeWithContentDescription(JarvisControls.MIC).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
@@ -126,14 +134,14 @@ class JarvisControlsTest {
         row()
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
         mic.performTouchInput { down(center) }
-        compose.frames()
+        step()
         held()
-        compose.mainClock.advanceTimeBy(com.optionslab.ira.HoldTalk.CAP_MS - 1_000); compose.frames()
+        compose.mainClock.advanceTimeBy(com.optionslab.ira.HoldTalk.CAP_MS - 1_000); step()
         assertEquals("still held at 59 s", listOf("start"), fake.calls)
-        compose.mainClock.advanceTimeBy(2_000); compose.frames()
+        compose.mainClock.advanceTimeBy(2_000); step()
         assertEquals(listOf("start", "send"), fake.calls)
         mic.performTouchInput { advanceEventTime(61_000); up() }
-        compose.frames()
+        step()
         assertEquals(listOf("start", "send"), fake.calls)
         assertFalse(compose.has(JarvisControls.HOLD_HINT))
     }
@@ -141,12 +149,12 @@ class JarvisControlsTest {
     @Test fun aQuickTapSaysHoldToTalkAndSendsNothing() {
         row()
         compose.onNodeWithContentDescription(JarvisControls.MIC).performTouchInput { down(center); advanceEventTime(100); up() }
-        compose.frames()
+        step()
         // Nothing starts or stops: Jarvis is not interrupted and his follow-up window is left alone.
         assertEquals(emptyList<String>(), fake.calls)
         compose.onNodeWithText(JarvisControls.HOLD_HINT).assertIsDisplayed()
         // Brief: gone a couple of seconds later.
-        compose.mainClock.advanceTimeBy(JarvisControls.HINT_MS + 500); compose.frames()
+        compose.mainClock.advanceTimeBy(JarvisControls.HINT_MS + 500); step()
         assertFalse(compose.has(JarvisControls.HOLD_HINT))
     }
 
@@ -154,10 +162,10 @@ class JarvisControlsTest {
         row()
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
         mic.performTouchInput { down(center) }
-        compose.frames()
+        step()
         held()
         mic.performTouchInput { advanceEventTime(600); moveTo(Offset(width * 6f, centerY)); advanceEventTime(600); up() }
-        compose.frames()
+        step()
         assertEquals(listOf("start", "drop"), fake.calls)
         assertFalse(compose.has(JarvisControls.HOLD_HINT))
     }
@@ -166,20 +174,20 @@ class JarvisControlsTest {
     @Test fun talkBackTapStartsAndASecondTapSends() {
         row()
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
-        mic.performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        mic.performSemanticsAction(SemanticsActions.OnClick); step()
         assertEquals(listOf("start"), fake.calls)
         mic.assert(listening)
         assertEquals("Stop and send", mic.fetchSemanticsNode().config[SemanticsActions.OnClick].label)
-        mic.performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        mic.performSemanticsAction(SemanticsActions.OnClick); step()
         assertEquals(listOf("start", "send"), fake.calls)
     }
 
     @Test fun muteTogglesItsSymbolAndJarvisVoice() {
         row()
-        compose.onNodeWithContentDescription(JarvisControls.MUTE).performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.onNodeWithContentDescription(JarvisControls.MUTE).performSemanticsAction(SemanticsActions.OnClick); step()
         compose.onNodeWithContentDescription(JarvisControls.UNMUTE).assert(button)
         compose.until(5_000, "muted") { JarvisVoice.muted }
-        compose.onNodeWithContentDescription(JarvisControls.UNMUTE).performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.onNodeWithContentDescription(JarvisControls.UNMUTE).performSemanticsAction(SemanticsActions.OnClick); step()
         compose.onNodeWithContentDescription(JarvisControls.MUTE).assert(button)
         compose.until(5_000, "unmuted") { !JarvisVoice.muted }
     }
@@ -192,9 +200,9 @@ class JarvisControlsTest {
             }
         }
         compose.mainClock.autoAdvance = false
-        compose.frames()
-        compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).performSemanticsAction(SemanticsActions.OnClick); compose.frames()
-        compose.onNodeWithContentDescription(JarvisControls.CLOSE_CHAT).performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        step()
+        compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).performSemanticsAction(SemanticsActions.OnClick); step()
+        compose.onNodeWithContentDescription(JarvisControls.CLOSE_CHAT).performSemanticsAction(SemanticsActions.OnClick); step()
         compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).assert(button)
     }
 
@@ -202,10 +210,10 @@ class JarvisControlsTest {
     @Test fun onTheGlobeTheChatIconOpensTheChat() {
         org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
         compose.setContent { IraAlgoTheme("dark") { IraPage() } }
-        compose.frames()
+        step()
         compose.onNodeWithContentDescription(JarvisControls.MUTE).assert(button)
         listOf("Open chat", "Talk", "Requests").forEach { w -> compose.onAllNodesWithText(w, substring = true).assertCountEquals(0) }
-        compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).performSemanticsAction(SemanticsActions.OnClick); step()
         compose.waitForText("Ask Ira about the market")
         compose.onNodeWithContentDescription(JarvisControls.CLOSE_CHAT).assert(button)
     }
@@ -213,7 +221,7 @@ class JarvisControlsTest {
     /** The chat on an ordinary phone: the header's icon row leaves the question box and Ask on screen. */
     @Test fun theQuestionBoxStaysOnScreenInTheChat() {
         compose.setContent { IraAlgoTheme("light") { IraPage(startInChat = true) } }
-        compose.frames()
+        step()
         compose.waitForText("Ask Ira about the market")
         val rootBottom = compose.onRoot().fetchSemanticsNode().boundsInRoot.bottom
         listOf("Ask Ira about the market", "Ask").forEach { t ->
