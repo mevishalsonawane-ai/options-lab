@@ -27,7 +27,8 @@ object SettingWhere {
 
     /** Said with a setting's own word ("setting", "switch", "toggle"...): taken even when nothing is found by that name. */
     private val NAMED = listOf(
-        // "where is the quiet hours setting", "where's the kill switch", "where do I find the backup option"
+        // "where is the quiet hours setting", "where's the mute switch", "where do I find the backup option" (never the kill
+        // switch: "kill" is in [NOT_EVER], so it is not taken here)
         "^ $LEAD$WHERE( the| my)? $X $SW$TAIL",
         // "where is the setting for quiet hours", "where are the settings for alerts"
         "^ $LEAD$WHERE the $SW (for|of) (the |my )?$X$TAIL",
@@ -47,7 +48,7 @@ object SettingWhere {
         "^ $LEAD(how) (to|do you|does one|do we|can we) $OFF (the |my )?$X( $SW)?$TAIL",
         // "how do I turn quiet hours off"
         "^ $LEAD(how) (do|can) i (turn|switch) (the |my )?$X (off|on)$TAIL",
-        // "how do I change the theme", "how do I disable the kill switch", "how do I stop jarvis talking", "how to mute jarvis"
+        // "how do I change the theme", "how do I disable the fingerprint","how do I stop jarvis talking", "how to mute jarvis"
         "^ $LEAD(how) (do i|can i|to|do you) (disable|enable|change|stop|mute|unmute|silence|find) (the |my )?$X( $SW)?$TAIL",
         // "solo kaise band karu", "market alerts kaise off karte hai", "quiet hours kahan se band karu"
         "^ $LEAD$X (kaise|kese|kaisey) (band|off|on|chalu|change|mute) $HINDI_DO$TAIL",
@@ -116,10 +117,12 @@ object SettingWhere {
 
     /**
      * Where [q]'s setting is in this build ([gold]: IraGoldAlgo's Settings): the best match's path - or up to [NAMED_MAX] when
-     * several fit as well - and that the search at the top of Settings opens it. Words only; nothing is switched.
+     * several fit as well - and that the search at the top of Settings opens it. [pages]: the pages this build's Settings
+     * shows, the same set its search is given ([SettingsIndex.search]; null: all) - a page that search would not list is never
+     * named. Words only; nothing is switched.
      */
-    fun answer(q: Q, gold: Boolean): String {
-        val found = SettingsIndex.search(q.topic, gold)
+    fun answer(q: Q, gold: Boolean, pages: Set<String>? = null): String {
+        val found = SettingsIndex.search(q.topic, gold, pages)
         val search = SettingsIndex.said(q.topic).joinToString(" ")
         if (found.isEmpty()) return "Boss, I can't find a setting called \"${q.topic}\". The search at the top of Settings finds every setting " +
             "by its name or what it does. $NOTHING_SWITCHED"

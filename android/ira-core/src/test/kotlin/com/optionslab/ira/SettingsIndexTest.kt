@@ -182,6 +182,13 @@ class SettingsIndexTest {
         // Nothing by that name: said so, and the search named.
         val none = SettingWhere.answer(SettingWhere.Q("cricket"), gold = false)
         assertTrue(none.contains("can't find a setting called \"cricket\""), none)
+        // Only the pages Settings shows (the set its search is given): a page it would not list is never named.
+        val notes = SettingWhere.answer(SettingWhere.Q("today's notes"), gold = false)
+        assertTrue(notes.contains("Today's notes"), notes)
+        val shown = SettingWhere.answer(SettingWhere.Q("today's notes"), gold = false, pages = setOf("security", "jarvis"))
+        assertFalse(shown.contains("Today's notes"), shown)
+        assertEquals(SettingsIndex.search("backup", gold = false, pages = setOf("security")).first().pathText,
+            SettingWhere.answer(SettingWhere.Q("backup"), gold = false, pages = setOf("security")).removePrefix("Boss, it's under ").substringBefore(". Type"))
         // IraGoldAlgo: its own Settings only.
         assertTrue(SettingWhere.answer(SettingWhere.Q("kill"), gold = true).contains("can't find"))
         assertTrue(SettingWhere.answer(SettingWhere.Q("fingerprint"), gold = true).contains("Settings → Security → Unlocking → Fingerprint"))

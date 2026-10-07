@@ -159,11 +159,16 @@ object DayRecap {
 
     // ---- which day -----------------------------------------------------------------------------------------------
 
-    /** The date [said] names at [today], or null when it names none (31 Feb). A date with no year still to come within a month is that one (refused); further on, last year's. */
-    fun dayOf(said: Said, today: LocalDate): LocalDate? = when (said) {
+    /**
+     * The date [said] names at [today], or null when it names none (31 Feb). A date with no year still to come within a month
+     * is that one (refused); further on, last year's. [now]: the time asked (a bare weekday that is today, asked before the
+     * open, is the one before; null: not known).
+     */
+    fun dayOf(said: Said, today: LocalDate, now: LocalTime? = null): LocalDate? = when (said) {
         is Said.DaysAgo -> today.minusDays(said.n.toLong())
         is Said.Weekday -> when (said.mode) {
-            Mode.BARE -> generateSequence(today) { it.minusDays(1) }.first { it.dayOfWeek == said.day }
+            Mode.BARE -> generateSequence(if (now != null && now.isBefore(OPEN)) today.minusDays(1) else today) { it.minusDays(1) }
+                .first { it.dayOfWeek == said.day }
             Mode.LAST -> generateSequence(today.minusDays(1)) { it.minusDays(1) }.first { it.dayOfWeek == said.day }
             Mode.THIS -> today.with(DayOfWeek.MONDAY).plusDays((said.day.value - 1).toLong())
         }
@@ -173,8 +178,11 @@ object DayRecap {
                 if (d.isAfter(today.plusDays(31))) LocalDate.of(today.year - 1, said.month, said.dayOfMonth) else d
             }
         }.getOrNull()
+        // This month's when it has been; else the latest of the two months before that has that day (7 Oct "the 31st": 31 Aug).
         is Said.OfMonth -> runCatching { today.withDayOfMonth(said.dayOfMonth) }.getOrNull()?.takeIf { !it.isAfter(today) }
-            ?: runCatching { today.minusMonths(1).withDayOfMonth(said.dayOfMonth) }.getOrNull()
+            ?: (1L..2L).firstNotNullOfOrNull { k ->
+                today.minusMonths(k).withDayOfMonth(1).takeIf { said.dayOfMonth <= it.lengthOfMonth() }?.withDayOfMonth(said.dayOfMonth)
+            }
     }
 
     /** What the recap is of. */
@@ -210,10 +218,10 @@ object DayRecap {
 
     /**
      * The day [q] names at [today], against the calendar ([trading], [holiday]'s names): still to come, today, a day with no
-     * session (said "yesterday": the session before it is recapped), or a session.
+     * session (said "yesterday": the session before it is recapped), or a session. [now]: the time asked ([dayOf]).
      */
-    fun plan(q: Q, today: LocalDate, trading: (LocalDate) -> Boolean, holiday: (LocalDate) -> String?): Plan {
-        val day = dayOf(q.said, today) ?: return Plan.Unknown
+    fun plan(q: Q, today: LocalDate, trading: (LocalDate) -> Boolean, holiday: (LocalDate) -> String?, now: LocalTime? = null): Plan {
+        val day = dayOf(q.said, today, now) ?: return Plan.Unknown
         if (day.isAfter(today)) return Plan.Future(day)
         if (day == today) return Plan.Today(day)
         if (runCatching { trading(day) }.getOrDefault(true)) return Plan.Session(day)
@@ -231,9 +239,14 @@ object DayRecap {
     /** The indices recapped, in the order said. */
     val MARKETS: List<Market> = listOf(Market.NIFTY, Market.BANKNIFTY, Market.FINNIFTY)
 
-    /** An index that day: [open], [high], [low], [close] (the last while the day runs), the session before's [prevClose]; [recorder]: from the recorder's minute readings. */
+    /**
+     * An index that day: [open], [high], [low], [close] (the last while the day runs), the session before's [prevClose];
+     * [recorder]: from the recorder's minute readings. [firstAt]/[lastAt]: the times of the first and last candle or reading
+     * (null: not known) - a day read only in part is said as its readings, never as a full open and close.
+     */
     data class Index(val market: Market, val open: Double, val high: Double, val low: Double, val close: Double,
-                     val prevClose: Double? = null, val recorder: Boolean = false)
+                     val prevClose: Double? = null, val recorder: Boolean = false,
+                     val firstAt: LocalTime? = null, val lastAt: LocalTime? = null)
 
     /** One paper trade of an arm that day: its [symbol], bought at [at], its [net] after charges (null: still open), its exit [why]. */
     data class Paper(val symbol: String, val at: LocalTime, val net: Double?, val why: String? = null)
@@ -244,7 +257,7 @@ object DayRecap {
      * headlines the recorder kept that day (null: no recorder file for it); [flows] the FII/DII figures for that day. The
      * arms (null: not read): [liquidity] Liquidity 15+5's rows that day, [solo] Solo (midday)'s trades, [hero] Hero's -
      * each with the first day of its record ([liquidityFrom], [soloFrom], [heroFrom]; null: none yet). [locked]: the
-     * phone is locked (the arms are left out).
+     * phone is locked (the arms are left out). [slow]: some part took too long to read (the rest is said, and that).
      */
     data class Facts(
         val day: LocalDate, val today: LocalDate,
@@ -255,39 +268,50 @@ object DayRecap {
         val solo: List<Paper>? = null, val soloFrom: LocalDate? = null,
         val hero: List<Paper>? = null, val heroFrom: LocalDate? = null,
         val locked: Boolean = false,
+        val slow: Boolean = false,
     )
 
-    private fun sessionBars(bars: List<Candle>, day: LocalDate): List<Candle> = bars
-        .filter { it.t.toLocalDate() == day && !it.t.toLocalTime().isBefore(OPEN) && it.t.toLocalTime().isBefore(CLOSE) }
-        .sortedBy { it.t }
+    private fun inSession(t: LocalTime) = !t.isBefore(OPEN) && t.isBefore(CLOSE)
 
-    /** The close of the last session before [day] in [bars] (its last 1-minute close), or null. */
-    fun prevClose(bars: List<Candle>, day: LocalDate): Double? {
-        val before = bars.filter { it.t.toLocalDate().isBefore(day) && !it.t.toLocalTime().isBefore(OPEN) && it.t.toLocalTime().isBefore(CLOSE) }
-        return before.maxByOrNull { it.t }?.c?.takeIf { it > 0 }
+    /** [day]'s candles in 09:15-15:30; none there (a special session, e.g. Muhurat's evening): any of that day. */
+    private fun sessionBars(bars: List<Candle>, day: LocalDate): List<Candle> {
+        val all = bars.filter { it.t.toLocalDate() == day }.sortedBy { it.t }
+        return all.filter { inSession(it.t.toLocalTime()) }.ifEmpty { all }
     }
 
-    /** [m] on [day] from its 1-minute [bars] (null: no candle of that day kept). */
-    fun index(m: Market, bars: List<Candle>, day: LocalDate): Index? {
+    /**
+     * The close of the session before [day] in [bars] (its last 1-minute close in 09:15-15:30), or null. [before]: that
+     * session's date ([sessionBefore]) - a held candle of any other day is never taken for it (null: none is known).
+     */
+    fun prevClose(bars: List<Candle>, day: LocalDate, before: LocalDate?): Double? {
+        if (before == null || !before.isBefore(day)) return null
+        return bars.filter { it.t.toLocalDate() == before && inSession(it.t.toLocalTime()) }.maxByOrNull { it.t }?.c?.takeIf { it > 0 }
+    }
+
+    /** [m] on [day] from its 1-minute [bars] (null: no candle of that day kept); [before]: the session before's date ([prevClose]). */
+    fun index(m: Market, bars: List<Candle>, day: LocalDate, before: LocalDate?): Index? {
         val s = sessionBars(bars, day)
         if (s.isEmpty() || s.first().o <= 0) return null
-        return Index(m, s.first().o, s.maxOf { it.h }, s.minOf { it.l }, s.last().c, prevClose(bars, day))
+        return Index(m, s.first().o, s.maxOf { it.h }, s.minOf { it.l }, s.last().c, prevClose(bars, day, before),
+            firstAt = s.first().t.toLocalTime(), lastAt = s.last().t.toLocalTime())
     }
 
     /**
      * [m] on that day from the market recorder's minute readings ("S,time,index,last" in [lines], [MarketRecord.spot]),
-     * 09:15-15:30 only (null: none kept); [prevClose] from wherever it is known.
+     * 09:15-15:30 (none there - a special session: any of that day; null: none kept); [prevClose] from wherever it is known.
      */
     fun indexFromRecorder(m: Market, lines: List<String>, prevClose: Double?): Index? {
-        val pts = lines.asSequence().filter { it.startsWith("S,") }.mapNotNull { l ->
+        val all = lines.asSequence().filter { it.startsWith("S,") }.mapNotNull { l ->
             val f = runCatching { MarketRecord.fields(l) }.getOrNull() ?: return@mapNotNull null
             if (f.size < 4 || f[2] != m.name) return@mapNotNull null
             val t = runCatching { LocalTime.parse(f[1]) }.getOrNull() ?: return@mapNotNull null
             val v = f[3].toDoubleOrNull()?.takeIf { it > 0 } ?: return@mapNotNull null
-            if (t.isBefore(OPEN) || !t.isBefore(CLOSE)) null else t to v
+            t to v
         }.sortedBy { it.first }.toList()
+        val pts = all.filter { inSession(it.first) }.ifEmpty { all }
         if (pts.isEmpty()) return null
-        return Index(m, pts.first().second, pts.maxOf { it.second }, pts.minOf { it.second }, pts.last().second, prevClose, recorder = true)
+        return Index(m, pts.first().second, pts.maxOf { it.second }, pts.minOf { it.second }, pts.last().second, prevClose, recorder = true,
+            firstAt = pts.first().first, lastAt = pts.last().first)
     }
 
     /** The headlines in the recorder's [lines] ("N" records), as first seen. */
@@ -323,6 +347,8 @@ object DayRecap {
     const val UNKNOWN = "I couldn't tell which day that is, Boss - say it like \"what happened on 3 Oct\" or \"recap of last Friday\"."
     const val LOCKED_ARMS = "Unlock the phone for the paper arms' trades that day."
     const val SLOW = "That day is taking too long to read just now, Boss - ask again in a moment."
+    /** Said under a recap put together from the parts read in time. */
+    const val SOME_SLOW = "Some parts took too long to read just now, Boss - ask again in a moment for the rest."
     /** The day's own answers, pointed to when today is asked. */
     val TODAY_ASKS = listOf("what happened in the market today", "why didn't liquidity trade today", "what did solo do today", "what did hero do today")
 
@@ -343,8 +369,25 @@ object DayRecap {
         is Plan.Today, is Plan.Session -> null
     }
 
-    /** One index's line: its open (and the gap), high, low and close (and the day's change). */
+    /** A first reading after this, or (the day done) a last one before [LAST_FROM]: the day was read only in part. */
+    private val FIRST_BY: LocalTime = LocalTime.of(9, 16)
+    private val LAST_FROM: LocalTime = LocalTime.of(15, 29)
+
+    /**
+     * One index's line: its open (and the gap), high, low and close (and the day's change). Read only in part (its first
+     * reading after 09:16, or the day done and its last before 15:29): its readings from the first to the last, never an
+     * open or a close.
+     */
     fun indexLine(i: Index, partial: Boolean = false): String {
+        val firstAt = i.firstAt
+        val lastAt = i.lastAt
+        if (firstAt != null && lastAt != null &&
+            (firstAt.withSecond(0).withNano(0).isAfter(FIRST_BY) || (!partial && lastAt.isBefore(LAST_FROM)))) {
+            val change = if (i.prevClose != null) "${pct((i.close - i.prevClose) / i.prevClose * 100)} against the session before's close"
+                else "${pct((i.close - i.open) / i.open * 100)} from the first reading"
+            return "${i.market.label}: readings from ${hm(firstAt)} to ${hm(lastAt)}: first ${n(i.open)}, high ${n(i.high)}, low ${n(i.low)}, " +
+                "last ${n(i.close)} ($change)" + (if (i.recorder) " - from the recorder's minute readings" else "") + "."
+        }
         val gap = i.prevClose?.let { pc ->
             val pts = i.open - pc
             val p = pts / pc * 100
@@ -453,6 +496,7 @@ object DayRecap {
         f.news?.let { newsLine(it) }?.let { out += it }
         flowsLine(f.flows)?.let { out += it }
         if (isToday) {
+            if (f.slow) out += SOME_SLOW
             out += "For the rest of today ask " + TODAY_ASKS.joinToString(", ") { "\"$it\"" } + "."
             return out
         }
@@ -463,6 +507,7 @@ object DayRecap {
             out += soloLine(f)
             out += heroLine(f)
         }
+        if (f.slow) out += SOME_SLOW
         return out
     }
 

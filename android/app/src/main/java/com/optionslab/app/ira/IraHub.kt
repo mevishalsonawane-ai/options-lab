@@ -3552,7 +3552,10 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val recapLocked = phoneLocked()
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { IraDayRecap.answer(recapAsk, recapLocked) }.getOrElse { "I could not put that day's recap together just now, Boss." })
+                reply(runCatching { IraDayRecap.answer(recapAsk, recapLocked) }.getOrElse {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    "I could not put that day's recap together just now, Boss."
+                })
             }
             return true
         }
@@ -3565,7 +3568,11 @@ object IraHub {
         val settingAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.SettingWhere.asked(q) }.getOrNull() else null
         if (settingAsk != null) {
-            val said = runCatching { com.optionslab.ira.SettingWhere.answer(settingAsk, com.optionslab.app.BuildConfig.GOLD) }
+            // Only the pages Settings shows, the same set its search is given (IraGoldAlgo's search: every entry of its build).
+            val said = runCatching {
+                val shownPages = if (com.optionslab.app.BuildConfig.GOLD) null else com.optionslab.app.ui.screens.settingsShownPages()
+                com.optionslab.ira.SettingWhere.answer(settingAsk, com.optionslab.app.BuildConfig.GOLD, shownPages)
+            }
                 .getOrDefault("The search at the top of Settings finds every setting by its name, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true

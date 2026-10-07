@@ -106,7 +106,26 @@ class DayRecapTest {
         assertEquals(LocalDate.of(2026, 9, 9), d("what happened on the 9th"))    // this month's is to come: last month's
         assertNull(DayRecap.dayOf(DayRecap.Said.Dated(2, 30), TODAY))
         assertEquals(LocalDate.of(2026, 10, 31), DayRecap.dayOf(DayRecap.Said.OfMonth(31), LocalDate.of(2026, 11, 7)))   // no 31 Nov: October's
-        assertNull(DayRecap.dayOf(DayRecap.Said.OfMonth(31), TODAY))                                                    // 31 Oct to come, no 31 Sep
+        // 31 Oct to come, no 31 Sep: back a month more, 31 Aug; asked 1 Mar "the 30th" (no 30 Feb): 30 Jan.
+        assertEquals(LocalDate.of(2026, 8, 31), DayRecap.dayOf(DayRecap.Said.OfMonth(31), TODAY))
+        assertEquals(LocalDate.of(2026, 1, 30), DayRecap.dayOf(DayRecap.Said.OfMonth(30), LocalDate.of(2026, 3, 1)))
+        assertEquals(LocalDate.of(2026, 1, 31), DayRecap.dayOf(DayRecap.Said.OfMonth(31), LocalDate.of(2026, 3, 1)))
+        assertEquals(LocalDate.of(2024, 2, 29), DayRecap.dayOf(DayRecap.Said.OfMonth(29), LocalDate.of(2024, 3, 1)))
+        // Two months back at most: asked 1 May "the 31st" - 31 Mar (no 31 Apr).
+        assertEquals(LocalDate.of(2026, 3, 31), DayRecap.dayOf(DayRecap.Said.OfMonth(31), LocalDate.of(2026, 5, 1)))
+    }
+
+    @Test fun aBareWeekdayThatIsTodayAskedBeforeTheOpenIsTheOneBefore() {
+        val wed = DayRecap.Said.Weekday(DayOfWeek.WEDNESDAY, DayRecap.Mode.BARE)
+        assertEquals(LocalDate.of(2026, 9, 30), DayRecap.dayOf(wed, TODAY, LocalTime.of(8, 30)))
+        assertEquals(TODAY, DayRecap.dayOf(wed, TODAY, LocalTime.of(9, 15)))
+        assertEquals(TODAY, DayRecap.dayOf(wed, TODAY))
+        // Another weekday is unchanged; "this Wednesday" is still today's.
+        assertEquals(TUE, DayRecap.dayOf(DayRecap.Said.Weekday(DayOfWeek.TUESDAY, DayRecap.Mode.BARE), TODAY, LocalTime.of(8, 30)))
+        assertEquals(TODAY, DayRecap.dayOf(DayRecap.Said.Weekday(DayOfWeek.WEDNESDAY, DayRecap.Mode.THIS), TODAY, LocalTime.of(8, 30)))
+        assertEquals(DayRecap.Plan.Session(LocalDate.of(2026, 9, 30)),
+            DayRecap.plan(DayRecap.asked("how was wednesday")!!, TODAY, trading, holiday, now = LocalTime.of(7, 0)))
+        assertEquals(DayRecap.Plan.Today(TODAY), DayRecap.plan(DayRecap.asked("how was wednesday")!!, TODAY, trading, holiday, now = LocalTime.of(10, 0)))
     }
 
     @Test fun thePlanRefusesTheFutureSaysClosedDaysAndRollsYesterdayBack() {
@@ -153,13 +172,14 @@ class DayRecapTest {
     )
 
     @Test fun anIndexIsReadFromItsCandlesOfThatDay() {
-        val i = DayRecap.index(Market.NIFTY, nifty, TUE)!!
-        assertEquals(DayRecap.Index(Market.NIFTY, 25100.0, 25300.0, 24950.0, 25250.0, 25000.0), i)
+        val i = DayRecap.index(Market.NIFTY, nifty, TUE, MON)!!
+        assertEquals(DayRecap.Index(Market.NIFTY, 25100.0, 25300.0, 24950.0, 25250.0, 25000.0,
+            firstAt = LocalTime.of(9, 15), lastAt = LocalTime.of(15, 29)), i)
         assertEquals("Nifty: open 25,100.00 (gap up 100.00, +0.40%), high 25,300.00, low 24,950.00, close 25,250.00 (+1.00% on the day).",
             DayRecap.indexLine(i))
         // No candle of the day kept: none; no session before: the change from its open, no gap.
-        assertNull(DayRecap.index(Market.NIFTY, nifty, LocalDate.of(2026, 9, 1)))
-        val first = DayRecap.index(Market.NIFTY, nifty.drop(1), TUE)!!
+        assertNull(DayRecap.index(Market.NIFTY, nifty, LocalDate.of(2026, 9, 1), null))
+        val first = DayRecap.index(Market.NIFTY, nifty.drop(1), TUE, MON)!!
         assertNull(first.prevClose)
         assertTrue(DayRecap.indexLine(first).contains("(+0.60% from its open)"), DayRecap.indexLine(first))
         // A flat open, a gap down, and the day still running.
@@ -181,9 +201,66 @@ class DayRecapTest {
             "S,broken",
         )
         val b = DayRecap.indexFromRecorder(Market.BANKNIFTY, lines, 56000.0)!!
-        assertEquals(DayRecap.Index(Market.BANKNIFTY, 56100.0, 56400.0, 55900.0, 56200.0, 56000.0, recorder = true), b)
+        assertEquals(DayRecap.Index(Market.BANKNIFTY, 56100.0, 56400.0, 55900.0, 56200.0, 56000.0, recorder = true,
+            firstAt = LocalTime.of(9, 15, 2), lastAt = LocalTime.of(15, 29, 1)), b)
+        assertTrue(DayRecap.indexLine(b).startsWith("BankNifty: open 56,100.00"), DayRecap.indexLine(b))
         assertTrue(DayRecap.indexLine(b).endsWith("- from the recorder's minute readings."), DayRecap.indexLine(b))
         assertNull(DayRecap.indexFromRecorder(Market.FINNIFTY, lines, null))
+    }
+
+    @Test fun aDayReadOnlyInPartIsSaidAsItsReadings() {
+        // The recorder ran from 10:02 to 13:45 only: never an open or a close.
+        val lines = listOf(
+            MarketRecord.spot(LocalTime.of(10, 2, 3), "NIFTY", 25100.0),
+            MarketRecord.spot(LocalTime.of(11, 0, 1), "NIFTY", 25300.0),
+            MarketRecord.spot(LocalTime.of(13, 45, 0), "NIFTY", 25200.0),
+        )
+        val r = DayRecap.indexFromRecorder(Market.NIFTY, lines, 25000.0)!!
+        assertEquals("Nifty: readings from 10:02 to 13:45: first 25,100.00, high 25,300.00, low 25,100.00, last 25,200.00 " +
+            "(+0.80% against the session before's close) - from the recorder's minute readings.", DayRecap.indexLine(r))
+        assertEquals("Nifty: readings from 10:02 to 13:45: first 25,100.00, high 25,300.00, low 25,100.00, last 25,200.00 " +
+            "(+0.40% from the first reading) - from the recorder's minute readings.", DayRecap.indexLine(r.copy(prevClose = null)))
+        // Candles from the open that stop early (the day done): the same; the day still running: its open, "so far".
+        val early = listOf(c(TUE, 9, 15, 25100.0, 25150.0, 25080.0, 25120.0), c(TUE, 12, 30, 25120.0, 25200.0, 25100.0, 25180.0))
+        val e = DayRecap.index(Market.NIFTY, early, TUE, MON)!!
+        assertTrue(DayRecap.indexLine(e).startsWith("Nifty: readings from 09:15 to 12:30: first 25,100.00"), DayRecap.indexLine(e))
+        assertTrue(DayRecap.indexLine(e, partial = true).startsWith("Nifty: open 25,100.00"), DayRecap.indexLine(e, partial = true))
+        // Candles that start late: their readings, even while the day runs.
+        val late = DayRecap.index(Market.NIFTY, listOf(c(TODAY, 9, 40, 25260.0, 25270.0, 25250.0, 25255.0)), TODAY, TUE)!!
+        assertTrue(DayRecap.indexLine(late, partial = true).startsWith("Nifty: readings from 09:40 to 09:40"), DayRecap.indexLine(late, partial = true))
+        // A first reading by 09:16 and a last from 15:29: the full day.
+        val full = DayRecap.index(Market.NIFTY, listOf(c(TUE, 9, 16, 1.0, 2.0, 1.0, 2.0), c(TUE, 15, 29, 2.0, 3.0, 2.0, 3.0)), TUE, null)!!
+        assertTrue(DayRecap.indexLine(full).startsWith("Nifty: open 1.00"), DayRecap.indexLine(full))
+    }
+
+    @Test fun theCloseBeforeIsOnlyTheSessionImmediatelyBefore() {
+        // Monday's candles are held, but the session before Tuesday is not Monday: no gap, no change on the day.
+        assertEquals(25000.0, DayRecap.prevClose(nifty, TUE, MON))
+        assertNull(DayRecap.prevClose(nifty, TUE, LocalDate.of(2026, 10, 3)))
+        assertNull(DayRecap.prevClose(nifty, TUE, null))
+        assertNull(DayRecap.prevClose(nifty, TUE, TUE))
+        // Tuesday's candles held without Monday's: Wednesday's session before is Tuesday, Thursday's (Wednesday) is not held.
+        val held = nifty.filter { it.t.toLocalDate() != MON }
+        assertNull(DayRecap.index(Market.NIFTY, held, TUE, MON)!!.prevClose)
+        assertEquals(25250.0, DayRecap.prevClose(held, TODAY, TUE))
+        val i = DayRecap.index(Market.NIFTY, held, TUE, DayRecap.sessionBefore(TUE, trading))!!
+        assertNull(i.prevClose)
+        assertTrue(DayRecap.indexLine(i).contains("from its open") && !DayRecap.indexLine(i).contains("gap"), DayRecap.indexLine(i))
+    }
+
+    @Test fun aSpecialSessionOutsideTheHoursIsReadFromThatDaysCandlesAndReadings() {
+        // Muhurat: an evening hour, no candle in 09:15-15:30.
+        val muhurat = listOf(c(TUE, 18, 0, 25100.0, 25150.0, 25080.0, 25120.0), c(TUE, 18, 59, 25120.0, 25200.0, 25100.0, 25180.0))
+        val m = DayRecap.index(Market.NIFTY, nifty.filter { it.t.toLocalDate() == MON } + muhurat, TUE, MON)!!
+        assertEquals("Nifty: readings from 18:00 to 18:59: first 25,100.00, high 25,200.00, low 25,080.00, last 25,180.00 " +
+            "(+0.72% against the session before's close).", DayRecap.indexLine(m))
+        val rec = DayRecap.indexFromRecorder(Market.NIFTY, listOf(MarketRecord.spot(LocalTime.of(18, 15, 0), "NIFTY", 25110.0)), null)!!
+        assertTrue(DayRecap.indexLine(rec).startsWith("Nifty: readings from 18:15 to 18:15: first 25,110.00"), DayRecap.indexLine(rec))
+        // Nothing that day at all: said plainly.
+        assertNull(DayRecap.index(Market.NIFTY, muhurat, MON, null))
+        assertNull(DayRecap.indexFromRecorder(Market.NIFTY, emptyList(), null))
+        assertEquals("No candles kept for that day on the phone - nor the recorder's index readings.",
+            DayRecap.lines(DayRecap.Facts(day = MON, today = TODAY))[1])
     }
 
     private val recorded = listOf(
@@ -227,7 +304,7 @@ class DayRecapTest {
 
     private fun full(locked: Boolean = false) = DayRecap.Facts(
         day = TUE, today = TODAY,
-        indices = listOf(DayRecap.index(Market.NIFTY, nifty, TUE)!!, DayRecap.Index(Market.BANKNIFTY, 56100.0, 56400.0, 55900.0, 56200.0, 56000.0, recorder = true)),
+        indices = listOf(DayRecap.index(Market.NIFTY, nifty, TUE, MON)!!, DayRecap.Index(Market.BANKNIFTY, 56100.0, 56400.0, 55900.0, 56200.0, 56000.0, recorder = true)),
         events = DayRecap.eventsOf(recorded, TUE) + Events.Event(TUE, "rbi policy") + Events.Event(TUE, "My own note", owner = true),
         news = DayRecap.headlines(recorded), flows = DayRecap.flowsFor(recorded, TUE),
         liquidity = liq.filter { it.day == TUE }, liquidityFrom = MON,
@@ -285,13 +362,22 @@ class DayRecapTest {
             DayRecap.heroLine(bare.copy(hero = listOf(DayRecap.Paper("NIFTY26OCT25300CE", LocalTime.of(13, 42), -1500.0, "hero_stop")))))
     }
 
+    @Test fun aRecapWithSlowPartsSaysWhatWasReadAndThat() {
+        val l = DayRecap.lines(full().copy(slow = true))
+        assertEquals(DayRecap.SOME_SLOW, l.last())
+        assertTrue(l[1].startsWith("Nifty: open"), l[1])
+        val t = DayRecap.lines(DayRecap.Facts(day = TODAY, today = TODAY, partial = true, slow = true))
+        assertEquals(DayRecap.SOME_SLOW, t[t.size - 2])
+        assertFalse(DayRecap.lines(full()).contains(DayRecap.SOME_SLOW))
+    }
+
     @Test fun yesterdayRolledBackSaysWhy() {
         val l = DayRecap.lines(DayRecap.Facts(day = THU, today = MON, from = LocalDate.of(2026, 10, 4), fromWhy = "a weekend"))
         assertEquals("Sun 4 Oct was a weekend, so here is the session before it, Thu 1 Oct, Boss:", l[0])
     }
 
     @Test fun todayPointsToTheDaysOwnAnswers() {
-        val f = DayRecap.Facts(day = TODAY, today = TODAY, partial = true, indices = listOf(DayRecap.index(Market.NIFTY, nifty, TODAY)!!),
+        val f = DayRecap.Facts(day = TODAY, today = TODAY, partial = true, indices = listOf(DayRecap.index(Market.NIFTY, nifty, TODAY, TUE)!!),
             liquidity = liq, solo = emptyList(), hero = emptyList())
         val l = DayRecap.lines(f)
         assertEquals("That's today, Boss - here is the market so far (Wed 7 Oct):", l[0])

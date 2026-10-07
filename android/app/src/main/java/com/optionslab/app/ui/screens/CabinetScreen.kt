@@ -131,6 +131,9 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
 /** The pages this build's Settings shows (the drawers' keys): the search lists only settings on them. */
 private val SHOWN_PAGES: Set<String> by lazy { GROUPS.flatMap { (_, items) -> items.map { it.key } }.toSet() }
 
+/** [SHOWN_PAGES] for Jarvis's "where is the X setting" ([com.optionslab.ira.SettingWhere]): it names only what this search lists. */
+internal fun settingsShownPages(): Set<String> = SHOWN_PAGES
+
 @Composable
 private fun Drawers(onPage: (String) -> Unit) {
     val p = LocalPalette.current
