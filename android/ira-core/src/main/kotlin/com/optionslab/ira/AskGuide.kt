@@ -94,6 +94,7 @@ object AskGuide {
             ex("am i ready to trade", "PreMarket"),
             ex("how was my day", "DaySummary"),
             ex("aaj ka din kaisa raha", "DaySummary"),
+            ex("what happened last friday", "DayRecap"),
             ex("help me journal today", "DayJournal"),
             ex("how did this week go", "WeeklyReview"),
             ex("do i overtrade after a loss", "AfterLoss"),

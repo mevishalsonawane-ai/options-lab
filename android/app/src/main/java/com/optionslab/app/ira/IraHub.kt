@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -3533,11 +3533,29 @@ object IraHub {
     }
 
     /**
-     * [ask]'s question branches on what to ask, how fresh the data is, what the phone has no data for and Jarvis's own
-     * reasons (and where a setting is): SettingWhere, Tour, WhatsNew, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
+     * [ask]'s question branches on a past day's recap, what to ask, how fresh the data is, what the phone has no data for and
+     * Jarvis's own reasons (and where a setting is): DayRecap, SettingWhere, Tour, WhatsNew, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfJarvis(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
+        // "What happened on 3 Oct", "recap of yesterday", "how was Monday", "2 oct ka recap", "what happened last Friday", "kal kya
+        // hua" ([com.optionslab.ira.DayRecap], [IraDayRecap]): one compact recap of that trading day from what the phone keeps -
+        // Nifty's, BankNifty's and FinNifty's open, high, low, close, gap and change, the day's events, the headlines and FII/DII
+        // figures the recorder kept, and the paper arms' trades that day (Liquidity 15+5, Solo, Hero); what is not kept is said
+        // plainly, a day to come is refused, a weekend or holiday said as one, today pointed to the day's own answers. The
+        // general recap only: an index, his P&L, one arm, the news or the open asked of a day keep their answers. On a locked
+        // phone the arms' lines are left out (the market's stay). Reads only - nothing is armed, placed, closed or changed.
+        // (Not in IraGoldAlgo: no arms, no NSE feeds.)
+        val recapAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.DayRecap.asked(q) }.getOrNull() else null
+        if (recapAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val recapLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraDayRecap.answer(recapAsk, recapLocked) }.getOrElse { "I could not put that day's recap together just now, Boss." })
+            }
+            return true
+        }
         // "Where is the quiet hours setting?", "how do I turn off market alerts?", "backup ki setting kahan hai"
         // ([com.optionslab.ira.SettingWhere], the Settings search's catalogue [com.optionslab.ira.SettingsIndex]): the setting's
         // path and that the search at the top of Settings opens it, highlighted. A reply only: nothing is switched, set or

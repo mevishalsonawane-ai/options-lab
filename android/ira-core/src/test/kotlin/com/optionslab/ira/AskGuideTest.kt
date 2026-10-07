@@ -65,6 +65,8 @@ class AskGuideTest {
         assertTrue(groups.first { it.id == "strategies" }.examples.any { it.q == "is anything drifting" && it.family == "ForwardWatch" })
         // Today's notes sit with Jarvis himself (App).
         assertTrue(groups.first { it.id == "app" }.examples.any { it.q == "what did you tell me today" && it.family == "TodayNotes" })
+        // A past day's recap sits with the day and the week reviewed (Coach).
+        assertTrue(groups.first { it.id == "coach" }.examples.any { it.q == "what happened last friday" && it.family == "DayRecap" })
     }
 
     @Test fun goldShowsOnlyWhatItAnswers() {

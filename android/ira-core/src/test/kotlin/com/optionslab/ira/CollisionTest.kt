@@ -139,6 +139,7 @@ class CollisionTest {
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
+        "DayRecap" to { q -> DayRecap.asked(q) != null },
         "SettingWhere" to { q -> SettingWhere.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
         "WhatsNew" to { q -> WhatsNew.asked(q) },
@@ -940,6 +941,20 @@ class CollisionTest {
         "forward test status" to "ForwardWatch", "what's the forward test status" to "ForwardWatch", "how is the forward test going" to "ForwardWatch",
         "status of my forward tests" to "ForwardWatch", "forward test ka haal" to "ForwardWatch", "kya koi arm drift kar raha hai" to "ForwardWatch",
         "koi bot drift ho raha hai kya" to "ForwardWatch", "mere arms backtest ke hisaab se kaise hain" to "ForwardWatch",
+        // ---- DayRecap: one compact recap of a past trading day (the market, events, news, FII/DII, the paper arms) ----
+        "what happened on 3 oct" to "DayRecap", "what happened on 3rd october" to "DayRecap", "what happened on oct 2nd" to "DayRecap",
+        "what happened yesterday" to "DayRecap", "what all happened yesterday" to "DayRecap", "what happened in the market yesterday" to "DayRecap",
+        "what happened on monday" to "DayRecap", "what happened last friday" to "DayRecap", "jarvis what happened last friday" to "DayRecap",
+        "what happened day before yesterday" to "DayRecap", "what happened 3 days ago" to "DayRecap", "what happened on the 3rd" to "DayRecap",
+        "what happened with the market on monday" to "DayRecap", "what happened on 3 oct 2025" to "DayRecap", "what happened a week ago" to "DayRecap",
+        "recap of yesterday" to "DayRecap", "give me a recap of yesterday" to "DayRecap", "summary of yesterday" to "DayRecap",
+        "yesterday's recap" to "DayRecap", "what's yesterday's recap" to "DayRecap", "recap of 3 oct" to "DayRecap", "3 oct recap" to "DayRecap",
+        "recap of last monday" to "DayRecap", "recap of the session on 3 oct" to "DayRecap", "monday's summary" to "DayRecap", "sum up last friday" to "DayRecap",
+        "how was monday" to "DayRecap", "how was friday" to "DayRecap", "how was last friday" to "DayRecap", "how was 3 oct" to "DayRecap",
+        "how was the 3rd" to "DayRecap", "how did monday go" to "DayRecap", "how did last friday turn out" to "DayRecap",
+        "2 oct ka recap" to "DayRecap", "kal ka recap" to "DayRecap", "pichle shukravar ka recap" to "DayRecap", "kal kya hua" to "DayRecap",
+        "parso kya hua" to "DayRecap", "somvar ko kya hua" to "DayRecap", "market mein kal kya hua" to "DayRecap", "kal ka din kaisa tha" to "DayRecap",
+        "somvar kaisa raha" to "DayRecap", "3 oct ka market kaisa tha" to "DayRecap",
         // ---- TodayNotes: what Jarvis posted by himself today (counted by category, the latest three named) ----
         "what did you tell me today" to "TodayNotes", "what have you told me today" to "TodayNotes", "what did you say today" to "TodayNotes",
         "what all did you tell me today" to "TodayNotes", "what did you tell me this morning" to "TodayNotes", "what did you post today" to "TodayNotes",
@@ -1536,7 +1551,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
@@ -3537,5 +3552,57 @@ class CollisionTest {
             assertTrue(audit.feature(s) != "SettingWhere", "$s: ${audit.feature(s)}")
         // Two questions: each its own.
         assertEquals("SettingWhere & Account:PNL", audit.feature("where is the backup setting and what is my pnl"))
+    }
+
+    // ---- DayRecap: a past day's general recap, never the dated questions that already had their answers ----
+
+    @Test fun theDayRecapLeavesTheDatedQuestionsTheirRoutes() {
+        for (s in listOf("what happened on 3 oct", "recap of yesterday", "how was monday", "2 oct ka recap", "what happened last friday",
+            "kal kya hua", "what happened yesterday", "how did monday go")) {
+            assertEquals("DayRecap", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // One arm, his P&L, the open, an index, the news, today, the week, the day's own recap: as before.
+        assertEquals("LiquidityRecord", audit.feature("liquidity on 3 oct"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do on 3 oct"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("why didn't hero trade yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("what did solo do yesterday"))
+        assertEquals("Account:PNL", audit.feature("my pnl on 2 oct"))
+        assertEquals("Account:HISTORY", audit.feature("pnl yesterday"))
+        assertEquals("Lookback", audit.feature("how did the market open yesterday"))
+        assertEquals("Lookback", audit.feature("what was yesterday's high"))
+        assertEquals("MarketStory", audit.feature("what happened in the market today"))
+        assertEquals("MarketStory", audit.feature("what happened today"))
+        assertEquals("Account:HISTORY", audit.feature("news yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("how was yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("how was my day yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("was yesterday a good day"))
+        assertEquals("Account:HISTORY", audit.feature("what happened last week"))
+        assertEquals("Account:HISTORY", audit.feature("what happened to nifty yesterday"))
+        assertEquals("DayCompare", audit.feature("how was yesterday for nifty"))
+        assertEquals("DayCompare", audit.feature("how was the market yesterday"))
+        assertEquals("DayCompare", audit.feature("is today like yesterday"))
+        assertEquals("InsideDays", audit.feature("was yesterday an inside day"))
+        assertEquals("OrderWhy", audit.feature("what happened to my order yesterday"))
+        assertEquals("DayStory", audit.feature("recap the day"))
+        assertEquals("DayStory", audit.feature("day recap"))
+        assertEquals("DayStory", audit.feature("today's recap"))
+        assertEquals("DayStory", audit.feature("aaj ka recap"))
+        assertEquals("WeeklyReview", audit.feature("weekly recap"))
+        assertEquals("WeeklyReview", audit.feature("how was last week"))
+        assertEquals("Outlook", audit.feature("what will nifty do on monday"))
+        assertEquals("Weekdays", audit.feature("how does nifty usually do on fridays"))
+        assertEquals("TomorrowPlan", audit.feature("kal ka plan"))
+        assertEquals("ExpiryEve", audit.feature("kal kya expire ho raha hai"))
+        assertEquals("MarketMemory", audit.feature("what happened the last 3 expiries"))
+        // Said with something to do: never the recap; two questions: each its own.
+        assertTrue(audit.feature("what happened yesterday then close all positions") != "DayRecap")
+        assertEquals("DayRecap & Account:PNL", audit.feature("what happened yesterday and what is my pnl"))
+        for (s in listOf("what happened on monday with nifty", "what happened to banknifty on 3 oct", "what news on 3 oct", "what happened to my requests",
+            "what happened today", "how was today", "what happened next monday", "recap my trades yesterday", "liquidity recap of yesterday"))
+            assertTrue(DayRecap.asked(s) == null, "$s: ${audit.feature(s)}")
     }
 }
