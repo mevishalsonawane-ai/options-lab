@@ -113,6 +113,22 @@ class JarvisControlsTest {
         compose.onNodeWithContentDescription(JarvisControls.MIC).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
     }
 
+    /** Held a minute: asked then (as if let go); letting go later sends nothing more. */
+    @Test fun aHoldIsAskedAtSixtySecondsAndOnlyOnce() {
+        row()
+        val mic = compose.onNodeWithContentDescription(JarvisControls.MIC)
+        mic.performTouchInput { down(center) }
+        compose.frames()
+        compose.mainClock.advanceTimeBy(com.optionslab.ira.HoldTalk.CAP_MS - 1_000); compose.frames()
+        assertEquals("still held at 59 s", listOf("start"), fake.calls)
+        compose.mainClock.advanceTimeBy(2_000); compose.frames()
+        assertEquals(listOf("start", "send"), fake.calls)
+        mic.performTouchInput { advanceEventTime(61_000); up() }
+        compose.frames()
+        assertEquals(listOf("start", "send"), fake.calls)
+        assertFalse(compose.has(JarvisControls.HOLD_HINT))
+    }
+
     @Test fun aQuickTapSaysHoldToTalkAndSendsNothing() {
         row()
         compose.onNodeWithContentDescription(JarvisControls.MIC).performTouchInput { down(center); advanceEventTime(100); up() }

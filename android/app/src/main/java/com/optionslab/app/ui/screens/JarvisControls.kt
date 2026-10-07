@@ -70,7 +70,7 @@ internal object JarvisControls {
     val Chat: ImageVector by lazy { icon("ChatBubble", "M20,2H4c-1.1,0 -2,0.9 -2,2v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2z") }
 }
 
-/** The mic's way to Jarvis's ears: the voice service's own Talk ([JarvisVoice.talk]); tests put a fake in [talkPathForTest]. */
+/** The mic's way to Jarvis's ears: the voice service's hold to talk ([JarvisVoice.holdTalk]); tests put a fake in [talkPathForTest]. */
 internal interface TalkPath {
     /** Starts listening; false when it did not ([note]: what to tell Boss; [askMic]: asks Android for the microphone). */
     fun start(ctx: Context, askMic: () -> Unit, note: (String) -> Unit): Boolean
@@ -82,7 +82,7 @@ internal object VoiceTalkPath : TalkPath {
     override fun start(ctx: Context, askMic: () -> Unit, note: (String) -> Unit): Boolean = when {
         !JarvisVoice.available(ctx) -> { note("This phone has no on-device speech recognizer (Android 12 or later needed)."); false }
         !JarvisVoice.permitted(ctx) -> { askMic(); false }
-        !JarvisVoice.talk(ctx) -> { note("Jarvis could not start listening; try again."); false }
+        !JarvisVoice.holdTalk(ctx) -> { note("Jarvis could not start listening; try again."); false }
         else -> true
     }
     override fun end(send: Boolean) = JarvisVoice.talkEnd(send)
@@ -138,8 +138,9 @@ private fun MuteIcon() {
 }
 
 /**
- * Hold to talk (Boss, 7 Oct): pressed, Jarvis listens (the mic's usual Talk: the same checks, recognizer and voice
- * session); let go, what was heard is asked and Jarvis replies. A quick tap says "Hold to talk"; a finger slid off
+ * Hold to talk (Boss, 7 Oct): pressed, Jarvis listens silently ([JarvisVoice.holdTalk]: the Talk checks, recognizer
+ * and speech choice, no "Yes, Boss?"), a pause sending nothing; let go (or after 60 s), all that was heard is asked
+ * once and Jarvis replies. A quick tap says "Hold to talk"; a finger slid off
  * sends nothing. TalkBack, which cannot hold: a double tap starts, the next one stops and sends.
  */
 @Composable
@@ -157,6 +158,8 @@ private fun HoldToTalkMic(onNote: (String?) -> Unit) {
         path.start(ctx, { ask.launch(android.Manifest.permission.RECORD_AUDIO) }, { noteNow.value(it) }).also { talking.value = it }
     }
     val end = rememberUpdatedState<(Boolean) -> Unit> { send -> if (talking.value) { talking.value = false; path.end(send) } }
+    // Held 60 s: asked as if let go (the voice service caps the hold the same way).
+    LaunchedEffect(talking.value) { if (talking.value) { kotlinx.coroutines.delay(com.optionslab.ira.HoldTalk.CAP_MS); end.value(true) } }
     // Leaving the page mid-hold: nothing is sent.
     DisposableEffect(Unit) { onDispose { if (talking.value) { talking.value = false; path.end(false) } } }
     val on = talking.value
