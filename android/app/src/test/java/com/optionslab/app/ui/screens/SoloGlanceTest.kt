@@ -94,7 +94,7 @@ class SoloGlanceTest {
         compose.waitUntil(10_000) { shows("FORWARD TEST") }
         compose.waitForIdle()
         assertEquals(1, reads.get())
-        key = 1
+        androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot { key = 1 }   // applied at once, so the effect re-keys
         compose.waitUntil(10_000) { reads.get() == 2 }
         compose.waitForIdle()
         assertEquals(2, reads.get())
