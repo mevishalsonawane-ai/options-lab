@@ -365,7 +365,8 @@ def open_at_or_after(ser, m):
     return (op[i], int(mins[i])) if i < len(mins) else (cl[-1], int(mins[-1]))
 
 
-def run_variant(v, recs):
+def run_variant(v, recs, only=None):
+    """only: a set of (book, day, entry minute) - take exactly those entries, each held on its own (books may overlap)."""
     trades = []
     for r in recs:
         und, lot, imin = r["und"], r["lot"], r["imin"]
@@ -373,7 +374,7 @@ def run_variant(v, recs):
         for book, sigs in r["books"].items():
             flat_from = 0
             for s in sigs:
-                if s["done"] < flat_from:
+                if only is None and s["done"] < flat_from:
                     continue
                 done = s["done"]
                 if done > 930 or done < WIN_FROM or done > WIN_TO:
@@ -389,6 +390,8 @@ def run_variant(v, recs):
                 if ei >= len(mins) or mins[ei] > done + 2:
                     continue
                 t0 = int(mins[ei])
+                if only is not None and (book, r["day"], t0) not in only:
+                    continue
                 e = buy_mkt(op[ei])
                 qty = lot
                 ptrig = pct_trigger(e, v.prem_pct) if v.prem_pct else None

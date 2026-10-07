@@ -152,3 +152,61 @@ For comparison, the median one-strike-ITM weekly (else monthly) option at 11:00 
 - C (40/80): C1 Rs +26,739 (DD -39,341, better than A in 1/6 years); C2 Rs +28,575 (DD -40,321, better than A in 1/6 years); C3 Rs +54,700 (DD -42,393, better than A in 2/6 years).
 - D (40/40 ORB): D1 Rs -28,300 (DD -70,937, better than A in 1/6 years); D2 Rs -51,956 (DD -86,194, better than A in 1/6 years); D3 Rs -37,636 (DD -74,991, better than A in 1/6 years).
 - E (ladder on top): E60 Rs +22,969 (DD -59,277, better than A in 1/6 years); E40 Rs +22,729 (DD -45,606, better than A in 2/6 years); E80 Rs +63,934 (DD -42,162, better than A in 1/6 years).
+
+## POST-HOC (added at Boss's request, 07 Oct): no stop loss, no target - hold to the liquidity level (research/liquidity_nostop.py)
+
+Not part of the pre-set comparison above; these were run after its results were known. Every stop is removed (no -15% premium stop, no index stop, no 20-minute time stop) and there is no premium target. 15:10 square-off stays (an intraday option arm must be flat by then).
+
+'Wait till the next liquidity' has two readings in LiquidityRules:
+- **next liquidity** (`target`, exit `next_liquidity`): the nearest level that ALREADY exists beyond the entry; out when the index touches it. With no level ahead, the trade holds to 15:10. -> **N1**
+- **new liquidity** (exit `new_liquidity`): a NEW swing or pool level forming on the trade's side after the entry. -> **N2**
+They differ, so both are run, plus N12 (whichever comes first) and **N3** = N1 + the failed break (bar closes back through the broken level).
+
+### (a) as the app would run it: one position per book, so longer holds skip later breaks
+
+| variant | trades | win | Rs / trade | Rs / year / lot | max DD | worst trade (Rs, % of premium) | worst trade % | trades losing >30% / >50% of premium | worst day | worst month | longest losing run | years + | BANKNIFTY | FINNIFTY | avg hold |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A current exits | 1651 | 36% | +147 | **+46,948** | -37,402 | -4,753 (-15%) | -23% | 0.0% / 0.0% | -7,000 (2026-04-15) | -12,850 (2024-07) | 14 | 4/6 | +146,811 | +95,610 | 29 min |
+| N1 next liquidity only (+15:10) | 1511 | 58% | +41 | **+12,015** | -101,607 | -12,067 (-39%) | -100% | 14.1% / 5.9% | -33,466 (2026-06-03) | -63,461 (2025-12) | 9 | 3/6 | -29,251 | +91,294 | 173 min |
+| N2 new liquidity only (+15:10) | 1473 | 41% | +105 | **+29,869** | -103,023 | -12,573 (-40%) | -100% | 11.3% / 3.4% | -25,829 (2026-06-03) | -42,546 (2025-12) | 18 | 4/6 | +43,444 | +110,786 | 151 min |
+| N12 next or new liquidity (+15:10) | 1623 | 53% | +117 | **+36,654** | -53,688 | -12,573 (-40%) | -100% | 8.7% / 2.6% | -25,829 (2026-06-03) | -33,166 (2025-12) | 9 | 4/6 | +86,653 | +102,612 | 101 min |
+| N3 next liquidity + failed break (+15:10) | 1619 | 38% | +169 | **+53,077** | -48,948 | -7,923 (-42%) | -72% | 3.6% / 0.4% | -22,214 (2025-08-18) | -27,991 (2024-07) | 14 | 5/6 | +147,556 | +126,514 | 71 min |
+
+| per year | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|
+| A | -9,474 | -5,309 | +19,384 | +44,444 | +105,870 | +87,504 |
+| N1 | -8,320 | -59,317 | +34,340 | +40,145 | -32,709 | +87,903 |
+| N2 | -2,878 | -1,978 | +28,596 | +9,849 | +44,588 | +76,054 |
+| N12 | -1,480 | -13,569 | +25,898 | +40,451 | +80,724 | +57,243 |
+| N3 | -3,760 | +14,503 | +57,126 | +35,873 | +58,154 | +112,173 |
+
+### (b) exactly the current arm's 1,651 entries, each held on its own
+
+| variant | trades | win | Rs / trade | Rs / year / lot | max DD | worst trade (Rs, % of premium) | worst trade % | trades losing >30% / >50% of premium | worst day | worst month | longest losing run | years + | BANKNIFTY | FINNIFTY | avg hold |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A current exits | 1651 | 36% | +147 | **+46,948** | -37,402 | -4,753 (-15%) | -23% | 0.0% / 0.0% | -7,000 (2026-04-15) | -12,850 (2024-07) | 14 | 4/6 | +146,811 | +95,610 | 29 min |
+| N1 next liquidity only (+15:10) | 1651 | 58% | +33 | **+10,410** | -108,049 | -12,067 (-39%) | -100% | 13.7% / 5.5% | -33,466 (2026-06-03) | -53,891 (2025-12) | 9 | 3/6 | -12,120 | +65,872 | 167 min |
+| N2 new liquidity only (+15:10) | 1651 | 41% | +112 | **+35,827** | -126,081 | -12,573 (-40%) | -100% | 10.8% / 3.1% | -25,829 (2026-06-03) | -49,508 (2025-12) | 19 | 5/6 | +34,958 | +150,037 | 148 min |
+| N12 next or new liquidity (+15:10) | 1651 | 53% | +104 | **+33,130** | -55,789 | -12,573 (-40%) | -100% | 8.7% / 2.5% | -25,829 (2026-06-03) | -33,166 (2025-12) | 10 | 4/6 | +71,253 | +99,816 | 100 min |
+| N3 next liquidity + failed break (+15:10) | 1651 | 38% | +170 | **+54,470** | -54,576 | -7,923 (-42%) | -72% | 3.6% / 0.4% | -22,214 (2025-08-18) | -27,991 (2024-07) | 14 | 5/6 | +160,924 | +120,338 | 70 min |
+
+| per year | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|
+| A | -9,474 | -5,309 | +19,384 | +44,444 | +105,870 | +87,504 |
+| N1 | -4,502 | -53,317 | +32,491 | +33,454 | -47,828 | +93,454 |
+| N2 | +2,379 | -4,094 | +30,799 | +12,591 | +58,272 | +85,048 |
+| N12 | -5,240 | -13,569 | +23,584 | +34,495 | +74,861 | +56,939 |
+| N3 | -5,847 | +15,049 | +63,484 | +34,517 | +54,217 | +119,842 |
+
+How they end: N1: session_end 57%, next_liquidity 43%; N2: new_liquidity 67%, session_end 33%; N12: new_liquidity 45%, next_liquidity 37%, session_end 18%; N3: failed_break 58%, next_liquidity 27%, session_end 15%.
+
+Notes: 'worst trade %' is the exit price against the price paid; with no stop the only cap on a loss is the premium itself (100%) and the 15:10 square-off. Per year = net / the sample's span in years (as above). Charges and fills as above.
+
+### Reading the post-hoc runs
+
+- **Taking every stop off does not pay on its own.** With "next liquidity" only (N1), net falls to about Rs +10-12k a year (A: +47k). The max drawdown is about 2.7x A's (-102k to -108k vs -37k), and the worst month is -54k to -63k. 57% of trades are still open at 15:10, because the level is often never reached that day.
+- **N2 (new level only) and N12 (either level) also lose to A**, in net and in drawdown (-53k to -126k).
+- **Worst case without stops.** Single trades lost up to Rs 12.6k per lot (about 40% of the premium). Measured as a share of the premium, the worst exits were 87-100% losses, all at 15:10 on contracts close to expiry. 9-14% of N1/N2 trades lost more than 30% of the premium, and 3-6% lost more than 50%. Under A, no trade lost more than 23%.
+- One of these, the FINNIFTY 30-min book's trade on 20 Sep 2022, falls on a Tuesday, when FINNIFTY options expired. The option ended at 0.05, so the data's expiry-day flag probably missed that day.
+- **N3 (next level + failed break, no stops) is the only one that out-earns A:** Rs +53-54k a year against +47k. It is better than A in 4 of 6 years (2021, 2022, 2023, 2026). But its max drawdown is worse (-49k to -55k vs -37k), its worst trade is worse (-7.9k vs -4.8k), and its worst day is worse (-22k vs -7k). By Boss's rule (a plan may only lower risk) it does not pass.
+- N3 is also post-hoc: it was chosen after the main results were seen, it would need its own walk-forward or paper test, and it is not recommended as a change.
