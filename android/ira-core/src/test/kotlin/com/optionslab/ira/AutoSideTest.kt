@@ -1,5 +1,6 @@
 package com.optionslab.ira
 
+import com.optionslab.engine.orb.ArmPriority.Rank
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -66,6 +67,53 @@ class AutoSideTest {
             AutoSide.describe(s))
         assertTrue(AutoSide.describe(AutoSide.check("BANKNIFTY", 1, listOf(orbCall))!!).contains("one automatic position an index a side"))
         assertEquals("entered", AutoSide.describe("entered"))
+    }
+
+    // Boss's 07 Oct decision (research/HUNT_H21.md): Liquidity 15+5 has priority over ORB, ORB Fresh, ORB Sweep and Range Fade.
+    private val orbHeld = AutoSide.Held.option("ORB", "BANKNIFTY26OCT52000CE", "BANKNIFTY", "CE", long = true, rank = Rank.OLD_ARM)
+    private val fadeHeld = AutoSide.Held.option("Range Fade", "BANKNIFTY26OCT52000PE", "BANKNIFTY", "PE", long = true, rank = Rank.OLD_ARM)
+    private val liqHeld = AutoSide.Held.option("Liquidity 15m", "BANKNIFTY26OCT51900CE", "BANKNIFTY", "CE", long = true, rank = Rank.LIQUIDITY)
+
+    @Test fun aLiquidityEntryWhileAnOrbArmHoldsBankNiftyIsTaken() {
+        assertNull(AutoSide.check("BANKNIFTY", 1, listOf(orbHeld), Rank.LIQUIDITY), "the same way: taken beside ORB")
+        assertNull(AutoSide.check("BANKNIFTY", 1, listOf(fadeHeld), Rank.LIQUIDITY), "the other way: taken beside Range Fade")
+        assertNull(AutoSide.check("BANKNIFTY", -1, listOf(orbHeld, fadeHeld), Rank.LIQUIDITY, live = true), "a live entry beside paper arms")
+        assertEquals("Liquidity 15m is not held back by ORB's BANKNIFTY26OCT52000CE, Range Fade's BANKNIFTY26OCT52000PE: " +
+            "Liquidity has priority over ORB arms.", AutoSide.priorityNote("Liquidity 15m", "BANKNIFTY", 1, listOf(orbHeld, fadeHeld), Rank.LIQUIDITY))
+        assertNull(AutoSide.priorityNote("Liquidity 15m", "BANKNIFTY", 1, emptyList(), Rank.LIQUIDITY), "nothing set aside: no word")
+        assertNull(AutoSide.priorityNote("Liquidity 15m", "BANKNIFTY", 0, listOf(orbHeld), Rank.LIQUIDITY))
+        // Everything else still counts against Liquidity: another Liquidity book, Pine, Solo, Strategies, the Hero arm.
+        assertEquals("same_side_already_held: Liquidity 15m holds BANKNIFTY26OCT51900CE",
+            AutoSide.check("BANKNIFTY", 1, listOf(liqHeld), Rank.LIQUIDITY))
+        assertEquals("opposite_position_open: Pine #2 holds BANKNIFTY26OCT52000PE",
+            AutoSide.check("BANKNIFTY", 1, listOf(orbHeld, AutoSide.Held.option("Pine #2", "BANKNIFTY26OCT52000PE", "BANKNIFTY", "PE", true)), Rank.LIQUIDITY))
+        assertNull(AutoSide.priorityNote("Liquidity 15m", "BANKNIFTY", 1, listOf(orbHeld, liqHeld), Rank.LIQUIDITY), "refused anyway: no word")
+    }
+
+    @Test fun anOrbEntryWhileLiquidityHoldsBankNiftyIsRefusedAndSaysWhy() {
+        val same = AutoSide.check("BANKNIFTY", 1, listOf(liqHeld), Rank.OLD_ARM)!!
+        assertEquals("same_side_already_held: Liquidity 15m holds BANKNIFTY26OCT51900CE; Liquidity has priority over ORB arms", same)
+        assertTrue(AutoSide.refused(same))
+        assertEquals("Not entered: Liquidity 15m holds BANKNIFTY26OCT51900CE the same way on this index (one automatic position an " +
+            "index a side). Liquidity has priority over ORB arms.", AutoSide.describe(same))
+        val other = AutoSide.check("BANKNIFTY", -1, listOf(liqHeld), Rank.OLD_ARM)!!
+        assertEquals("Not entered: Liquidity 15m holds BANKNIFTY26OCT51900CE the other way on this index (no automatic trade " +
+            "against another). Liquidity has priority over ORB arms.", AutoSide.describe(other))
+        // The old arms keep their own guard among themselves, without the priority words.
+        assertEquals("same_side_already_held: ORB holds BANKNIFTY26OCT52000CE", AutoSide.check("BANKNIFTY", 1, listOf(orbHeld), Rank.OLD_ARM))
+        assertEquals("entered" + AutoSide.PRIORITY, AutoSide.describe("entered" + AutoSide.PRIORITY), "anything else as it is")
+    }
+
+    @Test fun liveGatesAreUnchangedTwoLivePositionsStillRefuse() {
+        val liveOrb = orbHeld.copy(live = true)
+        assertEquals("same_side_already_held: ORB holds BANKNIFTY26OCT52000CE",
+            AutoSide.check("BANKNIFTY", 1, listOf(liveOrb), Rank.LIQUIDITY, live = true), "never two live automatic positions on one index")
+        assertNull(AutoSide.check("BANKNIFTY", 1, listOf(liveOrb), Rank.LIQUIDITY, live = false), "a paper Liquidity entry beside it")
+        assertNull(AutoSide.priorityNote("Liquidity 15m", "BANKNIFTY", 1, listOf(liveOrb), Rank.LIQUIDITY, live = true))
+        // Every other trader is unchanged: the default rank counts everything, as before 07 Oct.
+        assertEquals("same_side_already_held: ORB holds BANKNIFTY26OCT52000CE", AutoSide.check("BANKNIFTY", 1, listOf(orbHeld)))
+        assertTrue(AutoSide.check("BANKNIFTY", -1, listOf(orbHeld))!!.startsWith(AutoSide.OPPOSITE))
+        assertEquals(Rank.OTHER, sweepPut.rank); assertFalse(sweepPut.live)
     }
 
     @Test fun bossesOwnOrderIsOnlyWarned() {

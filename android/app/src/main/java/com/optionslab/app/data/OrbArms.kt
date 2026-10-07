@@ -310,17 +310,33 @@ object OrbArms {
             arm.hero -> HeroRules.UNDERLYING
             else -> OrbRules.UNDERLYING
         }
-        com.optionslab.ira.AutoSide.Held.option(arm?.let { ownerOf(it) } ?: p.arm, p.symbol, und, p.right, long = true)
+        com.optionslab.ira.AutoSide.Held.option(arm?.let { ownerOf(it) } ?: p.arm, p.symbol, und, p.right, long = true,
+            rank = arm?.let { com.optionslab.engine.orb.ArmPriority.rankOf(it) } ?: com.optionslab.engine.orb.ArmPriority.Rank.OTHER,
+            live = p.live)
     }
 
     /**
      * Boss's 06 Oct rule ([com.optionslab.ira.AutoSide]): no automatic entry against another automatic position on the same
      * index, and at most one automatic position an index a side - the arms' own open positions (fresh from [b]) and every
      * other automatic trader's. Null when [c] may be bought, else the refusal the row and the log show.
+     *
+     * Liquidity 15+5 has priority over the ORB arms (Boss's 07 Oct decision, research/HUNT_H21.md,
+     * [com.optionslab.engine.orb.ArmPriority]): [arm]'s rank decides which holdings count - a Liquidity entry is never refused
+     * by an ORB, ORB Fresh, ORB Sweep or Range Fade position (it runs beside it; both live at the broker still refuse), and an
+     * ORB-family entry is refused while Liquidity holds the index, saying so. [live]: the entry goes to Zerodha. The live
+     * gates (PIN, the account guard, the kill switch) are all still checked after this, unchanged.
      */
-    private fun exposureRefusal(b: Book, c: Paper.Contract): String? =
-        AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true),
-            exposureOf(b) + runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList()))
+    private fun exposureRefusal(b: Book, c: Paper.Contract, arm: Arm, live: Boolean = false): String? {
+        val dir = com.optionslab.ira.AutoSide.direction(c.right.name, true)
+        val own = exposureOf(b) + runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList())
+        val rank = com.optionslab.engine.orb.ArmPriority.rankOf(arm)
+        val refusal = AutoExposure.check(AutoExposure.Source.ORB, c.underlying, dir, own, rank, live)
+        // The activity log: a Liquidity entry going beside an ORB arm's position says why it was not refused.
+        if (refusal == null && rank == com.optionslab.engine.orb.ArmPriority.Rank.LIQUIDITY) runCatching {
+            AutoExposure.priorityNote(AutoExposure.Source.ORB, ownerOf(arm), c.underlying, dir, own, rank, live)?.let { Diag.record("orb", it) }
+        }
+        return refusal
+    }
 
     /** The one-time switch-off on this update (Boss's choice, 06 Oct): its key in [Book.migrated]. */
     internal const val OFF_LOSERS = "off_losers_2026_10_06"
@@ -1076,8 +1092,8 @@ object OrbArms {
 
     /** [live] is decided once by the caller, so the account cannot change between the check and the order. */
     private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, live: Boolean): String {
-        // One index, one side, for every automatic trader (Boss's 06 Oct rule): paper and live alike.
-        exposureRefusal(b, c)?.let { return it }
+        // One index, one side, for every automatic trader (Boss's 06 Oct rule): paper and live alike; Liquidity first (07 Oct).
+        exposureRefusal(b, c, arm, live)?.let { return it }
         if (live) return enterLive(b, arm, c, signalBar)
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"             // never enter blind
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
@@ -1418,7 +1434,7 @@ object OrbArms {
         val limit = HeroRules.limitPrice(ask, pick.ltp)
         val lots = HeroRules.lots(limit, c.lotSize)
         if (lots <= 0) return kept("hero_zero_lots", pick, limit, lots)
-        exposureRefusal(b, c)?.let { return kept(it, pick, limit, lots) }
+        exposureRefusal(b, c, HeroRules.ARM)?.let { return kept(it, pick, limit, lots) }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
@@ -2006,7 +2022,7 @@ object OrbArms {
         val listed = Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
         val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
-        exposureRefusal(b, c)?.let { return it }
+        exposureRefusal(b, c, arm, live)?.let { return it }
         // Boss's size (1, 2 or 3 lots of this contract's own lot): read at the entry, so a change applies to new entries only.
         val lots = lotsOf(b)
         if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong, lots = lots)
@@ -2259,11 +2275,16 @@ object OrbArms {
             val ce = fiveMinute(Net.intraday(legs.ce.feedKey), day).associateBy { it.start }
             val pe = fiveMinute(Net.intraday(legs.pe.feedKey), day).associateBy { it.start }
             val aligned = index.filter { it.start in ce && it.start in pe }
+            // Liquidity has priority over the ORB arms (07 Oct): the day's Liquidity BANKNIFTY trades, so the replay marks
+            // the trades the app's guard would have refused while Liquidity held the index ([com.optionslab.engine.orb.ArmPriority]).
+            val liq = lock.withLock { liquidityLegs(book(), day) }
             for (arm in OrbRules.ARMS) {
                 val trades = Replay.day(arm, aligned, aligned.map { ce.getValue(it.start) }, aligned.map { pe.getValue(it.start) })
+                val refused = runCatching { com.optionslab.engine.orb.ArmPriority.refusedInReplay(arm, day, trades, liq) }.getOrDefault(emptyMap())
                 out.put(arm.source, JSONArray().apply {
-                    trades.forEach { tr -> put(JSONObject().put("bar", tr.signalBar).put("exitBar", tr.exitBar).put("right", tr.right)
-                        .put("entry", tr.entry).put("exit", tr.exit).put("why", tr.why).put("pnl", tr.points * legs.ce.lotSize)) }
+                    trades.forEachIndexed { i, tr -> put(JSONObject().put("bar", tr.signalBar).put("exitBar", tr.exitBar).put("right", tr.right)
+                        .put("entry", tr.entry).put("exit", tr.exit).put("why", tr.why).put("pnl", tr.points * legs.ce.lotSize)
+                        .apply { refused[i]?.let { put("refused", it) } }) }
                 })
             }
             out.put("strike", legs.strike).put("lot", legs.ce.lotSize)
@@ -2271,6 +2292,16 @@ object OrbArms {
         lock.withLock { val b = book(); b.replays[day.toString()] = out; b.upDays[day.toString()] = out.getBoolean("up"); save(b) }
         return true
     }
+
+    /** [b]'s Liquidity trades on BANKNIFTY on [day], as the guard's replay reads them ([com.optionslab.engine.orb.ArmPriority.Leg]). */
+    private fun liquidityLegs(b: Book, day: LocalDate): List<com.optionslab.engine.orb.ArmPriority.Leg> =
+        b.positions.filter { it.day == day }.mapNotNull { p ->
+            val arm = (ALL_ARMS + LiquidityRules.ARM).firstOrNull { it.source == p.arm }?.takeIf { it.liquidity } ?: return@mapNotNull null
+            val und = com.optionslab.ira.AutoSide.underlyingOf(p.symbol) ?: LiquidityRules.underlyingOf(arm)
+            if (und != OrbRules.UNDERLYING) return@mapNotNull null
+            com.optionslab.engine.orb.ArmPriority.Leg(arm.source, com.optionslab.engine.orb.ArmPriority.Rank.LIQUIDITY, und,
+                if (p.right == "CE") 1 else -1, p.entryTime, p.exitTime, p.live)
+        }
 
     /** Up or down day (index close vs open) for past trade days the evening replay never recorded, for the pass rule. */
     private suspend fun backfillUpDays() {

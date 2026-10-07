@@ -13,6 +13,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -63,7 +64,7 @@ class LiquidityArmLiveTest : RobolectricTest() {
      * The arms' saved state: both liquidity books armed in Live, the 5-minute book with a signal waiting for approval, at
      * [lots] a trade (null: no size saved, a book from before the setting).
      */
-    private fun state(expires: LocalDateTime = now.plusMinutes(9), lots: Int? = 1) {
+    private fun state(expires: LocalDateTime = now.plusMinutes(9), lots: Int? = 1, held: JSONArray = JSONArray()) {
         val books = listOf("liquidity15", "liquidity5")
         fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
         val bar = maxOf(now.minusMinutes(1), now.toLocalDate().atStartOfDay())
@@ -71,7 +72,7 @@ class LiquidityArmLiveTest : RobolectricTest() {
             .put("armed", flags(true)).put("auto", flags(false)).put("liveOk", flags(true))
             // Saved after the 06 Oct update (its one-time switch-off already done): armed again by Boss.
             .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
-            .put("positions", JSONArray())
+            .put("positions", held)
             .put("pending", JSONObject().put("liquidity5", JSONObject().put("right", "CE").put("bar", bar.toString())
                 .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0)))
             .apply { lots?.let { put("liqLots", it) } })
@@ -168,6 +169,42 @@ class LiquidityArmLiveTest : RobolectricTest() {
     @Test fun theKillSwitchRefusesTheEntry() {
         SecurePrefs.put("g.kill", true)
         state()
+        assertEquals("Refused: the kill switch is on", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    // ---- Liquidity has priority over the ORB arms (Boss's 07 Oct decision); the live gates are unchanged ----
+
+    /** ORB holding a BANKNIFTY call since 20 minutes ago: on paper, or at Zerodha when [live]. */
+    private fun orbHolds(live: Boolean): JSONArray = JSONArray().put(JSONObject().put("arm", "orb")
+        .put("symbol", "BANKNIFTY-ORB-52000CE").put("right", "CE").put("qty", 30).put("entry", 300.0)
+        .put("entryTime", now.minusMinutes(20).toString()).put("signalBar", now.minusMinutes(25).toString()).put("live", live)
+        .apply { if (live) put("kite", "BANKNIFTY26OCT52100CE") })
+
+    @Test fun aLiveLiquidityEntryGoesBesideAPaperOrbPositionWithThePin() {
+        state(held = orbHolds(live = false))
+        // Without the PIN nothing is sent, as always.
+        assertEquals("The app is in Live: approve with your PIN on Home → Strategies.", runBlocking { OrbArms.approve("liquidity", pinConfirmed = false) })
+        assertTrue(kite.requests.isEmpty())
+        // With it, ORB's paper call no longer stops Liquidity: it buys at Zerodha beside it.
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+        assertTrue(row().open!!.live)
+        assertNotNull("ORB's paper call is untouched", runBlocking { OrbArms.view() }.arms.single { it.arm.source == "orb" }.open)
+    }
+
+    @Test fun twoLiveAutomaticPositionsOnOneIndexAreStillRefused() {
+        state(held = orbHolds(live = true))
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.startsWith("same_side_already_held: ORB holds BANKNIFTY-ORB-52000CE"))
+        assertFalse("no priority over a live position", msg.contains("Liquidity has priority over ORB arms"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertNull(row().open)
+    }
+
+    @Test fun theKillSwitchStillRefusesLiquidityBesideAPaperOrbPosition() {
+        SecurePrefs.put("g.kill", true)
+        state(held = orbHolds(live = false))
         assertEquals("Refused: the kill switch is on", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
         assertTrue(kite.placed.isEmpty())
     }

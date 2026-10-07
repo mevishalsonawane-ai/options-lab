@@ -526,6 +526,29 @@ class LiquidityArmTest : RobolectricTest() {
         assertTrue(r.status, r.status.contains("BANKNIFTY 15-min:") && r.status.contains("BANKNIFTY 5-min:"))
     }
 
+    /**
+     * Boss's 07 Oct decision (research/HUNT_H21.md): Liquidity 15+5 has priority over the ORB arms. ORB holds a BANKNIFTY call
+     * on paper since 12:30; the 13:00 break is still bought at 13:05, beside it, and the arms' log says why.
+     */
+    @Test fun aLiquidityEntryWhileOrbHoldsBankNiftyIsTakenAndTheLogSaysLiquidityHasPriority() {
+        failDay = false
+        val t = day.atTime(12, 30)
+        AutomationSupport.orbState(context, org.json.JSONObject().put("liqLots", 1)
+            .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "orb")
+                .put("symbol", "BANKNIFTY-ORB-54000CE").put("right", "CE").put("qty", 30).put("entry", 300.0)
+                .put("entryTime", t.toString()).put("signalBar", t.minusMinutes(5).toString()))))
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue("taken beside ORB's call", p.open)
+        assertEquals("CE", p.right); assertEquals("liquidity5", p.arm)
+        assertEquals("one paper buy: Liquidity's", 1, Paper.state.orders.count { it.action == "BUY" })
+        val orb = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "orb" }
+        assertTrue("ORB's call is untouched", orb.open != null)
+        val log = Diag.lines()
+        assertTrue(log.toString(), log.any { it.contains("Liquidity 5m is not held back by ORB's BANKNIFTY-ORB-54000CE: Liquidity has priority over ORB arms.") })
+    }
+
     @Test fun disarmedItBuysNothing() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 15))
         assertTrue(row().today.isEmpty())

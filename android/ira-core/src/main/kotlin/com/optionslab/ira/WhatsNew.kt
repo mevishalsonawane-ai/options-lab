@@ -49,6 +49,11 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-07-liquidity-priority", OCT7, "Liquidity 15+5 goes first on an index",
+            "ORB, ORB Fresh, ORB Sweep and Range Fade no longer stop a Liquidity 15+5 trade: Liquidity enters beside them on paper, " +
+                "and they wait while Liquidity holds the index (Liquidity has priority over ORB arms). Zerodha still needs your PIN " +
+                "or fingerprint, your daily limits and kill switch are unchanged, and two live automatic trades on one index are still refused.",
+            "Home → Dashboard → Strategies card: an arm's row says when it waited for Liquidity, and the evening replay marks those trades"),
         Entry("2026-10-07-profit-lock-stop", OCT7, "The profit lock now moves the stop itself",
             "When ORB, ORB Fresh, ORB Sweep or Range Fade reach a profit-lock rung, their resting stop order is moved up to the lock " +
                 "(never down), so at Zerodha it sells there even with the app closed, and the best price counts every tick or each minute's high. " +

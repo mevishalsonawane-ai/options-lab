@@ -29,10 +29,19 @@ object AutoExposure {
     /**
      * Whether an automatic entry by [source] on [underlying] leaning [direction] may go ([AutoSide.check]): null when it
      * may, else "opposite_position_open: <who> holds <symbol>" or "same_side_already_held: ...". [own]: the asker's own
-     * open positions, fresh from its book.
+     * open positions, fresh from its book. [rank] and [live]: the asker's place in Liquidity's priority over the ORB arms
+     * (Boss's 07 Oct decision, [com.optionslab.engine.orb.ArmPriority]) and whether the entry goes to the broker; every
+     * other trader leaves them as they are.
      */
-    fun check(source: Source, underlying: String, direction: Int, own: List<AutoSide.Held>): String? =
-        AutoSide.check(underlying, direction, own + others(source))
+    fun check(source: Source, underlying: String, direction: Int, own: List<AutoSide.Held>,
+              rank: com.optionslab.engine.orb.ArmPriority.Rank = com.optionslab.engine.orb.ArmPriority.Rank.OTHER,
+              live: Boolean = false): String? =
+        AutoSide.check(underlying, direction, own + others(source), rank, live)
+
+    /** The activity log's word when a Liquidity entry goes beside an ORB arm's position ([AutoSide.priorityNote]); null when none. */
+    fun priorityNote(source: Source, who: String, underlying: String, direction: Int, own: List<AutoSide.Held>,
+                     rank: com.optionslab.engine.orb.ArmPriority.Rank, live: Boolean = false): String? =
+        AutoSide.priorityNote(who, underlying, direction, own + others(source), rank, live)
 
     /** All of them (Boss's own order review warns against these: [AutoSide.warn]). */
     fun all(): List<AutoSide.Held> = others(Source.ORB) + runCatching { OrbArms.exposureHint }.getOrDefault(emptyList()) +

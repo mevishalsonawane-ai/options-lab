@@ -395,6 +395,8 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
                         Text("${a.arm.label}: ${arr.length()} trade(s), ${rs(total)} before charges", style = small)
                         for (i in 0 until arr.length()) arr.getJSONObject(i).let { t ->
                             Text("  ${t.getString("bar")} ${t.getString("right")} ${px(t.getDouble("entry"))} → ${px(t.getDouble("exit"))} ${t.getString("why").replace('_', ' ')}", style = soft)
+                            // Liquidity has priority over the ORB arms: the app would not have taken this one.
+                            t.optString("refused").takeIf { it.isNotEmpty() }?.let { Text("    not taken by the app: $it", style = soft) }
                         }
                     }
                 }

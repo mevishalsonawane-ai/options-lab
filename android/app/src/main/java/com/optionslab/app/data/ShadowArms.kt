@@ -624,7 +624,8 @@ object ShadowArms {
         }
         exposureHint = b.trades.filter { it.open && it.paper }.map {
             com.optionslab.ira.AutoSide.Held.option("${ShadowRules.of(it.variant)?.let { v -> ShadowRules.armName(v) } ?: it.variant} (shadow)",
-                it.symbol, it.underlying, it.right, long = true)
+                it.symbol, it.underlying, it.right, long = true,
+                rank = ShadowRules.of(it.variant)?.let { v -> com.optionslab.engine.orb.ArmPriority.rankOf(v.arms) } ?: com.optionslab.engine.orb.ArmPriority.Rank.OTHER)
         }
         rowsHint = rowsOf(b)
     }
@@ -633,7 +634,8 @@ object ShadowArms {
     private suspend fun enterPaper(v: ShadowRules.Variant, c: Paper.Contract, base: Trade): Trade? {
         if (Strategies.stoppedToday()) return null
         val own = OrbArms.exposureHint + exposureHint
-        if (AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true), own) != null) return null
+        if (AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true), own,
+                com.optionslab.engine.orb.ArmPriority.rankOf(v.arms)) != null) return null
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         if (Guard.check(Guard.paperOrder(c, "BUY", 1, base.entry), snap?.let { Guard.paperAccount(it) }, paper = true).isNotEmpty()) return null
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)

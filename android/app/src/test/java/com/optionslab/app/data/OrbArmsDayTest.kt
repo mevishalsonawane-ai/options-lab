@@ -395,6 +395,24 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals("one paper buy", 1, Paper.state.orders.count { it.action == "BUY" })
     }
 
+    @Test fun theOrbWaitsWhileLiquidityHoldsBankNiftyAndSaysLiquidityHasPriority() {
+        // Boss's 07 Oct decision (research/HUNT_H21.md): Liquidity 15+5 holds a BankNifty call from 09:40; the 10:30 break is
+        // ORB's call, refused while Liquidity holds the index - the old arms keep the guard, Liquidity goes first.
+        OrbArms.testHistoryBars = { emptyList() }
+        val t = day.atTime(9, 40)
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "liquidity5")
+                .put("symbol", "BANKNIFTY-LIQ-53000CE").put("right", "CE").put("qty", 30).put("entry", 250.0)
+                .put("entryTime", t.toString()).put("signalBar", t.minusMinutes(5).toString()).put("level", 53_000.0))))
+        armOrb(LocalTime.of(9, 50))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 40))
+        assertTrue("ORB bought nothing", arm("orb").today.isEmpty())
+        val s = arm("orb").status
+        assertTrue(s, s.startsWith("same_side_already_held: Liquidity 5m holds BANKNIFTY-LIQ-53000CE; Liquidity has priority over ORB arms"))
+        assertTrue(OrbArms.describe(s), OrbArms.describe(s).endsWith("Liquidity has priority over ORB arms."))
+        assertTrue("no paper buy", Paper.state.orders.none { it.action == "BUY" })
+    }
+
     // ---- the one-time switch-off (Boss's choice, 06 Oct) ------------------------------------------------
 
     @Test fun aBookFromBeforeThe6thRunsEveryChangeOnceAndEndsWithTheFourOnPaper() {

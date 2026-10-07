@@ -26,7 +26,9 @@ object ArmsBacktest {
     val ARMS: List<Arm> = OrbRules.ARMS + SweepRules.ARM + RangeFadeRules.ARM
 
     data class Trade(val day: LocalDate, val arm: String, val right: String, val signalBar: String, val entry: Double,
-                     val exit: Double, val why: String, val net: Double)
+                     val exit: Double, val why: String, val net: Double,
+                     /** When it was bought and sold (null on a trade made by hand in a test). */
+                     val entryTime: LocalDateTime? = null, val exitTime: LocalDateTime? = null)
 
     data class Row(val arm: Arm, val trades: Int, val wins: Int, val net: Double, val avg: Double, val t: Double?,
                    val firstHalf: Double, val secondHalf: Double) {
@@ -71,6 +73,22 @@ object ArmsBacktest {
         return ARMS.flatMap { arm -> armDay(s.day, arm, bars, ce, pe, slip, charges) }
     }
 
+    /**
+     * The arms' [trades] as the app takes them: under the one-index guard (one automatic BANKNIFTY position a side, none
+     * against another) with Liquidity's priority ([ArmPriority]): [liquidity] (Liquidity 15+5's trades on the same days) is
+     * never refused because an ORB-family arm holds the index, and an ORB-family trade is refused while Liquidity or another
+     * arm does. A trade without times (made by hand) is kept as it is.
+     */
+    fun guarded(trades: List<Trade>, liquidity: List<ArmPriority.Leg> = emptyList()): ArmPriority.Outcome {
+        val legs = trades.mapNotNull { t ->
+            val at = t.entryTime ?: return@mapNotNull null
+            val arm = ARMS.firstOrNull { it.source == t.arm }
+            ArmPriority.Leg(t.arm, arm?.let { ArmPriority.rankOf(it) } ?: ArmPriority.Rank.OTHER, OrbRules.UNDERLYING,
+                if (t.right == "CE") 1 else -1, at, t.exitTime)
+        }
+        return ArmPriority.guard(legs + liquidity)
+    }
+
     fun fiveMinute(day: LocalDate, ix: Series): List<Bar> {
         val out = ArrayList<Bar>()
         var i = 0
@@ -107,15 +125,15 @@ object ArmsBacktest {
             val t = fill(leg, from, stopOf(arm), targetOf(arm), slip, ProfitLock.targetOf(arm), charges / leg.lot.coerceAtLeast(1))
             if (t == null) { k++; continue }
             val (entry, exit, why, exitMinute) = t
-            out += Trade(day, arm.source, if (dir > 0) "CE" else "PE", "%02d:%02d".format(signal.hour, signal.minute),
-                entry, exit, why, (exit - entry) * leg.lot - charges)
             lastExit = day.atTime(exitMinute / 60, exitMinute % 60)
+            out += Trade(day, arm.source, if (dir > 0) "CE" else "PE", "%02d:%02d".format(signal.hour, signal.minute),
+                entry, exit, why, (exit - entry) * leg.lot - charges, day.atTime(t.from / 60, t.from % 60), lastExit)
             k++
         }
         return out
     }
 
-    private data class Fill(val entry: Double, val exit: Double, val why: String, val minute: Int)
+    private data class Fill(val entry: Double, val exit: Double, val why: String, val minute: Int, val from: Int)
 
     /**
      * Bought at the first minute at or after [from]; exits on the resting stop, the target, or the 15:10 square-off. The
@@ -131,6 +149,7 @@ object ArmsBacktest {
         val squareOff = OrbRules.SQUARE_OFF.hour * 60 + OrbRules.SQUARE_OFF.minute
         if (leg.minutes[i] >= squareOff) return null
         val e = (leg.open?.get(i) ?: leg.close[i]) + slip
+        val bought = leg.minutes[i]
         if (OrbRules.stopTrigger(e) == null) return null                    // at or under 40: the arms refuse the entry
         val base = (e - stop).takeIf { it > 0 }
         var peak = e
@@ -141,13 +160,13 @@ object ArmsBacktest {
             val hi = leg.high?.get(i) ?: leg.close[i]
             val rest = ProfitLock.restingStop(e, base, ladder, peak, costPerUnit)
             if (rest != null) ProfitLock.sellStopFill(rest, op, lo)?.let { px ->
-                return Fill(e, px - slip, if (base != null && rest <= base) "stop" else "profit_lock", m)
+                return Fill(e, px - slip, if (base != null && rest <= base) "stop" else "profit_lock", m, bought)
             }
-            if (hi >= e + target) return Fill(e, e + target - slip, "target", m)
+            if (hi >= e + target) return Fill(e, e + target - slip, "target", m, bought)
             peak = maxOf(peak, hi)
-            if (m >= squareOff) return Fill(e, leg.close[i] - slip, "session_end", m)
+            if (m >= squareOff) return Fill(e, leg.close[i] - slip, "session_end", m, bought)
             i++
         }
-        return Fill(e, leg.close[leg.size - 1] - slip, "last_bar", leg.minutes[leg.size - 1])
+        return Fill(e, leg.close[leg.size - 1] - slip, "last_bar", leg.minutes[leg.size - 1], bought)
     }
 }

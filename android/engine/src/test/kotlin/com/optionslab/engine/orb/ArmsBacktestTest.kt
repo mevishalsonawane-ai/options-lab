@@ -107,6 +107,30 @@ class ArmsBacktestTest {
         assertEquals(150.0, t.entry, 1e-9)
     }
 
+    @Test fun theReplayGivesLiquidityPriorityOverTheOrbArms() {
+        // ORB buys the CE after the 10:05 break and holds it to 15:10; Liquidity 15+5 breaks a level at 11:00 the same way.
+        val ix = series(Right.IX, 0.0, all, { m -> if (m < 605) 53_800.0 + (m % 3) * 100 else 54_200.0 })
+        val pe = series(Right.PE, 54_000.0, all, { 200.0 })
+        val ce = series(Right.CE, 54_000.0, all, { m -> 300.0 + (m % 2) })
+        val orb = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, ce)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals(day.atTime(10, 10), orb.entryTime); assertEquals(day.atTime(15, 10), orb.exitTime)
+        val liq = ArmPriority.Leg("liquidity15", ArmPriority.Rank.LIQUIDITY, "BANKNIFTY", 1, day.atTime(11, 0), day.atTime(11, 40))
+        val g = ArmsBacktest.guarded(listOf(orb), listOf(liq))
+        assertTrue(liq in g.taken, "a Liquidity entry while ORB holds BANKNIFTY is taken")
+        assertTrue(g.taken.any { it.who == "orb" }); assertTrue(g.refused.isEmpty())
+        // ORB's signal while Liquidity holds the index: refused, and the reason says Liquidity has priority.
+        val early = liq.copy(entry = day.atTime(9, 30), exit = day.atTime(10, 30))
+        val h = ArmsBacktest.guarded(listOf(orb), listOf(early))
+        assertEquals(listOf(early), h.taken)
+        assertEquals("orb refused: liquidity15 holds BANKNIFTY (Liquidity has priority over ORB arms)", h.refused.single().words)
+        // Trades made by hand (no times) stay out of the guard; an unknown arm is not one of the ORB family.
+        val hand = ArmsBacktest.Trade(day, "orb", "PE", "10:05", 1.0, 2.0, "target", 1.0)
+        assertTrue(ArmsBacktest.guarded(listOf(hand)).taken.isEmpty())
+        val odd = orb.copy(arm = "mystery", right = "PE")
+        assertEquals(ArmPriority.Rank.OTHER, ArmsBacktest.guarded(listOf(odd)).taken.single().rank)
+        assertEquals(-1, ArmsBacktest.guarded(listOf(odd)).taken.single().side)
+    }
+
     @Test fun aDayWithoutItsIndexOrOptionsIsSkipped() {
         val ix = series(Right.IX, 0.0, all, { 53_900.0 })
         assertNull(ArmsBacktest.day(Session(day, 30, listOf(series(Right.CE, 1.0, all, { 1.0 })))))
