@@ -180,3 +180,51 @@ A rule 'adds risk' when its median planned stop per lot is larger than 30/60's o
 - Fills are the paper account's; a real stop in a fast market can slip more, which hurts the tight point stops and the percentage stops on BANKNIFTY alike. Prices are minute bars: inside a minute the stop is assumed hit before the target.
 - 12 rules were tried; a rule ahead in one set or a few years is expected by chance. The walk-forward (choose on the past, trade the next year) lost to simply keeping 30/60.
 
+
+## Post-hoc: the pre-06-Oct rule (L40), added after the fact at Boss's request
+
+Not one of the pre-registered 12 above: Boss switched Jarvis's own trades back to this rule on 7 Oct and asked for it to be measured the same way (research/jarvis_exits_posthoc.py, same entry sets, option choice, prices, fills, charges and 15:15 exit). L40: stop 15% below the price paid (tick-rounded down, as LiquidityRules), target +40 points, profit-lock ladder on 40 (+10 -> breakeven after charges, +20 -> lock +10, +30 -> lock +20), out by 15:15, and no 35-premium floor (so it also buys the cheap options 30/60 skips; the third row compares on exactly 30/60's trades).
+
+### Real entry sets pooled (pattern ideas + Liquidity + Solo; 1 lot each)
+
+| rule | trades | win | Rs / trade | Rs / year | max DD | worst trade | years + |
+|---|---|---|---|---|---|---|---|
+| C0 30/60 + ladder 60 (35 floor) | 2296 | 35% | +11 | **+3,963** | -63,667 | -3,182 | 3/7 |
+| L40 pre-06-Oct rule (no floor) | 2296 | 40% | -15 | **-5,627** | -82,993 | -5,794 | 3/7 |
+| L40 on 30/60's trades only (premium > 35) | 2296 | 40% | -15 | **-5,627** | -82,993 | -5,794 | 3/7 |
+
+### Per entry set
+
+| set | rule | trades | Rs / trade | Rs / year | max DD | worst trade | years + |
+|---|---|---|---|---|---|---|---|
+| PAT | C0 | 100 | -28 | -609 | -22,712 | -2,341 | 3/5 |
+| PAT | L40 | 100 | -67 | -1,445 | -15,837 | -2,657 | 2/5 |
+| PAT | L40 (same trades) | 100 | -67 | -1,445 | -15,837 | -2,657 | 2/5 |
+| LIQ | C0 | 1573 | -5 | -1,565 | -47,796 | -3,182 | 2/6 |
+| LIQ | L40 | 1573 | -23 | -7,258 | -63,187 | -5,794 | 1/6 |
+| LIQ | L40 (same trades) | 1573 | -23 | -7,258 | -63,187 | -5,794 | 1/6 |
+| SOLO | C0 | 623 | +56 | +5,720 | -43,618 | -2,529 | 4/7 |
+| SOLO | L40 | 623 | +14 | +1,426 | -39,989 | -5,374 | 3/7 |
+| SOLO | L40 (same trades) | 623 | +14 | +1,426 | -39,989 | -5,374 | 3/7 |
+| RND | C0 | 3106 | -77 | -38,851 | -302,100 | -4,314 | 2/7 |
+| RND | L40 | 3107 | -79 | -39,852 | -263,503 | -6,042 | 0/7 |
+| RND | L40 (same trades) | 3106 | -79 | -39,973 | -264,250 | -6,042 | 0/7 |
+
+### Net by year, real sets pooled (Rs)
+
+| rule | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|---|
+| C0 | -1,653 | +10,827 | +37,310 | -981 | -11,720 | +21,376 | -30,977 |
+| L40 | -2,008 | +8,015 | +3,527 | -20,060 | -19,355 | +37,321 | -41,779 |
+| L40 (same trades) | -2,008 | +8,015 | +3,527 | -20,060 | -19,355 | +37,321 | -41,779 |
+
+### Risk per trade (planned stop, median per lot by index; all sets)
+
+| rule | NIFTY pts / Rs | BANKNIFTY pts / Rs | FINNIFTY pts / Rs | median premium NIFTY / BANKNIFTY / FINNIFTY |
+|---|---|---|---|---|
+| C0 | 30 / 1,502 | 30 / 751 | 30 / 1,202 | Rs 104 / Rs 382 / Rs 154 |
+| L40 | 16 / 851 | 57 / 1,304 | 23 / 937 | Rs 104 / Rs 382 / Rs 154 |
+
+Reading it: L40 makes Rs -15 a trade on the real sets against Rs +11 for 30/60 (drawdown Rs -82,993 vs Rs -63,667). Against 30/60's 30-point stop it risks MORE per lot on BANKNIFTY (median), less elsewhere - by Boss's rule that part adds risk. Post-hoc and a single rule: it was not chosen by these results, but it was not pre-registered either.
+
+Note: dropping the 35-premium floor changes nothing on the real sets: no ATM next-expiry option at these entries was priced at 35 or less once the 50-lot liquidity check had run, so the "no floor" and "same trades" rows are identical; in the random set it adds one trade.
