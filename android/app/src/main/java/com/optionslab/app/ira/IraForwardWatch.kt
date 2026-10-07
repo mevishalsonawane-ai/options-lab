@@ -64,6 +64,18 @@ internal object IraForwardWatch {
         return ForwardWatch.summary(checks, soloBar())
     }
 
+    /**
+     * One arm named ("liquidity vs backtest", "is hero drifting", [ForwardWatch.armAsked]): that arm's line and what it means,
+     * Solo's with its own switch-off line, Hero's with its drawdown against the backtest's worst ([ForwardWatch.armAnswer]).
+     * Reads only.
+     */
+    suspend fun answer(arm: ForwardCheck.Expectation): String {
+        val checks = kotlinx.coroutines.withTimeoutOrNull(WATCH_MS) { checks() }
+            ?: return "I could not read ${ForwardWatch.name(arm)}'s record in time just now, Boss - ask me again in a moment."
+        val r = checks.firstOrNull { it.first.key == arm.key }?.second
+        return ForwardWatch.armAnswer(arm, r, if (arm.key == ForwardCheck.SOLO.key) soloBar() else null)
+    }
+
     private fun told(e: ForwardCheck.Expectation): ForwardWatch.Told? =
         runCatching { ForwardWatch.Told.decode(com.optionslab.app.security.SecurePrefs.getString(ForwardWatch.key(e))) }.getOrNull()
 

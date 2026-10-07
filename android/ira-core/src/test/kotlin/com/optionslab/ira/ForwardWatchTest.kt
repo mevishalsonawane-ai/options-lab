@@ -217,4 +217,65 @@ class ForwardWatchTest {
             "is nifty drifting", "switch off the arm that is drifting", "stop the drifting arm", "what is drift", "is the market drifting"))
             assertFalse(ForwardWatch.asked(s), s)
     }
+
+    // ---- one arm asked ----------------------------------------------------------------------------------------------
+
+    @Test fun oneArmNamedAgainstItsBacktestIsThatArm() {
+        val want = mapOf(
+            ForwardCheck.LIQUIDITY to listOf("liquidity live vs backtest", "how is liquidity doing vs backtest", "liquidity vs backtest",
+                "is liquidity in line with the backtest", "Liquidity 15+5 vs the backtest", "how's liquidity doing against the research",
+                "jarvis liquidity vs backtest?", "live vs backtest for liquidity", "is the liquidity arm drifting", "liquidity forward test status",
+                "forward test for liquidity", "liquidity backtest ke hisaab se kaisa hai"),
+            ForwardCheck.SOLO to listOf("solo vs backtest", "is solo drifting", "how is solo doing vs the backtest", "is solo in line with the backtest",
+                "solo midday vs backtest", "kya solo drift kar raha hai", "drift check on solo"),
+            ForwardCheck.HERO to listOf("hero vs backtest", "is hero drifting", "hero forward test", "how is the hero forward test going",
+                "hero expiry vs backtest", "is hero drifting from the backtest", "hero drift ho raha hai kya"),
+        )
+        for ((e, said) in want) for (s in said) {
+            assertEquals(e, ForwardWatch.armAsked(s), s)
+            assertTrue(ForwardWatch.notABacktest(s), s)
+            assertFalse(ForwardWatch.asked(s), s)
+        }
+        // Solo's forward test is Solo's own status; two arms, another arm, another day, an act, the arm's other questions, a
+        // pattern's backtest: never this.
+        for (s in listOf("solo forward test", "solo forward test status", "liquidity and solo vs backtest", "is orb drifting", "is nifty drifting",
+            "how did liquidity do last week vs backtest", "switch off liquidity if it is drifting", "stop hero", "is liquidity on track",
+            "how is solo doing", "how is liquidity doing", "hero record", "liquidity record", "backtest liquidity", "run a backtest of liquidity",
+            "backtest a hammer on banknifty", "backtest this pattern", "run a backtest of inside bars", "what is a liquidity pool",
+            "how are my shadows vs backtest"))
+            assertNull(ForwardWatch.armAsked(s), s)
+        for (s in listOf("backtest a hammer on banknifty", "backtest this pattern", "run a backtest of inside bars", "backtest orb",
+            "how are my shadows vs backtest", "backtest my strategy"))
+            assertFalse(ForwardWatch.notABacktest(s), s)
+        // The arms at once still are.
+        assertTrue(ForwardWatch.notABacktest("live vs backtest"))
+        assertTrue(ForwardWatch.notABacktest("how are my arms vs backtest"))
+    }
+
+    @Test fun oneArmsAnswerIsItsLineAndWhatItMeans() {
+        assertEquals("Liquidity 15+5: in line (₹300/trade vs expected ₹228 ± ₹923). Within what the backtest allows for 20 trades - nothing to " +
+            "do; nothing has been changed.", ForwardWatch.armAnswer(ForwardCheck.LIQUIDITY, liq(20 to 300.0)))
+        // Solo: with its own switch-off line (from its baseline), or without when it could not be read.
+        val s = ForwardWatch.armAnswer(ForwardCheck.SOLO, solo(5 to 100.0), ForwardWatch.SoloBar(-1_000.0))
+        assertTrue(s.startsWith("Solo (midday): too few trades (<20) (₹100/trade vs expected ₹25 ± ₹2,861). Too few trades to judge yet"), s)
+        assertTrue(s.endsWith("Solo's own switch-off line: ₹1,000 below its best now, ₹24,000 from the −₹25,000 line where Solo switches " +
+            "itself off (its own rule, untouched)."), s)
+        assertFalse(ForwardWatch.armAnswer(ForwardCheck.SOLO, solo(5 to 100.0)).contains("switch-off"))
+        // A Solo bar never reaches another arm's answer.
+        assertFalse(ForwardWatch.armAnswer(ForwardCheck.LIQUIDITY, liq(5 to 100.0), ForwardWatch.SoloBar(-1_000.0)).contains("switch-off"))
+        // Hero: a lottery, judged by its drawdown against the backtest's worst.
+        val hero = ForwardWatch.armAnswer(ForwardCheck.HERO, check(ForwardCheck.HERO, List(9) { -1_000.0 }))
+        assertTrue(hero.startsWith("Hero (expiry): too few trades"), hero)
+        assertTrue(hero.endsWith("Hero is a lottery - a few big wins, many small losses - so it is judged by its drawdown against the backtest's " +
+            "worst (−₹53,035), not its average: −₹9,000 now, ₹44,035 from it."), hero)
+        val deep = ForwardWatch.armAnswer(ForwardCheck.HERO, check(ForwardCheck.HERO, List(9) { -6_000.0 }))
+        assertTrue(deep.contains("deeper than the backtest's worst") && deep.endsWith("−₹54,000 now, already past it."), deep)
+        assertEquals("Hero is a lottery - a few big wins, many small losses - so it is judged by its drawdown against the backtest's worst " +
+            "(−₹53,035), not its average.", ForwardWatch.heroWords(check(ForwardCheck.HERO, emptyList())))
+        // Not read: said so, never guessed.
+        assertEquals("Hero (expiry): its record could not be read just now, Boss - ask me again in a moment.", ForwardWatch.armAnswer(ForwardCheck.HERO, null))
+        // Words only.
+        for (a in listOf(ForwardWatch.armAnswer(ForwardCheck.LIQUIDITY, liq(30 to -600.0)), deep))
+            assertTrue(a.contains("nothing has been changed"), a)
+    }
 }

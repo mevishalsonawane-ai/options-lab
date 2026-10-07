@@ -21,7 +21,9 @@ import com.optionslab.engine.orb.SoloMidday
  * what changed and what it means in plain words - and for Solo how far it is from its own −₹25,000 switch-off line
  * ([SoloBar], [SoloMidday.FORWARD_MAX_DRAWDOWN]). Words only: nothing here switches an arm, changes its lots or its rules
  * (Solo's own switch-off stays Solo's own). Asked: "is anything drifting", "how are my arms vs backtest", "forward test
- * status" ([asked]) - one line an arm ([summary], the card's own [ForwardCheck.line]). Pure: no clock, no storage.
+ * status" ([asked]) - one line an arm ([summary], the card's own [ForwardCheck.line]); one arm named ("liquidity vs
+ * backtest", "is hero drifting", [armAsked]) - that arm's line, what it means, Solo's switch-off line or Hero's drawdown
+ * ([armAnswer]). Pure: no clock, no storage.
  */
 object ForwardWatch {
     /** The arms watched, in the order told and summed up. */
@@ -254,5 +256,87 @@ object ForwardWatch {
         val t = Spaced.joined(text)
         if (NOT.containsMatchIn(t)) return false
         return ASKED.containsMatchIn(t)
+    }
+
+    // ---- one arm asked ----------------------------------------------------------------------------------------------
+
+    /** An arm as named: "liquidity" ("liquidity 15+5"), "solo" ("solo midday"), "hero" ("hero expiry"); "the ... arm". */
+    private const val ARM = "(the |my )?(liquidity( 15 5| 15 plus 5| fifteen plus five)?|solo( midday)?|hero( expiry)?)( arm| bot| strategy| algo)?"
+    private val ONE_ARM = Regex(
+        // "liquidity live vs backtest", "how is liquidity doing vs backtest", "liquidity vs backtest", "solo vs the backtest",
+        // "hero against the research", "how is hero doing compared to the backtest"
+        "^ $LEAD(how (is|s) |hows |how s |is |show |show me |whats |what is |what s )?$ARM( doing| holding up| performing| running| looking)?" +
+            "( live| paper| forward)? $VS $BT( status| check| summary| update)?$TAIL|" +
+        // "live vs backtest for liquidity", "live vs backtest of hero"
+        "^ $LEAD(show |show me |whats |what is |what s )?(the )?(live|paper|forward) $VS $BT( status| check| summary| update)? (for|of|on) $ARM$TAIL|" +
+        // "is liquidity in line with the backtest", "is hero keeping up with the research"
+        "^ $LEAD(is|are) $ARM (in line|on track|keeping up|holding up) with $BT$TAIL|" +
+        // "is solo drifting", "is hero drifting from the backtest", "liquidity drifting", "any drift in liquidity", "drift check on hero"
+        "^ $LEAD(is )?$ARM drifting( (from|away from) $BT)?$TAIL|" +
+        "^ $LEAD(any drift|drift check|drift status|drift report) (in|on|for|of) $ARM$TAIL|" +
+        // Hinglish: "kya solo drift kar raha hai", "hero drift ho raha hai kya", "liquidity backtest ke hisaab se kaisa hai"
+        "^ $LEAD(kya )?$ARM drift (kar|ho) (raha|rahi) (hai|he)( kya)?$TAIL|" +
+        "^ $LEAD$ARM backtest ke (hisaab|hisab|mukable|mukabale) (se |me |mein )?(kaise|kaisa|kaisi) (hai|chal raha hai|chal rahi hai)$TAIL"
+    )
+    /**
+     * "Hero forward test", "liquidity forward test status", "how is the hero forward test going", "forward test for liquidity".
+     * (Solo's forward test is Solo's own: its status says it, x of 60 - so not taken here.)
+     */
+    private val ONE_FORWARD = Regex(
+        "^ $LEAD(whats |what is |what s |show |show me |how is |hows |how s )?(the )?$ARM( s)? forward ?tests?( watch)?( (status|update|summary|check|report))?( (going|doing|looking))?$TAIL|" +
+        "^ $LEAD(whats |what is |what s |show |show me )?(the )?forward ?tests?( (status|update|summary|check|report))? (for|of|on) $ARM$TAIL"
+    )
+    /** Never this: another arm or a shadow named, the index, another day, an act, more than one arm. */
+    private val ONE_NOT = Regex(" (orb|fade|sweep|momentum|shadows?|retired|pine|nifty|banknifty|finnifty|sensex|gold|" +
+        "yesterday|last|week|month|buy|sell|stop|start|switch|turn|disarm|pause|close|exit|run|make|create|build|write|backtest it|test this|" +
+        "and|or|all|arms|bots) ")
+    private val NAMED = listOf(
+        ForwardCheck.LIQUIDITY to Regex(" liquidity "), ForwardCheck.SOLO to Regex(" solo "), ForwardCheck.HERO to Regex(" hero "))
+
+    /**
+     * One arm asked against its backtest - "liquidity live vs backtest", "how is liquidity doing vs backtest", "is liquidity in
+     * line with the backtest", "solo vs backtest", "is hero drifting", "hero forward test": that arm ([armAnswer]); null when
+     * not (none or two named, another arm, another day, an act - and "solo forward test", Solo's own status).
+     */
+    fun armAsked(text: String): ForwardCheck.Expectation? {
+        val t = Spaced.joined(text)
+        val named = NAMED.filter { it.second.containsMatchIn(t) }
+        if (named.size != 1 || ONE_NOT.containsMatchIn(t)) return null
+        val e = named[0].first
+        if (ONE_ARM.containsMatchIn(t)) return e
+        if (e.key != ForwardCheck.SOLO.key && ONE_FORWARD.containsMatchIn(t)) return e
+        return null
+    }
+
+    /**
+     * Not a pattern's backtest to run, though it says "backtest": the arms against theirs ([asked]) or one of them
+     * ([armAsked]). The pattern-backtest lab leaves these to this answer (and never runs a backtest for them).
+     */
+    fun notABacktest(text: String): Boolean = armAsked(text) != null || asked(text)
+
+    /**
+     * One arm's answer: "<arm>: <the card's own line>." ([ForwardCheck.line]) and what it means, then for Solo how far it is
+     * from its own −₹25,000 switch-off line ([solo], [soloWords]), for Hero what its drawdown is judged against ([heroWords]);
+     * [r] null: its record could not be read. Reads only - nothing is switched, sized or changed.
+     */
+    fun armAnswer(e: ForwardCheck.Expectation, r: ForwardCheck.Result?, solo: SoloBar? = null): String {
+        if (r == null) return "${name(e)}: its record could not be read just now, Boss - ask me again in a moment."
+        val line = "${name(e)}: ${ForwardCheck.line(r).removePrefix("Live vs backtest: ").removeSuffix(".")}."
+        val more = when (e.key) {
+            ForwardCheck.SOLO.key -> solo?.let { soloWords(it) }
+            ForwardCheck.HERO.key -> heroWords(r)
+            else -> null
+        }
+        return listOfNotNull(line, meaning(r, category(r)), more).joinToString(" ")
+    }
+
+    /** Hero's framing: a lottery, judged by how deep its drawdown is against the backtest's worst - and how far from it now. */
+    fun heroWords(r: ForwardCheck.Result): String {
+        val worst = rs(r.expectation.maxDrawdown)
+        val lottery = "Hero is a lottery - a few big wins, many small losses - so it is judged by its drawdown against the backtest's worst ($worst), not its average"
+        if (r.trades == 0) return "$lottery."
+        val room = r.drawdown - r.expectation.maxDrawdown
+        val where = if (room <= 0) "already past it" else "${rs(room)} from it"
+        return "$lottery: ${rs(r.drawdown)} now, $where."
     }
 }

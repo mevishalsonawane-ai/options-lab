@@ -1668,7 +1668,7 @@ object IraHub {
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
@@ -2354,7 +2354,9 @@ object IraHub {
             val loss = runCatching { IraCoach.recentLoss() }.getOrNull() != null
             runCatching { IraTools.noteHabit(q, loss) }.getOrNull()?.let { p -> offerRoutine(p) }
         }
-        if (Topic.BACKTEST in parsed.topics) {
+        // An arm against its backtest ("liquidity vs backtest", "is hero drifting", "live vs backtest") is the forward-test
+        // watch's (above), never a pattern's backtest to run: the lab leaves it ([com.optionslab.ira.ForwardWatch.notABacktest]).
+        if (Topic.BACKTEST in parsed.topics && (GOLD_ONLY_TALK || !runCatching { com.optionslab.ira.ForwardWatch.notABacktest(q) }.getOrDefault(false))) {
             // IraGoldAlgo: no NSE backtests or strategies (Jarvis only talks there).
             if (GOLD_ONLY_TALK) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
             backtestAsked(q, parsed); return
@@ -3394,15 +3396,22 @@ object IraHub {
         // "Is anything drifting", "how are my arms vs backtest", "forward test status", "live vs backtest", "kya koi arm drift
         // kar raha hai" ([com.optionslab.ira.ForwardWatch], [IraForwardWatch]): one line an arm - Liquidity 15+5, Solo (midday),
         // Hero - its forward paper trades against its backtest (the Live vs backtest card's own line), Solo's with its own
-        // switch-off line. An arm named keeps its own answer (Liquidity's record, Solo, Hero). Boss's paper records, so never on
-        // a locked phone; reads only - nothing is switched, sized or changed. (Not in IraGoldAlgo: no such arms.)
+        // switch-off line. One arm named against its backtest ("liquidity live vs backtest", "is liquidity in line with the
+        // backtest", "solo vs backtest", "is hero drifting", "hero forward test" - [com.optionslab.ira.ForwardWatch.armAsked]):
+        // that arm's line and what it means, Solo's with its own switch-off line, Hero's with its drawdown against the backtest's
+        // worst. Its own questions keep their answers ("is liquidity on track" Liquidity's record, "how is solo doing" and "solo
+        // forward test" Solo's status). Boss's paper records, so never on a locked phone; reads only - nothing is switched, sized
+        // or changed. (Not in IraGoldAlgo: no such arms.)
+        val forwardArm = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.ForwardWatch.armAsked(q) }.getOrNull() else null
         val forwardAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
-            runCatching { com.optionslab.ira.ForwardWatch.asked(q) }.getOrDefault(false) else false
+            runCatching { forwardArm != null || com.optionslab.ira.ForwardWatch.asked(q) }.getOrDefault(false) else false
         if (forwardAsk) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply(com.optionslab.ira.ForwardWatch.LOCKED); return true }
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { IraForwardWatch.answer() }.getOrElse { "I could not read the arms' records just now, Boss." })
+                reply(runCatching { if (forwardArm != null) IraForwardWatch.answer(forwardArm) else IraForwardWatch.answer() }
+                    .getOrElse { "I could not read the arms' records just now, Boss." })
             }
             return true
         }

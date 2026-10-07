@@ -3103,7 +3103,7 @@ class CollisionTest {
         assertEquals("SwitchOff", audit.feature("should i switch off liquidity"))
         assertEquals("SwitchOff", audit.feature("should i turn off liquidity 15+5"))
         assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
-        assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
+        assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
         for (s in listOf("how did my bots do this week", "how did nifty do this week", "how did my week go", "how was the month", "what is a liquidity pool"))
             assertTrue(audit.feature(s) != "LiquidityRecord", "$s: ${audit.feature(s)}")
     }
@@ -3180,7 +3180,7 @@ class CollisionTest {
         assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
         assertEquals("SwitchOff", audit.feature("should i switch off liquidity"))
         assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
-        assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
+        assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
         assertEquals("Thinking", audit.feature("why didn't you take that trade"))
         assertEquals("Thinking", audit.feature("trade kyun nahi liya"))
         assertEquals("Thinking", audit.feature("why didn't solo take that trade"))
@@ -3275,7 +3275,7 @@ class CollisionTest {
             "hero lots" to "Missed", "set hero to 2 lots" to "Missed", "how many lots does hero buy" to "Honest",
             "hero budget" to "Account:EVENTS", "what is hero's budget" to "Account:EVENTS",
             "what is hero" to "Missed", "explain the hero arm" to "Account:STRATEGIES", "hero record" to "Missed",
-            "hero paper record" to "Missed", "hero forward test" to "Missed", "hero net so far" to "Account:HISTORY",
+            "hero paper record" to "Missed", "hero forward test" to "ForwardWatch", "hero net so far" to "Account:HISTORY",
             "how much has hero made" to "Account:PNL", "hero trades today" to "Account:ORDERS", "why did hero exit" to "Why",
             "what are hero's exits" to "Missed", "hero ki exits kya hai" to "Missed", "hero expiry" to "Missed",
             "why didn't hero trade yesterday" to "Account:HISTORY", "what did hero do last week" to "Account:HISTORY",
@@ -3418,15 +3418,17 @@ class CollisionTest {
             assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
             assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
         }
-        // One arm named: its own answers, as before (Liquidity's record and "on track", Solo's status and record, Hero's
-        // words); the bots' health; a backtest to run; the shadows; the weekly review.
-        assertEquals("Backtest", audit.feature("liquidity live vs backtest"))
-        assertEquals("Backtest", audit.feature("how is liquidity doing vs backtest"))
+        // One arm named against its backtest: that arm's answer here (before, "liquidity live vs backtest" and "how is liquidity
+        // doing vs backtest" were a pattern's backtest to run, "hero forward test" nothing). Its other questions keep their own
+        // answers (Liquidity's record and "on track", Solo's status - its forward test too - and record, Hero's words); the
+        // bots' health; a backtest to run; the shadows; the weekly review.
+        assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
+        assertEquals("ForwardWatch", audit.feature("how is liquidity doing vs backtest"))
         assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
         assertEquals("Solo", audit.feature("solo forward test"))
         assertEquals("Solo", audit.feature("is solo on track"))
         assertEquals("Solo", audit.feature("solo record"))
-        assertEquals("Missed", audit.feature("hero forward test"))
+        assertEquals("ForwardWatch", audit.feature("hero forward test"))
         assertEquals("Missed", audit.feature("is hero on track"))
         assertEquals("Account:BOTS", audit.feature("how are my bots doing"))
         assertEquals("Account:BOTS", audit.feature("how are my arms doing"))
@@ -3442,7 +3444,40 @@ class CollisionTest {
         // Two questions: each its own.
         assertEquals("ForwardWatch & Account:PNL", audit.feature("forward test status and what is my pnl"))
         for (s in listOf("switch off the arm that is drifting", "stop the drifting arm", "how did my arms do last week vs backtest", "what is drift",
-            "liquidity forward test status", "is solo drifting", "is hero drifting"))
+            "switch off liquidity if it is drifting", "how did liquidity do last week vs backtest", "is orb drifting", "liquidity and solo vs backtest"))
             assertTrue(audit.feature(s) != "ForwardWatch", "$s: ${audit.feature(s)}")
+    }
+
+    @Test fun oneArmAgainstItsBacktestIsTheForwardWatchsNeverAPatternBacktest() {
+        // Before: a pattern's backtest to run ("... vs backtest", "is liquidity in line with the backtest"), Solo's status
+        // ("solo vs backtest", "is solo drifting"), nothing ("hero vs backtest", "is hero drifting"). Now that arm against its
+        // research - reads only, never an order, a command or a plan.
+        val arms = listOf(
+            "liquidity live vs backtest" to ForwardCheck.LIQUIDITY, "how is liquidity doing vs backtest" to ForwardCheck.LIQUIDITY,
+            "liquidity vs backtest" to ForwardCheck.LIQUIDITY, "is liquidity in line with the backtest" to ForwardCheck.LIQUIDITY,
+            "liquidity 15+5 vs the backtest" to ForwardCheck.LIQUIDITY, "is liquidity drifting" to ForwardCheck.LIQUIDITY,
+            "liquidity forward test status" to ForwardCheck.LIQUIDITY,
+            "solo vs backtest" to ForwardCheck.SOLO, "is solo drifting" to ForwardCheck.SOLO, "how is solo doing against the backtest" to ForwardCheck.SOLO,
+            "hero vs backtest" to ForwardCheck.HERO, "is hero drifting" to ForwardCheck.HERO, "hero forward test" to ForwardCheck.HERO,
+            "kya hero drift kar raha hai" to ForwardCheck.HERO)
+        for ((s, e) in arms) {
+            assertEquals("ForwardWatch", audit.feature(s), s)
+            assertEquals(e, ForwardWatch.armAsked(s), s)
+            assertTrue(ForwardWatch.notABacktest(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // A pattern's backtest to run stays the lab's.
+        for (s in listOf("backtest a hammer on banknifty", "backtest this pattern", "run a backtest of inside bars", "backtest the hammer on nifty",
+            "backtest orb", "backtest my strategy", "how are my shadows vs backtest")) {
+            assertEquals("Backtest", audit.feature(s), s)
+            assertTrue(!ForwardWatch.notABacktest(s), s)
+        }
+        // The arms' own questions keep their answers.
+        assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
+        assertEquals("Solo", audit.feature("how is solo doing"))
+        assertEquals("Solo", audit.feature("solo forward test"))
+        assertEquals("ForwardWatch", audit.feature("live vs backtest"))
     }
 }
