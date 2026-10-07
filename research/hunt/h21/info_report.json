@@ -1,0 +1,98 @@
+{
+ "pre|R0 app today, no guard": {
+  "n": 10917,
+  "gross_day": -411.6,
+  "rs_day": -1413.3,
+  "maxdd": -1413012,
+  "with_liq_rs_day": -726.4,
+  "liq_bn_lost": 198,
+  "liq_bn_lost_net": 8803
+ },
+ "pre|R0 app today + guard": {
+  "n": 7125,
+  "gross_day": -210.3,
+  "rs_day": -884.4,
+  "maxdd": -881019,
+  "with_liq_rs_day": -726.4,
+  "liq_bn_lost": 198,
+  "liq_bn_lost_net": 8803
+ },
+ "pre|V01 fixed lock + guard": {
+  "n": 8521,
+  "gross_day": -58.1,
+  "rs_day": -892.9,
+  "maxdd": -897146,
+  "with_liq_rs_day": -704.7,
+  "liq_bn_lost": 169,
+  "liq_bn_lost_net": 13658
+ },
+ "pre|V02 max1 + guard": {
+  "n": 2637,
+  "gross_day": -112.3,
+  "rs_day": -340.0,
+  "maxdd": -342139,
+  "with_liq_rs_day": -202.2,
+  "liq_bn_lost": 139,
+  "liq_bn_lost_net": 16634
+ },
+ "pre|V08 PKG + guard": {
+  "n": 3920,
+  "gross_day": -132.3,
+  "rs_day": -475.8,
+  "maxdd": -479130,
+  "with_liq_rs_day": -339.9,
+  "liq_bn_lost": 161,
+  "liq_bn_lost_net": 13255
+ },
+ "pre|Liquidity alone": {
+  "rs_day": 156.8
+ },
+ "hold|R0 app today, no guard": {
+  "n": 2701,
+  "gross_day": -175.5,
+  "rs_day": -2209.9,
+  "maxdd": -546111,
+  "with_liq_rs_day": -1428.1,
+  "liq_bn_lost": 68,
+  "liq_bn_lost_net": 7677
+ },
+ "hold|R0 app today + guard": {
+  "n": 1913,
+  "gross_day": -273.5,
+  "rs_day": -1789.8,
+  "maxdd": -445605,
+  "with_liq_rs_day": -1428.1,
+  "liq_bn_lost": 68,
+  "liq_bn_lost_net": 7677
+ },
+ "hold|V01 fixed lock + guard": {
+  "n": 2259,
+  "gross_day": 176.5,
+  "rs_day": -1668.3,
+  "maxdd": -413025,
+  "with_liq_rs_day": -1385.8,
+  "liq_bn_lost": 57,
+  "liq_bn_lost_net": 11111
+ },
+ "hold|V02 max1 + guard": {
+  "n": 678,
+  "gross_day": -83.0,
+  "rs_day": -530.3,
+  "maxdd": -130452,
+  "with_liq_rs_day": -252.7,
+  "liq_bn_lost": 49,
+  "liq_bn_lost_net": 13550
+ },
+ "hold|V08 PKG + guard": {
+  "n": 1042,
+  "gross_day": -17.4,
+  "rs_day": -722.8,
+  "maxdd": -177617,
+  "with_liq_rs_day": -381.2,
+  "liq_bn_lost": 54,
+  "liq_bn_lost_net": 11200
+ },
+ "hold|Liquidity alone": {
+  "rs_day": 347.9
+ }
+}

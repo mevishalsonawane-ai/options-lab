@@ -1,0 +1,1517 @@
+{
+ "pre": {
+  "orb": {
+   "n": 351,
+   "gross": 19349,
+   "charges": 25371,
+   "net": -12942,
+   "per_trade": -36.9,
+   "win": 39.3,
+   "t": -1.09,
+   "rs_day": -13.0,
+   "gross_day": 19.4,
+   "maxdd": -21285,
+   "worst_day": -1572,
+   "worst_month": -3155,
+   "months_neg": "33/50",
+   "sharpe": -0.55,
+   "years": {
+    "2021": -2895,
+    "2022": -8077,
+    "2023": -5428,
+    "2024": 4240,
+    "2025": -781
+   }
+  },
+  "orb_fresh": {
+   "n": 351,
+   "gross": 19349,
+   "charges": 25371,
+   "net": -12942,
+   "per_trade": -36.9,
+   "win": 39.3,
+   "t": -1.09,
+   "rs_day": -13.0,
+   "gross_day": 19.4,
+   "maxdd": -21285,
+   "worst_day": -1572,
+   "worst_month": -3155,
+   "months_neg": "33/50",
+   "sharpe": -0.55,
+   "years": {
+    "2021": -2895,
+    "2022": -8077,
+    "2023": -5428,
+    "2024": 4240,
+    "2025": -781
+   }
+  },
+  "orb_sweep": {
+   "n": 267,
+   "gross": -19077,
+   "charges": 16662,
+   "net": -39056,
+   "per_trade": -146.3,
+   "win": 45.3,
+   "t": -2.73,
+   "rs_day": -39.2,
+   "gross_day": -19.2,
+   "maxdd": -39376,
+   "worst_day": -2969,
+   "worst_month": -3904,
+   "months_neg": "33/50",
+   "sharpe": -1.32,
+   "years": {
+    "2021": -10795,
+    "2022": -10735,
+    "2023": -10346,
+    "2024": -5867,
+    "2025": -1312
+   }
+  },
+  "range_fade": {
+   "n": 298,
+   "gross": -33410,
+   "charges": 18791,
+   "net": -56015,
+   "per_trade": -188.0,
+   "win": 43.0,
+   "t": -4.23,
+   "rs_day": -56.2,
+   "gross_day": -33.5,
+   "maxdd": -60204,
+   "worst_day": -2607,
+   "worst_month": -6656,
+   "months_neg": "34/50",
+   "sharpe": -2.05,
+   "years": {
+    "2021": -3976,
+    "2022": -20700,
+    "2023": -13146,
+    "2024": -10967,
+    "2025": -7226
+   }
+  },
+  "combined": {
+   "n": 1009,
+   "gross": -43352,
+   "charges": 68475,
+   "net": -129320,
+   "per_trade": -128.2,
+   "win": 31.9,
+   "t": -6.12,
+   "rs_day": -129.8,
+   "gross_day": -43.5,
+   "maxdd": -130850,
+   "worst_day": -3191,
+   "worst_month": -10610,
+   "months_neg": "44/50",
+   "sharpe": -3.04,
+   "years": {
+    "2021": -25310,
+    "2022": -34631,
+    "2023": -38310,
+    "2024": -18844,
+    "2025": -12225
+   }
+  },
+  "ref:R0_app_today": {
+   "orb": {
+    "n": 6309,
+    "gross": -85401,
+    "charges": 470777,
+    "net": -704051,
+    "per_trade": -111.6,
+    "win": 38.1,
+    "t": -11.43,
+    "rs_day": -706.9,
+    "gross_day": -85.7,
+    "maxdd": -705418,
+    "worst_day": -9777,
+    "worst_month": -36143,
+    "months_neg": "47/50",
+    "sharpe": -5.74,
+    "years": {
+     "2021": -82770,
+     "2022": -173070,
+     "2023": -95649,
+     "2024": -165658,
+     "2025": -186903
+    }
+   },
+   "orb_fresh": {
+    "n": 1898,
+    "gross": -66006,
+    "charges": 135931,
+    "net": -237046,
+    "per_trade": -124.9,
+    "win": 37.9,
+    "t": -6.85,
+    "rs_day": -238.0,
+    "gross_day": -66.3,
+    "maxdd": -246430,
+    "worst_day": -4738,
+    "worst_month": -25494,
+    "months_neg": "44/50",
+    "sharpe": -3.34,
+    "years": {
+     "2021": -22802,
+     "2022": -63972,
+     "2023": -42824,
+     "2024": -42239,
+     "2025": -65209
+    }
+   },
+   "orb_sweep": {
+    "n": 1295,
+    "gross": -129141,
+    "charges": 82431,
+    "net": -228257,
+    "per_trade": -176.3,
+    "win": 30.6,
+    "t": -6.77,
+    "rs_day": -229.2,
+    "gross_day": -129.7,
+    "maxdd": -230742,
+    "worst_day": -3191,
+    "worst_month": -16965,
+    "months_neg": "41/50",
+    "sharpe": -3.38,
+    "years": {
+     "2021": -19715,
+     "2022": -64134,
+     "2023": -49324,
+     "2024": -17736,
+     "2025": -77348
+    }
+   },
+   "range_fade": {
+    "n": 1415,
+    "gross": -129418,
+    "charges": 90514,
+    "net": -238251,
+    "per_trade": -168.4,
+    "win": 35.9,
+    "t": -9.17,
+    "rs_day": -239.2,
+    "gross_day": -129.9,
+    "maxdd": -241188,
+    "worst_day": -3104,
+    "worst_month": -17455,
+    "months_neg": "45/50",
+    "sharpe": -4.55,
+    "years": {
+     "2021": -13429,
+     "2022": -66015,
+     "2023": -45200,
+     "2024": -32398,
+     "2025": -81209
+    }
+   },
+   "combined": {
+    "n": 10917,
+    "gross": -409966,
+    "charges": 779653,
+    "net": -1407604,
+    "per_trade": -128.9,
+    "win": 36.9,
+    "t": -17.06,
+    "rs_day": -1413.3,
+    "gross_day": -411.6,
+    "maxdd": -1413012,
+    "worst_day": -13852,
+    "worst_month": -61605,
+    "months_neg": "50/50",
+    "sharpe": -7.36,
+    "years": {
+     "2021": -138716,
+     "2022": -367191,
+     "2023": -232996,
+     "2024": -258031,
+     "2025": -410669
+    }
+   }
+  },
+  "ref:V01_fixed_lock_only": {
+   "orb": {
+    "n": 7764,
+    "gross": 59539,
+    "charges": 577740,
+    "net": -723845,
+    "per_trade": -93.2,
+    "win": 36.7,
+    "t": -13.76,
+    "rs_day": -726.8,
+    "gross_day": 59.8,
+    "maxdd": -730305,
+    "worst_day": -8484,
+    "worst_month": -36265,
+    "months_neg": "49/50",
+    "sharpe": -6.74,
+    "years": {
+     "2021": -70742,
+     "2022": -178369,
+     "2023": -104811,
+     "2024": -170377,
+     "2025": -199546
+    }
+   },
+   "orb_fresh": {
+    "n": 1978,
+    "gross": -25205,
+    "charges": 141475,
+    "net": -208807,
+    "per_trade": -105.6,
+    "win": 36.8,
+    "t": -7.73,
+    "rs_day": -209.6,
+    "gross_day": -25.3,
+    "maxdd": -213756,
+    "worst_day": -3940,
+    "worst_month": -19809,
+    "months_neg": "42/50",
+    "sharpe": -3.74,
+    "years": {
+     "2021": -22450,
+     "2022": -58600,
+     "2023": -36881,
+     "2024": -33626,
+     "2025": -57250
+    }
+   },
+   "orb_sweep": {
+    "n": 1328,
+    "gross": -100511,
+    "charges": 84596,
+    "net": -204644,
+    "per_trade": -154.1,
+    "win": 27.1,
+    "t": -6.84,
+    "rs_day": -205.5,
+    "gross_day": -100.9,
+    "maxdd": -209103,
+    "worst_day": -3191,
+    "worst_month": -16070,
+    "months_neg": "42/50",
+    "sharpe": -3.41,
+    "years": {
+     "2021": -10733,
+     "2022": -53453,
+     "2023": -52497,
+     "2024": -22521,
+     "2025": -65440
+    }
+   },
+   "range_fade": {
+    "n": 1460,
+    "gross": -103045,
+    "charges": 93415,
+    "net": -218604,
+    "per_trade": -149.7,
+    "win": 29.8,
+    "t": -10.24,
+    "rs_day": -219.5,
+    "gross_day": -103.5,
+    "maxdd": -222801,
+    "worst_day": -3092,
+    "worst_month": -18637,
+    "months_neg": "44/50",
+    "sharpe": -5.18,
+    "years": {
+     "2021": -17583,
+     "2022": -47270,
+     "2023": -55082,
+     "2024": -26827,
+     "2025": -71840
+    }
+   },
+   "combined": {
+    "n": 12530,
+    "gross": -169222,
+    "charges": 897225,
+    "net": -1355900,
+    "per_trade": -108.2,
+    "win": 34.9,
+    "t": -19.47,
+    "rs_day": -1361.3,
+    "gross_day": -169.9,
+    "maxdd": -1366946,
+    "worst_day": -12074,
+    "worst_month": -63967,
+    "months_neg": "49/50",
+    "sharpe": -8.34,
+    "years": {
+     "2021": -121508,
+     "2022": -337693,
+     "2023": -249272,
+     "2024": -253351,
+     "2025": -394076
+    }
+   }
+  },
+  "ref:V08_PKG": {
+   "orb": {
+    "n": 1659,
+    "gross": -23916,
+    "charges": 119860,
+    "net": -179327,
+    "per_trade": -108.1,
+    "win": 36.4,
+    "t": -7.21,
+    "rs_day": -180.0,
+    "gross_day": -24.0,
+    "maxdd": -182182,
+    "worst_day": -3170,
+    "worst_month": -14554,
+    "months_neg": "43/50",
+    "sharpe": -3.71,
+    "years": {
+     "2021": -15450,
+     "2022": -53482,
+     "2023": -41664,
+     "2024": -29062,
+     "2025": -39669
+    }
+   },
+   "orb_fresh": {
+    "n": 1417,
+    "gross": -27872,
+    "charges": 101833,
+    "net": -159622,
+    "per_trade": -112.6,
+    "win": 36.5,
+    "t": -7.09,
+    "rs_day": -160.3,
+    "gross_day": -28.0,
+    "maxdd": -164174,
+    "worst_day": -3154,
+    "worst_month": -12203,
+    "months_neg": "42/50",
+    "sharpe": -3.56,
+    "years": {
+     "2021": -14686,
+     "2022": -49400,
+     "2023": -34713,
+     "2024": -22498,
+     "2025": -38325
+    }
+   },
+   "orb_sweep": {
+    "n": 1308,
+    "gross": -94353,
+    "charges": 83378,
+    "net": -197044,
+    "per_trade": -150.6,
+    "win": 27.0,
+    "t": -6.64,
+    "rs_day": -197.8,
+    "gross_day": -94.7,
+    "maxdd": -202567,
+    "worst_day": -3077,
+    "worst_month": -15282,
+    "months_neg": "42/50",
+    "sharpe": -3.36,
+    "years": {
+     "2021": -12659,
+     "2022": -54081,
+     "2023": -54300,
+     "2024": -21802,
+     "2025": -54201
+    }
+   },
+   "range_fade": {
+    "n": 1449,
+    "gross": -106868,
+    "charges": 92781,
+    "net": -221755,
+    "per_trade": -153.0,
+    "win": 29.7,
+    "t": -10.35,
+    "rs_day": -222.6,
+    "gross_day": -107.3,
+    "maxdd": -225952,
+    "worst_day": -3092,
+    "worst_month": -18640,
+    "months_neg": "44/50",
+    "sharpe": -5.2,
+    "years": {
+     "2021": -18018,
+     "2022": -50963,
+     "2023": -54980,
+     "2024": -27212,
+     "2025": -70582
+    }
+   },
+   "combined": {
+    "n": 3920,
+    "gross": -131816,
+    "charges": 268405,
+    "net": -473943,
+    "per_trade": -120.9,
+    "win": 32.3,
+    "t": -11.26,
+    "rs_day": -475.8,
+    "gross_day": -132.3,
+    "maxdd": -479130,
+    "worst_day": -6552,
+    "worst_month": -25970,
+    "months_neg": "48/50",
+    "sharpe": -5.43,
+    "years": {
+     "2021": -45232,
+     "2022": -114539,
+     "2023": -85894,
+     "2024": -84346,
+     "2025": -143932
+    }
+   }
+  },
+  "liquidity_additivity": {
+   "liq_alone": {
+    "n": 1235,
+    "gross": 244913,
+    "charges": 88780,
+    "net": 156133,
+    "per_trade": 126.4,
+    "win": 35.5,
+    "t": 2.51,
+    "rs_day": 156.8,
+    "gross_day": 245.9,
+    "maxdd": -37402,
+    "worst_day": -5734,
+    "worst_month": -12850,
+    "months_neg": "22/50",
+    "sharpe": 1.01,
+    "years": {
+     "2021": -9474,
+     "2022": -5309,
+     "2023": 19384,
+     "2024": 44444,
+     "2025": 107087
+    }
+   },
+   "combined": {
+    "variant": "V32_max1_s30al_early",
+    "total": {
+     "n": 2105,
+     "gross": 178064,
+     "charges": 147151,
+     "net": 14126,
+     "per_trade": 6.7,
+     "win": 33.7,
+     "t": 0.22,
+     "rs_day": 14.2,
+     "gross_day": 178.8,
+     "maxdd": -94253,
+     "worst_day": -5734,
+     "worst_month": -14442,
+     "months_neg": "26/50",
+     "sharpe": 0.1,
+     "years": {
+      "2021": -32325,
+      "2022": -30818,
+      "2023": -20310,
+      "2024": 9917,
+      "2025": 87662
+     }
+    },
+    "liq_bn_dropped": 102,
+    "liq_bn_dropped_net": 12695,
+    "corr_with_liq": 0.022
+   },
+   "orb": {
+    "variant": "V32_max1_s30al_early",
+    "total": {
+     "n": 1481,
+     "gross": 234974,
+     "charges": 106367,
+     "net": 121997,
+     "per_trade": 82.4,
+     "win": 35.7,
+     "t": 2.03,
+     "rs_day": 122.5,
+     "gross_day": 235.9,
+     "maxdd": -30659,
+     "worst_day": -5734,
+     "worst_month": -12110,
+     "months_neg": "20/50",
+     "sharpe": 0.89,
+     "years": {
+      "2021": -10975,
+      "2022": -6030,
+      "2023": 10049,
+      "2024": 33421,
+      "2025": 95531
+     }
+    },
+    "liq_bn_dropped": 87,
+    "liq_bn_dropped_net": 14770,
+    "corr_with_liq": -0.012
+   },
+   "orb_fresh": {
+    "variant": "V32_max1_s30al_early",
+    "total": {
+     "n": 1470,
+     "gross": 235492,
+     "charges": 105449,
+     "net": 123830,
+     "per_trade": 84.2,
+     "win": 35.9,
+     "t": 2.06,
+     "rs_day": 124.3,
+     "gross_day": 236.4,
+     "maxdd": -31370,
+     "worst_day": -5734,
+     "worst_month": -12110,
+     "months_neg": "20/50",
+     "sharpe": 0.9,
+     "years": {
+      "2021": -10960,
+      "2022": -5691,
+      "2023": 9820,
+      "2024": 33666,
+      "2025": 96995
+     }
+    },
+    "liq_bn_dropped": 87,
+    "liq_bn_dropped_net": 14770,
+    "corr_with_liq": -0.012
+   },
+   "orb_sweep": {
+    "variant": "V31_PKG_s30dir_dird_trail",
+    "total": {
+     "n": 1398,
+     "gross": 202227,
+     "charges": 97690,
+     "net": 101466,
+     "per_trade": 72.6,
+     "win": 37.3,
+     "t": 1.67,
+     "rs_day": 101.9,
+     "gross_day": 203.0,
+     "maxdd": -41768,
+     "worst_day": -5777,
+     "worst_month": -13911,
+     "months_neg": "22/50",
+     "sharpe": 0.74,
+     "years": {
+      "2021": -18327,
+      "2022": -5259,
+      "2023": 7716,
+      "2024": 24101,
+      "2025": 93235
+     }
+    },
+    "liq_bn_dropped": 98,
+    "liq_bn_dropped_net": 14193,
+    "corr_with_liq": -0.004
+   },
+   "range_fade": {
+    "variant": "V31_PKG_s30dir_dird_trail",
+    "total": {
+     "n": 1427,
+     "gross": 174698,
+     "charges": 99713,
+     "net": 71379,
+     "per_trade": 50.0,
+     "win": 36.8,
+     "t": 1.19,
+     "rs_day": 71.7,
+     "gross_day": 175.4,
+     "maxdd": -50386,
+     "worst_day": -5734,
+     "worst_month": -14857,
+     "months_neg": "24/50",
+     "sharpe": 0.52,
+     "years": {
+      "2021": -11507,
+      "2022": -20841,
+      "2023": 382,
+      "2024": 14935,
+      "2025": 88410
+     }
+    },
+    "liq_bn_dropped": 100,
+    "liq_bn_dropped_net": 28622,
+    "corr_with_liq": -0.03
+   }
+  }
+ },
+ "hold": {
+  "orb": {
+   "n": 75,
+   "gross": -4707,
+   "charges": 7820,
+   "net": -17411,
+   "per_trade": -232.1,
+   "win": 34.7,
+   "t": -2.36,
+   "rs_day": -70.2,
+   "gross_day": -19.0,
+   "maxdd": -19483,
+   "worst_day": -1635,
+   "worst_month": -3719,
+   "months_neg": "10/13",
+   "sharpe": -2.31,
+   "years": {
+    "2025": -6372,
+    "2026": -11039
+   },
+   "p_rand": 0.63968015992004,
+   "p_losing_month": 0.7685,
+   "variant": "V32_max1_s30al_early"
+  },
+  "orb_fresh": {
+   "n": 75,
+   "gross": -4707,
+   "charges": 7820,
+   "net": -17411,
+   "per_trade": -232.1,
+   "win": 34.7,
+   "t": -2.36,
+   "rs_day": -70.2,
+   "gross_day": -19.0,
+   "maxdd": -19483,
+   "worst_day": -1635,
+   "worst_month": -3719,
+   "months_neg": "10/13",
+   "sharpe": -2.31,
+   "years": {
+    "2025": -6372,
+    "2026": -11039
+   },
+   "p_rand": 0.6721639180409795,
+   "p_losing_month": 0.7685,
+   "variant": "V32_max1_s30al_early"
+  },
+  "orb_sweep": {
+   "n": 66,
+   "gross": -12452,
+   "charges": 6435,
+   "net": -23159,
+   "per_trade": -350.9,
+   "win": 39.4,
+   "t": -2.22,
+   "rs_day": -93.4,
+   "gross_day": -50.2,
+   "maxdd": -25755,
+   "worst_day": -2893,
+   "worst_month": -7039,
+   "months_neg": "9/13",
+   "sharpe": -2.12,
+   "years": {
+    "2025": -3460,
+    "2026": -19699
+   },
+   "p_rand": 0.8860569715142429,
+   "p_losing_month": 0.721,
+   "variant": "V31_PKG_s30dir_dird_trail"
+  },
+  "range_fade": {
+   "n": 77,
+   "gross": -16650,
+   "charges": 7251,
+   "net": -28432,
+   "per_trade": -369.3,
+   "win": 36.4,
+   "t": -2.78,
+   "rs_day": -114.6,
+   "gross_day": -67.1,
+   "maxdd": -29254,
+   "worst_day": -2784,
+   "worst_month": -5898,
+   "months_neg": "9/13",
+   "sharpe": -3.03,
+   "years": {
+    "2025": -7307,
+    "2026": -21125
+   },
+   "p_rand": 0.9750124937531235,
+   "p_losing_month": 0.7925,
+   "variant": "V31_PKG_s30dir_dird_trail"
+  },
+  "combined": {
+   "n": 229,
+   "gross": -27462,
+   "charges": 22811,
+   "net": -65076,
+   "per_trade": -284.2,
+   "win": 30.6,
+   "t": -4.99,
+   "rs_day": -262.4,
+   "gross_day": -110.7,
+   "maxdd": -65001,
+   "worst_day": -3147,
+   "worst_month": -13670,
+   "months_neg": "12/13",
+   "sharpe": -4.54,
+   "years": {
+    "2025": -20593,
+    "2026": -44483
+   },
+   "p_rand": 0.95952023988006,
+   "p_losing_month": 0.8875,
+   "variant": "V32_max1_s30al_early"
+  },
+  "ref:R0_app_today": {
+   "orb": {
+    "n": 1549,
+    "gross": -20468,
+    "charges": 169114,
+    "net": -344078,
+    "per_trade": -222.1,
+    "win": 36.5,
+    "t": -8.22,
+    "rs_day": -1387.4,
+    "gross_day": -82.5,
+    "maxdd": -346320,
+    "worst_day": -13263,
+    "worst_month": -63246,
+    "months_neg": "13/13",
+    "sharpe": -8.08,
+    "years": {
+     "2025": -70785,
+     "2026": -273293
+    }
+   },
+   "orb_fresh": {
+    "n": 456,
+    "gross": 39220,
+    "charges": 48032,
+    "net": -40559,
+    "per_trade": -88.9,
+    "win": 41.0,
+    "t": -1.77,
+    "rs_day": -163.5,
+    "gross_day": 158.1,
+    "maxdd": -50204,
+    "worst_day": -4820,
+    "worst_month": -9038,
+    "months_neg": "9/13",
+    "sharpe": -1.75,
+    "years": {
+     "2025": -12911,
+     "2026": -27648
+    }
+   },
+   "orb_sweep": {
+    "n": 329,
+    "gross": -35283,
+    "charges": 30354,
+    "net": -83063,
+    "per_trade": -252.5,
+    "win": 29.2,
+    "t": -3.58,
+    "rs_day": -334.9,
+    "gross_day": -142.3,
+    "maxdd": -85806,
+    "worst_day": -3129,
+    "worst_month": -18569,
+    "months_neg": "11/13",
+    "sharpe": -3.44,
+    "years": {
+     "2025": -30124,
+     "2026": -52939
+    }
+   },
+   "range_fade": {
+    "n": 367,
+    "gross": -26982,
+    "charges": 33884,
+    "net": -80364,
+    "per_trade": -219.0,
+    "win": 35.1,
+    "t": -4.53,
+    "rs_day": -324.0,
+    "gross_day": -108.8,
+    "maxdd": -80527,
+    "worst_day": -3067,
+    "worst_month": -13192,
+    "months_neg": "11/13",
+    "sharpe": -4.24,
+    "years": {
+     "2025": -27603,
+     "2026": -52761
+    }
+   },
+   "combined": {
+    "n": 2701,
+    "gross": -43513,
+    "charges": 281384,
+    "net": -548063,
+    "per_trade": -202.9,
+    "win": 36.2,
+    "t": -9.79,
+    "rs_day": -2209.9,
+    "gross_day": -175.5,
+    "maxdd": -546111,
+    "worst_day": -16897,
+    "worst_month": -98505,
+    "months_neg": "13/13",
+    "sharpe": -7.7,
+    "years": {
+     "2025": -141422,
+     "2026": -406641
+    }
+   }
+  },
+  "ref:V01_fixed_lock_only": {
+   "orb": {
+    "n": 1892,
+    "gross": 69891,
+    "charges": 205063,
+    "net": -333088,
+    "per_trade": -176.1,
+    "win": 35.4,
+    "t": -8.97,
+    "rs_day": -1343.1,
+    "gross_day": 281.8,
+    "maxdd": -334007,
+    "worst_day": -10019,
+    "worst_month": -65141,
+    "months_neg": "13/13",
+    "sharpe": -8.44,
+    "years": {
+     "2025": -57132,
+     "2026": -275956
+    }
+   },
+   "orb_fresh": {
+    "n": 474,
+    "gross": 25638,
+    "charges": 49750,
+    "net": -60001,
+    "per_trade": -126.6,
+    "win": 36.1,
+    "t": -3.39,
+    "rs_day": -241.9,
+    "gross_day": 103.4,
+    "maxdd": -64691,
+    "worst_day": -4602,
+    "worst_month": -12278,
+    "months_neg": "11/13",
+    "sharpe": -3.1,
+    "years": {
+     "2025": -18274,
+     "2026": -41727
+    }
+   },
+   "orb_sweep": {
+    "n": 331,
+    "gross": -39117,
+    "charges": 30530,
+    "net": -88797,
+    "per_trade": -268.3,
+    "win": 26.9,
+    "t": -4.43,
+    "rs_day": -358.1,
+    "gross_day": -157.7,
+    "maxdd": -89891,
+    "worst_day": -3067,
+    "worst_month": -16430,
+    "months_neg": "11/13",
+    "sharpe": -4.34,
+    "years": {
+     "2025": -25361,
+     "2026": -63436
+    }
+   },
+   "range_fade": {
+    "n": 376,
+    "gross": -19950,
+    "charges": 34644,
+    "net": -76715,
+    "per_trade": -204.0,
+    "win": 30.6,
+    "t": -5.29,
+    "rs_day": -309.3,
+    "gross_day": -80.4,
+    "maxdd": -76715,
+    "worst_day": -3002,
+    "worst_month": -10480,
+    "months_neg": "13/13",
+    "sharpe": -4.91,
+    "years": {
+     "2025": -20717,
+     "2026": -55998
+    }
+   },
+   "combined": {
+    "n": 3073,
+    "gross": 36462,
+    "charges": 319988,
+    "net": -558601,
+    "per_trade": -181.8,
+    "win": 34.0,
+    "t": -11.63,
+    "rs_day": -2252.4,
+    "gross_day": 147.0,
+    "maxdd": -555029,
+    "worst_day": -14355,
+    "worst_month": -95128,
+    "months_neg": "13/13",
+    "sharpe": -9.22,
+    "years": {
+     "2025": -121484,
+     "2026": -437117
+    }
+   }
+  },
+  "ref:V08_PKG": {
+   "orb": {
+    "n": 411,
+    "gross": 12889,
+    "charges": 43282,
+    "net": -60481,
+    "per_trade": -147.2,
+    "win": 33.1,
+    "t": -3.74,
+    "rs_day": -243.9,
+    "gross_day": 52.0,
+    "maxdd": -64369,
+    "worst_day": -3257,
+    "worst_month": -11141,
+    "months_neg": "12/13",
+    "sharpe": -3.48,
+    "years": {
+     "2025": -17768,
+     "2026": -42713
+    }
+   },
+   "orb_fresh": {
+    "n": 344,
+    "gross": 11062,
+    "charges": 36069,
+    "net": -49671,
+    "per_trade": -144.4,
+    "win": 35.8,
+    "t": -3.33,
+    "rs_day": -200.3,
+    "gross_day": 44.6,
+    "maxdd": -52842,
+    "worst_day": -3257,
+    "worst_month": -9959,
+    "months_neg": "11/13",
+    "sharpe": -3.13,
+    "years": {
+     "2025": -13476,
+     "2026": -36194
+    }
+   },
+   "orb_sweep": {
+    "n": 322,
+    "gross": -39778,
+    "charges": 29716,
+    "net": -88205,
+    "per_trade": -273.9,
+    "win": 27.0,
+    "t": -4.47,
+    "rs_day": -355.7,
+    "gross_day": -160.4,
+    "maxdd": -89299,
+    "worst_day": -3067,
+    "worst_month": -15564,
+    "months_neg": "11/13",
+    "sharpe": -4.37,
+    "years": {
+     "2025": -28505,
+     "2026": -59701
+    }
+   },
+   "range_fade": {
+    "n": 368,
+    "gross": -13530,
+    "charges": 33839,
+    "net": -68821,
+    "per_trade": -187.0,
+    "win": 31.5,
+    "t": -4.83,
+    "rs_day": -277.5,
+    "gross_day": -54.6,
+    "maxdd": -68821,
+    "worst_day": -3033,
+    "worst_month": -10511,
+    "months_neg": "12/13",
+    "sharpe": -4.66,
+    "years": {
+     "2025": -20816,
+     "2026": -48005
+    }
+   },
+   "combined": {
+    "n": 1042,
+    "gross": -4316,
+    "charges": 103905,
+    "net": -179251,
+    "per_trade": -172.0,
+    "win": 34.0,
+    "t": -6.18,
+    "rs_day": -722.8,
+    "gross_day": -17.4,
+    "maxdd": -177617,
+    "worst_day": -7572,
+    "worst_month": -30357,
+    "months_neg": "12/13",
+    "sharpe": -5.54,
+    "years": {
+     "2025": -58888,
+     "2026": -120363
+    }
+   }
+  },
+  "liquidity_additivity": {
+   "liq_alone": {
+    "n": 416,
+    "gross": 127094,
+    "charges": 40806,
+    "net": 86288,
+    "per_trade": 207.4,
+    "win": 38.9,
+    "t": 1.86,
+    "rs_day": 347.9,
+    "gross_day": 512.5,
+    "maxdd": -29408,
+    "worst_day": -7000,
+    "worst_month": -9972,
+    "months_neg": "4/13",
+    "sharpe": 1.68,
+    "years": {
+     "2025": -1216,
+     "2026": 87504
+    }
+   },
+   "combined": {
+    "variant": "V32_max1_s30al_early",
+    "total": {
+     "n": 598,
+     "gross": 81095,
+     "charges": 59109,
+     "net": 7738,
+     "per_trade": 12.9,
+     "win": 36.1,
+     "t": 0.17,
+     "rs_day": 31.2,
+     "gross_day": 327.0,
+     "maxdd": -54115,
+     "worst_day": -5813,
+     "worst_month": -21039,
+     "months_neg": "7/13",
+     "sharpe": 0.17,
+     "years": {
+      "2025": -17716,
+      "2026": 25454
+     }
+    },
+    "liq_bn_dropped": 38,
+    "liq_bn_dropped_net": 17489,
+    "corr_with_liq": -0.035
+   },
+   "orb": {
+    "variant": "V32_max1_s30al_early",
+    "total": {
+     "n": 455,
+     "gross": 99557,
+     "charges": 45197,
+     "net": 49660,
+     "per_trade": 109.1,
+     "win": 37.8,
+     "t": 1.12,
+     "rs_day": 200.2,
+     "gross_day": 401.4,
+     "maxdd": -35485,
+     "worst_day": -5813,
+     "worst_month": -10283,
+     "months_neg": "5/13",
+     "sharpe": 1.14,
+     "years": {
+      "2025": -3493,
+      "2026": 53153
+     }
+    },
+    "liq_bn_dropped": 31,
+    "liq_bn_dropped_net": 18336,
+    "corr_with_liq": 0.013
+   },
+   "orb_fresh": {
+    "variant": "V32_max1_s30al_early",
+    "total": {
+     "n": 453,
+     "gross": 100596,
+     "charges": 44978,
+     "net": 51075,
+     "per_trade": 112.7,
+     "win": 38.0,
+     "t": 1.15,
+     "rs_day": 205.9,
+     "gross_day": 405.6,
+     "maxdd": -35485,
+     "worst_day": -5813,
+     "worst_month": -10283,
+     "months_neg": "5/13",
+     "sharpe": 1.17,
+     "years": {
+      "2025": -3493,
+      "2026": 54568
+     }
+    },
+    "liq_bn_dropped": 31,
+    "liq_bn_dropped_net": 18336,
+    "corr_with_liq": 0.051
+   },
+   "orb_sweep": {
+    "variant": "V31_PKG_s30dir_dird_trail",
+    "total": {
+     "n": 449,
+     "gross": 94132,
+     "charges": 44065,
+     "net": 45797,
+     "per_trade": 102.0,
+     "win": 38.8,
+     "t": 1.02,
+     "rs_day": 184.7,
+     "gross_day": 379.6,
+     "maxdd": -37025,
+     "worst_day": -7332,
+     "worst_month": -11915,
+     "months_neg": "6/13",
+     "sharpe": 1.0,
+     "years": {
+      "2025": 294,
+      "2026": 45503
+     }
+    },
+    "liq_bn_dropped": 33,
+    "liq_bn_dropped_net": 17334,
+    "corr_with_liq": 0.15
+   },
+   "range_fade": {
+    "variant": "V31_PKG_s30dir_dird_trail",
+    "total": {
+     "n": 460,
+     "gross": 92707,
+     "charges": 44814,
+     "net": 43363,
+     "per_trade": 94.3,
+     "win": 38.5,
+     "t": 0.97,
+     "rs_day": 174.8,
+     "gross_day": 373.8,
+     "maxdd": -36799,
+     "worst_day": -7330,
+     "worst_month": -10281,
+     "months_neg": "7/13",
+     "sharpe": 0.96,
+     "years": {
+      "2025": -3553,
+      "2026": 46916
+     }
+    },
+    "liq_bn_dropped": 33,
+    "liq_bn_dropped_net": 14496,
+    "corr_with_liq": 0.141
+   }
+  }
+ },
+ "kappa_sens_hold": {
+  "orb|k=0.0": {
+   "n": 75,
+   "gross": -5205,
+   "charges": 7821,
+   "net": -15674,
+   "per_trade": -209.0,
+   "win": 37.3,
+   "t": -2.1,
+   "rs_day": -63.2,
+   "gross_day": -21.0,
+   "maxdd": -17836,
+   "worst_day": -1596,
+   "worst_month": -3601,
+   "months_neg": "10/13",
+   "sharpe": -2.07,
+   "years": {
+    "2025": -6026,
+    "2026": -9647
+   }
+  },
+  "orb_fresh|k=0.0": {
+   "n": 75,
+   "gross": -5205,
+   "charges": 7821,
+   "net": -15674,
+   "per_trade": -209.0,
+   "win": 37.3,
+   "t": -2.1,
+   "rs_day": -63.2,
+   "gross_day": -21.0,
+   "maxdd": -17836,
+   "worst_day": -1596,
+   "worst_month": -3601,
+   "months_neg": "10/13",
+   "sharpe": -2.07,
+   "years": {
+    "2025": -6026,
+    "2026": -9647
+   }
+  },
+  "orb_sweep|k=0.0": {
+   "n": 66,
+   "gross": -13632,
+   "charges": 6435,
+   "net": -22086,
+   "per_trade": -334.6,
+   "win": 39.4,
+   "t": -2.15,
+   "rs_day": -89.1,
+   "gross_day": -55.0,
+   "maxdd": -24883,
+   "worst_day": -2719,
+   "worst_month": -6732,
+   "months_neg": "8/13",
+   "sharpe": -2.04,
+   "years": {
+    "2025": -3212,
+    "2026": -18874
+   }
+  },
+  "range_fade|k=0.0": {
+   "n": 77,
+   "gross": -19355,
+   "charges": 7248,
+   "net": -28677,
+   "per_trade": -372.4,
+   "win": 37.7,
+   "t": -2.86,
+   "rs_day": -115.6,
+   "gross_day": -78.0,
+   "maxdd": -29542,
+   "worst_day": -2734,
+   "worst_month": -5810,
+   "months_neg": "10/13",
+   "sharpe": -3.07,
+   "years": {
+    "2025": -7065,
+    "2026": -21613
+   }
+  },
+  "combined|k=0.0": {
+   "n": 228,
+   "gross": -28146,
+   "charges": 22735,
+   "net": -58357,
+   "per_trade": -256.0,
+   "win": 32.9,
+   "t": -4.47,
+   "rs_day": -235.3,
+   "gross_day": -113.5,
+   "maxdd": -59331,
+   "worst_day": -3097,
+   "worst_month": -13087,
+   "months_neg": "12/13",
+   "sharpe": -4.14,
+   "years": {
+    "2025": -19604,
+    "2026": -38753
+   }
+  },
+  "orb|k=0.01": {
+   "n": 75,
+   "gross": -4804,
+   "charges": 7821,
+   "net": -16393,
+   "per_trade": -218.6,
+   "win": 36.0,
+   "t": -2.2,
+   "rs_day": -66.1,
+   "gross_day": -19.4,
+   "maxdd": -18510,
+   "worst_day": -1617,
+   "worst_month": -3659,
+   "months_neg": "10/13",
+   "sharpe": -2.16,
+   "years": {
+    "2025": -6201,
+    "2026": -10192
+   }
+  },
+  "orb_fresh|k=0.01": {
+   "n": 75,
+   "gross": -4804,
+   "charges": 7821,
+   "net": -16393,
+   "per_trade": -218.6,
+   "win": 36.0,
+   "t": -2.2,
+   "rs_day": -66.1,
+   "gross_day": -19.4,
+   "maxdd": -18510,
+   "worst_day": -1617,
+   "worst_month": -3659,
+   "months_neg": "10/13",
+   "sharpe": -2.16,
+   "years": {
+    "2025": -6201,
+    "2026": -10192
+   }
+  },
+  "orb_sweep|k=0.01": {
+   "n": 66,
+   "gross": -13373,
+   "charges": 6435,
+   "net": -22953,
+   "per_trade": -347.8,
+   "win": 39.4,
+   "t": -2.24,
+   "rs_day": -92.6,
+   "gross_day": -53.9,
+   "maxdd": -25650,
+   "worst_day": -2805,
+   "worst_month": -6890,
+   "months_neg": "8/13",
+   "sharpe": -2.12,
+   "years": {
+    "2025": -3334,
+    "2026": -19619
+   }
+  },
+  "range_fade|k=0.01": {
+   "n": 77,
+   "gross": -17348,
+   "charges": 7251,
+   "net": -27895,
+   "per_trade": -362.3,
+   "win": 39.0,
+   "t": -2.74,
+   "rs_day": -112.5,
+   "gross_day": -70.0,
+   "maxdd": -28738,
+   "worst_day": -2755,
+   "worst_month": -5852,
+   "months_neg": "10/13",
+   "sharpe": -3.0,
+   "years": {
+    "2025": -7184,
+    "2026": -20711
+   }
+  },
+  "combined|k=0.01": {
+   "n": 229,
+   "gross": -27893,
+   "charges": 22813,
+   "net": -61859,
+   "per_trade": -270.1,
+   "win": 32.3,
+   "t": -4.72,
+   "rs_day": -249.4,
+   "gross_day": -112.5,
+   "maxdd": -62089,
+   "worst_day": -3123,
+   "worst_month": -13444,
+   "months_neg": "12/13",
+   "sharpe": -4.32,
+   "years": {
+    "2025": -19993,
+    "2026": -41866
+   }
+  },
+  "orb|k=0.04": {
+   "n": 75,
+   "gross": -4760,
+   "charges": 7818,
+   "net": -19712,
+   "per_trade": -262.8,
+   "win": 34.7,
+   "t": -2.7,
+   "rs_day": -79.5,
+   "gross_day": -19.2,
+   "maxdd": -21693,
+   "worst_day": -1672,
+   "worst_month": -3836,
+   "months_neg": "11/13",
+   "sharpe": -2.63,
+   "years": {
+    "2025": -6724,
+    "2026": -12989
+   }
+  },
+  "orb_fresh|k=0.04": {
+   "n": 75,
+   "gross": -4760,
+   "charges": 7818,
+   "net": -19712,
+   "per_trade": -262.8,
+   "win": 34.7,
+   "t": -2.7,
+   "rs_day": -79.5,
+   "gross_day": -19.2,
+   "maxdd": -21693,
+   "worst_day": -1672,
+   "worst_month": -3836,
+   "months_neg": "11/13",
+   "sharpe": -2.63,
+   "years": {
+    "2025": -6724,
+    "2026": -12989
+   }
+  },
+  "orb_sweep|k=0.04": {
+   "n": 66,
+   "gross": -11591,
+   "charges": 6435,
+   "net": -24557,
+   "per_trade": -372.1,
+   "win": 39.4,
+   "t": -2.37,
+   "rs_day": -99.0,
+   "gross_day": -46.7,
+   "maxdd": -26950,
+   "worst_day": -2953,
+   "worst_month": -7337,
+   "months_neg": "9/13",
+   "sharpe": -2.25,
+   "years": {
+    "2025": -3710,
+    "2026": -20848
+   }
+  },
+  "range_fade|k=0.04": {
+   "n": 77,
+   "gross": -16557,
+   "charges": 7250,
+   "net": -30782,
+   "per_trade": -399.8,
+   "win": 36.4,
+   "t": -3.05,
+   "rs_day": -124.1,
+   "gross_day": -66.8,
+   "maxdd": -31563,
+   "worst_day": -2875,
+   "worst_month": -5989,
+   "months_neg": "10/13",
+   "sharpe": -3.25,
+   "years": {
+    "2025": -7550,
+    "2026": -23232
+   }
+  },
+  "combined|k=0.04": {
+   "n": 230,
+   "gross": -27027,
+   "charges": 22906,
+   "net": -72211,
+   "per_trade": -314.0,
+   "win": 29.1,
+   "t": -5.44,
+   "rs_day": -291.2,
+   "gross_day": -109.0,
+   "maxdd": -71988,
+   "worst_day": -3200,
+   "worst_month": -15856,
+   "months_neg": "12/13",
+   "sharpe": -4.94,
+   "years": {
+    "2025": -21093,
+    "2026": -51119
+   }
+  }
+ }
+}
