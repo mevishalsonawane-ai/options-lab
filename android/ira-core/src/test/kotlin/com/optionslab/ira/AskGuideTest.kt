@@ -67,6 +67,8 @@ class AskGuideTest {
         assertTrue(groups.first { it.id == "app" }.examples.any { it.q == "what did you tell me today" && it.family == "TodayNotes" })
         // What's working for Liquidity 15+5 sits with the strategies (the Liquidity group is full).
         assertTrue(groups.first { it.id == "strategies" }.examples.any { it.q == "what's working for liquidity" && it.family == "LiquidityInsight" })
+        // How long Liquidity 15+5 holds its trades sits with the strategies too (the Liquidity group is full).
+        assertTrue(groups.first { it.id == "strategies" }.examples.any { it.q == "how long does liquidity hold its trades" && it.family == "LiquidityHold" })
         // A what-if on Liquidity 15+5's lots sits with the arm (its size is never changed from it).
         assertTrue(groups.first { it.id == "liquidity" }.examples.any { it.q == "what if liquidity traded 3 lots" && it.family == "LotsWhatIf" })
         // A past day's recap sits with the day and the week reviewed (Coach).

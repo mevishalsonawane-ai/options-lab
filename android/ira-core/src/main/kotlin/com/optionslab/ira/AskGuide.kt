@@ -59,6 +59,7 @@ object AskGuide {
             ex("orb aaj kyun fail hua", "ArmDay"),
             ex("is anything drifting", "ForwardWatch"),
             ex("what's working for liquidity", "LiquidityInsight"),
+            ex("how long does liquidity hold its trades", "LiquidityHold"),
         )),
         Group("market", "Market & levels", "The indices now, the day's shape and the option chain", listOf(
             ex("how is nifty", "Market"),
