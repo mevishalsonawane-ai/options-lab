@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -134,7 +133,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     // The saved conversation is read off the main thread at the start: until then the chat says so (no examples).
     val memoryReady by IraHub.ready.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-    // "Don't listen" (Boss, 6 Oct): the same switch as in Settings - the globe says so plainly while it is on.
+    // "Don't listen" (Boss, 6 Oct): the same switch as in Settings - the globe shows it as a crossed-out ear (no words).
     val deafNow by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
@@ -144,7 +143,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
         JarvisVoice.Mode.AWAKE -> 1; JarvisVoice.Mode.THINKING -> 2; JarvisVoice.Mode.SPEAKING -> 3; else -> 0 }
     // At rest, say plainly whether Jarvis can hear its name ("Idle" read the same with the voice off).
     val restLabel = when {
-        com.optionslab.app.BuildConfig.JARVIS && deafNow -> "Not listening"
+        com.optionslab.app.BuildConfig.JARVIS && deafNow -> "Mic off"
         voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
         voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
         else -> "Idle"
@@ -228,7 +227,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
                 if (showChat) chat = true
             }
             Row(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Not listening: a crossed-out microphone beside the word, so it reads at a glance.
+                // Mic off ("Don't listen"): a crossed-out microphone beside the word, so it reads at a glance.
                 if (com.optionslab.app.BuildConfig.JARVIS && deafNow && orbMode == 0) {
                     MicGlyph(crossed = true, color = Color(0xFF4AA8FF)); Spacer(Modifier.width(6.dp))
                 }
@@ -237,11 +236,10 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
             }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (com.optionslab.app.BuildConfig.JARVIS) DontListenButton(deafNow)
-                // Boss, 7 Oct: the mic (hold to talk), mute and the chat as small icons in one row, no words; no Talk
-                // while the microphone is off. (No Requests below the globe: Boss, 7 Oct - it is in the chat's header
-                // and on Home.)
-                JarvisControlRow(chatOpen = false, onChat = { chat = true }, showMic = !deafNow)
+                // Boss, 7 Oct: "Don't listen" (an ear), the mic (hold to talk), mute and the chat as small icons in one
+                // row, no words; the mic greyed while the microphone is off. (No Requests below the globe: Boss, 7 Oct -
+                // it is in the chat's header and on Home.)
+                JarvisControlRow(chatOpen = false, onChat = { chat = true })
             }
         }
         if (com.optionslab.app.BuildConfig.JARVIS) ModelAsk()
@@ -251,7 +249,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
         Row(Modifier.fillMaxWidth().background(if (com.optionslab.app.BuildConfig.JARVIS) Color.Black else Color.Transparent),
             verticalAlignment = Alignment.CenterVertically) {
             // Jarvis: the same icon row as on the globe (the chat icon closes the chat, back to the globe).
-            if (com.optionslab.app.BuildConfig.JARVIS) JarvisControlRow(chatOpen = true, onChat = { chat = false }, showMic = !deafNow,
+            if (com.optionslab.app.BuildConfig.JARVIS) JarvisControlRow(chatOpen = true, onChat = { chat = false },
                 modifier = Modifier.padding(start = 4.dp))
             Spacer(Modifier.weight(1f))
             // Today's notes: what Jarvis said by himself today (in the header, so the question box keeps its room).
@@ -483,7 +481,7 @@ internal fun VoiceSwitch() {
     }
     // The service stopped on its own ("Jarvis, stop listening", or the notification's Stop): the switch follows.
     LaunchedEffect(vs.mode) { if (vs.mode == JarvisVoice.Mode.OFF && !JarvisVoice.wanted) on = false }
-    // "Don't listen": the globe's button and this switch are one setting; while it is on, listening's own switch waits.
+    // "Don't listen": the globe's ear and this switch are one setting; while it is on, listening's own switch waits.
     val deafNow by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LedgerCard(title = "Voice") {
         com.optionslab.app.ui.SettingSpot("jarvis.voice.deaf") {
@@ -495,8 +493,8 @@ internal fun VoiceSwitch() {
                 }, modifier = Modifier.semantics { contentDescription = if (deafNow) "Don't listen is on: Jarvis's microphone is off" else "Don't listen is off" })
             }
         }
-        Note(if (deafNow) "Jarvis hears nothing: no \"Jarvis\", no follow-ups, no mic button, and Android's microphone dot stays off. He still speaks and you can still type. " +
-            "Only this switch or \"Listen again\" on the globe turns listening back on - never your voice, a chat message or a backup."
+        Note(if (deafNow) "Jarvis hears nothing: no \"Jarvis\", no follow-ups, no hold to talk, and Android's microphone dot stays off. He still speaks and you can still type. " +
+            "Only this switch or the crossed-out ear on the globe turns listening back on - never your voice, a chat message or a backup."
             else "Switch the microphone off altogether (also: type \"don't listen\" or \"mat suno\"). Listening comes back only when you tap.")
         com.optionslab.app.ui.SettingSpot("jarvis.voice.wake") {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1068,25 +1066,6 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
     }
 }
 
-/**
- * "Don't listen" (Boss, 6 Oct: "like the other button on the globe, add a button 'Don't listen', so that he won't listen
- * to all the conversations"): one tap switches the microphone off altogether (wake word, follow-ups, Talk, cut-in, voice
- * teaching) and the service stops; one tap here - or the Settings switch - is the only way back, to listening as set before.
- */
-@Composable
-internal fun DontListenButton(deaf: Boolean) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val desc = if (deaf) "Not listening: Jarvis's microphone is off. Double-tap to let Jarvis listen again."
-        else "Don't listen: switch Jarvis's microphone off. He still speaks and you can still type."
-    BrassButton(if (deaf) "Not listening · Listen again" else "Don't listen",
-        modifier = Modifier.semantics {
-            contentDescription = desc
-            stateDescription = if (deaf) "Microphone off" else "Microphone on"
-        },
-        leading = if (deaf) ({ c -> MicGlyph(crossed = true, color = c) }) else null) {
-        if (deaf) JarvisVoice.listenAgain(ctx) else JarvisVoice.dontListen(ctx)
-    }
-}
 
 /** A small microphone, [crossed] out when Jarvis is not listening (decorative: its button or label says it in words). */
 @Composable

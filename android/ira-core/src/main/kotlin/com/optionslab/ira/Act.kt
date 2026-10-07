@@ -59,7 +59,7 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         MUTE_FOR(true),
         /**
          * "Don't listen", "mat suno", "sunna band karo" (Boss, 6 Oct): the microphone off altogether - no wake word, no
-         * follow-ups, nothing heard - until Boss taps Listen again on the globe or in Settings. Only ever lowers what is
+         * follow-ups, nothing heard - until Boss taps the crossed-out ear on the globe or the switch in Settings. Only ever lowers what is
          * heard: no words, typed or said, switch listening back on ([NoListen]).
          */
         LISTEN_OFF(true),
@@ -640,7 +640,7 @@ object Commands {
         Command.Kind.PACE_FASTER -> "speak faster"
         Command.Kind.PACE_NORMAL -> "speak at the normal pace"
         Command.Kind.MUTE_FOR -> "stay quiet for ${c.number} minutes"
-        Command.Kind.LISTEN_OFF -> "stop listening (the microphone off until you tap Listen again)"
+        Command.Kind.LISTEN_OFF -> "stop listening (the microphone off until you tap to listen again)"
         Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }

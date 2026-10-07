@@ -40,8 +40,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Jarvis's icon row (Boss, 7 Oct): the mic (hold to talk), mute and the chat as symbols only, in one row. The voice
- * service under the mic is a fake here ([talkPathForTest]): what the mic asks of it is recorded, nothing listens.
+ * Jarvis's icon row (Boss, 7 Oct): "Don't listen" (an ear), the mic (hold to talk), mute and the chat as symbols only, in
+ * one row. The voice service under the mic is a fake here ([talkPathForTest]): what the mic asks of it is recorded, nothing
+ * listens.
  */
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h800dp")
 @RunWith(AndroidJUnit4::class)
@@ -65,6 +66,8 @@ class JarvisControlsTest {
 
     @After fun down() {
         talkPathForTest = null
+        JarvisVoice.listenAgain(androidx.test.core.app.ApplicationProvider.getApplicationContext())
+        JarvisVoice.resetDeafForTest()
         JarvisVoice.muted = false
         runBlocking { IraHub.forgetAll() }
         AreaE.resetGlobals()
@@ -94,23 +97,74 @@ class JarvisControlsTest {
         step()
     }
 
-    @Test fun threeIconButtonsInOneRowAndNoWords() {
+    private val ctx: Context get() = androidx.test.core.app.ApplicationProvider.getApplicationContext()
+
+    /** The old worded "Don't listen" button's words: none anywhere. */
+    private fun noListeningWords() = listOf("Not listening", "Listen again", "Don't listen").forEach { w ->
+        compose.onAllNodesWithText(w, substring = true, ignoreCase = true).assertCountEquals(0)
+    }
+
+    @Test fun fourIconButtonsInOneRowAndNoWords() {
         row()
+        val ear = compose.onNodeWithContentDescription(JarvisControls.STOP_LISTEN).assert(button).fetchSemanticsNode().boundsInRoot
         val mic = compose.onNodeWithContentDescription(JarvisControls.MIC).assert(button).fetchSemanticsNode().boundsInRoot
         val mute = compose.onNodeWithContentDescription(JarvisControls.MUTE).assert(button).fetchSemanticsNode().boundsInRoot
         val chat = compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).assert(button).fetchSemanticsNode().boundsInRoot
-        // One row: the same top, left to right.
-        assertEquals(mic.top, mute.top, 0.5f); assertEquals(mic.top, chat.top, 0.5f)
-        assertTrue(mic.right <= mute.left + 0.5f && mute.right <= chat.left + 0.5f)
+        // One row: the same top, left to right - the ear, the mic, mute, the chat.
+        listOf(mic, mute, chat).forEach { b -> assertEquals(ear.top, b.top, 0.5f) }
+        assertTrue(ear.right <= mic.left + 0.5f && mic.right <= mute.left + 0.5f && mute.right <= chat.left + 0.5f)
         // Small, but each a full 48dp touch target.
         val density = compose.density.density
-        listOf(mic, mute, chat).forEach { b ->
+        listOf(ear, mic, mute, chat).forEach { b ->
             assertEquals(48f, b.width / density, 0.5f); assertEquals(48f, b.height / density, 0.5f)
         }
         // None of the old worded buttons.
         listOf("Talk", "Open chat", "Muted", "unmute", "Back to Jarvis", "Requests").forEach { w ->
             compose.onAllNodesWithText(w, substring = true, ignoreCase = true).assertCountEquals(0)
         }
+        noListeningWords()
+    }
+
+    /** The ear is "Don't listen" (the Settings switch): a tap switches the microphone off, a tap on the crossed-out ear back on. */
+    @Test fun theEarSwitchesListeningOffAndBackOn() {
+        row()
+        compose.onNodeWithContentDescription(JarvisControls.STOP_LISTEN)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Microphone on"))
+            .performSemanticsAction(SemanticsActions.OnClick); step()
+        assertTrue(JarvisVoice.deaf)
+        compose.onNodeWithContentDescription(JarvisControls.LISTEN_AGAIN).assert(button)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Microphone off"))
+        // Still one row of symbols: the mic stays (greyed), and no words appear.
+        compose.onNodeWithContentDescription(JarvisControls.MIC).assert(button)
+        noListeningWords()
+        compose.onNodeWithContentDescription(JarvisControls.LISTEN_AGAIN).performSemanticsAction(SemanticsActions.OnClick); step()
+        assertFalse(JarvisVoice.deaf)
+        compose.onNodeWithContentDescription(JarvisControls.STOP_LISTEN).assert(button)
+        noListeningWords()
+    }
+
+    /** "Don't listen" is the microphone off altogether: the mic stays in the row but a press only says so, briefly. */
+    @Test fun whileNotListeningTheMicOnlySaysListeningIsOff() {
+        JarvisVoice.dontListen(ctx)
+        row()
+        val mic = compose.onNodeWithContentDescription(JarvisControls.MIC).assert(button)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, JarvisControls.LISTENING_OFF))
+        mic.performTouchInput { down(center); advanceEventTime(100); up() }
+        step()
+        assertEquals(emptyList<String>(), fake.calls)
+        compose.onNodeWithText(JarvisControls.LISTENING_OFF).assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(JarvisControls.HINT_MS + 500); step()
+        assertFalse(compose.has(JarvisControls.LISTENING_OFF))
+        // A hold starts nothing either; nor does TalkBack's double tap.
+        mic.performTouchInput { down(center) }
+        step()
+        held()
+        mic.performTouchInput { advanceEventTime(1_500); up() }
+        step()
+        mic.performSemanticsAction(SemanticsActions.OnClick); step()
+        assertEquals(emptyList<String>(), fake.calls)
+        assertFalse(JarvisVoice.listeningNow())
+        assertTrue(JarvisVoice.deaf)
     }
 
     @Test fun pressAndHoldListensAndLettingGoSends() {
@@ -206,6 +260,21 @@ class JarvisControlsTest {
         compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).assert(button)
     }
 
+    /** With Jarvis, "Don't listen" on: the globe shows the crossed-out ear and the mic in the row - no listening words. */
+    @Test fun onTheGlobeNotListeningIsASymbolOnly() {
+        org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
+        JarvisVoice.dontListen(ctx)
+        compose.setContent { IraAlgoTheme("dark") { IraPage() } }
+        step()
+        compose.onNodeWithContentDescription(JarvisControls.LISTEN_AGAIN).assert(button)
+        compose.onNodeWithContentDescription(JarvisControls.MIC).assert(button)
+        noListeningWords()
+        compose.onNodeWithContentDescription(JarvisControls.LISTEN_AGAIN).performSemanticsAction(SemanticsActions.OnClick); step()
+        assertFalse(JarvisVoice.deaf)
+        compose.onNodeWithContentDescription(JarvisControls.STOP_LISTEN).assert(button)
+        noListeningWords()
+    }
+
     /** With Jarvis: the globe's chat icon opens the chat; the globe shows no Requests and no worded buttons. */
     @Test fun onTheGlobeTheChatIconOpensTheChat() {
         org.junit.Assume.assumeTrue(com.optionslab.app.BuildConfig.JARVIS)
@@ -213,6 +282,8 @@ class JarvisControlsTest {
         step()
         compose.onNodeWithContentDescription(JarvisControls.MUTE).assert(button)
         listOf("Open chat", "Talk", "Requests").forEach { w -> compose.onAllNodesWithText(w, substring = true).assertCountEquals(0) }
+        compose.onNodeWithContentDescription(JarvisControls.STOP_LISTEN).assert(button)
+        noListeningWords()
         compose.onNodeWithContentDescription(JarvisControls.OPEN_CHAT).performSemanticsAction(SemanticsActions.OnClick); step()
         compose.waitForText("Ask Ira about the market")
         compose.onNodeWithContentDescription(JarvisControls.CLOSE_CHAT).assert(button)
@@ -231,7 +302,9 @@ class JarvisControlsTest {
         }
         if (com.optionslab.app.BuildConfig.JARVIS) {
             compose.onNodeWithContentDescription(JarvisControls.MIC).assert(button)
+            compose.onNodeWithContentDescription(JarvisControls.STOP_LISTEN).assert(button)
             compose.onNodeWithContentDescription(JarvisControls.CLOSE_CHAT).assert(button)
+
             compose.onAllNodesWithText("Back to Jarvis", substring = true).assertCountEquals(0)
         }
     }

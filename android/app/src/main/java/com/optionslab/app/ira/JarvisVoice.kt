@@ -168,7 +168,7 @@ class JarvisVoice : Service() {
         fun diagnose(context: Context?, hint: Boolean = false): String {
             val out = ArrayList<String>()
             val v = instance?.get()
-            if (deaf) out += "\"Don't listen\" is on: my microphone is off and I hear nothing (your choice). I still speak; tap \"Listen again\" under the globe to let me hear you."
+            if (deaf) out += "\"Don't listen\" is on: my microphone is off and I hear nothing (your choice). I still speak; tap the crossed-out ear under the globe to let me hear you."
             if (wanted && v == null && !deaf) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
             // No on-device recognizer on the phone: Jarvis cannot hear at all (he listens on the phone only).
             if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(v) }.getOrDefault(false))
@@ -436,7 +436,7 @@ class JarvisVoice : Service() {
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
 
         /** What the screens say while "Don't listen" is on. */
-        const val NOT_LISTENING = "Not listening: you switched my microphone off. Tap \"Listen again\" to let me hear you."
+        const val NOT_LISTENING = "Not listening: you switched my microphone off. Tap the crossed-out ear under the globe to let me hear you."
 
         const val ACTION_TALK = "com.optionslab.app.ira.JarvisVoice.TALK"
 

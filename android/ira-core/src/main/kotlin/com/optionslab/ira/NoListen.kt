@@ -30,8 +30,8 @@ object NoListen {
 
     /** Said back when listening goes off from the chat. */
     const val OFF = "Not listening now, Boss: my microphone is off and I hear nothing - no \"Jarvis\", no follow-ups. " +
-        "I still speak and you can still type to me. Only you can switch listening back on: tap \"Listen again\" under the globe, or in Jarvis settings."
+        "I still speak and you can still type to me. Only you can switch listening back on: tap the crossed-out ear under the globe, or in Jarvis settings."
 
     /** Already off. */
-    const val ALREADY = "My microphone is already off, Boss. Tap \"Listen again\" under the globe when you want me to hear you."
+    const val ALREADY = "My microphone is already off, Boss. Tap the crossed-out ear under the globe when you want me to hear you."
 }

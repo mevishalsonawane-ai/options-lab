@@ -447,7 +447,7 @@ internal object IraActions {
             // Jarvis's voice and language: done at once (nothing to confirm, nothing at risk).
             Command.Kind.MUTE -> { JarvisVoice.muteBy(com.optionslab.ira.VoiceMute.By.TYPED); runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.MUTED) }; IraTools.count(com.optionslab.ira.Improve.MUTED); IraActivity.add("Muted my voice."); "Muted, Boss. I'll reply on screen only. Say \"Jarvis, unmute\" or \"Jarvis, speak again\" to hear me." to null }
             // "Don't listen" (6 Oct): the microphone off at once (it only lowers what is heard). Nothing typed or said switches
-            // it back on - Boss's tap on "Listen again" (the globe, Settings) alone.
+            // it back on - Boss's tap on the ear (the globe, Settings) alone.
             Command.Kind.LISTEN_OFF -> {
                 if (JarvisVoice.deaf) com.optionslab.ira.NoListen.ALREADY to null
                 else { JarvisVoice.dontListen(ctx()); IraActivity.add("Stopped listening: microphone off (asked in the chat)."); com.optionslab.ira.NoListen.OFF to null }

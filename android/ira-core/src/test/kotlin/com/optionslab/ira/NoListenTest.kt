@@ -46,7 +46,7 @@ class NoListenTest {
     @Test fun itOnlyLowersAndIsAVoiceTool() {
         assertTrue(Command.Kind.LISTEN_OFF.reduces)
         assertEquals("Voice", Toolbox.of(Command.Kind.LISTEN_OFF).area)
-        assertTrue("Listen again" in NoListen.OFF && "Only you" in NoListen.OFF)
+        assertTrue("crossed-out ear" in NoListen.OFF && "Only you" in NoListen.OFF && "crossed-out ear" in NoListen.ALREADY)
         assertTrue(Commands.describe(Command(Command.Kind.LISTEN_OFF)).startsWith("stop listening"))
     }
 
