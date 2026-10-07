@@ -205,8 +205,13 @@ internal object IraStudy {
         val local = now.toLocalDateTime()
         val trading: (LocalDate) -> Boolean = { com.optionslab.app.data.Market.isTradingDay(it) }
         val card = com.optionslab.app.security.SecurePrefs.getString("jarvis.reportcard") == now.toLocalDate().toString()
+        // Saturday's "what's working" look (IraLiquidityInsight): hourly through its morning until it is made.
+        // (Switched off, or not a Jarvis build: nothing to wait for, so no extra hourly runs.)
+        val liq = com.optionslab.app.security.SecurePrefs.getString(com.optionslab.ira.LiquidityInsight.KEY_DONE) == now.toLocalDate().toString() ||
+            !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD ||
+            !runCatching { Automations.on(Automations.Auto.LIQINSIGHT) }.getOrDefault(false)
         com.optionslab.ira.StudyPace.everyHours(local, com.optionslab.ira.NightNewsPace.nextOpen(local, trading),
-            _state.value.at?.atZone(IST)?.toLocalDateTime(), com.optionslab.ira.StudyPace.lastClose(local, trading), card)
+            _state.value.at?.atZone(IST)?.toLocalDateTime(), com.optionslab.ira.StudyPace.lastClose(local, trading), card, liq)
     }.getOrDefault(1L)
 
     fun ivHistory(u: String): List<Pair<LocalDate, Double>> = _state.value.iv[u].orEmpty()

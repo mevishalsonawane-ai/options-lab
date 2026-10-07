@@ -1129,13 +1129,17 @@ private fun SoloCard() {
             androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.on = v })
         }
         // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
-        SoloForwardGlance(on) { readSoloGlance(on) }
-        // The forward test set in advance, and the "not proven" label (the lines the glance shows are left out under it).
+        var glance by remember { mutableStateOf<SoloGlanceRead?>(null) }
+        SoloForwardGlance(on, onRead = { glance = it }) { readSoloGlance(on) }
+        // The forward test set in advance, and the "not proven" label (the lines the glance shows are left out under it -
+        // only once it has been read; while it is not, or cannot be, the card keeps them).
+        val shown = glance
         val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
-        lines.filter { com.optionslab.app.BuildConfig.GOLD || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
+        lines.filter { com.optionslab.app.BuildConfig.GOLD || shown == null || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
         val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
         Note(rec)
-        com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
+        // Why it switched itself off: said once - the glance's own line when it shows one, else the kept note.
+        if (shown?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
     }
 }
 

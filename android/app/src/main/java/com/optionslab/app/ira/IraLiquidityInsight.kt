@@ -8,7 +8,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * "What's working" ([LiquidityInsight], Boss, 07 Oct 2026): Liquidity 15+5's closed paper trades cut by entry time, book,
- * side, exit, room to the next level and weekday, a group said to stand out only past 2 standard errors from the rest,
+ * side, exit, room to the next level and weekday, a group said to stand out only past a 95% t-test from the rest,
  * beside the research. Asked ("what's working for liquidity", "where does liquidity lose", "liquidity patterns", [answer]),
  * and once a week ([watch], [Automations.Auto.LIQINSIGHT], its own switch under Coach me, on): on Saturday morning, when at
  * least [LiquidityInsight.MIN_NEW] trades closed since the last look, one note in the chat, tagged for Today's notes (Coach).
@@ -57,6 +57,8 @@ internal object IraLiquidityInsight {
         if (!LiquidityInsight.due(now, doneOn())) return
         if (!busy.compareAndSet(false, true)) return
         try {
+            // Again under the guard: a round that finished just before this one took it has kept the day already.
+            if (!LiquidityInsight.due(now, doneOn())) return
             val rows = rows() ?: return
             val text = runCatching { LiquidityInsight.weekly(rows, mark()) }.getOrNull()
             val keep = HashMap<String, Any?>()

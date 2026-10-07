@@ -1,6 +1,7 @@
 package com.optionslab.ira
 
 import com.optionslab.engine.orb.LiquidityRules
+import com.optionslab.engine.orb.LiquidityShadow
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -8,6 +9,7 @@ import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -16,16 +18,18 @@ import kotlin.math.sqrt
  * "liquidity kahan loss karta hai" - Liquidity 15+5's own closed paper trades cut six ways, and once a week (Saturday
  * morning, when at least [MIN_NEW] trades closed since the last look) the same as one note.
  *
- * The cuts ([Dim]): the entry's time of day (09:20-10:30, 10:30-12:00, 12:00-13:30, 13:30-14:00), the index and book
- * (BankNifty 5/15-min, FinNifty 5/30-min), the side (CE/PE), the exit reason, the room to the next liquidity level at the
- * entry (in index-stop units, when the levels were recorded) and the day of the week. A group is shown only with at least
- * [MIN_CUT] trades: its trades, win rate and net a lot a trade after charges.
+ * The cuts ([Dim]): the entry's time of day (09:20-10:30, 10:30-12:00, 12:00-13:30, 13:30-14:00, and after 14:00 for
+ * trades from before the 14:00 last entry), the index and book (BankNifty 5/15-min, FinNifty 5/30-min), the side (CE/PE),
+ * the exit reason, the room from the level broken to the next liquidity level at the entry (in index-stop units, when the
+ * levels were recorded, on trades closed since the room filter went on - [ROOM_SINCE]) and the day of the week. A group is
+ * shown only with at least [MIN_CUT] trades: its trades, win rate and net a lot a trade after charges.
  *
  * The significance guard: a group "stands out" only when its mean net a lot a trade differs from the mean of the rest of
- * its cut (the other trades with that cut recorded, at least [MIN_CUT] of them) by more than [Z] standard errors of the
- * difference (Welch: SE = sqrt(s1^2/n1 + s2^2/n2), each s the sample standard deviation). Otherwise: no cut stands out yet.
- * Exit reasons are outcomes, not something known at the entry, so they are never "standing out": their mix is set against
- * the research's ([TradeLesson]'s shares) with a binomial standard error instead.
+ * its cut (the other trades with that cut recorded, at least [MIN_CUT] of them) beyond a two-sided 95% Welch t-test: the
+ * difference over its standard error (SE = sqrt(s1^2/n1 + s2^2/n2), each s the sample standard deviation) past the Student
+ * t critical value ([tCritical]) at the Welch-Satterthwaite degrees of freedom ([welchDf]). Otherwise: no cut stands out
+ * yet. Exit reasons are outcomes, not something known at the entry, so they are never "standing out": their mix is set
+ * against the research's ([TradeLesson]'s shares) with a binomial standard error instead ([Z] of them).
  *
  * Research, where the repo pins any: the backtest's net a trade and its band ([ForwardCheck.LIQUIDITY]), the five-year
  * study's exit mix ([TradeLesson]), the last-entry study (entries after 14:00 lost in both BankNifty years:
@@ -42,14 +46,15 @@ object LiquidityInsight {
 
     /** The six cuts, in the order told. [atEntry]: known when the trade was entered (exits are outcomes). */
     enum class Dim(val words: String, val atEntry: Boolean = true) {
-        TIME("entry time"), BOOK("index and book"), SIDE("side"), EXIT("exit", atEntry = false), ROOM("room to the next level at entry"), WEEKDAY("day of the week")
+        TIME("entry time"), BOOK("index and book"), SIDE("side"), EXIT("exit", atEntry = false),
+        ROOM("room from the level broken to the next level at entry"), WEEKDAY("day of the week")
     }
 
     /** A group is shown (and a rest set against it) only with at least this many trades. */
-    const val MIN_CUT = 5
+    const val MIN_CUT = 8
     /** The weekly note needs at least this many trades closed since the last one. */
     const val MIN_NEW = 10
-    /** Stands out: more than this many standard errors from the rest. */
+    /** An exit's share is beyond noise past this many binomial standard errors from the research's. */
     const val Z = 2.0
 
     const val LOCKED = LiquidityRecord.LOCKED
@@ -58,11 +63,13 @@ object LiquidityInsight {
     const val END = "Nothing changes from this: the arm's rules, lots and switch stay as they are. A rule change stays your call " +
         "after enough trades, through the research first."
     const val NONE = "No cut stands out yet - too few trades, or the differences are within noise (a cut stands out only when its " +
-        "average a trade is more than 2 standard errors from the rest)."
+        "average a trade differs from the rest's beyond a 95% t-test that allows for small groups)."
 
     /** Where the app keeps the Saturday the week's look was made, and the newest exit it counted. */
     const val KEY_DONE = "jarvis.liqinsight.done"
     const val KEY_MARK = "jarvis.liqinsight.mark"
+    /** Both keys' prefix: this phone's alone (they follow the arms' book, which never leaves it - [Upkeep.PRIVATE]). */
+    const val KEY_PREFIX = "jarvis.liqinsight."
     /** The weekly note's Saturday-morning window. */
     val FROM: LocalTime = LocalTime.of(8, 30)
     val UNTIL: LocalTime = LocalTime.of(12, 0)
@@ -74,6 +81,12 @@ object LiquidityInsight {
      */
     const val LATE_TRADES = 74
     const val LATE_NET = -10_652.0
+
+    /**
+     * The room filter ([LiquidityRules.hasRoom], research liq2) went on with the new rules on 06 Oct 2026
+     * ([LiquidityShadow.SINCE]): trades closed before it were not filtered, so the room cut leaves them out.
+     */
+    val ROOM_SINCE: LocalDate = LiquidityShadow.SINCE
 
     // ---- the question --------------------------------------------------------------------------------------------------
 
@@ -123,18 +136,24 @@ object LiquidityInsight {
 
     // ---- the cuts ------------------------------------------------------------------------------------------------------
 
-    /** The entry-time bucket of [t] (an entry before 09:20 counts in the first, one at or after 13:30 in the last). */
+    /**
+     * The entry-time bucket of [t] (an entry before 09:20 counts in the first; 13:30 to the 14:00 last entry in
+     * "13:30-14:00"; one after 14:00 - from before the last entry moved to 14:00 on 30 Sep - in its own "after 14:00").
+     */
     fun timeBucket(t: LocalTime): String = when {
         t.isBefore(LocalTime.of(10, 30)) -> "09:20-10:30"
         t.isBefore(LocalTime.of(12, 0)) -> "10:30-12:00"
         t.isBefore(LocalTime.of(13, 30)) -> "12:00-13:30"
-        else -> "13:30-14:00"
+        !t.isAfter(LiquidityRules.LAST_ENTRY) -> "13:30-14:00"
+        else -> AFTER_LAST
     }
-    private val TIMES = listOf("09:20-10:30", "10:30-12:00", "12:00-13:30", "13:30-14:00")
+    private const val AFTER_LAST = "after 14:00"
+    private val TIMES = listOf("09:20-10:30", "10:30-12:00", "12:00-13:30", "13:30-14:00", AFTER_LAST)
 
     /**
      * The room from the level the entry broke to the next level ahead, in index-stop units (BankNifty 30 points, FinNifty 15),
-     * at the entry; +infinity with no level ahead; null when the levels were not recorded.
+     * at the entry; +infinity with no level ahead; null when the levels were not recorded. (The room filter measures from
+     * the deciding bar's close, which the book does not keep: this is the room from the level broken.)
      */
     fun roomStops(r: LiquidityRecord.Row): Double? {
         val level = r.trade.level ?: return null
@@ -164,9 +183,12 @@ object LiquidityInsight {
         Dim.BOOK -> r.book
         Dim.SIDE -> side(r)
         Dim.EXIT -> r.why
-        Dim.ROOM -> roomBucket(roomStops(r))
+        Dim.ROOM -> if (beforeRoomFilter(r)) null else roomBucket(roomStops(r))
         Dim.WEEKDAY -> r.day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
     }
+
+    /** Did [r] close before the room filter went on ([ROOM_SINCE])? Such a trade is left out of the room cut. */
+    fun beforeRoomFilter(r: LiquidityRecord.Row): Boolean = (r.trade.exitTime?.toLocalDate() ?: r.day).isBefore(ROOM_SINCE)
 
     /** Mean and sample standard deviation (null under 2 values). */
     data class Stats(val n: Int, val mean: Double, val sd: Double?)
@@ -190,16 +212,52 @@ object LiquidityInsight {
     }
 
     /**
-     * One group of a cut: [n] trades, [wins], [mean] net a lot a trade after charges; set against the [restN] other trades
-     * of its cut ([restMean]) when there are at least [MIN_CUT] of them, with [se] the standard error of the difference.
+     * The Welch-Satterthwaite degrees of freedom of the difference between two means:
+     * (s1^2/n1 + s2^2/n2)^2 / ((s1^2/n1)^2/(n1-1) + (s2^2/n2)^2/(n2-1)); null when either side has fewer than 2 values or
+     * there is no spread at all.
      */
-    data class Cut(val dim: Dim, val key: String, val n: Int, val wins: Int, val mean: Double, val restN: Int, val restMean: Double?, val se: Double?) {
+    fun welchDf(a: Stats, b: Stats): Double? {
+        val sa = a.sd ?: return null
+        val sb = b.sd ?: return null
+        val va = sa * sa / a.n
+        val vb = sb * sb / b.n
+        val den = va * va / (a.n - 1) + vb * vb / (b.n - 1)
+        if (den <= 0.0) return null
+        return (va + vb) * (va + vb) / den
+    }
+
+    /** Two-sided 95% Student t critical values (the 97.5th percentile) for 1..30 degrees of freedom. */
+    private val T975 = doubleArrayOf(12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179, 2.160,
+        2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086, 2.080, 2.074, 2.069, 2.064, 2.060, 2.056, 2.052, 2.048, 2.045, 2.042)
+
+    /**
+     * The two-sided 95% Student t critical value at [df] degrees of freedom: the table for 1..30 (a fractional df rounds
+     * down - the stricter value), beyond 30 the Cornish-Fisher expansion about the normal's 1.96 (t(60) = 2.000, t(120) =
+     * 1.980), tending to 1.96.
+     */
+    fun tCritical(df: Double): Double {
+        val d = floor(df).coerceAtLeast(1.0)
+        if (d <= 30.0) return T975[d.toInt() - 1]
+        val z = 1.959964
+        val z3 = z * z * z
+        val z5 = z3 * z * z
+        return z + (z3 + z) / (4 * d) + (5 * z5 + 16 * z3 + 3 * z) / (96 * d * d)
+    }
+
+    /**
+     * One group of a cut: [n] trades, [wins], [mean] net a lot a trade after charges; set against the [restN] other trades
+     * of its cut ([restMean]) when there are at least [MIN_CUT] of them, with [se] the standard error of the difference and
+     * [df] its Welch-Satterthwaite degrees of freedom.
+     */
+    data class Cut(val dim: Dim, val key: String, val n: Int, val wins: Int, val mean: Double, val restN: Int, val restMean: Double?, val se: Double?,
+                   val df: Double? = null) {
         val winRate: Double get() = wins.toDouble() / n
         val diff: Double? get() = restMean?.let { mean - it }
-        /** How many standard errors from the rest; null when it could not be set against one. */
-        val z: Double? get() = if (se == null || se <= 0.0 || diff == null) null else diff!! / se
+        /** How many standard errors from the rest (Welch's t); null when it could not be set against one. */
+        val z: Double? get() = if (se == null || se <= 0.0 || diff == null || df == null) null else diff!! / se
         val tested: Boolean get() = dim.atEntry && z != null
-        val standsOut: Boolean get() = tested && abs(z!!) > Z
+        /** Beyond the two-sided 95% t critical value at [df]. */
+        val standsOut: Boolean get() = tested && abs(z!!) > tCritical(df!!)
     }
 
     /** Every group of [d] among [rows] with at least [MIN_CUT] trades, in the cut's own order. */
@@ -213,7 +271,8 @@ object LiquidityInsight {
             val a = stats(mine.map { it.perLot })
             val b = stats(rest)
             val tested = rest.size >= MIN_CUT
-            Cut(d, k, mine.size, mine.count { it.win }, a.mean, rest.size, if (tested) b.mean else null, if (tested) standardError(a, b) else null)
+            Cut(d, k, mine.size, mine.count { it.win }, a.mean, rest.size, if (tested) b.mean else null, if (tested) standardError(a, b) else null,
+                if (tested) welchDf(a, b) else null)
         }
     }
 
@@ -271,7 +330,7 @@ object LiquidityInsight {
         Dim.BOOK -> c.key
         Dim.SIDE -> "${c.key} trades"
         Dim.EXIT -> LiquidityRecord.reason(c.key)
-        Dim.ROOM -> if (c.key == "no level ahead") "entries with no level ahead" else "room ${c.key}"
+        Dim.ROOM -> if (c.key == "no level ahead") "entries with no level ahead" else "room ${c.key} from the level broken"
         Dim.WEEKDAY -> c.key + "s"
     }
 
@@ -326,11 +385,18 @@ object LiquidityInsight {
         }
     }
 
-    /** The room filter's finding against the paper's tightest room. */
+    /**
+     * The room filter's finding against the paper's tightest room. The paper measures the room from the level broken (the
+     * filter's deciding close is not kept on the trade), and only on trades closed since the filter went on ([ROOM_SINCE]).
+     */
     fun roomResearchLine(read: Read): String {
-        val recorded = read.rows.count { roomStops(it) != null }
-        val head = "The research found breaks with under ${LiquidityRules.MIN_ROOM_STOPS.roundToInt()} index stop of room to the next level did worse, so the arm skips them. "
-        if (recorded == 0) return head + "The room is not recorded on these trades, so the paper record cannot speak to it."
+        val before = read.rows.count { beforeRoomFilter(it) }
+        val recorded = read.rows.count { !beforeRoomFilter(it) && roomStops(it) != null }
+        val head = "The research found breaks with under ${LiquidityRules.MIN_ROOM_STOPS.roundToInt()} index stop of room to the next level did worse, so the arm skips them. " +
+            "The paper's room is measured from the level broken, not the deciding close the filter uses" +
+            (if (before > 0) "; the ${s(before, "trade")} closed before ${date(ROOM_SINCE)} (before the filter went on) ${if (before == 1) "is" else "are"} left out of the room cut. " else ". ")
+        if (recorded == 0) return head + if (before > 0) "No trade closed since has its room recorded, so the paper record cannot speak to it yet."
+            else "The room is not recorded on these trades, so the paper record cannot speak to it."
         val tight = read.cuts.getValue(Dim.ROOM).firstOrNull { it.key == "under 2 index stops" }
         return head + when {
             tight == null -> "Too few paper trades had under 2 stops of room to tell whether less room still does worse."
@@ -371,9 +437,13 @@ object LiquidityInsight {
             }
             Focus.PATTERNS -> { if (good.isNotEmpty()) out += goodLine(); if (bad.isNotEmpty()) out += badLine() }
         }
-        out += "Worth watching, not proof: with ${s(read.tested, "group")} checked, about 1 in 20 can pass this test by chance, and the record is young."
+        out += "Worth watching, not proof: with ${s(read.tested, "group")} checked, about ${byChance(read.tested)} could stand out by chance even with no " +
+            "real difference, and the record is young."
         return out
     }
+
+    /** How many of [n] groups a 5% test lets through by chance alone: n/20, to one decimal ("0.6", "1", "1.5"). */
+    fun byChance(n: Int): String = String.format(Locale.ENGLISH, "%.1f", n / 20.0).removeSuffix(".0")
 
     private fun head(focus: Focus, rows: List<LiquidityRecord.Row>): String {
         val st = stats(rows.map { it.perLot })

@@ -186,6 +186,22 @@ class StudyPaceTest {
         assertEquals(1L, pace(at(4, 9, 15), at(3, 3, 45), card = true), "Sunday from 09:15: the night news window comes within six hours")
     }
 
+    @Test fun saturdayMorningStaysHourlyUntilTheWeeksLiquidityLook() {
+        // Saturday 3 Oct: the card given early, the second study made - the 6-hour step must not jump 08:00-12:00.
+        fun p(h: Int, m: Int = 0, done: Boolean) =
+            StudyPace.everyHours(at(3, h, m), NightNewsPace.nextOpen(at(3, h, m), weekday), at(3, 3, 45), StudyPace.lastClose(at(3, h, m), weekday), true, done)
+        assertEquals(StudyPace.SLOW_HOURS, p(7, 59, done = false), "before the window")
+        assertEquals(1L, p(8, 0, done = false))
+        assertEquals(1L, p(11, 59, done = false))
+        assertEquals(StudyPace.SLOW_HOURS, p(12, 0, done = false), "the window closed")
+        assertEquals(StudyPace.SLOW_HOURS, p(9, 0, done = true), "the look made today")
+        // Not a Saturday: the look never holds the pace (Sunday 4 Oct, 08:30).
+        assertEquals(StudyPace.SLOW_HOURS, StudyPace.everyHours(at(4, 8, 30), NightNewsPace.nextOpen(at(4, 8, 30), weekday), at(3, 3, 45),
+            StudyPace.lastClose(at(4, 8, 30), weekday), true, false))
+        // Callers that do not pass it: as before.
+        assertEquals(StudyPace.SLOW_HOURS, pace(at(3, 10), at(3, 3, 45), card = true))
+    }
+
     @Test fun unknownReadsAsBefore() {
         assertEquals(1L, pace(at(3, 12), at(3, 3, 45), card = true) { false })
     }

@@ -47,7 +47,10 @@ object Upkeep {
         "recorder.",
         // The forward-test watch's last told verdicts (jarvis.forward.told.): read from Solo's record, which never leaves
         // the phone - restored over a fresh record they would silence its milestones (07 Oct).
-        ForwardWatch.KEY_PREFIX)
+        ForwardWatch.KEY_PREFIX,
+        // The weekly "what's working" note's day and newest counted exit (jarvis.liqinsight.): read from the arms' book,
+        // which never leaves the phone - restored over a fresh book they would hold back or skip its notes (07 Oct).
+        LiquidityInsight.KEY_PREFIX)
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }

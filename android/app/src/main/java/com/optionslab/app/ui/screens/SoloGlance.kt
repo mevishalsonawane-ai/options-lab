@@ -61,16 +61,18 @@ internal fun readSoloGlance(on: Boolean): SoloGlanceRead {
 
 /**
  * Solo (midday)'s forward test at a glance on its card: read by [load] on Dispatchers.IO once, and again when [refresh]
- * changes (its switch). Nothing until it is read, nothing when it cannot be read. Reads only: the card's switch is
- * untouched. Never in the GOLD build (Solo is not in it).
+ * changes (its switch). Nothing until it is read, nothing when it cannot be read. Each read is handed to [onRead] (null:
+ * not read), so the card leaves out its own copies of the glance's lines only once the glance shows them. Reads only:
+ * the card's switch is untouched. Never in the GOLD build (Solo is not in it).
  */
 @Composable
-internal fun SoloForwardGlance(refresh: Any?, load: suspend () -> SoloGlanceRead?) {
+internal fun SoloForwardGlance(refresh: Any?, onRead: (SoloGlanceRead?) -> Unit = {}, load: suspend () -> SoloGlanceRead?) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     var read by remember { mutableStateOf<SoloGlanceRead?>(null) }
     LaunchedEffect(refresh) {
         val r = withContext(Dispatchers.IO) { runCatching { load() }.getOrNull() }
         read = r
+        onRead(r)
     }
     read?.let { SoloGlanceContent(it) }
 }

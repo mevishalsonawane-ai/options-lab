@@ -341,13 +341,22 @@ object StudyPace {
     fun studyDue(lastStudy: java.time.LocalDateTime?, lastClose: java.time.LocalDateTime?): Boolean =
         lastStudy == null || lastClose == null || lastStudy.isBefore(lastClose.plusHours(SECOND_AFTER_HOURS))
 
-    /** Hours between the study job's runs: 1 as before, or [SLOW_HOURS] while nothing of its work can fall due sooner. */
+    /** Saturday's "what's working" window for the pace ([LiquidityInsight.due]'s, from a little before it opens). */
+    private val LIQ_FROM = java.time.LocalTime.of(8, 0)
+
+    /**
+     * Hours between the study job's runs: 1 as before, or [SLOW_HOURS] while nothing of its work can fall due sooner. On a
+     * Saturday morning (08:00 to [LiquidityInsight.UNTIL]) it stays hourly until the week's "what's working" look is made
+     * ([liqInsightDone]: [LiquidityInsight.KEY_DONE] is today), so a 6-hour step after the report card cannot jump the window.
+     */
     fun everyHours(now: java.time.LocalDateTime, nextOpen: java.time.LocalDateTime?, lastStudy: java.time.LocalDateTime?,
-                   lastClose: java.time.LocalDateTime?, reportCardDone: Boolean): Long = when {
+                   lastClose: java.time.LocalDateTime?, reportCardDone: Boolean, liqInsightDone: Boolean = true): Long = when {
         nextOpen == null -> 1L
         !now.isBefore(nextOpen.minusHours(NightNewsPace.OVERNIGHT_HOURS + SLOW_HOURS)) -> 1L
         studyDue(lastStudy, lastClose) -> 1L
         now.dayOfWeek == java.time.DayOfWeek.SATURDAY && !reportCardDone -> 1L
+        now.dayOfWeek == java.time.DayOfWeek.SATURDAY && !liqInsightDone && !now.toLocalTime().isBefore(LIQ_FROM) &&
+            now.toLocalTime().isBefore(LiquidityInsight.UNTIL) -> 1L
         else -> SLOW_HOURS
     }
 }
