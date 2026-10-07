@@ -30,6 +30,7 @@ and `trades.csv.gz`.
 | `lab.py` | `Lab(strategies).run()`: everything end to end plus the gated ranking and report |
 | `strategies/*.py` | `liquidity`, `solo`, `orb`, `straddle`, `hero`, `bigbar`, `random_entry` (control); `registry.py` lists them |
 | `validate.py` | the validation suite |
+| `strategies/lv05_multiday.py`, `lv05_run.py` | multi-day positions (catalog LV-05): a day-by-day walker on real option bars with rolls, expiry exits, Black-Scholes fill-in outside the ATM±10 window and a futures mirror; same-day parity with `engine.py` is checked in every run. Results: `research/OBUY_LV05_MULTIDAY.md` |
 
 ## How a backtest works
 
