@@ -121,9 +121,9 @@ object WhatsNew {
             "On the BankNifty and FinNifty charts, a panel shows the levels Liquidity 15+5 watches, today's entries and exits, and the breaks it skipped. " +
                 "Tap a marker for the trade's details.",
             "Chart tab → BANKNIFTY or FINNIFTY → \"Liquidity levels\" (on at first)", to = "chart"),
-        Entry("2026-10-06-jarvis-trades-30-60", OCT6, "Jarvis's own trades: 30-point stop, 60-point target",
-            "News trades and Jarvis's other trade ideas now always use a fixed 30-point stop and a 60-point target, with the profit locked in steps on the way. " +
-                "An option priced 35 or less is not bought.",
+        Entry("2026-10-06-jarvis-trades-15-40", OCT6, "Jarvis's own trades: 15% stop, 40-point target",
+            "News trades and Jarvis's other trade ideas use a stop 15% below the price paid and a 40-point target, with the profit locked in steps on the way. " +
+                "A trade already placed with the 30-point stop and 60-point target keeps them.",
             "Applies by itself to Jarvis's trades", ask = "what is the stop loss for news trades", jarvisOnly = true),
         Entry("2026-10-06-pine-30-60", OCT6, "Pine scripts: stop, target and profit lock required",
             "Every Pine script must now have a stop-loss and a target; new scripts start at 30 and 60 points, and the profit lock is always on. " +

@@ -54,7 +54,7 @@ object PatternExpert {
         fun optionText(): String = when {
             !held -> ""
             priced < MIN_CASES -> " Not enough real option prices to test it as a trade ($priced cases), so I don't suggest it."
-            else -> " As an option trade on real prices (ATM, ${"%.0f".format(Locale.ENGLISH, JarvisTrades.STOP_POINTS)}-point stop, +${"%.0f".format(Locale.ENGLISH, JarvisTrades.TARGET_POINTS)} target, profit lock, ${"%.0f".format(Locale.ENGLISH, JarvisTrades.COST_POINTS)} point for costs): " +
+            else -> " As an option trade on real prices (ATM, ${"%.0f".format(Locale.ENGLISH, JarvisTrades.STOP_SHARE * 100)}% stop, +${"%.0f".format(Locale.ENGLISH, JarvisTrades.TARGET_POINTS)} target, profit lock, ${"%.0f".format(Locale.ENGLISH, JarvisTrades.COST_POINTS)} point for costs): " +
                 "${"%+.1f".format(Locale.ENGLISH, optAvg)} points a trade over $priced trades (${"%+.1f".format(Locale.ENGLISH, optFirst)} and ${"%+.1f".format(Locale.ENGLISH, optSecond)} by year)" +
                 if (optionHeld) "." else " - it lost in a year, so I don't suggest it."
         }
@@ -139,7 +139,7 @@ object PatternExpert {
                 (next?.let { "Room to ${it.name} at ${px(it.price)}. " } ?: "") +
                 (behind?.let { "${it.name} at ${px(it.price)} is ${if (up) "below" else "above"}. " } ?: "") +
                 "Trade check: ${when (check) { TradeCheck.Level.GO -> "normal"; TradeCheck.Level.CAREFUL -> "careful today"; else -> "not known" }}. " +
-                "What can go wrong: it failed ${pct(1 - e.rate)} of the time; the stop ${"%.0f".format(Locale.ENGLISH, JarvisTrades.STOP_POINTS)} points below the price paid and the profit lock limit that. History, not a promise."
+                "What can go wrong: it failed ${pct(1 - e.rate)} of the time; the stop ${"%.0f".format(Locale.ENGLISH, JarvisTrades.STOP_SHARE * 100)}% below the price paid and the profit lock limit that. History, not a promise."
             return Verdict(NewsTrade.Idea(m, up, why, e.rate, k.name), reasons)
         }
         return Verdict(null, reasons)

@@ -43,7 +43,7 @@ class WhatsNewChangelogTest {
         for (want in listOf("liquidity-only", "liquidity-lots", "solo-midday", "chart-liquidity", "liquidity-level-alert", "liquidity-notifications",
             "trade-lessons", "liquidity-replay", "liquidity-paper-record", "live-vs-backtest", "today-glance", "morning-cues", "big-move-risk",
             "market-data-viewer", "weekly-review", "tomorrow-plan", "liquidity-record", "liquidity-why-not", "solo-day", "liquidity-levels",
-            "pine-30-60", "jarvis-trades-30-60"))
+            "pine-30-60", "jarvis-trades-15-40"))
             assertTrue(want in ids, want)
         // Written newest first: the last change of the day leads, the first one closes.
         assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES.first().id)
