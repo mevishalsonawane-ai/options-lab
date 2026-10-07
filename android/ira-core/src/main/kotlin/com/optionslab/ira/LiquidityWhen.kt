@@ -49,19 +49,20 @@ object LiquidityWhen {
     private val LIQ = Regex(" (liquidity|liquiditys|liqudity|liquidty) ")
     /** A day of the week asked: which day, by weekday, Mondays (plural: the record of them), in Hinglish "kis din". */
     private val WEEKDAY = Regex(" (weekday|weekdays|week day|week days|day of the week|days of the week|day of week|which day|which days|what day|" +
-        "what days|best day|best days|worst day|worst days|mondays|tuesdays|wednesdays|thursdays|fridays|kis din|kaun se din|kaunsa din|" +
+        "what days|best day|best days|worst day|worst days|day wise|weekday wise|mondays|tuesdays|wednesdays|thursdays|fridays|kis din|kaun se din|kaunsa din|" +
         "kaun sa din|konsa din|konse din|kon sa din) ")
     /** Expiry days asked: on expiry, expiry days against the rest, in Hinglish "expiry ke din". */
-    private val EXPIRY = Regex(" (expiry day|expiry days|expiry session|expiry sessions|on expiry|on expiries|expiries|non expiry|expiry vs|" +
+    private val EXPIRY = Regex(" (expiry day|expiry days|expiry session|expiry sessions|on expiry|on expiries|non expiry|expiry vs|" +
         "expiry versus|expiry ke din|expiry wale din|expiry waale din|expiry din|expiry pe|expiry par) ")
     /** The entry's time of day asked: the time of entry, which hour or half hour, in Hinglish "kis time". */
     private val TIME = Regex(" (time of day|time of the day|times of day|time of entry|time of its entry|entry time|entry times|entry hour|" +
         "entry hours|which time|what time|which hour|what hour|which half hour|half hour|half hours|half hourly|time bucket|time buckets|" +
-        "time slot|time slots|morning or afternoon|morning vs afternoon|morning versus afternoon|kis time|kis waqt|kis samay|kitne baje) ")
+        "time slot|time slots|time wise|hour wise|by hour|by the hour|hourly|best time|worst time|best hour|worst hour|" +
+        "morning|mornings|afternoon|afternoons|morning or afternoon|morning vs afternoon|morning versus afternoon|kis time|kis waqt|kis samay|kitne baje) ")
     /** How it did there: best or worst, works, a record or a split, in Hinglish "achha karta", "kaisa". */
     private val HOW = Regex(" (best|worst|better|worse|well|good|works|work|working|perform|performs|performed|performance|win rate|" +
         "record|stats|breakdown|split|compare|comparison|vs|versus|how|money|profit|profitable|made|makes|earns|achha|accha|acha|acchha|" +
-        "kaisa|kaise|kamata|kamaata) ")
+        "lose|loses|losing|loss|losses|kaisa|kaise|kamata|kamaata) ")
     /** A split named as one: by weekday, by entry time, weekday wise. */
     private val BY = Regex(" ((by|per|across) (weekday|weekdays|week day|day of the week|days of the week|day of week|entry time|entry times|" +
         "time of day|time of entry|time|hour|hours|half hour|expiry|expiry day|expiry days)|(weekday|day|time|hour|expiry) wise|" +
@@ -74,9 +75,9 @@ object LiquidityWhen {
      * shadows, a definition, Boss's own trades, another arm, or an index named.
      */
     private val NOT = Regex(" (should|shall|set|change|changes|changing|switch|switched|turn on|turn off|disable|enable|karo|kar do|kardo|band karo|" +
-        "stop|stops|stopping|today|todays|aaj|tomorrow|kal|next|will|would|why|kyun|kyon|kyu|did|was|were|yesterday|last|this|" +
+        "stop|stops|stopping|today|todays|aaj|tomorrow|kal|next|will|would|why|kyun|kyon|kyu|was|were|yesterday|last|this|" +
         "backtest|back test|backtested|research|shadow|shadows|candidate|candidates|what is a|define|meaning|mean by|" +
-        "hero|solo|orb|gold|pine|my|mera|meri|mere|i|me|main|mai|level|levels|pool|pools|lot|lots|size|" +
+        "hero|solo|orb|gold|pine|my|mera|meri|mere|i|main|mai|level|levels|pool|pools|lot|lots|size|" +
         "hold|holds|held|how long|drawdown|streak|which expiry|what expiry|buy|buys|bought|contract|contracts|strike|strikes|" +
         "enter|enters|entering|start|starts|when|nifty|banknifty|bank nifty|finnifty|fin nifty|" +
         "(does|do|can) (liquidity|it) (trade|take) (on|during|at)) ")
@@ -171,13 +172,25 @@ object LiquidityWhen {
         if (c.enough) "" else " (too few to tell)"
 
     /**
-     * The plain takeaway over [cells] (the splits shown): the buckets with [MIN_BUCKET] trades or more, the one that made the
+     * The plain takeaway over [cells] (one split): the buckets with [MIN_BUCKET] trades or more, the one that made the
      * most a trade and the least - a pattern, not proof; under two such buckets, too few to tell. Never a change.
      */
-    fun takeaway(cells: List<Cell>): String {
+    fun takeaway(cells: List<Cell>): String = standout(cells) ?: TOO_FEW
+
+    private const val TOO_FEW = "Too few trades in its buckets to tell which day or time suits it - it takes $MIN_BUCKET trades in a bucket " +
+        "before I set one against another."
+
+    /**
+     * The takeaway over the splits shown, each split read on its own (a weekday is never set against "other days" or an
+     * hour: the same trades sit in every split); too few to tell when no split has two buckets with enough trades.
+     */
+    fun takeawayOver(splits: List<List<Cell>>): String =
+        splits.mapNotNull { standout(it) }.ifEmpty { listOf(TOO_FEW) }.joinToString(" ")
+
+    /** [takeaway] over one split, or null under two buckets with [MIN_BUCKET] trades or more. */
+    private fun standout(cells: List<Cell>): String? {
         val enough = cells.filter { it.enough }
-        if (enough.size < 2) return "Too few trades in its buckets to tell which day or time suits it - it takes $MIN_BUCKET trades in a bucket " +
-            "before I set one against another."
+        if (enough.size < 2) return null
         val best = enough.maxByOrNull { it.avg }!!; val least = enough.minByOrNull { it.avg }!!
         if (best.avg - least.avg < 1.0) return "Among the buckets with $MIN_BUCKET trades or more, none stands apart - about the same a trade."
         return "Among the buckets with $MIN_BUCKET trades or more, ${best.label} made the most a trade (${rs(best.avg)} a lot) and ${least.label} " +
@@ -195,9 +208,9 @@ object LiquidityWhen {
             Focus.TIME -> "entry time"
             Focus.ALL -> "day and time"
         } + ", net a lot after charges:"
-        val shown = mutableListOf<Cell>()
+        val shown = mutableListOf<List<Cell>>()
         if (focus == Focus.ALL || focus == Focus.WEEKDAY) {
-            val cells = byWeekday(mine); shown += cells
+            val cells = byWeekday(mine); shown += listOf(cells)
             out += "By weekday: " + cells.joinToString("; ") { said(it) } + "."
         }
         if (focus == Focus.ALL || focus == Focus.EXPIRY) {
@@ -205,7 +218,7 @@ object LiquidityWhen {
             out += if (e.readable == 0) "Expiry days: its book does not carry a readable option expiry for these trades, so I can't tell its " +
                 "expiry days from the rest - that split is skipped."
             else {
-                val cells = listOf(e.expiry, e.other).filter { it.n > 0 }; shown += cells
+                val cells = listOf(e.expiry, e.other).filter { it.n > 0 }; shown += listOf(cells)
                 val none = if (e.expiry.n == 0) " None of its trades fell on an expiry day its book shows." else ""
                 "Expiry days against the rest: " + cells.joinToString("; ") { said(it) } + ".$none (Expiry days read from the expiries of " +
                     "the options in its own book - it buys the next expiry, never the one expiring that day - so an expiry with no trade " +
@@ -213,10 +226,10 @@ object LiquidityWhen {
             }
         }
         if (focus == Focus.ALL || focus == Focus.TIME) {
-            val cells = byTime(mine); shown += cells
+            val cells = byTime(mine); shown += listOf(cells)
             out += "By entry time ($BUCKET_MIN-minute buckets): " + cells.joinToString("; ") { said(it) } + "."
         }
-        if (shown.isNotEmpty()) out += takeaway(shown)
+        if (shown.isNotEmpty()) out += takeawayOver(shown)
         out += END
         return out.joinToString("\n")
     }

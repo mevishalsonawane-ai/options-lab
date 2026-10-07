@@ -89,7 +89,7 @@ class LiquidityDrawdownTest {
         assertTrue("Worst drawdown ever: none - it has never fallen from a best." in up && "Longest losing streak: none - no losing trade yet." in up, up)
         // Never above zero.
         val under = LiquidityDrawdown.answer(rows(-100.0))
-        assertTrue("It has not yet been above zero: its best is the start, -Rs 100 below it." in under, under)
+        assertTrue("It has not yet been above zero, so its best is still the start." in under, under)
         assertTrue("Its low so far -Rs 100 at trade 1 (21 Sep)." in under, under)
         assertTrue("Longest losing streak: 1 loss in a row on 21 Sep" in under, under)
         // Not the arm's: another arm, a live trade.

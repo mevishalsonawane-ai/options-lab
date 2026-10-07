@@ -38,6 +38,7 @@ object LiquidityHold {
     private val HOLD = Regex(" (hold time|hold times|holding time|holding times|holding period|holding periods|time in (a |the |its )?(trade|trades)|" +
         "trade duration|trade durations|duration|durations|" +
         "how long (does|do|did|is|are|was|were) (liquidity|liquiditys|it|its|the) ?(trades?|positions?)? ?(hold|held|holding|keep|kept|last|lasted|stay|stayed|run|ran|sit|open)|" +
+        "how long( [a-z]+){1,5} (holds|keeps|lasts|stays|sits|usually (hold|last|stay|run)|typically (hold|last|stay|run)|normally (hold|last|stay|run))|" +
         "(losers|losing trades|losses|winners|winning trades|wins) (last|lasted|run|ran|held|stay|stayed) (longer|shorter)|" +
         "(hold|holds|held|keep|keeps|kept) (its |the )?(losers|losing trades|winners|winning trades) (longer|shorter|too long)|" +
         "kitni der|kitne der|kitne minute|kitna time|kitne time|kab tak (rakhta|rakhti|hold|chalta|chalti)) ")
@@ -46,7 +47,7 @@ object LiquidityHold {
      * how long it has been armed or running, the backtest or the shadows, a definition, or another arm.
      */
     private val NOT = Regex(" (should|shall|set|change|changes|changing|switch|turn on|turn off|disable|enable|karo|kar do|kardo|band karo|" +
-        "right now|now|abhi|currently|still|open trade|open position|until|till|before|next|wait|waiting|been|armed|running since|" +
+        "right now|now|abhi|currently|current|still|open trade|open position|this trade|this position|will|would|until|till|before|next|wait|waiting|been|armed|running since|" +
         "backtest|back test|backtested|shadow|shadows|candidate|candidates|today|todays|aaj|tomorrow|kal|why|kyun|kyon|kyu|" +
         "what is a|define|meaning|mean by|hero|solo|orb|gold|pine|my trades|i hold|do i|did i|main|mai) ")
     /** A second question said after it: left to the splitter, each answered on its own. */

@@ -945,6 +945,14 @@ class CollisionTest {
         "liquidity by entry time" to "LiquidityWhen", "how does liquidity do on expiry days" to "LiquidityWhen", "liquidity by day and time" to "LiquidityWhen",
         "how does liquidity do on mondays" to "LiquidityWhen", "liquidity expiry ke din kaisa karta hai" to "LiquidityWhen",
         "which weekday is best for liquidity" to "LiquidityWhen", "liquidity kis time achha karta hai" to "LiquidityWhen",
+        // (Said other ways: a past tense, "show me", a loss, day or time wise, the best time, the morning.)
+        "how did liquidity do on expiry days" to "LiquidityWhen", "which day did liquidity do best" to "LiquidityWhen",
+        "show me liquidity by weekday" to "LiquidityWhen", "tell me which day liquidity does best" to "LiquidityWhen",
+        "which day liquidity loses most" to "LiquidityWhen", "liquidity day wise" to "LiquidityWhen", "liquidity performance by hour" to "LiquidityWhen",
+        "best time for liquidity" to "LiquidityWhen", "how does liquidity do in the morning" to "LiquidityWhen",
+        "how long liquidity holds its trades" to "LiquidityHold", "how long do liquidity's trades usually last" to "LiquidityHold",
+        "how much has liquidity lost from its peak" to "LiquidityDrawdown", "how far is liquidity from its peak" to "LiquidityDrawdown",
+        "did liquidity get back to its high" to "LiquidityDrawdown",
         // ---- LiquidityRecord:Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
         "how did liquidity do this week" to "LiquidityRecord", "how did liquidity do last week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord",
         "how did liquidity do on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord", "liquidity's last 10 trades" to "LiquidityRecord",
@@ -3283,7 +3291,8 @@ class CollisionTest {
             "should liquidity hold its trades longer", "change liquidity's hold time", "set liquidity hold time to 30 minutes", "how long is liquidity holding right now",
             "how long has liquidity been armed", "how long until liquidity trades", "how long does liquidity wait for a trade", "liquidity hold time today",
             "how long does hero hold its trades", "how long do i hold my trades", "how long does liquidity hold its trades and what is my pnl",
-            "hold to talk", "read my notes", "how long is the liquidity backtest", "what is liquidity", "liquidity hold time kar do"))
+            "hold to talk", "read my notes", "how long is the liquidity backtest", "what is liquidity", "liquidity hold time kar do",
+            "how long will liquidity hold this trade", "how long does liquidity hold the current trade"))
             assertEquals(null, LiquidityHold.asked(s), "$s: ${audit.feature(s)}")
         assertTrue(audit.feature("how long does liquidity hold its trades and what is my pnl") != "LiquidityHold")
     }
@@ -3317,7 +3326,11 @@ class CollisionTest {
             "how long does liquidity hold its trades", "what is my drawdown", "how close is my drawdown to my daily loss limit",
             "set liquidity's drawdown limit", "should liquidity stop after this drawdown", "turn off liquidity in a drawdown",
             "liquidity drawdown today", "solo drawdown", "hero's worst losing streak", "liquidity backtest drawdown", "what is a drawdown",
-            "why is liquidity in a drawdown", "liquidity drawdown and what is my pnl", "is nifty down from its high", "read my notes", "catch me up"))
+            "why is liquidity in a drawdown", "liquidity drawdown and what is my pnl", "is nifty down from its high", "read my notes", "catch me up",
+            // A zone's depth, a stop's depth or a re-entry is not its fall from its best.
+            "how deep is the liquidity zone", "liquidity sweep how deep", "how deep was liquidity's stop", "liquidity get back in",
+            // A span named: the whole book is all this reads, so the record (which cuts by span) keeps it.
+            "liquidity drawdown last week", "liquidity worst losing streak this week", "liquidity drawdown over the last 10 trades"))
             assertTrue(!LiquidityDrawdown.asked(s), "$s: ${audit.feature(s)}")
         assertTrue(audit.feature("liquidity drawdown and what is my pnl") != "LiquidityDrawdown")
     }
@@ -3353,7 +3366,9 @@ class CollisionTest {
             "how long does liquidity hold its trades", "should liquidity skip mondays", "turn off liquidity on expiry days",
             "what time does liquidity stop entering", "which expiry does liquidity buy", "does liquidity trade on expiry days",
             "how did liquidity do on monday", "liquidity today", "which day is best for my trades", "which day does hero do best",
-            "which day has the biggest range", "liquidity by weekday and what is my pnl", "read my notes", "catch me up"))
+            "which day has the biggest range", "liquidity by weekday and what is my pnl", "read my notes", "catch me up",
+            // The expiries themselves (how many are left, which it trades) are not its record on expiry days.
+            "how many expiries does liquidity have left", "liquidity's expiries"))
             assertTrue(LiquidityWhen.asked(s) == null, "$s: ${audit.feature(s)}")
         assertTrue(audit.feature("liquidity by weekday and what is my pnl") != "LiquidityWhen")
     }

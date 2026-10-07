@@ -37,14 +37,15 @@ object LiquidityDrawdown {
 
     private val LIQ = Regex(" (liquidity|liquiditys|liqudity|liquidty) ")
     /**
-     * A fall from its best asked: a drawdown, fallen or down from its best / peak / high, below or off its peak, how deep,
-     * underwater, a recovery from a fall, its peak equity, the worst or longest losing streak; in Hinglish "peak se kitna
-     * neeche", "kitna gira".
+     * A fall from its best asked: a drawdown, fallen, down or how far from its best / peak / high, below or off its peak,
+     * underwater, a recovery or a climb back to its best, its peak equity or equity curve, the worst or longest losing streak;
+     * in Hinglish "peak se kitna neeche", "kitna gira". Not a bare "how deep" or "get back" (a zone's depth, a re-entry).
      */
     private val DD = Regex(" (drawdown|drawdowns|draw down|draw downs|drawn down|underwater|under water|peak equity|equity peak|" +
-        "(fallen|fell|fall|falls|dropped|drop|down|slipped|off|below|under|away) (from )?(its |the )?(best|peak|high|highs|top|high water mark)|" +
-        "how deep|deepest (fall|dip|hole)|(worst|biggest|deepest|largest) (fall|dip|slump|hole)|" +
-        "(recover|recovered|recovery|recovering|climb back|climbed back|bounce back|bounced back|get back|got back)|" +
+        "(fallen|fell|fall|falls|dropped|drop|down|slipped|off|below|under|away|far|lost) (from )?(its |the )?(best|peak|high|highs|top|high water mark)|" +
+        "how far( [a-z]+){1,3} (from|below|off) (its |the )?(best|peak|high|top)|(at|near) (its |the )?(best|peak)|equity curve|" +
+        "deepest (fall|dip|hole)|(worst|biggest|deepest|largest) (fall|dip|slump|hole)|" +
+        "(recover|recovered|recovery|recovering)|(climb|climbed|bounce|bounced|get|got|come|came) back (to|up to) (its |the )?(best|peak|high|top|old high)|" +
         "(worst|longest|biggest|most) (losing|loss|losses) (streak|streaks|run|runs)|(worst|longest) (streak|run) of (losses|losing trades)|" +
         "most losses in a row|" +
         "(peak|best|high|top) se (kitna|kitni|kitne) (neeche|niche|neche|gira|giri|gire|door|dur)|kitna gira|kitni giri) ")
@@ -55,7 +56,7 @@ object LiquidityDrawdown {
     private val NOT = Regex(" (should|shall|set|change|changes|changing|switch|switched|turn on|turn off|disable|enable|karo|kar do|kardo|band karo|" +
         "limit|limits|kill switch|guard|breaker|today|todays|aaj|tomorrow|kal|why|kyun|kyon|kyu|will|would|" +
         "backtest|back test|backtested|shadow|shadows|candidate|candidates|what is a|define|meaning|mean by|hero|solo|orb|gold|pine|" +
-        "my|mera|meri|mere|i|main|mai|nifty|banknifty|bank nifty|finnifty|level|levels|pool|pools|vix|stock|stocks) ")
+        "my|mera|meri|mere|i|main|mai|nifty|banknifty|bank nifty|finnifty|level|levels|pool|pools|zone|zones|sweep|sweeps|grab|vix|stock|stocks) ")
     /** A second question said after it: left to the splitter, each answered on its own. */
     private val AND = Regex(" (and|aur|also|then|phir) (what|whats|how|hows|is|are|when|why|tell|show|give|check|kya|kitna|nifty|banknifty|my|mera|meri|mere) ")
 
@@ -65,7 +66,9 @@ object LiquidityDrawdown {
 
     private fun askedFresh(text: String): Boolean {
         val t = norm(text)
-        return LIQ.containsMatchIn(t) && DD.containsMatchIn(t) && !NOT.containsMatchIn(t) && !AND.containsMatchIn(t)
+        // Its whole book only: a span named ("this week", "last 10 trades") is the record's, which cuts by span - this does not.
+        return LIQ.containsMatchIn(t) && DD.containsMatchIn(t) && !NOT.containsMatchIn(t) && !AND.containsMatchIn(t) &&
+            LiquidityRecord.spanOf(text).span == LiquidityRecord.Span.ALL
     }
 
     // ---- the figures ---------------------------------------------------------------------------------------------------
@@ -164,7 +167,7 @@ object LiquidityDrawdown {
         if (r.n == 0) return "Liquidity 15+5 has no closed paper trade in its book yet, Boss - no best to fall from.\n$END"
         val out = mutableListOf<String>()
         out += "Boss, over its ${s(r.n, "closed paper trade")} Liquidity 15+5 stands at ${rs(r.total)} a lot. " +
-            if (r.peak <= 0) "It has not yet been above zero: its best is the start, ${rs(r.now)} below it."
+            if (r.peak <= 0) "It has not yet been above zero, so its best is still the start."
             else "Its best was ${rs(r.peak)}, at ${at(mine, r.peakAt)}."
         r.open?.let { o ->
             if (r.peak > 0) out += "Drawdown now: ${rs(r.now)} from that best${share(r.now, r.peak)}, ${s(r.n - o.peakAt, "trade")} since; " +

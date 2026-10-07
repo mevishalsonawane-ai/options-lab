@@ -75,6 +75,13 @@ class LiquidityWhenTest {
         assertTrue(two.startsWith("Among the buckets with 10 trades or more, Mon made the most a trade (+Rs 100 a lot) and Tue the least (-Rs 20 a lot)"), two)
         assertTrue(!ADVICE.containsMatchIn(two), two)
         assertTrue(LiquidityWhen.takeaway(listOf(LiquidityWhen.Cell("Mon", 10, 6, 100.0), LiquidityWhen.Cell("Tue", 10, 4, 100.0))).contains("none stands apart"))
+        // Every split read on its own: the same trades sit in each, so a weekday is never set against "other days" or an hour.
+        val weekdays = listOf(LiquidityWhen.Cell("Mon", 10, 6, 1000.0), LiquidityWhen.Cell("Tue", 12, 4, -240.0))
+        val expiry = listOf(LiquidityWhen.Cell("expiry days", 5, 1, -2000.0), LiquidityWhen.Cell("other days", 17, 9, 760.0))
+        val over = LiquidityWhen.takeawayOver(listOf(weekdays, expiry))
+        assertEquals(LiquidityWhen.takeaway(weekdays), over)
+        assertTrue("other days" !in over, over)
+        assertTrue(LiquidityWhen.takeawayOver(listOf(expiry, listOf(LiquidityWhen.Cell("09:30-10:00", 22, 10, 0.0)))).startsWith("Too few trades"))
     }
 
     @Test fun theAnswer() {
