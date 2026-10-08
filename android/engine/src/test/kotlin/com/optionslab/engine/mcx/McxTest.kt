@@ -288,19 +288,25 @@ class McxTest {
         assertNull(McxExpiry.due("CRUDEOIL", e, option = true, now = t("2026-10-14T20:00"), cal = cal))
     }
 
-    @Test fun deliveryFuturesGoTwoTradingDaysBeforeExpiryCrudeStays() {
+    @Test fun deliveryFuturesGoFiveTradingDaysBeforeExpiryCrudeStays() {
         val cal = McxSession.DEFAULT
-        // GOLDM November future expires Thu 5 Nov: closed from Tue 3 Nov.
+        // The default was raised from 2 to 5 trading days (9 Oct; research/MCX_TREND.md: roll about 5 days before expiry).
+        assertEquals(5, McxExpiry.Config().futureExitTradingDays)
+        assertEquals(5, McxExpiry.DEFAULT_FUTURE_EXIT_DAYS)
+        // GOLDM November future expires Thu 5 Nov: closed from Thu 29 Oct (4, 3, 2 Nov, Fri 30 Oct, Thu 29 Oct).
         val e = d("2026-11-05")
-        assertEquals(d("2026-11-03"), McxExpiry.futureExitDay(e, cal))
-        assertFalse(McxExpiry.futureExitDue("GOLDM", e, t("2026-11-02T23:00"), cal))
-        assertTrue(McxExpiry.futureExitDue("GOLDM", e, t("2026-11-03T09:00"), cal))
+        assertEquals(d("2026-10-29"), McxExpiry.futureExitDay(e, cal))
+        assertFalse(McxExpiry.futureExitDue("GOLDM", e, t("2026-10-28T23:00"), cal))
+        assertTrue(McxExpiry.futureExitDue("GOLDM", e, t("2026-10-29T09:00"), cal))
         assertFalse(McxExpiry.futureExitDue("CRUDEOIL", d("2026-10-19"), t("2026-10-19T10:00"), cal))
         assertFalse(McxExpiry.futureExitDue("GOLDM", e, t("2026-11-04T09:00"), cal, McxExpiry.Config(enabled = false)))
+        // The old 2-day setting still reads as asked (Tue 3 Nov), and 0 is taken as 1.
+        assertEquals(d("2026-11-03"), McxExpiry.futureExitDay(e, cal, McxExpiry.Config(futureExitTradingDays = 2)))
         assertEquals(d("2026-11-04"), McxExpiry.futureExitDay(e, cal, McxExpiry.Config(futureExitTradingDays = 0)))
-        val x = McxExpiry.due("GOLDM", e, option = false, now = t("2026-11-03T10:00"), cal = cal)
+        val x = McxExpiry.due("GOLDM", e, option = false, now = t("2026-10-29T10:00"), cal = cal)
         assertEquals(McxExpiry.Why.FUTURE_DELIVERY, x?.why)
-        assertTrue(x!!.text.contains("delivery"))
+        assertTrue(x!!.text.contains("delivery") && x.text.contains("5 trading days"))
+        assertNull(McxExpiry.due("GOLDM", e, option = false, now = t("2026-10-28T10:00"), cal = cal))
     }
 
     @Test fun newOptionBuysAreRefusedOnExpiryDayAndAfter1500TheDayBefore() {
@@ -312,8 +318,8 @@ class McxTest {
         assertNull(McxExpiry.entryRefusal("CRUDEOIL", e, option = true, buy = false, now = t("2026-10-15T10:00"), cal = cal))
         assertNull(McxExpiry.entryRefusal("CRUDEOIL", e, option = true, buy = true, now = t("2026-10-13T20:00"), cal = cal))
         // Delivery futures from their exit day; crude futures never.
-        assertNotNull(McxExpiry.entryRefusal("GOLDM", d("2026-11-05"), option = false, buy = true, now = t("2026-11-03T10:00"), cal = cal))
-        assertNull(McxExpiry.entryRefusal("GOLDM", d("2026-11-05"), option = false, buy = false, now = t("2026-11-02T10:00"), cal = cal))
+        assertNotNull(McxExpiry.entryRefusal("GOLDM", d("2026-11-05"), option = false, buy = true, now = t("2026-10-29T10:00"), cal = cal))
+        assertNull(McxExpiry.entryRefusal("GOLDM", d("2026-11-05"), option = false, buy = false, now = t("2026-10-28T10:00"), cal = cal))
         assertNull(McxExpiry.entryRefusal("CRUDEOIL", d("2026-10-19"), option = false, buy = true, now = t("2026-10-19T10:00"), cal = cal))
     }
 

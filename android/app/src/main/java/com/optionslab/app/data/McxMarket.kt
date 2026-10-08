@@ -276,11 +276,24 @@ object McxMarket {
 
     fun exposure(): Boolean = paperExposure() || liveExposure()
 
-    /** The watch should run now for MCX: MCX is open and something is held or working there. */
-    fun watchDue(): Boolean = isOpen() && exposure()
+    /**
+     * The watch should run now for MCX: MCX is open and something is held or working there, or an MCX paper arm is on and
+     * inside its minutes ([McxPaperArms.wantsWatch]: the evening break 17:00-23:16, the morning call 09:14-14:00).
+     */
+    fun watchDue(): Boolean = isOpen() && (exposure() || runCatching { McxPaperArms.wantsWatch() }.getOrDefault(false))
 
-    /** When MCX next opens (epoch ms), while something is held or working there; null otherwise (or if not within a week). */
+    /**
+     * When the watch is next needed for MCX (epoch ms): MCX's next open while something is held or working there, or an
+     * armed MCX paper arm's next window ([McxPaperArms.nextWakeMillis]), whichever is sooner; null otherwise (or not within a week).
+     */
     fun nextOpenMillis(): Long? {
+        val arms = runCatching { McxPaperArms.nextWakeMillis() }.getOrNull()
+        val held = heldNextOpenMillis()
+        return listOfNotNull(arms, held).minOrNull()
+    }
+
+    /** MCX's next open (epoch ms) while something is held or working there; null otherwise (or if not within a week). */
+    private fun heldNextOpenMillis(): Long? {
         if (!exposure()) return null
         val now = now()
         val c = calendar()

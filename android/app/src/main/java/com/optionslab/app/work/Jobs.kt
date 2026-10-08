@@ -637,8 +637,10 @@ object Tasks {
         step("stops and targets") { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
         step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
-        // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 2 trading days before (paper and live).
+        // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 5 trading days before (paper and live).
         step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+        // The MCX paper arms (9 Oct, research M3/M4/M2; paper only, off by default): their exits, then their entries.
+        step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         step("strategies") {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
@@ -801,10 +803,11 @@ object Tasks {
     }
 
     /**
-     * The MCX pass (9 Oct): outside NSE's hours, while MCX trades and something is held or working there. Only the steps
-     * that protect money, each in its own try: Zerodha's stream, paper fills and MCX square-off, the daily loss limit, stops
-     * and targets, the MCX expiry exit, the missed-lock sweep with the no-price failsafe, the position cards. Nothing NSE's
-     * (no arm, no strategy, no Jarvis check) runs here, so NSE's behaviour is unchanged.
+     * The MCX pass (9 Oct): outside NSE's hours, while MCX trades and something is held or working there (or an MCX paper
+     * arm is on inside its minutes). Only the steps that protect money, each in its own try: Zerodha's stream, paper fills
+     * and MCX square-off, the daily loss limit, stops and targets, the MCX expiry exit, the MCX paper arms (paper only), the
+     * missed-lock sweep with the no-price failsafe, the position cards. Nothing NSE's (no NSE arm, no strategy, no Jarvis
+     * check) runs here, so NSE's behaviour is unchanged.
      */
     suspend fun mcxTick(context: Context, s: AppSettings): Tick {
         com.optionslab.app.data.Broker.passBegin()
@@ -814,6 +817,8 @@ object Tasks {
             step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
             step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+            // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
+            step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
             if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
                 com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }

@@ -15,8 +15,8 @@ import kotlin.math.abs
  *
  *  - every MCX option position, paper and Zerodha, is closed by 23:00 on the trading day before its expiry (an MCX option
  *    that ends in the money turns into a future needing Rs 1.4-2.7 lakh of margin by 19:00 on expiry day);
- *  - gold, silver and base-metal futures (delivery-settled; Zerodha does not allow delivery) are closed 2 trading days
- *    before expiry; crude and natural gas settle in cash and are left alone;
+ *  - gold, silver and base-metal futures (delivery-settled; Zerodha does not allow delivery) are closed 5 trading days
+ *    before expiry (2 until 9 Oct; Settings → Bot settings); crude and natural gas settle in cash and are left alone;
  *  - a new MCX option buy is refused on expiry day and after 15:00 the day before, a new delivery future from its exit day
  *    ([entryRefusal]: the order sheets ask it).
  *

@@ -17,8 +17,9 @@ import java.util.Locale
  *    and on the day before from [Config.buyCutoff] (15:00) - it would only be closed again that night ([buyRefusal]);
  *  - gold, silver and base-metal futures settle by delivery, which Zerodha does not allow: it squares them off itself at
  *    22:30 on the day before the tender period. The app closes them first: from the session open
- *    [Config.futureExitTradingDays] (2) trading days before expiry ([futureExitDue]), and refuses new ones from then.
- *    Crude and natural gas settle in cash and are left alone.
+ *    [Config.futureExitTradingDays] (5; it was 2 until 9 Oct - research/MCX_TREND.md: "delivery contracts must be rolled
+ *    about 5 days before expiry", well clear of the tender period) trading days before expiry ([futureExitDue]), and
+ *    refuses new ones from then. Crude and natural gas settle in cash and are left alone.
  *
  * Pure: the caller hands in the time (IST) and the MCX calendar.
  */
@@ -28,8 +29,11 @@ object McxExpiry {
         val enabled: Boolean = true,
         val optionExitTime: LocalTime = LocalTime.of(23, 0),
         val buyCutoff: LocalTime = LocalTime.of(15, 0),
-        val futureExitTradingDays: Int = 2,
+        val futureExitTradingDays: Int = DEFAULT_FUTURE_EXIT_DAYS,
     )
+
+    /** Delivery futures are closed this many trading days before expiry by default (research/MCX_TREND.md: about 5). */
+    const val DEFAULT_FUTURE_EXIT_DAYS = 5
 
     /** Why a position must go now. */
     enum class Why { OPTION_DEVOLVES, FUTURE_DELIVERY }

@@ -656,13 +656,16 @@ object Broker {
     /** Instrument token of an index Kite knows by its IraAlgo name (NIFTY, BANKNIFTY, INDIAVIX). */
     fun indexToken(symbol: String): Long? = INDEX[symbol]?.second
 
-    /** Daily candles (needs Kite's historical-data add-on); Kite serves about 2000 days a call. */
-    suspend fun dailyBars(token: Long, from: LocalDate, to: LocalDate): List<Upstox.Bar> {
+    /**
+     * Daily candles (needs Kite's historical-data add-on); Kite serves about 2000 days a call. [continuous]: a future's
+     * continuous near-month series (Kite's continuous=1; the MCX trend arm's 12-month history), not roll-adjusted. Reads only.
+     */
+    suspend fun dailyBars(token: Long, from: LocalDate, to: LocalDate, continuous: Boolean = false): List<Upstox.Bar> {
         val out = ArrayList<Upstox.Bar>()
         var lo = from
         while (!lo.isAfter(to)) {
             val hi = minOf(lo.plusDays(1900), to)
-            val q = "from=${Kite.enc("$lo 00:00:00")}&to=${Kite.enc("$hi 23:59:59")}"
+            val q = "from=${Kite.enc("$lo 00:00:00")}&to=${Kite.enc("$hi 23:59:59")}" + (if (continuous) "&continuous=1" else "")
             val candles = (call("GET", "/instruments/historical/$token/day?$q") as JSONObject).optJSONArray("candles") ?: JSONArray()
             for (i in 0 until candles.length()) {
                 val r = candles.getJSONArray(i)

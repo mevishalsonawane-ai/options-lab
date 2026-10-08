@@ -94,7 +94,12 @@ class McxMarketTest : RobolectricTest() {
         assertNull("a sell is not refused here", McxGuard.entryRefusal(option, buy = false))
         at("2026-10-15", "10:00")
         assertTrue(McxGuard.entryRefusal(McxMarket.paperContract(option), buy = true)!!.contains("expiry day"))
-        // GOLDM's November future: no new one from Tue 3 Nov (2 trading days before its 5 Nov expiry).
+        // GOLDM's November future: no new one from Thu 29 Oct (5 trading days before its 5 Nov expiry; it was 2 until 9 Oct).
+        assertEquals(5, AppSettings.load().mcxFutureExitDays)
+        at("2026-10-28", "10:00")
+        assertNull(McxGuard.entryRefusal(future, buy = true))
+        at("2026-10-29", "10:00")
+        assertNotNull(McxGuard.entryRefusal(future, buy = true))
         at("2026-11-03", "10:00")
         assertNotNull(McxGuard.entryRefusal(future, buy = true))
         // An NFO contract is never refused by MCX's rules.

@@ -63,7 +63,8 @@ import java.util.Locale
  * near and next future with its price and today's change - crude, natural gas, gold, silver, copper, zinc, aluminium,
  * lead, nickel and their minis - MCX's hours today, and for each future its margin per lot and round-trip charges. A tap
  * opens the future: Buy / Sell (paper here, or the usual Zerodha review in Live), its chart, and the option chain where
- * MCX lists one. Reading only until an order is placed; there is no MCX strategy.
+ * MCX lists one. Reading only until an order is placed. On top, the three MCX paper bots (9 Oct, [McxArmsCard]): paper only,
+ * not proven, off until switched on.
  */
 @Composable
 fun CommoditiesScreen(model: AppModel, onChart: (String, String) -> Unit, onChain: (String) -> Unit) {
@@ -73,9 +74,10 @@ fun CommoditiesScreen(model: AppModel, onChart: (String, String) -> Unit, onChai
     // Prices move all evening: re-read every 30 s while the page is in front.
     com.optionslab.app.ui.PollWhileStarted(s.live) { while (true) { kotlinx.coroutines.delay(30_000); model.loadCommodities(quiet = true) } }
     var picked by remember { mutableStateOf<McxMarket.Quote?>(null) }
-    CommoditiesContent(state, sessionLine(), onRefresh = { model.loadCommodities() }, onPick = { picked = it })
+    CommoditiesContent(state, sessionLine(), onRefresh = { model.loadCommodities() }, onPick = { picked = it },
+        futureExitDays = s.mcxFutureExitDays, arms = { McxArmsCard() })
     picked?.let { q ->
-        McxFutureSheet(q, s.live,
+        McxFutureSheet(q, s.live, futureExitDays = s.mcxFutureExitDays,
             onOrder = { buy, lots, limit, product ->
                 val side = if (buy) Kite.Side.BUY else Kite.Side.SELL
                 if (s.live) model.planMcx(q.contract, side, lots, product, limit)
@@ -100,7 +102,9 @@ internal fun sessionLine(): String {
 
 /** The page from plain values (tests drive it without an [AppModel] or the network). */
 @Composable
-internal fun CommoditiesContent(state: Load<List<McxMarket.Quote>>, session: String, onRefresh: () -> Unit, onPick: (McxMarket.Quote) -> Unit) {
+internal fun CommoditiesContent(state: Load<List<McxMarket.Quote>>, session: String, onRefresh: () -> Unit, onPick: (McxMarket.Quote) -> Unit,
+                                futureExitDays: Int = com.optionslab.engine.mcx.McxExpiry.DEFAULT_FUTURE_EXIT_DAYS,
+                                arms: (@Composable () -> Unit)? = null) {
     val p = LocalPalette.current
     Page {
         item { PageTitle("Commodities", "MCX futures: near and next month · prices, margin and charges per lot") }
@@ -108,10 +112,11 @@ internal fun CommoditiesContent(state: Load<List<McxMarket.Quote>>, session: Str
             LedgerCard {
                 Text(session, style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
                 Note("Hours 09:00-23:30, to 23:55 from 2 Nov (US winter time). MCX options are closed by 23:00 the day before expiry; " +
-                    "gold, silver and metal futures 2 trading days before expiry (Settings → Bot settings).")
+                    "gold, silver and metal futures $futureExitDays trading days before expiry (Settings → Bot settings).")
                 BrassButton("Refresh prices", Modifier.padding(top = 6.dp), tone = p.inkSoft, onClick = onRefresh)
             }
         }
+        if (arms != null) item(key = "mcx-paper-arms") { arms() }
         when (state) {
             Load.Idle -> item { LedgerCard { FullSpinner("Reading MCX prices") } }
             is Load.Busy -> item { LedgerCard { FullSpinner(state.label) } }
@@ -158,7 +163,8 @@ private fun QuoteRow(q: McxMarket.Quote, onClick: () -> Unit) {
  */
 @Composable
 internal fun McxFutureSheet(q: McxMarket.Quote, live: Boolean, onOrder: (Boolean, Int, Double?, String) -> Unit, onChart: () -> Unit,
-                            onChain: (() -> Unit)?, onClose: () -> Unit) {
+                            onChain: (() -> Unit)?, onClose: () -> Unit,
+                            futureExitDays: Int = com.optionslab.engine.mcx.McxExpiry.DEFAULT_FUTURE_EXIT_DAYS) {
     val p = LocalPalette.current
     val c = q.contract
     var buy by remember { mutableStateOf(true) }
@@ -212,7 +218,7 @@ internal fun McxFutureSheet(q: McxMarket.Quote, live: Boolean, onOrder: (Boolean
                     Spacer(Modifier.height(8.dp))
                     Note("Margin about " + (margin?.let { "Rs %,.0f".format(Locale.ENGLISH, it) } ?: "unknown") +
                         " for $lots lot${if (lots == 1) "" else "s"} (Zerodha's; MIS is the same on MCX). Charges about Rs %,.0f a round trip.".format(Locale.ENGLISH, charges))
-                    if (Mcx.physical(c.name)) Note("Settles by delivery: the app closes it 2 trading days before expiry.")
+                    if (Mcx.physical(c.name)) Note("Settles by delivery: the app closes it $futureExitDays trading days before expiry.")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                         BrassButton("Chart", tone = p.inkSoft, onClick = onChart)
                         if (onChain != null) BrassButton("Option chain", tone = p.inkSoft, onClick = onChain)

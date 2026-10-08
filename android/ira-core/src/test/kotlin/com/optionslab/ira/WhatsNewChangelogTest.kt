@@ -49,15 +49,16 @@ class WhatsNewChangelogTest {
             assertTrue(want in ids, want)
         // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
         // the day; the first one closes.
-        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES.first().id)
-        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[1].id)
-        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[2].id)
-        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[3].id)
-        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[4].id)
-        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[5].id)
-        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[6].id)
-        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[7].id)
-        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES.first().id)
+        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[1].id)
+        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[2].id)
+        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[3].id)
+        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[4].id)
+        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[5].id)
+        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[6].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[7].id)
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[9].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
@@ -96,12 +97,26 @@ class WhatsNewChangelogTest {
         assertFalse(x.gold)
     }
 
+    @Test fun theMcxPaperArmsAreSaidPlainlyWithTheirResearchNumbers() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-mcx-paper-arms" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        assertTrue("MCX" in x.title && "paper" in x.title, x.title)
+        for (w in listOf("paper-only", "not proven", "off until you switch it on", "Natural gas evening breakout", "17:00-19:00", "22:00",
+            "23:15", "Rs 41 a day", "Rs 83", "not significant", "Rs 40,000 drawdown", "Silver mini morning call", "two strikes out",
+            "11-20 days", "4 hours", "Rs 454 a trade over 51 trades", "failed 2 of its 4 checks", "12-month trend", "Rs 8-10 lakh",
+            "often ruined at Rs 1 lakh", "1 lot", "never send an order to Zerodha", "5 trading days before expiry, not 2"))
+            assertTrue(w in x.what, w)
+        assertTrue("Commodities" in x.where && "MCX paper bots" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
     @Test fun mcxIsSaidPlainly() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-mcx" }
         assertEquals(LocalDate.of(2026, 10, 9), x.date)
         assertTrue("MCX" in x.title, x.title)
         for (w in listOf("Crude oil", "natural gas", "gold", "silver", "near and next month futures", "23:30", "23:55 from 2 November",
-            "spread and charges", "closed by 23:00 the day before expiry", "15:00 the day before expiry", "2 trading days before expiry", "no bot does"))
+            "spread and charges", "closed by 23:00 the day before expiry", "15:00 the day before expiry", "5 trading days before expiry", "no bot does"))
             assertTrue(w in x.what, w)
         assertTrue("Options tab → Commodities" in x.where && "MCX expiry exit" in x.where, x.where)
         assertNull(x.ask)
@@ -250,18 +265,18 @@ class WhatsNewChangelogTest {
         // Two days among the newest six: each line says its day.
         assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
+        assertEquals("• Three MCX ideas to try on paper, all off at first (9 Oct): Options tab → Commodities → MCX paper bots. " +
+            "Settings → Bot settings → MCX expiry exit.", lines[1])
         assertEquals("• MCX commodities: prices, charts, paper and expiry safety (9 Oct): Options tab → Commodities. Options tab → MCX row " +
-            "for the chains. Settings → Bot settings → MCX expiry exit.", lines[1])
+            "for the chains. Settings → Bot settings → MCX expiry exit.", lines[2])
         assertEquals("• Faster entries, 1 lot, and a paper night trade (8 Oct): Home → Dashboard → Strategies card (Liquidity's lots and " +
-            "the Night (R3) row). Pine scripts screen for the FinNifty script.", lines[2])
+            "the Night (R3) row). Pine scripts screen for the FinNifty script.", lines[3])
         assertEquals("• Paper fills now pay the bid/ask spread (8 Oct): Trade → Paper → tap a trade or an order (Bid/ask spread). " +
-            "Home → Dashboard → Strategies card, and the day report.", lines[3])
+            "Home → Dashboard → Strategies card, and the day report.", lines[4])
         assertEquals("• Safer exits, and a day lock at +Rs 8,000 (8 Oct): Settings → Bot settings → Day lock (+Rs 8,000 at first, off at 0) and the paper start date. " +
-            "Home → Dashboard → Strategies card shows both.", lines[4])
+            "Home → Dashboard → Strategies card shows both.", lines[5])
         assertEquals("• Liquidity 15+5 goes first on an index (7 Oct): Home → Dashboard → Strategies card: an arm's row says when it " +
-            "waited for Liquidity, and the evening replay marks those trades.", lines[5])
-        assertEquals("• The profit lock now moves the stop itself (7 Oct): Home → Dashboard → Strategies card → an arm's open trade " +
-            "(its stop shows the lock).", lines[6])
+            "waited for Liquidity, and the evening replay marks those trades.", lines[6])
 
         assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.

@@ -51,6 +51,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-mcx-paper-arms", OCT9, "Three MCX ideas to try on paper, all off at first",
+            "The Commodities page has three paper-only MCX bots, each marked not proven and off until you switch it on. " +
+                "Natural gas evening breakout: buys a call or put when 17:00-19:00's range breaks before 22:00, flat by 23:15. " +
+                "Its research made about Rs 41 a day, then Rs 83, not significant, with a Rs 40,000 drawdown. " +
+                "Silver mini morning call: buys a call two strikes out, 11-20 days to expiry, sells 4 hours later. " +
+                "Its research made Rs 454 a trade over 51 trades, but failed 2 of its 4 checks. " +
+                "12-month trend on mini futures: long or short monthly; needs Rs 8-10 lakh, often ruined at Rs 1 lakh. " +
+                "All three are 1 lot, paper only, and never send an order to Zerodha. " +
+                "Delivery futures are now closed 5 trading days before expiry, not 2.",
+            "Options tab → Commodities → MCX paper bots. Settings → Bot settings → MCX expiry exit"),
         Entry("2026-10-09-mcx", OCT9, "MCX commodities: prices, charts, paper and expiry safety",
             "Crude oil, natural gas, gold, silver and the metals are now in the app. " +
                 "You see near and next month futures with live prices, charts and option chains. " +
@@ -58,8 +68,8 @@ object WhatsNew {
                 "Paper fills pay MCX's spread and charges, and the margin per lot is shown. " +
                 "MCX options are closed by 23:00 the day before expiry, so they never turn into futures. " +
                 "New option buys stop at 15:00 the day before expiry. " +
-                "Gold, silver and metal futures are closed 2 trading days before expiry. " +
-                "Only you trade MCX for now; no bot does.",
+                "Gold, silver and metal futures are closed 5 trading days before expiry. " +
+                "Only you trade MCX on Zerodha; no bot does.",
             "Options tab → Commodities. Options tab → MCX row for the chains. Settings → Bot settings → MCX expiry exit"),
         Entry("2026-10-08-x1-x2", OCT8, "Faster entries, 1 lot, and a paper night trade",
             "The arms now decide within seconds of each bar close, not a minute or two later. " +

@@ -63,6 +63,7 @@ class TestApp : Application() {
         Strategies.init(this)
         OrbArms.init(this)
         ShadowArms.init(this)
+        com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
         PineAuto.init(this)
         Protections.init(this)
@@ -78,5 +79,6 @@ class TestApp : Application() {
         Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
         com.optionslab.app.data.MarketRecorder.wipe()
         com.optionslab.app.data.McxMarket.wipe()
+        com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
     }
 }

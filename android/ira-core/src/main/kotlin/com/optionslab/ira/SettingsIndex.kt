@@ -223,7 +223,7 @@ object SettingsIndex {
         Entry("risk", "risk.guards", "Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live.",
             GUARD, listOf("expiry", "square off", "auto close")),
         Entry("risk", "risk.guards", "Keep the Expiry Put to settlement", "Its legs are left for the 15:30 settlement.", GUARD, listOf("expiry put", "settlement")),
-        Entry("risk", "risk.guards", "MCX expiry exit", "Closes MCX options by 23:00 the day before expiry, and delivery futures 2 trading days before.",
+        Entry("risk", "risk.guards", "MCX expiry exit", "Closes MCX options by 23:00 the day before expiry, and delivery futures 5 trading days before.",
             GUARD, listOf("mcx", "commodity", "expiry", "crude", "gold", "silver")),
         Entry("risk", "risk.guards", "Block naked option shorts", "Selling to open needs a bought option of the same index, expiry and type first.",
             GUARD, listOf("naked", "short", "selling")),
