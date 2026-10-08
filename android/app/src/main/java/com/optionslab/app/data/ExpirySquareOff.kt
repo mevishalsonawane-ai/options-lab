@@ -63,6 +63,8 @@ object ExpirySquareOff {
             for (p in snap.positions.positions.filter { it.quantity != 0 }) {
                 val c = Paper.contractOf(p.symbol) ?: continue
                 if (c.expiry != today || isTicketLeg(c.underlying, c.strike, c.right.name)) continue
+                // Night (R3)'s own overnight position goes at its own 09:16 sale (it is never bought into its expiry).
+                if (NightArm.holds(p.symbol)) continue
                 stillOpen++
                 val r = Paper.close(p.symbol, p.product)
                 r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.EXPIRY) } }

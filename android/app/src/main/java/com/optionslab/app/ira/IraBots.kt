@@ -90,7 +90,15 @@ internal object IraBots {
         val tested = armTested()
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
             val signal = (a.today.map { it.signalBar } + listOfNotNull(a.pending?.signalBar)).maxOrNull()
-            out[a.arm.label] = Conf("ORB arm", a.armed, signal = signal, holding = a.open != null, tested = tested[a.arm.label])
+            if (a.arm.source == com.optionslab.engine.orb.LiquidityRules.ARM.source) {
+                // Liquidity 15+5 per index (research X1): BANKNIFTY's health apart from FINNIFTY's and MIDCPNIFTY's, each
+                // against its own record (the arm's backtest is all of them together).
+                for (idx in com.optionslab.ira.LiquiditySplit.INDICES) {
+                    val mine = a.today.filter { com.optionslab.ira.LiquiditySplit.indexOf(it.symbol) == idx }
+                    out[com.optionslab.ira.LiquiditySplit.name(idx)] = Conf("ORB arm", a.armed, signal = mine.map { it.signalBar }.maxOrNull(),
+                        holding = mine.any { it.open })
+                }
+            } else out[a.arm.label] = Conf("ORB arm", a.armed, signal = signal, holding = a.open != null, tested = tested[a.arm.label])
         }
         out[SOLO] = Conf("Solo", runCatching { IraSolo.on }.getOrDefault(false), paperOnly = true)
         return out
@@ -114,7 +122,7 @@ internal object IraBots {
         for (book in listOf(false, true)) {
             val where = if (book) "Zerodha" else "Paper"
             val byBot = runCatching { com.optionslab.app.data.TradeBook.trips(book) }.getOrDefault(emptyList())
-                .groupBy { botOf(it, owners) }.filterKeys { it in confs }
+                .groupBy { com.optionslab.ira.LiquiditySplit.owner(botOf(it, owners), it.symbol) }.filterKeys { it in confs }
             for ((name, c) in confs) {
                 val trips = byBot[name].orEmpty()
                 // On in the book it trades in now (Solo only ever on paper); shown in the other only when it traded there.

@@ -20,12 +20,20 @@ class LiquidityLotsTest {
         assertFailsWith<IllegalArgumentException> { LiquidityLots.qty(2, 0) }
     }
 
-    @Test fun onlyOneTwoOrThreeAndTwoByDefault() {
+    @Test fun onlyOneTwoOrThreeAndOneByDefault() {
         assertEquals(listOf(1, 2, 3), LiquidityLots.CHOICES)
-        assertEquals(2, LiquidityLots.DEFAULT)
+        assertEquals(1, LiquidityLots.DEFAULT)
         assertTrue(LiquidityLots.valid(3)); assertFalse(LiquidityLots.valid(4)); assertFalse(LiquidityLots.valid(0))
         assertEquals(3, LiquidityLots.of(3)); assertNull(LiquidityLots.of(7)); assertNull(LiquidityLots.of(null))
-        assertTrue(LiquidityLots.MIGRATED.contains("2 lots a trade (Boss's 06 Oct choice"))
+        assertTrue(LiquidityLots.MIGRATED.contains("1 lot a trade (research X1"))
+    }
+
+    @Test fun twoLotsBossNeverChoseGoBackToOneOnce() {
+        assertEquals(1, LiquidityLots.oneLot(2, chosen = false))
+        assertNull(LiquidityLots.oneLot(2, chosen = true), "chosen by hand: kept")
+        assertNull(LiquidityLots.oneLot(3, chosen = false), "3 was always Boss's own choice")
+        assertNull(LiquidityLots.oneLot(1, chosen = false)); assertNull(LiquidityLots.oneLot(null, chosen = false))
+        assertEquals("Liquidity size set to 1 lot (research X1); change it in Strategies if you want", LiquidityLots.ONE_LOT_NOTICE)
     }
 
     @Test fun moreLotsIsARaise() {
@@ -44,9 +52,10 @@ class LiquidityLotsTest {
         assertEquals(1 to 3, LiquidityLots.restored(1, 3), "kept at this phone's 1; the backup's 3 waits for Boss")
         assertEquals(1 to null, LiquidityLots.restored(3, 1), "lowering restores")
         assertEquals(2 to null, LiquidityLots.restored(2, 2))
-        assertEquals(2 to 3, LiquidityLots.restored(null, 3), "no book here: Boss's default of 2")
-        assertEquals(1 to 2, LiquidityLots.restored(1, null), "a backup from before the setting: 2, never above 1")
-        assertEquals(2 to null, LiquidityLots.restored(9, null), "an unknown size here reads as the default")
+        assertEquals(1 to 3, LiquidityLots.restored(null, 3), "no book here: the default of 1")
+        assertEquals(1 to null, LiquidityLots.restored(1, null), "a backup from before the setting: the default, 1")
+        assertEquals(1 to null, LiquidityLots.restored(9, null), "an unknown size here reads as the default")
+        assertEquals(1 to 2, LiquidityLots.restored(null, 2), "never above the default without Boss")
     }
 
     @Test fun theRowsLine() {

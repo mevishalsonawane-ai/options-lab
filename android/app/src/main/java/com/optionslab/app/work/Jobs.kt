@@ -622,6 +622,8 @@ object Tasks {
         step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
         // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
         step("ORB arms") { com.optionslab.app.data.OrbArms.tick() }
+        // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
+        step("Night (R3)") { com.optionslab.app.data.NightArm.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
@@ -1129,6 +1131,40 @@ class WatchService : Service() {
                     com.optionslab.app.data.PineAuto.holding() ||
                     (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
                 stepSec = if (holding) 15 else 60
+                // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
+                // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so
+                // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
+                val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
+                if (wake <= waitEnd && wake < next) {
+                    delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
+                    Heartbeat.stepBegin("bar-close entry check")
+                    try {
+                        try {
+                            com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: paper orders", e)
+                        }
+                        try {
+                            com.optionslab.app.data.OrbArms.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: ORB arms", e)
+                        }
+                        try {
+                            com.optionslab.app.data.NightArm.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: Night (R3)", e)
+                        }
+                    } finally { Heartbeat.stepEnd() }
+                    Heartbeat.beat(this)
+                    continue
+                }
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (holding && streaming) {

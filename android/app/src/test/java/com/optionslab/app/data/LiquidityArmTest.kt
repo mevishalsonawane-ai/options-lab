@@ -82,7 +82,7 @@ class LiquidityArmTest : RobolectricTest() {
         upstox.price(peKey, 280.0)
         OrbArms.testIndexBars = { t -> feed(t) }
         OrbArms.testHistoryBars = { emptyList() }
-        // The day's figures below are one lot's: the size is set to 1 here (Boss's default is 2; its own tests set it).
+        // The day's figures below are one lot's (the default since 08 Oct); the size tests set their own.
         runBlocking { OrbArms.setLiquidityLots(1, "test") }
     }
 
@@ -461,15 +461,15 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals(195, Paper.state.orders.single { it.action == "SELL" }.quantity)
     }
 
-    @Test fun aBookSavedBeforeTheSizeTakesTwoLotsOnceAndTheArmLogSaysSo() {
+    @Test fun aBookSavedBeforeTheSizeTakesOneLotOnceAndTheArmLogSaysSo() {
         AutomationSupport.orbState(context, org.json.JSONObject().put("positions", org.json.JSONArray()))
-        assertEquals(2, row().lots)
+        assertEquals("1 lot by default since 08 Oct (research X1)", 1, row().lots)
         assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains(com.optionslab.engine.orb.LiquidityLots.MIGRATED) })
         // Boss's own choice afterwards stays: the change ran once.
-        runBlocking { OrbArms.setLiquidityLots(1, "Boss on the row") }
+        runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }
         AutomationSupport.reloadFromDisk(OrbArms)
-        assertEquals(1, row().lots)
-        assertTrue(Diag.lines().any { it.contains("Liquidity 15+5: size 2 lots -> 1 lot (Boss on the row)") })
+        assertEquals(2, row().lots)
+        assertTrue(Diag.lines().any { it.contains("Liquidity 15+5: size 1 lot -> 2 lots (Boss on the row)") })
     }
 
     /** "Liquidity ko 3 lot karo": said back and asked; nothing changes until Boss's yes, and a raise counts as more risk. */

@@ -85,6 +85,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         stopWhy = botStopWhy,
         dayLock = dayLock,
         paperSince = paperSince,
+        nightRow = { NightRow() },
     )
 }
 
@@ -115,6 +116,8 @@ internal fun StrategyArmContent(
     dayLock: String? = null,
     /** The paper account's running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days ..."). */
     paperSince: String? = null,
+    /** Night (R3)'s row, paper only ([NightRow] in the app); nothing by default. */
+    nightRow: @Composable () -> Unit = {},
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
@@ -150,6 +153,7 @@ internal fun StrategyArmContent(
         // The paper account's net since the start date (Settings → Bot settings): words only.
         paperSince?.let { Note(it, Modifier.padding(top = 6.dp)) }
         orbRows()
+        nightRow()
         if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->

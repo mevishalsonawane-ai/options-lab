@@ -50,6 +50,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-08-x1-x2", OCT8, "Faster entries, 1 lot, and a paper night trade",
+            "The arms now decide within seconds of each bar close, not a minute or two later. " +
+                "Liquidity 15+5 on Bank Nifty is judged on its own, apart from FinNifty and Midcap Nifty. " +
+                "Liquidity is back to 1 lot unless you chose more; change it in Strategies. " +
+                "Jarvis says a lesson only after 30 trades in that group. " +
+                "The Pine FinNifty breakdown auto-trade is switched off; you can arm it again. " +
+                "New: Night (R3) on paper buys at 15:20 on a strong close and sells at 09:16. " +
+                "It is not proven: about Rs 207 a day before the holdout, Rs 150 in it.",
+            "Home → Dashboard → Strategies card (Liquidity's lots and the Night (R3) row). Pine scripts screen for the FinNifty script"),
         Entry("2026-10-08-honest-paper", OCT8, "Paper fills now pay the bid/ask spread",
             "Every paper buy and sell now pays the bid/ask spread, like a real order. " +
                 "It uses the real bid and ask when Zerodha's stream has them. " +

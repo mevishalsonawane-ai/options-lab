@@ -97,7 +97,9 @@ object WeeklyReview {
      * One closed paper round trip: its [group], [name] (a Liquidity book's, a Pine script's or the owner as labelled), the
      * day it [closed], its [net] rupees after [charges].
      */
-    data class Trade(val group: Group, val name: String, val closed: LocalDate, val net: Double, val charges: Double)
+    data class Trade(val group: Group, val name: String, val closed: LocalDate, val net: Double, val charges: Double,
+                     /** A Liquidity 15+5 trade's index ("BANKNIFTY"), judged on its own ([LiquiditySplit]); null otherwise or unknown. */
+                     val index: String? = null)
 
     /**
      * The group of a paper trade whose orders the app labelled [owner] (as [Charges.owner] cuts it: "Liquidity 5m",
@@ -122,7 +124,9 @@ object WeeklyReview {
     }
 
     /** The money: each group's row in [Group] order, the Liquidity books and Pine scripts one by one ([detail]), the [total]. */
-    data class Money(val rows: List<Row>, val detail: Map<Group, List<Row>>, val total: Row)
+    data class Money(val rows: List<Row>, val detail: Map<Group, List<Row>>, val total: Row,
+                     /** Liquidity 15+5 per index, BANKNIFTY first ([LiquiditySplit]): each judged on its own record. */
+                     val liquidityByIndex: List<Row> = emptyList())
 
     private fun row(name: String, now: List<Trade>, prev: List<Trade>) =
         Row(name, now.size, now.count { it.net > 0 }, now.sumOf { it.net }, now.sumOf { it.charges }, prev.size, prev.sumOf { it.net })
@@ -143,7 +147,12 @@ object WeeklyReview {
             (now + prev).filter { it.group == g }.map { it.name }.distinct().sorted()
                 .map { name -> row(name, now.filter { it.group == g && it.name == name }, prev.filter { it.group == g && it.name == name }) }
         }.filterValues { it.isNotEmpty() }
-        return Money(rows, detail, row("All paper trading", now, prev))
+        // 08 Oct (research X1): BANKNIFTY's Liquidity on its own, apart from FINNIFTY and MIDCPNIFTY.
+        val liq = (now + prev).filter { it.group == Group.LIQUIDITY && it.index != null }
+        val byIndex = LiquiditySplit.INDICES.filter { i -> liq.any { it.index == i } }.map { i ->
+            row(LiquiditySplit.name(i), now.filter { it.group == Group.LIQUIDITY && it.index == i }, prev.filter { it.group == Group.LIQUIDITY && it.index == i })
+        }
+        return Money(rows, detail, row("All paper trading", now, prev), byIndex)
     }
 
     private fun rowLine(r: Row): String {
@@ -158,6 +167,8 @@ object WeeklyReview {
             out += rowLine(r)
             val g = Group.entries.firstOrNull { it.label == r.name }
             m.detail[g]?.takeIf { it.size > 1 || (it.size == 1 && it[0].name != r.name) }?.forEach { out += "  · " + rowLine(it) }
+            // Each index judged on its own record (research X1): BANKNIFTY apart from FINNIFTY and MIDCPNIFTY.
+            if (g == Group.LIQUIDITY) m.liquidityByIndex.forEach { out += "  = " + rowLine(it.copy(name = it.name + " on its own")) }
         }
         val t = m.total
         out += "Total: " + (if (t.trades == 0) "no paper trades closed this week" else

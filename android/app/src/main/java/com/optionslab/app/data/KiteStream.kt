@@ -114,6 +114,9 @@ object KiteStream {
     /** Where a resting SELL stop at [trigger] on [token], resting since [sinceMs], filled on the stream's ticks, or null. */
     fun sellStopFill(token: Long, sinceMs: Long, trigger: Double): Double? = paths[token]?.sellStopFill(sinceMs, trigger)
 
+    /** The 1-minute candle of [token] that started at [startMs] built from the stream's ticks (open, high, low, close), or null. */
+    fun minuteBar(token: Long, startMs: Long): DoubleArray? = paths[token]?.minute(startMs)
+
     /** The last tick for [token] if it is at most [maxAgeMs] old (market closed = none fresh). */
     fun tick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
         ticks[token]?.takeIf { System.currentTimeMillis() - it.at <= maxAgeMs }?.tick

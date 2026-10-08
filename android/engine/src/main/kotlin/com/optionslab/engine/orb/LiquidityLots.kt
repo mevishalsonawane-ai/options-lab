@@ -5,7 +5,8 @@ package com.optionslab.engine.orb
  * books buys - 1, 2 or 3 - each book's quantity being that many of its own contract's lot (BANKNIFTY's, FINNIFTY's, MIDCPNIFTY's). An open
  * position keeps the quantity it was bought with; its 15% resting stop and every exit always cover all of it.
  *
- *  - A book saved before the setting existed takes [DEFAULT] (2, Boss's 06 Oct choice), said once in the arm log ([MIGRATED]).
+ *  - A book saved before the setting existed takes [DEFAULT] (1 lot since 08 Oct, research X1), said once in the arm log
+ *    ([MIGRATED]); a book at 2 lots Boss never chose by hand goes back to 1 once ([oneLot]).
  *  - Paper has no further limit. Live (only when Boss arms it live with his PIN) still goes through the account guard: when
  *    the Bot settings' max lots is below the setting, the entry is refused by name ([liveRefusal]) - never sent smaller.
  *  - Raising it is Boss's alone, asked and confirmed ([raises]); lowering may apply at once.
@@ -16,13 +17,25 @@ package com.optionslab.engine.orb
 object LiquidityLots {
     /** The choices on the row and by voice. */
     val CHOICES: List<Int> = listOf(1, 2, 3)
-    /** Boss's 06 Oct choice: the size of a book saved before the setting existed. */
-    const val DEFAULT = 2
+    /** The size of a book with none saved: 1 lot (research X1, 08 Oct: the plan is 1 lot; Boss's 06 Oct default was 2). */
+    const val DEFAULT = 1
     /** The one-time change's key in the arms' book. */
     const val MIGRATION = "liquidity_lots_2026_10_06"
     /** What the arm log says, once, when a book takes [DEFAULT]. */
-    const val MIGRATED = "Liquidity 15+5: size set to $DEFAULT lots a trade (Boss's 06 Oct choice; no size was saved). " +
-        "New entries buy $DEFAULT lots of each contract's lot; an open position keeps its own quantity."
+    const val MIGRATED = "Liquidity 15+5: size set to $DEFAULT lot a trade (research X1; no size was saved). " +
+        "New entries buy $DEFAULT lot of each contract's lot; an open position keeps its own quantity."
+
+    /** The 08 Oct one-time change's key in the arms' book ([oneLot]). */
+    const val ONE_LOT_MIGRATION = "liquidity_lots_1_2026_10_08"
+    /** What Boss is told, once, when [oneLot] set the size back to 1 lot. */
+    const val ONE_LOT_NOTICE = "Liquidity size set to 1 lot (research X1); change it in Strategies if you want"
+
+    /**
+     * The 08 Oct one-time change (research X1, Boss's yes): the size a book saved at [saved] lots takes now. 2 lots Boss did
+     * not choose by hand ([chosen] false: the old default, or a size saved before choices were recorded, so not known)
+     * become 1; anything else is kept. Null: nothing changes.
+     */
+    fun oneLot(saved: Int?, chosen: Boolean): Int? = if (saved == 2 && !chosen) 1 else null
 
     fun valid(lots: Int): Boolean = lots in CHOICES
 

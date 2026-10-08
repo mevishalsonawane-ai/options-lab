@@ -163,8 +163,10 @@ internal object IraWeekly {
             val net = (p.grossPnl ?: 0.0) - p.charges
             val book = books[p.arm]
             when {
+                // Its index too: BANKNIFTY is judged on its own, apart from FINNIFTY and MIDCPNIFTY (research X1).
                 book != null -> out += WeeklyReview.Trade(WeeklyReview.Group.LIQUIDITY,
-                    "${com.optionslab.ira.LiquidityMap.indexName(LiquidityRules.underlyingOf(book))} ${LiquidityRules.minutesOf(book)}-min", exit, net, p.charges)
+                    "${com.optionslab.ira.LiquidityMap.indexName(LiquidityRules.underlyingOf(book))} ${LiquidityRules.minutesOf(book)}-min", exit, net, p.charges,
+                    index = LiquidityRules.underlyingOf(book))
                 p.arm == HeroRules.ARM.source -> out += WeeklyReview.Trade(WeeklyReview.Group.HERO, HeroRules.ARM.label, exit, net, p.charges)
             }
         }

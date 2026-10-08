@@ -521,6 +521,23 @@ object Broker {
         }.toMap()
     }
 
+    /**
+     * Last price and previous close for "EXCHANGE:SYMBOL" keys, from Kite's OHLC quote (500 keys a call): the Night (R3)
+     * arm's breadth ([com.optionslab.engine.orb.NightRules.breadth]). Reads only; a key Kite does not know is left out.
+     */
+    suspend fun lastAndPrevClose(keys: List<String>): Map<String, Pair<Double, Double>> {
+        val out = HashMap<String, Pair<Double, Double>>()
+        for (chunk in keys.chunked(500)) {
+            val data = call("GET", "/quote/ohlc?" + chunk.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
+            for (k in chunk) {
+                val q = data.optJSONObject(k) ?: continue
+                val pc = q.optJSONObject("ohlc")?.optDouble("close") ?: continue
+                out[k] = q.optDouble("last_price") to pc
+            }
+        }
+        return out
+    }
+
     /** Kite's quote key for an index by its IraAlgo name ("NIFTY" -> "NSE:NIFTY 50"), null for one Kite has no index of. */
     fun indexKey(symbol: String): String? = INDEX[symbol]?.first
 

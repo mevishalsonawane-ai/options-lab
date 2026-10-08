@@ -130,6 +130,8 @@ object Diag {
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
         // Honest paper (08 Oct): the bid/ask spread paper fills paid today (the "[paper] Stale price" lines below: fills on old prices).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { Paper.spreadTodayLine() }.getOrElse { "Paper spread: could not read" }).append('\n')
+        // Night (R3), paper only (08 Oct): on or off, what it holds overnight, its last decisions (the "[night]" lines below).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NightArm.diagLine() }.getOrElse { "Night (R3): could not read" }).append('\n')
         // Speed, round 4 (Boss, 5 Oct: "Answer is taking a lot after question is asked"): where a question's wait goes,
         // stage by stage (heard→routed, routed→answered, answered→spoken) and the slowest - durations only, never words.
         append(redact(runCatching { com.optionslab.app.ira.IraHub.askSpeedLine() }.getOrElse { "Speed (asks): could not read" })).append('\n')

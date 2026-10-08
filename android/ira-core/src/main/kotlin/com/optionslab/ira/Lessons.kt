@@ -12,8 +12,10 @@ object Lessons {
     data class Lesson(val owner: String, val text: String, val rupees: Double, val turned: Boolean = false)
 
     /** Trades of one owner before anything is said about it; trades in one hour or weekday before it is judged. */
-    const val MIN_OWNER = 10
-    const val MIN_SLICE = 6
+    // 08 Oct (research X1, Boss's yes): at least 30 closed trades in the group before a lesson is said, else nothing. On 8 Oct
+    // "Liquidity loses when entered 09:00-10:00" came from 6 trades and was the reverse of its 5-year record.
+    const val MIN_OWNER = 30
+    const val MIN_SLICE = 30
     const val RECENT = 10
 
     fun of(trips: List<Insights.Trip>, max: Int = 5): List<Lesson> {

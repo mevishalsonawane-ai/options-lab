@@ -17,7 +17,8 @@ internal object IraExpert {
         // Judged again only when the paper trips changed (the same list comes back while they have not): every pass read it.
         return judged.of(IraAccount.trips(false, owners)) { trips ->
             trips.filter { it.owner.isNotBlank() && it.owner != "Manual" && !it.owner.startsWith("Jarvis") }
-                .groupBy { it.owner }
+                // Liquidity 15+5 per index (research X1): BANKNIFTY's paper test apart from FINNIFTY's and MIDCPNIFTY's.
+                .groupBy { com.optionslab.ira.LiquiditySplit.owner(it.owner, it.symbol) }
                 .map { (owner, l) -> Vetting.judge(owner, l.sortedBy { it.closedAt }.map { it.net }) }
         }
     }

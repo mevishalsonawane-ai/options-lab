@@ -68,6 +68,20 @@ class WeeklyReviewTest {
         assertEquals("Total: no paper trades closed this week; none last week.", WeeklyReview.moneyLines(WeeklyReview.money(emptyList(), mon, false)).last())
     }
 
+    /** 08 Oct (research X1): Liquidity's BANKNIFTY record on its own, apart from FINNIFTY and MIDCPNIFTY. */
+    @Test fun liquidityBankniftyIsJudgedOnItsOwn() {
+        val tagged = trades.map { if (it.group == Group.LIQUIDITY) it.copy(index = if (it.name.startsWith("Bank")) "BANKNIFTY" else "FINNIFTY") else it }
+        val m = WeeklyReview.money(tagged, mon, heroArmed = false)
+        assertEquals(listOf("Liquidity 15+5 BANKNIFTY", "Liquidity 15+5 FINNIFTY"), m.liquidityByIndex.map { it.name })
+        val bn = m.liquidityByIndex.first()
+        assertEquals(2, bn.trades); assertEquals(700.0, bn.net, 1e-9); assertEquals(1, bn.prevTrades)
+        val lines = WeeklyReview.moneyLines(m)
+        assertTrue("  = Liquidity 15+5 BANKNIFTY on its own: 2 trades, net +₹700, 50% won, charges ₹80 (last week: 1 trade, −₹800)." in lines, "$lines")
+        assertTrue("  = Liquidity 15+5 FINNIFTY on its own: 1 trade, net +₹300, 100% won, charges ₹40 (last week: none)." in lines, "$lines")
+        // Untagged trades (an older record): no per-index rows.
+        assertTrue(WeeklyReview.money(trades, mon, heroArmed = false).liquidityByIndex.isEmpty())
+    }
+
     // ---- 2. live vs backtest ----
 
     private fun ft(i: Int, x: Double) = ForwardCheck.Trade(mon.plusDays(1 + i / 10L), x)

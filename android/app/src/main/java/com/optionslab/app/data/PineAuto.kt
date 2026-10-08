@@ -176,6 +176,31 @@ object PineAuto {
         return true
     }
 
+    /** The one-time FINNIFTY breakdown switch-off (Boss's 08 Oct yes, research X1): its key in [Book.migrated]. */
+    internal const val FIN_OFF = com.optionslab.ira.PineFinniftyOff.KEY
+
+    /**
+     * Once, on this update: the armed "breakdown below the last 20 candles' low" script on FINNIFTY 15-minute
+     * ([com.optionslab.ira.PineFinniftyOff]) is switched off - never deleted; an option it holds is managed to its exit
+     * ([Book.winding]) - said in its log and in a notice. Boss can arm it again. True when [b] changed (it is then saved).
+     */
+    private fun finniftyOff(b: Book): Boolean {
+        if (FIN_OFF in b.migrated) return false
+        val items = PineScripts.loadNow() ?: return false
+        for (item in items.filter { it.auto.on && com.optionslab.ira.PineFinniftyOff.matches(it.name, it.code, it.auto.symbol, it.auto.interval) }) {
+            PineScripts.setAuto(item.id, item.auto.copy(on = false))
+            b.liveOk.remove(item.id)
+            val holding = b.held.containsKey(item.id)
+            if (holding) b.winding[item.id] = "switched off on Boss's 08 Oct yes (FINNIFTY too thin)"
+            val text = com.optionslab.ira.PineFinniftyOff.notice(item.name)
+            note(b, item.id, text + if (holding) " Its open option is managed to its exit; nothing more is bought." else "")
+            runCatching { Diag.record("pine", text) }
+            runCatching { Notifier.post(app, 6957, Notifier.SCHEDULE, com.optionslab.ira.PineFinniftyOff.TITLE, text, "pine") }
+        }
+        b.migrated += FIN_OFF
+        return true
+    }
+
     /**
      * Switch a script off by the app's own rule (Boss's yes to switching a losing script off, [com.optionslab.ira.ArmCutoff]):
      * unlike [arm] off, what it holds is NOT sold now - it is managed to its exit, and nothing more is bought. Never
@@ -276,6 +301,8 @@ object PineAuto {
         if (ruleNotes(b)) save(b)
         // The one-time switch-off of duplicate scripts (Boss's 06 Oct diagnostics), before anything trades.
         if (!disarm && dedupe(b)) save(b)
+        // The one-time FINNIFTY breakdown switch-off (Boss's 08 Oct yes), before anything trades.
+        if (!disarm && finniftyOff(b)) save(b)
         val all = PineScripts.items.value
         val on = if (disarm) emptyList() else all.filter { it.auto.on }
         // Switched off by the app's own rule while holding: managed to its exit, buying nothing more.

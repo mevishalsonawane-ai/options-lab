@@ -75,7 +75,8 @@ class LiquidityArmLiveTest : RobolectricTest() {
             .put("positions", held)
             .put("pending", JSONObject().put("liquidity5", JSONObject().put("right", "CE").put("bar", bar.toString())
                 .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0)))
-            .apply { lots?.let { put("liqLots", it) } })
+            // A size saved by Boss's own choice (kept by the 08 Oct one-lot change).
+            .apply { lots?.let { put("liqLots", it); put("liqLotsChosen", true) } })
     }
 
     private fun row() = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "liquidity" }
@@ -139,11 +140,23 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals(60, p.qty); assertEquals(30, p.lot)
     }
 
-    @Test fun aBookSavedBeforeTheSizeTradesTwoLotsWithinTheBotSettings() {
+    @Test fun aBookSavedBeforeTheSizeTradesOneLot() {
         state(lots = null)
-        assertEquals(2, row().lots)
+        assertEquals("the default is 1 lot since 08 Oct (research X1)", 1, row().lots)
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
-        assertEquals("60", kite.placed.first().form["quantity"])
+        assertEquals("30", kite.placed.first().form["quantity"])
+    }
+
+    /** 08 Oct (research X1): 2 lots Boss never chose by hand go back to 1 lot once, with a notice; a chosen 2 stays. */
+    @Test fun twoLotsNotChosenByHandGoBackToOneOnce() {
+        AutomationSupport.orbState(context, JSONObject().put("positions", JSONArray()).put("liqLots", 2)
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN)))
+        assertEquals(1, row().lots)
+        // Boss's own 2 afterwards is kept, across a restart.
+        runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(2, row().lots)
     }
 
     @Test fun threeLotsOverTheBotSettingsTwoAreRefusedByNameNeverSentSmaller() {

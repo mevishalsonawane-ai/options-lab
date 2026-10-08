@@ -166,6 +166,8 @@ object OrbArms {
         var liqLots: Int? = null,
         /** A restore's higher size, waiting for Boss to choose it ([LiquidityLots.restored]); null: nothing waits. */
         var liqLotsAsk: Int? = null,
+        /** Boss chose [liqLots] himself (the row, or by voice on his yes) since 08 Oct; false: not known ([LiquidityLots.oneLot]). */
+        var liqLotsChosen: Boolean = false,
     )
 
     private var cache: Book? = null
@@ -245,13 +247,15 @@ object OrbArms {
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
             b.liqLots = LiquidityLots.of(if (o.has("liqLots")) o.optInt("liqLots") else null)
             b.liqLotsAsk = LiquidityLots.of(if (o.has("liqLotsAsk")) o.optInt("liqLotsAsk") else null)
+            b.liqLotsChosen = o.optBoolean("liqLotsChosen", false)
         }.isSuccess
         if (!ok) {
             // Never overwrite what could not be read: set it aside and start clean, and say so.
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
-            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN); cache = it; hints(it) }
+            return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
+                LiquidityLots.ONE_LOT_MIGRATION); cache = it; hints(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -260,13 +264,14 @@ object OrbArms {
         cache = b
         hints(b)
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
-        if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN)
+        if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN, LiquidityLots.ONE_LOT_MIGRATION)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
         // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then the MIDCPNIFTY books
         // joining Liquidity's switch (on paper, when it is on); then Liquidity's size, when none was saved (Boss's 06 Oct
-        // choice: 2 lots).
-        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b)) save(b)
+        // choice then, 1 lot since 08 Oct).
+        // Then (08 Oct, research X1) a 2-lot size Boss never chose by hand goes back to 1 lot, told once.
+        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b)) save(b)
         return b
     }
 
@@ -295,7 +300,15 @@ object OrbArms {
     /** Liquidity 15+5's size now, from the book itself (Jarvis's "set liquidity to 3 lots" reads it before asking). */
     suspend fun liquidityLots(): Int = lock.withLock { lotsOf(book()) }
 
+    /**
+     * Whether any arm is armed, as of the last load or save: read without the lock by the watch, which then wakes a few
+     * seconds after each bar close for the arms' decisions ([com.optionslab.engine.orb.BarClose]).
+     */
+    @Volatile var armedHint: Boolean = false
+        private set
+
     private fun hints(b: Book) {
+        armedHint = ALL_ARMS.any { b.armed[it.source] == true }
         holdingHint = b.positions.any { it.open }
         exposureHint = exposureOf(b)
         liquidityLotsHint = lotsOf(b)
@@ -439,13 +452,30 @@ object OrbArms {
 
     /**
      * Once, for a book with no size saved (one from before the setting, or a new one): Liquidity 15+5 takes
-     * [LiquidityLots.DEFAULT] (2 lots, Boss's 06 Oct choice), said in the arm log. True when [b] changed (it is then saved).
+     * [LiquidityLots.DEFAULT] (1 lot since 08 Oct, research X1), said in the arm log. True when [b] changed (it is then saved).
      */
     private fun sizeLiquidity(b: Book): Boolean {
         if (b.liqLots != null) return false
         b.liqLots = LiquidityLots.DEFAULT
         b.migrated += LiquidityLots.MIGRATION
         if (!com.optionslab.app.BuildConfig.GOLD) runCatching { Diag.record("orb", LiquidityLots.MIGRATED) }
+        return true
+    }
+
+    /**
+     * Once (08 Oct, research X1, Boss's yes): a book at 2 lots Boss never chose by hand ([Book.liqLotsChosen]; a size saved
+     * before that was recorded counts as not known) goes back to 1 lot, said in the arm log and in a notice. A size Boss
+     * chooses afterwards stays. True when [b] changed (it is then saved).
+     */
+    private fun oneLot(b: Book): Boolean {
+        if (LiquidityLots.ONE_LOT_MIGRATION in b.migrated) return false
+        b.migrated += LiquidityLots.ONE_LOT_MIGRATION
+        val n = LiquidityLots.oneLot(b.liqLots, b.liqLotsChosen) ?: return true
+        b.liqLots = n
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            runCatching { Diag.record("orb", "Liquidity 15+5: " + LiquidityLots.ONE_LOT_NOTICE) }
+            runCatching { Notifier.post(app, 6958, Notifier.SCHEDULE, "Liquidity size: 1 lot", LiquidityLots.ONE_LOT_NOTICE + ".", "strategy") }
+        }
         return true
     }
 
@@ -489,6 +519,7 @@ object OrbArms {
         o.put("migrated", JSONArray(b.migrated.sorted()))
         b.liqLots?.let { o.put("liqLots", it) }
         b.liqLotsAsk?.let { o.put("liqLotsAsk", it) }
+        if (b.liqLotsChosen) o.put("liqLotsChosen", true)
         val text = o.toString()
         // Battery: an idle book (nothing armed, open or waiting) whose bytes are already on disk, as this process last
         // wrote them, is not encrypted and synced again ([com.optionslab.ira.OrbIdleSave]); anything else is, as before.
@@ -630,7 +661,7 @@ object OrbArms {
         val b = book()
         val old = lotsOf(b)
         val waited = b.liqLotsAsk
-        b.liqLots = lots; b.liqLotsAsk = null
+        b.liqLots = lots; b.liqLotsAsk = null; b.liqLotsChosen = true
         if (old == lots && waited == null) return@withLock "Liquidity 15+5 already trades ${LiquidityLots.words(lots)}."
         save(b)
         runCatching { Diag.record("orb", "Liquidity 15+5: size ${LiquidityLots.words(old)} -> ${LiquidityLots.words(lots)} ($by)" +
@@ -960,6 +991,8 @@ object OrbArms {
             runCatching { liquidityNotices(b, t) }
             runCatching { heroKillCheck(b) }
             val anyArmed = ALL_ARMS.any { b.armed[it.source] == true }
+            // The armed arms' indices on Zerodha's stream when it runs: a bar's last minute is then known at its close.
+            followIndices(b)
             if (!anyArmed || !OrbRules.inWindow(t.toLocalTime())) { save(b); return@withLock }
             val bars = runCatching { indexBars(t) }.getOrNull()
             for (arm in ALL_ARMS) {
@@ -2223,7 +2256,7 @@ object OrbArms {
             toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also { if (!testing && it.isNotEmpty()) liquidityHistory[underlying] = day to it }
         }
         val raw = when {
-            !testing -> Net.intraday(key)
+            !testing -> streamed(underlying, Net.intraday(key), t)
             bank -> testIndexBars?.invoke(t).orEmpty()
             else -> testOtherIndexBars?.invoke(underlying, t).orEmpty()
         }
@@ -2243,8 +2276,32 @@ object OrbArms {
 
     /** Today's completed 5-minute BANKNIFTY bars, built from the 1-minute feed. */
     private suspend fun indexBars(t: LocalDateTime): List<Bar> {
-        val ones = testIndexBars?.invoke(t) ?: Net.intraday(Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING))
+        val ones = testIndexBars?.invoke(t) ?: streamed(OrbRules.UNDERLYING, Net.intraday(Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)), t)
         return OrbRules.completed(fiveMinute(ones, t.toLocalDate(), t), t)
+    }
+
+    /**
+     * [raw] (the candle feed's minutes of [underlying]'s index today) with the minutes it does not have yet built from
+     * Zerodha's stream, when the stream streams the index (08 Oct, research X1 change 2: a bar is decided within seconds
+     * of its close, not when the feed catches up). Without the stream, [raw] as before. Never throws.
+     */
+    private fun streamed(underlying: String, raw: List<Upstox.Bar>, t: LocalDateTime): List<Upstox.Bar> = runCatching {
+        val token = Broker.indexKey(underlying)?.let { Broker.tokenOf(it) } ?: return raw
+        val today = raw.filter { it.istDate == t.toLocalDate() }
+        if (today.isEmpty()) return raw
+        val nowSec = t.atZone(com.optionslab.engine.IST).toEpochSecond()
+        val done = com.optionslab.engine.orb.BarClose.complete(today, nowSec) { s -> KiteStream.minuteBar(token, s * 1000) }
+        if (done.size == today.size) raw else raw + done.drop(today.size)
+    }.getOrDefault(raw)
+
+    /**
+     * The indices the armed arms read, followed on Zerodha's stream while it runs (the "index" owner never starts it on
+     * its own: the stream stays as the rest of the app needs it). Never throws.
+     */
+    private fun followIndices(b: Book) = runCatching {
+        val unds = ALL_ARMS.filter { b.armed[it.source] == true && !it.hero }
+            .map { if (it.liquidity) LiquidityRules.underlyingOf(it) else OrbRules.UNDERLYING }.distinct()
+        KiteStream.want("index", unds.mapNotNull { u -> Broker.indexKey(u)?.let { Broker.tokenOf(it) } })
     }
 
     /**
