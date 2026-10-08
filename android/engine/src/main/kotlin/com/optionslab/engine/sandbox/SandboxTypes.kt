@@ -69,6 +69,12 @@ data class SandboxConfig(
     val spreadFallbackBps: BigDecimal = BigDecimal.ZERO,
     /** Debit brokerage, STT, exchange, SEBI, stamp and GST on each fill (sandbox/charges.py). */
     val chargesEnabled: Boolean = false,
+    /**
+     * Honest paper fills (08 Oct, [PaperSpread]): every aggressive fill pays the half-spread (the book's, else the measured
+     * default), by max(slippage, half-spread) and on the tick; a resting LIMIT fills only when the market trades through it.
+     * Not a sandbox_config key: off for the desktop parity, always on in the app's paper account.
+     */
+    val paperSpread: Boolean = false,
 ) {
     companion object {
         /** Build from `sandbox_config` keys, as the Python's get_config would read them. */
@@ -239,6 +245,8 @@ data class Trade(
     val timestamp: LocalDateTime,
     /** Brokerage and statutory charges debited for this leg (0 when charges are off). */
     val charges: BigDecimal = BigDecimal.ZERO,
+    /** Rupees this fill paid for the bid/ask spread ([SandboxConfig.paperSpread]; 0 when off or none). In the price, not a debit. */
+    val spread: BigDecimal = BigDecimal.ZERO,
 )
 
 /**
@@ -407,6 +415,8 @@ data class TradeRow(
     val timestamp: String,
     /** Charges debited for this leg (0 with charges off). */
     val charges: Double = 0.0,
+    /** Rupees of bid/ask spread in this leg's price (0 when not charged). */
+    val spread: Double = 0.0,
 )
 
 data class HoldingRow(

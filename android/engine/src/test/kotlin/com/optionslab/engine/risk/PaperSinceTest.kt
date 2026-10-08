@@ -27,6 +27,12 @@ class PaperSinceTest {
         assertEquals("Paper since 6 Oct: Rs 0 net over 1 day (avg Rs 0/day)", PaperSince.line(PaperSince.summary(mapOf(d(6) to 0.2), d(6))))
     }
 
+    @Test fun theLineSaysPaperNowPaysTheSpreadAndFromWhen() {
+        assertEquals("Paper fills include the bid/ask spread from 8 Oct", PaperSince.spreadNote(d(1)))
+        assertEquals("Paper fills include the bid/ask spread", PaperSince.spreadNote(d(8)))
+        assertEquals("Paper fills include the bid/ask spread", PaperSince.spreadNote(d(9)))
+    }
+
     @Test fun aSavedStartIsReadBackOrTheFirstOfOctober() {
         assertEquals(d(5), PaperSince.startOf("2026-10-05"))
         assertEquals(d(5), PaperSince.startOf(" 2026-10-05 "))

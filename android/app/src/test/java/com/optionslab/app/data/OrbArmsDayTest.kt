@@ -130,7 +130,7 @@ class OrbArmsDayTest : RobolectricTest() {
         assertTrue(p.open)
         assertEquals("CE", p.right); assertEquals(sym, p.symbol); assertEquals(30, p.qty)
         assertTrue("premium ${p.entry} above 40", p.entry > 40.0)
-        assertEquals(300.0, p.entry, 0.5)
+        assertEquals("300 plus the 0.16% half-spread, up to the tick", 300.5, p.entry, 0.06)
         assertEquals(day.atTime(signalBar), p.signalBar)
         assertEquals(day.atTime(entryTime), p.entryTime)
         assertEquals(OrbRules.stopTrigger(p.entry), p.stopTrigger)
@@ -231,7 +231,7 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals("today's expiry", day, legs.expiry)
         val p = arm().open!!
         assertEquals(legs.ce.symbol, p.symbol)
-        assertEquals(120.0, p.entry, 0.5)
+        assertEquals("120 plus the 0.16% half-spread, up to the tick", 120.2, p.entry, 0.06)
     }
 
     // ---- the profit lock (25 / 50 / 75 % of the target) ------------------------------------------------
@@ -249,7 +249,7 @@ class OrbArmsDayTest : RobolectricTest() {
         tick(LocalTime.of(10, 38))
         val closed = arm().today.single()
         assertEquals("profit_lock", closed.why)
-        assertEquals(p.entry - 1, closed.exit!!, 0.5)
+        assertEquals(p.entry - 1, closed.exit!!, 0.6)                        // less the half-spread, on the tick
         assertTrue("the resting -40 stop came out of the book",
             Paper.state.orders.none { it.orderId == p.stopOrderId && it.status == "trigger pending" })
     }
@@ -324,14 +324,14 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals("trigger pending", so.status)
         assertEquals(be, so.triggerPrice!!.toDouble(), 1e-9)
         // 10:38 opened at +4 and traded down to -3 before the next look: the paper book fills the stop at its trigger, as an
-        // SL-M at the exchange would (less its 10 bps stop slippage), not at the price the next look sees.
+        // SL-M at the exchange would (less the 0.16% half-spread, more than the 10 bps stop slip, down to the tick), not at the price the next look sees.
         upstox.minutes[ceKey] = listOf(spike, FakeUpstox.Candle(LocalTime.of(10, 38), p.entry + 4, p.entry + 4, p.entry - 3, p.entry - 2))
         at(LocalTime.of(10, 39))
         runBlocking { Paper.tick() }
         tick(LocalTime.of(10, 39))
         val closed = arm().today.single()
         assertEquals("profit_lock", closed.why)
-        assertEquals(be * 0.999, closed.exit!!, 0.06)
+        assertEquals(be * (1 - 0.0016), closed.exit!!, 0.051)
         assertTrue("sold at the lock, not at the -2 close", closed.exit!! > p.entry)
     }
 

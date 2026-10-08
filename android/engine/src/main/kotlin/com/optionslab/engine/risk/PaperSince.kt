@@ -34,6 +34,16 @@ object PaperSince {
         return "$since: ${signed(s.net)} net over ${s.days} day${if (s.days == 1) "" else "s"} (avg ${signed(s.perDay, plus = false)}/day)"
     }
 
+    /** From this day every paper fill pays the bid/ask spread (Honest paper, [com.optionslab.engine.sandbox.PaperSpread]). */
+    val SPREAD_FROM: LocalDate = LocalDate.of(2026, 10, 8)
+
+    /**
+     * What Home adds under the line: "includes the bid/ask spread", and from when if the count starts before
+     * [SPREAD_FROM] (the earlier days were booked without it).
+     */
+    fun spreadNote(start: LocalDate): String =
+        if (start.isBefore(SPREAD_FROM)) "Paper fills include the bid/ask spread from 8 Oct" else "Paper fills include the bid/ask spread"
+
     private fun signed(x: Double, plus: Boolean = true): String {
         val r = Math.round(x).toDouble()
         val sign = if (r < 0) "-" else if (plus && r > 0) "+" else ""

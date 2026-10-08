@@ -150,6 +150,9 @@ fun RowActionPopup(model: AppModel) {
             lines += "Quantity · filled · pending" to "${r.quantity} · ${r.filledQuantity} · ${r.pendingQuantity}"
             lines += "Order type" to "${r.priceType}${if (r.price > 0) " @ ${px(r.price)}" else ""}${if (r.triggerPrice > 0) " · trigger ${px(r.triggerPrice)}" else ""}"
             lines += "Average fill" to (r.averagePrice.takeIf { it > 0 }?.let(::px) ?: "—")
+            // Honest paper (08 Oct): the bid/ask spread this order's fill paid, already in its price.
+            (paper as? Load.Done)?.value?.trades?.filter { it.orderId == r.orderId }?.sumOf { it.spread }
+                ?.let { com.optionslab.engine.sandbox.PaperSpread.chargedLine(it) }?.let { lines += "Bid/ask spread" to it }
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Placed at" to r.timestamp.takeLast(8)
             lines += "Order id" to r.orderId
@@ -169,6 +172,8 @@ fun RowActionPopup(model: AppModel) {
             lines += "Filled" to "${r.quantity} @ ${px(r.price)}"
             lines += "Trade value" to rs(r.tradeValue)
             if (r.charges > 0) lines += "Charges (brokerage, STT, fees)" to rs(r.charges)
+            // Honest paper (08 Oct): the bid/ask spread this fill paid, already in its price.
+            com.optionslab.engine.sandbox.PaperSpread.chargedLine(r.spread)?.let { lines += "Bid/ask spread" to it }
             lines += "Product · exchange" to "${r.product} · ${r.exchange}"
             lines += "Time" to r.timestamp.takeLast(8)
             lines += "Trade · order id" to "${r.tradeId} · ${r.orderId}"

@@ -1369,7 +1369,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 val since = com.optionslab.engine.risk.PaperSince.startOf(com.optionslab.app.data.AppSettings.load().paperSince)
                 val days = com.optionslab.app.data.DailyPnl.all(false).mapValues { it.value.net }
-                paperSinceLine.value = com.optionslab.engine.risk.PaperSince.line(com.optionslab.engine.risk.PaperSince.summary(days, since))
+                // Honest paper (08 Oct): the line says the figures now pay the bid/ask spread, and from when.
+                paperSinceLine.value = com.optionslab.engine.risk.PaperSince.line(com.optionslab.engine.risk.PaperSince.summary(days, since)) +
+                    ". " + com.optionslab.engine.risk.PaperSince.spreadNote(since)
             }
             strategies.value = st.all()
             strategyLog.value = st.log()

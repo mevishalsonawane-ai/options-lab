@@ -252,7 +252,7 @@ class OptionOrderSheetTest {
         tap("+")
         tap("Buy (paper)")
         compose.waitUntil(5_000) { closed == 1 }
-        assertEquals("Paper BUY 150 $symbol filled @ 100.05", waitMessage(m, "filled @"))
+        assertEquals("Paper BUY 150 $symbol filled @ 100.20", waitMessage(m, "filled @"))
         val s = waitSnap(m, "the position") { x -> x.positions.positions.any { it.quantity == 150 } }
         assertEquals("NRML", s.orders.orders.single().product)
         assertEquals("MARKET", s.orders.orders.single().priceType)

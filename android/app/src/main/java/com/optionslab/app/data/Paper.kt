@@ -105,8 +105,11 @@ object Paper {
         // The desktop sandbox's execution costs (TODO A9): stops slip 10 bps, a MARKET fill with no
         // bid/ask (the Upstox candle feed has none) slips 5 bps, and every leg pays its charges.
         // Every close's P&L reaches the balance (the desktop drops it when the position has no margin left to release).
+        // Honest paper (08 Oct, research/X3_AUDIT.md): every aggressive fill also pays the bid/ask half-spread - the stream's
+        // real bid/ask, else the measured default for the index - by max(slippage, half-spread), never both. Always on:
+        // no setting, nothing a voice command or a backup can change.
         SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true,
-            pnlAlwaysToFunds = true),
+            pnlAlwaysToFunds = true, paperSpread = true),
         InstrumentMaster { sym, ex ->
             if (ex != "NFO") null else contracts[sym]?.let {
                 Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike)
@@ -338,12 +341,118 @@ object Paper {
     /** How old the candles [staleEntry] reads may be (the ones the caller's [quote] read just now): else read again. */
     private const val STALE_READ_MS = 30_000L
 
+    // ---- honest paper: never a fill on a price over a minute old (08 Oct) ----------------------------------------
+
+    /**
+     * The last 1-minute candle behind [q] when [q] is the candle feed's price for [c] (the stream does not stream it) and
+     * that price is older than [com.optionslab.engine.sandbox.PaperSpread.STALE_SECONDS]; null when [q] is fresh: the
+     * stream's tick, Zerodha's quote, or a candle under a minute old.
+     */
+    private fun staleCandle(c: Contract, q: Quote?): Upstox.Bar? {
+        if (testSkipFeedChecks || q == null) return null
+        if (candleQuotes[c.symbol]?.second != q) return null
+        val bar = candleBars[c.symbol]?.second?.maxByOrNull { it.epochSecond } ?: return null
+        return bar.takeIf { com.optionslab.engine.sandbox.PaperSpread.isStale(it.epochSecond, System.currentTimeMillis() / 1000) }
+    }
+
+    /** Zerodha's quote for [c] by its quote API (logged in only; with the real best bid and ask); null without one. */
+    private suspend fun restQuote(c: Contract): Quote? {
+        if (!Broker.loggedIn) return null
+        val ins = Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null
+        val key = "NFO:" + ins.tradingSymbol
+        val r = runCatching { Broker.quotes(listOf(key)) }.getOrNull()?.get(key) ?: return null
+        if (!(r.last > 0)) return null
+        return Quote(r.last, bid = r.bid ?: 0.0, ask = r.ask ?: 0.0).also { remember(c.symbol, it) }
+    }
+
+    /**
+     * The quote an EXIT of [c] ([action]: the closing side) fills on. [q] itself when fresh; when it is a candle close over
+     * a minute old: Zerodha's quote, else the last minute's low for a sell (its high for a buy) - the worse side, never the
+     * stale close. With the note for diagnostics (null when [q] was fresh).
+     */
+    private suspend fun exitQuote(c: Contract, q: Quote?, action: String): ExitQuote {
+        val bar = staleCandle(c, q) ?: return ExitQuote(q, null, false)
+        val age = com.optionslab.engine.sandbox.PaperSpread.ageSeconds(bar.epochSecond, System.currentTimeMillis() / 1000)
+        restQuote(c)?.let { return ExitQuote(it, "${c.symbol}: candle price ${age}s old and no stream, so the $action used Zerodha's quote ${"%.2f".format(Locale.ENGLISH, it.ltp)}", false) }
+        val px = com.optionslab.engine.sandbox.PaperSpread.conservativeExit(action, bar.close, bar.low, bar.high)
+        return ExitQuote((q ?: Quote(px)).copy(ltp = px), "${c.symbol}: candle price ${age}s old, no stream and no Zerodha quote, so the $action used the last minute's " +
+            "${if (action.equals("BUY", true)) "high" else "low"} ${"%.2f".format(Locale.ENGLISH, px)}", true)
+    }
+
+    /** [exitQuote]'s answer: the quote, the diagnostics note (null: [quote] was fresh), and whether it is the stale minute's worse side (exits only). */
+    private data class ExitQuote(val quote: Quote?, val note: String?, val worseSide: Boolean)
+
+    /** The side that closes [symbol]'s open position (SELL when long or flat, BUY when short). */
+    private fun closingSide(symbol: String): String =
+        if (book().state.positions.filter { it.symbol == symbol }.sumOf { it.quantity } < 0) "BUY" else "SELL"
+
+    /** Whether [action] on [symbol] opens or adds (true), or only reduces the position held. */
+    private fun opens(symbol: String, action: String): Boolean {
+        val held = book().state.positions.filter { it.symbol == symbol }.sumOf { it.quantity }
+        return if (action.equals("BUY", true)) held >= 0 else held <= 0
+    }
+
+    /** What [exitPrices] hands the engine: the quotes to fill on, the entries that must wait, the diagnostics notes by symbol. */
+    private data class ExitPrices(val quotes: Map<String, Quote>, val hold: Set<String>, val notes: Map<String, String>)
+
+    /**
+     * [q] made safe to fill on: each symbol with a working order whose price is a stale candle gets Zerodha's quote, else
+     * the worse side of its last minute for its exits, and its entries wait ([ExitPrices.hold]). [alsoHeld]: every open
+     * position's symbol too (the 15:15 square-off closes them at market).
+     */
+    private suspend fun exitPrices(q: Map<String, Quote>, alsoHeld: Boolean = false): ExitPrices {
+        val st = book().state
+        val working = st.orders.filter { it.status == "open" || it.status == "trigger pending" }
+        val syms = working.map { it.symbol }.toSet() + (if (alsoHeld) st.positions.filter { it.quantity != 0 }.map { it.symbol } else emptyList())
+        if (syms.isEmpty()) return ExitPrices(q, emptySet(), emptyMap())
+        val out = HashMap(q); val hold = HashSet<String>(); val notes = HashMap<String, String>()
+        for (sym in syms) {
+            val c = book().contracts[sym] ?: continue
+            val k = Sandbox.key(sym, "NFO")
+            val x = exitQuote(c, q[k], closingSide(sym))
+            val fq = x.quote ?: continue
+            val note = x.note ?: continue
+            out[k] = fq; notes[sym] = note
+            // Zerodha's quote is fresh: everything may fill on it. The candle's worse side is for exits only.
+            if (x.worseSide) working.filter { it.symbol == sym && opens(sym, it.action) }.forEach { hold += it.orderId }
+        }
+        return ExitPrices(out, hold, notes)
+    }
+
+    /** Entries already noted as held back on a stale price (noted once each). */
+    private val heldNoted = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** Diagnostics for a pass that filled on a substitute price or held an entry back ([exitPrices]). */
+    private fun noteStale(p: ExitPrices, events: List<SandboxEvent>) {
+        if (p.notes.isEmpty()) return
+        events.filterIsInstance<SandboxEvent.Fill>().filter { it.symbol in p.notes }
+            .forEach { f -> runCatching { Diag.record("paper", "Stale price: " + p.notes.getValue(f.symbol) + "; filled @ ${"%.2f".format(Locale.ENGLISH, f.price)}") } }
+        p.hold.filter { heldNoted.add(it) }.forEach { id -> runCatching { Diag.record("paper", "Stale price: entry order $id waits for a fresh price (no stream, candle over a minute old)") } }
+    }
+
+    /** The diagnostics line: the bid/ask spread paper fills paid this session (Honest paper, 08 Oct). */
+    fun spreadTodayLine(): String = book().let { b ->
+        val t = engine(b.capital, b.contracts).tradeBook(b.state, Market.now())
+        com.optionslab.engine.sandbox.PaperSpread.dayLine(t.sumOf { it.spread }, t.count { it.spread > 0 })
+    }
+
     /** [known]: the contract's quote when the caller has just read it (read here otherwise). */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
                       known: Quote? = null): Result {
-        val q = known ?: runCatching { quote(c) }.getOrNull()
+        val read = known ?: runCatching { quote(c) }.getOrNull()
         // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
         staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
+        // Honest paper (08 Oct): no fill on a price over a minute old. An exit fills on Zerodha's quote or the stale minute's
+        // worse side; an entry LIMIT or stop rests without it (it fills later on a fresh price; a MARKET entry is refused
+        // above, as before). Noted in diagnostics.
+        val x = when {
+            !opens(c.symbol, action) -> exitQuote(c, read, action)
+            priceType.equals("MARKET", true) -> ExitQuote(read, null, false)
+            else -> staleCandle(c, read)?.let { ExitQuote(null, "${c.symbol}: candle price over a minute old and no stream, so the $priceType entry rests until a fresh price", false) }
+                ?: ExitQuote(read, null, false)
+        }
+        val q = x.quote
+        x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         synchronized(this) {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
@@ -389,7 +498,11 @@ object Paper {
     }
 
     suspend fun close(symbol: String, product: String): Result {
-        val q = quickQuote(symbol)
+        val read = quickQuote(symbol)
+        // Honest paper (08 Oct): never closed on a candle price over a minute old ([exitQuote]); noted in diagnostics.
+        val x = book().contracts[symbol]?.let { exitQuote(it, read, closingSide(symbol)) }
+        val q = x?.quote ?: read
+        x?.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         synchronized(this) {
             val b = book()
             val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, "NFO", product, q, Market.now())
@@ -419,6 +532,8 @@ object Paper {
             val got = q[Sandbox.key(sym, "NFO")] ?: return@mapNotNull null
             candleQuotes[sym]?.takeIf { com.optionslab.ira.StopPrice.handedOn(got, it.second) }?.let { sym to it }
         }.toMap()
+        // Honest paper (08 Oct): the orders fill on fresh prices only ([exitPrices]); positions are still marked to [q].
+        val fill = exitPrices(q, alsoHeld = !Market.now().toLocalTime().isBefore(java.time.LocalTime.of(15, 14)))
         synchronized(this) {
             val b = book()
             val e = engine(b.capital, b.contracts)
@@ -433,14 +548,14 @@ object Paper {
                 if (q[Sandbox.key(o.symbol, "NFO")] == null) continue          // only on a pass that read this contract's price
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 val px = runCatching { restingFill(c, o.updateTimestamp, trig) }.getOrNull() ?: continue
-                e.fillRestingStop(s, o.orderId, px, now).also { if (it.result.ok) { s = it.state; events += it.events } }
+                e.fillRestingStop(s, o.orderId, px, now, q[Sandbox.key(o.symbol, "NFO")]).also { if (it.result.ok) { s = it.state; events += it.events } }
             }
-            e.onQuotes(s, q, now).also { s = it.state; events += it.events }
+            e.onQuotes(s, fill.quotes, now, fill.hold).also { s = it.state; events += it.events }
             // Marks positions to the fresh LTP, which expiry settlement prices from.
             e.positionBook(s, now, q).also { s = it.state; events += it.events }
             // The square-off's own events kept apart: only its cancels are the 15:15 square-off (reason text only).
             val squareFrom = events.size
-            e.squareOffDue(s, now, q).also { s = it.state; events += it.events }
+            e.squareOffDue(s, now, fill.quotes).also { s = it.state; events += it.events }
             val squareTo = events.size
             e.settleExpiries(s, now).also { s = it.state; events += it.events }
             // The book's own cancels here: a contract's expiry, the 15:15 MIS square-off, or (the catch-up after a day's end,
@@ -457,6 +572,7 @@ object Paper {
                 }
             }
             if (s != b.state) save(b.copy(state = s, why = if (own.isEmpty()) b.why else noted(b.why, own)))
+            noteStale(fill, events)
             return events
         }
     }
@@ -475,21 +591,26 @@ object Paper {
         val stops = book().state.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }
         val held = book().state.positions.filter { it.quantity != 0 }.map { it.symbol }.toSet()
         val q = quotes(stops.map { it.symbol } + held)
+        // Honest paper (08 Oct): a stop is never sold on a candle price over a minute old ([exitPrices]).
+        val fill = exitPrices(q)
         val out = ArrayList<Swept>()
+        val events = ArrayList<SandboxEvent>()
         synchronized(this) {
             val b = book()
             val e = engine(b.capital, b.contracts)
             val now = Market.now()
             var s = b.state
             for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
-                val px = q[Sandbox.key(o.symbol, "NFO")]?.ltp ?: continue
+                val fq = fill.quotes[Sandbox.key(o.symbol, "NFO")] ?: continue
+                val px = fq.ltp
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 if (!com.optionslab.engine.risk.MissedLock.missed(px, trig)) continue
-                val r = e.fillRestingStop(s, o.orderId, px, now)
-                if (r.result.ok) { s = r.state; out += Swept(o.symbol, trig, s.orders.firstOrNull { it.orderId == o.orderId }?.averagePrice?.toDouble() ?: px, o.orderId) }
+                val r = e.fillRestingStop(s, o.orderId, px, now, fq)
+                if (r.result.ok) { s = r.state; events += r.events; out += Swept(o.symbol, trig, s.orders.firstOrNull { it.orderId == o.orderId }?.averagePrice?.toDouble() ?: px, o.orderId) }
             }
             if (s != b.state) save(b.copy(state = s))
         }
+        noteStale(fill, events)
         return Sweep(out, q.isNotEmpty(), held.isNotEmpty())
     }
 
@@ -563,6 +684,9 @@ object Paper {
 
         /** Today's charges (the trade book holds today's trades only). */
         val dayCharges: Double get() = trades.sumOf { it.charges }
+
+        /** Today's bid/ask spread, already in the fill prices (Honest paper, 08 Oct): words only, never subtracted again. */
+        val daySpread: Double get() = trades.sumOf { it.spread }
 
         /** The day's P&L BEFORE charges, as every screen shows it (as Zerodha shows its own): display only, never a limit. */
         val dayGross: Double get() = com.optionslab.ira.PnlCharges.gross(dayPnl, dayCharges)

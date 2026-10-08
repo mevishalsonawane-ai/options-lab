@@ -340,6 +340,8 @@ object DailyReports {
                 total += sn.dayGross
                 lines += "Paper: ${rs(sn.dayGross)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}" +
                     (com.optionslab.ira.PnlCharges.line(sn.dayCharges, estimate = false)?.let { " · ${it.lowercase()}" } ?: "")
+                // Honest paper (08 Oct): the figure above already paid the bid/ask spread; said so, with how much.
+                lines += "Paper now includes the bid/ask spread: Rs " + String.format(java.util.Locale.ENGLISH, "%,.2f", sn.daySpread) + " today"
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, sn.trades.size, sn.dayCharges) }
             }
             val open = sn.positions.positions.count { it.quantity != 0 }

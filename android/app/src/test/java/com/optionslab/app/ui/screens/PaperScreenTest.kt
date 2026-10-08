@@ -196,16 +196,16 @@ class PaperScreenTest {
         assertTrue("the strike box opens on the at-the-money strike", exists("24500"))
         assertTrue(exists("Strike · NIFTY 24,512"))
 
-        // Place: MARKET with no bid/ask fills at the last price plus 5 bps, and pays its charges.
+        // Place: MARKET with no bid/ask fills at the last price plus the NIFTY half-spread (0.16%, honest paper), on the tick: 100.16 -> 100.20.
         waitPlaceable()
         placeButton().performClick()
         val filled = waitMessage(m, "filled @")
-        assertEquals("Paper BUY 75 ${sym(24_500.0)} filled @ 100.05", filled)
+        assertEquals("Paper BUY 75 ${sym(24_500.0)} filled @ 100.20", filled)
         var s = waitSnap(m, "the position") { x -> x.positions.positions.any { it.quantity == 75 } }
         val pos = s.positions.positions.single()
         assertEquals(sym(24_500.0), pos.symbol)
-        assertEquals(100.05, pos.averagePrice, 1e-9)
-        val buyCharge = SandboxCosts.charge("BUY", BigDecimal("100.05"), 75).toDouble()
+        assertEquals(100.20, pos.averagePrice, 1e-9)
+        val buyCharge = SandboxCosts.charge("BUY", BigDecimal("100.20"), 75).toDouble()
         assertEquals(buyCharge, s.trades.single().charges, 0.001)
 
         // The position appears on the page.
@@ -216,16 +216,16 @@ class PaperScreenTest {
         upstox.price(TradeFixtures.key("NIFTY", near, 24_500.0, "PE"), 110.0)
         m.loadPaper(quiet = true)
         s = waitSnap(m, "the new mark") { x -> x.positions.positions.single().ltp == 110.0 }
-        assertEquals("unrealised = (110 - 100.05) x 75", 746.25, s.positions.positions.single().unrealizedPnl, 0.001)
-        compose.waitUntil(10_000) { exists("avg 100.05 → 110.00", substring = true) }
+        assertEquals("unrealised = (110 - 100.20) x 75", 735.0, s.positions.positions.single().unrealizedPnl, 0.001)
+        compose.waitUntil(10_000) { exists("avg 100.20 → 110.00", substring = true) }
 
-        // Close from the row: a MARKET sell at 110 less 5 bps = 109.945 -> 109.94 (half-even).
+        // Close from the row: a MARKET sell at 110 less the 0.16% half-spread = 109.824 -> 109.80 (down to the tick).
         tap("Close")
-        assertEquals("Paper SELL 75 ${sym(24_500.0)} filled @ 109.94", waitMessage(m, "SELL 75"))
+        assertEquals("Paper SELL 75 ${sym(24_500.0)} filled @ 109.80", waitMessage(m, "SELL 75"))
         s = waitSnap(m, "the position to close") { x -> x.positions.positions.all { it.quantity == 0 } && x.trades.size == 2 }
-        val sellCharge = SandboxCosts.charge("SELL", BigDecimal("109.94"), 75).toDouble()
-        val gross = (109.94 - 100.05) * 75
-        assertEquals(741.75, gross, 1e-9)
+        val sellCharge = SandboxCosts.charge("SELL", BigDecimal("109.80"), 75).toDouble()
+        val gross = (109.80 - 100.20) * 75
+        assertEquals(720.0, gross, 1e-9)
         assertEquals("the closed row shows the day's realised P&L", gross, s.positions.positions.single().todayRealizedPnl, 0.001)
         assertEquals(sellCharge, s.trades.first { it.action == "SELL" }.charges, 0.001)
         assertEquals("realised in funds is net of both legs' charges", gross - buyCharge - sellCharge, s.funds.todayRealizedPnl, 0.01)
@@ -248,7 +248,7 @@ class PaperScreenTest {
         assertEquals("finished orders have no Modify / Cancel", 0, compose.onAllNodesWithText("Modify").fetchSemanticsNodes().size)
         // Trades: both legs, at their fill prices.
         tap("Trades")
-        compose.waitUntil(5_000) { exists("75 @ 100.05") && exists("75 @ 109.94") }
+        compose.waitUntil(5_000) { exists("75 @ 100.20") && exists("75 @ 109.80") }
         // Funds: the same figures as the account.
         tap("Funds")
         compose.waitUntil(5_000) { exists("Realised, all time") }
@@ -378,11 +378,11 @@ class PaperScreenTest {
         assertEquals(105.0, s.orders.orders.single().triggerPrice, 1e-9)
         assertTrue(s.positions.positions.none { it.quantity != 0 })
 
-        // The market touches the trigger: the next tick fills at the LTP less nothing, plus 10 bps against.
+        // The market touches the trigger: the next tick fills at the LTP plus the larger of 10 bps and the 0.16% half-spread, up to the tick.
         upstox.price(TradeFixtures.key("NIFTY", near, 24_500.0, "PE"), 106.0)
         m.loadPaper(quiet = true)
         s = waitSnap(m, "the stop to fill") { x -> x.orders.orders.single().status == "complete" }
-        assertEquals("106 + 10 bps = 106.106 -> 106.11", 106.11, s.orders.orders.single().averagePrice, 1e-9)
+        assertEquals("106 + 0.16% = 106.1696 -> 106.20", 106.20, s.orders.orders.single().averagePrice, 1e-9)
         assertEquals(75, s.positions.positions.single().quantity)
     }
 
@@ -397,7 +397,7 @@ class PaperScreenTest {
         m.loadPaper(quiet = true)
         val s = waitSnap(m, "the stop-limit to fill") { x -> x.orders.orders.single().status == "complete" }
         val px = s.orders.orders.single().averagePrice
-        assertEquals(106.11, px, 1e-9)
+        assertEquals(106.20, px, 1e-9)
         assertTrue("never above its limit", px <= 107.0)
     }
 
@@ -407,8 +407,8 @@ class PaperScreenTest {
         field("Price").performTextInput("101")
         waitPlaceable(); placeButton().performClick()
         val s = waitSnap(m, "the fill") { x -> x.orders.orders.any { it.status == "complete" } }
-        // A marketable LIMIT fills at the LTP (price improvement), with no slippage.
-        assertEquals(100.0, s.orders.orders.single().averagePrice, 1e-9)
+        // A marketable LIMIT crosses the spread like a market order (100 + 0.16% = 100.16 -> 100.20), never past its limit.
+        assertEquals(100.20, s.orders.orders.single().averagePrice, 1e-9)
     }
 
     @Test fun aLimitWithNoPriceIsRefusedAndNothingIsPlaced() {

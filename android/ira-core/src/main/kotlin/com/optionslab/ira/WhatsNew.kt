@@ -50,6 +50,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-08-honest-paper", OCT8, "Paper fills now pay the bid/ask spread",
+            "Every paper buy and sell now pays the bid/ask spread, like a real order. " +
+                "It uses the real bid and ask when Zerodha's stream has them. " +
+                "Otherwise it uses the measured spread for each index. " +
+                "So paper looks about Rs 100 worse per round trip, and closer to real money. " +
+                "A paper fill never uses a price over a minute old. " +
+                "Each paper trade shows the spread it paid.",
+            "Trade → Paper → tap a trade or an order (Bid/ask spread). Home → Dashboard → Strategies card, and the day report"),
         Entry("2026-10-08-locks-and-day-lock", OCT8, "Safer exits, and a day lock at +Rs 8,000",
             "Pine's stop and profit lock now rest as one stop that only moves up, on every tick or minute high. " +
                 "At Zerodha a backup GTT waits just under each bot's stop and moves up with it. " +

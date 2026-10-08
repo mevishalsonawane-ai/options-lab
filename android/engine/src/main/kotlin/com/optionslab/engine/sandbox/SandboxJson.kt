@@ -57,6 +57,7 @@ object SandboxJson {
                     t.str("tradeId"), t.str("orderId"), t.str("symbol"), t.str("exchange"), t.str("action"),
                     t.int("quantity"), t.dec("price"), t.str("product"), t.strOrNull("strategy"), t.time("timestamp"),
                     (if (t.containsKey("charges")) t.decOrNull("charges") else null) ?: java.math.BigDecimal.ZERO,
+                    (if (t.containsKey("spread")) t.decOrNull("spread") else null) ?: java.math.BigDecimal.ZERO,
                 )
             },
             positions = root.list("positions").map { it.asObj() }.map { p ->
@@ -124,6 +125,7 @@ object SandboxJson {
         field("strategy") { str(t.strategy) }
         field("timestamp") { str(t.timestamp.toString()) }
         if (t.charges.signum() != 0) field("charges") { dec(t.charges) }
+        if (t.spread.signum() != 0) field("spread") { dec(t.spread) }
     }
 
     private fun Writer.position(p: Position) = obj {

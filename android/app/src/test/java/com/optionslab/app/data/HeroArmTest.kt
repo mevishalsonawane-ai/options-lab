@@ -157,7 +157,7 @@ class HeroArmTest : RobolectricTest() {
         assertEquals("CE", p.right)
         assertEquals(Paper.contractFor("NIFTY", day, 25_200.0, Right.CE)!!.symbol, p.symbol)
         assertEquals(18 * lot, p.qty)
-        assertEquals(4.0, p.entry, 0.05)
+        assertEquals("4.00 plus the 0.16% spread, up to the tick, held to the 4.05 limit", 4.05, p.entry, 0.001)
         assertTrue("within the Rs 5,000 budget", p.qty * p.entry <= HeroRules.BUDGET)
         assertEquals(day.atTime(13, 46), p.signalBar)
         val buy = Paper.state.orders.single()
@@ -177,7 +177,7 @@ class HeroArmTest : RobolectricTest() {
         val closed = hero().today.single()
         assertFalse(closed.open)
         assertEquals("hero_exit", closed.why)
-        assertEquals(2.0, closed.exit!!, 0.05)
+        assertEquals("2.00 less the 0.16% spread, down to the tick", 1.95, closed.exit!!, 0.001)
         val sell = Paper.state.orders.single { it.action == "SELL" }
         assertEquals("LIMIT", sell.priceType)
         assertEquals("Hero · hero_exit", runBlocking { Strategies.owners() }["paper:${sell.orderId}"])
@@ -197,7 +197,7 @@ class HeroArmTest : RobolectricTest() {
         armHero()
         passes(LocalTime.of(13, 44), LocalTime.of(13, 46))
         val p = hero().today.single()
-        assertEquals(18 * lot, p.qty); assertEquals(4.0, p.entry, 0.05)
+        assertEquals(18 * lot, p.qty); assertEquals(4.05, p.entry, 0.001)
         val ce = key(day, 25_200.0, Right.CE)
         // 20.00 exactly is 5x but not a tick through it: held.
         upstox.price(ce, 20.0)
@@ -210,7 +210,7 @@ class HeroArmTest : RobolectricTest() {
         val h = hero().today.single()
         assertTrue("the rest is still held", h.open)
         assertEquals(9 * lot, h.sold); assertEquals(9 * lot, h.qty)
-        assertEquals(20.5, h.soldAt!!, 0.05); assertTrue("never below the 5x limit", h.soldAt!! >= 20.0)
+        assertEquals("20.50 less the 0.16% spread, down to the tick", 20.45, h.soldAt!!, 0.001); assertTrue("never below the 5x limit", h.soldAt!! >= 20.0)
         assertEquals(day.atTime(14, 0), h.soldTime)
         val half = Paper.state.orders.single { it.action == "SELL" }
         assertEquals("LIMIT", half.priceType); assertEquals(20.0, half.price!!.toDouble(), 1e-9); assertEquals(9 * lot, half.quantity)
@@ -227,7 +227,7 @@ class HeroArmTest : RobolectricTest() {
         tick(LocalTime.of(15, 5))
         val c = hero().today.single()
         assertFalse(c.open)
-        assertEquals("hero_exit", c.why); assertEquals(10.0, c.exit!!, 0.05)
+        assertEquals("hero_exit", c.why); assertEquals(9.95, c.exit!!, 0.001)
         assertEquals(9 * lot, c.qty); assertEquals(9 * lot, c.sold)
         assertEquals("both parts: (5x fill - entry) x 585 + (15:05 fill - entry) x 585",
             (c.soldAt!! - c.entry) * 585 + (c.exit!! - c.entry) * 585, c.grossPnl!!, 1e-6)
@@ -266,7 +266,7 @@ class HeroArmTest : RobolectricTest() {
         tick(LocalTime.of(14, 1))
         val c = hero().today.single()
         assertFalse(c.open)
-        assertEquals("hero_stop", c.why); assertEquals(1.5, c.exit!!, 0.05)
+        assertEquals("hero_stop", c.why); assertEquals(1.45, c.exit!!, 0.001)
         assertEquals(18 * lot, c.qty); assertEquals(0, c.sold)
         val sell = Paper.state.orders.single { it.action == "SELL" }
         assertEquals("LIMIT", sell.priceType); assertEquals(1.45, sell.price!!.toDouble(), 1e-9); assertEquals(18 * lot, sell.quantity)
