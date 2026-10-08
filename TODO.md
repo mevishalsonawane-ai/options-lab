@@ -113,3 +113,13 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   report the results first; only then add the Liquidity 15+5 arm to the app (engine rules in `orb/LiquidityRules.kt`).
 - [ ] R2. AFTER the Liquidity 15+5 arm is tested and pushed: run the same liquidity rules on XAUUSD (gold vs US dollar,
   forex) - the `forex/` folder has the fetch scripts. Note: forex is not tradable from Zerodha / the app; research only.
+
+## P. Position screen (owner, 2026-10-08)
+
+- [ ] P1. Show every stop-loss and target that is active on a position, in the position popup (Trade -> Account ->
+  tap a position) and on the position row. Today the popup only offers "Protect: stop · trail · target" and does not
+  say what is already set. List, with the rupee level and the option price for each: the hard stop, the target, the
+  trailing stop (current level), the profit-lock level reached so far, the time stop (clock time), any index-level
+  stop, and the 15:10 square-off. Say who set each one (the arm or Jarvis solo, or Boss by hand) and whether it rests at
+  Zerodha as an order (live) or is watched by the app (paper). Example from 8 Oct 13:01: NIFTY13OCT2622550PE, opened by
+  Jarvis solo, avg 261.33, LTP 318.95, +Rs 3,745 - none of its exits were visible.
