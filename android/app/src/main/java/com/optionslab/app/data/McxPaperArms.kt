@@ -589,7 +589,8 @@ object McxPaperArms {
             val bars = runCatching { minutes(fc.upstoxKey, now) }.getOrNull().orEmpty()
             val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
             val buy = step.open > 0
-            refusal(pc, buy = buy, fresh = fresh)?.let { note(b, arm, "$leg: ${step.why} refused: $it"); notes += "$leg: $it"; continue }
+            val refused = refusal(pc, buy = buy, fresh = fresh)
+            if (refused != null) { note(b, arm, "$leg: ${step.why} refused: $refused"); notes += "$leg: $refused"; continue }
             val (fill, r) = paperOrder(pc, if (buy) "BUY" else "SELL", "${McxTrendRules.LABEL} · ${step.why}")
             if (fill == null) { note(b, arm, "$leg: ${step.why} not filled: ${r.message}"); notes += "$leg: not filled"; continue }
             opened(b, Pos(arm, pc.symbol, step.open, fill.quantity, fill.price, today, now, minuteOf(now), fc.expiry, false, r.orderId,
