@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import com.optionslab.app.ui.Root
 
 /**
@@ -83,6 +84,14 @@ class MainActivity : FragmentActivity() {
         if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.JarvisVoice.resume(this) }
         // Opening the app just after one of Jarvis's unasked alerts: Boss followed it up (kinds and minutes only).
         if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.OPENED) }
+        // Back on screen in market hours: a stop or lock the price went through while the app was away is sold now (08 Oct,
+        // the missed-lock sweeper), off the main thread.
+        if (com.optionslab.app.data.Market.isOpen() && !com.optionslab.app.data.Paper.testSkipFeedChecks) {
+            val ctx = applicationContext
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+                runCatching { com.optionslab.app.data.Sweeper.run(ctx) }
+            }
+        }
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {

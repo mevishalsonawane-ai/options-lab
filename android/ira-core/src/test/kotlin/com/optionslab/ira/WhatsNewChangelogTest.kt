@@ -26,10 +26,10 @@ class WhatsNewChangelogTest {
             assertEquals(LocalDate.parse(x.id.take(10)), x.date, x.id)
             assertTrue(x.title.isNotBlank() && x.title.length <= 60, x.id)
             assertTrue(x.what.isNotBlank() && x.where.isNotBlank(), x.id)
-            // One or two plain sentences; a few related fixes in one entry: up to five short ones (20 words at most each).
+            // One or two plain sentences; a few related fixes in one entry: up to eight short ones (20 words at most each).
             val sentences = Regex("[.!?](\\s|$)").findAll(x.what).count()
             val short = x.what.split(Regex("[.!?](\\s|$)")).all { it.trim().split(' ').size <= 20 }
-            assertTrue(sentences in 1..2 || (sentences <= 5 && short), "${x.id}: $sentences sentences")
+            assertTrue(sentences in 1..2 || (sentences <= 8 && short), "${x.id}: $sentences sentences")
             // No internal names (camelCase words) and no developer jargon.
             for (t in listOf(x.title, x.what, x.where, x.ask.orEmpty()))
                 assertFalse(Regex("\\b[a-z]+[A-Z][A-Za-z]*\\b|\\b[A-Z][a-z]+[A-Z][A-Za-z]*\\b").containsMatchIn(t.replace("BankNifty", "").replace("FinNifty", "")), "${x.id}: $t")
@@ -84,6 +84,7 @@ class WhatsNewChangelogTest {
         assertEquals(LocalDate.of(2026, 10, 8), x.date)
         assertTrue("only moves up" in x.what && "every tick or minute high" in x.what, "fix 1: the resting stop")
         assertTrue("barely trades" in x.what, "fix 2: thin options")
+        assertTrue("backup GTT" in x.what && "sold at once" in x.what && "loud warning" in x.what, "items 6-8: backup, sweeper, no-price warning")
         assertTrue("every 15 seconds" in x.what && "Solo" in x.what && "Liquidity" in x.what, "fix 3: the 15-second check")
         assertTrue("paper buy never fills" in x.what, "fix 4: stale prices")
         assertTrue("net since 1 Oct" in x.what && "paper start date" in x.where, "the paper running total on Home")

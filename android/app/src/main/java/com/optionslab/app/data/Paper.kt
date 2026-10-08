@@ -461,6 +461,41 @@ object Paper {
         }
     }
 
+    /** One resting stop the sweeper sold: its symbol, its trigger and where it filled. */
+    data class Swept(val symbol: String, val trigger: Double, val price: Double, val orderId: String)
+
+    /**
+     * The missed-lock sweeper's paper half (08 Oct, Boss's item 7): every resting SELL SL-M whose contract's price now
+     * ([quote]: the stream's tick, else the day's candles) is already at or under its trigger is filled now at that price
+     * ([Sandbox.fillRestingStop]) - the resting order itself, so the owner (an ORB arm, a Pine script, a protection) sees
+     * its stop filled and there is never a second sell. Also says whether any price was read ([Sweep.priced]) for the
+     * no-price failsafe. Paper only: nothing reaches Zerodha.
+     */
+    suspend fun sweepMissedStops(): Sweep {
+        val stops = book().state.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }
+        val held = book().state.positions.filter { it.quantity != 0 }.map { it.symbol }.toSet()
+        val q = quotes(stops.map { it.symbol } + held)
+        val out = ArrayList<Swept>()
+        synchronized(this) {
+            val b = book()
+            val e = engine(b.capital, b.contracts)
+            val now = Market.now()
+            var s = b.state
+            for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
+                val px = q[Sandbox.key(o.symbol, "NFO")]?.ltp ?: continue
+                val trig = o.triggerPrice?.toDouble() ?: continue
+                if (!com.optionslab.engine.risk.MissedLock.missed(px, trig)) continue
+                val r = e.fillRestingStop(s, o.orderId, px, now)
+                if (r.result.ok) { s = r.state; out += Swept(o.symbol, trig, s.orders.firstOrNull { it.orderId == o.orderId }?.averagePrice?.toDouble() ?: px, o.orderId) }
+            }
+            if (s != b.state) save(b.copy(state = s))
+        }
+        return Sweep(out, q.isNotEmpty(), held.isNotEmpty())
+    }
+
+    /** What [sweepMissedStops] did: the stops it sold, whether any price was read, and whether any position is open. */
+    data class Sweep(val swept: List<Swept>, val priced: Boolean, val holding: Boolean)
+
     /**
      * Views, priced with fresh quotes where the engine uses them. [reuseQuotesMs] > 0 only for words and cards (never the
      * loss limit, the square-off, stops or anything that orders): a price read that recently is used again; the book

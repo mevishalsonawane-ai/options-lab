@@ -52,8 +52,10 @@ object WhatsNew {
     val ENTRIES: List<Entry> = listOf(
         Entry("2026-10-08-locks-and-day-lock", OCT8, "Safer exits, and a day lock at +Rs 8,000",
             "Pine's stop and profit lock now rest as one stop that only moves up, on every tick or minute high. " +
+                "At Zerodha a backup GTT waits just under each bot's stop and moves up with it. " +
                 "Pine skips an option that barely trades. " +
-                "Pine, Solo and Liquidity exits are checked every 15 seconds. " +
+                "Pine, Solo and Liquidity exits are checked every 15 seconds, and a stop the price passed is sold at once. " +
+                "With no prices for two minutes while you hold a position, you get a loud warning. " +
                 "A paper buy never fills on a price minutes old, and Home shows paper's net since 1 Oct. " +
                 "Once an account's day reaches +Rs 8,000, no new automatic trade starts that day; open trades keep their exits.",
             "Settings → Bot settings → Day lock (+Rs 8,000 at first, off at 0) and the paper start date. Home → Dashboard → Strategies card shows both"),

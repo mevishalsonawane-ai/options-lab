@@ -1172,6 +1172,23 @@ class WatchService : Service() {
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: Solo", e)
                         }
+                        // Jarvis's own trades: their profit-lock stop and exits (a money step, under its own lock).
+                        if (com.optionslab.app.BuildConfig.JARVIS) try {
+                            com.optionslab.app.ira.IraNewsTrades.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: Jarvis's trades", e)
+                        }
+                        // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
+                        // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).
+                        try {
+                            com.optionslab.app.data.Sweeper.run(this)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: missed-lock sweep", e)
+                        }
                         try {
                             com.optionslab.app.data.Protections.tick()
                         } catch (e: kotlinx.coroutines.CancellationException) {
