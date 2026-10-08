@@ -197,7 +197,7 @@ object TradeBook {
             com.optionslab.ira.PnlCharges.perFill(inMonth.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
                 .forEach { m -> m.forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v } }
         } else Paper.state.trades.filter { YearMonth.from(it.timestamp) == month }.forEach { t ->
-            SandboxCosts.breakdown(t.action, t.price.toDouble(), t.quantity).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
+            SandboxCosts.breakdown(t.action, t.price.toDouble(), t.quantity, t.exchange, t.symbol).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
         }
         return out
     }

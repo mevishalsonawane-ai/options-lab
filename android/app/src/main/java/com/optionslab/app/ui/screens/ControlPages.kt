@@ -722,6 +722,11 @@ private fun GuardCard(model: AppModel) {
         if (s.expirySquareOff) ToggleRow("Keep the Expiry Put to settlement", "Its legs are left for the 15:30 settlement, as the strategy intends", s.keepExpiryPut) { on ->
             model.update { it.copy(keepExpiryPut = on) }
         }
+        // MCX (9 Oct): an MCX option at expiry turns into a future (far more margin than the account has); delivery futures.
+        ToggleRow("MCX expiry exit", "Closes MCX options by %02d:%02d the day before expiry, and gold, silver and metal futures %d trading days before expiry, paper and live"
+            .format(java.util.Locale.ENGLISH, s.mcxOptionExitMinute / 60, s.mcxOptionExitMinute % 60, s.mcxFutureExitDays), s.mcxExpiryExit) { on ->
+            model.update { it.copy(mcxExpiryExit = on) }
+        }
         ToggleRow("Block naked option shorts", "Selling an option to open needs a bought option of the same index, expiry and type held first", s.guardNakedShort) { on ->
             model.update { it.copy(guardNakedShort = on) }
         }

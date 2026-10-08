@@ -55,6 +55,9 @@ import java.util.Locale
 private fun f2(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 private fun f1(x: Double) = String.format(Locale.ENGLISH, "%,.1f", x)
 
+/** The MCX chains the Options tab offers (research/MCX_GUIDE.md 1b: the liquid near-month books). */
+internal val MCX_CHAINS = com.optionslab.engine.mcx.Mcx.CHAIN_FIRST
+
 /**
  * IraAlgo's option tools on the phone: the chain with Greeks, OI and PCR,
  * max pain, the IV smile, gamma exposure, the expected move, the synthetic
@@ -71,7 +74,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
     var underlying by rememberSaveable { mutableStateOf("NIFTY") }
     var picked by remember { mutableStateOf<ChainPick?>(null) }
     val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "straddle" to "Straddle", "iv" to "IV smile", "gex" to "GEX",
-        "move" to "Expected move", "builder" to "Strategy builder", "expiryput" to "Expiry Put")
+        "move" to "Expected move", "builder" to "Strategy builder", "expiryput" to "Expiry Put", "commodities" to "Commodities")
     // The Expiry Put strategy (formerly the Ticket tab) has its own scrolling page.
     if (view == "expiryput") {
         Column(Modifier.fillMaxSize()) {
@@ -79,6 +82,16 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
                 ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
             }
             Box(Modifier.weight(1f)) { TicketScreen(model) }
+        }
+        return
+    }
+    // MCX (9 Oct): every commodity's near and next future; its option chain opens here with that underlying.
+    if (view == "commodities") {
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp)) {
+                ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
+            }
+            Box(Modifier.weight(1f)) { CommoditiesScreen(model, onChart, onChain = { name -> underlying = name; onView("chain") }) }
         }
         return
     }
@@ -96,6 +109,8 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
         item {
             ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
             ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
+            // MCX (9 Oct): the liquid near-month option books; the chain's underlying is the future its options turn into.
+            ParamTokens("MCX", MCX_CHAINS.map { it to (it == underlying) }) { underlying = MCX_CHAINS[it] }
         }
         when (val l = snap) {
             Load.Idle -> item { LedgerCard { FullSpinner("Pricing the chain") } }
@@ -121,7 +136,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
             }
         }
     }
-    picked?.let { pk -> OptionChartPage(model, pk, onFullChart = { sym -> picked = null; onChart(sym, "NFO") }) { picked = null } }
+    picked?.let { pk -> OptionChartPage(model, pk, onFullChart = { sym -> picked = null; onChart(sym, if (com.optionslab.engine.mcx.Mcx.isMcxName(pk.underlying)) "MCX" else "NFO") }) { picked = null } }
 }
 
 @Composable

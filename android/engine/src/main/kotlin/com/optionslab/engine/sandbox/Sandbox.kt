@@ -393,7 +393,14 @@ class Sandbox(
 
         /** calculate_margin_required: |qty| x price / leverage, or why not. */
         fun marginRequired(symbol: String, exchange: String, product: String, quantity: Int, price: BigDecimal, action: String?): Pair<BigDecimal?, String> {
-            instruments.lookup(symbol, exchange) ?: return null to "Symbol not found"
+            val inst = instruments.lookup(symbol, exchange) ?: return null to "Symbol not found"
+            // A contract with a known margin per lot (MCX: Zerodha's margin, the same for MIS and NRML) blocks that for a
+            // future, bought or sold, and for a sold option; a bought option pays its premium as before.
+            val perLot = inst.marginPerLot?.takeIf { it > 0 && it.isFinite() }
+            if (perLot != null && (isFuture(symbol, exchange) || (isOption(symbol, exchange) && action == "SELL"))) {
+                val lots = BigDecimal(kotlin.math.abs(quantity)).divide(BigDecimal(if (inst.lotSize > 0) inst.lotSize else 1), SandboxRules.PY)
+                return lots.multiply(pyDec(perLot)) to "Margin calculated successfully"
+            }
             val tradeValue = BigDecimal(kotlin.math.abs(quantity)).multiply(price)
             return div(tradeValue, SandboxRules.leverage(config, symbol, exchange, product, action)) to "Margin calculated successfully"
         }
@@ -608,7 +615,7 @@ class Sandbox(
 
             // MIS after square-off (or before 09:00) may only reduce an open position.
             if (product == "MIS") {
-                val sq = config.squareOffTimes[exchange]
+                val sq = config.squareOffTime(exchange, now.toLocalDate())
                 val t = now.toLocalTime()
                 if (sq != null && (!t.isBefore(sq) || t.isBefore(MARKET_OPEN))) {
                     val open = positions.firstOrNull { it.symbol == symbol && it.exchange == exchange && it.product == product && it.quantity != 0 }
@@ -842,7 +849,7 @@ class Sandbox(
             val (px, spread) = if (config.paperSpread) honestFill(o, rawPx, usedBook, quote, passive)
                 else SandboxCosts.fillPrice(rawPx, o.action, o.priceType, usedBook, o.price, config) to BigDecimal.ZERO
             val tradeId = nextTradeId()
-            val charge = if (config.chargesEnabled) SandboxCosts.charge(o.action, px, o.quantity, contractValue(o.symbol, o.exchange)) else BigDecimal.ZERO
+            val charge = if (config.chargesEnabled) SandboxCosts.charge(o.action, px, o.quantity, contractValue(o.symbol, o.exchange), o.exchange, o.symbol) else BigDecimal.ZERO
             if (charge.signum() > 0) editFunds { available -= charge; realized -= charge; today -= charge; total = realized + unrealized }
             trades += Trade(tradeId, o.orderId, o.symbol, o.exchange, o.action, o.quantity, store(px), o.product, o.strategy, now,
                 if (charge.signum() > 0) store(charge) else BigDecimal.ZERO, if (spread.signum() > 0) store(spread) else BigDecimal.ZERO)
@@ -869,7 +876,7 @@ class Sandbox(
             }
             val tick = instruments.lookup(o.symbol, o.exchange)?.tickSize?.takeIf { it > 0 && it.isFinite() }?.let { BigDecimal(it.toString()) }
                 ?: BigDecimal("0.05")
-            val moved = PaperSpread.fill(rawPx, o.action, PaperSpread.halfSpread(o.symbol, quote), floor, tick)
+            val moved = PaperSpread.fill(rawPx, o.action, PaperSpread.halfSpread(o.symbol, quote, o.exchange, now.toLocalTime()), floor, tick)
             val px = if (o.priceType == "SL" || o.priceType == "LIMIT") SandboxCosts.clampToLimit(moved, o.action, o.price) else moved
             return px to PaperSpread.charged(rawPx, px, o.quantity, cv)
         }
@@ -887,9 +894,9 @@ class Sandbox(
 
         fun checkAndSquareOff(quotes: Map<String, Quote>) {
             val t = now.toLocalTime()
-            val sq = config.squareOffTimes
+            val day = now.toLocalDate()
             for (o in pendingOrders().filter { it.product == "MIS" }) {
-                val cut = sq[o.exchange] ?: continue
+                val cut = config.squareOffTime(o.exchange, day) ?: continue
                 if (!t.isBefore(cut)) cancelOrder(o.orderId, quotes[key(o.symbol, o.exchange)])
             }
             for (o in pendingOrders()) {
@@ -898,7 +905,7 @@ class Sandbox(
             }
             cleanupExpiredContracts()
             val due = positions.filter { it.product == "MIS" && it.quantity != 0 }.filter { p ->
-                val cut = sq[p.exchange]
+                val cut = config.squareOffTime(p.exchange, day)
                 cut != null && !t.isBefore(cut)
             }
             for (p in due) {

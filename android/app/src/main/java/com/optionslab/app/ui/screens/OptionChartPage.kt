@@ -60,6 +60,8 @@ fun OptionChartPage(model: AppModel, pick: ChainPick, onFullChart: (String) -> U
         intraday = { model.optionIntraday(pick.underlying, pick.expiry, pick.strike, pick.right) },
         symbolOf = {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (com.optionslab.engine.mcx.Mcx.isMcxName(pick.underlying))
+                    return@withContext com.optionslab.app.data.McxMarket.find(pick.underlying, pick.expiry, pick.strike, pick.right)?.tradingSymbol
                 runCatching { com.optionslab.app.data.Market.contracts().firstOrNull { c ->
                     c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
             }
@@ -141,14 +143,19 @@ internal fun OptionChartContent(
                     Text("Change since today's open", style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 12.sp))
                     // Plotted by minute, not by candle: an illiquid option skips minutes, and the line
                     // (and its 11:00 / 13:00 labels) must still sit at the right time.
+                    // An MCX option (9 Oct) runs 09:00 to 23:30 (23:55 in US winter): its own axis; NSE's exactly as before.
+                    val mcx = com.optionslab.engine.mcx.Mcx.isMcxName(pick.underlying)
+                    val base = if (mcx) 9 * 60 else com.optionslab.app.data.Market.OPEN
+                    val span = if (mcx) com.optionslab.engine.mcx.McxSession.close(com.optionslab.app.data.Market.today()).let { it.hour * 60 + it.minute } - base else 375
                     val byMinute = remember(bars) {
-                        val m = bars.associate { (it.istMinute - com.optionslab.app.data.Market.OPEN).coerceIn(0, 374) to it.close }
+                        val m = bars.associate { (it.istMinute - base).coerceIn(0, span - 1) to it.close }
                         val lastIdx = m.keys.maxOrNull() ?: -1
                         var carry = bars.firstOrNull()?.close ?: 0.0
                         (0..lastIdx).map { i -> m[i]?.also { carry = it } ?: carry }
                     }
-                    if (bars.size >= 2) PriceChart(byMinute, open, 375,
-                        listOf(0 to "09:15", 105 to "11:00", 225 to "13:00", 374 to "15:30"), Modifier.padding(top = 10.dp))
+                    val axis = if (mcx) listOf(0 to "09:00", 240 to "13:00", 480 to "17:00", 720 to "21:00")
+                        else listOf(0 to "09:15", 105 to "11:00", 225 to "13:00", 374 to "15:30")
+                    if (bars.size >= 2) PriceChart(byMinute, open, span, axis, Modifier.padding(top = 10.dp))
                     else Note(when {
                         error != null -> "Could not load the chart: $error"
                         !loaded -> "Loading today's prices…"

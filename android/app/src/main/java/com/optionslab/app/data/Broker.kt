@@ -488,6 +488,8 @@ object Broker {
     @Volatile private var tokenMap: Pair<LocalDate, Map<String, Long>>? = null
     fun tokenOf(key: String): Long? {
         INDEX.values.firstOrNull { it.first == key }?.let { return it.second }
+        // MCX: from the day's MCX list ([McxMarket]), so its contracts stream too.
+        if (key.startsWith("MCX:")) return McxMarket.tokenOf(key.removePrefix("MCX:"))
         if (!key.startsWith("NFO:")) return null
         val m = tokenMap?.takeIf { it.first == Market.today() }?.second
             ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
@@ -628,9 +630,12 @@ object Broker {
 
     private val KITE_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 
-    /** 1-minute candles with OI (needs a plan that includes historical data). */
-    suspend fun minuteBars(token: Long, day: LocalDate): List<Upstox.Bar> {
-        val q = "from=${Kite.enc("$day 09:15:00")}&to=${Kite.enc("$day 15:30:00")}&oi=1"
+    /**
+     * 1-minute candles with OI (needs a plan that includes historical data). [from] / [to]: the session's window (NSE's
+     * 09:15-15:30 unless asked; MCX's 09:00-23:59).
+     */
+    suspend fun minuteBars(token: Long, day: LocalDate, from: String = "09:15:00", to: String = "15:30:00"): List<Upstox.Bar> {
+        val q = "from=${Kite.enc("$day $from")}&to=${Kite.enc("$day $to")}&oi=1"
         val candles = (call("GET", "/instruments/historical/$token/minute?$q") as JSONObject).optJSONArray("candles") ?: JSONArray()
         return (0 until candles.length()).map { candles.getJSONArray(it) }.map { r ->
             val ts = r.getString(0)
@@ -638,6 +643,15 @@ object Broker {
             Upstox.Bar(epoch, r.getDouble(1), r.getDouble(2), r.getDouble(3), r.getDouble(4), r.optLong(5), if (r.length() > 6) r.optLong(6) else 0L)
         }
     }
+
+    /**
+     * Zerodha's MCX instrument list (GET /instruments/MCX, CSV): public, so it is read without the login when there is none
+     * ([McxMarket.contracts]). Reads only.
+     */
+    suspend fun mcxInstrumentsText(): String = call("GET", "/instruments/MCX", auth = loggedIn, raw = true) as String
+
+    /** Zerodha's public commodity margin list (JSON: each contract's NRML and MIS margin per lot). Reads only, no login. */
+    suspend fun mcxMarginsText(): String = call("GET", "/margins/commodity", auth = false, raw = true) as String
 
     /** Instrument token of an index Kite knows by its IraAlgo name (NIFTY, BANKNIFTY, INDIAVIX). */
     fun indexToken(symbol: String): Long? = INDEX[symbol]?.second

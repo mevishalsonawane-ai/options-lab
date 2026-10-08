@@ -78,6 +78,7 @@ class IraAlgoApp : Application() {
         removeOldMarketDataStore()
         Market.init(this)
         com.optionslab.app.data.Holidays.init(this)
+        com.optionslab.app.data.McxMarket.init(this)
         Broker.init(this)
         com.optionslab.app.data.StaticIp.init(this)
         com.optionslab.app.data.Paper.init(this)

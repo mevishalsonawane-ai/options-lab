@@ -64,6 +64,43 @@ object PaperSpread {
         quote?.let { fromBook(it.bid, it.ask) } ?: defaultHalfSpread(symbol)
 
     /**
+     * [halfSpread] for a fill on [exchange] at [at] (IST): an MCX fill with no usable book pays the MCX default for its
+     * contract and hour ([mcxHalfSpread]); every other exchange exactly as [halfSpread].
+     */
+    fun halfSpread(symbol: String, quote: Quote?, exchange: String, at: java.time.LocalTime): Double =
+        if (exchange.uppercase() != "MCX") halfSpread(symbol, quote)
+        else quote?.let { fromBook(it.bid, it.ask) } ?: mcxHalfSpread(symbol, at)
+
+    // ---- MCX (research/MCX_GUIDE.md 1b, MCX_INTRADAY.md: 70-80% of option volume trades after 17:00) -------------------
+
+    /** MCX's evening session (US hours), where the option books are deep: from here the narrower default applies. */
+    val MCX_EVENING: java.time.LocalTime = java.time.LocalTime.of(17, 0)
+
+    /**
+     * Assumed half-spreads of near-ATM MCX options (fraction of the mid): (from 17:00, before 17:00). Crude ATM spreads were
+     * measured live at 0.19-0.29% (NN_CRUDE, STRAD_CRUDE); GOLDM, SILVERM and NATURALGAS were never measured, so these
+     * are on the safe (wide) side until the market recorder has logged them.
+     */
+    val MCX_OPTION_DEFAULTS: Map<String, Pair<Double, Double>> = linkedMapOf(
+        "CRUDEOIL" to (0.0030 to 0.0060), "NATURALGAS" to (0.0030 to 0.0060),
+        "GOLDM" to (0.0040 to 0.0080), "SILVERM" to (0.0040 to 0.0080),
+    )
+
+    /** Any other MCX option (the minis' small premiums, the thin books): (from 17:00, before). */
+    val MCX_OPTION_UNKNOWN: Pair<Double, Double> = 0.0060 to 0.0120
+
+    /** An MCX future (one tick is 0.01-0.05% of the price on the liquid ones). */
+    const val MCX_FUTURE = 0.0003
+
+    /** The MCX default half-spread for [symbol] (a paper symbol: NAME + DDMMMYY + strike + CE/PE, or + FUT) at [at]. */
+    fun mcxHalfSpread(symbol: String, at: java.time.LocalTime): Double {
+        val s = symbol.uppercase()
+        if (s.endsWith("FUT")) return MCX_FUTURE
+        val (evening, day) = underlying(s)?.let { MCX_OPTION_DEFAULTS[it] } ?: MCX_OPTION_UNKNOWN
+        return if (at.isBefore(MCX_EVENING)) day else evening
+    }
+
+    /**
      * [price] moved against the order by max([floorBps], [hs]) and rounded to [tick] against the order (a BUY up, a SELL
      * down), never under one tick.
      */

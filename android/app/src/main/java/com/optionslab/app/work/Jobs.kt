@@ -174,8 +174,12 @@ object Jobs {
         }
     }
 
-    /** Market hours today (from 09:14 to the close): the watch should be running now. */
-    fun watchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE
+    /**
+     * Market hours today (from 09:14 to the close): the watch should be running now. Also while MCX trades (to 23:30, or
+     * 23:55 in US winter; NSE holidays with an MCX evening session too) with an MCX position or order open (9 Oct).
+     */
+    fun watchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE ||
+        runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
     /** Start the watch now if it should be running; it is a no-op when it already is. */
     fun ensureWatch(context: Context) {
@@ -252,10 +256,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
             val done = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {
-                    val open = if (!com.optionslab.app.data.Market.acceptsOrders()) {
-                        Alerts.post(com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
+                    // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
+                    val mcx = com.optionslab.app.data.Paper.contractOf(symbol)?.isMcx == true
+                    val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
+                    val open = if (!accepts) {
+                        Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
                     } else com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
-                    if (open.isEmpty() && com.optionslab.app.data.Market.acceptsOrders()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+                    if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
                     for (p in open) {
                         val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
                         r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
@@ -630,6 +637,8 @@ object Tasks {
         step("stops and targets") { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
         step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
+        // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 2 trading days before (paper and live).
+        step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         step("strategies") {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
@@ -724,7 +733,10 @@ object Tasks {
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
             if (keys.isNotEmpty()) runCatching { b.within(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
-            runCatching { b.within(20_000) { b.passPositionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
+            runCatching { b.within(20_000) { b.passPositionBook() } }.getOrNull()?.also { book ->
+                // An open MCX position keeps the watch up through MCX's evening session (9 Oct).
+                runCatching { com.optionslab.app.data.McxMarket.noteLive(book.net) }
+            }?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
@@ -786,6 +798,35 @@ object Tasks {
             else -> "almanac"
         }
         return Tick(title, lines, progress, dest)
+    }
+
+    /**
+     * The MCX pass (9 Oct): outside NSE's hours, while MCX trades and something is held or working there. Only the steps
+     * that protect money, each in its own try: Zerodha's stream, paper fills and MCX square-off, the daily loss limit, stops
+     * and targets, the MCX expiry exit, the missed-lock sweep with the no-price failsafe, the position cards. Nothing NSE's
+     * (no arm, no strategy, no Jarvis check) runs here, so NSE's behaviour is unchanged.
+     */
+    suspend fun mcxTick(context: Context, s: AppSettings): Tick {
+        com.optionslab.app.data.Broker.passBegin()
+        try {
+            step("live price stream") { com.optionslab.app.data.KiteStream.ensure() }
+            step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+            step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
+            step("stops and targets") { com.optionslab.app.data.Protections.tick() }
+            step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+            step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
+            if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
+                com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
+                    ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
+            }
+            step("position cards") { PositionCards.refresh(context) }
+            runCatching { Heartbeat.beat(context) }
+        } finally {
+            com.optionslab.app.data.Broker.passEnd()
+            Heartbeat.stepEnd()
+        }
+        val until = com.optionslab.app.data.McxMarket.todayWindow()?.close
+        return Tick("MCX watch", listOf("Watching your MCX positions and orders" + (until?.let { " until %02d:%02d".format(it.hour, it.minute) } ?: "")), -1, "trade")
     }
 
     /** The index quotes this watch pass has a reader for (an empty list = none fetched). */
@@ -1088,8 +1129,8 @@ class WatchService : Service() {
             setting = "broker.login")
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
-        while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
-                (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
+        // And while MCX trades with an MCX position or order open (9 Oct): the MCX pass ([Tasks.mcxTick]) outside NSE's hours.
+        while (nseWindow() || mcxDue()) {
             try {
                 watchPass(fired)
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1107,10 +1148,33 @@ class WatchService : Service() {
         runCatching { com.optionslab.app.data.KiteStream.stop() }
     }
 
+    /** NSE's part of the watch: market hours, and a quarter-hour past the close while a strategy run is still open. */
+    private fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
+        (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))
+
+    private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+
+    /** The MCX pass and its wait: every 15 s while MCX trades and something is held or working there. */
+    private suspend fun mcxPass() {
+        Heartbeat.beat(this)
+        stepSec = 15
+        val t = Tasks.mcxTick(this, AppSettings.load())
+        Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
+        show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
+        delay(15_000)
+    }
+
     /** One pass of the watch loop and the wait until the next one. */
     private suspend fun watchPass(fired: HashSet<String>) {
         run {
             Heartbeat.beat(this)
+            // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
+            val nseOpen = nseWindow() && Market.minuteNow() >= Market.OPEN
+            if (!nseOpen) {
+                if (mcxDue()) { mcxPass(); return }
+                // Past NSE's session (or an NSE holiday) with nothing due on MCX either: no NSE step runs; the loop ends next look.
+                if (!Market.isTradingDay() || Market.minuteNow() >= Market.OPEN) { delay(15_000); return }
+            }
             if (Market.minuteNow() < Market.OPEN) {
                 stepSec = 30
                 show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)

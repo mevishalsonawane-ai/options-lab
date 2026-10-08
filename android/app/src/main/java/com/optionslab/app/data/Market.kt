@@ -199,7 +199,9 @@ object Market {
      */
     suspend fun liveChain(underlying: String, near: Int = 14): LiveChain {
         val liveNow = liveMode()
-        val lc = if (liveNow) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
+        // An MCX name (CRUDEOIL, NATURALGAS, GOLDM, SILVERM...): its near-month chain on its near future (9 Oct).
+        val lc = if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying)) McxMarket.chain(underlying, near)
+            else if (liveNow) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
         chainReads[chainKey(underlying, near)] = Triple(System.currentTimeMillis(), liveNow, lc)
         return lc
     }

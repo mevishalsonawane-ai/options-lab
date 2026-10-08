@@ -46,10 +46,21 @@ object WhatsNew {
     private val OCT6: LocalDate = LocalDate.of(2026, 10, 6)
     private val OCT7: LocalDate = LocalDate.of(2026, 10, 7)
     private val OCT8: LocalDate = LocalDate.of(2026, 10, 8)
+    private val OCT9: LocalDate = LocalDate.of(2026, 10, 9)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-mcx", OCT9, "MCX commodities: prices, charts, paper and expiry safety",
+            "Crude oil, natural gas, gold, silver and the metals are now in the app. " +
+                "You see near and next month futures with live prices, charts and option chains. " +
+                "The watch now runs in MCX hours, to 23:30, and to 23:55 from 2 November. " +
+                "Paper fills pay MCX's spread and charges, and the margin per lot is shown. " +
+                "MCX options are closed by 23:00 the day before expiry, so they never turn into futures. " +
+                "New option buys stop at 15:00 the day before expiry. " +
+                "Gold, silver and metal futures are closed 2 trading days before expiry. " +
+                "Only you trade MCX for now; no bot does.",
+            "Options tab → Commodities. Options tab → MCX row for the chains. Settings → Bot settings → MCX expiry exit"),
         Entry("2026-10-08-x1-x2", OCT8, "Faster entries, 1 lot, and a paper night trade",
             "The arms now decide within seconds of each bar close, not a minute or two later. " +
                 "Liquidity 15+5 on Bank Nifty is judged on its own, apart from FinNifty and Midcap Nifty. " +

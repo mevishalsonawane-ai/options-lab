@@ -133,7 +133,8 @@ object SandboxRules {
         if (today.isAfter(expiry)) return true
         if (today.isBefore(expiry)) return false
         if (config.expirySettlementTiming != "expiry_day_close") return false
-        val close = EXCHANGE_CLOSE_TIMES[exchange] ?: DEFAULT_CLOSE_TIME
+        val close = if (config.mcxSessionAware && exchange == "MCX") com.optionslab.engine.mcx.McxSession.close(today)
+            else EXCHANGE_CLOSE_TIMES[exchange] ?: DEFAULT_CLOSE_TIME
         return !now.toLocalTime().isBefore(close)
     }
 

@@ -80,6 +80,13 @@ data class AppSettings(
     val expirySquareOff: Boolean = true,
     /** ...except the Expiry Put ticket, which is meant to be held to the 15:30 settlement. */
     val keepExpiryPut: Boolean = true,
+    /**
+     * MCX expiry exit (9 Oct, [McxGuard]): MCX options closed by [mcxOptionExitMinute] on the trading day before expiry (they
+     * turn into futures otherwise), delivery futures [mcxFutureExitDays] trading days before expiry. On by default.
+     */
+    val mcxExpiryExit: Boolean = true,
+    val mcxOptionExitMinute: Int = 23 * 60,
+    val mcxFutureExitDays: Int = 2,
     val prepareRealOrder: Boolean = true,
     // appearance
     val theme: String = "system",          // system | light | dark
@@ -168,6 +175,9 @@ data class AppSettings(
                 guardMaxExposure = p.getDouble("g.expo", d.guardMaxExposure), guardPaperTrades = p.getInt("g.pTrades", d.guardPaperTrades),
                 guardPaperDailyLoss = p.getDouble("g.pLoss", d.guardPaperDailyLoss), guardPaperDrawdownPct = p.getDouble("g.pDd", d.guardPaperDrawdownPct),
                 expirySquareOff = p.getBoolean("g.expSq", d.expirySquareOff), keepExpiryPut = p.getBoolean("g.keepPut", d.keepExpiryPut),
+                mcxExpiryExit = p.getBoolean("g.mcxExit", d.mcxExpiryExit),
+                mcxOptionExitMinute = p.getInt("g.mcxOptAt", d.mcxOptionExitMinute).coerceIn(9 * 60, 23 * 60 + 40),
+                mcxFutureExitDays = p.getInt("g.mcxFutDays", d.mcxFutureExitDays).coerceIn(1, 10),
                 prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
@@ -197,6 +207,7 @@ data class AppSettings(
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
                 "g.naked" to s.guardNakedShort, "g.expo" to s.guardMaxExposure, "g.pTrades" to s.guardPaperTrades,
                 "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
+                "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays" to s.mcxFutureExitDays,
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
                 "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
             ))

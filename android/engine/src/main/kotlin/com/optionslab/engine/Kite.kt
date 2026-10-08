@@ -166,7 +166,7 @@ object Kite {
     /** Exchanges whose order quantity is a number of lots, not units. */
     val LOT_QUOTED = setOf("MCX", "CDS", "BCD")
 
-    private fun splitCsv(line: String): List<String> {
+    internal fun splitCsv(line: String): List<String> {
         val out = ArrayList<String>()
         val sb = StringBuilder()
         var quoted = false
@@ -197,6 +197,8 @@ object Kite {
         val exchange: String = "NFO",
         val tag: String = "iraalgo",
         val triggerPrice: Double? = null,   // required for SL and SL-M
+        /** Units in one [quantity] (MCX: the lot's multiplier, as Zerodha takes MCX in lots); 1 elsewhere. Value caps only. */
+        val multiplier: Int = 1,
     ) {
         val lots: Int get() = if (lotSize > 0) quantity / lotSize else 0
         val hasPrice: Boolean get() = orderType == "LIMIT" || orderType == "SL"
@@ -293,13 +295,14 @@ object Kite {
             else if (!p.isFinite()) out += "a ${o.orderType} order needs a finite price, not $p"
             else {
                 onGrid(p, "price")
-                if (!exit && p * o.quantity > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(p * o.quantity, limits.maxOrderValue)
+                val value = p * o.quantity * o.multiplier.coerceAtLeast(1)
+                if (!exit && value > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(value, limits.maxOrderValue)
             }
         }
         if (!o.hasPrice && !exit && refPrice != null && !refPrice.isFinite())
             out += "the last price $refPrice is not a usable price, so the order value is unknown"
-        else if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity > limits.maxOrderValue)
-            out += "order value about Rs %,.0f (at the last price) exceeds the Rs %,.0f cap".format(refPrice * o.quantity, limits.maxOrderValue)
+        else if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity * o.multiplier.coerceAtLeast(1) > limits.maxOrderValue)
+            out += "order value about Rs %,.0f (at the last price) exceeds the Rs %,.0f cap".format(refPrice * o.quantity * o.multiplier.coerceAtLeast(1), limits.maxOrderValue)
         if (o.hasTrigger) {
             val t = o.triggerPrice
             if (t == null || t <= 0) out += "a ${o.orderType} order needs a positive trigger price"

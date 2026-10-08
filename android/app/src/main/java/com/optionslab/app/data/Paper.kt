@@ -45,8 +45,17 @@ object Paper {
 
     fun init(context: Context) { file = File(context.applicationContext.filesDir, "paper.vault") }
 
+    /**
+     * A contract the paper account trades. [exchange] "NFO" (index options, as always) or "MCX" (9 Oct: commodities; a
+     * future's [right] is IX and its strike 0, its [lotSize] is the lot's units, its [feedKey] Upstox's MCX_FO key).
+     */
     data class Contract(val symbol: String, val underlying: String, val expiry: LocalDate, val strike: Double, val right: Right,
-                        val lotSize: Int, val feedKey: String)
+                        val lotSize: Int, val feedKey: String, val exchange: String = "NFO") {
+        val isMcx: Boolean get() = exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE
+    }
+
+    /** The exchange a paper symbol trades on (NFO unless it is a remembered MCX contract). */
+    private fun exchangeOf(symbol: String): String = book().contracts[symbol]?.exchange ?: "NFO"
 
     /** [why]: why the app cancelled an order (order id -> a reason key, see [cancel]); the newest [WHY_KEPT] only. */
     private data class Book(val state: SandboxState, val capital: BigDecimal, val contracts: Map<String, Contract>,
@@ -70,7 +79,7 @@ object Paper {
             val cs = o.optJSONArray("contracts") ?: JSONArray()
             val contracts = (0 until cs.length()).map { cs.getJSONArray(it) }.associate {
                 it.getString(0) to Contract(it.getString(0), it.getString(1), LocalDate.parse(it.getString(2)), it.getDouble(3),
-                    Right.valueOf(it.getString(4)), it.getInt(5), it.getString(6))
+                    Right.valueOf(it.getString(4)), it.getInt(5), it.getString(6), it.optString(7, "NFO").ifEmpty { "NFO" })
             }
             val w = o.optJSONObject("cancelWhy")
             val why = LinkedHashMap<String, String>()
@@ -90,7 +99,7 @@ object Paper {
     @Synchronized
     private fun save(b: Book) {
         val cs = JSONArray()
-        b.contracts.values.forEach { cs.put(JSONArray().put(it.symbol).put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.feedKey)) }
+        b.contracts.values.forEach { cs.put(JSONArray().put(it.symbol).put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.feedKey).put(it.exchange)) }
         val why = JSONObject(); b.why.forEach { (k, v) -> why.put(k, v) }
         Vault.writeFile(file, JSONObject().put("state", SandboxJson.encode(b.state)).put("capital", b.capital.toPlainString())
             .put("contracts", cs).put("cancelWhy", why).toString().toByteArray(Charsets.UTF_8))
@@ -108,14 +117,31 @@ object Paper {
         // Honest paper (08 Oct, research/X3_AUDIT.md): every aggressive fill also pays the bid/ask half-spread - the stream's
         // real bid/ask, else the measured default for the index - by max(slippage, half-spread), never both. Always on:
         // no setting, nothing a voice command or a backup can change.
+        // MCX (9 Oct) by its own clock: MIS squared off at 23:20 (23:45 in US winter), expiry from the day's real close; its
+        // charges on the commodity schedule and its fills on the MCX spreads (the engine switches on the exchange).
         SandboxConfig(startingCapital = capital, stopSlippageBps = BigDecimal("10"), spreadFallbackBps = BigDecimal("5"), chargesEnabled = true,
-            pnlAlwaysToFunds = true, paperSpread = true),
+            pnlAlwaysToFunds = true, paperSpread = true, mcxSessionAware = true),
         InstrumentMaster { sym, ex ->
-            if (ex != "NFO") null else contracts[sym]?.let {
-                Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike)
+            when (ex) {
+                "NFO" -> contracts[sym]?.takeIf { !it.isMcx }?.let { Instrument(sym, "NFO", "OPTIDX", it.lotSize, 0.05, it.expiry, it.strike) }
+                com.optionslab.engine.mcx.Mcx.EXCHANGE -> contracts[sym]?.takeIf { it.isMcx }?.let { mcxInstrument(it) }
+                else -> null
             }
         },
     )
+
+    /**
+     * An MCX contract as the engine sees it: its tick (from the day's MCX list, else the table), and Zerodha's margin per
+     * lot (its public list, else the table) for a future or a sold option. MIS and NRML block the same on MCX.
+     */
+    private fun mcxInstrument(c: Contract): Instrument {
+        val listed = runCatching { McxMarket.find(c.symbol) }.getOrNull()
+        val future = c.right == Right.IX
+        val table = com.optionslab.engine.mcx.Mcx.commodity(c.underlying)
+        val tick = listed?.tick ?: (if (future) table?.tick else table?.optionTick) ?: 0.05
+        val margin = com.optionslab.engine.mcx.McxMargin.perLot(c.underlying, runCatching { McxMarket.marginFeed() }.getOrDefault(emptyMap()))
+        return Instrument(c.symbol, c.exchange, if (future) "FUTCOM" else "OPTFUT", c.lotSize, tick, c.expiry, c.strike.takeIf { !future }, marginPerLot = margin)
+    }
 
     val state: SandboxState get() = book().state
     /** An open order or an open position in the paper book (no price read): Battery, round 9. */
@@ -228,6 +254,11 @@ object Paper {
     private fun kiteToken(c: Contract): Long? {
         kiteTokens[c.symbol]?.let { return it.takeIf { t -> t > 0 } }
         if (!Broker.loggedIn) return null
+        if (c.isMcx) {
+            // MCX: from the day's MCX list (none yet: asked again next time, not remembered as unlisted).
+            val m = McxMarket.find(c.symbol) ?: return null
+            return m.token.takeIf { it > 0 }?.also { kiteTokens[c.symbol] = it }
+        }
         val list = Broker.cachedInstruments() ?: return null
         val t = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
         kiteTokens[c.symbol] = t
@@ -254,7 +285,7 @@ object Paper {
     private suspend fun quotes(symbols: Collection<String>, reuseMs: Long = 0L): Map<String, Quote> = kotlinx.coroutines.coroutineScope {
         val b = book()
         symbols.distinct().mapNotNull { s -> b.contracts[s]?.let { c -> s to c } }
-            .map { (s, c) -> async { runCatching { if (reuseMs > 0L) recentQuote(c, reuseMs) else quote(c) }.getOrNull()?.let { Sandbox.key(s, "NFO") to it } } }
+            .map { (s, c) -> async { runCatching { if (reuseMs > 0L) recentQuote(c, reuseMs) else quote(c) }.getOrNull()?.let { Sandbox.key(s, c.exchange) to it } } }
             .mapNotNull { it.await() }.toMap()
     }
 
@@ -292,8 +323,10 @@ object Paper {
         return Result(r.ok, msg, events, r.orderId)
     }
 
-    /** Resolve a listed option into a paper contract (and remember it). */
+    /** Resolve a listed option into a paper contract (and remember it). An MCX name resolves on MCX's list (9 Oct). */
     fun contractFor(underlying: String, expiry: LocalDate, strike: Double, right: Right): Contract? {
+        if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying))
+            return McxMarket.find(underlying, expiry, strike, right.takeIf { it != Right.IX })?.let { McxMarket.paperContract(it) }
         val c = Market.contracts().firstOrNull { it.underlying == underlying && it.expiry == expiry && it.strike == strike && it.right == right }
             ?: return null
         return Contract(symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
@@ -358,8 +391,8 @@ object Paper {
     /** Zerodha's quote for [c] by its quote API (logged in only; with the real best bid and ask); null without one. */
     private suspend fun restQuote(c: Contract): Quote? {
         if (!Broker.loggedIn) return null
-        val ins = Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null
-        val key = "NFO:" + ins.tradingSymbol
+        val key = if (c.isMcx) McxMarket.find(c.symbol)?.kiteKey ?: return null
+            else "NFO:" + (Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right) } ?: return null).tradingSymbol
         val r = runCatching { Broker.quotes(listOf(key)) }.getOrNull()?.get(key) ?: return null
         if (!(r.last > 0)) return null
         return Quote(r.last, bid = r.bid ?: 0.0, ask = r.ask ?: 0.0).also { remember(c.symbol, it) }
@@ -408,7 +441,7 @@ object Paper {
         val out = HashMap(q); val hold = HashSet<String>(); val notes = HashMap<String, String>()
         for (sym in syms) {
             val c = book().contracts[sym] ?: continue
-            val k = Sandbox.key(sym, "NFO")
+            val k = Sandbox.key(sym, c.exchange)
             val x = exitQuote(c, q[k], closingSide(sym))
             val fq = x.quote ?: continue
             val note = x.note ?: continue
@@ -458,7 +491,7 @@ object Paper {
             val b0 = book()
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             val out = engine(b.capital, b.contracts).place(b.state,
-                OrderRequest(c.symbol, "NFO", action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
+                OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
             save(b.copy(state = out.state))
             return describe(out.result, out.events)
         }
@@ -505,7 +538,7 @@ object Paper {
         x?.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         synchronized(this) {
             val b = book()
-            val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, "NFO", product, q, Market.now())
+            val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, exchangeOf(symbol), product, q, Market.now())
             save(b.copy(state = out.state))
             return describe(out.result, out.events)
         }
@@ -529,10 +562,11 @@ object Paper {
         val q = quotes(syms)
         // The candle prices this pass read itself, kept for [stopPrice] (the stream's ticks are read afresh there).
         tickCandles = syms.mapNotNull { sym ->
-            val got = q[Sandbox.key(sym, "NFO")] ?: return@mapNotNull null
+            val got = q[Sandbox.key(sym, exchangeOf(sym))] ?: return@mapNotNull null
             candleQuotes[sym]?.takeIf { com.optionslab.ira.StopPrice.handedOn(got, it.second) }?.let { sym to it }
         }.toMap()
         // Honest paper (08 Oct): the orders fill on fresh prices only ([exitPrices]); positions are still marked to [q].
+        // From 15:14 on (NSE's 15:15 square-off, and every MCX evening position after it, MCX's 23:20 / 23:45 cut included).
         val fill = exitPrices(q, alsoHeld = !Market.now().toLocalTime().isBefore(java.time.LocalTime.of(15, 14)))
         synchronized(this) {
             val b = book()
@@ -545,10 +579,10 @@ object Paper {
             // have at the exchange - its trigger, or the price already under it - not at whatever the price is now.
             for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
                 val c = b.contracts[o.symbol] ?: continue
-                if (q[Sandbox.key(o.symbol, "NFO")] == null) continue          // only on a pass that read this contract's price
+                if (q[Sandbox.key(o.symbol, o.exchange)] == null) continue          // only on a pass that read this contract's price
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 val px = runCatching { restingFill(c, o.updateTimestamp, trig) }.getOrNull() ?: continue
-                e.fillRestingStop(s, o.orderId, px, now, q[Sandbox.key(o.symbol, "NFO")]).also { if (it.result.ok) { s = it.state; events += it.events } }
+                e.fillRestingStop(s, o.orderId, px, now, q[Sandbox.key(o.symbol, o.exchange)]).also { if (it.result.ok) { s = it.state; events += it.events } }
             }
             e.onQuotes(s, fill.quotes, now, fill.hold).also { s = it.state; events += it.events }
             // Marks positions to the fresh LTP, which expiry settlement prices from.
@@ -601,7 +635,7 @@ object Paper {
             val now = Market.now()
             var s = b.state
             for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
-                val fq = fill.quotes[Sandbox.key(o.symbol, "NFO")] ?: continue
+                val fq = fill.quotes[Sandbox.key(o.symbol, o.exchange)] ?: continue
                 val px = fq.ltp
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 if (!com.optionslab.engine.risk.MissedLock.missed(px, trig)) continue

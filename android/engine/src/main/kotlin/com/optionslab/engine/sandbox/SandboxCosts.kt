@@ -41,6 +41,22 @@ object SandboxCosts {
             else -> price
         }
 
+    /**
+     * One leg's charges line by line on [exchange]: an MCX leg on the commodity schedule ([com.optionslab.engine.mcx.McxCosts]:
+     * CTT for STT; [symbol] ending CE/PE is an option, else a future), every other exchange exactly as [breakdown].
+     */
+    fun breakdown(action: String, price: Double, quantity: Int, exchange: String, symbol: String): Map<String, Double> =
+        if (exchange.uppercase() == "MCX") com.optionslab.engine.mcx.McxCosts.breakdown(action, price * kotlin.math.abs(quantity), isOptionSymbol(symbol))
+        else breakdown(action, price, quantity)
+
+    /** [charge] on [exchange]: an MCX leg on the commodity schedule, every other exchange exactly as [charge]. */
+    fun charge(action: String, price: BigDecimal, quantity: Int, contractValue: BigDecimal, exchange: String, symbol: String): BigDecimal =
+        if (exchange.uppercase() == "MCX") com.optionslab.engine.mcx.McxCosts.charge(action,
+            price.toDouble() * kotlin.math.abs(quantity) * contractValue.toDouble(), isOptionSymbol(symbol))
+        else charge(action, price, quantity, contractValue)
+
+    private fun isOptionSymbol(symbol: String): Boolean = symbol.uppercase().let { it.endsWith("CE") || it.endsWith("PE") }
+
     /** One leg's charges line by line (the charges report): brokerage, STT, exchange, SEBI, stamp, GST. */
     fun breakdown(action: String, price: Double, quantity: Int): Map<String, Double> {
         val value = price * kotlin.math.abs(quantity)

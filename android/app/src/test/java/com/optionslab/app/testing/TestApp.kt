@@ -55,6 +55,7 @@ class TestApp : Application() {
         Store.init(this)
         Market.init(this)
         Holidays.init(this)
+        com.optionslab.app.data.McxMarket.init(this)
         Broker.init(this)
         StaticIp.init(this)
         Paper.init(this)
@@ -76,5 +77,6 @@ class TestApp : Application() {
         // Caches from an earlier test (the files behind them are already gone with its directories).
         Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
         com.optionslab.app.data.MarketRecorder.wipe()
+        com.optionslab.app.data.McxMarket.wipe()
     }
 }

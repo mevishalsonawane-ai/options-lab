@@ -127,13 +127,18 @@ object Heartbeat {
         // Armed whenever the watch is scheduled - paper bots run in it with no Zerodha account too.
         if (!watched()) return
         val now = Market.now()
-        val at = if (Market.isTradingDay() && Market.minuteNow() < Market.CLOSE && Market.minuteNow() >= Market.OPEN) {
+        // In NSE's hours, and while MCX trades with an MCX position or order open (9 Oct): every few minutes.
+        val mcx = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+        val at = if (mcx || Market.isTradingDay() && Market.minuteNow() < Market.CLOSE && Market.minuteNow() >= Market.OPEN) {
             System.currentTimeMillis() + EVERY_MS
         } else {
             var d = now.toLocalDate()
             if (Market.minuteNow() >= Market.OPEN) d = d.plusDays(1)
             while (!Market.isTradingDay(d)) d = d.plusDays(1)
-            d.atTime(9, 20).atZone(now.zone).toInstant().toEpochMilli()
+            val nse = d.atTime(9, 20).atZone(now.zone).toInstant().toEpochMilli()
+            // Something open on MCX: also MCX's next session (an NSE holiday's evening, an early MCX open), a minute in.
+            val mcxNext = runCatching { com.optionslab.app.data.McxMarket.nextOpenMillis() }.getOrNull()?.plus(60_000)
+            if (mcxNext != null && mcxNext < nse) mcxNext else nse
         }
         try {
             if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -146,6 +151,8 @@ object Heartbeat {
     /** The alarm fired: re-arm, and if the watch is silent, restart it and say so once. */
     fun check(context: Context) {
         schedule(context)
+        // MCX's evening (9 Oct): with an MCX position or order open the watch is brought back if Android stopped it.
+        if (watched() && runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)) runCatching { Jobs.ensureWatch(context) }
         if (!watched() || !stale()) return
         val now = System.currentTimeMillis()
         val state = WatchHealth.state(now, last(), alivePulse).let { if (it == WatchHealth.State.OK) WatchHealth.State.DEAD else it }

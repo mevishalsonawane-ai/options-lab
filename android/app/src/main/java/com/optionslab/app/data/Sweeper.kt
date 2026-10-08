@@ -64,20 +64,23 @@ object Sweeper {
         orderId?.let { id -> runCatching { Strategies.tagOwner(if (venue == "Paper") "paper:$id" else "kite:$id", "Missed-lock sweep") } }
     }
 
+    /** The exchanges swept at Zerodha: NFO, and MCX (9 Oct: its positions are watched in its own hours too). */
+    private val SWEPT = setOf("NFO", "MCX")
+
     /** Zerodha: the sweeper and the GTT backups. (holding, priced). */
     private suspend fun live(context: Context): Pair<Boolean, Boolean> {
-        val held = runCatching { Broker.positionBook().net.filter { it.exchange == "NFO" && it.qty > 0 } }.getOrNull() ?: return false to false
+        val held = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT && it.qty > 0 } }.getOrNull() ?: return false to false
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return held.isNotEmpty() to false
-        val stops = orders.filter { it.working && it.side == "SELL" && it.exchange == "NFO" && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
-        val keys = (held.map { "NFO:${it.symbol}" } + stops.map { "NFO:${it.symbol}" }).distinct()
+        val stops = orders.filter { it.working && it.side == "SELL" && it.exchange in SWEPT && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
+        val keys = (held.map { "${it.exchange}:${it.symbol}" } + stops.map { "${it.exchange}:${it.symbol}" }).distinct()
         // REST quotes, whatever the stream says (item 8): a silent stream never leaves the stops unread.
         val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.quotes(keys) }.getOrDefault(emptyMap())
             .mapValues { it.value.last }.filterValues { it > 0 }
         // Item 7: a resting stop the price is already through is turned into a sell at a protected limit (the same order).
         for (so in stops) {
-            val px = ltp["NFO:${so.symbol}"] ?: continue
+            val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
             if (!MissedLock.missed(px, so.trigger)) continue
-            val tick = runCatching { Broker.spec("NFO", so.symbol).tickSize }.getOrDefault(0.05)
+            val tick = runCatching { Broker.spec(so.exchange, so.symbol).tickSize }.getOrDefault(0.05)
             val limit = MissedLock.limit(px, tick)
             val r = runCatching { Broker.modify(so, so.qty, "LIMIT", limit, null) }
             if (r.isSuccess) said(context, MissedLock.say(so.trigger, px, so.symbol) + " (a sell at a limit of %.2f)".format(Locale.ENGLISH, limit), "Zerodha", so.id)
@@ -85,7 +88,7 @@ object Sweeper {
                 .format(Locale.ENGLISH, so.trigger, px, r.exceptionOrNull()?.message?.take(160) ?: "an error"), com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock", throttle = true)
         }
         runCatching { backups(orders, stops.filter { backed(it.tag) }, ltp) }
-        return held.isNotEmpty() to (held.isNotEmpty() && held.all { ltp.containsKey("NFO:${it.symbol}") })
+        return held.isNotEmpty() to (held.isNotEmpty() && held.all { ltp.containsKey("${it.exchange}:${it.symbol}") })
     }
 
     // ---- item 6: the GTT beside each bot's SL ------------------------------------------------------------------------
@@ -118,11 +121,11 @@ object Sweeper {
         }
         // Placed or moved up only with Live on (the live gates); a paper position never has one.
         if (OrbArms.liveNow()) for (so in stops) {
-            val spec = runCatching { Broker.spec("NFO", so.symbol) }.getOrNull() ?: continue
+            val spec = runCatching { Broker.spec(so.exchange, so.symbol) }.getOrNull() ?: continue
             val want = LiveBackup.trigger(so.trigger, so.price.takeIf { so.type == "SL" }, spec.tickSize) ?: continue
             val old = map[so.id]?.let { id -> gtts.firstOrNull { it.id == id } }
             if (!LiveBackup.moves(old?.triggers?.firstOrNull(), want)) continue
-            val px = ltp["NFO:${so.symbol}"] ?: continue
+            val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
             val (gtt, why) = com.optionslab.engine.Kite.protect(spec, so.product.ifBlank { "MIS" }, so.qty - so.filled, px, want, null)
             if (gtt == null) { failed(so.symbol, want, why.joinToString("; ")); continue }
             // Moved: the old one out first, so two GTTs never sell the same position.

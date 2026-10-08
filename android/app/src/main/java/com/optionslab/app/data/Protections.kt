@@ -131,7 +131,9 @@ object Protections {
                 val r = Paper.place(c, exit, lots, "LIMIT", product, target, null)
                 if (r.ok) { targetId = r.orderId; targetId?.let { Strategies.tagOwner("paper:$it", "Protection · target") } }
             }
-            val item = Item(System.currentTimeMillis(), false, symbol, "NFO", product, qty, c.lotSize, 0.05, s0, trail, target, price, stopId, targetId)
+            // An MCX contract keeps its own exchange and tick (9 Oct); NFO exactly as before.
+            val tick = if (c.isMcx) McxMarket.find(symbol)?.tick ?: 0.05 else 0.05
+            val item = Item(System.currentTimeMillis(), false, symbol, c.exchange, product, qty, c.lotSize, tick, s0, trail, target, price, stopId, targetId)
             list += item; save(list)
             "Protected ${symbol}: ${item.describe()}"
         }

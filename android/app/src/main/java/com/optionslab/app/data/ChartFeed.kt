@@ -50,6 +50,11 @@ object ChartFeed {
     fun instrumentKey(symbol: String): String {
         Upstox.INDEX_KEYS[symbol.uppercase()]?.let { return it }
         EXTRA_INDICES[symbol.uppercase()]?.let { return it }
+        // An MCX future or option (9 Oct): Upstox's MCX_FO key from the day's MCX list.
+        McxMarket.find(symbol)?.let { m ->
+            if (m.expiry.isBefore(Market.today())) throw IOException("$symbol expired on ${m.expiry}; the free candle feed does not keep expired contracts")
+            return m.upstoxKey
+        }
         val c = contract(symbol) ?: throw IOException("$symbol is not an index or a listed NIFTY/BANKNIFTY option")
         if (c.isExpired(Market.today())) throw IOException("$symbol expired on ${c.expiry}; the free candle feed does not keep expired contracts")
         return c.instrumentKey
@@ -69,6 +74,11 @@ object ChartFeed {
         // An index is never a contract: answer at once instead of downloading the master to find out.
         if (isIndex(symbol)) return null
         known().firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }?.let { return it }
+        // An MCX option (9 Oct) as the chart's option contract (lot = the lot's units); an MCX future is no option.
+        McxMarket.find(symbol)?.let { m ->
+            val r = m.right ?: return null
+            return Upstox.Contract(m.name, m.expiry, m.strike, r, m.multiplier, m.upstoxKey, m.tradingSymbol)
+        }
         // Block on the (large) master download only when the phone has no list at all; on a weekend or
         // holiday the saved list is from an earlier day, so refresh it behind the chart instead.
         if (Market.cachedContracts() != null) { refreshInBackground(); return null }
@@ -180,6 +190,12 @@ object ChartFeed {
             .sortedWith(compareBy({ it.expiry }, { it.strike }))
             .take(40)
             .map { Match(it.tradingSymbol, "NFO", "lot ${it.lotSize}") }
-        return indices + options
+        // MCX (9 Oct): futures first, then options, from the day's MCX list on the phone.
+        val mcx = McxMarket.cached().asSequence()
+            .filter { !it.expiry.isBefore(today) && words.all { w -> it.tradingSymbol.uppercase().contains(w) } }
+            .sortedWith(compareBy({ it.isOption }, { it.expiry }, { it.strike }))
+            .take(20)
+            .map { Match(it.tradingSymbol, "MCX", com.optionslab.engine.mcx.Mcx.commodity(it.name)?.label ?: "MCX") }
+        return indices + options + mcx
     }
 }

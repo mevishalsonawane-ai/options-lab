@@ -524,6 +524,8 @@ internal fun ChartAlertDialog(symbol: String, source: ChartSource, onSave: (com.
 /** The Zerodha instrument token for a chart symbol: an index by name, an option through the day's instrument list. */
 private suspend fun streamTokenOf(symbol: String): Long? {
     com.optionslab.app.data.Broker.indexToken(symbol.uppercase())?.let { return it }
+    // MCX (9 Oct): its token from the day's MCX list (futures too).
+    com.optionslab.app.data.McxMarket.find(symbol)?.let { return it.token.takeIf { t -> t > 0 } }
     val c = ChartFeed.contract(symbol) ?: return null
     val list = com.optionslab.app.data.Broker.cachedInstruments() ?: return null
     return com.optionslab.app.data.Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token

@@ -1593,6 +1593,20 @@ object IraHub {
         }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
+        // MCX (9 Oct): "how is crude", "natural gas price", "mcx gold", "my mcx positions" - read only, never an order
+        // ([com.optionslab.ira.McxTalk]: anything that buys, sells, charts or sets an alarm is left to the rest).
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            val mcxAsked = runCatching { com.optionslab.ira.McxTalk.read(q) }.getOrNull()
+            if (mcxAsked != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                val locked = phoneLocked()
+                scope.launch {
+                    val said = runCatching { IraMcx.answer(mcxAsked, locked) }.getOrElse { "I could not read MCX just now, Boss." }
+                    reply(said)
+                }
+                return
+            }
+        }
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
         if (com.optionslab.app.BuildConfig.JARVIS) scope.launch { runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.ASKED) } }
         // "What?" / "come again" just after an answer: that answer's kind was unclear to Boss ([com.optionslab.ira.Clarity];

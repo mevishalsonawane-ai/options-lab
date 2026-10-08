@@ -152,7 +152,9 @@ object KiteStream {
     fun ensure() {
         val loggedIn = Broker.loggedIn
         val hasKey = Broker.apiKey != null
-        val inHours = Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(15 * 60 + 45)
+        // NSE's day, and MCX's hours while something is held or working on MCX (9 Oct: to 23:30, 23:55 in US winter).
+        val inHours = Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(15 * 60 + 45) ||
+            runCatching { McxMarket.watchDue() }.getOrDefault(false)
         if (loggedIn && hasKey && inHours) {
             // Battery, round 1: a stream nobody reads (the app off screen, no position or chart following instruments, no
             // quote asked for 3 minutes) kept the phone's radio busy all session for the indices' ticks alone. Unneeded for
@@ -314,7 +316,7 @@ object KiteStream {
             StreamHealth.paused(lastLook, now)?.let { sec -> c.pausedSec = sec; graceUntil = now + 5_000 }
             lastLook = now
             if (now < graceUntil) continue
-            val marketOpen = runCatching { Market.isOpen() }.getOrDefault(false)
+            val marketOpen = runCatching { Market.isOpen() || McxMarket.isOpen() }.getOrDefault(false)
             if (StreamHealth.stalled(c.opened.get(), marketOpen, c.lastFrame, now)) {
                 val sec = (now - c.lastFrame) / 1000
                 c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.SILENT, silentSec = sec))

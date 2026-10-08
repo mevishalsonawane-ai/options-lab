@@ -75,7 +75,17 @@ data class SandboxConfig(
      * Not a sandbox_config key: off for the desktop parity, always on in the app's paper account.
      */
     val paperSpread: Boolean = false,
+    /**
+     * MCX by its real clock ([com.optionslab.engine.mcx.McxSession]): MIS squared off 10 minutes before the day's close
+     * (23:20, or 23:45 in US winter time) and an expiring contract settled from that close, instead of the fixed
+     * [mcxSquareOffTime] and 23:30. Not a sandbox_config key: off for the desktop parity, on in the app's paper account.
+     */
+    val mcxSessionAware: Boolean = false,
 ) {
+    /** The MIS square-off on [exchange] on [day]: [squareOffTimes]'s, except MCX by its date when [mcxSessionAware]. */
+    fun squareOffTime(exchange: String, day: java.time.LocalDate): LocalTime? =
+        if (mcxSessionAware && exchange == "MCX") com.optionslab.engine.mcx.McxSession.misCut(day) else squareOffTimes[exchange]
+
     companion object {
         /** Build from `sandbox_config` keys, as the Python's get_config would read them. */
         fun fromConfigMap(values: Map<String, String>): SandboxConfig {
@@ -138,6 +148,11 @@ data class Instrument(
     val strike: Double? = null,
     /** Multiplier on P&L (0.01 for a crypto perpetual); 1 for every Indian contract. */
     val contractValue: Double = 1.0,
+    /**
+     * Rupees blocked per lot ([lotSize] units) for a future, or a sold option, when the broker's margin is known (MCX:
+     * Zerodha's, [com.optionslab.engine.mcx.McxMargin]); null: the leverage rule, as before.
+     */
+    val marginPerLot: Double? = null,
 )
 
 /** get_symbol_info: null means "Symbol X not found on Y". */
