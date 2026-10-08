@@ -1149,7 +1149,7 @@ class WatchService : Service() {
     }
 
     /** NSE's part of the watch: market hours, and a quarter-hour past the close while a strategy run is still open. */
-    private fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
+    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
         (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))
 
     private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
