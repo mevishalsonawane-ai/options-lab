@@ -170,10 +170,10 @@ class BackupTest : RobolectricTest() {
             assertEquals(0, o.getJSONObject("armed").length())
         }
         restoreWith(here = 3, backup = 1).let { o -> assertEquals("lowering restores as it was", 1, o.getInt("liqLots")); assertFalse(o.has("liqLotsAsk")) }
-        // A new phone (no book here) holds at Boss's default of 2.
-        restoreWith(here = null, backup = 3).let { o -> assertEquals(2, o.getInt("liqLots")); assertEquals(3, o.getInt("liqLotsAsk")) }
-        // A backup from before the setting: 2, never above this phone's 1.
-        restoreWith(here = 1, backup = null).let { o -> assertEquals(1, o.getInt("liqLots")); assertEquals(2, o.getInt("liqLotsAsk")) }
+        // A new phone (no book here) holds at the default of 1 lot (research X1, 8 Oct).
+        restoreWith(here = null, backup = 3).let { o -> assertEquals(1, o.getInt("liqLots")); assertEquals(3, o.getInt("liqLotsAsk")) }
+        // A backup from before the setting reads as the default, 1: nothing waits.
+        restoreWith(here = 1, backup = null).let { o -> assertEquals(1, o.getInt("liqLots")); assertFalse(o.has("liqLotsAsk")) }
     }
 
     @Test fun oldPassphraseFilesStillOpen() {
