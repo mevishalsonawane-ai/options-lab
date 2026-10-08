@@ -34,6 +34,8 @@ object LossBreaker {
         // keeps the safer, net figure (Boss, 5 Oct). Zerodha's is its own m2m, as it always was.
         val paper = runCatching { Paper.snapshot() }.getOrNull()?.dayPnl
         val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
+        // The day lock on the same figures (08 Oct): an account up by the Bot settings amount makes no new automatic entry today.
+        runCatching { DayLockGuard.update(context, paper, live) }
         val hit = when {
             live != null && s.guardDailyLoss > 0 && live <= -s.guardDailyLoss -> Triple("Live", live, s.guardDailyLoss)
             paper != null && s.guardPaperDailyLoss > 0 && paper <= -s.guardPaperDailyLoss -> Triple("Paper", paper, s.guardPaperDailyLoss)

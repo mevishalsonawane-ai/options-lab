@@ -694,9 +694,28 @@ private fun GuardCard(model: AppModel) {
         ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> model.update { it.copy(guardMaxExposure = expo[i]) } }
         val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
         ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i -> model.update { it.copy(guardCutoff = cut[i]) } }
+        // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
+        val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
+        ParamTokens("Day lock: no new automatic entries once the day is up by", dayLocks.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.dayLock) }) { i ->
+            model.update { it.copy(dayLock = dayLocks[i]) }
+        }
+        val dayLockNow = remember(s) { com.optionslab.app.data.DayLockGuard.statusLine() }
+        Note(dayLockNow ?: "Paper and Zerodha are locked separately (the paper day after charges). Bots, Pine, Solo and Jarvis's trades " +
+            "start nothing new once it is reached; open positions keep their own exits, and your own orders are never stopped by it.")
         Text("Paper account", style = Type.body.copy(color = p.ink, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(top = 12.dp))
         Note("Paper is practice: the limits above and the kill switch apply to Zerodha only. On paper your own orders and the bots (ORB, Pine, strategies) all go through, side by side; \"Stop for today\" still stops the bots.")
         Note("Hitting the Zerodha drawdown limit also turns the kill switch on, as the desktop does.")
+        // Home's paper running total counts from this date (words only; nothing trades on it).
+        val sinceCtx = LocalContext.current
+        val since = com.optionslab.engine.risk.PaperSince.startOf(s.paperSince)
+        TextButton({
+            android.app.DatePickerDialog(sinceCtx, { _, y, m, d ->
+                model.update { it.copy(paperSince = java.time.LocalDate.of(y, m + 1, d).toString()) }
+            }, since.year, since.monthValue - 1, since.dayOfMonth).show()
+        }) {
+            Text("Home's paper total counts from ${since.dayOfMonth} ${since.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)} " +
+                "${since.year} (change the date)", style = Type.label.copy(color = p.inkSoft))
+        }
         ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
             model.update { it.copy(expirySquareOff = on) }
         }

@@ -32,11 +32,16 @@ object AutoExposure {
      * open positions, fresh from its book. [rank] and [live]: the asker's place in Liquidity's priority over the ORB arms
      * (Boss's 07 Oct decision, [com.optionslab.engine.orb.ArmPriority]) and whether the entry goes to the broker; every
      * other trader leaves them as they are.
+     *
+     * The account day lock first (08 Oct, [DayLockGuard]): once [account]'s day P&L reached the Bot settings amount, no new
+     * automatic entry goes in it today - "Day lock (paper): reached +Rs 8,000 at 14:11, no new entries today (...)".
+     * [account]: the account the entry goes to (true Zerodha, false paper; null when the asker cannot tell yet: either
+     * account's lock refuses it); by default the one [live] names.
      */
     fun check(source: Source, underlying: String, direction: Int, own: List<AutoSide.Held>,
               rank: com.optionslab.engine.orb.ArmPriority.Rank = com.optionslab.engine.orb.ArmPriority.Rank.OTHER,
-              live: Boolean = false): String? =
-        AutoSide.check(underlying, direction, own + others(source), rank, live)
+              live: Boolean = false, account: Boolean? = live): String? =
+        DayLockGuard.refusal(account) ?: AutoSide.check(underlying, direction, own + others(source), rank, live)
 
     /** The activity log's word when a Liquidity entry goes beside an ORB arm's position ([AutoSide.priorityNote]); null when none. */
     fun priorityNote(source: Source, who: String, underlying: String, direction: Int, own: List<AutoSide.Held>,

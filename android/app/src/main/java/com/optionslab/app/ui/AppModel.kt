@@ -594,6 +594,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         account.value = Load.Idle; plan.value = Load.Idle; sending.value = Load.Idle; gttPlan.value = Load.Idle
         paper.value = Load.Idle; stuck.value = null; orb.value = null; strategies.value = emptyList()
         orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false; botStopWhy.value = null
+        dayLockLine.value = null; paperSinceLine.value = null
     }
 
     // ---- protections: stops, trailing stops, targets ------------------------------------------
@@ -1363,6 +1364,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             runCatching { orderOwners.value = st.owners() }
             runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday(); botStopWhy.value = st.stoppedWhy() }
+            runCatching { dayLockLine.value = com.optionslab.app.data.DayLockGuard.statusLine() }
+            // The paper account's own day figures after charges, read only (Boss's 08 Oct wish).
+            runCatching {
+                val since = com.optionslab.engine.risk.PaperSince.startOf(com.optionslab.app.data.AppSettings.load().paperSince)
+                val days = com.optionslab.app.data.DailyPnl.all(false).mapValues { it.value.net }
+                paperSinceLine.value = com.optionslab.engine.risk.PaperSince.line(com.optionslab.engine.risk.PaperSince.summary(days, since))
+            }
             strategies.value = st.all()
             strategyLog.value = st.log()
             runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
@@ -1415,6 +1423,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val botStopped = MutableStateFlow(false)
     /** Why it was stopped for today (by Boss, the daily loss limit, the tile), said on Home's bar; null when it is not. */
     val botStopWhy = MutableStateFlow<com.optionslab.ira.DayStop.Why?>(null)
+    /** The account day lock's line when reached today (08 Oct, [com.optionslab.app.data.DayLockGuard]); null when not. */
+    val dayLockLine = MutableStateFlow<String?>(null)
+    /** Home's paper running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days (avg ...)"). */
+    val paperSinceLine = MutableStateFlow<String?>(null)
 
     fun stopBotForToday(stopRunning: Boolean) = strategyDo {
         com.optionslab.app.data.Strategies.stopForToday(stopRunning, compromisedFresh())

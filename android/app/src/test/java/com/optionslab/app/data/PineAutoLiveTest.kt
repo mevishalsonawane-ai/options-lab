@@ -90,7 +90,9 @@ class PineAutoLiveTest : RobolectricTest() {
 
     private fun log() = PineAuto.log.value.filter { it.script == id }.joinToString("\n") { it.text }
     private fun held() = PineAuto.held.value[id]
-    private fun side(s: String) = kite.placed.filter { it.form["transaction_type"] == s }
+    /** The orders sent on side [s], less the resting stops (SL): the buys and the market sells. */
+    private fun side(s: String) = kite.placed.filter { it.form["transaction_type"] == s && it.form["order_type"] != "SL" }
+    private fun stops() = kite.placed.filter { it.form["order_type"] == "SL" }
 
     /** Switched on while the signal says SELL, then it turns to BUY: the ATM call is bought. */
     private fun bought(lots: Int = 1) {
@@ -112,12 +114,19 @@ class PineAutoLiveTest : RobolectricTest() {
         bought()
         val keys = setOf("tradingsymbol", "exchange", "transaction_type", "order_type", "quantity", "product", "tag")
         assertEquals(mapOf("tradingsymbol" to ce, "exchange" to "NFO", "transaction_type" to "BUY", "order_type" to "MARKET",
-            "quantity" to "30", "product" to "MIS", "tag" to "irapine"), kite.placed.single().form.filterKeys { it in keys })
+            "quantity" to "30", "product" to "MIS", "tag" to "irapine"), side("BUY").single().form.filterKeys { it in keys })
         val h = held()!!
         assertTrue(h.live); assertFalse(h.unconfirmed); assertEquals(30, h.qty); assertEquals(300.0, h.entry, 0.0)
         assertTrue(log(), log().contains("Bought 30 $ce at 300.00 (LIVE)"))
+        // Its stop-loss (30 under the buy) rests at Zerodha at once (08 Oct): an SL sell of what was bought, its own tag.
+        val stop = stops().single().form
+        assertEquals(ce, stop["tradingsymbol"]); assertEquals("SELL", stop["transaction_type"]); assertEquals("30", stop["quantity"])
+        assertEquals("MIS", stop["product"]); assertEquals("irapine", stop["tag"])
+        assertEquals(270.0, stop["trigger_price"]!!.toDouble(), 1e-9)
+        assertEquals(270.0, h.stopAt!!, 1e-9)
+        assertEquals("TRIGGER PENDING", kite.order(h.stop!!).status)
         pass(52_030.0)
-        assertEquals("the same signal again buys nothing more", 1, kite.placed.size)
+        assertEquals("the same signal again buys nothing more", 1, side("BUY").size)
     }
 
     @Test fun staleCandlesAreNeverTradedOn() {
@@ -132,7 +141,7 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue("nothing traded on stale candles", kite.placed.isEmpty())
         candles = null
         pass(52_010.0)
-        assertEquals("fresh candles with the same signal do trade", 1, kite.placed.size)
+        assertEquals("fresh candles with the same signal do trade", 1, side("BUY").size)
     }
 
     @Test fun aChangeMissedWhileTheAppWasAwayIsCaughtUp() {
@@ -142,7 +151,7 @@ class PineAutoLiveTest : RobolectricTest() {
         // not a pause: the day's candles are read again and the signal as it is now is traded.
         candles = { AutomationSupport.bars(now, List(7) { 51_900.0 } + List(3) { 52_010.0 }) }
         pass(52_010.0, minutes = 15)
-        assertEquals("missed candles are caught up, not skipped", 1, kite.placed.size)
+        assertEquals("missed candles are caught up, not skipped", 1, side("BUY").size)
     }
 
     @Test fun aSlowPassThatSkippedACandleIsNotAPause() {
@@ -151,7 +160,7 @@ class PineAutoLiveTest : RobolectricTest() {
         // One pass took 10 minutes (a slow phone network): the signal turned BUY on the candle it skipped. Still bought.
         candles = { AutomationSupport.bars(now, List(8) { 51_900.0 } + List(2) { 52_010.0 }) }
         pass(52_010.0, minutes = 10)
-        assertEquals("a skipped candle is not a pause", 1, kite.placed.size)
+        assertEquals("a skipped candle is not a pause", 1, side("BUY").size)
     }
 
     @Test fun aChangeOnTheNewestCandleAfterAPauseStillTrades() {
@@ -159,7 +168,7 @@ class PineAutoLiveTest : RobolectricTest() {
         pass(51_900.0)
         // Away for 15 minutes, but the signal stayed SELL until the newest candle turned it BUY.
         pass(52_010.0, minutes = 15)
-        assertEquals(1, kite.placed.size)
+        assertEquals(1, side("BUY").size)
     }
 
     @Test fun nothingIsDecidedOutsideMarketHours() {
@@ -362,19 +371,29 @@ class PineAutoLiveTest : RobolectricTest() {
 
     @Test fun theProfitLockSellsWhatGaveBackPastItsLockedLevel() {
         auto { it.copy(targetPts = 100.0, profitLock = true) }
-        bought()                                                   // 30 at 300
-        // 55% of the way: the ladder locks 25 (325); the trail at +18.3% keeps half of 55 (327.50): the higher counts,
-        // from the next look on.
+        bought()                                                   // 30 at 300, its stop-loss resting at 270
+        val stop = held()!!.stop!!
+        // 55% of the way: the ladder locks 25 (325); the trail at +18.3% keeps half of 55 (327.50): the higher counts.
         kite.quote("NFO:$ce", 355.0, 354.95, 355.05)
         pass(52_010.0)
         assertTrue("not sold on the look that set the best", side("SELL").isEmpty())
         assertEquals(355.0, held()!!.peak, 0.0)
         assertTrue(log(), log().contains("profit lock now at 327.50"))
+        // 08 Oct: the lock MOVES the resting stop up - a modify of the same order at Zerodha, never a new sell.
+        assertEquals(327.5, kite.order(stop).trigger, 1e-9)
+        assertEquals("TRIGGER PENDING", kite.order(stop).status)
+        assertEquals(327.5, held()!!.stopAt!!, 1e-9)
+        assertTrue(log(), log().contains("resting stop moved up to 327.50 at Zerodha (profit lock)"))
+        // The price gives back under the lock: Zerodha sells at the resting stop by itself; the app sends no sell of its own.
         kite.quote("NFO:$ce", 320.0, 319.95, 320.05)
         pass(52_010.0)
-        assertEquals(1, side("SELL").size)
-        assertTrue(log(), log().contains("profit lock (locked at 327.50)"))
+        assertTrue("the stop rests at the lock: no market sell", side("SELL").isEmpty())
+        kite.fill(stop, 327.5)
+        pass(52_010.0)
+        assertTrue(side("SELL").isEmpty())
+        assertTrue(log(), log().contains("Sold 30 $ce at 327.50 (profit lock, the resting stop, LIVE)"))
         assertNull(held())
+        assertEquals(825.0, PineAuto.todayOf(id)!!, 0.01)
         assertEquals("nothing new is bought by the lock", 1, side("BUY").size)
     }
 
@@ -391,10 +410,13 @@ class PineAutoLiveTest : RobolectricTest() {
         kite.quote("NFO:$ce", 320.0, 319.95, 320.05)              // still above 315: held
         pass(52_010.0)
         assertTrue(side("SELL").isEmpty())
-        kite.quote("NFO:$ce", 306.0, 305.95, 306.05)              // +2%: below the lock
+        assertEquals("the resting stop moved up to the lock", 315.0, held()!!.stopAt!!, 1e-9)
+        kite.quote("NFO:$ce", 306.0, 305.95, 306.05)              // +2%: below the lock, Zerodha's stop sells there
         pass(52_010.0)
-        assertEquals(1, side("SELL").size)
-        assertTrue(log(), log().contains("at 306.00: profit lock (locked at 315.00)"))
+        assertTrue(side("SELL").isEmpty())
+        kite.fill(held()!!.stop!!, 315.0)
+        pass(52_010.0)
+        assertTrue(log(), log().contains("Sold 30 $ce at 315.00 (profit lock, the resting stop, LIVE)"))
         assertNull(held())
         assertEquals("nothing new is bought by the lock", 1, side("BUY").size)
     }
@@ -404,27 +426,36 @@ class PineAutoLiveTest : RobolectricTest() {
         auto { it.copy(targetPts = 100.0, profitLock = false, profitLockChosen = true) }
         assertTrue(PineScripts.get(id)!!.auto.profitLock)
         bought()
+        val stop = held()!!.stop!!
         kite.quote("NFO:$ce", 355.0, 354.95, 355.05)
         pass(52_010.0)
-        kite.quote("NFO:$ce", 320.0, 319.95, 320.05)
+        // The price ran through the stop's limit (311.10) without it filling: the app takes it out and sells at market.
+        kite.quote("NFO:$ce", 300.0, 299.95, 300.05)
         pass(52_010.0)
         assertEquals(1, side("SELL").size)
-        assertTrue(log(), log().contains("profit lock (locked at 327.50)"))
+        assertTrue(log(), log().contains("at 300.00: profit lock (locked at 327.50)"))
+        assertEquals("its resting stop was taken out first", "CANCELLED", kite.order(stop).status)
+        assertNull(held())
     }
 
     // ---- Boss's 06 Oct rule: a stop-loss, a target and the profit lock on every Pine trade ---------------------------
 
     @Test fun aScriptWithoutStrategyExitIsSoldAtTheStop() {
         // The Level script is an indicator: no strategy.exit of its own. The app's stop (entry - 30) still sells it.
-        bought()                                                   // 30 at 300
+        bought()                                                   // 30 at 300, the stop resting at Zerodha at 270
         kite.quote("NFO:$ce", 275.0, 274.95, 275.05)
         pass(52_010.0)
         assertTrue("above 270: held", side("SELL").isEmpty())
+        // Under 270: Zerodha's resting stop sells it there (08 Oct), not a market sell of the app's after the fact.
         kite.quote("NFO:$ce", 269.0, 268.95, 269.05)
         pass(52_010.0)
-        assertEquals(1, side("SELL").size)
-        assertTrue(log(), log().contains("at 269.00: stop-loss"))
+        assertTrue(side("SELL").isEmpty())
+        kite.fill(held()!!.stop!!, 270.0)
+        pass(52_010.0)
+        assertTrue(side("SELL").isEmpty())
+        assertTrue(log(), log().contains("Sold 30 $ce at 270.00 (stop-loss, the resting stop, LIVE)"))
         assertNull(held())
+        assertEquals(-900.0, PineAuto.todayOf(id)!!, 0.01)
     }
 
     @Test fun aScriptWithoutStrategyExitIsSoldAtTheTargetAndTheLadderMovesOnTheWay() {

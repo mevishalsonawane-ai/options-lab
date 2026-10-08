@@ -1125,7 +1125,9 @@ class WatchService : Service() {
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
-                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
+                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
+                    com.optionslab.app.data.PineAuto.holding() ||
+                    (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
                 stepSec = if (holding) 15 else 60
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
@@ -1152,6 +1154,23 @@ class WatchService : Service() {
                             throw e
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: ORB arms", e)
+                        }
+                        // Every money exit runs here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3): the Pine scripts' stops and
+                        // locks, Solo's exits (Liquidity's index exits run in the ORB arms' check above). Each under its own
+                        // lock, as in the full pass, so a holding never has two sells in flight. Jarvis's words stay in the full pass.
+                        try {
+                            com.optionslab.app.data.PineAuto.watchOnly()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: Pine scripts", e)
+                        }
+                        if (com.optionslab.app.BuildConfig.JARVIS) try {
+                            com.optionslab.app.ira.IraSolo.manageOnly()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: Solo", e)
                         }
                         try {
                             com.optionslab.app.data.Protections.tick()

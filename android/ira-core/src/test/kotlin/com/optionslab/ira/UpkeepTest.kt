@@ -25,6 +25,14 @@ class UpkeepTest {
             .forEach { assertFalse(Upkeep.carried(it), it) }
     }
 
+    @Test fun theDayLockNeverTravels() {
+        // 08 Oct: the day lock's amount (Bot settings, never by voice) and the day it was reached are this phone's alone, as
+        // the guard: a restored backup can never switch it off or raise it.
+        listOf("g.dayLock", "breaker.daylock.paper", "breaker.daylock.live").forEach { assertFalse(Upkeep.carried(it), it) }
+        // Nor is it one of the limits Jarvis may change by voice (or undo).
+        assertTrue(SettingsTalk.Key.entries.none { "day lock" in it.label.lowercase() || it.name.contains("DAY_LOCK") })
+    }
+
     @Test fun round7KeysThatCouldActStayOnThePhone() {
         // Solo's switch and record (its record earns real orders), its brain; timed commands; the limits' undo history.
         listOf("jarvis.solo", "jarvis.solo.trades", "jarvis.solo.paused", "jarvis.solo.from", "jarvis.solo.shadows",

@@ -306,6 +306,22 @@ internal object IraSolo {
         pass(com.optionslab.app.data.Market.now().toLocalDateTime())
     }
 
+    /**
+     * The 15-second check between full passes (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3): only Solo's open trade's exits
+     * (its index stop on a 1-minute close, the breakeven lock, 14:30), so a minute's close is acted on within 15 s. Never a
+     * decision or an entry. Under Solo's own lock as [tick]: one exit in flight.
+     */
+    suspend fun manageOnly() = lock.withLock {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return@withLock
+        if (!com.optionslab.app.data.Market.isOpen()) return@withLock
+        val list = all()
+        val open = list.lastOrNull { !it.closed } ?: return@withLock
+        manage(open, list, com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
+    /** Whether Solo holds an open trade (its saved list; no network): the 15-second check runs while it does. */
+    fun holding(): Boolean = runCatching { all().any { !it.closed } }.getOrDefault(false)
+
     /** One pass at [t], after the market watch's gates ([tick]); tests call it directly. */
     internal suspend fun passAt(t: LocalDateTime) = lock.withLock { pass(t) }
 

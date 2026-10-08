@@ -84,6 +84,14 @@ data class AppSettings(
     // appearance
     val theme: String = "system",          // system | light | dark
     val reduceMotion: Boolean = false,
+    /**
+     * The day lock (08 Oct, research/PROFIT_LOCK_8OCT.md fix 5), rupees; 0 = off: once an account's day P&L reaches it, no new
+     * automatic entry in that account for the rest of the day ([com.optionslab.engine.risk.DayLock], [DayLockGuard]). It only
+     * ever stops entries. Set in Bot settings only: never by voice, never from a backup (a "g." setting stays on the phone).
+     */
+    val dayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
+    /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
+    val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
 ) {
     val entryMinute: Int get() = runCatching { hhmm(entry) }.getOrDefault(ExpiryPut.DEFAULT_ENTRY)
 
@@ -163,6 +171,8 @@ data class AppSettings(
                 prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
+                dayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.dayLock", d.dayLock)),
+                paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }
 
@@ -187,6 +197,8 @@ data class AppSettings(
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
                 "g.naked" to s.guardNakedShort, "g.expo" to s.guardMaxExposure, "g.pTrades" to s.guardPaperTrades,
                 "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
+                "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
+                "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
             ))
         }
     }

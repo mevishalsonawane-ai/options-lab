@@ -39,6 +39,9 @@ class TestApp : Application() {
         com.optionslab.app.ui.LoginPrompt.enabled = false
         // Screen tests place paper orders at whatever hour CI runs; PaperMarketHoursTest turns this off.
         Market.testOrdersAnyTime = true
+        // The fake candle feeds are a few fixed minutes of the morning: the 08 Oct feed checks (a stale price never fills an
+        // entry, Pine's thin-option check and its best price from the minute highs) are off unless a test turns them on.
+        Paper.testSkipFeedChecks = true
         IdleSampler.install()
         NetworkGuard.install()
         NetworkGuard.blocked.clear()

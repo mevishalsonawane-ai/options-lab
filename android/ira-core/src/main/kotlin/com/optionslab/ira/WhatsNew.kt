@@ -20,7 +20,7 @@ object WhatsNew {
         val id: String,
         val date: LocalDate,
         val title: String,
-        /** One or two plain sentences: what changed. */
+        /** One or two plain sentences: what changed (a few related fixes: up to five short ones). */
         val what: String,
         /** Where to find it in the app (the screen or tab and how to reach it). */
         val where: String,
@@ -45,10 +45,18 @@ object WhatsNew {
 
     private val OCT6: LocalDate = LocalDate.of(2026, 10, 6)
     private val OCT7: LocalDate = LocalDate.of(2026, 10, 7)
+    private val OCT8: LocalDate = LocalDate.of(2026, 10, 8)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-08-locks-and-day-lock", OCT8, "Safer exits, and a day lock at +Rs 8,000",
+            "Pine's stop and profit lock now rest as one stop that only moves up, on every tick or minute high. " +
+                "Pine skips an option that barely trades. " +
+                "Pine, Solo and Liquidity exits are checked every 15 seconds. " +
+                "A paper buy never fills on a price minutes old, and Home shows paper's net since 1 Oct. " +
+                "Once an account's day reaches +Rs 8,000, no new automatic trade starts that day; open trades keep their exits.",
+            "Settings → Bot settings → Day lock (+Rs 8,000 at first, off at 0) and the paper start date. Home → Dashboard → Strategies card shows both"),
         Entry("2026-10-07-liquidity-priority", OCT7, "Liquidity 15+5 goes first on an index",
             "ORB, ORB Fresh, ORB Sweep and Range Fade no longer stop a Liquidity 15+5 trade: Liquidity enters beside them on paper, " +
                 "and they wait while Liquidity holds the index (Liquidity has priority over ORB arms). Zerodha still needs your PIN " +

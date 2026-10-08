@@ -65,6 +65,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val pending by model.strategyPending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val botStopped by model.botStopped.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val botStopWhy by model.botStopWhy.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val dayLock by model.dayLockLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paperSince by model.paperSinceLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     StrategyArmContent(
         live = s.live, killOn = s.guardKill, all = all, auto = auto, pending = pending, botStopped = botStopped,
         actions = object : StrategyArmActions {
@@ -81,6 +83,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         orbRows = { OrbRows(model) },
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
         stopWhy = botStopWhy,
+        dayLock = dayLock,
+        paperSince = paperSince,
     )
 }
 
@@ -107,6 +111,10 @@ internal fun StrategyArmContent(
     pending: Map<Long, RunMode>, botStopped: Boolean, actions: StrategyArmActions, onManage: () -> Unit,
     orbRows: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
     stopWhy: com.optionslab.ira.DayStop.Why? = null,
+    /** The account day lock's line when reached today ("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries"). */
+    dayLock: String? = null,
+    /** The paper account's running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days ..."). */
+    paperSince: String? = null,
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
@@ -137,6 +145,10 @@ internal fun StrategyArmContent(
             Text(botState, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
             BrassButton(botAction, tone = botTone) { confirmBot = true }
         }
+        // The account day lock (08 Oct): reached today, new automatic entries wait for tomorrow; open positions keep their exits.
+        dayLock?.let { Note(it, Modifier.padding(top = 6.dp)) }
+        // The paper account's net since the start date (Settings → Bot settings): words only.
+        paperSince?.let { Note(it, Modifier.padding(top = 6.dp)) }
         orbRows()
         if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))

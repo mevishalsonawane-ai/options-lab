@@ -271,7 +271,9 @@ internal object IraNewsTrades {
         // Taken by himself ([paperOnly]): one index, one side, for every automatic trader (Boss's 06 Oct rule) - never against
         // another automatic position on this index, never a second one the same way. Boss's own yes is his call.
         if (paperOnly) com.optionslab.app.data.AutoExposure.check(com.optionslab.app.data.AutoExposure.Source.JARVIS, u,
-                com.optionslab.ira.AutoSide.direction(if (idea.call) "CE" else "PE", true), exposure())?.let { return "Not placed: $it." }
+                com.optionslab.ira.AutoSide.direction(if (idea.call) "CE" else "PE", true), exposure(),
+                // The account day lock first (08 Oct): paper or Zerodha is decided later, so either account's lock holds it.
+                account = null)?.let { return "Not placed: $it." }
         val s = AppSettings.load()
         val day = com.optionslab.app.data.Market.today().toString()
         val quote = runCatching { Paper.quote(c) }.getOrNull()

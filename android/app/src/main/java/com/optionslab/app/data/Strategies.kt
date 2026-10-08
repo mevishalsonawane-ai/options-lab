@@ -675,7 +675,9 @@ object Strategies {
                             // Automatic: the owner chose this when arming (live arming needed the PIN or fingerprint).
                             // One index, one side, for every automatic trader (Boss's 06 Oct rule): a strategy leaning the other
                             // way from - or the same way as - another automatic position on its index does not start.
-                            val side = AutoExposure.check(AutoExposure.Source.STRATEGIES, def.underlying.uppercase(), planned(def), exposureOf(b))
+                            // The account day lock first (08 Oct): the account this run goes to.
+                            val side = AutoExposure.check(AutoExposure.Source.STRATEGIES, def.underlying.uppercase(), planned(def), exposureOf(b),
+                                account = d.mode == RunMode.LIVE)
                             if (side != null) {
                                 record(b, def.name, Event("start_refused", "Scheduled start refused: $side", "warn"), true)
                                 notes += "${def.name}: $side"

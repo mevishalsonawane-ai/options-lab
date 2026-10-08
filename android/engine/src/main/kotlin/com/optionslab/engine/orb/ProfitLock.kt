@@ -199,6 +199,39 @@ object ProfitLock {
     fun lockLevel(entry: Double, ref: Double?, trail: Trail?, costPerUnit: Double, peak: Double): Double? =
         listOfNotNull(ref?.let { level(entry, it, peak, costPerUnit) }, trail?.let { trailLevel(entry, peak, it, costPerUnit) }).maxOrNull()
 
+    // ---- the Pine lock as a resting stop (2026-10-08, research/PROFIT_LOCK_8OCT.md fix 1) -----------------------------
+
+    /**
+     * A Pine trade's own stop-loss as a resting sell stop: [stopPts] under the buy price [entry], on the [tick] (rounded up,
+     * so it never sits under the level it guards), or null with no stop or a level at or under one tick.
+     */
+    fun pineBase(entry: Double, stopPts: Double, tick: Double = OrbRules.TICK): Double? {
+        if (!(entry.isFinite() && stopPts.isFinite() && stopPts > 0)) return null
+        val level = entry - stopPts
+        return if (level > tick) onTick(level, tick) else null
+    }
+
+    /**
+     * The Pine lock ([lockLevel]: the higher of the target ladder on [ref] and the percentage [trail]) as the trigger its
+     * resting stop moves UP to, as [raise] for the ORB arms: null when no rung is reached, when it is not above the stop
+     * resting now ([current]; never moved down), or when it does not sit below the price now ([ltp]) - the app's own check
+     * sells that instead. The rungs and percentages are the scripts' own, unchanged.
+     */
+    fun pineRaise(entry: Double, ref: Double?, trail: Trail?, costPerUnit: Double, peak: Double, current: Double?, ltp: Double,
+                  tick: Double = OrbRules.TICK): Double? {
+        val lock = lockLevel(entry, ref, trail, costPerUnit, peak)?.let { onTick(it, tick) } ?: return null
+        if (current != null && lock <= current + EPS) return null
+        return lock.takeIf { it < ltp - EPS }
+    }
+
+    /**
+     * Where a Pine trade's resting stop belongs for its best price [peak]: the higher of its own stop ([base], [pineBase];
+     * null: none) and the lock it has earned, on the [tick]; null with neither.
+     */
+    fun pineRestingStop(entry: Double, base: Double?, ref: Double?, trail: Trail?, costPerUnit: Double, peak: Double,
+                        tick: Double = OrbRules.TICK): Double? =
+        listOfNotNull(base, lockLevel(entry, ref, trail, costPerUnit, peak)?.let { onTick(it, tick) }).maxOrNull()
+
     /** True when [ltp] is at or below [lockLevel] earned by the best price seen BEFORE it ([peakBefore]), as [exits]. */
     fun lockExits(entry: Double, ref: Double?, trail: Trail?, costPerUnit: Double, peakBefore: Double, ltp: Double): Boolean =
         lockLevel(entry, ref, trail, costPerUnit, peakBefore)?.let { ltp <= it + EPS } == true

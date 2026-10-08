@@ -297,10 +297,53 @@ object Paper {
     }
 
 
+    /**
+     * TEST SEAM (JVM tests only): the tests' fake candle feeds are a few fixed minutes of the morning, so the 08 Oct checks on
+     * the candle feed (a stale price is never an entry's fill, [staleEntry]; Pine's thin-option check and its best price
+     * from the minute highs) are skipped unless a test turns this off. False in the app, always: its setter throws in a
+     * release build.
+     */
+    @Volatile internal var testSkipFeedChecks: Boolean = false
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the feed-check seam exists only in debug builds" }
+            field = v
+        }
+
+    /** Today's 1-minute candles of [c] from the paper feed (kept, as [quote] keeps them, for the minutes' highs and lows). */
+    suspend fun minutes(c: Contract): List<Upstox.Bar> {
+        val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
+        if (bars.isNotEmpty()) candleBars[c.symbol] = System.currentTimeMillis() to bars
+        return bars
+    }
+
+    /**
+     * Why a MARKET order that opens or adds to a position must not fill now (08 Oct, research/PROFIT_LOCK_8OCT.md fix 4):
+     * without Zerodha's stream the only price is the last 1-minute candle's close, and when the contract has not traded
+     * for a while ([com.optionslab.engine.risk.StaleEntry]) that close is not a price anyone could buy at (Pine #17 bought at
+     * a 368.90 the market had left). Null when it may fill: the stream streams the contract, the candles are fresh, or the
+     * order only reduces what is held (an exit always fills, on the candle as before).
+     */
+    private suspend fun staleEntry(c: Contract, action: String, priceType: String): String? {
+        if (testSkipFeedChecks || priceType != "MARKET") return null
+        val held = book().state.positions.filter { it.symbol == c.symbol }.sumOf { it.quantity }
+        val opens = if (action.equals("BUY", true)) held >= 0 else held <= 0
+        if (!opens) return null
+        if (runCatching { streamQuote(c) }.getOrNull() != null) return null
+        val kept = candleBars[c.symbol]
+        val bars = if (kept != null && System.currentTimeMillis() - kept.first in 0..STALE_READ_MS) kept.second
+            else runCatching { minutes(c) }.getOrNull() ?: return null
+        return com.optionslab.engine.risk.StaleEntry.refusal(bars.map { it.epochSecond to it.volume }, System.currentTimeMillis() / 1000, c.symbol)
+    }
+
+    /** How old the candles [staleEntry] reads may be (the ones the caller's [quote] read just now): else read again. */
+    private const val STALE_READ_MS = 30_000L
+
     /** [known]: the contract's quote when the caller has just read it (read here otherwise). */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
                       known: Quote? = null): Result {
         val q = known ?: runCatching { quote(c) }.getOrNull()
+        // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
+        staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
         synchronized(this) {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()

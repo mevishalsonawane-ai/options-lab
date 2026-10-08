@@ -987,8 +987,19 @@ object OrbArms {
         }
     }
 
-    /** A lighter pass between minutes while a position is open: the stop, the target and the clock. */
-    suspend fun priceCheckOnly() = lock.withLock { val b = book(); val t = now(); runCatching { priceCheck(b, t) }; runCatching { liquidityNotices(b, t) }; save(b) }
+    /**
+     * A lighter pass between minutes while a position is open: the stop, the target and the clock - and since 08 Oct
+     * (research/PROFIT_LOCK_8OCT.md fix 3) Liquidity 15+5's index exits too, so a new minute's index candle is acted on
+     * within 15 s, not on the next full pass. Under the arms' lock as the full pass: one sale in flight per position (a sold
+     * position is closed; a failed sale is tried again).
+     */
+    suspend fun priceCheckOnly() = lock.withLock {
+        val b = book(); val t = now()
+        runCatching { priceCheck(b, t) }
+        runCatching { liquidityExits(b, t) }
+        runCatching { liquidityNotices(b, t) }
+        save(b)
+    }
 
     /**
      * An entry left unapproved past its time ([Pending.expires]) is dropped - said once (a notice in place of the approval's,
