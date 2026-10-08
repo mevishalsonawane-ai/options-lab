@@ -543,10 +543,11 @@ class ControlPagesTest {
             "14:00" to { it.guardCutoff == 14 * 60 },
         )
         for ((chip, ok) in picks) {
+            // "₹5,000" is also a Day lock choice further down the page: the Daily loss limit row comes first.
             compose.reveal(chip)
-            tap(chip)
+            compose.onAllNodesWithText(chip)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
             waitSettings(ok = ok)
-            compose.onNodeWithText(chip).assertIsSelected()
+            compose.onAllNodesWithText(chip)[0].assertIsSelected()
         }
         compose.until(10_000) { AppSettings.load().let { it.guardDailyLoss == 5_000.0 && it.guardCutoff == 14 * 60 } }
         // Paper has no limits of its own any more: the page says so and offers none.
