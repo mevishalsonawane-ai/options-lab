@@ -57,7 +57,7 @@ object Sweeper {
         } finally { mutex.unlock() }
     }
 
-    private fun said(context: Context, text: String, venue: String, orderId: String?) {
+    private suspend fun said(context: Context, text: String, venue: String, orderId: String?) {
         runCatching { Diag.record("risk", "$venue: $text") }
         runCatching { com.optionslab.app.work.Alerts.post("$venue: $text", com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock") }
         runCatching { Notifier.post(context, 2042, Notifier.RISK, "Lock missed", "$venue: $text", "strategy") }
