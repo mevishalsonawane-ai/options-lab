@@ -296,6 +296,8 @@ abstract class TradeLayoutBase(device: DeviceConfig) : TradeScreenBase(device) {
     protected fun liveModifyDialog() {
         live(working = true)
         showLive()
+        // The Book chip may still be settling into its merged row on the first frame (as Modify below): wait for it.
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Orders 1").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Orders 1").performClick()
         compose.waitUntil(5_000) { exists("Modify") }
         paused {
