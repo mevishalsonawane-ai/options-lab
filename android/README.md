@@ -13,10 +13,10 @@ unauthenticated Upstox candle endpoint the PC harvester uses.
 |---|---|
 | **Home** | Capital, P&L, the BANKNIFTY chart, live orders, the Strategies card (ORB / ORB Fresh arms, imported strategies, the one bot button) |
 | **Chart** | IraAlgo Charts (the PC terminal): every drawing tool, indicators (and your Pine scripts), buy/sell, brackets and price alerts from the chart; OPT opens the option chain and charts the option you tap (‹ back to the index); live candle from the Zerodha stream in Live mode |
-| **Trade** | The account (paper or Zerodha): positions, orders, trades, GTT, strategies, replay |
+| **Trade** | The account (paper or Zerodha): positions, orders, trades, GTT, replay |
 | **P&L** | The P&L calendar, month summary, year view, strategy filter and comparison, charges, journal, CSV export |
 | **Options** | Option chain with OI and PCR, strategy builder and templates, Expiry Put ticket, straddle tracker |
-| **Research** | Pine scripts (write, check, backtest, chart, auto-trade), trials, health, the IC table, signal lab |
+| **Research** | Your saved strategies (baskets), Pine scripts (write, check, backtest, chart, auto-trade), trials, health, the IC table, signal lab |
 | **More** | Zerodha, Bot settings, security, alerts, schedules, backup and restore, data and harvest |
 
 ## What it does, mapped to the PC
@@ -228,7 +228,7 @@ Daily prices come from Kite when you are logged in and your plan includes
 historical data. Otherwise they come from Upstox's public daily candles, and
 the source is shown under each report.
 
-## Strategies (Trade → Strategies)
+## Strategies (Research → Strategies)
 
 IraAlgo's Strategy Module (`engine/.../strategy` and `.../risk`, checked
 against the Python on tens of thousands of cases) runs on the phone.

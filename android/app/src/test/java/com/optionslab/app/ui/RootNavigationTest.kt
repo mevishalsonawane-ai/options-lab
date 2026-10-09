@@ -127,8 +127,9 @@ class RootNavigationTest {
             "almanac" to NavState(tab = Tab.ALMANAC),
             "ticket" to NavState(tab = Tab.TOOLS, toolsView = "expiryput"),
             "chart" to NavState(tab = Tab.CHART),
-            "trade" to NavState(tab = Tab.TRADE, tradePage = "account"),
-            "strategy" to NavState(tab = Tab.TRADE, tradePage = "strategies"),
+            "trade" to NavState(tab = Tab.TRADE),
+            // The saved strategies are a Research page (moved from Trade, 9 Oct).
+            "strategy" to NavState(tab = Tab.LAB, labPage = "strategies"),
             "health" to NavState(tab = Tab.LAB, labPage = "health"),
             "trials" to NavState(tab = Tab.LAB, labPage = "trials"),
             "pine" to NavState(tab = Tab.LAB, labPage = "pine"),
@@ -140,7 +141,7 @@ class RootNavigationTest {
         )
         for ((dest, want) in expect) assertEquals(dest, want, NavState().request(dest))
         // From elsewhere a link replaces only what it names.
-        val from = NavState(tab = Tab.TRADE, tradePage = "strategies", labPage = "pine")
+        val from = NavState(tab = Tab.TRADE, labPage = "pine")
         assertEquals(from.copy(tab = Tab.LAB, labPage = "health"), from.request("health"))
         // Unknown, blank or absent: nothing moves.
         for (junk in listOf(null, "", "settings", "../../etc", "ALMANAC")) assertEquals(from, from.request(junk))
@@ -150,7 +151,7 @@ class RootNavigationTest {
         val h = NavState()
         assertEquals(NavState(tab = Tab.LAB, labPage = "trials"), h.home("trials"))
         assertEquals(NavState(tab = Tab.TRADE), h.home("trade"))
-        assertEquals(NavState(tab = Tab.TRADE, tradePage = "strategies"), h.home("strategy"))
+        assertEquals(NavState(tab = Tab.LAB, labPage = "strategies"), h.home("strategy"))
         assertEquals(NavState(tab = Tab.TOOLS, toolsView = "expiryput"), h.home("ticket"))
         assertEquals(NavState(tab = Tab.CHART), h.home("chart"))
         assertEquals(NavState(tab = Tab.LAB, labPage = "health"), h.home("health"))
@@ -163,7 +164,7 @@ class RootNavigationTest {
         val away = NavState(tab = Tab.PNL)
         assertEquals(Tab.ALMANAC, away.tour("orb").tab)
         assertEquals(Tab.CHART, away.tour("chart").tab)
-        assertEquals(NavState(tab = Tab.TRADE, tradePage = "account"), away.copy(tradePage = "strategies").tour("trade"))
+        assertEquals(NavState(tab = Tab.TRADE), away.tour("trade"))
         assertEquals("Skip closes the guide where it is", away, away.tour(""))
     }
 

@@ -56,7 +56,7 @@ object SettingWhere {
     ).map { Regex(it) }
 
     /**
-     * Never a setting, however asked: the market, an arm or a strategy (its switch is under Trade, then Strategies, and "how
+     * Never a setting, however asked: the market, an arm or a strategy (its switch is on Home's Strategies card, and "how
      * do I stop ORB" has its own answer), the phone itself.
      */
     private val NOT_EVER = setOf("nifty", "banknifty", "finnifty", "sensex", "orb", "fresh", "sweep", "fade", "bot", "algo", "arm",
@@ -113,7 +113,7 @@ object SettingWhere {
 
     const val NOTHING_SWITCHED = "I only say where it is - nothing is switched from here."
     const val GUARDED = "It keeps its own check there (your PIN, fingerprint or a confirmation), as always."
-    const val ARMS = "An arm's own switch (Liquidity 15+5, Hero, the ORB arms) is under Trade, then Strategies."
+    const val ARMS = "An arm's own switch (Liquidity 15+5, Hero, the ORB arms) is on Home, on the Strategies card."
 
     /**
      * Where [q]'s setting is in this build ([gold]: IraGoldAlgo's Settings): the best match's path - or up to [NAMED_MAX] when

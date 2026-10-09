@@ -301,8 +301,8 @@ object AppAnswers {
             rx(" (zerodha|kite|login|log in|live|real orders|api|mode|paper) ") to "Zerodha login, Paper or Live mode and order limits: More, then Zerodha. The PAPER TRADING badge at the top switches the mode.",
             rx(" (alarm|alarms|alert|alerts) ") to "Price alarms and P&L alerts: More, then Alerts.",
             rx(" (pine|script|scripts|indicator) ") to "Pine scripts (write, backtest, put on the chart, auto-trade): Research, then Pine.",
-            rx(" (strategy|strategies|arm|arms|orb) ") to "Strategies and the ORB arms: Trade, then Strategies. Pine arms (and the strategies Jarvis made): Research, then Pine.",
-            rx(" (order|orders|position|positions|funds|account) ") to "Orders, positions and funds: Trade, then Account.",
+            rx(" (strategy|strategies|arm|arms|orb) ") to "Your saved strategies (baskets): Research, then Strategies. The ORB arms and the other bots: Home, the Strategies card. Pine arms (and the strategies Jarvis made): Research, then Pine.",
+            rx(" (order|orders|position|positions|funds|account) ") to "Orders, positions and funds: the Trade tab.",
             rx(" (p l|pnl|calendar|journal|history) ") to "P&L by day, the calendar and the journal: the P&L tab.",
             rx(" (option chain|chain|options|straddle|oi|iv|greeks|builder) ") to "Option chain, OI, IV, straddle and the strategy builder: the Options tab.",
             rx(" (chart|charts) ") to "Charts: the Chart tab; tap Options on a chart for option prices and buy or sell.",
@@ -312,7 +312,7 @@ object AppAnswers {
             rx(" (backtest|portfolio|sip|replay|health) ") to "Backtests, portfolio, SIP, replay and strategy health: the Research tab.",
             rx(" (voice|jarvis|listen|model|ai) ") to "Jarvis's voice and AI model: Home, Ira, the Voice and AI model cards at the top.",
         ).filter { it.first.containsMatchIn(t) }.map { it.second }
-        return map.ifEmpty { listOf("The tabs: Home (Ira and the dashboard), Chart, Trade (account and strategies), P&L, Options, Research, More (Zerodha, Alerts, Security, Schedules, Bot settings, Data).") }
+        return map.ifEmpty { listOf("The tabs: Home (Ira and the dashboard), Chart, Trade (your account), P&L, Options, Research (backtests, Pine and your saved strategies), More (Zerodha, Alerts, Security, Schedules, Bot settings, Data).") }
     }
 
     /** The home-screen widgets: how to add one, what each shows, and the switch their P&L waits for. */

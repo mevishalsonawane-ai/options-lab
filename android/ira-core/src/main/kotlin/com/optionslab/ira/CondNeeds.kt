@@ -15,7 +15,7 @@ import java.time.LocalDateTime
  * What it changes: the 15:35 wrap-up says ONE such kind, once ([next], [wrapLine]: the most asked not said before,
  * [Log.told]) - how often he asked, and that the app's own tool covers that need, naming its screen: a price alarm (More,
  * then Alerts) for an index level; a P&L alert (More, then Alerts) and the daily loss limit (More, then Bot settings) for
- * his own loss or profit; Protect - stop, trail, target - on the position itself (Trade, then Account, tap the position)
+ * his own loss or profit; Protect - stop, trail, target - on the position itself (the Trade tab, tap the position)
  * for a position's price. A fact and a pointer only: nothing learned sets an alarm, a stop, a limit or anything else, and
  * nothing acts or places anything. Never on a locked phone (the app adds no line then, and nothing is kept as told),
  * never in IraGoldAlgo, never in the wrap-up Boss asks for in the day, and on a day the wrap-up says a [SmallTrades] fact it
@@ -48,7 +48,7 @@ object CondNeeds {
         PNL("to act when your loss or profit reaches an amount",
             "the app's own P&L alert (More, then Alerts) and daily loss limit (More, then Bot settings) cover that"),
         POSITION("to act when a position's own price gets somewhere",
-            "the app's own stop loss covers that - Trade, then Account, tap the position, then Protect: stop, trail, target - and the app watches it itself");
+            "the app's own stop loss covers that - the Trade tab, tap the position, then Protect: stop, trail, target - and the app watches it itself");
     }
 
     /** One conditional instruction: its kind and minute only. */

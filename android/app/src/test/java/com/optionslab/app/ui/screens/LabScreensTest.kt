@@ -99,7 +99,7 @@ class LabScreensTest {
         set { LabTabs(page, { asked += it; page = it }) { Text("page=$it") } }
         text("page=trials").assertIsDisplayed()
         text("Backtests").assertIsSelected()
-        val tokens = listOf("Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Arms" to "arms", "Backtests" to "trials")
+        val tokens = listOf("Strategies" to "strategies", "Pine scripts" to "pine", "Health" to "health", "Portfolio" to "portfolio", "SIP" to "sip", "Replay" to "replay", "Arms" to "arms", "Backtests" to "trials")
         for ((label, id) in tokens) {
             text(label).performClick()
             text("page=$id").assertIsDisplayed()

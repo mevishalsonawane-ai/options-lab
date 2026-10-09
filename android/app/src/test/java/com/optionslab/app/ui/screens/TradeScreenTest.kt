@@ -49,7 +49,7 @@ import org.robolectric.annotation.ConscryptMode
 import java.time.LocalDate
 
 /**
- * The Trade tab in LIVE mode ([TradeScreen], [TradeHub], the row popup) on a real [AppModel] against
+ * The Trade tab in LIVE mode ([TradeScreen], the row popup) on a real [AppModel] against
  * [FakeKite]: every book, square-off and GTT, modify and cancel with their confirmation and PIN gates,
  * and the error / logged-out states. Nothing leaves the machine; anything that would change something
  * at Zerodha is checked in [FakeKite.writes] (only after the PIN).
@@ -92,10 +92,9 @@ class TradeScreenTest {
         SecurePrefs.put("kite.apiSecret", "testsecretnotreal")
     }
 
-    private fun show(page: String = "account"): AppModel {
+    private fun show(): AppModel {
         val m = holder.model
-        var p by mutableStateOf(page)
-        compose.setContent { IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) { TradeHub(m, p) { p = it }; RowActionPopup(m) } } }
+        compose.setContent { IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) { TradeScreen(m); RowActionPopup(m) } } }
         compose.waitForIdle()
         // The clock keeps running: text-field dialogs settle since the app's AlertDialog has one fixed width.
         frames()
@@ -176,16 +175,28 @@ class TradeScreenTest {
         assertTrue(kite.requests.isEmpty())
     }
 
-    @Test fun theHubSwitchesBetweenAccountAndStrategies() {
+    /** The saved strategies moved from Trade to Research (9 Oct): Trade is the account book alone, Research has the Strategies page. */
+    @Test fun strategiesAreAResearchPageAndTradeHasNoChips() {
         SecurePrefs.putAll(mapOf("k.mode" to "live", "k.allow" to true))
-        show()
-        compose.onNode(isSelectable() and hasText("Account")).assertIsSelected()
-        tab("Strategies")
-        compose.onNode(isSelectable() and hasText("Strategies")).assertIsSelected()
+        val m = holder.model
+        var research by mutableStateOf(false)
+        // Research → Strategies, as the "strategy" deep link opens it (the tokens themselves: LabScreensTest).
+        compose.setContent {
+            IraAlgoTheme("light") { Box(Modifier.fillMaxSize()) { if (research) LabScreen(m, "strategies", {}) else TradeScreen(m) } }
+        }
         compose.waitForIdle()
-        assertTrue("the account page is gone", !exists("Set up your Kite API key and secret first (More → Zerodha)."))
-        tab("Account")
+        frames()
+        // Trade opens straight on the account: no Account / Strategies chips, no Strategies page.
         waitText("Set up your Kite API key and secret first (More → Zerodha).")
+        assertTrue("no chips on Trade", compose.onAllNodes(isSelectable() and (hasText("Strategies") or hasText("Account"))).fetchSemanticsNodes().isEmpty())
+        assertFalse(exists("Baskets with stops, targets and trails, managed by the phone"))
+        // Research: its Strategies page is the same page as before (the same composable, on the same model).
+        research = true
+        compose.waitForIdle()
+        frames()
+        compose.onNode(isSelectable() and hasText("Strategies")).assertIsSelected()
+        waitText("Baskets with stops, targets and trails, managed by the phone")
+        assertTrue(exists("New strategy"))
     }
 
     @Test fun anUnreadableAccountSaysSoAndTryAgainReads() {

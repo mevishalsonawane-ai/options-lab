@@ -13,11 +13,12 @@ import androidx.compose.ui.unit.dp
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.Token
 
-/** The research bench: Pine scripts (write, check, backtest, chart, auto-trade), the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters, the candle-by-candle replay, and the ORB arms replayed on every recorded day. */
+/** The research bench: your saved strategies (baskets: create, edit, arm, run; moved here from Trade on 9 Oct), Pine scripts (write, check, backtest, chart, auto-trade), the strategy's trials (arms), its health checks, and the portfolio and SIP backtesters, the candle-by-candle replay, and the ORB arms replayed on every recorded day. */
 @Composable
 fun LabScreen(model: AppModel, page: String, onPage: (String) -> Unit, onChart: () -> Unit = {}) {
     LabTabs(page, onPage) { current ->
         when (current) {
+            "strategies" -> StrategiesScreen(model)
             "pine" -> PineScreen(model, onChart)
             "health" -> HealthScreen(model)
             "portfolio" -> PortfolioLab(model)
@@ -35,6 +36,7 @@ internal fun LabTabs(page: String, onPage: (String) -> Unit, content: @Composabl
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Token("Strategies", page == "strategies") { onPage("strategies") }
             Token("Pine scripts", page == "pine") { onPage("pine") }
             Token("Backtests", page == "trials") { onPage("trials") }
             Token("Health", page == "health") { onPage("health") }

@@ -158,7 +158,7 @@ internal fun StrategyArmContent(
         paperSince?.let { Note(it, Modifier.padding(top = 6.dp)) }
         orbRows()
         nightRow()
-        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
+        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Research → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
             if (i == 0) Rule()
@@ -272,7 +272,7 @@ private fun ImportDialog(actions: StrategyArmActions, onClose: () -> Unit) {
                 Spacer(Modifier.padding(top = 8.dp))
                 BrassButton("Choose the .json file", Modifier.fillMaxWidth()) { pick.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
                 OutlinedTextField(text, { text = it }, label = { Text("…or paste the JSON") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 90.dp, max = 160.dp))
-                Note("Strategies arrive disarmed and paper-only. Arm them on Home; enable live per strategy in Trade → Strategies.", Modifier.padding(top = 6.dp))
+                Note("Strategies arrive disarmed and paper-only. Arm them on Home; enable live per strategy in Research → Strategies.", Modifier.padding(top = 6.dp))
             }
         },
         confirmButton = { TextButton({ if (text.isNotBlank()) { actions.importText(text); onClose() } }, enabled = text.isNotBlank()) { Text("Import") } },

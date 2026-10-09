@@ -51,6 +51,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-strategies-to-research", OCT9, "Saved strategies moved to Research",
+            "Your saved strategies moved from Trade to Research → Strategies. " +
+                "Trade now opens straight on your account; Home's Strategies card with the bots stays on Home.",
+            "Research tab → Strategies (create, edit, arm, run and backtest your baskets)", to = "strategy"),
         Entry("2026-10-09-order-speed", OCT9, "Faster orders, and an order speed card",
             "Stops, targets and exits are now checked the moment a new price arrives, not every 15 seconds. " +
                 "Bar-close entries are decided at the close itself; the 15-second check stays as a backup. " +

@@ -66,9 +66,9 @@ fun GettingStarted(onGo: (String) -> Unit) {
         TourPage("Find your way", listOf(
             "Home: the market, your arms and alerts.",
             "Chart: live candles; BUY / SELL and price alerts sit above it.",
-            "Trade: your paper and Zerodha account, orders and strategies.",
+            "Trade: your paper and Zerodha account and orders.",
             "P&L: a calendar of every day's profit and loss.",
-            "Options and Research: the option chain, OI and backtests.",
+            "Options and Research: the option chain, OI, backtests and your saved strategies.",
         ), "Open the chart" to "chart"),
     )
     val page = pages[i]

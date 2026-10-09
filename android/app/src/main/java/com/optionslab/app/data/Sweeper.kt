@@ -154,7 +154,7 @@ object Sweeper {
         alertedFor = from
         val text = PriceWatch.say(java.time.Instant.ofEpochMilli(from).atZone(com.optionslab.engine.IST).toLocalTime())
         runCatching { Diag.record("risk", text) }
-        runCatching { Notifier.post(context, 2043, Notifier.RISK, "Positions not protected", "$text. Check them in Trade.", "strategy") }
+        runCatching { Notifier.post(context, 2043, Notifier.RISK, "Positions not protected", "$text. Check them in Trade.", "trade") }
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
             com.optionslab.app.ira.IraHub.note(text)
             com.optionslab.app.ira.JarvisVoice.announce("$text. Check your positions.", urgent = true)

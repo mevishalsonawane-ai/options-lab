@@ -210,7 +210,7 @@ internal object IraActions {
             is com.optionslab.app.ui.Load.Done -> "Sent to Zerodha: ${p.title}. " + sent.value.joinToString("; ") { "${it.status} ${it.filled} at ${"%.2f".format(it.avgPrice)}" +
                 (com.optionslab.app.data.Origins.shortId(it.orderId)?.let { id -> " (order $id)" } ?: "") }
             is com.optionslab.app.ui.Load.Failed -> "Zerodha refused: ${sent.why}"
-            else -> "Sent; Zerodha has not confirmed yet - see Trade, then Account."
+            else -> "Sent; Zerodha has not confirmed yet - see the Trade tab."
         }
     }
 

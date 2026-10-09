@@ -250,12 +250,12 @@ object Strategies {
         if (i < 0) return@withLock "That strategy no longer exists."
         val d = b.defs[i]
         if (on && needsBreakoutRules(d)) return@withLock BREAKOUT_BLOCK
-        if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Trade → Strategies) before arming it live."
+        if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Research → Strategies) before arming it live."
         val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
             days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
                 java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY),
             startTime = d.entryTime, autoStopTime = d.exitTime)
-        if (on && base.startTime == null) return@withLock "${d.name} has no start time. Set its entry time in Trade → Strategies, then arm it."
+        if (on && base.startTime == null) return@withLock "${d.name} has no start time. Set its entry time in Research → Strategies, then arm it."
         b.defs[i] = d.copy(scheduler = base.copy(enabled = on, defaultMode = if (on) mode else base.defaultMode))
         if (on) b.autoApprove[id] = automatic else b.pending.remove(id)
         save(b); null

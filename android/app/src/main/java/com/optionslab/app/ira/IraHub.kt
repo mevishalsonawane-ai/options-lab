@@ -3279,7 +3279,7 @@ object IraHub {
         }
         // "What should I switch off?", "which arms lost in both the test and on paper?", "should I disarm ORB Fresh?", "kaun sa
         // bot band karun" ([com.optionslab.ira.SwitchOff]): each arm's two-year BankNifty test beside its own paper record - the
-        // arms that lost in both (armed first), those that lost in one, and where the switch is (Trade, then Strategies). Facts,
+        // arms that lost in both (armed first), those that lost in one, and where the switch is (Home, the Strategies card). Facts,
         // never advice. Nothing is switched here: one armed arm that lost in both may be put to Boss as a yes or no (always
         // asked, even with automatic stops), and "stop <arm>" stays the command that asks him to confirm. Boss's account, so
         // never on a locked phone. (Not in IraGoldAlgo.)

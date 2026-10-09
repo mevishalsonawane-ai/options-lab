@@ -65,7 +65,7 @@ class CondNeedsTest {
         assertNull(CondNeeds.next(CondNeeds.learned(told, now), told))
         // Each kind names its own screen.
         assertTrue(CondNeeds.Need.PNL.tool.contains("More, then Bot settings"))
-        assertTrue(CondNeeds.Need.POSITION.tool.contains("Trade, then Account") && CondNeeds.Need.POSITION.tool.contains("Protect"))
+        assertTrue(CondNeeds.Need.POSITION.tool.contains("the Trade tab, tap the position") && CondNeeds.Need.POSITION.tool.contains("Protect"))
         // Locked: the undo's reply never names what was learned.
         assertFalse(CondNeeds.RESET_LOCKED.contains("Nifty") || CondNeeds.RESET_LOCKED.contains("level") || CondNeeds.RESET_LOCKED.contains("hadn't"))
         assertTrue(CondNeeds.say(emptyList()).startsWith("Nothing yet"))
