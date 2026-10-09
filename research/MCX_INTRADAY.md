@@ -367,3 +367,19 @@ How to read the hours tables:
   - `raw/` holds the option minutes, spot and live futures (256 MB, zstd). `work/` holds trades and random draws.
   - Logs: `fetch_*.log`, `runp_*.log`, `design_*.log`, `holdout*.log`.
   - Crude was reused from `scratchpad/hunt/strad_crude/cache`.
+
+## Re-cost with measured evening spreads (9 Oct 2026)
+
+Live MCX option chains were snapshotted 19:24-19:27 IST on 9 Oct (5 rounds; the recorder was stopped early by a machine restart).
+Median full bid/ask spread of near-ATM (±3%) options, evening: NATURALGAS 0.43%, NATGASMINI 0.60%, CRUDEOIL 0.31%,
+CRUDEOILM 0.23%, GOLDM 0.39%, SILVERM 0.47% (morning not measured; assumed 2× evening). NATURALGAS was costed at 0.30%
+before, so its real evening spread is wider.
+
+Holdout re-priced with these spreads (costs only, no rule change; `analyze.py holdout --recost`):
+
+| rule | trades | win | net/trade | net/day | before (0.30%) |
+|---|---|---|---|---|---|
+| NATURALGAS EVE (evening breakout) | 55 | 49% | +Rs 70 | +Rs 62 | +Rs 93 / +Rs 83 |
+
+Still positive after the real spread, still not significant (random p 0.19, BH q 0.55). It stays a paper-only bot.
+Caveat: one evening of snapshots; spreads vary by day and strike.
