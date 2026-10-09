@@ -85,7 +85,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         stopWhy = botStopWhy,
         dayLock = dayLock,
         paperSince = paperSince,
-        nightRow = { NightRow() },
+        // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
+        nightRow = { NightRow(); VixDivRow() },
         mcxRows = { McxArmRows() },
     )
 }

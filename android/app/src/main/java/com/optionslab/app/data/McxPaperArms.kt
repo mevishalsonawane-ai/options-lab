@@ -14,6 +14,7 @@ import com.optionslab.engine.mcx.McxInstruments
 import com.optionslab.engine.mcx.McxMorningRules
 import com.optionslab.engine.mcx.McxSession
 import com.optionslab.engine.mcx.McxTrendRules
+import com.optionslab.engine.mcx.McxUsSilverRules
 import com.optionslab.engine.sandbox.SandboxEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,13 +53,14 @@ object McxPaperArms {
         file = File(app.filesDir, "mcx_arms.vault")
     }
 
-    /** The arms, in the order the screen lists them. */
-    val ARMS: List<String> = listOf(McxEveRules.SOURCE, McxMorningRules.SOURCE, McxTrendRules.SOURCE)
+    /** The arms, in the order the screen lists them (the US-night silver futures rule, 9 Oct research R2, last). */
+    val ARMS: List<String> = listOf(McxEveRules.SOURCE, McxMorningRules.SOURCE, McxTrendRules.SOURCE, McxUsSilverRules.SOURCE)
 
     fun label(arm: String): String = when (arm) {
         McxEveRules.SOURCE -> McxEveRules.LABEL
         McxMorningRules.SOURCE -> McxMorningRules.LABEL
         McxTrendRules.SOURCE -> McxTrendRules.LABEL
+        McxUsSilverRules.SOURCE -> McxUsSilverRules.LABEL
         else -> arm
     }
 
@@ -66,6 +68,7 @@ object McxPaperArms {
         McxEveRules.SOURCE -> McxEveRules.RECORD
         McxMorningRules.SOURCE -> McxMorningRules.RECORD
         McxTrendRules.SOURCE -> McxTrendRules.RECORD
+        McxUsSilverRules.SOURCE -> McxUsSilverRules.RECORD
         else -> ""
     }
 
@@ -73,6 +76,7 @@ object McxPaperArms {
         McxEveRules.SOURCE -> McxEveRules.RULES
         McxMorningRules.SOURCE -> McxMorningRules.RULES
         McxTrendRules.SOURCE -> McxTrendRules.RULES
+        McxUsSilverRules.SOURCE -> McxUsSilverRules.RULES
         else -> ""
     }
 
@@ -101,10 +105,16 @@ object McxPaperArms {
         val signals: MutableMap<String, Int> = HashMap(),
         val status: MutableMap<String, String> = HashMap(),
         val log: ArrayList<String> = ArrayList(),
+        /** Small facts kept between days ("silver_near": the near SILVERMIC expiry the US-night silver arm last saw). */
+        val marks: MutableMap<String, String> = HashMap(),
     )
 
-    /** What the Commodities page shows. */
-    data class View(val armed: Map<String, Boolean>, val status: Map<String, String>, val open: List<Pos>, val closed: List<Pos>, val log: List<String>) {
+    /**
+     * What Home's MCX group shows; [nets] each arm's closed trades' rupees after charges, oldest first (its paper test,
+     * over every closed trade the book keeps, not only the last ones shown).
+     */
+    data class View(val armed: Map<String, Boolean>, val status: Map<String, String>, val open: List<Pos>, val closed: List<Pos>, val log: List<String>,
+                    val nets: Map<String, List<Double>> = emptyMap()) {
         fun isArmed(arm: String): Boolean = armed[arm] == true
     }
 
@@ -131,6 +141,7 @@ object McxPaperArms {
             o.optJSONObject("signals")?.let { m -> m.keys().forEach { b.signals[it] = m.getInt(it) } }
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[it] = m.getString(it) } }
             o.optJSONArray("log")?.let { a -> for (i in 0 until a.length()) b.log += a.getString(i) }
+            o.optJSONObject("marks")?.let { m -> m.keys().forEach { b.marks[it] = m.getString(it) } }
         }.onFailure { if (file.exists()) Vault.setAside(file) }
         cache = b
         publish(b)
@@ -168,6 +179,7 @@ object McxPaperArms {
         o.put("signals", JSONObject().apply { b.signals.keys.sorted().takeLast(60).forEach { put(it, b.signals.getValue(it)) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
+        o.put("marks", JSONObject().apply { b.marks.forEach { (k, v) -> put(k, v) } })
         runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
     }
@@ -176,7 +188,7 @@ object McxPaperArms {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
-            b.log.takeLast(40))
+            b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } })
     }
 
     private fun note(b: Book, arm: String, text: String) {
@@ -237,6 +249,7 @@ object McxPaperArms {
         if (v.isArmed(McxEveRules.SOURCE)) add(McxEveRules.RANGE_FROM..McxEveRules.FLAT_BY + 1)
         if (v.isArmed(McxMorningRules.SOURCE)) add(McxMorningRules.GRID_FROM - 1..14 * 60)
         if (v.isArmed(McxTrendRules.SOURCE)) add(9 * 60..10 * 60)
+        if (v.isArmed(McxUsSilverRules.SOURCE)) add(McxUsSilverRules.ENTRY - 1..McxUsSilverRules.ENTRY + McxUsSilverRules.ENTRY_GRACE)
     }
 
     /** Whether the MCX watch should run now for an armed arm (MCX open, inside that arm's minutes); held positions are the paper exposure's. */
@@ -298,6 +311,8 @@ object McxPaperArms {
                     changed = runCatching { morning(b, now, cal, window) }.getOrElse { b.status[McxMorningRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
                 if (b.armed[McxTrendRules.SOURCE] == true)
                     changed = runCatching { trend(b, now, cal) }.getOrElse { b.status[McxTrendRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
+                if (b.armed[McxUsSilverRules.SOURCE] == true)
+                    changed = runCatching { silver(b, now, cal, window) }.getOrElse { b.status[McxUsSilverRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed
             }
             // Closed trades beyond what is kept are dropped (oldest first); open ones always stay.
             val closed = b.positions.count { !it.open }
@@ -369,7 +384,7 @@ object McxPaperArms {
             // The option's resting stop filled in the paper book (on a minute's low): that is the exit.
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "complete") {
-                val done = p.copy(exit = so.averagePrice?.toDouble() ?: McxEveRules.optionStop(p.entry), exitTime = so.updateTimestamp, why = "option_stop",
+                val done = p.copy(exit = so.averagePrice?.toDouble() ?: stopFallback(p), exitTime = so.updateTimestamp, why = stopWhy(p),
                     stopOrderId = null, charges = p.charges + chargesOf(so.orderId))
                 b.positions[i] = done; closed(b, done); changed = true; continue
             }
@@ -390,6 +405,7 @@ object McxPaperArms {
                 p.arm == McxEveRules.SOURCE -> eveExit(p, c, now)
                 p.arm == McxMorningRules.SOURCE ->
                     if (now.toLocalDate().isAfter(p.entryDay)) "four_hours" else McxMorningRules.exit(p.entryMinute, minute, window)
+                p.arm == McxUsSilverRules.SOURCE -> silverExit(p, c, now, window)
                 else -> null   // the trend's legs close on their own month's signal and rolls ([trend])
             }
             if (why == null) continue
@@ -421,7 +437,7 @@ object McxPaperArms {
             runCatching { Paper.cancel(id, "exit:$why") }
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
             if (so?.status == "complete") {
-                val done = p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp, why = "option_stop", stopOrderId = null,
+                val done = p.copy(exit = so.averagePrice?.toDouble() ?: stopFallback(p), exitTime = so.updateTimestamp, why = stopWhy(p), stopOrderId = null,
                     charges = p.charges + chargesOf(id))
                 closed(b, done); return done
             }
@@ -618,6 +634,89 @@ object McxPaperArms {
             if (b.status[arm] != s) { b.status[arm] = s; changed = true }
         }
         return changed
+    }
+
+    // ---- US-night silver (R2, futures) ------------------------------------------------------------------------------------
+
+    /** What a filled resting stop is called: the silver future's disaster stop (not part of its research), else the option's -15%. */
+    private fun stopWhy(p: Pos): String = if (p.arm == McxUsSilverRules.SOURCE) "disaster_stop" else "option_stop"
+
+    /** A filled stop's price when the paper book did not say: the stop's own level. */
+    private fun stopFallback(p: Pos): Double =
+        if (p.arm == McxUsSilverRules.SOURCE) McxUsSilverRules.disasterLevel(p.entry, p.side) else McxEveRules.optionStop(p.entry)
+
+    /** The silver future's exit at [now]: its disaster stop on any finished minute's high or low since the entry, or the close's 10 minutes. */
+    private suspend fun silverExit(p: Pos, c: Paper.Contract, now: LocalDateTime, window: McxSession.Window?): String? {
+        val bars = runCatching { minutes(p.futureKey ?: c.feedKey, now) }.getOrNull().orEmpty()
+            .map { McxUsSilverRules.Minute(it.istMinute, it.high, it.low) }
+        val exitAt = p.flatBy ?: McxUsSilverRules.exitMinute(now.toLocalDate(), window)
+        return McxUsSilverRules.exit(p.side, p.entry, p.entryDay, p.entryMinute, bars, now.toLocalDate(), minuteOf(now), exitAt)
+    }
+
+    /**
+     * 09:05's decision: the US move since the last MCX close (COMEX silver and USD/INR at 08:30 against the close, from
+     * five days of [UsCues] bars, so a phone shut overnight still has them), then 1 lot of the near SILVERMIC bought or
+     * sold on paper with its disaster stop resting in the paper book. Once a day; every reason it does not trade is logged.
+     */
+    private suspend fun silver(b: Book, now: LocalDateTime, cal: McxSession.Calendar, window: McxSession.Window?): Boolean {
+        val arm = McxUsSilverRules.SOURCE
+        val today = now.toLocalDate()
+        val key = "$today|silver"
+        if (key in b.decided || b.positions.any { it.arm == arm && it.open }) return false
+        val minute = minuteOf(now)
+        if (minute < McxUsSilverRules.ENTRY) {
+            val s = "waiting for 09:05"
+            if (b.status[arm] != s) { b.status[arm] = s; return true }
+            return false
+        }
+        val near = McxInstruments.futures(McxMarket.contracts(), McxUsSilverRules.UNDERLYING, today, 2).firstOrNull()
+            ?: run { decide(b, arm, key, "silver_no_contract (no SILVERMIC future listed)"); return true }
+        // The near contract seen on an earlier day: a different one now means it rolled overnight (the research skips that day).
+        val seen = b.marks["silver_near"]?.split('|')?.takeIf { it.size == 2 }
+        val previousNear = seen?.takeIf { it[0] != today.toString() }?.let { runCatching { LocalDate.parse(it[1]) }.getOrNull() }
+        if (seen == null || seen[0] != today.toString()) b.marks["silver_near"] = "$today|${near.expiry}"
+        if (!McxUsSilverRules.entryWindow(minute)) {
+            decide(b, arm, key, "silver_late: the watch was not running at 09:05-09:09; no trade today"); return true
+        }
+        if (McxUsSilverRules.rolled(previousNear, near.expiry)) {
+            decide(b, arm, key, "silver_rolled: the near SILVERMIC changed overnight ($previousNear to ${near.expiry}); no trade today"); return true
+        }
+        val prev = McxUsSilverRules.prevClose(today, cal) ?: run { decide(b, arm, key, "silver_no_previous_session"); return true }
+        val ref = McxUsSilverRules.refAt(today)
+        val si = UsCues.bars(McxUsSilverRules.US_SYMBOL)
+        val fx = UsCues.bars(McxUsSilverRules.FX_SYMBOL)
+        val siNow = McxUsSilverRules.priceAt(si, McxUsSilverRules.epoch(ref))
+        val siPrev = McxUsSilverRules.priceAt(si, McxUsSilverRules.epoch(prev))
+        val fxNow = McxUsSilverRules.priceAt(fx, McxUsSilverRules.epoch(ref))
+        val fxPrev = McxUsSilverRules.priceAt(fx, McxUsSilverRules.epoch(prev))
+        val missing = listOfNotNull(
+            "COMEX silver at 08:30".takeIf { siNow == null }, "COMEX silver at the ${hhmm(prev.hour * 60 + prev.minute)} close".takeIf { siPrev == null },
+            "USD/INR at 08:30".takeIf { fxNow == null }, "USD/INR at the ${hhmm(prev.hour * 60 + prev.minute)} close".takeIf { fxPrev == null })
+        val s = McxUsSilverRules.signal(siNow, siPrev, fxNow, fxPrev)
+        if (s == null) {
+            val why = if (si.isEmpty() || fx.isEmpty()) "the US price feed did not answer" else "not in the feed's history"
+            decide(b, arm, key, "silver_no_us_price: ${missing.joinToString(", ").ifEmpty { "a price" }} not read ($why); no trade today"); return true
+        }
+        val facts = "s %+.4f: COMEX silver %.3f to %.3f, USD/INR %.4f to %.4f since %s".format(Locale.ENGLISH, s, siPrev, siNow, fxPrev, fxNow,
+            prev.toLocalDate().toString() + " " + hhmm(prev.hour * 60 + prev.minute))
+        val side = McxUsSilverRules.side(s)
+        if (side == 0) { decide(b, arm, key, "silver_flat ($facts)"); return true }
+        val pc = McxMarket.paperContract(near)
+        val bars = runCatching { minutes(near.upstoxKey, now) }.getOrNull().orEmpty()
+        val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
+        refusal(pc, buy = side > 0, fresh = fresh)?.let { decide(b, arm, key, "silver_$it ($facts)"); return true }
+        b.decided += key
+        val (fill, r) = paperOrder(pc, if (side > 0) "BUY" else "SELL", "${McxUsSilverRules.LABEL} · entry")
+        if (fill == null) { decideLine(b, arm, "silver_not_filled: ${r.message} ($facts)"); return true }
+        // The disaster stop (not part of the research) rests in the paper book, so it fills on a minute's high or low.
+        val level = toTick(McxUsSilverRules.disasterLevel(fill.price, side), near.tick)
+        val stop = runCatching { Paper.place(pc, if (side > 0) "SELL" else "BUY", McxArmRules.LOTS, "SL-M", "NRML", null, level) }.getOrNull()
+        val stopId = stop?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${McxUsSilverRules.LABEL} · disaster stop") } }
+        val exitAt = McxUsSilverRules.exitMinute(today, window)
+        opened(b, Pos(arm, pc.symbol, side, fill.quantity, fill.price, today, now, minute, near.expiry, false, r.orderId,
+            stopOrderId = stopId, futureKey = near.upstoxKey, flatBy = exitAt, charges = chargesOf(r.orderId)),
+            "$facts; out at ${hhmm(exitAt)}; disaster stop %.0f (${McxUsSilverRules.STOP_NOTE})".format(Locale.ENGLISH, level))
+        return true
     }
 
     /** For tests: the book forgotten (its file goes with the test's directory). */

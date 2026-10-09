@@ -51,6 +51,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-two-paper-bots-and-parking", OCT9, "Two new paper bots, and two losing ones switched off",
+            "Home → Strategies has two new paper-only bots, not proven, off until you switch them on. " +
+                "VIX divergence buys a put when Nifty or Bank Nifty is up 0.2% while India VIX is up 2%. " +
+                "Both down buys a call; it checks at 10:30, 11:30, 12:30 and 13:30, first signal only. " +
+                "Its research made Rs 70 and Rs 112 a day in the holdout, but failed the luck checks. " +
+                "US-night silver buys or sells 1 lot of the silver micro future at 09:05, following US silver overnight. " +
+                "Its holdout made Rs 1,189 a trade in silver's tripling year; it sells too and has a 3% disaster stop. " +
+                "Liquidity 15+5 FINNIFTY (−₹8,035 over 8 paper trades) and ORB Sweep (−₹4,498 over 6) were switched off on your OK. " +
+                "Switch them back on in Home → Strategies any time.",
+            "Home → Dashboard → Strategies card: the VIX divergence row, US-night silver under MCX (commodities), " +
+                "and Switch FINNIFTY back on under the Liquidity 15+5 row"),
         Entry("2026-10-09-mcx-paper-arms", OCT9, "Three MCX ideas to try on paper, all off at first",
             "Home → Strategies has three paper-only MCX bots, each not proven and off until you switch it on. " +
                 "Natural gas evening breakout: buys a call or put when 17:00-19:00's range breaks before 22:00, flat by 23:15. " +

@@ -11,6 +11,7 @@ import com.optionslab.engine.IST
 import com.optionslab.engine.mcx.McxEveRules
 import com.optionslab.engine.mcx.McxMorningRules
 import com.optionslab.engine.mcx.McxTrendRules
+import com.optionslab.engine.mcx.McxUsSilverRules
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -48,8 +49,11 @@ class McxPaperArmsTest : RobolectricTest() {
         Market.testClock = Clock.fixed(on.atTime(t).plusSeconds(seconds).atZone(IST).toInstant(), IST)
     }
 
-    /** Today's MCX list on the phone, as [McxMarket.contracts] keeps it: the NATURALGAS future and its chain, a CRUDEOILM future. */
-    private fun mcxList(today: LocalDate = day, gasOptExpiry: LocalDate = optExpiry) {
+    /**
+     * Today's MCX list on the phone, as [McxMarket.contracts] keeps it: the NATURALGAS future and its chain, a CRUDEOILM future;
+     * with [silver], SILVERMIC's near future (expiring [silverNear]) and the next one.
+     */
+    private fun mcxList(today: LocalDate = day, gasOptExpiry: LocalDate = optExpiry, silver: Boolean = false, silverNear: LocalDate = LocalDate.of(2026, 11, 27)) {
         val a = JSONArray()
         fun row(tok: Long, xt: Long, sym: String, name: String, exp: LocalDate, strike: Double, right: String, tick: Double, mult: Int) =
             a.put(JSONArray().put(tok).put(xt).put(sym).put(name).put(exp.toString()).put(strike).put(right).put(tick).put(mult))
@@ -60,6 +64,10 @@ class McxPaperArmsTest : RobolectricTest() {
         }
         row(2, 900500, "CRUDEOILM26OCTFUT", "CRUDEOILM", LocalDate.of(2026, 10, 19), 0.0, "", 1.0, 10)
         row(3, 900501, "CRUDEOILM26NOVFUT", "CRUDEOILM", LocalDate.of(2026, 11, 19), 0.0, "", 1.0, 10)
+        if (silver) {
+            row(4, 900600, "SILVERMIC-NEAR", "SILVERMIC", silverNear, 0.0, "", 1.0, 1)
+            row(5, 900601, "SILVERMIC27FEBFUT", "SILVERMIC", LocalDate.of(2027, 2, 26), 0.0, "", 1.0, 1)
+        }
         File(context.filesDir, "mcx_contracts.json").writeText(JSONObject().put("day", today.toString()).put("c", a).toString())
         McxMarket.wipe()
     }
@@ -105,6 +113,8 @@ class McxPaperArmsTest : RobolectricTest() {
     @After fun down() {
         Market.testClock = null
         McxPaperArms.testDaily = null
+        UsCues.testFetch = null
+        UsCues.resetForTest()
         kite.close(); upstox.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -213,6 +223,159 @@ class McxPaperArmsTest : RobolectricTest() {
         tick(LocalTime.of(10, 1))
         assertEquals(1, McxPaperArms.view.value.open.size)
         assertTrue(McxPaperArms.view.value.status[McxTrendRules.SOURCE].orEmpty().contains("CRUDEOILM: hold"))
+        assertNothingAtZerodha()
+    }
+
+    // ---- US-night silver (9 Oct, research R2 rule 1; futures, paper only) -------------------------------------------------
+
+    private val silverKey = "MCX_FO|900600"
+
+    /** Yahoo's chart JSON for 5-minute bars at the given starts (IST) and opens (each bar's close = its open). */
+    private fun chart(bars: List<Pair<java.time.LocalDateTime, Double>>): JSONObject {
+        val ts = JSONArray(); val px = JSONArray(); val vol = JSONArray()
+        bars.forEach { (t, v) -> ts.put(t.atZone(IST).toEpochSecond()); px.put(v); vol.put(0) }
+        val quote = JSONObject().put("open", px).put("high", px).put("low", px).put("close", px).put("volume", vol)
+        return JSONObject().put("chart", JSONObject().put("result", JSONArray().put(JSONObject().put("timestamp", ts)
+            .put("indicators", JSONObject().put("quote", JSONArray().put(quote))))))
+    }
+
+    /**
+     * The US feed: COMEX silver [siPrev] at the previous MCX close (Wed 7 Oct 23:30 IST, US summer time) and [siNow] at 08:30
+     * today; USD/INR flat at 88 (its close bar left out with [noFxClose]). Every URL the arm asked for is kept in [asked].
+     */
+    private fun usFeed(siPrev: Double, siNow: Double, noFxClose: Boolean = false, asked: MutableList<String> = ArrayList()) {
+        val prev = LocalDate.of(2026, 10, 7).atTime(23, 30)
+        val ref = day.atTime(8, 30)
+        UsCues.resetForTest()
+        UsCues.testFetch = { url ->
+            asked += url
+            when {
+                "SI%3DF" in url -> chart(listOf(prev to siPrev, ref to siNow))
+                "INR%3DX" in url -> chart(if (noFxClose) listOf(ref to 88.0) else listOf(prev to 88.0, ref to 88.0))
+                else -> throw AssertionError(url)
+            }
+        }
+    }
+
+    /** SILVERMIC's minutes from 09:00 to [until] (exclusive): [px] each, with a low of [low] at [lowAt]. */
+    private fun silverMinutes(until: LocalTime, px: Double = 75_000.0, lowAt: LocalTime? = null, low: Double = px) {
+        val out = ArrayList<FakeUpstox.Candle>()
+        var t = LocalTime.of(9, 0)
+        while (t.isBefore(until)) { out += FakeUpstox.Candle(t, px, px, if (t == lowAt) low else px, px); t = t.plusMinutes(1) }
+        upstox.minutes[silverKey] = out
+    }
+
+    @Test fun usNightSilverBuysOnPaperOnlyWithEverythingLiveAndItsDisasterStopReadsTheMinutesLow() {
+        mcxList(silver = true)
+        val asked = ArrayList<String>()
+        usFeed(siPrev = 30.0, siNow = 30.6, asked = asked)                 // silver +2% overnight, the rupee flat: s > 0, a buy
+        silverMinutes(LocalTime.of(9, 5))
+        assertTrue(runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }.contains("paper only"))
+        // Before 09:05: nothing read, nothing bought.
+        tick(LocalTime.of(9, 3))
+        assertTrue(asked.isEmpty())
+        assertTrue(McxPaperArms.view.value.open.isEmpty())
+        tick(LocalTime.of(9, 5))
+        val pos = McxPaperArms.view.value.open.single()
+        assertEquals(McxUsSilverRules.SOURCE, pos.arm)
+        assertEquals(1, pos.side)
+        assertEquals("1 lot of SILVERMIC (1 kg)", 1, pos.qty)
+        assertFalse(pos.option)
+        assertEquals(LocalDate.of(2026, 11, 27), pos.expiry)
+        assertEquals(23 * 60 + 20, pos.flatBy)
+        assertTrue("paid the spread", pos.entry > 75_000.0)
+        assertTrue(asked.any { "SI%3DF" in it } && asked.any { "INR%3DX" in it })
+        // Its disaster stop (not part of the research) rests in the paper book: a SELL 3% under the fill.
+        val stop = Paper.state.orders.single { it.orderId == pos.stopOrderId }
+        assertEquals("SL-M", stop.priceType); assertEquals("SELL", stop.action)
+        assertEquals(pos.entry * 0.97, stop.triggerPrice!!.toDouble(), 1.0)
+        val status = McxPaperArms.view.value.status[McxUsSilverRules.SOURCE].orEmpty()
+        assertTrue(status, status.contains("bought") && status.contains("not part of the research") && status.contains("out at 23:20"))
+        assertNothingAtZerodha()
+        // Once a day: the next pass buys nothing more.
+        tick(LocalTime.of(9, 6))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        // A minute's LOW 4% down (its close back up) is the disaster stop: sold on paper at the next pass.
+        silverMinutes(LocalTime.of(10, 1), lowAt = LocalTime.of(10, 0), low = 72_000.0)
+        tick(LocalTime.of(10, 1))
+        val done = McxPaperArms.view.value.closed.single { it.arm == McxUsSilverRules.SOURCE }
+        assertEquals("disaster_stop", done.why)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
+        assertTrue("the resting stop is out of the book", Paper.state.orders.single { it.orderId == pos.stopOrderId }.status in setOf("cancelled", "complete"))
+        assertTrue(McxPaperArms.diagLine().contains(McxUsSilverRules.LABEL))
+        assertNothingAtZerodha()
+    }
+
+    @Test fun usNightSilverSellsWhenTheUsMoveIsDownAndClosesTenMinutesBeforeMcxCloses() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 29.4)                                 // silver -2% overnight: a sell
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5))
+        val pos = McxPaperArms.view.value.open.single()
+        assertEquals(-1, pos.side)
+        assertEquals("BUY", Paper.state.orders.single { it.orderId == pos.stopOrderId }.action)
+        assertTrue(Paper.state.positions.any { it.symbol == pos.symbol && it.quantity == -1 })
+        // Held through the day (no wick near 3%), sold back at 23:20 - 10 minutes before MCX's 23:30 close.
+        silverMinutes(LocalTime.of(23, 19))
+        tick(LocalTime.of(23, 19))
+        assertEquals(1, McxPaperArms.view.value.open.size)
+        silverMinutes(LocalTime.of(23, 20))
+        tick(LocalTime.of(23, 20))
+        assertEquals("close_10_min", McxPaperArms.view.value.closed.single().why)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun usNightSilverSkipsTheDayWhenAUsPriceIsMissing() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 30.6, noFxClose = true)
+        silverMinutes(LocalTime.of(9, 5))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        val orders = Paper.state.orders.size
+        tick(LocalTime.of(9, 5))
+        assertEquals(orders, Paper.state.orders.size)
+        val s = McxPaperArms.view.value.status[McxUsSilverRules.SOURCE].orEmpty()
+        assertTrue(s, s.startsWith("silver_no_us_price: USD/INR at the 23:30 close not read"))
+        assertTrue(McxPaperArms.view.value.log.any { "silver_no_us_price" in it })
+        // Decided for the day: a later pass in the window does not try again.
+        usFeed(siPrev = 30.0, siNow = 30.6)
+        tick(LocalTime.of(9, 6))
+        assertEquals(orders, Paper.state.orders.size)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun usNightSilverSkipsTheDayAfterTheNearContractRolled() {
+        // Wed 7 Oct: the near SILVERMIC is the one expiring that day (no trade that day), and it is remembered.
+        val wed = LocalDate.of(2026, 10, 7)
+        at(LocalTime.of(9, 5), on = wed)
+        mcxList(today = wed, silver = true, silverNear = wed)
+        usFeed(siPrev = 30.0, siNow = 30.6)
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        tick(LocalTime.of(9, 5), on = wed)
+        assertTrue(McxPaperArms.view.value.open.isEmpty())
+        // Thu 8 Oct: the near one is November's now - it rolled overnight: no trade today, said why.
+        at(LocalTime.of(9, 5))
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 30.6)
+        silverMinutes(LocalTime.of(9, 5))
+        val orders = Paper.state.orders.size
+        tick(LocalTime.of(9, 5))
+        assertEquals(orders, Paper.state.orders.size)
+        val s = McxPaperArms.view.value.status[McxUsSilverRules.SOURCE].orEmpty()
+        assertTrue(s, s.startsWith("silver_rolled: the near SILVERMIC changed overnight (2026-10-07 to 2026-11-27)"))
+        assertNothingAtZerodha()
+    }
+
+    @Test fun usNightSilverOnlyEntersAt0905() {
+        mcxList(silver = true)
+        usFeed(siPrev = 30.0, siNow = 30.6)
+        silverMinutes(LocalTime.of(9, 30))
+        runBlocking { McxPaperArms.setArmed(McxUsSilverRules.SOURCE, true) }
+        assertTrue(run { at(LocalTime.of(9, 5)); McxPaperArms.wantsWatch() })
+        tick(LocalTime.of(9, 30))
+        assertTrue(McxPaperArms.view.value.open.isEmpty())
+        assertTrue(McxPaperArms.view.value.status[McxUsSilverRules.SOURCE].orEmpty().startsWith("silver_late"))
         assertNothingAtZerodha()
     }
 

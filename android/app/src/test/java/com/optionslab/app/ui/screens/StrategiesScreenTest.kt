@@ -177,6 +177,7 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun skip(source: String) { calls += "orb skip $source" }
     override fun shadowOff(id: String) { calls += "shadow off $id" }
     override fun lots(n: Int) { calls += "orb lots $n" }
+    override fun unpark(index: String) { calls += "orb unpark $index" }
 }
 
 /** A click through the node's semantics action (as TalkBack does): works wherever the node is, on screen or not. */

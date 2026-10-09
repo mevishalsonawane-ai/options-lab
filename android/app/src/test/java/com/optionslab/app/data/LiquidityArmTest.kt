@@ -394,9 +394,10 @@ class LiquidityArmTest : RobolectricTest() {
     }
 
     @Test fun aSwitchedOffBookLeavesTheMidcpniftyBooksOffUntilTheSwitchComesOn() {
+        // (9 Oct's parking marked done: this test is about the MIDCPNIFTY books alone.)
         AutomationSupport.orbState(context, org.json.JSONObject()
             .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
-                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
             .put("positions", org.json.JSONArray()))
         assertFalse(row().armed)
         assertTrue(runBlocking { OrbArms.liquidityDay(day) }.first.none { it.armed })

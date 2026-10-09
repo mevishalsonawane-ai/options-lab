@@ -1435,6 +1435,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun shadowOff(id: String) = strategyDo { com.optionslab.app.data.ShadowArms.disarm(id) }
     /** Liquidity 15+5's size from its row (a raise was confirmed in the row's dialog first). */
     fun liquidityLots(n: Int) = strategyDo { com.optionslab.app.data.OrbArms.setLiquidityLots(n, "Boss on the row") }
+    /** A Liquidity 15+5 index parked on Boss's OK (9 Oct) switched back on from its row, on paper. */
+    fun unparkLiquidity(index: String) = strategyDo { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
 
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {

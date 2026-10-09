@@ -67,6 +67,7 @@ fun OrbRows(model: AppModel) {
             override fun skip(source: String) { model.skipOrb(source) }
             override fun shadowOff(id: String) { model.shadowOff(id) }
             override fun lots(n: Int) { model.liquidityLots(n) }
+            override fun unpark(index: String) { model.unparkLiquidity(index) }
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) },
         paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() },
@@ -82,6 +83,8 @@ internal interface OrbActions {
     fun shadowOff(id: String) {}
     /** Liquidity 15+5's size for its new entries ([OrbArms.setLiquidityLots]): a raise only after Boss's yes in the dialog. */
     fun lots(n: Int) {}
+    /** A Liquidity 15+5 index parked on Boss's OK (9 Oct: FINNIFTY) switched back on ([OrbArms.unparkLiquidity]), on paper. */
+    fun unpark(index: String) {}
 }
 
 /** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
@@ -168,6 +171,13 @@ internal fun OrbRowsContent(
                     // A restore's higher size waits for Boss: it never raised the size by itself.
                     a.lotsAsk?.let { w -> Text(keepNumbersWhole("The backup had ${com.optionslab.engine.orb.LiquidityLots.words(w)}: it trades " +
                         "${com.optionslab.engine.orb.LiquidityLots.words(n)} until you choose $w."), style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp)) }
+                }
+                // Liquidity 15+5's indices parked on Boss's OK (9 Oct): each said with its record, and a tap switches it back on (paper).
+                a.parked.forEach { idx ->
+                    Text(keepNumbersWhole("$idx parked on your OK (${com.optionslab.engine.orb.ParkedArms.record(idx)}): its books stay off with the switch."),
+                        style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+                    Text("Switch $idx back on", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.clickable { actions.unpark(idx) }.padding(vertical = 4.dp))
                 }
                 // Liquidity 15+5's pre-registered candidates, tracked in its shadow per lot (they never change what it trades).
                 a.shadow?.let { s -> Text(keepNumbersWhole(com.optionslab.engine.orb.LiquidityShadow.line(s)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }

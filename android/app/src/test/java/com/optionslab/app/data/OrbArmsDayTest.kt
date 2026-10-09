@@ -429,7 +429,7 @@ class OrbArmsDayTest : RobolectricTest() {
         val v = runBlocking { OrbArms.view() }
         // The 06 Oct switch-off and retirement took ORB Sweep, Range Fade and ORB off; Boss's 07 Oct un-retirement then switched
         // all four back on - automatic, on paper only, never cleared for Zerodha.
-        for (src in listOf("orb", "orb_fresh", "orb_sweep", "range_fade")) {
+        for (src in listOf("orb", "orb_fresh", "range_fade")) {
             val a = v.arms.single { it.arm.source == src }
             assertTrue("$src back on", a.armed)
             assertTrue("$src automatic", a.automatic)
@@ -437,6 +437,11 @@ class OrbArmsDayTest : RobolectricTest() {
             assertEquals(com.optionslab.engine.orb.RetiredArms.UNRETIRED, a.status)
             assertEquals("its record, as information", src, a.record!!.arm.source)
         }
+        // ... and the 9 Oct parking (Boss's OK) then switched ORB Sweep off again, once, on paper terms.
+        val sweep = v.arms.single { it.arm.source == "orb_sweep" }
+        assertTrue("ORB Sweep parked", !sweep.armed && !sweep.liveOk)
+        assertEquals(com.optionslab.engine.orb.ParkedArms.PARKED, sweep.status)
+        assertEquals(listOf("FINNIFTY"), v.arms.single { it.arm.source == "liquidity" }.parked)
         val log = Diag.lines()
         assertTrue(log.toString(), log.any { it.contains("Range Fade: ${OrbArms.SWITCHED_OFF}") })
         assertTrue(log.toString(), log.any { it.contains("ORB: switched off: lost on 6 years of real data (Boss's choice 06 Oct)") })
@@ -448,7 +453,7 @@ class OrbArmsDayTest : RobolectricTest() {
         assertNull("Liquidity has no record line", liq.record)
         assertTrue(liq.status, liq.status.contains("switched back on, paper only (Boss's choice 06 Oct)"))
         assertNotNull("Range Fade's open put is kept, managed to its exit", v.arms.single { it.arm.source == "range_fade" }.open)
-        // Boss switches ORB Sweep off: no change runs a second time, even after a restart.
+        // Boss switches ORB Sweep off (it already is): no change runs a second time, even after a restart.
         runBlocking { OrbArms.setArmed("orb_sweep", false, automatic = true) }
         AutomationSupport.reloadFromDisk(OrbArms)
         assertTrue("never switched on twice", !arm("orb_sweep").armed)
@@ -478,7 +483,10 @@ class OrbArmsDayTest : RobolectricTest() {
         at(LocalTime.of(9, 50))
         val v = runBlocking { OrbArms.view() }
         // ORB was cleared for Zerodha before the 06 Oct retirement: back on 07 Oct on paper only - Live takes the PIN again.
-        for (src in listOf("orb", "orb_fresh", "orb_sweep", "range_fade")) {
+        // (ORB Sweep, back on 07 Oct too, was then parked on 9 Oct: Boss's OK.)
+        assertTrue("ORB Sweep parked on 9 Oct", !v.arms.single { it.arm.source == "orb_sweep" }.armed)
+        assertEquals(com.optionslab.engine.orb.ParkedArms.PARKED, v.arms.single { it.arm.source == "orb_sweep" }.status)
+        for (src in listOf("orb", "orb_fresh", "range_fade")) {
             val a = v.arms.single { it.arm.source == src }
             assertTrue("$src back on", a.armed)
             assertTrue("$src automatic", a.automatic)
@@ -511,7 +519,9 @@ class OrbArmsDayTest : RobolectricTest() {
             .put("auto", org.json.JSONObject().put("liquidity5", true).put("orb_sweep", false))
             .put("liveOk", org.json.JSONObject().put("orb_sweep", false))
             .put("status", org.json.JSONObject().put("orb_sweep", "inside_range"))
-            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION))
+            // (9 Oct's parking marked done: this test is about the 07 Oct un-retirement alone.)
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "range_fade")
                 .put("symbol", "BANKNIFTY-ORB-${strike}PE").put("right", "PE").put("qty", 30).put("entry", 280.0)
                 .put("entryTime", t.minusMinutes(5).toString()).put("signalBar", t.minusMinutes(10).toString()))))

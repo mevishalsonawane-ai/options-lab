@@ -49,16 +49,17 @@ class WhatsNewChangelogTest {
             assertTrue(want in ids, want)
         // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
         // the day; the first one closes.
-        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES.first().id)
-        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[1].id)
-        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[2].id)
-        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[3].id)
-        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[4].id)
-        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[5].id)
-        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[6].id)
-        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[7].id)
-        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[8].id)
-        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[9].id)
+        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES.first().id)
+        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[1].id)
+        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[2].id)
+        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[3].id)
+        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[4].id)
+        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[5].id)
+        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[6].id)
+        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[7].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[9].id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[10].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
@@ -93,6 +94,25 @@ class WhatsNewChangelogTest {
         assertTrue("FinNifty breakdown" in x.what && "arm it again" in x.what, "E: the Pine script")
         assertTrue("Night (R3) on paper" in x.what && "Rs 207" in x.what && "Rs 150" in x.what && "not proven" in x.what, "F: the night arm")
         assertTrue("Strategies card" in x.where && "Night (R3) row" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theTwoNewPaperBotsAndTheParkingAreSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-two-paper-bots-and-parking" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        for (w in listOf("two new paper-only bots", "not proven", "off until you switch them on", "VIX divergence", "0.2%", "India VIX is up 2%",
+            "10:30, 11:30, 12:30 and 13:30, first signal only", "Rs 70 and Rs 112 a day", "failed the luck checks", "US-night silver",
+            "1 lot", "09:05", "Rs 1,189 a trade", "tripling year", "sells too", "3% disaster stop",
+            "Liquidity 15+5 FINNIFTY (−₹8,035 over 8 paper trades) and ORB Sweep (−₹4,498 over 6) were switched off on your OK",
+            "Switch them back on in Home → Strategies any time"))
+            assertTrue(w in x.what, w)
+        // At most 20 words a sentence, eight sentences.
+        val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
+        assertEquals(8, sentences.size, x.what)
+        for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
+        assertTrue("Strategies card" in x.where && "VIX divergence row" in x.where && "MCX (commodities)" in x.where &&
+            "Switch FINNIFTY back on" in x.where && "Liquidity 15+5 row" in x.where, x.where)
         assertNull(x.ask)
         assertFalse(x.gold)
     }
@@ -266,18 +286,18 @@ class WhatsNewChangelogTest {
         // Two days among the newest six: each line says its day.
         assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
+        assertEquals("• Two new paper bots, and two losing ones switched off (9 Oct): Home → Dashboard → Strategies card: the VIX divergence " +
+            "row, US-night silver under MCX (commodities), and Switch FINNIFTY back on under the Liquidity 15+5 row.", lines[1])
         assertEquals("• Three MCX ideas to try on paper, all off at first (9 Oct): Home → Dashboard → Strategies card → MCX (commodities). " +
-            "Settings → Bot settings → MCX expiry exit.", lines[1])
+            "Settings → Bot settings → MCX expiry exit.", lines[2])
         assertEquals("• MCX commodities: prices, charts, paper and expiry safety (9 Oct): Options tab → Commodities. Options tab → MCX row " +
-            "for the chains. Settings → Bot settings → MCX expiry exit.", lines[2])
+            "for the chains. Settings → Bot settings → MCX expiry exit.", lines[3])
         assertEquals("• Faster entries, 1 lot, and a paper night trade (8 Oct): Home → Dashboard → Strategies card (Liquidity's lots and " +
-            "the Night (R3) row). Pine scripts screen for the FinNifty script.", lines[3])
+            "the Night (R3) row). Pine scripts screen for the FinNifty script.", lines[4])
         assertEquals("• Paper fills now pay the bid/ask spread (8 Oct): Trade → Paper → tap a trade or an order (Bid/ask spread). " +
-            "Home → Dashboard → Strategies card, and the day report.", lines[4])
+            "Home → Dashboard → Strategies card, and the day report.", lines[5])
         assertEquals("• Safer exits, and a day lock at +Rs 8,000 (8 Oct): Settings → Bot settings → Day lock (+Rs 8,000 at first, off at 0) and the paper start date. " +
-            "Home → Dashboard → Strategies card shows both.", lines[5])
-        assertEquals("• Liquidity 15+5 goes first on an index (7 Oct): Home → Dashboard → Strategies card: an arm's row says when it " +
-            "waited for Liquidity, and the evening replay marks those trades.", lines[6])
+            "Home → Dashboard → Strategies card shows both.", lines[6])
 
         assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.

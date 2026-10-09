@@ -659,6 +659,8 @@ object Tasks {
         step("ORB arms") { com.optionslab.app.data.OrbArms.tick() }
         // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
         step("Night (R3)") { com.optionslab.app.data.NightArm.tick() }
+        // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
+        step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
@@ -1261,7 +1263,8 @@ class WatchService : Service() {
                 // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
                 // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so
                 // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
-                val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
+                    com.optionslab.app.data.VixDivArm.view.value.armed) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
                 val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
@@ -1287,6 +1290,13 @@ class WatchService : Service() {
                             throw e
                         } catch (e: Throwable) {
                             Tasks.stepFailed("bar-close entry check: Night (R3)", e)
+                        }
+                        try {
+                            com.optionslab.app.data.VixDivArm.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: VIX divergence", e)
                         }
                     } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
