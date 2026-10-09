@@ -83,7 +83,7 @@ object Protections {
             Alerts.error("The saved stops and targets could not be read and were set aside. Their orders may still be resting: check the order book.", "Protection")
         }
         cache = out
-        activeHint = out.any { it.active }
+        hint(out)
         return out
     }
 
@@ -93,6 +93,18 @@ object Protections {
      */
     @Volatile var activeHint: Boolean? = null
         private set
+
+    /** "EXCHANGE:SYMBOL" of the active live protections, as [activeHint] (round 2: followed on the stream, trailed from it). */
+    @Volatile var liveKeysHint: List<String> = emptyList()
+        private set
+
+    private fun hint(list: List<Item>) {
+        activeHint = list.any { it.active }
+        liveKeysHint = list.filter { it.active && it.live }.map { "${it.exchange}:${it.symbol}" }.distinct()
+    }
+
+    /** True while a fast look decides from the stream (round 2, set under [lock] by [tick]): Zerodha's books as last read. */
+    @Volatile private var streamLook = false
 
     private fun save(list: List<Item>) {
         val a = JSONArray()
@@ -105,7 +117,7 @@ object Protections {
         }
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
         cache = list.toMutableList()
-        activeHint = list.any { it.active }
+        hint(list)
     }
 
     suspend fun active(): List<Item> = lock.withLock { load().filter { it.active } }
@@ -280,9 +292,14 @@ object Protections {
      * position gone? cancel both; trailing? move the stop up to the new level.
      * Called by the market watch and while the app is open.
      */
-    suspend fun tick(fast: Boolean = false) = lock.withLock {
+    suspend fun tick(fast: Boolean = false, stream: Boolean = false) = lock.withLock {
+        streamLook = fast && stream
+        try { tickLocked(fast) } finally { streamLook = false }
+    }
+
+    private suspend fun tickLocked(fast: Boolean) {
         val list = load()
-        if (list.none { it.active }) return@withLock
+        if (list.none { it.active }) return
         warnIfBlind(list)
         var changed = false
         // [fast]: an event-driven look ([FastPath]). A change of the best price seen alone (a trail not yet moved) stays in
@@ -300,7 +317,6 @@ object Protections {
             save(list)
             trackedOnly = false
         }
-        Unit
     }
 
     /** A fast look left a best-price change in memory only ([tick]): the next regular look writes it. */
@@ -363,11 +379,13 @@ object Protections {
     private suspend fun tickLive(p: Item): Item {
         if (!Broker.loggedIn) return p
         if (p.note == REMOVING) return if (cancelOrders(p)) p.copy(active = false, note = "removed") else p
-        val rows = Broker.orders().associateBy { it.id }
+        // A stream look (round 2): Zerodha's books as last read (re-read after any change), the price from the fresh tick.
+        val stream = streamLook
+        val rows = (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id }
         val so = p.stopOrderId?.let { rows[it] }; val to = p.targetOrderId?.let { rows[it] }
         val stopDone = so?.status == "COMPLETE"; val targetDone = to?.status == "COMPLETE"
         suspend fun netNow(): Int? = runCatching {
-            Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
+            (if (stream) Broker.positionsRecon() else Broker.positionBook()).net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
         }.getOrNull()
         if (stopDone || targetDone) {
             // One-cancels-other: finished only once the other exit is confirmed gone, or it
@@ -425,7 +443,8 @@ object Protections {
         }
         if (cur.trail == null || so == null || !so.working) return cur
         val key = "${p.exchange}:${p.symbol}"
-        val ltp = Broker.quotes(listOf(key))[key]?.last ?: return cur
+        val streamed = if (stream) runCatching { Broker.tokenOf(key)?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } }.getOrNull() else null
+        val ltp = streamed ?: Broker.quotes(listOf(key))[key]?.last ?: return cur
         val n = Protection.next(cur.spec(), ltp)
         val ns = n.stop   // a local: the engine's property cannot be smart-cast across modules
         if (ns != null && ns != cur.stop && abs(ns - (cur.stop ?: 0.0)) >= p.tick - 1e-9) {
@@ -477,5 +496,5 @@ object Protections {
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
     suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
 
-    fun wipe() { cache = null; activeHint = null; if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; activeHint = null; liveKeysHint = emptyList(); if (::file.isInitialized) file.delete() }
 }

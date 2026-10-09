@@ -320,10 +320,18 @@ object OrbArms {
     @Volatile var armedHint: Boolean = false
         private set
 
+    /**
+     * Zerodha's trading symbols of the arms' open live positions, as [liveHint] (round 2): the event-driven checks follow
+     * them on the stream and decide their exits from its ticks.
+     */
+    @Volatile var liveSymbolsHint: List<String> = emptyList()
+        private set
+
     private fun hints(b: Book) {
         armedHint = ALL_ARMS.any { b.armed[it.source] == true }
         holdingHint = b.positions.any { it.open }
         liveHint = b.positions.any { it.open && it.live }
+        liveSymbolsHint = b.positions.filter { it.open && it.live }.mapNotNull { it.kite }.distinct()
         exposureHint = exposureOf(b)
         liquidityLotsHint = lotsOf(b)
     }
@@ -1107,13 +1115,15 @@ object OrbArms {
      * within 15 s, not on the next full pass. Under the arms' lock as the full pass: one sale in flight per position (a sold
      * position is closed; a failed sale is tried again).
      */
-    suspend fun priceCheckOnly(fast: Boolean = false) = lock.withLock {
+    suspend fun priceCheckOnly(fast: Boolean = false, stream: Boolean = false) = lock.withLock {
         val b = book(); val t = now()
         // [fast]: an event-driven look ([FastPath], up to several a second). A look that changed only the best or lowest
         // premium seen (peak, low: re-read from the stream's ticks anyway) keeps the book in memory and is written with the
         // next pass that saves it - no Keystore write per tick. Anything else (an exit, a stop moved, a sale) is written now.
+        // [stream] (round 2): every live position's contract has a fresh stream tick: its exits decide from the ticks and
+        // Zerodha's orders and positions as last read ([Broker.ordersRecon]); only an order goes over REST.
         val before = if (fast) untracked(b) else null
-        runCatching { priceCheck(b, t) }
+        runCatching { priceCheck(b, t, stream = fast && stream, regular = !fast) }
         runCatching { liquidityExits(b, t) }
         runCatching { liquidityNotices(b, t) }
         if (before != null && before == untracked(b)) { cache = b; hints(b) } else save(b)
@@ -1254,10 +1264,10 @@ object OrbArms {
     }
 
     /** Resting stop, +40 target, 15:10 exit, the 15:15 backstop and the operator stop, for every open position. */
-    private suspend fun priceCheck(b: Book, t: LocalDateTime) {
+    private suspend fun priceCheck(b: Book, t: LocalDateTime, stream: Boolean = false, regular: Boolean = true) {
         val stopped = Strategies.stoppedToday()
         val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
-        if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped) }
+        if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped, stream, regular) }
         val open = b.positions.withIndex().filter { it.value.open && !it.value.live }
         if (open.isEmpty()) return
         val orders = Paper.state.orders.associateBy { it.orderId }
@@ -1777,7 +1787,8 @@ object OrbArms {
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize * lots.coerceAtLeast(1), ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "iraorb")
-        val acct = Broker.accountNow()      // positions, funds and orders read in parallel
+        // Positions, funds and orders: the kept margins when fresh and roomy for this buy, else read now (in parallel).
+        val acct = Broker.accountNow(needed = last * o.quantity)
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = last), acct)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)
@@ -1866,12 +1877,15 @@ object OrbArms {
     }
 
     /** Stop, target, 15:10 and the operator stop for positions held at Zerodha. */
-    private suspend fun priceCheckLive(b: Book, t: LocalDateTime, open: List<IndexedValue<Position>>, stopped: Boolean) {
+    private suspend fun priceCheckLive(b: Book, t: LocalDateTime, open: List<IndexedValue<Position>>, stopped: Boolean,
+                                       stream: Boolean = false, regular: Boolean = true) {
         if (!Broker.loggedIn) return
-        val orders = Broker.orders().associateBy { it.id }
-        val net = Broker.positionBook().net
+        // [stream]: Zerodha's orders and positions as last read (under 20 s, nothing sent since, the stream live: else read
+        // now), and each price from the stream's fresh tick; a contract without one is quoted from Zerodha as before.
+        val orders = (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id }
+        val net = (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
-        val q = runCatching { Broker.quotes(keys) }.getOrDefault(emptyMap())
+        val q = runCatching { liveQuotes(keys, stream) }.getOrDefault(emptyMap())
         val drop = ArrayList<Int>()
         for ((i, p) in open) {
             val sym = p.kite ?: continue
@@ -1914,6 +1928,13 @@ object OrbArms {
             if (ltp == null) continue
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
+            // "Keep a stop-loss order at the exchange" (Settings → Zerodha, off unless chosen): a position whose stop is not
+            // resting at Zerodha (it could not be placed, or was refused or cancelled) gets it placed again at the arm's own
+            // level on the regular pass - never on a fast look, at most once a minute - while the price is still above it.
+            if (regular && cur.stopOrderId == null && held > 0) {
+                val rested = runCatching { restExchangeStop(b, cur, sym, held, ltp, tick) }.getOrNull()
+                if (rested != null) { b.positions[i] = rested; continue }
+            }
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms only.
             val leg = b.legs?.let { l -> listOf(l.ce, l.pe) }?.firstOrNull { it.symbol == cur.symbol }
@@ -1946,6 +1967,46 @@ object OrbArms {
             rest?.let { b.positions += it }
         }
         drop.sortedDescending().forEach { b.positions.removeAt(it) }
+    }
+
+    /**
+     * The prices of [keys] ("NFO:SYMBOL"): [stream] - each from its fresh stream tick (2 s), the rest from Zerodha's quote
+     * (the REST fallback, which itself answers from a tick up to 5 s old); else [Broker.quotes] as before.
+     */
+    private suspend fun liveQuotes(keys: List<String>, stream: Boolean): Map<String, Broker.Quote> {
+        if (!stream) return Broker.quotes(keys)
+        val out = HashMap<String, Broker.Quote>()
+        for (k in keys) {
+            val tok = runCatching { Broker.tokenOf(k) }.getOrNull() ?: continue
+            val tk = KiteStream.freshTick(tok) ?: continue
+            if (tk.last > 0) out[k] = Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume)
+        }
+        val rest = keys.filter { it !in out }
+        if (rest.isNotEmpty()) out.putAll(Broker.quotes(rest))
+        return out
+    }
+
+    /** When each position's exchange stop was last placed again ([restExchangeStop]): at most once a minute each. */
+    private val restoppedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * The exchange stop placed again for [p] (held [held] at Zerodha, price [ltp]) when the owner keeps one there
+     * ([AppSettings.exchangeStops]): at the lock its best price earned when above its own trigger, else its trigger; only
+     * while the price is above that level (a sell stop must rest below the price - at or under it the app's own check sells).
+     * Null when nothing was placed (the setting off, too soon, no level, or Zerodha refused: the app keeps watching it).
+     */
+    private suspend fun restExchangeStop(b: Book, p: Position, sym: String, held: Int, ltp: Double, tick: Double): Position? {
+        if (!runCatching { AppSettings.load().exchangeStops }.getOrDefault(false)) return null
+        val key = "${p.arm}|$sym|${p.entryTime}"
+        val now = System.currentTimeMillis()
+        if (now - (restoppedAt[key] ?: 0L) < 60_000L) return null
+        restoppedAt[key] = now
+        val level = lockOrStop(p, tick) ?: p.stopTrigger ?: return null
+        if (ltp <= level + tick) return null
+        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return null
+        val (id, trig) = placeStop(armOf(p.arm).label, sym, minOf(p.qty, held), spec.lotSize, spec.tickSize, p.entry, knownKite(b),
+            liquidity = armOf(p.arm).liquidity, at = level)
+        return if (id == null) null else p.copy(stopOrderId = id, stopTrigger = trig ?: level)
     }
 
     /**
@@ -1992,8 +2053,11 @@ object OrbArms {
             return p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger) to null
         }
         p.stopOrderId?.let { id ->
+            // The resting exchange stop comes out FIRST (timed for the order speed card); one that already filled is the exit.
+            val c0 = System.currentTimeMillis()
             runCatching { Broker.cancel(id) }
             val st = runCatching { Broker.orderState(id) }.getOrNull()
+            runCatching { OrderTiming.stopCancel(System.currentTimeMillis() - c0) }
             if (st?.status == "COMPLETE") {
                 val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
                 return p.copy(exit = px, exitTime = now(), why = if (lockedStop(p)) "profit_lock" else "stop", stopOrderId = null,
@@ -2356,7 +2420,10 @@ object OrbArms {
             else -> testOtherIndexBars?.invoke(underlying, t).orEmpty()
         }
         val today = toBars(raw).filter { it.start.toLocalDate() == day }
-        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (!testing && keep) liquidityPass[underlying] = minute to it }
+        // Kept as this minute's read only once it has the minute just closed (round 2: a look at the close itself, before the
+        // feed or the stream has that minute, is read again by the next look rather than kept for the rest of the minute).
+        val whole = today.lastOrNull()?.start?.let { !it.isBefore(minute.minusMinutes(1)) } == true
+        return (hist + today).distinctBy { it.start }.sortedBy { it.start }.also { if (!testing && keep && whole) liquidityPass[underlying] = minute to it }
     }
 
     // ---- data ------------------------------------------------------------------
@@ -2380,14 +2447,14 @@ object OrbArms {
      * Zerodha's stream, when the stream streams the index (08 Oct, research X1 change 2: a bar is decided within seconds
      * of its close, not when the feed catches up). Without the stream, [raw] as before. Never throws.
      */
-    private fun streamed(underlying: String, raw: List<Upstox.Bar>, t: LocalDateTime): List<Upstox.Bar> = runCatching {
-        val token = Broker.indexKey(underlying)?.let { Broker.tokenOf(it) } ?: return raw
-        val today = raw.filter { it.istDate == t.toLocalDate() }
-        if (today.isEmpty()) return raw
+    private suspend fun streamed(underlying: String, raw: List<Upstox.Bar>, t: LocalDateTime): List<Upstox.Bar> {
+        // Round 2: the local candles by the exchange's stamp ([LocalCandles]): added only when whole and without a gap after
+        // the feed's last minute; otherwise the feed's own candles, as before.
+        val key = LiquidityRules.INDEX_KEYS[underlying] ?: Upstox.INDEX_KEYS[underlying] ?: return raw
+        if (raw.none { it.istDate == t.toLocalDate() }) return raw
         val nowSec = t.atZone(com.optionslab.engine.IST).toEpochSecond()
-        val done = com.optionslab.engine.orb.BarClose.complete(today, nowSec) { s -> KiteStream.minuteBar(token, s * 1000) }
-        if (done.size == today.size) raw else raw + done.drop(today.size)
-    }.getOrDefault(raw)
+        return runCatching { LocalCandles.overlay(key, raw, nowSec) }.getOrDefault(raw)
+    }
 
     /**
      * The indices the armed arms read, followed on Zerodha's stream while it runs (the "index" owner never starts it on
@@ -2522,7 +2589,7 @@ object OrbArms {
     }
 
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; liveHint = false; exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
+        cache = null; holdingHint = false; liveHint = false; liveSymbolsHint = emptyList(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         if (::file.isInitialized) file.delete()
     }
 }

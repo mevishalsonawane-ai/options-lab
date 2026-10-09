@@ -343,10 +343,14 @@ object McxPaperArms {
 
     private fun nowSec(): Long = Market.now().toEpochSecond()
 
-    /** Today's finished 1-minute bars of [key] (the paper feed's), oldest first. */
+    /**
+     * Today's finished 1-minute bars of [key] (the paper feed's), oldest first; round 2: with the minutes the feed has not
+     * published yet built from the stream when whole and gap-free ([LocalCandles]), so the arms decide at the close.
+     */
     private suspend fun minutes(key: String, now: LocalDateTime): List<Upstox.Bar> {
         val nowSec = now.atZone(IST).toEpochSecond()
-        return Net.intraday(key).filter { it.istDate == now.toLocalDate() && it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
+        val feed = Net.intraday(key).filter { it.istDate == now.toLocalDate() && it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
+        return LocalCandles.overlay(key, feed, nowSec).filter { it.istDate == now.toLocalDate() && it.epochSecond + 60 <= nowSec }
     }
 
     private fun minuteOf(t: LocalDateTime): Int = t.hour * 60 + t.minute

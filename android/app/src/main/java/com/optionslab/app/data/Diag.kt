@@ -66,8 +66,10 @@ object Diag {
     /** Keep one event: "[area] text", time-stamped (IST) now, written in the background. Never throws. */
     fun record(area: String, text: String) {
         if (!::file.isInitialized) return
-        val line = "${TIME.format(Instant.now())} [$area] ${redact(text.replace('\n', ' '))}"
-        runCatching { writer.execute { keep(line) } }
+        // Redacted on the diary's own thread (round 2): the caller - an order being sent - never waits on the vault read it
+        // makes for the account holder's name.
+        val head = "${TIME.format(Instant.now())} [$area] "
+        runCatching { writer.execute { keep(head + redact(text.replace('\n', ' '))) } }
     }
 
     @Synchronized

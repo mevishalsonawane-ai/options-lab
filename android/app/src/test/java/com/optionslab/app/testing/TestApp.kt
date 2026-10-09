@@ -88,5 +88,8 @@ class TestApp : Application() {
         // The event-driven checks and the order-speed figures of an earlier test (in memory only).
         com.optionslab.app.data.FastPath.resetForTest()
         com.optionslab.app.data.OrderTiming.forget()
+        // Round 2: the order path's in-memory session and kept reads, and the stream's local candles, of an earlier test.
+        com.optionslab.app.data.Broker.resetForTest()
+        com.optionslab.app.data.KiteStream.candles.clear()
     }
 }

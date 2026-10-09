@@ -48,7 +48,7 @@ internal fun OrderSpeedCard() {
 internal fun OrderSpeedContent(card: OrderTiming.Card?, relayOn: Boolean, region: String?) {
     val p = LocalPalette.current
     LedgerCard(title = ORDER_SPEED_TITLE, accent = if (card?.warnings?.isNotEmpty() == true) p.amber else null) {
-        Note("From a signal to Zerodha's fill, step by step, today: typical (median) and worst (95th percentile).")
+        Note("From a signal to Zerodha's fill, step by step, today: p50 (typical, the median) and p95 (the worst one in twenty); where each decision's price came from; the price stream's drops.")
         if (card == null) { Note("Reading…"); return@LedgerCard }
         card.warnings.forEach { w ->
             Text("⚠ $w", style = Type.bodySmall.copy(color = p.oxblood), modifier = Modifier.padding(vertical = 2.dp))

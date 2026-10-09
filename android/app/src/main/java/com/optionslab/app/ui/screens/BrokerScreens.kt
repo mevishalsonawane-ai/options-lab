@@ -763,6 +763,13 @@ fun BrokerPage(
                     ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
                         if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
                     }
+                    ToggleRow("Keep a stop-loss order at the exchange for live positions",
+                        "The bots already rest each live position's stop at Zerodha after the buy. With this on, a stop that could not be " +
+                            "placed, or that Zerodha refused or cancelled, is placed again at the bot's own level on the next check, so " +
+                            "Zerodha sells at the stop even if the phone is slow or off. The app takes it out before any exit of its own. " +
+                            "Live only; paper keeps its own stops.", s.exchangeStops) { on ->
+                        model.update { it.copy(exchangeStops = on) }
+                    }
                     ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
                     if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
                     // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.

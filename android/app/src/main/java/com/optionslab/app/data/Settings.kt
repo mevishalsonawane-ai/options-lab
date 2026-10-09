@@ -55,6 +55,12 @@ data class AppSettings(
     val orderProduct: String = "NRML",
     /** Live orders without PIN: the review's confirm sends it (and a cancel, square-off or protect) - no PIN or fingerprint. The owner's choice. */
     val oneTapOrders: Boolean = false,
+    /**
+     * "Keep a stop-loss order at the exchange for live positions" (Settings → Zerodha; off unless the owner chooses it):
+     * a live arm position whose stop is not resting at Zerodha (it could not be placed, or was refused or cancelled) gets
+     * it placed again at the arm's own level, so Zerodha triggers it with no phone in the loop. Only lowers risk; live only.
+     */
+    val exchangeStops: Boolean = false,
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
@@ -166,6 +172,7 @@ data class AppSettings(
                 allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders) || p.getString("k.mode", d.mode) == "live",
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
                 oneTapOrders = p.getBoolean("k.oneTap", d.oneTapOrders),
+                exchangeStops = p.getBoolean("k.exStop", d.exchangeStops),
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
@@ -203,7 +210,7 @@ data class AppSettings(
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
-                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.exStop" to s.exchangeStops, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,

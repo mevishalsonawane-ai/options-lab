@@ -36,7 +36,14 @@ object KitePin {
     @Volatile var mismatch: Boolean = false
         private set
 
-    val pins: List<String> get() = SecurePrefs.getString(K_PINS)?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+    /** The pinned CAs, kept in memory (round 2: a new connection's handshake reads no vault); re-read when the vault changes. */
+    @Volatile private var pinsKept: Pair<Int, List<String>>? = null
+
+    val pins: List<String> get() {
+        val g = SecurePrefs.generationHint
+        pinsKept?.let { (gen, l) -> if (gen == g) return l }
+        return (SecurePrefs.getString(K_PINS)?.split(",")?.filter { it.isNotBlank() } ?: emptyList()).also { pinsKept = g to it }
+    }
     val since: Long get() = SecurePrefs.getLong(K_SINCE, 0L)
 
     /** Forget the pins; the next connection learns them again. The UI asks for the PIN first. */

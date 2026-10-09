@@ -201,10 +201,14 @@ object VixDivArm {
     private fun chargesOf(orderId: String?): Double =
         if (orderId == null) 0.0 else Paper.state.trades.filter { it.orderId == orderId }.sumOf { it.charges.toDouble() }
 
-    /** Today's finished 1-minute bars of [key] (the paper feed's), oldest first. */
+    /**
+     * Today's finished 1-minute bars of [key] (the paper feed's), oldest first; round 2: with the minutes the feed has not
+     * published yet built from the stream when whole and gap-free ([LocalCandles]), so the check decides at the close.
+     */
     private suspend fun minutes(key: String, now: LocalDateTime): List<Upstox.Bar> {
         val nowSec = now.atZone(com.optionslab.engine.IST).toEpochSecond()
-        return Net.intraday(key).filter { it.istDate == now.toLocalDate() && it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
+        val feed = Net.intraday(key).filter { it.istDate == now.toLocalDate() && it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
+        return LocalCandles.overlay(key, feed, nowSec).filter { it.istDate == now.toLocalDate() && it.epochSecond + 60 <= nowSec }
     }
 
     /** Whether the bot is stopped for today (Boss's stop, or the daily loss limit). Unknown counts as stopped. */

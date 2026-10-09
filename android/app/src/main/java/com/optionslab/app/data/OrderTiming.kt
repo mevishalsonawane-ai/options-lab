@@ -21,10 +21,18 @@ object OrderTiming {
      * ([triggerMs]) and the exchange's stamp of its price ([exchMs], null when unknown). [decidedAt] is set by the first
      * [decided] in that run. Carried in the coroutine context, so an order placed anywhere under it is timed from it.
      */
-    class Trigger(val triggerMs: Long, val exchMs: Long?) : AbstractCoroutineContextElement(Trigger) {
+    class Trigger(val triggerMs: Long, val exchMs: Long?, source: OrderSpeed.Source = OrderSpeed.Source.FEED) :
+        AbstractCoroutineContextElement(Trigger) {
         companion object Key : CoroutineContext.Key<Trigger>
         @Volatile var startedAt: Long = System.currentTimeMillis()
         @Volatile var decidedAt: Long = 0L
+        /**
+         * Where this run's prices came from (round 2): a stream tick, a local candle built from ticks, or the candle feed /
+         * Zerodha's quote. Set by [FastPath] per lane, and lowered to the feed by [candles] when an arm had to read it.
+         */
+        @Volatile var source: OrderSpeed.Source = source
+        /** An arm told where its candles came from in this run ([candles]): the first word sets it, a feed read lowers it. */
+        @Volatile var candlesTold: Boolean = false
     }
 
     private val lock = Any()
@@ -53,11 +61,45 @@ object OrderTiming {
         runCatching { SecurePrefs.putAllLazy(mapOf(KEY to text)) }
     }
 
-    /** The arm in the current run decided to trade now (the first call counts). Safe anywhere; a no-op outside a [Trigger]. */
+    /**
+     * The arm in the current run decided to trade now (the first call counts, and is counted by where its price came from:
+     * the card's "decided from the stream / a local candle / the feed"). Safe anywhere; a no-op outside a [Trigger].
+     */
     suspend fun decided() {
         val t = currentCoroutineContext()[Trigger] ?: return
-        if (t.decidedAt == 0L) t.decidedAt = System.currentTimeMillis()
+        if (t.decidedAt == 0L) {
+            t.decidedAt = System.currentTimeMillis()
+            count(t.source)
+        }
     }
+
+    /** One decision taken on a price from [src] (memory; written with the next order step). */
+    private fun count(src: OrderSpeed.Source) {
+        synchronized(lock) { bookLocked().decidedFrom(src) }
+    }
+
+    /**
+     * The candles an arm read in the current run came from [src] ([OrderSpeed.Source.LOCAL_CANDLE] or
+     * [OrderSpeed.Source.FEED]): the first word sets the run's source; a later read from the feed lowers it to the feed
+     * (the slower source is the one said). Safe anywhere; a no-op outside a [Trigger].
+     */
+    suspend fun candles(src: OrderSpeed.Source) {
+        val t = currentCoroutineContext()[Trigger] ?: return
+        if (!t.candlesTold) { t.candlesTold = true; t.source = src }
+        else if (src == OrderSpeed.Source.FEED) t.source = src
+    }
+
+    /** A live entry's margin check took [ms] (the kept snapshot, or Zerodha's read when it was needed). */
+    fun marginCheck(ms: Long) = add(OrderSpeed.Step.MARGIN_CHECK, true, ms, keep = true)
+
+    /** A resting exchange stop was cancelled (and confirmed gone) in [ms] before an app exit. */
+    fun stopCancel(ms: Long) = add(OrderSpeed.Step.STOP_CANCEL, true, ms, keep = true)
+
+    /** The price stream was down [ms] (from the drop to the first tick after it). In memory; written with the next step. */
+    fun streamGap(ms: Long) = add(OrderSpeed.Step.STREAM_GAP, false, ms, keep = false)
+
+    /** The price stream dropped. In memory; written with the next order step. */
+    fun streamDropped() { synchronized(lock) { bookLocked().dropped() } }
 
     /**
      * An order's request starts now ([live] Zerodha, else paper): signal → decision, decision → sent and signal → sent from

@@ -26,8 +26,33 @@ object SecurePrefs {
     @Volatile var unreadable: Boolean = false
         private set
 
+    /**
+     * [generation], readable without this object's lock (round 2): a caller that keeps vault values in memory for the order
+     * path (Broker's session, the relay switch, the pinned certificates) drops them when it changes. Bumped by [init],
+     * [wipe] and [reload].
+     */
+    @Volatile var generationHint: Int = 0
+        private set
+
+    /**
+     * TEST ONLY: how many settings reads [countedThread] made ([getString] and the other getters), to prove the order path
+     * makes none. Null in the app, always (one volatile read per get); never read by the app.
+     */
+    internal val readsForTest = java.util.concurrent.atomic.AtomicLong()
+    @Volatile internal var countedThread: Thread? = null
+
+    private fun counted() { val t = countedThread; if (t != null && t === Thread.currentThread()) readsForTest.incrementAndGet() }
+
+    /** The settings kept in memory for the order path elsewhere (and the kill switch, which clears them): a write bumps [generationHint]. */
+    private val HOT = setOf("kite.apiKey", "kite.accessToken", "kite.loginAt", "kite.userName", "relay.on", "k.staticIp", "g.kill")
+
+    /** Under this object's lock: [keys] include a kept-elsewhere setting (or a pinned certificate set): [generationHint] bumped. */
+    private fun touched(keys: Collection<String>) {
+        if (keys.any { it in HOT || it.startsWith("tls.") }) generationHint++
+    }
+
     fun init(context: Context) {
-        synchronized(ioLock) { synchronized(this) { generation++; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }
+        synchronized(ioLock) { synchronized(this) { generation++; generationHint = generation; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }
         file = File(context.noBackupFilesDir, "prefs.vault")
     }
 
@@ -57,6 +82,7 @@ object SecurePrefs {
      */
     @Synchronized fun putAllSoon(values: Map<String, Any?>) {
         if (unchanged(values)) return
+        touched(values.keys)
         val m = map()
         for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
         if (pending) return
@@ -92,6 +118,7 @@ object SecurePrefs {
      */
     @Synchronized fun putAllLazy(values: Map<String, Any?>, delayMs: Long = LAZY_MS) {
         if (unchanged(values)) return
+        touched(values.keys)
         val m = map()
         for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
         lazyDirty = true
@@ -191,7 +218,7 @@ object SecurePrefs {
     /** Drop the cache and read the file again (the "try again" on the unreadable-vault screen). */
     fun reload(): Boolean {
         flush()
-        synchronized(this) { cache = null; unreadable = false; map(); return !unreadable }
+        synchronized(this) { cache = null; unreadable = false; generationHint++; map(); return !unreadable }
     }
 
     /** The map as it is now, copied out to be written; null when nothing may be written (an unreadable vault). */
@@ -221,15 +248,16 @@ object SecurePrefs {
     }
 
 
-    @Synchronized fun getString(k: String, d: String? = null): String? = map().optString(k, "").ifEmpty { d }
-    @Synchronized fun getBoolean(k: String, d: Boolean): Boolean = if (map().has(k)) map().optBoolean(k, d) else d
-    @Synchronized fun getInt(k: String, d: Int): Int = if (map().has(k)) map().optInt(k, d) else d
-    @Synchronized fun getLong(k: String, d: Long): Long = if (map().has(k)) map().optLong(k, d) else d
-    @Synchronized fun getDouble(k: String, d: Double): Double = if (map().has(k)) map().optDouble(k, d) else d
+    @Synchronized fun getString(k: String, d: String? = null): String? { counted(); return map().optString(k, "").ifEmpty { d } }
+    @Synchronized fun getBoolean(k: String, d: Boolean): Boolean { counted(); return if (map().has(k)) map().optBoolean(k, d) else d }
+    @Synchronized fun getInt(k: String, d: Int): Int { counted(); return if (map().has(k)) map().optInt(k, d) else d }
+    @Synchronized fun getLong(k: String, d: Long): Long { counted(); return if (map().has(k)) map().optLong(k, d) else d }
+    @Synchronized fun getDouble(k: String, d: Double): Double { counted(); return if (map().has(k)) map().optDouble(k, d) else d }
 
     fun put(k: String, v: Any?) {
         val snap = synchronized(this) {
             if (unchanged(mapOf(k to v))) return
+            touched(listOf(k))
             if (v == null) map().remove(k) else map().put(k, v)
             copyOut()
         } ?: return
@@ -239,6 +267,7 @@ object SecurePrefs {
     fun putAll(values: Map<String, Any?>) {
         val snap = synchronized(this) {
             if (unchanged(values)) return
+            touched(values.keys)
             val m = map()
             for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
             copyOut()
@@ -259,7 +288,7 @@ object SecurePrefs {
         // After any write in progress (a write finishing after the delete would bring the old vault back).
         synchronized(ioLock) {
             synchronized(this) {
-                generation++; pending = false; lazyDirty = false; lazyTask = 0L
+                generation++; generationHint = generation; pending = false; lazyDirty = false; lazyTask = 0L
                 cache = JSONObject()
                 unreadable = false
                 writtenSeq = seq

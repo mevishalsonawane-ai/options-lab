@@ -339,6 +339,15 @@ object PineAuto {
     /** Whether any script holds an option now (as of the last load or save; read without the lock): the 15-second check runs. */
     fun holding(): Boolean = _held.value.isNotEmpty()
 
+    /** Zerodha's trading symbols of the confirmed live holdings (round 2: followed on the stream, their exits decided from it). */
+    fun liveSymbols(): List<String> = _held.value.values.filter { it.live && !it.unconfirmed }.mapNotNull { it.kite }.distinct()
+
+    /**
+     * True while a fast look decides from the stream (round 2, set under [lock] by [watchOnly]): Zerodha's orders as last
+     * read ([Broker.ordersRecon]) and the stream's fresh tick for the price; only an order goes over REST.
+     */
+    @Volatile private var streamLook = false
+
     /**
      * The 15-second check between full passes (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3): only the money exits of what
      * the scripts hold - a resting stop that filled, the stop-loss, the target, the profit lock (the resting stop moved up),
@@ -346,14 +355,19 @@ object PineAuto {
      * the same lock as [tick], so one holding never has two sells in flight; a holding the full pass must settle (a live
      * buy not yet confirmed, a script no longer on) is left to it.
      */
-    suspend fun watchOnly(fast: Boolean = false) = lock.withLock {
+    suspend fun watchOnly(fast: Boolean = false, stream: Boolean = false) = lock.withLock {
+        streamLook = fast && stream
+        try { watchOnlyLocked(fast) } finally { streamLook = false }
+    }
+
+    private suspend fun watchOnlyLocked(fast: Boolean) {
         val b = book()
-        if (b.held.isEmpty()) return@withLock
+        if (b.held.isEmpty()) return
         // [fast]: an event-driven look ([FastPath]). Only the best premium seen changed (peak): kept in memory and written with
         // the next save, never a Keystore write per tick; a stop moved, a sale or a note is written now as before.
         val before = if (fast) untracked(b) else null
         // A restore not yet disarmed: the full pass sells what is held.
-        if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) return@withLock
+        if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) return
         val stopped = dayStopped()
         val all = PineScripts.items.value
         val t = clock()
@@ -375,6 +389,9 @@ object PineAuto {
         }
         if (before != null && before == untracked(b)) { cache = b; publish(b) } else save(b)
     }
+
+    /** Zerodha's orders: the kept read on a stream look ([streamLook]), else read now. */
+    private suspend fun kiteOrders(): List<Broker.OrderRow> = if (streamLook) Broker.ordersRecon() else Broker.orders()
 
     /** What a fast look may leave unsaved: [b]'s holdings without their best premium seen, and its log's length. */
     private fun untracked(b: Book): Pair<Map<Long, Held>, Int> = b.held.mapValues { it.value.copy(peak = 0.0) } to b.log.size
@@ -512,7 +529,11 @@ object PineAuto {
 
     /** The held option's last price, paper or Zerodha. */
     private suspend fun optionLtp(h: Held): Double? = if (!h.live) Paper.contractOf(h.symbol)?.let { Paper.lastPrice(it) }
-        else h.kite?.let { sym -> if (!Broker.loggedIn) null else Broker.quotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 } }
+        else h.kite?.let { sym ->
+            if (!Broker.loggedIn) null
+            else (if (streamLook) Broker.tokenOf("NFO:$sym")?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } else null)
+                ?: Broker.quotes(listOf("NFO:$sym"))["NFO:$sym"]?.last?.takeIf { it > 0 }
+        }
 
     // ---- the stop-loss and the profit lock as a resting stop (08 Oct, research/PROFIT_LOCK_8OCT.md fixes 1 and 3) ----------
 
@@ -626,7 +647,7 @@ object PineAuto {
         }
         val sym = h.kite ?: return h
         if (!Broker.loggedIn) return h
-        val so = runCatching { Broker.orders() }.getOrNull()?.firstOrNull { it.id == sid } ?: return h
+        val so = runCatching { kiteOrders() }.getOrNull()?.firstOrNull { it.id == sid } ?: return h
         if (!so.working) return h
         val r = runCatching {
             if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, to) else Broker.modify(so, so.qty, "SL", stopLimit(to, tick), to)
@@ -707,7 +728,7 @@ object PineAuto {
             return false
         }
         if (!Broker.loggedIn) return false
-        val so = runCatching { Broker.orders() }.getOrNull()?.firstOrNull { it.id == sid } ?: return false
+        val so = runCatching { kiteOrders() }.getOrNull()?.firstOrNull { it.id == sid } ?: return false
         when (so.status) {
             "COMPLETE" -> {
                 bookStop(b, id, item, h, so.avg.takeIf { it > 0 } ?: h.stopAt ?: h.entry, so.filled.takeIf { it > 0 } ?: h.qty, sid)

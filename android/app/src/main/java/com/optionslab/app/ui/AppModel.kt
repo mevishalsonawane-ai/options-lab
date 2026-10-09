@@ -31,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -1818,7 +1819,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         else -> 300_000
     }
 
-    fun loadPaper(quiet: Boolean = false) {
+    /**
+     * Round 2 (Boss: "everything live"): an open paper page waits for the next price on Zerodha's stream (the stream's
+     * version moves at most every 250 ms) when the stream is live, else [paperRefreshMs] - the fallback for prices the
+     * stream does not carry or when it is down. Returns true when a tick woke it (the light re-mark is enough).
+     */
+    suspend fun paperWait(): Boolean {
+        val st = com.optionslab.app.data.KiteStream
+        val ms = paperRefreshMs()
+        // Only when every paper holding streams (else a tick-paced re-mark would read the candle feed): read off the screen's thread.
+        val covered = st.status.value == com.optionslab.app.data.KiteStream.Status.LIVE && kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.data.Paper.streamCover().covered }.getOrDefault(false)
+        }
+        if (!covered) { kotlinx.coroutines.delay(ms); return false }
+        val seen = st.version.value
+        return kotlinx.coroutines.withTimeoutOrNull(ms) { st.version.first { it != seen } } != null
+    }
+
+    fun loadPaper(quiet: Boolean = false, light: Boolean = false) {
         // A quiet refresh while the last one is still running is not started beside it (the fast re-pricing never
         // piles up); it runs once as soon as that one ends, so what an order just changed is always read.
         if (quiet && paper.value is Load.Done) {
@@ -1834,8 +1852,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // With a Zerodha session the paper account is priced from its live stream.
                 runCatching { com.optionslab.app.data.KiteStream.ensure() }
                 runCatching { com.optionslab.app.data.Paper.tick() }
-                runCatching { com.optionslab.app.data.Protections.tick(); protections.value = com.optionslab.app.data.Protections.active() }
-                runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
+                // [light]: a re-mark woken by a stream tick (up to four a second): the paper book only; the stops' own check
+                // and the owners' labels keep their every-2-seconds pace (never a Zerodha read per tick).
+                if (!light) {
+                    runCatching { com.optionslab.app.data.Protections.tick(); protections.value = com.optionslab.app.data.Protections.active() }
+                    runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
+                }
                 val snap = com.optionslab.app.data.Paper.snapshot()
                 recordPaperDay(snap)
                 runCatching { com.optionslab.app.widget.OpenWidget.fromPaper(ctx, snap) }

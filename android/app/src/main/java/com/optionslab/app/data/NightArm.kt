@@ -175,6 +175,9 @@ object NightArm {
                     if (key in b.decided) continue
                     b.decided += key
                     val why = runCatching { decide(b, u, now) }.getOrElse { "error: ${it.javaClass.simpleName}" }
+                    // The 15:19 minute not in yet (a look at the close itself, before the feed or the stream has it): looked at
+                    // again on the next check, not decided on the minute before.
+                    if (why == WAITING) { b.decided -= key; continue }
                     b.status[u] = why
                     note(b, "$u ${now.toLocalTime().withNano(0)}: $why")
                     changed = true
@@ -230,13 +233,20 @@ object NightArm {
         return n
     }
 
+    /** [decide]'s word for "the 15:19 minute is not in yet": nothing decided, looked at again (until 15:20:30). */
+    private const val WAITING = "night_waiting_for_1519"
+
     /** 15:20's decision for [u]: what it did, in a few words. Records the day's build-up once. */
     private suspend fun decide(b: Book, u: String, now: LocalDateTime): String {
         val today = now.toLocalDate()
         // The index's minutes to 15:19, and the previous session's close.
         val key = Upstox.INDEX_KEYS[u] ?: return "night_no_index_data"
-        val mins = Net.intraday(key).filter { it.istDate == today && it.istMinute <= 15 * 60 + 19 }.sortedBy { it.epochSecond }
+        // Round 2: the feed's minutes with the ones it has not published yet built from the stream when whole and gap-free.
+        val nowSec = now.atZone(com.optionslab.engine.IST).toEpochSecond()
+        val feedMins = Net.intraday(key).filter { it.istDate == today && it.epochSecond + 60 <= nowSec }.sortedBy { it.epochSecond }
+        val mins = LocalCandles.overlay(key, feedMins, nowSec).filter { it.istDate == today && it.istMinute <= 15 * 60 + 19 }
         val last = mins.lastOrNull() ?: return "night_no_index_data"
+        if (last.istMinute < 15 * 60 + 19 && now.toLocalTime().isBefore(java.time.LocalTime.of(15, 20, 30))) return WAITING
         val prev = Net.history(key, today.minusDays(10), today.minusDays(1)).filter { it.istDate.isBefore(today) }.maxByOrNull { it.epochSecond }
             ?: return "night_no_previous_close"
         val x = last.close

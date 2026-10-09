@@ -51,6 +51,7 @@ import com.optionslab.engine.options.Payoff
 import com.optionslab.engine.options.Side
 import com.optionslab.engine.options.StrategyTemplates
 import java.util.Locale
+import kotlinx.coroutines.flow.first
 
 private fun f2(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 private fun f1(x: Double) = String.format(Locale.ENGLISH, "%,.1f", x)
@@ -101,8 +102,16 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
     val streaming = s.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     // Battery (round 6): only while the app is in front - a plain LaunchedEffect kept pricing the chain (two Zerodha
     // calls every 5 s) with the screen off and the Options tab last open; it resumes on return.
+    // Round 2: re-priced on the stream's next price (at most once a second: the chain's analytics are re-run each time),
+    // 5 s at the latest as before. The prices come from the ticks in memory; no quote call is added.
     com.optionslab.app.ui.PollWhileStarted(underlying, streaming) {
-        while (streaming) { kotlinx.coroutines.delay(5_000); model.loadTools(underlying, quiet = true) }
+        val version = com.optionslab.app.data.KiteStream.version
+        while (streaming) {
+            val seen = version.value
+            kotlinx.coroutines.withTimeoutOrNull(5_000) { version.first { it != seen } }
+            model.loadTools(underlying, quiet = true)
+            kotlinx.coroutines.delay(1_000)
+        }
     }
     Page {
         item { PageTitle("Options", "Option chain, analytics, the strategy builder and the Expiry Put strategy") }

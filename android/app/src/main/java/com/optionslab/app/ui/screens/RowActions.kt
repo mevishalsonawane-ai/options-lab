@@ -95,9 +95,14 @@ fun RowActionPopup(model: AppModel) {
     val paperTarget = t is RowTarget.PaperPosition || t is RowTarget.PaperOrder || t is RowTarget.PaperTrade
     com.optionslab.app.ui.PollWhileStarted(paperTarget) {
         if (!paperTarget) return@PollWhileStarted
+        var full = 0L
+        var light = false
         while (true) {
-            model.loadPaper(quiet = true)
-            kotlinx.coroutines.delay(model.paperRefreshMs())
+            val now = System.currentTimeMillis()
+            val heavy = !light || now - full >= 2_000
+            if (heavy) full = now
+            model.loadPaper(quiet = true, light = !heavy)
+            light = model.paperWait()
         }
     }
     fun close() { model.rowAction.value = null }

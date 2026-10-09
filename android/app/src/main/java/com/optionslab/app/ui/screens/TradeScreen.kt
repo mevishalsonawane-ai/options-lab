@@ -83,11 +83,18 @@ fun TradeScreen(model: AppModel) {
     var resetting by remember { mutableStateOf(false) }
 
     // Sandbox: the paper engine runs its jobs against fresh public prices.
+    // Round 2: on every stream price (at most four times a second) while Zerodha's stream is live; the full refresh (the
+    // stops' check, the owners' labels) every 2 s; without the stream, every 10 s as before.
     com.optionslab.app.ui.PollWhileStarted(s.live) {
         if (s.live) return@PollWhileStarted
+        var full = 0L
+        var light = false
         while (true) {
-            model.loadPaper(quiet = true)
-            delay(model.paperRefreshMs())
+            val now = System.currentTimeMillis()
+            val heavy = !light || now - full >= 2_000
+            if (heavy) full = now
+            model.loadPaper(quiet = true, light = !heavy)
+            light = model.paperWait()
         }
     }
 
@@ -102,6 +109,7 @@ fun TradeScreen(model: AppModel) {
 
     Page {
         item { PageTitle("Trade", if (s.live) "Your Zerodha account, live" else "The paper account · sandbox") }
+        if (b.loggedIn) item { PriceFreshness() }
         if (!s.live) {
             paperTrade(model, paperSnap, paperBook, { paperBook = it }, onReset = { resetting = true })
             return@Page
