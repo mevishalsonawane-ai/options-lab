@@ -210,7 +210,8 @@ object Jobs {
             false -> Unit
             null -> {
                 val app = context.applicationContext ?: context
-                offMain.launch { runCatching { if (watchDue()) start(app, Kind.LIVE, manual = false) } }
+                // NSE's part was already false here: only MCX's part is left to tell (the clock may have moved on meanwhile).
+                offMain.launch { runCatching { if (com.optionslab.app.data.McxMarket.watchDue()) start(app, Kind.LIVE, manual = false) } }
             }
         }
     }
