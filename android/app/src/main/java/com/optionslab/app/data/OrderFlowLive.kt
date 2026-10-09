@@ -61,9 +61,12 @@ object OrderFlowLive {
 
     fun init(context: Context) {
         appContext = context.applicationContext
+        MoveRecorder.init(context)
         if (!enabled || layoutJob != null) return
         // Every 30 s: the instruments to follow (only while the stream runs), the paper results and the shadow log's flush.
         layoutJob = CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            // The big-move recorder's switch read once here, off the main thread (the stream's checks then read memory).
+            runCatching { MoveRecorder.refreshSwitch() }
             while (true) {
                 if (testOff) { delay(30_000); continue }
                 runCatching { if (KiteStream.status.value != KiteStream.Status.OFF) relayout() else if (watched.isNotEmpty()) clear() }
@@ -97,7 +100,11 @@ object OrderFlowLive {
         KiteStream.want(OWNER, emptyList())
     }
 
-    /** The futures, the focus index's ATM ±2 options and the MCX bots' futures, at most [OrderFlow.FULL_MODE_CAP]. */
+    /**
+     * The futures, the focus index's ATM ±2 options and the MCX bots' futures, at most [OrderFlow.FULL_MODE_CAP]; with the
+     * big-move recorder on ([MoveRecorder.on]), also the other of NIFTY / BANKNIFTY's ATM ±2 options, recorded only
+     * ([OrderFlow.Role.REC_CE] / [OrderFlow.Role.REC_PE]: never part of a read), at most [com.optionslab.ira.MoveEvents.RECORD_CAP].
+     */
     private suspend fun relayout() {
         if (!Broker.loggedIn) { if (watched.isNotEmpty()) clear(); return }
         val today = Market.today()
@@ -107,23 +114,7 @@ object OrderFlowLive {
         // The focus index's options: ATM from the index's tick (else its future's), recentred every 5 minutes at most (a new
         // focus at once) - the full-mode set stays small and steady (HUNT R7).
         val f = focus
-        val now = System.currentTimeMillis()
-        val keep = centred.takeIf { it.isNotEmpty() && centredFor == f && now - centredAt < RECENTRE_MS }
-        if (keep != null) out += keep
-        val spot = if (keep != null) null else Broker.indexToken(f)?.let { KiteStream.tick(it, 60_000)?.last } ?: futs[f]?.let { KiteStream.tick(it.token, 60_000)?.last }
-        if (spot != null && spot > 0) {
-            val opts = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull()).orEmpty()
-                .filter { it.name == f && !it.expiry.isBefore(today) }
-            val expiry = opts.minOfOrNull { it.expiry }
-            if (expiry != null) {
-                val chain = opts.filter { it.expiry == expiry }
-                for (k in OrderFlow.atmStrikes(chain.map { it.strike }, spot)) for (r in listOf(Right.CE, Right.PE))
-                    chain.firstOrNull { it.strike == k && it.right == r }?.let {
-                        out += OrderFlow.Board.Entry(it.token, f, if (r == Right.CE) OrderFlow.Role.CE else OrderFlow.Role.PE, k)
-                    }
-                centred = out.filter { it.role != OrderFlow.Role.FUTURE }; centredFor = f; centredAt = now
-            }
-        }
+        out += atmOptions(f, today, futs[f]?.token, recordOnly = false)
         // The option the Chart shows (its tape and heatmap only; never part of the read).
         watching?.takeIf { it.name == f || it.name in OrderFlow.INDICES }?.let { out += it }
         // The MCX bots' near futures, while one is on.
@@ -133,7 +124,11 @@ object OrderFlowLive {
             for (n in mcx) com.optionslab.engine.mcx.McxInstruments.futures(all, n, today, 1).firstOrNull()?.takeIf { it.token > 0 }
                 ?.let { out += OrderFlow.Board.Entry(it.token, n, OrderFlow.Role.FUTURE) }
         }
-        follow(out.distinctBy { it.token }.take(OrderFlow.FULL_MODE_CAP))
+        // The big-move recorder: the other index's options too (last, so nothing above is ever crowded out).
+        val record = runCatching { MoveRecorder.on }.getOrDefault(false)
+        val other = com.optionslab.ira.MoveEvents.other(f).takeIf { record && f in com.optionslab.ira.MoveEvents.INDICES }
+        if (other != null) out += atmOptions(other, today, futs[other]?.token, recordOnly = true)
+        follow(out.distinctBy { it.token }.take(if (record) com.optionslab.ira.MoveEvents.RECORD_CAP else OrderFlow.FULL_MODE_CAP))
         // The trap guard's time windows: each index's session (an expiry day's last hour, the day's event minutes), MCX's hours.
         runCatching { sessions(today, mcx) }
     }
@@ -212,11 +207,41 @@ object OrderFlowLive {
         return com.optionslab.ira.Auction.fromCandles(out)
     }
 
-    /** The option set's last centring (5 minutes kept), and for which index. */
-    @Volatile private var centred: List<OrderFlow.Board.Entry> = emptyList()
-    @Volatile private var centredFor: String? = null
-    @Volatile private var centredAt = 0L
+    /** Each index's option set's last centring (5 minutes kept): the entries and when. */
+    private val centred = java.util.concurrent.ConcurrentHashMap<String, Pair<List<OrderFlow.Board.Entry>, Long>>()
     private const val RECENTRE_MS = 5 * 60_000L
+
+    /** Each followed option's expiry ("2026-10-14"), for the recorders' files. */
+    private val expiries = java.util.concurrent.ConcurrentHashMap<Long, String>()
+
+    /**
+     * [name]'s nearest-expiry ATM ±2 calls and puts (CE / PE, or the recorder's REC_CE / REC_PE when [recordOnly]): ATM from
+     * the index's tick, else its future's ([futToken]); the last centring is kept 5 minutes.
+     */
+    private suspend fun atmOptions(name: String, today: LocalDate, futToken: Long?, recordOnly: Boolean): List<OrderFlow.Board.Entry> {
+        val now = System.currentTimeMillis()
+        centred[name]?.let { (list, at) ->
+            if (list.isNotEmpty() && now - at < RECENTRE_MS && list.all { (it.role == OrderFlow.Role.REC_CE || it.role == OrderFlow.Role.REC_PE) == recordOnly }) return list
+        }
+        val spot = Broker.indexToken(name)?.let { KiteStream.tick(it, 60_000)?.last } ?: futToken?.let { KiteStream.tick(it, 60_000)?.last }
+        if (spot == null || spot <= 0) return emptyList()
+        val opts = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull()).orEmpty()
+            .filter { it.name == name && !it.expiry.isBefore(today) }
+        val expiry = opts.minOfOrNull { it.expiry } ?: return emptyList()
+        val chain = opts.filter { it.expiry == expiry }
+        val out = ArrayList<OrderFlow.Board.Entry>()
+        for (k in OrderFlow.atmStrikes(chain.map { it.strike }, spot)) for (r in listOf(Right.CE, Right.PE))
+            chain.firstOrNull { it.strike == k && it.right == r }?.let {
+                val role = when {
+                    recordOnly -> if (r == Right.CE) OrderFlow.Role.REC_CE else OrderFlow.Role.REC_PE
+                    else -> if (r == Right.CE) OrderFlow.Role.CE else OrderFlow.Role.PE
+                }
+                out += OrderFlow.Board.Entry(it.token, name, role, k)
+                expiries[it.token] = expiry.toString()
+            }
+        centred[name] = out to now
+        return out
+    }
 
     /** The time traps' sessions: NSE's with its expiry day and event minutes (RBI 10:00; US data 18:00), MCX's for its bots. */
     private fun sessions(today: LocalDate, mcx: List<String>) {
@@ -251,6 +276,7 @@ object OrderFlowLive {
         // The charted option's tape and heatmap (it may be followed already as an ATM call or put: that role is kept).
         board.watch(watching?.token)
         watched = entries.map { it.token }.toSet()
+        if (expiries.size > 500) expiries.keys.retainAll(watched)
         KiteStream.want(OWNER, watched)
     }
 
@@ -259,18 +285,29 @@ object OrderFlowLive {
 
     // ---- the ticks ------------------------------------------------------------------------------------------------------
 
-    /** From the stream's socket thread: the ticks of the followed instruments are queued (nothing computed here). */
+    /**
+     * From the stream's socket thread: the ticks of the followed instruments, and the cash indices' and VIX's (the big-move
+     * recorder's per-second index prints), are queued (nothing computed here).
+     */
     fun offer(got: List<KiteTicks.Tick>, now: Long) {
         if (!enabled) return
         val w = watched
         if (w.isEmpty()) return
-        val mine = got.filter { it.token in w }
+        val mine = got.filter { it.token in w || it.token in MoveRecorder.INDEX_TOKENS }
         if (mine.isEmpty()) return
         queue.add(mine to now)
         kick()
     }
 
+    /**
+     * TEST ONLY: queued ticks wait for [secondForTest] (no pump of its own on the wall clock). False in the app, always: the
+     * setter throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var testManual = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
+
     private fun kick() {
+        if (testManual) return
         if (!pumping.compareAndSet(false, true)) return
         scope.launch {
             try { pump() } finally {
@@ -298,7 +335,10 @@ object OrderFlowLive {
         var n = 0
         while (true) {
             val (ticks, at) = queue.poll() ?: break
-            for (t in ticks) if (board.offer(t, at)) n++
+            for (t in ticks) {
+                if (t.token in MoveRecorder.INDEX_TOKENS && t.token !in watched) { MoveRecorder.onIndexTick(t.token, t.last, at); continue }
+                if (board.offer(t, at)) n++
+            }
         }
         return n
     }
@@ -314,7 +354,74 @@ object OrderFlowLive {
     private suspend fun perSecond(now: Long) {
         FlowGate.onReads(_reads.value, now)
         publishAuction(now)
-        Recorder.collect(board, now)
+        // The closed seconds since each instrument's own cursor, and the indices' prints: the 1-second file's and the
+        // big-move recorder's rows (each with its gap and OI change).
+        val rows = takeRows(now)
+        Recorder.collect(board, rows, now)
+        runCatching { MoveRecorder.onSecond(rows, now, moveFeed) }
+    }
+
+    /** Each followed instrument's last second handed to the recorders (its cursor). Pruned to the followed set. */
+    private val cursors = HashMap<Long, Long>()
+    private val sequencer = com.optionslab.ira.MoveEvents.Sequencer()
+
+    private fun takeRows(now: Long): List<com.optionslab.ira.MoveEvents.Row> {
+        val got = board.closedAfter { t -> cursors[t] ?: -1L }
+        for ((e, b) in got) if (b.sec > (cursors[e.token] ?: -1L)) cursors[e.token] = b.sec
+        if (cursors.size > 200) cursors.keys.retainAll(board.tokens())
+        val out = ArrayList<com.optionslab.ira.MoveEvents.Row>(got.size + 4)
+        for ((e, b) in got) out += sequencer.row(e.token, e.name, e.role.name, e.strike, expiries[e.token].orEmpty(), b)
+        for (r in MoveRecorder.indexRows(now / 1000 - 1)) out += sequencer.row(r.token, r.name, r.role, 0.0, "", r.bar)
+        return out
+    }
+
+    /** What the big-move recorder reads from the flow: the bars in memory, the options' expiries, the context at a trigger. */
+    private val moveFeed = object : MoveRecorder.Feed {
+        override fun window(fromSec: Long, pick: (OrderFlow.Board.Entry) -> Boolean) = board.window(fromSec, pick)
+        override fun expiry(token: Long): String = expiries[token].orEmpty()
+        override fun context(t: com.optionslab.ira.MoveEvents.Trigger, nowMs: Long): com.optionslab.ira.MoveEvents.Context = contextOf(t, nowMs)
+    }
+
+    /**
+     * The H line's context at a trigger: VIX, the future's price, its VWAP distance, the value-area position, the gamma
+     * sign and zero-gamma distance, the IB and the day type, the minutes since the open, the expiry flag, today's scheduled
+     * events, the flow read and its traps, the latest headline. Each part on its own: one that fails is left out.
+     */
+    private fun contextOf(t: com.optionslab.ira.MoveEvents.Trigger, nowMs: Long): com.optionslab.ira.MoveEvents.Context {
+        val n = t.name
+        val a = runCatching { board.auction(n, nowMs) }.getOrNull()
+        val read = _reads.value[n]
+        val g = runCatching { GammaLive.state.value[n] }.getOrNull()
+        val conv = runCatching { GammaLive.convention.value }.getOrNull()
+        val today = Market.today()
+        val events = runCatching { com.optionslab.app.ira.IraEvents.upcoming(0).filter { it.day == today }.map { it.name } }.getOrDefault(emptyList())
+        val expiry = runCatching { Market.upcomingExpiries(n).firstOrNull() == today }.getOrNull()
+        val price = a?.last?.takeIf { it > 0 } ?: read?.mid
+        val headline = runCatching { com.optionslab.app.ira.IraHub.state.value.news.firstOrNull()?.let { h -> (h.at?.let { "${com.optionslab.ira.MoveEvents.hhmm(it.epochSecond)} " } ?: "") + h.title } }.getOrNull()
+        return com.optionslab.ira.MoveEvents.Context(
+            vix = MoveRecorder.vixAt(t.startSec + 60), price = price,
+            vwapSd = price?.let { p -> a?.vwap?.sdUnits(p) }, valuePos = a?.regime?.words,
+            gamma = if (g != null && conv != null) g.sign(conv).name.lowercase(Locale.ENGLISH) else null, zeroGammaDist = g?.distance(),
+            ibHigh = a?.tpo?.ibHigh, ibLow = a?.tpo?.ibLow, openType = a?.tpo?.openType?.code, dayType = a?.tpo?.dayType?.words,
+            minutesOpen = com.optionslab.ira.MoveEvents.minuteIndex(t.startSec), expiryDay = expiry, events = events,
+            flow = read?.let { OrderFlow.word(it) }, buyers = read?.buyers, traps = read?.flags?.map { it.words }.orEmpty(), headline = headline)
+    }
+
+    /**
+     * Keep the price stream on from 09:15 to F&O's close on a trading day while the big-move recorder is on (so a day with
+     * the app in the background has no holes) - but never in Android's battery saver or Jarvis's low-battery saver. Read by
+     * [KiteStream]'s "is the stream needed" (its login and hours checks still come first). Cheap: the switch is cached.
+     */
+    fun keepStreamOn(): Boolean {
+        if (!enabled) return false
+        val ctx = appContext ?: return false
+        if (!runCatching { MoveRecorder.on }.getOrDefault(false)) return false
+        if (!runCatching { Market.isTradingDay() }.getOrDefault(false)) return false
+        val m = Market.minuteNow()
+        if (m < 9 * 60 + 15 || m > Market.foClose()) return false
+        if (runCatching { ctx.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)) return false
+        if (runCatching { com.optionslab.app.work.Battery.saving(ctx) }.getOrDefault(false)) return false
+        return true
     }
 
     private val _auction = MutableStateFlow<Map<String, com.optionslab.ira.Auction.Snapshot>>(emptyMap())
@@ -378,82 +485,138 @@ object OrderFlowLive {
     // ---- the daily recorder (1-second bars, gzip, 30 days) -----------------------------------------------------------------
 
     /**
-     * The flow's 1-second bars of the index futures and the ATM options during NSE hours, one gzip file a day under
-     * noBackupFilesDir/orderflow (plain: market data only, never in a backup), written once a minute as a new gzip member,
-     * 30 days kept; exported with the market recorder's zip.
+     * The flow's 1-second bars of the index futures and the ATM options during NSE hours (and the MCX bots' futures while
+     * they run), with the cash indices' and VIX's per-second prints, one gzip file a day under noBackupFilesDir/orderflow
+     * (plain: market data only, never in a backup), written once a minute as a new gzip member, 30 days kept (and at most
+     * [BUDGET_BYTES]); exported with the market recorder's zip. Its columns ([com.optionslab.ira.MoveEvents.DAILY_HEADER])
+     * keep the first 16 of before and add the best bid and offer, the 5 levels' sizes and order counts, pulls, the quote
+     * rule's split, prints and the largest print, the trade range, the 5-level OFI, Kite's totals and the feed's health.
+     * Beside it, the index futures' footprint per minute (every traded price's buy and sell volume): footprint-<day>.csv.gz.
      */
     internal object Recorder {
         const val KEEP_DAYS = 30L
-        const val HEADER = "epoch_sec,time_ist,token,name,role,strike,mid,last,ofi,buy_vol,sell_vol,vol,depth_imb,queue_imb,buy_sell_ratio,oi\n"
+        const val BUDGET_BYTES = 1_024L * 1024 * 1024
+        val HEADER: String = com.optionslab.ira.MoveEvents.DAILY_HEADER
         private val buf = StringBuilder()
-        private var lastSec = 0L
+        private val footBuf = StringBuilder()
+        private val footCursor = HashMap<String, Long>()
         private var lastFlush = 0L
         private var rotated: LocalDate? = null
+        private var headerChecked: LocalDate? = null
 
         fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, "orderflow") }
 
-        private fun d(x: Double) = if (x.isNaN()) "" else "%.4f".format(Locale.ENGLISH, x)
-
-        suspend fun collect(b: OrderFlow.Board, now: Long) {
+        /** This second's [rows] (NSE's in its hours; the MCX bots' futures whenever they come) and the footprint's new minutes. */
+        suspend fun collect(b: OrderFlow.Board, rows: List<com.optionslab.ira.MoveEvents.Row>, now: Long) {
             val open = testOpen ?: runCatching { Market.isOpen() }.getOrDefault(false)
+            for (r in rows) {
+                if (r.role == OrderFlow.Role.WATCH.name) continue
+                val mcx = r.role == OrderFlow.Role.FUTURE.name && r.name !in OrderFlow.INDICES
+                if (!open && !mcx) continue
+                val t = Instant.ofEpochSecond(r.bar.sec).atZone(com.optionslab.engine.IST).toLocalTime().withNano(0)
+                buf.append(com.optionslab.ira.MoveEvents.dailyLine(r, if (t.second == 0) "$t:00" else t.toString()))
+            }
             if (open) {
-                val rows = b.closedAfter(lastSec).filter { (e, _) -> e.role != OrderFlow.Role.WATCH && (e.role != OrderFlow.Role.FUTURE || e.name in OrderFlow.INDICES) }
-                for ((e, bar) in rows) {
-                    val t = Instant.ofEpochSecond(bar.sec).atZone(com.optionslab.engine.IST).toLocalTime()
-                    buf.append(bar.sec).append(',').append(t).append(',').append(e.token).append(',').append(e.name).append(',').append(e.role.name)
-                        .append(',').append(if (e.strike > 0) d(e.strike) else "").append(',').append(d(bar.mid)).append(',').append(d(bar.last))
-                        .append(',').append(d(bar.ofi)).append(',').append(bar.buyVol).append(',').append(bar.sellVol).append(',').append(bar.vol)
-                        .append(',').append(d(bar.depth)).append(',').append(d(bar.queue)).append(',').append(d(bar.ratio)).append(',').append(bar.oi).append('\n')
+                val nowSec = now / 1000
+                for (n in com.optionslab.ira.MoveEvents.INDICES) {
+                    val from = footCursor[n] ?: (nowSec / 60 - 2)
+                    footCursor[n] = from
+                    for ((m, prices) in b.footMinutes(n, from, nowSec - 5)) {
+                        footBuf.append(com.optionslab.ira.MoveEvents.footLines(n, m, prices))
+                        footCursor[n] = maxOf(footCursor[n] ?: m, m)
+                    }
                 }
-                rows.maxOfOrNull { it.second.sec }?.let { lastSec = maxOf(lastSec, it) }
-            } else lastSec = now / 1000
-            if (buf.isNotEmpty() && (now - lastFlush >= 60_000 || buf.length > 512_000)) flush(now)
+            }
+            if ((buf.isNotEmpty() || footBuf.isNotEmpty()) && (now - lastFlush >= 60_000 || buf.length > 512_000)) flush(now)
         }
 
-        /** Writes what is buffered to today's file (a new gzip member) and drops days over [KEEP_DAYS]. */
+        /** Writes what is buffered to today's files (a new gzip member each) and drops days over [KEEP_DAYS] or the budget. */
         suspend fun flush(now: Long = System.currentTimeMillis()) {
             lastFlush = now
-            if (buf.isEmpty()) return
+            if (buf.isEmpty() && footBuf.isEmpty()) return
             val text = buf.toString(); buf.setLength(0)
+            val foot = footBuf.toString(); footBuf.setLength(0)
             val dir = dir() ?: return
             val day = Market.today()
             withContext(Dispatchers.IO) {
                 runCatching {
                     dir.mkdirs()
                     val f = File(dir, "$day.csv.gz")
-                    val fresh = !f.exists()
-                    java.util.zip.GZIPOutputStream(java.io.FileOutputStream(f, true)).use { z ->
+                    // A day file begun by an older build (16 columns) gets the new header line before the new rows.
+                    val fresh = !f.exists() || (headerChecked != day && !startsWithHeader(f))
+                    headerChecked = day
+                    if (text.isNotEmpty()) java.util.zip.GZIPOutputStream(java.io.FileOutputStream(f, true)).use { z ->
                         if (fresh) z.write(HEADER.toByteArray(Charsets.UTF_8))
                         z.write(text.toByteArray(Charsets.UTF_8))
                     }
                 }
+                runCatching {
+                    if (foot.isNotEmpty()) {
+                        val f = File(dir, "footprint-$day.csv.gz")
+                        val fresh = !f.exists()
+                        java.util.zip.GZIPOutputStream(java.io.FileOutputStream(f, true)).use { z ->
+                            if (fresh) z.write(com.optionslab.ira.MoveEvents.FOOT_HEADER.toByteArray(Charsets.UTF_8))
+                            z.write(foot.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                }
                 if (rotated != day) {
                     rotated = day
-                    runCatching { days().filter { it.first.isBefore(day.minusDays(KEEP_DAYS - 1)) }.forEach { it.second.delete() } }
+                    runCatching {
+                        val all = (days() + footDays()).sortedBy { it.first }
+                        val old = all.filter { it.first.isBefore(day.minusDays(KEEP_DAYS - 1)) }
+                        old.forEach { it.second.delete() }
+                        val kept = all.filter { it !in old }
+                        var total = kept.sumOf { it.second.length() }
+                        for ((d, f) in kept) if (total > BUDGET_BYTES && d.isBefore(day)) { total -= f.length(); f.delete() }
+                    }
                 }
             }
         }
 
+        /** Whether [f]'s first line is today's [HEADER] (only its first line is read). */
+        private fun startsWithHeader(f: File): Boolean = runCatching {
+            java.util.zip.GZIPInputStream(f.inputStream()).bufferedReader().use { it.readLine() } + "\n" == HEADER
+        }.getOrDefault(true)
+
         private val DAY = Regex("^(\\d{4}-\\d{2}-\\d{2})\\.csv\\.gz$")
+        private val FOOT_DAY = Regex("^footprint-(\\d{4}-\\d{2}-\\d{2})\\.csv\\.gz$")
 
         /** The kept day files, oldest first. */
-        fun days(): List<Pair<LocalDate, File>> = (dir()?.listFiles() ?: emptyArray()).mapNotNull { f ->
-            DAY.find(f.name)?.let { m -> runCatching { LocalDate.parse(m.groupValues[1]) }.getOrNull()?.let { it to f } }
+        fun days(): List<Pair<LocalDate, File>> = listed(DAY)
+
+        /** The kept footprint files, oldest first. */
+        fun footDays(): List<Pair<LocalDate, File>> = listed(FOOT_DAY)
+
+        private fun listed(rx: Regex): List<Pair<LocalDate, File>> = (dir()?.listFiles() ?: emptyArray()).mapNotNull { f ->
+            rx.find(f.name)?.let { m -> runCatching { LocalDate.parse(m.groupValues[1]) }.getOrNull()?.let { it to f } }
         }.sortedBy { it.first }
 
         /** TEST ONLY: market hours as given (null: the real clock). */
         @Volatile internal var testOpen: Boolean? = null
+
+        /** TEST ONLY: forget what is buffered and when it was written. */
+        internal fun resetForTest() {
+            buf.setLength(0); footBuf.setLength(0); footCursor.clear(); lastFlush = 0L; rotated = null; headerChecked = null; testOpen = null
+        }
     }
 
     /** The kept order-flow days (date, bytes), newest first. Lists the folder only. */
     fun recordedDays(): List<Pair<LocalDate, Long>> = Recorder.days().reversed().map { it.first to it.second.length() }
 
-    /** Each kept day's gzip file and the shadow log, into the market recorder's export zip (copied as they are). Returns files. */
+    /**
+     * Each kept day's gzip file, the footprint files, the big-move recorder's event files and the shadow log, into the market
+     * recorder's export zip (copied as they are). Returns files.
+     */
     fun export(zip: java.util.zip.ZipOutputStream): Int {
         var n = 0
         for ((day, f) in Recorder.days()) {
             zip.putNextEntry(java.util.zip.ZipEntry("orderflow-$day.csv.gz")); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry(); n++
         }
+        for ((day, f) in Recorder.footDays()) {
+            zip.putNextEntry(java.util.zip.ZipEntry("orderflow-footprint-$day.csv.gz")); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry(); n++
+        }
+        n += runCatching { MoveRecorder.export(zip) }.getOrDefault(0)
         for (f in FlowGate.files()) if (f.exists()) {
             zip.putNextEntry(java.util.zip.ZipEntry("orderflow-${f.name}")); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry(); n++
         }
@@ -482,6 +645,16 @@ object OrderFlowLive {
         follow(entries)
     }
 
+    /**
+     * TEST ONLY: take the queued ticks, publish the reads and run the once-a-second work (the recorders) now, at [nowMs].
+     * Throws unless BuildConfig.DEBUG.
+     */
+    internal fun secondForTest(nowMs: Long) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the test second exists only in debug builds" }
+        drain(); publish(nowMs)
+        kotlinx.coroutines.runBlocking { perSecond(nowMs) }
+    }
+
     /** TEST ONLY: take the queued ticks and publish the reads now, at [nowMs]. Throws unless BuildConfig.DEBUG. */
     internal fun pumpForTest(nowMs: Long) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test pump exists only in debug builds" }
@@ -493,5 +666,7 @@ object OrderFlowLive {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
         queue.clear(); board.layout(emptyList()); watched = emptySet(); _reads.value = emptyMap(); testRead = null
         testAuction = null; _auction.value = emptyMap(); _chartLevels.value = emptyMap(); watching = null
+        synchronized(cursors) { cursors.clear() }; sequencer.clear(); centred.clear(); expiries.clear(); testManual = false
+        Recorder.resetForTest()
     }
 }

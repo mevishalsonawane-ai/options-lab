@@ -51,6 +51,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-big-move-recorder", OCT9, "Big moves saved, second by second",
+            "The order flow now saves each big minute in full: 5 minutes before and after, second by second. " +
+                "A big minute is a futures candle 4.7 times its usual size for that time of day. " +
+                "Two ordinary minutes a day are saved too, to compare against. " +
+                "The one-second file adds the best bid and offer, five levels, pulls, print sizes and the cash index. " +
+                "The price stream stays on from 9:15 to 15:40 for it, except in battery saver. " +
+                "A switch in the same sheet turns it off. " +
+                "Files are kept 12 months and export with the market data. " +
+                "It only records; no strategy uses it.",
+            "Home → Dashboard → Strategies card → Order flow (tap an index) → Big moves",
+            ask = "why did banknifty jump at 10:32", to = "chart"),
         Entry("2026-10-09-fno-to-1540", OCT9, "F&O trades to 15:40",
             "NSE F&O now trades to 15:40; the app's order window and watch follow it. " +
                 "Index values still close at 15:30, and every strategy keeps its own entry and exit times.",

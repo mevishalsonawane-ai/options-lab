@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.FlowGate
+import com.optionslab.app.data.MoveRecorder
 import com.optionslab.app.data.OrderFlowLive
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
@@ -160,6 +162,7 @@ internal fun OrderFlowSheet(underlying: String, onClose: () -> Unit) {
                 modifier = Modifier.padding(top = 10.dp))
             FlowHistory(hist, Modifier.fillMaxWidth().height(90.dp).padding(top = 4.dp))
             AuctionBlock(underlying, auctions[underlying], onHeat = { tool = "heat" }, onTape = { tool = "tape" })
+            BigMovesBlock()
             Note("Strategies only log the flow beside their signals unless you set one to CONFIRM (Home → Strategies → Order flow). " +
                 "It can only ever skip an entry; it never places, adds to, reverses or exits a trade.")
         }
@@ -212,6 +215,72 @@ private fun AuctionBlock(underlying: String, a: com.optionslab.ira.Auction.Snaps
         TextButton(onHeat) { Text("Liquidity heatmap") }
         TextButton(onTape) { Text("Time & sales") }
     }
+}
+
+/**
+ * The detail's "Big moves" (display only): the big-move recorder's saved minutes, newest first - time, index, size and
+ * direction, each read from its file's first line - and a tap opens that event's summary in place (the futures' flow
+ * before and during, calls against puts, the book in the way thinning, VIX, what stood out first, the context), read off
+ * the main thread. The recorder's switch is here too (it also keeps the price stream on in market hours).
+ */
+@Composable
+private fun BigMovesBlock() {
+    val p = LocalPalette.current
+    val version by MoveRecorder.version.collectAsState(Dispatchers.Main.immediate)
+    val on by MoveRecorder.onFlow.collectAsState(Dispatchers.Main.immediate)
+    var items by remember { mutableStateOf<List<MoveRecorder.Item>?>(null) }
+    var controls by remember { mutableStateOf(0) }
+    var openFile by remember { mutableStateOf<String?>(null) }
+    var lines by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(version) {
+        val got = withContext(Dispatchers.IO) {
+            runCatching { MoveRecorder.refreshSwitch(); MoveRecorder.items(20) to MoveRecorder.controls() }.getOrNull()
+        }
+        items = got?.first.orEmpty(); controls = got?.second ?: 0
+    }
+    LaunchedEffect(openFile) {
+        lines = null
+        val f = items?.firstOrNull { it.file.name == openFile }?.file ?: return@LaunchedEffect
+        lines = withContext(Dispatchers.IO) { runCatching { MoveRecorder.summary(f)?.let { com.optionslab.ira.MoveEvents.lines(it) } }.getOrNull() }
+            ?: listOf("Summary" to "could not be read")
+    }
+    Text("Big moves (saved minutes)", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.padding(top = 12.dp))
+    Note("A futures minute 4.7 times its usual size for that time of day: the 5 minutes before and after are saved second by " +
+        "second, with the 5-level book, for research. Recording only; no strategy uses it.")
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(if (on) "Recorder on: the price stream stays on 9:15-15:40 (not in battery saver)" else "Recorder off",
+            style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f))
+        TextButton({ scope.launch(Dispatchers.IO) { runCatching { MoveRecorder.on = !on } } }) { Text(if (on) "Turn off" else "Turn on") }
+    }
+    val list = items
+    when {
+        list == null -> Note("Reading the saved minutes…")
+        list.isEmpty() -> Note("None saved yet: it needs the Zerodha stream in market hours, and a big minute.")
+        else -> list.forEach { m ->
+            val up = m.kind == com.optionslab.ira.MoveEvents.Kind.BIG_UP
+            val day = "%d %s".format(java.util.Locale.ENGLISH, m.day.dayOfMonth, m.day.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH))
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .clickable(role = androidx.compose.ui.semantics.Role.Button) { openFile = if (openFile == m.file.name) null else m.file.name }
+                .padding(vertical = 4.dp).semantics { contentDescription = "Big move $day ${m.line}, show its summary" },
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(day, maxLines = 1, softWrap = false, style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(end = 8.dp))
+                Text(m.line, style = Type.figure.copy(color = if (up) p.verdigris else p.oxblood, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                Text(if (openFile == m.file.name) "▴" else "▾", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            }
+            if (openFile == m.file.name) {
+                val l = lines
+                if (l == null) Note("Reading its minutes…")
+                else l.forEach { (label, value) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                        Text(label, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                        Text(value, style = Type.figure.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+    if (controls > 0) Note("Also saved: $controls ordinary minute${if (controls == 1) "" else "s"} to compare against (two a day per index).")
 }
 
 /** Signed bars around a middle line: buying minutes up in verdigris, selling minutes down in oxblood. */

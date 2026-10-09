@@ -1688,7 +1688,7 @@ object IraHub {
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityHold.asked(q) != null || com.optionslab.ira.LiquidityDrawdown.asked(q) || com.optionslab.ira.LiquidityWhen.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.CatchUp.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
-                com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
+                com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.MoveEvents.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
@@ -3729,6 +3729,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch { reply(freshAsked(markets)) }
+            return true
+        }
+        // "Why did BankNifty jump at 10:32?" (10 Oct): the nearest big move the order-flow recorder saved today - what stood out
+        // first (the futures' flow, the options, the book in the way, VIX, the cash index) and the context then
+        // ([com.optionslab.ira.MoveEvents]; its own files on this phone, read off the main thread). Timing only; nothing acts.
+        // Not in IraGoldAlgo.
+        val moveAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MoveEvents.asked(q) }.getOrNull() else null
+        if (moveAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.MoveRecorder.answer(moveAsk) }.getOrElse { "I could not read the saved big moves just now, Boss." })
+            }
             return true
         }
         // "How is order flow helping?" (9 Oct): every strategy's paper trades taken WITH the order flow against those taken

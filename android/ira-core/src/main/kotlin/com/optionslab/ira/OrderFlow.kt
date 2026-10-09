@@ -42,7 +42,14 @@ object OrderFlow {
      * What an instrument is to its underlying's read: its future, an ATM ±2 call or put, or the option the Chart shows
      * (WATCH: its tape and heatmap only, never part of the read).
      */
-    enum class Role { FUTURE, CE, PE, WATCH }
+    enum class Role {
+        FUTURE, CE, PE, WATCH,
+        /**
+         * The big-move recorder's ATM ±2 calls and puts of the index NOT in focus ([MoveEvents]): recorded only (the 1-second
+         * file and the event files), never part of any read, so no strategy's flow changes because they are followed.
+         */
+        REC_CE, REC_PE,
+    }
 
     /** A strategy's use of the flow: none, logged beside each signal, or an entry skipped unless the flow agrees. */
     enum class Mode { OFF, SHADOW, CONFIRM }
@@ -246,8 +253,70 @@ object OrderFlow {
         val medLevel: Double = Double.NaN,
         /** The trades' arrival delay this second (ms after the exchange's trade time; NaN: no trade). */
         val ageMs: Double = Double.NaN,
+        // ---- recorded only (the 1-second file and the big-move recorder, [MoveEvents]); no read uses them ----
+        /** The highest and lowest trade price this second (NaN: no trade). */
+        val high: Double = Double.NaN, val low: Double = Double.NaN,
+        /** The best bid and offer, their sizes, and the 5 levels' total sizes (the last packet of the second). */
+        val bid: Double = Double.NaN, val ask: Double = Double.NaN, val bidQty: Long = 0, val askQty: Long = 0,
+        val bid5: Long = 0, val ask5: Long = 0,
+        /** The quote rule's buy and sell volume (their difference is [qDelta]). */
+        val qBuy: Long = 0, val qSell: Long = 0,
+        /** Packets with a volume change (a trade-count proxy) and the largest volume step (the largest print). */
+        val prints: Int = 0, val maxPrint: Long = 0,
+        /** The 5-level order-flow imbalance (the best level's is [ofi]). */
+        val mofi: Double = 0.0,
+        /** Kite's total buy and sell quantity (−1: not known). Recorded, never trusted for direction (HUNT R8). */
+        val tbq: Long = -1, val tsq: Long = -1,
+        /** The 5-level book of the second's last packet; kept only for the last [BOOK_SEC] bars (memory stays bounded). */
+        val book: Book? = null,
     ) {
         val delta: Long get() = buyVol - sellVol
+    }
+
+    /** Bars a tracker keeps the 5-level book for (the big-move recorder's 5 minutes before a candle, with slack). */
+    const val BOOK_SEC = 420
+
+    /**
+     * A 5-level book packed small (about 180 bytes): per level the price in paise, and the size with the order count in
+     * one long. Levels missing from the packet are 0.
+     */
+    class Book(private val v: LongArray) {
+        fun bidPx(i: Int): Double = v[i] / 100.0
+        fun bidQty(i: Int): Long = v[5 + i] ushr 32
+        fun bidOrders(i: Int): Int = (v[5 + i] and 0xffffffffL).toInt()
+        fun askPx(i: Int): Double = v[10 + i] / 100.0
+        fun askQty(i: Int): Long = v[15 + i] ushr 32
+        fun askOrders(i: Int): Int = (v[15 + i] and 0xffffffffL).toInt()
+        override fun equals(other: Any?): Boolean = other is Book && other.v.contentEquals(v)
+        override fun hashCode(): Int = v.contentHashCode()
+
+        companion object {
+            /** The first five [bids] and [asks] (best first). */
+            fun of(bids: List<KiteTicks.Level>, asks: List<KiteTicks.Level>): Book {
+                val v = LongArray(20)
+                fun put(l: List<KiteTicks.Level>, at: Int) {
+                    for (i in 0 until minOf(5, l.size)) {
+                        v[at + i] = Math.round(l[i].price * 100)
+                        v[at + 5 + i] = (l[i].qty.coerceIn(0L, 0xffffffffL) shl 32) or (l[i].orders.toLong() and 0xffffffffL)
+                    }
+                }
+                put(bids, 0); put(asks, 10)
+                return Book(v)
+            }
+        }
+    }
+
+    /** Multi-level OFI: the best-level formula level by level over the 5 levels, summed (a level missing on either side: skipped). */
+    fun mofi(prevBids: List<KiteTicks.Level>, prevAsks: List<KiteTicks.Level>, bids: List<KiteTicks.Level>, asks: List<KiteTicks.Level>): Double {
+        var e = 0.0
+        for (i in 0 until 5) {
+            val pb = prevBids.getOrNull(i) ?: continue
+            val pa = prevAsks.getOrNull(i) ?: continue
+            val b = bids.getOrNull(i) ?: continue
+            val a = asks.getOrNull(i) ?: continue
+            e += ofi(pb.price, pb.qty, pa.price, pa.qty, b.price, b.qty, a.price, a.qty)
+        }
+        return e
     }
 
     /** A tick reduced to what the flow reads (null without a book: not a full-mode packet). */
@@ -279,6 +348,9 @@ object OrderFlow {
         private var ofiAcc = 0.0; private var buyAcc = 0L; private var sellAcc = 0L; private var volAcc = 0L; private var qAcc = 0L
         private var pullBidAcc = 0L; private var pullAskAcc = 0L
         private var updAcc = 0; private var staleAcc = 0
+        // Recorded only: the second's trade range, the quote rule's two sides, the prints, the 5-level OFI.
+        private var hiAcc = Double.NaN; private var loAcc = Double.NaN; private var qBuyAcc = 0L; private var qSellAcc = 0L
+        private var printsAcc = 0; private var maxPrintAcc = 0L; private var mofiAcc = 0.0
         private val ages = ArrayList<Long>()
         /** Recent trade sizes (the illiquid-print guard's median). */
         private val sizes = ArrayDeque<Long>()
@@ -334,8 +406,18 @@ object OrderFlow {
                     volAcc += dv
                     if (sg != 0) lastSign = sg
                     // The quote rule (secondary): against the book that stood before the trade.
-                    qAcc += sign(q.last, p.bid, p.ask, null, 0) * dv
+                    val qs = sign(q.last, p.bid, p.ask, null, 0)
+                    qAcc += qs * dv
+                    if (qs > 0) qBuyAcc += dv else if (qs < 0) qSellAcc += dv
                 }
+                // Recorded only: the print, its size and the second's trade range; the 5-level OFI.
+                if (dv > 0) {
+                    printsAcc++
+                    if (dv > maxPrintAcc) maxPrintAcc = dv
+                    if (hiAcc.isNaN() || q.last > hiAcc) hiAcc = q.last
+                    if (loAcc.isNaN() || q.last < loAcc) loAcc = q.last
+                }
+                mofiAcc += mofi(p.bids, p.asks, q.bids, q.asks)
                 // Display and the log only: the tape, the heatmap's big prints, the future's session (an illiquid print unsigned).
                 if (dv > 0) {
                     tape.add(TapeHeat.Print(q.tradeSec?.takeIf { it > 0 }?.times(1000) ?: q.ms, q.last, dv, sg, bigPrint))
@@ -376,11 +458,21 @@ object OrderFlow {
                 imbalance(q.bidDepth, q.askDepth) ?: Double.NaN, imbalance(q.bidQty, q.askQty) ?: Double.NaN,
                 ratio(q.totalBuy, q.totalSell) ?: Double.NaN, q.oi, qAcc,
                 if (pb + pa > 0) (pb - pa) / (pb + pa) else Double.NaN, pullBidAcc, pullAskAcc, updAcc, staleAcc,
-                TrapGuard.median(levels) ?: Double.NaN, TrapGuard.median(ages.map { it.toDouble() }) ?: Double.NaN)
+                TrapGuard.median(levels) ?: Double.NaN, TrapGuard.median(ages.map { it.toDouble() }) ?: Double.NaN,
+                high = hiAcc, low = loAcc, bid = q.bid, ask = q.ask, bidQty = q.bidQty, askQty = q.askQty,
+                bid5 = q.bidDepth, ask5 = q.askDepth, qBuy = qBuyAcc, qSell = qSellAcc, prints = printsAcc, maxPrint = maxPrintAcc,
+                mofi = mofiAcc, tbq = q.totalBuy ?: -1, tsq = q.totalSell ?: -1, book = Book.of(q.bids, q.asks))
         }
 
         private fun close() {
-            open()?.let { b -> ring[head] = b; head = (head + 1) % HISTORY_SEC; if (count < HISTORY_SEC) count++ }
+            open()?.let { b ->
+                ring[head] = b; head = (head + 1) % HISTORY_SEC; if (count < HISTORY_SEC) count++
+                // The book is kept for the last [BOOK_SEC] bars only (each bar is at least a second apart): bounded memory.
+                if (count > BOOK_SEC) {
+                    val old = (head - 1 - BOOK_SEC + HISTORY_SEC) % HISTORY_SEC
+                    ring[old]?.takeIf { it.book != null }?.let { ring[old] = it.copy(book = null) }
+                }
+            }
             // The heatmap: the book once a second, and the pulls the trap guard counts as big.
             val h = heat; val q = last
             if (h != null && q != null && sec >= 0) {
@@ -391,6 +483,7 @@ object OrderFlow {
             }
             ofiAcc = 0.0; buyAcc = 0; sellAcc = 0; volAcc = 0; qAcc = 0
             pullBidAcc = 0; pullAskAcc = 0; updAcc = 0; staleAcc = 0; ages.clear()
+            hiAcc = Double.NaN; loAcc = Double.NaN; qBuyAcc = 0; qSellAcc = 0; printsAcc = 0; maxPrintAcc = 0; mofiAcc = 0.0
         }
 
         /** The closed seconds, oldest first, then the one being built. */
@@ -570,6 +663,23 @@ object OrderFlow {
         /** Every followed instrument's closed seconds after [afterSec]: the recorder's rows. */
         @Synchronized fun closedAfter(afterSec: Long): List<Pair<Entry, Bar>> =
             trackers.values.flatMap { t -> t.closedAfter(afterSec).map { Entry(t.token, t.name, t.role, t.strike) to it } }
+
+        /**
+         * Every followed instrument's closed seconds after its own cursor ([after] of its token): the recorders' rows. An
+         * instrument whose second closes late (its next packet came late) is not skipped, as one cursor for all would.
+         */
+        @Synchronized fun closedAfter(after: (Long) -> Long): List<Pair<Entry, Bar>> =
+            trackers.values.flatMap { t -> t.closedAfter(after(t.token)).map { Entry(t.token, t.name, t.role, t.strike) to it } }
+
+        /** [name]'s future's footprint of each completed minute after [afterMin] (epoch minute to its prices), oldest first. */
+        @Synchronized fun footMinutes(name: String, afterMin: Long, nowSec: Long): List<Pair<Long, List<Auction.Foot>>> =
+            future(name)?.day?.footMinutes(afterMin, Math.floorDiv(nowSec, 60L)).orEmpty()
+
+        /** The closed seconds from [fromSec] on of the followed instruments [pick] takes (the big-move recorder's window before). */
+        @Synchronized fun window(fromSec: Long, pick: (Entry) -> Boolean): List<Pair<Entry, Bar>> = trackers.values.flatMap { t ->
+            val e = Entry(t.token, t.name, t.role, t.strike)
+            if (pick(e)) t.closedAfter(fromSec - 1).map { e to it } else emptyList()
+        }
 
         /** [name]'s read at [nowMs] from its future (null: no future followed or no quote yet), its options and its OI, trap-guarded. */
         @Synchronized fun read(name: String, nowMs: Long): Read? {

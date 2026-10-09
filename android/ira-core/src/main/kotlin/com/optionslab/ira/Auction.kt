@@ -355,6 +355,15 @@ object Auction {
                 .map { Foot(it.key / 100.0, it.value[0], it.value[1]) }.sortedByDescending { it.price }
         }
 
+        /**
+         * Each minute's footprint (every traded price with its buy and sell volume, highest price first) for the minutes after
+         * [afterMin] and before [beforeMin] (epoch minutes) still kept ([FOOT_MIN]), oldest first: the per-minute footprint file.
+         */
+        fun footMinutes(afterMin: Long, beforeMin: Long): List<Pair<Long, List<Foot>>> =
+            foot.subMap(afterMin, false, beforeMin, false).map { (m, prices) ->
+                m to prices.entries.filter { it.value[0] + it.value[1] > 0 }.map { Foot(it.key / 100.0, it.value[0], it.value[1]) }.sortedByDescending { it.price }
+            }
+
         /** The day as of [nowSec] against [prior] (null: no snapshot - nothing today). */
         fun snapshot(name: String, nowSec: Long, prior: Levels?): Snapshot? {
             if (day == Long.MIN_VALUE || dayOf(nowSec) != day || minutes.isEmpty()) return null

@@ -227,6 +227,8 @@ object KiteStream {
     private fun needed(): Boolean {
         if (foreground() != false) return true
         if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER }) return true
+        // The big-move recorder (on by default): kept on 09:15 to F&O's close, never in battery saver ([OrderFlowLive.keepStreamOn]).
+        if (runCatching { OrderFlowLive.keepStreamOn() }.getOrDefault(false)) return true
         wanted()                                          // drops touches older than 3 minutes
         return touched.isNotEmpty()
     }
