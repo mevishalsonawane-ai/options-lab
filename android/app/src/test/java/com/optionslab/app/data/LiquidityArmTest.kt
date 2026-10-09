@@ -583,4 +583,61 @@ class LiquidityArmTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(OrbArms)
         assertEquals(false, row().today.single().strong)
     }
+
+    // ---- the order flow beside the entry (9 Oct): SHADOW logs, CONFIRM only ever skips ----
+
+    /** The flow's read for every index: [buyers] the buyers' share (30: sellers at 70, against a call). */
+    private fun flow(buyers: Int) {
+        com.optionslab.app.data.FlowGate.testNowSec = 1_000
+        OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, buyers, 1_000) }
+    }
+
+    @Test fun orderFlowShadowLogsTheSignalAndChangesNothing() {
+        flow(30)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue("the arm traded exactly as before, against the flow", p.open)
+        assertEquals("CE", p.right)
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertEquals(com.optionslab.ira.OrderFlow.Mode.SHADOW, s.mode)
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.DISAGREES, s.agreement)
+        assertFalse(s.skipped); assertFalse(s.live); assertEquals(1, s.side); assertEquals(30, s.buyers)
+        assertTrue("its paper order is kept for the result", s.taken && s.orderId == p.entryOrderId)
+    }
+
+    @Test fun orderFlowConfirmSkipsAPaperEntryTheFlowDisagreesWithAndLogsIt() {
+        val said = FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        assertTrue(said, said.startsWith("Liquidity 15+5 BankNifty: an entry is skipped unless the order flow agrees"))
+        flow(30)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue("skipped: nothing bought", row().today.isEmpty())
+        assertTrue("no paper order at all", Paper.state.orders.isEmpty())
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertTrue(s.skipped); assertEquals(FlowGate.SKIPPED, s.verdict); assertFalse(s.taken)
+        assertTrue(Diag.lines().any { "skipped by flow" in it })
+    }
+
+    @Test fun orderFlowConfirmTakesTheEntryWhenTheFlowAgrees() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        flow(72)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.open); assertEquals(30, p.qty)
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.AGREES, s.agreement); assertFalse(s.skipped); assertTrue(s.taken)
+    }
+
+    @Test fun orderFlowConfirmWithNoFlowHasNoOpinionAndTheEntryGoesAhead() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        com.optionslab.app.data.FlowGate.testNowSec = 1_000
+        OrderFlowLive.testRead = { null }                                   // no Zerodha stream: no flow at all
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue("the strategy's own entry, as without the flow", row().today.single().open)
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.UNKNOWN, s.agreement); assertFalse(s.skipped); assertTrue(s.taken)
+    }
 }

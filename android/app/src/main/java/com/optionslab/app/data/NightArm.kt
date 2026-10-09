@@ -281,6 +281,9 @@ object NightArm {
         val minutes = runCatching { Paper.minutes(c) }.getOrNull()?.map { it.epochSecond to it.volume }
         com.optionslab.engine.risk.ThinOption.refusal(minutes, System.currentTimeMillis() / 1000, c.lotSize, null, null)
             ?.let { return "night_thin_option: $it" }
+        // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
+        val flow = FlowGate.gate(NightRules.SOURCE, u, d.side, false, now.withSecond(0).withNano(0).toString(), right.name, contract = c)
+        if (flow.skip) return "${FlowGate.SKIPPED} ($facts)"
         val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
@@ -288,6 +291,7 @@ object NightArm {
             return "night_not_filled: ${r.message}"
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · entry") } }
+        FlowGate.taken(flow, r.orderId)
         b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
         runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${NightRules.LABEL} bought ${c.symbol} · Paper",
             "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "almanac") }

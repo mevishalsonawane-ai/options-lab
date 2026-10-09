@@ -228,4 +228,60 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertTrue(msg, msg.startsWith("The Liquidity 15+5 signal expired at "))
         assertTrue(kite.placed.isEmpty())
     }
+
+    // ---- the order flow at a LIVE entry (9 Oct): CONFIRM may only skip; turning it on in Live takes the PIN ----
+
+    private fun flow(buyers: Int) {
+        FlowGate.testNowSec = 1_000
+        OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, buyers, 1_000) }
+    }
+
+    @Test fun turningOrderFlowConfirmOnForALiveStrategyTakesThePin() {
+        val confirm = com.optionslab.ira.OrderFlow.Mode.CONFIRM
+        assertEquals(FlowGate.PIN_NEEDED, FlowGate.set("liquidity:BANKNIFTY", confirm))
+        assertEquals("unchanged without the PIN", com.optionslab.ira.OrderFlow.Mode.SHADOW, FlowGate.setting("liquidity:BANKNIFTY").mode)
+        assertTrue(FlowGate.needsPin("liquidity:BANKNIFTY", confirm))
+        // A paper-only bot, or a mode that can skip nothing: no PIN.
+        assertFalse(FlowGate.needsPin("orb_sweep", confirm))
+        assertFalse(FlowGate.needsPin("orb", com.optionslab.ira.OrderFlow.Mode.OFF))
+        FlowGate.set("liquidity:BANKNIFTY", confirm, pinConfirmed = true)
+        assertEquals(confirm, FlowGate.setting("liquidity:BANKNIFTY").mode)
+        // Already on: its threshold moves without asking again.
+        assertFalse(FlowGate.needsPin("liquidity:BANKNIFTY", confirm))
+        FlowGate.set("liquidity:BANKNIFTY", confirm, threshold = 65)
+        assertEquals(65, FlowGate.setting("liquidity:BANKNIFTY").threshold)
+        assertTrue("setting it sends nothing", kite.requests.isEmpty())
+    }
+
+    @Test fun orderFlowConfirmSkipsALiveEntryWhenTheFlowDisagrees() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM, pinConfirmed = true)
+        flow(30)                                                             // sellers: against the call
+        state()
+        assertEquals(OrbArms.describe(FlowGate.SKIPPED), runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
+        assertNull(row().open)
+        val s = FlowGate.signalsForTest().single()
+        assertTrue(s.live && s.skipped)
+    }
+
+    @Test fun orderFlowNeverPlacesATradeTheStrategyDidNotSignal() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM, pinConfirmed = true)
+        flow(95)                                                             // the flow strongly agrees with buying calls
+        // Armed in Live, nothing waiting: however strong the flow, nothing is sent and nothing is logged.
+        fun flags(v: Boolean) = JSONObject().apply { listOf("liquidity15", "liquidity5").forEach { put(it, v) } }
+        AutomationSupport.orbState(context, JSONObject()
+            .put("armed", flags(true)).put("auto", flags(false)).put("liveOk", flags(true)).put("liqLots", 1).put("liqLotsChosen", true)
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", JSONArray()))
+        assertEquals("Nothing is waiting for approval.", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(FlowGate.signalsForTest().isEmpty())
+        // The strategy's own signal with the flow agreeing: exactly its own entry (1 lot and its stop), nothing more.
+        state()
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals(2, kite.placed.size)
+        assertEquals("30", kite.placed.first().form["quantity"])
+        val s = FlowGate.signalsForTest().single()
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.AGREES, s.agreement); assertFalse(s.skipped); assertTrue(s.live)
+    }
 }

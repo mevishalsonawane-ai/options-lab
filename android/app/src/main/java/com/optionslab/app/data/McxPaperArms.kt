@@ -508,9 +508,13 @@ object McxPaperArms {
         val pc = McxMarket.paperContract(oc)
         val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
         refusal(pc, buy = true, fresh = fresh)?.let { decide(b, arm, key, "eve_$it ($facts)"); return true }
+        // The order flow on the future at the decision (9 Oct; paper only): logged; under CONFIRM skipped unless it agrees.
+        val flow = FlowGate.gate(arm, McxEveRules.UNDERLYING, sig.side, false, "$today ${hhmm(sig.minute)}", right.name, contract = pc)
+        if (flow.skip) { decide(b, arm, key, "eve_${FlowGate.SKIPPED} ($facts)"); return true }
         b.decided += key
         val (fill, r) = paperOrder(pc, "BUY", "${McxEveRules.LABEL} · entry")
         if (fill == null) { decideLine(b, arm, "eve_not_filled: ${r.message} ($facts)"); return true }
+        FlowGate.taken(flow, r.orderId)
         // The -15% stop rests in the paper book, so it fills on a minute's low (the wick) between passes.
         val trigger = toTick(McxEveRules.optionStop(fill.price), oc.tick)
         val stop = runCatching { Paper.place(pc, "SELL", McxArmRules.LOTS, "SL-M", "NRML", null, trigger) }.getOrNull()
@@ -558,9 +562,12 @@ object McxPaperArms {
             if (!McxMorningRules.premiumOk(px, oc.multiplier)) { why = "am_premium ${oc.label}: 1 lot Rs %,.0f (needs Rs 500 to Rs 1 lakh)".format(Locale.ENGLISH, px * oc.multiplier); continue }
             val facts = "OTM$steps call, $dte days to expiry, future %.2f".format(Locale.ENGLISH, last.close)
             refusal(pc, buy = true, fresh = fresh)?.let { decide(b, arm, key, "am_$it ($facts)"); return true }
+            val flow = FlowGate.gate(arm, McxMorningRules.UNDERLYING, 1, false, "$today ${hhmm(slot)}", "CE", contract = pc)
+            if (flow.skip) { decide(b, arm, key, "am_${FlowGate.SKIPPED} ($facts)"); return true }
             b.decided += key
             val (fill, r) = paperOrder(pc, "BUY", "${McxMorningRules.LABEL} · entry")
             if (fill == null) { decideLine(b, arm, "am_not_filled: ${r.message} ($facts)"); return true }
+            FlowGate.taken(flow, r.orderId)
             opened(b, Pos(arm, pc.symbol, 1, fill.quantity, fill.price, today, now, slot, oc.expiry, true, r.orderId,
                 futureKey = fut.upstoxKey, charges = chargesOf(r.orderId)), "$facts; sells at ${hhmm(McxMorningRules.exitMinute(slot, window))}")
             return true
@@ -628,8 +635,12 @@ object McxPaperArms {
             val buy = step.open > 0
             val refused = refusal(pc, buy = buy, fresh = fresh)
             if (refused != null) { note(b, arm, "$leg: ${step.why} refused: $refused"); notes += "$leg: $refused"; continue }
+            // The order flow on this leg's future (9 Oct; paper only): logged; under CONFIRM the opening is skipped unless it agrees.
+            val flow = FlowGate.gate(arm, leg, if (buy) 1 else -1, false, "$today ${step.why}", leg, contract = pc)
+            if (flow.skip) { note(b, arm, "$leg: ${step.why} ${FlowGate.SKIPPED}"); notes += "$leg: ${FlowGate.SKIPPED}"; continue }
             val (fill, r) = paperOrder(pc, if (buy) "BUY" else "SELL", "${McxTrendRules.LABEL} · ${step.why}")
             if (fill == null) { note(b, arm, "$leg: ${step.why} not filled: ${r.message}"); notes += "$leg: not filled"; continue }
+            FlowGate.taken(flow, r.orderId)
             opened(b, Pos(arm, pc.symbol, step.open, fill.quantity, fill.price, today, now, minuteOf(now), fc.expiry, false, r.orderId,
                 leg = leg, charges = chargesOf(r.orderId)), "${step.why.removePrefix("trend_")}, $month signal")
         }
@@ -709,9 +720,12 @@ object McxPaperArms {
         val bars = runCatching { minutes(near.upstoxKey, now) }.getOrNull().orEmpty()
         val fresh = bars.lastOrNull()?.let { McxArmRules.fresh(it.epochSecond, nowSec()) } == true
         refusal(pc, buy = side > 0, fresh = fresh)?.let { decide(b, arm, key, "silver_$it ($facts)"); return true }
+        val flow = FlowGate.gate(arm, McxUsSilverRules.UNDERLYING, side, false, "$today silver", if (side > 0) "BUY" else "SELL", contract = pc)
+        if (flow.skip) { decide(b, arm, key, "silver_${FlowGate.SKIPPED} ($facts)"); return true }
         b.decided += key
         val (fill, r) = paperOrder(pc, if (side > 0) "BUY" else "SELL", "${McxUsSilverRules.LABEL} · entry")
         if (fill == null) { decideLine(b, arm, "silver_not_filled: ${r.message} ($facts)"); return true }
+        FlowGate.taken(flow, r.orderId)
         // The disaster stop (not part of the research) rests in the paper book, so it fills on a minute's high or low.
         val level = toTick(McxUsSilverRules.disasterLevel(fill.price, side), near.tick)
         val stop = runCatching { Paper.place(pc, if (side > 0) "SELL" else "BUY", McxArmRules.LOTS, "SL-M", "NRML", null, level) }.getOrNull()

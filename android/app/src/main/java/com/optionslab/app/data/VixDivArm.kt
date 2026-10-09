@@ -259,6 +259,9 @@ object VixDivArm {
         com.optionslab.engine.risk.ThinOption.refusal(mins, now.atZone(com.optionslab.engine.IST).toEpochSecond(), c.lotSize,
             q?.bid?.takeIf { it > 0 }, q?.ask?.takeIf { it > 0 })
             ?.let { return Decision(true, "vix_thin_option: $it ($said)") }
+        // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
+        val flow = FlowGate.gate(VixDivRules.SOURCE, u, sig.side, false, "$today ${hhmm(sig.check)}", right.name, contract = c)
+        if (flow.skip) return Decision(true, "vix_${FlowGate.SKIPPED} ($said)")
         val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {
@@ -266,6 +269,7 @@ object VixDivArm {
             return Decision(true, "vix_not_filled: ${r.message} ($said)")
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · entry") } }
+        FlowGate.taken(flow, r.orderId)
         // NIFTY's -15% stop rests in the paper book, so it fills on a minute's low (the wick) between passes.
         val stopId = if (!VixDivRules.liquidityExit(u)) null else runCatching {
             Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price))

@@ -75,6 +75,8 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
         alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
         chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) },
         liquidity = if (com.optionslab.app.BuildConfig.GOLD) null else ArmLiquiditySource,
+        // The live order flow of the charted index (its future), in the toolbar; never in the gold build.
+        flowChip = if (com.optionslab.app.BuildConfig.GOLD) null else FlowChipSlot,
         // A level's alert is one of the app's own price alarms (the Alarms page's store, the watch's minute check); the
         // gold build has no NSE watch to ring it, and no layer.
         levelAlarms = if (com.optionslab.app.BuildConfig.GOLD) null else remember(model) { StoreLevelAlarms(model.alarms) })
@@ -126,6 +128,8 @@ internal fun ChartPane(
     liquidity: LiquiditySource? = null,
     /** The price alarms a tapped liquidity level sets and lists ([LevelSheet]); null: the level's sheet has no alert button. */
     levelAlarms: LevelAlarms? = null,
+    /** The order flow's chip for the charted index ([OrderFlowChip]); null: none (the gold build, most tests). */
+    flowChip: (@Composable (String, Modifier) -> Unit)? = null,
 ) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
@@ -290,6 +294,9 @@ internal fun ChartPane(
             // The option chain of the index: tap a price to chart that option (and buy or sell it there).
             if (trading && chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { chainFor = chainUnderlying }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // The live order flow of the charted index (its future): a tap opens its parts and its last 30 minutes.
+            val flowUnderlying = flowUnderlyingOf(current.first)
+            if (flowChip != null && flowUnderlying != null) flowChip(flowUnderlying, Modifier.align(Alignment.CenterVertically))
             // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
             Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable {

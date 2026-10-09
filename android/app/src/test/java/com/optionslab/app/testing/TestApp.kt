@@ -46,6 +46,7 @@ class TestApp : Application() {
         NetworkGuard.install()
         NetworkGuard.blocked.clear()
         KiteStream.testOff = true          // the fake Kite has no price stream: never open its socket
+        com.optionslab.app.data.OrderFlowLive.testOff = true     // and the order flow never lays out its instruments by itself
         FakeAndroidKeyStore.install()
         FakeAndroidKeyStore.reset()
         SecurePrefs.init(this)
@@ -71,6 +72,10 @@ class TestApp : Application() {
         TradeBook.init(this)
         Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
+        com.optionslab.app.data.FlowGate.init(this)
+        com.optionslab.app.data.FlowGate.resetForTest()
+        com.optionslab.app.data.OrderFlowLive.init(this)
+        com.optionslab.app.data.OrderFlowLive.resetForTest()
         com.optionslab.app.ira.IraHub.init(this)
         com.optionslab.app.ira.IraHub.awaitLoadedBlocking()   // its memory is read off the main thread: every test starts with it in
         // Ira never reaches the network in tests: no live candles, empty news feeds (a test sets its own).

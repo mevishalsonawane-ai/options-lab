@@ -132,7 +132,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
             }
             is Load.Done -> {
                 val c = l.value
-                item { Header(c, source) { model.loadTools(underlying) } }
+                item { Header(c, source, flow = { if (c.underlying.uppercase() in com.optionslab.ira.OrderFlow.INDICES) OrderFlowLine(c.underlying) }) { model.loadTools(underlying) } }
                 when (view) {
                     "oi" -> item { Column { OiCard(c) } }
                     "straddle" -> item { StraddleCard(model, c, streaming) }
@@ -149,7 +149,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
 }
 
 @Composable
-internal fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
+internal fun Header(c: ChainSnapshot, source: String, flow: @Composable () -> Unit = {}, onRefresh: () -> Unit) {
     val p = LocalPalette.current
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -166,6 +166,8 @@ internal fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
             Stat("PCR", f2(c.pcr.pcrOi))
             Stat("Max pain", c.maxPain?.let { fmtG(it.maxPainStrike) } ?: "—")
         }
+        // The live order flow of the chain's index (its future; a tap opens the detail). Never in the gold build.
+        flow()
     }
 }
 

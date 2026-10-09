@@ -20,6 +20,7 @@ import com.optionslab.engine.orb.RangeFadeRules
 import com.optionslab.engine.orb.RetiredArms
 import com.optionslab.engine.orb.SweepRules
 import com.optionslab.ira.DayStop
+import com.optionslab.ira.FlowShadow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -1200,6 +1201,8 @@ object OrbArms {
         val live = liveNow()
         // Automatic unless the owner chose approvals, or the arm was armed in Paper and now finds the app in Live.
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
+            // The order flow at the signal, logged while it waits (decided at the approval, if Boss approves).
+            FlowGate.outcome(FlowGate.gate(arm.source, OrbRules.UNDERLYING, direction, live, last.start.toString(), c.right.name, decide = false, contract = c), "awaiting_approval")
             // Valid until the next bar completes: after that the signal is stale.
             b.pending[arm.source] = Pending(arm.source, right, last.start, last.start.plusMinutes(10))
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${arm.label}: approve BUY ${c.symbol}",
@@ -1238,7 +1241,11 @@ object OrbArms {
         runCatching { OrderTiming.decided() }
         // One index, one side, for every automatic trader (Boss's 06 Oct rule): paper and live alike; Liquidity first (07 Oct).
         exposureRefusal(b, c, arm, live)?.let { return it }
-        if (live) return enterLive(b, arm, c, signalBar)
+        // The order flow at this decision (9 Oct): logged beside the signal; under CONFIRM an entry it does not agree with is
+        // skipped - it never places, enlarges or reverses anything (paper and live alike; the live path is only ever skipped).
+        val flow = FlowGate.gate(arm.source, OrbRules.UNDERLYING, if (c.right == Right.CE) 1 else -1, live, signalBar.toString(), c.right.name, contract = c)
+        if (flow.skip) return FlowGate.SKIPPED
+        if (live) return enterLive(b, arm, c, signalBar).also { FlowGate.outcome(flow, it) }
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"             // never enter blind
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
         val expected = ltp * 1.0005
@@ -1250,6 +1257,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · entry") }
+        FlowGate.taken(flow, buy.orderId)
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${arm.label} · entry", buy.orderId)
         val trigger = OrbRules.stopTrigger(fill.price)
         var stopId: String? = null
@@ -1580,6 +1588,9 @@ object OrbArms {
         val lots = HeroRules.lots(limit, c.lotSize)
         if (lots <= 0) return kept("hero_zero_lots", pick, limit, lots)
         exposureRefusal(b, c, HeroRules.ARM)?.let { return kept(it, pick, limit, lots) }
+        // The order flow at this minute (paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
+        val flow = FlowGate.gate(HeroRules.ARM.source, HeroRules.UNDERLYING, scan.signal, false, day.atTime(at).toString(), c.right.name, contract = c)
+        if (flow.skip) return kept(FlowGate.SKIPPED, pick, limit, lots)
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
@@ -1589,6 +1600,7 @@ object OrbArms {
         val fill = filledOrCancelled(buy) ?: return kept("order_refused: " +
             (if (buy.ok) "the limit %.2f did not fill; the order was cancelled".format(Locale.ENGLISH, limit) else buy.message), pick, limit, lots)
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${HeroRules.OWNER} · entry") }
+        FlowGate.taken(flow, buy.orderId)
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${HeroRules.OWNER} · entry", buy.orderId)
         val text = ("NIFTY %s %.2f%% in 15 min, straddle %.0f%% above its low: bought %d %s @ %.2f on PAPER (limit %.2f). " +
             "Sells half at %.2f (5x), the rest at %.2f (20x) or 15:05; stop: a minute closing at or below %.2f (-60%%). %s.")
@@ -2179,6 +2191,8 @@ object OrbArms {
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             val right = if (s.side > 0) "CE" else "PE"
             val expires = last.start.plusMinutes(2L * tf)                    // until the next bar completes
+            // The order flow at the signal, logged while it waits (decided at the approval, if Boss approves).
+            FlowGate.outcome(FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, last.start.toString(), arm.source, decide = false), "awaiting_approval")
             b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target, near, volSkip, strong)
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
                 "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
@@ -2226,9 +2240,13 @@ object OrbArms {
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
         val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
         exposureRefusal(b, c, arm, live)?.let { return it }
+        // The order flow at this decision (per index; logged, and only ever a skip under CONFIRM), as the ORB's.
+        val flow = FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, signalBar.toString(), arm.source, contract = c)
+        if (flow.skip) return FlowGate.SKIPPED
         // Boss's size (1, 2 or 3 lots of this contract's own lot): read at the entry, so a change applies to new entries only.
         val lots = lotsOf(b)
         if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong, lots = lots)
+            .also { FlowGate.outcome(flow, it) }
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val snap = runCatching { Paper.snapshot() }.getOrNull()
@@ -2237,6 +2255,7 @@ object OrbArms {
         val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
+        FlowGate.taken(flow, buy.orderId)
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${LiquidityRules.ARM.label} · entry", buy.orderId)
         // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40), for all that filled.
         val trigger = LiquidityRules.stopTrigger(fill.price)
@@ -2576,6 +2595,7 @@ object OrbArms {
         s == "no_liquidity_break" -> "Waiting for a close through a liquidity pool that sits on a swing zone."
         s == "liquidity_history_loading" -> "Loading the last days' index candles for the liquidity levels."
         s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
+        s == FlowGate.SKIPPED -> "Skipped by the order flow (CONFIRM): the flow did not agree with this entry at the decision."
         s == "liquidity_no_room" -> "Skipped a liquidity break: the next level ahead was closer than one index stop " +
             "(30 BANKNIFTY / 15 FINNIFTY / 8 MIDCPNIFTY points)."
         s.startsWith("hero_") -> describeHero(s) + " ${HeroRules.NOT_PROVEN}."

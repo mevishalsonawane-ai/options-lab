@@ -742,7 +742,7 @@ object Broker {
     }
 
     /** The index futures the market recorder follows, by name. */
-    val FUTURE_NAMES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
+    val FUTURE_NAMES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
 
     private fun futuresFile() = File(app.filesDir, "kite_futures.json")
 

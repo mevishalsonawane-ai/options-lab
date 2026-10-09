@@ -384,8 +384,22 @@ object Strategies {
     /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
     suspend fun tagOwner(key: String, label: String) = lock.withLock { val b = book(); b.owners[key] = label; save(b) }
 
+    /**
+     * The order flow beside a one-leg strategy's option BUY entry (9 Oct; a basket's legs are never gated one by one: a
+     * skipped leg would leave the rest unhedged). Logged; under CONFIRM an entry the flow does not agree with is refused
+     * like a guard's refusal - the flow never places, enlarges or reverses anything. Null: not gated.
+     */
+    private fun flowGate(def: StrategyDef, order: Action.PlaceOrder, live: Boolean): FlowGate.Ticket? {
+        if (order.kind != "entry" || order.side.wire != "BUY" || def.legs.size != 1) return null
+        val side = when { order.symbol.endsWith("CE") -> 1; order.symbol.endsWith("PE") -> -1; else -> return null }
+        val at = runCatching { Market.now().toLocalDateTime().withSecond(0).withNano(0).toString() }.getOrDefault("")
+        return FlowGate.check("saved", def.underlying, side, live, at, "${def.id}:${order.legId}")
+    }
+
     private fun paperExec(b: Book, def: StrategyDef, v: Venue) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
+            val flow = flowGate(def, order, live = false)
+            if (flow?.skip == true) return StrategyHost.Placed.Refused("skipped by the order flow (CONFIRM: the flow did not agree)")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed")
             val c = ref.upstox ?: return StrategyHost.Placed.Refused("no price feed for ${order.symbol}")
             val pc = Paper.Contract(order.symbol, c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
@@ -398,6 +412,7 @@ object Strategies {
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
             b.owners["paper:$id"] = ownerLabel(def, order)
+            FlowGate.taken(flow, id)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
             fill?.let { Notifier.orderFilled(app, it.action, it.quantity, it.symbol, it.price, "Paper", ownerLabel(def, order), it.orderId) }
             return if (fill != null) StrategyHost.Placed.Accepted("paper:$id", "complete", fill.quantity, fill.price)
@@ -419,6 +434,9 @@ object Strategies {
             if (order.kind == "entry" && (!s.live || !s.allowRealOrders)) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
             if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
+            // The order flow can only refuse this entry (CONFIRM), never add to it; exits are never asked.
+            val flow = flowGate(def, order, live = true)
+            if (flow?.skip == true) return StrategyHost.Placed.Refused("skipped by the order flow (CONFIRM: the flow did not agree)")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed on Zerodha")
             val kiteSym = ref.kite ?: return StrategyHost.Placed.Refused("${order.symbol} has no Zerodha symbol")
             val side = if (order.side.wire == "BUY") Kite.Side.BUY else Kite.Side.SELL
@@ -462,6 +480,7 @@ object Strategies {
                         ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
                 }
                 b.owners["kite:$id"] = ownerLabel(def, order)
+                FlowGate.outcome(flow, "entered_live")
                 // From here the order exists at Zerodha: never report it as refused. An unknown
                 // state is polled on the next tick.
                 val f = runCatching { Broker.awaitOrder(id, 12_000) }.getOrNull()

@@ -837,6 +837,11 @@ object PineAuto {
             runCatching { Diag.record("pine", "${label(item)}: ${c.symbol} not bought: $it") }
             return
         }
+        // The order flow at this decision (9 Oct): logged beside the signal; under CONFIRM an entry it does not agree with is
+        // skipped (paper and live alike: it only ever skips, never places or reverses anything).
+        val flow = FlowGate.gate("pine", u, if (right == Right.CE) 1 else -1, live,
+            Market.now().toLocalDateTime().withSecond(0).withNano(0).toString(), "$id:${right.name}", contract = c)
+        if (flow.skip) { note(b, id, "Not bought: skipped by the order flow (CONFIRM; the flow did not agree)"); return }
         val lots = item.auto.lots.coerceIn(1, 50)
         if (!live) {
             val ltp = Paper.lastPrice(c) ?: run { note(b, id, "No price for ${c.symbol}: nothing bought"); return }
@@ -846,6 +851,7 @@ object PineAuto {
             val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
             val fill = filledOrCancelled(buy) ?: run { note(b, id, "Paper buy not filled: ${buy.message}"); return }
             buy.orderId?.let { Strategies.tagOwner("paper:$it", "${label(item)} · entry") }
+            FlowGate.taken(flow, buy.orderId)
             Notifier.orderFilled(app, "BUY", fill.first, c.symbol, fill.second, "Paper", label(item), buy.orderId)
             // The stop-loss rests in the paper book from now on (fix 1): the book sells at it between two looks.
             val stop = placePaperStop(item, c, (fill.first / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), fill.second)
@@ -883,6 +889,7 @@ object PineAuto {
             catch (_: Exception) { null }                                          // the order book could not be read either
         }
         orderId?.let { Strategies.tagOwner("kite:$it", "${label(item)} · entry") }
+        FlowGate.outcome(flow, "entered_live")
         var f = orderId?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
         if (orderId != null && f?.status !in DONE) {
             // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later as an untracked entry;

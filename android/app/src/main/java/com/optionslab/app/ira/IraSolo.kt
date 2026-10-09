@@ -455,6 +455,10 @@ internal object IraSolo {
         var why = "no ${s.underlying} strike near ${s.strike} is listed"
         val held = runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.map { it.symbol }.toSet() }.getOrNull()
             ?: return "the paper account could not be read"
+        // The order flow at this decision (9 Oct; paper only): logged; under CONFIRM skipped unless the flow agrees.
+        val flow = com.optionslab.app.data.FlowGate.gate("solo", s.underlying, if (s.call) 1 else -1, false,
+            t.withSecond(0).withNano(0).toString(), right.name)    // (the strike is chosen below; no book logged)
+        if (flow.skip) return "the order flow did not agree (CONFIRM)"
         for (k in SoloMidday.strikesToTry(s.underlying, s.side, s.index)) {
             val c = Paper.contractFor(s.underlying, expiry, k.toDouble(), right) ?: continue
             // Boss's own paper position in this contract is never mixed with Solo's (its exit would touch it).
@@ -485,6 +489,7 @@ internal object IraSolo {
                 return "the paper order for ${c.symbol} did not fill"
             }
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
+            com.optionslab.app.data.FlowGate.taken(flow, r.orderId)
             val itm = kotlin.math.abs(SoloMidday.atm(s.underlying, s.index) - k) / SoloMidday.step(s.underlying)
             val n = signals.size
             val seen = SoloMidday.why(s, n)

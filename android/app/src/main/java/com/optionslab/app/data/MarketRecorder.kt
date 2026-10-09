@@ -434,7 +434,8 @@ object MarketRecorder {
         }
         // Inside the session only (09:15-15:30) for prices; once a minute.
         if (minute < Market.OPEN || minute > Market.CLOSE) return
-        val futs = runCatching { Kite.nearestFutures(src.futures(), day) }.getOrElse { e ->
+        // (Its own four; MIDCPNIFTY's future is in the list for the order flow only.)
+        val futs = runCatching { Kite.nearestFutures(src.futures().filter { it.name in MarketRecord.FUTURES }, day) }.getOrElse { e ->
             if (!st.futuresGap) { st.futuresGap = true; gap("futures list", MarketRecord.why(e)) }
             emptyMap()
         }
@@ -631,6 +632,8 @@ object MarketRecorder {
         var n = 0
         ZipOutputStream(out).use { zip ->
             zip.putNextEntry(ZipEntry("README.txt")); zip.write(MarketRecord.README.toByteArray(Charsets.UTF_8)); zip.closeEntry()
+            // The order flow's 1-second bars (one gzip CSV a day, 30 days) and its signal log, as kept (9 Oct).
+            runCatching { OrderFlowLive.export(zip) }
             for ((day, _) in days()) {
                 val r = readDay(day)
                 zip.putNextEntry(ZipEntry("market-$day.csv"))

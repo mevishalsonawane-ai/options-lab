@@ -133,6 +133,8 @@ object Diag {
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderFlowLive.coverageLine() }.getOrElse { "Order flow: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowGate.diagLine() }.getOrElse { "Order flow modes: could not read" }).append('\n')
         // Honest paper (08 Oct): the bid/ask spread paper fills paid today (the "[paper] Stale price" lines below: fills on old prices).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { Paper.spreadTodayLine() }.getOrElse { "Paper spread: could not read" }).append('\n')
         // Night (R3), paper only (08 Oct): on or off, what it holds overnight, its last decisions (the "[night]" lines below).

@@ -1686,6 +1686,7 @@ object IraHub {
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityHold.asked(q) != null || com.optionslab.ira.LiquidityDrawdown.asked(q) || com.optionslab.ira.LiquidityWhen.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.CatchUp.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
+                com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
@@ -3726,6 +3727,35 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             val markets = parsed.markets
             scope.launch { reply(freshAsked(markets)) }
+            return true
+        }
+        // "How is order flow helping?" (9 Oct): every strategy's paper trades taken WITH the order flow against those taken
+        // AGAINST it, and the skips, from the flow's own log on this phone ([com.optionslab.ira.FlowShadow]). Facts only; nothing
+        // is set or acts. Not in IraGoldAlgo.
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.FlowShadow.helpAsked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.FlowGate.helpAnswer() }.getOrElse { "I could not read the order flow's log just now, Boss." })
+            }
+            return true
+        }
+        // "What is the order flow on BankNifty?", "nifty me buyers or sellers?" (9 Oct): the live read of the index's near future
+        // ([com.optionslab.ira.OrderFlow]; memory only, from Zerodha's stream) - who is in control and why, as facts, never a
+        // trade suggestion. No index named: the one the chart follows (BankNifty by default). Not in IraGoldAlgo.
+        val flowAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.OrderFlow.asked(q) }.getOrNull() else null
+        if (flowAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                val said = runCatching {
+                    val name = flowAsk.ifEmpty { com.optionslab.app.data.OrderFlowLive.focus }
+                    val now = System.currentTimeMillis()
+                    val read = com.optionslab.app.data.OrderFlowLive.reads.value[name] ?: com.optionslab.app.data.OrderFlowLive.readNow(name, now)
+                    com.optionslab.ira.OrderFlow.answer(name, read, now / 1000)
+                }.getOrElse { "I could not read the order flow just now, Boss." }
+                reply(said)
+            }
             return true
         }
         // "How much market data have we recorded?", "is the market recorder running?", "kitna market data record hua hai": what the

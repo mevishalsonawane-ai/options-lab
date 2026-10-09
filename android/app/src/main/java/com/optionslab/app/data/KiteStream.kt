@@ -115,7 +115,8 @@ object KiteStream {
         if (wants[owner] == set) return
         if (set.isEmpty()) wants.remove(owner) else wants[owner] = set
         resubscribe()
-        if (set.isNotEmpty() && owner != "index") wake()
+        // The order flow's instruments ride along with the stream; they never wake it or keep it running by themselves.
+        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER) wake()
     }
 
     private val touched = ConcurrentHashMap<Long, Long>()
@@ -224,7 +225,7 @@ object KiteStream {
     /** Something reads live prices: the app on screen (or unknown), a part following instruments, a quote asked in the last 3 min. */
     private fun needed(): Boolean {
         if (foreground() != false) return true
-        if (wants.keys.any { it != "index" }) return true
+        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER }) return true
         wanted()                                          // drops touches older than 3 minutes
         return touched.isNotEmpty()
     }
@@ -412,6 +413,9 @@ object KiteStream {
      * Bring the socket's subscriptions in line with what is wanted, full mode (depth and OI). At most Kite's 3000
      * instruments (the indices and open positions kept first), sent in messages of 500.
      *
+     * Order flow (9 Oct): the flow reads the five-level book, the total buy / sell quantity, the last traded quantity and
+     * time, the volume and the OI of its ~20 instruments ([OrderFlowLive]) - all in the full packet, so nothing changes here.
+     *
      * Battery (round 9), kept full on purpose for every token: "quote" mode drops the depth and the OI. A contract not
      * held yet still needs them - a paper MARKET order fills at the best ask or bid from [Paper]'s stream quote (else the
      * last price), a news trade's liquidity check reads bid, ask and volume ([Broker.quotes]), and the chain's largest OI
@@ -467,6 +471,8 @@ object KiteStream {
         if (down > 0L) { downSince = 0L; runCatching { OrderTiming.streamGap(now - down) } }
         bump(now)
         runCatching { FastPath.offer(got, now) }
+        // The order flow's instruments: queued for its own thread (a set lookup here, nothing computed on this socket thread).
+        runCatching { OrderFlowLive.offer(got, now) }
         val s = stamp
         if (s != null) runCatching { OrderTiming.clock(now, s) }
     }

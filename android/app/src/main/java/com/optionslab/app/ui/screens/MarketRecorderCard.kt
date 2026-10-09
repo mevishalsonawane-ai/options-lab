@@ -40,9 +40,12 @@ fun MarketRecorderCard(model: AppModel) {
     var reread by remember { mutableStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf(false) }
+    // The order flow's own days (1-second bars, 30 days kept): exported in the same zip.
+    var flowDays by remember { mutableStateOf(0) }
     // The figures list the folder: read off the main thread, on opening, after the switch and after an export.
     LaunchedEffect(reread) {
         status = withContext(Dispatchers.IO) { runCatching { MarketRecorder.status() }.getOrNull() }
+        flowDays = if (com.optionslab.app.BuildConfig.GOLD) 0 else withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.OrderFlowLive.recordedDays().size }.getOrDefault(0) }
     }
     val save = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")) { uri ->
@@ -79,7 +82,8 @@ fun MarketRecorderCard(model: AppModel) {
         BrassButton("Open recorded data", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = (s?.days ?: 0) > 0, tone = p.inkSoft) {
             viewing = true
         }
-        BrassButton("Export recorded data (CSV/zip)", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = (s?.days ?: 0) > 0, busy = busy) {
+        if (flowDays > 0) Note("Order flow: $flowDays day${if (flowDays == 1) "" else "s"} of 1-second bars kept (30 days), exported in the same zip.")
+        BrassButton("Export recorded data (CSV/zip)", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = (s?.days ?: 0) > 0 || flowDays > 0, busy = busy) {
             save.launch("iraalgo-market-data-$today.zip")
         }
     }

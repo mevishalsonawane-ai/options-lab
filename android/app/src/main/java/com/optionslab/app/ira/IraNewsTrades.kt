@@ -284,6 +284,12 @@ internal object IraNewsTrades {
         quote?.let { q -> com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize) }?.let { return "$it Not placed." }
         // [shrink]: his own record where this idea came is losing - half size, one lot at least (it only ever lowers).
         val lots = lotsFor(premium, c.lotSize).let { if (shrink) com.optionslab.ira.SelfCalibration.lots(it, com.optionslab.ira.SelfCalibration.Action.SHRINK) else it }
+        // The order flow at this decision (9 Oct): logged beside the idea; under CONFIRM skipped unless the flow agrees (paper
+        // or Zerodha alike - it only ever skips; it never places, enlarges or reverses a trade).
+        val flow = com.optionslab.app.data.FlowGate.gate("jarvis", u, if (idea.call) 1 else -1, s.live && earned(solo),
+            java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).withSecond(0).withNano(0).toString(), c.symbol, contract = c)
+        if (flow.skip) return "Not placed: the order flow did not agree with this ${if (idea.call) "call" else "put"} (order-flow confirm is on for my trades)."
+
         val nowMin = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute }
         if (lots < 1) return com.optionslab.ira.RiskSizing.tooSmall(c.lotSize)
         // Paper first: until their own record is proven (checked again now), Jarvis's trades go on paper even in Live mode.
@@ -292,6 +298,7 @@ internal object IraNewsTrades {
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
                 ?: return "Paper: ${r.message}"
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis news · entry") }
+            com.optionslab.app.data.FlowGate.taken(flow, r.orderId)
             val (stop, target) = protectionFor(fill.price)
             val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stop, null, target)
             val guarded = prot.startsWith("Protected")
