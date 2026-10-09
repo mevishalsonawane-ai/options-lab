@@ -22,7 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.McxPaperArms
-import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.components.Rule
 import com.optionslab.app.ui.theme.LocalPalette
@@ -32,28 +31,36 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+/** The heading of the MCX paper bots' group on Home's Strategies card. */
+internal const val MCX_GROUP = "MCX (commodities)"
+
+/** Where the MCX paper bots live (9 Oct, Boss: "it should be on home screen"); the Commodities page says so in one line. */
+internal const val MCX_ARMS_WHERE = "MCX paper bots are on Home → Strategies (the MCX (commodities) group)."
+
 /**
- * The MCX paper bots on the Commodities page (9 Oct, research M3 / M4 / M2; [McxPaperArms]): one row each, labelled
- * "Not proven — paper only" with its research numbers above its rules, and its switch - off until Boss turns it on, and on
- * means paper only, always. Reads [McxPaperArms.view]; a switch goes through [McxPaperArms.setArmed] off the main thread.
+ * The MCX paper bots on Home's Strategies card (9 Oct, research M3 / M4 / M2; [McxPaperArms]), in their own
+ * "MCX (commodities)" group under the NSE arms: one row each, labelled "Not proven — paper only" with its research numbers
+ * above its rules, and its switch - off until Boss turns it on, and on means paper only, always. Reads [McxPaperArms.view]
+ * (the one place they are shown; the Commodities page only points here); a switch goes through [McxPaperArms.setArmed]
+ * off the main thread.
  */
 @Composable
-internal fun McxArmsCard() {
+internal fun McxArmRows() {
     val v by McxPaperArms.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { McxPaperArms.refresh() } } }
-    McxArmsContent(v) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
+    McxArmsGroup(v) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
 }
 
-/** The card from plain state ([v]) and the switches' callback (arm, on). */
+/** The group from plain state ([v]) and the switches' callback (arm, on); it sits in the Strategies card's column. */
 @Composable
-internal fun McxArmsContent(v: McxPaperArms.View, onArm: (String, Boolean) -> Unit) {
+internal fun McxArmsGroup(v: McxPaperArms.View, onArm: (String, Boolean) -> Unit) {
     val p = LocalPalette.current
-    LedgerCard {
-        Text("MCX paper bots", style = Type.title.copy(color = p.ink, fontSize = 15.sp))
-        Note("Research ideas on paper only: none passed its tests. 1 lot each, never sent to Zerodha, off until you switch one on.")
-        McxPaperArms.ARMS.forEach { arm -> McxArmRow(arm, v, onArm) }
-    }
+    Rule()
+    Text(MCX_GROUP, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = 10.dp))
+    Note("Research ideas on paper only: none passed its tests. 1 lot each, never sent to Zerodha, off until you switch one on.",
+        Modifier.padding(bottom = 4.dp))
+    McxPaperArms.ARMS.forEach { arm -> McxArmRow(arm, v, onArm) }
 }
 
 @Composable

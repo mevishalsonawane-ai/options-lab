@@ -63,8 +63,8 @@ import java.util.Locale
  * near and next future with its price and today's change - crude, natural gas, gold, silver, copper, zinc, aluminium,
  * lead, nickel and their minis - MCX's hours today, and for each future its margin per lot and round-trip charges. A tap
  * opens the future: Buy / Sell (paper here, or the usual Zerodha review in Live), its chart, and the option chain where
- * MCX lists one. Reading only until an order is placed. On top, the three MCX paper bots (9 Oct, [McxArmsCard]): paper only,
- * not proven, off until switched on.
+ * MCX lists one. Reading only until an order is placed. The three MCX paper bots (9 Oct) are on Home → Strategies
+ * ([McxArmRows]); this page says so in one line.
  */
 @Composable
 fun CommoditiesScreen(model: AppModel, onChart: (String, String) -> Unit, onChain: (String) -> Unit) {
@@ -75,7 +75,7 @@ fun CommoditiesScreen(model: AppModel, onChart: (String, String) -> Unit, onChai
     com.optionslab.app.ui.PollWhileStarted(s.live) { while (true) { kotlinx.coroutines.delay(30_000); model.loadCommodities(quiet = true) } }
     var picked by remember { mutableStateOf<McxMarket.Quote?>(null) }
     CommoditiesContent(state, sessionLine(), onRefresh = { model.loadCommodities() }, onPick = { picked = it },
-        futureExitDays = s.mcxFutureExitDays, arms = { McxArmsCard() })
+        futureExitDays = s.mcxFutureExitDays)
     picked?.let { q ->
         McxFutureSheet(q, s.live, futureExitDays = s.mcxFutureExitDays,
             onOrder = { buy, lots, limit, product ->
@@ -103,8 +103,7 @@ internal fun sessionLine(): String {
 /** The page from plain values (tests drive it without an [AppModel] or the network). */
 @Composable
 internal fun CommoditiesContent(state: Load<List<McxMarket.Quote>>, session: String, onRefresh: () -> Unit, onPick: (McxMarket.Quote) -> Unit,
-                                futureExitDays: Int = com.optionslab.engine.mcx.McxExpiry.DEFAULT_FUTURE_EXIT_DAYS,
-                                arms: (@Composable () -> Unit)? = null) {
+                                futureExitDays: Int = com.optionslab.engine.mcx.McxExpiry.DEFAULT_FUTURE_EXIT_DAYS) {
     val p = LocalPalette.current
     Page {
         item { PageTitle("Commodities", "MCX futures: near and next month · prices, margin and charges per lot") }
@@ -116,7 +115,8 @@ internal fun CommoditiesContent(state: Load<List<McxMarket.Quote>>, session: Str
                 BrassButton("Refresh prices", Modifier.padding(top = 6.dp), tone = p.inkSoft, onClick = onRefresh)
             }
         }
-        if (arms != null) item(key = "mcx-paper-arms") { arms() }
+        // The MCX paper bots moved to Home → Strategies (9 Oct, Boss); one line here says where, so their switches live in one place.
+        item(key = "mcx-paper-arms") { LedgerCard { Note(MCX_ARMS_WHERE) } }
         when (state) {
             Load.Idle -> item { LedgerCard { FullSpinner("Reading MCX prices") } }
             is Load.Busy -> item { LedgerCard { FullSpinner(state.label) } }

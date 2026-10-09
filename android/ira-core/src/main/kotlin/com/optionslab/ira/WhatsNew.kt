@@ -52,7 +52,7 @@ object WhatsNew {
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
         Entry("2026-10-09-mcx-paper-arms", OCT9, "Three MCX ideas to try on paper, all off at first",
-            "The Commodities page has three paper-only MCX bots, each marked not proven and off until you switch it on. " +
+            "Home → Strategies has three paper-only MCX bots, each not proven and off until you switch it on. " +
                 "Natural gas evening breakout: buys a call or put when 17:00-19:00's range breaks before 22:00, flat by 23:15. " +
                 "Its research made about Rs 41 a day, then Rs 83, not significant, with a Rs 40,000 drawdown. " +
                 "Silver mini morning call: buys a call two strikes out, 11-20 days to expiry, sells 4 hours later. " +
@@ -60,7 +60,7 @@ object WhatsNew {
                 "12-month trend on mini futures: long or short monthly; needs Rs 8-10 lakh, often ruined at Rs 1 lakh. " +
                 "All three are 1 lot, paper only, and never send an order to Zerodha. " +
                 "Delivery futures are now closed 5 trading days before expiry, not 2.",
-            "Options tab → Commodities → MCX paper bots. Settings → Bot settings → MCX expiry exit"),
+            "Home → Dashboard → Strategies card → MCX (commodities). Settings → Bot settings → MCX expiry exit"),
         Entry("2026-10-09-mcx", OCT9, "MCX commodities: prices, charts, paper and expiry safety",
             "Crude oil, natural gas, gold, silver and the metals are now in the app. " +
                 "You see near and next month futures with live prices, charts and option chains. " +

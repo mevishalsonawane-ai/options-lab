@@ -106,7 +106,8 @@ class WhatsNewChangelogTest {
             "11-20 days", "4 hours", "Rs 454 a trade over 51 trades", "failed 2 of its 4 checks", "12-month trend", "Rs 8-10 lakh",
             "often ruined at Rs 1 lakh", "1 lot", "never send an order to Zerodha", "5 trading days before expiry, not 2"))
             assertTrue(w in x.what, w)
-        assertTrue("Commodities" in x.where && "MCX paper bots" in x.where, x.where)
+        assertTrue("Home → Dashboard → Strategies card → MCX (commodities)" in x.where && "Commodities →" !in x.where, x.where)
+        assertTrue("Home → Strategies has three paper-only MCX bots" in x.what && "Commodities page" !in x.what, x.what)
         assertNull(x.ask)
         assertFalse(x.gold)
     }
@@ -265,7 +266,7 @@ class WhatsNewChangelogTest {
         // Two days among the newest six: each line says its day.
         assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
-        assertEquals("• Three MCX ideas to try on paper, all off at first (9 Oct): Options tab → Commodities → MCX paper bots. " +
+        assertEquals("• Three MCX ideas to try on paper, all off at first (9 Oct): Home → Dashboard → Strategies card → MCX (commodities). " +
             "Settings → Bot settings → MCX expiry exit.", lines[1])
         assertEquals("• MCX commodities: prices, charts, paper and expiry safety (9 Oct): Options tab → Commodities. Options tab → MCX row " +
             "for the chains. Settings → Bot settings → MCX expiry exit.", lines[2])

@@ -86,6 +86,7 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         dayLock = dayLock,
         paperSince = paperSince,
         nightRow = { NightRow() },
+        mcxRows = { McxArmRows() },
     )
 }
 
@@ -118,6 +119,8 @@ internal fun StrategyArmContent(
     paperSince: String? = null,
     /** Night (R3)'s row, paper only ([NightRow] in the app); nothing by default. */
     nightRow: @Composable () -> Unit = {},
+    /** The MCX paper bots' "MCX (commodities)" group, paper only ([McxArmRows] in the app); nothing by default. */
+    mcxRows: @Composable () -> Unit = {},
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
@@ -219,6 +222,8 @@ internal fun StrategyArmContent(
         }
         if (list.isNotEmpty()) Note("AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves.",
             Modifier.padding(top = 4.dp))
+        // The MCX paper bots (9 Oct, Boss: "it should be on home screen"): their own group, last, so no NSE row reads as MCX.
+        mcxRows()
     }
 
     choosing?.let { d ->
