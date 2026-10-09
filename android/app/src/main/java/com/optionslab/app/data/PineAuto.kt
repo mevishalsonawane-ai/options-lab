@@ -112,6 +112,9 @@ object PineAuto {
         return (b ?: Book()).also { cache = it; publish(it) }
     }
 
+    /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
+    private val written = Vault.LastWrite()
+
     private fun save(b: Book) {
         while (b.log.size > 300) b.log.removeAt(0)
         val o = JSONObject()
@@ -127,7 +130,7 @@ object PineAuto {
         o.put("paused", JSONObject().apply { b.paused.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("winding", JSONObject().apply { b.winding.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("migrated", JSONArray(b.migrated.sorted()))
-        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         publish(b)
     }

@@ -91,7 +91,12 @@ object DailyPnl {
         // About three years of days is plenty; the oldest go first.
         val keys = o.keys().asSequence().toList().sorted()
         keys.dropLast(1100).forEach { o.remove(it) }
-        SecurePrefs.putAllSoon(mapOf(key(live) to o.toString()))
+        // ANR fix (9 Oct): with a position open the figure moves on every price pass (the open Home / Trade page every
+        // 2-10 s, the watch every 15 s), and each write re-encrypted the whole settings vault through the Keystore. A reading
+        // that only moves the figure is kept in memory (readable at once) and written at most a minute later
+        // ([SecurePrefs.putAllLazy]); a new day, a new trade or new charges are written at once in the background, as before.
+        val write = mapOf(key(live) to o.toString())
+        if (com.optionslab.ira.DayFigure.marksOnly(stored, entry)) SecurePrefs.putAllLazy(write) else SecurePrefs.putAllSoon(write)
         changed()
         return true
     }

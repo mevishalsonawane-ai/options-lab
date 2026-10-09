@@ -157,6 +157,9 @@ object McxPaperArms {
             p.exit?.let { put("exit", it) }; p.exitTime?.let { put("exitTime", it.toString()) }; p.why?.let { put("why", it) }
         }
 
+    /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
+    private val written = Vault.LastWrite()
+
     private fun save(b: Book) {
         val o = JSONObject()
         o.put("armed", JSONObject().apply { b.armed.forEach { (k, v) -> put(k, v) } })
@@ -165,7 +168,7 @@ object McxPaperArms {
         o.put("signals", JSONObject().apply { b.signals.keys.sorted().takeLast(60).forEach { put(it, b.signals.getValue(it)) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
-        runCatching { Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8)) }
+        runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
     }
 

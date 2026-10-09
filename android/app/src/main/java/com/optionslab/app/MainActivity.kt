@@ -74,6 +74,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         runCatching { com.optionslab.app.data.Speed.stop() }
+        // The day's P&L figures kept in memory between writes ([SecurePrefs.putAllLazy]) go to disk now, in the background.
+        runCatching { com.optionslab.app.security.SecurePrefs.saveSoon() }
         super.onStop()
     }
 

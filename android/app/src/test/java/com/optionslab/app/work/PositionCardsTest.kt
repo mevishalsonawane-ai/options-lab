@@ -93,6 +93,24 @@ class PositionCardsTest : RobolectricTest() {
         assertTrue(Background.text(posted("Paper", "W")!!)!!.endsWith("\nOpened by ORB + Manual"))
     }
 
+    /** ANR fix (9 Oct): a silent update showing the same words is not posted again; a moved price or a fill is. */
+    @Test fun anUnchangedCardIsNotPostedAgain() {
+        PositionCards.card(context, "Paper", "SAME", 75, 100.0, 101.0, 75.0)
+        val first = posted("Paper", "SAME")!!
+        PositionCards.card(context, "Paper", "SAME", 75, 100.0, 101.0, 75.0)
+        assertTrue("the same card is not re-posted", first === posted("Paper", "SAME"))
+        PositionCards.card(context, "Paper", "SAME", 75, 100.0, 102.0, 150.0)
+        val moved = posted("Paper", "SAME")!!
+        assertFalse("a moved price is posted", first === moved)
+        assertEquals("LONG 75 @ 100.00 · LTP 102.00\nP&L +₹150 (+2.0%)", Background.text(moved))
+        PositionCards.card(context, "Paper", "SAME", 75, 100.0, 102.0, 150.0, alert = true, headline = "BUY filled · Paper · Manual")
+        assertFalse("a fill always sounds", moved === posted("Paper", "SAME"))
+        // Taken down and opened again: posted again, even with the same words.
+        PositionCards.dismiss(context, "Paper", "SAME")
+        PositionCards.card(context, "Paper", "SAME", 75, 100.0, 102.0, 150.0)
+        assertNotNull(posted("Paper", "SAME"))
+    }
+
     @Test fun withoutThePermissionNoCard() {
         Background.denyNotifications(context)
         PositionCards.card(context, "Paper", "Z", 75, 100.0, 101.0, 75.0)

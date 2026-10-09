@@ -35,7 +35,7 @@ import java.util.Locale
  */
 class IraWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        render(context, manager, ids)
+        render(context, manager, ids, force = true)
         val pending = runCatching { goAsync() }.getOrNull()
         refreshLiquidity(context, ids) { runCatching { pending?.finish() } }
     }
@@ -44,7 +44,7 @@ class IraWidget : AppWidgetProvider() {
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle?) {
         runCatching {
             val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
-            if (ids.isNotEmpty()) render(context, appWidgetManager, ids)
+            if (ids.isNotEmpty()) render(context, appWidgetManager, ids, force = true)
         }
     }
 
@@ -71,8 +71,19 @@ class IraWidget : AppWidgetProvider() {
         @Volatile internal var inlineForTest = false
         @Volatile internal var liquidityFake: WidgetLiquidity.Facts? = null
 
+        /**
+         * What the widget last showed (its words, colours, rows and the widgets drawn), so a redraw that would show the same
+         * is not sent (ANR fix, 9 Oct): the live stream redraws every 5 s, the watch and the open Home page too - each an
+         * update sent through Android to the home screen, mostly the same figures between two prints.
+         */
+        @Volatile private var drawnSig: String? = null
+
+        /** Tests: each test's home screen starts empty, so nothing counts as drawn already. */
+        internal fun forgetDrawnForTest() { drawnSig = null }
+
         /** Tests share this process: back to a fresh start. */
         internal fun resetForTest() {
+            drawnSig = null
             runCatching { liquidityWorker.submit(Runnable {}).get(5, java.util.concurrent.TimeUnit.SECONDS) }
             liquidity = null; liquidityAt = 0L; liquidityBusy.set(false); inlineForTest = false; liquidityFake = null
         }
@@ -140,7 +151,8 @@ class IraWidget : AppWidgetProvider() {
                     all
                 } else { unsaved.putAll(m); null }   // held in memory (the same minute, or only the stamp moved); the redraw shows it
             }
-            if (toVault != null) SecurePrefs.putAll(toVault)
+            // ANR fix (9 Oct): written with the next minute's lazy save ([SecurePrefs.putAllLazy]), not one Keystore encryption here.
+            if (toVault != null) SecurePrefs.putAllLazy(toVault)
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, IraWidget::class.java))
             if (ids.isNotEmpty()) { render(context, mgr, ids); refreshLiquidity(context, ids) }
@@ -264,14 +276,18 @@ class IraWidget : AppWidgetProvider() {
             return String.format(Locale.ENGLISH, "%-9s %,10.2f  %+.2f%%", name, last, 100 * chg)
         }
 
-        private fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        private fun render(context: Context, manager: AppWidgetManager, ids: IntArray, force: Boolean = false) {
             val v = RemoteViews(context.packageName, R.layout.widget_iraalgo)
-            v.setTextViewText(R.id.w_nifty, line("NIFTY", textNow(K_NIFTY)))
-            v.setTextViewText(R.id.w_bank, line("BANKNIFTY", textNow(K_BANK)))
+            val niftyLine = line("NIFTY", textNow(K_NIFTY))
+            val bankLine = line("BANKNIFTY", textNow(K_BANK))
+            v.setTextViewText(R.id.w_nifty, niftyLine)
+            v.setTextViewText(R.id.w_bank, bankLine)
             val showPnl = AppSettings.load().widgetPnl
             val pnl = pnlNow()
+            var pnlShown: String? = null
             if (showPnl && pnl != null) {
                 v.setViewVisibility(R.id.w_pnl, View.VISIBLE)
+                pnlShown = String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl) + (if (pnl >= 0) "+" else "-")
                 v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl))
                 v.setTextColor(R.id.w_pnl, context.getColor(if (pnl >= 0) R.color.widget_gain else R.color.widget_loss))
             } else v.setViewVisibility(R.id.w_pnl, View.GONE)
@@ -280,21 +296,29 @@ class IraWidget : AppWidgetProvider() {
             val chargesLine = if (showPnl && pnl != null) chargesToday()?.let { com.optionslab.ira.PnlCharges.line(it.value, it.estimate) } else null
             if (chargesLine == null) v.setViewVisibility(R.id.w_charges, View.GONE)
             else { v.setViewVisibility(R.id.w_charges, View.VISIBLE); v.setTextViewText(R.id.w_charges, chargesLine) }
-            liquidityRow(context, manager, ids, v, showPnl)
+            val liqLine = liquidityRow(context, manager, ids, v, showPnl)
             val at = textNow(K_AT)
-            v.setTextViewText(R.id.w_status, (if (Market.isOpen()) "Market open" else "Market shut") + (at?.let { " · $it IST" } ?: ""))
+            val status = (if (Market.isOpen()) "Market open" else "Market shut") + (at?.let { " · $it IST" } ?: "")
+            v.setTextViewText(R.id.w_status, status)
+            val sig = listOf(ids.joinToString(","), niftyLine, bankLine, pnlShown ?: "-", chargesLine ?: "-", liqLine ?: "-", status)
+                .joinToString("\u0001")
+            if (!force && sig == drawnSig) return
             val open = PendingIntent.getActivity(context, 9, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "almanac").putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             v.setOnClickPendingIntent(R.id.w_root, open)
             manager.updateAppWidget(ids, v)
+            drawnSig = sig
         }
 
-        /** Liquidity 15+5's row: none in IraGoldAlgo or before its book was read; its rupee figures only with [figures]. */
-        private fun liquidityRow(context: Context, manager: AppWidgetManager, ids: IntArray, v: RemoteViews, figures: Boolean) {
+        /**
+         * Liquidity 15+5's row: none in IraGoldAlgo or before its book was read; its rupee figures only with [figures]. The
+         * row's words, or null when no row is shown.
+         */
+        private fun liquidityRow(context: Context, manager: AppWidgetManager, ids: IntArray, v: RemoteViews, figures: Boolean): String? {
             // A cached read from another day, or over 10 minutes old while the market is open, is not shown as current.
             val f = liquidity?.takeIf { runCatching { WidgetLiquidity.fresh(it, Market.now().toLocalDateTime(), Market.isOpen()) }.getOrDefault(false) }
             val row = if (BuildConfig.GOLD || f == null) null else runCatching { WidgetLiquidity.row(f, figures) }.getOrNull()
-            if (row == null) { v.setViewVisibility(R.id.w_liq_box, View.GONE); return }
+            if (row == null) { v.setViewVisibility(R.id.w_liq_box, View.GONE); return null }
             v.setViewVisibility(R.id.w_liq_box, View.VISIBLE)
             v.setTextViewText(R.id.w_liq, row.line)
             v.setTextColor(R.id.w_liq, context.getColor(when (row.tone) {
@@ -309,6 +333,7 @@ class IraWidget : AppWidgetProvider() {
             val strategies = PendingIntent.getActivity(context, 10, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAB, "strategy")
                 .putExtra(MainActivity.EXTRA_NONCE, MainActivity.nonce()), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             v.setOnClickPendingIntent(R.id.w_liq_box, strategies)
+            return listOf(row.line, row.tone.name, detail ?: "-").joinToString("|")
         }
     }
 }

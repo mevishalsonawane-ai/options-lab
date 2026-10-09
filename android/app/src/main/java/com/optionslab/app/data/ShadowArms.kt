@@ -164,6 +164,9 @@ object ShadowArms {
         return b
     }
 
+    /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
+    private val written = Vault.LastWrite()
+
     private fun save(b: Book) {
         val o = JSONObject()
         b.since?.let { o.put("since", it.toString()) }
@@ -203,7 +206,7 @@ object ShadowArms {
         o.put("promoted", JSONObject(b.promoted as Map<*, *>))
         o.put("armed", JSONObject(b.armed as Map<*, *>))
         o.put("asked", JSONArray(b.asked.sorted()))
-        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         hints(b)
     }

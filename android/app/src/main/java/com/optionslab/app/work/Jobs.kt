@@ -953,12 +953,20 @@ class WatchService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /** False when Android refused the foreground (the service is then stopping: start nothing). */
-    private fun show(title: String, text: String, progress: Int = -1, dest: String = "almanac"): Boolean {
-        val n = Notifier.builder(this, Notifier.LIVE, title, text, dest)
-            .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
-            .apply { if (progress >= 0) setProgress(100, progress, false) }
-            .build()
+    /** What the ongoing notice shows now (as last posted), so a pass that changes nothing does not post it again. */
+    private data class Shown(val title: String, val text: String, val progress: Int, val dest: String, val type: Int)
+    @Volatile private var shown: Shown? = null
+
+    /**
+     * False when Android refused the foreground (the service is then stopping: start nothing).
+     *
+     * ANR fix (9 Oct): the notice is posted (startForeground: a binder call into Android's activity manager, which also
+     * re-posts the notification through the system) only when what it shows changed, or [force] - every start command
+     * must call startForeground, whatever it shows. The watch re-showed the same words every pass (every 15 s on MCX's
+     * evening, each minute in NSE's hours), each a round of work in system_server that the app's own main-thread calls
+     * to Android then waited behind.
+     */
+    private fun show(title: String, text: String, progress: Int = -1, dest: String = "almanac", force: Boolean = false): Boolean {
         // The watch runs longer than Android 15 allows a dataSync service (6h a day); it is
         // declared specialUse, which has no daily cap. One-shot jobs stay dataSync.
         val type = when {
@@ -966,10 +974,18 @@ class WatchService : Service() {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             else -> 0
         }
+        val now = Shown(title, text, progress, dest, type)
+        if (!force && now == shown) return true
+        val n = Notifier.builder(this, Notifier.LIVE, title, text, dest)
+            .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
+            .apply { if (progress >= 0) setProgress(100, progress, false) }
+            .build()
         try {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
+            shown = now
             return true
         } catch (e: Exception) {
+            shown = null
             // Not allowed now (e.g. the dataSync budget is spent, or a start from the background while Android
             // battery-optimizes the app): say so and stop cleanly - a service started in the foreground that never
             // calls startForeground is killed by the system.
@@ -1024,8 +1040,11 @@ class WatchService : Service() {
             stopSelf(); return START_NOT_STICKY
         }
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
-        // Refused: show() stopped the service, so no job is launched to run on after stopSelf.
-        if (!show("IraAlgo", "Starting…")) return START_NOT_STICKY
+        // Refused: show() stopped the service, so no job is launched to run on after stopSelf. Always posted here (Android
+        // requires it after every foreground-service start); a job already running keeps its own words, not "Starting…".
+        val again = shown?.takeIf { running.values.any { it.isActive } }
+        val ok = if (again != null) show(again.title, again.text, again.progress, again.dest, force = true) else show("IraAlgo", "Starting…", force = true)
+        if (!ok) return START_NOT_STICKY
         if (intent?.action == STOP) {
             if (endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.STOPPED_BY_BOSS to null
             stopEverything(); return START_NOT_STICKY
@@ -1035,7 +1054,8 @@ class WatchService : Service() {
         if (k == null) { maybeStop(); return stickiness() }
         if (running[k]?.isActive == true) return stickiness()
         val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
-        val run = if (k == Jobs.Kind.LIVE) noteStart(byAndroid) else 0L
+        // On the main thread only the run's number (memory); its vault and diary work runs first thing in the job (below).
+        val run = if (k == Jobs.Kind.LIVE) beginRun() else 0L
         // Registered before its work runs (it waits for [registered]): a maybeStop() in between never sees the service idle
         // and stops it. ATOMIC: the body always starts, so a stop that lands before the coroutine is first dispatched
         // still goes through the finally below (the end in the diary, the run's day cleared), never skipped.
@@ -1044,6 +1064,9 @@ class WatchService : Service() {
             var end: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
             try {
                 registered.await()
+                // ANR fix (9 Oct): the watch's start note - a settings read and a vault WRITE (a Keystore encryption and two
+                // disk syncs, queued behind any other vault work), the battery question to Android - off the main thread.
+                if (k == Jobs.Kind.LIVE) noteStart(run, byAndroid)
                 val s = AppSettings.load()
                 when (k) {
                     Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
@@ -1079,6 +1102,8 @@ class WatchService : Service() {
                     // whoever sees the end in the diary (the owner, the next start) also sees the day cleared; and only
                     // by the run that set it, never over a newer run's day.
                     endRun(run)
+                    // The day's P&L figures kept in memory between writes go to disk with the watch's end (background).
+                    runCatching { SecurePrefs.saveSoon() }
                     Heartbeat.diary(com.optionslab.ira.WatchHealth.ended(why.first, why.second))
                     // A newer watch started meanwhile: its pulse and its "running" state are left alone. Checked and done
                     // under the one lock (both only set fields in memory), so a new run cannot start between the two.
@@ -1101,13 +1126,17 @@ class WatchService : Service() {
         return stickiness()
     }
 
-    /**
-     * The watch starts: a start after a watch that was never seen to end means the app's process ended under it.
-     * Returns this run's number, which its end hands to [endRun].
-     */
-    private fun noteStart(byAndroid: Boolean): Long {
+    /** A watch run starts: its number (memory only, safe on the main thread), which [noteStart] and its end ([endRun]) take. */
+    private fun beginRun(): Long {
         endWhy = null
-        val run = synchronized(runDayLock) { ++watchRun }
+        return synchronized(runDayLock) { ++watchRun }
+    }
+
+    /**
+     * The watch run [run] starts: a start after a watch that was never seen to end means the app's process ended under it.
+     * Off the main thread (the job's first step): it reads and writes the settings vault.
+     */
+    private fun noteStart(run: Long, byAndroid: Boolean) {
         runCatching {
             val today = Market.today().toString()
             val crash = java.io.File(filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).exists()
@@ -1120,7 +1149,6 @@ class WatchService : Service() {
             val battery = Heartbeat.batteryRestricted(this) == true
             Heartbeat.diary("started" + if (battery) " · battery OPTIMIZED: Android may stop the watch (set IraAlgo's battery to Unrestricted)" else "")
         }
-        return run
     }
 
     /** The newest watch run is ending, seen here (its own end clears [RUN_DAY] a moment later). */

@@ -525,7 +525,11 @@ object OrbArms {
         // wrote them, is not encrypted and synced again ([com.optionslab.ira.OrbIdleSave]); anything else is, as before.
         val idle = b.armed.values.none { it } && b.positions.none { it.open } && b.pending.isEmpty()
         val untouched = writtenStat != null && file.exists() && writtenStat == (file.length() to file.lastModified())
-        if (com.optionslab.ira.OrbIdleSave.writes(idle, text == writtenText, untouched)) {
+        // ANR fix (9 Oct): an armed or holding book whose bytes are the ones on disk is not written again either - with a
+        // position open the 15-second stop check saved the same book four times a minute, each a Keystore encryption that
+        // every other vault read or write (the screen's included) queued behind. Anything that changed is written as before.
+        val unchanged = text == writtenText && untouched
+        if (com.optionslab.ira.OrbIdleSave.writes(idle, text == writtenText, untouched) && !unchanged) {
             writtenText = null; writtenStat = null
             Vault.writeFile(file, text.toByteArray(Charsets.UTF_8))
             writtenText = text; writtenStat = file.length() to file.lastModified()

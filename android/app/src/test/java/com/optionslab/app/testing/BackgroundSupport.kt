@@ -191,7 +191,7 @@ object Background {
 
     /** The position cards shown so far (process-wide). */
     fun clearCards() {
-        listOf("shown", "sources", "sourceQty").forEach {
+        listOf("shown", "sources", "sourceQty", "posted").forEach {
             (PositionCards::class.java.getDeclaredField(it).apply { isAccessible = true }.get(null) as MutableMap<*, *>).clear()
         }
     }

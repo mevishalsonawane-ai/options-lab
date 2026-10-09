@@ -192,6 +192,9 @@ object Strategies {
         return loaded.also { cache = it; hint(it) }
     }
 
+    /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
+    private val written = Vault.LastWrite()
+
     private fun save(b: Book) {
         val o = JSONObject()
         o.put("defs", JSONArray().apply { b.defs.forEach { put(StrategyCodec.encode(it)) } })
@@ -207,7 +210,7 @@ object Strategies {
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
         b.stoppedDay?.let { o.put("stoppedDay", it) }
         b.stoppedWhy?.let { o.put("stoppedWhy", it) }
-        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         hint(b)
     }

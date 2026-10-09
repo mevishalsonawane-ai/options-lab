@@ -32,6 +32,15 @@ object DayFigure {
     data class Kept(val pnl: Double, val trades: Int, val charges: Double = 0.0, val exact: Boolean = false)
 
     /**
+     * ANR fix (9 Oct): [next] only moved the day's figure - the same day already kept, the same trade count, the same charges
+     * as [stored] - so it may wait in memory for a minute before it is written (a figure that moves with every price pass
+     * no longer re-encrypts the settings vault each pass). A first reading of the day, a new trade or new charges: false
+     * (written at once, as before).
+     */
+    fun marksOnly(stored: Kept?, next: Kept): Boolean =
+        stored != null && next.trades == stored.trades && next.charges == stored.charges && next.exact == stored.exact
+
+    /**
      * [next] with the day's charges: [charges] < 0 keeps the charges already [stored] (0 when none) with whether they were
      * [Kept.exact]; a new figure is [exact] as said (never for no charges). Null when the entry is exactly what is
      * [stored] (nothing to write).

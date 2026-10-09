@@ -98,6 +98,9 @@ object NightArm {
         return b
     }
 
+    /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
+    private val written = Vault.LastWrite()
+
     private fun save(b: Book) {
         val o = JSONObject().put("armed", b.armed)
         o.put("positions", JSONArray().apply {
@@ -113,7 +116,7 @@ object NightArm {
         o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(40).forEach { put(it) } })
         o.put("status", JSONObject(b.status as Map<*, *>))
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
-        runCatching { Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8)) }
+        runCatching { written.write(file, o.toString().toByteArray(Charsets.UTF_8)) }
         publish(b)
     }
 

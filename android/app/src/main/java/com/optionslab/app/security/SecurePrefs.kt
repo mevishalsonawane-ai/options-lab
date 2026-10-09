@@ -27,7 +27,7 @@ object SecurePrefs {
         private set
 
     fun init(context: Context) {
-        synchronized(ioLock) { synchronized(this) { generation++; pending = false; writtenSeq = seq } }
+        synchronized(ioLock) { synchronized(this) { generation++; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }
         file = File(context.noBackupFilesDir, "prefs.vault")
     }
 
@@ -38,13 +38,13 @@ object SecurePrefs {
     private val ioLock = Any()
     /** Bumped (under this object's lock) each time the map is copied out to be written. */
     private var seq = 0L
-    /** The newest copy on disk (guarded by [ioLock]). */
-    private var writtenSeq = 0L
+    /** The newest copy on disk (written under [ioLock]; volatile so [unchanged] may look at it under this object's lock). */
+    @Volatile private var writtenSeq = 0L
 
     // ---- write-behind, for writes that must not hold up an order -----------------------------------
 
-    /** One background writer: saves run in order, each writing the whole (latest) map. */
-    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "prefs-writer").apply { isDaemon = true } }
+    /** One background writer: saves run in order, each writing the whole (latest) map. Scheduled, for [putAllLazy]. */
+    private val writer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "prefs-writer").apply { isDaemon = true } }
     /** A save is queued and not yet written (guarded by this object's lock). */
     private var pending = false
     /** Bumped by [init] and [wipe]: a save queued before them is dropped, never written over the new state. */
@@ -56,6 +56,7 @@ object SecurePrefs {
      * A later [put]/[putAll] writes them too; [flush] waits for them.
      */
     @Synchronized fun putAllSoon(values: Map<String, Any?>) {
+        if (unchanged(values)) return
         val m = map()
         for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
         if (pending) return
@@ -67,6 +68,84 @@ object SecurePrefs {
         }
     }
 
+    // ---- coalesced writes, for figures that move with every price (ANR fix, 9 Oct) --------------------------------------
+
+    /**
+     * How long a [putAllLazy] value may stay in memory only. Every vault write re-encrypts the WHOLE settings map through
+     * the Keystore, which does one operation at a time (StrongBox on a Pixel): the day's P&L figure and curve, recorded on
+     * every price pass (the open Home / Trade page every 2-10 s, the watch every 15 s), kept it busy all session, and every
+     * other vault read or write - the screen's, the app's start ("settings 1941 ms") - queued behind it.
+     */
+    const val LAZY_MS = 60_000L
+    /** [putAllLazy] values not yet on disk (guarded by this object's lock). */
+    private var lazyDirty = false
+    /** The scheduled lazy write's number (0: none scheduled; guarded by this object's lock). */
+    private var lazyTask = 0L
+    private var lazySeq = 0L
+
+    /**
+     * [putAllSoon] for display figures that change on every price (the calendar's day P&L, the day's P&L curve): readable at
+     * once, written at most [delayMs] later - or with the next write of any other setting, whichever comes first - so a
+     * figure moving every few seconds costs one Keystore encryption a minute, not one a pass. [saveSoon] / [flush] write
+     * them sooner (the app leaving the screen, the watch ending). A process killed in between loses at most that last
+     * minute of the figure, which the next pass records again. Never for anything an order, a limit or a lock reads.
+     */
+    @Synchronized fun putAllLazy(values: Map<String, Any?>, delayMs: Long = LAZY_MS) {
+        if (unchanged(values)) return
+        val m = map()
+        for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
+        lazyDirty = true
+        if (pending || lazyTask != 0L) return      // a queued write carries them, or a lazy one is already on its way
+        val task = ++lazySeq
+        lazyTask = task
+        val gen = generation
+        val ok = runCatching {
+            writer.schedule(Runnable {
+                val snap = synchronized(this) {
+                    if (lazyTask != task) null
+                    else {
+                        lazyTask = 0L
+                        if (lazyDirty && gen == generation) copyOut(gen) else null
+                    }
+                }
+                if (snap != null) runCatching { write(snap) }
+            }, delayMs.coerceAtLeast(0L), java.util.concurrent.TimeUnit.MILLISECONDS)
+        }.isSuccess
+        if (!ok) lazyTask = 0L
+    }
+
+    /** The [putAllLazy] values kept in memory only, written now on the background writer (never waits; any thread). */
+    fun saveSoon() {
+        val gen = synchronized(this) { if (lazyDirty) generation else null } ?: return
+        runCatching {
+            writer.execute {
+                val snap = synchronized(this) { if (lazyDirty && gen == generation) copyOut(gen) else null }
+                if (snap != null) runCatching { write(snap) }
+            }
+        }
+    }
+
+    /**
+     * True when writing [values] would change nothing: each one is already the value in memory, and everything in memory is
+     * on disk (nothing queued, no write in flight or failed, the file there). Then no Keystore encryption is spent on it -
+     * the watch's and Jarvis's passes save their lists after every look, most of the time unchanged. Under this object's lock.
+     */
+    private fun unchanged(values: Map<String, Any?>): Boolean {
+        if (values.isEmpty() || pending || lazyDirty || writeFailed || writtenSeq != seq) return false
+        val m = map()
+        if (unreadable) return false
+        for ((k, v) in values) if (!same(if (m.has(k)) m.opt(k) else null, v)) return false
+        return runCatching { file.exists() }.getOrDefault(false)
+    }
+
+    /** The same setting value: numbers by their JSON text (a reloaded 5 is the 5L or 5.0 that was put), the rest as is. */
+    private fun same(old: Any?, new: Any?): Boolean = when {
+        old == null || new == null -> old == null && new == null
+        old is Number && new is Number -> runCatching { JSONObject.numberToString(old) == JSONObject.numberToString(new) }.getOrDefault(false)
+        old is String || old is Boolean -> old == new
+        else -> old.javaClass == new.javaClass && old.toString() == new.toString()
+    }
+
     /** The last background write failed (e.g. a Keystore fault); the values stay in memory and the next save retries. */
     @Volatile private var writeFailed = false
 
@@ -75,11 +154,13 @@ object SecurePrefs {
      * False when the background write failed: a caller that needs the value durable writes it itself.
      */
     fun flush(): Boolean {
-        if (synchronized(this) { pending }) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
+        // The lazily kept values too ([putAllLazy]): queued now, then waited for with the rest.
+        saveSoon()
+        if (synchronized(this) { pending || lazyDirty }) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
         // A write another thread copied out and is still putting on disk counts as not yet written: wait for it.
         val want = synchronized(this) { seq }
         val written = synchronized(ioLock) { writtenSeq >= want }
-        return written && !writeFailed && synchronized(this) { !pending }
+        return written && !writeFailed && synchronized(this) { !pending && !lazyDirty }
     }
 
     @Synchronized
@@ -121,6 +202,7 @@ object SecurePrefs {
         map()
         if (unreadable) return null   // never write over a vault we could not read
         pending = false               // this write carries every value set so far
+        lazyDirty = false             // ...the lazily kept ones too
         seq++
         return Snap(seq, gen, map().toString().toByteArray(Charsets.UTF_8))
     }
@@ -147,6 +229,7 @@ object SecurePrefs {
 
     fun put(k: String, v: Any?) {
         val snap = synchronized(this) {
+            if (unchanged(mapOf(k to v))) return
             if (v == null) map().remove(k) else map().put(k, v)
             copyOut()
         } ?: return
@@ -155,6 +238,7 @@ object SecurePrefs {
 
     fun putAll(values: Map<String, Any?>) {
         val snap = synchronized(this) {
+            if (unchanged(values)) return
             val m = map()
             for ((k, v) in values) if (v == null) m.remove(k) else m.put(k, v)
             copyOut()
@@ -175,7 +259,7 @@ object SecurePrefs {
         // After any write in progress (a write finishing after the delete would bring the old vault back).
         synchronized(ioLock) {
             synchronized(this) {
-                generation++; pending = false
+                generation++; pending = false; lazyDirty = false; lazyTask = 0L
                 cache = JSONObject()
                 unreadable = false
                 writtenSeq = seq

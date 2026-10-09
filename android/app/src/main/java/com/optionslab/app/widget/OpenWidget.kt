@@ -257,7 +257,7 @@ class OpenWidget : AppWidgetProvider() {
                 if (at != savedAt && all.any { (k, v) -> !OpenBook.sameFigures(v, SecurePrefs.getString(k)) }) {
                     savedAt = at
                     unsaved.clear()
-                    SecurePrefs.putAllSoon(all)
+                    SecurePrefs.putAllLazy(all)   // ANR fix (9 Oct): with the next lazy save, at most a minute on
                 } else unsaved.putAll(values)
                 true
             }

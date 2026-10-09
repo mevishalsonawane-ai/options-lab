@@ -80,5 +80,7 @@ class TestApp : Application() {
         com.optionslab.app.data.MarketRecorder.wipe()
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
+        com.optionslab.app.work.PositionCards.forgetPostedForTest()
+        com.optionslab.app.widget.IraWidget.forgetDrawnForTest()
     }
 }

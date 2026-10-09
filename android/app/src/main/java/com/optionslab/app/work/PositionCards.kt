@@ -35,6 +35,18 @@ object PositionCards {
     /** Who opened each carded position ("venue|symbol" -> "ORB + Manual"), and the quantity that was read at. */
     private val sources = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val sourceQty = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    /**
+     * What each card ("venue|symbol") last showed, as posted. ANR fix (9 Oct): a silent update that would show exactly the
+     * same words is not posted again - every post is a binder call into Android with the card's two drawn tiles, which the
+     * system then hands to the shade; a book re-read every few seconds at an unchanged price posted the same card each time.
+     */
+    private val posted = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** True when a card showing [sig] for [key] was already posted (and so is not posted again); a sounding one always posts. */
+    internal fun samePosted(key: String, sig: String, alert: Boolean): Boolean = !alert && posted[key] == sig
+
+    /** TEST SEAM: each test starts with an empty notification shade, so nothing counts as posted already. */
+    internal fun forgetPostedForTest() { posted.clear() }
     @Volatile var anyOpen = false
         private set
 
@@ -86,6 +98,9 @@ object PositionCards {
             "\n" + pnlLine(qty, avg, pnl)
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
+        val key = "$venue|$symbol"
+        val sig = listOf(title, text, quiet.toString(), open.toString()).joinToString("\u0001")
+        if (samePosted(key, sig, alert)) { if (open) shown[key] = true; return }
         val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade",
             side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT",
             // A tap opens the app on the position with its card over it: the whole text and a Close that goes through the
@@ -95,8 +110,11 @@ object PositionCards {
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
         if (quiet) b.setPriority(NotificationCompat.PRIORITY_LOW)
         if (open) b.addAction(closeAction(context, venue, symbol))
-        try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
-        if (open) shown["$venue|$symbol"] = true
+        try {
+            NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build())
+            posted[key] = sig
+        } catch (_: SecurityException) { posted.remove(key) }
+        if (open) shown[key] = true
     }
 
     /** Bumped when a position is closed from its card in the shade: the open app reloads its books at once. */
@@ -110,7 +128,7 @@ object PositionCards {
     /** Take down [symbol]'s card on [venue] ("Paper" / "Live"): the position is closed. */
     fun dismiss(context: Context, venue: String, symbol: String) {
         val key = "$venue|$symbol"
-        shown.remove(key); sources.remove(key); sourceQty.remove(key)
+        shown.remove(key); sources.remove(key); sourceQty.remove(key); posted.remove(key)
         runCatching { NotificationManagerCompat.from(context).cancel(idOf(venue, symbol)) }
     }
 
@@ -194,7 +212,7 @@ object PositionCards {
         }
         // A card whose position vanished from the book entirely (a new session): no longer ongoing.
         shown.keys.filter { it !in now }.forEach { k ->
-            shown.remove(k)
+            shown.remove(k); posted.remove(k)
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
         anyOpen = now.isNotEmpty()
