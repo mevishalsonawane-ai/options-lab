@@ -41,8 +41,23 @@ object KiteTicks {
         /** Total quantity bid and offered across the whole book (quote and full mode; null in an LTP or index packet). */
         val buyQty: Long? = null,
         val sellQty: Long? = null,
+        /** The last trade's quantity (quote and full mode; null in an LTP or index packet). */
+        val lastQty: Long? = null,
+        /** Seconds since the epoch of the last trade (full mode only). */
+        val lastTradeTime: Long? = null,
+        /** The five best bids and offers (full mode only; null otherwise): the order flow's book. */
+        val depth: Depth? = null,
     ) {
         val changePct: Double get() = if (close > 0) (last - close) / close else 0.0
+    }
+
+    /** One level of the book: its price, the quantity resting there and how many orders make it up. */
+    data class Level(val price: Double, val qty: Long, val orders: Int)
+
+    /** Five bids (best first) and five offers (best first), empty levels (price 0) left out. */
+    data class Depth(val bids: List<Level>, val asks: List<Level>) {
+        val bidQty: Long get() = bids.sumOf { it.qty }
+        val askQty: Long get() = asks.sumOf { it.qty }
     }
 
     private const val SEG_CDS = 3
@@ -91,7 +106,12 @@ object KiteTicks {
                 var ask: Double? = null
                 var bidQty: Long? = null
                 var askQty: Long? = null
+                var depth: Depth? = null
                 if (p.size == 184) {
+                    // Each entry: qty (4), price (4), orders (2), padding (2).
+                    fun level(at: Int) = Level(px(at + 4), int(at), b.getShort(at + 8).toInt() and 0xffff)
+                    depth = Depth((0 until 5).map { level(64 + it * 12) }.filter { it.price > 0 },
+                        (0 until 5).map { level(64 + 60 + it * 12) }.filter { it.price > 0 })
                     // Depth from byte 64: 5 bids then 5 offers, 12 bytes each (qty, price, orders, padding).
                     bid = px(64 + 4).takeIf { it > 0 }
                     ask = px(64 + 5 * 12 + 4).takeIf { it > 0 }
@@ -102,7 +122,8 @@ object KiteTicks {
                     token, last = px(4), volume = int(16), open = px(28), high = px(32), low = px(36), close = px(40),
                     oi = if (p.size == 184) int(48) else 0, bid = bid, ask = ask,
                     exchangeTime = if (p.size == 184) int(60) else null, bidQty = bidQty, askQty = askQty,
-                    buyQty = int(20), sellQty = int(24),
+                    buyQty = int(20), sellQty = int(24), lastQty = int(8),
+                    lastTradeTime = if (p.size == 184) int(44) else null, depth = depth,
                 )
             }
             else -> null

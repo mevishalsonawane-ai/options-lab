@@ -63,9 +63,29 @@ class KiteTicksTest {
         // The whole book's totals (the market recorder's order flow): bytes 20 and 24.
         assertEquals(900L, t.buyQty)
         assertEquals(800L, t.sellQty)
+        // The order flow's fields: last traded quantity, last trade time, and the whole 5+5 book (empty levels left out).
+        assertEquals(15L, t.lastQty)
+        assertEquals(1_790_000_000L, t.lastTradeTime)
+        assertEquals(listOf(KiteTicks.Level(212.50, 75, 3)), t.depth!!.bids)
+        assertEquals(listOf(KiteTicks.Level(212.60, 150, 2)), t.depth!!.asks)
+        assertEquals(75L, t.depth!!.bidQty); assertEquals(150L, t.depth!!.askQty)
         val noDepth = KiteTicks.parse(message(packet(44) { putInt(option.toInt()); putInt(21_255) })).single()
         assertEquals(null, noDepth.bidQty); assertEquals(null, noDepth.askQty)
         assertEquals(0L, noDepth.buyQty); assertEquals(0L, noDepth.sellQty)
+        assertEquals(null, noDepth.depth); assertEquals(null, noDepth.lastTradeTime); assertEquals(0L, noDepth.lastQty)
+    }
+
+    @Test fun fullBookAllFiveLevels() {
+        val p = packet(184) {
+            putInt(option.toInt()); putInt(10_000); repeat(14) { putInt(0) }
+            for (i in 0 until 5) { putInt(10 * (i + 1)); putInt(10_000 - 5 * (i + 1)); putShort((i + 1).toShort()); putShort(0) }
+            for (i in 0 until 5) { putInt(20 * (i + 1)); putInt(10_000 + 5 * (i + 1)); putShort((i + 2).toShort()); putShort(0) }
+        }
+        val d = KiteTicks.parse(message(p)).single().depth!!
+        assertEquals(listOf(99.95, 99.90, 99.85, 99.80, 99.75), d.bids.map { it.price })
+        assertEquals(listOf(100.05, 100.10, 100.15, 100.20, 100.25), d.asks.map { it.price })
+        assertEquals(150L, d.bidQty); assertEquals(300L, d.askQty)
+        assertEquals(listOf(1, 2, 3, 4, 5), d.bids.map { it.orders })
     }
 
     @Test fun severalPacketsAndHeartbeat() {

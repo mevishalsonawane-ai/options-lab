@@ -51,6 +51,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-order-flow", OCT9, "Live order flow, logged beside every strategy",
+            "A live read of who is pushing, buyers or sellers, from Zerodha's full price stream. " +
+                "It shows on the chart, the option chain and the Strategies card, with a detail on tap. " +
+                "Every strategy now logs the flow beside each signal, and the result later. " +
+                "Per strategy you can set it off, shadow (log only) or confirm. " +
+                "Confirm only skips an entry the flow disagrees with; it never places, adds or reverses a trade. " +
+                "Turning confirm on in Live asks for your PIN; it is unproven and may skip winners. " +
+                "A trap guard ignores pulled orders, fake walls, stop hunts and the open and close minutes. " +
+                "One-second flow bars are kept 30 days and export with the market data.",
+            "Home → Dashboard → Strategies card → Order flow (and the Flow chip on the Chart)",
+            ask = "what is the order flow on banknifty", to = "chart"),
         Entry("2026-10-09-live-prices-everywhere", OCT9, "Live exits from the price stream, local candles",
             "Live stops, targets and trails now decide on each streamed price; only the order itself goes to Zerodha. " +
                 "Minute and bar-close arms decide on candles built from the stream, with the candle feed as the check. " +
