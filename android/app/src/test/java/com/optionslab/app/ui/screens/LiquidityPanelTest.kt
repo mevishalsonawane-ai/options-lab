@@ -110,7 +110,8 @@ class LiquidityPanelTest {
 
     private fun shows(t: String, sub: Boolean = false) = compose.onAllNodesWithText(t, substring = sub).fetchSemanticsNodes().isNotEmpty()
     private fun idle() { shadowOf(Looper.getMainLooper()).idle(); compose.waitForIdle() }
-    private fun until(what: () -> Boolean) = compose.waitUntil(5_000) { idle(); what() }
+    // 15 s: on a loaded CI runner the replay sheet took over 5 s to appear once (9 Oct), the same code passing a run before.
+    private fun until(what: () -> Boolean) = compose.waitUntil(15_000) { idle(); what() }
 
     private fun pane(symbol: String, chart: FakeChartSource, liq: LiquiditySource?) {
         compose.setContent {
