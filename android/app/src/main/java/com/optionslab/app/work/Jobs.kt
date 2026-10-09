@@ -178,14 +178,41 @@ object Jobs {
      * Market hours today (from 09:14 to the close): the watch should be running now. Also while MCX trades (to 23:30, or
      * 23:55 in US winter; NSE holidays with an MCX evening session too) with an MCX position or order open (9 Oct).
      */
-    fun watchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE ||
-        runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+    fun watchDue(): Boolean = nseWatchDue() || runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
-    /** Start the watch now if it should be running; it is a no-op when it already is. */
+    /** NSE's part of [watchDue]: the clock and NSE's calendar only (no vault, no lock), safe on the main thread. */
+    private fun nseWatchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE
+
+    /**
+     * [watchDue] for the main thread (ANR fix, 9 Oct): NSE's hours, else MCX's from memory only
+     * ([com.optionslab.app.data.McxMarket.watchDueQuick]); null when MCX's part cannot be told without a vault read.
+     */
+    internal fun watchDueQuick(): Boolean? =
+        if (nseWatchDue()) true else runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() }.getOrNull()
+
+    private fun onMainThread(): Boolean = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+
+    /** Where [ensureWatch] finishes a decision that needs a vault read when it was called on the main thread. */
+    private val offMain = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Start the watch now if it should be running; it is a no-op when it already is. On the main thread (the app's start,
+     * a switch, an order) nothing here reads a vault or waits on the paper book's lock (ANR fix, 9 Oct: MCX's part of the
+     * decision read the paper book, the MCX arms' book and the settings): NSE's hours decide at once, MCX's from memory,
+     * and only when memory cannot tell is the decision finished off the main thread.
+     */
     fun ensureWatch(context: Context) {
         // IraGoldAlgo has no NSE watch: its own always-on service instead.
         if (com.optionslab.app.BuildConfig.GOLD) { GoldService.ensure(context); return }
-        if (watchDue()) start(context, Kind.LIVE, manual = false)
+        if (!onMainThread()) { if (watchDue()) start(context, Kind.LIVE, manual = false); return }
+        when (watchDueQuick()) {
+            true -> start(context, Kind.LIVE, manual = false)
+            false -> Unit
+            null -> {
+                val app = context.applicationContext ?: context
+                offMain.launch { runCatching { if (watchDue()) start(app, Kind.LIVE, manual = false) } }
+            }
+        }
     }
 
     fun stopLive(context: Context) {
@@ -985,7 +1012,9 @@ class WatchService : Service() {
         // No intent: Android restarted this sticky service after ending the app's process. In market hours that is the
         // watch coming back; otherwise there is nothing to resume (one-shot jobs are not sticky).
         val byAndroid = intent == null
-        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDue()) Jobs.Kind.LIVE
+        // On the main thread: from memory and the plain MCX hint only (ANR fix, 9 Oct; [Jobs.watchDueQuick]), never a vault
+        // decryption before the foreground. Unknown is not resumed here: the dead-man alarm (off the main thread) brings it back.
+        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() == true) Jobs.Kind.LIVE
             else runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (byAndroid && k == null && running.isEmpty()) {
             // Past the watch's hours: nothing to resume. Not a foreground start (it would be refused from the background

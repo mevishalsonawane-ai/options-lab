@@ -69,7 +69,62 @@ object Paper {
     fun symbolOf(c: Upstox.Contract): String =
         c.underlying + c.expiry.format(DDMMMYY).uppercase(Locale.ENGLISH) + fmtG(c.strike) + c.right.name
 
-    private var cache: Book? = null
+    /** Volatile: [mcxExposureIfLoaded] reads it without the lock (the main thread never waits on a save's Keystore work). */
+    @Volatile private var cache: Book? = null
+
+    /**
+     * ANR fix (9 Oct, MCX held all day): when the book was last written (wall-clock ms; guarded by this object's lock). A pass
+     * that only re-marks the open positions to new prices is kept in memory and written at most every [MARK_SAVE_MS]: each
+     * write is a Keystore encryption of the whole book, and the Keystore (StrongBox on a Pixel) takes one operation at a
+     * time, so a write every 2-15 s for positions held all day kept every other vault read and write - the screen's
+     * included - waiting behind it. Orders, fills, trades, cash and quantities are always written at once, as before.
+     */
+    private var savedAtMs = 0L
+    internal const val MARK_SAVE_MS = 60_000L
+
+    /**
+     * The paper book holds an MCX position or has a working MCX order, read from memory only (no vault read, no lock):
+     * null when the book has not been read in this process yet. For the main thread ([McxMarket.watchDueQuick]).
+     */
+    fun mcxExposureIfLoaded(): Boolean? {
+        val st = cache?.state ?: return null
+        val ex = com.optionslab.engine.mcx.Mcx.EXCHANGE
+        return st.positions.any { it.quantity != 0 && it.exchange == ex } ||
+            st.orders.any { (it.status == "open" || it.status == "trigger pending") && it.exchange == ex }
+    }
+
+    /** [state] from memory only (no vault read, no lock: safe on the main thread); null before the book is read. */
+    fun stateIfLoaded(): SandboxState? = cache?.state
+
+    /** [contractOf] from memory only (no vault read, no lock: safe on the main thread); null when not known yet. */
+    fun contractIfLoaded(symbol: String): Contract? = cache?.contracts?.get(symbol)
+
+    /**
+     * Whether [after] differs from [before] only by the marks a price pass writes: each position's last price, P&L and
+     * P&L % (and its updated time), and the funds' unrealised and total P&L (and their updated time). Nothing that an
+     * order, a fill, a settlement or a reset changes.
+     */
+    internal fun marksOnly(before: SandboxState, after: SandboxState): Boolean {
+        if (before.orders != after.orders || before.trades != after.trades || before.holdings != after.holdings) return false
+        if (before.orderSeq != after.orderSeq || before.tradeSeq != after.tradeSeq) return false
+        if (before.positions.size != after.positions.size) return false
+        for (i in before.positions.indices) {
+            val x = before.positions[i]; val y = after.positions[i]
+            if (x.copy(ltp = y.ltp, pnl = y.pnl, pnlPercent = y.pnlPercent, updatedAt = y.updatedAt) != y) return false
+        }
+        val f = before.funds; val g = after.funds
+        return f.copy(unrealizedPnl = g.unrealizedPnl, totalPnl = g.totalPnl, updatedAt = g.updatedAt) == g
+    }
+
+    /** [save], except that a marks-only change ([marksOnly]) within [MARK_SAVE_MS] of the last write stays in memory. */
+    @Synchronized
+    private fun saveMarked(b: Book) {
+        val was = cache
+        val age = System.currentTimeMillis() - savedAtMs
+        if (was != null && savedAtMs > 0L && age in 0L until MARK_SAVE_MS && was.capital == b.capital && was.contracts == b.contracts &&
+            was.why == b.why && marksOnly(was.state, b.state)) { cache = b; return }
+        save(b)
+    }
 
     @Synchronized
     private fun book(): Book {
@@ -90,6 +145,7 @@ object Paper {
         if (loaded == null && file.exists()) file.renameTo(File(file.parentFile, "paper.unreadable.${System.currentTimeMillis()}"))
         val b = loaded ?: fresh(SandboxConfig().startingCapital, emptyMap())
         cache = b
+        runCatching { mcxExposureIfLoaded()?.let { McxMarket.notePaperExposure(it) } }
         return b
     }
 
@@ -107,6 +163,9 @@ object Paper {
         // figures are read afresh. Marking positions to the price alone does not count (the kept copy says its time).
         val ordersMoved = cache.let { was -> was == null || was.state.orders != b.state.orders || was.state.trades != b.state.trades }
         cache = b
+        savedAtMs = System.currentTimeMillis()
+        // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
+        runCatching { mcxExposureIfLoaded()?.let { McxMarket.notePaperExposure(it) } }
         if (ordersMoved) runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
     }
 
@@ -605,7 +664,7 @@ object Paper {
                     else -> "day_end"
                 }
             }
-            if (s != b.state) save(b.copy(state = s, why = if (own.isEmpty()) b.why else noted(b.why, own)))
+            if (s != b.state) saveMarked(b.copy(state = s, why = if (own.isEmpty()) b.why else noted(b.why, own)))
             noteStale(fill, events)
             return events
         }
@@ -667,7 +726,7 @@ object Paper {
             val hold = e.holdings(pos.state, now, q)
             // The funds read again after re-pricing (and any expiry settlement), so they agree with the positions shown.
             val after = e.funds(hold.state, now)
-            if (after.state != b.state) save(b.copy(state = after.state))
+            if (after.state != b.state) saveMarked(b.copy(state = after.state))
             return Snapshot(after.result, pos.result, e.orderBook(after.state, now), e.tradeBook(after.state, now), hold.result, q.isNotEmpty() || watched(after.state).isEmpty(),
                 chargesSinceReset(after.state))
         }
@@ -733,6 +792,10 @@ object Paper {
     @Synchronized
     fun reset(capital: BigDecimal) { save(fresh(capital, book().contracts)) }
 
+    /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
     @Synchronized
-    fun wipe() { cache = null; file.delete(); lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap() }
+    internal fun forgetForTest() { cache = null; savedAtMs = 0L }
+
+    @Synchronized
+    fun wipe() { cache = null; savedAtMs = 0L; file.delete(); lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap() }
 }

@@ -283,18 +283,84 @@ object McxMarket {
     fun watchDue(): Boolean = isOpen() && (exposure() || runCatching { McxPaperArms.wantsWatch() }.getOrDefault(false))
 
     /**
+     * [watchDue] for the main thread (ANR fix, 9 Oct): from memory only - never a vault read (a Keystore decryption) and
+     * never a wait on the paper book's lock, which a pass holds while it writes the book through the Keystore. Null when
+     * that cannot be told without reading a vault (the paper book or the MCX arms not read yet in this process): the
+     * caller then decides off the main thread, or lets the watch's own loop (off it) decide.
+     */
+    fun watchDueQuick(): Boolean? {
+        if (!isOpen()) return false
+        if (liveExposure()) return true
+        // The books themselves when this process has read them, else what their last write left in the hint file.
+        val paper = runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: hint(H_PAPER)
+        if (paper == true) return true
+        val arms = runCatching { McxPaperArms.wantsWatchIfLoaded() }.getOrNull() ?: hint(H_ARMS)?.let { armed -> if (armed) null else false }
+        if (arms == true) return true
+        return if (paper == null || arms == null) null else false
+    }
+
+    // ---- the watch hint: two booleans in a plain file, so the main thread never decrypts a vault to decide ----------------
+
+    private const val H_PAPER = "paper"
+    private const val H_ARMS = "arms"
+    private fun hintFile() = File(app.filesDir, "mcx_watch.hint")
+    private val hintLock = Any()
+    /** The hint as this process last read or wrote it (null: not read yet). */
+    private var hints: MutableMap<String, Boolean>? = null
+
+    private fun hintsLocked(): MutableMap<String, Boolean> {
+        hints?.let { return it }
+        val m = HashMap<String, Boolean>()
+        if (ready()) runCatching {
+            val o = JSONObject(hintFile().readText())
+            for (k in o.keys()) m[k] = o.getBoolean(k)
+        }
+        hints = m
+        return m
+    }
+
+    /** What the hint file says for [key] (no vault, no network): null when nothing was ever written for it. */
+    private fun hint(key: String): Boolean? = synchronized(hintLock) { hintsLocked()[key] }
+
+    /** Kept when it changed: the paper book (after each write) says whether it holds or works anything on MCX. */
+    fun notePaperExposure(held: Boolean) = noteHint(H_PAPER, held)
+
+    /** Kept when it changed: whether any MCX paper arm is switched on (its book read or written). */
+    fun noteArmsArmed(armed: Boolean) = noteHint(H_ARMS, armed)
+
+    private fun noteHint(key: String, v: Boolean) {
+        if (!ready()) return
+        synchronized(hintLock) {
+            val m = hintsLocked()
+            if (m[key] == v) return
+            m[key] = v
+            runCatching { hintFile().writeText(JSONObject().apply { m.forEach { (k, x) -> put(k, x) } }.toString()) }
+        }
+    }
+
+    /**
      * When the watch is next needed for MCX (epoch ms): MCX's next open while something is held or working there, or an
      * armed MCX paper arm's next window ([McxPaperArms.nextWakeMillis]), whichever is sooner; null otherwise (or not within a week).
      */
     fun nextOpenMillis(): Long? {
         val arms = runCatching { McxPaperArms.nextWakeMillis() }.getOrNull()
-        val held = heldNextOpenMillis()
+        val held = heldNextOpenMillis(exposure())
         return listOfNotNull(arms, held).minOrNull()
     }
 
-    /** MCX's next open (epoch ms) while something is held or working there; null otherwise (or if not within a week). */
-    private fun heldNextOpenMillis(): Long? {
-        if (!exposure()) return null
+    /** [exposure] from memory and the plain hint only (no vault read, no lock): for the main thread. Unknown counts as none. */
+    fun exposureQuick(): Boolean = liveExposure() || (runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: hint(H_PAPER) ?: false)
+
+    /** [nextOpenMillis] for the main thread: [exposureQuick], and the arms' next window only when their book is in memory. */
+    fun nextOpenMillisQuick(): Long? {
+        val arms = runCatching { McxPaperArms.nextWakeMillisIfLoaded() }.getOrNull()
+        val held = runCatching { heldNextOpenMillis(exposureQuick()) }.getOrNull()
+        return listOfNotNull(arms, held).minOrNull()
+    }
+
+    /** MCX's next open (epoch ms) while something is held or working there ([exposed]); null otherwise (or if not within a week). */
+    private fun heldNextOpenMillis(exposed: Boolean): Long? {
+        if (!exposed) return null
         val now = now()
         val c = calendar()
         for (i in 0..7) {
@@ -307,5 +373,5 @@ object McxMarket {
     }
 
     /** For tests: the day's lists and the calendar forgotten (their files go with the test's directories). */
-    internal fun wipe() { mem = null; cal = null; margins = null }
+    internal fun wipe() { mem = null; cal = null; margins = null; synchronized(hintLock) { hints = null } }
 }

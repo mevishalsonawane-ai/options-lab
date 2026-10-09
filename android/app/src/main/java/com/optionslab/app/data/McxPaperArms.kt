@@ -111,7 +111,7 @@ object McxPaperArms {
     private val _view = MutableStateFlow(View(emptyMap(), emptyMap(), emptyList(), emptyList(), emptyList()))
     val view: StateFlow<View> = _view
 
-    private var cache: Book? = null
+    @Volatile private var cache: Book? = null
     private const val LOG_KEPT = 200
     private const val CLOSED_KEPT = 400
 
@@ -170,6 +170,8 @@ object McxPaperArms {
     }
 
     private fun publish(b: Book) {
+        // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
+        runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40))
     }
@@ -241,6 +243,18 @@ object McxPaperArms {
         val w = windows(loaded())
         w.isNotEmpty() && McxMarket.isOpen() && w.any { minute in it }
     }.getOrDefault(false)
+
+    /** [wantsWatch] from memory only (never the vault): null when the arms' book has not been read in this process yet. */
+    fun wantsWatchIfLoaded(): Boolean? {
+        if (!ready() || cache == null) return null
+        return wantsWatch()
+    }
+
+    /** [nextWakeMillis] from memory only (never the vault): null when the arms' book has not been read in this process yet. */
+    fun nextWakeMillisIfLoaded(): Long? {
+        if (!ready() || cache == null) return null
+        return nextWakeMillis()
+    }
 
     /** The next time (epoch ms) an armed arm needs the watch within a week, on MCX's calendar; null when none is armed. */
     fun nextWakeMillis(): Long? = runCatching {

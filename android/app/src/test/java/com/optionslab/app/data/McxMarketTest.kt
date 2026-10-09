@@ -105,4 +105,48 @@ class McxMarketTest : RobolectricTest() {
         // An NFO contract is never refused by MCX's rules.
         assertNull(McxGuard.entryRefusal(Paper.Contract("NIFTY20OCT2625000CE", "NIFTY", LocalDate.of(2026, 10, 20), 25_000.0, Right.CE, 75, "k"), buy = true))
     }
+
+    /**
+     * ANR fix (9 Oct): the main thread's question "should the watch run for MCX?" is answered from memory and the plain
+     * hint the books leave, never by reading (decrypting) the paper book: a new process does not read it to answer.
+     */
+    @Test fun theWatchQuestionOnTheMainThreadNeverReadsThePaperBook() = runBlocking {
+        at("2026-10-08", "20:00")
+        val c = McxMarket.paperContract(option)
+        assertTrue(Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, Quote(242.0)).ok)
+        assertEquals(true, McxMarket.watchDueQuick())
+        // A new process: nothing read yet. The hint answers; the book stays unread.
+        Paper.forgetForTest(); McxMarket.wipe()
+        assertNull(Paper.stateIfLoaded())
+        assertEquals(true, McxMarket.watchDueQuick())
+        assertEquals(true, com.optionslab.app.work.Jobs.watchDueQuick())
+        assertNull("the book was not read to answer", Paper.stateIfLoaded())
+        // MCX shut: no, at once.
+        at("2026-10-08", "23:45")
+        assertEquals(false, McxMarket.watchDueQuick())
+        assertNull(Paper.stateIfLoaded())
+        // Read again (as any pass does): from memory now, the same answer.
+        at("2026-10-08", "21:00")
+        assertTrue(McxMarket.watchDue())
+        assertEquals(true, Paper.mcxExposureIfLoaded())
+    }
+
+    /** ANR fix (9 Oct): a pass that only re-marks positions is told apart from one that changed the book. */
+    @Test fun aMarksOnlyChangeIsToldApartFromABookChange() = runBlocking {
+        at("2026-10-08", "20:00")
+        assertTrue(Paper.place(McxMarket.paperContract(option), "BUY", 1, "MARKET", "NRML", null, null, Quote(242.0)).ok)
+        val s0 = Paper.state
+        val p0 = s0.positions.single()
+        val marked = s0.copy(positions = listOf(p0.copy(ltp = java.math.BigDecimal("250.00"), pnl = java.math.BigDecimal("720.00"),
+            pnlPercent = java.math.BigDecimal("2.9653"), updatedAt = p0.updatedAt.plusSeconds(15))),
+            funds = s0.funds.copy(unrealizedPnl = java.math.BigDecimal("720.00"), totalPnl = s0.funds.totalPnl.add(java.math.BigDecimal("720.00")),
+                updatedAt = s0.funds.updatedAt.plusSeconds(15)))
+        assertTrue(Paper.marksOnly(s0, marked))
+        assertTrue(Paper.marksOnly(s0, s0))
+        assertFalse("a quantity changed", Paper.marksOnly(s0, s0.copy(positions = listOf(p0.copy(quantity = 200)))))
+        assertFalse("cash moved", Paper.marksOnly(s0, s0.copy(funds = s0.funds.copy(availableBalance = s0.funds.availableBalance.add(java.math.BigDecimal.ONE)))))
+        assertFalse("an order", Paper.marksOnly(s0, s0.copy(orders = emptyList())))
+        assertFalse("a fill", Paper.marksOnly(s0, s0.copy(trades = emptyList())))
+        assertFalse("a position gone", Paper.marksOnly(s0, s0.copy(positions = emptyList())))
+    }
 }

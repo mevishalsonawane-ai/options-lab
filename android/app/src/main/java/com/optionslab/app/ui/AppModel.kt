@@ -1908,10 +1908,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id, "you") }
     fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) =
-        paperDo(mcx = com.optionslab.app.data.Paper.state.orders.firstOrNull { it.orderId == id }?.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE) {
+        // The book from memory (the screen's thread: never the vault, never the book's lock - ANR fix, 9 Oct).
+        paperDo(mcx = com.optionslab.app.data.Paper.stateIfLoaded()?.orders?.firstOrNull { it.orderId == id }?.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE) {
             com.optionslab.app.data.Paper.modify(id, qty, price, trigger)
         }
-    fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo(mcx = com.optionslab.app.data.Paper.contractOf(symbol)?.isMcx == true) {
+    fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo(mcx = com.optionslab.app.data.Paper.contractIfLoaded(symbol)?.isMcx == true) {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
         com.optionslab.app.data.Paper.close(symbol, product).also { r ->
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
