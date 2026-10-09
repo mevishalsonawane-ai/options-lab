@@ -126,6 +126,66 @@ class FastLaneTest {
         assertEquals(t0 + 10_000, FastLane.plan(listOf(Ev(1, t0, s)), r3, g3, t0 + 10_000, st, all).minuteAtMs)
     }
 
+    @Test fun liveExitsDecideAtTheStreamPaceWhileEveryLiveInstrumentIsFresh() {
+        val r = FastLane.Rolls(); val g = FastLane.Debounce()
+        val st = held.copy(holding = false, liveHolding = true, liveFresh = true)
+        assertEquals(FastLane.STREAM_GAP_MS, FastLane.liveGap(st))
+        assertEquals(FastLane.LIVE_GAP_MS, FastLane.liveGap(st.copy(liveFresh = false)))
+        assertEquals(setOf(Lane.LIVE), FastLane.plan(listOf(Ev(9, t0, null)), r, g, t0, st, all).lanes)
+        val soon = FastLane.plan(listOf(Ev(9, t0 + 120, null)), r, g, t0 + 120, st, all)
+        assertTrue(soon.lanes.isEmpty()); assertEquals(80, soon.retryMs)
+        assertEquals(setOf(Lane.LIVE), FastLane.plan(listOf(Ev(9, t0 + 200, null)), r, g, t0 + 200, st, all).lanes)
+        // A stale live instrument: back to Zerodha's pace.
+        val stale = FastLane.plan(listOf(Ev(9, t0 + 400, null)), r, g, t0 + 400, st.copy(liveFresh = false), all)
+        assertTrue(stale.lanes.isEmpty()); assertEquals(FastLane.LIVE_GAP_MS - 200, stale.retryMs)
+    }
+
+    @Test fun lanesAreIndependentABusyLaneHoldsBackOnlyItself() {
+        val r = FastLane.Rolls(); val g = FastLane.Debounce()
+        val st = held.copy(liveHolding = true)
+        val busy = FastLane.Busy()
+        assertTrue(busy.start(Lane.LIVE))
+        assertFalse(busy.start(Lane.LIVE), "never beside itself")
+        // The live lane is stuck on a slow Zerodha read: the stream lane still runs on every tick's gap.
+        val p = FastLane.plan(listOf(Ev(9, t0, null)), r, g, t0, st, busy.now(), all)
+        assertEquals(setOf(Lane.STREAM), p.lanes)
+        assertEquals(FastLane.LIVE_GAP_MS, p.retryMs, "the busy lane is looked at again after its gap")
+        val q = FastLane.plan(listOf(Ev(9, t0 + 200, null)), r, g, t0 + 200, st, busy.now(), all)
+        assertEquals(setOf(Lane.STREAM), q.lanes)
+        // A busy bar-close lane is not run again; the minute lane is unaffected.
+        busy.end(Lane.LIVE)
+        assertEquals(emptySet(), busy.now())
+        assertEquals(setOf(Lane.LIVE), FastLane.plan(listOf(Ev(9, t0 + 2_100, null)), r, g, t0 + 2_100, st, busy.now(), all).lanes - Lane.STREAM)
+        val s = t0 / 1000
+        val r2 = FastLane.Rolls(); val g2 = FastLane.Debounce()
+        val armed = st.copy(armed = true, minuteArms = true)
+        FastLane.plan(listOf(Ev(1, t0 - 2_000, s - 2)), r2, g2, t0 - 2_000, armed, all)
+        val b = FastLane.plan(listOf(Ev(1, t0 + 10, s)), r2, g2, t0 + 10, armed, setOf(Lane.BAR_CLOSE), all)
+        assertFalse(Lane.BAR_CLOSE in b.lanes)
+        assertEquals(t0 + FastLane.MINUTE_AFTER_MS, b.minuteAtMs)
+    }
+
+    @Test fun withLocalCandlesTheMinuteLaneRunsAtTheCloseAndAgainFromTheFeed() {
+        val r = FastLane.Rolls(); val g = FastLane.Debounce()
+        val s = t0 / 1000
+        val st = FastLane.State(holding = false, liveHolding = false, armed = false, covered = true, minuteArms = true, localCandles = true)
+        FastLane.plan(listOf(Ev(1, t0 - 2_000, s - 2)), r, g, t0 - 2_000, st, all)
+        val p = FastLane.plan(listOf(Ev(1, t0 + 40, s)), r, g, t0 + 40, st, all)
+        assertEquals(t0 + 40, p.minuteAtMs, "at the first tick after the boundary")
+        assertEquals(t0 + FastLane.MINUTE_AFTER_MS, p.minuteAgainMs, "the feed's run, the source of truth")
+        assertFalse(p.idle)
+        // A late first tick (after the feed's moment): one run, from the feed.
+        val r2 = FastLane.Rolls(); val g2 = FastLane.Debounce()
+        FastLane.plan(listOf(Ev(1, t0 - 2_000, s - 2)), r2, g2, t0 - 2_000, st, all)
+        val late = FastLane.plan(listOf(Ev(1, t0 + 5_000, s + 4)), r2, g2, t0 + 5_000, st, all)
+        assertEquals(t0 + 5_000, late.minuteAtMs); assertNull(late.minuteAgainMs)
+        // Without local candles: as before, 3 s after the close, once.
+        val r3 = FastLane.Rolls(); val g3 = FastLane.Debounce()
+        FastLane.plan(listOf(Ev(1, t0 - 2_000, s - 2)), r3, g3, t0 - 2_000, st.copy(localCandles = false), all)
+        val feed = FastLane.plan(listOf(Ev(1, t0 + 40, s)), r3, g3, t0 + 40, st.copy(localCandles = false), all)
+        assertEquals(t0 + FastLane.MINUTE_AFTER_MS, feed.minuteAtMs); assertNull(feed.minuteAgainMs)
+    }
+
     @Test fun theRouteIsWarmedFiveSecondsBeforeEachBarClose() {
         assertEquals(t0 + 295_000, FastLane.warmAt(t0))
         assertEquals(t0 + 295_000, FastLane.warmAt(t0 + 100_000))

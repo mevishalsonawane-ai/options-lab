@@ -72,10 +72,10 @@ class OrderSpeedTest {
         b.add(OrderSpeed.Step.SIGNAL_SENT, true, 1_400)
         b.add(OrderSpeed.Step.CLOCK_OFFSET, true, -1_500)
         val l = OrderSpeed.lines(b, fillsOnStream = 2, fillsKnown = 3)
-        assertTrue("Live · Order sent → Zerodha's answer: typical 50 ms, worst 60 ms, 3 times" in l, l.toString())
-        assertTrue("Paper · Order sent → Zerodha's answer: typical 2 ms, worst 2 ms, 1 time" in l, l.toString())
+        assertTrue("Live · Order sent → Zerodha's answer: p50 50 ms, p95 60 ms, 3 times" in l, l.toString())
+        assertTrue("Paper · Order sent → Zerodha's answer: p50 2 ms, p95 2 ms, 1 time" in l, l.toString())
         assertTrue("Live fills first seen on Zerodha's stream: 2 of 3" in l, l.toString())
-        assertTrue("Relay round trip: typical 180 ms, worst 200 ms, 3 times" in l, l.toString())
+        assertTrue("Relay round trip: p50 180 ms, p95 200 ms, 3 times" in l, l.toString())
         assertTrue("Phone clock vs exchange: phone behind by 1.5 s (typical, network delay included)" in l, l.toString())
         val w = OrderSpeed.warnings(b)
         assertEquals(4, w.size, w.toString())
@@ -88,11 +88,42 @@ class OrderSpeedTest {
         assertTrue("rp 180/200/200ms n3" in d && "WARN Relay is slow" in d, d)
         assertEquals("Order speed (2026-10-09, typical/worst/slowest): no timings yet", OrderSpeed.diagLine(OrderSpeed.Book("2026-10-09")))
         // The slowest is said only when it differs from the 95th percentile; long times in seconds.
-        assertEquals("typical 12 s, worst 12 s, 1 time", OrderSpeed.said(OrderSpeed.Summary(1, 12_000, 12_000, 12_000)))
-        assertEquals("typical 10 ms, worst 90 ms (slowest 120 ms), 30 times", OrderSpeed.said(OrderSpeed.Summary(30, 10, 90, 120)))
+        assertEquals("p50 12 s, p95 12 s, 1 time", OrderSpeed.said(OrderSpeed.Summary(1, 12_000, 12_000, 12_000)))
+        assertEquals("p50 10 ms, p95 90 ms (slowest 120 ms), 30 times", OrderSpeed.said(OrderSpeed.Summary(30, 10, 90, 120)))
         // A phone ahead of the exchange.
         val ahead = OrderSpeed.Book("2026-10-09").also { it.add(OrderSpeed.Step.CLOCK_OFFSET, false, 300) }
         assertTrue("Phone clock vs exchange: phone ahead by 300 ms (typical, network delay included)" in OrderSpeed.lines(ahead))
+    }
+
+    @Test fun whereDecisionsCameFromTheOrderPathStepsAndTheStreamsDropsAreCountedAndKept() {
+        val b = OrderSpeed.Book("2026-10-09")
+        b.decidedFrom(OrderSpeed.Source.STREAM); b.decidedFrom(OrderSpeed.Source.STREAM)
+        b.decidedFrom(OrderSpeed.Source.LOCAL_CANDLE)
+        b.decidedFrom(OrderSpeed.Source.FEED, 0)
+        b.dropped(); b.dropped(2)
+        listOf(600L, 900L).forEach { b.add(OrderSpeed.Step.STREAM_GAP, false, it) }
+        b.add(OrderSpeed.Step.MARGIN_CHECK, true, 3)
+        b.add(OrderSpeed.Step.STOP_CANCEL, true, 45)
+        assertFalse(b.isEmpty())
+        val raw = b.encode()
+        assertEquals("2026-10-09|sg:0:600,900;mc:1:3;sc:1:45;n:s:2;n:l:1;d:3", raw)
+        val back = OrderSpeed.decode(raw, "2026-10-09")
+        assertEquals(2, back.decidedCount(OrderSpeed.Source.STREAM))
+        assertEquals(1, back.decidedCount(OrderSpeed.Source.LOCAL_CANDLE))
+        assertEquals(0, back.decidedCount(OrderSpeed.Source.FEED))
+        assertEquals(3, back.drops)
+        val l = OrderSpeed.lines(back)
+        assertTrue("Decided from the stream 2 · from a local candle 1 · from the feed / Zerodha's quote 0" in l, l.toString())
+        assertTrue("Price stream drops today: 3 · gap p50 600 ms, p95 900 ms, 2 times" in l, l.toString())
+        assertTrue("Live · Margin check (live entry): p50 3 ms, p95 3 ms, 1 time" in l, l.toString())
+        assertTrue("Live · Exchange stop cancelled before an exit: p50 45 ms, p95 45 ms, 1 time" in l, l.toString())
+        // Counts alone are not "no timings".
+        val only = OrderSpeed.Book("2026-10-09").also { it.dropped() }
+        assertEquals(listOf("Price stream drops today: 1"), OrderSpeed.lines(only))
+        // Broken counts are skipped.
+        val odd = OrderSpeed.decode("2026-10-09|n:z:4;n:s:x;d:y;n:f:2", "2026-10-09")
+        assertEquals(2, odd.decidedCount(OrderSpeed.Source.FEED)); assertEquals(0, odd.drops)
+        assertTrue(OrderSpeed.diagLine(back).contains("mc 3/3/3ms n1"))
     }
 
     @Test fun theRelayAdviceSaysMumbaiOnlyWhenFar() {

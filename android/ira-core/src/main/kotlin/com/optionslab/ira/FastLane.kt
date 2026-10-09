@@ -10,9 +10,16 @@ package com.optionslab.ira
  * The lanes (the app runs each step under that arm's own lock, with every gate as on the full pass):
  *  - [Lane.STREAM]: what reads prices only from the stream (the paper book's resting stops, the ORB arms' paper exits),
  *    at most every [STREAM_GAP_MS];
- *  - [Lane.LIVE]: exits that also read Zerodha (orders, positions), at most every [LIVE_GAP_MS] (Zerodha's rate limits);
- *  - [Lane.MINUTE]: arms that judge 1-minute candles from the candle feed, once a minute, [MINUTE_AFTER_MS] after it closes;
+ *  - [Lane.LIVE]: exits of what is held at Zerodha. Round 2: while every live instrument has a fresh stream tick
+ *    ([State.liveFresh]) it is decided from the stream at the stream lane's pace ([STREAM_GAP_MS]) - only an order goes
+ *    over REST; otherwise it reads Zerodha, at most every [LIVE_GAP_MS] (Zerodha's rate limits);
+ *  - [Lane.MINUTE]: arms that judge 1-minute candles: at the first tick after the minute's close when the local candles
+ *    ([LiveCandles]) can stand for the feed ([State.localCandles]), and again [MINUTE_AFTER_MS] after the close from the
+ *    candle feed (the fallback, and the source of truth);
  *  - [Lane.BAR_CLOSE]: the armed arms' entries on a 5-minute bar, at its close.
+ *
+ * Lanes are independent (round 2): a lane still running ([Plan] is given the [busy] ones) is never started again beside
+ * itself and never holds back another lane - a slow Zerodha read in one cannot stall the stream's checks.
  */
 object FastLane {
     enum class Lane { STREAM, LIVE, MINUTE, BAR_CLOSE }
@@ -103,10 +110,31 @@ object FastLane {
         val covered: Boolean,
         /** An arm that judges 1-minute candles is armed or holds (the minute lane has work). */
         val minuteArms: Boolean,
+        /** Every instrument held at Zerodha has a stream tick at most [LiveQuote.FRESH_MS] old: exits decide from the stream. */
+        val liveFresh: Boolean = false,
+        /** The local candles are being built for what the minute arms read: the minute lane may run at the close itself. */
+        val localCandles: Boolean = false,
     )
 
-    data class Plan(val lanes: Set<Lane>, val triggerMs: Long?, val triggerExchMs: Long?, val minuteAtMs: Long?, val retryMs: Long?) {
-        val idle: Boolean get() = lanes.isEmpty() && minuteAtMs == null && retryMs == null
+    /**
+     * [minuteAtMs]: when the minute lane is due (at once on local candles, else the close plus [MINUTE_AFTER_MS]);
+     * [minuteAgainMs]: its second run from the feed after a run on local candles (null: none).
+     */
+    data class Plan(val lanes: Set<Lane>, val triggerMs: Long?, val triggerExchMs: Long?, val minuteAtMs: Long?, val retryMs: Long?,
+                    val minuteAgainMs: Long? = null) {
+        val idle: Boolean get() = lanes.isEmpty() && minuteAtMs == null && retryMs == null && minuteAgainMs == null
+    }
+
+    /** The live lane's gap: the stream's when every live instrument is fresh on it, else Zerodha's ([LIVE_GAP_MS]). */
+    fun liveGap(st: State): Long = if (st.liveFresh) STREAM_GAP_MS else LIVE_GAP_MS
+
+    /** The lanes running now (thread-safe): a lane is never started beside itself, and a busy one holds back no other. */
+    class Busy {
+        private val running = HashSet<Lane>()
+        /** True when [lane] was free (it is now marked running). */
+        @Synchronized fun start(lane: Lane): Boolean = running.add(lane)
+        @Synchronized fun end(lane: Lane) { running.remove(lane) }
+        @Synchronized fun now(): Set<Lane> = running.toSet()
     }
 
     /**
@@ -115,24 +143,33 @@ object FastLane {
      * stamp, in ms). [Plan.minuteAtMs]: when the minute lane is due (the close plus [MINUTE_AFTER_MS]). [Plan.retryMs]: a
      * lane held back by its gap is due again in this long (the consumer looks again then, even with no new tick).
      */
-    fun plan(evs: List<Ev>, rolls: Rolls, gate: Debounce, nowMs: Long, st: State, relevant: (Long) -> Boolean): Plan {
+    fun plan(evs: List<Ev>, rolls: Rolls, gate: Debounce, nowMs: Long, st: State, relevant: (Long) -> Boolean): Plan =
+        plan(evs, rolls, gate, nowMs, st, emptySet(), relevant)
+
+    /** [plan] with the lanes still running ([busy]): never started beside themselves, looked at again after their gap. */
+    fun plan(evs: List<Ev>, rolls: Rolls, gate: Debounce, nowMs: Long, st: State, busy: Set<Lane>,
+             relevant: (Long) -> Boolean): Plan {
         val mine = evs.filter { relevant(it.token) }
         if (mine.isEmpty()) return Plan(emptySet(), null, null, null, null)
         val roll = rolls.see(mine)
         val first = mine.minByOrNull { it.atMs }!!
         val lanes = LinkedHashSet<Lane>()
         var retry: Long? = null
-        fun hold(lane: Lane, gap: Long) { val l = gate.left(lane, nowMs, gap); if (l > 0) retry = minOf(retry ?: l, l) }
-        if (st.holding && st.covered) {
-            if (gate.due(Lane.STREAM, nowMs, STREAM_GAP_MS, roll.minute)) lanes += Lane.STREAM else hold(Lane.STREAM, STREAM_GAP_MS)
+        fun hold(lane: Lane, gap: Long) { val l = gate.left(lane, nowMs, gap).coerceAtLeast(if (lane in busy) gap else 0); if (l > 0) retry = minOf(retry ?: l, l) }
+        // A lane still running is looked at again after its gap (the latest ticks are kept for it); the others go on.
+        fun try_(lane: Lane, gap: Long, force: Boolean) {
+            if (lane in busy) { hold(lane, gap); return }
+            if (gate.due(lane, nowMs, gap, force)) lanes += lane else hold(lane, gap)
         }
-        if (st.liveHolding && st.covered) {
-            if (gate.due(Lane.LIVE, nowMs, LIVE_GAP_MS, roll.minute)) lanes += Lane.LIVE else hold(Lane.LIVE, LIVE_GAP_MS)
-        }
-        if (roll.bar && st.armed && gate.due(Lane.BAR_CLOSE, nowMs, BAR_GAP_MS)) lanes += Lane.BAR_CLOSE
-        val minuteAt = if (roll.minute && st.minuteArms && gate.due(Lane.MINUTE, nowMs, MINUTE_GAP_MS))
-            maxOf(nowMs, (roll.closedAtMs ?: nowMs) + MINUTE_AFTER_MS) else null
-        return Plan(lanes, first.atMs, first.exchSec?.let { it * 1000 }, minuteAt, retry)
+        if (st.holding && st.covered) try_(Lane.STREAM, STREAM_GAP_MS, roll.minute)
+        // The live lane's looks also mark the paper holdings: only when those are streamed too (no candle feed read per tick).
+        if (st.liveHolding && (st.covered || !st.holding)) try_(Lane.LIVE, liveGap(st), roll.minute)
+        if (roll.bar && st.armed && Lane.BAR_CLOSE !in busy && gate.due(Lane.BAR_CLOSE, nowMs, BAR_GAP_MS)) lanes += Lane.BAR_CLOSE
+        val minute = roll.minute && st.minuteArms && gate.due(Lane.MINUTE, nowMs, MINUTE_GAP_MS)
+        val feedAt = maxOf(nowMs, (roll.closedAtMs ?: nowMs) + MINUTE_AFTER_MS)
+        val minuteAt = if (!minute) null else if (st.localCandles) nowMs else feedAt
+        val again = if (minute && st.localCandles && feedAt > nowMs) feedAt else null
+        return Plan(lanes, first.atMs, first.exchSec?.let { it * 1000 }, minuteAt, retry, again)
     }
 
     /**

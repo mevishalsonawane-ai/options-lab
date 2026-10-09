@@ -51,6 +51,13 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-live-prices-everywhere", OCT9, "Live exits from the price stream, local candles",
+            "Live stops, targets and trails now decide on each streamed price; only the order itself goes to Zerodha. " +
+                "Minute and bar-close arms decide on candles built from the stream, with the candle feed as the check. " +
+                "Orders read nothing from the phone's locked storage and reuse a warm connection. " +
+                "Screens update on every price, up to four times a second, and say live or delayed. " +
+                "An optional setting keeps a stop-loss order resting at Zerodha for live positions.",
+            "Settings → Zerodha (the order speed card and the exchange stop setting)"),
         Entry("2026-10-09-strategies-to-research", OCT9, "Saved strategies moved to Research",
             "Your saved strategies moved from Trade to Research → Strategies. " +
                 "Trade now opens straight on your account; Home's Strategies card with the bots stays on Home.",

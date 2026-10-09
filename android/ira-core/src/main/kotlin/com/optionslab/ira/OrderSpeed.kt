@@ -16,6 +16,10 @@ import java.util.Locale
  *  - price age: how old the price an order used was, by the exchange's own stamp (the phone clock's offset included);
  *  - relay / direct round trip: a cheap read through the static-IP relay, and the same read without it;
  *  - clock offset: the phone's clock minus the exchange's stamp of its ticks (network delay included).
+ *
+ * Round 2 (9 Oct): the order path's own steps too - the live entry's margin check, the resting exchange stop's cancel
+ * before an app exit, the stream's gaps when it drops and comes back - and where each decision's price came from
+ * ([Source]: a stream tick, a local candle built from ticks, or the candle feed / Zerodha's REST quote), counted per day.
  */
 object OrderSpeed {
     enum class Step(val key: String, val label: String) {
@@ -29,6 +33,9 @@ object OrderSpeed {
         RELAY_COLD("rc", "Relay round trip (cold)"),
         DIRECT_PING("dp", "Direct round trip (no relay)"),
         CLOCK_OFFSET("co", "Phone clock vs exchange"),
+        MARGIN_CHECK("mc", "Margin check (live entry)"),
+        STOP_CANCEL("sc", "Exchange stop cancelled before an exit"),
+        STREAM_GAP("sg", "Price stream gap (drop to first tick)"),
         ;
         companion object {
             fun of(key: String): Step? = entries.firstOrNull { it.key == key }
@@ -49,6 +56,17 @@ object OrderSpeed {
     const val MUMBAI = "Move the relay to a Mumbai region (e.g. Oracle ap-mumbai-1 / AWS ap-south-1): ~20–40 ms faster per order"
 
     data class Summary(val n: Int, val median: Long, val p95: Long, val max: Long)
+
+    /** Where a decision's price came from. */
+    enum class Source(val key: String, val label: String) {
+        STREAM("s", "from the stream"),
+        LOCAL_CANDLE("l", "from a local candle"),
+        FEED("f", "from the feed / Zerodha's quote"),
+        ;
+        companion object {
+            fun of(key: String): Source? = entries.firstOrNull { it.key == key }
+        }
+    }
 
     /** The median of [xs] (the lower middle for an even count); 0 for none. */
     fun median(xs: List<Long>): Long {
@@ -90,11 +108,27 @@ object OrderSpeed {
         /** Both modes together. */
         fun all(step: Step): List<Long> = of(step, false) + of(step, true)
 
-        fun isEmpty(): Boolean = samples.values.all { it.isEmpty() }
+        private val decided = LinkedHashMap<Source, Int>()
 
-        /** "day|sd:1:12,15;sa:0:3": compact, for the settings vault. */
-        fun encode(): String = day + "|" + samples.entries.filter { it.value.isNotEmpty() }
-            .joinToString(";") { (k, v) -> "${k.first.key}:${if (k.second) 1 else 0}:${v.joinToString(",")}" }
+        /** The stream's drops today. */
+        var drops: Int = 0
+            private set
+
+        /** A decision taken on a price from [src]. */
+        fun decidedFrom(src: Source, n: Int = 1) { if (n > 0) decided[src] = (decided[src] ?: 0) + n }
+
+        fun decidedCount(src: Source): Int = decided[src] ?: 0
+
+        /** The stream dropped ([n] times). */
+        fun dropped(n: Int = 1) { if (n > 0) drops += n }
+
+        fun isEmpty(): Boolean = samples.values.all { it.isEmpty() } && decided.isEmpty() && drops == 0
+
+        /** "day|sd:1:12,15;sa:0:3;n:s:4;d:2": compact, for the settings vault. */
+        fun encode(): String = day + "|" + (samples.entries.filter { it.value.isNotEmpty() }
+            .map { (k, v) -> "${k.first.key}:${if (k.second) 1 else 0}:${v.joinToString(",")}" } +
+            decided.entries.filter { it.value > 0 }.map { (k, v) -> "n:${k.key}:$v" } +
+            (if (drops > 0) listOf("d:$drops") else emptyList())).joinToString(";")
     }
 
     /** [Book.encode] read back; a different day, or anything unreadable, gives a fresh book for [today]. */
@@ -106,6 +140,8 @@ object OrderSpeed {
         val b = Book(today)
         for (part in raw.substringAfter('|').split(';')) {
             val bits = part.split(':')
+            if (bits.size == 2 && bits[0] == "d") { bits[1].toIntOrNull()?.let { b.dropped(it) }; continue }
+            if (bits.size == 3 && bits[0] == "n") { Source.of(bits[1])?.let { src -> bits[2].toIntOrNull()?.let { b.decidedFrom(src, it) } }; continue }
             if (bits.size != 3) continue
             val step = Step.of(bits[0]) ?: continue
             val live = bits[1] == "1"
@@ -117,12 +153,13 @@ object OrderSpeed {
     private fun ms(x: Long): String = if (kotlin.math.abs(x) >= 10_000) "%.0f s".format(Locale.ENGLISH, x / 1000.0)
         else if (kotlin.math.abs(x) >= 1_000) "%.1f s".format(Locale.ENGLISH, x / 1000.0) else "$x ms"
 
-    /** "typical 120 ms, worst 340 ms (slowest 410 ms), 12 times". */
-    fun said(s: Summary): String = "typical ${ms(s.median)}, worst ${ms(s.p95)}" +
+    /** "p50 120 ms, p95 340 ms (slowest 410 ms), 12 times". */
+    fun said(s: Summary): String = "p50 ${ms(s.median)}, p95 ${ms(s.p95)}" +
         (if (s.max != s.p95) " (slowest ${ms(s.max)})" else "") + ", ${s.n} ${if (s.n == 1) "time" else "times"}"
 
     /** The order steps, each mode apart ("Live" / "Paper"), in the order they happen. */
-    private val ORDER_STEPS = listOf(Step.SIGNAL_DECISION, Step.DECISION_SENT, Step.SENT_ACK, Step.ACK_FILL, Step.SIGNAL_SENT, Step.PRICE_AGE)
+    private val ORDER_STEPS = listOf(Step.SIGNAL_DECISION, Step.MARGIN_CHECK, Step.DECISION_SENT, Step.STOP_CANCEL, Step.SENT_ACK, Step.ACK_FILL,
+        Step.SIGNAL_SENT, Step.PRICE_AGE)
 
     /**
      * The card's lines: each order step for live and for paper that has samples, then the round trips and the clock.
@@ -135,6 +172,11 @@ object OrderSpeed {
             out += "${if (live) "Live" else "Paper"} · ${st.label}: ${said(s)}"
         }
         if (fillsKnown > 0) out += "Live fills first seen on Zerodha's stream: $fillsOnStream of $fillsKnown"
+        if (Source.entries.any { b.decidedCount(it) > 0 })
+            out += "Decided " + Source.entries.joinToString(" · ") { "${it.label} ${b.decidedCount(it)}" }
+        val gaps = summary(b.all(Step.STREAM_GAP))
+        if (b.drops > 0 || gaps != null)
+            out += "Price stream drops today: ${b.drops}" + (gaps?.let { " · gap ${said(it)}" } ?: "")
         for (st in listOf(Step.RELAY_PING, Step.RELAY_COLD, Step.DIRECT_PING)) summary(b.all(st))?.let { out += "${st.label}: ${said(it)}" }
         summary(b.all(Step.CLOCK_OFFSET))?.let {
             out += "${Step.CLOCK_OFFSET.label}: phone ${if (it.median >= 0) "ahead by" else "behind by"} ${ms(kotlin.math.abs(it.median))} (typical, network delay included)"
