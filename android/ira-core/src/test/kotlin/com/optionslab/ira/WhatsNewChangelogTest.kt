@@ -49,17 +49,18 @@ class WhatsNewChangelogTest {
             assertTrue(want in ids, want)
         // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
         // the day; the first one closes.
-        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES.first().id)
-        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[1].id)
-        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[2].id)
-        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[3].id)
-        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[4].id)
-        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[5].id)
-        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[6].id)
-        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[7].id)
-        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[8].id)
-        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[9].id)
-        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[10].id)
+        assertEquals("2026-10-09-order-speed", WhatsNew.ENTRIES.first().id)
+        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES[1].id)
+        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[2].id)
+        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[3].id)
+        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[4].id)
+        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[5].id)
+        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[6].id)
+        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[7].id)
+        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[9].id)
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[10].id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[11].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
@@ -94,6 +95,21 @@ class WhatsNewChangelogTest {
         assertTrue("FinNifty breakdown" in x.what && "arm it again" in x.what, "E: the Pine script")
         assertTrue("Night (R3) on paper" in x.what && "Rs 207" in x.what && "Rs 150" in x.what && "not proven" in x.what, "F: the night arm")
         assertTrue("Strategies card" in x.where && "Night (R3) row" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun fasterOrdersAndTheOrderSpeedCardAreSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-order-speed" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        for (w in listOf("the moment a new price arrives", "not every 15 seconds", "the 15-second check stays as a backup",
+            "fill notice", "typical and worst time, paper and live", "relay is slow", "Mumbai relay",
+            "Every safety rule, approval and paper-only bot is unchanged"))
+            assertTrue(w in x.what, w)
+        val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
+        assertEquals(6, sentences.size, x.what)
+        for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
+        assertTrue("Settings → Zerodha → Order speed card" in x.where && "Copy diagnostics" in x.where, x.where)
         assertNull(x.ask)
         assertFalse(x.gold)
     }
@@ -286,18 +302,18 @@ class WhatsNewChangelogTest {
         // Two days among the newest six: each line says its day.
         assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
+        assertEquals("• Faster orders, and an order speed card (9 Oct): Settings → Zerodha → Order speed card, below the Live self-test. " +
+            "Copy diagnostics includes it too.", lines[1])
         assertEquals("• Two new paper bots, and two losing ones switched off (9 Oct): Home → Dashboard → Strategies card: the VIX divergence " +
-            "row, US-night silver under MCX (commodities), and Switch FINNIFTY back on under the Liquidity 15+5 row.", lines[1])
+            "row, US-night silver under MCX (commodities), and Switch FINNIFTY back on under the Liquidity 15+5 row.", lines[2])
         assertEquals("• Three MCX ideas to try on paper, all off at first (9 Oct): Home → Dashboard → Strategies card → MCX (commodities). " +
-            "Settings → Bot settings → MCX expiry exit.", lines[2])
+            "Settings → Bot settings → MCX expiry exit.", lines[3])
         assertEquals("• MCX commodities: prices, charts, paper and expiry safety (9 Oct): Options tab → Commodities. Options tab → MCX row " +
-            "for the chains. Settings → Bot settings → MCX expiry exit.", lines[3])
+            "for the chains. Settings → Bot settings → MCX expiry exit.", lines[4])
         assertEquals("• Faster entries, 1 lot, and a paper night trade (8 Oct): Home → Dashboard → Strategies card (Liquidity's lots and " +
-            "the Night (R3) row). Pine scripts screen for the FinNifty script.", lines[4])
+            "the Night (R3) row). Pine scripts screen for the FinNifty script.", lines[5])
         assertEquals("• Paper fills now pay the bid/ask spread (8 Oct): Trade → Paper → tap a trade or an order (Bid/ask spread). " +
-            "Home → Dashboard → Strategies card, and the day report.", lines[5])
-        assertEquals("• Safer exits, and a day lock at +Rs 8,000 (8 Oct): Settings → Bot settings → Day lock (+Rs 8,000 at first, off at 0) and the paper start date. " +
-            "Home → Dashboard → Strategies card shows both.", lines[6])
+            "Home → Dashboard → Strategies card, and the day report.", lines[6])
 
         assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.

@@ -83,8 +83,16 @@ object Protections {
             Alerts.error("The saved stops and targets could not be read and were set aside. Their orders may still be resting: check the order book.", "Protection")
         }
         cache = out
+        activeHint = out.any { it.active }
         return out
     }
+
+    /**
+     * Whether a protection is active, as of the last load or save (null: not loaded yet in this process): read without the
+     * lock by the event-driven checks ([FastPath]), which then run [tick] between the watch's passes.
+     */
+    @Volatile var activeHint: Boolean? = null
+        private set
 
     private fun save(list: List<Item>) {
         val a = JSONArray()
@@ -97,6 +105,7 @@ object Protections {
         }
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
         cache = list.toMutableList()
+        activeHint = list.any { it.active }
     }
 
     suspend fun active(): List<Item> = lock.withLock { load().filter { it.active } }
@@ -271,18 +280,31 @@ object Protections {
      * position gone? cancel both; trailing? move the stop up to the new level.
      * Called by the market watch and while the app is open.
      */
-    suspend fun tick() = lock.withLock {
+    suspend fun tick(fast: Boolean = false) = lock.withLock {
         val list = load()
         if (list.none { it.active }) return@withLock
         warnIfBlind(list)
         var changed = false
+        // [fast]: an event-driven look ([FastPath]). A change of the best price seen alone (a trail not yet moved) stays in
+        // memory and is written by the next regular look - never a Keystore write per tick; a stop moved, an exit filled or
+        // cancelled is written now as before.
+        var acted = false
         for ((i, p) in list.withIndex()) {
             if (!p.active) continue
             val next = runCatching { if (p.live) tickLive(p) else tickPaper(p) }.getOrNull() ?: continue
-            if (next != p) { list[i] = next; changed = true }
+            if (next != p) { list[i] = next; changed = true; if (next.copy(best = p.best) != p) acted = true }
         }
-        if (changed) save(list)
+        if (fast && changed && !acted) {
+            trackedOnly = true
+        } else if (changed || trackedOnly) {
+            save(list)
+            trackedOnly = false
+        }
+        Unit
     }
+
+    /** A fast look left a best-price change in memory only ([tick]): the next regular look writes it. */
+    @Volatile private var trackedOnly = false
 
     @Volatile private var blindWarned = 0L
 
@@ -455,5 +477,5 @@ object Protections {
     /** Reset paper: every paper stop / target / trail is dropped; Zerodha's are untouched. */
     suspend fun resetPaper(): Unit = lock.withLock { save(load().filter { it.live }) }
 
-    fun wipe() { cache = null; if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; activeHint = null; if (::file.isInitialized) file.delete() }
 }

@@ -85,5 +85,8 @@ class TestApp : Application() {
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
         com.optionslab.app.work.PositionCards.forgetPostedForTest()
         com.optionslab.app.widget.IraWidget.forgetDrawnForTest()
+        // The event-driven checks and the order-speed figures of an earlier test (in memory only).
+        com.optionslab.app.data.FastPath.resetForTest()
+        com.optionslab.app.data.OrderTiming.forget()
     }
 }

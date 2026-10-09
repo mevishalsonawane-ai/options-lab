@@ -291,6 +291,10 @@ object OrbArms {
     @Volatile var holdingHint: Boolean = false
         private set
 
+    /** Whether an arm holds an open position at Zerodha (its checks read Zerodha's orders and positions), as [holdingHint]. */
+    @Volatile var liveHint: Boolean = false
+        private set
+
     /**
      * The arms' open positions as [com.optionslab.ira.AutoSide] reads them (each a bought option on its index), as of the
      * last load or save: read without the lock by the other automatic traders ([AutoExposure]).
@@ -319,6 +323,7 @@ object OrbArms {
     private fun hints(b: Book) {
         armedHint = ALL_ARMS.any { b.armed[it.source] == true }
         holdingHint = b.positions.any { it.open }
+        liveHint = b.positions.any { it.open && it.live }
         exposureHint = exposureOf(b)
         liquidityLotsHint = lotsOf(b)
     }
@@ -1102,13 +1107,20 @@ object OrbArms {
      * within 15 s, not on the next full pass. Under the arms' lock as the full pass: one sale in flight per position (a sold
      * position is closed; a failed sale is tried again).
      */
-    suspend fun priceCheckOnly() = lock.withLock {
+    suspend fun priceCheckOnly(fast: Boolean = false) = lock.withLock {
         val b = book(); val t = now()
+        // [fast]: an event-driven look ([FastPath], up to several a second). A look that changed only the best or lowest
+        // premium seen (peak, low: re-read from the stream's ticks anyway) keeps the book in memory and is written with the
+        // next pass that saves it - no Keystore write per tick. Anything else (an exit, a stop moved, a sale) is written now.
+        val before = if (fast) untracked(b) else null
         runCatching { priceCheck(b, t) }
         runCatching { liquidityExits(b, t) }
         runCatching { liquidityNotices(b, t) }
-        save(b)
+        if (before != null && before == untracked(b)) { cache = b; hints(b) } else save(b)
     }
+
+    /** [b]'s positions without the premiums tracked on every price (what [priceCheckOnly]'s fast look may leave unsaved). */
+    private fun untracked(b: Book): List<Position> = b.positions.map { it.copy(peak = null, low = null) }
 
     /**
      * An entry left unapproved past its time ([Pending.expires]) is dropped - said once (a notice in place of the approval's,
@@ -1212,6 +1224,8 @@ object OrbArms {
 
     /** [live] is decided once by the caller, so the account cannot change between the check and the order. */
     private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, live: Boolean): String {
+        // Order speed: the arm decided here (timing only; nothing about the decision changes).
+        runCatching { OrderTiming.decided() }
         // One index, one side, for every automatic trader (Boss's 06 Oct rule): paper and live alike; Liquidity first (07 Oct).
         exposureRefusal(b, c, arm, live)?.let { return it }
         if (live) return enterLive(b, arm, c, signalBar)
@@ -1308,6 +1322,7 @@ object OrbArms {
 
     /** Take the resting stop out of the book first, then sell; if the stop filled meanwhile, that is the exit. */
     private suspend fun exit(p: Position, c: Paper.Contract, why: String): Position {
+        runCatching { OrderTiming.decided() }
         p.stopOrderId?.let { id ->
             Paper.cancel(id, "exit:$why")
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
@@ -1584,6 +1599,7 @@ object OrbArms {
      * less a tick; not filled, the usual exit (a market sell, retried). The book at that moment is logged with the trade.
      */
     private suspend fun heroExit(p0: Position, c: Paper.Contract, why: String): Position {
+        runCatching { OrderTiming.decided() }
         val q = runCatching { Paper.quote(c) }.getOrNull()
         val p = p0.copy(seen = p0.seen + heroSeen(why, q, marks[p0.symbol]))
         // A stale feed at the exit: the last known price stands in for the bid.
@@ -1740,6 +1756,7 @@ object OrbArms {
      */
     private suspend fun enterLive(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal? = null,
                                   near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null, lots: Int = 1): String {
+        runCatching { OrderTiming.decided() }
         // A paper-only arm (the Hero arm among them) never reaches Zerodha, whatever called this.
         liveRefusal(arm.source)?.let { return it }
         val s = AppSettings.load()
@@ -1957,6 +1974,7 @@ object OrbArms {
      * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
      */
     private suspend fun exitLive(b: Book, p: Position, sym: String, why: String): Pair<Position, Position?> {
+        runCatching { OrderTiming.decided() }
         val label = armOf(p.arm).label
         // The sell certainly did not go: a stop that was taken out is placed again so the position is never left unprotected.
         // F3: back at the lock its best price has earned when that is above its own trigger - never the -40 once a rung is
@@ -2136,6 +2154,7 @@ object OrbArms {
      */
     private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, live: Boolean,
                                        near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null): String {
+        runCatching { OrderTiming.decided() }
         val right = if (s.side > 0) Right.CE else Right.PE
         val day = signalBar.toLocalDate()
         val und = LiquidityRules.underlyingOf(arm)
@@ -2503,7 +2522,7 @@ object OrbArms {
     }
 
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
+        cache = null; holdingHint = false; liveHint = false; exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         if (::file.isInitialized) file.delete()
     }
 }

@@ -476,6 +476,12 @@ object Tasks {
             }
             // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
             if (s.live && m.isOpen() && com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
+            // Order speed (9 Oct): the relay's round trip (the warm-up above times it; in Paper mode a read through the relay
+            // times it too) and the same read straight to Zerodha, each at most once a minute in market hours, in the background.
+            if (m.isOpen() && com.optionslab.app.data.Broker.loggedIn) {
+                if (!s.live && com.optionslab.app.data.Relay.enabled) runCatching { com.optionslab.app.data.Broker.warmOrderRoute(entry = false) }
+                runCatching { com.optionslab.app.data.Broker.pingDirect() }
+            }
         }
     }
 
@@ -1195,19 +1201,26 @@ class WatchService : Service() {
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
         // And while MCX trades with an MCX position or order open (9 Oct): the MCX pass ([Tasks.mcxTick]) outside NSE's hours.
-        while (nseWindow() || mcxDue()) {
-            try {
-                watchPass(fired)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
-                // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
-                Tasks.stepFailed(Heartbeat.busy, e)
-                Heartbeat.stepEnd()
-                runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
-                delay(15_000)
+        // Order speed (9 Oct): the event-driven checks run beside the watch - a stream price or a candle close wakes the
+        // stops, exits and bar-close entries at once ([com.optionslab.app.data.FastPath]); these passes stay as the safety net.
+        com.optionslab.app.data.FastPath.start(this)
+        try {
+            while (nseWindow() || mcxDue()) {
+                try {
+                    watchPass(fired)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
+                    // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
+                    Tasks.stepFailed(Heartbeat.busy, e)
+                    Heartbeat.stepEnd()
+                    runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
+                    delay(15_000)
+                }
             }
+        } finally {
+            com.optionslab.app.data.FastPath.stop()
         }
         // The watch is over for the day: the live price stream closes with it.
         runCatching { com.optionslab.app.data.KiteStream.stop() }
@@ -1269,9 +1282,11 @@ class WatchService : Service() {
                 if (wake <= waitEnd && wake < next) {
                     delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
                     Heartbeat.stepBegin("bar-close entry check")
-                    try {
+                    // Order speed: an order this check leads to is timed from the bar's close (the wake is 3 s after it).
+                    val closedAt = wake - com.optionslab.engine.orb.BarClose.AFTER_MS
+                    try { kotlinx.coroutines.withContext(com.optionslab.app.data.OrderTiming.Trigger(closedAt, null)) {
                         try {
-                            com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
+                            com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this@WatchService, it) }
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Throwable) {
@@ -1298,7 +1313,7 @@ class WatchService : Service() {
                         } catch (e: Throwable) {
                             Tasks.stepFailed("bar-close entry check: VIX divergence", e)
                         }
-                    } finally { Heartbeat.stepEnd() }
+                    } } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
                     continue
                 }

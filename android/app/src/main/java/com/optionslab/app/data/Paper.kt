@@ -334,6 +334,26 @@ object Paper {
             prevClose = t.close, volume = t.volume, bidQty = t.bidQty ?: 0L, askQty = t.askQty ?: 0L)
     }
 
+    /**
+     * The event-driven checks ([FastPath]): the Zerodha tokens of every symbol the paper book holds or has a working order
+     * on (those with none listed are left out), and whether each of those symbols has a fresh stream price ([covered]:
+     * then a paper pass reads no candle feed; an empty book is covered). No network, no vault write.
+     */
+    data class StreamCover(val tokens: Set<Long>, val covered: Boolean, val any: Boolean)
+
+    fun streamCover(): StreamCover {
+        val b = book()
+        val syms = watched(b.state)
+        if (syms.isEmpty()) return StreamCover(emptySet(), covered = true, any = false)
+        var covered = true
+        val tokens = HashSet<Long>()
+        for (s in syms) {
+            val tok = b.contracts[s]?.let { runCatching { kiteToken(it) }.getOrNull() }
+            if (tok == null) { covered = false } else { tokens += tok; if (KiteStream.tick(tok) == null) covered = false }
+        }
+        return StreamCover(tokens, covered, any = true)
+    }
+
     /** The contract's latest price from the paper feed, or null when there is none today. */
     suspend fun lastPrice(c: Contract): Double? = runCatching { quote(c) }.getOrNull()?.ltp
 
@@ -531,6 +551,10 @@ object Paper {
     /** [known]: the contract's quote when the caller has just read it (read here otherwise). */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
                       known: Quote? = null): Result {
+        // Order speed (paper): timed from here (the price read included) to the paper book's answer; the price's age is the
+        // exchange stamp of this contract's last stream tick, when it streams.
+        val stamp = runCatching { kiteToken(c)?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
         val read = known ?: runCatching { quote(c) }.getOrNull()
         // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
         staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
@@ -545,14 +569,25 @@ object Paper {
         }
         val q = x.quote
         x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
-        synchronized(this) {
+        val r = synchronized(this) {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
             val out = engine(b.capital, b.contracts).place(b.state,
                 OrderRequest(c.symbol, c.exchange, action, lots * c.lotSize, priceType, product, price, trigger, "IraAlgo-Android"), q, Market.now())
             save(b.copy(state = out.state))
-            return describe(out.result, out.events)
+            describe(out.result, out.events)
+        }
+        timed(r, t0)
+        return r
+    }
+
+    /** Order speed: the paper book answered [r] (placed at [t0]); a fill in the same answer is known at once. */
+    private fun timed(r: Result, t0: Long) {
+        if (!r.ok) return
+        runCatching {
+            OrderTiming.answered(live = false, startedAt = t0)
+            if (r.events.any { it is SandboxEvent.Fill }) OrderTiming.fillKnown(live = false, ms = 0L, viaStream = false)
         }
     }
 
@@ -590,17 +625,21 @@ object Paper {
     }
 
     suspend fun close(symbol: String, product: String): Result {
+        val stamp = runCatching { book().contracts[symbol]?.let { kiteToken(it) }?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
         val read = quickQuote(symbol)
         // Honest paper (08 Oct): never closed on a candle price over a minute old ([exitQuote]); noted in diagnostics.
         val x = book().contracts[symbol]?.let { exitQuote(it, read, closingSide(symbol)) }
         val q = x?.quote ?: read
         x?.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
-        synchronized(this) {
+        val r = synchronized(this) {
             val b = book()
             val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, exchangeOf(symbol), product, q, Market.now())
             save(b.copy(state = out.state))
-            return describe(out.result, out.events)
+            describe(out.result, out.events)
         }
+        timed(r, t0)
+        return r
     }
 
     /**
@@ -797,5 +836,5 @@ object Paper {
     internal fun forgetForTest() { cache = null; savedAtMs = 0L }
 
     @Synchronized
-    fun wipe() { cache = null; savedAtMs = 0L; file.delete(); lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap() }
+    fun wipe() { cache = null; savedAtMs = 0L; file.delete(); lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear() }
 }

@@ -720,6 +720,8 @@ fun BrokerPage(
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
         item { com.optionslab.app.ui.SettingSpot("broker.staticip") { StaticIpCard(model, staticIpStatus) } }
         if (b.configured) item { SelfTestCard() }
+        // Order speed (9 Oct): where the time goes from a signal to the fill, beside the self-test and "Copy diagnostics".
+        if (b.configured) item { OrderSpeedCard() }
         item { com.optionslab.app.ui.SettingSpot("broker.login") {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)

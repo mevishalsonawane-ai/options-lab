@@ -353,6 +353,7 @@ object KiteStream {
         conn = null
         socket?.close(1000, null); socket = null
         synchronized(subscribed) { subscribed.clear() }
+        synchronized(updates) { updates.clear() }
         _status.value = Status.OFF
         if (was) runCatching { Diag.record(StreamHealth.AREA, "stopped: ${why ?: "the session or the day ended"}") }
     }
@@ -392,11 +393,46 @@ object KiteStream {
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
         c.ticks.addAndGet(got.size.toLong())
-        got.forEach {
-            ticks[it.token] = Seen(it, now)
-            if (it.last > 0) paths.getOrPut(it.token) { com.optionslab.engine.TickPath() }.record(it.last, now)
+        record(got, now)
+    }
+
+    /**
+     * [got] reached the phone at [now]: kept as each instrument's last tick and in its path, then handed to the
+     * event-driven checks ([FastPath.offer]: a map put and a wake, never the checks themselves on this socket thread),
+     * and one exchange stamp in five seconds to the clock-offset figure ([OrderTiming.clock]).
+     */
+    private fun record(got: List<KiteTicks.Tick>, now: Long) {
+        var stamp: Long? = null
+        for (t in got) {
+            ticks[t.token] = Seen(t, now)
+            if (t.last > 0) paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
+            if (stamp == null) stamp = t.exchangeTime
         }
         if (now - lastBump >= 500) { lastBump = now; _version.value = now }
+        runCatching { FastPath.offer(got, now) }
+        val s = stamp
+        if (s != null) runCatching { OrderTiming.clock(now, s) }
+    }
+
+    /** The last tick for [token] as it arrived (the exchange's stamp and the phone's arrival time), however old. */
+    fun seen(token: Long): Seen? = ticks[token]
+
+    /** The instruments open positions and the armed arms' indices follow (what wakes the event-driven checks). */
+    fun followed(): Set<Long> = wants["positions"].orEmpty() + wants["index"].orEmpty()
+
+    /**
+     * TEST ONLY: [got] as if the socket had just brought them (kept, pathed and handed on exactly as a live message's).
+     * Throws unless BuildConfig.DEBUG (as [testOff]); no app code calls it.
+     */
+    internal fun feedForTest(got: List<KiteTicks.Tick>) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }
+        record(got, System.currentTimeMillis())
+    }
+
+    /** TEST ONLY: a text frame as if the socket had brought it (an order update). Throws unless BuildConfig.DEBUG. */
+    internal fun textForTest(text: String) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }
+        onText(text)
     }
 
     @Volatile private var lastError: Pair<Long, String>? = null
@@ -406,7 +442,12 @@ object KiteStream {
         val o = runCatching { org.json.JSONObject(text) }.getOrNull() ?: return
         when (o.optString("type")) {
             // (An order changed at Zerodha - from Kite web too: Jarvis's kept account figures are read afresh.)
-            "order" -> { _orderEvents.value = System.currentTimeMillis(); runCatching { com.optionslab.app.ira.IraAccount.invalidate() } }
+            // Its state is kept by order id first, so an order being waited on ([Broker.awaitOrder]) is answered from it at once.
+            "order" -> {
+                com.optionslab.ira.OrderUpdate.parse(text)?.let { u -> keepUpdate(u) }
+                _orderEvents.value = System.currentTimeMillis()
+                runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
+            }
             // e.g. a token Kite no longer accepts: kept in the diary (scrubbed), once a minute per message.
             "error" -> {
                 val said = StreamHealth.scrub(o.optString("data"), listOf(Broker.streamToken(), Broker.apiKey))
@@ -424,6 +465,25 @@ object KiteStream {
     fun statusLine(lines: List<String>): String =
         StreamHealth.statusLine(_status.value.name, lines, Market.now().toLocalDateTime())
 
+
+    /** The latest order update per order id that Zerodha pushed on the stream (the newest [UPDATES_KEPT]). */
+    private val updates = java.util.LinkedHashMap<String, com.optionslab.ira.OrderUpdate.Update>()
+    private const val UPDATES_KEPT = 200
+
+    private fun keepUpdate(u: com.optionslab.ira.OrderUpdate.Update) {
+        synchronized(updates) {
+            // A terminal state is never replaced by a late non-terminal one (updates can arrive out of order).
+            val was = updates[u.orderId]
+            if (was == null || !was.terminal || u.terminal) {
+                updates.remove(u.orderId)
+                updates[u.orderId] = u
+                while (updates.size > UPDATES_KEPT) updates.remove(updates.keys.first())
+            }
+        }
+    }
+
+    /** Zerodha's latest pushed state of order [orderId], or null when the stream has said nothing of it. */
+    fun orderUpdate(orderId: String): com.optionslab.ira.OrderUpdate.Update? = synchronized(updates) { updates[orderId] }
 
     private val _orderEvents = MutableStateFlow(0L)
     /** Bumped when Kite pushes an order update (placed, filled, cancelled, rejected). */

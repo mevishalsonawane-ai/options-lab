@@ -346,9 +346,12 @@ object PineAuto {
      * the same lock as [tick], so one holding never has two sells in flight; a holding the full pass must settle (a live
      * buy not yet confirmed, a script no longer on) is left to it.
      */
-    suspend fun watchOnly() = lock.withLock {
+    suspend fun watchOnly(fast: Boolean = false) = lock.withLock {
         val b = book()
         if (b.held.isEmpty()) return@withLock
+        // [fast]: an event-driven look ([FastPath]). Only the best premium seen changed (peak): kept in memory and written with
+        // the next save, never a Keystore write per tick; a stop moved, a sale or a note is written now as before.
+        val before = if (fast) untracked(b) else null
         // A restore not yet disarmed: the full pass sells what is held.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) return@withLock
         val stopped = dayStopped()
@@ -370,8 +373,11 @@ object PineAuto {
                 Unit
             }.onFailure { e -> note(b, id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         }
-        save(b)
+        if (before != null && before == untracked(b)) { cache = b; publish(b) } else save(b)
     }
+
+    /** What a fast look may leave unsaved: [b]'s holdings without their best premium seen, and its log's length. */
+    private fun untracked(b: Book): Pair<Map<Long, Held>, Int> = b.held.mapValues { it.value.copy(peak = 0.0) } to b.log.size
 
     private fun stepSeconds(iv: String): Long = when (iv) { "1m" -> 60; "5m" -> 300; "15m" -> 900; "1h" -> 3600; else -> 86400 }
     private fun lookbackDays(iv: String): Long = when (iv) { "1m" -> 4; "5m" -> 12; "15m" -> 30; "1h" -> 90; else -> 700 }

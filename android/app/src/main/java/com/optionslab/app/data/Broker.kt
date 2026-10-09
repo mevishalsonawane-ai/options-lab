@@ -292,6 +292,7 @@ object Broker {
                 throw IOException("Could not reach Zerodha")
             } finally {
                 if (!reusable) c.disconnect()
+                if (relay != null) relayUsedAt = System.currentTimeMillis()
             }
         }
     }
@@ -303,16 +304,48 @@ object Broker {
      * Get the order route ready while the owner is still reviewing (or, for the bots, during market hours):
      * the relay's SSH session and a pooled TLS connection to Zerodha through it, and the static-IP reading
      * an entry is checked against. Only removes waiting: every check at send still runs. Returns at once
-     * (the work runs in the background), never throws, and does something at most every 20 s.
+     * (the work runs in the background), never throws, and does something at most every [WARM_GAP_MS] -
+     * [force] (a bar close the armed arms decide on is seconds away) at most every [FORCED_WARM_MS].
+     * The relay's read is timed for the order-speed card ([OrderTiming.relayPing]).
      */
-    fun warmOrderRoute(entry: Boolean = true) {
+    fun warmOrderRoute(entry: Boolean = true, force: Boolean = false) {
         val now = System.currentTimeMillis()
-        if (now - warmedAt < 20_000) return
+        if (now - warmedAt in 0 until (if (force) FORCED_WARM_MS else WARM_GAP_MS)) return
         warmedAt = now
         if (testEndpoint != null) return            // JVM tests: the fake Kite needs no warming, and nothing may reach the internet
         if (entry && StaticIp.registered != null) warmScope.launch { runCatching { StaticIp.current(maxAgeMs = 30_000) } }
         // Without the relay, the review's own reads have already pooled the connection the order uses.
-        if (Relay.enabled && loggedIn) warmScope.launch { runCatching { call("GET", "/user/profile", viaRelay = true) } }
+        if (Relay.enabled && loggedIn) warmScope.launch {
+            // Cold: nothing went through the relay for 4 minutes (its pooled connection is likely gone: handshakes again).
+            val cold = System.currentTimeMillis() - relayUsedAt > 240_000
+            val t0 = System.currentTimeMillis()
+            runCatching { call("GET", "/user/profile", viaRelay = true) }
+                .onSuccess { runCatching { OrderTiming.relayPing(System.currentTimeMillis() - t0, cold) } }
+        }
+    }
+
+    /** The order route is warmed at most this often (Zerodha's profile read through the relay, in market hours). */
+    const val WARM_GAP_MS = 60_000L
+    private const val FORCED_WARM_MS = 5_000L
+
+    /** When a request last went through the relay (cold or warm, for the order-speed card). */
+    @Volatile private var relayUsedAt = 0L
+    @Volatile private var directAt = 0L
+
+    /**
+     * The same cheap read as the relay's, straight to Zerodha (reads never use the relay): the network's own round trip,
+     * beside the relay's, for the order-speed card. At most once a minute, in the background; never an order, never the
+     * relay. Returns at once, never throws.
+     */
+    fun pingDirect() {
+        val now = System.currentTimeMillis()
+        if (now - directAt in 0 until WARM_GAP_MS) return
+        directAt = now
+        if (testEndpoint != null || !loggedIn) return
+        warmScope.launch {
+            val t0 = System.currentTimeMillis()
+            runCatching { call("GET", "/user/profile") }.onSuccess { runCatching { OrderTiming.directPing(System.currentTimeMillis() - t0) } }
+        }
     }
 
     // ---- login --------------------------------------------------------------------
@@ -496,6 +529,10 @@ object Broker {
             ?: return null
         return m[key]
     }
+
+    /** [tokenOf] only from what is already in memory (never builds the day's map or reads a file): for timing an order. */
+    private fun tokenKnown(key: String): Long? =
+        INDEX.values.firstOrNull { it.first == key }?.second ?: tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
 
     /**
      * Quotes for "EXCHANGE:SYMBOL" keys. Instruments the live stream has a fresh tick for
@@ -817,7 +854,13 @@ object Broker {
     suspend fun placeOrder(o: Kite.Order, exit: Boolean = false): String {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
-        val data = call("POST", "/orders/regular", o.formBody()) as JSONObject
+        // Order speed: the body is built before the clock starts (a string; nothing is fetched for it), then the request is
+        // timed from its start to Zerodha's answer. The price's age is the stamp of this contract's last stream tick.
+        val body = o.formBody()
+        val stamp = runCatching { tokenKnown("${o.exchange}:${o.tradingSymbol}")?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        val t0 = runCatching { OrderTiming.sending(live = true, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
+        val data = call("POST", "/orders/regular", body) as JSONObject
+        runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
         return data.getString("order_id")
     }
@@ -830,19 +873,29 @@ object Broker {
     internal val POLL_MS = longArrayOf(150, 200, 250, 300, 400, 500, 750, 1_000)
 
     /**
-     * Read an order until it is terminal or [timeoutMs] passes. The order's state always comes from Kite's
-     * REST order history; an order update pushed on the live stream only wakes the next read early.
+     * Read an order until it is terminal or [timeoutMs] passes. Zerodha's own order update pushed on the live stream
+     * ([KiteStream.orderUpdate]: COMPLETE, REJECTED or CANCELLED for this order id) answers at once, without another read;
+     * otherwise the order's state comes from Kite's REST order history on the same schedule as before ([POLL_MS]), and
+     * any update on the stream wakes the next look early.
      */
     suspend fun awaitOrder(orderId: String, timeoutMs: Long = 20_000): Fill {
-        val end = System.currentTimeMillis() + timeoutMs
+        val start = System.currentTimeMillis()
+        val end = start + timeoutMs
         var last: JSONObject? = null
         var i = 0
         while (true) {
+            streamed(orderId)?.let { f ->
+                runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = true) }
+                return f
+            }
             val seen = KiteStream.orderEvents.value
             val hist = call("GET", "/orders/$orderId") as JSONArray
             if (hist.length() > 0) last = hist.getJSONObject(hist.length() - 1)
             val st = last?.optString("status") ?: ""
-            if (st in setOf("COMPLETE", "REJECTED", "CANCELLED")) break
+            if (st in com.optionslab.ira.OrderUpdate.TERMINAL) {
+                runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = false) }
+                break
+            }
             val left = end - System.currentTimeMillis()
             if (left <= 0) break
             val wait = POLL_MS[minOf(i++, POLL_MS.size - 1)].coerceAtMost(left)
@@ -852,6 +905,11 @@ object Broker {
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
             // Kite sends "status_message": null for an open order, which optString reads as the text "null".
             o.optString("status_message", "").let { if (it == "null") "" else it })
+    }
+
+    /** Order [orderId]'s end as Zerodha pushed it on the stream (COMPLETE, REJECTED or CANCELLED), or null when not (yet). */
+    private fun streamed(orderId: String): Fill? = KiteStream.orderUpdate(orderId)?.takeIf { it.terminal }?.let { u ->
+        Fill(orderId, u.status, u.avgPrice, u.filled, u.message)
     }
 
     /**

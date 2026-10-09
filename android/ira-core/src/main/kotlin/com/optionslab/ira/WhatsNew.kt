@@ -51,6 +51,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-order-speed", OCT9, "Faster orders, and an order speed card",
+            "Stops, targets and exits are now checked the moment a new price arrives, not every 15 seconds. " +
+                "Bar-close entries are decided at the close itself; the 15-second check stays as a backup. " +
+                "Zerodha's own fill notice now confirms your orders at once, without asking again. " +
+                "The order speed card shows each step's typical and worst time, paper and live. " +
+                "It warns when the relay is slow or prices are old, and suggests a Mumbai relay if far. " +
+                "Every safety rule, approval and paper-only bot is unchanged.",
+            "Settings → Zerodha → Order speed card, below the Live self-test. Copy diagnostics includes it too."),
         Entry("2026-10-09-two-paper-bots-and-parking", OCT9, "Two new paper bots, and two losing ones switched off",
             "Home → Strategies has two new paper-only bots, not proven, off until you switch them on. " +
                 "VIX divergence buys a put when Nifty or Bank Nifty is up 0.2% while India VIX is up 2%. " +
