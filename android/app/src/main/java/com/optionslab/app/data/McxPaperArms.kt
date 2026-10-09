@@ -456,7 +456,7 @@ object McxPaperArms {
         b.status[p.arm] = "closed ${p.symbol}: ${p.why}"
         note(b, p.arm, "${p.symbol}: closed (${p.why}) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.SELL, "${label(p.arm)} closed ${p.symbol} · Paper",
-            "Closed (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "strategy") }
+            "Closed (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
     private fun opened(b: Book, p: Pos, facts: String) {
@@ -464,7 +464,7 @@ object McxPaperArms {
         val verb = if (p.side > 0) "bought" else "sold"
         decideLine(b, p.arm, "$verb ${p.symbol} @ %.2f ($facts) · paper".format(Locale.ENGLISH, p.entry))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.BUY, "${label(p.arm)} $verb ${p.symbol} · Paper",
-            "${verb.replaceFirstChar { it.uppercase() }} ${p.qty} @ %.2f ($facts). Paper only, not proven.".format(Locale.ENGLISH, p.entry), "strategy") }
+            "${verb.replaceFirstChar { it.uppercase() }} ${p.qty} @ %.2f ($facts). Paper only, not proven.".format(Locale.ENGLISH, p.entry), "almanac") }
     }
 
     private fun decideLine(b: Book, arm: String, text: String) { b.status[arm] = text; note(b, arm, text) }

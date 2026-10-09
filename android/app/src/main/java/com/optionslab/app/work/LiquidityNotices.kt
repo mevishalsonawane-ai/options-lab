@@ -135,8 +135,8 @@ object LiquidityNotices {
         val said = LiquidityNotice.skip(s)
         runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.LIQSKIP, said.line) }
         val id = SKIP_IDS + ((book.hashCode() and Int.MAX_VALUE) % 100)
-        val b = Notifier.builder(context, Notifier.HEALTH, said.title, said.line, "strategy",
-            card = NoticeCard(id, Notifier.HEALTH, said.title, said.body, System.currentTimeMillis(), tab = "strategy"))
+        val b = Notifier.builder(context, Notifier.HEALTH, said.title, said.line, "almanac",
+            card = NoticeCard(id, Notifier.HEALTH, said.title, said.body, System.currentTimeMillis(), tab = "almanac"))
             .setStyle(NotificationCompat.BigTextStyle().bigText(said.body))
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -147,8 +147,8 @@ object LiquidityNotices {
                      chart: (Int, Int) -> LiquidityNotice.Chart?, silent: Boolean = false) {
         if (!Notifier.canPost(context)) return
         // The plain trade notification (title, the first line collapsed, the whole text expanded), as every fill's.
-        val b = Notifier.builder(context, channel, said.title, said.line, "strategy",
-            card = NoticeCard(id, channel, said.title, said.body, System.currentTimeMillis(), tab = "strategy"))
+        val b = Notifier.builder(context, channel, said.title, said.line, "almanac",
+            card = NoticeCard(id, channel, said.title, said.body, System.currentTimeMillis(), tab = "almanac"))
             .setContentText(said.line)
             .setStyle(NotificationCompat.BigTextStyle().bigText(said.body))
             // The whole text stays in the extras even with the chart's custom view (accessibility, a watch).

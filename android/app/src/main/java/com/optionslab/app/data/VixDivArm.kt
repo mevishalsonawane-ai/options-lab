@@ -270,7 +270,7 @@ object VixDivArm {
         val exits = if (VixDivRules.liquidityExit(u)) "stop %.2f on the low, out after 20 min unless +5%%, else 15:10".format(Locale.ENGLISH, VixDivRules.stop(fill.price))
             else "held to 15:10"
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${VixDivRules.LABEL} bought ${c.symbol} · Paper",
-            "Bought ${fill.quantity} @ %.2f (%s). %s. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts, exits), "strategy") }
+            "Bought ${fill.quantity} @ %.2f (%s). %s. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts, exits), "almanac") }
         // (Words with a "%" in them are never part of a format string.)
         return Decision(true, "bought ${c.symbol} ${fill.quantity} @ ${"%.2f".format(Locale.ENGLISH, fill.price)} · paper ($said; $exits)")
     }
@@ -343,7 +343,7 @@ object VixDivArm {
         b.status[p.index] = "closed ${p.symbol}: ${p.why}"
         note(b, "${p.symbol}: sold (${p.why}) @ %.2f, %s after charges · paper".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)))
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(p.index).coerceAtLeast(0), Notifier.SELL, "${VixDivRules.LABEL} sold ${p.symbol} · Paper",
-            "Sold (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "strategy") }
+            "Sold (${p.why}) @ %.2f: %s after charges. Paper only, not proven.".format(Locale.ENGLISH, p.exit ?: 0.0, rs(p.net ?: 0.0)), "almanac") }
     }
 
     /** For tests: the book forgotten (its file goes with the test's directory). */

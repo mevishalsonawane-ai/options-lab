@@ -205,7 +205,7 @@ object NightArm {
             b.status[p.index] = "sold at 09:16"
             note(b, "${p.symbol}: sold ${fill.quantity} @ %.2f, %s after charges".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)))
             runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(p.index), Notifier.SELL, "${NightRules.LABEL} sold ${p.symbol} · Paper",
-                "Sold ${fill.quantity} @ %.2f at 09:16: %s after charges.".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)), "strategy") }
+                "Sold ${fill.quantity} @ %.2f at 09:16: %s after charges.".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)), "almanac") }
             changed = true
         }
         // Closed trades beyond what is kept are dropped (oldest first); open ones always stay.
@@ -280,7 +280,7 @@ object NightArm {
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · entry") } }
         b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
         runCatching { Notifier.post(app, 6950 + NightRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${NightRules.LABEL} bought ${c.symbol} · Paper",
-            "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "strategy") }
+            "Bought ${fill.quantity} @ %.2f on a strong close (%s). Sells at 09:16 next session. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts), "almanac") }
         return "${d.why} ${c.symbol} @ %.2f ($facts)".format(Locale.ENGLISH, fill.price)
     }
 

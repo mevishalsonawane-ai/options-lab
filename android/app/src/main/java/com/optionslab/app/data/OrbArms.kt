@@ -488,7 +488,7 @@ object OrbArms {
         b.liqLots = n
         if (!com.optionslab.app.BuildConfig.GOLD) {
             runCatching { Diag.record("orb", "Liquidity 15+5: " + LiquidityLots.ONE_LOT_NOTICE) }
-            runCatching { Notifier.post(app, 6958, Notifier.SCHEDULE, "Liquidity size: 1 lot", LiquidityLots.ONE_LOT_NOTICE + ".", "strategy") }
+            runCatching { Notifier.post(app, 6958, Notifier.SCHEDULE, "Liquidity size: 1 lot", LiquidityLots.ONE_LOT_NOTICE + ".", "almanac") }
         }
         return true
     }
@@ -518,7 +518,7 @@ object OrbArms {
         b.migrated += ParkedArms.MIGRATION
         if (plan.off.isNotEmpty() && !com.optionslab.app.BuildConfig.GOLD) {
             runCatching { Diag.record("orb", ParkedArms.NOTICE) }
-            runCatching { Notifier.post(app, 6956, Notifier.SCHEDULE, "Two losing paper arms switched off", ParkedArms.NOTICE, "strategy") }
+            runCatching { Notifier.post(app, 6956, Notifier.SCHEDULE, "Two losing paper arms switched off", ParkedArms.NOTICE, "almanac") }
         }
         return true
     }
@@ -1135,7 +1135,7 @@ object OrbArms {
             noteLiquidity(now(), arm.source, com.optionslab.ira.LiquidityWhyNot.LAPSED, pd.signalBar,
                 pd.level?.let { LiquidityRules.Signal(if (pd.right == "CE") 1 else -1, it, pd.target) })
         }
-        runCatching { Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${if (arm.liquidity) arm.label else "ORB"} signal lapsed: not approved in $mins minutes", text, "strategy") }
+        runCatching { Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${if (arm.liquidity) arm.label else "ORB"} signal lapsed: not approved in $mins minutes", text, "almanac") }
     }
 
     private suspend fun cycle(b: Book, arm: Arm, t: LocalDateTime, bars: List<Bar>): String {
