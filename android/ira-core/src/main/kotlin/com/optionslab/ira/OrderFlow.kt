@@ -38,8 +38,11 @@ object OrderFlow {
         LONG_UNWINDING("long unwinding"), NEUTRAL("no clear build-up"),
     }
 
-    /** What an instrument is to its underlying's read: its future, an ATM ±2 call or put. */
-    enum class Role { FUTURE, CE, PE }
+    /**
+     * What an instrument is to its underlying's read: its future, an ATM ±2 call or put, or the option the Chart shows
+     * (WATCH: its tape and heatmap only, never part of the read).
+     */
+    enum class Role { FUTURE, CE, PE, WATCH }
 
     /** A strategy's use of the flow: none, logged beside each signal, or an entry skipped unless the flow agrees. */
     enum class Mode { OFF, SHADOW, CONFIRM }
@@ -294,6 +297,12 @@ object OrderFlow {
         /** Packets dropped: exact repeats of the last one, and older states re-sent. */
         var repeats = 0L; private set
         var stale = 0L; private set
+        /** The future's session: profile, minutes, footprint ([Auction.Day]; display and the log only). */
+        val day: Auction.Day? = if (role == Role.FUTURE) Auction.Day() else null
+        /** Time & sales ([TapeHeat.Tape]). */
+        val tape = TapeHeat.Tape()
+        /** The liquidity heatmap, kept only for the instruments the board shows one for ([Board.layout]). */
+        var heat: TapeHeat.Heatmap? = null
 
         /** Takes [q] (true), or drops it as a repeat or an older state (false). */
         fun offer(q: Quote): Boolean {
@@ -316,6 +325,7 @@ object OrderFlow {
                 val med = TrapGuard.median(sizes.map { it.toDouble() })
                 val illiquid = dv > 0 && TrapGuard.illiquidPrint(dv, med, priceMoved = abs(q.last - p.last) > 1e-9)
                 if (dv > 0) { sizes.addLast(dv); while (sizes.size > 200) sizes.removeFirst() }
+                val bigPrint = dv > 0 && TapeHeat.big(dv, med)
                 q.tradeSec?.takeIf { dv > 0 && it > 0 }?.let { ages += q.ms - it * 1000 }
                 if (dv > 0 && !illiquid) {
                     // The tick rule (primary): against the previous trade price; a zero tick keeps the last sign.
@@ -325,6 +335,12 @@ object OrderFlow {
                     if (sg != 0) lastSign = sg
                     // The quote rule (secondary): against the book that stood before the trade.
                     qAcc += sign(q.last, p.bid, p.ask, null, 0) * dv
+                }
+                // Display and the log only: the tape, the heatmap's big prints, the future's session (an illiquid print unsigned).
+                if (dv > 0) {
+                    tape.add(TapeHeat.Print(q.tradeSec?.takeIf { it > 0 }?.times(1000) ?: q.ms, q.last, dv, sg, bigPrint))
+                    if (bigPrint) heat?.dot(TapeHeat.Dot(q.ms / 1000, q.last, dv, if (sg >= 0) TapeHeat.DotKind.BIG_BUY else TapeHeat.DotKind.BIG_SELL))
+                    day?.trade(q.ms, q.last, dv, sg)
                 }
                 // The trap guard: size that left the book without trading; the defended levels.
                 pullBidAcc += TrapGuard.pulled(p.bids, q.bids, bids = true, traded = dv)
@@ -365,6 +381,14 @@ object OrderFlow {
 
         private fun close() {
             open()?.let { b -> ring[head] = b; head = (head + 1) % HISTORY_SEC; if (count < HISTORY_SEC) count++ }
+            // The heatmap: the book once a second, and the pulls the trap guard counts as big.
+            val h = heat; val q = last
+            if (h != null && q != null && sec >= 0) {
+                h.snap(sec, q.bids, q.asks)
+                val big = maxOf(1.0, TrapGuard.PULL_BIG * (median5m() ?: 0.0))
+                if (pullBidAcc >= big) h.dot(TapeHeat.Dot(sec, q.bid, pullBidAcc, TapeHeat.DotKind.PULL_BID))
+                if (pullAskAcc >= big) h.dot(TapeHeat.Dot(sec, q.ask, pullAskAcc, TapeHeat.DotKind.PULL_ASK))
+            }
             ofiAcc = 0.0; buyAcc = 0; sellAcc = 0; volAcc = 0; qAcc = 0
             pullBidAcc = 0; pullAskAcc = 0; updAcc = 0; staleAcc = 0; ages.clear()
         }
@@ -472,6 +496,11 @@ object OrderFlow {
         val huntDir: Int = 0,
         /** How late trades arrive, above the steady clock offset (ms, median over 30 s; NaN: not known). */
         val lateMs: Double = Double.NaN,
+        /**
+         * The latest absorption in the last minute (a defended level that held): its price (NaN: none) and who absorbed
+         * (+1 buyers - a bid soaked up selling; −1 sellers - an offer soaked up buying). Display and the log only.
+         */
+        val absorbAt: Double = Double.NaN, val absorbBy: Int = 0,
     )
 
     /** The flows of every followed instrument, by underlying. Thread-safe: every call holds its lock. */
@@ -494,6 +523,20 @@ object OrderFlow {
             for (e in entries) {
                 val t = trackers[e.token]
                 if (t == null || t.role != e.role || t.name != e.name) trackers[e.token] = Tracker(e.token, e.name, e.role, e.strike)
+            }
+            heats()
+        }
+
+        /** The charted option's token (it may already be followed as an ATM call or put): its tape and heatmap are shown. */
+        private var watchToken: Long? = null
+
+        @Synchronized fun watch(token: Long?) { watchToken = token; heats() }
+
+        /** A heatmap for the index futures and the charted option only (memory is fixed: about 150 KB each). */
+        private fun heats() {
+            for (t in trackers.values) {
+                val keep = t.role == Role.WATCH || t.token == watchToken || (t.role == Role.FUTURE && t.name in INDICES)
+                if (keep && t.heat == null) t.heat = TapeHeat.Heatmap() else if (!keep) t.heat = null
             }
         }
 
@@ -550,7 +593,7 @@ object OrderFlow {
             // Option side: the calls' 60 s signed volume against the puts'.
             // (An option with no distinct update for 15 s is left out; NSE's options count from 9:20.)
             val opts = if (!TrapGuard.optionsReady(nowSec, session)) emptyList()
-                else trackers.values.filter { it.name == name && it.role != Role.FUTURE && nowMs - it.lastMs <= TrapGuard.BOOK_STALE_OPTION_MS }
+                else trackers.values.filter { it.name == name && (it.role == Role.CE || it.role == Role.PE) && nowMs - it.lastMs <= TrapGuard.BOOK_STALE_OPTION_MS }
             var ce = 0.0; var pe = 0.0
             for (o in opts) {
                 val d = window(o.bars(), nowSec, 60) { it.delta.toDouble() }
@@ -620,6 +663,8 @@ object OrderFlow {
             // (9) Time traps.
             val why = TrapGuard.timeWindow(nowSec, session)
             if (why != null) flags += TrapGuard.Trap.TIME_WINDOW
+            // The absorption note: the latest defended level that held in the last minute (display and the log only).
+            val held = (asks.filter { !it.exhausted }.map { it to -1 } + bidsD.filter { !it.exhausted }.map { it to 1 }).maxByOrNull { it.first.sec }
             val pulledBid = window(bars, nowSec, 60) { it.pullBid.toDouble() }.toLong()
             val pulledAsk = window(bars, nowSec, 60) { it.pullAsk.toDouble() }.toLong()
             val traded = window(bars, nowSec, 60) { it.vol.toDouble() }
@@ -629,7 +674,7 @@ object OrderFlow {
                 lastBar.depth, lastBar.queue, lastBar.ratio, ce, pe, optNet, bu, mc?.second, zs,
                 depth10[n - 1], depth60[n - 1], depth300[n - 1], window(bars, nowSec, 60) { it.qDelta.toDouble() },
                 flags, raw, pulledBid, pulledAsk, if (traded > 0) (pulledBid + pulledAsk) / traded else Double.NaN, why,
-                hunt?.dir ?: 0, late)
+                hunt?.dir ?: 0, late, held?.first?.price ?: Double.NaN, held?.second ?: 0)
             if (warm) keepHistory(name, nowSec, by)
             return read
         }
@@ -651,6 +696,41 @@ object OrderFlow {
             h.addLast(slot to buyers)
             while (h.isNotEmpty() && slot - h.first().first >= HISTORY_SEC) h.removeFirst()
         }
+
+        private val priors = HashMap<String, Auction.Levels>()
+
+        /** [name]'s prior-day profile (from its future's 1-minute candles; null forgets it). */
+        @Synchronized fun prior(name: String, l: Auction.Levels?) { if (l == null) priors.remove(name) else priors[name] = l }
+
+        @Synchronized fun prior(name: String): Auction.Levels? = priors[name]
+
+        private fun future(name: String) = trackers.values.firstOrNull { it.name == name && it.role == Role.FUTURE }
+
+        /** Today's 1-minute [candles] of [name]'s future before the stream ([Auction.Day.seed]). False: no future followed. */
+        @Synchronized fun seed(name: String, candles: List<Auction.Candle>, nowSec: Long): Boolean {
+            val d = future(name)?.day ?: return false
+            d.seed(candles, nowSec)
+            return true
+        }
+
+        /** [name]'s auction at [nowMs] (its future's profile, delta, footprint, VWAP, TPO; null: none today). */
+        @Synchronized fun auction(name: String, nowMs: Long): Auction.Snapshot? {
+            val d = future(name)?.day ?: return null
+            d.openMin = (sessions[name] ?: TrapGuard.Session.NSE).openMin
+            return d.snapshot(name, nowMs / 1000, priors[name])
+        }
+
+        /** The latest [n] prints of [name]'s future ([watch]: of the charted option instead), newest first. */
+        @Synchronized fun tape(name: String, watch: Boolean, n: Int = 200): List<TapeHeat.Print> =
+            pick(name, watch)?.tape?.latest(n).orEmpty()
+
+        /** The heatmap of [name]'s future ([watch]: of the charted option) at [nowMs] (null: none kept). */
+        @Synchronized fun heat(name: String, watch: Boolean, nowMs: Long, maxCols: Int = 300): TapeHeat.Frame? =
+            pick(name, watch)?.heat?.frame(nowMs / 1000, maxCols)
+
+        /** The charted option's tracker (WATCH) or [name]'s future. */
+        private fun pick(name: String, watch: Boolean): Tracker? =
+            if (watch) watchToken?.let { trackers[it] } ?: trackers.values.firstOrNull { it.role == Role.WATCH } else future(name)
 
         /** [name]'s buyers' share every 10 s over the last 30 minutes, oldest first (epoch second to share). */
         @Synchronized fun history(name: String): List<Pair<Long, Int>> = history[name]?.toList().orEmpty()
@@ -686,8 +766,14 @@ object OrderFlow {
             ?: "not known yet"),
         "Pulled without trading (60s)" to "bids ${"%,d".format(Locale.ENGLISH, r.pulledBid60)} / offers ${"%,d".format(Locale.ENGLISH, r.pulledAsk60)}" +
             (if (r.cancelToTrade.isNaN()) "" else ", ${"%.1f".format(Locale.ENGLISH, r.cancelToTrade)} cancelled per traded"),
+        "Absorption (last minute)" to (absorption(r) ?: "none"),
         "Trap guard" to trapWords(r),
     )
+
+    /** "absorption at 52,310 (sellers)" when a defended level held in the last minute, else null. */
+    fun absorption(r: Read?): String? = r?.takeIf { !it.absorbAt.isNaN() && it.absorbBy != 0 }?.let {
+        "absorption at ${"%,.2f".format(Locale.ENGLISH, it.absorbAt).removeSuffix(".00")} (${if (it.absorbBy > 0) "buyers" else "sellers"})"
+    }
 
     /** The traps found, in plain words ("pull detected (offers), possible stop hunt"), or "none". */
     fun trapWords(r: Read): String = if (r.flags.isEmpty()) "none" else r.flags.joinToString(", ") { t ->
@@ -703,7 +789,9 @@ object OrderFlow {
     // ---- Jarvis ---------------------------------------------------------------------------------------------------------
 
     private val FLOW = Regex(" (order ?flow|orderflow|flow of orders|buying pressure|selling pressure|buyers or sellers|sellers or buyers|" +
-        "who is buying|who s buying|whos buying|kaun kharid raha|kaun bech raha|kharidar ya bechne wale|tape) ")
+        "who is buying|who s buying|whos buying|kaun kharid raha|kaun bech raha|kharidar ya bechne wale|tape|" +
+        // The auction's readings ([Auction.topic]): answered from the same live flow.
+        "volume profile|value area|point of control|market profile|auction regime|gamma regime|gamma exposure|gex|zero gamma|gamma flip|dealer gamma) ")
     /** How the flow has done for the strategies: [FlowShadow]'s question, not this one. */
     private val HELP = Regex(" (helping|helped|help|working|worked|record|results?|paying|useful|worth) ")
     private val NOT = Regex(" (turn|switch|set|enable|disable|confirm mode|shadow mode|export|delete|explain|what is an?|meaning|definition) ")
@@ -738,6 +826,7 @@ object OrderFlow {
         if (!r.depth.isNaN()) parts += "the 5-level book ${pct(r.depth)} to the bids"
         if (!r.optionNet.isNaN()) parts += if (r.optionNet >= 0) "calls bought more than puts (net ${pct(r.optionNet)})" else "puts bought more than calls (net ${pct(-r.optionNet)})"
         r.buildUp?.takeIf { it != BuildUp.NEUTRAL }?.let { parts += "the future shows ${it.words}" }
+        absorption(r)?.let { parts += it }
         val traps = if (r.flags.isEmpty()) "" else " Trap guard: ${trapWords(r)}."
         return "$who's order flow, from its future: $side. " + parts.joinToString(", ").replaceFirstChar { it.uppercase() } +
             ".$traps It is a live read, not a forecast; strategies only log it unless you set one to confirm."

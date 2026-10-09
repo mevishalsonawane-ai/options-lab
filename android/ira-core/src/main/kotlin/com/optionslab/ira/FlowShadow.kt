@@ -83,7 +83,7 @@ object FlowShadow {
 
     /** The signal and the flow at it ([r] null: no read). */
     fun signal(id: String, epochSec: Long, key: String, underlying: String, side: Int, live: Boolean, mode: OrderFlow.Mode, threshold: Int,
-               a: OrderFlow.Agreement, skipped: Boolean, r: OrderFlow.Read?, book: String = ""): String = listOf(
+               a: OrderFlow.Agreement, skipped: Boolean, r: OrderFlow.Read?, book: String = "", ctx: Context? = null): String = listOf(
         "S", clean(id), epochSec.toString(), clean(key), clean(underlying), side.toString(), if (live) "1" else "0", mode.name,
         threshold.toString(), a.name, if (skipped) "1" else "0", r?.buyers?.toString() ?: "", if (r?.warm == true) "1" else "0",
         d(r?.ofi60), d(r?.cvd60), d(r?.depth), d(r?.queue), d(r?.ratio), d(r?.optionNet), r?.buildUp?.name ?: "",
@@ -93,7 +93,46 @@ object FlowShadow {
         // The trap guard at the signal: its flags, the buyers' share before it, the pulls and the cancel-to-trade ratio.
         r?.flags?.joinToString(",") { it.name } ?: "", r?.rawBuyers?.toString() ?: "", r?.pulledBid60?.toString() ?: "",
         r?.pulledAsk60?.toString() ?: "", d(r?.cancelToTrade),
-    ).joinToString("|")
+    ).plus(context(ctx)).joinToString("|")
+
+    /**
+     * The auction and the gamma regime at a signal (9 Oct 2026; logged only, never a rule - research tests whether each one
+     * helped): [price] (the future's), the auction's [auction] snapshot, the read [r] (its absorption note), the gamma
+     * regime [gamma] under [convention], and the index's [basis] (future − index) to place the future against the index's
+     * zero-gamma level.
+     */
+    data class Context(
+        val price: Double?, val auction: Auction.Snapshot?, val r: OrderFlow.Read?,
+        val gamma: GammaRegime.Result?, val convention: GammaRegime.Convention = GammaRegime.Convention.STANDARD, val basis: Double? = null,
+    )
+
+    /** The context's field names, in the order logged after the trap guard's (field [CONTEXT_FROM] on). */
+    val CONTEXT_FIELDS = listOf(
+        "prior_poc_dist", "prior_vah_dist", "prior_val_dist", "regime", "delta15", "divergence", "absorption",
+        "gex_sign", "gex_convention", "zero_gamma_dist", "vwap_sd", "vwap_side", "ib_range", "open_type", "day_type",
+    )
+
+    /** The first context field's index in an S line. */
+    const val CONTEXT_FROM = 40
+
+    /** The context's fields (empty strings where not known; all empty with no context). */
+    fun context(c: Context?): List<String> {
+        if (c == null) return CONTEXT_FIELDS.map { "" }
+        val px = c.price?.takeIf { it > 0 } ?: c.r?.mid?.takeIf { it > 0 } ?: c.auction?.last?.takeIf { it > 0 }
+        val prior = c.auction?.prior
+        fun dist(level: Double?) = if (px == null || level == null) "" else d(px - level)
+        val g = c.gamma
+        val zgDist = if (g?.zeroGamma == null || px == null) "" else d(px - (c.basis ?: (g.forward - g.spot)) - g.zeroGamma)
+        val v = c.auction?.vwap
+        val tpo = c.auction?.tpo
+        return listOf(
+            dist(prior?.poc), dist(prior?.vah), dist(prior?.vaLow), c.auction?.regime?.name ?: "",
+            c.auction?.delta15?.toString() ?: "", c.auction?.divergence?.name ?: "", clean(OrderFlow.absorption(c.r) ?: ""),
+            g?.let { if (it.net(c.convention) >= 0) "1" else "-1" } ?: "", if (g != null) c.convention.name else "", zgDist,
+            if (v != null && px != null) d(v.sdUnits(px)) else "", if (v != null && px != null) (if (px >= v.vwap) "above" else "below") else "",
+            d(tpo?.ibRange), tpo?.openType?.name ?: "", tpo?.dayType?.name ?: "",
+        )
+    }
 
     /** The verdict of an entry the flow skipped (CONFIRM). */
     const val SKIPPED = "skipped_by_flow"
@@ -117,6 +156,8 @@ object FlowShadow {
         var verdict: String? = null, var orderId: String? = null, var net: Double? = null, var m15: Double? = null, var m30: Double? = null,
         /** The trap guard's flags at the signal ([TrapGuard.Trap] names). */
         var flags: List<String> = emptyList(),
+        /** The auction and gamma context at the signal ([CONTEXT_FIELDS] to their logged text; empty for older lines). */
+        var context: Map<String, String> = emptyMap(),
     ) {
         val taken: Boolean get() = verdict?.startsWith("entered") == true || orderId != null
     }
@@ -131,7 +172,8 @@ object FlowShadow {
                     if (f.size < 12 || f[1] in out) return@runCatching
                     out[f[1]] = Signal(f[1], f[2].toLong(), f[3], f[4], f[5].toInt(), f[6] == "1", OrderFlow.Mode.valueOf(f[7]),
                         OrderFlow.Agreement.valueOf(f[9]), f[10] == "1", f[11].toIntOrNull(),
-                        flags = f.getOrNull(35)?.split(',')?.filter { it.isNotEmpty() }.orEmpty())
+                        flags = f.getOrNull(35)?.split(',')?.filter { it.isNotEmpty() }.orEmpty(),
+                        context = CONTEXT_FIELDS.withIndex().mapNotNull { (i, k) -> f.getOrNull(CONTEXT_FROM + i)?.takeIf { it.isNotEmpty() }?.let { k to it } }.toMap())
                 }
                 "V" -> out[f.getOrNull(1)]?.let { s ->
                     f.getOrNull(2)?.let { v -> if (s.verdict == null || !s.taken) s.verdict = v; if (v == SKIPPED) s.skipped = true }

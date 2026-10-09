@@ -274,7 +274,7 @@ class OrderFlowTest {
         assertEquals(3, b.coverage(now).followed)
         assertEquals("Flow BN: buyers ${r.strength}" + if (r.flags.isEmpty()) "" else " ⚠", OrderFlow.line("BANKNIFTY", r))
         assertEquals("Flow NF: no flow", OrderFlow.line("NIFTY", null))
-        assertEquals(10, OrderFlow.components(r).size)
+        assertEquals(11, OrderFlow.components(r).size)
         // The guard let it through: nothing neutralised it (a moving book is pulled on the side the price runs through).
         assertEquals(r.rawBuyers, r.buyers)
         assertTrue(TrapGuard.Trap.ABSORPTION_BUY !in r.flags && TrapGuard.Trap.STOP_HUNT !in r.flags && TrapGuard.Trap.UNRELIABLE !in r.flags, "${r.flags}")

@@ -55,6 +55,16 @@ object WhatsNew {
             "NSE F&O now trades to 15:40; the app's order window and watch follow it. " +
                 "Index values still close at 15:30, and every strategy keeps its own entry and exit times.",
             "Home's market status, the order forms and the market watch"),
+        Entry("2026-10-09-order-flow-auction", OCT9, "Volume profile, gamma regime, heatmap and tape",
+            "The order flow detail shows the future's volume profile: point of control, value area and its busy and thin prices. " +
+                "It says whether price is inside or outside yesterday's value, and if a move outside is accepted. " +
+                "It adds delta per minute with divergence, a 15-minute footprint, VWAP bands and the market profile. " +
+                "A liquidity heatmap and a time and sales tape open from the same sheet. " +
+                "Home and the GEX tool show the gamma regime and its zero-gamma level, with both dealer-sign conventions. " +
+                "Optional chart lines for these levels and VWAP start off. " +
+                "All of it is shown and logged beside each signal for research; no strategy uses it.",
+            "Home → Dashboard → Strategies card → Order flow (tap an index), Options → GEX, and the Chart's POC/VA and VWAP toggles",
+            ask = "what's the volume profile on banknifty", to = "chart"),
         Entry("2026-10-09-order-flow", OCT9, "Live order flow, logged beside every strategy",
             "A live read of who is pushing, buyers or sellers, from Zerodha's full price stream. " +
                 "It shows on the chart, the option chain and the Strategies card, with a detail on tap. " +
