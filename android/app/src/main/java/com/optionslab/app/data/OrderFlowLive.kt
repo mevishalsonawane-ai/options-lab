@@ -67,6 +67,11 @@ object OrderFlowLive {
             while (true) {
                 if (testOff) { delay(30_000); continue }
                 runCatching { if (KiteStream.status.value != KiteStream.Status.OFF) relayout() else if (watched.isNotEmpty()) clear() }
+                // The auction's prior-day profiles and today's early minutes (once a day each), and the gamma regime (5 min).
+                if (KiteStream.status.value != KiteStream.Status.OFF) {
+                    runCatching { auctionCandles() }
+                    runCatching { GammaLive.refreshIfDue() }
+                }
                 runCatching { FlowGate.settle() }
                 delay(30_000)
             }
@@ -119,6 +124,8 @@ object OrderFlowLive {
                 centred = out.filter { it.role != OrderFlow.Role.FUTURE }; centredFor = f; centredAt = now
             }
         }
+        // The option the Chart shows (its tape and heatmap only; never part of the read).
+        watching?.takeIf { it.name == f || it.name in OrderFlow.INDICES }?.let { out += it }
         // The MCX bots' near futures, while one is on.
         val mcx = runCatching { mcxNames() }.getOrDefault(emptyList())
         if (mcx.isNotEmpty()) {
@@ -129,6 +136,80 @@ object OrderFlowLive {
         follow(out.distinctBy { it.token }.take(OrderFlow.FULL_MODE_CAP))
         // The trap guard's time windows: each index's session (an expiry day's last hour, the day's event minutes), MCX's hours.
         runCatching { sessions(today, mcx) }
+    }
+
+    /** The charted option (its tape and heatmap; null: an index or nothing charted). */
+    @Volatile private var watching: OrderFlow.Board.Entry? = null
+
+    /**
+     * The Chart shows [symbol] (call off the main thread): an NFO option of a followed index is added to the full-mode set
+     * for its tape and heatmap (from the next layout, at once); anything else drops it.
+     */
+    fun watchSymbol(symbol: String) {
+        if (!enabled) return
+        val ins = runCatching { Broker.cachedInstruments() }.getOrNull().orEmpty()
+        val c = ins.firstOrNull { it.tradingSymbol.equals(symbol.replace(" ", ""), ignoreCase = true) && (it.right == Right.CE || it.right == Right.PE) }
+        val next = c?.takeIf { it.name in OrderFlow.INDICES }?.let { OrderFlow.Board.Entry(it.token, it.name, OrderFlow.Role.WATCH, it.strike) }
+        if (next == watching) return
+        watching = next
+        if (!testOff) CoroutineScope(Dispatchers.IO).launch { runCatching { relayout() } }
+    }
+
+    /** Whether the charted option is followed (the sheets offer its tape and heatmap). */
+    fun watchingName(): String? = watching?.let { w -> board.entries().firstOrNull { it.token == w.token }?.let { w.name } }
+
+    // ---- the auction's candles: the prior day's profile, today's minutes before the stream ------------------------------
+
+    private val priorFor = HashMap<String, LocalDate>()
+    private val seededFor = HashMap<String, LocalDate>()
+    private val candleTried = HashMap<String, Long>()
+
+    /**
+     * Once a day per index (a failure retried after 10 minutes): the prior session's profile from its near future's 1-minute
+     * candles (Zerodha's historical read; else the order-flow recorder's file of that day), and today's minutes before the
+     * stream began. Call off the main thread.
+     */
+    private suspend fun auctionCandles() {
+        if (!Broker.loggedIn) return
+        val today = Market.today()
+        val now = System.currentTimeMillis()
+        val futs = board.entries().filter { it.role == OrderFlow.Role.FUTURE && it.name in OrderFlow.INDICES }
+        for (e in futs) {
+            val n = e.name
+            if (priorFor[n] == today && seededFor[n] == today) continue
+            if (now - (candleTried[n] ?: 0L) < 10 * 60_000L) continue
+            candleTried[n] = now
+            if (priorFor[n] != today) {
+                var d = today.minusDays(1)
+                repeat(10) { if (!runCatching { Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5)) d = d.minusDays(1) }
+                val bars = runCatching { Broker.minuteBars(e.token, d) }.getOrDefault(emptyList())
+                val levels = com.optionslab.ira.Auction.fromCandles(bars.map { com.optionslab.ira.Auction.Candle(it.epochSecond, it.open, it.high, it.low, it.close, it.volume) })
+                    ?: runCatching { recordedProfile(n, d) }.getOrNull()
+                if (levels != null) { board.prior(n, levels); priorFor[n] = today }
+            }
+            if (seededFor[n] != today && runCatching { Market.isOpen() }.getOrDefault(false)) {
+                val hhmmss = java.time.LocalTime.now(com.optionslab.engine.IST).withNano(0).toString().let { if (it.length == 5) "$it:00" else it }
+                val bars = runCatching { Broker.minuteBars(e.token, today, to = hhmmss) }.getOrDefault(emptyList())
+                if (bars.isNotEmpty() && board.seed(n, bars.map { com.optionslab.ira.Auction.Candle(it.epochSecond, it.open, it.high, it.low, it.close, it.volume) }, now / 1000))
+                    seededFor[n] = today
+            }
+        }
+    }
+
+    /** [name]'s future's profile on [day] from the order-flow recorder's 1-second rows (no side: candles of one second). */
+    private fun recordedProfile(name: String, day: LocalDate): com.optionslab.ira.Auction.Levels? {
+        val f = Recorder.days().firstOrNull { it.first == day }?.second ?: return null
+        val out = ArrayList<com.optionslab.ira.Auction.Candle>()
+        java.util.zip.GZIPInputStream(f.inputStream()).bufferedReader().useLines { lines ->
+            for (l in lines) {
+                val c = l.split(',')
+                if (c.size < 12 || c[3] != name || c[4] != OrderFlow.Role.FUTURE.name) continue
+                val px = c[7].toDoubleOrNull() ?: continue
+                val v = c[11].toLongOrNull() ?: continue
+                if (v > 0) out += com.optionslab.ira.Auction.Candle(c[0].toLongOrNull() ?: 0L, px, px, px, px, v)
+            }
+        }
+        return com.optionslab.ira.Auction.fromCandles(out)
     }
 
     /** The option set's last centring (5 minutes kept), and for which index. */
@@ -167,6 +248,8 @@ object OrderFlowLive {
 
     private fun follow(entries: List<OrderFlow.Board.Entry>) {
         board.layout(entries)
+        // The charted option's tape and heatmap (it may be followed already as an ATM call or put: that role is kept).
+        board.watch(watching?.token)
         watched = entries.map { it.token }.toSet()
         KiteStream.want(OWNER, watched)
     }
@@ -230,8 +313,45 @@ object OrderFlowLive {
 
     private suspend fun perSecond(now: Long) {
         FlowGate.onReads(_reads.value, now)
+        publishAuction(now)
         Recorder.collect(board, now)
     }
+
+    private val _auction = MutableStateFlow<Map<String, com.optionslab.ira.Auction.Snapshot>>(emptyMap())
+    /** Each index future's auction (profile, regime, delta, footprint, VWAP, TPO), once a second; display only. */
+    val auction: StateFlow<Map<String, com.optionslab.ira.Auction.Snapshot>> = _auction
+
+    private val _chartLevels = MutableStateFlow<Map<String, List<com.optionslab.ira.Auction.ChartLevel>>>(emptyMap())
+    /** Each index's optional chart lines in the INDEX's prices (empty while its basis is not known), once a second. */
+    val chartLevels: StateFlow<Map<String, List<com.optionslab.ira.Auction.ChartLevel>>> = _chartLevels
+
+    private fun publishAuction(now: Long) {
+        val m = LinkedHashMap<String, com.optionslab.ira.Auction.Snapshot>()
+        for (n in names()) if (n in OrderFlow.INDICES) board.auction(n, now)?.let { m[n] = it }
+        _auction.value = m
+        _chartLevels.value = m.mapValues { (n, s) -> basis(n, s.last)?.let { com.optionslab.ira.Auction.chartLevels(s, it) }.orEmpty() }
+    }
+
+    /** [name]'s future − index now (null: the index's tick is not fresh). */
+    fun basis(name: String, future: Double): Double? {
+        if (!(future > 0)) return null
+        val idx = runCatching { Broker.indexToken(name)?.let { KiteStream.tick(it, 60_000)?.last } }.getOrNull()
+        return idx?.takeIf { it > 0 }?.let { future - it }
+    }
+
+    /** [underlying]'s auction now, fresh from the flow (the shadow log's; null: no future followed or nothing today). */
+    fun auctionNow(underlying: String, nowMs: Long = System.currentTimeMillis()): com.optionslab.ira.Auction.Snapshot? {
+        testAuction?.let { return it(underlying) }
+        if (!enabled) return null
+        return board.auction(underlying, nowMs)
+    }
+
+    /** [underlying]'s future's time & sales ([watch]: the charted option's), newest first. Call off the main thread. */
+    fun tape(underlying: String, watch: Boolean): List<com.optionslab.ira.TapeHeat.Print> = board.tape(underlying, watch)
+
+    /** [underlying]'s future's heatmap ([watch]: the charted option's) now. Call off the main thread. */
+    fun heat(underlying: String, watch: Boolean, nowMs: Long = System.currentTimeMillis()): com.optionslab.ira.TapeHeat.Frame? =
+        board.heat(underlying, watch, nowMs)
 
     // ---- reads ----------------------------------------------------------------------------------------------------------
 
@@ -277,7 +397,7 @@ object OrderFlowLive {
         suspend fun collect(b: OrderFlow.Board, now: Long) {
             val open = testOpen ?: runCatching { Market.isOpen() }.getOrDefault(false)
             if (open) {
-                val rows = b.closedAfter(lastSec).filter { (e, _) -> e.role != OrderFlow.Role.FUTURE || e.name in OrderFlow.INDICES }
+                val rows = b.closedAfter(lastSec).filter { (e, _) -> e.role != OrderFlow.Role.WATCH && (e.role != OrderFlow.Role.FUTURE || e.name in OrderFlow.INDICES) }
                 for ((e, bar) in rows) {
                     val t = Instant.ofEpochSecond(bar.sec).atZone(com.optionslab.engine.IST).toLocalTime()
                     buf.append(bar.sec).append(',').append(t).append(',').append(e.token).append(',').append(e.name).append(',').append(e.role.name)
@@ -346,6 +466,16 @@ object OrderFlowLive {
     @Volatile internal var testRead: ((String) -> OrderFlow.Read?)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test read exists only in debug builds" }; field = v }
 
+    /** TEST ONLY: an auction for each underlying, as if from the flow (null in the app, always). Throws unless BuildConfig.DEBUG. */
+    @Volatile internal var testAuction: ((String) -> com.optionslab.ira.Auction.Snapshot?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test auction exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: publish [m] as the auctions (and [levels] as the chart's lines). Throws unless BuildConfig.DEBUG. */
+    internal fun publishForTest(m: Map<String, com.optionslab.ira.Auction.Snapshot>, levels: Map<String, List<com.optionslab.ira.Auction.ChartLevel>> = emptyMap()) {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the test publish exists only in debug builds" }
+        _auction.value = m; _chartLevels.value = levels
+    }
+
     /** TEST ONLY: follow [entries] as a layout would (no network). Throws unless BuildConfig.DEBUG. */
     internal fun layoutForTest(entries: List<OrderFlow.Board.Entry>) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test layout exists only in debug builds" }
@@ -362,5 +492,6 @@ object OrderFlowLive {
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
         queue.clear(); board.layout(emptyList()); watched = emptySet(); _reads.value = emptyMap(); testRead = null
+        testAuction = null; _auction.value = emptyMap(); _chartLevels.value = emptyMap(); watching = null
     }
 }

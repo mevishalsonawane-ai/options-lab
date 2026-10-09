@@ -125,6 +125,9 @@ internal fun OrderFlowSheet(underlying: String, onClose: () -> Unit) {
     // The history is copied off the main thread when the read changes (at most every 250 ms while open).
     var hist by remember { mutableStateOf<List<Pair<Long, Int>>>(emptyList()) }
     LaunchedEffect(r?.atSec) { hist = withContext(Dispatchers.Default) { runCatching { OrderFlowLive.history(underlying) }.getOrDefault(emptyList()) } }
+    val auctions by OrderFlowLive.auction.collectAsState(Dispatchers.Main.immediate)
+    // The heatmap or the tape, opened from this sheet (each its own sheet over it).
+    var tool by remember { mutableStateOf<String?>(null) }
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
         usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
         Column(Modifier.fillMaxWidth(0.94f).heightIn(max = 640.dp).background(p.paper, RoundedCornerShape(16.dp)).padding(14.dp)
@@ -134,6 +137,16 @@ internal fun OrderFlowSheet(underlying: String, onClose: () -> Unit) {
                 TextButton(onClose) { Text("Close") }
             }
             Text(OrderFlow.word(r).replaceFirstChar { it.uppercase() }, style = Type.title.copy(color = sideColor(r), fontSize = 22.sp))
+            // The auction regime against the prior day's value area, as one word (display only).
+            auctions[underlying]?.regime?.let { rg ->
+                Text("Auction: ${rg.chip}", maxLines = 1, softWrap = false,
+                    style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(vertical = 4.dp).semantics { contentDescription = "Auction regime: ${rg.words}" }
+                        .background(p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 6.dp))
+            }
+            // The read's notes (display only): a delta divergence on the future, a level that absorbed the flow.
+            val notes = listOfNotNull(auctions[underlying]?.divergence?.words, OrderFlow.absorption(r))
+            if (notes.isNotEmpty()) Text("⚠ " + notes.joinToString(" · "), style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
             Note("From the near future's full-mode ticks (5-level book, total buy / sell quantity, volume, OI) and the ATM ±2 options of the " +
                 "index in focus. Each part is scored against its own last 30 minutes. A live read, not a forecast.")
             if (r == null) Note("No live flow now: it needs the Zerodha price stream in market hours.")
@@ -146,11 +159,201 @@ internal fun OrderFlowSheet(underlying: String, onClose: () -> Unit) {
             Text("Last 30 minutes (buyers' share; the line is 50)", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp),
                 modifier = Modifier.padding(top = 10.dp))
             FlowHistory(hist, Modifier.fillMaxWidth().height(90.dp).padding(top = 4.dp))
+            AuctionBlock(underlying, auctions[underlying], onHeat = { tool = "heat" }, onTape = { tool = "tape" })
             Note("Strategies only log the flow beside their signals unless you set one to CONFIRM (Home → Strategies → Order flow). " +
                 "It can only ever skip an entry; it never places, adds to, reverses or exits a trade.")
         }
     }
+    when (tool) {
+        "heat" -> HeatmapSheet(underlying) { tool = null }
+        "tape" -> TapeSheet(underlying) { tool = null }
+    }
 }
+
+/**
+ * The detail's auction part (live readings and shadow-log fields; no strategy uses them): the regime against the prior
+ * day's value area, the two profiles, delta and its divergence, VWAP, the market profile, the gamma regime, the per-minute
+ * delta bars and the 15-minute footprint, and the buttons to the heatmap and the tape. Reads [OrderFlowLive.auction] and
+ * [com.optionslab.app.data.GammaLive]'s state only.
+ */
+@Composable
+private fun AuctionBlock(underlying: String, a: com.optionslab.ira.Auction.Snapshot?, onHeat: () -> Unit, onTape: () -> Unit) {
+    val p = LocalPalette.current
+    val gamma by com.optionslab.app.data.GammaLive.state.collectAsState(Dispatchers.Main.immediate)
+    val conv by com.optionslab.app.data.GammaLive.convention.collectAsState(Dispatchers.Main.immediate)
+    Text("Auction, delta, VWAP, market profile", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.padding(top = 12.dp))
+    Note("Live readings from the future's trades, logged beside every signal for research. No strategy uses them.")
+    val rows = (if (a == null) listOf("Auction" to "no live profile yet (the future's trades in market hours)") else com.optionslab.ira.Auction.lines(a)) +
+        (if (underlying in com.optionslab.app.data.GammaLive.INDICES)
+            listOf("Gamma (${conv.label.lowercase(java.util.Locale.ENGLISH)} sign)" to com.optionslab.ira.GammaRegime.line(gamma[underlying], conv).removePrefix("Gamma: "))
+        else emptyList())
+    rows.forEach { (label, value) ->
+        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+            Text(label, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
+            Text(value, style = Type.figure.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f))
+        }
+    }
+    if (a != null && a.deltas.isNotEmpty()) {
+        Text("Delta per minute, last 30 minutes", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.padding(top = 8.dp))
+        DeltaBars(a.deltas.map { it.second }, Modifier.fillMaxWidth().height(60.dp).padding(top = 4.dp))
+    }
+    if (a != null && a.footprint.isNotEmpty()) {
+        Text("Footprint, last 15 minutes (bought × sold at each price)", style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp),
+            modifier = Modifier.padding(top = 8.dp))
+        a.footprint.forEach { f ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+                Text("%,.2f".format(java.util.Locale.ENGLISH, f.price), style = Type.figure.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                Text("%,d".format(java.util.Locale.ENGLISH, f.buy), style = Type.figure.copy(color = p.verdigris, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                Text("%,d".format(java.util.Locale.ENGLISH, f.sell), style = Type.figure.copy(color = p.oxblood, fontSize = 12.sp), modifier = Modifier.weight(1f))
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onHeat) { Text("Liquidity heatmap") }
+        TextButton(onTape) { Text("Time & sales") }
+    }
+}
+
+/** Signed bars around a middle line: buying minutes up in verdigris, selling minutes down in oxblood. */
+@Composable
+private fun DeltaBars(values: List<Long>, modifier: Modifier) {
+    val p = LocalPalette.current
+    val up = p.verdigris; val dn = p.oxblood; val mid = p.rule
+    Canvas(modifier.semantics { contentDescription = "Delta per minute over the last 30 minutes" }) {
+        val h = size.height; val w = size.width
+        drawLine(mid, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 1f)
+        val mx = values.maxOfOrNull { kotlin.math.abs(it) }?.takeIf { it > 0 } ?: return@Canvas
+        val bw = w / 30f
+        values.takeLast(30).forEachIndexed { i, v ->
+            val bh = (kotlin.math.abs(v).toFloat() / mx) * (h / 2)
+            val x = w - (values.takeLast(30).size - i) * bw
+            drawRect(if (v >= 0) up else dn, Offset(x + bw * 0.15f, if (v >= 0) h / 2 - bh else h / 2),
+                androidx.compose.ui.geometry.Size(bw * 0.7f, maxOf(1f, bh)))
+        }
+    }
+}
+
+/** The future's or the charted option's (when one is followed) choice at the top of the heatmap and the tape. */
+@Composable
+private fun WhichInstrument(underlying: String, watch: Boolean, onWatch: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    var option by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { option = withContext(Dispatchers.Default) { runCatching { OrderFlowLive.watchingName() }.getOrNull() } }
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(false to "${OrderFlow.short(underlying)} future", true to "Charted option").forEach { (w, label) ->
+            if (!w || option == underlying) Text(label, maxLines = 1, softWrap = false,
+                style = Type.label.copy(color = if (w == watch) p.onPrimary else p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                modifier = Modifier.background(if (w == watch) p.brass else p.chip, RoundedCornerShape(50)).clickable { onWatch(w) }
+                    .heightIn(min = 36.dp).padding(horizontal = 12.dp, vertical = 9.dp))
+        }
+    }
+}
+
+/**
+ * The liquidity heatmap (Bookmap-style, display only): the 5-level book's resting size by price × time over the last 30
+ * minutes (one column per few seconds, darker = more size; bids green, offers red), pulled size (rings) and big prints
+ * (dots). Copied off the main thread every 2 s while open.
+ */
+@Composable
+internal fun HeatmapSheet(underlying: String, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    var watch by remember { mutableStateOf(false) }
+    var frame by remember { mutableStateOf<com.optionslab.ira.TapeHeat.Frame?>(null) }
+    LaunchedEffect(watch) {
+        while (true) {
+            frame = withContext(Dispatchers.Default) { runCatching { OrderFlowLive.heat(underlying, watch) }.getOrNull() }
+            kotlinx.coroutines.delay(2_000)
+        }
+    }
+    val bid = p.verdigris; val ask = p.oxblood; val pull = p.amber; val big = p.ink; val grid = p.rule
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
+        usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
+        Column(Modifier.fillMaxWidth(0.96f).heightIn(max = 640.dp).background(p.paper, RoundedCornerShape(16.dp)).padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Liquidity heatmap · ${OrderFlow.label(underlying)}", style = Type.title.copy(color = p.ink), modifier = Modifier.weight(1f))
+                TextButton(onClose) { Text("Close") }
+            }
+            WhichInstrument(underlying, watch) { watch = it }
+            val f = frame
+            if (f == null || f.columns.isEmpty()) Note("No book recorded yet: it needs the Zerodha price stream in market hours.")
+            else {
+                Canvas(Modifier.fillMaxWidth().height(320.dp).semantics { contentDescription = "Resting size by price and time" }) {
+                    val w = size.width; val h = size.height
+                    val span = (f.high - f.low).coerceAtLeast(0.05)
+                    fun y(px: Double) = (h - (px - f.low) / span * (h - 8) - 4).toFloat()
+                    drawLine(grid, Offset(0f, h - 1), Offset(w, h - 1), 1f)
+                    val cw = w / f.columns.size
+                    val t0 = f.columns.first().sec; val t1 = f.columns.last().sec.coerceAtLeast(t0 + 1)
+                    f.columns.forEachIndexed { i, c ->
+                        for ((px, q) in c.bids) drawRect(bid.copy(alpha = (0.12f + 0.88f * q.toFloat() / f.maxQty.coerceAtLeast(1L)).coerceIn(0f, 1f)), Offset(i * cw, y(px) - 2f),
+                            androidx.compose.ui.geometry.Size(maxOf(1f, cw), 4f))
+                        for ((px, q) in c.asks) drawRect(ask.copy(alpha = (0.12f + 0.88f * q.toFloat() / f.maxQty.coerceAtLeast(1L)).coerceIn(0f, 1f)), Offset(i * cw, y(px) - 2f),
+                            androidx.compose.ui.geometry.Size(maxOf(1f, cw), 4f))
+                    }
+                    for (d in f.dots) {
+                        val x = ((d.sec - t0).toFloat() / (t1 - t0)) * w
+                        val pulled = d.kind == com.optionslab.ira.TapeHeat.DotKind.PULL_BID || d.kind == com.optionslab.ira.TapeHeat.DotKind.PULL_ASK
+                        if (pulled) drawCircle(pull, 5f, Offset(x, y(d.price)), style = Stroke(width = 2f))
+                        else drawCircle(big, 4f, Offset(x, y(d.price)))
+                    }
+                }
+                Text("%,.2f – %,.2f · last %d min".format(java.util.Locale.ENGLISH, f.low, f.high, ((f.columns.last().sec - f.columns.first().sec) / 60 + 1)),
+                    style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
+            }
+            Note("Green: bids, red: offers, darker = more size resting. Rings: size pulled without trading; dots: big prints. " +
+                "From Zerodha's 5 best levels once a second, so deeper orders are not seen. Display only.")
+        }
+    }
+}
+
+/**
+ * Time & sales (display only): each volume change of the stream as a print - time, price, quantity, buyer or seller by the
+ * tick rule - newest first, big prints (over 5× the median size) in bold. Copied off the main thread every second while open.
+ */
+@Composable
+internal fun TapeSheet(underlying: String, onClose: () -> Unit) {
+    val p = LocalPalette.current
+    var watch by remember { mutableStateOf(false) }
+    var prints by remember { mutableStateOf<List<com.optionslab.ira.TapeHeat.Print>>(emptyList()) }
+    LaunchedEffect(watch) {
+        while (true) {
+            prints = withContext(Dispatchers.Default) { runCatching { OrderFlowLive.tape(underlying, watch) }.getOrDefault(emptyList()) }
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
+    val hms = remember { java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss", java.util.Locale.ENGLISH) }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
+        usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
+        Column(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.85f).background(p.paper, RoundedCornerShape(16.dp)).padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Time & sales · ${OrderFlow.label(underlying)}", style = Type.title.copy(color = p.ink), modifier = Modifier.weight(1f))
+                TextButton(onClose) { Text("Close") }
+            }
+            WhichInstrument(underlying, watch) { watch = it }
+            Note("Kite sends snapshots, not every trade: several trades between two updates show as one row. Bold: over 5× the usual size.")
+            if (prints.isEmpty()) Note("No prints yet: they need the Zerodha price stream in market hours.")
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                items(prints.size) { i ->
+                    val pr = prints[i]
+                    val c = when { pr.side > 0 -> p.verdigris; pr.side < 0 -> p.oxblood; else -> p.inkSoft }
+                    val wt = if (pr.big) FontWeight.Bold else FontWeight.Normal
+                    Row(Modifier.fillMaxWidth().background(if (pr.big) p.chip else p.paper).padding(vertical = 2.dp)) {
+                        Text(java.time.Instant.ofEpochMilli(pr.ms).atZone(com.optionslab.engine.IST).format(hms),
+                            style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.weight(1f))
+                        Text("%,.2f".format(java.util.Locale.ENGLISH, pr.price), style = Type.figure.copy(color = c, fontSize = 12.sp, fontWeight = wt), modifier = Modifier.weight(1f))
+                        Text("%,d".format(java.util.Locale.ENGLISH, pr.qty), style = Type.figure.copy(color = c, fontSize = 12.sp, fontWeight = wt), modifier = Modifier.weight(1f))
+                        Text(when { pr.side > 0 -> "B"; pr.side < 0 -> "S"; else -> "·" }, style = Type.figure.copy(color = c, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Home's auction and gamma line for [underlying] ("BN: inside · Gamma: positive (choppy) · zero-γ 52,300 ..."). */
+internal fun homeAuctionLine(underlying: String, a: com.optionslab.ira.Auction.Snapshot?, g: com.optionslab.ira.GammaRegime.Result?,
+                             c: com.optionslab.ira.GammaRegime.Convention): String =
+    com.optionslab.ira.Auction.homeWord(underlying, a) + if (underlying in com.optionslab.app.data.GammaLive.INDICES) " · " + com.optionslab.ira.GammaRegime.line(g, c) else ""
 
 /** The buyers' share over 30 minutes: a line, 0 at the bottom, 100 at the top, a faint rule at 50. */
 @Composable
@@ -201,6 +404,15 @@ internal fun OrderFlowSection(model: AppModel) {
                     style = Type.bodySmall.copy(color = sideColor(r), fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.heightIn(min = 32.dp).clickable { detail = u }.padding(vertical = 6.dp))
             }
+        }
+        // The auction regime and the gamma regime of BankNifty and Nifty (live readings; no strategy uses them).
+        val auctions by OrderFlowLive.auction.collectAsState(Dispatchers.Main.immediate)
+        val gamma by com.optionslab.app.data.GammaLive.state.collectAsState(Dispatchers.Main.immediate)
+        val conv by com.optionslab.app.data.GammaLive.convention.collectAsState(Dispatchers.Main.immediate)
+        LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.GammaLive.loadConvention() } } }
+        listOf("BANKNIFTY", "NIFTY").forEach { u ->
+            Text(homeAuctionLine(u, auctions[u], gamma[u], conv), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                modifier = Modifier.heightIn(min = 32.dp).clickable { detail = u }.padding(vertical = 4.dp))
         }
         val confirming = modes.count { it.value.mode == OrderFlow.Mode.CONFIRM }
         Note(if (confirming == 0) "Logged beside every strategy's signal (SHADOW); no entry is skipped by it." else

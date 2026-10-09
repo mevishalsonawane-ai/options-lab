@@ -3753,8 +3753,20 @@ object IraHub {
                 val said = runCatching {
                     val name = flowAsk.ifEmpty { com.optionslab.app.data.OrderFlowLive.focus }
                     val now = System.currentTimeMillis()
-                    val read = com.optionslab.app.data.OrderFlowLive.reads.value[name] ?: com.optionslab.app.data.OrderFlowLive.readNow(name, now)
-                    com.optionslab.ira.OrderFlow.answer(name, read, now / 1000)
+                    // "What's the volume profile / gamma regime on BankNifty?" (9 Oct): the auction's or the gamma's live reading.
+                    when (com.optionslab.ira.Auction.topic(q)) {
+                        com.optionslab.ira.Auction.Topic.PROFILE -> com.optionslab.ira.Auction.answer(name,
+                            com.optionslab.app.data.OrderFlowLive.auction.value[name] ?: com.optionslab.app.data.OrderFlowLive.auctionNow(name, now), now / 1000)
+                        com.optionslab.ira.Auction.Topic.GAMMA -> {
+                            com.optionslab.app.data.GammaLive.loadConvention()
+                            com.optionslab.ira.GammaRegime.answer(name, com.optionslab.app.data.GammaLive.state.value[name],
+                                com.optionslab.app.data.GammaLive.convention.value, now)
+                        }
+                        null -> {
+                            val read = com.optionslab.app.data.OrderFlowLive.reads.value[name] ?: com.optionslab.app.data.OrderFlowLive.readNow(name, now)
+                            com.optionslab.ira.OrderFlow.answer(name, read, now / 1000)
+                        }
+                    }
                 }.getOrElse { "I could not read the order flow just now, Boss." }
                 reply(said)
             }

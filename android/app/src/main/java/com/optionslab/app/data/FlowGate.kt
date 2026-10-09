@@ -131,7 +131,8 @@ object FlowGate {
             loadOnce()
             synchronized(lock) {
                 if (seen.add(id)) {
-                    append(FlowShadow.signal(id, now / 1000, key, underlying, side, live, s.mode, s.threshold, a, skip, r, bookOf(contract)))
+                    append(FlowShadow.signal(id, now / 1000, key, underlying, side, live, s.mode, s.threshold, a, skip, r, bookOf(contract),
+                        contextOf(underlying, r, now)))
                     r?.takeIf { it.mid > 0 }?.let { moves += Move(id, underlying, side, it.mid, now / 1000) }
                 }
                 if (skip) append(FlowShadow.verdict(id, SKIPPED))
@@ -167,6 +168,18 @@ object FlowGate {
         }
         check(key, underlying, side, live, at, what, decide, contract)
     }
+
+    /**
+     * The auction and the gamma regime at the signal, for the log only ([FlowShadow.Context]): the future's profile, regime,
+     * delta, VWAP and TPO from the flow, the read's absorption note, the index's gamma regime under Boss's convention. Memory
+     * only; null on any error (the signal is still logged).
+     */
+    private fun contextOf(underlying: String, r: OrderFlow.Read?, now: Long): FlowShadow.Context? = runCatching {
+        val a = OrderFlowLive.auctionNow(underlying, now)
+        val price = r?.mid?.takeIf { it > 0 } ?: a?.last
+        FlowShadow.Context(price, a, r, GammaLive.state.value[underlying], GammaLive.convention.value,
+            price?.let { p -> runCatching { OrderFlowLive.basis(underlying, p) }.getOrNull() })
+    }.getOrNull()
 
     /** The traded contract's 5-level book from the stream at this moment, for the log ("" when the stream has none fresh). */
     private fun bookOf(c: Paper.Contract?): String = runCatching {

@@ -162,6 +162,10 @@ internal fun ChartPane(
     var liqOn by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.liq", true)) }
     val liqCache = remember { LiquidityCache() }
     val liqUnderlying = current.first.uppercase().takeIf { liquidity != null && it in LiquidityRules.UNDERLYINGS }
+    // A charted index option gets its own tape and heatmap in the order-flow detail (display only; off the main thread).
+    LaunchedEffect(current.first, flowChip != null) {
+        if (flowChip != null) withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.OrderFlowLive.watchSymbol(current.first) } }
+    }
 
     fun openOrder(buy: Boolean, price: Double?, type: String = if (price == null) "MARKET" else "LIMIT") {
         // IraGoldAlgo: paper only, its strategy buys by itself; the chart can place nothing.
@@ -420,7 +424,11 @@ internal fun ChartPane(
                 Text("$it Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
             }
-            NativeChart(current.first, Modifier.weight(1f), visible, open = marketOpen) { s, iv -> source.bars(s, iv, null, null) }
+            // The order flow's optional lines (POC/VA, VWAP; off until tapped) on an index the flow follows; none elsewhere.
+            val flowLevels by com.optionslab.app.data.OrderFlowLive.chartLevels.collectAsState(Dispatchers.Main.immediate)
+            val lines = if (flowChip == null || !com.optionslab.app.data.ChartFeed.isIndex(current.first)) null
+                else flowUnderlyingOf(current.first)?.let { flowLevels[it].orEmpty() }
+            NativeChart(current.first, Modifier.weight(1f), visible, open = marketOpen, levels = lines) { s, iv -> source.bars(s, iv, null, null) }
         }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
         if (!basic && !ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
@@ -603,6 +611,20 @@ internal class Bridge(
 
     @JavascriptInterface
     fun symbol(symbol: String, exchange: String) { web.post { onSymbol(symbol, exchange) } }
+
+    /**
+     * terminal.mjs: the order flow's lines for [symbol] (an index the flow follows; "[]" otherwise) as JSON
+     * [{"label","price","kind"}] - the "Ira:" indicators in the chart's indicator menu, off until Boss adds one. Memory only.
+     */
+    @JavascriptInterface
+    fun flowLevels(symbol: String): String = runCatching {
+        if (!com.optionslab.app.data.ChartFeed.isIndex(symbol)) return@runCatching "[]"
+        val u = flowUnderlyingOf(symbol) ?: return@runCatching "[]"
+        val arr = JSONArray()
+        for (l in com.optionslab.app.data.OrderFlowLive.chartLevels.value[u].orEmpty())
+            arr.put(JSONObject().put("label", l.label).put("price", l.price).put("kind", l.kind.name))
+        arr.toString()
+    }.getOrDefault("[]")
 
     /** terminal.mjs: the owner's Pine scripts, registered as indicators. */
     @JavascriptInterface

@@ -95,6 +95,44 @@ class OrderFlowLiveTest : RobolectricTest() {
         assertEquals(1, FlowGate.signalsForTest().size)
     }
 
+    @Test fun theShadowLogCarriesTheAuctionAndGammaFieldsAtEachSignal() {
+        val prior = com.optionslab.ira.Auction.Levels(27.5, 54_900.0, 54_950.0, 54_800.0, emptyList(), emptyList(), 1.0, 55_100.0, 54_700.0)
+        val tpo = com.optionslab.ira.MarketProfile.Read(55_050.0, 54_850.0, true, com.optionslab.ira.MarketProfile.OpenType.OPEN_AUCTION, 0,
+            com.optionslab.ira.MarketProfile.DayType.NORMAL, emptyList(), false, false, 4)
+        val snap = com.optionslab.ira.Auction.Snapshot("BANKNIFTY", 1_000, 55_000.0, 27.5, null, prior, com.optionslab.ira.Auction.Regime.ABOVE_TESTING,
+            900, -120, com.optionslab.ira.Auction.Divergence.BEARISH, emptyList(), emptyList(), com.optionslab.ira.Auction.Vwap(54_950.0, 25.0, null, null),
+            tpo, null, false)
+        OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, 60, 1_000).copy(absorbAt = 55_010.0, absorbBy = -1) }
+        OrderFlowLive.testAuction = { u -> if (u == "BANKNIFTY") snap else null }
+        GammaLive.setForTest(mapOf("BANKNIFTY" to com.optionslab.ira.GammaRegime.Result("BANKNIFTY", 0, 54_900.0, 54_980.0, 7.0, 54_800.0)))
+        try {
+            FlowGate.testNowSec = 1_000
+            val t = FlowGate.check("orb", "BANKNIFTY", +1, live = false, at = "2026-10-09T11:10", what = "CE")
+            assertTrue("logging the context never skips", !t.skip)
+            FlowGate.check("pine", "NIFTY", -1, live = false, at = "2026-10-09T11:11")
+            val sigs = FlowGate.signalsForTest()
+            val c = sigs.first { it.key == "orb" }.context
+            assertEquals("100.0000", c["prior_poc_dist"]); assertEquals("50.0000", c["prior_vah_dist"]); assertEquals("200.0000", c["prior_val_dist"])
+            assertEquals("ABOVE_TESTING", c["regime"]); assertEquals("-120", c["delta15"]); assertEquals("BEARISH", c["divergence"])
+            assertEquals("absorption at 55,010 (sellers)", c["absorption"])
+            assertEquals("1", c["gex_sign"]); assertEquals("STANDARD", c["gex_convention"])
+            assertEquals("120.0000", c["zero_gamma_dist"])            // 55,000 − (54,980 − 54,900) − 54,800: the chain's basis
+            assertEquals("2.0000", c["vwap_sd"]); assertEquals("above", c["vwap_side"])
+            assertEquals("200.0000", c["ib_range"]); assertEquals("OPEN_AUCTION", c["open_type"]); assertEquals("NORMAL", c["day_type"])
+            // An index with no auction or gamma: the fields are logged empty, the signal is still there.
+            val nifty = sigs.first { it.key == "pine" }.context
+            assertNull(nifty["regime"]); assertNull(nifty["gex_sign"])
+            assertEquals("absorption at 55,010 (sellers)", nifty["absorption"])
+            // The line on file has every context field, in order, after the trap guard's.
+            FlowGate.flush()
+            val line = FlowGate.files().last().readLines().first { it.startsWith("S|orb@2026-10-09T11:10@CE|") }.split('|')
+            assertEquals(com.optionslab.ira.FlowShadow.CONTEXT_FROM + com.optionslab.ira.FlowShadow.CONTEXT_FIELDS.size, line.size)
+            assertEquals("ABOVE_TESTING", line[com.optionslab.ira.FlowShadow.CONTEXT_FROM + 3])
+        } finally {
+            GammaLive.setForTest(emptyMap())
+        }
+    }
+
     @Test fun aClosedPaperRoundTripIsTheSignalsResult() {
         fun tr(id: String, order: String, action: String, qty: Int, px: Double, min: Int) = com.optionslab.engine.sandbox.Trade(id, order, "NIFTYX",
             "NFO", action, qty, java.math.BigDecimal(px), "MIS", null, java.time.LocalDateTime.of(2026, 10, 9, 10, min), java.math.BigDecimal("10"))

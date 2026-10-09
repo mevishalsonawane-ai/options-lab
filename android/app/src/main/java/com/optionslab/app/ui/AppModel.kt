@@ -1607,6 +1607,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 toolsSource.value = source
                 val snap = com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now())
                 toolsCache[underlying] = snap to source
+                // The gamma regime from this same chain (at most every 5 minutes; display and the shadow log only).
+                runCatching { com.optionslab.app.data.GammaLive.offer(snap) }
                 Load.Done(snap)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
                 // A failed refresh keeps the last good chain on screen, saying why it is not fresh.

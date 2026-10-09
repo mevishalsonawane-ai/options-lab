@@ -61,6 +61,11 @@ import kotlin.math.min
 fun NativeChart(
     symbol: String, modifier: Modifier = Modifier, visible: Boolean = true,
     open: () -> Boolean = { Market.isOpen() },
+    /**
+     * The order flow's optional lines for the charted index (prior / today's POC, VAH, VAL and VWAP with its bands, in the
+     * index's prices); null: no toggles at all (an option, the gold build, most tests). Each overlay is OFF until tapped.
+     */
+    levels: List<com.optionslab.ira.Auction.ChartLevel>? = null,
     feed: suspend (symbol: String, interval: String) -> List<Upstox.Bar> = { s, iv -> ChartFeed.bars(s, iv, null, null) },
 ) {
     val p = LocalPalette.current
@@ -70,6 +75,9 @@ fun NativeChart(
     var loading by remember { mutableStateOf(true) }
     var offset by remember(symbol, interval) { mutableFloatStateOf(0f) }        // candles scrolled back from the newest
     var picked by remember(symbol, interval) { mutableStateOf<Int?>(null) }
+    // The optional overlays: off by default, per chart (never saved).
+    var showProfile by remember { mutableStateOf(OVERLAY_DEFAULT) }
+    var showVwap by remember { mutableStateOf(OVERLAY_DEFAULT) }
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     // Axis text grows with the font only so far (the gutter and the time axis have fixed room); tabular digits.
@@ -95,6 +103,11 @@ fun NativeChart(
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             listOf("1m", "5m", "15m", "1h", "1D").forEach { iv -> Token(iv, iv == interval) { interval = iv } }
+            // In the same row (it scrolls): the order flow's lines, each off until tapped.
+            if (levels != null) {
+                Token("POC/VA", showProfile) { showProfile = !showProfile }
+                Token("VWAP", showVwap) { showVwap = !showVwap }
+            }
         }
         val shown = bars
         // The price gutter fits the widest label it will show (grid prices and the last-price tag), on one line:
@@ -123,6 +136,11 @@ fun NativeChart(
                 shown.isEmpty() -> Text(error ?: "No candles.", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.align(Alignment.Center).padding(20.dp))
                 else -> {
                     val grid = p.rule; val ink = p.inkSoft; val upC = p.verdigris; val dnC = p.oxblood; val lastC = p.gold; val tagInk = p.paper
+                    val profC = p.brass; val vwapC = p.inkSoft
+                    val drawn = levels.orEmpty().filter {
+                        (it.kind == com.optionslab.ira.Auction.ChartLevel.Kind.PROFILE && showProfile) ||
+                            (it.kind == com.optionslab.ira.Auction.ChartLevel.Kind.VWAP && showVwap)
+                    }
                     Canvas(Modifier.fillMaxSize()
                         .pointerInput(shown.size, interval) {
                             detectHorizontalDragGestures { _, drag ->
@@ -190,6 +208,15 @@ fun NativeChart(
                             l to l + texts[j].size.width
                         }
                         for (j in nonOverlapping(spans, 6.dp.toPx())) drawText(texts[j], topLeft = Offset(spans[j].first, plotH + 2.dp.toPx()))
+                        // The order flow's optional lines: thin, labelled at the left, only where they fall in view.
+                        for (l in drawn) {
+                            if (l.price < lo || l.price > hi) continue
+                            val yy = y(l.price)
+                            val lc = if (l.kind == com.optionslab.ira.Auction.ChartLevel.Kind.PROFILE) profC else vwapC
+                            drawLine(lc, Offset(0f, yy), Offset(plotW, yy), 0.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f)))
+                            val lt = measurer.measureLine(l.label, axisStyle.copy(color = lc))
+                            drawText(lt, topLeft = Offset(2f, (yy - lt.size.height).coerceAtLeast(0f)))
+                        }
                         // Last price line and a filled tag in the gutter, kept inside the canvas.
                         if (tag != null && tagTop != null) {
                             val yy = y(lp)
@@ -209,6 +236,9 @@ fun NativeChart(
 }
 
 private const val GAP = 4        // dp between the plot and the price labels
+
+/** The order flow's chart overlays (POC/VA, VWAP) start OFF on every chart. */
+internal const val OVERLAY_DEFAULT = false
 private const val TAG_PAD = 3    // dp either side of the last-price tag's text
 
 private fun priceLabel(v: Double) = String.format(Locale.ENGLISH, "%,.1f", v)

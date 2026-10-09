@@ -322,7 +322,36 @@ internal fun GexCard(c: ChainSnapshot) {
             flip?.let { LedgerLine("Sign flips between", "${fmtG(it.first.strike)} and ${fmtG(it.second.strike)}") }
             Note("GEX = gamma × OI × lot, calls minus puts. Positive: dealers long gamma, moves tend to be damped. Negative: moves tend to run.")
         }
+        GammaRegimeBlock(c.underlying)
     }
+}
+
+/**
+ * The gamma regime of NIFTY / BANKNIFTY ([com.optionslab.app.data.GammaLive], refreshed at most every 5 minutes off the main
+ * thread): positive (choppy) or negative (trending) and the zero-gamma level, under the dealer-sign convention Boss picks
+ * here (standard by default). A live reading; no strategy uses it.
+ */
+@Composable
+internal fun GammaRegimeBlock(underlying: String) {
+    val u = underlying.uppercase(Locale.ENGLISH)
+    if (u !in com.optionslab.app.data.GammaLive.INDICES) return
+    val p = LocalPalette.current
+    val st by com.optionslab.app.data.GammaLive.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val conv by com.optionslab.app.data.GammaLive.convention.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.GammaLive.loadConvention() } } }
+    val r = st[u]
+    val all = com.optionslab.ira.GammaRegime.Convention.entries
+    Rule()
+    Text("Gamma regime", style = Type.title.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 6.dp))
+    ParamTokens("Dealer sign", all.map { it.label to (it == conv) }) { com.optionslab.app.data.GammaLive.setConvention(all[it]) }
+    val sign = r?.sign(conv)
+    LedgerLine("Regime", sign?.words ?: "not known yet",
+        when (sign) { com.optionslab.ira.GammaRegime.Sign.POSITIVE -> p.verdigris; com.optionslab.ira.GammaRegime.Sign.NEGATIVE -> p.oxblood; else -> null })
+    LedgerLine("Zero-gamma level", r?.zeroGamma?.let { "%,.0f".format(Locale.ENGLISH, it) } ?: if (r == null) "—" else "none within ±5%")
+    r?.let { LedgerLine("Net GEX (${conv.label.lowercase(Locale.ENGLISH)} sign)", "%,.0f".format(Locale.ENGLISH, it.net(conv))) }
+    Note("${conv.label}: ${conv.words}. The ${com.optionslab.ira.GammaRegime.NOTE}: switch it here to compare. The zero-gamma level " +
+        "is the price where the net would cross zero (every strike re-priced ±5% with its own implied vol); it is the same under both. " +
+        "Refreshed at most every 5 minutes. A live reading; no strategy uses it.")
 }
 
 @Composable
