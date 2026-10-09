@@ -90,6 +90,7 @@ class TestApp : Application() {
         com.optionslab.app.data.OrderTiming.forget()
         // Round 2: the order path's in-memory session and kept reads, and the stream's local candles, of an earlier test.
         com.optionslab.app.data.Broker.resetForTest()
-        com.optionslab.app.data.KiteStream.candles.clear()
+        // The stream's ticks too: Broker.quotes answers from one up to 5 s old, so an earlier test's price would be this one's.
+        com.optionslab.app.data.KiteStream.resetForTest()
     }
 }

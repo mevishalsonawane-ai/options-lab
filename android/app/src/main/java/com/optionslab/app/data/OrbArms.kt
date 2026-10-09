@@ -2589,7 +2589,7 @@ object OrbArms {
     }
 
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; liveHint = false; liveSymbolsHint = emptyList(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
+        cache = null; holdingHint = false; liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         if (::file.isInitialized) file.delete()
     }
 }

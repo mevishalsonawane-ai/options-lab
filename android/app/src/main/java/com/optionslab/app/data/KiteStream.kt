@@ -492,6 +492,18 @@ object KiteStream {
         _status.value = if (on) Status.LIVE else Status.OFF
     }
 
+    /**
+     * TEST ONLY: forget every tick, price path and local candle of an earlier test. The ticks live in this object for the
+     * whole run, and [Broker.quotes] answers from one up to 5 s old - so without this a price fed by the test before (a
+     * fall to 145 through a stop) is the next test's price, whatever its fake quote says. Throws unless BuildConfig.DEBUG.
+     */
+    internal fun resetForTest() {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
+        ticks.clear(); paths.clear(); candles.clear()
+        lastTickAt = 0L
+        _status.value = Status.OFF
+    }
+
     /** TEST ONLY: a text frame as if the socket had brought it (an order update). Throws unless BuildConfig.DEBUG. */
     internal fun textForTest(text: String) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }

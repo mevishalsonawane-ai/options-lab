@@ -56,6 +56,8 @@ class OrderPathRound2Test : RobolectricTest() {
         kite.instruments += FakeKite.Ins(peToken, "BANKNIFTY26OCT52000PE", "BANKNIFTY", expiry, 52_000.0, "PE", 30)
         kite.quote("NFO:$sym", 200.0, 199.95, 200.05)
         runBlocking { Broker.instruments() }
+        // Each test's prices are its own: a tick an earlier test fed (a fall to 145) is answered by Broker.quotes for 5 s.
+        assertNull("a stream tick left over from an earlier test: ${KiteStream.seen(token)}", KiteStream.tick(token))
         kite.requests.clear()
         val t = AutomationSupport.earlierToday()
         OrbArms.testNow = t
@@ -160,7 +162,10 @@ class OrderPathRound2Test : RobolectricTest() {
         assertTrue("then sold", sell > cancel)
         assertEquals("CANCELLED", kite.order(s1).status)
         assertEquals(1, sells.size)
-        assertEquals("target", arm().today.single().why)
+        val done = arm().today.single()
+        assertEquals("the exit at 245 is the +40 target (exit ${done.exit}, the price a pass reads now: " +
+            "${runBlocking { Broker.quotes(listOf("NFO:$sym")) }["NFO:$sym"]?.last})", "target", done.why)
+        assertEquals("booked at the sell's own fill", 245.0, done.exit!!, 0.0)
         assertTrue(OrderTiming.card().lines.any { it.startsWith("Live · Exchange stop cancelled before an exit") })
     }
 
@@ -208,12 +213,14 @@ class OrderPathRound2Test : RobolectricTest() {
         kite.position(sym, 30, 200.0, product = "MIS")
         // Off (the default): the app watches the stop itself, nothing is placed.
         pass()
-        assertTrue(kite.placed.isEmpty())
+        assertTrue("setting off at 200: nothing placed, yet ${kite.placed.map { it.form }} (price " +
+            "${runBlocking { Broker.quotes(listOf("NFO:$sym")) }["NFO:$sym"]?.last}, exits ${arm().today.map { it.why }})", kite.placed.isEmpty())
         assertNull(arm().open!!.stopOrderId)
         // On: the next regular check places an SL SELL at the arm's own 160 (its limit under it), and keeps it.
         AppSettings.save(AppSettings.load().copy(exchangeStops = true))
+        assertTrue("the switch is read back", AppSettings.load().exchangeStops)
         pass()
-        val sl = kite.placed.single()
+        val sl = kite.placed.singleOrNull() ?: throw AssertionError("setting on: one SL placed at 160, got ${kite.placed.map { it.form }}")
         assertEquals("SL", sl.form["order_type"]); assertEquals("SELL", sl.form["transaction_type"])
         assertEquals("160.00", sl.form["trigger_price"]); assertEquals("30", sl.form["quantity"])
         assertEquals(kite.orders.keys.last(), arm().open!!.stopOrderId)
