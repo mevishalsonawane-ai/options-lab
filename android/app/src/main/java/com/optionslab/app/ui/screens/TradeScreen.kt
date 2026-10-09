@@ -108,8 +108,15 @@ fun TradeScreen(model: AppModel) {
     }
 
     Page {
-        item { PageTitle("Trade", if (s.live) "Your Zerodha account, live" else "The paper account · sandbox") }
-        if (b.loggedIn) item { PriceFreshness() }
+        // The live/delayed word sits beside the title, not in a row of its own (no extra height in the list).
+        item {
+            androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
+                    PageTitle("Trade", if (s.live) "Your Zerodha account, live" else "The paper account · sandbox")
+                }
+                if (b.loggedIn) PriceFreshness(Modifier.padding(start = 8.dp))
+            }
+        }
         if (!s.live) {
             paperTrade(model, paperSnap, paperBook, { paperBook = it }, onReset = { resetting = true })
             return@Page
