@@ -4,7 +4,7 @@ package com.optionslab.ira
  * Jarvis reviews himself at the end of the day: what his own results changed, and what he will do differently
  * tomorrow - the bar he now needs to act alone, the hours and kinds of idea he now leaves alone, the conditions his
  * scored ideas say he is weak in ([SelfCalibration]), the goals at risk,
- * the strongest lesson and the paper tests decided. Said in a few sentences in the 15:35 wrap-up. Pure.
+ * the strongest lesson and the paper tests decided. Said in a few sentences in the 15:45 wrap-up. Pure.
  */
 object SelfReview {
     data class Facts(

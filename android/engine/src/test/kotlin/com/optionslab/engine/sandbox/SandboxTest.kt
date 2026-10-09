@@ -274,6 +274,11 @@ class SandboxTest {
         assertTrue(SandboxRules.isContractExpiredNow(exp, "NFO", LocalDateTime.of(2026, 9, 29, 15, 40), c))
         assertFalse(SandboxRules.isContractExpiredNow(exp, "MCX", LocalDateTime.of(2026, 9, 29, 23, 29), c))
         assertTrue(SandboxRules.isContractExpiredNow(exp, "CDS", LocalDateTime.of(2026, 9, 29, 17, 0), c))
+        // Before 3 Aug 2026 NFO/BFO closed at 15:30: an older expiry replays by its own hours.
+        val july = LocalDate.of(2026, 7, 30)
+        assertFalse(SandboxRules.isContractExpiredNow(july, "BFO", LocalDateTime.of(2026, 7, 30, 15, 29), c))
+        assertTrue(SandboxRules.isContractExpiredNow(july, "NFO", LocalDateTime.of(2026, 7, 30, 15, 30), c))
+        assertFalse(SandboxRules.isContractExpiredNow(exp, "BFO", LocalDateTime.of(2026, 9, 29, 15, 35), c))
         val nextDay = c.copy(expirySettlementTiming = "next_day")
         assertFalse(SandboxRules.isContractExpiredNow(exp, "NFO", LocalDateTime.of(2026, 9, 29, 23, 59), nextDay))
         assertTrue(SandboxRules.isContractExpiredNow(exp, "NFO", LocalDateTime.of(2026, 9, 30, 0, 0), nextDay))

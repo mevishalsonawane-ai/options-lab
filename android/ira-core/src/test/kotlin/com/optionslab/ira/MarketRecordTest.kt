@@ -25,8 +25,10 @@ class MarketRecordTest {
         assertTrue(MarketRecord.inWindow(true, LocalTime.of(9, 0)))
         assertTrue(MarketRecord.inWindow(true, LocalTime.of(12, 0)))
         assertTrue(MarketRecord.inWindow(true, LocalTime.of(15, 35)))
+        // F&O trades to 15:40 since 3 Aug 2026: the window runs five minutes past it.
+        assertTrue(MarketRecord.inWindow(true, LocalTime.of(15, 45)))
         assertFalse(MarketRecord.inWindow(true, LocalTime.of(8, 59, 59)))
-        assertFalse(MarketRecord.inWindow(true, LocalTime.of(15, 35, 1)))
+        assertFalse(MarketRecord.inWindow(true, LocalTime.of(15, 45, 1)))
         assertFalse(MarketRecord.inWindow(false, LocalTime.of(12, 0)), "a holiday or a weekend: nothing")
     }
 

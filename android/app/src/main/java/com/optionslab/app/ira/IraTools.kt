@@ -1626,7 +1626,7 @@ internal object IraTools {
         runCatching { com.optionslab.ira.CondNeeds.learned(condNeedsLog(), minuteNow()) }.getOrDefault(emptyList())
 
     /**
-     * The 15:35 wrap-up's one pointer to the app's own tool for a conditional instruction Boss keeps giving, said once
+     * The 15:45 wrap-up's one pointer to the app's own tool for a conditional instruction Boss keeps giving, said once
      * ([com.optionslab.ira.CondNeeds.next]) and kept as told - or null. Never on a [locked] phone (nothing kept as told then),
      * never in IraGoldAlgo. A fact and a pointer only: nothing is set, armed or placed.
      */
@@ -1936,7 +1936,7 @@ internal object IraTools {
     }
 
     /**
-     * The 15:35 wrap-up's one fact about his small trades, said once ([com.optionslab.ira.SmallTrades.next]) and kept as
+     * The 15:45 wrap-up's one fact about his small trades, said once ([com.optionslab.ira.SmallTrades.next]) and kept as
      * told - or null. Never on a [locked] phone (nothing kept as told then, so it waits for a wrap-up heard unlocked), never
      * in IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
      */
@@ -1985,7 +1985,7 @@ internal object IraTools {
         }
     }
 
-    /** The 09:00 check made [entries] (its outlook's numbers): noted for the 15:35 check. */
+    /** The 09:00 check made [entries] (its outlook's numbers): noted for the 15:45 check. */
     fun outlookMade(entries: List<com.optionslab.ira.OutlookCheck.Entry>) {
         if (entries.isEmpty()) return
         outlookUpdate { com.optionslab.ira.OutlookCheck.made(it, entries) }

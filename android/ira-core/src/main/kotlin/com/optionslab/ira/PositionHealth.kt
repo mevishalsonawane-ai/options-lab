@@ -47,7 +47,10 @@ object PositionHealth {
     const val AT = 14 * 60 + 45
     fun due(minute: Int): Boolean = minute in AT until AT + 10
 
-    /** The session's close, when an option expires; the session's length in hours (time decay per trading hour). */
+    /**
+     * The index's close, when an index option's value settles (on the index's close); the session's length in hours (time
+     * decay per trading hour). F&O itself trades on to 15:40 since 3 Aug 2026 ([com.optionslab.engine.NseHours.foClose]).
+     */
     val CLOSE: LocalTime = LocalTime.of(15, 30)
     private const val SESSION_HOURS = 6.25
 
@@ -162,7 +165,8 @@ object PositionHealth {
         // Expiring today first, then the nearest expiry.
         ps.sortedWith(compareBy<Pos> { it.expiry ?: LocalDate.MAX }.thenBy { it.symbol }).forEach { out += one(it, now) }
         val flagged = expiringItm(ps, today)
-        if (flagged.isNotEmpty() && now.toLocalTime().isBefore(CLOSE)) {
+        // Said while the position can still be closed: to F&O's close (15:40 from 3 Aug 2026), though its value settles at 15:30.
+        if (flagged.isNotEmpty() && now.toLocalTime().isBefore(com.optionslab.engine.NseHours.foCloseTime(today))) {
             out += "Expiring today in the money: " + flagged.joinToString(", ") { "${it.where} ${it.symbol} (${n(it.itmBy!!)} points in)" } + "."
             flagged.map { settlement(it.underlying) }.distinct().forEach { out += it }
         }

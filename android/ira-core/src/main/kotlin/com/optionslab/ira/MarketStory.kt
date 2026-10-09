@@ -287,7 +287,7 @@ object MarketStory {
     }
 
     /**
-     * For the 15:35 wrap-up: the one thing that stood out most today (or that it was a usual day), which index led and
+     * For the 15:45 wrap-up: the one thing that stood out most today (or that it was a usual day), which index led and
      * which lagged when they were apart, and how to hear the whole story. Null without today's candles or enough earlier sessions.
      */
     fun wrapLine(bars: Map<Market, List<Candle>>, now: LocalDateTime, day: LocalDate = now.toLocalDate()): String? {

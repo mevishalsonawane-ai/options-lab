@@ -12,7 +12,7 @@ import java.time.LocalDateTime
  * Learned ([learned]): a kind he asked for at least [MIN_TIMES] times, on at least [MIN_DAYS] days, in the last
  * [WINDOW_DAYS] days (since the last undo, [Log.resetAt]).
  *
- * What it changes: the 15:35 wrap-up says ONE such kind, once ([next], [wrapLine]: the most asked not said before,
+ * What it changes: the 15:45 wrap-up says ONE such kind, once ([next], [wrapLine]: the most asked not said before,
  * [Log.told]) - how often he asked, and that the app's own tool covers that need, naming its screen: a price alarm (More,
  * then Alerts) for an index level; a P&L alert (More, then Alerts) and the daily loss limit (More, then Bot settings) for
  * his own loss or profit; Protect - stop, trail, target - on the position itself (the Trade tab, tap the position)
@@ -94,7 +94,7 @@ object CondNeeds {
         }.sortedWith(compareByDescending<Record> { it.days }.thenByDescending { it.times }.thenBy { it.need.ordinal })
     }
 
-    /** The one kind for today's 15:35 wrap-up: the most asked not said before, or null. The app keeps its [Record.key] as told. */
+    /** The one kind for today's 15:45 wrap-up: the most asked not said before, or null. The app keeps its [Record.key] as told. */
     fun next(learned: List<Record>, log: Log): Record? = learned.firstOrNull { it.key !in log.told }
 
     /** The wrap-up's sentence for [r]: a fact and a pointer only. */
@@ -156,7 +156,7 @@ object CondNeeds {
     /** "What have you learned about my conditional orders?". */
     fun say(rs: List<Record>): String =
         if (rs.isEmpty()) "Nothing yet, Boss. When you ask me to act on a condition - like \"if Nifty falls below 24000, exit\" - " +
-            "$MIN_TIMES times or more on $MIN_DAYS different days in the last $WINDOW_DAYS days, I'll say once in the 15:35 wrap-up which of the app's own tools covers it. $ONLY_POINTER"
+            "$MIN_TIMES times or more on $MIN_DAYS different days in the last $WINDOW_DAYS days, I'll say once in the 15:45 wrap-up which of the app's own tools covers it. $ONLY_POINTER"
         else "Boss, in the last $WINDOW_DAYS days: " + rs.joinToString("; ") { it.fact() + " - " + it.need.tool } + ". $ONLY_POINTER Say \"$UNDO\" to have me forget it."
 
     /** "Stop mentioning my conditional orders". */
@@ -169,5 +169,5 @@ object CondNeeds {
 
     /** The ledger's lines for [r]. */
     fun ledgerWhat(r: Record): String = "You often ask me ${r.need.asked}, which I can't set"
-    fun ledgerWhy(r: Record): String = "${r.times} times on ${r.days} days in the last $WINDOW_DAYS days; the app's own tool named once in the 15:35 wrap-up - a pointer only, nothing set"
+    fun ledgerWhy(r: Record): String = "${r.times} times on ${r.days} days in the last $WINDOW_DAYS days; the app's own tool named once in the 15:45 wrap-up - a pointer only, nothing set"
 }

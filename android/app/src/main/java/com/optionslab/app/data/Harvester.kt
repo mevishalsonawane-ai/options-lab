@@ -57,9 +57,9 @@ object Harvester {
         val collected = Market.today()
         val start = today.minusDays(days)
         // The session is final once the exchange has served its last minute and closing OI - a few
-        // minutes after the 15:30 close - or it never opened. Only then may a retried run skip the
-        // contracts an earlier attempt already stored.
-        val closed = today.isBefore(collected) || Market.minuteNow() >= Market.CLOSE + 10
+        // minutes after F&O's close (15:40 from 3 Aug 2026, 15:30 before) - or it never opened. Only then
+        // may a retried run skip the contracts an earlier attempt already stored.
+        val closed = today.isBefore(collected) || Market.minuteNow() >= Market.foClose(today) + 10
         val sessionFinal = !Market.isTradingDay(today) || closed
         kotlinx.coroutines.yield()   // a stopped run ends here, not after the (blocking) master read
         onProgress(Progress("Reading the instrument master", 0, 1))

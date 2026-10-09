@@ -799,9 +799,11 @@ object Broker {
 
     /**
      * 1-minute candles with OI (needs a plan that includes historical data). [from] / [to]: the session's window (NSE's
-     * 09:15-15:30 unless asked; MCX's 09:00-23:59).
+     * 09:15 to F&O's close of [day] unless asked - 15:40 from 3 Aug 2026, so a future's or an option's last 10 minutes are
+     * in; an index's candles end 15:29 either way; MCX's 09:00-23:59).
      */
-    suspend fun minuteBars(token: Long, day: LocalDate, from: String = "09:15:00", to: String = "15:30:00"): List<Upstox.Bar> {
+    suspend fun minuteBars(token: Long, day: LocalDate, from: String = "09:15:00",
+                           to: String = "${com.optionslab.engine.NseHours.foCloseText(day)}:00"): List<Upstox.Bar> {
         val q = "from=${Kite.enc("$day $from")}&to=${Kite.enc("$day $to")}&oi=1"
         val candles = (call("GET", "/instruments/historical/$token/minute?$q") as JSONObject).optJSONArray("candles") ?: JSONArray()
         return (0 until candles.length()).map { candles.getJSONArray(it) }.map { r ->

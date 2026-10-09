@@ -640,7 +640,7 @@ internal object IraSolo {
         runCatching { JarvisVoice.announce(com.optionslab.ira.Overheard.said(line, IraHub.locked(), "Boss, Solo has news on its paper trade: it's in the chat.")) }
     }
 
-    /** Solo's day for the 15:35 wrap-up (null when it was off and did nothing). */
+    /** Solo's day for the 15:45 wrap-up (null when it was off and did nothing). */
     fun daySummary(): String? = runCatching {
         val all = all()
         val today = com.optionslab.app.data.Market.today().toString()

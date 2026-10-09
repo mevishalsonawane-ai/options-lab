@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 
 /**
  * "Today's notes" (Boss, 06 Oct 2026): Jarvis posts many notes in the chat by himself - the opening read, Liquidity
- * heads-ups, trade lessons, Solo and Hero, the coach's words, the 15:35 wrap-up, tomorrow's plan, news on a position - and
+ * heads-ups, trade lessons, Solo and Hero, the coach's words, the 15:45 wrap-up, tomorrow's plan, news on a position - and
  * they get lost among the answers. Each note is kept with its time and a category (from the automation that posted it
  * when known, else read from its first words), so they can be listed newest first, filtered by category, and summed up
  * when asked ("what did you tell me today", "today's notes", "aaj kya bataya").

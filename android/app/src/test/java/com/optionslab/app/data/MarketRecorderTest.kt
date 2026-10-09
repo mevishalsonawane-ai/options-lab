@@ -29,7 +29,7 @@ import java.util.zip.ZipInputStream
 /**
  * The market recorder ([MarketRecorder]) over a stand-in for the app's feeds: what one pass writes (news first seen, the
  * calendar, FII/DII, levels, futures with basis, the book, the chain with IV and the Rs 1-5 options), encrypted at rest
- * and read back; the window (nothing before 09:00, after 15:35 or on a holiday); a feed that fails or hangs is a gap and
+ * and read back; the window (nothing before 09:00, after 15:45 or on a holiday); a feed that fails or hangs is a gap and
  * never reaches the watch; no token or key is ever written; the zip export.
  */
 class MarketRecorderTest : RobolectricTest() {
@@ -72,7 +72,7 @@ class MarketRecorderTest : RobolectricTest() {
             }
         }
         override suspend fun minuteBars(token: Long, day: LocalDate): List<Upstox.Bar> =
-            (9 * 60 + 15 until 15 * 60 + 30).map { m -> Upstox.Bar(day.atTime(m / 60, m % 60).atZone(IST).toEpochSecond(), 1.0, 2.0, 0.5, 1.5, 10, 20) }
+            (9 * 60 + 15 until Market.foClose(day)).map { m -> Upstox.Bar(day.atTime(m / 60, m % 60).atZone(IST).toEpochSecond(), 1.0, 2.0, 0.5, 1.5, 10, 20) }
         override fun news() = Triple(listOf(
             Headline("RBI keeps repo rate unchanged, $token", "https://rbi.example/press?access_token=$token", "RBI", day.atTime(9, 50).atZone(IST).toInstant(), -0.1,
                 listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)),
@@ -193,13 +193,15 @@ class MarketRecorderTest : RobolectricTest() {
     }
 
     @Test fun theFuturesCandlesAreReadAfterTheCloseOnce() {
+        // F&O's close on the test's day (15:40 from 3 Aug 2026): the futures trade, and have candles, to then.
+        val close = Market.foClose(day)
         MarketRecorder.testSource = Feeds()
-        runBlocking { MarketRecorder.pass(at(15, 29, 10)) }
-        assertEquals(2 * (15 * 60 + 29 - (9 * 60 + 15)), lines().count { it.startsWith("B,") })   // to 15:28, both futures
-        runBlocking { MarketRecorder.pass(at(15, 30, 10)) }
-        assertEquals(2 * (15 * 60 + 30 - (9 * 60 + 15)), lines().count { it.startsWith("B,") })   // 15:29 added, nothing twice
-        runBlocking { MarketRecorder.pass(at(15, 31, 10)) }
-        assertEquals(2 * (15 * 60 + 30 - (9 * 60 + 15)), lines().count { it.startsWith("B,") })
+        runBlocking { MarketRecorder.pass(at(close / 60, close % 60 - 1, 10)) }
+        assertEquals(2 * (close - 1 - (9 * 60 + 15)), lines().count { it.startsWith("B,") })   // to the close - 2, both futures
+        runBlocking { MarketRecorder.pass(at(close / 60, close % 60, 10)) }
+        assertEquals(2 * (close - (9 * 60 + 15)), lines().count { it.startsWith("B,") })   // the last minute added, nothing twice
+        runBlocking { MarketRecorder.pass(at(close / 60, close % 60 + 1, 10)) }
+        assertEquals(2 * (close - (9 * 60 + 15)), lines().count { it.startsWith("B,") })
     }
 
     @Test fun withoutZerodhaOnlyTheNewsCalendarAndFlowsAndOneGap() {
@@ -217,7 +219,7 @@ class MarketRecorderTest : RobolectricTest() {
         val f = Feeds()
         MarketRecorder.testSource = f
         at(8, 59, 59); MarketRecorder.kick(); waitIdle()
-        at(15, 35, 1); MarketRecorder.kick(); waitIdle()
+        at(15, 45, 1); MarketRecorder.kick(); waitIdle()
         var holiday = day.plusDays(1)
         while (Market.isTradingDay(holiday)) holiday = holiday.plusDays(1)
         at(11, 0, 0, holiday); MarketRecorder.kick(); waitIdle()

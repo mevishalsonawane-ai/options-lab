@@ -88,7 +88,7 @@ internal object IraLiquidity {
      */
     suspend fun watch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.LIQUIDITY) ||
-            !com.optionslab.app.data.Market.isOpen()) return
+            !com.optionslab.app.data.Market.isIndexOpen()) return   // the index's levels: its own session (to 15:30)
         val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         if (now.toLocalTime().isBefore(LiquidityRules.FIRST_ENTRY) || now.toLocalTime().isAfter(LiquidityRules.LAST_ENTRY)) return
         if (armed() != true) return

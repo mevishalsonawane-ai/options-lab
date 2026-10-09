@@ -26,8 +26,9 @@ import kotlin.math.sqrt
  *  7. Price confirmation: a lean the future's mid moved against by more than a tick over the minute does not count ([against]).
  *  8. Stop hunts and failed breaks ([stopHunt]): a burst of aggressive volume back where it started within 60 s is a stop
  *     hunt, within 120 s a failed break; for 2 minutes after, CONFIRM refuses entries in the burst's direction.
- *  9. Time traps ([timeWindow]): NSE futures' first 3 minutes (options' flow from 9:20), MCX's first 5; NSE from 15:00 (the
- *     settlement averaging) and MCX's last 5 minutes; the traded index's expiry day from 14:30; 5 minutes either side of
+ *  9. Time traps ([timeWindow]): NSE futures' first 3 minutes (options' flow from 9:20), MCX's first 5; NSE's closing-price
+ *     window, the last 30 minutes of F&O (15:10-15:40 since 3 Aug 2026, 15:00-15:30 before: [Session.nse]) and MCX's last 5
+ *     minutes; the traded index's expiry day from 14:30; 5 minutes either side of
  *     scheduled news ([eventMinutes]: RBI 10:00, US CPI / jobs 8:30 and FOMC 14:00 New York time, EIA crude Wednesday and gas
  *     Thursday 10:30 New York time for MCX, DST-aware). No opinion there.
  * 10. Feed health: repeats, older states (volume below the running maximum) and crossed books are dropped; the book's parts
@@ -262,8 +263,14 @@ object TrapGuard {
     data class Session(val openMin: Int, val closeMin: Int, val openGuard: Int, val closeGuard: Int, val expiryDay: Boolean = false,
                        val expiryFrom: Int = 14 * 60 + 30, val eventMins: List<Int> = emptyList(), val optionsFrom: Int = 0) {
         companion object {
-            /** NSE: futures' first 3 minutes, options from 9:20, from 15:00 (the settlement averaging), expiry day from 14:30. */
-            val NSE = Session(9 * 60 + 15, 15 * 60 + 30, 3, 30, optionsFrom = 9 * 60 + 20)
+            /**
+             * NSE on [day]: futures' first 3 minutes, options from 9:20, the closing-price window (the volume-weighted average
+             * of F&O's last 30 minutes: 15:10-15:40 since 3 Aug 2026, 15:00-15:30 before), expiry day from 14:30.
+             */
+            fun nse(day: LocalDate): Session = Session(com.optionslab.engine.NseHours.OPEN, com.optionslab.engine.NseHours.foClose(day),
+                3, com.optionslab.engine.NseHours.FO_CLOSING_WINDOW_MIN, optionsFrom = 9 * 60 + 20)
+            /** NSE's session by today's rules (F&O to 15:40, the closing-price window from 15:10). */
+            val NSE = nse(com.optionslab.engine.NseHours.FO_EXTENDED_FROM)
             /** MCX: the first 5 minutes after 9:00 and the last 5 (23:30; 23:55 in US winter: set by the app). */
             val MCX = Session(9 * 60, 23 * 60 + 30, 5, 5, expiryFrom = 24 * 60)
         }
@@ -281,7 +288,8 @@ object TrapGuard {
         return when {
             m < s.openMin || m >= s.closeMin -> null
             m < s.openMin + s.openGuard -> "the first ${s.openGuard} minutes after the open"
-            m >= s.closeMin - s.closeGuard -> if (s.closeGuard >= 30) "the closing settlement window (from 15:00)" else "the last ${s.closeGuard} minutes before the close"
+            m >= s.closeMin - s.closeGuard -> if (s.closeGuard >= 30) "the closing settlement window (from ${com.optionslab.engine.minuteText(s.closeMin - s.closeGuard)})"
+                else "the last ${s.closeGuard} minutes before the close"
             s.expiryDay && m >= s.expiryFrom -> "the expiry day's last hour"
             s.eventMins.any { abs(m - it) <= EVENT_PAD_MIN } -> "minutes around scheduled news"
             else -> null

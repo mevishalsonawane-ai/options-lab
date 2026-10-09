@@ -236,7 +236,7 @@ object PineAuto {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test candles exist only in debug builds" }; field = v }
     private fun clock(): java.time.ZonedDateTime = testNow ?: Market.now()
     private fun todayIst(): java.time.LocalDate = testNow?.toLocalDate() ?: Market.today()
-    private fun isOpen(): Boolean = testNow?.let { Market.isTradingDay(it.toLocalDate()) && (it.hour * 60 + it.minute) in Market.OPEN until Market.CLOSE }
+    private fun isOpen(): Boolean = testNow?.let { Market.isOpenAt(it.toLocalDate(), it.hour * 60 + it.minute) }
         ?: Market.isOpen()
     private fun epochSecondNow(): Long = testNow?.toEpochSecond() ?: (System.currentTimeMillis() / 1000)
 

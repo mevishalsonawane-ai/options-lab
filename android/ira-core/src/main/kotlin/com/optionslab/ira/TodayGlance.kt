@@ -34,7 +34,8 @@ object TodayGlance {
     const val NO_EVENTS = "No events today or tomorrow."
 
     private val OPEN: LocalTime = LocalTime.of(9, 15)
-    private val CLOSE: LocalTime = LocalTime.of(15, 30)
+    /** The index's (cash) close: the index risk badges stop here. F&O's own close is [com.optionslab.engine.NseHours.foClose]. */
+    private val INDEX_CLOSE: LocalTime = LocalTime.of(15, 30)
 
     // ---- the facts in, the card out --------------------------------------------------------------------------------
 
@@ -88,7 +89,8 @@ object TodayGlance {
         val today = f.now.toLocalDate()
         val notices = listOfNotNull(expiryLine(f.expiriesToday, f.tradingToday), holidayLine(today, f.holidays))
         val cues = if (ph == Phase.PRE_OPEN) listOfNotNull(f.gift, f.fii) else emptyList()
-        val risks = if (ph == Phase.OPEN) f.risks.map { badge(it, f.now) } else emptyList()
+        // The badges read the index's next candles: none after the index's 15:30 close, though F&O trades on to 15:40.
+        val risks = if (ph == Phase.OPEN && f.now.toLocalTime().isBefore(INDEX_CLOSE)) f.risks.map { badge(it, f.now) } else emptyList()
         val rows = listOfNotNull(
             f.liquidity?.let { liquidity(it) },
             f.solo?.let { solo(it, f.now, f.tradingToday) },
@@ -101,20 +103,27 @@ object TodayGlance {
 
     // ---- the market ----------------------------------------------------------------------------------------------
 
+    /** Open to NSE F&O's close of the day (15:40 from 3 Aug 2026, 15:30 before): the app's orders and positions run to then. */
     fun phase(now: LocalDateTime, tradingToday: Boolean): Phase {
         val t = now.toLocalTime()
         return when {
             !tradingToday -> Phase.CLOSED
             t.isBefore(OPEN) -> Phase.PRE_OPEN
-            t.isBefore(CLOSE) -> Phase.OPEN
+            t.isBefore(com.optionslab.engine.NseHours.foCloseTime(now.toLocalDate())) -> Phase.OPEN
             else -> Phase.CLOSED
         }
     }
 
-    /** "Pre-open · opens at 09:15", "Market open · closes at 15:30 (2h 10m)", "Market closed · next session tomorrow, 09:15". */
+    /**
+     * "Pre-open · opens at 09:15", "Market open · closes at 15:40 (2h 10m left)", after the index's 15:30 close "Market open ·
+     * closes at 15:40 (8m left) · index closed 15:30", "Market closed · next session tomorrow, 09:15".
+     */
     fun marketLine(now: LocalDateTime, tradingToday: Boolean, nextSession: LocalDate?): String = when (phase(now, tradingToday)) {
         Phase.PRE_OPEN -> "Pre-open · opens at 09:15 (in ${span(java.time.Duration.between(now.toLocalTime(), OPEN).toMinutes())})"
-        Phase.OPEN -> "Market open · closes at 15:30 (${span(java.time.Duration.between(now.toLocalTime(), CLOSE).toMinutes())} left)"
+        Phase.OPEN -> com.optionslab.engine.NseHours.foCloseTime(now.toLocalDate()).let { close ->
+            "Market open · closes at ${hm(close)} (${span(java.time.Duration.between(now.toLocalTime(), close).toMinutes())} left)" +
+                if (!now.toLocalTime().isBefore(INDEX_CLOSE)) " · index closed ${hm(INDEX_CLOSE)}" else ""
+        }
         Phase.CLOSED -> "Market closed" + (nextSession?.let { " · next session ${dayWord(it, now.toLocalDate())}, 09:15" } ?: "")
     }
 

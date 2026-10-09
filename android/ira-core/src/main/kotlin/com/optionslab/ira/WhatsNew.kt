@@ -51,6 +51,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-09-fno-to-1540", OCT9, "F&O trades to 15:40",
+            "NSE F&O now trades to 15:40; the app's order window and watch follow it. " +
+                "Index values still close at 15:30, and every strategy keeps its own entry and exit times.",
+            "Home's market status, the order forms and the market watch"),
         Entry("2026-10-09-order-flow", OCT9, "Live order flow, logged beside every strategy",
             "A live read of who is pushing, buyers or sellers, from Zerodha's full price stream. " +
                 "It shows on the chart, the option chain and the Strategies card, with a detail on tap. " +

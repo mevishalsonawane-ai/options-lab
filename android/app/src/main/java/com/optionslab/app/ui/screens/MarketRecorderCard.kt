@@ -64,7 +64,7 @@ fun MarketRecorderCard(model: AppModel) {
         }
     }
     LedgerCard(title = "Market recorder") {
-        Note("On trading days from 09:00 to 15:35, inside the market watch: the news and official notices as first seen, the " +
+        Note("On trading days from 09:00 to 15:45, inside the market watch: the news and official notices as first seen, the " +
             "event calendar, FII/DII figures and, with Zerodha logged in, the index futures with their basis, the order book at the " +
             "money and the option chain every 5 minutes. Also GIFT Nifty (NSE IX) from 06:30, every 5 minutes in hours and at 23:30, " +
             "and NSE's participant-wise OI (Client, DII, FII, Pro) after 18:30. Encrypted on this phone, never in a backup, 12 months kept. " +

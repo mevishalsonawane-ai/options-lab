@@ -72,8 +72,17 @@ class ExpirySquareOffTest : RobolectricTest() {
     @Test fun nothingBefore1505OrAfterTheClose() {
         kite.position(ce, 75, 20.0)
         at(15, 4); pass()
-        at(15, 30); pass()
-        assertTrue("no request at all outside 15:05-15:30", kite.requests.isEmpty())
+        // F&O's close of the day (15:40 from 3 Aug 2026, 15:30 before): an expiring option is closable to then, not after.
+        val close = Market.foClose(today)
+        at(close / 60, close % 60); pass()
+        assertTrue("no request at all outside 15:05 to F&O's close", kite.requests.isEmpty())
+    }
+
+    @Test fun stillClosesAt1535WhileFnoTradesTo1540() {
+        org.junit.Assume.assumeTrue("a day from 3 Aug 2026", Market.foClose(today) == 15 * 60 + 40)
+        kite.position(ce, 75, 20.0)
+        at(15, 35); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
     }
 
     @Test fun switchedOffDoesNothing() {

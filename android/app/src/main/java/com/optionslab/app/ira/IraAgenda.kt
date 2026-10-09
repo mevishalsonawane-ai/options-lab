@@ -10,7 +10,7 @@ import org.json.JSONObject
 /**
  * Jarvis's own plan for the day ([Agenda]; Boss, 5 Oct: "let him direct his own work"): made once each morning from what
  * the app knows, kept on the phone (encrypted), worked through on every market-watch pass at each item's time, said
- * when Boss asks "what's your plan today?" and summed up in the 15:35 wrap-up, with what is carried to tomorrow.
+ * when Boss asks "what's your plan today?" and summed up in the 15:45 wrap-up, with what is carried to tomorrow.
  *
  * Every item only speaks, studies or works on paper: nothing here places, changes or closes anything, and nothing adds
  * risk. A lesson from his study is put to Boss as a question (always asked, even with automatic stops on) and kept only

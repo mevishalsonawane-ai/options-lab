@@ -23,9 +23,9 @@ import java.util.Locale
  * asks for on its own, said right after the price in an overview ([LeadPart]), the question he usually asks next, offered in
  * one short question at the end of an answer ([NextAsk]), the kinds of answer said in full straight away aloud as he
  * usually asks for more after their short line ([MoreAfter]), where his trades that moved less than twice their own charges
- * come from, said once in the 15:35 wrap-up ([SmallTrades], a fact of his record), the times of day he usually checks his P&L,
+ * come from, said once in the 15:45 wrap-up ([SmallTrades], a fact of his record), the times of day he usually checks his P&L,
  * his account read ahead just before them while the market is open ([CheckTimes]), the conditional instructions he keeps
- * trying to give, the app's own tool for that need named once in the 15:35 wrap-up ([CondNeeds]) and his own goals for the
+ * trying to give, the app's own tool for that need named once in the 15:45 wrap-up ([CondNeeds]) and his own goals for the
  * week ([Improve]) -
  * each with when and why it changed and, where one exists, the words that undo it by voice.
  *
@@ -269,7 +269,7 @@ object Learnings {
             out += Item(Area.MORE_AFTER, MoreAfter.ledgerWhat(r), r.newest.toLocalDate(), MoreAfter.ledgerWhy(r), MoreAfter.UNDO)
         }
         // Where Boss's trades that moved less than twice their own charges come from ([SmallTrades]; by source and time of
-        // day, from his closed trades): a fact said once in the 15:35 wrap-up - never advice, nothing that acts.
+        // day, from his closed trades): a fact said once in the 15:45 wrap-up - never advice, nothing that acts.
         SmallTrades.learned(i.smallBooks, i.smallTrades, now).forEach { r ->
             out += Item(Area.SMALL_TRADES, SmallTrades.ledgerWhat(r), r.newest, SmallTrades.ledgerWhy(r), SmallTrades.UNDO)
         }
@@ -279,7 +279,7 @@ object Learnings {
             out += Item(Area.CHECK_TIMES, CheckTimes.ledgerWhat(r), r.newest, CheckTimes.ledgerWhy(r), CheckTimes.UNDO)
         }
         // The conditional instructions Boss keeps trying to give ([CondNeeds]; kinds and minutes only): the app's own alarm,
-        // stop loss or limit named once in the 15:35 wrap-up - a pointer only, nothing set, nothing that acts.
+        // stop loss or limit named once in the 15:45 wrap-up - a pointer only, nothing set, nothing that acts.
         CondNeeds.learned(i.condNeeds, now).forEach { r ->
             out += Item(Area.COND_NEEDS, CondNeeds.ledgerWhat(r), r.newest, CondNeeds.ledgerWhy(r), CondNeeds.UNDO)
         }

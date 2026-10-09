@@ -45,7 +45,8 @@ object ExpirySquareOff {
         // The kill switch stops new orders, not this: closing what expires today only lowers risk.
         if (!s.expirySquareOff) return
         val today = todayIst()
-        if (minuteNow() < AT_MINUTE || minuteNow() >= Market.CLOSE) return
+        // Until F&O closes (15:40 from 3 Aug 2026): an expiring option still trades, and can be closed, to then.
+        if (minuteNow() < AT_MINUTE || minuteNow() >= Market.foClose(today)) return
         if (SecurePrefs.getString(K_DONE) == today.toString()) return
         val ticket = Ledger.openTicket()?.row?.ticket?.takeIf { s.keepExpiryPut && it.session == today }
         fun isTicketLeg(underlying: String?, strike: Double?, right: String?): Boolean =

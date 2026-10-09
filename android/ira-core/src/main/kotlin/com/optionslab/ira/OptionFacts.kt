@@ -57,11 +57,12 @@ object OptionFacts {
         "${m.label} $strike $right is at ${rs(ltp)}" + (if (bid != null && ask != null && bid > 0 && ask > 0) " (bid ${rs(bid)}, ask ${rs(ask)})" else "") +
             ", open interest %,d; one lot of $lotSize is about ${"Rs %,.0f".format(Locale.ENGLISH, ltp * lotSize)}.".format(Locale.ENGLISH, oi)
 
+    /** [close]: the caller's F&O close of the day (15:40 from 3 Aug 2026: [com.optionslab.engine.NseHours.foClose]). */
     fun timeLeft(minuteNow: Int, open: Int = 9 * 60 + 15, close: Int = 15 * 60 + 30, tradingDay: Boolean = true,
                  /** The next trading day after today, e.g. "Mon 6 Oct" (for "opens next on ..."). */ nextDay: String? = null): String = when {
         !tradingDay -> "The market is closed today, Boss." + (nextDay?.let { " It opens next on $it at 09:15." } ?: "")
         minuteNow < open -> "The market opens in ${open - minuteNow} minutes (09:15), Boss."
-        minuteNow >= close -> "The market has closed for today (15:30), Boss." + (nextDay?.let { " It opens next on $it at 09:15." } ?: "")
-        else -> (close - minuteNow).let { left -> "${if (left >= 60) "${left / 60} h ${left % 60} min" else "$left minutes"} left until the 15:30 close, Boss." }
+        minuteNow >= close -> "The market has closed for today (${com.optionslab.engine.minuteText(close)}), Boss." + (nextDay?.let { " It opens next on $it at 09:15." } ?: "")
+        else -> (close - minuteNow).let { left -> "${if (left >= 60) "${left / 60} h ${left % 60} min" else "$left minutes"} left until the ${com.optionslab.engine.minuteText(close)} close, Boss." }
     }
 }

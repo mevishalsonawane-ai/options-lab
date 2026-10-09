@@ -106,8 +106,8 @@ object Heartbeat {
     /** One line in the diagnostics diary (words the app chose; [Diag] redacts anything secret-looking anyway). */
     fun diary(text: String) = runCatching { Diag.record(WatchHealth.AREA, text) }
 
-    /** Checks only make sense from a couple of minutes after the open to the close. */
-    private fun inHours(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN + 2) until Market.CLOSE
+    /** Checks only make sense from a couple of minutes after the open to F&O's close (the watch's hours: 15:40 from 3 Aug 2026). */
+    private fun inHours(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN + 2) until Market.foClose()
 
     /** The same condition [Jobs] schedules the market watch on. */
     private fun watched(): Boolean = Jobs.enabled(Jobs.Kind.LIVE, com.optionslab.app.data.AppSettings.load())
@@ -133,7 +133,7 @@ object Heartbeat {
         val main = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
         val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() == true }.getOrDefault(false)
             else runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
-        val at = if (mcx || Market.isTradingDay() && Market.minuteNow() < Market.CLOSE && Market.minuteNow() >= Market.OPEN) {
+        val at = if (mcx || Market.isTradingDay() && Market.minuteNow() < Market.foClose() && Market.minuteNow() >= Market.OPEN) {
             System.currentTimeMillis() + EVERY_MS
         } else {
             var d = now.toLocalDate()

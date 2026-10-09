@@ -195,7 +195,17 @@ class TrapGuardTest {
         assertEquals("the first 3 minutes after the open", TrapGuard.timeWindow(ist(9, 17, 30), nse))
         assertNull(TrapGuard.timeWindow(ist(9, 18), nse))
         assertFalse(TrapGuard.optionsReady(ist(9, 19), nse)); assertTrue(TrapGuard.optionsReady(ist(9, 20), nse))
-        assertEquals("the closing settlement window (from 15:00)", TrapGuard.timeWindow(ist(15, 1), nse))
+        // F&O trades to 15:40 since 3 Aug 2026: its closing-price window is 15:10-15:40.
+        assertEquals(15 * 60 + 40, nse.closeMin)
+        assertNull(TrapGuard.timeWindow(ist(15, 1), nse))
+        assertEquals("the closing settlement window (from 15:10)", TrapGuard.timeWindow(ist(15, 11), nse))
+        assertEquals("the closing settlement window (from 15:10)", TrapGuard.timeWindow(ist(15, 39), nse))
+        assertNull(TrapGuard.timeWindow(ist(15, 40), nse))
+        assertEquals(nse, TrapGuard.Session.nse(LocalDate.of(2026, 10, 9)))
+        // An older day keeps its own hours: 15:00-15:30.
+        val july = TrapGuard.Session.nse(LocalDate.of(2026, 7, 31))
+        assertEquals("the closing settlement window (from 15:00)", TrapGuard.timeWindow(ist(15, 1, day = LocalDate.of(2026, 7, 31)), july))
+        assertNull(TrapGuard.timeWindow(ist(15, 35, day = LocalDate.of(2026, 7, 31)), july))
         assertNull(TrapGuard.timeWindow(ist(14, 45), nse))
         assertEquals("the expiry day's last hour", TrapGuard.timeWindow(ist(14, 31), nse.copy(expiryDay = true)))
         assertEquals("minutes around scheduled news", TrapGuard.timeWindow(ist(10, 4), nse.copy(eventMins = listOf(600))))

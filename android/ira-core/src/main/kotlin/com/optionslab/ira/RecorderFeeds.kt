@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * The market recorder's two feeds read OUTSIDE its 09:00-15:35 window (Boss, 06 Oct 2026), pure: their sources, their
+ * The market recorder's two feeds read OUTSIDE its 09:00-15:45 window (Boss, 06 Oct 2026), pure: their sources, their
  * parsers, when each is due and when the off-hours alarm next fires. The app fetches and writes
  * ([com.optionslab.app.data.MarketRecorder]); nothing here touches the network, a file or an order.
  *

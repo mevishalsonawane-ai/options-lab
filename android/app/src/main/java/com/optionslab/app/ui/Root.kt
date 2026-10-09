@@ -717,7 +717,7 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
                         // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
-                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.CLOSE) null else
+                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.foClose()) null else
                             runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull() }
                         Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                         if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))

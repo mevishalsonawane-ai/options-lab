@@ -12,7 +12,7 @@ import java.time.ZoneId
 /**
  * Jarvis watching over the owner's own trading (Jarvis, the owner's wishes 2026-10-02): the automatic trailing
  * stop, too many trades too fast, losses outgrowing wins, the opening-gap plan, open interest walls moving, "explain my
- * position" and the 15:35 wrap-up. The bots (ORB, Pine, strategy runs) and Jarvis's own trades manage their own exits.
+ * position" and the 15:45 wrap-up. The bots (ORB, Pine, strategy runs) and Jarvis's own trades manage their own exits.
  */
 internal object IraCoach {
     private val IST = ZoneId.of("Asia/Kolkata")
@@ -435,7 +435,7 @@ internal object IraCoach {
      * the move out - a break seen already outside at the first look (a restart, the app opened late) is not news.
      */
     fun orbWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.ORB) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.ORB) || !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val now = java.time.LocalTime.now(IST)
         if (now.isBefore(java.time.LocalTime.of(9, 30))) return
         val day = com.optionslab.app.data.Market.today().toString()
@@ -466,7 +466,7 @@ internal object IraCoach {
      * told once a day, on the move - the first look of a day only records, so a state already there is not news.
      */
     fun momentsWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.MOMENTS) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.MOMENTS) || !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val day = com.optionslab.app.data.Market.today().toString()
         trimDays(com.optionslab.app.data.Market.today())
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
@@ -538,7 +538,7 @@ internal object IraCoach {
      * so a spike already there when the app starts is not told as news.
      */
     fun vixWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.VIX) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.VIX) || !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val day = com.optionslab.app.data.Market.today().toString()
         trimDays(com.optionslab.app.data.Market.today())
         val v = IraHub.state.value.snaps[com.optionslab.ira.Market.VIX] ?: return
@@ -562,7 +562,7 @@ internal object IraCoach {
      */
     fun sharpMoveWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.SHARPMOVE) ||
-            !com.optionslab.app.data.Market.isOpen()) return
+            !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val day = com.optionslab.app.data.Market.today()
         trimDays(day)
         val now = LocalDateTime.now(IST)
@@ -1041,7 +1041,7 @@ internal object IraCoach {
         Automations.acted(Automations.Auto.WORDS, "Pointed out one of your rules or goals against today's trades.")
     }
 
-    /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
+    /** The 15:45 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         if (!Automations.on(Automations.Auto.SUMMARY)) return
@@ -1054,7 +1054,7 @@ internal object IraCoach {
     }
 
     /**
-     * The wrap-up's words. [review]: Jarvis's review of himself, which also keeps the day's bar - only at 15:35, never
+     * The wrap-up's words. [review]: Jarvis's review of himself, which also keeps the day's bar - only at 15:45, never
      * when Boss asks for the wrap-up during the day ("wrap up my day").
      */
     suspend fun wrapUp(scorecard: String?, review: Boolean): String {
@@ -1084,12 +1084,12 @@ internal object IraCoach {
         // The expiry-eve checklist right after Boss's own figures (so it is within what is spoken). Facts only.
         val eve = runCatching { expiryEve() }.getOrNull()
         // Where Boss's small trades come from (moved less than twice their own charges; [com.optionslab.ira.SmallTrades]):
-        // one fact from his own record, said once - only at 15:35, never on a locked phone (his record), never in
+        // one fact from his own record, said once - only at 15:45, never on a locked phone (his record), never in
         // IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
         val small = if (review && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { IraTools.smallTradesWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
         // The conditional instructions Boss keeps trying to give ([com.optionslab.ira.CondNeeds]): the app's own alarm, stop
-        // loss or limit for that need named once - only at 15:35, never on a locked phone, never in IraGoldAlgo. A fact and
+        // loss or limit for that need named once - only at 15:45, never on a locked phone, never in IraGoldAlgo. A fact and
         // a pointer only: nothing is set, armed or placed. One learned line a wrap-up: on a day the small-trades fact is said, it waits.
         val condNeeds = if (review && small == null && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { IraTools.condNeedsWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
@@ -1098,7 +1098,7 @@ internal object IraCoach {
         return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, small, condNeeds, agenda, improve, IraSolo.daySummary(),
             lessons,
             IraHub.marketWrapLine(),
-            // The 09:00 outlook against the close, owned (only at 15:35, when the day is in and the check is kept).
+            // The 09:00 outlook against the close, owned (only at 15:45, when the day is in and the check is kept).
             if (review) IraHub.outlookCheckLine() else null,
             runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
     }

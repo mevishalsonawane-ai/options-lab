@@ -13,7 +13,7 @@ import java.util.Locale
  * they were opened ([Band]). A source or a time of day with at least [MIN_TRADES] such trades, closed on at least [MIN_DAYS]
  * days, of which at least [MIN_SMALL] and at least [SHARE] were small, is learned ([learned]).
  *
- * What it changes: the 15:35 wrap-up says ONE such fact, once ([wrapLine]: the clearest not said before, [Log.told]) - "Over
+ * What it changes: the 15:45 wrap-up says ONE such fact, once ([wrapLine]: the clearest not said before, [Log.told]) - "Over
  * the last 10 days, 18 of ORB's 40 Paper trades moved less than twice their own charges, on 7 days." A fact from his own
  * record only: never advice to stop, change or size a strategy, never a judgement, and nothing learned acts - it never
  * arms, stops, trades or changes anything. Never on a locked phone (the app adds no line then, and nothing is kept as
@@ -108,7 +108,7 @@ object SmallTrades {
         return out.sortedWith(compareByDescending<Record> { it.share }.thenByDescending { it.small }.thenBy { it.key })
     }
 
-    /** The one fact for today's 15:35 wrap-up: the clearest not said before, or null. The app keeps its [Record.key] as told. */
+    /** The one fact for today's 15:45 wrap-up: the clearest not said before, or null. The app keeps its [Record.key] as told. */
     fun next(learned: List<Record>, log: Log): Record? = learned.firstOrNull { it.key !in log.told }
 
     /** The wrap-up's sentence for [r]: a fact only. */
@@ -187,7 +187,7 @@ object SmallTrades {
     /** "What have you learned about my charges?". */
     fun say(rs: List<Record>): String =
         if (rs.isEmpty()) "Nothing yet, Boss. When one source or one time of day has at least $MIN_TRADES trades on $MIN_DAYS days in the last " +
-            "$WINDOW_DAYS days, and at least $MIN_SMALL of them - ${pct(SHARE)} or more - moved less than twice their own charges, I'll say it once in the 15:35 wrap-up. $ONLY_FACTS"
+            "$WINDOW_DAYS days, and at least $MIN_SMALL of them - ${pct(SHARE)} or more - moved less than twice their own charges, I'll say it once in the 15:45 wrap-up. $ONLY_FACTS"
         else "Boss, over the last $WINDOW_DAYS days: ${named(rs)}. $ONLY_FACTS Say \"$UNDO\" to have me forget it."
 
     /** "Stop mentioning my small trades". */
@@ -200,7 +200,7 @@ object SmallTrades {
 
     /** The ledger's lines for [r]. */
     fun ledgerWhat(r: Record): String = r.fact().replaceFirstChar { it.uppercase() }
-    fun ledgerWhy(r: Record): String = "from your trades closed in the last $WINDOW_DAYS days; said once in the 15:35 wrap-up, a fact only - nothing acts"
+    fun ledgerWhy(r: Record): String = "from your trades closed in the last $WINDOW_DAYS days; said once in the 15:45 wrap-up, a fact only - nothing acts"
 
     private fun pct(x: Double) = "%.0f%%".format(Locale.ENGLISH, x * 100)
 }

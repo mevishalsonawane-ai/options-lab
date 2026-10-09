@@ -29,7 +29,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * The market recorder (Boss's approval, 06 Oct 2026; the formats are [MarketRecord]'s): on trading days from 09:00 to 15:35,
+ * The market recorder (Boss's approval, 06 Oct 2026; the formats are [MarketRecord]'s): on trading days from 09:00 to 15:45,
  * once a pass of the market watch, it appends what the app ALREADY reads - the news and official notices as first seen,
  * the event calendar, NSE's FII/DII figures, and with a Zerodha session the index futures with their basis, the order
  * book at the money, the option chain at ATM +/-15 every 5 minutes and the Rs 1-5 options in it - to one encrypted file a
@@ -134,7 +134,7 @@ object MarketRecorder {
 
     /**
      * From each pass of the market watch: starts one recording pass in the recorder's own scope and returns at once (it
-     * never waits, never throws). Off, outside 09:00-15:35 on a trading day, or a pass still running: nothing.
+     * never waits, never throws). Off, outside 09:00-15:45 on a trading day, or a pass still running: nothing.
      */
     fun kick() {
         try {
@@ -432,17 +432,18 @@ object MarketRecorder {
             if (!st.noLogin) { st.noLogin = true; gap("futures, order book, chain", "no Zerodha login") }
             return
         }
-        // Inside the session only (09:15-15:30) for prices; once a minute.
-        if (minute < Market.OPEN || minute > Market.CLOSE) return
+        // Inside F&O's session only (09:15 to its close: 15:40 from 3 Aug 2026, 15:30 before) for prices; once a minute.
+        val close = Market.foClose(day)
+        if (minute < Market.OPEN || minute > close) return
         // (Its own four; MIDCPNIFTY's future is in the list for the order flow only.)
         val futs = runCatching { Kite.nearestFutures(src.futures().filter { it.name in MarketRecord.FUTURES }, day) }.getOrElse { e ->
             if (!st.futuresGap) { st.futuresGap = true; gap("futures list", MarketRecord.why(e)) }
             emptyMap()
         }
-        // The futures' 1-minute candles: at 15:29 (to 15:28) and again at 15:30 or later for the rest - the watch may not
-        // have a pass after 15:30.
-        if (minute >= Market.CLOSE - 1 && !st.bars) { if (minute >= Market.CLOSE) st.bars = true; closeBars(st, futs, day, minute, lines, gap) }
-        if (minute == st.lastMinute || minute >= Market.CLOSE) return
+        // The futures' 1-minute candles: a minute before F&O's close (15:39, to 15:38) and again at the close or later for the
+        // rest - the watch may not have a pass after it.
+        if (minute >= close - 1 && !st.bars) { if (minute >= close) st.bars = true; closeBars(st, futs, day, minute, lines, gap) }
+        if (minute == st.lastMinute || minute >= close) return
         st.lastMinute = minute
         val keys = LinkedHashMap<String, Long?>()
         val spotKey = HashMap<String, String>()

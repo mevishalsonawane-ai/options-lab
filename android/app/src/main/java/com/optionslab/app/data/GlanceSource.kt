@@ -53,7 +53,8 @@ internal object GlanceSource {
         val preOpen = phase == TodayGlance.Phase.PRE_OPEN && jarvis
         val gift = if (preOpen) runCatching { com.optionslab.app.ira.GlanceReads.gift(now) }.getOrNull() else null
         val fii = if (preOpen) runCatching { com.optionslab.app.ira.GlanceReads.fii(today) }.getOrNull() else null
-        val risks = if (phase == TodayGlance.Phase.OPEN && jarvis) listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { m ->
+        // Index reads: to the index's 15:30 close (F&O's later close brings no index candle).
+        val risks = if (phase == TodayGlance.Phase.OPEN && now.hour * 60 + now.minute < Market.INDEX_CLOSE && jarvis) listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY).mapNotNull { m ->
             runCatching { com.optionslab.app.ira.GlanceReads.bigMove(m, now, trading) }.getOrNull()
         } else emptyList()
 

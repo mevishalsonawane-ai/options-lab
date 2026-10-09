@@ -144,7 +144,7 @@ object OrderFlowLive {
         for (n in OrderFlow.INDICES) {
             // The traded index's own expiry day: its last hour from 14:30.
             val expiry = runCatching { Market.upcomingExpiries(n).firstOrNull() == today }.getOrDefault(false)
-            board.session(n, com.optionslab.ira.TrapGuard.Session.NSE.copy(expiryDay = expiry, eventMins = nse))
+            board.session(n, com.optionslab.ira.TrapGuard.Session.nse(today).copy(expiryDay = expiry, eventMins = nse))
         }
         if (mcx.isNotEmpty()) {
             // MCX closes 23:30, or 23:55 while New York is on winter time; the EIA reports on Wednesdays and Thursdays.

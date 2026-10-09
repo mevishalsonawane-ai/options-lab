@@ -101,7 +101,7 @@ class OutlookCheckTest {
                 if (i % 2 == 0) 24_600.0 else 24_400.0)
         } + OutlookCheck.Entry(today, Market.NIFTY, 24_500.0, 24_300.0, 24_700.0, OutlookCheck.Lean.UP, 24_450.0)
         val s = OutlookCheck.say(log, today)
-        assertTrue(s.startsWith("Today's outlook is noted, Boss, and is checked at the 15:35 wrap-up."), s)
+        assertTrue(s.startsWith("Today's outlook is noted, Boss, and is checked at the 15:45 wrap-up."), s)
         assertTrue("over the last 4 checked sessions (since ${today.minusDays(4)}): Nifty close inside the range 4 of 4, direction read held 2 of 4, pivot side held 2 of 4." in s, s)
         assertTrue(s.endsWith("Counts only."))
         for (w in listOf("should", "you could", "consider", "buy", "sell")) assertFalse(w in s.lowercase(), w)

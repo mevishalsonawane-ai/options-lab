@@ -44,9 +44,10 @@ object MarketRecord {
 
     /** The recorder writes only between these, on trading days (IST). */
     val FROM: LocalTime = LocalTime.of(9, 0)
-    val UNTIL: LocalTime = LocalTime.of(15, 35)
+    /** Five minutes past NSE F&O's close (15:40 since 3 Aug 2026; the futures and options trade to then). */
+    val UNTIL: LocalTime = LocalTime.of(15, 45)
 
-    /** Inside the recording window: a trading day, 09:00-15:35 IST. */
+    /** Inside the recording window: a trading day, 09:00-15:45 IST. */
     fun inWindow(tradingDay: Boolean, t: LocalTime): Boolean = tradingDay && !t.isBefore(FROM) && !t.isAfter(UNTIL)
 
     /** Months of days kept; older day files are deleted. */
@@ -380,7 +381,7 @@ object MarketRecord {
     /** Jarvis's answer: how much is recorded, since when, the last write and the gaps (his own data; nothing acts). */
     fun answer(s: Status, today: LocalDate): String {
         if (!s.on && s.days == 0) return "The market recorder is off, Boss, and nothing is recorded yet. Its switch is in More, Data & Harvest."
-        if (s.days == 0) return "Nothing recorded yet, Boss: the market recorder writes on trading days from 9:00 to 15:35 while the market watch runs."
+        if (s.days == 0) return "Nothing recorded yet, Boss: the market recorder writes on trading days from 9:00 to 15:45 while the market watch runs."
         val since = s.first?.let { " since ${date(it)}" } ?: ""
         val last = s.lastWrite?.let { ", last written at ${whenText(it, today)}" } ?: ""
         val gaps = when {

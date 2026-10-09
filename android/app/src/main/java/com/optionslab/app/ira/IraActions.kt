@@ -338,7 +338,7 @@ internal object IraActions {
                 val lvl = c.level ?: c.pct?.let { pct ->
                     // A fresh price only (in market hours the last 3 minutes): a level from an old price would be wrong.
                     val st = IraHub.state.value
-                    val fresh = !com.optionslab.app.data.Market.isOpen() || st.liveAt?.isAfter(java.time.Instant.now().minusSeconds(180)) == true
+                    val fresh = !com.optionslab.app.data.Market.isIndexOpen() || st.liveAt?.isAfter(java.time.Instant.now().minusSeconds(180)) == true
                     val px = st.snaps[m!!]?.price?.takeIf { fresh } ?: return "I don't have a fresh ${m.label} price just now to measure $pct% from. Try again in a moment." to null
                     base = px
                     com.optionslab.ira.MoveAlarm.level(px, com.optionslab.ira.MoveAlarm.Move(pct, above == true))

@@ -180,8 +180,15 @@ object Jobs {
      */
     fun watchDue(): Boolean = nseWatchDue() || runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
-    /** NSE's part of [watchDue]: the clock and NSE's calendar only (no vault, no lock), safe on the main thread. */
-    private fun nseWatchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE
+    /**
+     * NSE's part of [watchDue]: the clock and NSE's calendar only (no vault, no lock), safe on the main thread. To F&O's
+     * close (15:40 from 3 Aug 2026; 15:30 before): orders, positions and option prices run to then.
+     */
+    private fun nseWatchDue(): Boolean = nseWatchDueAt(Market.today(), Market.minuteNow())
+
+    /** [nseWatchDue] on [day] at [minute] (the clock given; NSE's calendar only). */
+    internal fun nseWatchDueAt(day: java.time.LocalDate, minute: Int): Boolean =
+        Market.isTradingDay(day) && minute in (Market.OPEN - 1)..Market.foClose(day)
 
     /**
      * [watchDue] for the main thread (ANR fix, 9 Oct): NSE's hours, else MCX's from memory only
@@ -1226,9 +1233,12 @@ class WatchService : Service() {
         runCatching { com.optionslab.app.data.KiteStream.stop() }
     }
 
-    /** NSE's part of the watch: market hours, and a quarter-hour past the close while a strategy run is still open. */
-    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
-        (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))
+    /**
+     * NSE's part of the watch: F&O's hours (to 15:40 from 3 Aug 2026), and a quarter-hour past that close while a strategy
+     * run is still open.
+     */
+    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
+        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning()))
 
     private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 

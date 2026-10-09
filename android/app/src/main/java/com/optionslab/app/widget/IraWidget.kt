@@ -174,7 +174,7 @@ class IraWidget : AppWidgetProvider() {
                     liquidity = read
                     // (A stale read before - its row hidden - is redrawn with the fresh one even when the words match.)
                     if (was == null || WidgetLiquidity.row(was, true) != WidgetLiquidity.row(read, true) ||
-                        !runCatching { WidgetLiquidity.fresh(was, read.now, Market.isOpen()) }.getOrDefault(false)) {
+                        !runCatching { WidgetLiquidity.fresh(was, read.now, Market.isIndexOpen()) }.getOrDefault(false)) {
                         val mgr = AppWidgetManager.getInstance(app)
                         val placed = mgr.getAppWidgetIds(ComponentName(app, IraWidget::class.java))
                         if (placed.isNotEmpty()) render(app, mgr, placed)
@@ -316,7 +316,7 @@ class IraWidget : AppWidgetProvider() {
          */
         private fun liquidityRow(context: Context, manager: AppWidgetManager, ids: IntArray, v: RemoteViews, figures: Boolean): String? {
             // A cached read from another day, or over 10 minutes old while the market is open, is not shown as current.
-            val f = liquidity?.takeIf { runCatching { WidgetLiquidity.fresh(it, Market.now().toLocalDateTime(), Market.isOpen()) }.getOrDefault(false) }
+            val f = liquidity?.takeIf { runCatching { WidgetLiquidity.fresh(it, Market.now().toLocalDateTime(), Market.isIndexOpen()) }.getOrDefault(false) }
             val row = if (BuildConfig.GOLD || f == null) null else runCatching { WidgetLiquidity.row(f, figures) }.getOrNull()
             if (row == null) { v.setViewVisibility(R.id.w_liq_box, View.GONE); return null }
             v.setViewVisibility(R.id.w_liq_box, View.VISIBLE)

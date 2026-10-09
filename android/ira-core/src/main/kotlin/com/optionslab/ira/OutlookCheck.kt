@@ -7,7 +7,7 @@ import java.util.Locale
 /**
  * The morning outlook checked against the close (Jarvis reasoning, round 21). The 09:00 check says each index's outlook
  * in one line ([Outlook.brief]: the trend read, the range a usual day spans from India VIX, the pivot). Those three are
- * noted when the check makes them ([call], [made]) - the numbers only - and at the 15:35 wrap-up set against what the
+ * noted when the check makes them ([call], [made]) - the numbers only - and at the 15:45 wrap-up set against what the
  * day did ([check]), owned honestly in a sentence per index:
  *
  *  - the range: did the close stay inside the usual-day range (and did the day's high or low go past it);
@@ -176,10 +176,10 @@ object OutlookCheck {
         val todays = done.filter { it.day == today }
         val pending = log.any { it.day == today && !it.checked }
         if (done.isEmpty()) return "I have not checked a morning outlook against a close yet, Boss: each index's outlook is noted at the 09:00 check " +
-            "and set against the close at the 15:35 wrap-up." + (if (pending) " Today's is noted and is checked at 15:35." else "")
+            "and set against the close at the 15:45 wrap-up." + (if (pending) " Today's is noted and is checked at 15:45." else "")
         val parts = ArrayList<String>()
         if (todays.isNotEmpty()) parts += "Today's outlook against the close, Boss: " + todays.joinToString(" ") { line(it) }
-        else if (pending) parts += "Today's outlook is noted, Boss, and is checked at the 15:35 wrap-up."
+        else if (pending) parts += "Today's outlook is noted, Boss, and is checked at the 15:45 wrap-up."
         val since = done.groupBy { it.market }.values.minOfOrNull { l -> l.sortedBy { it.day }.takeLast(WINDOW).first().day }
         val sessions = done.map { it.day }.distinct().sorted().takeLast(WINDOW).size
         parts += (if (parts.isEmpty()) "Boss, my" else "My") + " morning outlooks against the close over the last $sessions checked session${if (sessions == 1) "" else "s"}" +

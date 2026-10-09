@@ -30,7 +30,7 @@ import kotlin.math.abs
  * Words only: nothing here places, closes, arms or changes anything, and it never suggests a trade. Pure.
  */
 object TomorrowPlan {
-    /** The plan is put in the chat from this time on a trading day (after the close and the 15:35 wrap-up). */
+    /** The plan is put in the chat from this time on a trading day (after the close and the 15:45 wrap-up). */
     val POST_AT: LocalTime = LocalTime.of(15, 45)
     /** ... and not from this time (quiet hours start then; the next morning's check takes over). */
     val POST_UNTIL: LocalTime = LocalTime.of(22, 0)

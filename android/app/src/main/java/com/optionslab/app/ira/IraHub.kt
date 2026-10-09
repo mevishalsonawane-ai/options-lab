@@ -1213,7 +1213,9 @@ object IraHub {
     /** Live prices stopped for two minutes in market hours: told once, and again only after they came back. */
     suspend fun feedWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.FEED)) return
-        val open = com.optionslab.app.data.Market.isOpen()
+        // The index candles' feed: the index's session (to 15:30). F&O's later close (15:40) brings no index candle, so a
+        // read of those last minutes is not a stopped feed.
+        val open = com.optionslab.app.data.Market.isIndexOpen()
         // After the close nothing "comes back": a warning still standing is simply cleared.
         if (!open) { feedWarned = false; return }
         fun last() = _state.value.liveAt?.atZone(IST)?.toLocalDateTime()
@@ -1439,7 +1441,7 @@ object IraHub {
 
     /**
      * The 09:00 check made its outlook ([morningOutlook]): each index's numbers (previous close, usual-day range, direction
-     * read, pivot - [com.optionslab.ira.OutlookCheck.call]) noted for the 15:35 wrap-up. Trading days only; market data only.
+     * read, pivot - [com.optionslab.ira.OutlookCheck.call]) noted for the 15:45 wrap-up. Trading days only; market data only.
      */
     fun outlookNoted() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
@@ -1451,7 +1453,7 @@ object IraHub {
         }
     }
 
-    /** For the 15:35 wrap-up: today's 09:00 outlook against the close, with the record so far - or null (none noted, or the day not in). */
+    /** For the 15:45 wrap-up: today's 09:00 outlook against the close, with the record so far - or null (none noted, or the day not in). */
     fun outlookCheckLine(): String? {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
         return runCatching {
@@ -1739,7 +1741,7 @@ object IraHub {
             val condGold = com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK
             val condInstead = if (condGold) null else runCatching { com.optionslab.ira.Conditional.instead(q) }.getOrNull()
             // Learning (round 32): its kind and minute kept, never the words ([com.optionslab.ira.CondNeeds]) - after enough
-            // of them the 15:35 wrap-up names the app's own tool for that need once. Jarvis only; nothing is set or done.
+            // of them the 15:45 wrap-up names the app's own tool for that need once. Jarvis only; nothing is set or done.
             if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !GOLD_ONLY_TALK)
                 scope.launch(Dispatchers.IO) { runCatching { IraTools.condNeedsNote(q) } }
             val condAlarm = condInstead?.alarm
@@ -1905,7 +1907,7 @@ object IraHub {
                 "Microphone permission" to (if (voiceOn) mic else null),
                 "Spoken replies" to (if (JarvisVoice.muted) null else true),
                 "AI model (${IraModel.choice.name})" to (if (IraModel.state.value.status == IraModel.Status.ABSENT) null else IraModel.state.value.status == IraModel.Status.READY),
-                "Live prices" to (if (com.optionslab.app.data.Market.isOpen()) _state.value.liveMissing.size < 3 else null),
+                "Live prices" to (if (com.optionslab.app.data.Market.isIndexOpen()) _state.value.liveMissing.size < 3 else null),
                 "Relay server" to (if (relay.enabled && relay.host != null) relay.connected.takeIf { it } ?: (if (com.optionslab.app.data.Market.isOpen()) false else null) else null),
                 "Zerodha session" to (if (com.optionslab.app.data.Broker.configured) com.optionslab.app.data.Broker.loggedIn else null),
             )
@@ -1986,7 +1988,7 @@ object IraHub {
                     val mk = com.optionslab.app.data.Market
                     val next = runCatching { var d = mk.today().plusDays(1); var g = 0; while (g++ < 14 && !mk.isTradingDay(d)) d = d.plusDays(1)
                         d.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.ENGLISH)) }.getOrNull()
-                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true), nextDay = next)); return
+                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), close = mk.foClose(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true), nextDay = next)); return
                 }
                 val m = when (a) { is com.optionslab.ira.OptionFacts.Asked.Quote -> a.market; is com.optionslab.ira.OptionFacts.Asked.Atm -> a.market
                     is com.optionslab.ira.OptionFacts.Asked.LotSize -> a.market; else -> IraMarket.NIFTY }
@@ -2033,7 +2035,7 @@ object IraHub {
                 }
                 return
             }
-        // "Wrap up my day" / "aaj ka summary" at any hour: the 15:35 wrap-up's words so far (the day's P&L is Boss's own,
+        // "Wrap up my day" / "aaj ka summary" at any hour: the 15:45 wrap-up's words so far (the day's P&L is Boss's own,
         // so the phone must be unlocked).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
             runCatching { com.optionslab.ira.DaySummary.asked(q) }.getOrDefault(false)) {
@@ -2041,7 +2043,7 @@ object IraHub {
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch {
                 // The scorecard saves its points and lapses waiting answers: only after the close (review, 4 Oct).
-                val card = if (com.optionslab.app.data.Market.minuteNow() >= 15 * 60 + 30) runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull() else null
+                val card = if (com.optionslab.app.data.Market.minuteNow() >= com.optionslab.app.data.Market.foClose()) runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull() else null
                 reply(runCatching { IraCoach.wrapUp(card, review = false) }.getOrElse { "I could not put the day together just now, Boss." })
             }
             return
@@ -2348,7 +2350,7 @@ object IraHub {
                 val m = named.firstOrNull { it in LIVE.keys } ?: IraMarket.NIFTY
                 fun answer(text: String) = _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
                 if (parsed.markets.isNotEmpty() && named.isEmpty()) { answer("There are no options on that here, Boss: option prices are for Nifty, BankNifty, FinNifty and Sensex."); return }
-                if (!com.optionslab.app.data.Market.isOpen()) { answer("The market is closed, Boss: option prices are read live, from 9:15 to 3:30 on trading days."); return }
+                if (!com.optionslab.app.data.Market.isOpen()) { answer("The market is closed, Boss: option prices are read live, from 9:15 to ${com.optionslab.app.data.Market.foClose().let { "${it / 60 - 12}:%02d".format(it % 60) }} on trading days."); return }
                 if (!online()) { answer("I'm offline, Boss: option prices need the internet."); return }
                 // A placeholder answer at once (so a later question is never answered with this quote), replaced when read.
                 val wait = Msg(true, "$CHAIN_NOTE${m.label}, Boss...")
@@ -2858,7 +2860,7 @@ object IraHub {
             return true
         }
         // "What have you learned about my conditional orders?" / "stop mentioning my conditional orders": the conditional
-        // instructions Boss keeps trying to give, the app's own alarm, stop loss or limit named once in the 15:35 wrap-up
+        // instructions Boss keeps trying to give, the app's own alarm, stop loss or limit named once in the 15:45 wrap-up
         // ([com.optionslab.ira.CondNeeds]; kinds and minutes only). His own words' record: named on an unlocked phone only;
         // the undo works locked too, in neutral words. A pointer only - nothing is set, nothing learned acts. Not in IraGoldAlgo.
         val condNeedsReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
@@ -5071,7 +5073,7 @@ object IraHub {
         _state.update { it.copy(news = got.first.ifEmpty { it.news }, newsAt = if (got.first.isNotEmpty()) Instant.now() else it.newsAt, newsMissing = got.second) }
     }
 
-    /** How [m]'s day went, from the candles on the phone (for the 15:35 wrap-up), or null. */
+    /** How [m]'s day went, from the candles on the phone (for the 15:45 wrap-up), or null. */
     fun dayStory(m: IraMarket): String? = runCatching {
         val bars = histories[m]?.bars ?: return null
         // Only today's session: an old day (a failed refresh, a holiday) is never told as today's.
@@ -5080,7 +5082,7 @@ object IraHub {
     }.getOrNull()
 
     /**
-     * For the 15:35 wrap-up: what stood out most in the market today against the last sessions on the phone, and how to
+     * For the 15:45 wrap-up: what stood out most in the market today against the last sessions on the phone, and how to
      * hear the whole story - or null without today's session (only today's candles are read, never an old day's).
      */
     fun marketWrapLine(): String? = runCatching {
@@ -5574,7 +5576,7 @@ object IraHub {
         return com.optionslab.ira.TradeCheck.Now(
             marketOpen = m.isOpen(), tradingDay = m.isTradingDay(today), minute = m.minuteNow(),
             liveMode = s.live, zerodhaLoggedIn = com.optionslab.app.data.Broker.loggedIn, staticIpOk = ipOk,
-            pricesFresh = !m.isOpen() || st.liveAt?.isAfter(Instant.now().minusSeconds(180)) == true,
+            pricesFresh = !m.isIndexOpen() || st.liveAt?.isAfter(Instant.now().minusSeconds(180)) == true,   // index candles: to 15:30
             killSwitch = s.guardKill, breakerTripped = com.optionslab.app.data.LossBreaker.trippedToday(),
             botsStopped = runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrDefault(false),
             dayPnl = dayPnl, dayLossLimit = if (s.live) s.guardDailyLoss else s.guardPaperDailyLoss,

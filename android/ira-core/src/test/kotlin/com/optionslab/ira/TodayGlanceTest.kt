@@ -17,14 +17,20 @@ class TodayGlanceTest {
         assertEquals(TodayGlance.Phase.PRE_OPEN, TodayGlance.phase(at(8, 50), true))
         assertEquals(TodayGlance.Phase.OPEN, TodayGlance.phase(at(9, 15), true))
         assertEquals(TodayGlance.Phase.OPEN, TodayGlance.phase(at(15, 29), true))
-        assertEquals(TodayGlance.Phase.CLOSED, TodayGlance.phase(at(15, 30), true))
+        // F&O trades to 15:40 since 3 Aug 2026 (15:30 before).
+        assertEquals(TodayGlance.Phase.OPEN, TodayGlance.phase(at(15, 39), true))
+        assertEquals(TodayGlance.Phase.CLOSED, TodayGlance.phase(at(15, 40), true))
+        assertEquals(TodayGlance.Phase.CLOSED, TodayGlance.phase(LocalDate.of(2026, 7, 31).atTime(15, 30), true))
+        assertEquals(TodayGlance.Phase.OPEN, TodayGlance.phase(LocalDate.of(2026, 7, 31).atTime(15, 29), true))
         assertEquals(TodayGlance.Phase.CLOSED, TodayGlance.phase(at(10, 0), false))
     }
 
     @Test fun marketLines() {
         assertEquals("Pre-open · opens at 09:15 (in 25m)", TodayGlance.marketLine(at(8, 50), true, null))
-        assertEquals("Market open · closes at 15:30 (5h 20m left)", TodayGlance.marketLine(at(10, 10), true, null))
-        assertEquals("Market open · closes at 15:30 (1h left)", TodayGlance.marketLine(at(14, 30), true, null))
+        assertEquals("Market open · closes at 15:40 (5h 30m left)", TodayGlance.marketLine(at(10, 10), true, null))
+        assertEquals("Market open · closes at 15:40 (1h 10m left)", TodayGlance.marketLine(at(14, 30), true, null))
+        assertEquals("Market open · closes at 15:40 (5m left) · index closed 15:30", TodayGlance.marketLine(at(15, 35), true, null))
+        assertEquals("Market open · closes at 15:30 (1h left)", TodayGlance.marketLine(LocalDate.of(2026, 7, 31).atTime(14, 30), true, null))
         assertEquals("Market closed · next session tomorrow, 09:15", TodayGlance.marketLine(at(16, 0), true, day.plusDays(1)))
         assertEquals("Market closed · next session Mon 12 Oct, 09:15", TodayGlance.marketLine(at(16, 0), true, LocalDate.of(2026, 10, 12)))
         assertEquals("Market closed", TodayGlance.marketLine(at(11, 0), false, null))

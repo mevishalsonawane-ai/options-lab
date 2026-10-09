@@ -21,6 +21,9 @@ class OptionFactsTest {
     @Test fun says() {
         assertTrue(OptionFacts.quote(Market.NIFTY, 25000, "CE", 120.5, 120.0, 121.0, 1_234_500, 75).contains("one lot of 75 is about Rs 9,038"))
         assertEquals("2 h 15 min left until the 15:30 close, Boss.", OptionFacts.timeLeft(13 * 60 + 15))
+        // F&O trades to 15:40 since 3 Aug 2026: the caller passes that close.
+        assertEquals("5 minutes left until the 15:40 close, Boss.", OptionFacts.timeLeft(15 * 60 + 35, close = 15 * 60 + 40))
+        assertTrue(OptionFacts.timeLeft(15 * 60 + 40, close = 15 * 60 + 40).startsWith("The market has closed for today (15:40), Boss."))
         assertTrue(OptionFacts.timeLeft(8 * 60).contains("opens in 75 minutes"))
     }
 }

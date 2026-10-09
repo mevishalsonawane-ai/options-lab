@@ -96,7 +96,7 @@ class TodayGlanceTest {
 
     @Test fun inSessionShowsTheRiskBadgesAndTheirNoteOnTap() {
         card(GlanceFixtures.inSession)
-        text("Market open · closes at 15:30 (4h 25m left)").assertIsDisplayed()
+        text("Market open · closes at 15:40 (4h 35m left)").assertIsDisplayed()
         assertFalse(shows("Before the open"))
         text("Nifty: high · 2.5x").assertIsDisplayed()
         text("BankNifty: low · 0.4x").assertIsDisplayed()
@@ -141,7 +141,7 @@ class TodayGlanceTest {
     @Test fun foldedShowsOnlyTheMarketLine() {
         card(GlanceFixtures.inSession, expanded = false)
         text("Today at a glance").assertIsDisplayed()
-        text("Market open · closes at 15:30 (4h 25m left)").assertIsDisplayed()
+        text("Market open · closes at 15:40 (4h 35m left)").assertIsDisplayed()
         text("Show ▾").assertIsDisplayed()
         assertFalse(shows("Liquidity 15+5"))
         assertFalse(shows("Nifty: high"))

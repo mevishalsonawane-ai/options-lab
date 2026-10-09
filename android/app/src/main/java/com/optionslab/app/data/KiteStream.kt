@@ -195,7 +195,8 @@ object KiteStream {
         val loggedIn = Broker.loggedIn
         val hasKey = Broker.apiKey != null
         // NSE's day, and MCX's hours while something is held or working on MCX (9 Oct: to 23:30, 23:55 in US winter).
-        val inHours = Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(15 * 60 + 45) ||
+        // To five minutes past F&O's close (15:40 from 3 Aug 2026: 15:45; it was 15:45 before too, past the 15:30 close).
+        val inHours = Market.isTradingDay() && Market.minuteNow() in (9 * 60)..maxOf(15 * 60 + 45, Market.foClose() + 5) ||
             runCatching { McxMarket.watchDue() }.getOrDefault(false)
         if (loggedIn && hasKey && inHours) {
             // Battery, round 1: a stream nobody reads (the app off screen, no position or chart following instruments, no

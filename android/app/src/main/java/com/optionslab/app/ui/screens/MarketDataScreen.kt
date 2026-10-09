@@ -154,7 +154,7 @@ internal fun MarketDataContent(
             LedgerCard(title = "Recorded days") {
                 when {
                     days == null -> Note("Reading the list…")
-                    days.isEmpty() -> Note("Nothing recorded yet. The recorder writes on trading days from 09:00 to 15:35 while the market watch runs.")
+                    days.isEmpty() -> Note("Nothing recorded yet. The recorder writes on trading days from 09:00 to 15:45 while the market watch runs.")
                     else -> {
                         val newest = days.first().first
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

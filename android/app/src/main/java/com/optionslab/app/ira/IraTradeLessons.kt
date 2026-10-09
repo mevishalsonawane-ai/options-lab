@@ -8,7 +8,7 @@ import com.optionslab.ira.TradeLesson
  * closes, one line in the chat - whether it was a normal win or loss for the arm and what kind - so Boss learns what a
  * normal win or loss looks like. In the chat only (never spoken, no pop-up); on short answers or while saving battery only
  * its first sentence. Told once per closed trade (remembered across a restart for the day). The same lesson rides on the
- * bot-trades answer ([BotTrades.answer]) and the 15:35 wrap-up has its one line for the day ([wrapLine]). Facts only:
+ * bot-trades answer ([BotTrades.answer]) and the 15:45 wrap-up has its one line for the day ([wrapLine]). Facts only:
  * nothing here arms, stops, places or closes anything. Not in IraGoldAlgo (no Liquidity arm).
  */
 internal object IraTradeLessons {
