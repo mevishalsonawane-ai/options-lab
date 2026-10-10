@@ -408,6 +408,7 @@ class ManagerTeamTest {
         assertEquals(TradeManager.TeamAsk(TradeManager.TeamKind.UNMUTE, "vix"), M.asked("unmute the VIX specialist for VIX divergence")!!.team)
         assertEquals("vixdiv", M.asked("unmute the VIX specialist for VIX divergence")!!.family)
         assertEquals("vwap", M.asked("mute the vwap specialist for solo")!!.team!!.specialist)
+        assertNull(M.asked("should I ask a tax specialist"), "not the manager's")
         // The original questions read as before.
         assertEquals(TradeManager.Ask(false, null), M.asked("how is the trade manager doing?"))
         assertEquals(TradeManager.Ask(true, "solo"), M.asked("Why did Solo exit early?"))

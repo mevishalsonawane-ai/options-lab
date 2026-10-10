@@ -692,6 +692,8 @@ object TradeManager {
             val spec = ManagerTeam.specialistIn(t)
             val rest = spec?.let { t.replaceFirst(it.second, " ") } ?: t
             val fam = FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(rest) }?.first
+            // Only the manager's: it, a strategy or one of its specialists named ("ask a tax specialist" is not this).
+            if (spec == null && fam == null && !Regex(" (manager|managers|manager s) ").containsMatchIn(t)) return null
             val kind = when {
                 UNMUTE_WORDS.containsMatchIn(t) -> TeamKind.UNMUTE
                 MUTE_WORDS.containsMatchIn(t) -> TeamKind.MUTE
