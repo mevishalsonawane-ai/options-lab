@@ -52,6 +52,25 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-10-findings-bus", OCT10, "The bots share what they find",
+            "Each strategy and checker posts what it finds: a sweep, a break, a pull, a stop hit, a big move. " +
+                "Home shows each index's view: how many findings lean up and how many lean down. " +
+                "That view is logged beside every signal, to test later whether it helps. " +
+                "Reactions between bots can only skip an entry, and start as a record only. " +
+                "Unreliable data pauses every new entry at once; exits always go.",
+            "Home → Dashboard → Strategies card → Findings, and Copy diagnostics (Brain)",
+            ask = "what are the bots saying about banknifty"),
+        Entry("2026-10-10-smart-workers", OCT10, "Smarter bots: they wake, heal and check themselves",
+            "Each bot now wakes when something it waits for happens, such as its candle closing, not on a fixed clock. " +
+                "A check every 30 s stays as a safety net, every 15 s while anything is held. " +
+                "When the stream, Zerodha, the relay or candles falter, the app uses a backup and tells you once. " +
+                "New entries pause for 5 minutes around news such as RBI policy and US data, paper and live. " +
+                "Trap alerts, an unreliable feed and big moves are only recorded beside each signal for now. " +
+                "After 15:45 each strategy compares its recent trades with its backtest. " +
+                "A drifting live strategy moves itself to paper and asks you; it never goes back to live alone. " +
+                "Exits are never delayed.",
+            "Home → Dashboard → Strategies card (health chips), Settings → Zerodha → Order speed, and Copy diagnostics (Brain)",
+            ask = "how are my strategies doing vs backtest"),
         Entry("2026-10-10-parallel-workers", OCT10, "The watch works on many things at once",
             "The order watch now runs the strategies side by side instead of one after another. " +
                 "Stops, exits and the daily loss limit still run first, and never wait behind an entry. " +

@@ -38,6 +38,8 @@ class Supervisor(
     private val clock: () -> Long = { System.currentTimeMillis() },
     private val onTimed: (name: String, ms: Long) -> Unit = { _, _ -> },
     private val onError: (name: String, e: Throwable) -> Unit = { _, _ -> },
+    /** A worker restarted after repeated failures ([SelfHeal.shouldRestart]): told once per restart. */
+    private val onRestart: (name: String, failuresInRow: Int) -> Unit = { _, _ -> },
 ) {
     enum class State(val words: String) {
         IDLE("idle"),
@@ -60,6 +62,8 @@ class Supervisor(
         val lastError: String? = null,
         val failuresInRow: Int = 0,
         val nextAt: Long? = null,
+        /** Fresh starts after repeated failures ([SelfHeal.Restart]). */
+        val restarts: Int = 0,
     )
 
     /** A worker on its own clock ([start]). */
@@ -74,6 +78,8 @@ class Supervisor(
         val sleepMs: Long = 60_000,
         val backoffBaseMs: Long = 5_000,
         val backoffCapMs: Long = 5 * 60_000,
+        /** Self-healing (10 Oct, part 2): restarted fresh after this many failures in a row (null: never). */
+        val restart: SelfHeal.Restart? = null,
     )
 
     /** A step of a [group]: its [name] (the app's own words) and its work. */
@@ -129,7 +135,11 @@ class Supervisor(
                         delay(wait)
                     }
                     val ok = runWorker(spec, body, failures + 1)
-                    if (ok) failures = 0 else { failures++; backOff(spec, failures) }
+                    if (ok) failures = 0 else {
+                        failures++
+                        if (restartDue(spec, failures)) failures = 0
+                        backOff(spec, failures.coerceAtLeast(1))
+                    }
                 }
             } finally {
                 update(spec.name, spec.group) { it.copy(state = State.STOPPED, nextAt = null) }
@@ -137,6 +147,24 @@ class Supervisor(
         }
         workers[spec.name] = job
         return job
+    }
+
+    private val restartTimes = ConcurrentHashMap<String, ArrayDeque<Long>>()
+
+    /**
+     * Self-healing: after [Spec.restart]'s count of failures in a row the worker starts fresh (its pause back to the
+     * shortest, counted and told), at most its limit an hour; past that it keeps backing off as before.
+     */
+    private fun restartDue(spec: Spec, failures: Int): Boolean {
+        val policy = spec.restart ?: return false
+        val now = clock()
+        val times = restartTimes.getOrPut(spec.name) { ArrayDeque() }
+        val recent = synchronized(times) { while (times.isNotEmpty() && now - times.first() > 3_600_000L) times.removeFirst(); times.size }
+        if (!SelfHeal.shouldRestart(failures, recent, policy)) return false
+        synchronized(times) { times.addLast(now) }
+        update(spec.name, spec.group) { it.copy(restarts = it.restarts + 1, failuresInRow = 0) }
+        runCatching { onRestart(spec.name, failures) }
+        return true
     }
 
     private suspend fun backOff(spec: Spec, failures: Int) {
@@ -254,6 +282,7 @@ class Supervisor(
             append(" · ").append(s.runs).append(if (s.runs == 1) " run" else " runs")
             if (s.errors > 0) append(" · ").append(s.errors).append(if (s.errors == 1) " error" else " errors")
                 .append(s.lastError?.let { " (last: $it)" } ?: "")
+            if (s.restarts > 0) append(" · restarted ").append(s.restarts).append(if (s.restarts == 1) " time" else " times")
         }
     }
 }

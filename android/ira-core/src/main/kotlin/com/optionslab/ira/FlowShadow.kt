@@ -149,6 +149,21 @@ object FlowShadow {
     /** The underlying future's move in the trade's direction 15 and 30 minutes after signal [id] (points; null not read). */
     fun move(id: String, m15: Double?, m30: Double?): String = "M|${clean(id)}|${d(m15)}|${d(m30)}"
 
+    /**
+     * The market brain and the findings at signal [id] (10 Oct, smart workers): [blocked] the pause that skipped it (null:
+     * none), [keys] the causes that would have paused it in SHADOW ([MarketBrain.Cause.key], [Findings.Reaction.key]) and their
+     * [words]. Logged so the record per strategy can say later whether each pause would have helped ([pauseEffects]).
+     */
+    fun brain(id: String, blocked: String?, keys: List<String>, words: List<String>): String =
+        "B|${clean(id)}|${clean(blocked ?: "")}|${keys.joinToString(",") { clean(it).replace(",", " ") }}|${clean(words.joinToString("; "))}"
+
+    /** The findings' consensus on the signal's index at [id]: bullish and bearish findings and their summed strengths. */
+    fun consensus(id: String, c: Findings.Consensus?): String =
+        if (c == null) "C|${clean(id)}||||" else "C|${clean(id)}|${c.bullish}|${c.bearish}|${c.bullStrength}|${c.bearStrength}"
+
+    /** The verdict of an entry the brain or a reaction paused. */
+    const val PAUSED = "paused_by_brain"
+
     /** One signal as read back from the lines. */
     data class Signal(
         val id: String, val epochSec: Long, val key: String, val underlying: String, val side: Int, val live: Boolean,
@@ -158,6 +173,11 @@ object FlowShadow {
         var flags: List<String> = emptyList(),
         /** The auction and gamma context at the signal ([CONTEXT_FIELDS] to their logged text; empty for older lines). */
         var context: Map<String, String> = emptyMap(),
+        /** The pause that skipped it (null: none), and the SHADOW causes that would have (10 Oct). */
+        var paused: String? = null,
+        var wouldPause: List<String> = emptyList(),
+        /** The findings' consensus at it: bullish and bearish counts (null: not logged). */
+        var consensus: Pair<Int, Int>? = null,
     ) {
         val taken: Boolean get() = verdict?.startsWith("entered") == true || orderId != null
     }
@@ -181,6 +201,14 @@ object FlowShadow {
                 "O" -> out[f.getOrNull(1)]?.let { it.orderId = f.getOrNull(2) }
                 "R" -> out[f.getOrNull(1)]?.let { it.net = f.getOrNull(2)?.toDoubleOrNull() }
                 "M" -> out[f.getOrNull(1)]?.let { it.m15 = f.getOrNull(2)?.toDoubleOrNull(); it.m30 = f.getOrNull(3)?.toDoubleOrNull() }
+                "B" -> out[f.getOrNull(1)]?.let { s ->
+                    s.paused = f.getOrNull(2)?.takeIf { it.isNotEmpty() }
+                    s.wouldPause = f.getOrNull(3)?.split(',')?.filter { it.isNotEmpty() }.orEmpty()
+                }
+                "C" -> out[f.getOrNull(1)]?.let { s ->
+                    val b = f.getOrNull(2)?.toIntOrNull(); val r = f.getOrNull(3)?.toIntOrNull()
+                    s.consensus = if (b != null && r != null) b to r else null
+                }
             }
         }
         return out.values.toList()
@@ -211,6 +239,28 @@ object FlowShadow {
         }
         Record(k, list.size, list.count { it.skipped }, w, a, u)
     }.sortedBy { r -> STRATEGIES.indexOfFirst { it.key == r.key }.let { if (it < 0) Int.MAX_VALUE else it } }
+
+    /**
+     * One SHADOW pause cause's effect on one strategy so far: the signals it would have paused ([would]) against the rest
+     * ([rest]) - their closed paper trades and their 30-minute moves. A pause that helps shows worse results in [would].
+     */
+    data class PauseEffect(val key: String, val cause: String, val would: Tally, val rest: Tally)
+
+    fun pauseEffects(signals: List<Signal>): List<PauseEffect> = signals.groupBy { it.key }.flatMap { (k, list) ->
+        list.flatMap { it.wouldPause }.distinct().sorted().map { c ->
+            var w = Tally(); var r = Tally()
+            for (s in list) if (c in s.wouldPause) w += s else r += s
+            PauseEffect(k, c, w, r)
+        }
+    }
+
+    /** "ORB, trap alerts: would have paused signals with 2 trades, 0% won, -Rs 900; the rest 3 trades, ... (too few to judge)". */
+    fun pauseLine(e: PauseEffect): String {
+        val cause = MarketBrain.Cause.entries.firstOrNull { it.key == e.cause }?.words
+            ?: Findings.Reaction.entries.firstOrNull { it.key == e.cause }?.let { "findings: ${it.key}" } ?: e.cause
+        return "${strategy(e.key)?.label ?: e.key}, $cause: would have paused signals with ${tallyWords(e.would)}; the rest ${tallyWords(e.rest)}" +
+            if (e.would.trades < 20) " (too few to judge)" else ""
+    }
 
     private fun rs(x: Double) = (if (x < 0) "−Rs " else "+Rs ") + "%,.0f".format(Locale.ENGLISH, abs(x))
 
