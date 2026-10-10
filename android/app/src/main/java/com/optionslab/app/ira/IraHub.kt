@@ -3768,7 +3768,10 @@ object IraHub {
         }
         // "How is the trade manager doing?", "why did Solo exit early?" (10 Oct): its record per strategy against the original
         // rules, and the newest early exit with its evidence and the lock ([com.optionslab.ira.TradeManager]; memory only).
-        // Nothing acts. Not in IraGoldAlgo.
+        // Its specialists too: "which specialist made Solo exit?", "how are the manager's specialists doing?", "mute the OI
+        // specialist for Pine" (a mute only moves the manager back toward the original rules, so no PIN; an un-mute where the
+        // manager acts on live trades is refused by voice and needs the PIN in the sheet). No order, no mode, no PIN, lock,
+        // Live or AI-live setting changes here. Not in IraGoldAlgo.
         val managerAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.TradeManager.asked(q) }.getOrNull() else null
         if (managerAsk != null) {

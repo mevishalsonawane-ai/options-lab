@@ -3,6 +3,7 @@ package com.optionslab.app.data
 import android.content.Context
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.Findings
+import com.optionslab.ira.ManagerTeam
 import com.optionslab.ira.TradeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,7 @@ object TradeManagerHost {
     fun init(context: Context) {
         appContext = context.applicationContext
         scope.launch { runCatching { ensureLoaded(); load() } }
+        runCatching { ManagerSpecialists.init(context) }
         subscribe()
     }
 
@@ -60,7 +62,7 @@ object TradeManagerHost {
         subscribed = true
         runCatching {
             SmartWorkers.bus.subscribe(Findings.Sub(emptySet(), emptySet()) { f ->
-                if (f.who != TradeManager.WHO && live.isNotEmpty() &&
+                if (!f.who.startsWith(TradeManager.WHO) && live.isNotEmpty() &&
                     live.values.any { f.instrument == Findings.ALL || it.reg.trade.underlying.equals(f.instrument, ignoreCase = true) })
                     if (!testNoWake) scope.launch { runCatching { onLook() } }
             })
@@ -129,8 +131,11 @@ object TradeManagerHost {
         val wake: (suspend () -> Unit)? = null,
     )
 
-    private class Live(@Volatile var reg: Registration, @Volatile var state: TradeManager.State, @Volatile var pendingExit: String? = null,
-                       @Volatile var high: Double? = null, @Volatile var atr: Double? = null, @Volatile var noteLock: Double? = null)
+    /** One followed trade: its registration, its team's memory ([team]: the manager's state, each specialist's hold and vote). */
+    private class Live(@Volatile var reg: Registration, @Volatile var team: ManagerTeam.TeamState, @Volatile var pendingExit: String? = null,
+                       @Volatile var high: Double? = null, @Volatile var atr: Double? = null, @Volatile var noteLock: Double? = null) {
+        val state: TradeManager.State get() = team.core
+    }
 
     private val live = ConcurrentHashMap<String, Live>()
     private val recs = LinkedHashMap<String, TradeManager.Record>()
@@ -159,7 +164,7 @@ object TradeManagerHost {
             if (existing == null) s else s.copy(target = existing.target ?: s.target, lock = existing.lock, extensions = existing.extensions,
                 exited = existing.notes.any { it.kind == TradeManager.EXIT_EARLY || it.kind == TradeManager.LOCK_NOTE })
         }
-        live[t.tradeId] = Live(r, st, existing?.notes?.lastOrNull { it.acted && (it.kind == TradeManager.EXIT_EARLY || it.kind == TradeManager.LOCK_NOTE) }
+        live[t.tradeId] = Live(r, ManagerTeam.resume(st), existing?.notes?.lastOrNull { it.acted && (it.kind == TradeManager.EXIT_EARLY || it.kind == TradeManager.LOCK_NOTE) }
             ?.takeIf { mode == TradeManager.Mode.ACT }?.words)
         if (existing == null) {
             synchronized(recs) { recs[t.tradeId] = TradeManager.Record(t, mode) }
@@ -197,12 +202,14 @@ object TradeManagerHost {
             recs[tradeId] = TradeManager.closed(r, TradeManager.Exit(atMs, price, why.take(80)))
         }
         if (l != null) l.pendingExit = null
+        runCatching { ManagerSpecialists.dropView(tradeId) }
         publish(); dirty()
     }
 
     /** A trade let go with no result (closed outside, no price): its record is dropped (it compares nothing). */
     fun drop(tradeId: String) {
         live.remove(tradeId)
+        runCatching { ManagerSpecialists.dropView(tradeId) }
         val gone = synchronized(recs) { recs[tradeId]?.takeIf { it.actual == null }?.let { recs.remove(tradeId) } }
         if (gone != null) { publish(); dirty() }
     }
@@ -285,6 +292,9 @@ object TradeManagerHost {
         val auc = runCatching { OrderFlowLive.auction.value[u] }.getOrNull()
         val vixNow = runCatching { MoveRecorder.vixAt(now / 1000) }.getOrNull()
         val vix5 = runCatching { MoveRecorder.vixAt(now / 1000 - 300) }.getOrNull()
+        // The gamma regime under Boss's convention, while fresh (memory only).
+        val gex = runCatching { GammaLive.state.value[u]?.takeIf { now - it.atMs <= 15 * 60_000L } }.getOrNull()
+        val conv = runCatching { GammaLive.convention.value }.getOrNull()
         return TradeManager.Snapshot(
             atMs = now, premium = runCatching { l.reg.premium() }.getOrNull(), premiumHigh = l.high, premiumAtr = l.atr,
             underlyingPrice = runCatching { l.reg.underlyingPrice?.invoke() }.getOrNull(),
@@ -293,6 +303,9 @@ object TradeManagerHost {
             vixChangePct = if (vixNow != null && vix5 != null && vix5 > 0) (vixNow / vix5 - 1) * 100 else null,
             brain = runCatching { SmartWorkers.brain.value }.getOrNull(),
             findings = runCatching { SmartWorkers.bus.recent(now, u) }.getOrDefault(emptyList()),
+            poc = auc?.today?.poc, hvns = auc?.today?.hvns.orEmpty(), lvns = auc?.today?.lvns.orEmpty(),
+            minuteVolumes = auc?.vols.orEmpty(),
+            gammaNet = if (gex != null && conv != null) gex.net(conv) else null, zeroGamma = gex?.zeroGamma,
         )
     }
 
@@ -320,11 +333,18 @@ object TradeManagerHost {
             // Closed: the manager's way in SHADOW may still be open (an extension the real trade never had) - settled from bars.
             return
         }
+        // Out already (the strategy has not closed it yet): nothing more to decide, and the last look stays on show.
+        if (l.state.exited) return
         val t = l.reg.trade
         val s = snapshot(l, now)
-        val step = TradeManager.decide(t, s, l.state)
-        l.state = step.state
         val act = r0.mode == TradeManager.Mode.ACT
+        // The committee: LIVE trades the manager acts on use the frozen weights; SHADOW and paper the self-tuned ones (memory only).
+        val frozen = act && t.account == TradeManager.Account.LIVE
+        val step = ManagerTeam.decide(t, s, l.team, ManagerSpecialists.configFor(t.family, frozen))
+        l.team = step.state
+        runCatching { ManagerSpecialists.observe(id, t, step, now, frozen) }
+        val lead = step.lead?.specialist
+        val voters = step.voters
         val px = s.premium
         when (val d = step.decision) {
             is TradeManager.Decision.Hold -> {}
@@ -334,8 +354,8 @@ object TradeManagerHost {
                 // Said when it first trails and then on each rise of 1% of the entry or more (not a line a second).
                 if (was == null || d.newStop >= was + maxOf(0.01 * t.entry, t.caps.tick)) {
                     l.noteLock = d.newStop
-                    note(id, TradeManager.Note(now, TradeManager.TRAIL_NOTE, "lock", "lock trailed to ${TradeManager.lv(d.newStop)} (best ${TradeManager.lv(step.state.peak)})",
-                        px, act, mapOf("lock" to d.newStop, "peak" to step.state.peak), lock = d.newStop))
+                    note(id, TradeManager.Note(now, TradeManager.TRAIL_NOTE, "lock", "lock trailed to ${TradeManager.lv(d.newStop)} (best ${TradeManager.lv(step.state.core.peak)})",
+                        px, act, mapOf("lock" to d.newStop, "peak" to step.state.core.peak), lock = d.newStop, lead = lead, voters = voters))
                 }
                 if (act) wake(l)
             }
@@ -343,7 +363,8 @@ object TradeManagerHost {
                 val lockHit = d.rule == TradeManager.Rule.LOCK
                 val words = if (lockHit) "profit lock hit" else TradeManager.short(d.rule, t.side)
                 val kind = if (lockHit) TradeManager.LOCK_NOTE else TradeManager.EXIT_EARLY
-                note(id, TradeManager.Note(now, kind, d.rule.key, "$words (${d.reason})", px, act, d.evidence, lock = step.state.lock))
+                note(id, TradeManager.Note(now, kind, d.rule.key, "$words (${d.reason})", px, act, d.evidence, lock = step.state.core.lock,
+                    lead = if (lockHit) null else lead, voters = if (lockHit) emptyList() else voters))
                 update(id) { r ->
                     var x = r.copy(actedAtMs = r.actedAtMs ?: now)
                     if (!act && px != null) x = x.copy(manager = TradeManager.Exit(now, px, if (lockHit) "LOCK" else "EARLY: ${d.rule.key}"))
@@ -353,15 +374,15 @@ object TradeManagerHost {
                 if (act) {
                     l.pendingExit = if (lockHit) "the trade manager's profit lock" else "the trade manager: $words"
                     wake(l)
-                    post(t, "$who exited early: $words" + if (lockHit) " (lock ${TradeManager.lv(step.state.lock ?: 0.0)})" else "")
+                    post(t, "$who exited early: $words" + if (lockHit) " (lock ${TradeManager.lv(step.state.core.lock ?: 0.0)})" else "")
                 } else post(t, "$who would have exited early (shadow): $words")
             }
             is TradeManager.Decision.Extend -> {
                 note(id, TradeManager.Note(now, TradeManager.EXTEND_NOTE, TradeManager.Rule.EXTEND.key,
                     "target ${TradeManager.lv(d.newTarget)}, lock ${TradeManager.lv(d.newStop)} (${d.reason})", px, act, d.evidence,
-                    target = d.newTarget, lock = d.newStop))
+                    target = d.newTarget, lock = d.newStop, lead = lead, voters = voters))
                 l.noteLock = d.newStop
-                update(id) { it.copy(target = d.newTarget, lock = d.newStop, extensions = step.state.extensions, actedAtMs = it.actedAtMs ?: now) }
+                update(id) { it.copy(target = d.newTarget, lock = d.newStop, extensions = step.state.core.extensions, actedAtMs = it.actedAtMs ?: now) }
                 val who = TradeManager.familyName(t.family)
                 if (act) {
                     wake(l)
@@ -440,7 +461,7 @@ object TradeManagerHost {
                     publish(); dirty()
                     x.vsOriginal?.let { v -> runCatching { Diag.record("trade manager", "${t.label}: settled, ${TradeManager.rs(v)} against the original rules") } }
                 }
-                if (x.settled || now > t.caps.squareOffMs + 30 * 60_000L) live.remove(id)
+                if (x.settled || now > t.caps.squareOffMs + 30 * 60_000L) { live.remove(id); runCatching { ManagerSpecialists.dropView(id) } }
             }
         } finally { settling.set(false) }
     }
@@ -451,6 +472,7 @@ object TradeManagerHost {
 
     /** Jarvis: "how is the trade manager doing?" / "why did Solo exit early?". */
     fun answer(a: TradeManager.Ask): String {
+        if (a.team != null) return ManagerSpecialists.answer(a)
         val rs = _records.value
         return if (a.why) TradeManager.answerWhy(a.family, rs) { SmartWorkers.hhmm(it) } else TradeManager.answerStatus(rs, _policy.value)
     }
@@ -458,7 +480,8 @@ object TradeManagerHost {
     /** The diagnostics' lines. */
     fun diagLines(): List<String> = listOf("Trade manager modes: " + TradeManager.FAMILIES.map { it.key }.joinToString("; ") { f ->
         "${TradeManager.familyName(f)} paper ${_policy.value.mode(f, TradeManager.Account.PAPER).name}, live ${_policy.value.mode(f, TradeManager.Account.LIVE).name}"
-    }) + recordLines().map { "Trade manager: $it" } + live.keys.map { "Trade manager follows $it" }
+    }) + recordLines().map { "Trade manager: $it" } + live.keys.map { "Trade manager follows $it" } +
+        runCatching { ManagerSpecialists.diagLines() }.getOrDefault(emptyList())
 
     // ---- the file --------------------------------------------------------------------------------------------------------------
 
@@ -519,6 +542,7 @@ object TradeManagerHost {
         o.put("notes", JSONArray().apply {
             for (n in r.notes) put(JSONObject().put("at", n.atMs).put("k", n.kind).put("r", n.rule).put("w", n.words).put("a", n.acted)
                 .apply { n.premium?.takeIf { it.isFinite() }?.let { put("px", it) }; n.target?.let { put("tg", it) }; n.lock?.let { put("lk", it) }
+                    n.lead?.let { put("ld", it) }; if (n.voters.isNotEmpty()) put("vt", JSONArray(n.voters))
                     put("ev", JSONObject().apply { n.evidence.forEach { (k, v) -> if (v.isFinite()) put(k, v) } }) })
         })
         return o
@@ -531,11 +555,19 @@ object TradeManagerHost {
             TradeManager.Account.valueOf(o.getString("acct")), o.getLong("ems"), o.optDouble("chg", 0.0), dn(o, "su"), dn(o, "eu"))
         val notes = o.optJSONArray("notes")?.let { a -> (0 until a.length()).map { i -> a.getJSONObject(i).let { n ->
             val ev = n.optJSONObject("ev")?.let { e -> e.keys().asSequence().associateWith { k -> e.getDouble(k) } }.orEmpty()
-            TradeManager.Note(n.getLong("at"), n.getString("k"), n.getString("r"), n.getString("w"), dn(n, "px"), n.getBoolean("a"), ev, dn(n, "tg"), dn(n, "lk"))
+            val vt = n.optJSONArray("vt")?.let { v -> (0 until v.length()).map { v.getString(it) } }.orEmpty()
+            TradeManager.Note(n.getLong("at"), n.getString("k"), n.getString("r"), n.getString("w"), dn(n, "px"), n.getBoolean("a"), ev, dn(n, "tg"), dn(n, "lk"),
+                if (n.has("ld") && !n.isNull("ld")) n.getString("ld") else null, vt)
         } } }.orEmpty()
         return TradeManager.Record(t, TradeManager.Mode.valueOf(o.getString("mode")), notes, dn(o, "tg"), dn(o, "lk"), o.optInt("ext", 0),
             decExit(o.optJSONObject("actual")), decExit(o.optJSONObject("mgr")), decExit(o.optJSONObject("orig")),
             if (o.has("acted")) o.getLong("acted") else null)
+    }
+
+    /** TEST ONLY: the records as given (none followed). */
+    internal fun recordsForTest(rs: List<TradeManager.Record>) {
+        synchronized(recs) { recs.clear(); for (r in rs) recs[r.trade.tradeId] = r }
+        publish()
     }
 
     /** TEST ONLY: nothing followed, recorded or set (in memory). */
@@ -543,6 +575,7 @@ object TradeManagerHost {
         live.clear(); synchronized(recs) { recs.clear() }; publish()
         _policy.value = TradeManager.Policy(); policyLoaded = true; loaded = true
         lastEval = 0L; minuteSettled = -1L
+        ManagerSpecialists.resetForTest()
         if (com.optionslab.app.BuildConfig.DEBUG) { testSnapshot = null; testBars = null; testNoWake = false }
     }
 }

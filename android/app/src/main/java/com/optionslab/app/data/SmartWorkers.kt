@@ -373,6 +373,8 @@ object SmartWorkers {
         if (now - closedAt > 30_000L) { closedAt = now; runCatching { postExits(today) } }
         if (now - flushedAt > 30_000L) { flushedAt = now; runCatching { flushFindings(context, today) } }
         runCatching { reviewIfDue(context) }
+        // The trade manager's specialists: their nightly report cards and slow self-tuning (paper and shadow only), once a day.
+        runCatching { ManagerSpecialists.reviewIfDue() }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */
