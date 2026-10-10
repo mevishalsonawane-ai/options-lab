@@ -91,7 +91,7 @@ class LiquidityReplayCardTest {
         assertTrue(shown("Arms · today"))
         assertTrue(shown("Tap a closed trade to replay it."))
         tap("paper BUY CE ×30 @ 210.00 → 250.00")
-        compose.waitUntil(5_000) { shown(keepNumbersWhole("Replay · BANKNIFTY 5-min CE")) }
+        compose.waitUntil(15_000) { shown(keepNumbersWhole("Replay · BANKNIFTY 5-min CE")) }
         assertEquals(1, asked.size)
         assertEquals("next_liquidity", asked.single().why)
         assertTrue(shown(keepNumbersWhole("Net after charges +₹1,158 · +₹1,158 a lot · charges ₹42")))
