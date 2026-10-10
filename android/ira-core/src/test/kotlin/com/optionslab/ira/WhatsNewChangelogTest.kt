@@ -49,27 +49,28 @@ class WhatsNewChangelogTest {
             assertTrue(want in ids, want)
         // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
         // the day; the first one closes.
-        assertEquals("2026-10-10-findings-bus", WhatsNew.ENTRIES.first().id)
-        assertEquals("2026-10-10-smart-workers", WhatsNew.ENTRIES[1].id)
-        assertEquals("2026-10-10-parallel-workers", WhatsNew.ENTRIES[2].id)
-        assertEquals("2026-10-09-big-move-recorder", WhatsNew.ENTRIES[3].id)
-        assertEquals("2026-10-09-fno-to-1540", WhatsNew.ENTRIES[4].id)
-        assertEquals("2026-10-09-order-flow-auction", WhatsNew.ENTRIES[5].id)
-        assertEquals("2026-10-09-order-flow", WhatsNew.ENTRIES[6].id)
-        assertEquals("2026-10-09-live-prices-everywhere", WhatsNew.ENTRIES[7].id)
-        assertEquals("2026-10-09-strategies-to-research", WhatsNew.ENTRIES[8].id)
-        assertEquals("2026-10-09-order-speed", WhatsNew.ENTRIES[9].id)
-        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES[10].id)
-        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[11].id)
-        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[12].id)
-        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[13].id)
-        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[14].id)
-        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[15].id)
-        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[16].id)
-        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[17].id)
-        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[18].id)
-        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[19].id)
-        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[20].id)
+        assertEquals("2026-10-10-trade-manager", WhatsNew.ENTRIES.first().id)
+        assertEquals("2026-10-10-findings-bus", WhatsNew.ENTRIES[1].id)
+        assertEquals("2026-10-10-smart-workers", WhatsNew.ENTRIES[2].id)
+        assertEquals("2026-10-10-parallel-workers", WhatsNew.ENTRIES[3].id)
+        assertEquals("2026-10-09-big-move-recorder", WhatsNew.ENTRIES[4].id)
+        assertEquals("2026-10-09-fno-to-1540", WhatsNew.ENTRIES[5].id)
+        assertEquals("2026-10-09-order-flow-auction", WhatsNew.ENTRIES[6].id)
+        assertEquals("2026-10-09-order-flow", WhatsNew.ENTRIES[7].id)
+        assertEquals("2026-10-09-live-prices-everywhere", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-09-strategies-to-research", WhatsNew.ENTRIES[9].id)
+        assertEquals("2026-10-09-order-speed", WhatsNew.ENTRIES[10].id)
+        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES[11].id)
+        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[12].id)
+        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[13].id)
+        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[14].id)
+        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[15].id)
+        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[16].id)
+        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[17].id)
+        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[18].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[19].id)
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[20].id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[21].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
@@ -90,6 +91,16 @@ class WhatsNewChangelogTest {
             assertTrue(w in x.what, w)
         assertTrue("Order speed" in x.where && "diagnostics" in x.where, x.where)
         assertNull(x.ask)
+    }
+
+    @Test fun theTradeManagerIsSaidPlainlyWithItsSafety() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-10-trade-manager" }
+        for (w in listOf("exits early", "lock at breakeven plus charges", "never down", "never adds lots", "never widens a stop",
+            "acts on paper", "only records until you switch it on with your PIN", "what the original rules would have done",
+            "Every other strategy only records", "a hint, never a switch"))
+            assertTrue(w in x.what, w)
+        assertEquals(TradeManager.Ask(false, null), TradeManager.asked(x.ask!!))
+        assertTrue("Trade manager record" in x.where)
     }
 
     @Test fun theSmartWorkersAndTheFindingsAreSaidPlainlyWithTheirSafety() {
@@ -286,7 +297,7 @@ class WhatsNewChangelogTest {
 
     @Test fun eachQuestionToTryIsAnsweredByItsOwnFeature() {
         val audit = CoverageTest()
-        val want = mapOf("what are the bots saying about banknifty" to "Findings", "how are my strategies doing vs backtest" to "ForwardWatch",
+        val want = mapOf("how is the trade manager doing" to "TradeManager", "what are the bots saying about banknifty" to "Findings","how are my strategies doing vs backtest" to "ForwardWatch",
             "why did banknifty jump at 10:32" to "MoveEvents", "what's the volume profile on banknifty" to "OrderFlow", "what is the order flow on banknifty" to "OrderFlow","what did Solo do today" to "SoloDay", "why no liquidity trade today" to "LiquidityWhyNot",
             "what's the plan for tomorrow" to "TomorrowPlan", "how did liquidity do this week" to "LiquidityRecord",
             "explain my bots' trades today" to "BotTrades", "weekly review" to "WeeklyReview", "where are the liquidity levels" to "LiquidityMap",
@@ -380,13 +391,13 @@ class WhatsNewChangelogTest {
         assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
         val oct10 = WhatsNew.day(WhatsNew.ENTRIES[0].date)
-        assertEquals("• The bots share what they find ($oct10): try \"what are the bots saying about banknifty\".", lines[1])
-        assertEquals("• Smarter bots: they wake, heal and check themselves ($oct10): try \"how are my strategies doing vs backtest\".", lines[2])
-        assertEquals("• The watch works on many things at once ($oct10): Settings → Zerodha → Order speed, and Copy diagnostics.", lines[3])
-        val oct9 = WhatsNew.day(WhatsNew.ENTRIES[3].date)
-        assertEquals("• Big moves saved, second by second ($oct9): try \"why did banknifty jump at 10:32\".", lines[4])
-        assertEquals("• F&O trades to 15:40 ($oct9): Home's market status, the order forms and the market watch.", lines[5])
-        assertEquals("• Volume profile, gamma regime, heatmap and tape ($oct9): try \"what's the volume profile on banknifty\".", lines[6])
+        assertEquals("• Solo and Pine manage their open trades ($oct10): try \"how is the trade manager doing\".", lines[1])
+        assertEquals("• The bots share what they find ($oct10): try \"what are the bots saying about banknifty\".", lines[2])
+        assertEquals("• Smarter bots: they wake, heal and check themselves ($oct10): try \"how are my strategies doing vs backtest\".", lines[3])
+        assertEquals("• The watch works on many things at once ($oct10): Settings → Zerodha → Order speed, and Copy diagnostics.", lines[4])
+        val oct9 = WhatsNew.day(WhatsNew.ENTRIES[4].date)
+        assertEquals("• Big moves saved, second by second ($oct9): try \"why did banknifty jump at 10:32\".", lines[5])
+        assertEquals("• F&O trades to 15:40 ($oct9): Home's market status, the order forms and the market watch.", lines[6])
 
 
         assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())

@@ -52,6 +52,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-10-trade-manager", OCT10, "Solo and Pine manage their open trades",
+            "After a fill, a trade manager watches the trade with the live order flow, VWAP, value area and findings. " +
+                "It exits early when sellers or buyers take over, a trap turns against it, or news is about to start. " +
+                "It moves the target out only with a lock at breakeven plus charges or better. " +
+                "That lock rises on each move and trails new highs at half the open profit, never down. " +
+                "It never adds lots and never widens a stop. " +
+                "It acts on paper; on live it only records until you switch it on with your PIN. " +
+                "Its record compares every trade with what the original rules would have done. " +
+                "Every other strategy only records until its record proves it; the record then says ready, a hint, never a switch.",
+            "Home → Dashboard → Strategies card → Trade manager record, and the Solo and Pine trade cards",
+            ask = "how is the trade manager doing"),
         Entry("2026-10-10-findings-bus", OCT10, "The bots share what they find",
             "Each strategy and checker posts what it finds: a sweep, a break, a pull, a stop hit, a big move. " +
                 "Home shows each index's view: how many findings lean up and how many lean down. " +
