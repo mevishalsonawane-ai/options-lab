@@ -7,7 +7,6 @@ import com.optionslab.engine.sandbox.SandboxCosts
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -31,6 +30,9 @@ object TradeBook {
     // ---- Zerodha trades, kept day after day -------------------------------------------------
 
     private var liveCache: MutableList<Broker.Trade>? = null
+
+    /** Moves on every change to the kept Zerodha trades (a fill recorded, a wipe): what [liveChargesOn]'s kept figure is keyed on. */
+    @Volatile private var liveGen = 0L
 
     /**
      * The kept Zerodha trades. No file yet: empty (and kept). A vault that cannot be read (a Keystore failure, a damaged
@@ -71,6 +73,7 @@ object TradeBook {
         keep.forEach { t -> a.put(JSONArray().put(t.id).put(t.orderId).put(t.symbol).put(t.exchange).put(t.side).put(t.qty).put(t.price).put(t.product).put(t.at)) }
         Vault.writeFile(liveFile, a.toString().toByteArray(Charsets.UTF_8))
         liveCache = keep.toMutableList()
+        liveGen++
     }
 
     private fun kiteTime(s: String): LocalDateTime? = runCatching { LocalDateTime.parse(s.trim().replace(' ', 'T').take(19)) }.getOrNull()
@@ -79,16 +82,33 @@ object TradeBook {
 
     fun fills(live: Boolean): List<RoundTrips.Fill> = if (live) liveFills(liveSnapshot()) else paperFills(Paper.state.trades)
 
+    /** A fill with the exchange and product it was traded on ("NSE", "MIS"); blank for the paper account's (options). */
+    class Leg(val fill: RoundTrips.Fill, val exchange: String, val product: String)
+
+    /**
+     * [fills] with each one's exchange and product, as "why are my charges so high" prices them on their own schedule
+     * (a share bought under MIS is a same-day trade, as [liveCharges] prices it). Paper: blank (the option schedule).
+     */
+    fun legs(live: Boolean): List<Leg> {
+        if (!live) return paperFills(Paper.state.trades).map { Leg(it, "", "") }
+        val trades = liveSnapshot()
+        val byId = trades.associateBy { "kite:${it.id}" }
+        return liveFills(trades).map { f -> val t = byId[f.id]; Leg(f, t?.exchange.orEmpty(), t?.product.orEmpty()) }
+    }
+
     /** A copy of the Zerodha trades taken under the lock ([recordLive] adds to the kept list in place). */
     @Synchronized
     private fun liveSnapshot(): List<Broker.Trade> = ArrayList(liveTrades())
 
-    private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> =
-        trades.mapNotNull { t ->
-            val at = kiteTime(t.at) ?: return@mapNotNull null
+    private fun liveFills(trades: List<Broker.Trade>): List<RoundTrips.Fill> {
+        // Zerodha's Rs 20 is per order, not per fill: an order that filled in pieces pays it once ([PnlCharges.perFill]).
+        val timed = trades.mapNotNull { t -> kiteTime(t.at)?.let { t to it } }.sortedBy { it.second }
+        val costs = com.optionslab.ira.PnlCharges.perFill(timed.map { (t, at) -> chargeFill(t, at.toLocalDate().toString()) })
+        return timed.mapIndexed { i, (t, at) ->
             RoundTrips.Fill("kite:${t.id}", "kite:${t.orderId}", t.symbol, if (t.side == "BUY") 1 else -1, t.qty, t.price, at,
-                SandboxCosts.charge(t.side, BigDecimal(t.price), t.qty).toDouble())
+                Math.round(costs[i].values.sum() * 100) / 100.0)
         }
+    }
 
     private fun paperFills(trades: List<com.optionslab.engine.sandbox.Trade>): List<RoundTrips.Fill> =
         trades.map { t ->
@@ -117,7 +137,7 @@ object TradeBook {
     fun ownerOf(trip: RoundTrips.Trip, owners: Map<String, String>): String {
         val label = trip.openOrderIds.firstNotNullOfOrNull { owners[it] } ?: owners[trip.closeOrderId]?.takeIf { !it.startsWith("Protection") }
         // A Liquidity 15+5 book's own name ("Liquidity 5m FINNIFTY") is that one arm's (ArmOwners): one row, all its trades.
-        return label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { com.optionslab.ira.ArmOwners.arm(it) } ?: "Manual"
+        return com.optionslab.ira.Charges.owner(label)
     }
 
     /** Realised P&L per day for one strategy (the calendar's filter): before charges, with the day's charges beside it. */
@@ -131,28 +151,69 @@ object TradeBook {
      * charges report): the "Charges ≈ ₹X (estimate)" line under a Zerodha P&L. Pure: no vault read (safe on the main thread).
      */
     fun liveCharges(trades: List<Broker.Trade>): Double =
-        com.optionslab.ira.PnlCharges.estimate(trades.map { com.optionslab.ira.PnlCharges.Fill(it.side, it.price, it.qty) })
+        com.optionslab.ira.PnlCharges.estimate(trades.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
+
+    /** A Zerodha trade as the charges estimate reads it: its own schedule (option, future, shares held or same-day). */
+    private fun chargeFill(t: Broker.Trade, day: String) =
+        com.optionslab.ira.PnlCharges.Fill(t.side, t.price, t.qty, t.orderId, t.symbol, t.exchange, t.product, day)
 
     /**
      * Zerodha's estimated charges on [day] from the trades kept here, or null when none are kept for it (or the book could
      * not be read). Reads the vault: never on the main thread.
      */
     fun liveChargesOn(day: LocalDate): Double? = runCatching {
-        liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.takeIf { it.isNotEmpty() }?.let { liveCharges(it) }
+        // Battery, round 14: the order watch asks every pass (once a minute in market hours); the book is copied and
+        // every kept fill's time parsed only when a fill was recorded since, or the day turned ([com.optionslab.ira.DayKept]).
+        // The generation is read before the snapshot, so a fill recorded meanwhile is made again on the next ask.
+        val gen = liveGen
+        dayCharges.of(day.toString(), gen) {
+            liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.takeIf { it.isNotEmpty() }?.let { liveCharges(it) }
+        }
     }.getOrNull()
+
+    private val dayCharges = com.optionslab.ira.DayKept<Double?>()
+
+    /**
+     * Zerodha's EXACT charges for [day] ([ZerodhaCharges]) when the answer kept for it covers every order the day's kept
+     * trades belong to, or null (none asked yet, a fill since, or the book could not be read): the words beside the
+     * watch's and the wrap-up's P&L say it in place of [liveChargesOn]'s estimate. Never asks Zerodha. Reads the vault
+     * (only when a fill was recorded since, as [liveChargesOn]): never on the main thread.
+     */
+    fun exactChargesOn(day: LocalDate): Double? = runCatching {
+        val gen = liveGen
+        val ids = dayOrderIds.of(day.toString(), gen) {
+            liveSnapshot().filter { kiteTime(it.at)?.toLocalDate() == day }.map { it.orderId }.toSet()
+        }
+        ZerodhaCharges.keptCovering(day, ids)
+    }.getOrNull()
+
+    private val dayOrderIds = com.optionslab.ira.DayKept<Set<String>>()
 
     /** Charges paid in [month], line by line. */
     fun charges(live: Boolean, month: YearMonth): Map<String, Double> {
         val out = LinkedHashMap<String, Double>()
-        if (live) liveTrades().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month } == true }.forEach { t ->
-            SandboxCosts.breakdown(t.side, t.price, t.qty).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
+        if (live) {
+            val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month } == true }
+            com.optionslab.ira.PnlCharges.perFill(inMonth.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
+                .forEach { m -> m.forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v } }
         } else Paper.state.trades.filter { YearMonth.from(it.timestamp) == month }.forEach { t ->
-            SandboxCosts.breakdown(t.action, t.price.toDouble(), t.quantity).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
+            SandboxCosts.breakdown(t.action, t.price.toDouble(), t.quantity, t.exchange, t.symbol).forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v }
         }
         return out
     }
 
-    fun wipe() { liveCache = null; if (::liveFile.isInitialized) liveFile.delete() }
+    /**
+     * Forgets the kept Zerodha trades. Lock order: [liveChargesOn] holds [dayCharges]'s lock while it reads the book (this
+     * object's lock), so [dayCharges] - and [dayOrderIds], read the same way - is never touched while this object's lock
+     * is held - that was a deadlock (wipe: TradeBook then DayKept; liveChargesOn: DayKept then TradeBook). Bumping [liveGen] under the lock is what makes the
+     * kept figure stale (it is keyed on the generation); forgetting it after the lock is let go only frees it sooner.
+     */
+    fun wipe() {
+        synchronized(this) { liveCache = null; liveGen++; if (::liveFile.isInitialized) liveFile.delete() }
+        dayCharges.forget()
+        dayOrderIds.forget()
+        ZerodhaCharges.forget()
+    }
 }
 
 /**

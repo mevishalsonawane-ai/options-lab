@@ -185,7 +185,7 @@ object PreMarket {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")) + " "
+    private fun words(s: String) = Spaced.words(s)
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |please |ok |okay )*"
     private const val END = "( (today|now|this morning|for today|for the day|for the open))?( boss| jarvis| please)? $"

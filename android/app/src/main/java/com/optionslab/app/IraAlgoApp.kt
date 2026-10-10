@@ -75,14 +75,21 @@ class IraAlgoApp : Application() {
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)
+        removeOldMarketDataStore()
         Market.init(this)
         com.optionslab.app.data.Holidays.init(this)
+        com.optionslab.app.data.McxMarket.init(this)
         Broker.init(this)
         com.optionslab.app.data.StaticIp.init(this)
         com.optionslab.app.data.Paper.init(this)
         com.optionslab.app.data.History.init(this)
         com.optionslab.app.data.Strategies.init(this)
         com.optionslab.app.data.OrbArms.init(this)
+        com.optionslab.app.data.NightArm.init(this)
+        com.optionslab.app.data.VixDivArm.init(this)
+        com.optionslab.app.data.McxPaperArms.init(this)
+        com.optionslab.app.data.ShadowArms.init(this)
+        com.optionslab.app.data.MarketRecorder.init(this)
         com.optionslab.app.data.PineScripts.init(this)
         com.optionslab.app.data.PineAuto.init(this)
         com.optionslab.app.data.Protections.init(this)
@@ -90,6 +97,9 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
+        // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).
+        com.optionslab.app.data.FlowGate.init(this)
+        com.optionslab.app.data.OrderFlowLive.init(this)
         // The gold books and Jarvis's memory are decrypted on a background thread (Speed, round 2); every change to them
         // waits until they are read, so nothing is ever saved over them empty.
         timed("gold books") { com.optionslab.app.data.GoldBooks.init(this) }
@@ -113,5 +123,31 @@ class IraAlgoApp : Application() {
         Thread { runCatching { Jobs.scheduleAll(this) } }.start()
         com.optionslab.app.data.Speed.startMs = android.os.SystemClock.uptimeMillis() - startAt
         com.optionslab.app.data.Speed.startSlowest = slowest?.let { (n, ms) -> "$n $ms ms" }
+    }
+
+    /**
+     * Older versions could download market data from Dhan (and build a learned graph from it); the app now uses Zerodha only.
+     * What they left on this phone goes, off the main thread: the stored data and its import/pack folders, the learned graph,
+     * the Dhan client ID, access token and choices in the settings vault, any queued download/import/graph work, and the
+     * read grants kept on picked pack files (nothing else in the app keeps such grants). Each step is harmless when there is
+     * nothing to remove.
+     */
+    private fun removeOldMarketDataStore() {
+        val c = applicationContext
+        Thread {
+            runCatching { java.io.File(c.filesDir, "dhan").deleteRecursively() }
+            runCatching { java.io.File(c.filesDir, "dhan.import").deleteRecursively() }
+            runCatching { java.io.File(c.filesDir, "neuro").deleteRecursively() }
+            runCatching { java.io.File(c.cacheDir, "dhan-pack").deleteRecursively() }
+            runCatching {
+                val old = SecurePrefs.keys("dhan.")
+                if (old.isNotEmpty()) SecurePrefs.putAll(old.associateWith { null })
+            }
+            runCatching {
+                val wm = androidx.work.WorkManager.getInstance(c)
+                listOf("dhan.download.now", "dhan.download.auto", "dhan.import", "neuro.after", "neuro.full", "neuro.now")
+                    .forEach { runCatching { wm.cancelUniqueWork(it) } }
+            }
+        }.start()
     }
 }

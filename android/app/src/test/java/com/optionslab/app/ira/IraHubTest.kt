@@ -71,6 +71,7 @@ class IraHubTest : RobolectricTest() {
     @Test fun aBacktestIsOfferedAndApprovedAsAPaperArm() = runBlocking {
         IraHub.testLabBars = { _, _ -> twoYears }
         com.optionslab.app.data.PineScripts.init(context)
+        com.optionslab.app.data.PineScripts.wipe()       // a script another test approved would make this one a duplicate
         IraHub.testHistories = { sixty }
         IraHub.refresh()
         IraHub.ask("Backtest the breakout on BankNifty 15m")
@@ -84,10 +85,34 @@ class IraHubTest : RobolectricTest() {
         assertTrue(said, said.startsWith("Added"))
         val item = com.optionslab.app.data.PineScripts.items.value.single { it.name == p.result.name }
         assertTrue(item.auto.on); assertEquals("BANKNIFTY", item.auto.symbol); assertEquals("15m", item.auto.interval); assertEquals(1, item.auto.lots)
+        assertTrue("Jarvis's strategies carry the profit lock", item.auto.profitLock && item.auto.byJarvis)
+        // Boss's 06 Oct rule: a stop-loss and a target on every Pine strategy, Jarvis's too.
+        assertEquals(30.0, item.auto.stopPts, 0.0); assertEquals(60.0, item.auto.targetPts, 0.0)
         assertEquals(p.result.script, item.code)
         assertEquals(IraHub.Proposal.APPROVED, IraHub.state.value.proposals.single().status)
         assertEquals("Already approved.", IraHub.approve(p.id))
         assertEquals("That strategy is gone.", IraHub.approve(99))
+    }
+
+    @Test fun aStrategyAlreadySavedIsRefusedNotAddedTwice() = runBlocking {
+        // Boss's 06 Oct diagnostics: the same "Jarvis: ..." strategy was added again at 09:50 and every trade doubled.
+        IraHub.testLabBars = { _, _ -> twoYears }
+        com.optionslab.app.data.PineScripts.init(context)
+        com.optionslab.app.data.PineScripts.wipe()
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        IraHub.ask("Backtest the breakout on BankNifty 15m")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        // Already saved and armed: another header comment and layout, the same code, symbol and chart.
+        val earlier = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, p.result.name,
+            "// added at 09:50\n" + p.result.script.replace("\n", "\n\n")))
+        com.optionslab.app.data.PineScripts.setAuto(earlier.id, com.optionslab.app.data.PineScripts.Auto(on = true, symbol = "BANKNIFTY", interval = "15m"))
+        val said = IraHub.approve(p.id)
+        assertEquals("Not added: ${p.result.name} is already armed as #${earlier.id} (the same code, symbol and chart) - " +
+            "a second copy would double every trade.", said)
+        assertEquals("nothing added", 1, com.optionslab.app.data.PineScripts.items.value.size)
+        assertEquals(IraHub.Proposal.DISMISSED, IraHub.state.value.proposals.single().status)
     }
 
     @Test fun dismissedAndNothingToTest() = runBlocking {
@@ -443,15 +468,23 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("turn on the kill switch")
         waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
         val id = IraHub.state.value.pending.single()
-        assertEquals("Tap Confirm to turn the kill switch on (no new live positions).", IraHub.state.value.messages.last().text)
+        // The chat: one short line naming the request; its details and buttons are in the Requests panel.
+        assertEquals("New request: turn the kill switch on (no new live positions) — see Requests.", IraHub.state.value.messages.last().text)
+        val view = IraHub.requestsOf(IraHub.state.value).single()
+        assertEquals(id, view.id)
+        assertEquals("turn the kill switch on (no new live positions)", view.what)
+        assertTrue(view.lapsesAt!! > view.askedAt)
         assertTrue("nothing before Confirm", !com.optionslab.app.data.AppSettings.load().guardKill)
         IraHub.confirm(id)
         assertTrue(com.optionslab.app.data.AppSettings.load().guardKill)
         assertTrue(IraHub.state.value.messages.last().text.startsWith("Kill switch on"))
+        assertTrue("approved: gone from the panel", IraHub.requestsOf(IraHub.state.value).isEmpty())
+        assertEquals(com.optionslab.ira.Requests.Outcome.APPROVED, IraHub.recentRequests().value.first().outcome)
         IraHub.ask("alert me when nifty goes above 25000")
         waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
         IraHub.cancelAction(IraHub.state.value.pending.single())
         assertTrue(com.optionslab.app.data.Alarms.all().isEmpty())
+        assertEquals(com.optionslab.ira.Requests.Outcome.DECLINED, IraHub.recentRequests().value.first().outcome)
         IraHub.ask("set an alarm on banknifty below 51000")
         waitFor("the alarm confirm") { IraHub.state.value.pending.isNotEmpty() }
         IraHub.confirm(IraHub.state.value.pending.single())
@@ -462,7 +495,7 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("stop strategy 3")
         waitFor("the answer") { IraHub.state.value.messages.last().let { it.fromIra && it.text != "Kill switch off." } && IraHub.state.value.messages.dropLast(1).last().text == "stop strategy 3" }
         val ans = IraHub.state.value.messages.last()
-        assertTrue(ans.text, ans.text.startsWith("Tap Confirm to stop ") || ans.text.startsWith("There are no strategies or arms") || ans.text.startsWith("Which one?"))
+        assertTrue(ans.text, ans.text.startsWith("New request: stop ") || ans.text.startsWith("There are no strategies or arms") || ans.text.startsWith("Which one?"))
         ans.action?.let { IraHub.cancelAction(it) }
         Unit
     }
@@ -555,7 +588,7 @@ class IraHubTest : RobolectricTest() {
         // Boss, 4 Oct: paper until he switches "AI trades go live" on; even then only once proven, asked each time.
         assertTrue(IraNewsTrades.paperFirst)
         assertTrue(!IraNewsTrades.goesLive()); assertTrue(!IraNewsTrades.goesLive(solo = true))
-        assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper until 20"))
+        assertTrue(IraSolo.provenWhy()!!.startsWith("Solo's trades stay on paper always"))
         IraHub.ask("Jarvis, let your trades go live")
         waitFor("the refusal") { IraHub.state.value.messages.lastOrNull()?.fromIra == true }
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.contains("stay on paper until 20"))
@@ -570,6 +603,22 @@ class IraHubTest : RobolectricTest() {
         // Without a taught voice, voice cannot trade.
         assertTrue(!VoiceGuard.isBoss(null) && !VoiceGuard.isBoss(ShortArray(16_000)))
         assertTrue(VoiceGuard.blocked() != null)
+    }
+
+    @Test fun jarvisTradesTakeAThirtyPointStopAndASixtyTarget() {
+        // Boss, 06 Oct: every new Jarvis trade (paper or Zerodha) rests its stop 30 points under the fill, its target +60.
+        val (stop, target) = IraNewsTrades.protectionFor(100.0)
+        assertEquals(70.0, stop!!, 1e-9); assertEquals(160.0, target, 1e-9)
+        val (stop2, target2) = IraNewsTrades.protectionFor(212.37)
+        assertEquals(182.35, stop2!!, 1e-9); assertEquals(272.37, target2, 1e-9)
+        assertEquals(30.0, IraNewsTrades.STOP_POINTS, 0.0); assertEquals(60.0, IraNewsTrades.TARGET_POINTS, 0.0)
+        // The ladder runs on the target the trade was placed with: +60 now, +40 for one placed before (never changed).
+        val p = IraNewsTrades.Pos("NIFTY26OCT25000CE", false, 100.0, 75, 100.0, 70.0, "news: x", "2026-10-06", target = IraNewsTrades.TARGET_POINTS)
+        assertEquals(60.0, p.ladderPoints, 0.0)
+        assertEquals(40.0, p.copy(target = null).ladderPoints, 0.0)
+        // Sizing: one lot risks 30 points x the lot size.
+        assertEquals("Your risk per trade is smaller than one lot's stop risk (30 points x 75, about Rs 2,250.00): not placed.",
+            com.optionslab.ira.RiskSizing.tooSmall(75))
     }
 
     @Test fun jarvisSpeaksInANormalMaleVoiceByDefault() {
@@ -671,6 +720,12 @@ class IraHubTest : RobolectricTest() {
         com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(guardMaxLots = before.guardMaxLots))
     }
 
+    @Test fun switchingAPineProfitLockOffIsPolitelyRefused() = runBlocking {
+        IraHub.ask("switch off profit lock for ema crossover")
+        waitFor("the refusal") { IraHub.state.value.messages.let { ms -> ms.drop(ms.indexOfLast { !it.fromIra } + 1).any { it.fromIra && it.text.contains("06 Oct rule") } } }
+        assertTrue("nothing to confirm", IraHub.state.value.pending.isEmpty())
+    }
+
     @Test fun aChangeIsLoggedAndUndone() = runBlocking {
         val before = com.optionslab.app.data.AppSettings.load()
         IraHub.ask("set max open positions to 4")
@@ -682,7 +737,7 @@ class IraHubTest : RobolectricTest() {
         assertTrue(com.optionslab.app.data.SettingsLog.lines().any { it.contains("max open positions") })
         IraHub.ask("undo")
         waitFor("the undo confirm") { IraHub.state.value.pending.isNotEmpty() }
-        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Tap Confirm to undo: change max open positions from 4 to"))
+        assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("New request: undo: change max open positions from 4 to"))
         IraHub.confirm(IraHub.state.value.pending.single())
         assertEquals(before.guardMaxOpen, com.optionslab.app.data.AppSettings.load().guardMaxOpen)
         // A change on the Settings screen is logged too.
@@ -742,7 +797,8 @@ class IraHubTest : RobolectricTest() {
         IraHub.ask("clear my target")
         waitFor("cleared") { IraJournal.target() == null }
         IraHub.ask("Jarvis, note: I bought because of the hammer at support")
-        waitFor("the note") { IraHub.state.value.messages.lastOrNull()?.text?.startsWith("Noted, Boss") == true }
+        // Among the latest lines (a background line of Jarvis's own may land after the reply).
+        waitFor("the note") { IraHub.state.value.messages.takeLast(5).any { it.fromIra && it.text.startsWith("Noted, Boss") } }
         assertTrue(IraJournal.reasons().single().startsWith("Not enough noted trades"))
         assertEquals("No Thursday trades found.", IraJournal.search("how did my thursday trades do").single())
         // Each automation starts at its default: all on, except trailing the owner's own stops (it moves live orders).
@@ -751,7 +807,9 @@ class IraHubTest : RobolectricTest() {
         Automations.set(Automations.Auto.STALE, false); assertTrue(!Automations.on(Automations.Auto.STALE)); Automations.set(Automations.Auto.STALE, true)
         // Boss, 4 Oct: a few grouped switches; the safety helpers have none and stay on.
         assertTrue(Automations.Group.entries.size <= 7)
-        assertTrue(Automations.Auto.entries.all { it in Automations.ALWAYS || Automations.groupOf(it) != null })
+        assertTrue(Automations.Auto.entries.all { it in Automations.ALWAYS || it in Automations.RETIRED || Automations.groupOf(it) != null })
+        // Solo's ideas are retired: in no group, never on.
+        assertTrue(Automations.groupOf(Automations.Auto.SOLO_IDEAS) == null && !Automations.on(Automations.Auto.SOLO_IDEAS))
         Automations.set(Automations.Auto.FEED, false); assertTrue(Automations.on(Automations.Auto.FEED))
         Automations.set(Automations.Group.HELP, false); assertTrue(!Automations.on(Automations.Auto.RESCUE)); Automations.set(Automations.Group.HELP, true)
         IraJournal.targetWatch(); IraJournal.staleWatch()
@@ -774,6 +832,10 @@ class IraHubTest : RobolectricTest() {
         waitFor("the confirm") { IraHub.state.value.pending.isNotEmpty() }
         val id = IraHub.state.value.pending.single()
         assertTrue(IraHub.isExit(id))
+        // The panel's mark is the hub's own gate, never guessed from the venue; the request is labelled at once, never "No order".
+        val exitView = IraHub.requestsOf(IraHub.state.value).single { it.id == id }
+        assertEquals(IraHub.needsFingerprint(id), exitView.fingerprint)
+        assertTrue(exitView.venue != com.optionslab.ira.Requests.Venue.NONE)
         if (IraHub.needsFingerprint(id)) assertTrue(IraHub.confirm(id)!!.contains("fingerprint"))
         val r = IraHub.confirm(id, fingerprint = true)
         assertTrue(r.toString(), r != null)

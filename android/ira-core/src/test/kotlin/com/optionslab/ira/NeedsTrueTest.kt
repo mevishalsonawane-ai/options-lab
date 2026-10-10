@@ -94,7 +94,14 @@ class NeedsTrueTest {
         // 18 stretches of 3 sessions; the 10 starting at 24,000 end at 23,700 (-1.25%): a fall of 0.93% or more.
         assertEquals("A fall of 0.93% or more within 3 sessions: 10 of the last 18 overlapping stretches on the phone (56%).", l[4])
         assertEquals("Time: decay about -Rs 450.00 a day on the position (6.00 a unit) - each day without the move costs a buyer about that.", l[5])
-        assertTrue(l[6].startsWith("That is at expiry, from your average price, charges left out"))
+        // Round 30: the move that covers the rest of today's decay, beside the (flat) record - it never went that far.
+        assertTrue(l[6].startsWith("Covering today's decay: about Rs 162 of decay is still to come on the position today " +
+            "(one day's theta spread over the session, 2 h 15 min left). At its delta of "), l[6])
+        assertTrue(l[6].contains("On the record from 13:15, it went that far down before the close on 0 of the last 20 whole sessions on the phone (0%), " +
+            "and was still that far down at the close on 0 (0%)."), l[6])
+        // Round 31: the round trip's charges.
+        assertTrue(l[7].startsWith("Charges: a round trip of 75 at your 80.00 comes to about Rs "), l[7])
+        assertTrue(l[8].startsWith("That is at expiry, from your average price, charges left out"))
         assertEquals("Facts and arithmetic, not a forecast or advice - your call, Boss.", l.last())
         assertFalse(l.any { Regex("(?i)\\b(should|recommend|suggest|will (rise|fall)|likely)\\b").containsMatchIn(it) })
     }

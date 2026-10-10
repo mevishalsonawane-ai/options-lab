@@ -51,9 +51,13 @@ import com.optionslab.engine.options.Payoff
 import com.optionslab.engine.options.Side
 import com.optionslab.engine.options.StrategyTemplates
 import java.util.Locale
+import kotlinx.coroutines.flow.first
 
 private fun f2(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
 private fun f1(x: Double) = String.format(Locale.ENGLISH, "%,.1f", x)
+
+/** The MCX chains the Options tab offers (research/MCX_GUIDE.md 1b: the liquid near-month books). */
+internal val MCX_CHAINS = com.optionslab.engine.mcx.Mcx.CHAIN_FIRST
 
 /**
  * IraAlgo's option tools on the phone: the chain with Greeks, OI and PCR,
@@ -71,7 +75,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
     var underlying by rememberSaveable { mutableStateOf("NIFTY") }
     var picked by remember { mutableStateOf<ChainPick?>(null) }
     val views = listOf("chain" to "Chain", "oi" to "OI · Max pain", "straddle" to "Straddle", "iv" to "IV smile", "gex" to "GEX",
-        "move" to "Expected move", "builder" to "Strategy builder", "expiryput" to "Expiry Put")
+        "move" to "Expected move", "builder" to "Strategy builder", "expiryput" to "Expiry Put", "commodities" to "Commodities")
     // The Expiry Put strategy (formerly the Ticket tab) has its own scrolling page.
     if (view == "expiryput") {
         Column(Modifier.fillMaxSize()) {
@@ -82,20 +86,40 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
         }
         return
     }
+    // MCX (9 Oct): every commodity's near and next future; its option chain opens here with that underlying.
+    if (view == "commodities") {
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp)) {
+                ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
+            }
+            Box(Modifier.weight(1f)) { CommoditiesScreen(model, onChart, onChain = { name -> underlying = name; onView("chain") }) }
+        }
+        return
+    }
     LaunchedEffect(underlying, s.live) { model.loadTools(underlying) }
     // Live mode with the Zerodha stream up: the chain re-prices every 5 s from the ticks (no quote calls).
     val streamStatus by com.optionslab.app.data.KiteStream.status.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val streaming = s.live && streamStatus == com.optionslab.app.data.KiteStream.Status.LIVE
     // Battery (round 6): only while the app is in front - a plain LaunchedEffect kept pricing the chain (two Zerodha
     // calls every 5 s) with the screen off and the Options tab last open; it resumes on return.
+    // Round 2: re-priced on the stream's next price (at most once a second: the chain's analytics are re-run each time),
+    // 5 s at the latest as before. The prices come from the ticks in memory; no quote call is added.
     com.optionslab.app.ui.PollWhileStarted(underlying, streaming) {
-        while (streaming) { kotlinx.coroutines.delay(5_000); model.loadTools(underlying, quiet = true) }
+        val version = com.optionslab.app.data.KiteStream.version
+        while (streaming) {
+            val seen = version.value
+            kotlinx.coroutines.withTimeoutOrNull(5_000) { version.first { it != seen } }
+            model.loadTools(underlying, quiet = true)
+            kotlinx.coroutines.delay(1_000)
+        }
     }
     Page {
         item { PageTitle("Options", "Option chain, analytics, the strategy builder and the Expiry Put strategy") }
         item {
             ParamTokens("Tool", views.map { it.second to (it.first == view) }) { onView(views[it].first) }
             ParamTokens("Underlying", listOf("NIFTY", "BANKNIFTY").map { it to (it == underlying) }) { underlying = listOf("NIFTY", "BANKNIFTY")[it] }
+            // MCX (9 Oct): the liquid near-month option books; the chain's underlying is the future its options turn into.
+            ParamTokens("MCX", MCX_CHAINS.map { it to (it == underlying) }) { underlying = MCX_CHAINS[it] }
         }
         when (val l = snap) {
             Load.Idle -> item { LedgerCard { FullSpinner("Pricing the chain") } }
@@ -108,7 +132,7 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
             }
             is Load.Done -> {
                 val c = l.value
-                item { Header(c, source) { model.loadTools(underlying) } }
+                item { Header(c, source, flow = { if (c.underlying.uppercase() in com.optionslab.ira.OrderFlow.INDICES) OrderFlowLine(c.underlying) }) { model.loadTools(underlying) } }
                 when (view) {
                     "oi" -> item { Column { OiCard(c) } }
                     "straddle" -> item { StraddleCard(model, c, streaming) }
@@ -121,11 +145,11 @@ fun ToolsScreen(model: AppModel, view: String, onView: (String) -> Unit, onChart
             }
         }
     }
-    picked?.let { pk -> OptionChartPage(model, pk, onFullChart = { sym -> picked = null; onChart(sym, "NFO") }) { picked = null } }
+    picked?.let { pk -> OptionChartPage(model, pk, onFullChart = { sym -> picked = null; onChart(sym, if (com.optionslab.engine.mcx.Mcx.isMcxName(pk.underlying)) "MCX" else "NFO") }) { picked = null } }
 }
 
 @Composable
-internal fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
+internal fun Header(c: ChainSnapshot, source: String, flow: @Composable () -> Unit = {}, onRefresh: () -> Unit) {
     val p = LocalPalette.current
     LedgerCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -142,6 +166,8 @@ internal fun Header(c: ChainSnapshot, source: String, onRefresh: () -> Unit) {
             Stat("PCR", f2(c.pcr.pcrOi))
             Stat("Max pain", c.maxPain?.let { fmtG(it.maxPainStrike) } ?: "—")
         }
+        // The live order flow of the chain's index (its future; a tap opens the detail). Never in the gold build.
+        flow()
     }
 }
 
@@ -296,7 +322,36 @@ internal fun GexCard(c: ChainSnapshot) {
             flip?.let { LedgerLine("Sign flips between", "${fmtG(it.first.strike)} and ${fmtG(it.second.strike)}") }
             Note("GEX = gamma × OI × lot, calls minus puts. Positive: dealers long gamma, moves tend to be damped. Negative: moves tend to run.")
         }
+        GammaRegimeBlock(c.underlying)
     }
+}
+
+/**
+ * The gamma regime of NIFTY / BANKNIFTY ([com.optionslab.app.data.GammaLive], refreshed at most every 5 minutes off the main
+ * thread): positive (choppy) or negative (trending) and the zero-gamma level, under the dealer-sign convention Boss picks
+ * here (standard by default). A live reading; no strategy uses it.
+ */
+@Composable
+internal fun GammaRegimeBlock(underlying: String) {
+    val u = underlying.uppercase(Locale.ENGLISH)
+    if (u !in com.optionslab.app.data.GammaLive.INDICES) return
+    val p = LocalPalette.current
+    val st by com.optionslab.app.data.GammaLive.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val conv by com.optionslab.app.data.GammaLive.convention.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.GammaLive.loadConvention() } } }
+    val r = st[u]
+    val all = com.optionslab.ira.GammaRegime.Convention.entries
+    Rule()
+    Text("Gamma regime", style = Type.title.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 6.dp))
+    ParamTokens("Dealer sign", all.map { it.label to (it == conv) }) { com.optionslab.app.data.GammaLive.setConvention(all[it]) }
+    val sign = r?.sign(conv)
+    LedgerLine("Regime", sign?.words ?: "not known yet",
+        when (sign) { com.optionslab.ira.GammaRegime.Sign.POSITIVE -> p.verdigris; com.optionslab.ira.GammaRegime.Sign.NEGATIVE -> p.oxblood; else -> null })
+    LedgerLine("Zero-gamma level", r?.zeroGamma?.let { "%,.0f".format(Locale.ENGLISH, it) } ?: if (r == null) "—" else "none within ±5%")
+    r?.let { LedgerLine("Net GEX (${conv.label.lowercase(Locale.ENGLISH)} sign)", "%,.0f".format(Locale.ENGLISH, it.net(conv))) }
+    Note("${conv.label}: ${conv.words}. The ${com.optionslab.ira.GammaRegime.NOTE}: switch it here to compare. The zero-gamma level " +
+        "is the price where the net would cross zero (every strike re-priced ±5% with its own implied vol); it is the same under both. " +
+        "Refreshed at most every 5 minutes. A live reading; no strategy uses it.")
 }
 
 @Composable

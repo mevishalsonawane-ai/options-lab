@@ -2,85 +2,124 @@ package com.optionslab.app.ira
 
 import com.optionslab.app.data.AppSettings
 import com.optionslab.app.data.Paper
-import com.optionslab.ira.Candle
+import com.optionslab.engine.Right
+import com.optionslab.engine.orb.Bar
+import com.optionslab.engine.orb.ShadowRules
+import com.optionslab.engine.orb.SoloMidday
 import com.optionslab.ira.SelfCalibration
-import com.optionslab.ira.Solo
-import com.optionslab.ira.SoloCalibration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
+import java.time.LocalDateTime
 import com.optionslab.ira.Market as IraMarket
 
 /**
- * Solo (the owner's wish, 2026-10-03): Jarvis trades by himself, ON PAPER ONLY, when Boss switches it on. The setup and
- * the risk rules are [Solo]'s (pure, the same code the two-year backtest ran); this object feeds it fresh minute bars,
- * places and closes the paper option, keeps the record and stops itself when its own losses say so.
+ * Solo (the owner's wish, 2026-10-03): Jarvis trades by himself, ON PAPER ONLY, when Boss switches it on.
  *
- * Never live: Solo has no path to Zerodha. Real money stays a separate decision of Boss's, in the app, after the
- * paper record has earned it.
+ * Since 06 Oct 2026 (Boss's approval) Solo trades the "risk-reduced Solo", Solo (midday) - [SoloMidday], pure and pinned
+ * exactly as the research ran it: at 12:00, of NIFTY, BANKNIFTY and FINNIFTY (SENSEX is not traded: the paper account
+ * and the instrument master are NSE F&O only), the index that has moved half its daily ATR or more from the open and
+ * closed in the outer quarter of the morning's range - the strongest one - is bought 4 strikes in the money, 1 lot, one
+ * trade a day and one position at a time; out on a 1-minute close 0.3 ATR against it, at breakeven once the index has
+ * gone 75% of the way to 2R, or at 14:30. It is NOT PROVEN (the research's unseen period on these three: +Rs 4k on 178
+ * trades, profit factor 1.02) and runs a forward test set in advance ([SoloMidday.judge]): after 60 closed paper trades
+ * Jarvis reports the record, and a net per trade at or below 0 then or a drawdown beyond -Rs 25,000 at any time
+ * switches Solo off by itself (that only lowers risk; switching it back on is Boss's choice - the drawdown then counts
+ * from that moment, [SoloMidday.Baseline]).
+ *
+ * Retired as traders on the same day: the online learner (Learner / SoloGate) and the big-candle rules - both lost on the
+ * research harness. Their trades stay in the record, readable; the new Solo's record starts fresh with its first trade
+ * (tagged [SoloMidday.TAG]), so its 60-trade forward test is clean.
+ *
+ * Never live: Solo has no path to Zerodha - its orders go to the paper account only, and it never offers its setups as
+ * trade ideas for approval.
  */
 internal object IraSolo {
     private const val KEY_ON = "jarvis.solo"
+    /** Why Solo switched itself off (the forward test; earlier, the old Solo's drawdown pause). Boss switching it on clears it. */
     private const val KEY_PAUSED = "jarvis.solo.paused"
     private const val KEY = "jarvis.solo.trades"
-    private const val KEY_FROM = "jarvis.solo.from"
-    /** The trades Solo sat out by its own record, followed on paper as if taken (no order) - see [SoloCalibration]. */
-    private const val KEY_SHADOWS = "jarvis.solo.shadows"
-    private val IST = ZoneId.of("Asia/Kolkata")
-    private val MARKETS = listOf(IraMarket.NIFTY, IraMarket.BANKNIFTY)
-
     /**
-     * Paper only, and no cap on how many trades a day (Boss, 3 Oct: "no limit, but only paper orders, even on a live
-     * market" - Solo decides for itself): every setup it finds is taken, one at a time, while the setup's last 60
-     * signals (on the index, before costs) averaged above zero. (The 2-year test in SOLO.md was run at one a day.)
+     * The forward-test verdict Solo last switched itself off for, with the baseline it was judged from ("FAILED_DRAWDOWN@0",
+     * [SoloMidday.Baseline.key]): acted once per verdict and baseline - Boss's switching it back on stands until a new one.
      */
-    val RULES = Solo.Rules(maxPerDay = Int.MAX_VALUE, lossesToStop = Int.MAX_VALUE, recentN = 60, profitLock = false, premiumStop = STOP_LOSS)
-    /**
-     * Always a stop-loss on the option itself (Boss's rule, 3 Oct: no ladder), sized by Solo's own study: tighter stops
-     * (15-25%) sit inside an option's normal swings and are hit too often; at 30% it fired on only 10 of 511 tested
-     * trades - insurance for a sharp fall, not an edge (40% scored about the same). See SOLO.md.
-     */
-    const val STOP_LOSS = 0.30
+    private const val KEY_VERDICT = "jarvis.solo.midday.verdict"
+    /** Where the forward test is judged from ("from|peak", [SoloMidday.Baseline]): set when Boss switches Solo back on after it switched itself off. */
+    private const val KEY_BASE = "jarvis.solo.midday.base"
+    /** How often a thin strike moved Solo's strike, and passed an index over ("moved|skipped"). */
+    private const val KEY_THIN = "jarvis.solo.midday.thin"
+    /** Set once the 60-trade report has been told. */
+    private const val KEY_REPORTED = "jarvis.solo.midday.reported"
+    private val MARKETS = SoloMidday.UNDERLYINGS.map { IraMarket.valueOf(it) }
 
-    /** The day's loss limit for Solo's trades, and the drawdown from its best at which it pauses itself. */
-    const val DAY_LOSS = 5_000.0
-    const val PAUSE_DRAWDOWN = 15_000.0
-    /** Rupees a round trip on top of the fills (brokerage and charges), as in the backtest. */
-    private const val COSTS = 60.0
-
-    /** The two-year test, in one line each (research data, real option prices, Rs 60 a trip), for Boss to judge. */
-    val BACKTEST = listOf(
-        "Its learning brain replayed minute by minute over two years of real prices (learning only from what had already happened):",
-        "NIFTY Apr 2024-Apr 2025: 987 trades, 40% winners, -Rs 1,31,183 (1 lot of 75).",
-        "NIFTY Apr 2025-Apr 2026: 963 trades, 42% winners, -Rs 1,15,255.",
-        "BANKNIFTY Feb 2025-Feb 2026: 744 trades, 45% winners, -Rs 1,00,924 (1 lot of 30).",
-        "It has not found an edge after costs yet - which is why it is on paper only. It keeps learning every minute.",
-    )
+    /** The research line under every Solo record. */
+    val RESEARCH: String get() = SoloMidday.RESEARCH
 
     var on: Boolean
-        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(KEY_ON, false) }.getOrDefault(false)
+        // A pause the old Solo set ("paused until you switch it on again") still holds: it reads as off.
+        get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(KEY_ON, false) && paused == null }.getOrDefault(false)
         set(v) {
-            runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_ON, v) }
-            // Switched on again: the drawdown that paused it is not counted again (measured from here).
-            if (v) runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_PAUSED, null); com.optionslab.app.security.SecurePrefs.put(KEY_FROM, all().size) }
-            IraActivity.add(if (v) "Solo switched on (paper only)." else "Solo switched off.")
+            val m = HashMap<String, Any?>()
+            m[KEY_ON] = v
+            if (v) {
+                // Back on after Solo switched itself off: the forward test's drawdown counts from here ([SoloMidday.Baseline]).
+                if (paused != null) m[KEY_BASE] = SoloMidday.baseline(nets(all())).let { "${it.from}|${it.peak}" }
+                m[KEY_PAUSED] = null
+            }
+            runCatching { com.optionslab.app.security.SecurePrefs.putAll(m) }
+            IraActivity.add(if (v) "Solo switched on (paper only, not proven)." else "Solo switched off.")
+            refreshOn()
         }
 
-    /** Why Solo paused itself (null: not paused). Switching it on again clears it. */
+    private val _onState = MutableStateFlow(false)
+    /** [on] for the Ira page's card: set on every switch, Solo's own switch-off and each pass ([refreshOn]). */
+    val onState: StateFlow<Boolean> = _onState
+
+    /** Reads [on] into [onState]. */
+    fun refreshOn() { _onState.value = on }
+
+    /** Where the forward test is judged from: the last switch-on after a switch-off, else the start. */
+    fun baseline(): SoloMidday.Baseline = runCatching {
+        com.optionslab.app.security.SecurePrefs.getString(KEY_BASE)?.split('|')?.let { SoloMidday.Baseline(it[0].toInt(), it[1].toDouble()) }
+    }.getOrNull() ?: SoloMidday.Baseline()
+
+    /** How often a thin strike made Solo buy the next strike ([first]) and pass an index over ([second]). */
+    fun thinCounts(): Pair<Int, Int> = runCatching {
+        com.optionslab.app.security.SecurePrefs.getString(KEY_THIN)?.split('|')?.let { it[0].toInt() to it[1].toInt() }
+    }.getOrNull() ?: (0 to 0)
+
+    private fun countThin(moved: Boolean): Pair<Int, Int> {
+        val (a, b) = thinCounts()
+        val n = if (moved) a + 1 to b else a to b + 1
+        runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_THIN, "${n.first}|${n.second}") }
+        return n
+    }
+
+    /** Why Solo switched itself off (null: it did not). Switching it on again clears it. */
     val paused: String? get() = runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY_PAUSED) }.getOrNull()
 
-    /** One Solo trade; [closed] once out, with [exitPrice] and [net] (rupees after costs). */
+    /**
+     * One Solo trade; [closed] once out, with [exitPrice] and [net] (rupees after the paper account's charges). [tag]
+     * [SoloMidday.TAG] for Solo (midday)'s trades (null: the retired Solo's); [atr] the ATR14 its stop and lock came from.
+     */
     data class T(val day: String, val market: String, val symbol: String, val call: Boolean, val qty: Int, val entry: Double,
                  val entryMinute: Int, val index: Double, val level: Double, val target: Double, val why: String,
                  val closed: Boolean = false, val exitPrice: Double? = null, val net: Double? = null, val exit: String? = null,
                  /** The paper order ids of the entry and the exit (for the order book: "who placed it, which order"). */
                  val orderId: String? = null, val exitOrderId: String? = null,
-                 /** The conditions it came in, kept so Solo can judge itself by them ([SoloCalibration]); null: not known then. */
-                 val regime: String? = null, val ivRank: Double? = null)
+                 /** The old Solo's conditions (kept readable; Solo (midday) does not judge itself by them). */
+                 val regime: String? = null, val ivRank: Double? = null,
+                 val tag: String? = null, val atr: Double? = null) {
+        val midday: Boolean get() = tag == SoloMidday.TAG
+    }
 
     fun all(): List<T> = runCatching {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
@@ -89,7 +128,8 @@ internal object IraSolo {
                 o.getDouble("i"), o.getDouble("lv"), o.getDouble("tg"), o.getString("w"), o.optBoolean("x"),
                 if (o.has("xp")) o.getDouble("xp") else null, if (o.has("n")) o.getDouble("n") else null, o.optString("xr").ifEmpty { null },
                 o.optString("oid").ifEmpty { null }, o.optString("xoid").ifEmpty { null },
-                o.optString("rg").ifEmpty { null }, if (o.has("iv")) o.getDouble("iv") else null)
+                o.optString("rg").ifEmpty { null }, if (o.has("iv")) o.getDouble("iv") else null,
+                o.optString("tag").ifEmpty { null }, if (o.has("atr")) o.getDouble("atr") else null)
         } }.getOrNull() }
     }.getOrDefault(emptyList())
 
@@ -99,422 +139,497 @@ internal object IraSolo {
                 .put("em", t.entryMinute).put("i", t.index).put("lv", t.level).put("tg", t.target).put("w", t.why).put("x", t.closed)
                 .apply { t.exitPrice?.let { put("xp", it) }; t.net?.let { put("n", it) }; t.exit?.let { put("xr", it) }
                     t.orderId?.let { put("oid", it) }; t.exitOrderId?.let { put("xoid", it) }
-                    t.regime?.let { put("rg", it) }; t.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) } })
+                    t.regime?.let { put("rg", it) }; t.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) }
+                    t.tag?.let { put("tag", it) }; t.atr?.takeIf { it.isFinite() }?.let { put("atr", it) } })
         } }.toString())
     }
 
-    // ---- self-calibration (Solo judged by its own record; it only ever makes Solo more careful on paper) --------------
+    /** Solo (midday)'s own trades (the forward test's), oldest first. */
+    fun midday(list: List<T> = all()): List<T> = list.filter { it.midday }
 
-    /** The conditions a Solo trade came in (null: its day or market could not be read). */
-    private fun conditionsOf(t: T): SelfCalibration.Conditions? = runCatching {
-        SoloCalibration.conditions(LocalDate.parse(t.day), t.entryMinute, IraMarket.valueOf(t.market), t.call,
-            t.regime?.let { com.optionslab.ira.Regime.Kind.valueOf(it) }, t.ivRank)
-    }.getOrNull()
+    /** Solo (midday)'s closed trades' nets in order (the forward test's). */
+    private fun nets(list: List<T>): List<Double> = midday(list).filter { it.closed && it.net != null }.map { it.net!! }
 
-    private fun shadows(): List<SoloCalibration.Shadow> = runCatching {
-        val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY_SHADOWS) ?: "[]")
-        (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
-            SoloCalibration.Shadow(SelfCalibration.Conditions(java.time.LocalDateTime.parse(o.getString("at")), IraMarket.valueOf(o.getString("m")),
-                o.getBoolean("c"), SoloCalibration.KIND, o.optString("rg").ifEmpty { null }?.let { com.optionslab.ira.Regime.Kind.valueOf(it) },
-                if (o.has("iv")) o.getDouble("iv") else null),
-                o.getString("s"), o.getInt("q"), o.getDouble("e"), o.getInt("du"), if (o.has("x")) o.getDouble("x") else null,
-                if (o.has("i")) o.getDouble("i") else null)
-        } }.getOrNull() }
-    }.getOrDefault(emptyList())
+    /** Solo (midday)'s forward-test record: its closed trades' nets in order. */
+    fun forward(list: List<T> = all()): SoloMidday.Record = SoloMidday.record(nets(list))
 
-    private fun saveShadows(list: List<SoloCalibration.Shadow>) = runCatching {
-        com.optionslab.app.security.SecurePrefs.put(KEY_SHADOWS, JSONArray().apply { list.forEach { x ->
-            put(JSONObject().put("at", x.c.at.toString()).put("m", x.c.market.name).put("c", x.c.call).put("s", x.symbol).put("q", x.qty)
-                .put("e", x.entry).put("du", x.due)
-                .apply { x.c.regime?.let { put("rg", it.name) }; x.c.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) }
-                    x.exit?.let { put("x", it) }; x.spot?.let { put("i", it) } })
-        } }.toString())
-    }
+    /** The day Solo (midday)'s record starts: its first trade's (null: none yet). */
+    fun since(list: List<T> = all()): LocalDate? = midday(list).firstOrNull()?.let { runCatching { LocalDate.parse(it.day) }.getOrNull() }
 
-    /** Solo's own record to judge itself by: its closed paper trades and the sat-out trades scored as if taken. */
-    fun calibration(list: List<T> = all()): List<SelfCalibration.Outcome> = SoloCalibration.outcomes(
-        list.filter { it.closed }.mapNotNull { t -> conditionsOf(t)?.let { SoloCalibration.outcome(it, t.net, t.qty) } }, shadows())
+    /** What Solo's card shows: the forward test ("x of 60"), the not-proven label and the research line. */
+    fun card(): List<String> = all().let { SoloMidday.card(forward(it), since(it)) }
 
-    /** Scores the sat-out trades whose time is up (the option's bid then); an earlier day's unscored one is dropped. */
-    private suspend fun settleShadows(today: LocalDate, now: Int) {
-        val all = shadows()
-        val due = SoloCalibration.dueNow(all, today, now)
-        val kept = SoloCalibration.prune(all, today)
-        if (due.isEmpty()) { if (kept.size != all.size) saveShadows(kept); return }
-        val done = HashMap<SoloCalibration.Shadow, Double>()
-        for (x in due) {
-            val c = Paper.contractOf(x.symbol)
-                ?: x.spot?.let { IraNewsTrades.contract(x.c.market.name, it, x.c.call) }?.takeIf { it.symbol == x.symbol } ?: continue
-            val q = runCatching { Paper.quote(c) }.getOrNull() ?: continue
-            SoloCalibration.sellPrice(q.bid, q.ltp)?.let { done[x] = it }
-        }
-        // Written only when something changed (a price not read leaves it for the next pass, without a vault write).
-        val next = kept.map { x -> done[x]?.let { x.copy(exit = it) } ?: x }
-        if (next != all) saveShadows(next)
-    }
+    /**
+     * Solo no longer judges itself by the conditions a trade came in: a self-gate on its own record was tested and cost
+     * money out of sample (solo2/SPEC.md). Nothing to calibrate - the old Solo's sit-outs are not carried over.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun calibration(list: List<T> = all()): List<SelfCalibration.Outcome> = emptyList()
 
-    /** A trade Solo sits out by its own record: followed on paper as if taken (no order), one at a time a market. */
-    private suspend fun shadow(m: IraMarket, sig: Solo.Signal, cond: SelfCalibration.Conditions, horizon: Int, why: String?) {
-        val all = shadows()
-        if (!SoloCalibration.mayShadow(all, m)) return
-        val c = IraNewsTrades.contract(m.name, sig.index, sig.call) ?: return
-        val q = runCatching { Paper.quote(c) }.getOrNull() ?: return
-        val x = SoloCalibration.shadow(cond, c.symbol, c.lotSize, q.ask, q.ltp, sig.entryMinute, horizon, sig.index) ?: return
-        saveShadows(all + x)
-        IraActivity.add("Solo sat out a ${m.label} ${if (sig.call) "call" else "put"}" + (why?.let { ": $it." } ?: ": my record could not be read."))
-    }
+    // ---- the test seams (tests set them; the app never does) -----------------------------------------------------------
+
+    /** TEST ONLY: an index's daily candles (null in the app: Upstox's are read). Setter throws unless BuildConfig.DEBUG. */
+    @Volatile internal var testDaily: ((String) -> List<com.optionslab.engine.Upstox.Bar>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: the trade check's level (null in the app: [IraHub.tradeCheckFast]). Setter throws unless BuildConfig.DEBUG. */
+    @Volatile internal var testCheck: com.optionslab.ira.TradeCheck.Level? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test check exists only in debug builds" }; field = v }
 
     private val lock = Mutex()
 
-    /** The markets whose setup was offered as an idea today (one a market a day). */
-    private val offered = HashSet<String>()
+    /** What Solo saw at its last decision (for "how is Solo doing"), and when. */
+    @Volatile private var watch: Pair<LocalDateTime, String>? = null
 
-    /** What Solo was watching at its last pass (for "how is Solo doing"), and when. */
-    @Volatile private var watch: Pair<java.time.LocalDateTime, String>? = null
+    /** The day Solo made its 12:00 decision (one a day), with the vault's generation (a wiped vault starts afresh). */
+    @Volatile private var decided: Pair<Int, LocalDate>? = null
+    private fun generation(): Int = runCatching { com.optionslab.app.security.SecurePrefs.generationNow() }.getOrDefault(0)
 
-    /** Each market's learned shadow record, worked out once a day from the finished sessions the app holds. */
-    private val learned = HashMap<IraMarket, Pair<LocalDate, List<Double>>>()
+    /** Each index's ATR14 for the day (read once a day; a failed read is tried again on the next pass). */
+    private val atrs = HashMap<String, Pair<LocalDate, Double>>()
 
-    private fun learnedFor(m: IraMarket, bars: List<Candle>, today: LocalDate): List<Double> {
-        synchronized(learned) { learned[m]?.takeIf { it.first == today }?.second }?.let { return it }
-        // Worked out outside the lock ("how is Solo doing" reads the map from the main thread).
-        val sessions = bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values
-            .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > Solo.CUT }
-        // Kept for the day only once the full look-back is there (the app's stored days may still be loading).
-        return Solo.learn(sessions, RULES).also { if (it.size >= (RULES.recentN ?: 0)) synchronized(learned) { learned[m] = today to it } }
+    /** Each Solo index's listed expiries for the day (the instrument master, read once a day). */
+    @Volatile private var listed: Pair<LocalDate, Map<String, List<LocalDate>>>? = null
+
+    private fun expiries(today: LocalDate): Map<String, List<LocalDate>>? {
+        listed?.takeIf { it.first == today }?.let { return it.second }
+        val all = runCatching { com.optionslab.app.data.Market.contracts() }.getOrNull() ?: return null
+        val m = SoloMidday.UNDERLYINGS.associateWith { u -> all.filter { it.underlying == u }.map { it.expiry }.distinct().sorted() }
+        if (m.values.any { it.isNotEmpty() }) listed = today to m
+        return m
     }
 
-    /** The average day's range (high - low) over the earlier days the app holds (null: none yet). */
-    private fun typicalRange(bars: List<Candle>, today: LocalDate): Double? =
-        bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values.toList().takeLast(20)
-            .map { d -> d.maxOf { it.h } - d.minOf { it.l } }.takeIf { it.isNotEmpty() }?.average()
+    /** The day the slow reads were started early ([prefetch]), with the vault's generation. */
+    @Volatile private var prefetched: Pair<Int, LocalDate>? = null
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** The minute of the session now (0 = 09:15). */
-    private fun minuteNow(): Int = LocalTime.now(IST).let { it.hour * 60 + it.minute - (9 * 60 + 15) }
-
-    /** Today's 1-minute bars as the session's minutes (0 = 09:15), gaps filled from the minute before; the forming minute left out. */
-    internal fun session(bars: List<Candle>, today: LocalDate, now: Int): List<Candle> {
-        val byMin = HashMap<Int, Candle>()
-        for (b in bars) if (b.t.toLocalDate() == today) {
-            val m = b.t.hour * 60 + b.t.minute - (9 * 60 + 15)
-            if (m in 0 until now) byMin[m] = b
-        }
-        val first = byMin[0] ?: return emptyList()
-        // Up to the last minute the feed has published (a copied minute is never read as a 5-minute close).
-        val end = byMin.keys.max() + 1
-        val out = ArrayList<Candle>(end)
-        var last = first
-        for (m in 0 until end) { val b = byMin[m] ?: last; out += b; last = b }
-        return out
+    /**
+     * The 12:00 decision's slow reads - each index's ATR14 (the daily candles) and the instrument master - started on the
+     * first pass from 09:15 (once a day, in the background: the market watch's pass does not wait), so the 12:00-12:03
+     * window reads them from memory. One that fails is read again at 12:00.
+     */
+    private fun prefetch(t: LocalDateTime) {
+        val tt = t.toLocalTime()
+        if (tt.isBefore(java.time.LocalTime.of(9, 15)) || !tt.isBefore(SoloMidday.DECIDE_AT)) return
+        val key = generation() to t.toLocalDate()
+        if (prefetched == key) return
+        prefetched = key
+        background.launch { prefetchNow(t.toLocalDate()) }
     }
 
-    /** The body size that counts as big, from the earlier days the app holds (null: fewer than 100 15-minute candles yet). */
-    private fun big(bars: List<Candle>, today: LocalDate): Double? {
-        val days = bars.filter { it.t.toLocalDate() != today }.groupBy { it.t.toLocalDate() }.toSortedMap().values.toList().takeLast(20)
-        val earlier15 = days.flatMap { d -> Solo.fifteen(session(d, d.first().t.toLocalDate(), 375)) }
-        return Solo.bigBody(earlier15, RULES.bigQuantile)
+    /** [prefetch]'s reads for [today] (tests call it directly). */
+    internal suspend fun prefetchNow(today: LocalDate) {
+        for (m in MARKETS) runCatching { atr(m.name, today) }
+        runCatching { expiries(today) }
     }
 
-    // ---- the learning brain (Boss, 3 Oct: Solo learns from the market itself, no strategy made in advance) -------------
-
-    /** Why a trade came from the learning brain (its exit is the brain's: [Learner.Cfg.horizon] minutes at most). */
-    private const val LEARNED = "Learned:"
-
-    /** One view: a learner looking [h] minutes ahead, with its guesses waiting for their answers. */
-    private class Mind(val h: Int, val l: com.optionslab.ira.Learner) {
-        val pending = ArrayDeque<Triple<Int, DoubleArray, Double>>()
-        var lastP: Double? = null
+    /** Tests: forget the day's memory (ATR14s, listed expiries, the early reads, the decision and what Solo saw). */
+    internal fun resetForTest() {
+        synchronized(atrs) { atrs.clear() }
+        listed = null; prefetched = null; decided = null; watch = null
+        synchronized(dayLock) { dayKept = null }
     }
 
-    /** A market's brain: its views side by side (Boss: "tune itself" - it follows whichever has the best record). */
-    private class Brain(val minds: List<Mind>) {
-        var day: LocalDate? = null
-        var done = 0
-        var prevClose: Double? = null
-        var lastPrice = 0.0
-        /**
-         * The view with the best record so far: one ready to trade always before one still learning (as the trading
-         * choice, [Learner.pick], only takes ready ones); the 15-minute one until any has been scored.
-         */
-        val best: Mind get() = minds.maxByOrNull { (if (it.l.ready) 2.0 else if (it.l.scored > 0) 0.0 else -1.0) + it.l.hitRate } ?: minds.first()
-    }
-    private val brains = HashMap<IraMarket, Brain>()
-    /** Minutes behind the newest that the brain reads (the feed fills a late minute from the one before). */
-    private const val SETTLE = 2
-    private fun brainKey(m: IraMarket) = "solo.brain.${m.name}"
+    // ---- Solo's day in words (Jarvis's "what did Solo do today", [com.optionslab.ira.SoloDay]) ------------------------
 
-    /** Reads minutes [Brain.done]+1..[upTo] of [day]: learns each answer as it comes due, then guesses again. */
-    private fun feed(b: Brain, day: List<Candle>, upTo: Int, only: List<Mind> = b.minds) {
-        for (m in maxOf(1, b.done + 1)..upTo) for (mind in only) {
-            val l = mind.l
-            l.tick(day[m - 1], day[m])
-            while (mind.pending.isNotEmpty() && mind.pending.first().first + mind.h <= m) {
-                val (m0, x, g) = mind.pending.removeFirst()
-                l.learn(x, day[m0 + mind.h].c > day[m0].c, g)
-            }
-            val x = l.features(day, m, b.prevClose) ?: continue
-            val g = l.p(x)
-            mind.pending.addLast(Triple(m, x, g)); mind.lastP = g
-        }
-        b.done = maxOf(b.done, upTo)
-        b.lastPrice = day[upTo].c
+    /**
+     * Today's decision as Solo made it (each index's 12:00 read, what set one aside, a thin strike, LATE, the buy, a guard
+     * holding it back). In memory only, guarded by itself - never Solo's [lock] - and never read by a decision, an exit or an
+     * order: words for Jarvis. A new day's first note drops the earlier day's.
+     */
+    private val dayLock = Any()
+    private var dayKept: com.optionslab.ira.SoloDay.Record? = null
+
+    /** When this run's record began (the app's start): a decision made before it is not in memory. */
+    val dayRecordSince: LocalDateTime = runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
+
+    /** Keeps one step of today's record ([com.optionslab.ira.SoloDay]'s pure steps). Never throws into a pass; nothing in GOLD. */
+    private fun noteDay(step: (com.optionslab.ira.SoloDay.Record?) -> com.optionslab.ira.SoloDay.Record) {
+        if (com.optionslab.app.BuildConfig.GOLD) return
+        runCatching { synchronized(dayLock) { dayKept = step(dayKept) } }
     }
 
-    /** Where each view is kept (the 15-minute one under the key it always had). */
-    private fun mindKey(m: IraMarket, h: Int) = if (h == 15) brainKey(m) else brainKey(m) + ".h$h"
+    /** Today's record for [day] (null: none kept): a copy, never waiting on Solo's lock. Reads only. */
+    fun dayRecord(day: LocalDate): com.optionslab.ira.SoloDay.Record? =
+        runCatching { synchronized(dayLock) { dayKept }?.takeIf { it.day == day } }.getOrNull()
 
-    /** The market's brain: kept on the phone; the first time, it learns from the earlier days the phone holds. */
-    private fun brain(m: IraMarket, held: List<Candle>, today: LocalDate): Brain = brains.getOrPut(m) {
-        val b = Brain(com.optionslab.ira.Learner.HORIZONS.map { h -> Mind(h, com.optionslab.ira.Learner(com.optionslab.ira.Learner.Cfg(horizon = h))) })
-        val fresh = b.minds.filter { mind ->
-            val kept = runCatching { com.optionslab.app.security.SecurePrefs.getString(mindKey(m, mind.h)) }.getOrNull()
-            kept == null || !mind.l.load(kept)
-        }
-        val earlier = held.filter { it.t.toLocalDate().isBefore(today) }.groupBy { it.t.toLocalDate() }.toSortedMap().values
-            .map { d -> session(d, d.first().t.toLocalDate(), 375) }.filter { it.size > com.optionslab.ira.Learner.FIRST }
-        // A view with nothing kept learns first from the earlier days the phone holds (the others carry on as saved).
-        if (fresh.isNotEmpty()) for (d in earlier) {
-            b.done = 0; fresh.forEach { it.pending.clear() }; feed(b, d, d.lastIndex, fresh); b.prevClose = d.last().c
-        }
-        b.done = 0
-        if (fresh.size < b.minds.size) runCatching {
-            // Saved part-way through today (the app restarted): today's minutes already learned are not learned twice.
-            val (d, n) = com.optionslab.app.security.SecurePrefs.getString(brainKey(m) + ".at")!!.split("|")
-            if (d == today.toString()) { b.day = today; b.done = n.toInt() }
-        }
-        b.prevClose = earlier.lastOrNull()?.last()?.c
-        b
+    /** The early reads for [day] as they stand in memory: started, each index's ATR14 read, the contracts read. Reads only. */
+    fun prefetchState(day: LocalDate): com.optionslab.ira.SoloDay.Prefetch {
+        val a = synchronized(atrs) { atrs.filterValues { it.first == day }.mapValues { it.value.second } }
+        return com.optionslab.ira.SoloDay.Prefetch(prefetched?.second == day, a, listed?.first == day)
     }
 
-    /** Every pass in market hours: each market's brain reads the new minutes and learns (whether Solo trades or not). */
-    private suspend fun learnTick(today: LocalDate, now: Int) {
-        // One save for every market's minds and marks (each save re-encrypts and rewrites the whole vault, and this runs
-        // every minute of the session): the same values, kept as before.
-        val save = HashMap<String, Any?>()
-        for (m in MARKETS) {
-            val bars = runCatching { IraHub.freshBars(m) }.getOrNull() ?: continue
-            val day = session(bars, today, now)
-            if (day.size < 2) continue
-            runCatching {
-                synchronized(brains) {
-                    val b = brains[m] ?: brain(m, IraHub.recentBars(m) + bars, today)
-                    if (b.day != today) {
-                        b.day = today; b.done = 0; b.minds.forEach { it.pending.clear(); it.lastP = null }
-                        // Yesterday's close (the app may have stayed open overnight).
-                        b.prevClose = IraHub.recentBars(m).lastOrNull { it.t.toLocalDate().isBefore(today) }?.c ?: b.prevClose
-                    }
-                    // Two minutes behind the newest: a minute that arrives late is otherwise learned as a copy of the one before.
-                    val upTo = day.lastIndex - SETTLE
-                    if (upTo > b.done) {
-                        feed(b, day, upTo)
-                        // The market's minds and its mark, saved together below.
-                        save.putAll(b.minds.associate { mind -> mindKey(m, mind.h) to mind.l.save() } + (brainKey(m) + ".at" to "$today|${b.done}"))
-                    }
-                }
-            }
-        }
-        if (save.isNotEmpty()) runCatching { com.optionslab.app.security.SecurePrefs.putAll(save) }
+    /** One of Solo's trades as [com.optionslab.ira.SoloDay] reads it (null: unreadable). */
+    private fun dayTrade(t: T): com.optionslab.ira.SoloDay.Trade? = runCatching {
+        com.optionslab.ira.SoloDay.Trade(LocalDate.parse(t.day), t.market, t.symbol, t.call, t.qty, t.entry, t.entryMinute, t.index, t.level,
+            t.target, t.atr, t.why, t.closed, t.exitPrice, t.net, t.exit)
+    }.getOrNull()
+
+    /**
+     * "What did Solo do today", "why didn't Solo trade", "how did Solo decide" ([com.optionslab.ira.SoloDay]): from Solo's own
+     * records - its switch, today's record ([dayRecord], no lock), its early reads, today's trades, a trade from an earlier day
+     * still open, the forward test from its baseline and the thin-strike counts. Read only: nothing is switched, placed or closed.
+     */
+    fun day(q: com.optionslab.ira.SoloDay.Q): String {
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = now.toLocalDate()
+        val tradingDay = runCatching { com.optionslab.app.data.Market.isTradingDay(today) }.getOrDefault(true)
+        val list = all()
+        val facts = com.optionslab.ira.SoloDay.Facts(
+            now = now, tradingDay = tradingDay, on = runCatching { on }.getOrNull(), paused = runCatching { paused }.getOrNull(),
+            record = dayRecord(today), since = dayRecordSince, prefetch = runCatching { prefetchState(today) }.getOrNull(),
+            trades = midday(list).filter { it.day == today.toString() }.mapNotNull { dayTrade(it) },
+            earlier = list.lastOrNull { !it.closed && it.day != today.toString() }?.let { dayTrade(it) },
+            check = runCatching { SoloMidday.judge(nets(list), baseline()) }.getOrNull(), thinCounts = runCatching { thinCounts() }.getOrNull())
+        return com.optionslab.ira.SoloDay.answer(q, facts)
     }
 
-    /** A learned trade's horizon, from its reason ("... over the next 30 minutes"); 15 when not said. */
-    private fun learnedHorizon(why: String): Int = Regex("over the next (\\d+) minutes").find(why)?.groupValues?.get(1)?.toIntOrNull() ?: 15
+    private suspend fun atr(u: String, day: LocalDate): Double? {
+        synchronized(atrs) { atrs[u]?.takeIf { it.first == day }?.let { return it.second } }
+        val raw = testDaily?.invoke(u)
+            ?: com.optionslab.app.data.Net.daily(com.optionslab.app.data.ChartFeed.instrumentKey(u), day.minusDays(45), day.minusDays(1))
+        val a = ShadowRules.atr14(raw.map { Bar(it.istDate.atStartOfDay(), it.open, it.high, it.low, it.close) }, day) ?: return null
+        synchronized(atrs) { atrs[u] = day to a }
+        return a
+    }
 
-    /** "How is Solo's learning going", per market. */
-    fun learning(): String = synchronized(brains) { MARKETS.mapNotNull { m -> brains[m]?.let { b -> runCatching {
-            val best = b.best
-            val views = b.minds.joinToString(", ") { v -> "${v.h} min " + if (v.l.scored == 0) "learning" else "%.0f%%".format(java.util.Locale.ENGLISH, v.l.hitRate * 100) }
-            best.l.say(m.label) + " (following its ${best.h}-minute view; views: $views)" +
-                (best.l.explain(m.label)?.let { ". $it" } ?: "") + (best.l.calibration(m.label)?.let { ". $it" } ?: "") }.getOrNull() } } }
-        .ifEmpty { listOf("it starts learning at the next market session") }.joinToString("; ")
+    /** [m]'s 1-minute bars today that have started by [t] (the forming minute included: its open is the 12:00 price). */
+    private suspend fun bars(m: IraMarket, t: LocalDateTime): List<Bar> =
+        runCatching { IraHub.freshBars(m) }.getOrDefault(emptyList())
+            .filter { it.t.toLocalDate() == t.toLocalDate() && !it.t.isAfter(t) && it.t.toLocalTime() >= java.time.LocalTime.of(9, 15) }
+            .map { Bar(it.t, it.o, it.h, it.l, it.c) }
 
-    /** Every market-watch pass while Solo is on: manage the open trade, or look for the next one. */
+    /** Every market-watch pass: Solo's open trade managed (even after it is switched off), or the 12:00 decision. */
     suspend fun tick() = lock.withLock {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return@withLock
         if (!com.optionslab.app.data.Market.isOpen()) return@withLock
-        val today = com.optionslab.app.data.Market.today()
-        val now = minuteNow()
-        // The brains learn every pass, Solo on or off.
-        learnTick(today, now)
-        // The trades Solo sat out are scored when their time is up (paper only, no order).
-        runCatching { settleShadows(today, now) }
+        pass(com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
+    /**
+     * The 15-second check between full passes (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3): only Solo's open trade's exits
+     * (its index stop on a 1-minute close, the breakeven lock, 14:30), so a minute's close is acted on within 15 s. Never a
+     * decision or an entry. Under Solo's own lock as [tick]: one exit in flight.
+     */
+    suspend fun manageOnly() = lock.withLock {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return@withLock
+        if (!com.optionslab.app.data.Market.isOpen()) return@withLock
         val list = all()
-        // An open trade is always seen through to its exit, even after Solo is switched off.
-        list.lastOrNull { !it.closed }?.let { manage(it, list, today, now); return@withLock }
-        // Switched off: its setup can still be offered to Boss as a trade idea (he approves each), once a market a day.
-        // In Live, once Solo's own paper record is proven, its setups are always asked (Boss, 4 Oct: real orders only
-        // after his yes with the fingerprint); until then it trades on paper as before.
-        // (Not when the day's loss limit for Jarvis's trades is hit: then Solo trades on paper only.)
-        val soloLive = on && runCatching { AppSettings.load().live }.getOrDefault(false) && provenWhy() == null && !IraNewsTrades.lossLimitHit()
-        val offering = soloLive || !on && Automations.on(Automations.Auto.SOLO_IDEAS) && !IraNewsTrades.lossLimitHit()
-        if (!on && !offering) return@withLock
-        // Paused by its drawdown: neither trades nor ideas until Boss switches it on again.
-        if (paused != null) return@withLock
-        // The risk book: a professional's day.
-        val mine = list.filter { it.day == today.toString() && it.closed }
-        val book = mine.fold(Solo.Day()) { b, t -> b.after(t.net ?: 0.0) }
-        if (book.canTrade(RULES, DAY_LOSS) != null) return@withLock
-        val s = AppSettings.load()
-        if (s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday()) return@withLock
-        // The trade check must say yes: an error reading it is a no (fail closed).
-        val level = runCatching { IraHub.tradeCheckFast().level }.getOrNull() ?: return@withLock
-        if (level == com.optionslab.ira.TradeCheck.Level.STOP) return@withLock
-        val seen = ArrayList<String>()
-        for (m in MARKETS) {
-            val b = synchronized(brains) { brains[m] } ?: continue
-            if (b.day != today || b.done < com.optionslab.ira.Learner.FIRST) continue
-            seen += b.best.l.say(m.label)
-            watch = java.time.LocalDateTime.now(IST) to seen.joinToString("; ")
-            // No setup made in advance: of its views that would trade now, the one with the best record (it tunes itself).
-            val pick = synchronized(brains) { com.optionslab.ira.Learner.pick(b.minds.map { v -> v.l.hitRate to v.lastP?.let { v.l.decide(it) } }) } ?: continue
-            val mind = b.minds[pick]
-            val p = mind.lastP ?: continue
-            val call = mind.l.decide(p) ?: continue
-            if (b.done + 1 >= Solo.LAST_ENTRY) continue
-            val ix = b.lastPrice
-            val sig = Solo.Signal(call, b.done + 1, ix, if (call) ix * 0.95 else ix * 1.05, if (call) ix * 1.05 else ix * 0.95, 0,
-                "$LEARNED it reads a %.0f%% chance ${m.label} goes ${if (call) "up" else "down"} over the next %d minutes; %s"
-                    .format(java.util.Locale.ENGLISH, (if (call) p else 1 - p) * 100, mind.h, mind.l.say(m.label)))
-            val day = session(IraHub.freshBars(m), today, now)
-            val read = Solo.read(day, typicalRange(IraHub.recentBars(m), today), m.label)
-            if (offering) {
-                val key = "$today|${m.name}"
-                if (synchronized(offered) { key in offered }) continue
-                val text = "Solo's read on ${m.label}: ${sig.why}. $read"
-                if (IraHub.offerSoloIdea(com.optionslab.ira.NewsTrade.Idea(m, sig.call, text, kind = "solo"), text, solo = true)) synchronized(offered) { offered += key }
-                return@withLock
+        val open = list.lastOrNull { !it.closed } ?: return@withLock
+        manage(open, list, com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
+    /** Whether Solo holds an open trade (its saved list; no network): the 15-second check runs while it does. */
+    fun holding(): Boolean = runCatching { all().any { !it.closed } }.getOrDefault(false)
+
+    /** One pass at [t], after the market watch's gates ([tick]); tests call it directly. */
+    internal suspend fun passAt(t: LocalDateTime) = lock.withLock { pass(t) }
+
+    @Volatile private var brainsDropped = false
+
+    private suspend fun pass(t: LocalDateTime) {
+        // The retired learner's saved minds ("solo.brain.*") are dropped once: nothing reads them now, and every vault
+        // write re-encrypts them.
+        if (!brainsDropped) {
+            brainsDropped = true
+            runCatching {
+                val old = com.optionslab.app.security.SecurePrefs.keys("solo.brain.")
+                if (old.isNotEmpty()) com.optionslab.app.security.SecurePrefs.putAll(old.associateWith { null })
             }
-            // Its own record, by the conditions this trade comes in: where it is clearly bad Solo sits out (and follows
-            // the trade on paper as if taken, so the condition can earn its way back); where it is losing, one a day at most.
-            // It only ever stops or limits Solo's own paper trades. (Read failing: sat out - the careful side.)
-            val regimeNow = runCatching { IraStudy.regimeOf(m) }.getOrNull()
-            val ivNow = runCatching { IraNewsTrades.ivNow(com.optionslab.ira.NewsTrade.Idea(m, call, sig.why, kind = "solo"), ix)?.first }.getOrNull()
-            val cond = SoloCalibration.conditions(today, sig.entryMinute, m, call, regimeNow, ivNow)
-            val decision = runCatching { SoloCalibration.decide(calibration(list), cond, list.filter { it.day == today.toString() }.mapNotNull { conditionsOf(it) }) }.getOrNull()
-            // The reason, as decided now (a failed read is written as the careful side it took).
-            runCatching { IraThinking.add(com.optionslab.ira.Thinking.solo(IraThinking.now(), cond,
-                decision ?: SoloCalibration.Decision(false, SelfCalibration.Action.SIT_OUT, null))) }
-            if (decision == null || !decision.take) {
-                runCatching { shadow(m, sig, cond, mind.h, decision?.text()) }
+        }
+        val list = all()
+        refreshOn()
+        // At most one Solo position: an open trade is always seen through to its exit, even after Solo is switched off.
+        list.lastOrNull { !it.closed }?.let { manage(it, list, t); return }
+        if (!on) return
+        prefetch(t)
+        val today = t.toLocalDate()
+        val tt = t.toLocalTime()
+        // One decision a day, from 12:00 to 12:03 (the research's 3 minutes' slack); one trade a day, no re-entry.
+        if (tt.isBefore(SoloMidday.DECIDE_AT) || !tt.isBefore(SoloMidday.LAST_ENTRY.plusMinutes(1))) return
+        if (decided == generation() to today || midday(list).any { it.day == today.toString() }) return
+        // The app's guards (they let paper through): the kill switch, the day's loss breaker, the trade check (a read
+        // failing is a no - fail closed).
+        // (Each guard that holds the decision back is kept for Jarvis's words only; the gates themselves are exactly as before.)
+        val s = AppSettings.load()
+        if (s.guardKill || com.optionslab.app.data.LossBreaker.trippedToday()) {
+            noteDay { com.optionslab.ira.SoloDay.held(it, t, if (s.guardKill) com.optionslab.ira.SoloDay.KILL_SWITCH else com.optionslab.ira.SoloDay.LOSS_BREAKER) }
+            return
+        }
+        val level = testCheck ?: runCatching { IraHub.tradeCheckFast().level }.getOrNull()
+        if (level == null) { noteDay { com.optionslab.ira.SoloDay.held(it, t, com.optionslab.ira.SoloDay.CHECK_UNREAD) }; return }
+        if (level == com.optionslab.ira.TradeCheck.Level.STOP) { noteDay { com.optionslab.ira.SoloDay.held(it, t, com.optionslab.ira.SoloDay.CHECK_STOP) }; return }
+        decide(t, list)
+    }
+
+    /**
+     * Whether today is [m]'s expiry day by the instrument master (as the Hero arm reads it: the nearest listed expiry is
+     * today); null when the master could not be read (then Solo skips the index).
+     */
+    private fun expiryToday(m: IraMarket, today: LocalDate): Boolean? = runCatching {
+        val listed = expiries(today)?.get(m.name).orEmpty()
+        if (listed.isEmpty()) null else com.optionslab.engine.orb.HeroRules.isExpiryDay(today, listed)
+    }.getOrNull()
+
+    /** Solo's open paper trade as [com.optionslab.ira.AutoSide] reads it, for the other automatic traders ([com.optionslab.app.data.AutoExposure]). */
+    fun exposure(): List<com.optionslab.ira.AutoSide.Held> = all().filter { !it.closed }.map { t ->
+        com.optionslab.ira.AutoSide.Held.option("Jarvis solo", t.symbol, t.market, if (t.call) "CE" else "PE", long = true)
+    }
+
+    /** Another automatic position on [s]'s index (Liquidity 15+5 among them): one index, one side ([com.optionslab.app.data.AutoExposure]). */
+    private fun conflict(s: SoloMidday.Signal): String? = runCatching {
+        com.optionslab.app.data.AutoExposure.check(com.optionslab.app.data.AutoExposure.Source.SOLO, s.underlying,
+            com.optionslab.ira.AutoSide.direction(if (s.call) "CE" else "PE", true), exposure())?.let { com.optionslab.ira.AutoSide.describe(it) }
+    }.getOrElse { "the other automatic positions could not be read" }
+
+    /** The 12:00 decision: each index read, the strongest signal that may be taken bought on paper. */
+    private suspend fun decide(t: LocalDateTime, list: List<T>) {
+        val today = t.toLocalDate()
+        val decisions = MARKETS.map { m -> SoloMidday.signal(m.name, bars(m, t), runCatching { atr(m.name, today) }.getOrNull(), t) }
+        // An index whose 11:59 minute (or ATR) is not in yet is waited for until 12:01; then Solo decides with what it has.
+        val late = decisions.filter { it.why == "waiting_for_1159" || it.why == "no_atr" }
+        if (late.isNotEmpty() && t.toLocalTime().isBefore(SoloMidday.DECIDE_AT.plusMinutes(1))) {
+            noteDay { com.optionslab.ira.SoloDay.waited(it, t, late.map { d -> d.underlying }) }
+            return
+        }
+        decided = generation() to today
+        // Each index's read, kept for Jarvis's words ([com.optionslab.ira.SoloDay]); nothing reads it back to decide.
+        noteDay { com.optionslab.ira.SoloDay.decided(it, t, decisions) }
+        val signals = decisions.mapNotNull { it.signal }
+        val none = decisions.filter { it.signal == null }.map { SoloMidday.skip(it) }
+        if (signals.isEmpty()) {
+            val line = "No Solo trade today: " + none.joinToString("; ") + "."
+            watch = t to line
+            IraActivity.add(line)
+            return
+        }
+        // The strongest that may be taken; one that cannot be bought (no strike, no price, a thin strike, no fill) passes
+        // the turn to the next strongest, as the research's portfolio did.
+        val excluded = HashMap<String, String>()
+        while (true) {
+            val c = SoloMidday.pick(signals) { s ->
+                excluded[s.underlying] ?: SoloMidday.gate(expiryToday(IraMarket.valueOf(s.underlying), today), conflict(s))
+            }
+            c.skipped.forEach { (x, why) -> noteDay { com.optionslab.ira.SoloDay.passed(it, t, x.underlying, why) } }
+            val s = c.taken
+            if (s == null) {
+                val line = "No Solo trade today: " + (c.skipped.map { (x, why) -> SoloMidday.passedOver(x, why, null) } + none).joinToString("; ") + "."
+                watch = t to line
+                IraActivity.add(line)
+                c.skipped.forEach { (x, why) -> think(x, false, listOf(SoloMidday.passedOver(x, why, null))) }
+                return
+            }
+            val why = enter(s, signals, c.skipped, list, t) ?: return
+            if (why == LATE) {
+                val line = "No Solo trade today: the 12:00-12:03 entry window closed before the order could go in."
+                watch = t to line
+                IraActivity.add(line)
+                return
+            }
+            excluded[s.underlying] = why
+            noteDay { com.optionslab.ira.SoloDay.passed(it, t, s.underlying, why) }
+        }
+    }
+
+    private fun think(s: SoloMidday.Signal, took: Boolean, facts: List<String>) = runCatching {
+        IraThinking.add(com.optionslab.ira.Thinking.soloMidday(IraThinking.now(), IraMarket.valueOf(s.underlying), s.call, took, facts))
+    }
+
+    /** [enter]'s answer when the clock passed 12:03 before the order: nothing more is tried today. */
+    private const val LATE = "late"
+
+    /**
+     * Buys [s] on paper: null when bought, [LATE] when the entry window closed first, else why not (the next strongest is
+     * then tried).
+     */
+    private suspend fun enter(s: SoloMidday.Signal, signals: List<SoloMidday.Signal>, skipped: List<Pair<SoloMidday.Signal, String>>,
+                              list: List<T>, t: LocalDateTime): String? {
+        val today = t.toLocalDate()
+        val listed = expiries(today)?.get(s.underlying).orEmpty()
+        // The nearest expiry (never today's: Solo does not trade an index on its expiry day).
+        val expiry = com.optionslab.engine.orb.OrbRules.expiryAfter(today, listed) ?: return "no ${s.underlying} expiry is listed"
+        // A thin strike: the research's fallback order (4 in the money, then one step either way, the less in the money
+        // first) is tried before the index is passed over - each time counted and said.
+        var thinFirst: String? = null
+        val right = if (s.call) Right.CE else Right.PE
+        var why = "no ${s.underlying} strike near ${s.strike} is listed"
+        val held = runCatching { Paper.snapshot().positions.positions.filter { it.quantity != 0 }.map { it.symbol }.toSet() }.getOrNull()
+            ?: return "the paper account could not be read"
+        // The order flow at this decision (9 Oct; paper only): logged; under CONFIRM skipped unless the flow agrees.
+        val flow = com.optionslab.app.data.FlowGate.gate("solo", s.underlying, if (s.call) 1 else -1, false,
+            t.withSecond(0).withNano(0).toString(), right.name)    // (the strike is chosen below; no book logged)
+        if (flow.skip) return "the order flow did not agree (CONFIRM)"
+        for (k in SoloMidday.strikesToTry(s.underlying, s.side, s.index)) {
+            val c = Paper.contractFor(s.underlying, expiry, k.toDouble(), right) ?: continue
+            // Boss's own paper position in this contract is never mixed with Solo's (its exit would touch it).
+            if (c.symbol in held) { why = "you hold ${c.symbol} yourself"; continue }
+            val q = runCatching { Paper.quote(c) }.getOrNull()
+            if (q == null) { why = "no price for ${c.symbol}"; continue }
+            val thin = com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize)
+            if (thin != null) {
+                why = thin
+                if (thinFirst == null) thinFirst = "${c.symbol}: $thin"
+                IraActivity.add("Solo skipped ${c.symbol}: $thin")
+                noteDay { com.optionslab.ira.SoloDay.thin(it, t, s.underlying, c.symbol, thin) }
+                runCatching { IraThinking.add(com.optionslab.ira.Thinking.soloThin(IraThinking.now(), IraMarket.valueOf(s.underlying), s.call, thin)) }
                 continue
             }
-            enter(m, sig, list, today, read, cond, decision.text())
-            return@withLock
+            // The decision was made at [t]; the reads since take time: never an order after 12:03.
+            val clock = runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrDefault(t)
+            if (!SoloMidday.mayPlace(today, if (clock.isAfter(t)) clock else t)) {
+                noteDay { com.optionslab.ira.SoloDay.late(it, if (clock.isAfter(t)) clock else t) }
+                return LATE
+            }
+            // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
+            val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q)
+            val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
+            if (fill == null) {
+                // Not filled now (a stale quote): cancelled, never left to fill later with no record.
+                r.orderId?.let { runCatching { Paper.cancel(it) } }
+                return "the paper order for ${c.symbol} did not fill"
+            }
+            r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
+            com.optionslab.app.data.FlowGate.taken(flow, r.orderId)
+            val itm = kotlin.math.abs(SoloMidday.atm(s.underlying, s.index) - k) / SoloMidday.step(s.underlying)
+            val n = signals.size
+            val seen = SoloMidday.why(s, n)
+            val trade = T(today.toString(), s.underlying, c.symbol, s.call, fill.quantity, fill.price,
+                t.hour * 60 + t.minute - (9 * 60 + 15), s.index, s.stop, s.target, seen, orderId = r.orderId, tag = SoloMidday.TAG, atr = s.atr)
+            save(list + trade)
+            val thinMoved = thinFirst != null
+            noteDay { com.optionslab.ira.SoloDay.bought(it, com.optionslab.ira.SoloDay.Bought(t, s.underlying, c.symbol, k, itm, fill.price, thinMoved)) }
+            // The ones passed over: blocked before it, and the weaker ones (one Solo position at a time).
+            val over = skipped.map { (x, w) -> x to SoloMidday.passedOver(x, w, s) } +
+                SoloMidday.rank(signals).dropWhile { it != s }.drop(1).map { it to SoloMidday.passedOver(it, "stronger", s) }
+            val passed = over.map { it.second }
+            // A thin strike moved the buy to the next one: counted and said (how often the research's strike is not the one bought).
+            val moved = thinFirst?.let { first ->
+                val n = countThin(moved = true).first
+                "The strike ${SoloMidday.ITM_STEPS} in the money was thin ($first): bought the next one, as the research's fallback " +
+                    "(the strike moved $n time${if (n == 1) "" else "s"} so far)."
+            }
+            moved?.let { IraActivity.add("Solo: $it") }
+            tell("Solo (paper, not proven): bought ${c.symbol} ($itm ITM) at ${"%.2f".format(java.util.Locale.ENGLISH, fill.price)}" +
+                (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") + ". Why: $seen " + SoloMidday.plan(s) +
+                (if (passed.isNotEmpty()) " Passed over: ${passed.joinToString("; ")}." else ""))
+            watch = t to "bought ${c.symbol}: ${s.underlying} was the strongest of $n"
+            think(s, true, listOfNotNull(seen, moved, SoloMidday.plan(s)))
+            over.forEach { (x, words) -> think(x, false, listOf(words)) }
+            IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo · entry", r.orderId) }
+            return null
         }
+        // Every strike near it thin: the index is passed over (counted and said; the next strongest is tried).
+        if (thinFirst != null) {
+            val n = countThin(moved = false).second
+            IraActivity.add("Solo passed ${s.underlying} over: its strikes near ${s.strike} were thin (an index passed over $n time${if (n == 1) "" else "s"} so far).")
+        }
+        return why
     }
 
-    private suspend fun enter(m: IraMarket, sig: Solo.Signal, list: List<T>, today: LocalDate, read: String,
-                              cond: SelfCalibration.Conditions? = null, careful: String? = null) {
-        val u = m.name
-        val c = IraNewsTrades.contract(u, sig.index, sig.call) ?: return
-        // Boss's own paper position in this contract is never mixed with Solo's (its stop and close would touch it).
-        if (runCatching { Paper.snapshot().positions.positions.any { it.symbol == c.symbol && it.quantity != 0 } }.getOrDefault(true)) return
-        val q = runCatching { Paper.quote(c) }.getOrNull() ?: return
-        com.optionslab.ira.StrikeLiquidity.problem(q.bid, q.ask, q.volume, c.lotSize)?.let {
-            IraActivity.add("Solo skipped ${c.symbol}: $it")
-            runCatching { IraThinking.add(com.optionslab.ira.Thinking.soloThin(IraThinking.now(), m, sig.call, it)) }
-            return
-        }
-        val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, q)
-        val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
-        if (fill == null) {
-            // Not filled now (a stale quote): the order is cancelled, never left to fill later with no stop and no record.
-            r.orderId?.let { runCatching { Paper.cancel(it) } }
-            return
-        }
-        r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
-        // Always a stop-loss order on the option (30% below the fill, from Solo's study), besides its index stop.
-        // On the 0.05 tick, below the fill (as the order is placed).
-        val stopPx = kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05
-        val prot = com.optionslab.app.data.Protections.protectPaper(c.symbol, "MIS", fill.quantity, fill.price, stopPx, null, null)
-        if (!prot.startsWith("Protected")) IraActivity.add("Solo: the stop-loss on ${c.symbol} was not set ($prot); Solo's own exit still watches it.")
-        val t = T(today.toString(), u, c.symbol, sig.call, fill.quantity, fill.price, sig.entryMinute, sig.index, sig.level, sig.target, sig.why,
-            orderId = r.orderId, regime = cond?.regime?.name, ivRank = cond?.ivRank)
-        save(list + t)
-        val line = "Solo (paper): bought ${c.symbol} at ${"%.2f".format(fill.price)}" +
-            (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") + ". Why: ${sig.why}. Out if ${m.label} " +
-            "${if (sig.call) "falls to" else "rises to"} ${"%,.0f".format(sig.level)}; target ${"%,.0f".format(sig.target)}; 15:10 at the latest. " +
-            "Stop-loss on the option at ${"%.2f".format(kotlin.math.floor(fill.price * (1 - STOP_LOSS) / 0.05) * 0.05)} (30% down)." +
-            (if (read.isNotEmpty()) " My read: $read" else "") + (careful?.let { " Careful: $it." } ?: "")
-        tell(line)
-        IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "BUY", fill.quantity, c.symbol, fill.price, "Paper", "Jarvis solo · entry", r.orderId) }
-    }
-
-    private suspend fun manage(t: T, list: List<T>, today: LocalDate, now: Int) {
-        val m = IraMarket.valueOf(t.market)
-        // Read fresh, as before (it decides Solo's exit); Battery (round 7): the same read gives the trade book below, which
-        // read the whole account again moments later (each read downloads every held contract's day of candles).
+    private suspend fun manage(t: T, list: List<T>, now: LocalDateTime) {
+        val today = now.toLocalDate()
         val soloBook = runCatching { Paper.snapshot() }.getOrNull()
         val held = soloBook?.positions?.positions?.any { it.symbol == t.symbol && it.quantity != 0 } ?: true
         if (!held) {
-            // Closed outside Solo (its safety stop or the 15:15 square-off): the newest sell today is the exit. When no
-            // sell is seen (settled overnight), it is counted at the safety stop - the worst it could have been.
-            val sold = if (t.day == today.toString())
-                soloBook?.trades?.firstOrNull { it.symbol == t.symbol && it.action == "SELL" }?.price else null
-            // Closed by its stop-loss: reviewed like any other exit.
-            val byStop = sold != null && sold <= t.entry * (1 - STOP_LOSS) + 0.1
-            val lesson = if (!byStop) null else runCatching {
-                val day = session(IraHub.freshBars(m), today, now)
-                Solo.review(Solo.Signal(t.call, t.entryMinute, t.index, t.level, t.target, 0, t.why), day, day.lastIndex, Solo.Exit.PREMIUM_STOP, t.entry, sold, m.label)
-            }.getOrNull()
-            finish(t, list, sold ?: t.entry * (1 - STOP_LOSS), if (byStop) "stop-loss on the option" else if (sold != null) "closed by the square-off" else "closed while the app was away (counted at its stop-loss)", lesson)
+            // Closed outside Solo (the 15:15 square-off, or by hand), maybe on an earlier day while the app was away: the
+            // sells of its symbol after its entry in the paper account's whole trade history are the exit, whatever the day.
+            // With none found, no result is counted.
+            val sold = runCatching { exitOf(Paper.state.trades, t) }.getOrNull()
+            finish(t, list, sold?.first, if (sold != null) "closed outside Solo" else "closed while the app was away (no result read)",
+                exitOrderId = sold?.second)
             return
         }
-        val day = session(IraHub.freshBars(m), today, now)
-        if (day.size <= t.entryMinute) return
-        val s = Solo.Signal(t.call, t.entryMinute, t.index, t.level, t.target, 0, t.why)
-        var best = 0.0
-        var how: Solo.Exit? = null
-        var at = day.lastIndex
-        for (j in t.entryMinute until day.size) {
-            // The brain's trades are for its horizon: out when it has passed (the stop-loss on the option still guards it).
-            if (t.why.startsWith(LEARNED) && j >= t.entryMinute + learnedHorizon(t.why)) { how = Solo.Exit.TIME; at = j; break }
-            how = Solo.exit(s, day[j], j, best, RULES)
-            best = Solo.favour(s, day[j], best)
-            if (how != null) { at = j; break }
+        val a = t.atr
+        // The retired Solo's trade, still open when Solo (midday) replaced it: its rules are gone, so it is closed now.
+        val walked: Pair<SoloMidday.Open, SoloMidday.Walk>? = if (!t.midday || a == null) null else {
+            // From the 12:00 decision minute (the research's entry bar), not the minute the paper order filled.
+            val o = SoloMidday.Open(t.market, if (t.call) 1 else -1, t.index, a, SoloMidday.entryTime(LocalDate.parse(t.day)))
+            o to SoloMidday.walk(o, bars(IraMarket.valueOf(t.market), now), now)
         }
-        if (how == null && now >= Solo.CUT) how = Solo.Exit.TIME
-        how ?: return
+        // Solo's own exits only (the index stop, the breakeven lock, 14:30). The 30/60 rule (Boss's fixed 30-point stop and
+        // +60 target with the ladder) is deliberately NOT applied to Solo: the solo2 study (06 Oct 2026, solo2/out/ablation.csv)
+        // found it cost -Rs 2.18 L against these exits on the same trades. A day that ended with it still open: out now.
+        val exit: String = when {
+            walked == null -> "the retired Solo's trade, closed when Solo (midday) replaced it"
+            walked.second.exit != null -> walked.second.exit!!
+            t.day != today.toString() -> SoloMidday.TIME
+            else -> return
+        }
         val r = Paper.close(t.symbol, "MIS")
         val px = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.price
-        // Solo's exit is labelled as its own (who placed it, which order) and notified like any fill.
-        if (px != null) r.orderId?.let { oid ->
-            com.optionslab.app.data.Strategies.tagOwner("paper:$oid", "Jarvis solo · exit")
-            IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "SELL", t.qty, t.symbol, px, "Paper", "Jarvis solo · exit", oid) }
-        }
         if (px == null) {
-            // Not filled (no fresh price): the exit order is cancelled and tried again next pass; the safety stop stays.
+            // Not filled (no fresh price): the exit order is cancelled and tried again next pass.
             r.orderId?.let { runCatching { Paper.cancel(it) } }
             return
         }
-        runCatching { com.optionslab.app.data.Protections.removeSymbol(false, "NFO", t.symbol) }
-        val learnedTrade = t.why.startsWith(LEARNED)
-        val lesson = if (learnedTrade) null else runCatching { Solo.review(s, day, at, how, t.entry, px, m.label) }.getOrNull()
-        finish(t, list, px, lesson = lesson, exitOrderId = r.orderId, why = if (learnedTrade && how == Solo.Exit.TIME) "its ${learnedHorizon(t.why)} minutes were up" else when (how) {
-            Solo.Exit.STOP -> "stop: ${m.label} through ${"%,.0f".format(t.level)}"
-            Solo.Exit.TARGET -> "target reached"
-            Solo.Exit.SLOW -> "no follow-through"
-            Solo.Exit.LOCK -> "profit lock"
-            Solo.Exit.PREMIUM_STOP -> "stop-loss on the option"
-            Solo.Exit.TIME -> "15:10"
-        })
+        // Solo's exit is labelled as its own (who placed it, which order) and notified like any fill.
+        r.orderId?.let { oid ->
+            com.optionslab.app.data.Strategies.tagOwner("paper:$oid", "Jarvis solo · exit")
+            IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "SELL", t.qty, t.symbol, px, "Paper", "Jarvis solo · exit", oid) }
+        }
+        val words = if (walked != null) {
+            val last = runCatching { bars(IraMarket.valueOf(t.market), now).lastOrNull()?.close }.getOrNull()
+            SoloMidday.exitSay(walked.first, walked.second.copy(exit = exit), last, (px - t.entry) * t.qty)
+        } else exit
+        finish(t, list, px, words, exitOrderId = r.orderId)
     }
 
-    private fun finish(t: T, list: List<T>, px: Double?, why: String, lesson: String? = null, exitOrderId: String? = null) {
-        val net = px?.let { (it - t.entry) * t.qty - COSTS }
+    /**
+     * [t]'s exit in the paper account's trade history [trades] (every day's, not the session's): the sells of its symbol at
+     * or after its entry fill (found by its order id; else its entry minute), up to its quantity - their quantity-weighted
+     * price and the first sell's order id; null when none.
+     */
+    internal fun exitOf(trades: List<com.optionslab.engine.sandbox.Trade>, t: T): Pair<Double, String>? {
+        val entered = trades.firstOrNull { t.orderId != null && it.orderId == t.orderId }?.timestamp
+            ?: runCatching { LocalDate.parse(t.day).atTime(9, 15).plusMinutes(t.entryMinute.toLong()).withSecond(0) }.getOrNull() ?: return null
+        val sells = trades.filter { it.symbol == t.symbol && it.action == "SELL" && !it.timestamp.isBefore(entered) }.sortedBy { it.timestamp }
+        var q = 0
+        var value = 0.0
+        for (x in sells) {
+            if (q >= t.qty) break
+            val take = minOf(kotlin.math.abs(x.quantity), t.qty - q)
+            q += take; value += take * x.price.toDouble()
+        }
+        return if (q == 0) null else value / q to sells.first().orderId
+    }
+
+    private fun finish(t: T, list: List<T>, px: Double?, why: String, exitOrderId: String? = null) {
+        val net = px?.let { (it - t.entry) * t.qty - ShadowRules.charges(t.entry, it, t.qty) }
         val done = t.copy(closed = true, exitPrice = px, net = net, exit = why, exitOrderId = exitOrderId)
         val all = list.map { if (it === t) done else it }
         save(all)
-        tell("Solo (paper): closed ${t.symbol}" + (px?.let { " at ${"%.2f".format(it)}" } ?: "") +
-            (com.optionslab.app.data.Origins.shortId(exitOrderId)?.let { " (order $it)" } ?: "") + " - $why. " +
-            (net?.let { "Result ${com.optionslab.ira.AppFacts.rs(it)}." } ?: "") + (lesson?.let { " Review: $it" } ?: "") + " " + record(all))
-        // Discipline: a drawdown this deep from Solo's best means the setup is not working now - it stops and says so.
-        var peak = 0.0; var eq = 0.0
-        val from = runCatching { com.optionslab.app.security.SecurePrefs.getInt(KEY_FROM, 0) }.getOrDefault(0).coerceIn(0, all.size)
-        for (x in all.drop(from).filter { it.closed }) { eq += x.net ?: 0.0; peak = maxOf(peak, eq) }
-        if (peak - eq >= PAUSE_DRAWDOWN && paused == null) {
-            val why2 = "Solo is down ${com.optionslab.ira.AppFacts.rs(eq - peak).removePrefix("-")} from its best: paused until you switch it on again."
-            runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_PAUSED, why2) }
-            tell(why2)
+        tell("Solo (paper, not proven): closed ${t.symbol}" + (px?.let { " at ${"%.2f".format(java.util.Locale.ENGLISH, it)}" } ?: "") +
+            (com.optionslab.app.data.Origins.shortId(exitOrderId)?.let { " (order $it)" } ?: "") + ". $why " +
+            (net?.let { "Result ${SoloMidday.rs(it)} after charges. " } ?: "") + record(all))
+        if (done.midday) forwardTest(all)
+    }
+
+    /**
+     * The forward test set in advance ([SoloMidday.verdict]), after each closed trade: the record told once at 60 trades;
+     * a failed bar switches Solo off by itself and says so (once a verdict and baseline: Boss switching it back on stands, and
+     * the drawdown is then judged from that moment).
+     */
+    private fun forwardTest(all: List<T>) {
+        val c = SoloMidday.judge(nets(all), baseline())
+        val r = c.record
+        val v = c.verdict
+        val words = SoloMidday.verdictSay(c)
+        var told = false
+        val reported = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(KEY_REPORTED, false) }.getOrDefault(true)
+        if (r.trades >= SoloMidday.FORWARD_TRADES && !reported) {
+            runCatching { com.optionslab.app.security.SecurePrefs.put(KEY_REPORTED, true) }
+            tell(words); told = true
+        }
+        val acted = runCatching { com.optionslab.app.security.SecurePrefs.getString(KEY_VERDICT) }.getOrNull()
+        // Once per verdict and baseline: after Boss switches it back on (a new baseline), a new failure switches it off again.
+        val key = c.base.key(v)
+        // (An older build kept the bare verdict: acted on too while no switch-on has been recorded since.)
+        if (SoloMidday.switchOff(v) && !c.base.actedOn(acted, v)) {
+            // Switching off only lowers risk: allowed by itself. Turning it back on is Boss's choice.
+            runCatching { com.optionslab.app.security.SecurePrefs.putAll(mapOf(KEY_VERDICT to key, KEY_ON to false, KEY_PAUSED to words)) }
+            IraActivity.add("Solo switched itself off: the forward test's bar failed.")
+            refreshOn()
+            if (!told) tell(words)
         }
     }
 
@@ -525,44 +640,52 @@ internal object IraSolo {
         runCatching { JarvisVoice.announce(com.optionslab.ira.Overheard.said(line, IraHub.locked(), "Boss, Solo has news on its paper trade: it's in the chat.")) }
     }
 
-    /** How the setup has been doing lately in each market (as learned by today's passes; empty before the first). */
-    private fun form(): String = runCatching {
-        val today = com.optionslab.app.data.Market.today()
-        // Only what today's passes already learned (never worked out here: this may run on the main thread).
-        MARKETS.mapNotNull { m -> synchronized(learned) { learned[m]?.takeIf { it.first == today }?.second }?.let { Solo.form(it, RULES, m.label) } }.takeIf { it.isNotEmpty() }?.joinToString("; ", prefix = " Lately: ", postfix = ".")
-    }.getOrNull() ?: ""
-
-    /** Solo's day for the 15:35 wrap-up (null when it was off and did nothing). */
+    /** Solo's day for the 15:45 wrap-up (null when it was off and did nothing). */
     fun daySummary(): String? = runCatching {
+        val all = all()
         val today = com.optionslab.app.data.Market.today().toString()
-        // With no trade, why: the last pass's watch today ("At 15:28 Solo saw: ...").
-        val why = watch?.takeIf { it.first.toLocalDate().toString() == today && it.second.isNotEmpty() }?.let { (at, w) -> "At %02d:%02d Solo saw: %s".format(at.hour, at.minute, w) }
-        Solo.daySay(all().filter { it.day == today && it.closed }.map { it.net to it.exit }, on, on && paused != null, why)
+        val mine = all.filter { it.day == today && it.closed }
+        if (mine.isEmpty()) {
+            if (!on) return@runCatching null
+            val w = watch?.takeIf { it.first.toLocalDate().toString() == today }?.second
+            return@runCatching "Solo (midday) took no trade today" + (w?.let { ": ${it.removePrefix("No Solo trade today: ").trimEnd('.')}" } ?: "") +
+                ". " + SoloMidday.forwardLine(forward(all))
+        }
+        "Solo today on paper: " + mine.joinToString("; ") { t ->
+            "${t.symbol} " + (t.net?.let { SoloMidday.rs(it) } ?: "result not read") + (t.exit?.let { " (${it.take(80)})" } ?: "")
+        } + ". " + SoloMidday.forwardLine(forward(all))
     }.getOrNull()
 
-    /** "How is Solo doing": on or off, paused or not, and the record. */
-    fun status(): String = (if (on) "Solo is on, Boss (on paper until its record is proven; then in Live it asks you each time; switch it off in Jarvis settings)." else "Solo is off, Boss: switch it on in Jarvis settings (paper until proven).") +
-        (paused?.let { " $it" } ?: "") + " " + record() + " Learning: ${learning()}." + (watch?.takeIf { on && paused == null && com.optionslab.app.data.Market.isOpen() && it.first.toLocalDate() == com.optionslab.app.data.Market.today() &&
-            all().none { t -> !t.closed } }?.let { (at, w) ->
-            if (w.isEmpty()) " At %02d:%02d nothing was set up yet.".format(at.hour, at.minute) else " At %02d:%02d Solo saw: ".format(at.hour, at.minute) + w + "."
-        } ?: "")
+    /** "How is Solo doing": on or off, why it switched itself off, the forward test, what it saw today, the old record. */
+    fun status(): String {
+        val all = all()
+        val head = if (on) "Solo is on, Boss - Solo (midday), paper only and not proven. At 12:00 it buys the index (NIFTY, BANKNIFTY " +
+            "or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's " +
+            "range - the strongest one, 4 strikes in the money, one trade a day, never on that index's expiry day; out on a 1-minute close " +
+            "0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30."
+        else "Solo is off, Boss: switch it on in Jarvis settings (Solo (midday), paper only, not proven)."
+        val seen = watch?.takeIf { on && it.first.toLocalDate() == com.optionslab.app.data.Market.today() }?.let { (at, w) ->
+            " At %02d:%02d: %s".format(java.util.Locale.ENGLISH, at.hour, at.minute, w.trimEnd('.')) + "."
+        } ?: ""
+        val (moved, passed) = thinCounts()
+        val thin = if (moved + passed == 0) "" else " Thin strikes so far: the strike moved $moved time${if (moved == 1) "" else "s"}, " +
+            "an index passed over $passed time${if (passed == 1) "" else "s"}."
+        return head + (paused?.let { " $it" } ?: "") + " " + SoloMidday.forwardLine(forward(all)) + " " + RESEARCH + seen + thin + " " + record(all)
+    }
 
-    /** Solo's closed record as [provenWhy] judges it: its own paper trades and its setups taken through Boss's approval. */
-    fun closedRecord(): List<com.optionslab.ira.JarvisTrades.Closed> = all().filter { it.closed && it.net != null }
-        .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.net!!, false) } +
-        // Its setups taken through Boss's approval (on Zerodha too) count against it: losing real money takes it back.
-        runCatching { IraNewsTrades.all().filter { it.closed && it.result != null && it.headline.startsWith("pattern: solo") }
-            .map { com.optionslab.ira.JarvisTrades.Closed(LocalDate.parse(it.day), it.result!!, false) } }.getOrDefault(emptyList())
+    /** Solo's record as Jarvis's graduation reads it: none - Solo (midday) never graduates to real money from here. */
+    fun closedRecord(): List<com.optionslab.ira.JarvisTrades.Closed> = emptyList()
 
-    /** Null when Solo's own paper record has earned real orders (the same bar as Jarvis's trades), else why not. */
-    fun provenWhy(): String? = com.optionslab.ira.JarvisTrades.proven(closedRecord())
-        ?.replace("My trades", "Solo's trades")?.replace("My paper trades", "Solo's paper trades")
+    /** Why Solo's trades do not go live: always - Solo is paper only, with no path to Zerodha. */
+    fun provenWhy(): String? = "Solo's trades stay on paper always: Solo (midday) is a paper-only test, not proven, and never reaches Zerodha."
 
-    /** Solo's paper record in one line. */
+    /** Solo's paper record in one line: Solo (midday)'s, then the retired rules' (kept readable). */
     fun record(list: List<T> = all()): String {
-        val c = list.filter { it.closed && it.net != null }
-        if (c.isEmpty()) return "Solo has no closed trades yet."
-        val net = c.sumOf { it.net!! }
-        return "Solo so far: ${c.size} trades, ${c.count { it.net!! > 0 }} won, net ${com.optionslab.ira.AppFacts.rs(net)} on paper."
+        val r = forward(list)
+        val now = if (r.trades == 0) "Solo (midday) has no closed trades yet." else
+            "Solo (midday) so far: ${r.trades} trade${if (r.trades == 1) "" else "s"}, ${r.wins} won, net ${SoloMidday.rs(r.net)} on paper."
+        val old = list.filter { !it.midday && it.closed && it.net != null }
+        return now + if (old.isEmpty()) "" else
+            " Before it, the retired rules: ${old.size} trade${if (old.size == 1) "" else "s"}, net ${SoloMidday.rs(old.sumOf { it.net!! })}."
     }
 }

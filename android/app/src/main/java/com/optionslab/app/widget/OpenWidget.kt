@@ -231,9 +231,10 @@ class OpenWidget : AppWidgetProvider() {
             val kept = day?.let { d -> DailyPnl.all(true)[d] }
             val figure = kept?.pnl
             val sample = PnlTracker.today().lastOrNull()?.let { it.minute to it.pnl }
-            // Zerodha's P&L is before charges; the charges the app estimated from the day's trades go on the small line.
+            // Zerodha's P&L is before charges; the day's charges go on the small line - Zerodha's exact figure when the
+            // calendar kept it (usefulness, round 35), else the estimate the app made from the day's trades.
             return OpenBook.recorded(OpenBook.ZERODHA, figure, sample, now, !Market.isOpen(), live,
-                charges = kept?.charges?.takeIf { it > 0 }, estimate = true)
+                charges = kept?.charges?.takeIf { it > 0 }, estimate = kept?.exact != true)
         }
 
         private fun off(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -256,7 +257,7 @@ class OpenWidget : AppWidgetProvider() {
                 if (at != savedAt && all.any { (k, v) -> !OpenBook.sameFigures(v, SecurePrefs.getString(k)) }) {
                     savedAt = at
                     unsaved.clear()
-                    SecurePrefs.putAllSoon(all)
+                    SecurePrefs.putAllLazy(all)   // ANR fix (9 Oct): with the next lazy save, at most a minute on
                 } else unsaved.putAll(values)
                 true
             }
@@ -267,16 +268,24 @@ class OpenWidget : AppWidgetProvider() {
         private fun nowMinute(): LocalDateTime = Market.now().toLocalDateTime().withSecond(0).withNano(0)
 
         /**
-         * Zerodha's books as the widget keeps them: its P&L (before charges, as Zerodha shows it) and [charges] estimated
-         * from today's trades; null [charges] keeps the estimate already kept for today ([keptZerodhaCharges]).
+         * Zerodha's books as the widget keeps them: its P&L (before charges, as Zerodha shows it) and the day's charges on
+         * the small line ([com.optionslab.ira.ExactCharges.widgetNext]): [exact] Zerodha's contract-note figure the app
+         * already kept for every order of the day (usefulness, round 35; never asked from here), else [charges] estimated
+         * from today's trades, else what was kept for today ([keptZerodhaCharges]) - a kept exact figure said as an
+         * estimate once a reading that [checked] for it no longer finds it covering the day.
          */
-        fun zerodhaVenue(book: Broker.Positions, at: LocalDateTime?, charges: Double? = null): OpenBook.Venue = OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
-            book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true, at = at,
-            charges = charges ?: keptZerodhaCharges(at), estimate = true)
+        fun zerodhaVenue(book: Broker.Positions, at: LocalDateTime?, charges: Double? = null, exact: Double? = null,
+                         checked: Boolean = false): OpenBook.Venue {
+            val shown = com.optionslab.ira.ExactCharges.widgetNext(keptZerodhaCharges(at), exact, charges, checked)
+            return OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
+                book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true, at = at,
+                charges = shown?.value, estimate = shown?.estimate ?: true)
+        }
 
-        /** The Zerodha charges estimate the widget kept from earlier today (a read of its trades), or null. */
-        private fun keptZerodhaCharges(at: LocalDateTime?): Double? = runCatching {
-            OpenBook.decode(textNow(K_Z))?.takeIf { k -> at != null && k.at?.toLocalDate() == at.toLocalDate() }?.charges
+        /** The Zerodha charges the widget kept from earlier today (a read of its trades, or Zerodha's exact figure), or null. */
+        private fun keptZerodhaCharges(at: LocalDateTime?): com.optionslab.ira.ExactCharges.Shown? = runCatching {
+            OpenBook.decode(textNow(K_Z))?.takeIf { k -> at != null && k.at?.toLocalDate() == at.toLocalDate() }
+                ?.let { k -> k.charges?.let { com.optionslab.ira.ExactCharges.Shown(it, k.estimate) } }
         }.getOrNull()
 
         /** The paper books: the day's P&L before charges (display only), the day's charges paid on the small line. */
@@ -288,16 +297,21 @@ class OpenWidget : AppWidgetProvider() {
         /**
          * The live watch's pass ([com.optionslab.app.work.PositionCards.refresh]): [live] the app is in Zerodha mode,
          * [loggedIn] with a session today, [book] its positions as read (null = the read failed), [paper] the paper books
-         * (null = not read; kept as they were).
+         * (null = not read; kept as they were), [orders] Zerodha's order book as this pass read it (null = not read).
          */
-        fun fromWatch(context: Context, live: Boolean, loggedIn: Boolean, book: Broker.Positions?, paper: Paper.Snapshot?) {
+        fun fromWatch(context: Context, live: Boolean, loggedIn: Boolean, book: Broker.Positions?, paper: Paper.Snapshot?,
+                      orders: List<Broker.OrderRow>? = null) {
             if (BuildConfig.GOLD) return
             val at = nowMinute()
             val z: OpenBook.Venue? = when {
                 !live -> null
                 !loggedIn -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "not logged in", primary = true, at = at)
                 book == null -> OpenBook.Venue(OpenBook.ZERODHA, null, problem = "could not read", primary = true, at = at)
-                else -> zerodhaVenue(book, at)
+                // Zerodha's exact charges only when this pass read the order book and the figure kept is for exactly those
+                // orders (an order placed outside the app - Kite web - since the ask is seen only there); else the
+                // estimate from the day's kept trades (the watch's worker thread: these read the vault; never ask Zerodha).
+                else -> zerodhaVenue(book, at, runCatching { com.optionslab.app.data.TradeBook.liveChargesOn(Market.today()) }.getOrNull(),
+                    orders?.let { o -> runCatching { com.optionslab.app.data.ZerodhaCharges.kept(o, Market.today()) }.getOrNull() }, checked = true)
             }
             val m = HashMap<String, String?>()
             m[K_Z] = z?.let { OpenBook.encode(it) }
@@ -326,11 +340,23 @@ class OpenWidget : AppWidgetProvider() {
 
         /**
          * Zerodha's positions read by the app ([com.optionslab.app.ui.AppModel.loadAccount]), with [charges] estimated from
-         * today's trades when they were read too (null: the estimate kept from earlier today stays).
+         * today's trades when they were read too (null: the figure kept from earlier today stays), or [exact] - Zerodha's
+         * own figure already kept for exactly the day's orders - in its place.
          */
-        fun fromZerodha(context: Context, book: Broker.Positions, charges: Double? = null) {
+        fun fromZerodha(context: Context, book: Broker.Positions, charges: Double? = null, exact: Double? = null) {
             if (BuildConfig.GOLD) return
-            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book, nowMinute(), charges))))
+            store(context, mapOf(K_Z to OpenBook.encode(zerodhaVenue(book, nowMinute(), charges, exact, checked = charges != null || exact != null))))
+        }
+
+        /**
+         * Zerodha's exact charges for the day just came (the account page asked its contract note for every order of the
+         * day): the small line under the kept Zerodha figure says them in place of the estimate. Only today's kept
+         * reading changes; nothing kept, no line. Never asks Zerodha.
+         */
+        fun exactCharges(context: Context, value: Double) {
+            if (BuildConfig.GOLD || !value.isFinite()) return
+            val kept = OpenBook.decode(textNow(K_Z))?.takeIf { it.pnl != null && it.at?.toLocalDate() == Market.today() } ?: return
+            store(context, mapOf(K_Z to OpenBook.encode(kept.copy(charges = value, estimate = false))))
         }
 
         /** Zerodha's positions moved by the live price stream: at most every 5 s, and only in Zerodha mode. */

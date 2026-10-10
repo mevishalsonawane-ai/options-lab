@@ -111,11 +111,11 @@ object Usage {
     }
 }
 
-/** What a suggested trade risks (the owner's wish, 2026-10-03): the stop's loss in rupees and of capital. Pure. */
+/** What a suggested trade risks (the owner's wish, 2026-10-03): the 30-point stop's loss in rupees and of capital. Pure. */
 object TradeRisk {
     fun say(premium: Double, lotSize: Int, lots: Int, capital: Double?): String? {
         if (premium <= 0 || lotSize <= 0) return null
-        val loss = premium * RiskSizing.STOP_SHARE * lotSize * maxOf(1, lots)
+        val loss = RiskSizing.perLot(lotSize) * maxOf(1, lots)
         val share = capital?.takeIf { it > 0 }?.let { " (%.1f%% of your capital)".format(Locale.ENGLISH, loss / it * 100) } ?: ""
         return "If the stop hits you lose about ${AppFacts.amt(loss)}$share."
     }

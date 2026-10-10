@@ -34,13 +34,14 @@ object BotTrades {
      * One arm trade today, as the arms' book keeps it: [source] the arm's id ("orb", "liquidity15"...), [right] "CE" or
      * "PE", [signalBar] the start of the bar that gave the signal, [why] the exit reason as booked, [live] at Zerodha,
      * [level]/[target] the index level broken and the next one (Liquidity only), [ladder] under the profit lock, [peak]
-     * its best premium since entry.
+     * its best premium since entry, [trough] its worst (Liquidity 15+5: both kept while held, for [TradeLesson]; null: not
+     * recorded), [lot] the contract's lot size at the entry (null: not known - [qty] is taken as one lot).
      */
     data class Trade(
         val source: String, val symbol: String, val right: String, val qty: Int, val entry: Double, val entryTime: LocalDateTime,
         val signalBar: LocalDateTime, val exit: Double? = null, val exitTime: LocalDateTime? = null, val why: String? = null,
         val charges: Double = 0.0, val live: Boolean = false, val level: Double? = null, val target: Double? = null,
-        val ladder: Boolean = false, val peak: Double? = null,
+        val ladder: Boolean = false, val peak: Double? = null, val trough: Double? = null, val lot: Int? = null,
     )
 
     /** An arm's switch as the app shows it ([label] "ORB", "Liquidity 15+5"...). */
@@ -75,8 +76,9 @@ object BotTrades {
     /** The arm group's name as its tested record names it ("orb" -> "ORB", "liquidity" -> "Liquidity 15+5"), or null. */
     internal fun groupName(bot: String): String? = ARMS.firstOrNull { group(it.source) == bot }?.let { recordName(it.source) }
     internal fun underlying(t: Trade): String = armOf(t.source)?.takeIf { it.liquidity }?.let { LiquidityRules.underlyingOf(it) }
-        ?: if (t.symbol.uppercase(Locale.ENGLISH).startsWith("FINNIFTY")) "FINNIFTY" else OrbRules.UNDERLYING
-    private fun index(u: String) = if (u == "FINNIFTY") "FinNifty" else "BankNifty"
+        ?: t.symbol.uppercase(Locale.ENGLISH).let { s -> listOf("FINNIFTY", "MIDCPNIFTY").firstOrNull { s.startsWith(it) } } ?: OrbRules.UNDERLYING
+    private fun index(u: String) = when (u) { "FINNIFTY" -> "FinNifty"; "MIDCPNIFTY" -> "Midcap Nifty"; else -> "BankNifty" }
+
 
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun pts(x: Double) = "%+,.2f".format(Locale.ENGLISH, x)
@@ -247,6 +249,21 @@ object BotTrades {
             (if (t.charges > 0) ", ${rs(gross - t.charges)} after ${n(t.charges)} charges" else "") + "."
     }
 
+    /**
+     * A closed Liquidity 15+5 trade against its research ([TradeLesson]): per lot, with the best and worst premium seen
+     * while held when kept. Null for an open trade or another arm.
+     */
+    fun lesson(t: Trade): TradeLesson.Lesson? {
+        val arm = armOf(t.source)?.takeIf { it.liquidity } ?: return null
+        val px = t.exit ?: return null
+        val held = t.exitTime?.let { Duration.between(t.entryTime, it).toMinutes().coerceAtLeast(0) } ?: return null
+        val lots = t.lot?.takeIf { it > 0 }?.let { t.qty.toDouble() / it }?.takeIf { it > 0 } ?: 1.0
+        val lotSize = t.lot?.takeIf { it > 0 } ?: t.qty.coerceAtLeast(1)
+        val net = (px - t.entry) * t.qty - t.charges
+        return TradeLesson.of(TradeLesson.Closed("${index(LiquidityRules.underlyingOf(arm))} ${LiquidityRules.minutesOf(arm)}-min", t.right,
+            t.entry, px, t.why ?: "exit", held, net / lots, t.charges / lots, lotSize, t.peak, t.trough))
+    }
+
     /** Each of [trades] chained, and what does not fit across the day. */
     fun read(trades: List<Trade>, switches: List<Switch>, range: Pair<Double, Double>?, ones: List<Candle>, now: LocalDateTime): Read {
         val sorted = trades.sortedBy { it.entryTime }
@@ -318,7 +335,9 @@ object BotTrades {
                 (if (closed.isNotEmpty()) ", ${closed.size} closed for ${rs(net)} after charges" else "") +
                 (if (closed.size < asked.size) ", ${asked.size - closed.size} still open" else "") + "."
             r.chains.take(MAX_TOLD).forEachIndexed { i, c ->
-                out += "${i + 1}. ${c.label}, ${c.trade.symbol}: ${c.signal} ${c.exit} ${c.result}"
+                out += "${i + 1}. ${c.label}, ${c.trade.symbol}: ${c.signal} ${c.exit} ${c.result}" +
+                    // A closed Liquidity 15+5 trade: what it looks like against the arm's research (the line Jarvis said at its close).
+                    (lesson(c.trade)?.let { " Against the research: ${it.text}" } ?: "")
             }
             if (r.chains.size > MAX_TOLD) out += "And ${r.chains.size - MAX_TOLD} more trades; ask for one arm by name for those."
         }
@@ -334,7 +353,7 @@ object BotTrades {
 
     // ---- the question --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val BOT = "((paper bots?|bots?|algos?|arms?|orb fresh|orb sweep|orb|range fade|liquidity( 15 5| 15| 5| 30| bot| arm| books?)?)s?)"
     private const val MY = "(my |our |the |mere |meri |mera |hamare |todays |today s )?"

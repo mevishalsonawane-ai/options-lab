@@ -40,7 +40,9 @@ object PnlTracker {
             ?.map { (m, v) -> Point(m, v) } ?: return was
         val a = JSONArray()
         kept.forEach { a.put(JSONArray().put(it.minute).put(it.pnl)) }
-        SecurePrefs.putAllSoon(mapOf(K_DAY to Market.today().toString(), K_SERIES to a.toString()))
+        // ANR fix (9 Oct): the curve is for the eye and moves with every pass; kept in memory and written at most a minute
+        // later ([SecurePrefs.putAllLazy]), not one Keystore encryption of the whole settings vault per pass.
+        SecurePrefs.putAllLazy(mapOf(K_DAY to Market.today().toString(), K_SERIES to a.toString()))
         return kept
     }
 

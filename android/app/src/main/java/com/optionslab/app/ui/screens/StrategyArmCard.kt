@@ -64,6 +64,9 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
     val auto by model.strategyAuto.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val pending by model.strategyPending.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val botStopped by model.botStopped.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val botStopWhy by model.botStopWhy.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val dayLock by model.dayLockLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val paperSince by model.paperSinceLine.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     StrategyArmContent(
         live = s.live, killOn = s.guardKill, all = all, auto = auto, pending = pending, botStopped = botStopped,
         actions = object : StrategyArmActions {
@@ -79,6 +82,13 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         onManage = onManage,
         orbRows = { OrbRows(model) },
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
+        stopWhy = botStopWhy,
+        dayLock = dayLock,
+        paperSince = paperSince,
+        // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
+        // Then the Order flow section (9 Oct): the live read, and each strategy's OFF / SHADOW / CONFIRM with its record.
+        nightRow = { NightRow(); VixDivRow(); OrderFlowSection(model) },
+        mcxRows = { McxArmRows() },
     )
 }
 
@@ -104,6 +114,15 @@ internal fun StrategyArmContent(
     live: Boolean, killOn: Boolean, all: List<com.optionslab.app.data.Strategies.Entry>, auto: Map<Long, Boolean>,
     pending: Map<Long, RunMode>, botStopped: Boolean, actions: StrategyArmActions, onManage: () -> Unit,
     orbRows: @Composable () -> Unit, reauth: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit,
+    stopWhy: com.optionslab.ira.DayStop.Why? = null,
+    /** The account day lock's line when reached today ("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries"). */
+    dayLock: String? = null,
+    /** The paper account's running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days ..."). */
+    paperSince: String? = null,
+    /** Night (R3)'s row, paper only ([NightRow] in the app); nothing by default. */
+    nightRow: @Composable () -> Unit = {},
+    /** The MCX paper bots' "MCX (commodities)" group, paper only ([McxArmRows] in the app); nothing by default. */
+    mcxRows: @Composable () -> Unit = {},
 ) {
     val p = LocalPalette.current
     // Imported copies of ORB / ORB Fresh are plain timed baskets; the built-in arms above replace them (TODO A4).
@@ -125,7 +144,8 @@ internal fun StrategyArmContent(
         // One control for the whole bot: stop it for today, start it again, or clear the kill switch.
         val (botState, botAction, botTone) = when {
             killOn -> Triple("Kill switch ON: Zerodha orders blocked", "Clear kill switch", p.oxblood)
-            botStopped -> Triple("Bot stopped for today", "Start bot", p.verdigris)
+            // Who stopped it is said (Boss, the daily loss limit, the tile): the loss limit's stop holds until tomorrow.
+            botStopped -> Triple(com.optionslab.ira.DayStop.bar(stopWhy ?: com.optionslab.ira.DayStop.Why.BOSS), "Start bot", p.verdigris)
             else -> Triple("Bot running: armed strategies start on time", "Stop bot for today", p.oxblood)
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp).background(botTone.copy(alpha = 0.10f), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -133,8 +153,13 @@ internal fun StrategyArmContent(
             Text(botState, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
             BrassButton(botAction, tone = botTone) { confirmBot = true }
         }
+        // The account day lock (08 Oct): reached today, new automatic entries wait for tomorrow; open positions keep their exits.
+        dayLock?.let { Note(it, Modifier.padding(top = 6.dp)) }
+        // The paper account's net since the start date (Settings → Bot settings): words only.
+        paperSince?.let { Note(it, Modifier.padding(top = 6.dp)) }
         orbRows()
-        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Trade → Strategies, blocked.",
+        nightRow()
+        if (replaced > 0) Note("$replaced imported ORB strateg${if (replaced == 1) "y is" else "ies are"} hidden here: the built-in ORB arms above run the real breakout rules. They stay in Research → Strategies, blocked.",
             Modifier.padding(bottom = 6.dp))
         list.forEachIndexed { i, e ->
             if (i == 0) Rule()
@@ -152,6 +177,8 @@ internal fun StrategyArmContent(
                         val (label, color) = when {
                             blocked -> "BLOCKED · needs breakout rules" to p.amber
                             e.running -> "RUNNING" to p.verdigris
+                            // The bot stopped for today: an armed strategy does not start today (never shown as normally ARMED).
+                            armed && botStopped -> "STOPPED TODAY · ARMED" to p.oxblood
                             armed && sch?.defaultMode == RunMode.LIVE -> "ARMED · LIVE · $how" to p.oxblood
                             armed -> "ARMED · PAPER · $how" to p.verdigris
                             else -> "OFF" to p.inkFaint
@@ -197,6 +224,8 @@ internal fun StrategyArmContent(
         }
         if (list.isNotEmpty()) Note("AUTO places the entry by itself at the start time; APPROVE waits for your tap. Stops, targets and square-off always run by themselves.",
             Modifier.padding(top = 4.dp))
+        // The MCX paper bots (9 Oct, Boss: "it should be on home screen"): their own group, last, so no NSE row reads as MCX.
+        mcxRows()
     }
 
     choosing?.let { d ->
@@ -208,7 +237,8 @@ internal fun StrategyArmContent(
     reauthArm?.let { (id, automatic) -> reauth({ reauthArm = null; actions.arm(id, true, automatic) }, { reauthArm = null }) }
     reauthApprove?.let { id -> reauth({ reauthApprove = null; actions.approve(id) }, { reauthApprove = null }) }
     if (importing) ImportDialog(actions) { importing = false }
-    if (confirmBot) BotDialog(actions, killOn = killOn, stopped = botStopped, anyRunning = list.any { it.running }) { confirmBot = false }
+    if (confirmBot) BotDialog(actions, killOn = killOn, stopped = botStopped, anyRunning = list.any { it.running },
+        lossStop = botStopped && stopWhy == com.optionslab.ira.DayStop.Why.LOSS) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -243,7 +273,7 @@ private fun ImportDialog(actions: StrategyArmActions, onClose: () -> Unit) {
                 Spacer(Modifier.padding(top = 8.dp))
                 BrassButton("Choose the .json file", Modifier.fillMaxWidth()) { pick.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
                 OutlinedTextField(text, { text = it }, label = { Text("…or paste the JSON") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 90.dp, max = 160.dp))
-                Note("Strategies arrive disarmed and paper-only. Arm them on Home; enable live per strategy in Trade → Strategies.", Modifier.padding(top = 6.dp))
+                Note("Strategies arrive disarmed and paper-only. Arm them on Home; enable live per strategy in Research → Strategies.", Modifier.padding(top = 6.dp))
             }
         },
         confirmButton = { TextButton({ if (text.isNotBlank()) { actions.importText(text); onClose() } }, enabled = text.isNotBlank()) { Text("Import") } },
@@ -284,21 +314,25 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
 
 /** The confirmation behind Home's single bot button. */
 @Composable
-private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, onClose: () -> Unit) {
+private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, lossStop: Boolean = false, onClose: () -> Unit) {
     val p = LocalPalette.current
     var alsoStop by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
-        title = { Text(when { killOn -> "Clear the kill switch?"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
+        title = { Text(when { killOn -> "Clear the kill switch?"; stopped && lossStop -> "Stopped by the daily loss limit"; stopped -> "Start the bot?"; else -> "Stop the bot for today?" }, style = Type.title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(when {
                     killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
                         if (stopped) " once the bot is started too." else "."
-                    stopped -> "Armed strategies start at their scheduled times again today."
-                    else -> "No armed strategy starts for the rest of today and waiting approvals are dropped. " +
-                        "Open ORB positions are closed now (as on the desktop). Tomorrow the bot runs as usual."
+                    // The daily loss limit's stop is never lifted today (plans only lower risk).
+                    stopped && lossStop -> "The daily loss limit stopped the bot today: it stays stopped until tomorrow, and starting it again is refused. " +
+                        "Tomorrow the armed strategies, ORB arms and Pine scripts run as usual."
+                    stopped -> "Armed strategies start at their scheduled times again today, and the armed ORB arms and Pine scripts trade again. " +
+                        "Nothing that is switched off is switched on."
+                    else -> "Stops everything the app trades by itself today: strategies, ORB arms and Pine scripts. What the ORB arms " +
+                        "and Pine scripts hold is sold now. Switches stay on; Start bot (or \"start all\") resumes them today."
                 }, style = Type.bodySmall)
                 if (!killOn && !stopped && anyRunning) Row(Modifier.padding(top = 10.dp).clickable { alsoStop = !alsoStop }, verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(alsoStop, { alsoStop = it })
@@ -310,11 +344,12 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
             TextButton({
                 when {
                     killOn -> actions.clearKill()
+                    stopped && lossStop -> Unit
                     stopped -> actions.startBot()
                     else -> actions.stopBot(alsoStop)
                 }
                 onClose()
-            }) { Text(when { killOn -> "Clear"; stopped -> "Start"; else -> "Stop for today" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }
+            }) { Text(when { killOn -> "Clear"; stopped && lossStop -> "OK"; stopped -> "Start"; else -> "Stop for today" }, color = if (killOn || stopped) p.verdigris else p.oxblood) }
         },
         dismissButton = { TextButton(onClose) { Text("Cancel") } },
     )

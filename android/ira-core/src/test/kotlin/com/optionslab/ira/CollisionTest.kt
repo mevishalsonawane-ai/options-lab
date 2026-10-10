@@ -77,6 +77,8 @@ class CollisionTest {
 
     /** The families in IraHub.ask's order, each named as [CoverageTest.feature] names what answers it. */
     private val FAMILIES: List<Pair<String, (String) -> Boolean>> = listOf(
+        "Conditional" to { q -> Conditional.asked(q) },
+        "Requests" to { q -> Requests.listAsked(q) },
         "TrendReads" to { q -> TrendReads.asked(q) },
         "OutsideApp" to { q -> OutsideApp.asked(q) },
         "Clarity" to { q -> Clarity.asked(q) != null },
@@ -97,6 +99,11 @@ class CollisionTest {
         "LeadIndex" to { q -> LeadIndex.asked(q) != null },
         "LeadPart" to { q -> LeadPart.asked(q) != null },
         "NextAsk" to { q -> NextAsk.asked(q) != null },
+        "MoreAfter" to { q -> MoreAfter.asked(q) != null },
+        "SmallTrades" to { q -> SmallTrades.asked(q) != null },
+        "DayIndex" to { q -> DayIndex.asked(q) != null },
+        "CheckTimes" to { q -> CheckTimes.asked(q) != null },
+        "CondNeeds" to { q -> CondNeeds.asked(q) != null },
         "Headroom" to { q -> Headroom.asked(q) != null },
         "ArmFit" to { q -> ArmFit.asked(q) },
         "WeakLink" to { q -> WeakLink.asked(q) },
@@ -107,21 +114,50 @@ class CollisionTest {
         "WhereIWin" to { q -> WhereIWin.asked(q) != null },
         "TradesADay" to { q -> TradesADay.asked(q) != null },
         "AfterLoss" to { q -> AfterLoss.asked(q) != null },
+        "StopNoise" to { q -> StopNoise.asked(q) },
+        "DayScore" to { q -> DayScore.asked(q) },
+        "RequestBook" to { q -> RequestBook.asked(q) != null },
         "NetLean" to { q -> NetLean.asked(q) },
         "ExpiryEve" to { q -> ExpiryEve.asked(q) },
         "BeforeTomorrow" to { q -> BeforeTomorrow.asked(q) },
+        "LiquidityWhyNot" to { q -> LiquidityWhyNot.asked(q) != null },
+        "SoloDay" to { q -> SoloDay.asked(q) != null },
+        "HeroDay" to { q -> HeroDay.asked(q) != null },
         "BotTrades" to { q -> BotTrades.asked(q) != null },
         "SwitchOff" to { q -> SwitchOff.asked(q) != null },
         "SaidAbout" to { q -> SaidAbout.asked(q) != null },
         "WeekAhead" to { q -> WeekAhead.asked(q) != null },
+        "WeeklyReview" to { q -> WeeklyReview.asked(q) != null },
+        "LotsWhatIf" to { q -> LotsWhatIf.asked(q) != null },
+        "LiquidityInsight" to { q -> LiquidityInsight.asked(q) != null },
+        "LiquidityHold" to { q -> LiquidityHold.asked(q) != null },
+        "LiquidityDrawdown" to { q -> LiquidityDrawdown.asked(q) },
+        "LiquidityWhen" to { q -> LiquidityWhen.asked(q) != null },
+        "LiquidityRecord" to { q -> LiquidityRecord.asked(q) != null },
+        "TomorrowPlan" to { q -> TomorrowPlan.asked(q) },
+        "OpeningRead" to { q -> OpeningRead.asked(q) },
+        "TodayNotes" to { q -> TodayNotes.asked(q) },
+        "CatchUp" to { q -> CatchUp.asked(q) },
+        "ForwardWatch" to { q -> ForwardWatch.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
         "WatchAsk" to { q -> WatchAsk.asked(q) != null },
+        "DayRecap" to { q -> DayRecap.asked(q) != null },
+        "SettingWhere" to { q -> SettingWhere.asked(q) != null },
         "Tour" to { q -> Tour.asked(q) },
+        "WhatsNew" to { q -> WhatsNew.asked(q) },
+        "MarketRecord" to { q -> MarketRecord.asked(q) },
+        "MorningCues" to { q -> MorningCues.asked(q) != null },
+        "BigMoveRisk" to { q -> BigMoveRisk.asked(q) },
+        "LiquidityMap" to { q -> LiquidityMap.asked(q) != null },
         "ExpiryPin" to { q -> ExpiryPin.asked(q) != null },
+        "ExpiryHour" to { q -> ExpiryHour.asked(q) != null },
+        "StraddleDecay" to { q -> StraddleDecay.asked(q) != null },
+        "AtmBuy" to { q -> AtmBuy.asked(q) != null },
+        "OtmReach" to { q -> OtmReach.asked(q) != null },
         "SinceMorning" to { q -> SinceMorning.asked(q) },
         "ChainDrift" to { q -> ChainDrift.asked(q) != null },
         "ChainIntel" to { q -> ChainIntel.asked(q) != null },
@@ -146,6 +182,10 @@ class CollisionTest {
         "VixBand" to { q -> VixBand.asked(q) != null },
         "Overnight" to { q -> Overnight.asked(q) != null },
         "DayAfter" to { q -> DayAfter.asked(q) != null },
+        "OpenReach" to { q -> OpenReach.asked(q) != null },
+        "MultiDay" to { q -> MultiDay.asked(q) != null },
+        "MoveTime" to { q -> MoveTime.asked(q) != null },
+        "GiveBack" to { q -> GiveBack.asked(q) != null },
         "Weekdays" to { q -> Weekdays.asked(q) != null },
         "DayCompare" to { q -> DayCompare.asked(q) != null },
         "LikeToday" to { q -> LikeToday.asked(q) },
@@ -333,7 +373,7 @@ class CollisionTest {
         "what was the high today" to "Market", "meaning of theta" to "Glossary", "which alerts do you hold back" to "AlertSense",
         "how much did i lose today" to "Account:PNL", "how is my position doing" to "Account:EXPLAIN_POS",
         "what if nifty falls 100 points what happens to my put" to "Account:MOVE", "what's the worst position" to "Account:RANK",
-        "are my stops okay" to "Account:PROTECTIONS", "where was today's high" to "Market", "when did nifty make its high today" to "Market",
+        "are my stops okay" to "StopNoise", "where was today's high" to "Market", "when did nifty make its high today" to "Market",
         "what is the day high" to "Market", "nifty day low" to "Market", "when does the market open" to "OptionFacts",
         "how much time is left in the session" to "OptionFacts", "how much time till close" to "OptionFacts",
         "market kitne baje band hoga" to "OptionFacts", "when is the best time to trade" to "Account:TIMEOFDAY",
@@ -351,6 +391,9 @@ class CollisionTest {
         "help me journal today" to "DayJournal", "why so quiet" to "Airtime", "what's crude doing" to "Honest",
         "what time do i lose most" to "Account:TIMEOFDAY", "how did i do this week" to "Account:HISTORY", "mera pnl kitna hai" to "Account:PNL",
         "aaj kitne trade hue" to "Account:ORDERS",
+        // Liquidity 15+5's size asked (06 Oct): its own answer from the arms' book, never "how many lots can I buy" without a budget.
+        "how many lots is liquidity trading" to "Honest", "liquidity kitne lot mein trade kar raha hai" to "Honest",
+        "how many lots does liquidity trade" to "Honest",
         // ==== Round 11: round 10's open items, routed ====
         "talk me through my put" to "Account:EXPLAIN_POS", "explain my put" to "Account:EXPLAIN_POS", "how did my put do" to "Account:EXPLAIN_POS",
         "my put" to "Account:EXPLAIN_POS", "holiday kab hai" to "MarketDays", "how many trading days left this month" to "MarketDays",
@@ -515,6 +558,14 @@ class CollisionTest {
         "what should i ask you now" to "Tour", "what else can i ask you" to "Tour", "any questions i should ask" to "Tour",
         "what kind of things can i ask you" to "Tour", "suggest some good questions" to "Tour", "aapse kya pooch sakta hoon" to "Tour",
         "sawal suggest karo" to "Tour", "take me on a tour" to "Tour",
+        // ---- WhatsNew: the app's own changelog (what changed in the app, never the market's news) ----
+        "what's new" to "WhatsNew", "whats new" to "WhatsNew", "what's new in the app" to "WhatsNew", "what is new in this update" to "WhatsNew",
+        "what changed in the app" to "WhatsNew", "what has changed in the app" to "WhatsNew", "what's changed in this build" to "WhatsNew",
+        "what's changed in the update" to "WhatsNew", "app me kya naya hai" to "WhatsNew",
+        // A bare "what changed" stays SinceLast's (the market since Boss last asked).
+        "what changed" to "SinceLast", "what's changed" to "SinceLast", "what has changed" to "SinceLast",
+        "naya kya hai" to "WhatsNew", "kya naya hai" to "WhatsNew", "app mein naya kya hai" to "WhatsNew", "naya kya aaya" to "WhatsNew",
+        "what are the new features" to "WhatsNew", "show me the changelog" to "WhatsNew", "jarvis what's new" to "WhatsNew",
         // ---- FigureFirst: the figure said first ----
         "which answers do you start with the number" to "FigureFirst", "why do you start with the number first" to "FigureFirst",
         "don't start with the number" to "FigureFirst", "why are you saying the level first" to "LeadPart",
@@ -534,6 +585,9 @@ class CollisionTest {
         "open zerodha" to "Account:STATUS", "start orb" to "Act", "play the alert sound" to "Account:ALARMS", "open orders" to "Account:ORDERS",
         // ==== Round 13: round 12's open items, routed ====
         "what all can you do" to "Help", "what else can you do" to "Help", "what can you do" to "Help",
+        // The help answer and the tour, as the question guide points at them (06 Oct): routes unchanged.
+        "help" to "Help", "tum kya kar sakte ho" to "Help", "jarvis tum kya kar sakte ho" to "Help", "what can i ask you" to "Tour",
+        "what can i ask jarvis" to "Tour", "main kya pooch sakta hoon" to "Tour",
         "how was yesterday for nifty" to "DayCompare", "how was nifty yesterday" to "DayCompare", "how did banknifty do yesterday" to "DayCompare",
         "how was the market yesterday" to "DayCompare", "kal nifty kaisa tha" to "DayCompare", "how did sensex close yesterday" to "DayCompare",
         "what is the average price of my put" to "Account:POSITIONS", "what's my average price on the 24500 put" to "Account:POSITIONS",
@@ -784,6 +838,244 @@ class CollisionTest {
         // Its neighbours: the intraday comeback, the day after a close at the low, the day after a VIX jump.
         "does nifty recover from a 1% fall" to "Comebacks", "what happens the day after nifty closes at the low" to "ExtremeCloses",
         "after a vix spike how much does nifty move the next day" to "VixNext",
+        // ---- OpenReach: how far the days got from their own open (round 36) ----
+        "how far does nifty usually move from its open" to "OpenReach", "how often does nifty go 1% from the open" to "OpenReach",
+        "how often does banknifty trade 0.5% on both sides of the open" to "OpenReach", "open reach record" to "OpenReach",
+        "how often does nifty close within 0.3% of its open" to "OpenReach", "open se 1% kitni baar jata hai banknifty" to "OpenReach",
+        "what share of days does nifty go 1% from the open" to "OpenReach",
+        // Its neighbours: the open as the day's low, the opening range's breaks, a fall from the previous close.
+        "how often does finnifty open at its low" to "OpenHighLow", "do opening range breakouts usually hold" to "RangeBreaks",
+        "how often does banknifty recover a 1% fall during the day" to "Comebacks",
+        // ---- MultiDay: how far a few sessions went from the close they started from (round 37) ----
+        "how far does nifty usually move in 3 sessions" to "MultiDay", "how often does nifty move 2% in 3 days" to "MultiDay",
+        "how often does banknifty stay within 1.5% over 4 sessions" to "MultiDay", "3 day move record for sensex" to "MultiDay",
+        "teen din mein nifty kitna chalta hai" to "MultiDay", "how often does finnifty move 300 points in 5 sessions" to "MultiDay",
+        // Its neighbours: a calendar week's range, the day after a big day, the reach from the open.
+        "how big is a normal week for finnifty" to "WeekRange", "does nifty bounce the day after a big down day" to "DayAfter",
+        "how often does sensex go 1% from the open" to "OpenReach",
+        // ---- MoveTime: how long the index took to travel a distance from a quarter-hour start (round 38) ----
+        "how long does nifty usually take to move 50 points" to "MoveTime", "how often does nifty move 0.3% within 30 minutes" to "MoveTime",
+        "how many minutes does banknifty take to move 200 points" to "MoveTime", "time to move record for sensex" to "MoveTime",
+        "nifty ko 50 point chalne mein kitna time lagta hai" to "MoveTime", "how often does finnifty move 40 points in an hour" to "MoveTime",
+        // Its neighbours: the busiest half hour, a big 5-minute candle, the first half hour's direction.
+        "is the lunch hour usually quiet on banknifty" to "DayClock", "big candle record for finnifty" to "BigCandles",
+        "does the first half hour usually decide the day for sensex" to "FirstMove",
+        // ---- GiveBack: how much of a run from the open the close gave back, and the pullback inside it (round 39) ----
+        "after nifty runs 100 points in the first hour how much does it give back by the end of the day" to "GiveBack",
+        "how much of a 1% run from the open does banknifty usually give back" to "GiveBack", "how deep is the pullback after nifty runs 100 points" to "GiveBack",
+        "give back record for sensex" to "GiveBack", "pullback after a run record" to "GiveBack", "100 point chalne ke baad nifty kitna wapas deta hai" to "GiveBack",
+        "how much does finnifty retrace after a 150 point move in the first 30 minutes" to "GiveBack",
+        // Its neighbours: a comeback from the previous close, the reach from the open, the first move's direction, the last hour.
+        "does a 1.5% intraday rally usually hold for banknifty" to "Comebacks", "how far does finnifty usually move from its open" to "OpenReach",
+        "when sensex is up in the first half hour how often does it end up" to "FirstMove", "does finnifty usually reverse in the last hour" to "LastHour",
+        // ---- StraddleDecay: what 9:30 to 14:30 did to the at-the-money straddle, quiet against moving sessions (round 40) ----
+        "how much does the atm straddle usually lose between 9:30 and 2:30" to "StraddleDecay",
+        "how much does nifty's straddle decay on a quiet day vs a trending day" to "StraddleDecay", "straddle decay record for banknifty" to "StraddleDecay",
+        "how often does the atm straddle gain by 2:30" to "StraddleDecay", "on expiry day how much does the straddle usually lose" to "StraddleDecay",
+        "nifty ka straddle din mein kitna girta hai" to "StraddleDecay", "how much do at the money option premiums usually decay intraday" to "StraddleDecay",
+        // Its neighbours: the straddle's implied move now, Boss's own book's decay, today's expiry companion.
+        "what does the banknifty straddle imply for expiry" to "ChainIntel", "how much is my book losing to theta" to "BookDecay",
+        // ---- ExpiryHour: the expiring at-the-money call and put from 14:30 to the end of expiry day (round 42) ----
+        "how does the atm option's premium behave in the last hour on expiry day" to "ExpiryHour",
+        "how much does the atm call lose in the last hour of expiry" to "ExpiryHour", "how often does the atm put double in the final hour on expiry" to "ExpiryHour",
+        "expiry last hour premium record for banknifty" to "ExpiryHour", "expiry ke aakhri ghante mein atm premium kitna girta hai" to "ExpiryHour",
+        "what usually happens to at the money premiums after 2:30 on expiry days" to "ExpiryHour",
+        // ---- AtmBuy: the at-the-money call and put bought at 9:30 and held, how often each ended the day worth more or doubled (round 41) ----
+        "how often does the atm option double from its 9:30 price before the end of the day" to "AtmBuy",
+        "how often does a bought atm call end the day worth more" to "AtmBuy", "how often does nifty's atm put double on expiry day" to "AtmBuy",
+        "atm option double record for banknifty" to "AtmBuy", "atm call kitni baar double hota hai" to "AtmBuy",
+        "how often do at the money options end the day worth more than at 9:30" to "AtmBuy", "how many sessions does the at the money call double" to "AtmBuy",
+        // ---- OtmReach: the out-of-the-money call and put held from 9:30, how often each ended the day in the money (round 43) ----
+        // ---- MarketRecord: what the market recorder keeps on this phone (days, storage, the last write, the gaps) ----
+        "how much market data have we recorded" to "MarketRecord", "is the market recorder running" to "MarketRecord",
+        "market recorder status" to "MarketRecord", "how many days of market data have you recorded" to "MarketRecord",
+        "kitna market data record hua hai" to "MarketRecord",
+        // ---- MorningCues: GIFT Nifty's gap from Nifty's last close and the FIIs' index positioning, from the market recorder ----
+        "gift nifty kya bol raha hai" to "MorningCues", "what is gift nifty saying" to "MorningCues", "how is gift nifty" to "MorningCues",
+        "where is gift nifty" to "MorningCues", "gift nifty kitna hai" to "MorningCues", "what's sgx nifty" to "MorningCues",
+        "what are fiis doing" to "MorningCues", "fii position" to "MorningCues", "fii positioning" to "MorningCues",
+        "what is the fii long short ratio" to "MorningCues", "fii ka position kya hai" to "MorningCues", "fii kya kar rahe hain" to "MorningCues",
+        "are fiis long or short" to "MorningCues", "fii index futures position" to "MorningCues", "morning cues" to "MorningCues",
+        "pre market cues" to "MorningCues",
+        // ---- BigMoveRisk: how likely a big 5-minute candle is now (level, rough multiple, reasons; never the direction) ----
+        "is a big move likely now" to "BigMoveRisk", "is a big move coming" to "BigMoveRisk", "any chance of a big move right now" to "BigMoveRisk",
+        "big move aa sakta hai kya" to "BigMoveRisk", "kya abhi bada move aayega" to "BigMoveRisk", "bada move aane wala hai kya" to "BigMoveRisk",
+        "abhi kitna risk hai" to "BigMoveRisk", "finnifty mein abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
+        "banknifty abhi volatile hai kya" to "BigMoveRisk", "is nifty volatile now" to "BigMoveRisk", "is the market volatile right now" to "BigMoveRisk",
+        "how risky is the market now" to "BigMoveRisk", "market risky hai kya abhi" to "BigMoveRisk", "is a sharp move likely in sensex" to "BigMoveRisk",
+        // ---- WeeklyReview: Jarvis's review of the week (money by strategy, live vs backtest, shadows, the market, next week) ----
+        "weekly review" to "WeeklyReview", "jarvis weekly review" to "WeeklyReview", "show me the weekly review" to "WeeklyReview",
+        "is hafte ka review" to "WeeklyReview", "hafte ka review" to "WeeklyReview", "week ka review" to "WeeklyReview",
+        "how did this week go" to "WeeklyReview", "how did the week go" to "WeeklyReview", "how was this week" to "WeeklyReview",
+        "weekly report" to "WeeklyReview", "weekly recap" to "WeeklyReview", "review of the week" to "WeeklyReview", "week in review" to "WeeklyReview",
+        "is hafta kaisa raha" to "WeeklyReview", "last week's review" to "WeeklyReview", "pichle hafte ka review" to "WeeklyReview",
+        "how did last week go" to "WeeklyReview", "what's in the weekly review" to "WeeklyReview",
+        // ---- LotsWhatIf: Liquidity 15+5 at another size, from its own book and its research (nothing changes) ----
+        "what if liquidity traded 3 lots" to "LotsWhatIf", "how much with 1 lot this week" to "LotsWhatIf", "3 lot pe kitna banta" to "LotsWhatIf",
+        "is 2 lots better than 3" to "LotsWhatIf", "what would liquidity have made with 3 lots" to "LotsWhatIf", "liquidity 3 lots pe kitna banta" to "LotsWhatIf",
+        "how much would 3 lots have made last week" to "LotsWhatIf", "liquidity with 2 lots last month" to "LotsWhatIf", "compare 2 lots vs 3 lots for liquidity" to "LotsWhatIf",
+        "is 2 lots better than 3 for liquidity" to "LotsWhatIf", "agar 3 lot hota toh kitna banta" to "LotsWhatIf", "what if liquidity traded 1 lot this week" to "LotsWhatIf",
+        "what if liquidity had traded 2 lots over the last 10 trades" to "LotsWhatIf", "liquidity 1 lot vs 2 lots this month" to "LotsWhatIf",
+        // ---- LiquidityInsight: what's working for Liquidity 15+5 - its paper trades cut six ways, beside the research ----
+        "what's working for liquidity" to "LiquidityInsight", "what is working for liquidity" to "LiquidityInsight", "whats working for liquidity" to "LiquidityInsight",
+        "what's working in liquidity" to "LiquidityInsight", "liquidity what's working" to "LiquidityInsight", "when does liquidity win" to "LiquidityInsight",
+        "where does liquidity make money" to "LiquidityInsight", "where does liquidity lose" to "LiquidityInsight", "where is liquidity losing" to "LiquidityInsight",
+        "where does liquidity lose money" to "LiquidityInsight", "what's not working for liquidity" to "LiquidityInsight", "liquidity weak spots" to "LiquidityInsight",
+        "liquidity patterns" to "LiquidityInsight", "liquidity insights" to "LiquidityInsight", "patterns in liquidity trades" to "LiquidityInsight",
+        "liquidity ka pattern kya hai" to "LiquidityInsight", "liquidity kahan loss karta hai" to "LiquidityInsight", "liquidity kab loss karta hai" to "LiquidityInsight",
+        "liquidity kahan jeetta hai" to "LiquidityInsight", "what works and what doesn't for liquidity" to "LiquidityInsight",
+        // ---- LiquidityHold: how long Liquidity 15+5 holds its trades, from its own paper book (nothing changes) ----
+        "how long does liquidity hold its trades" to "LiquidityHold", "how long does liquidity hold" to "LiquidityHold",
+        "how long do liquidity trades last" to "LiquidityHold", "liquidity hold time" to "LiquidityHold", "liquidity hold time this week" to "LiquidityHold",
+        "liquidity holding time last week" to "LiquidityHold", "liquidity trade duration" to "LiquidityHold", "how long are liquidity's trades open" to "LiquidityHold",
+        "do liquidity's losers last longer than its winners" to "LiquidityHold", "does liquidity hold its losers longer" to "LiquidityHold",
+        "liquidity ke trades kitni der chalte hain" to "LiquidityHold", "liquidity kitni der trade rakhta hai" to "LiquidityHold",
+        "liquidity time in trade" to "LiquidityHold", "liquidity hold times over the last 10 trades" to "LiquidityHold",
+        // ---- LiquidityDrawdown: how far Liquidity 15+5 has fallen from its best, from its own paper book (nothing changes) ----
+        "how deep has liquidity fallen from its best" to "LiquidityDrawdown", "liquidity drawdown" to "LiquidityDrawdown",
+        "liquidity's current drawdown" to "LiquidityDrawdown", "what is liquidity's drawdown" to "LiquidityDrawdown", "liquidity max drawdown" to "LiquidityDrawdown",
+        "how far is liquidity below its peak" to "LiquidityDrawdown", "liquidity's worst losing streak" to "LiquidityDrawdown",
+        "liquidity longest losing streak" to "LiquidityDrawdown", "how long did liquidity take to recover" to "LiquidityDrawdown",
+        "has liquidity recovered from its drawdown" to "LiquidityDrawdown", "liquidity worst drawdown ever" to "LiquidityDrawdown",
+        "liquidity peak se kitna neeche hai" to "LiquidityDrawdown", "liquidity kitna gira hai" to "LiquidityDrawdown",
+        "is liquidity underwater" to "LiquidityDrawdown", "how much is liquidity down from its high" to "LiquidityDrawdown",
+        // ---- LiquidityWhen: Liquidity 15+5 by weekday, expiry day and entry time, from its own paper book (nothing changes) ----
+        "which day does liquidity do best" to "LiquidityWhen", "liquidity on expiry days" to "LiquidityWhen", "liquidity by weekday" to "LiquidityWhen",
+        "what time of entry works best for liquidity" to "LiquidityWhen", "liquidity kis din achha karta hai" to "LiquidityWhen",
+        "liquidity by entry time" to "LiquidityWhen", "how does liquidity do on expiry days" to "LiquidityWhen", "liquidity by day and time" to "LiquidityWhen",
+        "how does liquidity do on mondays" to "LiquidityWhen", "liquidity expiry ke din kaisa karta hai" to "LiquidityWhen",
+        "which weekday is best for liquidity" to "LiquidityWhen", "liquidity kis time achha karta hai" to "LiquidityWhen",
+        // (Said other ways: a past tense, "show me", a loss, day or time wise, the best time, the morning.)
+        "how did liquidity do on expiry days" to "LiquidityWhen", "which day did liquidity do best" to "LiquidityWhen",
+        "show me liquidity by weekday" to "LiquidityWhen", "tell me which day liquidity does best" to "LiquidityWhen",
+        "which day liquidity loses most" to "LiquidityWhen", "liquidity day wise" to "LiquidityWhen", "liquidity performance by hour" to "LiquidityWhen",
+        "best time for liquidity" to "LiquidityWhen", "how does liquidity do in the morning" to "LiquidityWhen",
+        "how long liquidity holds its trades" to "LiquidityHold", "how long do liquidity's trades usually last" to "LiquidityHold",
+        "how much has liquidity lost from its peak" to "LiquidityDrawdown", "how far is liquidity from its peak" to "LiquidityDrawdown",
+        "did liquidity get back to its high" to "LiquidityDrawdown",
+        // ---- LiquidityRecord:Liquidity 15+5's paper record over time (a week, a day, the last few, by index, the streak, on track) ----
+        "how did liquidity do this week" to "LiquidityRecord", "how did liquidity do last week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord",
+        "how did liquidity do on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord", "liquidity's last 10 trades" to "LiquidityRecord",
+        "which index works best for liquidity" to "LiquidityRecord", "liquidity win streak" to "LiquidityRecord", "is liquidity on track" to "LiquidityRecord",
+        "liquidity ne is hafte kaisa kiya" to "LiquidityRecord", "liquidity ke last 10 trades" to "LiquidityRecord", "liquidity ki streak" to "LiquidityRecord",
+        "liquidity kis index pe accha chalta hai" to "LiquidityRecord", "liquidity track pe hai kya" to "LiquidityRecord", "liquidity ka record" to "LiquidityRecord",
+        "pichle hafte liquidity ne kitna kamaya" to "LiquidityRecord", "liquidity track record" to "LiquidityRecord", "liquidity best trade" to "LiquidityRecord",
+        "liquidity by exit reason" to "LiquidityRecord", "how did liquidity do yesterday" to "LiquidityRecord", "liquidity this month" to "LiquidityRecord",
+        "how has liquidity done so far" to "LiquidityRecord", "liquidity win rate" to "LiquidityRecord", "is liquidity in line with research" to "LiquidityRecord",
+        // ---- TomorrowPlan: the next session prepared (Liquidity's day and levels, Solo, Hero, events, cues) ----
+        "what's the plan for tomorrow" to "TomorrowPlan", "what is the plan for tomorrow" to "TomorrowPlan", "plan for tomorrow" to "TomorrowPlan",
+        "tomorrow's plan" to "TomorrowPlan", "what's tomorrow's plan" to "TomorrowPlan", "what's the game plan for tomorrow" to "TomorrowPlan",
+        "give me the plan for tomorrow" to "TomorrowPlan", "plan for the next session" to "TomorrowPlan", "what's the plan for the next trading day" to "TomorrowPlan",
+        "tomorrow ka plan" to "TomorrowPlan", "tomorrow ka plan kya hai" to "TomorrowPlan", "kal ka plan" to "TomorrowPlan", "kal ka plan kya hai" to "TomorrowPlan",
+        "kal ka plan batao" to "TomorrowPlan", "kal ki taiyari" to "TomorrowPlan", "kal ke liye plan" to "TomorrowPlan", "mera kal ka plan" to "TomorrowPlan",
+        "prepare me for tomorrow" to "TomorrowPlan", "prep me for tomorrow" to "TomorrowPlan", "get me ready for tomorrow" to "TomorrowPlan",
+        "brief me for tomorrow" to "TomorrowPlan", "can you prepare me for tomorrow" to "TomorrowPlan", "how should i prepare for tomorrow" to "TomorrowPlan",
+        "help me prepare for tomorrow" to "TomorrowPlan", "how do i get ready for tomorrow" to "TomorrowPlan", "jarvis what's the plan for tomorrow" to "TomorrowPlan",
+        // ---- OpeningRead: how the market opened (gaps, the open against Liquidity's levels, the first candle, the arm) ----
+        "how did the market open" to "OpeningRead", "how did the market open today" to "OpeningRead", "how did we open" to "OpeningRead",
+        "how has the market opened" to "OpeningRead", "how did the market open vs the levels" to "OpeningRead", "how did the market open vs the liquidity levels" to "OpeningRead",
+        "where did we open" to "OpeningRead", "where did we open vs the levels" to "OpeningRead", "where did the market open" to "OpeningRead",
+        "how was the open" to "OpeningRead", "how was the opening" to "OpeningRead", "how was today's open" to "OpeningRead", "how did the open go" to "OpeningRead",
+        "opening read" to "OpeningRead", "the opening read" to "OpeningRead", "give me the opening read" to "OpeningRead", "what's the opening read" to "OpeningRead",
+        "opening summary" to "OpeningRead", "today's opening summary" to "OpeningRead", "opening report" to "OpeningRead",
+        "market kaisa khula" to "OpeningRead", "market kaisa khula aaj" to "OpeningRead", "aaj market kaisa khula" to "OpeningRead", "market kaise khula aaj" to "OpeningRead",
+        "market kahan khula" to "OpeningRead", "open kaisa tha" to "OpeningRead", "aaj ki opening kaisi rahi" to "OpeningRead", "jarvis how did the market open" to "OpeningRead",
+        // ---- ForwardWatch: the paper arms against their backtests (Liquidity 15+5, Solo, Hero), one line an arm ----
+        "is anything drifting" to "ForwardWatch", "is anything drifting?" to "ForwardWatch", "jarvis is anything drifting" to "ForwardWatch",
+        "is any arm drifting" to "ForwardWatch", "are my arms drifting" to "ForwardWatch", "are my bots drifting" to "ForwardWatch",
+        "anything drifting from the backtest" to "ForwardWatch", "drift check" to "ForwardWatch", "any drift" to "ForwardWatch",
+        "how are my arms vs backtest" to "ForwardWatch", "how are my arms doing vs the backtest" to "ForwardWatch", "arms vs backtest" to "ForwardWatch",
+        "how are my arms doing against the backtest" to "ForwardWatch", "are my arms in line with the backtest" to "ForwardWatch",
+        "live vs backtest" to "ForwardWatch", "live vs backtest status" to "ForwardWatch", "paper vs backtest" to "ForwardWatch",
+        "forward test status" to "ForwardWatch", "what's the forward test status" to "ForwardWatch", "how is the forward test going" to "ForwardWatch",
+        "status of my forward tests" to "ForwardWatch", "forward test ka haal" to "ForwardWatch", "kya koi arm drift kar raha hai" to "ForwardWatch",
+        "koi bot drift ho raha hai kya" to "ForwardWatch", "mere arms backtest ke hisaab se kaise hain" to "ForwardWatch",
+        // ---- DayRecap: one compact recap of a past trading day (the market, events, news, FII/DII, the paper arms) ----
+        "what happened on 3 oct" to "DayRecap", "what happened on 3rd october" to "DayRecap", "what happened on oct 2nd" to "DayRecap",
+        "what happened yesterday" to "DayRecap", "what all happened yesterday" to "DayRecap", "what happened in the market yesterday" to "DayRecap",
+        "what happened on monday" to "DayRecap", "what happened last friday" to "DayRecap", "jarvis what happened last friday" to "DayRecap",
+        "what happened day before yesterday" to "DayRecap", "what happened 3 days ago" to "DayRecap", "what happened on the 3rd" to "DayRecap",
+        "what happened with the market on monday" to "DayRecap", "what happened on 3 oct 2025" to "DayRecap", "what happened a week ago" to "DayRecap",
+        "recap of yesterday" to "DayRecap", "give me a recap of yesterday" to "DayRecap", "summary of yesterday" to "DayRecap",
+        "yesterday's recap" to "DayRecap", "what's yesterday's recap" to "DayRecap", "recap of 3 oct" to "DayRecap", "3 oct recap" to "DayRecap",
+        "recap of last monday" to "DayRecap", "recap of the session on 3 oct" to "DayRecap", "monday's summary" to "DayRecap", "sum up last friday" to "DayRecap",
+        "how was monday" to "DayRecap", "how was friday" to "DayRecap", "how was last friday" to "DayRecap", "how was 3 oct" to "DayRecap",
+        "how was the 3rd" to "DayRecap", "how did monday go" to "DayRecap", "how did last friday turn out" to "DayRecap",
+        "2 oct ka recap" to "DayRecap", "kal ka recap" to "DayRecap", "pichle shukravar ka recap" to "DayRecap", "kal kya hua" to "DayRecap",
+        "parso kya hua" to "DayRecap", "somvar ko kya hua" to "DayRecap", "market mein kal kya hua" to "DayRecap", "kal ka din kaisa tha" to "DayRecap",
+        "somvar kaisa raha" to "DayRecap", "3 oct ka market kaisa tha" to "DayRecap",
+        // ---- TodayNotes: what Jarvis posted by himself today (counted by category, the latest three named) ----
+        "what did you tell me today" to "TodayNotes", "what have you told me today" to "TodayNotes", "what did you say today" to "TodayNotes",
+        "what all did you tell me today" to "TodayNotes", "what did you tell me this morning" to "TodayNotes", "what did you post today" to "TodayNotes",
+        "what notes did you post today" to "TodayNotes", "jarvis what did you tell me today" to "TodayNotes", "what have you told me so far today" to "TodayNotes",
+        "today's notes" to "TodayNotes", "todays notes" to "TodayNotes", "show today's notes" to "TodayNotes", "today's notes please" to "TodayNotes",
+        "your notes today" to "TodayNotes", "notes for today" to "TodayNotes", "show me your notes from today" to "TodayNotes",
+        "aaj kya bataya" to "TodayNotes", "aaj kya bataya tumne" to "TodayNotes", "aaj tumne kya bataya" to "TodayNotes", "tumne aaj kya bataya" to "TodayNotes",
+        "aaj kya kya bataya" to "TodayNotes", "aaj ke notes" to "TodayNotes", "aaj ke notes dikhao" to "TodayNotes",
+        // ---- CatchUp: the notes Jarvis posted since Boss last looked, said short ("what did I miss" keeps its own answer) ----
+        "catch me up" to "CatchUp", "jarvis catch me up" to "CatchUp", "catch me up please" to "CatchUp", "catch me up on your notes" to "CatchUp",
+        "read your notes" to "CatchUp", "read the notes" to "CatchUp", "read me your notes" to "CatchUp", "tumhare notes padh do" to "CatchUp",
+        "notes padh do" to "CatchUp", "aapke notes padh do" to "CatchUp", "notes sunao" to "CatchUp", "notes padh ke sunao" to "CatchUp",
+        // (Boss's own notes keep the routes they had before the catch-up.)
+        "read my notes" to "Account:REASONS", "read me my notes" to "Account:REASONS", "read out my notes" to "Account:REASONS", "mere notes padh do" to "Missed",
+        "kya hua jab main nahi tha" to "CatchUp", "kya hua jab mai nahi tha" to "CatchUp", "jab main nahi tha tab kya hua" to "CatchUp",
+        // ---- SettingWhere: where a setting is, from the Settings search's catalogue (a reply only; nothing is switched) ----
+        "where is the quiet hours setting" to "SettingWhere", "where's the mute switch" to "SettingWhere", "where do i find the backup option" to "SettingWhere",
+        "where is the backup setting" to "SettingWhere", "where can i find the fingerprint setting" to "SettingWhere", "where is the pin setting" to "SettingWhere",
+        "where is the setting for quiet hours" to "SettingWhere", "where is quiet hours in settings" to "SettingWhere", "where is the mute setting" to "SettingWhere",
+        "where are the alert settings" to "SettingWhere", "where is the liquidity setting" to "SettingWhere", "where is the recorder setting" to "SettingWhere",
+        "where is the news setting" to "SettingWhere", "where is the theme setting" to "SettingWhere", "where is the voice setting" to "SettingWhere",
+        "how do i turn off quiet hours" to "SettingWhere", "how do i turn off market alerts" to "SettingWhere", "how do i turn off liquidity alerts" to "SettingWhere",
+        "how do i turn off liquidity" to "SettingWhere", "how do i turn off solo" to "SettingWhere", "how do i switch off solo" to "SettingWhere",
+        "how do i turn on fingerprint" to "SettingWhere", "how do i change my pin" to "SettingWhere", "how to turn off notifications" to "SettingWhere",
+        "how do i stop jarvis talking" to "SettingWhere", "how do i mute jarvis" to "SettingWhere", "how to mute jarvis" to "SettingWhere",
+        "how do i turn off the widget" to "SettingWhere", "how can i disable screenshots" to "SettingWhere", "how do i turn off the guard" to "SettingWhere",
+        "how do i turn quiet hours off" to "SettingWhere", "how do i change the theme" to "SettingWhere", "how do i turn off the recorder" to "SettingWhere",
+        "how do i turn off the opening read" to "SettingWhere", "how do i turn off news alerts" to "SettingWhere", "how do i turn off hero" to "SettingWhere",
+        "liquidity setting kahan hai" to "SettingWhere", "quiet hours setting kahan hai" to "SettingWhere", "backup ki setting kahan hai" to "SettingWhere",
+        "notification setting kahan hai" to "SettingWhere", "fingerprint ki setting kahan hai" to "SettingWhere", "solo kaise band karu" to "SettingWhere",
+        "market alerts kaise off karte hai" to "SettingWhere", "jarvis where is the backup setting" to "SettingWhere",
+        // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, from its own records, and what it waits for ----
+        "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot", "why didn't liquidity trade today" to "LiquidityWhyNot",
+        "why did liquidity not trade today" to "LiquidityWhyNot", "why hasn't liquidity traded" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
+        "why no trade from liquidity" to "LiquidityWhyNot", "why didn't the liquidity bot trade" to "LiquidityWhyNot", "why didn't liquidity take a trade today" to "LiquidityWhyNot",
+        "why did liquidity skip" to "LiquidityWhyNot", "why did liquidity skip the break" to "LiquidityWhyNot", "how come liquidity didn't trade" to "LiquidityWhyNot",
+        "liquidity ne trade kyu nahi liya" to "LiquidityWhyNot", "liquidity ne trade kyun nahi liya" to "LiquidityWhyNot", "liquidity ne aaj trade kyu nahi liya" to "LiquidityWhyNot",
+        "liquidity kyu nahi chala" to "LiquidityWhyNot", "aaj liquidity ne entry kyun nahi li" to "LiquidityWhyNot", "why no banknifty liquidity trade" to "LiquidityWhyNot",
+        "what's liquidity waiting for" to "LiquidityWhyNot", "what is the liquidity bot waiting for" to "LiquidityWhyNot",
+        "liquidity kis cheez ka wait kar raha hai" to "LiquidityWhyNot", "what would make liquidity trade" to "LiquidityWhyNot", "when will liquidity trade" to "LiquidityWhyNot",
+        // ---- SoloDay: what Solo (midday) did today, why it did not trade, how it decided, what it will read ----
+        "what did solo do today" to "SoloDay", "what has solo done today" to "SoloDay", "why didn't solo trade" to "SoloDay",
+        "why didn't solo trade today" to "SoloDay", "why hasn't solo traded today" to "SoloDay", "why no solo trade today" to "SoloDay",
+        "why didn't solo buy anything today" to "SoloDay", "solo ne aaj kya kiya" to "SoloDay", "solo ne kya kiya" to "SoloDay",
+        "solo ne trade kyu nahi liya" to "SoloDay", "solo ne aaj trade kyun nahi liya" to "SoloDay", "solo ne kaise decide kiya" to "SoloDay",
+        "how did solo decide" to "SoloDay", "how did solo decide today" to "SoloDay", "how did solo choose" to "SoloDay",
+        "explain solo's decision" to "SoloDay", "solo's decision today" to "SoloDay", "which index did solo pick" to "SoloDay",
+        "why did solo pick banknifty" to "SoloDay", "why did solo skip nifty" to "SoloDay", "what did solo see at 12" to "SoloDay",
+        "what is solo waiting for" to "SoloDay", "what will solo look at" to "SoloDay", "when will solo decide" to "SoloDay",
+        "solo kya karega aaj" to "SoloDay", "did solo trade today" to "SoloDay", "what did solo buy today" to "SoloDay",
+        // ---- HeroDay: the Hero arm's day - is today its expiry day, what it read and decided, its trade or why none ----
+        "what did hero do today" to "HeroDay", "what has hero done today" to "HeroDay", "why no hero trade" to "HeroDay",
+        "why no hero trade today" to "HeroDay", "why didn't hero trade" to "HeroDay", "why didn't hero trade today" to "HeroDay",
+        "why hasn't hero traded today" to "HeroDay", "why didn't hero fire today" to "HeroDay", "hero ne aaj kya kiya" to "HeroDay",
+        "hero ne kya kiya" to "HeroDay", "hero ne trade kyu nahi liya" to "HeroDay", "hero ne aaj trade kyun nahi liya" to "HeroDay",
+        "is today a hero day" to "HeroDay", "is this a hero day" to "HeroDay", "aaj hero day hai kya" to "HeroDay",
+        "is today an expiry day for hero" to "HeroDay", "when is the next hero day" to "HeroDay", "next hero day kab hai" to "HeroDay",
+        "agla hero day kab hai" to "HeroDay", "is hero trading today" to "HeroDay", "will hero trade today" to "HeroDay",
+        "did hero trade today" to "HeroDay", "what is hero waiting for" to "HeroDay", "what did hero see" to "HeroDay",
+        "how did hero decide" to "HeroDay", "hero kab trade karega" to "HeroDay", "did the hero arm fire today" to "HeroDay",
+        // ---- LiquidityMap: Liquidity 15+5's map of the market (its levels, what it waits for, how far the next pool is) ----
+        "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "what is liquidity waiting for" to "LiquidityWhyNot",
+        "how far is the next pool" to "LiquidityMap", "how far is the next liquidity pool" to "LiquidityMap", "banknifty liquidity levels" to "LiquidityMap",
+        "finnifty liquidity levels kahan hain" to "LiquidityMap", "where is the next liquidity pool for banknifty" to "LiquidityMap",
+        "liquidity kis level ka wait kar raha hai" to "LiquidityMap", "next liquidity level kitna door hai" to "LiquidityMap",
+        "what is the liquidity arm waiting for" to "LiquidityWhyNot", "show me the liquidity zones on bank nifty" to "LiquidityMap",
+        "where is the nearest pool on finnifty" to "LiquidityMap", "liquidity map for the 15 minute chart" to "LiquidityMap",
+        "how often does an otm option 100 points away end the day in the money" to "OtmReach",
+        "how often does a call two strikes out of the money finish in the money" to "OtmReach", "how often does nifty's otm put double" to "OtmReach",
+        "otm option record for banknifty" to "OtmReach", "100 point door ka otm call kitni baar itm hota hai" to "OtmReach",
+        "how often does a put 3 strikes away end in the money on expiry day" to "OtmReach",
+        "how often does an out of the money call 200 points away double from 9:30" to "OtmReach",
         // ---- MorningSense: the morning check items said briefly ----
         "which morning items do you skip" to "MorningSense", "which morning check items do you leave out" to "MorningSense",
         "morning check ka kya skip karte ho" to "MorningSense", "read me the whole morning check" to "MorningSense",
@@ -839,6 +1131,65 @@ class CollisionTest {
         "don't offer follow ups" to "NextAsk", "do not ask me what comes next" to "NextAsk",
         "stop ending your answers with a question" to "NextAsk", "no more follow up offers" to "NextAsk",
         "agla sawal mat pucho" to "NextAsk", "agla sawal offer mat karo" to "NextAsk",
+        // ---- MoreAfter: the short answers Boss usually asks more after, said in full straight away aloud ----
+        "which answers do i usually ask more about" to "MoreAfter", "which answers do i ask for more after" to "MoreAfter",
+        "after which answers do i usually ask for more" to "MoreAfter", "where do i usually ask for more" to "MoreAfter",
+        "when do i ask you for more" to "MoreAfter", "which answers do you give me in full straight away" to "MoreAfter",
+        "which answers do you skip the short line for" to "MoreAfter", "why did you give me the whole answer" to "MoreAfter",
+        "why do you give me the full answer straight away" to "MoreAfter", "why didn't you keep it short" to "MoreAfter",
+        "why didn't you give me the short line" to "MoreAfter", "kaun se jawab ke baad main aur puchta hoon" to "MoreAfter",
+        "kis jawab ke baad main zyada puchta hoon" to "MoreAfter", "poora jawab seedha kyun diya" to "MoreAfter",
+        "keep my short answers short" to "MoreAfter", "keep your short answers short again" to "MoreAfter",
+        "give me the short line first" to "MoreAfter", "always say the short answer first" to "MoreAfter",
+        "stop skipping the short line" to "MoreAfter", "stop leaving out the short answer" to "MoreAfter",
+        "don't skip the short line" to "MoreAfter", "do not drop the short answer for some topics" to "MoreAfter",
+        "stop giving me the whole answer straight away" to "MoreAfter", "don't give me the full answer first" to "MoreAfter",
+        "forget which answers i ask more about" to "MoreAfter", "reset where i ask for more" to "MoreAfter",
+        "poora jawab seedha mat do" to "MoreAfter",
+        // ---- SmallTrades: where Boss's trades that moved less than twice their charges come from (a fact, said once) ----
+        "what have you learned about my charges" to "SmallTrades", "what did you notice about my charges" to "SmallTrades",
+        "what have you learnt about my small trades" to "SmallTrades", "which trades move less than twice their charges" to "SmallTrades",
+        "which of my trades moved less than twice their own charges" to "SmallTrades", "which strategies make the most small trades" to "SmallTrades",
+        "what time of day makes the most small trades" to "SmallTrades", "who makes the most small trades" to "SmallTrades",
+        "where do my small trades come from" to "SmallTrades", "what's my small trades record" to "SmallTrades",
+        "charges ke baare mein kya seekha" to "SmallTrades", "chhote trades kaun karta hai" to "SmallTrades",
+        "stop mentioning my small trades" to "SmallTrades", "stop telling me about my small trades" to "SmallTrades",
+        "don't mention my small trades" to "SmallTrades", "forget what you learned about my charges" to "SmallTrades",
+        "reset my small trades count" to "SmallTrades", "chhote trades mat batao" to "SmallTrades",
+        // ---- DayIndex: the index Boss follows on a given weekday, its read first in "how's the market" that day ----
+        "which index do you lead with on wednesdays" to "DayIndex", "which index do you lead with today" to "DayIndex",
+        "what index do you start the market read with" to "DayIndex", "which index do you mention first today" to "DayIndex",
+        "why did you start with banknifty today" to "DayIndex", "why do you lead with bank nifty on wednesdays" to "DayIndex",
+        "why is banknifty first today" to "DayIndex", "which index do i ask about most on wednesdays" to "DayIndex",
+        "kis din kaunsa index pehle" to "DayIndex", "aaj banknifty pehle kyun" to "DayIndex", "budhvar ko banknifty pehle kyun bola" to "DayIndex",
+        "lead with nifty every day again" to "DayIndex", "stop leading with banknifty on wednesdays" to "DayIndex",
+        "stop leading with bank nifty" to "DayIndex", "stop starting with banknifty on wednesdays" to "DayIndex",
+        "stop changing the index by day" to "DayIndex", "don't lead with banknifty on wednesdays" to "DayIndex",
+        "forget which index i ask about on wednesdays" to "DayIndex", "har din nifty pehle lo" to "DayIndex",
+        "budhvar ko banknifty pehle mat lo" to "DayIndex",
+        // ...and its neighbours keep theirs: LeadIndex across all days, the market read itself, the weekday record.
+        "why do you start with banknifty" to "LeadIndex", "stop saying bank nifty first" to "LeadIndex",
+        "how is the market" to "TradeCheck", "how are wednesdays for banknifty" to "Weekdays",
+        // ---- CheckTimes: the times Boss usually checks his P&L, his account read ahead just before them ----
+        "when do i usually check my p&l" to "CheckTimes", "what time do i usually check my p&l" to "CheckTimes",
+        "what time do i check my pnl" to "CheckTimes", "when do i check my positions" to "CheckTimes",
+        "what times do i ask for my p&l" to "CheckTimes", "do you read my account ahead" to "CheckTimes",
+        "why do you read my p&l in advance" to "CheckTimes", "why was my p&l already ready" to "CheckTimes",
+        "do you keep my p&l ready" to "CheckTimes", "main p&l kab check karta hoon" to "CheckTimes",
+        "stop getting my p&l ready" to "CheckTimes", "stop reading my account ahead" to "CheckTimes",
+        "stop preparing my p&l in advance" to "CheckTimes", "don't read my account ahead" to "CheckTimes",
+        "forget when i check my p&l" to "CheckTimes", "forget the times i check my p&l" to "CheckTimes",
+        "read my p&l only when i ask" to "CheckTimes", "p&l pehle se mat padho" to "CheckTimes",
+        // ---- CondNeeds: the conditional instructions Boss keeps trying to give, the app's own tool named once ----
+        "what have you learned about my conditional orders" to "CondNeeds", "my conditional orders" to "CondNeeds",
+        "which conditional orders do i keep giving you" to "CondNeeds", "show my conditional orders" to "CondNeeds",
+        "how often do i give you conditional orders" to "CondNeeds", "mere conditional orders ke baare mein kya seekha" to "CondNeeds",
+        "stop mentioning my conditional orders" to "CondNeeds", "dont tell me about my conditional orders" to "CondNeeds",
+        "forget what you learned about my conditional orders" to "CondNeeds", "reset my conditional orders" to "CondNeeds",
+        "conditional orders wali baat mat batao" to "CondNeeds",
+        // ...and its neighbours keep theirs: the charges themselves, why they are high, everything learned.
+        "how much did i pay in charges this week" to "Account:CHARGES", "why are my charges so high" to "Account:CHARGES",
+        "what have you learned about me" to "AboutBoss",
         // ...and a market question that merely puts Nifty first is never its undo: it keeps its market route.
         "nifty pehle batao" to "Market", "nifty ko pehle lo" to "Market", "give nifty first" to "Market", "say nifty first" to "Market",
         // ---- HonestStars: his confidence scores against their record ----
@@ -866,6 +1217,21 @@ class CollisionTest {
         "how do i trade after a loss" to "AfterLoss", "do i revenge trade" to "AfterLoss", "am i a revenge trader" to "AfterLoss",
         "do i chase my losses" to "AfterLoss", "how does my next trade do after a losing trade" to "AfterLoss",
         "do i get careless after a win" to "AfterLoss", "loss ke baad mera agla trade kaisa jaata hai" to "AfterLoss",
+        // ---- StopNoise: each bought option's stop against the index's swings over 15 and 30 minutes (reasoning round 33) ----
+        "is my stop too tight" to "StopNoise", "are my stops too close" to "StopNoise", "isn't my sl a bit tight" to "StopNoise",
+        "is my stop loss too tight" to "StopNoise", "is my nifty call stop too tight" to "StopNoise", "my stop is too tight" to "StopNoise",
+        "is my stop inside the noise" to "StopNoise", "will normal noise hit my stop" to "StopNoise", "how much room does my stop have" to "StopNoise",
+        "my stop noise check" to "StopNoise", "mera stop bahut tight hai kya" to "StopNoise", "meri sl zyada paas hai" to "StopNoise",
+        // ---- DayScore: today's own trades against the index, his usual hold and the price after each exit (reasoning round 34) ----
+        "my scorecard today" to "DayScore", "how's today's scorecard" to "DayScore", "aaj ka scorecard" to "DayScore",
+        "my trades so far today" to "DayScore", "how are my trades today so far" to "DayScore", "did i trade against the trend today" to "DayScore",
+        "how many of my trades were against the trend today" to "DayScore", "how long did i hold my trades today" to "DayScore",
+        "did i hold my trades longer than usual today" to "DayScore", "aaj maine trend ke against trade kiya kya" to "DayScore",
+        "were my exits before the best price today" to "DayScore",
+        // ---- RequestBook: the Requests panel said, waiting and answered (usefulness round 33) ----
+        "what requests are waiting" to "RequestBook", "anything waiting for my approval" to "RequestBook", "what needs my approval" to "RequestBook",
+        "koi request hai" to "RequestBook", "what did i approve today" to "RequestBook", "what did i decline today" to "RequestBook",
+        "what happened to my requests" to "RequestBook", "maine aaj kya approve kiya" to "RequestBook",
         // ---- ArmChange: the arms' paper results this week against last week ----
         "what's changed in my arms' results this week vs last" to "ArmChange", "how are my bots doing this week compared to last week" to "ArmChange",
         "my arms this week vs last week" to "ArmChange", "my strategies week on week" to "ArmChange", "what changed in my bots this week" to "ArmChange",
@@ -1240,9 +1606,9 @@ class CollisionTest {
     // ---- The audit's order is the hub's: read from IraHub.ask itself when the app's source is beside this module ----
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
-    private val HUB_ORDER = listOf("DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "NetLean", "ExpiryEve", "BeforeTomorrow", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "Tour", "DataAge", "Honest", "Thinking",
-        "SelfWhy", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
+    private val HUB_ORDER = listOf("Conditional", "DayJournal", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "SelfWhy", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 
     @Test fun theAuditFollowsTheHubsOrderAndEveryBranchIsGuarded() {
@@ -1272,7 +1638,10 @@ class CollisionTest {
         for (c in calls) {
             if (c.groupValues[1] == "SelfWhy") continue
             val head = body.substring(0, c.range.first).let { it.substring(maxOf(it.lastIndexOf(" if ("), it.lastIndexOf("= if ("))) }
-            for (g in listOf("!bundled", "parsed.order == null", "parsed.command == null")) assertTrue(g in head, "${c.groupValues[1]}: $g")
+            // (Conditional is taken said with an action too - "if Nifty crosses 25000 then square off everything" is what it
+            // answers - so it alone has no `!bundled`; it never acts, and still never with an order or a command.)
+            val guards = if (c.groupValues[1] == "Conditional") listOf("parsed.order == null", "parsed.command == null") else listOf("!bundled", "parsed.order == null", "parsed.command == null")
+            for (g in guards) assertTrue(g in head, "${c.groupValues[1]}: $g")
         }
         // HeardBack is the voice path's own read-back (JarvisVoice), never a question branch of the hub.
         assertTrue("HeardBack" !in body)
@@ -1334,7 +1703,9 @@ class CollisionTest {
         // A change of a limit stays out of Headroom; the orders beside these words still act as before (each its own confirm).
         for (s in listOf("change my loss limit", "increase my trade limit to 10", "set my daily loss limit to 5000")) assertEquals(null, Headroom.asked(s), s)
         for (s in listOf("sell my put", "close my call", "exit my put if it falls 50", "square off my position")) {
-            assertEquals(false, NeedsTrue.asked(s), s); assertEquals(false, PositionHealth.asked(s), s); assertEquals("Act", audit.feature(s), s)
+            assertEquals(false, NeedsTrue.asked(s), s); assertEquals(false, PositionHealth.asked(s), s)
+            // (An exit set on a condition is Jarvis saying he can't set one - understanding round 29 - never the exit done now.)
+            assertEquals(if (s == "exit my put if it falls 50") "Conditional" else "Act", audit.feature(s), s)
         }
         // Said with something to do, each is left to the multi-step plan (never answered and the action dropped).
         for (s in listOf("is my put healthy then close all positions", "am i overtrading, then stop all strategies",
@@ -2303,6 +2674,447 @@ class CollisionTest {
             assertTrue(audit.feature(s) != "DayAfter", "$s: ${audit.feature(s)}")
     }
 
+    /**
+     * Round 25: the newest features as Boss says them - OpenReach ("how far from open does BankNifty go", "opening price",
+     * "close near its open", the recognizer's "opan" and "open say"), MultiDay ("3 din me", "3 din ka move", "a 3 day
+     * period", "typical 5 day range"), AfterLoss (revenge trading named any way, "do I overtrade after a loss", "after
+     * losing"), NextAsk's undo ("stop the follow up questions", "follow up band karo" and "turn off follow up questions"
+     * were STOP_ONE of a strategy called "follow up questions"), the charges ("how much went in charges", "today's charges",
+     * "charges ne kitna khaya") and the Requests panel asked ("open requests", "kya pending hai" were Missed).
+     */
+    private val ROUND25 = listOf(
+        // OpenReach
+        "how far from open does banknifty go" to "OpenReach", "how far does nifty go from its opening price" to "OpenReach",
+        "how often does nifty close near its open" to "OpenReach", "average distance from the open for nifty" to "OpenReach",
+        "how far does nifty go from the opan usually" to "OpenReach", "open say kitna door jata hai nifty" to "OpenReach",
+        "how far does nifty move from open on a normal day" to "OpenReach", "nifty open se kitna move karta hai" to "OpenReach",
+        // MultiDay
+        "3 din me nifty kitna jata hai" to "MultiDay", "typical 5 day range of banknifty" to "MultiDay", "nifty ka 3 din ka move kitna hota hai" to "MultiDay",
+        "nifty 3 days mein kitna move karta hai" to "MultiDay", "how much does nifty move in a 3 day period" to "MultiDay", "teen din ka move kitna hota hai" to "MultiDay",
+        // AfterLoss
+        "revenge trade karta hoon kya" to "AfterLoss", "revenge trading check" to "AfterLoss", "am i doing revenge trades" to "AfterLoss",
+        "is there revenge trading in my trades" to "AfterLoss", "do i revenge tread" to "AfterLoss", "do i overtrade after a loss" to "AfterLoss",
+        "do i take bigger trades after a loss" to "AfterLoss", "do i trade more after a loss" to "AfterLoss", "how do i trade after losing" to "AfterLoss",
+        // NextAsk's undo
+        "stop asking what next" to "NextAsk", "stop the follow up questions" to "NextAsk", "follow up band karo" to "NextAsk",
+        "turn off follow up questions" to "NextAsk", "no more follow ups" to "NextAsk", "no follow ups please" to "NextAsk",
+        "next question mat poocho" to "NextAsk", "mujhe agla sawal offer mat karo" to "NextAsk", "don't end with a question" to "NextAsk",
+        "dont ask what next" to "NextAsk", "undo the next question thing" to "NextAsk",
+        // The charges
+        "how much went in charges" to "Account:CHARGES", "today's charges" to "Account:CHARGES", "charges ne kitna khaya" to "Account:CHARGES",
+        // The Requests panel asked
+        "open requests" to "RequestBook", "kya pending hai" to "Requests", "what's pending" to "Requests", "any pending requests" to "RequestBook",
+        "show requests" to "RequestBook", "what is waiting for my approval" to "RequestBook", "kuch pending hai kya" to "Requests",
+        "pending approvals" to "RequestBook", "how many requests" to "RequestBook", "anything waiting for me" to "Requests",
+        "kya approve karna hai" to "RequestBook", "requests dikhao" to "RequestBook", "open the requests panel" to "Requests",
+        "what requests are pending" to "RequestBook",
+    )
+
+    @Test fun roundTwentyFiveWordingsRouteAndNeverAct() {
+        assertEquals(ROUND25.size, ROUND25.map { it.first }.distinct().size)
+        val wrong = ROUND25.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND25) neverActs(s)
+        // NextAsk's undo is the undo (never a market question), and never a strategy stopped or started.
+        for ((s, want) in ROUND25) if (want == "NextAsk") assertEquals(NextAsk.Request.RESET, NextAsk.asked(s), s)
+        for (s in listOf("stop the follow up questions", "turn off follow up questions", "stop follow up", "stop follow ups", "turn on follow up questions"))
+            assertTrue(Ask.parse(s).command?.kind !in setOf(Command.Kind.STOP_ONE, Command.Kind.START_ONE), s)
+        // A strategy is still stopped by name, and "stop asking" / "what next" alone are not NextAsk's undo.
+        for (s in listOf("stop orb", "turn off orb", "stop strategy follow", "stop following nifty", "stop the next strategy"))
+            assertEquals(Command.Kind.STOP_ONE, Ask.parse(s).command?.kind, s)
+        for (s in listOf("what's next for nifty", "what next", "stop asking")) assertTrue(NextAsk.asked(s) == null, s)
+        // The Requests list reads only: approving, declining and cancelling stay as they were (never the list).
+        for (s in listOf("approve it", "yes approve", "approve the request", "reject all requests", "cancel the request", "yes", "haan"))
+            assertTrue(!Requests.listAsked(s), s)
+        // Boss's orders, positions and strategies "pending" or "open" stay his own; a cancel stays a cancel.
+        for ((s, want) in listOf("my pending orders" to "Account:ORDERS", "koi order pending hai" to "Account:ORDERS", "any orders pending" to "Account:ORDERS",
+            "pending orders dikhao" to "Account:ORDERS", "show my pending orders" to "Account:ORDERS", "what's pending in my orders" to "Account:ORDERS"))
+            assertEquals(want, audit.feature(s), s)
+        for (s in listOf("cancel pending orders", "cancel all pending orders")) assertEquals(Command.Kind.CANCEL_ALL, Ask.parse(s).command?.kind, s)
+        // The list said: how many only when locked, nothing in IraGoldAlgo, each heading with where it would act otherwise.
+        val v = Requests.RequestView(1, Requests.Kind.COMMAND, "stop ORB", "stop the ORB arm", null, Requests.Venue.NONE, 0, 600_000)
+        assertEquals(Requests.EMPTY, Requests.listSay(emptyList(), 1_000, locked = false, gold = false))
+        assertEquals(Requests.GOLD, Requests.listSay(listOf(v), 1_000, locked = false, gold = true))
+        assertEquals("1 request waiting, Boss. Unlock the phone to see what in Requests.", Requests.listSay(listOf(v), 1_000, locked = true, gold = false))
+        assertTrue(Requests.listSay(listOf(v), 1_000, locked = false, gold = false).let { it.startsWith("1 request waiting, Boss: stop ORB (No order, lapses in") && it.contains("your yes") })
+        assertEquals(Requests.EMPTY, Requests.listSay(listOf(v), 700_000, locked = false, gold = false))
+        // Neighbours keep their own: the P&L (charges said beside it), the history, Headroom, today's gap, the open's distance now.
+        for ((s, want) in listOf("my p&l" to "Account:PNL", "my p&l after charges" to "Account:PNL", "pnl before charges" to "Account:PNL",
+            "how much did i make today" to "Account:PNL", "aaj kitna kamaya" to "Account:PNL", "what's my p&l this week" to "Account:HISTORY",
+            "my best day this month" to "Account:HISTORY", "how much headroom do i have left" to "Headroom", "how many more trades can i take today" to "Headroom",
+            "is the gap bigger today" to "Gap", "my charges" to "Account:CHARGES", "how much brokerage did i pay" to "Account:CHARGES"))
+            assertEquals(want, audit.feature(s), s)
+        // The one-lot calculator is not the account's charges; OpenReach and MultiDay stay records, never now, today, a forecast or advice.
+        for (s in listOf("what are charges for one lot", "brokerage for one lot")) assertTrue(!Charges.asked(s), s)
+        for (s in listOf("how far is nifty from the open", "how far is nifty from its open now", "how far did nifty go from the open today",
+            "nifty open se kitna upar hai", "how far does nifty go from the open in the first hour", "how often does nifty close near its open today",
+            "does nifty close near the open on expiry"))
+            assertTrue(audit.feature(s) != "OpenReach", "$s: ${audit.feature(s)}")
+        for (s in listOf("how much did nifty move in 3 days", "how much did nifty move in the last 3 days", "what will nifty do in 3 days",
+            "nifty 3 din mein kitna jayega", "3 din ke baad nifty kitna jata hai", "should i hold for 3 din me"))
+            assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")
+        // AfterLoss is Boss's own record: never advice, a definition, a rule to set, or a losing day.
+        for (s in listOf("should i revenge trade", "what is revenge trading", "block revenge trading", "stop me from revenge trading",
+            "remind me if i revenge trade", "how do i do after a losing day"))
+            assertTrue(AfterLoss.asked(s) == null, s)
+    }
+
+    /**
+     * Round 26: the newest reads and panels as Boss says them - MoveTime ("how fast / how quickly does Nifty move 50 points",
+     * "time taken for", "average time for", "how long for BankNifty to do 200 points", "kitni jaldi", "kitne der me" - the
+     * Hindi "me" was read as Boss's), MultiDay ("the usual 3 day move", "5 din me kitna upar niche"), OpenReach ("how much
+     * does Nifty move from the open", "the usual move from the open", "from the opening price does Nifty go", "open se kitna
+     * move hota hai"), DayAfter ("what does Nifty do after a 2 percent fall", "badi girawat ke baad agle din", "after a 3% day
+     * what next", "follow through after big days", "after Nifty tanks"), the Requests panel ("anything pending for me",
+     * "what did I okay / deny today", "request status", "request history", "what's in the requests panel"), the charges
+     * ("charges batao", "charges lage kitne", "charges ka total", "how much did I pay Zerodha", "how much tax did I pay on
+     * trades"), the P&L after them ("charges ke baad kitna bacha") and the short answer's "more" ("say more", "keep going",
+     * "the rest", "baaki batao", "aage bolo", "poori baat batao", "give me the full answer", "the whole thing").
+     */
+    private val ROUND26 = listOf(
+        // MoveTime
+        "how fast does nifty move 50 points" to "MoveTime", "how quickly does banknifty move 200 points" to "MoveTime",
+        "time taken for nifty to move 50 points" to "MoveTime", "how long for banknifty to do 200 points" to "MoveTime",
+        "50 points kitni jaldi chalta hai nifty" to "MoveTime", "time to move 50 points" to "MoveTime",
+        "nifty 50 points kitne time mein move karta hai" to "MoveTime", "average time for nifty to move 50 points" to "MoveTime",
+        "typical time for banknifty to move 200 points" to "MoveTime", "how soon does nifty move 50 points" to "MoveTime",
+        "nifty 50 point kitne der me chalta hai" to "MoveTime", "how long does banknifty take for 200 points" to "MoveTime",
+        "how often does nifty do 50 points in 30 minutes" to "MoveTime", "time for nifty to move 50 points" to "MoveTime",
+        "nifty 100 point kitne time me chalta hai" to "MoveTime", "how long does nifty take to make a 1% move" to "MoveTime",
+        // MultiDay
+        "what's the usual 3 day move in nifty" to "MultiDay", "nifty 5 din me kitna upar niche hota hai" to "MultiDay",
+        "nifty 3 din mein kitna upar jata hai" to "MultiDay",
+        // OpenReach
+        "how much does nifty move from the open" to "OpenReach", "what's the usual move from the open" to "OpenReach",
+        "how far from the opening price does nifty go" to "OpenReach", "open se kitna move hota hai" to "OpenReach",
+        "open se kitna chalta hai nifty" to "OpenReach", "what's the typical move from the open for banknifty" to "OpenReach",
+        // DayAfter
+        "what does nifty do after a 2 percent fall" to "DayAfter", "nifty bade girawat ke baad agle din kya karta hai" to "DayAfter",
+        "after a 2 percent drop day what happens next" to "DayAfter", "follow through after big days" to "DayAfter",
+        "after nifty tanks what happens next day" to "DayAfter", "after a 3% day what next" to "DayAfter",
+        "what happens after a 1.5% rally day" to "DayAfter",
+        // The Requests panel
+        "anything pending for me" to "RequestBook", "what did i okay today" to "RequestBook", "what did i deny today" to "RequestBook",
+        "request status" to "RequestBook", "what's in the requests panel" to "RequestBook", "is anything awaiting approval" to "RequestBook",
+        "history of requests" to "RequestBook", "request history" to "RequestBook", "approval history" to "RequestBook",
+        "requests panel me kya hai" to "RequestBook",
+        // The charges, and the P&L after them
+        "charges batao" to "Account:CHARGES", "charges ka total kya hai" to "Account:CHARGES", "charges lage kitne" to "Account:CHARGES",
+        "charges ka hisaab" to "Account:CHARGES", "how much tax did i pay on trades" to "Account:CHARGES", "how much did i pay zerodha" to "Account:CHARGES",
+        "brokerage dikhao" to "Account:CHARGES", "show my charges" to "Account:CHARGES", "tell me today's charges" to "Account:CHARGES",
+        "charges ke baad kitna bacha" to "Account:PNL", "charges kaat ke kitna bacha" to "Account:PNL", "charges ke baad kitna mila" to "Account:PNL",
+    )
+
+    /** Round 26's "more": the full last answer only (a command that trades nothing), and the short answer's WHOLE. */
+    private val ROUND26_MORE = listOf("say more", "keep going", "the rest", "rest of it", "tell me the rest", "baaki batao", "baki bolo",
+        "aage batao", "aage bolo", "poori baat batao", "full answer", "give me the full answer", "say the whole thing", "the whole thing",
+        "the full answer please")
+
+    /** Review, round 26: a move's time asked on a weekday is Weekdays' record, never MoveTime's; MoveTime's own hours route as before. */
+    @Test fun aWeekdayMoveIsWeekdays() {
+        for (s in listOf("how often does nifty move 0.5% in 15 minutes on mondays", "how often does nifty move 50 points in 30 minutes on fridays")) {
+            assertEquals(null, MoveTime.asked(s), s)
+            assertEquals("Weekdays", audit.feature(s), "$s: ${hits(s)}")
+            neverActs(s)
+        }
+        for (s in listOf("how often does nifty move 50 points in 3 hours", "how often does nifty move 50 points in an hour and a half"))
+            assertEquals("MoveTime", audit.feature(s), "$s: ${hits(s)}")
+    }
+
+    @Test fun roundTwentySixWordingsRouteAndNeverAct() {
+        assertEquals(ROUND26.size, ROUND26.map { it.first }.distinct().size)
+        val wrong = ROUND26.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND26) neverActs(s)
+        // "More": that command and only that, typed or heard; with a question mark, never a command.
+        assertEquals(ROUND26_MORE.size, ROUND26_MORE.distinct().size)
+        for (s in ROUND26_MORE) {
+            val p = Ask.parse(s)
+            assertEquals(Command.Kind.MORE, p.command?.kind, s); assertEquals(null, p.order, s)
+            assertEquals("Act", audit.feature(s), s)
+            assertEquals(null, Ask.parse("$s?").command, s)
+            assertEquals(ShortAnswer.Kind.WHOLE, ShortAnswer.kind(s), s)
+        }
+        // Not "more": a bare "rest", trading on, the rest of his positions, what to do next, a mode, a topic said.
+        for (s in listOf("rest", "keep going with the trade", "the rest of my positions", "baaki positions batao", "aage kya karna hai",
+            "full answer mode", "say more about theta"))
+            assertTrue(Ask.parse(s).command?.kind != Command.Kind.MORE, "$s: ${Ask.parse(s).command}")
+        for ((s, want) in listOf("the rest of my positions" to "Account:POSITIONS", "baaki positions batao" to "Account:POSITIONS"))
+            assertEquals(want, audit.feature(s), s)
+        // The Requests panel read: what was okayed is the approved, what was denied the declined; it never answers one.
+        assertEquals(RequestBook.Asked(true, Requests.Outcome.APPROVED, true), RequestBook.asked("what did i okay today"))
+        assertEquals(RequestBook.Asked(true, Requests.Outcome.DECLINED, true), RequestBook.asked("what did i deny today"))
+        assertEquals(RequestBook.Asked(false, null, false), RequestBook.asked("what's in the requests panel"))
+        for (s in listOf("deny it", "approve it", "where is the requests panel", "how do i use the requests panel", "what did i do okay today",
+            "did i do ok today", "order history", "trade history", "order status", "my order status", "anything else"))
+            assertEquals(null, RequestBook.asked(s), s)
+        for ((s, want) in listOf("order history" to "Account:HISTORY+ORDERS", "trade history" to "Account:HISTORY", "what's pending in my orders" to "Account:ORDERS",
+            "is my order awaiting execution" to "Account:ORDERS", "where is the requests panel" to "Account:HOWTO"))
+            assertEquals(want, audit.feature(s), s)
+        // The one-lot calculator and a definition are not the account's charges; a price paid for an option is not either.
+        for (s in listOf("show charges for one lot", "tell me the charges per lot", "charges total for one lot", "what are charges",
+            "how much did i pay for nifty calls", "how much did i pay for the option"))
+            assertTrue(!Charges.asked(s), s)
+        // "Kitna bacha" alone is never the P&L: the time left or the margin left stay their own.
+        assertEquals("Account:FUNDS", audit.feature("kitna margin bacha"))
+        assertTrue(audit.feature("kitna time bacha") !in setOf("Account:PNL", "Account:CHARGES"))
+        // MoveTime stays the record: never Jarvis's or the app's speed, now, today, a forecast, advice or Boss's stop.
+        for (s in listOf("how fast is nifty moving", "how fast is nifty moving today", "how fast do you reply", "how quickly can you place an order",
+            "is it time to buy nifty", "how long does nifty take to move 50 points tomorrow", "how fast did nifty move 50 points today",
+            "time to move my stop loss", "how fast does nifty move", "how long before nifty moves 50 points"))
+            assertTrue(audit.feature(s) != "MoveTime", "$s: ${audit.feature(s)}")
+        // GiveBack stays the record: never today's or one past day's give-back, a forecast, advice, Boss's own book or stop, a
+        // definition, a run timed in minutes (MoveTime's), gold, VIX or Jarvis's own speed.
+        for (s in listOf("how much did nifty give back today", "how much has nifty given back so far", "will nifty pull back after this run",
+            "should i book profit after nifty runs 100 points", "how much does my option give back after a 100 point run", "what is a pullback",
+            "what is a fibonacci retracement", "how much does nifty give back after running 100 points in 30 minutes", "how fast do you answer",
+            "how much does gold give back after a 1% run", "should i trail my stop after a 100 point run", "nifty pullback kab aayega"))
+            assertTrue(audit.feature(s) != "GiveBack", "$s: ${audit.feature(s)}")
+        // StraddleDecay stays the record: never today's or one past day's straddle, a forecast, advice, Boss's own book, the
+        // expected move or IV, a definition, other spreads, gold, VIX or Jarvis's own speed.
+        for (s in listOf("how much will the straddle lose today", "should i buy the straddle", "how much is my straddle losing",
+            "how much has the straddle lost today", "how much did the straddle lose yesterday", "what does the straddle imply",
+            "what is a straddle", "how much does a strangle usually lose in a day", "how much does gold's straddle usually lose",
+            "how fast do you answer", "what's my theta", "atm straddle price"))
+            assertTrue(audit.feature(s) != "StraddleDecay", "$s: ${audit.feature(s)}")
+        // ExpiryHour stays the record: never today's or one past expiry, a forecast, advice, Boss's own trades, the straddle,
+        // the pin, gold, VIX or the index's own last hour.
+        for (s in listOf("will the atm call double in the last hour of expiry today", "should i hold the atm put into the last hour of expiry",
+            "how did the atm call do in the last hour of last expiry", "how often does my atm call double in the last hour on expiry",
+            "how much does the straddle lose in the last hour on expiry", "how often does gold's atm call double in the last hour of expiry",
+            "does nifty usually reverse in the last hour on expiry day", "how often does nifty pin to max pain in the last hour of expiry"))
+            assertTrue(audit.feature(s) != "ExpiryHour", "$s: ${audit.feature(s)}")
+        // AtmBuy stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
+        // question, a definition, the straddle, gold, VIX or the quote itself.
+        for (s in listOf("will the atm call double today", "should i buy the atm call", "how often does my atm call double",
+            "has the atm call doubled today", "did the atm put double yesterday", "what is an atm option",
+            "how often does selling the atm option work out", "how often does gold's atm call double", "atm call price",
+            "how often does the atm option double if i buy at 9:30"))
+            assertTrue(audit.feature(s) != "AtmBuy", "$s: ${audit.feature(s)}")
+        // MarketRecord only says what the recorder keeps: never a change to it, a voice or call recording, a price record or
+        // how fresh the data is.
+        for (s in listOf("delete the recorded market data", "export the recorded market data", "turn off the market recorder",
+            "is my voice being recorded", "what was the record high of nifty", "is your data fresh", "how old is your data",
+            "is the call recording on"))
+            assertTrue(audit.feature(s) != "MarketRecord", "$s: ${audit.feature(s)}")
+        // MorningCues never takes the FIIs' cash-market flows, the FII/DII figures, news, a definition or Boss's own positions.
+        for (s in listOf("what did fiis do yesterday", "fii data", "fii dii data", "did fiis buy or sell", "fii ne aaj kitna becha",
+            "news on fii flows", "what are my positions", "what does gift nifty mean"))
+            assertTrue(audit.feature(s) != "MorningCues", "$s: ${audit.feature(s)}")
+        // BigMoveRisk only reads how likely a big candle is now: never Boss's own risk or limits, a trade's risk, a definition,
+        // the big-candle record of past days, a direction, the expected range or an alert.
+        for (s in listOf("how much risk am i taking", "what are my risk limits", "what is volatility", "is my position risky",
+            "how often does a big candle follow through", "will nifty go up or down", "how much can nifty move today",
+            "big candle record for banknifty", "is it risky to trade now", "how volatile was nifty yesterday", "set an alert for a big move",
+            "why did nifty make a big move"))
+            assertTrue(audit.feature(s) != "BigMoveRisk", "$s: ${audit.feature(s)}")
+        // LiquidityMap only reads the arm's levels: never its health, size, trades, record, switch or a change to it, a
+        // definition, an option's own liquidity, or the market's other levels.
+        for (s in listOf("how is liquidity doing", "liquidity ko 3 lot karo", "how many lots is liquidity trading", "is liquidity healthy",
+            "liquidity bot health", "why did the liquidity bot exit", "what trades did liquidity take", "should i turn off liquidity 15+5",
+            "what is a liquidity pool", "what does liquidity mean", "is there liquidity in the 52000 ce", "what are the levels", "nifty levels",
+            "where is support", "how are my bots doing", "liquidity backtest record"))
+            assertTrue(audit.feature(s) != "LiquidityMap", "$s: ${audit.feature(s)}")
+        // Liquidity's own questions keep their routes.
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
+        assertEquals("Honest", audit.feature("how many lots is liquidity trading"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("BotTrades", audit.feature("why did the liquidity bot exit"))
+        assertEquals("SwitchOff", audit.feature("should i turn off liquidity 15+5"))
+        // OtmReach stays the record: never today's or one past day's option, a forecast, advice, Boss's own trades, a seller's
+        // question, a definition, a conditional, the at-the-money option, gold, VIX or the quote itself.
+        for (s in listOf("will the otm call end in the money today", "should i hold the otm call", "how often does my otm call double",
+            "did the otm put end in the money yesterday", "what is an otm option", "how often does selling an otm option work out",
+            "how often does gold's otm call end in the money", "otm call price", "how often does an otm option end in the money if nifty gaps up",
+            "how often does a bought atm call end the day worth more"))
+            assertTrue(audit.feature(s) != "OtmReach", "$s: ${audit.feature(s)}")
+        // MultiDay and OpenReach stay records: never one past stretch, today's own read or now.
+        for (s in listOf("what was the 3 day move in nifty", "nifty 3 din se upar hai", "is nifty up in 3 days"))
+            assertTrue(audit.feature(s) != "MultiDay", "$s: ${audit.feature(s)}")
+        for (s in listOf("how much did nifty move from the open", "how much has nifty moved from the open today", "nifty open se kitna upar hai",
+            "how much is nifty up from the open", "open se abhi kitna chala"))
+            assertTrue(audit.feature(s) != "OpenReach", "$s: ${audit.feature(s)}")
+        // DayAfter stays the session after a whole big day: never a part of the day, from the open, advice, today, a forecast or an alert.
+        for (s in listOf("after a 2 percent fall in the morning what happens", "what does nifty do after a 2 percent fall from the open",
+            "should i buy after a 2 percent fall", "after a 2% fall today what next", "after a 2 percent fall will nifty bounce", "nifty fell 2 percent",
+            "what happens after nifty crashes", "set an alert after a 2% fall"))
+            assertTrue(audit.feature(s) != "DayAfter", "$s: ${audit.feature(s)}")
+        // A size after "after" with no way said is both ways; with one said, that one.
+        assertEquals(null, DayAfter.asked("after a 3% day what next")?.side)
+        assertEquals(-1, DayAfter.asked("what does nifty do after a 2 percent fall")?.side)
+        assertEquals(-1, DayAfter.asked("after nifty tanks what happens next day")?.side)
+    }
+
+    /**
+     * Round 27: the newest reads as Boss says them - GiveBack ("how much of the opening run / morning rally does Nifty give
+     * back", "give up", "fade", "does Nifty keep its gains", the recognizer's "gift back" / "give bag", "first hour ki rally
+     * kitni wapas jaati hai", "give back after a 100 point run"), MoveTime ("50 point chalne me kitna time lagta hai", "time
+     * Nifty takes to move 50 points", "kitne minute me karta hai"), why the charges are so high ("charges itne kyun lage",
+     * "charges bahut zyada lag rahe hain", "how come charges are so high", "why high charges", "reason for high charges"),
+     * Zerodha's exact charges ("what did Zerodha actually charge", "contract note ke hisaab se charges", "exact charges", "is
+     * that charge an estimate"), one kind of trade's charges ("charges on my futures", "delivery charges", "DP charges",
+     * "intraday charges") and the Requests panel ("mere liye kuch pending hai", "request aaya kya", "new requests", "approval
+     * chahiye kya", "do you need anything from me", "any thing pending", "reqests pending").
+     */
+    private val ROUND27 = listOf(
+        // GiveBack
+        "how much of the morning rally does nifty give back" to "GiveBack", "how much of the opening run does nifty usually give back" to "GiveBack",
+        "how much of its opening move does nifty usually give back" to "GiveBack", "how much does nifty usually give up after a 1% run from the open" to "GiveBack",
+        "how much does nifty gift back after a 100 point run from the open" to "GiveBack", "how much does nifty give bag after a 100 point run from the open" to "GiveBack",
+        "does nifty keep its gains after a 1% run from the open" to "GiveBack", "how much of the run does nifty keep after a 1% move from the open" to "GiveBack",
+        "how much does nifty fade after a 1% run from the open" to "GiveBack", "how much does nifty fade after rallying 100 points from the open" to "GiveBack",
+        "first hour ki rally kitni wapas jaati hai" to "GiveBack", "give back after a 100 point run" to "GiveBack",
+        // MoveTime
+        "nifty 50 point chalne me kitna time lagta hai" to "MoveTime", "time nifty takes to move 50 points" to "MoveTime",
+        "nifty 50 points kitne minute me karta hai" to "MoveTime", "nifty 50 point kitni der mein karta hai" to "MoveTime",
+        // Why the charges are so high
+        "charges itne kyun lage" to "Account:CHARGES", "charges bahut zyada lag rahe hain" to "Account:CHARGES", "how come charges are so high" to "Account:CHARGES",
+        "why charges so high" to "Account:CHARGES", "charges itna kyu aa raha hai" to "Account:CHARGES", "reason for high charges" to "Account:CHARGES",
+        "why high charges" to "Account:CHARGES", "why charges high hai" to "Account:CHARGES", "charges itne kaise lage" to "Account:CHARGES",
+        "charges breakdown" to "Account:CHARGES", "why are my charges more today" to "Account:CHARGES",
+        // Zerodha's exact charges, its contract note
+        "what did zerodha actually charge" to "Account:CHARGES", "what did zerodha actually charge me today" to "Account:CHARGES",
+        "contract note ke hisaab se charges" to "Account:CHARGES", "charges as per contract note" to "Account:CHARGES",
+        "what does the contract note say" to "Account:CHARGES", "exact charges" to "Account:CHARGES", "what are my exact charges" to "Account:CHARGES",
+        "what are the actual charges" to "Account:CHARGES", "how much did zerodha charge me today" to "Account:CHARGES", "what did kite charge me" to "Account:CHARGES",
+        "contract note charges" to "Account:CHARGES", "is this the exact charge or an estimate" to "Account:CHARGES", "are the charges exact" to "Account:CHARGES",
+        "is that charge an estimate" to "Account:CHARGES", "how much did zerodha take today" to "Account:CHARGES", "charges as per contact note" to "Account:CHARGES",
+        // One kind of trade's charges
+        "charges on my futures" to "Account:CHARGES", "what are the charges on my futures" to "Account:CHARGES", "delivery charges" to "Account:CHARGES",
+        "how much dp charges" to "Account:CHARGES", "dp charges" to "Account:CHARGES", "what are my dp charges" to "Account:CHARGES",
+        "charges on my stocks" to "Account:CHARGES", "charges on my shares" to "Account:CHARGES", "intraday charges" to "Account:CHARGES",
+        "charges on my intraday trades" to "Account:CHARGES", "equity charges" to "Account:CHARGES", "fno charges" to "Account:CHARGES",
+        "charges on futures this month" to "Account:CHARGES",
+        // The Requests panel
+        "mere liye kuch pending hai" to "RequestBook", "new requests" to "RequestBook", "request aaya kya" to "RequestBook",
+        "approval chahiye kya" to "RequestBook", "kisi cheez ka approval chahiye" to "RequestBook", "do you need anything from me" to "RequestBook",
+        "any thing pending" to "Requests", "reqests pending" to "RequestBook",
+    )
+
+    /** Round 27's day-in-detail asks: Zerodha's exact figure and one kind of trade's charges are answered as "why so high" is. */
+    private val ROUND27_DETAIL = listOf("what did zerodha actually charge", "contract note ke hisaab se charges", "contract note ke hisab se charges kitne hai",
+        "exact charges", "is that charge an estimate", "zerodha ne kitna charge kiya", "charges on my futures", "delivery charges", "dp charges kitne lage",
+        "how much delivery charges did i pay", "futures ka brokerage kitna laga", "stock charges today", "charges itne kyun lage", "how come charges are so high")
+
+    @Test fun roundTwentySevenWordingsRouteAndNeverAct() {
+        assertEquals(ROUND27.size, ROUND27.map { it.first }.distinct().size)
+        val wrong = ROUND27.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND27) neverActs(s)
+        for (s in ROUND27_DETAIL) assertTrue(Charges.whyAsked(s) && Charges.asked(s), s)
+        // The day asked for Zerodha's exact figure is today, as the contract note's.
+        assertEquals(Charges.Span.TODAY, Charges.whySpan("what did zerodha actually charge me today"))
+        assertEquals(null, Charges.whySpan("what did zerodha actually charge"))
+        assertEquals(Charges.Span.MONTH, Charges.whySpan("charges on futures this month"))
+        // The schedule's questions (one lot, a definition, an amount of shares, the contract note as a document) are not the account's.
+        for (s in listOf("what are futures charges per lot", "what is dp charge", "dp charge kya hota hai", "how much are delivery charges for 100 shares",
+            "what is a contract note", "download contract note", "show contract note", "what is the real charge of nifty options",
+            "the exact charge for one lot", "what are the stock charges for 100 shares", "dp charges for one lot", "charges on futures",
+            "what are charges on futures", "delivery charges kya hai", "what is a delivery charge", "real time charges", "what are charges",
+            "what is brokerage", "how are charges calculated"))
+            assertTrue(!Charges.asked(s) && !Charges.whyAsked(s), s)
+        // The totals asked as before stay the trades' answer, never the day's detail.
+        for (s in listOf("my charges", "how much did i pay in charges this week", "today's charges", "charges kitne lage", "how much brokerage did i pay"))
+            assertTrue(Charges.asked(s) && !Charges.whyAsked(s), s)
+        // The market's own price words stay the market's.
+        for ((s, want) in listOf("what's the exact nifty price" to "Market", "actual price of nifty" to "Market", "nifty futures price" to "Market"))
+            assertEquals(want, audit.feature(s), s)
+        // GiveBack stays the record: never a definition, advice, today, a forecast or Boss's own gains.
+        for (s in listOf("what does fade mean", "should i fade the rally", "fade the move", "should i keep my gains", "does nifty keep going up",
+            "how much does nifty give up today", "will nifty give back its gains", "how much did nifty give back from the high today", "what is retracement"))
+            assertTrue(audit.feature(s) != "GiveBack", "$s: ${audit.feature(s)}")
+        // OpenReach keeps its own reach from the open; a run's give-up or fade is GiveBack's.
+        assertEquals("OpenReach", audit.feature("how much does nifty move from the open"))
+        assertEquals(null, OpenReach.asked("how much does nifty usually give up after a 1% run from the open"))
+        // "The morning rally" is the run inside the morning; "the opening run" any time before 15:00.
+        assertEquals(165, GiveBack.asked("how much of the morning rally does nifty give back")?.by)
+        assertEquals(null, GiveBack.asked("how much of the opening run does nifty usually give back")?.by)
+        // MoveTime stays the record: never today's past move, an exit, or the open's time.
+        for (s in listOf("how long did nifty take to move 50 points today", "time to exit", "what time does nifty open"))
+            assertTrue(audit.feature(s) != "MoveTime", "$s: ${audit.feature(s)}")
+        // The Requests panel is read, never answered or made: a request made, sent or approved, or something wrong, is not it.
+        for (s in listOf("make a new request", "send a new request", "approve the new request", "approval chahiye mujhe trade ke liye",
+            "is anything wrong", "some thing is wrong", "any thing new in the market"))
+            assertTrue(RequestBook.asked(s) == null && !Requests.listAsked(s), s)
+    }
+
+    /**
+     * Round 28: the newest reads as Boss says them - StraddleDecay ("how fast does the straddle decay", "straddle decay on
+     * expiry day", "what is the usual straddle decay"), the breakeven after charges said without "my" ("breakeven after
+     * charges", "charges ke baad breakeven kya hai", "real breakeven", "at what price do I cover my charges"), SmallTrades with
+     * one source named ("which bot makes tiny trades", "kaun sa bot chhote trades karta hai", "who is making tiny trades",
+     * "trades that don't cover charges"), GiveBack asked on its own ("how much does Nifty give back", "Nifty kitna wapas deta
+     * hai"), the charges' exact-or-estimate ("charges exact hai ya estimate", "estimated charges", "how accurate are the
+     * charges") and the Requests panel counted ("requests kitne hain").
+     */
+    private val ROUND28 = listOf(
+        // StraddleDecay
+        "straddle kitna girta hai" to "StraddleDecay", "premium decay record" to "StraddleDecay", "how fast does the straddle decay" to "StraddleDecay",
+        "how quickly does the atm straddle lose value" to "StraddleDecay", "straddle decay on expiry day" to "StraddleDecay",
+        "straddle decay on quiet days" to "StraddleDecay", "straddle decay on trending days" to "StraddleDecay",
+        "what is the usual straddle decay" to "StraddleDecay", "what is the typical straddle decay" to "StraddleDecay",
+        // NeedsTrue: the breakeven after charges
+        "breakeven after charges" to "Account:NEED", "break even after charges" to "Account:NEED", "charges ke baad breakeven kya hai" to "Account:NEED",
+        "breakeven including charges" to "Account:NEED", "breakeven with charges" to "Account:NEED", "breakeven after brokerage" to "Account:NEED",
+        "charges ke saath breakeven kitna hai" to "Account:NEED", "breakeven charges ke baad kitna hai" to "Account:NEED",
+        "real breakeven" to "Account:NEED", "net breakeven" to "Account:NEED", "nifty breakeven after charges" to "Account:NEED",
+        "what price do i need to cover charges" to "Account:NEED", "at what price do i cover my charges" to "Account:NEED",
+        // SmallTrades
+        "which bot makes tiny trades" to "SmallTrades", "which bot makes small trades" to "SmallTrades", "which strategy makes small trades" to "SmallTrades",
+        "which bot makes the most small trades" to "SmallTrades", "which arm makes small trades" to "SmallTrades", "which bot is making tiny trades" to "SmallTrades",
+        "which strategy is making small trades" to "SmallTrades", "which bot made the most tiny trades" to "SmallTrades",
+        "who is making tiny trades" to "SmallTrades", "who is placing tiny trades" to "SmallTrades",
+        "kaun sa bot chhote trades karta hai" to "SmallTrades", "konsa bot chhote trades karta hai" to "SmallTrades",
+        "tiny trades kaun karta hai" to "SmallTrades", "small trades kaun karta hai" to "SmallTrades",
+        "which trades are too small for charges" to "SmallTrades", "which of my trades are too small for their charges" to "SmallTrades",
+        "trades that don't cover charges" to "SmallTrades", "which trades don't cover their charges" to "SmallTrades",
+        // GiveBack asked on its own
+        "how much does nifty give back" to "GiveBack", "does nifty give back its gains" to "GiveBack", "does nifty usually give back its gains" to "GiveBack",
+        "how much does banknifty usually give back" to "GiveBack", "nifty kitna wapas deta hai" to "GiveBack", "banknifty kitna wapas deta hai" to "GiveBack",
+        // The charges, exact or an estimate
+        "charges exact hai ya estimate" to "Account:CHARGES", "estimated charges" to "Account:CHARGES", "charges estimate hai kya" to "Account:CHARGES",
+        "charges approx hai kya" to "Account:CHARGES", "charges approximate hai" to "Account:CHARGES", "charges exact hai kya" to "Account:CHARGES",
+        "kya ye charges exact hain" to "Account:CHARGES", "how accurate are the charges" to "Account:CHARGES",
+        "exact or approximate charges" to "Account:CHARGES", "is that charge approximate" to "Account:CHARGES",
+        // The Requests panel
+        "requests kitne hain" to "RequestBook", "how many requests" to "RequestBook",
+    )
+
+    @Test fun roundTwentyEightWordingsRouteAndNeverAct() {
+        assertEquals(ROUND28.size, ROUND28.map { it.first }.distinct().size)
+        val wrong = ROUND28.mapNotNull { (s, want) -> audit.feature(s).let { got -> if (got == want) null else "\"$s\": wanted $want, got $got ${hits(s)}" } }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("\n"))
+        for ((s, _) in ROUND28) {
+            neverActs(s)
+            // Never heard as a yes to anything waiting.
+            assertTrue(Wake.yesNo(s) != true && Hinglish.yesNo(s) != true, s)
+        }
+        // The charges' exact-or-estimate is the day's detail (each fill on its own schedule, the contract note's figure).
+        for (s in listOf("charges exact hai ya estimate", "estimated charges", "charges estimate hai kya", "how accurate are the charges", "is that charge approximate"))
+            assertTrue(Charges.whyAsked(s), s)
+        // ...never the schedule's one-lot question.
+        for (s in listOf("estimated charges for one lot", "estimated charges per lot")) assertTrue(!Charges.asked(s) && !Charges.whyAsked(s), s)
+        // The breakeven after charges explained, or acted on, is not Boss's positions worked out.
+        for (s in listOf("breakeven after charges kya hota hai", "what does breakeven after charges mean", "what is breakeven after charges meaning",
+            "exit at breakeven after charges", "sell when breakeven after charges", "square off at breakeven after charges", "what is breakeven"))
+            assertTrue(!NeedsTrue.asked(s), s)
+        for (s in listOf("exit at breakeven after charges", "sell when breakeven after charges")) assertTrue(audit.feature(s) != "Account:NEED", s)
+        // StraddleDecay stays the record: never a forecast, advice, a definition or Boss's own straddle.
+        for (s in listOf("will the straddle decay today", "should i sell a straddle", "what is straddle", "how much did my straddle decay",
+            "what is the usual straddle decay tomorrow"))
+            assertEquals(null, StraddleDecay.asked(s), s)
+        // SmallTrades is read, never made: a trade asked for is not it.
+        for (s in listOf("make a small trade", "place tiny trade", "buy a small lot", "which bot should make small trades"))
+            assertEquals(null, SmallTrades.asked(s), s)
+        // GiveBack asked on its own stays the record: never a forecast, today, Boss's own or Jarvis.
+        for (s in listOf("will nifty give back its gains", "how much did nifty give back today", "how much do you give back",
+            "how much does my stock give back", "should nifty give back"))
+            assertEquals(null, GiveBack.asked(s), s)
+        // The Requests panel is counted, never answered.
+        for (s in listOf("approve requests", "reject requests kitne hain")) assertEquals(null, RequestBook.asked(s), s)
+    }
+
     // ---- Again: the voice's own "say that again slowly" - heard before the question path, never a question family ----
 
     private val AGAIN = listOf("say that again slowly", "repeat it slower", "once more slowly", "dobara dheere bolo", "dheere se phir se bolo",
@@ -2327,5 +3139,743 @@ class CollisionTest {
         // A plain "repeat that" stays "tell me more"; "speak slower" stays the lasting pace change.
         assertEquals(Command.Kind.MORE, Ask.parse("repeat that").command?.kind)
         assertEquals(Command.Kind.PACE_SLOWER, Ask.parse("speak slower").command?.kind)
+    }
+
+    // ---- WeeklyReview: Jarvis's review of the week, never the questions that already had their own answers ----
+
+    @Test fun theWeeklyReviewLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("weekly review", "is hafte ka review", "how did this week go", "last week's review")) {
+            assertEquals("WeeklyReview", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+        }
+        // A strategy's own question, the day's wrap-up and summary, Boss's own week, the week ahead: as before.
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("Solo", audit.feature("how is solo doing"))
+        assertEquals("Market", audit.feature("today's summary"))
+        assertEquals("DaySummary", audit.feature("wrap up"))
+        assertEquals("DayStory", audit.feature("how did today go"))
+        assertEquals("Account:REVIEW", audit.feature("my weekly review"))
+        assertEquals("Account:REVIEW", audit.feature("how did my week go"))
+        assertEquals("WeekAhead", audit.feature("what does this week look like"))
+        assertEquals("WeekAhead", audit.feature("plan for next week"))
+        for (s in listOf("how did my bots do this week", "how was the week for the bots", "how did nifty do this week", "how was the month",
+            "monthly review", "is this an expiry week", "how are my bots doing"))
+            assertTrue(audit.feature(s) != "WeeklyReview", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- LiquidityRecord: the arm's record over time, never the questions that already had their own answers ----
+
+    @Test fun liquiditysRecordLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("how did liquidity do this week", "liquidity on 3 oct", "liquidity last 10 trades", "which index works best for liquidity",
+            "liquidity win streak", "is liquidity on track", "liquidity ne is hafte kaisa kiya")) {
+            assertEquals("LiquidityRecord", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The weekly reviews, the arm's levels, today's trades and why, its size, health, switch and backtest: as before.
+        assertEquals("Account:REVIEW", audit.feature("my weekly review"))
+        assertEquals("WeeklyReview", audit.feature("weekly review"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("LiquidityMap", audit.feature("where are the liquidity levels"))
+        assertEquals("BotTrades", audit.feature("why did the liquidity bot exit"))
+        assertEquals("BotTrades", audit.feature("what did the liquidity bot do today"))
+        assertEquals("BotTrades", audit.feature("liquidity trades today"))
+        assertEquals("ArmDay", audit.feature("why did liquidity 15+5 lose today"))
+        assertEquals("ArmFit", audit.feature("how did liquidity fare on sessions like today"))
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("Market", audit.feature("how did liquidity do today"))
+        assertEquals("Honest", audit.feature("how many lots does liquidity trade"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("SwitchOff", audit.feature("should i switch off liquidity"))
+        assertEquals("SwitchOff", audit.feature("should i turn off liquidity 15+5"))
+        assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
+        assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
+        for (s in listOf("how did my bots do this week", "how did nifty do this week", "how did my week go", "how was the month", "what is a liquidity pool"))
+            assertTrue(audit.feature(s) != "LiquidityRecord", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- LotsWhatIf: a what-if on the arm's size only; every lots change keeps its own confirmed route ----
+
+    @Test fun lotsWhatIfTakesOnlyTheHypotheticalAndLeavesTheLotsRoutes() {
+        for (s in listOf("what if liquidity traded 3 lots", "how much with 1 lot this week", "3 lot pe kitna banta", "is 2 lots better than 3")) {
+            assertEquals("LotsWhatIf", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The lots change stays a command (Act: its own route and its confirmation), as does the Hinglish one.
+        for (s in listOf("set liquidity to 2 lots", "set liquidity to 3 lots", "liquidity ko 3 lot karo")) {
+            assertEquals("Act", audit.feature(s), s)
+            assertEquals(SettingsTalk.Key.LIQUIDITY_LOTS.name, Ask.parse(s).command?.target, s)
+            assertEquals(null, LotsWhatIf.asked(s), s)
+        }
+        // The size asked, and a change said without the arm: as before.
+        assertEquals("Honest", audit.feature("liquidity lots"))
+        assertEquals("Honest", audit.feature("how many lots is liquidity trading"))
+        assertEquals("Honest", audit.feature("how many lots does liquidity trade"))
+        assertEquals("Missed", audit.feature("increase lots"))
+        assertEquals("Missed", audit.feature("change lots to 3"))
+        assertEquals("Sizing", audit.feature("how many lots can i buy with 20000"))
+        assertEquals("Scenarios", audit.feature("what if nifty falls 1%"))
+        for (s in listOf("liquidity lots", "how many lots is liquidity trading", "increase lots", "change lots to 3", "increase liquidity to 3 lots",
+            "change liquidity lots to 3", "should liquidity trade 3 lots", "can i buy 3 lots with 20000", "what if i traded 3 lots", "buy 2 lots of nifty ce",
+            "what if hero traded 2 lots", "is liquidity trading 2 lots", "liquidity 3 lots kar do", "make liquidity 3 lots", "go with 3 lots"))
+            assertEquals(null, LotsWhatIf.asked(s), "$s: ${audit.feature(s)}")
+        // The arm's record without a size: still its own.
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
+    }
+
+    // ---- LiquidityInsight: what's working, from the arm's own paper trades; the arm's other questions keep their routes ----
+
+    @Test fun liquidityInsightTakesOnlyItsQuestionsAndLeavesTheArmsOtherRoutes() {
+        for (s in listOf("what's working for liquidity", "where does liquidity lose", "liquidity patterns", "liquidity kahan loss karta hai")) {
+            assertEquals("LiquidityInsight", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        assertEquals(LiquidityInsight.Focus.WORKING, LiquidityInsight.asked("what's working for liquidity"))
+        assertEquals(LiquidityInsight.Focus.LOSING, LiquidityInsight.asked("where does liquidity lose"))
+        assertEquals(LiquidityInsight.Focus.LOSING, LiquidityInsight.asked("liquidity kahan loss karta hai"))
+        assertEquals(LiquidityInsight.Focus.PATTERNS, LiquidityInsight.asked("liquidity patterns"))
+        assertEquals(LiquidityInsight.Focus.PATTERNS, LiquidityInsight.asked("what works and what doesn't for liquidity"))
+        // The arm's other questions keep theirs (pinned as they routed before it).
+        assertEquals("Market", audit.feature("how did liquidity do"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity win streak"))
+        assertEquals("LiquidityRecord", audit.feature("which index works best for liquidity"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityWhyNot", audit.feature("why no liquidity trade"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("ForwardWatch", audit.feature("is liquidity drifting"))
+        assertEquals("LotsWhatIf", audit.feature("what if liquidity traded 3 lots"))
+        // Never a change, a switch, today alone, a backtest, a level, another arm, or a definition.
+        for (s in listOf("how did liquidity do", "liquidity win streak", "why no liquidity trade", "liquidity levels", "is liquidity drifting",
+            "what if liquidity traded 3 lots", "which index works best for liquidity", "should liquidity stop trading in the afternoon",
+            "change liquidity's rules to skip mornings", "switch off liquidity on fridays", "what's working for liquidity today",
+            "liquidity backtest patterns", "where does hero lose", "what's working for solo", "what is a liquidity pattern", "why did liquidity lose today",
+            "nifty patterns", "what's working", "where do i lose", "liquidity patterns kar do"))
+            assertEquals(null, LiquidityInsight.asked(s), "$s: ${audit.feature(s)}")
+        // Said with a second question: each its own.
+        assertTrue(audit.feature("what's working for liquidity and what is my pnl") != "LiquidityInsight")
+    }
+
+    // ---- LiquidityHold: the arm's time in a trade, from its own paper book; its other questions keep their routes ----
+
+    @Test fun liquidityHoldTakesOnlyTheTimeInATradeAndLeavesTheArmsOtherRoutes() {
+        for (s in listOf("how long does liquidity hold its trades", "liquidity hold time this week", "do liquidity's losers last longer than its winners",
+            "liquidity ke trades kitni der chalte hain")) {
+            assertEquals("LiquidityHold", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        assertEquals(LiquidityRecord.Span.ALL, LiquidityHold.asked("how long does liquidity hold its trades")?.span)
+        assertEquals(LiquidityRecord.Span.THIS_WEEK, LiquidityHold.asked("liquidity hold time this week")?.span)
+        assertEquals(LiquidityRecord.Span.LAST_WEEK, LiquidityHold.asked("liquidity holding time last week")?.span)
+        assertEquals(10, LiquidityHold.asked("liquidity hold times over the last 10 trades")?.n)
+        // The arm's other questions keep theirs (pinned as they routed before it).
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
+        assertEquals("LiquidityInsight", audit.feature("what's working for liquidity"))
+        assertEquals("LotsWhatIf", audit.feature("what if liquidity traded 3 lots"))
+        assertEquals("LiquidityWhyNot", audit.feature("why no liquidity trade"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        // Boss's own notes and the catch-up keep theirs.
+        assertEquals("Account:REASONS", audit.feature("read my notes"))
+        assertEquals("CatchUp", audit.feature("catch me up"))
+        // Never a change, the open trade now, a wait, how long it has been armed, today alone, another arm, his own trades, or two questions.
+        for (s in listOf("how did liquidity do", "liquidity win streak", "why no liquidity trade", "liquidity levels", "what if liquidity traded 3 lots",
+            "should liquidity hold its trades longer", "change liquidity's hold time", "set liquidity hold time to 30 minutes", "how long is liquidity holding right now",
+            "how long has liquidity been armed", "how long until liquidity trades", "how long does liquidity wait for a trade", "liquidity hold time today",
+            "how long does hero hold its trades", "how long do i hold my trades", "how long does liquidity hold its trades and what is my pnl",
+            "hold to talk", "read my notes", "how long is the liquidity backtest", "what is liquidity", "liquidity hold time kar do",
+            "how long will liquidity hold this trade", "how long does liquidity hold the current trade"))
+            assertEquals(null, LiquidityHold.asked(s), "$s: ${audit.feature(s)}")
+        assertTrue(audit.feature("how long does liquidity hold its trades and what is my pnl") != "LiquidityHold")
+    }
+
+    // ---- LiquidityDrawdown: the arm's fall from its best, from its own paper book; its other questions keep their routes ----
+
+    @Test fun liquidityDrawdownTakesOnlyTheFallFromItsBestAndLeavesTheArmsOtherRoutes() {
+        for (s in listOf("how deep has liquidity fallen from its best", "liquidity's worst losing streak", "liquidity's current drawdown",
+            "how long did liquidity take to recover", "liquidity peak se kitna neeche hai")) {
+            assertEquals("LiquidityDrawdown", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // The arm's other questions keep theirs (pinned as they routed before it).
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity win streak"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity ki streak"))
+        assertEquals("LiquidityHold", audit.feature("how long does liquidity hold its trades"))
+        assertEquals("LiquidityInsight", audit.feature("what's working for liquidity"))
+        assertEquals("LotsWhatIf", audit.feature("what if liquidity traded 3 lots"))
+        assertEquals("LiquidityWhyNot", audit.feature("why no liquidity trade"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("Headroom", audit.feature("how close is my drawdown to my daily loss limit"))
+        // Boss's own notes and the catch-up keep theirs.
+        assertEquals("Account:REASONS", audit.feature("read my notes"))
+        assertEquals("CatchUp", audit.feature("catch me up"))
+        // Never a change, a limit, Boss's own drawdown, today alone, another arm, the backtest, a definition, or two questions.
+        for (s in listOf("how did liquidity do", "liquidity win streak", "liquidity ki streak", "why no liquidity trade", "liquidity levels",
+            "how long does liquidity hold its trades", "what is my drawdown", "how close is my drawdown to my daily loss limit",
+            "set liquidity's drawdown limit", "should liquidity stop after this drawdown", "turn off liquidity in a drawdown",
+            "liquidity drawdown today", "solo drawdown", "hero's worst losing streak", "liquidity backtest drawdown", "what is a drawdown",
+            "why is liquidity in a drawdown", "liquidity drawdown and what is my pnl", "is nifty down from its high", "read my notes", "catch me up",
+            // A zone's depth, a stop's depth or a re-entry is not its fall from its best.
+            "how deep is the liquidity zone", "liquidity sweep how deep", "how deep was liquidity's stop", "liquidity get back in",
+            // A span named: the whole book is all this reads, so the record (which cuts by span) keeps it.
+            "liquidity drawdown last week", "liquidity worst losing streak this week", "liquidity drawdown over the last 10 trades"))
+            assertTrue(!LiquidityDrawdown.asked(s), "$s: ${audit.feature(s)}")
+        assertTrue(audit.feature("liquidity drawdown and what is my pnl") != "LiquidityDrawdown")
+    }
+
+    // ---- LiquidityWhen: the arm by weekday, expiry day and entry time, from its own paper book; its other questions keep their routes ----
+
+    @Test fun liquidityWhenTakesOnlyItsDayAndTimeSplitsAndLeavesTheOtherRoutes() {
+        for (s in listOf("which day does liquidity do best", "liquidity on expiry days", "liquidity by weekday",
+            "what time of entry works best for liquidity", "liquidity kis din achha karta hai")) {
+            assertEquals("LiquidityWhen", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // The arm's other questions keep theirs (pinned as they routed before it).
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity last 10 trades"))
+        assertEquals("LiquidityRecord", audit.feature("which index works best for liquidity"))
+        assertEquals("LiquidityRecord", audit.feature("liquidity win streak"))
+        assertEquals("LiquidityHold", audit.feature("how long does liquidity hold its trades"))
+        assertEquals("LiquidityDrawdown", audit.feature("how deep has liquidity fallen from its best"))
+        assertEquals("LiquidityInsight", audit.feature("what's working for liquidity"))
+        assertEquals("LiquidityInsight", audit.feature("where does liquidity lose"))
+        assertEquals("LotsWhatIf", audit.feature("what if liquidity traded 3 lots"))
+        assertEquals("LiquidityWhyNot", audit.feature("why no liquidity trade"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        // The market's weekdays and Boss's own notes and catch-up keep theirs.
+        assertEquals("Weekdays", audit.feature("which day has the biggest range"))
+        assertEquals("Account:REASONS", audit.feature("read my notes"))
+        assertEquals("CatchUp", audit.feature("catch me up"))
+        // Never a change, its rules, a single or coming day, Boss's own trades, another arm, an index's days, or two questions.
+        for (s in listOf("how did liquidity do", "which index works best for liquidity", "what's working for liquidity", "where does liquidity lose",
+            "how long does liquidity hold its trades", "should liquidity skip mondays", "turn off liquidity on expiry days",
+            "what time does liquidity stop entering", "which expiry does liquidity buy", "does liquidity trade on expiry days",
+            "how did liquidity do on monday", "liquidity today", "which day is best for my trades", "which day does hero do best",
+            "which day has the biggest range", "liquidity by weekday and what is my pnl", "read my notes", "catch me up",
+            // The expiries themselves (how many are left, which it trades) are not its record on expiry days.
+            "how many expiries does liquidity have left", "liquidity's expiries"))
+            assertTrue(LiquidityWhen.asked(s) == null, "$s: ${audit.feature(s)}")
+        assertTrue(audit.feature("liquidity by weekday and what is my pnl") != "LiquidityWhen")
+    }
+
+    // ---- TomorrowPlan: the next session prepared, never the questions that already had their own answers ----
+
+    @Test fun tomorrowsPlanLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("what's the plan for tomorrow", "tomorrow ka plan", "kal ka plan kya hai", "prepare me for tomorrow", "tomorrow's plan",
+            "get me ready for tomorrow", "plan for the next session")) {
+            assertEquals("TomorrowPlan", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The day's plans, the weekly review, Liquidity's record and levels, the checklist, expiries, the calendar: as before.
+        assertEquals("Missed", audit.feature("plan for the day"))
+        assertEquals("Missed", audit.feature("morning plan"))
+        assertEquals("Missed", audit.feature("what's the morning plan"))
+        assertEquals("Market", audit.feature("today's plan"))
+        assertEquals("Agenda", audit.feature("aaj ka plan"))
+        assertEquals("Agenda", audit.feature("what's the plan for today"))
+        assertEquals("Agenda", audit.feature("what's the plan"))
+        assertEquals("Agenda", audit.feature("what's your plan today"))
+        assertEquals("WeeklyReview", audit.feature("weekly review"))
+        assertEquals("WeekAhead", audit.feature("plan for next week"))
+        assertEquals("Market", audit.feature("how did liquidity do"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("BeforeTomorrow", audit.feature("what do i need to do before tomorrow"))
+        assertEquals("BeforeTomorrow", audit.feature("checklist for tomorrow"))
+        assertEquals("BeforeTomorrow", audit.feature("kal se pehle kya karna hai"))
+        assertEquals("ExpiryEve", audit.feature("what expires tomorrow"))
+        assertEquals("MarketDays", audit.feature("is tomorrow a holiday"))
+        assertEquals("DaySummary", audit.feature("wrap up my day"))
+        // The market's outlook for tomorrow (and Jarvis's own plan asked of him) keep the outlook's answer; an index named, its own.
+        assertEquals("Tomorrow", audit.feature("how does tomorrow look"))
+        assertEquals("Tomorrow", audit.feature("outlook for tomorrow"))
+        assertEquals("Tomorrow", audit.feature("what about tomorrow"))
+        assertEquals("Tomorrow", audit.feature("what's your plan for tomorrow"))
+        assertEquals("Market", audit.feature("what's the plan for nifty tomorrow"))
+        // Said with something to do: left to the multi-step plan, as every question is.
+        assertTrue(Bundle.acts("what's the plan for tomorrow then close all positions"))
+        for (s in listOf("start all strategies tomorrow", "plan to buy nifty tomorrow", "remind me of the plan tomorrow", "plan for the day after tomorrow",
+            "what's the trade plan for tomorrow", "plan my trip for tomorrow"))
+            assertTrue(audit.feature(s) != "TomorrowPlan", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- LiquidityWhyNot: why the arm did or did not trade today, never the questions that already had their own answers ----
+
+    @Test fun liquidityWhyNotLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("why no liquidity trade today", "why no liquidity trade today?", "why didn't liquidity trade", "liquidity ne trade kyu nahi liya",
+            "what is liquidity waiting for", "why did liquidity skip the break", "why didn't the liquidity bot trade", "what would make liquidity trade")) {
+            assertEquals("LiquidityWhyNot", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The arm's exits and today's trades, its record, levels, size, health, switch and plan, and the other arms: as before.
+        assertEquals("BotTrades", audit.feature("why did the liquidity bot exit"))
+        assertEquals("BotTrades", audit.feature("liquidity trades today"))
+        assertEquals("BotTrades", audit.feature("what did the liquidity bot do today"))
+        assertEquals("BotTrades", audit.feature("why did my bots trade today"))
+        assertEquals("ArmDay", audit.feature("why did liquidity 15+5 lose today"))
+        assertEquals("Market", audit.feature("how did liquidity do today"))
+        assertEquals("Market", audit.feature("how is liquidity doing"))
+        assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityMap", audit.feature("liquidity levels"))
+        assertEquals("LiquidityMap", audit.feature("where are the liquidity levels"))
+        assertEquals("LiquidityMap", audit.feature("liquidity kis level ka wait kar raha hai"))
+        assertEquals("LiquidityMap", audit.feature("how far is the next liquidity pool"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        assertEquals("Honest", audit.feature("how many lots does liquidity trade"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("SwitchOff", audit.feature("should i switch off liquidity"))
+        assertEquals("Act", audit.feature("liquidity ko 3 lot karo"))
+        assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
+        assertEquals("Thinking", audit.feature("why didn't you take that trade"))
+        assertEquals("Thinking", audit.feature("trade kyun nahi liya"))
+        assertEquals("Thinking", audit.feature("why didn't solo take that trade"))
+        // Another arm, another day, a definition: never this answer.
+        for (s in listOf("why didn't orb trade", "why no trade today", "why didn't liquidity trade yesterday", "why didn't liquidity trade last week",
+            "what is a liquidity pool", "why did liquidity trade today", "why did the liquidity bot exit early", "liquidity ne kal trade kyu nahi liya"))
+            assertTrue(audit.feature(s) != "LiquidityWhyNot", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- SoloDay: Solo (midday)'s day from its own records, never the Solo questions that already had their own answers ----
+
+    @Test fun soloDayLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("what did solo do today", "why didn't solo trade", "solo ne aaj kya kiya", "how did solo decide",
+            "why didn't solo trade today?", "solo ne trade kyu nahi liya", "what is solo waiting for", "why did solo skip nifty")) {
+            assertEquals("SoloDay", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // Solo's status, its switches, its record, a decision of the Thinking trail, its exits and results: as before.
+        assertEquals("Solo", audit.feature("how is solo doing"))
+        assertEquals("Solo", audit.feature("how did solo do today"))
+        assertEquals("Solo", audit.feature("solo on"))
+        assertEquals("Solo", audit.feature("solo off"))
+        assertEquals("Solo", audit.feature("is solo on"))
+        assertEquals("Solo", audit.feature("should i switch off solo"))
+        assertEquals("Act", audit.feature("switch on solo"))
+        assertEquals("Act", audit.feature("turn off solo"))
+        assertEquals("Solo", audit.feature("solo record"))
+        assertEquals("Solo", audit.feature("solo forward test"))
+        assertEquals("Solo", audit.feature("what is solo"))
+        assertEquals("Solo", audit.feature("why did solo exit"))
+        assertEquals("Solo", audit.feature("why did solo lose today"))
+        assertEquals("Account:ORDERS", audit.feature("solo trades today"))
+        assertEquals("Thinking", audit.feature("why didn't solo take that trade"))
+        assertEquals("Thinking", audit.feature("why didn't you take that trade"))
+        assertEquals("Thinking", audit.feature("trade kyun nahi liya"))
+        assertEquals("Thinking", audit.feature("solo ne wo trade kyu nahi liya"))
+        assertEquals("Thinking", audit.feature("why didn't solo trade yesterday"))
+        // The other arms keep theirs.
+        assertEquals("LiquidityWhyNot", audit.feature("why didn't liquidity trade"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        for (s in listOf("why didn't orb trade", "why didn't liquidity trade", "how is solo doing", "solo on", "solo off", "switch on solo",
+            "why didn't solo take that trade", "why didn't solo trade yesterday", "what did solo do last week", "solo ko band karo", "solo chalu karo"))
+            assertTrue(audit.feature(s) != "SoloDay", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- WhatsNew: the app's changelog takes only its own words; the news, the market and "since I last asked" keep theirs ----
+
+    @Test fun whatsNewLeavesTheNewsAndTheMarketTheirRoutes() {
+        for (s in listOf("what's new", "what's new in the app", "what changed in the app", "what's changed in the update", "naya kya hai", "kya naya hai",
+            "app mein naya kya hai", "what's new in this update", "what are the new features", "release notes")) {
+            assertEquals("WhatsNew", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The news and the market: as before.
+        for (s in listOf("what's new in the market", "any news", "news", "what's happening", "latest news", "what's new today", "what is new today",
+            "what's new with nifty", "what's new in banknifty", "anything new", "naya kya hai market mein", "what's new on the news", "any updates"))
+            assertEquals("Market", audit.feature(s), s)
+        assertEquals("SinceMorning", audit.feature("what's new since the open"))
+        assertEquals("SinceMorning", audit.feature("what changed since this morning"))
+        assertEquals("SinceLast", audit.feature("what's changed since i last asked"))
+        assertEquals("SinceLast", audit.feature("what changed since last time"))
+        for (s in listOf("what changed", "what's changed", "what has changed")) assertEquals("SinceLast", audit.feature(s), s)
+        assertEquals("Learnings", audit.feature("what changed in how you work"))
+        assertEquals("ArmChange", audit.feature("what changed in my bots this week"))
+        assertEquals("Tour", audit.feature("what can i ask you"))
+        for (s in listOf("what's new in the market", "any news", "news", "what's happening", "what changed today", "what changed in nifty",
+            "what changed in my positions", "what changed in the chain", "what's the latest", "naya kya hai market mein", "subah se kya badla"))
+            assertTrue(audit.feature(s) != "WhatsNew", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- HeroDay: the Hero arm's day from its own records, never the Hero questions that already had their own answers ----
+
+    @Test fun heroDayLeavesTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("what did hero do today", "why no hero trade", "is today a hero day", "hero ne aaj kya kiya",
+            "when is the next hero day", "why didn't hero trade today?", "hero ne trade kyu nahi liya", "what is hero waiting for")) {
+            assertEquals("HeroDay", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // Every question that named Hero before keeps its route: its status, its switch, its size and budget, its record and
+        // results, its exits, another day, "that trade", what it is - and Hero MotoCorp, the stock.
+        val kept = listOf(
+            "hero status" to "Market", "hero arm status" to "Account:STRATEGIES+STATUS", "how is hero doing" to "Market",
+            "how did hero do today" to "Market", "is hero on" to "Missed", "is hero armed" to "Missed", "is hero live" to "Missed",
+            "hero on" to "Missed", "hero off" to "Missed", "switch on hero" to "Act", "switch off hero" to "Act", "stop hero" to "Act",
+            "start hero" to "Act", "hero band karo" to "Act", "hero chalu karo" to "Act",
+            "hero lots" to "Missed", "set hero to 2 lots" to "Missed", "how many lots does hero buy" to "Honest",
+            "hero budget" to "Account:EVENTS", "what is hero's budget" to "Account:EVENTS",
+            "what is hero" to "Missed", "explain the hero arm" to "Account:STRATEGIES", "hero record" to "Missed",
+            "hero paper record" to "Missed", "hero forward test" to "ForwardWatch", "hero net so far" to "Account:HISTORY",
+            "how much has hero made" to "Account:PNL", "hero trades today" to "Account:ORDERS", "why did hero exit" to "Why",
+            "what are hero's exits" to "Missed", "hero ki exits kya hai" to "Missed", "hero expiry" to "Missed",
+            "why didn't hero trade yesterday" to "Account:HISTORY", "what did hero do last week" to "Account:HISTORY",
+            "why didn't hero take that trade" to "Why", "hero ka straddle kitna hai" to "ChainIntel",
+            "hero motocorp news" to "Market", "how is hero motocorp doing" to "Market",
+            // The expiry questions without Hero: the calendar's, as before.
+            "is today expiry" to "MarketDays", "expiry today" to "MarketDays", "is today expiry day" to "MarketDays",
+            "aaj expiry hai kya" to "MarketDays", "when is the next expiry" to "MarketDays", "next expiry kab hai" to "MarketDays",
+            "kal expiry hai kya" to "MarketDays")
+        for ((s, want) in kept) {
+            assertEquals(want, audit.feature(s), s)
+            assertEquals(null, HeroDay.asked(s), s)
+        }
+        // The other arms keep theirs.
+        assertEquals("SoloDay", audit.feature("what did solo do today"))
+        assertEquals("LiquidityWhyNot", audit.feature("why didn't liquidity trade"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        for (s in listOf("why didn't solo trade", "why didn't liquidity trade", "what did hero motocorp do today", "is tomorrow a hero day",
+            "why didn't hero trade yesterday", "hero ko band karo", "arm hero"))
+            assertTrue(audit.feature(s) != "HeroDay", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- AskGuide: "What can I ask?" - every example is the family it is tagged with, and the help words keep their routes ----
+
+    @Test fun theQuestionGuideRoutesAsTaggedAndTheHelpWordsKeepTheirRoutes() {
+        for (e in AskGuide.all()) assertEquals(e.family, audit.feature(e.q), e.q)
+        // "Help", "what can you do", "tum kya kar sakte ho": the help answer, which now ends with where the guide is.
+        for (s in listOf("help", "what can you do", "what all can you do", "tum kya kar sakte ho", "jarvis tum kya kar sakte ho")) {
+            assertEquals("Help", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Ira().answer(s, emptyMap(), emptyList()).text.contains(AskGuide.helpLine()), s)
+        }
+        // "What can I ask you": the tour, as before (the hub adds the guide's line to it).
+        for (s in listOf("what can i ask you", "what can i ask jarvis", "main kya pooch sakta hoon", "tumse kya puchu"))
+            assertEquals("Tour", audit.feature(s), s)
+        // The voice question keeps its own short answer (no guide line there).
+        assertTrue(!Ira().answer("can you hear me", emptyMap(), emptyList(), voice = true).text.contains(AskGuide.POINTER))
+    }
+
+    // ---- OpeningRead: how the market opened, never the open / opening / gap questions that already had their answers ----
+
+    @Test fun theOpeningReadLeavesTheOtherOpenQuestionsTheirRoutes() {
+        for (s in listOf("how did the market open", "opening read", "market kaisa khula", "where did we open vs the levels", "how was the open",
+            "aaj market kaisa khula", "how did we open")) {
+            assertEquals("OpeningRead", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // The gap plan and the gap's own questions, the opening range and the ORB arm, the session's hours, an index's own
+        // open, another day's open, the open-at-the-high record, the first candle asked alone, "is the market open": as before.
+        assertEquals("Gap", audit.feature("gap plan"))
+        assertEquals("Gap", audit.feature("what's the gap plan"))
+        assertEquals("Gap", audit.feature("did nifty gap up today"))
+        assertEquals("Gap", audit.feature("what was the gap today"))
+        assertEquals("Gap", audit.feature("how big was the gap"))
+        assertEquals("Gap", audit.feature("did the gap fill"))
+        assertEquals("Gap", audit.feature("opening gap"))
+        assertEquals("Gap", audit.feature("what is the opening gap"))
+        assertEquals("OpeningRange", audit.feature("opening range"))
+        assertEquals("OpeningRange", audit.feature("opening range breakout"))
+        assertEquals("Glossary", audit.feature("what's the opening range"))
+        assertEquals("Missed", audit.feature("will it gap up"))
+        assertEquals("Market", audit.feature("will nifty gap up tomorrow"))
+        assertEquals("Account:STUDY", audit.feature("will the market open gap up"))
+        assertEquals("Account:STATUS", audit.feature("is the market open"))
+        assertEquals("Account:STATUS", audit.feature("is market open now"))
+        assertEquals("OptionFacts", audit.feature("when does the market open"))
+        assertEquals("OptionFacts", audit.feature("what time does the market open"))
+        assertEquals("Account:STRATEGIES", audit.feature("orb"))
+        assertEquals("Account:STRATEGIES", audit.feature("how is orb doing"))
+        assertEquals("Account:CHAIN", audit.feature("open interest"))
+        assertEquals("Market", audit.feature("how did nifty open"))
+        assertEquals("Market", audit.feature("how did banknifty open"))
+        assertEquals("Market", audit.feature("where did nifty open"))
+        assertEquals("Market", audit.feature("nifty kaisa khula"))
+        assertEquals("Market", audit.feature("did the market open"))
+        assertEquals("Market", audit.feature("has the market opened"))
+        assertEquals("Market", audit.feature("market khula kya"))
+        assertEquals("Market", audit.feature("nifty opening price"))
+        assertEquals("Lookback", audit.feature("how did the market open yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("how did we open last week"))
+        assertEquals("OpenHighLow", audit.feature("how often does nifty open at its high"))
+        assertEquals("Market", audit.feature("how big was the first candle"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        // Said with something to do: left to the multi-step plan, as every question is; two questions: each its own.
+        assertTrue(Bundle.acts("how did the market open then close all positions"))
+        assertEquals("OpeningRead & Account:PNL", audit.feature("how did the market open and what is my pnl"))
+        for (s in listOf("how did the market open on friday", "how often does the market open flat", "how did my bots do at the open",
+            "open a trade", "when will the market open", "will the market open higher"))
+            assertTrue(audit.feature(s) != "OpeningRead", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- TodayNotes: what Jarvis posted by himself today, never the questions that already had their answers ----
+
+    @Test fun todaysNotesLeaveTheOtherSaidAndNotesQuestionsTheirRoutes() {
+        for (s in listOf("what did you tell me today", "today's notes", "aaj kya bataya", "what have you told me today", "your notes today")) {
+            assertEquals("TodayNotes", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // What was just said, said again; what Boss asked; what he missed; his own notes and journal; another day's or a
+        // topic's words: as before.
+        assertEquals("Missed", audit.feature("what did you say"))
+        assertEquals("Act", audit.feature("repeat that"))
+        assertEquals("Missed", audit.feature("what did i miss"))
+        assertEquals("Market", audit.feature("what did i ask"))
+        assertEquals("Market", audit.feature("what did you tell me"))
+        assertEquals("Market", audit.feature("what did you say about nifty"))
+        assertEquals("Market", audit.feature("what did you tell me about liquidity"))
+        assertEquals("Account:HISTORY", audit.feature("what did you tell me yesterday"))
+        assertEquals("Account:REASONS", audit.feature("my notes"))
+        assertEquals("Account:REASONS", audit.feature("show my notes"))
+        assertEquals("Account:HISTORY", audit.feature("my journal"))
+        assertEquals("Account:HISTORY", audit.feature("journal"))
+        assertEquals("Account:HISTORY", audit.feature("today's journal"))
+        assertEquals("Missed", audit.feature("notes"))
+        assertEquals("DayStory", audit.feature("recap today's notes"))
+        assertEquals("OpeningRead", audit.feature("how did the market open"))
+        assertEquals("TomorrowPlan", audit.feature("what's the plan for tomorrow"))
+        // Two questions: each its own.
+        assertEquals("TodayNotes & Account:PNL", audit.feature("what did you tell me today and what is my pnl"))
+        for (s in listOf("what did you tell me yesterday", "my notes today", "what did i tell you today", "delete today's notes",
+            "what did you tell me about nifty today", "kal kya bataya", "remind me of today's notes"))
+            assertTrue(audit.feature(s) != "TodayNotes", "$s: ${audit.feature(s)}")
+    }
+
+    // ---- CatchUp: the notes since Boss last looked; "what did I miss", his own notes, the briefing keep their routes ----
+
+    @Test fun catchUpTakesItsOwnWordsAndLeavesWhatDidIMissItsAnswer() {
+        // "catch me up" was CoPilot's ("what matters right now") and "kya hua jab main nahi tha" the missed-messages answer:
+        // both are the catch-up now.
+        for (s in listOf("catch me up", "jarvis catch me up", "read your notes", "read me your notes", "notes padh do", "tumhare notes padh do",
+            "kya hua jab main nahi tha", "kya hua jab mai nahi tha")) {
+            assertEquals("CatchUp", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // "What did I miss": what Jarvis said by himself since Boss last asked (its own answer, kept).
+        for (s in listOf("what did i miss", "what have i missed", "did i miss anything", "maine kya miss kiya")) {
+            assertEquals("Missed", audit.feature(s), s)
+            assertTrue(Reminder.missedAsked(s), s)
+            assertTrue(!CatchUp.asked(s), s)
+        }
+        // The briefing's other words, today's notes, his own notes, the market: as before.
+        assertEquals("CoPilot", audit.feature("brief me"))
+        assertEquals("CoPilot", audit.feature("bring me up to speed"))
+        assertEquals("CoPilot", audit.feature("what matters right now"))
+        assertEquals("TodayNotes", audit.feature("what did you tell me today"))
+        assertEquals("TodayNotes", audit.feature("read today's notes"))
+        assertEquals("Account:REASONS", audit.feature("my notes"))
+        assertEquals("Account:REASONS", audit.feature("show my notes"))
+        assertEquals("DayRecap", audit.feature("kal kya hua"))
+        // "Read my notes" is Boss's own trade notes (his reasons), as before the catch-up; "mere notes padh do" the missed answer.
+        for (s in listOf("read my notes", "read me my notes", "read out my notes", "read my notes aloud", "catch me up on my notes")) {
+            assertEquals("Account:REASONS", audit.feature(s), s); assertTrue(!CatchUp.asked(s), s)
+        }
+        for (s in listOf("mere notes padh do", "apne notes padh do", "mere notes sunao")) {
+            assertEquals("Missed", audit.feature(s), s); assertTrue(!CatchUp.asked(s), s)
+        }
+        assertEquals("Market", audit.feature("catch me up on nifty"))
+        // Said with something to do: never the catch-up (left to the multi-step plan).
+        assertTrue(audit.feature("read my notes then close all positions") != "CatchUp")
+        assertTrue(audit.feature("catch me up then close all positions") != "CatchUp")
+    }
+
+    // ---- ForwardWatch: the paper arms against their backtests, never the questions that already had their answers ----
+
+    @Test fun forwardWatchLeavesTheOtherArmAndBacktestQuestionsTheirRoutes() {
+        // Before it, these went to a pattern's backtest ("live vs backtest", "how are my arms vs backtest"), nothing ("is
+        // anything drifting", "forward test ka haal"), the market ("forward test status") or the strategies' list ("is any
+        // arm drifting"): now one line an arm against its research - reads only, never an order, a command or a plan.
+        for (s in listOf("is anything drifting", "how are my arms vs backtest", "forward test status", "live vs backtest", "is any arm drifting",
+            "are my arms in line with the backtest", "forward test ka haal", "kya koi arm drift kar raha hai")) {
+            assertEquals("ForwardWatch", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // One arm named against its backtest: that arm's answer here (before, "liquidity live vs backtest" and "how is liquidity
+        // doing vs backtest" were a pattern's backtest to run, "hero forward test" nothing). Its other questions keep their own
+        // answers (Liquidity's record and "on track", Solo's status - its forward test too - and record, Hero's words); the
+        // bots' health; a backtest to run; the shadows; the weekly review.
+        assertEquals("ForwardWatch", audit.feature("liquidity live vs backtest"))
+        assertEquals("ForwardWatch", audit.feature("how is liquidity doing vs backtest"))
+        assertEquals("ForwardWatch", audit.feature("how did liquidity do vs the backtest"))
+        assertEquals("ForwardWatch", audit.feature("how has solo done vs backtest"))
+        // Without the backtest, Liquidity's day and record keep their own answers.
+        assertEquals("Market", audit.feature("how did liquidity do today"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do this week"))
+        assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
+        assertEquals("Solo", audit.feature("solo forward test"))
+        assertEquals("Solo", audit.feature("is solo on track"))
+        assertEquals("Solo", audit.feature("solo record"))
+        assertEquals("ForwardWatch", audit.feature("hero forward test"))
+        assertEquals("Missed", audit.feature("is hero on track"))
+        assertEquals("Account:BOTS", audit.feature("how are my bots doing"))
+        assertEquals("Account:BOTS", audit.feature("how are my arms doing"))
+        assertEquals("Account:BOTS", audit.feature("liquidity bot health"))
+        assertEquals("Account:BOTS", audit.feature("how are the shadows doing"))
+        assertEquals("Backtest", audit.feature("how are my shadows vs backtest"))
+        assertEquals("Backtest", audit.feature("backtest orb"))
+        assertEquals("Backtest", audit.feature("backtest my strategy"))
+        assertEquals("WeeklyReview", audit.feature("weekly review"))
+        assertEquals("Missed", audit.feature("forward test"))
+        assertEquals("Market", audit.feature("is nifty drifting"))
+        assertEquals("Market", audit.feature("is the market drifting"))
+        // Two questions: each its own.
+        assertEquals("ForwardWatch & Account:PNL", audit.feature("forward test status and what is my pnl"))
+        for (s in listOf("switch off the arm that is drifting", "stop the drifting arm", "how did my arms do last week vs backtest", "what is drift",
+            "switch off liquidity if it is drifting", "how did liquidity do last week vs backtest", "is orb drifting", "liquidity and solo vs backtest"))
+            assertTrue(audit.feature(s) != "ForwardWatch", "$s: ${audit.feature(s)}")
+    }
+
+    @Test fun oneArmAgainstItsBacktestIsTheForwardWatchsNeverAPatternBacktest() {
+        // Before: a pattern's backtest to run ("... vs backtest", "is liquidity in line with the backtest"), Solo's status
+        // ("solo vs backtest", "is solo drifting"), nothing ("hero vs backtest", "is hero drifting"). Now that arm against its
+        // research - reads only, never an order, a command or a plan.
+        val arms = listOf(
+            "liquidity live vs backtest" to ForwardCheck.LIQUIDITY, "how is liquidity doing vs backtest" to ForwardCheck.LIQUIDITY,
+            "liquidity vs backtest" to ForwardCheck.LIQUIDITY, "is liquidity in line with the backtest" to ForwardCheck.LIQUIDITY,
+            "liquidity 15+5 vs the backtest" to ForwardCheck.LIQUIDITY, "is liquidity drifting" to ForwardCheck.LIQUIDITY,
+            "liquidity forward test status" to ForwardCheck.LIQUIDITY,
+            "solo vs backtest" to ForwardCheck.SOLO, "is solo drifting" to ForwardCheck.SOLO, "how is solo doing against the backtest" to ForwardCheck.SOLO,
+            "hero vs backtest" to ForwardCheck.HERO, "is hero drifting" to ForwardCheck.HERO, "hero forward test" to ForwardCheck.HERO,
+            "kya hero drift kar raha hai" to ForwardCheck.HERO,
+            // Asked in the past: before, still a pattern's backtest to run.
+            "how did liquidity do vs the backtest" to ForwardCheck.LIQUIDITY, "how did liquidity do vs backtest" to ForwardCheck.LIQUIDITY,
+            "how has solo done vs backtest" to ForwardCheck.SOLO, "how has solo done against the backtest so far" to ForwardCheck.SOLO,
+            "how has hero been doing vs the backtest" to ForwardCheck.HERO)
+        for ((s, e) in arms) {
+            assertEquals("ForwardWatch", audit.feature(s), s)
+            assertEquals(e, ForwardWatch.armAsked(s), s)
+            assertTrue(ForwardWatch.notABacktest(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // A pattern's backtest to run stays the lab's.
+        for (s in listOf("backtest a hammer on banknifty", "backtest this pattern", "run a backtest of inside bars", "backtest the hammer on nifty",
+            "backtest orb", "backtest my strategy", "how are my shadows vs backtest")) {
+            assertEquals("Backtest", audit.feature(s), s)
+            assertTrue(!ForwardWatch.notABacktest(s), s)
+        }
+        // The arms' own questions keep their answers.
+        assertEquals("LiquidityRecord", audit.feature("is liquidity on track"))
+        assertEquals("Solo", audit.feature("how is solo doing"))
+        assertEquals("Solo", audit.feature("solo forward test"))
+        assertEquals("ForwardWatch", audit.feature("live vs backtest"))
+    }
+
+    // ---- SettingWhere: where / how-to questions about a setting; the commands and the other questions keep their routes ----
+
+    @Test fun whereASettingIsLeavesTheCommandsAndTheOtherQuestionsTheirRoutes() {
+        for (s in listOf("where is the quiet hours setting", "how do i turn off market alerts", "backup ki setting kahan hai", "how do i stop jarvis talking",
+            "how do i turn off liquidity", "where's the mute switch", "how do i change my pin")) {
+            assertEquals("SettingWhere", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(!Reminder.asked(s) && !Reminder.cancelAsked(s) && !FollowUp.acts(s), s)
+        }
+        // The commands said as commands: as before (they act elsewhere, each with its own confirm).
+        for (s in listOf("turn off liquidity", "switch off solo", "stop jarvis talking", "mute", "jarvis mute", "unmute", "kill switch on karo")) {
+            assertEquals("Act", audit.feature(s), s)
+            assertEquals(null, SettingWhere.asked(s), s)
+        }
+        // The kill switch asked about keeps the account's own answer (its state and its place).
+        assertEquals("Account:RISK+HOWTO", audit.feature("where is the kill switch"))
+        assertTrue(audit.feature("how do i turn off the kill switch") != "SettingWhere")
+        // The battery setting asked is the order watch's own read (WatchAsk, earlier in the hub).
+        assertEquals("WatchAsk", audit.feature("battery setting kya hai"))
+        assertEquals("WatchAsk", audit.feature("what is my battery setting"))
+        assertEquals("WatchAsk", audit.feature("battery setting kahan hai"))
+        // An arm, a trade, a position, the market, a GIFT Nifty read: not a setting.
+        assertEquals("Market", audit.feature("where is nifty"))
+        for (s in listOf("how do i turn off orb", "how do i stop orb", "where is the strategies switch", "how do i close my position",
+            "how do i turn off my position", "how do i buy a call", "where is my stop loss", "where is the settings", "how do i turn off cricket",
+            "where is the gift nifty setting", "is the kill switch on", "what are my settings", "is quiet hours on"))
+            assertTrue(audit.feature(s) != "SettingWhere", "$s: ${audit.feature(s)}")
+        // Two questions: each its own.
+        assertEquals("SettingWhere & Account:PNL", audit.feature("where is the backup setting and what is my pnl"))
+    }
+
+    // ---- DayRecap: a past day's general recap, never the dated questions that already had their answers ----
+
+    @Test fun theDayRecapLeavesTheDatedQuestionsTheirRoutes() {
+        for (s in listOf("what happened on 3 oct", "recap of yesterday", "how was monday", "2 oct ka recap", "what happened last friday",
+            "kal kya hua", "what happened yesterday", "how did monday go")) {
+            assertEquals("DayRecap", audit.feature(s), s)
+            val p = Ask.parse(s)
+            assertEquals(null, p.order, s); assertEquals(null, p.command, s); assertTrue(!Bundle.acts(s), s)
+            assertTrue(Understand.questions(null, s).orEmpty().none { FollowUp.acts(it) || Ask.parse(it).command != null || Ask.parse(it).order != null }, s)
+        }
+        // One arm, his P&L, the open, an index, the news, today, the week, the day's own recap: as before.
+        assertEquals("LiquidityRecord", audit.feature("liquidity on 3 oct"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do on 3 oct"))
+        assertEquals("LiquidityRecord", audit.feature("how did liquidity do yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("why didn't hero trade yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("what did solo do yesterday"))
+        assertEquals("Account:PNL", audit.feature("my pnl on 2 oct"))
+        assertEquals("Account:HISTORY", audit.feature("pnl yesterday"))
+        assertEquals("Lookback", audit.feature("how did the market open yesterday"))
+        assertEquals("Lookback", audit.feature("what was yesterday's high"))
+        assertEquals("MarketStory", audit.feature("what happened in the market today"))
+        assertEquals("MarketStory", audit.feature("what happened today"))
+        assertEquals("Account:HISTORY", audit.feature("news yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("how was yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("how was my day yesterday"))
+        assertEquals("Account:HISTORY", audit.feature("was yesterday a good day"))
+        assertEquals("Account:HISTORY", audit.feature("what happened last week"))
+        assertEquals("Account:HISTORY", audit.feature("what happened to nifty yesterday"))
+        assertEquals("DayCompare", audit.feature("how was yesterday for nifty"))
+        assertEquals("DayCompare", audit.feature("how was the market yesterday"))
+        assertEquals("DayCompare", audit.feature("is today like yesterday"))
+        assertEquals("InsideDays", audit.feature("was yesterday an inside day"))
+        assertEquals("OrderWhy", audit.feature("what happened to my order yesterday"))
+        assertEquals("DayStory", audit.feature("recap the day"))
+        assertEquals("DayStory", audit.feature("day recap"))
+        assertEquals("DayStory", audit.feature("today's recap"))
+        assertEquals("DayStory", audit.feature("aaj ka recap"))
+        assertEquals("WeeklyReview", audit.feature("weekly recap"))
+        assertEquals("WeeklyReview", audit.feature("how was last week"))
+        assertEquals("Outlook", audit.feature("what will nifty do on monday"))
+        assertEquals("Weekdays", audit.feature("how does nifty usually do on fridays"))
+        assertEquals("TomorrowPlan", audit.feature("kal ka plan"))
+        assertEquals("ExpiryEve", audit.feature("kal kya expire ho raha hai"))
+        assertEquals("MarketMemory", audit.feature("what happened the last 3 expiries"))
+        // Said with something to do: never the recap; two questions: each its own.
+        assertTrue(audit.feature("what happened yesterday then close all positions") != "DayRecap")
+        assertEquals("DayRecap & Account:PNL", audit.feature("what happened yesterday and what is my pnl"))
+        for (s in listOf("what happened on monday with nifty", "what happened to banknifty on 3 oct", "what news on 3 oct", "what happened to my requests",
+            "what happened today", "how was today", "what happened next monday", "recap my trades yesterday", "liquidity recap of yesterday"))
+            assertTrue(DayRecap.asked(s) == null, "$s: ${audit.feature(s)}")
     }
 }

@@ -157,6 +157,17 @@ class ThinkingTest {
         assertTrue(thin.facts.single().text.contains("thin"))
     }
 
+    @Test fun soloMiddayTakenAndPassedOver() {
+        val took = Thinking.soloMidday(at(12, 0), Market.FINNIFTY, false, true,
+            listOf("FINNIFTY is down 380 points from the open, 1.45 x its daily ATR (262)", "Of the 3 indices that signalled, it was the strongest"))
+        assertEquals(Thinking.Kind.SOLO_MIDDAY_TOOK, took.kind)
+        assertEquals("Solo's FinNifty put at 12:00", took.subject)
+        val passed = Thinking.soloMidday(at(12, 0), Market.BANKNIFTY, false, false, listOf("I already hold FINNIFTY, the stronger move (BANKNIFTY was 1.35 ATR)"))
+        assertEquals(Thinking.Kind.SOLO_MIDDAY_SKIPPED, passed.kind)
+        val a = Thinking.answer(Thinking.asked("why didn't solo trade at 12")!!, listOf(passed), at(12, 30), locked = false)!!
+        assertTrue(a.contains("Solo's BankNifty put at 12:00") && a.contains("the stronger move") && a.contains("takes one index a day, the strongest move"), a)
+    }
+
     @Test fun genericAndDayQuestions() {
         val s = satOut()
         val q = Thinking.asked("why did you do that?")!!

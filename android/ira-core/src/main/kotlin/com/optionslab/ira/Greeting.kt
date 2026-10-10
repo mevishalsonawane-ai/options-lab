@@ -20,7 +20,8 @@ object Greeting {
      */
     fun say(now: LocalDateTime, snaps: Map<Market, Snapshot>, closedReason: String?, lead: Market? = null): String {
         val m = now.hour * 60 + now.minute
-        val open = closedReason == null && m in (9 * 60 + 15) until (15 * 60 + 30)
+        // Open to F&O's close of the day (15:40 from 3 Aug 2026, 15:30 before), as the app's "Market open".
+        val open = closedReason == null && com.optionslab.engine.NseHours.foOpen(now.toLocalDate(), m)
         val day = now.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
         val state = when {
             closedReason != null -> "It's $day and the market is closed today ($closedReason)."

@@ -55,7 +55,7 @@ object ArmDay {
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
     private fun leg(right: String) = if (right.equals("PE", true)) "put" else "call"
     private fun side(right: String) = if (right.equals("PE", true)) -1 else 1
-    private fun indexName(u: String) = if (u == "FINNIFTY") "FinNifty" else "BankNifty"
+    private fun indexName(u: String) = when (u) { "FINNIFTY" -> "FinNifty"; "MIDCPNIFTY" -> "Midcap Nifty"; else -> "BankNifty" }
 
     /** The index's close at minute [t] (the last candle at or before it, today), or null. */
     private fun at(ones: List<Candle>, t: LocalDateTime): Double? = ones.lastOrNull { !it.t.isAfter(t) && it.t.toLocalDate() == t.toLocalDate() }?.c

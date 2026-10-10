@@ -41,8 +41,18 @@ object Market {
     fun today(): LocalDate = now().toLocalDate()
     fun minuteNow(): Int = now().let { it.hour * 60 + it.minute }
 
-    const val OPEN = 9 * 60 + 15
-    const val CLOSE = 15 * 60 + 30
+    const val OPEN = com.optionslab.engine.NseHours.OPEN
+    /**
+     * The cash market's and the indices' close (15:30): index candles (the last is 15:29's), index-based signals, the
+     * index's settlement. Not F&O's close, which is [foClose] (15:40 from 3 Aug 2026).
+     */
+    const val INDEX_CLOSE = com.optionslab.engine.NseHours.INDEX_CLOSE
+
+    /**
+     * NSE F&O's close on [d] (15:40 from 3 Aug 2026, 15:30 before): orders, positions, option and future prices, the market
+     * watch, square-offs and stale-price checks. An older day keeps its own hours (replays, backtests).
+     */
+    fun foClose(d: LocalDate = today()): Int = com.optionslab.engine.NseHours.foClose(d)
     /** Minutes after the open that an empty intraday read still means "no candle yet", not a failure. */
     private const val FIRST_CANDLE_GRACE = 2
 
@@ -50,10 +60,18 @@ object Market {
 
     /** A weekday that is not an NSE trading holiday, or a special session NSE called (see [Holidays]). */
     fun isTradingDay(d: LocalDate = today()) = Holidays.isExtraSession(d) || (isWeekday(d) && !Holidays.isHoliday(d))
-    fun isOpen(): Boolean = isTradingDay() && minuteNow() in OPEN until CLOSE
+    /** NSE F&O trades now: a trading day, 09:15 to [foClose] (15:40 from 3 Aug 2026). The app's "Market open". */
+    fun isOpen(): Boolean = now().let { isOpenAt(it.toLocalDate(), it.hour * 60 + it.minute) }
 
-    /** What a hand order placed outside market hours is told (paper trades by the exchange's hours too). */
-    const val CLOSED_FOR_ORDERS = "Market is closed now: orders are taken 09:15-15:30 on trading days."
+    /** F&O trades on [d] at [minute] (minutes of the day, IST). */
+    fun isOpenAt(d: LocalDate, minute: Int): Boolean = isTradingDay(d) && com.optionslab.engine.NseHours.foOpen(d, minute)
+
+    /** The index (cash) session is on now: a trading day, 09:15 to 15:30 - for index-based reads and signals only. */
+    fun isIndexOpen(): Boolean = isTradingDay() && com.optionslab.engine.NseHours.indexOpen(minuteNow())
+
+    /** What a hand order placed outside market hours is told (paper trades by the exchange's F&O hours too). */
+    val CLOSED_FOR_ORDERS: String
+        get() = "Market is closed now: orders are taken 09:15-${com.optionslab.engine.NseHours.foCloseText(today())} on trading days."
 
     /**
      * TEST SEAM (JVM tests only): the screen tests place paper orders at whatever hour CI runs, so they
@@ -65,7 +83,7 @@ object Market {
             field = v
         }
 
-    /** Whether a hand order may be placed now: in market hours on a trading day. */
+    /** Whether a hand order may be placed now: in F&O's hours on a trading day (to 15:40 from 3 Aug 2026). */
     fun acceptsOrders(): Boolean = testOrdersAnyTime || isOpen()
 
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
@@ -82,17 +100,21 @@ object Market {
      */
     fun liveMode(): Boolean = AppSettings.load().live
 
-    /** [quick]: short timeouts and no queueing behind chart loads, for the market watch (Upstox feed only). */
-    suspend fun quote(symbol: String, quick: Boolean = false): Quote? =
-        if (liveMode()) Broker.indexQuote(symbol) else upstoxQuote(symbol, quick)
+    /**
+     * [quick]: short timeouts and no queueing behind chart loads, for the market watch (Upstox feed only). [spark] false:
+     * the caller reads only the last price and the change from the open, so Zerodha's day candles are not read for it
+     * (Live mode; the Upstox feed reads its candles for the price itself).
+     */
+    suspend fun quote(symbol: String, quick: Boolean = false, spark: Boolean = true): Quote? =
+        if (liveMode()) Broker.indexQuote(symbol, spark) else upstoxQuote(symbol, quick)
 
     private suspend fun upstoxQuote(symbol: String, quick: Boolean): Quote? {
         val key = Upstox.INDEX_KEYS.getValue(symbol)
         val read = runCatching { if (quick) Net.intradayQuick(key) else Net.intraday(key) }
         read.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
         var bars = read.getOrDefault(emptyList()).filter { it.istDate == today() }
-        if (bars.isEmpty() && isOpen()) {
-            // In session a failed read is an error, never the last close passed off as the live price.
+        if (bars.isEmpty() && isIndexOpen()) {
+            // In the index's session (to 15:30; F&O's later close does not move an index) a failed read is an error, never the last close passed off as the live price.
             read.exceptionOrNull()?.let { throw it }
             // An empty read is normal only before the first candle prints; later it means no data.
             if (minuteNow() > OPEN + FIRST_CANDLE_GRACE) return null
@@ -195,7 +217,9 @@ object Market {
      */
     suspend fun liveChain(underlying: String, near: Int = 14): LiveChain {
         val liveNow = liveMode()
-        val lc = if (liveNow) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
+        // An MCX name (CRUDEOIL, NATURALGAS, GOLDM, SILVERM...): its near-month chain on its near future (9 Oct).
+        val lc = if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying)) McxMarket.chain(underlying, near)
+            else if (liveNow) Broker.liveChain(underlying, near) else upstoxChain(underlying, near)
         chainReads[chainKey(underlying, near)] = Triple(System.currentTimeMillis(), liveNow, lc)
         return lc
     }

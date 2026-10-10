@@ -72,6 +72,33 @@ class MarketTest : RobolectricTest() {
         assertEquals(WED, Market.today())
     }
 
+    /** F&O trades to 15:40 from 3 Aug 2026 (15:30 before); the index's session still ends 15:30 on both sides. */
+    @Test fun foHoursMoveTo1540From3Aug2026AndTheIndexStaysAt1530() {
+        val july = java.time.LocalDate.of(2026, 7, 29)     // a Wednesday before the change
+        val aug = java.time.LocalDate.of(2026, 8, 5)       // a Wednesday after it
+        Background.calendar(WED)
+        Market.testOrdersAnyTime = false
+        try { foHours(july, aug) } finally { Market.testOrdersAnyTime = true }
+    }
+
+    private fun foHours(july: java.time.LocalDate, aug: java.time.LocalDate) {
+        assertEquals(15 * 60 + 30, Market.foClose(july))
+        assertEquals(15 * 60 + 40, Market.foClose(aug))
+        assertEquals(15 * 60 + 30, Market.INDEX_CLOSE)
+        Background.at(july, 15, 29); assertTrue(Market.isOpen()); assertTrue(Market.isIndexOpen())
+        Background.at(july, 15, 30); assertFalse(Market.isOpen()); assertFalse(Market.isIndexOpen())
+        assertEquals("Market is closed now: orders are taken 09:15-15:30 on trading days.", Market.CLOSED_FOR_ORDERS)
+        Background.at(july, 15, 35); assertFalse("15:35 before 3 Aug 2026: F&O was shut", Market.acceptsOrders())
+        Background.at(aug, 15, 30); assertTrue("F&O still trades", Market.isOpen()); assertFalse("the index has closed", Market.isIndexOpen())
+        Background.at(aug, 15, 35); assertTrue(Market.isOpen()); assertTrue(Market.acceptsOrders())
+        Background.at(aug, 15, 39); assertTrue(Market.isOpen())
+        Background.at(aug, 15, 40); assertFalse(Market.isOpen()); assertFalse(Market.acceptsOrders())
+        assertEquals("Market is closed now: orders are taken 09:15-15:40 on trading days.", Market.CLOSED_FOR_ORDERS)
+        // The pure check a replay of either day reads.
+        assertTrue(Market.isOpenAt(aug, 15 * 60 + 35)); assertFalse(Market.isOpenAt(july, 15 * 60 + 35))
+        assertFalse("a weekend", Market.isOpenAt(aug.plusDays(3), 11 * 60))
+    }
+
     @Test fun theClockSeamIsDebugOnlyAndDefaultsToTheSystemClock() {
         assertNull(Market.testClock)
         val before = java.time.ZonedDateTime.now(com.optionslab.engine.IST).minusSeconds(5)

@@ -71,6 +71,13 @@ jobs:
           test -n "$ANDROID_HOME"
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
+          # The default NDK (AGP's 27.0.12077973, for the Jarvis voice library) is fetched here with retries: a corrupt
+          # download from Google ("Archive is not a ZIP archive") failed whole builds before any code compiled.
+          for i in 1 2 3; do
+            "$SDKM" --install "ndk;27.0.12077973" > /dev/null && test -f "$ANDROID_HOME/ndk/27.0.12077973/source.properties" && break
+            echo "NDK install failed (try $i); clearing and retrying"
+            rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
+          done
       - uses: gradle/actions/setup-gradle@v4
       - name: Release keystore (optional)
         env:
@@ -162,12 +169,18 @@ jobs:
           gold=$(ls app/build/outputs/apk/gold/release/*.apk | head -1)
           cp "$gold" "$RUNNER_TEMP/IraGoldAlgo.apk"
           notes="Build of ${SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')). Installs over the previous one (same signing key)."
-          if gh release view latest-apk >/dev/null 2>&1; then
-            gh release edit latest-apk --notes "$notes"
-          else
+          if ! gh release view latest-apk >/dev/null 2>&1; then
             gh release create latest-apk --prerelease --title "IraAlgo - latest build" --notes "$notes" --target "$SHA"
           fi
-          gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber
+          # The upload first, with retries (GitHub answered HTTP 500 on the asset twice on 6 Oct); the notes name this
+          # build only once its APKs are up, so "Build of <sha>" never sits over an older APK.
+          up=0
+          for i in 1 2 3 4; do
+            if gh release upload latest-apk "$RUNNER_TEMP/IraAlgo.apk" "$RUNNER_TEMP/IraGoldAlgo.apk" --clobber; then up=1; break; fi
+            echo "Upload failed (try $i); retrying"; sleep $((i * 20))
+          done
+          [ "$up" = 1 ] || { echo "The APK upload failed 4 times"; exit 1; }
+          gh release edit latest-apk --notes "$notes"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraGoldAlgo.apk"
       # The Ira branch's build on its own link, so the owner's latest-apk links above only change from the main line:
@@ -221,6 +234,13 @@ jobs:
           test -n "$ANDROID_HOME"
           SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$SDKM" --licenses > /dev/null || true
+          # The default NDK (AGP's 27.0.12077973, for the Jarvis voice library) is fetched here with retries: a corrupt
+          # download from Google ("Archive is not a ZIP archive") failed whole builds before any code compiled.
+          for i in 1 2 3; do
+            "$SDKM" --install "ndk;27.0.12077973" > /dev/null && test -f "$ANDROID_HOME/ndk/27.0.12077973/source.properties" && break
+            echo "NDK install failed (try $i); clearing and retrying"
+            rm -rf "$ANDROID_HOME/ndk/27.0.12077973" "$HOME/.android/cache" ; sleep $((i * 15))
+          done
       - uses: gradle/actions/setup-gradle@v4
       # Robolectric fetches its Android runtime jar from Maven Central on first use, into ~/.m2; kept between runs
       # so four shards do not each download it (Maven Central rate-limits them: HTTP 429 failed every test once).

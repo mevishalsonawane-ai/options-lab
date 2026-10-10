@@ -68,7 +68,7 @@ object AutomationSupport {
 
     /** Every test clock back to the real one. */
     fun realClocks() {
-        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
+        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testOptionBars = null; ExpirySquareOff.testNow = null; PineAuto.testNow = null; PineAuto.testBars = null
     }
 
     fun clearAlerts() = Alerts.queue.value.forEach { Alerts.dismiss(it.id) }
@@ -87,8 +87,15 @@ object AutomationSupport {
         File(context.filesDir, "contracts.json").writeText(JSONObject().put("day", Market.today().toString()).put("c", arr).toString())
     }
 
-    /** Write the ORB arms' encrypted state as the app would have saved it, and make the arms read it. */
+    /**
+     * Write the ORB arms' encrypted state as the app would have saved it, and make the arms read it. Without a "migrated"
+     * list it is a book saved after every one-time change (06 Oct's switch-off and retirement, 07 Oct's un-retirement and the MIDCPNIFTY
+     * books joining Liquidity's switch, 9 Oct's parking of FINNIFTY and ORB Sweep), so loading it changes
+     * nothing; a test of a change passes its own list (an empty one: saved before all of them).
+     */
     fun orbState(context: Context, o: JSONObject) {
+        if (!o.has("migrated")) o.put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
+            .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN).put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
         OrbArms.wipe()
         Vault.writeFile(File(context.filesDir, "orb.vault"), o.toString().toByteArray(Charsets.UTF_8))
     }

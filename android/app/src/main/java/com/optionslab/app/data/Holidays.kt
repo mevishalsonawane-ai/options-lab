@@ -138,7 +138,12 @@ object Holidays {
     const val UPSTOX_URL = "https://api.upstox.com/v2/market/holidays"
 
     /** Upstox's list: the days NFO (the derivatives the app trades) is shut for trading. */
-    internal fun fromUpstox(): Map<LocalDate, String> = parseUpstox(get(UPSTOX_URL, null, nse = false).first)
+    internal fun fromUpstox(): Map<LocalDate, String> {
+        val body = get(UPSTOX_URL, null, nse = false).first
+        // The same list carries MCX's own hours on each listed day (evening-only sessions, Muhurat): kept for MCX's calendar.
+        runCatching { McxMarket.keepHolidays(com.optionslab.engine.mcx.McxSession.parseUpstox(body)) }
+        return parseUpstox(body)
+    }
 
     internal fun parseUpstox(body: String): Map<LocalDate, String> {
         val a = JSONObject(body).optJSONArray("data") ?: throw IOException("Upstox returned no list")

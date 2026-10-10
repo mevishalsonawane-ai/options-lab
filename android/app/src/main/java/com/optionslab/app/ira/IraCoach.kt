@@ -12,7 +12,7 @@ import java.time.ZoneId
 /**
  * Jarvis watching over the owner's own trading (Jarvis, the owner's wishes 2026-10-02): the automatic trailing
  * stop, too many trades too fast, losses outgrowing wins, the opening-gap plan, open interest walls moving, "explain my
- * position" and the 15:35 wrap-up. The bots (ORB, Pine, strategy runs) and Jarvis's own trades manage their own exits.
+ * position" and the 15:45 wrap-up. The bots (ORB, Pine, strategy runs) and Jarvis's own trades manage their own exits.
  */
 internal object IraCoach {
     private val IST = ZoneId.of("Asia/Kolkata")
@@ -29,6 +29,8 @@ internal object IraCoach {
         runCatching { com.optionslab.app.data.PineAuto.held.value.values.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
         runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
+        // Solo's paper trade keeps its own exits: never trailed by Boss's stops.
+        runCatching { IraSolo.all().filter { !it.closed }.forEach { bots += it.symbol } }
         return bots
     }
 
@@ -65,12 +67,12 @@ internal object IraCoach {
             if (why == null) {
                 synchronized(failedTrail) { failedTrail.remove(it.id) }
                 val said = com.optionslab.ira.AutoTrail.say(it.symbol, stop, avg)
-                IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT); IraActivity.add(said); Automations.acted(Automations.Auto.TRAIL, said)
+                IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, from = Automations.Auto.TRAIL); IraActivity.add(said); Automations.acted(Automations.Auto.TRAIL, said)
             } else {
                 synchronized(failedTrail) { failedTrail[it.id] = stop to now }
                 fun px(x: Double?) = x?.let { v -> "%.2f".format(java.util.Locale.ENGLISH, v) } ?: "?"
                 val said = "Could not trail the stop on ${it.symbol} up to ${px(stop)}: $why Your stop stays at ${px(it.stop)}."
-                IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT); IraActivity.add(said)
+                IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, from = Automations.Auto.TRAIL); IraActivity.add(said)
                 IraHub.appContext()?.let { c -> JarvisPopup.show(c, "Boss, check the stop on ${it.symbol}", said) }
             }
         }
@@ -97,7 +99,7 @@ internal object IraCoach {
         overtradeToldAt = now
         val text = com.optionslab.ira.Overtrade.say(n)
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, slow down?", text) }
-        IraHub.note(text); JarvisVoice.announce(text, urgent = true); IraActivity.add("Warned: $n trades in 30 minutes.")
+        IraHub.note(text, from = Automations.Auto.OVERTRADE); JarvisVoice.announce(text, urgent = true); IraActivity.add("Warned: $n trades in 30 minutes.")
         Automations.acted(Automations.Auto.OVERTRADE, "Warned: $n trades in 30 minutes.")
     }
 
@@ -237,7 +239,7 @@ internal object IraCoach {
         // Kept as told only once said: an answer that could not be given (old prices) is tried again on the next pass.
         val text = IraHub.usualAnswer(question) ?: return
         com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + due)).toString())
-        IraHub.note(text); IraTools.sayAlert(Automations.Auto.USUAL, com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
+        IraHub.note(text, from = Automations.Auto.USUAL); IraTools.sayAlert(Automations.Auto.USUAL, com.optionslab.ira.Wake.spoken(text, 3)); Automations.acted(Automations.Auto.USUAL, question)
     }
 
     /** A kept routine due [now] said ([usualWatch]); its token (and its key, so the hour's habit does not say it again) handed to [keep] once said. True when one was said. */
@@ -257,7 +259,7 @@ internal object IraCoach {
             else -> IraHub.marketAnswer(question)?.let { com.optionslab.ira.Routine.lead(k) + it }
         } ?: return false            // not answerable now (old prices, offline): tried again on the next pass
         keep(if (k.kind == com.optionslab.ira.Routine.Kind.AFTER_LOSS) setOf(com.optionslab.ira.Routine.token(k, lossAt)) else setOf(com.optionslab.ira.Routine.token(k, lossAt), k.key))
-        IraHub.note(text)
+        IraHub.note(text, from = Automations.Auto.USUAL)
         // A locked phone may be overheard: anything of the account stays in the chat.
         IraTools.sayAlert(Automations.Auto.USUAL, com.optionslab.ira.Overheard.said(com.optionslab.ira.Wake.spoken(text, 3), locked, "Boss, $about is in the chat, as you asked."))
         Automations.acted(Automations.Auto.USUAL, question)
@@ -304,7 +306,7 @@ internal object IraCoach {
         // Kept as told before it is said: a heads-up is never repeated today, even if the app restarts mid-way.
         com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day)
             .put("k", org.json.JSONArray(told + alerts.flatMap { it.marks })).toString())
-        alerts.forEach { IraHub.note(it.text); IraActivity.add(it.text); Automations.acted(Automations.Auto.HEADSUP, it.text) }
+        alerts.forEach { IraHub.note(it.text, from = Automations.Auto.HEADSUP); IraActivity.add(it.text); Automations.acted(Automations.Auto.HEADSUP, it.text) }
         // One spoken line a pass, however many were noted (the worst first).
         JarvisVoice.announce(alerts.first().spoken, urgent = true)
     }
@@ -322,7 +324,7 @@ internal object IraCoach {
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val mis = open.filter { it.product.equals("MIS", true) && it.qty != 0 }.map { it.symbol to it.qty }
         val text = com.optionslab.ira.MisNudge.say(mis) ?: return
-        IraHub.note(text); JarvisVoice.announce(com.optionslab.ira.MisNudge.say(mis, named = false)!!, urgent = true); IraActivity.add(text); Automations.acted(Automations.Auto.MIS, text)
+        IraHub.note(text, from = Automations.Auto.MIS); JarvisVoice.announce(com.optionslab.ira.MisNudge.say(mis, named = false)!!, urgent = true); IraActivity.add(text); Automations.acted(Automations.Auto.MIS, text)
     }
 
     /** 09:05-09:14 on a trading day, once: Zerodha not logged in while Live mode or a Zerodha arm needs it. */
@@ -339,7 +341,7 @@ internal object IraCoach {
         if (!com.optionslab.ira.LoginNudge.due(minute, b.configured, b.loggedIn, needs)) return
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val t = com.optionslab.ira.LoginNudge.say(minute)
-        IraHub.note(t); JarvisVoice.announce(t); IraActivity.add(t)
+        IraHub.note(t, from = null, kind = com.optionslab.ira.TodayNotes.Category.OTHER); JarvisVoice.announce(t); IraActivity.add(t)
     }
 
     private var relay = com.optionslab.ira.RelayWatch.State()
@@ -362,7 +364,7 @@ internal object IraCoach {
         }
         val (next, say) = com.optionslab.ira.RelayWatch.next(relay, ok)
         relay = next
-        say?.let { IraHub.note(it); JarvisVoice.announce(it, urgent = true); IraActivity.add(it); Automations.acted(Automations.Auto.RELAY, it) }
+        say?.let { IraHub.note(it, from = Automations.Auto.RELAY); JarvisVoice.announce(it, urgent = true); IraActivity.add(it); Automations.acted(Automations.Auto.RELAY, it) }
     }
 
     /** Just after the open (09:16 to 09:30), once a day: BankNifty's gap and how the arms did on such days. */
@@ -379,7 +381,7 @@ internal object IraCoach {
         com.optionslab.app.security.SecurePrefs.put(key, m.today().toString())
         val gap = (snap.open - prev) / prev * 100
         val text = com.optionslab.ira.GapPlan.say(com.optionslab.ira.Market.BANKNIFTY, gap, gapRecord(com.optionslab.ira.GapPlan.of(gap)))
-        IraHub.note(com.optionslab.ira.Address.boss(text))
+        IraHub.note(com.optionslab.ira.Address.boss(text), from = Automations.Auto.GAP)
         // Said through the airtime ([IraAirtime]): one line per move, a few an hour; no pop-up, as before.
         IraAirtime.offer(com.optionslab.ira.Airtime.Source.GAP, com.optionslab.ira.Market.BANKNIFTY, gap > 0, null, text,
             com.optionslab.ira.Address.boss(text), "BankNifty opened ${"%+.2f%%".format(java.util.Locale.ENGLISH, gap)} from the previous close")
@@ -417,7 +419,7 @@ internal object IraCoach {
             val before = synchronized(walls) { walls.put(u, now) } ?: return@runCatching
             com.optionslab.ira.OiShift.say(u, before, now).forEach { line ->
                 if (synchronized(wallTold) { wallTold.add("$day|$line") }) {
-                    IraHub.note(line); Automations.acted(Automations.Auto.OI, line)
+                    IraHub.note(line, from = Automations.Auto.OI); Automations.acted(Automations.Auto.OI, line)
                     IraAirtime.offer(com.optionslab.ira.Airtime.Source.OI, null, null, "$u: open interest moved", line, line, line.substringBefore(" - "))
                 }
             }
@@ -433,7 +435,7 @@ internal object IraCoach {
      * the move out - a break seen already outside at the first look (a restart, the app opened late) is not news.
      */
     fun orbWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.ORB) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.ORB) || !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val now = java.time.LocalTime.now(IST)
         if (now.isBefore(java.time.LocalTime.of(9, 30))) return
         val day = com.optionslab.app.data.Market.today().toString()
@@ -449,7 +451,7 @@ internal object IraCoach {
             if (!seen || before == up) continue
             if (!synchronized(orbTold) { orbTold.add("$day|${m.name}|$up") }) continue
             val line = com.optionslab.ira.OpeningRange.alert(s, up)
-            IraHub.note(line); Automations.acted(Automations.Auto.ORB, line)
+            IraHub.note(line, from = Automations.Auto.ORB); Automations.acted(Automations.Auto.ORB, line)
             IraAirtime.offer(com.optionslab.ira.Airtime.Source.ORB, m, up, "${m.label}: opening range", line, line,
                 "${m.label} broke ${if (up) "above" else "below"} its opening range")
         }
@@ -464,7 +466,7 @@ internal object IraCoach {
      * told once a day, on the move - the first look of a day only records, so a state already there is not news.
      */
     fun momentsWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.MOMENTS) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.MOMENTS) || !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val day = com.optionslab.app.data.Market.today().toString()
         trimDays(com.optionslab.app.data.Market.today())
         for (m in listOf(com.optionslab.ira.Market.NIFTY, com.optionslab.ira.Market.BANKNIFTY)) {
@@ -475,7 +477,7 @@ internal object IraCoach {
             val before = synchronized(momentLast) { momentLast.put("$day|${m.name}", now) } ?: continue
             for (a in com.optionslab.ira.Moments.alerts(s, bars, before, now)) {
                 if (!synchronized(momentTold) { momentTold.add("$day|${a.key}") }) continue
-                IraHub.note(a.text); Automations.acted(Automations.Auto.MOMENTS, a.text)
+                IraHub.note(a.text, from = Automations.Auto.MOMENTS); Automations.acted(Automations.Auto.MOMENTS, a.text)
                 // The way the price went: past the high up, past the low down, a gap filled back towards the close.
                 val up = when (a.key.substringBefore('|')) { "prevhigh" -> true; "prevlow" -> false; else -> s.prevClose?.let { s.open < it } }
                 IraAirtime.offer(com.optionslab.ira.Airtime.Source.MOMENTS, m, up, a.title, a.text, a.text, a.title)
@@ -511,7 +513,7 @@ internal object IraCoach {
                 rs.add(read); rs.first()
             }
             val text = com.optionslab.ira.ExpiryDay.say(m, slot, first, read, IraHub.recentBars(m))
-            IraHub.note(text); Automations.acted(Automations.Auto.EXPIRYDAY, text)
+            IraHub.note(text, from = Automations.Auto.EXPIRYDAY); Automations.acted(Automations.Auto.EXPIRYDAY, text)
             IraAirtime.offer(com.optionslab.ira.Airtime.Source.EXPIRYDAY, null, null, "${m.label}: expiry day", text, text, "${m.label}'s expiry-day read is in the chat")
         }
     }
@@ -536,7 +538,7 @@ internal object IraCoach {
      * so a spike already there when the app starts is not told as news.
      */
     fun vixWatch() {
-        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.VIX) || !com.optionslab.app.data.Market.isOpen()) return
+        if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.VIX) || !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val day = com.optionslab.app.data.Market.today().toString()
         trimDays(com.optionslab.app.data.Market.today())
         val v = IraHub.state.value.snaps[com.optionslab.ira.Market.VIX] ?: return
@@ -545,7 +547,7 @@ internal object IraCoach {
         if (!seen) return
         val line = com.optionslab.ira.VixSpike.alert(v, before) ?: return
         if (!synchronized(vixTold) { vixTold.add(day) }) return
-        IraHub.note(line); Automations.acted(Automations.Auto.VIX, line)
+        IraHub.note(line, from = Automations.Auto.VIX); Automations.acted(Automations.Auto.VIX, line)
         IraAirtime.offer(com.optionslab.ira.Airtime.Source.VIX, com.optionslab.ira.Market.VIX, true, "India VIX spiking", line, line,
             "India VIX up ${"%.1f%%".format(java.util.Locale.ENGLISH, v.changePct ?: 0.0)} on the day")
     }
@@ -560,7 +562,7 @@ internal object IraCoach {
      */
     fun sharpMoveWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD || !Automations.on(Automations.Auto.SHARPMOVE) ||
-            !com.optionslab.app.data.Market.isOpen()) return
+            !com.optionslab.app.data.Market.isIndexOpen()) return  // an index read: the index's session (to 15:30)
         val day = com.optionslab.app.data.Market.today()
         trimDays(day)
         val now = LocalDateTime.now(IST)
@@ -577,7 +579,7 @@ internal object IraCoach {
             val expiry = runCatching { com.optionslab.app.data.Market.isExpiryDay(m.name) }.getOrDefault(false)
             val c = com.optionslab.ira.SharpMove.context(mv, bars, IraHub.state.value.news, IST)
             val text = com.optionslab.ira.SharpMove.say(mv, c, expiry = expiry)
-            IraHub.note(text); Automations.acted(Automations.Auto.SHARPMOVE, text)
+            IraHub.note(text, from = Automations.Auto.SHARPMOVE); Automations.acted(Automations.Auto.SHARPMOVE, text)
             val pct = "%.2f%%".format(java.util.Locale.ENGLISH, kotlin.math.abs(mv.pct))
             IraAirtime.offer(com.optionslab.ira.Airtime.Source.SHARPMOVE, m, mv.up, "${m.label} ${"%+.2f%%".format(java.util.Locale.ENGLISH, mv.pct)} in ${mv.minutes} minutes",
                 text, com.optionslab.ira.SharpMove.spoken(mv, c), "${m.label} ${if (mv.up) "rose" else "fell"} $pct in ${mv.minutes} minutes")
@@ -697,20 +699,38 @@ internal object IraCoach {
     internal suspend fun openLegsRead(once: IraAccount.PaperOnce? = null): Pair<List<com.optionslab.ira.Exposure.Leg>, com.optionslab.ira.SinceMorning.Zerodha> {
         val now = java.time.ZonedDateTime.now(IST)
         fun spot(u: String) = runCatching { IraHub.state.value.snaps[com.optionslab.ira.Market.valueOf(u)]?.price }.getOrNull()
-        /** Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now. */
-        fun greeks(right: com.optionslab.engine.Right, u: String, strike: Double, expiry: LocalDate, price: Double): Pair<Double, Double>? {
-            if (right == com.optionslab.engine.Right.IX) return 1.0 to 0.0
+        /**
+         * Delta and gamma per unit of [u]: the index itself 1 and 0; an option's from its price now, with what it was
+         * priced from (its IV, strike and time) to reprice it at a move (reasoning, round 32).
+         */
+        fun greeks(right: com.optionslab.engine.Right, u: String, strike: Double, expiry: LocalDate, price: Double): Triple<Double, Double, com.optionslab.ira.Exposure.Model?>? {
+            if (right == com.optionslab.engine.Right.IX) return Triple(1.0, 0.0, null)
             val s = spot(u) ?: return null
             val t = com.optionslab.engine.options.OptionMath.timeToExpiryYears(now, expiry)
-            val g = com.optionslab.engine.options.OptionMath.legGreeks(if (right == com.optionslab.engine.Right.CE) com.optionslab.engine.options.OptionType.CE
-                else com.optionslab.engine.options.OptionType.PE, s, strike, t, price)?.greeks ?: return null
-            return g.delta to g.gamma
+            val call = right == com.optionslab.engine.Right.CE
+            val lg = com.optionslab.engine.options.OptionMath.legGreeks(if (call) com.optionslab.engine.options.OptionType.CE
+                else com.optionslab.engine.options.OptionType.PE, s, strike, t, price) ?: return null
+            val model = if (lg.theoretical || !(lg.ivPct > 0)) null else com.optionslab.ira.Exposure.Model(call, strike, t, lg.ivPct / 100.0, s)
+            return Triple(lg.greeks.delta, lg.greeks.gamma, model)
+        }
+        // Each position's own stop and target as the app keeps them (a protection's, else a strategy's stop): set against
+        // the estimated price at a move asked. Read only.
+        val prot = runCatching { com.optionslab.app.data.Protections.active() }.getOrDefault(emptyList())
+        val armsOpen = runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).mapNotNull { it.open }
+        fun levels(live: Boolean, symbol: String): Pair<Double?, Double?> {
+            val pr = prot.firstOrNull { it.live == live && it.symbol == symbol }
+            val armStop: Double? = armsOpen.firstOrNull { it.live == live && it.symbol == symbol }?.stopTrigger
+            val stop: Double? = pr?.stop ?: armStop
+            val target: Double? = pr?.target
+            return stop to target
         }
         val out = ArrayList<com.optionslab.ira.Exposure.Leg>()
         runCatching { paperView(once, Paper.SHARED_QUOTE_MS)?.positions?.positions.orEmpty().filter { it.quantity != 0 }.forEach { p ->
             val c = Paper.contractOf(p.symbol)
             val g = c?.let { runCatching { greeks(it.right, it.underlying, it.strike, it.expiry, p.ltp) }.getOrNull() }
-            out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second)
+            val lv = levels(false, p.symbol)
+            out += com.optionslab.ira.Exposure.Leg("Paper", p.symbol, p.quantity, p.averagePrice, p.ltp, c?.underlying, g?.first, g?.second,
+                stop = lv.first, target = lv.second, model = g?.third)
         } }
         var zerodha = if (Broker.loggedIn) com.optionslab.ira.SinceMorning.Zerodha.FAILED else com.optionslab.ira.SinceMorning.Zerodha.LOGGED_OUT
         if (Broker.loggedIn) runCatching {
@@ -720,7 +740,9 @@ internal object IraCoach {
             book?.net.orEmpty().filter { it.open }.forEach { p ->
                 val i = ins[p.symbol]
                 val g = i?.let { runCatching { greeks(it.right, it.name, it.strike, it.expiry, p.last) }.getOrNull() }
-                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second)
+                val lv = levels(true, p.symbol)
+                out += com.optionslab.ira.Exposure.Leg("Zerodha", p.symbol, p.qty, p.avg, p.last, i?.name, g?.first, g?.second,
+                    stop = lv.first, target = lv.second, model = g?.third)
             }
             if (book != null) zerodha = com.optionslab.ira.SinceMorning.Zerodha.READ
         }
@@ -730,6 +752,8 @@ internal object IraCoach {
     /** "What happens to my P&L if Nifty moves 100 points": a rough figure from the open positions' deltas. Reads only. */
     suspend fun moveLines(question: String, once: IraAccount.PaperOnce? = null): List<String> {
         val s = com.optionslab.ira.Exposure.moveAsked(question) ?: return listOf("Ask it with a size, Boss: \"what happens to my P&L if Nifty moves 100 points\".")
+        // His positions are never said on a locked phone.
+        if (IraHub.locked()) return listOf("Your positions stay out of it on a locked phone, Boss - unlock it for those.")
         val spot = runCatching { IraHub.state.value.snaps[s.market]?.price }.getOrNull()
         return com.optionslab.ira.Exposure.move(s, openLegs(once), spot)
     }
@@ -905,7 +929,7 @@ internal object IraCoach {
             val book = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrNull()
             if (book == null) { out += "$label: I could not read your $label trade book just now, so it is left out - not taken as no trades."; continue }
             if (live && book.isEmpty()) continue
-            val trades = book.map { com.optionslab.ira.TradesADay.Trade(it.openedAt, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners)) }
+            val trades = book.map { com.optionslab.ira.TradesADay.Trade(it.openedAt, it.closedAt, it.net, com.optionslab.app.data.TradeBook.ownerOf(it, owners), it.openOrderIds.firstOrNull() ?: "") }
             out += com.optionslab.ira.AfterLoss.lines(label, trades, span, today, first)
         }
         out += com.optionslab.ira.AfterLoss.CLOSING
@@ -945,7 +969,7 @@ internal object IraCoach {
         val ps = healthPositions().first
         val spoken = com.optionslab.ira.PositionHealth.spoken(ps, today) ?: return
         val lines = com.optionslab.ira.PositionHealth.lines(ps, LocalDateTime.now(IST))
-        IraHub.note(lines.joinToString("\n")); IraActivity.add(lines.first())
+        IraHub.note(lines.joinToString("\n"), from = Automations.Auto.HEALTH); IraActivity.add(lines.first())
         Automations.acted(Automations.Auto.HEALTH, "Expiry-day position check.")
         JarvisVoice.announce(com.optionslab.ira.Overheard.said(spoken, IraHub.locked()), urgent = true)
     }
@@ -1012,17 +1036,17 @@ internal object IraCoach {
         val clash = com.optionslab.ira.Consistency.next(wordClashes(), told) ?: return
         // Kept as told before it is said: never repeated today, even if the app restarts mid-way.
         com.optionslab.app.security.SecurePrefs.put(key, org.json.JSONObject().put("d", day).put("k", org.json.JSONArray(told + clash.key)).toString())
-        IraHub.note(clash.text); IraActivity.add("Pointed out: your words against today.")
+        IraHub.note(clash.text, from = Automations.Auto.WORDS); IraActivity.add("Pointed out: your words against today.")
         IraTools.sayAlert(Automations.Auto.WORDS, clash.text)
         Automations.acted(Automations.Auto.WORDS, "Pointed out one of your rules or goals against today's trades.")
     }
 
-    /** The 15:35 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
+    /** The 15:45 spoken wrap-up: the day's P&L, the scorecard's headline, tomorrow's events. */
     suspend fun daySummary(scorecard: String?) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return
         if (!Automations.on(Automations.Auto.SUMMARY)) return
         val text = wrapUp(scorecard, review = true)
-        IraHub.note(text)
+        IraHub.note(text, from = Automations.Auto.SUMMARY)
         // A locked phone may be overheard: the day's figures stay in the chat.
         JarvisVoice.announce(com.optionslab.ira.Overheard.said(com.optionslab.ira.Wake.spoken(text, 10), runCatching { IraHub.locked() }.getOrDefault(true),
             "Boss, the day's wrap-up is in the chat."))
@@ -1030,7 +1054,7 @@ internal object IraCoach {
     }
 
     /**
-     * The wrap-up's words. [review]: Jarvis's review of himself, which also keeps the day's bar - only at 15:35, never
+     * The wrap-up's words. [review]: Jarvis's review of himself, which also keeps the day's bar - only at 15:45, never
      * when Boss asks for the wrap-up during the day ("wrap up my day").
      */
     suspend fun wrapUp(scorecard: String?, review: Boolean): String {
@@ -1039,9 +1063,11 @@ internal object IraCoach {
         val pnl = runCatching {
             // Words only (the wrap-up said and noted): a paper price read in the last 20 s is shared (Battery, round 9).
             // Said before charges, as every P&L is shown (Boss, 5 Oct), with the day's charges beside it (Zerodha's
-            // estimated from the trades the app kept today).
+            // estimated from the trades the app kept today, or Zerodha's exact figure when it is kept for all of them).
             if (zerodha) Broker.positionBook().net.sumOf { it.pnl } to
-                com.optionslab.ira.PnlCharges.said(com.optionslab.app.data.TradeBook.liveChargesOn(com.optionslab.app.data.Market.today()), estimate = true)
+                com.optionslab.app.data.TradeBook.exactChargesOn(com.optionslab.app.data.Market.today()).let { exact ->
+                    com.optionslab.ira.PnlCharges.said(exact ?: com.optionslab.app.data.TradeBook.liveChargesOn(com.optionslab.app.data.Market.today()), estimate = exact == null)
+                }
             else Paper.snapshot(Paper.SHARED_QUOTE_MS).let { sn -> sn.dayGross to com.optionslab.ira.PnlCharges.said(sn.dayCharges, estimate = false) }
         }.getOrNull()?.let { (v, c) -> "${if (zerodha) "Zerodha" else "Paper"} today: ${AppFacts.rs(v)}${c?.let { " ($it)" } ?: ""}." }
         val events = runCatching { IraEvents.upcoming(2).map { com.optionslab.ira.Events.line(it, com.optionslab.app.data.Market.today()) } }.getOrDefault(emptyList())
@@ -1057,9 +1083,22 @@ internal object IraCoach {
         // so it never pushes them out of what is spoken).
         // The expiry-eve checklist right after Boss's own figures (so it is within what is spoken). Facts only.
         val eve = runCatching { expiryEve() }.getOrNull()
-        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, agenda, improve, IraSolo.daySummary(),
+        // Where Boss's small trades come from (moved less than twice their own charges; [com.optionslab.ira.SmallTrades]):
+        // one fact from his own record, said once - only at 15:45, never on a locked phone (his record), never in
+        // IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
+        val small = if (review && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { IraTools.smallTradesWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
+        // The conditional instructions Boss keeps trying to give ([com.optionslab.ira.CondNeeds]): the app's own alarm, stop
+        // loss or limit for that need named once - only at 15:45, never on a locked phone, never in IraGoldAlgo. A fact and
+        // a pointer only: nothing is set, armed or placed. One learned line a wrap-up: on a day the small-trades fact is said, it waits.
+        val condNeeds = if (review && small == null && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { IraTools.condNeedsWrapLine(runCatching { IraHub.locked() }.getOrDefault(true)) }.getOrNull() else null
+        // Today's Liquidity 15+5 trades in research terms ([com.optionslab.ira.TradeLesson]): one line, facts only.
+        val lessons = runCatching { IraTradeLessons.wrapLine() }.getOrNull()
+        return listOfNotNull(story, com.optionslab.ira.DaySummary.say(pnl, scorecard, events), eve, if (review) selfReview() else null, small, condNeeds, agenda, improve, IraSolo.daySummary(),
+            lessons,
             IraHub.marketWrapLine(),
-            // The 09:00 outlook against the close, owned (only at 15:35, when the day is in and the check is kept).
+            // The 09:00 outlook against the close, owned (only at 15:45, when the day is in and the check is kept).
             if (review) IraHub.outlookCheckLine() else null,
             runCatching { com.optionslab.ira.Missed.say(IraTools.missedToday()) }.getOrNull()).joinToString(" ")
     }

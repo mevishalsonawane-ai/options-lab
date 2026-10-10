@@ -90,7 +90,15 @@ internal object IraBots {
         val tested = armTested()
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
             val signal = (a.today.map { it.signalBar } + listOfNotNull(a.pending?.signalBar)).maxOrNull()
-            out[a.arm.label] = Conf("ORB arm", a.armed, signal = signal, holding = a.open != null, tested = tested[a.arm.label])
+            if (a.arm.source == com.optionslab.engine.orb.LiquidityRules.ARM.source) {
+                // Liquidity 15+5 per index (research X1): BANKNIFTY's health apart from FINNIFTY's and MIDCPNIFTY's, each
+                // against its own record (the arm's backtest is all of them together).
+                for (idx in com.optionslab.ira.LiquiditySplit.INDICES) {
+                    val mine = a.today.filter { com.optionslab.ira.LiquiditySplit.indexOf(it.symbol) == idx }
+                    out[com.optionslab.ira.LiquiditySplit.name(idx)] = Conf("ORB arm", a.armed, signal = mine.map { it.signalBar }.maxOrNull(),
+                        holding = mine.any { it.open })
+                }
+            } else out[a.arm.label] = Conf("ORB arm", a.armed, signal = signal, holding = a.open != null, tested = tested[a.arm.label])
         }
         out[SOLO] = Conf("Solo", runCatching { IraSolo.on }.getOrDefault(false), paperOnly = true)
         return out
@@ -114,7 +122,7 @@ internal object IraBots {
         for (book in listOf(false, true)) {
             val where = if (book) "Zerodha" else "Paper"
             val byBot = runCatching { com.optionslab.app.data.TradeBook.trips(book) }.getOrDefault(emptyList())
-                .groupBy { botOf(it, owners) }.filterKeys { it in confs }
+                .groupBy { com.optionslab.ira.LiquiditySplit.owner(botOf(it, owners), it.symbol) }.filterKeys { it in confs }
             for ((name, c) in confs) {
                 val trips = byBot[name].orEmpty()
                 // On in the book it trades in now (Solo only ever on paper); shown in the other only when it traded there.
@@ -128,8 +136,38 @@ internal object IraBots {
     }
 
     /** "How are my bots doing?", "is the ORB arm behaving?", "which strategy is losing?". Reads only. */
-    suspend fun lines(question: String): List<String> = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
-        runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
+    suspend fun lines(question: String): List<String> {
+        // ORB, ORB Fresh, ORB Sweep or Range Fade named: said first that Boss un-retired it on 07 Oct (on paper), with its
+        // 2021-2026 record as information ([com.optionslab.engine.orb.RetiredArms.history]).
+        val record = com.optionslab.engine.orb.RetiredArms.named(question).map { com.optionslab.engine.orb.RetiredArms.history(it) }
+        // "How are the shadows doing?", "how are the retired arms doing?": the shadow tracker's record (no orders), on its own.
+        if (SHADOWS.containsMatchIn(question)) return record + listOf(com.optionslab.app.data.ShadowArms.answer())
+        val health = BotHealth.lines(bots(), com.optionslab.app.data.Market.now().toLocalDateTime(), question,
+            runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false))
+        // Liquidity 15+5 named: its pre-registered candidates (a), (b) and the volatility filter (c), each judged at 40 paper trades.
+        val shadow = if (!question.contains("liquidity", ignoreCase = true)) emptyList()
+            else listOfNotNull(runCatching { com.optionslab.engine.orb.LiquidityShadow.verdict(com.optionslab.app.data.OrbArms.liquidityShadow()) }.getOrNull())
+        return record + health + shadow + liveVsBacktest(question)
+    }
+
+    /**
+     * Live vs backtest ([com.optionslab.ira.ForwardCheck], the P&L tab's card): one line for the strategy named (Liquidity,
+     * Solo, Hero), else one for each running one ("Liquidity 15+5 - Live vs backtest: ..."). Reads only.
+     */
+    private suspend fun liveVsBacktest(question: String): List<String> = runCatching {
+        val rows = com.optionslab.app.data.ForwardRecords.rows().filter { !it.shadow }
+        val named = rows.filter { r -> Regex("\\b${r.result.expectation.key}\\b", RegexOption.IGNORE_CASE).containsMatchIn(question) }
+        if (named.size == 1) listOf(com.optionslab.ira.ForwardCheck.line(named.single().result))
+        else named.ifEmpty { rows }.map { "${it.title} - ${com.optionslab.ira.ForwardCheck.line(it.result)}" }
+    }.getOrDefault(emptyList())
+
+    /** The shadows, or "the retired arms" (their research shadows), named ([lines]). */
+    private val SHADOWS = Regex("\\b(shadows?|retired)\\b", RegexOption.IGNORE_CASE)
+
+    /** An arm position as [com.optionslab.ira.BotTrades] reads it (also [IraTradeLessons]'s, so both say the same lesson). */
+    internal fun tradeOf(p: com.optionslab.app.data.OrbArms.Position): com.optionslab.ira.BotTrades.Trade =
+        com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
+            p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot)
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
@@ -137,12 +175,19 @@ internal object IraBots {
      */
     suspend fun tradesToday(q: com.optionslab.ira.BotTrades.Q, bankNifty: List<com.optionslab.ira.Candle>): String {
         val v = com.optionslab.app.data.OrbArms.view()
-        val trades = v.arms.flatMap { it.today }.map { p ->
-            com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
-                p.charges, p.live, p.level, p.target, p.ladder, p.peak)
-        }
+        val trades = v.arms.flatMap { it.today }.map { tradeOf(it) }
         val switches = v.arms.map { com.optionslab.ira.BotTrades.Switch(it.arm.label, it.armed) }
         return com.optionslab.ira.BotTrades.answer(q, trades, switches, v.range, bankNifty, com.optionslab.app.data.Market.now().toLocalDateTime())
+    }
+
+    /**
+     * "How did liquidity do this week", "liquidity last 10 trades", "is liquidity on track" ([com.optionslab.ira.LiquidityRecord]):
+     * Liquidity 15+5's record over time from the arms' own book of closed paper trades ([com.optionslab.app.data.OrbArms.closedPaper],
+     * every day it keeps). Reads only.
+     */
+    suspend fun liquidityRecord(q: com.optionslab.ira.LiquidityRecord.Q): String {
+        val rows = com.optionslab.ira.LiquidityRecord.rows(com.optionslab.app.data.OrbArms.closedPaper().map { tradeOf(it) })
+        return com.optionslab.ira.LiquidityRecord.answer(q, rows, com.optionslab.app.data.Market.today())
     }
 
     /**
@@ -153,7 +198,10 @@ internal object IraBots {
         val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
         val paper = bots().filter { it.where == "Paper" && it.name in armed }.associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
         val arms = armed.map { (name, on) -> com.optionslab.ira.SwitchOff.arm(name, on, paper[name].orEmpty()) }
-        val a = com.optionslab.ira.SwitchOff.answer(q, arms)
+        val a0 = com.optionslab.ira.SwitchOff.answer(q, arms)
+        // Asked about ORB, ORB Fresh, ORB Sweep or Range Fade: said first that Boss un-retired it on 07 Oct, with its record.
+        val record = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { com.optionslab.engine.orb.RetiredArms.history(it) }
+        val a = if (record.isEmpty()) a0 else a0.copy(text = "$record ${a0.text}")
         return a to a.offer.firstOrNull()?.let { n -> arms.firstOrNull { it.name == n } }
     }
 
@@ -188,10 +236,7 @@ internal object IraBots {
      */
     suspend fun armDay(q: com.optionslab.ira.ArmDay.Q, bars: Map<String, List<com.optionslab.ira.Candle>>): String {
         val v = com.optionslab.app.data.OrbArms.view()
-        val trades = v.arms.flatMap { it.today }.map { p ->
-            com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
-                p.charges, p.live, p.level, p.target, p.ladder, p.peak)
-        }
+        val trades = v.arms.flatMap { it.today }.map { tradeOf(it) }
         return com.optionslab.ira.ArmDay.answer(q, trades, bars, v.range, com.optionslab.app.data.Market.now().toLocalDateTime())
     }
 
@@ -302,7 +347,7 @@ internal object IraBots {
         // The figures go in the chat; what is said and shown unasked has no amount.
         val names = fresh.map { it.bot }.toSet()
         val lines = BotHealth.lines(bots.filter { it.name in names }, m.now().toLocalDateTime())
-        IraHub.note(lines.joinToString("\n")); IraActivity.add(fresh.joinToString(" ") { it.text })
+        IraHub.note(lines.joinToString("\n"), from = Automations.Auto.BOTS); IraActivity.add(fresh.joinToString(" ") { it.text })
         Automations.acted(Automations.Auto.BOTS, "Told a strategy behaving unusually.")
         val paper = runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
         val liveHeld = liveNames()
@@ -321,6 +366,104 @@ internal object IraBots {
             else IraHub.offer(what, "Boss, $name is behaving unusually", "$text Shall I $what?", act)
         }
         BotHealth.spoken(said)?.let { JarvisVoice.announce(com.optionslab.ira.Overheard.said(it, IraHub.locked()), urgent = true) }
+    }
+
+    // ---- switching off a losing arm (Boss's 06 Oct rule, [com.optionslab.ira.ArmCutoff]) ---------------------------
+
+    private const val CUTOFF_KEY = "jarvis.bots.cutoff"
+    @Volatile private var lastCutoff = 0L
+
+    /**
+     * The arms Boss could be asked about: each ORB-family arm (its own book's closed paper trades, after charges) and each
+     * Pine auto-trade script, Strategy Lab arms among them (its closed paper round trips, after charges), with its switch now
+     * and how to switch it off - an ORB arm disarmed, a script wound down; an open position is managed to its exit either
+     * way, and nothing is ever switched on. Reads only.
+     */
+    internal suspend fun cutoffArms(): List<Pair<com.optionslab.ira.ArmCutoff.Arm, suspend () -> String>> {
+        val out = ArrayList<Pair<com.optionslab.ira.ArmCutoff.Arm, suspend () -> String>>()
+        val orb = com.optionslab.app.data.OrbArms.view().arms
+        val closed = com.optionslab.app.data.OrbArms.closedPaper()
+        val liquidity = com.optionslab.engine.orb.LiquidityRules.BOOKS.map { it.source }.toSet()
+        for (a in orb) {
+            // Liquidity 15+5, switched back on on paper on 06 Oct: judged only on its trades from then, and only from 40 of them
+            // (its six-year record is the deciding evidence, not 15 trades).
+            val since = com.optionslab.engine.orb.LiquidityShadow.SINCE
+            // ORB, ORB Fresh, ORB Sweep and Range Fade, un-retired on paper by Boss on 07 Oct: judged only on their trades from
+            // then (their record from before is what he already weighed), from the same 15 trades as any arm.
+            val back = com.optionslab.engine.orb.RetiredArms.of(a.arm.source)?.let { com.optionslab.engine.orb.RetiredArms.UNRETIRED_ON }
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since)
+                    else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
+                .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
+            val src = a.arm.source; val auto = a.automatic
+            val act: suspend () -> String = { com.optionslab.app.data.OrbArms.setArmed(src, false, automatic = auto) }
+            out += Pair(com.optionslab.ira.ArmCutoff.Arm(a.arm.label, a.armed, mine,
+                if (a.arm.liquidity) com.optionslab.ira.ArmCutoff.LIQUIDITY_MIN_TRADES else com.optionslab.ira.ArmCutoff.MIN_TRADES), act)
+        }
+        val paper = runCatching { bots() }.getOrDefault(emptyList()).filter { it.where == "Paper" && it.kind == "Pine script" }
+            .associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
+        for (x in com.optionslab.app.data.PineScripts.items.value.filter { it.auto.mode != "alert" }) {
+            val trades = paper[x.name].orEmpty()
+            val arm = com.optionslab.ira.ArmCutoff.Arm(x.name, x.auto.on, trades)
+            val id = x.id
+            val name = x.name
+            val act: suspend () -> String = {
+                val r = com.optionslab.app.data.PineAuto.windDown(id, "paper record negative (${trades.size} trades after charges; Boss approved)")
+                if (r == "ok") com.optionslab.ira.ArmCutoff.done(arm) else "$name: $r."
+            }
+            out += Pair(arm, act)
+        }
+        return out
+    }
+
+    /**
+     * Market days, every 30 minutes at most: an arm with at least 15 closed paper trades and a net below zero after charges
+     * is put to Boss - approve or reject, in the Requests panel - once a day an arm. Done by itself only when Boss chose
+     * automatic stops in chat ([IraHub.offer]). Never arms anything again.
+     */
+    suspend fun cutoffLosers() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        val today = m.today()
+        if (!m.isTradingDay(today)) return
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastCutoff < 30 * 60_000L) return
+        lastCutoff = nowMs
+        val due = cutoffArms().filter { com.optionslab.ira.ArmCutoff.due(it.first) }.sortedBy { it.first.paper.sum() }
+        if (due.isEmpty()) return
+        val saved = runCatching { com.optionslab.app.security.SecurePrefs.getString(CUTOFF_KEY) }.getOrNull().orEmpty()
+        val asked = if (saved.substringBefore('|') == today.toString()) saved.split('|').drop(1).toMutableSet() else mutableSetOf()
+        val fresh = due.filter { it.first.name !in asked }
+        if (fresh.isEmpty()) return
+        for ((arm, act) in fresh) {
+            asked += arm.name
+            IraHub.offer("switch off ${arm.name}", "Boss, switch off ${arm.name}?", com.optionslab.ira.ArmCutoff.ask(arm), act)
+        }
+        runCatching { com.optionslab.app.security.SecurePrefs.put(CUTOFF_KEY, (listOf(today.toString()) + asked).joinToString("|")) }
+    }
+
+    // ---- a shadow that met the bar ([com.optionslab.engine.orb.ShadowRules.promotionDue]) --------------------------
+
+    @Volatile private var lastPromotion = 0L
+
+    /**
+     * Market days, every 30 minutes at most: a shadow with 60 closed trades, net above zero after charges and a profit factor
+     * of 1.2 or more is put to Boss - ONE request a variant, ever: "re-arm <arm> with <variant> on paper?". Approving re-arms
+     * it on paper only ([com.optionslab.app.data.ShadowArms.promote]; never Zerodha); always asked, never done by itself.
+     */
+    suspend fun shadowPromotions() {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        val m = com.optionslab.app.data.Market
+        if (!m.isTradingDay(m.today())) return
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastPromotion < 30 * 60_000L) return
+        lastPromotion = nowMs
+        for (row in com.optionslab.app.data.ShadowArms.due()) {
+            val v = row.variant
+            com.optionslab.app.data.ShadowArms.asked(v.id)
+            val id = v.id
+            IraHub.offer(com.optionslab.engine.orb.ShadowRules.askTitle(v), "Boss, " + com.optionslab.engine.orb.ShadowRules.askTitle(v),
+                com.optionslab.engine.orb.ShadowRules.ask(v, row.summary), { com.optionslab.app.data.ShadowArms.promote(id) }, addsRisk = true, alwaysAsk = true)
+        }
     }
 
     // ---- what Boss does with his bots after losing days ([com.optionslab.ira.ArmHabits]) --------------------------

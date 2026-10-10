@@ -285,6 +285,18 @@ class JobsTest : RobolectricTest() {
         Background.at(WED.plusDays(3), 10, 0); assertFalse("Saturday", Jobs.watchDue())
     }
 
+    /** F&O trades to 15:40 from 3 Aug 2026: the watch is due to then (15:30 on an older day). */
+    @Test fun theWatchRunsToFnoCloseOfTheDay() {
+        val aug = java.time.LocalDate.of(2026, 8, 5)
+        val july = java.time.LocalDate.of(2026, 7, 29)
+        Background.at(aug, 15, 38); assertTrue(Jobs.watchDue())
+        Background.at(aug, 15, 40); assertTrue(Jobs.watchDue())
+        Background.at(aug, 15, 41); assertFalse(Jobs.watchDue())
+        Background.at(july, 15, 38); assertFalse("before the change F&O closed at 15:30", Jobs.watchDue())
+        assertTrue(Jobs.nseWatchDueAt(aug, 15 * 60 + 38)); assertFalse(Jobs.nseWatchDueAt(july, 15 * 60 + 38))
+        assertTrue(Jobs.nseWatchDueAt(july, 15 * 60 + 30))
+    }
+
     // ---- the watch service -------------------------------------------------------------------------
 
     @Test fun theWatchGoesForegroundAtOnceAndStopsCleanly() {

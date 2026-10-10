@@ -148,6 +148,41 @@ function pineRegister() {
 }
 pineRegister();
 
+// ---- the order flow's optional lines (POC / VAH / VAL, VWAP and its bands) -----------------
+// Two indicators in the menu's "Order flow" group, off until added. The app gives the lines
+// for the charted index (bridge.flowLevels, memory only); they are drawn over today's candles.
+const FLOW_LINES = {
+  PROFILE: { name: 'Ira: volume profile (POC / VAH / VAL)', keys: ['pPOC', 'pVAH', 'pVAL', 'POC', 'VAH', 'VAL'] },
+  VWAP: { name: 'Ira: VWAP ±1σ ±2σ', keys: ['VWAP', '+1σ', '−1σ', '+2σ', '−2σ'] },
+};
+function flowLines(kind) {
+  try {
+    const [sym] = chartNow();
+    return JSON.parse(bridge && bridge.flowLevels ? bridge.flowLevels(sym) : '[]').filter((l) => l.kind === kind);
+  } catch (e) { return []; }
+}
+for (const [kind, def] of Object.entries(FLOW_LINES)) {
+  try {
+    registerIndicator({
+      id: 'ira-flow-' + kind.toLowerCase(), name: def.name, category: 'Order flow', placement: 'onchart',
+      inputs: def.keys.map((k, i) => ({ key: 'c' + i, type: 'color', label: k + ' colour',
+        default: kind === 'VWAP' ? '#6b7b8c' : (k.startsWith('p') ? '#9a8a6a' : '#b8860b') })),
+      plots: def.keys.map((k, i) => ({ key: 'k' + i, title: k, colorKey: 'c' + i, type: 'line', style: { lineWidth: 1 } })),
+      calc: (bars) => {
+        const lines = flowLines(kind);
+        // Today's session only (IST): the lines are the day's.
+        const day0 = Math.floor((Date.now() / 1000 + 19800) / 86400) * 86400 - 19800;
+        const out = {};
+        def.keys.forEach((k, i) => {
+          const l = lines.find((x) => x.label === k);
+          out['k' + i] = bars.map((b) => (l && b.time >= day0 ? l.price : null));
+        });
+        return out;
+      },
+    });
+  } catch (e) { /* an older chart build: the basic chart's toggles remain */ }
+}
+
 const widget = createWidget('#t', {
   feed,
   symbol,

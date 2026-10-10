@@ -34,6 +34,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -68,7 +71,9 @@ object IraHub {
                     */
                    val whole: Boolean = false,
                    /** Stable for the message's life (kept through rewrites), so the screen keeps each message's own state. */
-                   val id: Long = msgSeq.incrementAndGet())
+                   val id: Long = msgSeq.incrementAndGet(),
+                   /** A request's whole words behind its chat line (a news trade's risk, cautions, confidence): under "Details". */
+                   val details: String? = null)
 
     /** A strategy Jarvis wrote from a pattern and backtested: new until the owner approves (armed on paper) or dismisses it. */
     data class Proposal(val id: Long, val result: StrategyLab.Result, val status: String = NEW, val pineId: Long? = null) {
@@ -94,6 +99,7 @@ object IraHub {
         val nightlyAt: Instant? = null,                // the last evening review
         val best: List<PatternBook.Entry> = emptyList(), // the patterns that went their way most often so far
         val pending: Set<Long> = emptySet(),            // actions waiting for Confirm
+        val requestsRev: Long = 0,                      // bumped when a waiting request's view changes (its venue worked out)
     )
 
     /** One session's review: the patterns Ira saw on the index charts (15 and 60 minutes) and how many went their way. */
@@ -154,6 +160,8 @@ object IraHub {
     private val tested = HashSet<String>()
     @Volatile private var lastBackground: Instant? = null
     val state: StateFlow<State> = _state
+    /** Tests only: a market read under way (background work), as the screens see it. */
+    internal fun loadingForTest(on: Boolean) { _state.update { it.copy(loading = on) } }
     private val lock = Mutex()
     @Volatile private var book = PatternBook()
     private var bookFile: File? = null
@@ -594,9 +602,29 @@ object IraHub {
         val p = _state.value.proposals.firstOrNull { it.id == id } ?: return "That strategy is gone."
         if (p.status != Proposal.NEW) return "Already ${p.status}."
         val r = p.result
+        val interval = if (r.minutes == 60) "1h" else "${r.minutes}m"
+        // The same strategy already saved (Boss's 06 Oct diagnostics: #3 and #4 were one script added twice, so every
+        // trade was doubled): the same code - comments and whitespace aside - on the same symbol and chart is refused.
+        val saved = com.optionslab.app.data.PineScripts.loadNow().orEmpty().map {
+            com.optionslab.ira.PineDupes.Script(it.id, it.code, it.auto.symbol, it.auto.interval, it.auto.on)
+        }
+        com.optionslab.ira.PineDupes.duplicateOf(r.script, r.market.name, interval, saved)?.let { dup ->
+            val text = "Not added: ${r.name} is ${com.optionslab.ira.PineDupes.refusal(dup)} (the same code, symbol and chart) - " +
+                "a second copy would double every trade."
+            _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id) it.copy(status = Proposal.DISMISSED) else it },
+                messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
+            saveState()
+            IraActivity.add(text)
+            strategyDone(p, com.optionslab.ira.Requests.Outcome.FAILED, text)
+            return text
+        }
         val item = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, r.name, r.script))
         com.optionslab.app.data.PineScripts.setAuto(item.id, com.optionslab.app.data.PineScripts.Auto(
-            on = false, symbol = r.market.name, interval = if (r.minutes == 60) "1h" else "${r.minutes}m", lots = 1, shortWith = "put"))
+            on = false, symbol = r.market.name, interval = interval, lots = 1, shortWith = "put",
+            // Boss's 06 Oct rule: every Pine strategy, Jarvis's included, has a stop-loss, a target and the profit lock
+            // (30 / 60 points to start; PineScripts.protect keeps them on whatever is written).
+            stopPts = com.optionslab.ira.PineProtection.STOP, targetPts = com.optionslab.ira.PineProtection.TARGET,
+            profitLock = true, byJarvis = true))
         val armed = com.optionslab.app.data.PineAuto.arm(item.id, on = true, pinConfirmed = false)
         val text = if (armed == "ok") "Added ${r.name} as an arm and switched it on: on paper it trades 1 lot; in Live it waits for your PIN in Research → Pine. " +
             "You can switch it off there any time." else "Saved ${r.name} in Research → Pine, but could not switch it on ($armed)."
@@ -604,10 +632,12 @@ object IraHub {
             messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
         saveState()
         IraActivity.add(text)
+        strategyDone(p, if (armed == "ok") com.optionslab.ira.Requests.Outcome.APPROVED else com.optionslab.ira.Requests.Outcome.FAILED, text)
         return text
     }
 
     fun dismiss(id: Long) {
+        _state.value.proposals.firstOrNull { it.id == id && it.status == Proposal.NEW }?.let { strategyDone(it, com.optionslab.ira.Requests.Outcome.DECLINED, "Dismissed; not offered again today.") }
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id && it.status == Proposal.NEW) it.copy(status = Proposal.DISMISSED) else it },
             messages = (s.messages + Msg(true, "Dismissed. I won't offer that one again today.")).takeLast(MAX_MESSAGES)) }
         saveState()
@@ -663,7 +693,7 @@ object IraHub {
         if (!com.optionslab.ira.NightNewsPace.due(local, nextOpen)) return
         val got = newsIfDue() ?: return
         _state.update { it.copy(news = got.first, newsAt = Instant.now(), newsMissing = got.second) }
-        val fresh = synchronized(newsSeen) { got.first.filter { newsSeen.add(it.link.ifBlank { it.title }) }.also { com.optionslab.ira.Upkeep.trimOldest(newsSeen, NEWS_SEEN_MAX) } }
+        val fresh = synchronized(newsSeen) { got.first.filter { newsSeen.firstTime(it) } }
         newsPrimed = true
         val cut = now.minusSeconds(18 * 3600)
         fresh.filter { h -> h.at?.isAfter(cut) == true && com.optionslab.ira.NewsAnalyst.matters(h) }.take(6).forEach { h ->
@@ -673,20 +703,23 @@ object IraHub {
 
     @Volatile private var widgetKey: String? = null
 
-    /** Headlines already judged (link or title), the newest [NEWS_SEEN_MAX] only: the app can run for days. */
-    private val newsSeen = LinkedHashSet<String>()
+    /**
+     * Stories already judged, the newest [NEWS_SEEN_MAX] only (the app can run for days): the same link (tracking parts
+     * removed), or the same or nearly the same title from another site or a reworded update, is told once.
+     */
     private const val NEWS_SEEN_MAX = 3_000
+    private val newsSeen = com.optionslab.ira.NewsDedup(NEWS_SEEN_MAX)
     @Volatile private var newsPrimed = false
 
     /** New headlines that matter, told once (a pop-up and a line in the conversation); the first read only primes. */
     private suspend fun judgeNews(heads: List<Headline>) {
         val c = app ?: return
-        val fresh = synchronized(newsSeen) { heads.filter { newsSeen.add(it.link.ifBlank { it.title }) }.also { com.optionslab.ira.Upkeep.trimOldest(newsSeen, NEWS_SEEN_MAX) } }
+        val fresh = synchronized(newsSeen) { heads.filter { newsSeen.firstTime(it) } }
         if (!newsPrimed) { newsPrimed = true; return }
         val recent = fresh.filter { h -> h.at?.isAfter(Instant.now().minusSeconds(30 * 60)) != false }.filter { com.optionslab.ira.NewsAnalyst.matters(it) }.take(3)
         if (recent.isEmpty()) return
         val arms = HashMap<String, IraMarket>()
-        runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }.forEach { arms[it.arm.label] = IraMarket.BANKNIFTY }
+        runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).filter { it.armed }.forEach { arms[it.arm.label] = if (it.arm.hero) IraMarket.NIFTY else IraMarket.BANKNIFTY }
         com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on }.forEach { x -> IraMarket.entries.firstOrNull { it.name == x.auto.symbol }?.let { arms[x.name] = it } }
         val held = runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.quantity != 0 }.mapNotNull { p ->
             listOf(IraMarket.BANKNIFTY, IraMarket.FINNIFTY, IraMarket.NIFTY, IraMarket.SENSEX).firstOrNull { p.symbol.startsWith(it.name) } }.toSet() }.getOrDefault(emptySet())
@@ -722,8 +755,9 @@ object IraHub {
     }
 
     /**
-     * A trade Jarvis suggests (strong news, or the pattern expert): 1 lot of the index's ATM option, nearest expiry, the
-     * arm's 15% stop, a +40 target and the profit lock - placed only on the owner's yes (aloud, Approve on the pop-up or
+     * A trade Jarvis suggests (strong news, or the pattern expert): 1 lot of the index's ATM option, nearest expiry, a
+     * fixed 30-point stop, a +60 target and the profit lock on it ([com.optionslab.ira.JarvisTrades]) - never an option at
+     * 35 or less - placed only on the owner's yes (aloud, Approve on the pop-up or
      * Confirm on the Ira screen); unanswered in 10 minutes it lapses. [said] opens the spoken question.
      */
     /** [solo]: Solo's setup - its own paper record decides whether the approved trade goes to Zerodha. */
@@ -767,6 +801,8 @@ object IraHub {
         val side = if (idea.call) "call" else "put"
         // Money for it, with room to spare (Zerodha's funds when it would go live, else the paper account's).
         snap?.price?.let { px -> runCatching { IraNewsTrades.marginProblem(idea, px) }.getOrNull() }?.let { why -> reply("$text $why"); return }
+        // Too cheap for the fixed 30-point stop (35 or less): no trade offered (the news itself is still told).
+        snap?.price?.let { px -> runCatching { IraNewsTrades.premiumProblem(idea, px) }.getOrNull() }?.let { why -> reply("$text $why"); return }
         // Are options cheap or dear now? In the dearest tenth of the year, no buy is suggested.
         val iv = snap?.price?.let { runCatching { IraNewsTrades.ivNow(idea, it) }.getOrNull() }
         if (iv != null && iv.first >= com.optionslab.ira.IvRank.BLOCK) {
@@ -780,7 +816,7 @@ object IraHub {
         // long (a slow broker would leave a suggestion registered but unseen while its price went stale).
         val riskAsk = scope.async { runCatching { IraNewsTrades.riskLine(idea, snap?.price ?: 0.0) }.getOrNull() }
         val risk = kotlinx.coroutines.withTimeoutOrNull(3_000) { riskAsk.await() }?.let { " $it" } ?: ""
-        val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a 15% stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
+        val what = "buy 1 lot of the ${m.label} $side at the money, nearest expiry, with a ${IraNewsTrades.STOP_POINTS.toInt()}-point stop, a +${IraNewsTrades.TARGET_POINTS.toInt()} target and the profit lock"
         // Independent (Boss's choice, 4 Oct): a sure enough idea that would go to the PAPER account is taken at once and
         // told - never one that would reach Zerodha (that is always asked).
         val goesLive = runCatching { IraNewsTrades.goesLive(solo) }.getOrDefault(true)
@@ -830,11 +866,20 @@ object IraHub {
         if (sitOut && !solo) IraTools.count(com.optionslab.ira.Improve.SIT_OUT)
         thought(com.optionslab.ira.Thinking.Paper.ASKED)
         val id = System.nanoTime()
+        // The Requests panel's view: the idea in plain words, Paper or Zerodha as it would go now, lapsing with it.
+        val reqAt = System.currentTimeMillis()
+        val reqView = com.optionslab.ira.Requests.RequestView(id,
+            if (solo) com.optionslab.ira.Requests.Kind.SOLO else com.optionslab.ira.Requests.Kind.TRADE,
+            "buy 1 lot of the ${m.label} $side", what, com.optionslab.ira.Requests.why(text) ?: idea.why.takeIf { it.isNotBlank() },
+            if (goesLive) com.optionslab.ira.Requests.Venue.ZERODHA else com.optionslab.ira.Requests.Venue.PAPER, reqAt, reqAt + NEWS_ANSWER_MS,
+            symbol = "${m.label} $side (at the money)", qty = "1 lot",
+            price = snap?.price?.let { "index at " + "%.2f".format(java.util.Locale.ENGLISH, it) + "; ${IraNewsTrades.STOP_POINTS.toInt()}-point stop, +${IraNewsTrades.TARGET_POINTS.toInt()} target, profit lock" })
         synchronized(actions) {
             actions[id] = what to suspend { IraNewsTrades.place(idea, _state.value.snaps[m]?.price ?: snap?.price ?: error("no ${m.label} price"), source,
                 solo = solo, liveApproved = synchronized(actions) { id in liveApproved }, stars = conf.stars) }
             newsAsks += id
             if (solo) soloAsks += id
+            requestMeta[id] = reqView
         }
         IraNewsTrades.suggested(id, idea, snap?.price ?: 0.0, source, regimeNow, iv?.first, conf.stars)
         IraActivity.add("Suggested: $what (${source.substringBefore(':')}).")
@@ -844,17 +889,25 @@ object IraHub {
         // The reason Boss has turned such ideas down for, said up front when it fits this one ([com.optionslab.ira.TurnDowns]):
         // one line of words before the question - the idea, its gates and his Approve or reject are unchanged. Unlocked only.
         val turnLine = if (phoneLocked()) null else runCatching { IraTools.turnDownsLine(expiryToday(m)) }.getOrNull()
-        val full = "$text$ivLine ${conf.text()}$risk$hourLine" + (turnLine?.let { " $it" } ?: "") + " Shall I $what$where? Approve or reject."
-        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, full, action = id)).takeLast(MAX_MESSAGES)) }
+        val newsDetails = "$text$ivLine ${conf.text()}$risk$hourLine" + (turnLine?.let { " $it" } ?: "")
+        val full = "$newsDetails Shall I $what$where? Approve or reject."
+        // The whole idea - its risk, the IV line, any hour or kind caution, the turn-downs, the confidence - kept as the
+        // request's details: in the panel's card and under the chat line (never lost to the short line).
+        synchronized(actions) { requestMeta[id]?.let { rv -> requestMeta[id] = rv.copy(details = newsDetails.trim()) } }
+        // The chat: one line naming it with its full what; the details under it, the buttons in the Requests panel too.
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, com.optionslab.ira.Requests.chatLine(reqView.title, reqView.what + where),
+            action = id, details = newsDetails.trim())).takeLast(MAX_MESSAGES)) }
         JarvisApproval.show(c, id, title, full)
         // A score that has not held up is said aloud with its record beside it ([com.optionslab.ira.HonestStars]); the score,
         // the chat and the approval card are as worked out. On a locked phone, or on any trouble, the plain words.
         val starsAloud = if (phoneLocked()) "Confidence ${conf.stars} out of 5." else IraTools.starsAloud(conf.stars)
-        JarvisVoice.askYesNo(id, "$said $starsAloud" + (turnLine?.let { " $it" } ?: "") + " Shall I buy 1 lot of the ${m.label} $side? Yes or no?")
+        JarvisVoice.askYesNo(id, com.optionslab.ira.Requests.spoken(reqView.title, "$said $starsAloud" + (turnLine?.let { " $it" } ?: "") + " Shall I buy 1 lot of the ${m.label} $side? Yes or no?"))
         scope.launch {
             kotlinx.coroutines.delay(NEWS_ANSWER_MS)
+            val lapsedFp = runCatching { needsFingerprint(id) }.getOrNull()
             if (synchronized(actions) { actions.remove(id) } != null) {
                 settled(id)
+                requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED, result = "No answer in 10 minutes; nothing was placed.", fingerprint = lapsedFp)
                 IraNewsTrades.answered(id, "lapsed")
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("No answer in 10 minutes, so the ${m.label} trade lapsed; nothing was placed.")
@@ -950,6 +1003,9 @@ object IraHub {
         runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
         // Jarvis's own trades keep their own exits too (none was ever bare long enough to matter, but never doubled).
         runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
+        // Solo's paper trade keeps its own exits (the index stop, the breakeven lock, 14:30): never a premium stop set on it
+        // (the solo2 study found a premium stop instead of the index stop cost money).
+        runCatching { IraSolo.all().filter { !it.closed }.forEach { bots += it.symbol } }
         val day = com.optionslab.app.data.Market.today().toString()
         val bare = open.filter { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol !in guarded && p.symbol !in bots }
         val bareKeys = bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()
@@ -962,7 +1018,7 @@ object IraHub {
             val stop = com.optionslab.ira.Rescue.stopFor(p)
             val text = com.optionslab.ira.Rescue.say(p, stop)
             // (Only told when offering is on: the guard alone never sets a stop on these, so it says nothing.)
-            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); note(text, whole = true)
+            if (stop == null) { if (Automations.on(Automations.Auto.RESCUE)) { JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text); note(text, from = Automations.Auto.RESCUE, whole = true)
                 runCatching { JarvisVoice.offerNote(text, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) } }; continue }
             // Set alone only when nothing else could close it too: no working order on it at all and, at Zerodha, no GTT
             // on it (a GTT or a resting exit filling alongside the stop would leave a short). Otherwise only offered.
@@ -983,7 +1039,7 @@ object IraHub {
                 val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
                 JarvisPopup.show(c, if (com.optionslab.ira.Rescue.failed(result)) "Boss, ${p.symbol} is NOT guarded" else "Boss, I guarded ${p.symbol}", said)
                 // Said and shown whole: a "Not protected: ..." in it is never cut to the line "I set one" (review, 5 Oct).
-                note(said, whole = true); IraActivity.add(said)
+                note(said, from = Automations.Auto.GUARD, whole = true); IraActivity.add(said)
                 runCatching { JarvisVoice.offerNote(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, whole = true) }
                 Automations.acted(Automations.Auto.GUARD, said)
                 continue
@@ -1018,9 +1074,11 @@ object IraHub {
                     p.live -> com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, qty, ltp, stop, null, null)
                     else -> com.optionslab.app.data.Protections.protectPaper(p.symbol, product, qty, ltp, stop, null, null)
                 }
-            }, "$text Tap Confirm to $what.")
+            }, "$text Tap Confirm to $what.", kind = com.optionslab.ira.Requests.Kind.GUARD,
+                venue = if (p.live) com.optionslab.ira.Requests.Venue.ZERODHA else com.optionslab.ira.Requests.Venue.PAPER,
+                symbol = p.symbol, qty = p.qty.toString(), price = "stop at " + "%.2f".format(java.util.Locale.ENGLISH, stop))
             JarvisPopup.show(c, "Boss, ${p.symbol} has no stop", text, action = id)
-            JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
+            JarvisVoice.askYesNo(id, com.optionslab.ira.Requests.spoken(com.optionslab.ira.Requests.title(what), "Boss, $text Yes or no?"))
             IraActivity.add("Offered a stop on ${p.symbol} (it had none).")
             Automations.acted(Automations.Auto.RESCUE, "Offered a stop on ${p.symbol}.")
         }
@@ -1046,9 +1104,11 @@ object IraHub {
             }
             return
         }
-        val id = pend(what, act, "$text Tap Confirm to go ahead.")
+        // Jarvis's own offer (unasked): its question's first line leads the chat's short line, so it reads as his note
+        // beside an answer, never as the answer ([replyAfter]); the details and buttons are in the panel.
+        val id = pend(what, act, "$text Tap Confirm to go ahead.", kind = com.optionslab.ira.Requests.Kind.OFFER, lead = com.optionslab.ira.Requests.why(text))
         JarvisPopup.show(c, title, text, action = id)
-        JarvisVoice.askYesNo(id, Wake.spoken(text, 2) + " Yes or no?")
+        JarvisVoice.askYesNo(id, com.optionslab.ira.Requests.spoken(com.optionslab.ira.Requests.title(what), Wake.spoken(text, 2) + " Yes or no?"))
         IraActivity.add("Asked: $text")
     }
 
@@ -1115,9 +1175,10 @@ object IraHub {
                     r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Jarvis")) }   // Boss confirmed it
                     "Paper: ${r.message}" + (com.optionslab.app.data.Origins.shortId(r.orderId)?.let { " (order $it)" } ?: "") }
             }
-        }, "$text Tap Confirm to close $symbol.")
+        }, "$text Tap Confirm to close $symbol.", kind = com.optionslab.ira.Requests.Kind.CLOSE,
+            venue = if (live) com.optionslab.ira.Requests.Venue.ZERODHA else com.optionslab.ira.Requests.Venue.PAPER, symbol = symbol, price = "at market")
         JarvisPopup.show(c, "Boss, $symbol is going nowhere", text, action = id)
-        JarvisVoice.askYesNo(id, "Boss, $text Yes or no?")
+        JarvisVoice.askYesNo(id, com.optionslab.ira.Requests.spoken("close $symbol", "Boss, $text Yes or no?"))
     }
 
     /** Expiry day at 14:55: what the 15:05 square-off will close (or, when it is off, what will be settled). */
@@ -1152,7 +1213,9 @@ object IraHub {
     /** Live prices stopped for two minutes in market hours: told once, and again only after they came back. */
     suspend fun feedWatch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || !Automations.on(Automations.Auto.FEED)) return
-        val open = com.optionslab.app.data.Market.isOpen()
+        // The index candles' feed: the index's session (to 15:30). F&O's later close (15:40) brings no index candle, so a
+        // read of those last minutes is not a stopped feed.
+        val open = com.optionslab.app.data.Market.isIndexOpen()
         // After the close nothing "comes back": a warning still standing is simply cleared.
         if (!open) { feedWarned = false; return }
         fun last() = _state.value.liveAt?.atZone(IST)?.toLocalDateTime()
@@ -1185,6 +1248,9 @@ object IraHub {
 
     /** Is [id] a suggested trade Jarvis asks a yes or no about (so the voice does not also say "tap Confirm")? */
     fun asksYesNo(id: Long): Boolean = synchronized(actions) { id in newsAsks }
+
+    /** Read-only: does action [id] still wait for Boss's yes or Confirm (not yet answered, cancelled or lapsed)? */
+    fun waitsFor(id: Long): Boolean = synchronized(actions) { actions.containsKey(id) }
 
     @Volatile private var lastExpertSlot: LocalDateTime? = null
     private val suggested = HashSet<String>()
@@ -1329,9 +1395,53 @@ object IraHub {
             .mapNotNull { m -> com.optionslab.ira.Outlook.brief(m, histories[m]?.bars.orEmpty(), vix) }
     }.getOrDefault(emptyList())
 
+    /** The GIFT Nifty sentences ([com.optionslab.ira.MorningCues.gift]): the recorder's last reading against Nifty's previous close. */
+    private fun giftCue(now: LocalDateTime): Triple<com.optionslab.ira.RecorderFeeds.Gift?, LocalDateTime?, com.optionslab.ira.MorningCues.Close?> {
+        val g = com.optionslab.app.data.MarketRecorder.lastGift()
+        val prev = g?.let { (read, gift) -> com.optionslab.ira.MorningCues.prevClose(histories[IraMarket.NIFTY]?.bars.orEmpty(), gift.at ?: read) }
+        return Triple(g?.second, g?.first, prev)
+    }
+
+    /** The FIIs' newest and previous index positioning kept by the recorder (either may be null). Reads day files: off the main thread. */
+    private fun fiiCue(): Pair<com.optionslab.ira.MorningCues.Fii?, com.optionslab.ira.MorningCues.Fii?> {
+        val ps = com.optionslab.app.data.MarketRecorder.participantsRecorded()
+        return com.optionslab.ira.MorningCues.fii(ps.getOrNull(0)) to com.optionslab.ira.MorningCues.fii(ps.getOrNull(1))
+    }
+
+    /** Jarvis's answer to a morning-cues question ([com.optionslab.ira.MorningCues.Ask]); the FIIs' cash flows added when NSE's are held. */
+    private suspend fun morningCuesAnswer(ask: com.optionslab.ira.MorningCues.Ask): String {
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val gift = if (ask == com.optionslab.ira.MorningCues.Ask.FII) emptyList() else
+            giftCue(now).let { (g, read, prev) -> com.optionslab.ira.MorningCues.gift(g, read, prev, now) }
+        val fii = if (ask == com.optionslab.ira.MorningCues.Ask.GIFT) emptyList() else {
+            val (cur, prev) = fiiCue()
+            val flowLine = if (ask == com.optionslab.ira.MorningCues.Ask.FII) runCatching { withTimeoutOrNull(8_000) { flows() } }.getOrNull()
+                ?.takeIf { it.isNotEmpty() }?.let { com.optionslab.ira.Flows.lines(it).first() } else null
+            com.optionslab.ira.MorningCues.fiiSay(cur, prev) + listOfNotNull(flowLine)
+        }
+        return com.optionslab.ira.MorningCues.answer(ask, gift, fii)
+    }
+
+    /**
+     * The 09:00 check's morning cues ([com.optionslab.ira.MorningCues]): GIFT Nifty's gap from Nifty's previous close and
+     * the FIIs' index positioning, each only when the recorder holds a recent one. Not in IraGoldAlgo. Reads only.
+     */
+    suspend fun morningCues(): List<String> {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return emptyList()
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+                val (g, read, prev) = giftCue(now)
+                val (cur, before) = fiiCue()
+                listOfNotNull(com.optionslab.ira.MorningCues.giftBrief(g, read, prev, now),
+                    com.optionslab.ira.MorningCues.fiiBrief(cur, before, now.toLocalDate()))
+            }.getOrDefault(emptyList())
+        }
+    }
+
     /**
      * The 09:00 check made its outlook ([morningOutlook]): each index's numbers (previous close, usual-day range, direction
-     * read, pivot - [com.optionslab.ira.OutlookCheck.call]) noted for the 15:35 wrap-up. Trading days only; market data only.
+     * read, pivot - [com.optionslab.ira.OutlookCheck.call]) noted for the 15:45 wrap-up. Trading days only; market data only.
      */
     fun outlookNoted() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
@@ -1343,7 +1453,7 @@ object IraHub {
         }
     }
 
-    /** For the 15:35 wrap-up: today's 09:00 outlook against the close, with the record so far - or null (none noted, or the day not in). */
+    /** For the 15:45 wrap-up: today's 09:00 outlook against the close, with the record so far - or null (none noted, or the day not in). */
     fun outlookCheckLine(): String? {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
         return runCatching {
@@ -1446,7 +1556,7 @@ object IraHub {
         // locked phone. Any other words end the offer, and a yes while something waits for his yes or Confirm is never taken
         // as it. Understanding only: nothing learned acts. Not in IraGoldAlgo.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !cleaned) {
-            val nextAskWaiting = synchronized(actions) { actions.isNotEmpty() }
+            val nextAskWaiting = synchronized(actions) { actions.isNotEmpty() } || runCatching { JarvisVoice.askingOpen() }.getOrDefault(true)
             val nextAskQ = runCatching { IraTools.nextAskYes(q, nextAskWaiting, phoneLocked()) }.getOrNull()
             if (nextAskQ != null) {
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, "$TOOK_AS\"$nextAskQ\".")).takeLast(MAX_MESSAGES)) }
@@ -1485,6 +1595,20 @@ object IraHub {
         }
         // A new question: the model stops polishing the last answer (it stands as shown).
         IraModel.stopWriting()
+        // MCX (9 Oct): "how is crude", "natural gas price", "mcx gold", "my mcx positions" - read only, never an order
+        // ([com.optionslab.ira.McxTalk]: anything that buys, sells, charts or sets an alarm is left to the rest).
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            val mcxAsked = runCatching { com.optionslab.ira.McxTalk.read(q) }.getOrNull()
+            if (mcxAsked != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                val locked = phoneLocked()
+                scope.launch {
+                    val said = runCatching { IraMcx.answer(mcxAsked, locked) }.getOrElse { "I could not read MCX just now, Boss." }
+                    reply(said)
+                }
+                return
+            }
+        }
         // Boss asking anything just after an unasked alert: he followed it up ([com.optionslab.ira.AlertSense]; kinds and minutes only).
         if (com.optionslab.app.BuildConfig.JARVIS) scope.launch { runCatching { IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.ASKED) } }
         // "What?" / "come again" just after an answer: that answer's kind was unclear to Boss ([com.optionslab.ira.Clarity];
@@ -1557,14 +1681,15 @@ object IraHub {
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
-                com.optionslab.ira.ExpiryPin.asked(q) != null ||
-                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.BotTrades.asked(q) != null ||
+                com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.MorningCues.asked(q) != null || com.optionslab.ira.BigMoveRisk.asked(q) || com.optionslab.ira.LiquidityMap.asked(q) != null ||
+                com.optionslab.ira.Headroom.asked(q) != null || com.optionslab.ira.ArmFit.asked(q) || com.optionslab.ira.WeakLink.asked(q) || com.optionslab.ira.ArmChange.asked(q) || com.optionslab.ira.PnlGap.asked(q) || com.optionslab.ira.ArmDay.asked(q) != null || com.optionslab.ira.BookDecay.asked(q) || com.optionslab.ira.WhereIWin.asked(q) != null || com.optionslab.ira.TradesADay.asked(q) != null || com.optionslab.ira.AfterLoss.asked(q) != null || com.optionslab.ira.StopNoise.asked(q) || com.optionslab.ira.DayScore.asked(q) || com.optionslab.ira.RequestBook.asked(q) != null || com.optionslab.ira.NetLean.asked(q) || com.optionslab.ira.LiquidityWhyNot.asked(q) != null || com.optionslab.ira.SoloDay.asked(q) != null || com.optionslab.ira.HeroDay.asked(q) != null || com.optionslab.ira.BotTrades.asked(q) != null ||
                 com.optionslab.ira.ExpiryEve.asked(q) || com.optionslab.ira.BeforeTomorrow.asked(q) ||
                 com.optionslab.ira.SwitchOff.asked(q) != null ||
-                com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null ||
-                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null ||
-                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) ||
-                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null ||
+                com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
+                com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityHold.asked(q) != null || com.optionslab.ira.LiquidityDrawdown.asked(q) || com.optionslab.ira.LiquidityWhen.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.CatchUp.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
+                com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
+                com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.MoveEvents.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
+                com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
                 com.optionslab.ira.NeedsTrue.asked(q) ||
                 com.optionslab.ira.Clarity.asked(q) != null || com.optionslab.ira.DayClock.asked(q) != null ||
                 com.optionslab.ira.GapRecord.asked(q) != null || com.optionslab.ira.RangeBreaks.asked(q) != null ||
@@ -1575,7 +1700,8 @@ object IraHub {
                 com.optionslab.ira.LunchRange.asked(q) != null || com.optionslab.ira.OpenHighLow.asked(q) != null ||
                 com.optionslab.ira.BigCandles.asked(q) != null || com.optionslab.ira.ExtremeCloses.asked(q) != null || com.optionslab.ira.WeekRange.asked(q) != null ||
                 com.optionslab.ira.RelativeMove.asked(q) != null || com.optionslab.ira.Comebacks.asked(q) != null || com.optionslab.ira.VixBand.asked(q) != null ||
-                com.optionslab.ira.Overnight.asked(q) != null || com.optionslab.ira.DayAfter.asked(q) != null ||
+                com.optionslab.ira.Overnight.asked(q) != null || com.optionslab.ira.DayAfter.asked(q) != null || com.optionslab.ira.OpenReach.asked(q) != null || com.optionslab.ira.MultiDay.asked(q) != null ||
+                com.optionslab.ira.MoveTime.asked(q) != null || com.optionslab.ira.GiveBack.asked(q) != null ||
                 com.optionslab.ira.Weekdays.asked(q) != null ||
                 com.optionslab.ira.WordFit.asked(q) != null ||
                 com.optionslab.ira.Causes.asked(q) != null ||
@@ -1585,7 +1711,8 @@ object IraHub {
                 com.optionslab.ira.HonestStars.asked(q) != null || com.optionslab.ira.TalkHours.asked(q) != null || com.optionslab.ira.MorningAsks.asked(q) != null || com.optionslab.ira.BatteryUse.asked(q) ||
                 com.optionslab.ira.TurnDowns.asked(q) != null || com.optionslab.ira.TopicLength.asked(q) != null || com.optionslab.ira.OutlookCheck.asked(q) ||
                 com.optionslab.ira.UsualIndex.asked(q) != null || com.optionslab.ira.Nicknames.asked(q) != null || com.optionslab.ira.LeadIndex.asked(q) != null ||
-                com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null ||
+                com.optionslab.ira.LeadPart.asked(q) != null || com.optionslab.ira.NextAsk.asked(q) != null || com.optionslab.ira.MoreAfter.asked(q) != null ||
+                com.optionslab.ira.SmallTrades.asked(q) != null || com.optionslab.ira.DayIndex.asked(q) != null || com.optionslab.ira.Conditional.asked(q) || com.optionslab.ira.CheckTimes.asked(q) != null || com.optionslab.ira.CondNeeds.asked(q) != null ||
                 com.optionslab.ira.DayCompare.asked(q) != null || com.optionslab.ira.LikeToday.asked(q) }.getOrDefault(false)) {
             val prev = if (recent) _state.value.messages.lastOrNull { !it.fromIra }?.text else null
             val qs = runCatching { com.optionslab.ira.Understand.questions(prev, q) }.getOrNull()
@@ -1602,6 +1729,42 @@ object IraHub {
         // plan, so the action is never silently dropped ([com.optionslab.ira.Bundle]; review, 5 Oct).
         val bundled = runCatching { com.optionslab.ira.Bundle.acts(q) }.getOrDefault(true)
         val parsed = Ask.parse(q)
+        // "Agar Nifty 100 point gire to sab band kar do", "exit all if Nifty falls below 24000" (understanding round 29): an action
+        // set to wait for a condition, which Jarvis can't do - never a command, an order or a yes ([com.optionslab.ira.Conditional]).
+        // Said so, with the app's own alarm, stop loss and limits in words; nothing is done, nothing about the account is said,
+        // and IraGoldAlgo only talks. Before the plan and every question branch, so no part of it is ever acted on alone.
+        if (parsed.order == null && parsed.command == null && runCatching { com.optionslab.ira.Conditional.asked(q) }.getOrDefault(false)) {
+            // Usefulness round 38: something concrete instead - a price level on one index offers the app's own price alarm
+            // there (prepared by the same path as "alert me when Nifty goes below 24000", put as a request and set only on
+            // Boss's yes, never alone even with "do it automatically"); a loss amount answers with his daily loss limit and
+            // where to change it (his account: unlocked phone only). Never a stop, an exit, an order or the kill switch.
+            val condGold = com.optionslab.app.BuildConfig.GOLD || GOLD_ONLY_TALK
+            val condInstead = if (condGold) null else runCatching { com.optionslab.ira.Conditional.instead(q) }.getOrNull()
+            // Learning (round 32): its kind and minute kept, never the words ([com.optionslab.ira.CondNeeds]) - after enough
+            // of them the 15:45 wrap-up names the app's own tool for that need once. Jarvis only; nothing is set or done.
+            if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !GOLD_ONLY_TALK)
+                scope.launch(Dispatchers.IO) { runCatching { IraTools.condNeedsNote(q) } }
+            val condAlarm = condInstead?.alarm
+            if (condAlarm != null) {
+                _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                scope.launch {
+                    val (alarmWhat, alarmAct) = runCatching { IraActions.prepare(condAlarm) }.getOrElse { "" to null }
+                    if (alarmAct == null) { reply(com.optionslab.ira.Conditional.SAY); return@launch }
+                    reply(com.optionslab.ira.Conditional.alarmSay(condAlarm), whole = true)
+                    offer(alarmWhat, "Boss, set a price alarm?", com.optionslab.ira.Conditional.alarmAsk(condAlarm),
+                        suspend { IraActions.verified(condAlarm.kind, alarmAct()) }, alwaysAsk = true)
+                }
+                return
+            }
+            val condSaid = if (condGold) GOLD_TALK_ONLY else condInstead?.loss?.let { lossSaid ->
+                val condLocked = phoneLocked()
+                val condSet = if (condLocked) null else runCatching { com.optionslab.app.data.AppSettings.load() }.getOrNull()
+                com.optionslab.ira.Conditional.lossSay(lossSaid, condSet?.let { s -> if (s.live) s.guardDailyLoss else s.guardPaperDailyLoss },
+                    if (condSet?.live == true) "Zerodha" else "Paper", condLocked)
+            } ?: com.optionslab.ira.Conditional.SAY
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, condSaid)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         // "Help me journal today": today's journal drafted from the facts, then a few questions by voice. It holds the
         // account, so the phone must be unlocked. Words only; the answers are kept, never acted on. (Like every question
         // below, never when an order or a command is in the words.)
@@ -1614,6 +1777,16 @@ object IraHub {
         }
         // The kinds of question Boss asks (kind keys only, no words): set against those he marks wrong ([SelfDoubt]).
         scope.launch { runCatching { IraTools.countAsked(q) } }
+        // "Open requests", "kya pending hai", "what's waiting for my approval" (understanding round 25): what waits for Boss's
+        // yes, read from the Requests panel's own list ([com.optionslab.ira.Requests.listSay]) - how many only on a locked
+        // phone, none in IraGoldAlgo. It reads only: approving and declining stay [confirm] and [cancelAction].
+        if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Requests.listAsked(q) }.getOrDefault(false)) {
+            val reqSaid = runCatching { com.optionslab.ira.Requests.listSay(requestsOf(_state.value), System.currentTimeMillis(), phoneLocked(),
+                GOLD_ONLY_TALK || com.optionslab.app.BuildConfig.GOLD) }.getOrDefault("I could not read the requests just now, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, reqSaid)).takeLast(MAX_MESSAGES)) }
+            return
+        }
         if (askedOfHisWays(q, parsed, bundled, understood)) return
         if (askedOfRecords(q, parsed, bundled, understood)) return
         if (askedOfJarvis(q, parsed, bundled, understood)) return
@@ -1725,7 +1898,7 @@ object IraHub {
         // "Run a self check": each part Jarvis needs, working or not, from what the app knows now (no account figures).
         if (com.optionslab.app.BuildConfig.JARVIS && runCatching { com.optionslab.ira.SelfCheck.asked(q) }.getOrDefault(false)) {
             val c = app
-            val voiceOn = JarvisVoice.wanted
+            val voiceOn = JarvisVoice.listenOn
             val mic = c?.let { androidx.core.content.ContextCompat.checkSelfPermission(it, android.Manifest.permission.RECORD_AUDIO) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED }
             val relay = com.optionslab.app.data.Relay
@@ -1734,7 +1907,7 @@ object IraHub {
                 "Microphone permission" to (if (voiceOn) mic else null),
                 "Spoken replies" to (if (JarvisVoice.muted) null else true),
                 "AI model (${IraModel.choice.name})" to (if (IraModel.state.value.status == IraModel.Status.ABSENT) null else IraModel.state.value.status == IraModel.Status.READY),
-                "Live prices" to (if (com.optionslab.app.data.Market.isOpen()) _state.value.liveMissing.size < 3 else null),
+                "Live prices" to (if (com.optionslab.app.data.Market.isIndexOpen()) _state.value.liveMissing.size < 3 else null),
                 "Relay server" to (if (relay.enabled && relay.host != null) relay.connected.takeIf { it } ?: (if (com.optionslab.app.data.Market.isOpen()) false else null) else null),
                 "Zerodha session" to (if (com.optionslab.app.data.Broker.configured) com.optionslab.app.data.Broker.loggedIn else null),
             )
@@ -1815,7 +1988,7 @@ object IraHub {
                     val mk = com.optionslab.app.data.Market
                     val next = runCatching { var d = mk.today().plusDays(1); var g = 0; while (g++ < 14 && !mk.isTradingDay(d)) d = d.plusDays(1)
                         d.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.ENGLISH)) }.getOrNull()
-                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true), nextDay = next)); return
+                    reply(com.optionslab.ira.OptionFacts.timeLeft(mk.minuteNow(), close = mk.foClose(), tradingDay = runCatching { mk.isTradingDay(mk.today()) }.getOrDefault(true), nextDay = next)); return
                 }
                 val m = when (a) { is com.optionslab.ira.OptionFacts.Asked.Quote -> a.market; is com.optionslab.ira.OptionFacts.Asked.Atm -> a.market
                     is com.optionslab.ira.OptionFacts.Asked.LotSize -> a.market; else -> IraMarket.NIFTY }
@@ -1862,7 +2035,7 @@ object IraHub {
                 }
                 return
             }
-        // "Wrap up my day" / "aaj ka summary" at any hour: the 15:35 wrap-up's words so far (the day's P&L is Boss's own,
+        // "Wrap up my day" / "aaj ka summary" at any hour: the 15:45 wrap-up's words so far (the day's P&L is Boss's own,
         // so the phone must be unlocked).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.command == null && parsed.order == null &&
             runCatching { com.optionslab.ira.DaySummary.asked(q) }.getOrDefault(false)) {
@@ -1870,7 +2043,7 @@ object IraHub {
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
             scope.launch {
                 // The scorecard saves its points and lapses waiting answers: only after the close (review, 4 Oct).
-                val card = if (com.optionslab.app.data.Market.minuteNow() >= 15 * 60 + 30) runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull() else null
+                val card = if (com.optionslab.app.data.Market.minuteNow() >= com.optionslab.app.data.Market.foClose()) runCatching { IraNewsTrades.scorecard().firstOrNull() }.getOrNull() else null
                 reply(runCatching { IraCoach.wrapUp(card, review = false) }.getOrElse { "I could not put the day together just now, Boss." })
             }
             return
@@ -2177,7 +2350,7 @@ object IraHub {
                 val m = named.firstOrNull { it in LIVE.keys } ?: IraMarket.NIFTY
                 fun answer(text: String) = _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, text)).takeLast(MAX_MESSAGES)) }
                 if (parsed.markets.isNotEmpty() && named.isEmpty()) { answer("There are no options on that here, Boss: option prices are for Nifty, BankNifty, FinNifty and Sensex."); return }
-                if (!com.optionslab.app.data.Market.isOpen()) { answer("The market is closed, Boss: option prices are read live, from 9:15 to 3:30 on trading days."); return }
+                if (!com.optionslab.app.data.Market.isOpen()) { answer("The market is closed, Boss: option prices are read live, from 9:15 to ${com.optionslab.app.data.Market.foClose().let { "${it / 60 - 12}:%02d".format(it % 60) }} on trading days."); return }
                 if (!online()) { answer("I'm offline, Boss: option prices need the internet."); return }
                 // A placeholder answer at once (so a later question is never answered with this quote), replaced when read.
                 val wait = Msg(true, "$CHAIN_NOTE${m.label}, Boss...")
@@ -2200,7 +2373,9 @@ object IraHub {
             val loss = runCatching { IraCoach.recentLoss() }.getOrNull() != null
             runCatching { IraTools.noteHabit(q, loss) }.getOrNull()?.let { p -> offerRoutine(p) }
         }
-        if (Topic.BACKTEST in parsed.topics) {
+        // An arm against its backtest ("liquidity vs backtest", "is hero drifting", "live vs backtest") is the forward-test
+        // watch's (above), never a pattern's backtest to run: the lab leaves it ([com.optionslab.ira.ForwardWatch.notABacktest]).
+        if (Topic.BACKTEST in parsed.topics && (GOLD_ONLY_TALK || !runCatching { com.optionslab.ira.ForwardWatch.notABacktest(q) }.getOrDefault(false))) {
             // IraGoldAlgo: no NSE backtests or strategies (Jarvis only talks there).
             if (GOLD_ONLY_TALK) { _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, GOLD_TALK_ONLY)).takeLast(MAX_MESSAGES)) }; return }
             backtestAsked(q, parsed); return
@@ -2220,7 +2395,13 @@ object IraHub {
         if (Topic.TRADE_CHECK in parsed.topics) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             scope.launch {
-                val said = runCatching { tradeCheckFast().say() }.getOrElse { "I could not run the trade check just now." }
+                // On a weekday Boss follows another index, its read first ([com.optionslab.ira.DayIndex]; unlocked only, never
+                // in IraGoldAlgo): the same lines, only their order - the verdict and its reasons unchanged, nothing acts.
+                val said = runCatching {
+                    val verdict = tradeCheckFast()
+                    val dayLead = runCatching { IraTools.dayIndexLead(phoneLocked()) }.getOrNull()
+                    (if (dayLead == null) verdict else verdict.copy(reads = com.optionslab.ira.DayIndex.leadReads(verdict.reads, dayLead))).say()
+                }.getOrElse { "I could not run the trade check just now." }
                 // What Boss told me about himself that bears on now ("I get greedy after a win" when he is up): his words and
                 // his day, so only on an unlocked phone. Words only - it changes nothing.
                 val about = if (phoneLocked()) null else runCatching { aboutBossNow() }.getOrNull()
@@ -2341,10 +2522,13 @@ object IraHub {
         // The question Boss usually asks after this kind, offered in one short question at the end
         // ([com.optionslab.ira.NextAsk]; from his routine log, keys only): his own words only, an unlocked phone, a plain
         // answer (no order, no command, no caution, no old or withheld data). Words only - never answered unasked.
+        // Never while anything waits for Boss's yes or Confirm (a stop, an exit, a news trade pending, or Jarvis's own
+        // yes-or-no window open): a "yes" meant for the offer must never approve the older request.
+        val nextAskBusy = synchronized(actions) { actions.isNotEmpty() } || runCatching { JarvisVoice.askingOpen() }.getOrDefault(true)
         val nextAskLine: String? = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !understood && !bundled &&
             parsed.order == null && parsed.command == null && a.order == null && doubt.level == com.optionslab.ira.SelfDoubt.Level.NORMAL &&
-            off == null && ageNote == null && dressed?.withheld != true)
-            runCatching { IraTools.nextAskOffer(q, phoneLocked()) }.getOrNull() else null
+            off == null && ageNote == null && dressed?.withheld != true && !nextAskBusy)
+            runCatching { IraTools.nextAskOffer(q, phoneLocked(), nextAskBusy) }.getOrNull() else null
         val nextAskTail = if (nextAskLine == null) "" else " $nextAskLine"
         val msg = Msg(true, doubt.wrap(fitted) + nextAskTail, a.facts, a.order, writing = write)
         _state.update { it.copy(messages = (it.messages + Msg(false, q) + msg).takeLast(MAX_MESSAGES)) }
@@ -2369,7 +2553,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on how Jarvis himself speaks and hears: AlertSense, Airtime, Hearing, PatternCalls,
-     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk - in [ask]'s order. True when one
+     * TrendReads, Clarity, WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes, CondNeeds - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfHisWays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2622,12 +2806,77 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, nextAskSaid)).takeLast(MAX_MESSAGES)) }
             return true
         }
+        // "Which answers do I usually ask more about?" / "keep my short answers short": the kinds of answer said in full
+        // straight away aloud, as Boss usually asks for more after their short line ([com.optionslab.ira.MoreAfter]; kinds
+        // and minutes only). His habit: named on an unlocked phone only; the undo works locked too, in neutral words. The
+        // voice's length only - nothing learned acts. Not in IraGoldAlgo.
+        val moreAfterReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MoreAfter.asked(q) }.getOrNull() else null
+        if (moreAfterReq != null) {
+            val moreAfterSaid = if (moreAfterReq == com.optionslab.ira.MoreAfter.Request.RESET) IraTools.moreAfterReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.MoreAfter.LOCKED else IraTools.moreAfterSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, moreAfterSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What have you learned about my charges?" / "stop mentioning my small trades": where Boss's trades that moved less
+        // than twice their own charges come from, by source and time of day ([com.optionslab.ira.SmallTrades]; his closed
+        // trades, read only). His record: named on an unlocked phone only; the undo works locked too, in neutral words. A
+        // fact only - nothing learned acts. Not in IraGoldAlgo.
+        val smallReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SmallTrades.asked(q) }.getOrNull() else null
+        if (smallReq != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val smallLocked = phoneLocked()
+            if (smallReq != com.optionslab.ira.SmallTrades.Request.RESET && smallLocked) { reply(com.optionslab.ira.SmallTrades.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    if (smallReq == com.optionslab.ira.SmallTrades.Request.RESET) IraTools.smallTradesReset(smallLocked) else IraTools.smallTradesSay()
+                }.getOrElse { "I couldn't read your trades' record just now, Boss." })
+            }
+            return true
+        }
+        // "Which index do you lead with on Wednesdays?" / "lead with Nifty every day again": the index Boss follows on a given
+        // weekday, its read given first in "how's the market" on that weekday ([com.optionslab.ira.DayIndex]; from the kinds
+        // tally, counts only). His habit: named on an unlocked phone only; the undo works locked too, in neutral words. Only
+        // the order of the index lines changes - nothing learned acts. Not in IraGoldAlgo.
+        val dayIndexReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.DayIndex.asked(q) }.getOrNull() else null
+        if (dayIndexReq != null) {
+            val dayIndexSaid = if (dayIndexReq == com.optionslab.ira.DayIndex.Request.RESET) IraTools.dayIndexReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.DayIndex.LOCKED else IraTools.dayIndexSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, dayIndexSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "When do I usually check my P&L?" / "stop getting my P&L ready": the times Boss usually checks his P&L, his account
+        // read ahead just before them while the market is open and Jarvis listens ([com.optionslab.ira.CheckTimes]; from his
+        // routine log, keys and minutes only). His habit: named on an unlocked phone only; the undo works locked too, in
+        // neutral words. A read ahead only - nothing said unasked, nothing learned acts. Not in IraGoldAlgo.
+        val checkTimesReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.CheckTimes.asked(q) }.getOrNull() else null
+        if (checkTimesReq != null) {
+            val checkTimesSaid = if (checkTimesReq == com.optionslab.ira.CheckTimes.Request.RESET) IraTools.checkTimesReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.CheckTimes.LOCKED else IraTools.checkTimesSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, checkTimesSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What have you learned about my conditional orders?" / "stop mentioning my conditional orders": the conditional
+        // instructions Boss keeps trying to give, the app's own alarm, stop loss or limit named once in the 15:45 wrap-up
+        // ([com.optionslab.ira.CondNeeds]; kinds and minutes only). His own words' record: named on an unlocked phone only;
+        // the undo works locked too, in neutral words. A pointer only - nothing is set, nothing learned acts. Not in IraGoldAlgo.
+        val condNeedsReq = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.CondNeeds.asked(q) }.getOrNull() else null
+        if (condNeedsReq != null) {
+            val condNeedsSaid = if (condNeedsReq == com.optionslab.ira.CondNeeds.Request.RESET) IraTools.condNeedsReset(phoneLocked())
+                else if (phoneLocked()) com.optionslab.ira.CondNeeds.LOCKED else IraTools.condNeedsSay()
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, condNeedsSaid)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
         return false
     }
 
     /**
      * [ask]'s question branches on the records and Boss's own setup: NewsMoves, TaxRecords, Learnings (and its undo),
-     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, BotTrades, SwitchOff, SaidAbout, WeekAhead, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
+     * PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SwitchOff, SaidAbout, WeekAhead, WeeklyReview, LotsWhatIf, LiquidityInsight, LiquidityHold, LiquidityDrawdown, LiquidityWhen, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, CatchUp, ForwardWatch, ZerodhaSession, OrderWhy, RelayHealth, StreamHealth, BatteryUse, WatchAsk - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfRecords(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -2681,8 +2930,10 @@ object IraHub {
             scope.launch(Dispatchers.IO) {
                 reply(runCatching {
                     val plan = if (locked) null else runCatching { IraImprove.current() }.getOrNull()
+                    // Boss's closed trades for where his small trades come from (his record: none read on a locked phone).
+                    val smallBooks: List<com.optionslab.ira.SmallTrades.Book> = if (locked) emptyList() else runCatching { IraTools.smallBooks() }.getOrDefault(emptyList())
                     val now = LocalDateTime.now(IST).withSecond(0).withNano(0)
-                    com.optionslab.ira.Learnings.say(com.optionslab.ira.Learnings.items(IraTools.learnings(plan), now), learnAsk, now.toLocalDate(), locked)
+                    com.optionslab.ira.Learnings.say(com.optionslab.ira.Learnings.items(IraTools.learnings(plan, smallBooks), now), learnAsk, now.toLocalDate(), locked)
                 }.getOrElse { "I couldn't read what I've learned just now, Boss." })
             }
             return true
@@ -2863,6 +3114,55 @@ object IraHub {
             scope.launch(Dispatchers.IO) { reply(runCatching { IraCoach.afterLoss(q, afterLossSide) }.getOrElse { "I could not read your trades after a loss just now, Boss." }) }
             return true
         }
+        // "Is my stop too tight?", "will normal noise hit my stop?", "mera stop bahut tight hai kya" ([com.optionslab.ira.StopNoise]):
+        // each open bought option's stop - its distance in premium and, by its delta, roughly in index points - against how
+        // often the index moved that far against it within 15 and 30 minutes of a quarter-hour start in the whole past
+        // sessions on the phone. Facts only, never a judgement or advice on the stop. His positions, so never on a locked
+        // phone; nothing is placed, changed or cancelled. (After AfterLoss, before RequestBook. Not in IraGoldAlgo.)
+        val stopNoiseAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.StopNoise.asked(q) }.getOrDefault(false) else false
+        if (stopNoiseAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.StopNoise.LOCKED); return true }
+            scope.launch(Dispatchers.IO) { reply(runCatching { stopNoise() }.getOrElse { "I could not set your stops against the index's swings just now, Boss." }) }
+            return true
+        }
+        // "My scorecard today", "did I trade against the trend today?", "how long did I hold my trades today?", "aaj ka scorecard"
+        // ([com.optionslab.ira.DayScore]): today's own closed trades, each against the index's move in the 15 minutes before
+        // its entry, his usual hold and the option's best price in the 15 minutes after its exit. Facts only, never advice.
+        // His trades, so never on a locked phone; nothing is placed, changed or cancelled. (After StopNoise, before
+        // RequestBook. Not in IraGoldAlgo.)
+        val dayScoreAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.DayScore.asked(q) }.getOrDefault(false) else false
+        if (dayScoreAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.DayScore.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                val scoreSaid = runCatching { if (phoneLocked()) com.optionslab.ira.DayScore.LOCKED else IraJournal.dayScore() }
+                    .getOrElse { "I could not score today's trades just now, Boss." }
+                reply(scoreSaid)
+            }
+            return true
+        }
+        // "What requests are waiting?", "anything waiting for my approval?", "what did I approve today?", "koi request hai",
+        // "maine aaj kya approve kiya" ([com.optionslab.ira.RequestBook]): the Requests panel's own read-only lists said -
+        // those waiting now (what each would do, where, when it lapses, whether a yes needs his fingerprint) or the last few
+        // answered or ended. Words only: nothing is approved, declined or changed here. On a locked phone only how many wait;
+        // a list that could not be read is said so, never as none. (After AfterLoss, before NetLean. IraGoldAlgo: only talk.)
+        val requestBookAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.RequestBook.asked(q) }.getOrNull() else null
+        if (requestBookAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (GOLD_ONLY_TALK) { reply(com.optionslab.ira.Requests.GOLD); return true }
+            val requestBookNow = System.currentTimeMillis()
+            val requestBookWaiting = runCatching { com.optionslab.ira.Requests.shown(requestsOf(_state.value), requestBookNow, gold = false) }.getOrNull()
+            if (requestBookWaiting == null) { reply(com.optionslab.ira.RequestBook.READ_FAILED); return true }
+            if (phoneLocked()) { reply(com.optionslab.ira.RequestBook.locked(requestBookWaiting.size)); return true }
+            reply(runCatching {
+                com.optionslab.ira.RequestBook.answer(requestBookAsk, requestBookWaiting, _recent.value, requestBookNow, com.optionslab.app.data.Market.now().zone)
+            }.getOrElse { com.optionslab.ira.RequestBook.READ_FAILED })
+            return true
+        }
         // "Am I net long or short?", "which way am I leaning?", "what's my net delta?", "do my bots contradict each other right
         // now?", "main long hoon ya short" ([com.optionslab.ira.NetLean]): the open book by index from each leg's delta now -
         // the net rupees a point and which way it leans, who holds which side (each arm, other automations, his own Paper and
@@ -2914,6 +3214,57 @@ object IraHub {
             }
             return true
         }
+        // "Why no liquidity trade today?", "why didn't liquidity trade", "liquidity ne trade kyu nahi liya", "what is liquidity
+        // waiting for" ([com.optionslab.ira.LiquidityWhyNot], [IraLiquidity.whyNot]): from Liquidity 15+5's own records of the
+        // day, book by book - its switch, the day's stop and its entry hours, the bars it decided on and each break it did not
+        // take and why (no room, refused, unapproved, data missing), the trades it did take, and what would trigger its next
+        // entry and how far it is. Before BotTrades, which keeps "why did the liquidity bot exit" and today's trades. Boss's
+        // paper trades are in it, so never on a locked phone; reads only - nothing is armed, placed, closed or changed.
+        // (Not in IraGoldAlgo.)
+        val liqWhyNotAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityWhyNot.asked(q) }.getOrNull() else null
+        if (liqWhyNotAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityWhyNot.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidity.whyNot(liqWhyNotAsk) }.getOrElse { "I could not read Liquidity 15+5's day just now, Boss." })
+            }
+            return true
+        }
+        // "What did Solo do today?", "why didn't Solo trade", "solo ne aaj kya kiya", "how did Solo decide"
+        // ([com.optionslab.ira.SoloDay], [IraSolo.day]): from Solo (midday)'s own records of the day - its switch; before 12:00
+        // what it will read and its early reads; at 12:00 each index's read against the others, what set an index aside (its
+        // expiry day, another automatic position, a thin strike, no contract or price, LATE after 12:03), the pick with its
+        // entry, stop and exits, or why no trade; then its forward test and the research line. Before BotTrades and Thinking
+        // ("why didn't solo take that trade" stays Thinking's, "how is solo doing" Solo's status). Its paper trades are in it,
+        // so never on a locked phone; reads only - nothing is switched, placed, closed or changed. (Not in IraGoldAlgo.)
+        val soloDayAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SoloDay.asked(q) }.getOrNull() else null
+        if (soloDayAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.SoloDay.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraSolo.day(soloDayAsk) }.getOrElse { "I could not read Solo's day just now, Boss." })
+            }
+            return true
+        }
+        // "What did hero do today?", "why no hero trade", "is today a hero day", "hero ne aaj kya kiya", "when is the next hero
+        // day" ([com.optionslab.ira.HeroDay], [IraHero.day]): from the expiry-day Hero arm's own records - whether today is a
+        // NIFTY expiry day (else the next), its switch, its window, what it read (the ATM straddle, its legs and low, NIFTY's
+        // 15-minute move), each minute's verdict, the trade with its F07 exits and net or why none, then its paper record and
+        // that it is paper only and not proven. Before BotTrades ("hero status", its switch, lots, budget, exits and record keep
+        // theirs). Its paper trades are in it, so never on a locked phone; reads only - nothing is armed, placed, closed or
+        // changed. (Not in IraGoldAlgo.)
+        val heroDayAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.HeroDay.asked(q) }.getOrNull() else null
+        if (heroDayAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.HeroDay.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraHero.day(heroDayAsk) }.getOrElse { "I could not read Hero's day just now, Boss." })
+            }
+            return true
+        }
         // "Explain my bots' trades today", "why did ORB take that trade?", "did my bots follow their rules?", "mere bots ne aaj kya
         // kiya" ([com.optionslab.ira.BotTrades]): each of today's arm trades chained from its signal (the opening range and the
         // break bar, the sweep, the fade, the liquidity level) to its exit and reason and its points and rupees, against the
@@ -2931,7 +3282,7 @@ object IraHub {
         }
         // "What should I switch off?", "which arms lost in both the test and on paper?", "should I disarm ORB Fresh?", "kaun sa
         // bot band karun" ([com.optionslab.ira.SwitchOff]): each arm's two-year BankNifty test beside its own paper record - the
-        // arms that lost in both (armed first), those that lost in one, and where the switch is (Trade, then Strategies). Facts,
+        // arms that lost in both (armed first), those that lost in one, and where the switch is (Home, the Strategies card). Facts,
         // never advice. Nothing is switched here: one armed arm that lost in both may be put to Boss as a yes or no (always
         // asked, even with automatic stops), and "stop <arm>" stays the command that asks him to confirm. Boss's account, so
         // never on a locked phone. (Not in IraGoldAlgo.)
@@ -2982,6 +3333,201 @@ object IraHub {
                         runCatching { IraEvents.owner() }.getOrDefault(emptyList()), unlocked)
                 }.getOrElse { "I could not read the calendar just now, Boss." }
                 reply(said)
+            }
+            return true
+        }
+        // "Weekly review", "is hafte ka review", "how did this week go", "last week's review" ([com.optionslab.ira.WeeklyReview]):
+        // Jarvis's review of the week in three sentences - the paper P&L, each running strategy against its backtest and the
+        // one line to watch - the whole of it on the Ira page's card ([IraWeekly]). Before the week's review is made, the week
+        // so far. On a locked phone no rupee figure is said. Reads only; nothing acts. ("My weekly review" / "how did my week
+        // go" stay the review of Boss's own trades.) Not in IraGoldAlgo.
+        val weeklyAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.WeeklyReview.asked(q) }.getOrNull() else null
+        if (weeklyAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val weeklyLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraWeekly.answer(weeklyAsk, weeklyLocked) }.getOrElse { "I could not put the week's review together just now, Boss." })
+            }
+            return true
+        }
+        // "What if liquidity traded 3 lots", "how much with 1 lot this week", "3 lot pe kitna banta", "is 2 lots better than 3"
+        // ([com.optionslab.ira.LotsWhatIf], [IraLotsWhatIf]): Liquidity 15+5's closed paper trades over the span asked,
+        // recomputed at that size with that quantity's own charges (the sandbox's schedule), beside the lots it used - net,
+        // worst trade, drawdown, worst day - and its research scaled to the lots; the drawdown in rupees only (his capital is
+        // not known). A what-if only: the arm's lots are never changed here ("set liquidity to 3 lots" stays a command, asking
+        // first). Boss's paper record, so never on a locked phone. (Not in IraGoldAlgo.)
+        val lotsWhatIfAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LotsWhatIf.asked(q) }.getOrNull() else null
+        if (lotsWhatIfAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LotsWhatIf.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLotsWhatIf.answer(lotsWhatIfAsk) }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
+            }
+            return true
+        }
+        // "What's working for liquidity", "where does liquidity lose", "liquidity patterns", "liquidity kahan loss karta hai"
+        // ([com.optionslab.ira.LiquidityInsight], [IraLiquidityInsight]): Liquidity 15+5's closed paper trades cut by entry
+        // time, book, side, exit, room to the next level and weekday - a group said to stand out only past 2 standard errors
+        // from the rest - beside the research where it pins anything. Words only: no rule, lot or switch changes from it.
+        // Boss's paper record, so never on a locked phone. (Not in IraGoldAlgo.)
+        val insightAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityInsight.asked(q) }.getOrNull() else null
+        if (insightAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityInsight.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidityInsight.answer(insightAsk) }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
+            }
+            return true
+        }
+        // "How long does liquidity hold its trades", "liquidity hold time this week", "do liquidity's losers last longer than its
+        // winners", "liquidity ke trades kitni der chalte hain" ([com.optionslab.ira.LiquidityHold], [IraLiquidityHold]): Liquidity
+        // 15+5's closed paper trades over the span asked, timed from entry to exit - the typical hold, shortest and longest,
+        // winners against losers, the quick exits, by exit reason - and one plain takeaway. Words only: no rule, lot or switch
+        // changes from it. Boss's paper record, so never on a locked phone. (Not in IraGoldAlgo.)
+        val holdAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityHold.asked(q) }.getOrNull() else null
+        if (holdAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityHold.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidityHold.answer(holdAsk) }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
+            }
+            return true
+        }
+        // "How deep has liquidity fallen from its best", "liquidity's current drawdown", "liquidity's worst losing streak", "how
+        // long did liquidity take to recover" ([com.optionslab.ira.LiquidityDrawdown], [IraLiquidityDrawdown]): Liquidity 15+5's
+        // closed paper trades as a running total per lot - its best, the drawdown now in rupees and percent, the worst ever and
+        // how long it took to climb back, the longest losing streak, and whether now is unusual against its own history.
+        // Words only: no rule, lot or switch changes from it. Boss's paper record, so never on a locked phone. (Not in IraGoldAlgo.)
+        val drawdownAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityDrawdown.asked(q) }.getOrDefault(false) else false
+        if (drawdownAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityDrawdown.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidityDrawdown.answer() }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
+            }
+            return true
+        }
+        // "Which day does liquidity do best", "liquidity on expiry days", "liquidity by weekday", "what time of entry works best
+        // for liquidity", "liquidity kis din achha karta hai" ([com.optionslab.ira.LiquidityWhen], [IraLiquidityWhen]): Liquidity
+        // 15+5's closed paper trades split by weekday, expiry day or not (from the option expiries in its own book) and entry
+        // time - trades, win rate, net a lot, "too few to tell" under 10 - and one honest takeaway. Words only: no rule, lot,
+        // day, hour or switch changes from it. Boss's paper record, so never on a locked phone. (Not in IraGoldAlgo.)
+        val whenAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityWhen.asked(q) }.getOrNull() else null
+        if (whenAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityWhen.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidityWhen.answer(whenAsk) }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
+            }
+            return true
+        }
+        // "How did liquidity do this week", "liquidity on 3 Oct", "liquidity last 10 trades", "which index works best for
+        // liquidity", "liquidity win streak", "is liquidity on track", "liquidity ne is hafte kaisa kiya"
+        // ([com.optionslab.ira.LiquidityRecord]): Liquidity 15+5's paper record over time from the arm's own book - trades, wins
+        // and losses, net after charges (in all and per lot), best and worst, by index, by exit reason, the streak - against
+        // its backtest (the live-vs-backtest verdict) and the losing-trades study; too few trades said plainly. Boss's paper
+        // record, so never on a locked phone; reads only - nothing is armed, stopped, placed or closed. (Not in IraGoldAlgo.)
+        val liqRecordAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LiquidityRecord.asked(q) }.getOrNull() else null
+        if (liqRecordAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.LiquidityRecord.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraBots.liquidityRecord(liqRecordAsk) }.getOrElse { "I could not read Liquidity 15+5's book just now, Boss." })
+            }
+            return true
+        }
+        // "What's the plan for tomorrow", "tomorrow ka plan", "kal ka plan kya hai", "prepare me for tomorrow"
+        // ([com.optionslab.ira.TomorrowPlan], [IraTomorrow]): the next session (holidays skipped) and its expiries, Liquidity
+        // 15+5's paper day, the levels it carries into tomorrow, its switch and lots, Solo's and Hero's, the events, the FIIs
+        // and the big-move read at the close - facts only, each line only when its data is there. Boss's paper trades are in
+        // it, so never on a locked phone; reads only - nothing is armed, placed, closed or changed. (Not in IraGoldAlgo.)
+        val tomorrowAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TomorrowPlan.asked(q) }.getOrDefault(false) else false
+        if (tomorrowAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.TomorrowPlan.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraTomorrow.answer() }.getOrElse { "I could not put tomorrow's plan together just now, Boss." })
+            }
+            return true
+        }
+        // "How did the market open", "opening read", "market kaisa khula", "where did we open vs the levels"
+        // ([com.optionslab.ira.OpeningRead], [IraOpening]): Nifty's, BankNifty's and FinNifty's gap (and what GIFT Nifty
+        // pointed to), the open against Liquidity 15+5's levels, the first 5-minute candle against the usual, the arm's switch,
+        // lots and first trigger, and the big-move line - the market's facts, at most six lines. Reads only - nothing is
+        // armed, placed, closed or changed. (Not in IraGoldAlgo: no Liquidity arm, no NSE feeds.)
+        val openingAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.OpeningRead.asked(q) }.getOrDefault(false) else false
+        if (openingAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            // On a locked phone the Liquidity arm's line (its switch, lots and first trigger) is left out; the market's facts stay.
+            val lockedNow = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraOpening.answer(locked = lockedNow) }.getOrElse { "I could not read the open just now, Boss." })
+            }
+            return true
+        }
+        // "What did you tell me today", "today's notes", "aaj kya bataya" ([com.optionslab.ira.TodayNotes], [IraNotes]): how many
+        // notes Jarvis posted by himself today, by category, and the three most recent headlines with their time - every one is
+        // under Today's notes on the Ira page. Kept today only, in memory. May name the account: the phone must be unlocked.
+        // Reads only - nothing is said again in full, placed, closed, armed or switched. (Not in IraGoldAlgo: its chat posts
+        // no automations' notes.)
+        val notesAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.TodayNotes.asked(q) }.getOrDefault(false) else false
+        if (notesAsk) {
+            val said = if (phoneLocked()) com.optionslab.ira.TodayNotes.LOCKED
+                else runCatching { com.optionslab.ira.TodayNotes.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today()) }
+                    .getOrDefault(com.optionslab.ira.TodayNotes.NONE)
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Catch me up", "read your notes", "notes padh do", "kya hua jab main nahi tha" ([com.optionslab.ira.CatchUp], [IraNotes]):
+        // the notes Jarvis posted by himself since Boss last had the Ira page in front of him, or since the last catch-up - at
+        // most five headlines, by category (Liquidity's first), the rest counted. A reply like any other: said aloud when asked
+        // by voice, as the voice's own quiet hours and mute allow. On a locked phone only how many of each category, never a
+        // note's words (and the catch-up is not marked as heard, nor when the digest could not be made). After a restart it
+        // says the older notes aren't kept. "What did I miss" keeps its own answer. Reads only. (Not in IraGoldAlgo: its chat
+        // posts no automations' notes.)
+        val catchUpAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.CatchUp.asked(q) }.getOrDefault(false) else false
+        if (catchUpAsk) {
+            val lockedNow = phoneLocked()
+            // Taken before the notes are read: one posted while the digest is made is said again next time, never lost.
+            val at = IraNotes.now()
+            val d = runCatching {
+                com.optionslab.ira.CatchUp.digest(IraNotes.notes.value, com.optionslab.app.data.Market.today(), IraNotes.catchUpFrom(), locked = lockedNow, keptSince = IraNotes.keptSince)
+            }.getOrNull()
+            val said = d ?: "I couldn't read my notes just now, Boss - they're under Today's notes on the Ira page."
+            if (d != null && !lockedNow && at != null) IraNotes.caughtUp(at)
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "Is anything drifting", "how are my arms vs backtest", "forward test status", "live vs backtest", "kya koi arm drift
+        // kar raha hai" ([com.optionslab.ira.ForwardWatch], [IraForwardWatch]): one line an arm - Liquidity 15+5, Solo (midday),
+        // Hero - its forward paper trades against its backtest (the Live vs backtest card's own line), Solo's with its own
+        // switch-off line. One arm named against its backtest ("liquidity live vs backtest", "is liquidity in line with the
+        // backtest", "solo vs backtest", "is hero drifting", "hero forward test" - [com.optionslab.ira.ForwardWatch.armAsked]):
+        // that arm's line and what it means, Solo's with its own switch-off line, Hero's with its drawdown against the backtest's
+        // worst. Its own questions keep their answers ("is liquidity on track" Liquidity's record, "how is solo doing" and "solo
+        // forward test" Solo's status). Boss's paper records, so never on a locked phone; reads only - nothing is switched, sized
+        // or changed. (Not in IraGoldAlgo: no such arms.)
+        val forwardArm = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.ForwardWatch.armAsked(q) }.getOrNull() else null
+        val forwardAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { forwardArm != null || com.optionslab.ira.ForwardWatch.asked(q) }.getOrDefault(false) else false
+        if (forwardAsk) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.ForwardWatch.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { if (forwardArm != null) IraForwardWatch.answer(forwardArm) else IraForwardWatch.answer() }
+                    .getOrElse { "I could not read the arms' records just now, Boss." })
             }
             return true
         }
@@ -3103,11 +3649,50 @@ object IraHub {
     }
 
     /**
-     * [ask]'s question branches on what to ask, how fresh the data is, what the phone has no data for and Jarvis's own
-     * reasons: Tour, DataAge, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
+     * [ask]'s question branches on a past day's recap, what to ask, how fresh the data is, what the phone has no data for and
+     * Jarvis's own reasons (and where a setting is): DayRecap, SettingWhere, Tour, WhatsNew, DataAge, MarketRecord, MorningCues, Honest, Thinking (SelfWhy inside it) - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfJarvis(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
+        // "What happened on 3 Oct", "recap of yesterday", "how was Monday", "2 oct ka recap", "what happened last Friday", "kal kya
+        // hua" ([com.optionslab.ira.DayRecap], [IraDayRecap]): one compact recap of that trading day from what the phone keeps -
+        // Nifty's, BankNifty's and FinNifty's open, high, low, close, gap and change, the day's events, the headlines and FII/DII
+        // figures the recorder kept, and the paper arms' trades that day (Liquidity 15+5, Solo, Hero); what is not kept is said
+        // plainly, a day to come is refused, a weekend or holiday said as one, today pointed to the day's own answers. The
+        // general recap only: an index, his P&L, one arm, the news or the open asked of a day keep their answers. On a locked
+        // phone the arms' lines are left out (the market's stay). Reads only - nothing is armed, placed, closed or changed.
+        // (Not in IraGoldAlgo: no arms, no NSE feeds.)
+        val recapAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.DayRecap.asked(q) }.getOrNull() else null
+        if (recapAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val recapLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraDayRecap.answer(recapAsk, recapLocked) }.getOrElse {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    "I could not put that day's recap together just now, Boss."
+                })
+            }
+            return true
+        }
+        // "Where is the quiet hours setting?", "how do I turn off market alerts?", "backup ki setting kahan hai"
+        // ([com.optionslab.ira.SettingWhere], the Settings search's catalogue [com.optionslab.ira.SettingsIndex]): the setting's
+        // path and that the search at the top of Settings opens it, highlighted. A reply only: nothing is switched, set or
+        // opened, and a guarded switch keeps its PIN, fingerprint or confirmation. No account in it, so the same on a locked
+        // phone. "Turn off liquidity", "switch off solo", "stop jarvis talking" and "mute" are commands and never reach here.
+        // (IraGoldAlgo: its own Settings' entries.)
+        val settingAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.SettingWhere.asked(q) }.getOrNull() else null
+        if (settingAsk != null) {
+            // Only the pages Settings shows, the same set its search is given (IraGoldAlgo's search: every entry of its build).
+            val said = runCatching {
+                val shownPages = if (com.optionslab.app.BuildConfig.GOLD) null else com.optionslab.app.ui.screens.settingsShownPages()
+                com.optionslab.ira.SettingWhere.answer(settingAsk, com.optionslab.app.BuildConfig.GOLD, shownPages)
+            }
+                .getOrDefault("The search at the top of Settings finds every setting by its name, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
         // "What can I ask you?", "what should I ask now?", "main kya pooch sakta hoon" ([com.optionslab.ira.Tour]): five questions
         // worth asking for the part of the day (before the open, market hours, after the close, a day with no session) - two
         // fixed, three turning with the date. It only names questions (each one Jarvis answers as said), holds nothing of the
@@ -3118,9 +3703,24 @@ object IraHub {
             val said = runCatching {
                 val today = com.optionslab.app.data.Market.today()
                 com.optionslab.ira.Tour.answer(com.optionslab.ira.Tour.part(com.optionslab.app.data.Market.minuteNow(),
-                    com.optionslab.app.data.Market.isTradingDay(today)), today)
+                    com.optionslab.app.data.Market.isTradingDay(today)), today) +
+                    // Where every question is, by topic (the "What can I ask" sheet; 06 Oct): one line, nothing else changes.
+                    " " + com.optionslab.ira.AskGuide.POINTER + "."
             }.getOrDefault("Ask me how the market is doing, what matters right now, or \"what can you do\" for everything, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What's new?", "what changed in the app?", "naya kya hai" ([com.optionslab.ira.WhatsNew]): the newest entries of the app's
+        // own changelog, newest first, each with a question to try or where to find it, and where the full list is (Settings ->
+        // What's new). It holds nothing of the account and acts on nothing, so it is the same on a locked phone. "What's new in
+        // the market", "any news" and "what's changed since I last asked" keep their routes. (Not in IraGoldAlgo.)
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.WhatsNew.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                com.optionslab.ira.WhatsNew.answer(com.optionslab.ira.WhatsNew.forBuild(gold = false, jarvis = com.optionslab.app.BuildConfig.JARVIS))
+            }.getOrDefault("What's new in the app, and where to find each change, is in Settings under What's new, Boss.")
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
             return true
         }
         // "Is your data fresh?" / "how old are your prices?": how old his prices, candles, news and chain are, and today's
@@ -3131,11 +3731,104 @@ object IraHub {
             scope.launch { reply(freshAsked(markets)) }
             return true
         }
+        // "Why did BankNifty jump at 10:32?" (10 Oct): the nearest big move the order-flow recorder saved today - what stood out
+        // first (the futures' flow, the options, the book in the way, VIX, the cash index) and the context then
+        // ([com.optionslab.ira.MoveEvents]; its own files on this phone, read off the main thread). Timing only; nothing acts.
+        // Not in IraGoldAlgo.
+        val moveAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MoveEvents.asked(q) }.getOrNull() else null
+        if (moveAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.MoveRecorder.answer(moveAsk) }.getOrElse { "I could not read the saved big moves just now, Boss." })
+            }
+            return true
+        }
+        // "How is order flow helping?" (9 Oct): every strategy's paper trades taken WITH the order flow against those taken
+        // AGAINST it, and the skips, from the flow's own log on this phone ([com.optionslab.ira.FlowShadow]). Facts only; nothing
+        // is set or acts. Not in IraGoldAlgo.
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.FlowShadow.helpAsked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.FlowGate.helpAnswer() }.getOrElse { "I could not read the order flow's log just now, Boss." })
+            }
+            return true
+        }
+        // "What is the order flow on BankNifty?", "nifty me buyers or sellers?" (9 Oct): the live read of the index's near future
+        // ([com.optionslab.ira.OrderFlow]; memory only, from Zerodha's stream) - who is in control and why, as facts, never a
+        // trade suggestion. No index named: the one the chart follows (BankNifty by default). Not in IraGoldAlgo.
+        val flowAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.OrderFlow.asked(q) }.getOrNull() else null
+        if (flowAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                val said = runCatching {
+                    val name = flowAsk.ifEmpty { com.optionslab.app.data.OrderFlowLive.focus }
+                    val now = System.currentTimeMillis()
+                    // "What's the volume profile / gamma regime on BankNifty?" (9 Oct): the auction's or the gamma's live reading.
+                    when (com.optionslab.ira.Auction.topic(q)) {
+                        com.optionslab.ira.Auction.Topic.PROFILE -> com.optionslab.ira.Auction.answer(name,
+                            com.optionslab.app.data.OrderFlowLive.auction.value[name] ?: com.optionslab.app.data.OrderFlowLive.auctionNow(name, now), now / 1000)
+                        com.optionslab.ira.Auction.Topic.GAMMA -> {
+                            com.optionslab.app.data.GammaLive.loadConvention()
+                            com.optionslab.ira.GammaRegime.answer(name, com.optionslab.app.data.GammaLive.state.value[name],
+                                com.optionslab.app.data.GammaLive.convention.value, now)
+                        }
+                        null -> {
+                            val read = com.optionslab.app.data.OrderFlowLive.reads.value[name] ?: com.optionslab.app.data.OrderFlowLive.readNow(name, now)
+                            com.optionslab.ira.OrderFlow.answer(name, read, now / 1000)
+                        }
+                    }
+                }.getOrElse { "I could not read the order flow just now, Boss." }
+                reply(said)
+            }
+            return true
+        }
+        // "How much market data have we recorded?", "is the market recorder running?", "kitna market data record hua hai": what the
+        // market recorder keeps on this phone - days, storage, the last write, the gaps ([com.optionslab.ira.MarketRecord]). His own
+        // data, read from the folder; nothing is recorded, deleted or exported from here. Not in IraGoldAlgo (it records none).
+        if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.MarketRecord.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.MarketRecorder.answer() }.getOrElse { "I could not read the market recorder just now, Boss." })
+            }
+            return true
+        }
+        // "GIFT Nifty kya bol raha hai", "what are FIIs doing", "FII position", "morning cues" ([com.optionslab.ira.MorningCues]):
+        // the market recorder's last GIFT Nifty reading against Nifty's previous close (the gap, with the reading's time),
+        // and the FIIs' index futures long share and its change and their index calls and puts from NSE's participant OI
+        // rows it kept. Read only from what the recorder holds (nothing fetched here); missing data said as missing; facts
+        // only, never a trade suggestion; nothing acts. (Before Honest, which says GIFT Nifty has no data.) Not in IraGoldAlgo.
+        val cuesAsk = if (!com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.MorningCues.asked(q) }.getOrNull() else null
+        if (cuesAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { morningCuesAnswer(cuesAsk) }.getOrElse { "I could not read the morning cues just now, Boss." })
+            }
+            return true
+        }
         // Markets and figures the phone has no data for (crude, US markets, the rupee, results, VWAP), targets, or lots with
         // no budget: said honestly, never answered with Nifty's figures ([com.optionslab.ira.Honest]; nothing of the account).
         if (parsed.order == null && parsed.command == null && !bundled)
             runCatching { com.optionslab.ira.Honest.asked(q) }.getOrNull()?.let { a ->
-                val follows = if (com.optionslab.app.BuildConfig.GOLD) listOf(com.optionslab.ira.Market.GOLD) else com.optionslab.ira.Market.entries
+                // "How many lots is Liquidity trading?": its size from the arms' book (reads only; changing it is its own
+                // command, and a raise waits for Boss's yes). Not in IraGoldAlgo (no Liquidity arm).
+                if (a == com.optionslab.ira.Honest.Asked.LiquidityLots && !com.optionslab.app.BuildConfig.GOLD) {
+                    _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+                    scope.launch(Dispatchers.IO) {
+                        reply(runCatching {
+                            val row = com.optionslab.app.data.OrbArms.view().arms.first { it.arm.liquidity }
+                            com.optionslab.ira.Honest.liquidityLots(row.lots ?: com.optionslab.engine.orb.LiquidityLots.DEFAULT, row.lotSizes,
+                                com.optionslab.app.data.AppSettings.load().guardMaxLots) +
+                                (row.lotsAsk?.let { w -> " The backup you restored had $w lots; that waits for your choice on the row." } ?: "")
+                        }.getOrElse { com.optionslab.ira.Honest.say(a) })
+                    }
+                    return true
+                }
+                val follows =if (com.optionslab.app.BuildConfig.GOLD) listOf(com.optionslab.ira.Market.GOLD) else com.optionslab.ira.Market.entries
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, com.optionslab.ira.Honest.say(a, follows))).takeLast(MAX_MESSAGES)) }
                 return true
             }
@@ -3158,10 +3851,43 @@ object IraHub {
 
     /**
      * [ask]'s question branches on contradictions, the co-pilot brief, now against the morning and the option chain:
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel - in [ask]'s order. True when one
+     * BigMoveRisk, LiquidityMap, Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
+        // "Is a big move likely now?", "abhi kitna risk hai", "volatile hai kya" ([com.optionslab.ira.BigMoveRisk]): how likely a
+        // big 5-minute candle is in the next minutes for the index asked (Nifty when none is), from the real-data study's
+        // signals - the time of day, a big candle just now, volatility and today's range against recent days, a falling
+        // market, India VIX since the open - on the phone's own 1-minute candles ended before now. Its level and rough
+        // multiple of the usual chance, the top reasons, and always that the direction can't be told from it. Market data
+        // only (fine on a locked phone); information only, never a trade suggestion; nothing acts. Not in IraGoldAlgo.
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.BigMoveRisk.asked(q) }.getOrDefault(false)) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.BigMoveRisk.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.BigMoveRisk.NOT_HERE
+                else com.optionslab.ira.BigMoveRisk.answer(mk, histories[mk]?.bars.orEmpty(), histories[IraMarket.VIX]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.now().toLocalDateTime(), com.optionslab.app.data.Market.isTradingDay(com.optionslab.app.data.Market.today()))
+            }.getOrElse { "I could not read the big-move risk just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "Where are the liquidity levels?", "liquidity level kahan hai", "what is liquidity waiting for", "how far is the next
+        // pool" ([com.optionslab.ira.LiquidityMap]): Liquidity 15+5's map from the very rules the arm decides with, on the
+        // candles it reads - per book (BankNifty 15/5-min, FinNifty 30/5-min) the nearest pool on a swing above and below,
+        // how far, which side a close through it would buy, the next level beyond and whether that leaves the arm's room;
+        // armed or not and in its entry hours or not, said either way. Market data only; information only, nothing acts.
+        // Not in IraGoldAlgo (no Liquidity arm).
+        val liqMap = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.LiquidityMap.asked(q) }.getOrNull() else null
+        if (liqMap != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { IraLiquidity.answer(liqMap) }.getOrElse { "I could not read the liquidity levels just now, Boss." })
+            }
+            return true
+        }
         // "Any contradictions?", "do the facts agree?", "what's pulling different ways?", "am I going against my own rules?"
         // ([com.optionslab.ira.Consistency]): market facts pointing different ways, his own numbers disagreeing (and which he
         // goes by), and - on an unlocked phone only - Boss's words against today's trades. Words only, never advice.
@@ -3205,6 +3931,61 @@ object IraHub {
             scope.launch(Dispatchers.IO) { reply(runCatching { expiryPin(pinAsk, markets) }.getOrElse { "I could not read the past expiry chains just now, Boss." }) }
             return true
         }
+        // "How does the ATM option's premium behave in the last hour on expiry day?", "how much does the ATM call lose in the last
+        // hour of expiry?", "how often does the ATM put double in the final hour on expiry?", "expiry ke aakhri ghante mein atm
+        // premium kitna girta hai": the expiring at-the-money call and put from 14:30 to the end of the day on the past expiry
+        // days whose option prices the phone keeps ([com.optionslab.ira.ExpiryHour]), the other days' same hour beside, and
+        // today's legs so far when today is an expiry. A record of past expiries, never a forecast or advice; market data only
+        // (fine on a locked phone); nothing acts. (Before the straddle's record and the buyer's record from 9:30.)
+        val expiryHourAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.ExpiryHour.asked(q) }.getOrNull() else null
+        if (expiryHourAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val expiryHourMarkets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { expiryHour(expiryHourAsk, expiryHourMarkets) }.getOrElse { "I could not read the expiry-day last-hour record just now, Boss." }) }
+            return true
+        }
+        // "How much does the ATM straddle usually lose between 9:30 and 2:30?", "how much does Nifty's straddle decay on a quiet
+        // day vs a trending day?", "straddle decay record for BankNifty", "nifty ka straddle din mein kitna girta hai": what 9:30
+        // to 14:30 did to the at-the-money straddle in the past sessions whose option prices the phone keeps
+        // ([com.optionslab.ira.StraddleDecay]), quiet against moving sessions, expiry days apart, beside today's straddle so far.
+        // A record of past sessions, never a forecast or advice; market data only (fine on a locked phone); nothing acts.
+        // (Before the chain's own reads: "straddle" with a record asked is this, the expected move from it ChainIntel's.)
+        val straddleAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.StraddleDecay.asked(q) }.getOrNull() else null
+        if (straddleAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val markets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { straddleDecay(straddleAsk, markets) }.getOrElse { "I could not read the straddle decay record just now, Boss." }) }
+            return true
+        }
+        // "How often does the ATM option double from its 9:30 price before the end of the day?", "how often does a bought ATM
+        // call end the day worth more?", "ATM option buyer record for BankNifty", "atm call kitni baar double hota hai": the
+        // at-the-money call and put bought at 9:30 and held, in the past sessions whose option prices the phone keeps
+        // ([com.optionslab.ira.AtmBuy]) - how often each ended the day worth more and how often each doubled, expiry days apart,
+        // beside today's legs so far. A record of past sessions, never a forecast or advice; market data only; nothing acts.
+        val atmBuyAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.AtmBuy.asked(q) }.getOrNull() else null
+        if (atmBuyAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val atmMarkets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { atmBuy(atmBuyAsk, atmMarkets) }.getOrElse { "I could not read the at-the-money buyer's record just now, Boss." }) }
+            return true
+        }
+        // "How often does an OTM option 100 points away end the day in the money?", "how often does a call two strikes out of
+        // the money finish in the money?", "OTM option record for BankNifty", "100 point door ka otm call kitni baar itm hota
+        // hai": the out-of-the-money call and put held from 9:30 in the past sessions whose option prices the phone keeps
+        // ([com.optionslab.ira.OtmReach]) - how often each strike ended the day in the money, how often the index reached it and
+        // how often the option doubled, expiry days apart, beside today's legs so far. A record of past sessions, never a
+        // forecast or advice; market data only; nothing acts.
+        val otmReachAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.OtmReach.asked(q) }.getOrNull() else null
+        if (otmReachAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val otmMarkets = parsed.markets
+            scope.launch(Dispatchers.IO) { reply(runCatching { otmReach(otmReachAsk, otmMarkets) }.getOrElse { "I could not read the out-of-the-money option record just now, Boss." }) }
+            return true
+        }
         // "Where is the most call writing?", "how has OI shifted since morning?", "are puts dearer than calls?", "what's the
         // expected move by expiry from the straddle?": the option chain read beyond PCR and max pain ([com.optionslab.ira.ChainIntel]),
         // every number from the chain with its time. Market data only (fine on a locked phone); words only, never advice.
@@ -3233,7 +4014,7 @@ object IraHub {
 
     /**
      * [ask]'s question branches on the index's record of past sessions and today's structure: DayClock, GapRecord,
-     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
+     * RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, GiveBack, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth - in [ask]'s order. True when one
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfPastDays(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
@@ -3605,6 +4386,76 @@ object IraHub {
             reply(said)
             return true
         }
+        // "How far does Nifty usually move from its open?", "how often does BankNifty trade 0.5% on both sides of the open?", "how
+        // often does Nifty close within 0.3% of its open?", "open se kitna door jata hai": how far the whole past sessions on the
+        // phone got above and below their own open ([com.optionslab.ira.OpenReach]), beside today so far. A record of past days,
+        // never a forecast or advice; market data only (fine on a locked phone); nothing acts.
+        val openReachAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.OpenReach.asked(q) }.getOrNull() else null
+        if (openReachAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.OpenReach.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.OpenReach.NOT_HERE
+                else com.optionslab.ira.OpenReach.answer(openReachAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the reach-from-the-open record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "How far does Nifty usually move in 3 sessions?", "how often does Nifty move 2% in 3 days?", "teen din mein nifty kitna
+        // chalta hai": how far stretches of a few whole past sessions on the phone went from the close they started from
+        // ([com.optionslab.ira.MultiDay]), beside the newest stretch. A record of past sessions, never a forecast or advice;
+        // market data only (fine on a locked phone); nothing acts.
+        val multiDayAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.MultiDay.asked(q) }.getOrNull() else null
+        if (multiDayAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.MultiDay.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.MultiDay.NOT_HERE
+                else com.optionslab.ira.MultiDay.answer(multiDayAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime(),
+                    isTradingDay = { d -> runCatching { com.optionslab.app.data.Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5) })
+            }.getOrElse { "I could not read the few-sessions move record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "How long does Nifty usually take to move 50 points?", "how often does Nifty move 0.3% within 30 minutes?", "nifty ko
+        // 50 point chalne mein kitna time lagta hai": how long the index took to travel a distance from each quarter-hour start
+        // in the whole past sessions on the phone ([com.optionslab.ira.MoveTime]), beside today's starts so far. A record of
+        // past sessions, never a forecast or advice; market data only (fine on a locked phone); nothing acts.
+        val moveTimeAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.MoveTime.asked(q) }.getOrNull() else null
+        if (moveTimeAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.MoveTime.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.MoveTime.NOT_HERE
+                else com.optionslab.ira.MoveTime.answer(moveTimeAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the time-to-move record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
+        // "After Nifty runs 100 points in the first hour, how much does it give back by the close?", "how deep is the pullback
+        // after Nifty runs 1%?", "100 point chalne ke baad nifty kitna wapas deta hai": how much of a run from the open the close
+        // gave back in the whole past sessions on the phone, and the deepest pullback inside it ([com.optionslab.ira.GiveBack]),
+        // beside today's run so far. A record of past sessions, never a forecast or advice; market data only (fine on a locked
+        // phone); nothing acts.
+        val giveBackAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.GiveBack.asked(q) }.getOrNull() else null
+        if (giveBackAsk != null) {
+            val said = runCatching {
+                val mk = com.optionslab.ira.GiveBack.market(parsed.markets)
+                if (mk == null) com.optionslab.ira.GiveBack.NOT_HERE
+                else com.optionslab.ira.GiveBack.answer(giveBackAsk, mk, histories[mk]?.bars.orEmpty(),
+                    com.optionslab.app.data.Market.today(), com.optionslab.app.data.Market.now().toLocalDateTime())
+            }.getOrElse { "I could not read the give-back record just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
         // "Are Mondays more volatile?", "which day of the week moves the most?", "are expiry days wider than other days?": each
         // weekday's record, and the expiry days the phone knows against the rest, from the whole past sessions of 1-minute
         // candles ([com.optionslab.ira.Weekdays]) beside today's range. A record of past days, never a forecast or advice;
@@ -3857,9 +4708,12 @@ object IraHub {
         }
         _state.update { it.copy(busy = true, messages = (it.messages + Msg(false, q) + Msg(true, "Backtesting ${StrategyLab.name(kind, m, minutes)} on the candles I have...")).takeLast(MAX_MESSAGES)) }
         scope.launch {
-            val r = lab(kind, m, minutes)
-            if (r == null) _state.update { it.copy(busy = false, messages = (it.messages + Msg(true, "I have no ${m.label} candles to backtest on yet.")).takeLast(MAX_MESSAGES)) }
-            else { propose(r, ""); _state.update { it.copy(busy = false) } }
+            // Never left busy (the globe shows Boss's backtest as thinking): a failed run ends it too.
+            try {
+                val r = lab(kind, m, minutes)
+                if (r == null) _state.update { it.copy(busy = false, messages = (it.messages + Msg(true, "I have no ${m.label} candles to backtest on yet.")).takeLast(MAX_MESSAGES)) }
+                else { propose(r, ""); _state.update { it.copy(busy = false) } }
+            } finally { if (_state.value.busy) _state.update { it.copy(busy = false) } }
         }
     }
 
@@ -3898,6 +4752,154 @@ object IraHub {
     }
 
     private val actions = HashMap<Long, Pair<String, suspend () -> String>>()
+
+    // ---- the Requests panel (Boss, 5 Oct): what waits for his yes, apart from the chat ---------------------------------
+    // Read-only views of [actions] (and of the strategies waiting); approving and declining stay [confirm] and
+    // [cancelAction] - the panel holds no path of its own.
+
+    /** Each waiting action's view for the panel, kept beside [actions] (under the same lock). */
+    private val requestMeta = HashMap<Long, com.optionslab.ira.Requests.RequestView>()
+    /** When each waiting strategy was first listed (strategies carry no time of their own). */
+    private val strategySeen = HashMap<Long, Long>()
+    private val _recent = MutableStateFlow<List<com.optionslab.ira.Requests.Recent>>(emptyList())
+
+    /** The requests waiting in [s]: the actions still pending, then the strategies still new. None in IraGoldAlgo. */
+    fun requestsOf(s: State): List<com.optionslab.ira.Requests.RequestView> {
+        if (GOLD_ONLY_TALK) return emptyList()
+        val acts = synchronized(actions) { s.pending.mapNotNull { id -> requestMeta[id]?.takeIf { actions.containsKey(id) } } }
+            // A yes that asks for the fingerprint: the hub's own gate ([needsFingerprint]), never guessed from the venue.
+            .map { rv -> rv.copy(fingerprint = runCatching { needsFingerprint(rv.id) }.getOrDefault(rv.venue.real)) }
+        val now = System.currentTimeMillis()
+        val strategies = s.proposals.filter { it.status == Proposal.NEW }.map { p ->
+            val seen = synchronized(strategySeen) { strategySeen.getOrPut(p.id) { now } }
+            com.optionslab.ira.Requests.RequestView(p.id, com.optionslab.ira.Requests.Kind.STRATEGY, p.result.name,
+                "add ${p.result.name} as an arm on paper (${p.result.market.label}, ${p.result.minutes} min)",
+                com.optionslab.ira.Requests.why(p.result.verdict), com.optionslab.ira.Requests.Venue.PAPER, seen, null, symbol = p.result.market.label)
+        }
+        return com.optionslab.ira.Requests.sorted(acts) + strategies
+    }
+
+    private val _requests: StateFlow<List<com.optionslab.ira.Requests.RequestView>> by lazy {
+        _state.map { requestsOf(it) }.stateIn(scope, SharingStarted.Eagerly, requestsOf(_state.value))
+    }
+
+    /** The requests waiting now (read-only): the Requests panel, its badge and the voice's many-waiting rule read this. */
+    fun pendingRequests(): StateFlow<List<com.optionslab.ira.Requests.RequestView>> = _requests
+
+    /** What became of the last few requests (approved, declined, lapsed, failed), newest first; kept while the app runs. */
+    fun recentRequests(): StateFlow<List<com.optionslab.ira.Requests.Recent>> = _recent
+
+    /** The title of the action [id] still waiting, or null. */
+    fun requestTitle(id: Long): String? = synchronized(actions) { requestMeta[id]?.takeIf { actions.containsKey(id) }?.title }
+
+    /**
+     * Jarvis's spoken ask for the waiting action [id]: its short heading, then the full what - never shortened, so an exit
+     * or a plan is heard whole ("Request: <title>. Shall I <what>? Yes or no?") - or null.
+     */
+    fun requestAsk(id: Long): String? = synchronized(actions) { requestMeta[id]?.takeIf { actions.containsKey(id) } }
+        ?.let { v -> com.optionslab.ira.Requests.ask(v.title, v.what) }
+
+    /**
+     * [id] is no longer waiting: listed under Recent with [outcome] (once), how it was answered ([by], when known), what
+     * came of it ([result]) and whether a yes on it asked for the fingerprint ([fingerprint], read before it was taken out).
+     */
+    private fun requestDone(id: Long, outcome: com.optionslab.ira.Requests.Outcome, by: com.optionslab.ira.Requests.By? = null,
+                            result: String? = null, fingerprint: Boolean? = null) {
+        val v = synchronized(actions) { requestMeta.remove(id) } ?: return
+        _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis(), by, result, fingerprint)) }
+    }
+
+    /** Confirmed and taken out of [actions], its result not yet in Recent (under the [actions] lock): a second yes meanwhile is "already answered". */
+    private val confirming = HashSet<Long>()
+
+    /**
+     * The words for a yes (a tap, the voice, the notification) that found [id] no longer waiting: "That was already
+     * answered, Boss." when it was answered - being done now, or Recent shows its outcome - else [lapsed].
+     */
+    fun alreadyLine(id: Long, lapsed: String): String {
+        val inFlight = synchronized(actions) { id in confirming }
+        val outcome = _recent.value.firstOrNull { it.view.id == id && it.view.kind != com.optionslab.ira.Requests.Kind.STRATEGY }?.outcome
+        return com.optionslab.ira.Requests.alreadyLine(outcome, inFlight, lapsed)
+    }
+
+    /**
+     * Yes on [id] from a button (the Requests panel's, the chat's): [confirm] itself - every gate exactly as there (the
+     * fingerprint for real money and the emergency exit, the PIN, the live and proven-record checks) - launched in the
+     * hub's own long-lived [scope], never the button's. A button's scope ends when its card leaves the screen, and confirm
+     * takes [id] out of the pending list at once, so a confirm run there was cancelled mid-way (an emergency exit could be
+     * reported failed after its orders had gone out). Its result is said through the usual path ([reply], [requestDone]);
+     * nothing waiting any more: [alreadyLine].
+     */
+    fun confirmAsync(id: Long, fingerprint: Boolean = false): kotlinx.coroutines.Job = scope.launch {
+        val r = confirm(id, fingerprint = fingerprint,
+            by = if (fingerprint) com.optionslab.ira.Requests.By.FINGERPRINT else com.optionslab.ira.Requests.By.TAP)
+        if (r == null) reply(alreadyLine(id, "That had already lapsed; nothing was done."))
+    }
+
+    /** A strategy approved or dismissed: listed under Recent. */
+    private fun strategyDone(p: Proposal, outcome: com.optionslab.ira.Requests.Outcome, result: String? = null) {
+        val seen = synchronized(strategySeen) { strategySeen.remove(p.id) } ?: System.currentTimeMillis()
+        val v = com.optionslab.ira.Requests.RequestView(p.id, com.optionslab.ira.Requests.Kind.STRATEGY, p.result.name,
+            "add ${p.result.name} as an arm on paper", null, com.optionslab.ira.Requests.Venue.PAPER, seen, null)
+        _recent.update { com.optionslab.ira.Requests.keep(it, com.optionslab.ira.Requests.Recent(v, outcome, System.currentTimeMillis(),
+            result = result, fingerprint = false)) }
+    }
+
+    /**
+     * Does Jarvis's message [msgId] end with an offer of words still open (the question Boss asks next, the morning one)?
+     * Only his newest message, on an unlocked phone - its Yes / No buttons show while this holds.
+     */
+    fun offerOpen(msgId: Long): Boolean {
+        val newest = _state.value.messages.lastOrNull { it.fromIra } ?: return false
+        if (newest.id != msgId || _state.value.messages.lastOrNull()?.id != msgId) return false
+        return com.optionslab.ira.Requests.offerButtons(newest.text, true, runCatching { IraTools.offerLine() }.getOrNull(), phoneLocked())
+    }
+
+    /**
+     * Yes or No tapped under the offer in message [msgId]: Yes asks the offered question (a question only - never an
+     * order or a command, never on a locked phone); No ends the offer. Nothing acts. False when the offer is not open.
+     */
+    fun answerOffer(msgId: Long, yes: Boolean): Boolean {
+        if (!offerOpen(msgId)) return false
+        if (!yes) { runCatching { IraTools.endWaits() }; _state.update { it.copy(messages = (it.messages + Msg(false, "No")).takeLast(MAX_MESSAGES)) }; return true }
+        val q = runCatching { IraTools.offerTapped(phoneLocked()) }.getOrNull() ?: return false
+        val parsed = Ask.parse(q)
+        if (parsed.command != null || parsed.order != null) return false
+        _state.update { it.copy(messages = (it.messages + Msg(false, "Yes") + Msg(true, "$TOOK_AS\"$q\".")).takeLast(MAX_MESSAGES)) }
+        askSoon(q, confirmed = true)
+        return true
+    }
+
+    /** Forgetting everything (and the tests' reset): no request views, no recent list. */
+    internal fun clearRequests() {
+        synchronized(actions) { requestMeta.clear(); confirming.clear() }
+        synchronized(strategySeen) { strategySeen.clear() }
+        _recent.value = emptyList()
+    }
+
+    /**
+     * An exit's venue when what is open was not worked out ([IraActions.venueOf] is the usual way): an exit acts on the
+     * paper account and on Zerodha alike, so with Zerodha logged in it is "Paper + Zerodha" - never "Paper" on a guess.
+     */
+    private fun modeVenue(): com.optionslab.ira.Requests.Venue =
+        if (runCatching { com.optionslab.app.data.Broker.loggedIn }.getOrDefault(true)) com.optionslab.ira.Requests.Venue.PAPER_ZERODHA
+        else com.optionslab.ira.Requests.Venue.PAPER
+
+    /**
+     * The waiting request [id]'s venue, worked out in the background from what is open ([work]: [IraActions.venueOf]'s
+     * reads) after it was made with its at-once label - the request never waits on the reads. Set only while [id] still
+     * waits, and only from a read (null, nothing worked out: the label stays as it is - never "Paper" on a guess).
+     */
+    private fun venueLater(id: Long, work: suspend () -> com.optionslab.ira.Requests.Venue?) {
+        scope.launch {
+            val v = runCatching { work() }.getOrNull() ?: return@launch
+            val changed = synchronized(actions) {
+                val rv = requestMeta[id]
+                if (rv != null && actions.containsKey(id) && rv.venue != v) { requestMeta[id] = rv.copy(venue = v); true } else false
+            }
+            if (changed) _state.update { it.copy(requestsRev = it.requestsRev + 1) }
+        }
+    }
 
     /**
      * "Stop strategy 1", "cancel all orders", "switch to live"... In Jarvis what adds risk runs at once; what stops or
@@ -4096,7 +5098,7 @@ object IraHub {
         _state.update { it.copy(news = got.first.ifEmpty { it.news }, newsAt = if (got.first.isNotEmpty()) Instant.now() else it.newsAt, newsMissing = got.second) }
     }
 
-    /** How [m]'s day went, from the candles on the phone (for the 15:35 wrap-up), or null. */
+    /** How [m]'s day went, from the candles on the phone (for the 15:45 wrap-up), or null. */
     fun dayStory(m: IraMarket): String? = runCatching {
         val bars = histories[m]?.bars ?: return null
         // Only today's session: an old day (a failed refresh, a holiday) is never told as today's.
@@ -4105,7 +5107,7 @@ object IraHub {
     }.getOrNull()
 
     /**
-     * For the 15:35 wrap-up: what stood out most in the market today against the last sessions on the phone, and how to
+     * For the 15:45 wrap-up: what stood out most in the market today against the last sessions on the phone, and how to
      * hear the whole story - or null without today's session (only today's candles are read, never an old day's).
      */
     fun marketWrapLine(): String? = runCatching {
@@ -4173,7 +5175,7 @@ object IraHub {
             // (2.5 s at most) - and both passes now share one budget ([com.optionslab.ira.ModelWait]; they were 15 s each).
             // Only for a heard question with the model still to load (review, 5 Oct: a typed question, or one with the
             // model loaded, waited up to 2.5 s here for a line that is not said or not needed - [com.optionslab.ira.ModelWait.waitForHold]).
-            if (com.optionslab.ira.ModelWait.waitForHold(freeHeard, modelLoaded, JarvisVoice.wanted && !JarvisVoice.muted)) {
+            if (com.optionslab.ira.ModelWait.waitForHold(freeHeard, modelLoaded, JarvisVoice.listenOn && !JarvisVoice.muted)) {
                 val since = android.os.SystemClock.elapsedRealtime()
                 kotlinx.coroutines.withTimeoutOrNull(com.optionslab.ira.ModelWait.HOLD_FIRST_MS) {
                     while (JarvisVoice.speechStartedAt < since) kotlinx.coroutines.delay(100)
@@ -4249,6 +5251,10 @@ object IraHub {
      * Understanding only: whatever is prepared waits for its confirm exactly as before.
      */
     private fun commandAsked(q: String, c: com.optionslab.ira.Command, confirmAlways: Boolean = false, heard: Boolean = false) {
+        // Boss's "more" right after a short answer: that answer's kind noted ([com.optionslab.ira.MoreAfter]; kinds and
+        // minutes only, never his words; never on a locked phone). Learning only - the "more" is answered exactly as before.
+        if (c.kind == com.optionslab.ira.Command.Kind.MORE && com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { IraTools.moreAfterAsked(q, lastForMore(), phoneLocked()) }
         _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
         // Practice on a past day: replayed into the conversation, nothing traded.
         if (c.kind == com.optionslab.ira.Command.Kind.PRACTICE) { scope.launch { runCatching { IraTools.practice(c.target ?: q) { reply(it) } } }; return }
@@ -4262,8 +5268,13 @@ object IraHub {
             // Only a price alarm or an event note is done at once; anything that changes trading (starting arms, the
             // kill switch, autopilot, Jarvis's own limits) waits for Confirm - in the real app too (review, 3 Oct).
             if (c.kind.reduces || !com.optionslab.app.BuildConfig.JARVIS || confirmAlways || c.kind !in AT_ONCE) {
-                // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud).
-                pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL)
+                // The emergency exit asks for the fingerprint on the screen (or Boss's own voice, aloud). An exit, a close
+                // or a cancel is labelled by what is open now (Paper, Zerodha, or both); anything else sends no order. The
+                // request is made at once with the app's standing label (never waiting on a read - least of all the
+                // emergency exit); what is open is read in the background and corrects the label while it still waits.
+                val cmdId = pend(what, suspend { IraActions.verified(c.kind, act()) }, "Tap Confirm to ${what}.", exit = c.kind == com.optionslab.ira.Command.Kind.EXIT_ALL,
+                    venue = IraActions.venueAtOnce(c, what))
+                venueLater(cmdId) { IraActions.venueOf(c, what) }
             } else reply(IraActions.run(what, suspend { IraActions.verified(c.kind, act()) }), whole = true)
         }
     }
@@ -4278,13 +5289,17 @@ object IraHub {
         scope.launch {
             // A question in the plan (no command) is answered at its turn, after the steps before it were done.
             val cmds = steps.map { Ask.parse(it).command }
+            // Where the plan's steps would send orders (the Requests panel's label): any exit, close or cancel by what is open
+            // - labelled at once as the app stands, then read in the background, the steps side by side.
+            val planSteps = ArrayList<Pair<com.optionslab.ira.Command, String>>()
             for ((i, c) in cmds.withIndex()) {
                 if (c == null) continue
                 val (what, act) = runCatching { IraActions.prepare(c) }.getOrElse { ("I could not do that: ${it.message}") to null }
                 if (act == null) { reply("Step ${i + 1} (\"${steps[i]}\") cannot be done: $what Nothing in the plan was done.", whole = true); return@launch }
+                planSteps += c to what
             }
             val plan = com.optionslab.ira.Plan.say(steps)
-            pend("this plan: $plan", suspend {
+            val planId = pend("this plan: $plan", suspend {
                 val done = ArrayList<Pair<String, String>>()
                 for ((i, c) in cmds.withIndex()) {
                     if (c == null) {
@@ -4301,7 +5316,14 @@ object IraHub {
                 }
                 com.optionslab.ira.Plan.report(done, steps.size)
             }, "My plan, Boss: $plan. Tap Confirm and I'll do them in order, stopping if one fails.",
-                exit = cmds.any { it?.kind == com.optionslab.ira.Command.Kind.EXIT_ALL })
+                exit = cmds.any { it?.kind == com.optionslab.ira.Command.Kind.EXIT_ALL }, kind = com.optionslab.ira.Requests.Kind.PLAN,
+                venue = com.optionslab.ira.Requests.venueOf(planSteps.map { (c, what) -> IraActions.venueAtOnce(c, what) }))
+            if (planSteps.any { (c, _) -> IraActions.sendsOrders(c) }) venueLater(planId) {
+                coroutineScope {
+                    val read = planSteps.map { (c, what) -> async { IraActions.venueOf(c, what) } }.awaitAll()
+                    com.optionslab.ira.Requests.venueOf(read)
+                }
+            }
             IraActivity.add("Planned ${steps.size} steps: $plan")
         }
     }
@@ -4360,9 +5382,12 @@ object IraHub {
         return com.optionslab.ira.MoreAnswer.Last(m.text, before, unasked = synchronized(unaskedIds) { m.id in unaskedIds })
     }
 
-    suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false): String? {
+    /** [by]: how the yes came (a tap, the voice, the notification), kept for Recent's record only - it changes no gate. */
+    suspend fun confirm(id: Long, fingerprint: Boolean = false, ownerVoice: Boolean = false, by: com.optionslab.ira.Requests.By? = null): String? {
         // IraGoldAlgo: nothing Jarvis prepared is ever done there.
         if (GOLD_ONLY_TALK) { synchronized(actions) { exitIds.remove(id); actions.remove(id) }; _state.update { it.copy(pending = it.pending - id) }; return GOLD_TALK_ONLY.also { reply(it) } }
+        // Whether a yes on it asked for the fingerprint, read while it still waits (for Recent's record).
+        val askedFp = runCatching { needsFingerprint(id) }.getOrNull()
         if (isExit(id) && !fingerprint && !ownerVoice && fingerprintNeeded())
             return synchronized(actions) { actions.containsKey(id) }.let { waiting -> if (!waiting) null else
                 "The emergency exit is confirmed with your fingerprint on the Jarvis screen, or by saying yes in your own voice.".also { reply(it, whole = true) } }
@@ -4374,12 +5399,17 @@ object IraHub {
         // Real money only with the fingerprint (or a phone with none, where the app lock covers it): the trade checks this
         // again when placed, so a record that turns proven between now and then never sends one unapproved.
         val yes = asksYesNo(id)
-        val a = synchronized(actions) { exitIds.remove(id); actions.remove(id) } ?: return null
-        if (yes && (fingerprint || !fingerprintNeeded())) synchronized(actions) { liveApproved += id }
-        if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
-        settled(id)
-        _state.update { it.copy(pending = it.pending - id) }
-        return IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it, whole = true) }
+        val a = synchronized(actions) { exitIds.remove(id); actions.remove(id)?.also { confirming += id } } ?: return null
+        return try {
+            if (yes && (fingerprint || !fingerprintNeeded())) synchronized(actions) { liveApproved += id }
+            if (asksYesNo(id)) IraNewsTrades.answered(id, "approved")
+            settled(id)
+            _state.update { it.copy(pending = it.pending - id) }
+            IraActions.run(a.first, a.second).also { synchronized(actions) { liveApproved.remove(id) }; IraAccount.invalidate(); checked = null; reply(it, whole = true)
+                requestDone(id, com.optionslab.ira.Requests.outcomeOf(it), by ?: if (fingerprint) com.optionslab.ira.Requests.By.FINGERPRINT else null, it, askedFp) }
+        } finally {
+            synchronized(actions) { confirming.remove(id) }
+        }
     }
 
     /** Does a live trade's approval ask for the fingerprint? (whenever the phone has one; without one the app lock covers it) */
@@ -4391,10 +5421,15 @@ object IraHub {
     private fun isSolo(id: Long): Boolean = synchronized(actions) { id in soloAsks }
 
     /** [said]: Boss's spoken words for the rejection ("no, too late in the day"), when he said it aloud. */
-    fun cancelAction(id: Long, said: String? = null) {
+    /** [by]: how the no came (a tap, the voice, the notification), kept for Recent's record only. */
+    fun cancelAction(id: Long, said: String? = null, by: com.optionslab.ira.Requests.By? = null) {
+        // Whether a yes on it would have asked for the fingerprint, read while it still waits (for Recent's record).
+        val askedFp = runCatching { needsFingerprint(id) }.getOrNull()
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
         val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
         if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
+        requestDone(id, com.optionslab.ira.Requests.Outcome.DECLINED, by,
+            if (trade) "Rejected; nothing was placed." else "Cancelled; nothing was done.", askedFp)
         if (trade) IraNewsTrades.answered(id, "rejected")
         // A trade idea turned down: the reason he gave with it, or in his very next words, is noted - its kind only
         // ([com.optionslab.ira.TurnDowns]). It is said up front before the next idea it fits; nothing learned acts.
@@ -4408,14 +5443,28 @@ object IraHub {
     const val CONFIRM_LAPSE_MS = 30 * 60_000L
 
     /** A request that waits for Confirm, with its message; it lapses after [CONFIRM_LAPSE_MS]. */
-    private fun pend(what: String, act: suspend () -> String, text: String, exit: Boolean = false): Long {
+    /**
+     * [lead]: words before the chat's short line (an unasked offer's own question). [kind], [venue], [symbol], [qty] and
+     * [price]: what the Requests panel shows of it (an exit acts in the app's mode;
+     * anything else not said is no order). The chat shows one short line naming it; the details and the buttons are in
+     * the panel (and under that line).
+     */
+    private fun pend(what: String, act: suspend () -> String, text: String, exit: Boolean = false,
+                     kind: com.optionslab.ira.Requests.Kind? = null, venue: com.optionslab.ira.Requests.Venue? = null,
+                     symbol: String? = null, qty: String? = null, price: String? = null, lead: String? = null): Long {
         val id = System.nanoTime()
+        val askedAt = System.currentTimeMillis()
+        val view = com.optionslab.ira.Requests.RequestView(id, kind ?: if (exit) com.optionslab.ira.Requests.Kind.EXIT else com.optionslab.ira.Requests.Kind.COMMAND,
+            com.optionslab.ira.Requests.title(what), what, com.optionslab.ira.Requests.why(text),
+            venue ?: if (exit) modeVenue() else com.optionslab.ira.Requests.Venue.NONE, askedAt, askedAt + CONFIRM_LAPSE_MS, symbol, qty, price)
         // An emergency exit is known as one before anyone can see it (the voice then asks it in Boss's voice only).
-        synchronized(actions) { actions[id] = what to act; if (exit) exitIds += id }
-        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, text, action = id)).takeLast(MAX_MESSAGES)) }
+        synchronized(actions) { actions[id] = what to act; if (exit) exitIds += id; requestMeta[id] = view }
+        _state.update { it.copy(pending = it.pending + id, messages = (it.messages + Msg(true, listOfNotNull(lead, com.optionslab.ira.Requests.chatLine(view.title, view.what)).joinToString(" "), action = id)).takeLast(MAX_MESSAGES)) }
         scope.launch {
             kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
+            val lapsedFp = runCatching { needsFingerprint(id) }.getOrNull()
             if (synchronized(actions) { exitIds.remove(id); actions.remove(id) } != null) {
+                requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED, result = "No Confirm in 30 minutes; nothing was done.", fingerprint = lapsedFp)
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.", whole = true)
             }
@@ -4423,7 +5472,10 @@ object IraHub {
         return id
     }
 
-    /** Every request still waiting is dropped (the conversation was cleared). */
+    /**
+     * Every request still waiting is dropped (the conversation was cleared, or everything forgotten): forgotten, not
+     * lapsed - none is added to the Requests panel's Recent list, and that list is cleared too (Boss asked to forget).
+     */
     private fun dropPending() {
         val ids = synchronized(actions) { actions.keys.toList() }
         ids.forEach { id ->
@@ -4431,6 +5483,9 @@ object IraHub {
             if (was && trade) IraNewsTrades.answered(id, "rejected")
             if (was) settled(id)
         }
+        // Every view goes (a confirm still running when forgotten is not listed afterwards either).
+        synchronized(actions) { requestMeta.clear() }
+        _recent.value = emptyList()
         _state.update { it.copy(pending = emptySet()) }
     }
 
@@ -4483,13 +5538,13 @@ object IraHub {
     }
 
     /**
-     * Can anything use a trade check within the minute (Battery, round 9)? Solo on or its setups offered as ideas (it then
-     * reaches its gate, [IraSolo.tick]), Jarvis taking paper trades alone ([Automations.Auto.ACT_PAPER]), or anything
+     * Can anything use a trade check within the minute (Battery, round 9)? Solo on (it then reaches its gate,
+     * [IraSolo.tick]), Jarvis taking paper trades alone ([Automations.Auto.ACT_PAPER]), or anything
      * held or waiting to fill: the paper book, Solo's or the news trades' own, and in Live with a Zerodha session always
      * (its positions are not read here). A read failing says yes.
      */
     private fun checkKeptFast(): Boolean = runCatching {
-        val soloGate = IraSolo.on || Automations.on(Automations.Auto.SOLO_IDEAS)
+        val soloGate = IraSolo.on
         val alone = Automations.on(Automations.Auto.ACT_PAPER)
         val held = com.optionslab.app.data.Paper.watching() || IraSolo.all().any { !it.closed } || IraNewsTrades.all().any { !it.closed } ||
             (com.optionslab.app.data.AppSettings.load().live && com.optionslab.app.data.Broker.loggedIn)
@@ -4546,7 +5601,7 @@ object IraHub {
         return com.optionslab.ira.TradeCheck.Now(
             marketOpen = m.isOpen(), tradingDay = m.isTradingDay(today), minute = m.minuteNow(),
             liveMode = s.live, zerodhaLoggedIn = com.optionslab.app.data.Broker.loggedIn, staticIpOk = ipOk,
-            pricesFresh = !m.isOpen() || st.liveAt?.isAfter(Instant.now().minusSeconds(180)) == true,
+            pricesFresh = !m.isIndexOpen() || st.liveAt?.isAfter(Instant.now().minusSeconds(180)) == true,   // index candles: to 15:30
             killSwitch = s.guardKill, breakerTripped = com.optionslab.app.data.LossBreaker.trippedToday(),
             botsStopped = runCatching { com.optionslab.app.data.Strategies.stoppedToday() }.getOrDefault(false),
             dayPnl = dayPnl, dayLossLimit = if (s.live) s.guardDailyLoss else s.guardPaperDailyLoss,
@@ -4756,6 +5811,96 @@ object IraHub {
         return listOfNotNull(note, com.optionslab.ira.ChainIntel.answer(a, now, IraAccount.chainBook.first(u, today), today)).joinToString(" ")
     }
 
+    /**
+     * The index's past sessions read down for [straddleDecay], [expiryHour] and [atmBuy] in one stream
+     * ([com.optionslab.ira.PastReads]), kept until the day or the phone's kept days change.
+     */
+    private fun pastReads(u: String, today: java.time.LocalDate): com.optionslab.ira.PastReads.Read {
+        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
+        return com.optionslab.ira.PastReads.of(u, "$today|${kept.size}|${kept.lastOrNull()}", today) { Store.barSessions(u) }
+    }
+
+    /**
+     * "How much does the ATM straddle usually lose between 9:30 and 2:30?" ([com.optionslab.ira.StraddleDecay]): the index's
+     * sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few numbers,
+     * then today's kept chain. Reads only.
+     */
+    private fun straddleDecay(a: com.optionslab.ira.StraddleDecay.Q, markets: List<IraMarket>): String {
+        val m = com.optionslab.ira.StraddleDecay.market(markets) ?: return com.optionslab.ira.StraddleDecay.NOT_HERE
+        val u = m.name
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val past = pastReads(u, today).straddleDays
+        val todays = runCatching { Store.barSession(u, today) }.getOrNull()
+        return com.optionslab.ira.StraddleDecay.answer(a, m, past, todays, today, now)
+    }
+
+    /**
+     * "How does the ATM option's premium behave in the last hour on expiry day?" ([com.optionslab.ira.ExpiryHour]): the index's
+     * sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few numbers,
+     * then today's kept chain. Reads only.
+     */
+    private fun expiryHour(a: com.optionslab.ira.ExpiryHour.Q, markets: List<IraMarket>): String {
+        val m = com.optionslab.ira.ExpiryHour.market(markets) ?: return com.optionslab.ira.ExpiryHour.NOT_HERE
+        val u = m.name
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val past = pastReads(u, today).expiryHourDays
+        val todays = runCatching { Store.barSession(u, today) }.getOrNull()
+        return com.optionslab.ira.ExpiryHour.answer(a, m, past, todays, today, now)
+    }
+
+    /**
+     * "Is my stop too tight?" ([com.optionslab.ira.StopNoise]): the open positions as [IraCoach.openLegs] reads them (with
+     * each one's stop), set against the 1-minute candles kept for their indices. Reads only; his positions, so never on a
+     * locked phone.
+     */
+    private suspend fun stopNoise(): String {
+        if (phoneLocked()) return com.optionslab.ira.StopNoise.LOCKED
+        val legs = IraCoach.openLegs()
+        val today = com.optionslab.app.data.Market.today()
+        val hs = histories
+        val noiseRecords = com.optionslab.ira.StopNoise.markets(legs).associateWith { m -> com.optionslab.ira.StopNoise.record(hs[m]?.bars.orEmpty(), today) }
+        val noiseSpots = noiseRecords.keys.associateWith { m -> _state.value.snaps[m]?.price }
+        return com.optionslab.ira.StopNoise.answer(legs, noiseRecords, noiseSpots).joinToString(" ")
+    }
+
+    /** The past sessions read for [otmReach] (the index, its kept days and the day as key), kept until any of them changes. */
+    @Volatile private var otmReachDays: Pair<String, List<com.optionslab.ira.OtmReach.Day>>? = null
+
+    /**
+     * "How often does an OTM option 100 points away end the day in the money?" ([com.optionslab.ira.OtmReach]): the index's
+     * sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few numbers
+     * a strike, then today's kept chain. Reads only.
+     */
+    private fun otmReach(a: com.optionslab.ira.OtmReach.Q, markets: List<IraMarket>): String {
+        val m = com.optionslab.ira.OtmReach.market(markets) ?: return com.optionslab.ira.OtmReach.NOT_HERE
+        val u = m.name
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val kept = Store.deviceBarDays(u).filter { it.isBefore(today) }
+        val key = "$u|$today|${kept.size}|${kept.lastOrNull()}"
+        val past = otmReachDays?.takeIf { it.first == key }?.second
+            ?: com.optionslab.ira.OtmReach.days(Store.barSessions(u), today).also { otmReachDays = key to it }
+        val todays = runCatching { Store.barSession(u, today) }.getOrNull()
+        return com.optionslab.ira.OtmReach.answer(a, m, past, todays, today, now)
+    }
+
+    /**
+     * "How often does the ATM option double from its 9:30 price before the end of the day?" ([com.optionslab.ira.AtmBuy]): the
+     * index's sessions with option prices on the phone (bundled and harvested), each streamed once and read down to a few
+     * numbers, then today's kept chain. Reads only.
+     */
+    private fun atmBuy(a: com.optionslab.ira.AtmBuy.Q, markets: List<IraMarket>): String {
+        val m = com.optionslab.ira.AtmBuy.market(markets) ?: return com.optionslab.ira.AtmBuy.NOT_HERE
+        val u = m.name
+        val now = com.optionslab.app.data.Market.now().toLocalDateTime()
+        val today = com.optionslab.app.data.Market.today()
+        val past = pastReads(u, today).atmBuyDays
+        val todays = runCatching { Store.barSession(u, today) }.getOrNull()
+        return com.optionslab.ira.AtmBuy.answer(a, m, past, todays, today, now)
+    }
+
     /** The past expiries read for [expiryPin], kept until the phone's own captures or the day change. */
     @Volatile private var pinDays: Pair<String, List<com.optionslab.ira.ExpiryPin.Day>>? = null
 
@@ -4943,18 +6088,32 @@ object IraHub {
     private val unaskedIds: MutableSet<Long> = java.util.Collections.synchronizedSet(LinkedHashSet())
 
     /** [whole]: shown and said whole, never as a short line (the guard's report; [Msg.whole]). */
-    fun note(text: String, whole: Boolean = false) {
+    fun note(text: String, whole: Boolean = false) = noteFrom(text, whole, null, null)
+
+    /**
+     * As [note], with the automation that posted it ([from]) or its category ([kind]) for Today's notes ([IraNotes]): the
+     * note itself is the same, said and shown just the same and at the same time.
+     */
+    internal fun note(text: String, from: Automations.Auto?, kind: com.optionslab.ira.TodayNotes.Category? = null, whole: Boolean = false) =
+        noteFrom(text, whole, from, kind)
+
+    private fun noteFrom(text: String, whole: Boolean, from: Automations.Auto?, kind: com.optionslab.ira.TodayNotes.Category?) {
         val m = Msg(true, text, whole = whole)
         synchronized(unaskedIds) { unaskedIds += m.id; while (unaskedIds.size > 200) unaskedIds.remove(unaskedIds.first()) }
         _state.update { it.copy(messages = (it.messages + m).takeLast(MAX_MESSAGES)) }
+        // Kept for Today's notes (in memory, today only; never logged).
+        IraNotes.add(text, from, kind)
     }
 
     /**
      * A note in the chat that is also said aloud, as its one line, when Boss's "Jarvis speaks" choice takes a note of
      * [weight] ([JarvisVoice.offerNote]; muted, quiet hours and a locked phone as always). Words only.
      */
-    fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight) {
-        note(text)
+    fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight) = noteAloud(text, weight, null, null)
+
+    /** As [noteAloud], tagged for Today's notes as [note] is. */
+    internal fun noteAloud(text: String, weight: com.optionslab.ira.SpeakChoice.Weight, from: Automations.Auto?, kind: com.optionslab.ira.TodayNotes.Category? = null) {
+        noteFrom(text, false, from, kind)
         runCatching { JarvisVoice.offerNote(text, weight) }
     }
 
@@ -4964,13 +6123,16 @@ object IraHub {
     }
 
     /** Wipes the conversation (the owner's button). */
-    fun forgetConversation() { if (!loaded.isCompleted) wipedWhileLoading = true; dropPending(); synchronized(askedAt) { askedAt.clear() }; _state.update { it.copy(messages = emptyList()) } }
+    fun forgetConversation() { if (!loaded.isCompleted) wipedWhileLoading = true; dropPending(); synchronized(askedAt) { askedAt.clear() }; IraNotes.clear(); _state.update { it.copy(messages = emptyList()) } }
 
     /** Wipes what Ira learned too; it relearns from the data on the next refresh. */
     suspend fun forgetAll() { awaitLoaded(); forgetAllLoaded() }
 
     private suspend fun forgetAllLoaded() = lock.withLock {
         dropPending()
+        clearRequests()
+        // The short lines read from past answers go too (they were read from the conversation just forgotten).
+        com.optionslab.ira.ShortAnswer.clearCache()
         IraTools.forgetHabits()
         IraTools.forgetRoutine()
         IraTools.forgetMemory()
@@ -4986,6 +6148,7 @@ object IraHub {
         stateFile?.delete()
         // Boss chose to forget everything: the unreadable files are gone, so saving starts again.
         stateReadFailed = false; bookReadFailed = false
+        IraNotes.clear()
         _state.update { State() }
     }
 

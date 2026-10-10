@@ -32,7 +32,16 @@ import java.util.Locale
  *    or were read "plus-minus sign"; "its range is 1.3x the usual" was read "one point three ex". Now "plus or minus 1
  *    percent", "about plus or minus 210 points", "1.3 times the usual" (Hindi "प्लस-माइनस", "गुना"). Only a "±" right
  *    before a figure, and only an "x" (or "×") glued to a short figure with no letter or digit after it - so "2x3",
- *    "0x1F", "x2" and words with an x stay as written.
+ *    "0x1F", "x2" and words with an x stay as written;
+ *  - an amount under 100 rupees with paise said in rupees and paise (Voice, round 26): "12.4 rupees" -> "12 rupees 40
+ *    paise", "0.4 rupees" -> "40 paise" (Hindi "पैसे"); a bigger one is already said whole ([Aloud.numbers]).
+ *  - an index's signed move said in points (Voice, round 28): "It is now 24,150, +30.00 from the open", "Nifty closed at
+ *    24,212, +200.15 (+0.83%) from the previous close", "Since then it has moved +41.00 to 24,152", "the net move from the
+ *    open (+120.50)", "They moved opposite ways from the open: +85.20 today, -120.40 yesterday" were heard "plus 30 from
+ *    the open" - points, rupees or percent? - and "(-50 from the open)" kept its bare dash. Now "plus 30 points from the
+ *    open", "plus 200 points, plus 0.83 percent, from the previous close", "moved plus 41 points to", "minus 50 points"
+ *    (Hindi "पॉइंट"). Only a signed figure in those places, never one already followed by a unit, a percent or rupees,
+ *    and never in a line about gold (its moves are in dollars) ([moves]);
  *
  * The chat keeps the exact figures; this only shapes the words said, adds nothing new and never changes a sentence's end,
  * so "go on" after a cut-in finds the same sentences ([BargeIn]). Applying it twice changes nothing. Pure.
@@ -144,7 +153,64 @@ object SayAs {
                 said + if (tail == " rupees crore") " " + (if (hindi) "रुपये" else "rupees") else ""
             }
         }
-        return if (s.contains(" rupees crore")) RUPEES_CRORE.replace(s) { m -> m.groupValues[1] + " crore rupees" } else s
+        if (s.contains(" rupees crore")) s = RUPEES_CRORE.replace(s) { m -> m.groupValues[1] + " crore rupees" }
+        if (s.indexOf('.') >= 0 && (s.contains(" rupees") || s.contains(" रुपये"))) s = PAISE.replace(s) { m -> paise(m, hindi) }
+        if (s.contains(" from the ") || s.contains("moved ")) s = moves(s, hindi)
+        return s
+    }
+
+    /** A sign as it may stand by then: Wake's "plus " / "minus ", the Hindi words, or the bare character. */
+    private const val SIGN = "(?:plus |minus |प्लस |माइनस |[+-])"
+    private const val MOVE_FIG = "(?:\\d{1,3}(?:,\\d{2,3})+|\\d+)(?:\\.\\d+)?"
+    /** Where a signed figure is an index's move in points: the open or the previous close named. */
+    private const val FROM = "from the (?:open|previous close|prior close|day's open)\\b"
+    /**
+     * A signed figure with no unit right before "from the open" / "from the previous close" (a percent aside between
+     * allowed, bracketed or between commas).
+     */
+    private val MOVE_FROM = Regex("(^|[^\\w.,+\\-])($SIGN)($MOVE_FIG)(?= $FROM|(?: \\(|, )$SIGN?\\d+(?:\\.\\d+)? (?:percent|प्रतिशत)\\)?,? $FROM)")
+    /** "Since then it has moved +41.00 to 24,152.00." */
+    private val MOVED = Regex("(\\bmoved )($SIGN)($MOVE_FIG)(?= to \\d)")
+    /** "the net move from the open (+120.50)": a signed figure alone in brackets right after the open named. */
+    private val FROM_ASIDE = Regex("($FROM \\()($SIGN)($MOVE_FIG)(?=\\))")
+    /** The two days' net moves set side by side: "from the open: +85.20 today, -120.40 yesterday." */
+    private val OPPOSITE = Regex("(ways $FROM: )($SIGN)($MOVE_FIG)( (?!points?\\b|पॉइंट)[^,.\\d]{1,30}, )($SIGN)($MOVE_FIG)(?= (?!points?\\b|पॉइंट)[^\\s\\d])")
+    /** Gold's moves are in dollars, never points. */
+    private val GOLD = Regex("\\bGold\\b|\\$")
+
+    /** [s] with an index's signed moves said in points ("plus 30 points from the open"); see the list above. */
+    private fun moves(s: String, hindi: Boolean): String {
+        if (!hasDigit(s) || GOLD.containsMatchIn(s)) return s
+        fun said(sign: String, fig: String): String {
+            val plus = sign.trim().let { it == "+" || it == "plus" || it == "प्लस" }
+            val word = if (hindi) (if (plus) "प्लस" else "माइनस") else (if (plus) "plus" else "minus")
+            val unit = if (hindi) "पॉइंट" else if (fig == "1") "point" else "points"
+            return "$word $fig $unit"
+        }
+        var out = OPPOSITE.replace(s) { m ->
+            val g = m.groupValues
+            g[1] + said(g[2], g[3]) + g[4] + said(g[5], g[6])
+        }
+        for (r in listOf(MOVE_FROM, MOVED, FROM_ASIDE)) out = r.replace(out) { m -> m.groupValues[1] + said(m.groupValues[2], m.groupValues[3]) }
+        return out
+    }
+
+    /**
+     * A small amount with paise said as a person says it (Voice, round 26): "12.4 rupees" was read "twelve point four
+     * rupees", "0.4 rupees" "zero point four rupees"; now "12 rupees 40 paise", "40 paise" (Hindi "12 रुपये 40 पैसे",
+     * "40 पैसे"). Only under 100 rupees with one or two places - a bigger amount is already said whole, paise dropped
+     * ([Aloud.numbers]) - and only a figure right before "rupees"/"रुपये".
+     */
+    private val PAISE = Regex("(?<![\\w.,])(\\d{1,2})\\.(\\d{1,2})(?![\\d.,]) (rupees|रुपये)(?![\\p{L}\\p{M}])")
+
+    private fun paise(m: MatchResult, hindi: Boolean): String {
+        val r = m.groupValues[1].toInt()
+        val p = m.groupValues[2].padEnd(2, '0').toInt()
+        val rupee = if (hindi) (if (r == 1) "रुपया" else "रुपये") else (if (r == 1) "rupee" else "rupees")
+        val whole = "$r $rupee"
+        if (p == 0) return whole
+        val ps = "$p " + (if (hindi) "पैसे" else "paise")
+        return if (r == 0) ps else "$whole $ps"
     }
 
     /** Could [s] hold "CE" or "PE" (every option and strike pattern ends in one)? */

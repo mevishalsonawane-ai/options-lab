@@ -83,11 +83,18 @@ fun TradeScreen(model: AppModel) {
     var resetting by remember { mutableStateOf(false) }
 
     // Sandbox: the paper engine runs its jobs against fresh public prices.
+    // Round 2: on every stream price (at most four times a second) while Zerodha's stream is live; the full refresh (the
+    // stops' check, the owners' labels) every 2 s; without the stream, every 10 s as before.
     com.optionslab.app.ui.PollWhileStarted(s.live) {
         if (s.live) return@PollWhileStarted
+        var full = 0L
+        var light = false
         while (true) {
-            model.loadPaper(quiet = true)
-            delay(model.paperRefreshMs())
+            val now = System.currentTimeMillis()
+            val heavy = !light || now - full >= 2_000
+            if (heavy) full = now
+            model.loadPaper(quiet = true, light = !heavy)
+            light = model.paperWait()
         }
     }
 
@@ -101,7 +108,15 @@ fun TradeScreen(model: AppModel) {
     }
 
     Page {
-        item { PageTitle("Trade", if (s.live) "Your Zerodha account, live" else "The paper account · sandbox") }
+        // The live/delayed word sits beside the title, not in a row of its own (no extra height in the list).
+        item {
+            androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
+                    PageTitle("Trade", if (s.live) "Your Zerodha account, live" else "The paper account · sandbox")
+                }
+                if (b.loggedIn) PriceFreshness(Modifier.padding(start = 8.dp))
+            }
+        }
         if (!s.live) {
             paperTrade(model, paperSnap, paperBook, { paperBook = it }, onReset = { resetting = true })
             return@Page
@@ -210,9 +225,9 @@ private fun PositionsCard(model: AppModel, a: Account, onProtect: (GttTarget) ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("TOTAL P&L", style = Type.label.copy(color = p.inkSoft))
-                // Zerodha's own figure, before charges; today's charges (estimated from today's trades) in small type under it.
+                // Zerodha's own figure, before charges; today's charges (Zerodha's exact figure, or estimated from today's trades) in small type under it.
                 RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
-                com.optionslab.ira.PnlCharges.line(a.charges, estimate = true)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
+                com.optionslab.ira.PnlCharges.line(a.charges, estimate = a.chargesEstimate)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("realised ${rs(a.book.realised, true)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 12.sp))
@@ -372,8 +387,8 @@ private fun PnlCard(a: Account, series: List<PnlTracker.Point>) {
     val p = LocalPalette.current
     LedgerCard(title = "Today's P&L") {
         RollingFigure(a.book.pnl, { rs(it, true) }, Type.figureLarge.copy(color = if (a.book.pnl >= 0) p.verdigris else p.oxblood), calm = true)
-        // Before charges, as Zerodha shows it; today's charges, estimated from today's trades, in small type under it.
-        com.optionslab.ira.PnlCharges.line(a.charges, estimate = true)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
+        // Before charges, as Zerodha shows it; today's charges (Zerodha's exact figure, or estimated from today's trades) in small type under it.
+        com.optionslab.ira.PnlCharges.line(a.charges, estimate = a.chargesEstimate)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp)) }
         if (series.size >= 2) {
             InkCurve(series.map { it.pnl }, emptyList(), null, calm = true)
             val hi = series.maxBy { it.pnl }; val lo = series.minBy { it.pnl }

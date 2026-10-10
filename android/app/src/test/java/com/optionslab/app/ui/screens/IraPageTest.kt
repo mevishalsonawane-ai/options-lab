@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
@@ -58,6 +60,39 @@ class IraPageTest {
         compose.waitForText("The usual dashboard")
         compose.onAllNodesWithText("Ira").onFirst().performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.waitForText("Ask Ira about the market")
+    }
+
+    /**
+     * "What's new" over the Ira page on an ordinary phone: the one-row header leaves the question box and Ask on screen,
+     * folded and open (the open list takes at most about a third of the height).
+     */
+    @Test
+    @org.robolectric.annotation.Config(qualifiers = "w411dp-h800dp")
+    fun theQuestionBoxStaysOnScreenUnderWhatsNew() {
+        com.optionslab.app.security.SecurePrefs.put(com.optionslab.app.data.WhatsNewStore.KEY, null)
+        com.optionslab.app.data.WhatsNewStore.forget()
+        try {
+            val n = com.optionslab.app.data.WhatsNewStore.entries().size
+            org.junit.Assume.assumeTrue(n > 0)
+            compose.setContent { IraAlgoTheme("light") { IraHome { androidx.compose.material3.Text("The usual dashboard") } } }
+            compose.frames()
+            compose.waitForText("Ask Ira about the market")
+            val head = keepNumbersWhole(if (n == 1) "What's new · 1 change" else "What's new · $n changes")
+            compose.waitForText(head)
+            val rootBottom = compose.onRoot().fetchSemanticsNode().boundsInRoot.bottom
+            fun onScreen(t: String) {
+                compose.onNodeWithText(t).assertIsDisplayed()
+                val b = compose.onNodeWithText(t).fetchSemanticsNode().boundsInRoot
+                assertTrue("$t on screen: ${b.bottom} of $rootBottom", b.bottom <= rootBottom + 0.5f)
+            }
+            onScreen("Ask Ira about the market"); onScreen("Ask"); onScreen("Got it")
+            compose.onNodeWithText("Show").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            compose.waitForText("Hide")
+            onScreen("Ask Ira about the market"); onScreen("Ask"); onScreen("Got it")
+        } finally {
+            com.optionslab.app.security.SecurePrefs.put(com.optionslab.app.data.WhatsNewStore.KEY, null)
+            com.optionslab.app.data.WhatsNewStore.forget()
+        }
     }
 
     @Test fun asksAnExampleAndGetsAnAnswer() {

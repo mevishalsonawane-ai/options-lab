@@ -67,6 +67,12 @@ class FakeUpstox : Closeable {
 
     fun price(key: String, last: Double) { prices[key] = last }
 
+    /** One 1-minute candle of today, by its start (IST). */
+    data class Candle(val at: LocalTime, val open: Double, val high: Double, val low: Double, val close: Double)
+
+    /** A key's own candles of today (oldest first), served instead of the three made from [price]: highs and lows that matter. */
+    val minutes = ConcurrentHashMap<String, List<Candle>>()
+
     private val server = MockWebServer()
 
     init {
@@ -100,10 +106,21 @@ class FakeUpstox : Closeable {
         val i = parts.indexOf("intraday")
         if (i >= 0 && i + 1 < parts.size) {
             val key = URLDecoder.decode(parts[i + 1], "UTF-8")
-            prices[key]?.let { last -> todayCandles(last).forEach { candles.put(it) } }
+            val own = minutes[key]
+            if (own != null) ownCandles(own).forEach { candles.put(it) }
+            else prices[key]?.let { last -> todayCandles(last).forEach { candles.put(it) } }
         }
         return MockResponse().setResponseCode(200).addHeader("Content-Type", "application/json")
             .setBody(JSONObject().put("status", "success").put("data", JSONObject().put("candles", candles)).toString())
+    }
+
+    private fun ownCandles(list: List<Candle>): List<JSONArray> {
+        val day = Market.today()
+        val fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+        // Newest first, as Upstox sends them.
+        return list.sortedByDescending { it.at }.map { c ->
+            JSONArray().put(ZonedDateTime.of(day, c.at, IST).toOffsetDateTime().format(fmt)).put(c.open).put(c.high).put(c.low).put(c.close).put(1_000).put(0)
+        }
     }
 
     private fun todayCandles(last: Double): List<JSONArray> {

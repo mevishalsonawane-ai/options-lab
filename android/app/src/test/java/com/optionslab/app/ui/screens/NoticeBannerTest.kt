@@ -67,7 +67,7 @@ class NoticeBannerTest {
         compose.waitForText("Boss, a goal is broken")
         compose.waitForText(long)
         compose.onNodeWithTag("notice-banner", useUnmergedTree = true).assertExists()
-        assertFalse("nothing asked: no Confirm", compose.has("Confirm"))
+        assertFalse("nothing asked: no Yes", compose.has("Yes"))
         tap("OK")
         assertTrue(dismissed)
     }
@@ -78,15 +78,15 @@ class NoticeBannerTest {
         val id = IraHub.state.value.pending.single()
         compose.setContent { IraAlgoTheme("light") { NoticeBanner(card("Shall I switch the kill switch on?", action = id), onDismiss = {}, onClose = { _, _ -> }) } }
         compose.frames()
-        compose.waitForText("Confirm")
-        compose.waitForText("Cancel")
-        assertFalse("nothing before Confirm", com.optionslab.app.data.AppSettings.load().guardKill)
-        tap("Cancel")
+        compose.waitForText("Yes")
+        compose.waitForText("No")
+        assertFalse("nothing before Yes", com.optionslab.app.data.AppSettings.load().guardKill)
+        tap("No")
         compose.until(10_000, "cancelled") { id !in IraHub.state.value.pending }
         assertEquals("Cancelled; nothing was done.", IraHub.state.value.messages.last().text)
         assertFalse("cancelled: nothing done", com.optionslab.app.data.AppSettings.load().guardKill)
         compose.waitForText("Done. Jarvis: Cancelled; nothing was done.")
-        assertFalse("answered: no button left", compose.has("Confirm"))
+        assertFalse("answered: no button left", compose.has("Yes"))
     }
 
     @Test fun aRequestNoLongerWaitingShowsNoButton() {

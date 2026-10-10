@@ -65,9 +65,16 @@ object Relay {
         }
     }
 
+    /** The switch, kept in memory for the order path (round 2: no vault read per order); re-read when the vault changes. */
+    @Volatile private var enabledKept: Pair<Int, Boolean>? = null
+
     var enabled: Boolean
-        get() = SecurePrefs.getBoolean(K_ON, false)
-        set(v) { SecurePrefs.put(K_ON, v); if (!v) close() }
+        get() {
+            val g = SecurePrefs.generationHint
+            enabledKept?.let { (gen, on) -> if (gen == g) return on }
+            return SecurePrefs.getBoolean(K_ON, false).also { enabledKept = g to it }
+        }
+        set(v) { SecurePrefs.put(K_ON, v); enabledKept = null; if (!v) close() }
     var host: String?
         get() = SecurePrefs.getString(K_HOST)
         set(v) { SecurePrefs.put(K_HOST, v?.trim()?.ifEmpty { null }); close() }

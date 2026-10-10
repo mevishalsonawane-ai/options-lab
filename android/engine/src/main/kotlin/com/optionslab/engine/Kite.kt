@@ -105,6 +105,38 @@ object Kite {
         return out
     }
 
+    /** One futures contract from an instruments dump (NFO-FUT or BFO-FUT). */
+    data class Future(val token: Long, val tradingSymbol: String, val name: String, val expiry: LocalDate, val lotSize: Int, val exchange: String) {
+        /** The key Kite's quote call takes ("NFO:NIFTY26OCTFUT"). */
+        val key: String get() = "$exchange:$tradingSymbol"
+    }
+
+    /**
+     * The index futures of [names] in a GET /instruments/{NFO,BFO} dump (the market recorder's NIFTY, BANKNIFTY, FINNIFTY
+     * and SENSEX futures). A row with a missing token, expiry or lot is skipped, never guessed.
+     */
+    fun parseFutures(lines: Sequence<String>, names: Set<String>): List<Future> {
+        val out = ArrayList<Future>()
+        var head: Map<String, Int>? = null
+        for (line in lines) {
+            if (line.isBlank()) continue
+            val c = splitCsv(line)
+            if (head == null) { head = c.withIndex().associate { it.value.trim() to it.index }; continue }
+            fun col(n: String) = c.getOrNull(head[n] ?: -1)?.trim() ?: ""
+            val seg = col("segment")
+            if (col("instrument_type") != "FUT" || col("name") !in names || (seg != "NFO-FUT" && seg != "BFO-FUT")) continue
+            val token = col("instrument_token").toLongOrNull() ?: continue
+            val expiry = runCatching { LocalDate.parse(col("expiry")) }.getOrNull() ?: continue
+            val lot = col("lot_size").toDoubleOrNull()?.toInt() ?: continue
+            out += Future(token, col("tradingsymbol"), col("name"), expiry, lot, seg.substringBefore('-'))
+        }
+        return out
+    }
+
+    /** Each name's nearest future expiring on or after [day] (the current month's contract). */
+    fun nearestFutures(all: List<Future>, day: LocalDate): Map<String, Future> =
+        all.filter { !it.expiry.isBefore(day) }.groupBy { it.name }.mapValues { (_, v) -> v.minBy { it.expiry } }
+
     /** What an order needs to know about any instrument: its lot and its tick. */
     data class Spec(val exchange: String, val tradingSymbol: String, val token: Long, val lotSize: Int, val tickSize: Double)
 
@@ -134,7 +166,7 @@ object Kite {
     /** Exchanges whose order quantity is a number of lots, not units. */
     val LOT_QUOTED = setOf("MCX", "CDS", "BCD")
 
-    private fun splitCsv(line: String): List<String> {
+    internal fun splitCsv(line: String): List<String> {
         val out = ArrayList<String>()
         val sb = StringBuilder()
         var quoted = false
@@ -165,6 +197,8 @@ object Kite {
         val exchange: String = "NFO",
         val tag: String = "iraalgo",
         val triggerPrice: Double? = null,   // required for SL and SL-M
+        /** Units in one [quantity] (MCX: the lot's multiplier, as Zerodha takes MCX in lots); 1 elsewhere. Value caps only. */
+        val multiplier: Int = 1,
     ) {
         val lots: Int get() = if (lotSize > 0) quantity / lotSize else 0
         val hasPrice: Boolean get() = orderType == "LIMIT" || orderType == "SL"
@@ -261,13 +295,14 @@ object Kite {
             else if (!p.isFinite()) out += "a ${o.orderType} order needs a finite price, not $p"
             else {
                 onGrid(p, "price")
-                if (!exit && p * o.quantity > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(p * o.quantity, limits.maxOrderValue)
+                val value = p * o.quantity * o.multiplier.coerceAtLeast(1)
+                if (!exit && value > limits.maxOrderValue) out += "order value Rs %,.0f exceeds the Rs %,.0f cap".format(value, limits.maxOrderValue)
             }
         }
         if (!o.hasPrice && !exit && refPrice != null && !refPrice.isFinite())
             out += "the last price $refPrice is not a usable price, so the order value is unknown"
-        else if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity > limits.maxOrderValue)
-            out += "order value about Rs %,.0f (at the last price) exceeds the Rs %,.0f cap".format(refPrice * o.quantity, limits.maxOrderValue)
+        else if (!o.hasPrice && !exit && refPrice != null && refPrice > 0 && refPrice * o.quantity * o.multiplier.coerceAtLeast(1) > limits.maxOrderValue)
+            out += "order value about Rs %,.0f (at the last price) exceeds the Rs %,.0f cap".format(refPrice * o.quantity * o.multiplier.coerceAtLeast(1), limits.maxOrderValue)
         if (o.hasTrigger) {
             val t = o.triggerPrice
             if (t == null || t <= 0) out += "a ${o.orderType} order needs a positive trigger price"

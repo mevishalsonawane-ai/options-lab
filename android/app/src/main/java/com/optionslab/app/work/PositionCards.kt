@@ -35,6 +35,18 @@ object PositionCards {
     /** Who opened each carded position ("venue|symbol" -> "ORB + Manual"), and the quantity that was read at. */
     private val sources = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val sourceQty = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    /**
+     * What each card ("venue|symbol") last showed, as posted. ANR fix (9 Oct): a silent update that would show exactly the
+     * same words is not posted again - every post is a binder call into Android with the card's two drawn tiles, which the
+     * system then hands to the shade; a book re-read every few seconds at an unchanged price posted the same card each time.
+     */
+    private val posted = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** True when a card showing [sig] for [key] was already posted (and so is not posted again); a sounding one always posts. */
+    internal fun samePosted(key: String, sig: String, alert: Boolean): Boolean = !alert && posted[key] == sig
+
+    /** TEST SEAM: each test starts with an empty notification shade, so nothing counts as posted already. */
+    internal fun forgetPostedForTest() { posted.clear() }
     @Volatile var anyOpen = false
         private set
 
@@ -72,7 +84,9 @@ object PositionCards {
      * the position ("ORB + Manual"); the last one given is kept for the card's silent updates.
      */
     fun card(context: Context, venue: String, symbol: String, qty: Int, avg: Double, ltp: Double?, pnl: Double,
-             alert: Boolean = false, headline: String? = null, source: String? = null) {
+             alert: Boolean = false, headline: String? = null, source: String? = null,
+             /** A fill shown without sound, buzz or pop-up (a Liquidity 15+5 paper fill, [Notifier.quietFill]): low priority. */
+             quiet: Boolean = false) {
         // A position closed (squared off, stopped out, settled): its card is taken down, not left as a result.
         if (qty == 0) { dismiss(context, venue, symbol); return }
         if (source != null) sources["$venue|$symbol"] = source
@@ -84,6 +98,9 @@ object PositionCards {
             "\n" + pnlLine(qty, avg, pnl)
             else "Realised P&L ${rs(pnl)}"
         val text = text0 + by
+        val key = "$venue|$symbol"
+        val sig = listOf(title, text, quiet.toString(), open.toString()).joinToString("\u0001")
+        if (samePosted(key, sig, alert)) { if (open) shown[key] = true; return }
         val b = Notifier.builder(context, if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, "trade",
             side = if (headline?.startsWith("SELL") == true) "SELL" else if (headline?.startsWith("BUY") == true) "BUY" else if (qty > 0) "LONG" else "SHORT",
             // A tap opens the app on the position with its card over it: the whole text and a Close that goes through the
@@ -91,9 +108,13 @@ object PositionCards {
             card = NoticeCard(idOf(venue, symbol), if (qty >= 0) Notifier.BUY else Notifier.SELL, title, text, System.currentTimeMillis(),
                 tab = "trade", close = if (open) "$venue|$symbol" else null))
             .setOnlyAlertOnce(!alert).setSilent(!alert).setOngoing(open).setAutoCancel(!open)
+        if (quiet) b.setPriority(NotificationCompat.PRIORITY_LOW)
         if (open) b.addAction(closeAction(context, venue, symbol))
-        try { NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build()) } catch (_: SecurityException) {}
-        if (open) shown["$venue|$symbol"] = true
+        try {
+            NotificationManagerCompat.from(context).notify(idOf(venue, symbol), b.build())
+            posted[key] = sig
+        } catch (_: SecurityException) { posted.remove(key) }
+        if (open) shown[key] = true
     }
 
     /** Bumped when a position is closed from its card in the shade: the open app reloads its books at once. */
@@ -107,7 +128,7 @@ object PositionCards {
     /** Take down [symbol]'s card on [venue] ("Paper" / "Live"): the position is closed. */
     fun dismiss(context: Context, venue: String, symbol: String) {
         val key = "$venue|$symbol"
-        shown.remove(key); sources.remove(key); sourceQty.remove(key)
+        shown.remove(key); sources.remove(key); sourceQty.remove(key); posted.remove(key)
         runCatching { NotificationManagerCompat.from(context).cancel(idOf(venue, symbol)) }
     }
 
@@ -166,6 +187,8 @@ object PositionCards {
         val liveLoggedIn = Broker.loggedIn
         var liveBook: Broker.Positions? = null
         var ordersRead = false
+        // The order book as this pass read it (null: not read): what alone lets the widget call Zerodha's kept exact charges exact.
+        var watchOrders: List<Broker.OrderRow>? = null
         if (s.live && liveLoggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
             lastLive = book
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
@@ -176,6 +199,7 @@ object PositionCards {
                 val trades = Broker.trades()
                 val orders = Broker.orders()
                 ordersRead = true
+                watchOrders = orders
                 stale.forEach { p ->
                     Origins.livePosition(owners, trades, orders, p.symbol, p.product, p.qty)?.let { sources["Live|${p.symbol}"] = it }
                     sourceQty["Live|${p.symbol}"] = p.qty
@@ -188,7 +212,7 @@ object PositionCards {
         }
         // A card whose position vanished from the book entirely (a new session): no longer ongoing.
         shown.keys.filter { it !in now }.forEach { k ->
-            shown.remove(k)
+            shown.remove(k); posted.remove(k)
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
         anyOpen = now.isNotEmpty()
@@ -196,8 +220,8 @@ object PositionCards {
         // widget is placed, the switch is off, or none is working; screen off, about every 5 minutes), so a filled or
         // cancelled order leaves it. The read itself hands the book to the widget (Broker.orders).
         if (!ordersRead && s.live && liveLoggedIn && runCatching { com.optionslab.app.widget.OpenWidget.wantsOrders(context, true) }.getOrDefault(false))
-            runCatching { Broker.orders() }
+            runCatching { Broker.orders() }.getOrNull()?.let { watchOrders = it }
         // The "Open" widget from the books just read (no read of its own); a failed Zerodha read is shown as one.
-        runCatching { com.optionslab.app.widget.OpenWidget.fromWatch(context, s.live, liveLoggedIn, liveBook, paperSnap) }
+        runCatching { com.optionslab.app.widget.OpenWidget.fromWatch(context, s.live, liveLoggedIn, liveBook, paperSnap, watchOrders) }
     }
 }

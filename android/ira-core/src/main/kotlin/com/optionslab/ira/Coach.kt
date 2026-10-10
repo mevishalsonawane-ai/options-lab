@@ -144,7 +144,7 @@ object PositionTalk {
     }
 }
 
-/** The 15:35 spoken wrap-up (the owner's wish, 2026-10-02). Pure. */
+/** The 15:45 spoken wrap-up (the owner's wish, 2026-10-02). Pure. */
 object DaySummary {
     /**
      * "Wrap up my day", "how did my day go", "aaj ka summary": the wrap-up asked for at any hour. "Summarise the day",

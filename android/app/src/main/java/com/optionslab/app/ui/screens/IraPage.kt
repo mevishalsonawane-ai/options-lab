@@ -43,6 +43,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -65,17 +68,22 @@ import com.optionslab.ira.Market as IraMarket
 
 /**
  * Jarvis's Home: Ira first, the usual dashboard (prices, P&L, strategies) behind the second switch. The choice is
- * kept while the app runs.
+ * kept while the app runs. Over the Ira page, a one-row "What's new" header while changes are unseen ([WhatsNewOverPage]; the
+ * same list and "Got it" as the Dashboard's); [onGo]: a change's page, as Home's shortcuts (a change for the Ira page itself
+ * is no link there).
  */
 @Composable
-fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
+fun IraHome(orders: IraOrderPaths? = null, onGo: ((String) -> Unit)? = null, dashboard: @Composable () -> Unit) {
     val p = LocalPalette.current
     var showIra by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    // The Requests panel from Home (Boss, 5 Oct): its badge beside the switch; Back closes it.
+    var homeRequests by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = homeRequests) { homeRequests = false }
     // Jarvis: listening was left on - start it again now the app is on screen (Android allows it only then).
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && JarvisVoice.wanted) JarvisVoice.start(ctx) }
     // Voice off: the AI model is loaded while Boss reads the page, so the first typed question is answered sooner.
-    LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && !JarvisVoice.wanted) com.optionslab.app.ira.IraModel.preload() }
+    LaunchedEffect(Unit) { if (com.optionslab.app.BuildConfig.JARVIS && !JarvisVoice.listenOn) com.optionslab.app.ira.IraModel.preload() }
     // And the voice for typed replies, started ahead (the first reply is spoken at once).
     LaunchedEffect(Unit) { runCatching { com.optionslab.app.ira.JarvisSpeaker.warm(ctx) } }
     Column(Modifier.fillMaxSize()) {
@@ -85,10 +93,11 @@ fun IraHome(orders: IraOrderPaths? = null, dashboard: @Composable () -> Unit) {
                 Text(label, style = Type.label.copy(color = if (on) p.onPrimary else p.inkSoft, fontSize = 14.sp),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier.weight(1f).background(if (on) p.brass else Color.Transparent, RoundedCornerShape(9.dp))
-                        .clickable { showIra = ira }.padding(vertical = 8.dp))
+                        .clickable { showIra = ira; homeRequests = false }.padding(vertical = 8.dp))
             }
+            RequestsBadge(Modifier.align(Alignment.CenterVertically).padding(start = 6.dp)) { homeRequests = true }
         }
-        Box(Modifier.weight(1f)) { if (showIra) IraPage(orders) else dashboard() }
+        Box(Modifier.weight(1f)) { if (homeRequests) RequestsPanel(onClose = { homeRequests = false }) else if (showIra) WhatsNewOverPage(onGo) { IraPage(orders) } else dashboard() }
     }
 }
 
@@ -112,31 +121,26 @@ internal fun <T> iraSlice(key: Any? = null,
     return remember(all, key) { androidx.compose.runtime.derivedStateOf(policy) { pick(all.value) } }
 }
 
+/** [startInChat]: open on the chat, not the globe (a question asked from Settings → What can I ask? shows its reply). */
 @Composable
-fun IraPage(orders: IraOrderPaths? = null) {
+fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     val p = LocalPalette.current
     // The whole state is read only inside the conversation's list (its own scope); the page itself reads slices.
     val st by IraHub.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val snaps by iraSlice(policy = androidx.compose.runtime.referentialEqualityPolicy()) { it.snaps }
-    val working by iraSlice { it.busy || it.loading }
-    val waitingCount by iraSlice { it.pending.size }
     val newest by iraSlice { s -> s.messages.lastOrNull()?.let { it.id to it.text } }
     // The saved conversation is read off the main thread at the start: until then the chat says so (no examples).
     val memoryReady by IraHub.ready.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // "Don't listen" (Boss, 6 Oct): the same switch as in Settings - the globe shows it as a crossed-out ear (no words).
+    val deafNow by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var typed by remember { mutableIntStateOf(0) }
     // The orb shows the typed exchange first, else what the voice is doing (plain listening for the name is "idle").
-    val mode = if (typed != 0) typed else when (voice.mode) {
-        JarvisVoice.Mode.AWAKE -> 1; JarvisVoice.Mode.THINKING -> 2; JarvisVoice.Mode.SPEAKING -> 3; else -> 0 }
-    // At rest, say plainly whether Jarvis can hear its name ("Idle" read the same with the voice off).
-    val restLabel = when {
-        voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
-        voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
-        else -> "Idle"
-    }
-    fun orbLabel(m: Int) = if (m == 0) restLabel else listOf("Idle", "Listening", "Thinking", "Answering")[m]
+    // Thinking only for Boss's own question ([rememberGlobeMode]): background work never shows it, and it never sticks.
+    val mode = rememberGlobeMode(typed, drafting = false, askedWork = false)
+    fun orbLabel(m: Int) = globeWord(m, voice, deafNow)
     var focus by remember { mutableStateOf(IraMarket.NIFTY) }
     // Live prices every minute while Ira is on screen (and news every ten minutes, inside the hub). Battery (round 10): a
     // read begun under 50 s ago (the listening loop's, the feed check's) is shared, not made again ([com.optionslab.ira.LiveReadPace]).
@@ -146,6 +150,14 @@ fun IraPage(orders: IraOrderPaths? = null) {
     LaunchedEffect(newest) {
         if (newest != null) list.animateScrollToItem((list.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
     }
+    // "Catch me up" ([com.optionslab.ira.CatchUp]): the page was in front of Boss until it paused (screen off, another app)
+    // or was left - what was posted after that is what he missed. Only the moment is kept, never a note.
+    val seenOwner = LocalLifecycleOwner.current
+    DisposableEffect(seenOwner) {
+        val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_PAUSE) com.optionslab.app.ira.IraNotes.seen() }
+        seenOwner.lifecycle.addObserver(obs)
+        onDispose { seenOwner.lifecycle.removeObserver(obs); com.optionslab.app.ira.IraNotes.seen() }
+    }
 
     val ctxSpeak = androidx.compose.ui.platform.LocalContext.current
     fun send(q: String) {
@@ -154,27 +166,41 @@ fun IraPage(orders: IraOrderPaths? = null) {
         text = ""
         // The answer is ready at once (it is built from facts); the orb still shows a beat of thinking, then answers.
         // Read off the screen's thread (IraHub.askSoon); the spoken reply waits until the question is taken in, as before.
-        val asked = IraHub.askSoon(q)
-        // Jarvis: the reply to a typed question is said aloud too (the owner's switch, on by default).
-        scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctxSpeak, q) }
+        // Jarvis: the reply to a typed question is said aloud too (the owner's switch, on by default). [askAsTyped]: the
+        // question guide asks the same way.
+        askAsTyped(ctxSpeak, scope, q)
         typed = 2
         scope.launch { delay(600); typed = 3; delay(1_800); typed = 0 }
     }
 
     // Jarvis: only the globe until the owner opens the chat (the owner's wish, 2026-10-02); voice works either way.
-    var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!com.optionslab.app.BuildConfig.JARVIS) }
+    var chat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(startInChat || !com.optionslab.app.BuildConfig.JARVIS) }
+    // The Requests panel (Boss, 5 Oct): what waits for his yes, apart from the chat. Back closes it.
+    var requestsOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = requestsOpen) { requestsOpen = false }
+    if (requestsOpen) { RequestsPanel(onClose = { requestsOpen = false }); return }
+    // "What can I ask?" (06 Oct): the question guide from the "?" beside the question box. A tap asks the question exactly
+    // as typed ([send]) and closes it, back to the chat with the question in it; Back closes it too.
+    var guideOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = guideOpen) { guideOpen = false }
+    if (guideOpen) { AskGuideSheet(onAsk = { q -> guideOpen = false; send(q) }, onClose = { guideOpen = false }); return }
+    // "Today's notes" (06 Oct): what Jarvis posted by himself today, from the chip in the chat's header row. "Turn these off"
+    // only opens that switch in Settings → Jarvis (the row brought into view); Back closes it. Read only.
+    var notesOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = notesOpen) { notesOpen = false }
+    if (notesOpen) {
+        TodayNotesSheet(rememberTodayNotes(), onTurnOff = { key -> notesOpen = false; com.optionslab.app.ui.SettingFocus.open("jarvis", key) },
+            onClose = { notesOpen = false })
+        return
+    }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
         var quick by remember { mutableStateOf(false) }
         val ctx = androidx.compose.ui.platform.LocalContext.current
-        val writing by com.optionslab.app.ira.IraModel.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
-        // Analysing in the background (reading the market, a backtest, the model writing) shows as thinking too.
-        val orbMode = when {
-            mode == 0 && text.isNotEmpty() -> 1
-            mode == 0 && (working || writing.writing) -> 2
-            else -> mode
-        }
+        // Boss, 7 Oct: thinking is Boss's own question only (his backtest too) - the market read every minute and the
+        // model writing in the background show nothing ([com.optionslab.ira.GlobeThinking]).
+        val orbMode = rememberGlobeMode(typed, drafting = text.isNotEmpty(), askedWork = true)
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.Center)) {
                 Orb(vol = orbVol(snaps), trend = orbTrend(snaps[focus]), mode = orbMode,
@@ -188,28 +214,29 @@ fun IraPage(orders: IraOrderPaths? = null) {
                 scope.launch { asked.join(); com.optionslab.app.ira.JarvisSpeaker.replyTo(ctx, q) }
                 if (showChat) chat = true
             }
-            Text(orbLabel(orbMode).uppercase(),
-                style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
+            GlobeLabel(orbMode, Modifier.align(Alignment.TopCenter).padding(top = 18.dp))
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                val waiting = waitingCount
-                // Muted: said plainly on the globe, one tap to hear Jarvis again.
-                var mutedNow by remember { mutableStateOf(JarvisVoice.muted) }
-                com.optionslab.app.ui.PollWhileStarted { while (true) { mutedNow = JarvisVoice.muted; kotlinx.coroutines.delay(2_000) } }
-                if (mutedNow) BrassButton("🔇  Muted · tap to unmute") { JarvisVoice.muted = false; mutedNow = false }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MicButton("🎙  Talk")
-                    BrassButton(if (waiting > 0) "Open chat · $waiting waiting" else "Open chat") { chat = true }
-                }
+                // Boss, 7 Oct: "Don't listen" (an ear), the mic (hold to talk), mute and the chat as small icons in one
+                // row, no words; the mic greyed while the microphone is off. (No Requests below the globe: Boss, 7 Oct -
+                // it is in the chat's header and on Home.)
+                JarvisControlRow(chatOpen = false, onChat = { chat = true })
             }
         }
         if (com.optionslab.app.BuildConfig.JARVIS) ModelAsk()
         return
     }
     Column(Modifier.fillMaxSize()) {
-        if (com.optionslab.app.BuildConfig.JARVIS) Text("‹  Back to Jarvis", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 14.sp),
-            modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { chat = false }.padding(horizontal = 14.dp, vertical = 8.dp))
+        Row(Modifier.fillMaxWidth().background(if (com.optionslab.app.BuildConfig.JARVIS) Color.Black else Color.Transparent),
+            verticalAlignment = Alignment.CenterVertically) {
+            // Jarvis: the same icon row as on the globe (the chat icon closes the chat, back to the globe).
+            if (com.optionslab.app.BuildConfig.JARVIS) JarvisControlRow(chatOpen = true, onChat = { chat = false },
+                modifier = Modifier.padding(start = 4.dp))
+            Spacer(Modifier.weight(1f))
+            // Today's notes: what Jarvis said by himself today (in the header, so the question box keeps its room).
+            if (todayNotesShown()) TodayNotesChip(onOpen = { notesOpen = true }, modifier = Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp))
+            RequestsBadge(Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) { requestsOpen = true }
+        }
         // The keyboard is up: the globe steps aside so the question box and Ask keep their room.
         val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!imeOpen) Box(Modifier.fillMaxWidth().height(280.dp).background(Color.Black)) {
@@ -243,6 +270,8 @@ fun IraPage(orders: IraOrderPaths? = null) {
             // Its own slice (speed round 3): a new message or a busy flag no longer recomposes this card.
             item { val record by iraSlice { IraRecord.of(it) }; HowIraIsDoing(record) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
+            // Jarvis's weekly review: the newest week's three sentences, the whole review and the last 12 weeks (not IraGoldAlgo).
+            if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item { WeeklyReviewSlot() }
             if (st.messages.isEmpty() && memoryReady) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -260,16 +289,18 @@ fun IraPage(orders: IraOrderPaths? = null) {
             }
             if (st.messages.isNotEmpty()) item {
                 Text("Forget this conversation", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp),
-                    modifier = Modifier.clickable { IraHub.forgetConversation() }.padding(6.dp))
+                    modifier = Modifier.clickable { IraHub.forgetConversation(); com.optionslab.ira.ShortAnswer.clearCache() }.padding(6.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(start = 6.dp, end = 14.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // "What can I ask?": every question Jarvis answers, by topic (48dp; the box keeps the rest of the row).
+            AskGuideChip(onOpen = { guideOpen = true })
             OutlinedTextField(text, { text = it.take(300) }, placeholder = { Text("Ask Ira about the market") }, singleLine = true, modifier = Modifier.weight(1f),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send(text) }))
             Spacer(Modifier.width(8.dp))
-            if (com.optionslab.app.BuildConfig.JARVIS && text.isBlank()) MicButton("🎙")
-            else BrassButton("Ask", enabled = text.isNotBlank()) { send(text) }
+            // (The mic is in the icon row above: Boss, 7 Oct.)
+            BrassButton("Ask", enabled = text.isNotBlank()) { send(text) }
         }
     }
 }
@@ -285,7 +316,8 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
     val shortOn = remember { runCatching { com.optionslab.app.ira.IraTools.shortAnswers }.getOrDefault(true) }
     val brief = remember(m.text, asked, shortOn, keepWhole) {
         if (keepWhole) com.optionslab.ira.ShortAnswer.Short(m.text, null)
-        else runCatching { com.optionslab.ira.ShortAnswer.of(asked, m.text, shortOn) }.getOrDefault(com.optionslab.ira.ShortAnswer.Short(m.text, null))
+        // Speed, round 7: read once per (question, answer, choice) for the app's life, not each time the bubble comes back into the list.
+        else runCatching { com.optionslab.ira.ShortAnswer.cached(asked, m.text, shortOn) }.getOrDefault(com.optionslab.ira.ShortAnswer.Short(m.text, null))
     }
     var showDetails by remember { mutableStateOf(false) }
     val shownText = if (showDetails || brief.details == null) m.text else brief.line
@@ -295,6 +327,13 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
             modifier = Modifier.background(p.card, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
         if (brief.details != null) Text(if (showDetails) "Hide details" else "Details · or say \"more\"", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
             modifier = Modifier.clickable { showDetails = !showDetails }.padding(top = 4.dp))
+        // A request's whole words behind its chat line (a news trade's risk, IV, cautions, turn-downs, confidence).
+        m.details?.let { reqDetails ->
+            var showReqDetails by remember(m.id) { mutableStateOf(false) }
+            Text(if (showReqDetails) "Hide details" else "Details", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+                modifier = Modifier.clickable { showReqDetails = !showReqDetails }.padding(top = 4.dp))
+            if (showReqDetails) Text(reqDetails, style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 2.dp))
+        }
         if (m.fromIra && com.optionslab.app.BuildConfig.JARVIS && !m.writing) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
             Text("▶ Listen", style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 13.sp),
@@ -307,6 +346,7 @@ private fun Bubble(m: IraHub.Msg, orders: IraOrderPaths?, asked: String? = null)
         }
         m.proposal?.let { id -> ProposalActions(id) }
         m.action?.let { id -> ActionConfirm(id) }
+        if (m.fromIra && m.action == null && m.order == null && m.proposal == null) OfferButtons(m.id)
         if (m.writing) Text("Jarvis is writing this on the phone...", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
         m.draft?.let { d ->
             var showDraft by remember { mutableStateOf(false) }
@@ -422,32 +462,52 @@ internal fun VoiceSwitch() {
     }
     // The service stopped on its own ("Jarvis, stop listening", or the notification's Stop): the switch follows.
     LaunchedEffect(vs.mode) { if (vs.mode == JarvisVoice.Mode.OFF && !JarvisVoice.wanted) on = false }
+    // "Don't listen": the globe's ear and this switch are one setting; while it is on, listening's own switch waits.
+    val deafNow by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LedgerCard(title = "Voice") {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Listen for \"Jarvis\"", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { want ->
-                when {
-                    !want -> { JarvisVoice.wanted = false; on = false; JarvisVoice.stop(ctx) }
-                    !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (it needs Android 12 or later), so Jarvis " +
-                        "will not listen: your voice is never sent off the phone."
-                    JarvisVoice.permitted(ctx) -> begin()
-                    else -> ask.launch(android.Manifest.permission.RECORD_AUDIO)
-                }
-            })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.deaf") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Don't listen (microphone off)", style = Type.label.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = deafNow, onCheckedChange = { v ->
+                    note = null
+                    if (v) JarvisVoice.dontListen(ctx) else JarvisVoice.listenAgain(ctx)
+                }, modifier = Modifier.semantics { contentDescription = if (deafNow) "Don't listen is on: Jarvis's microphone is off" else "Don't listen is off" })
+            }
+        }
+        Note(if (deafNow) "Jarvis hears nothing: no \"Jarvis\", no follow-ups, no hold to talk, and Android's microphone dot stays off. He still speaks and you can still type. " +
+            "Only this switch or the crossed-out ear on the globe turns listening back on - never your voice, a chat message or a backup."
+            else "Switch the microphone off altogether (also: type \"don't listen\" or \"mat suno\"). Listening comes back only when you tap.")
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.wake") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Listen for \"Jarvis\"", style = Type.label.copy(color = if (deafNow) p.inkSoft else p.ink, fontSize = 15.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = on && !deafNow, enabled = !deafNow, onCheckedChange = { want ->
+                    when {
+                        !want -> { JarvisVoice.wanted = false; on = false; JarvisVoice.stop(ctx) }
+                        !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (it needs Android 12 or later), so Jarvis " +
+                            "will not listen: your voice is never sent off the phone."
+                        JarvisVoice.permitted(ctx) -> begin()
+                        else -> ask.launch(android.Manifest.permission.RECORD_AUDIO)
+                    }
+                })
+            }
         }
         VoiceStyle()
         var speakTyped by remember { mutableStateOf(com.optionslab.app.ira.JarvisSpeaker.speakTyped) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Say replies to typed questions aloud", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = speakTyped, onCheckedChange = { v ->
-                speakTyped = v; com.optionslab.app.ira.JarvisSpeaker.speakTyped = v; if (!v) com.optionslab.app.ira.JarvisSpeaker.stop() })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.typed") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Say replies to typed questions aloud", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = speakTyped, onCheckedChange = { v ->
+                    speakTyped = v; com.optionslab.app.ira.JarvisSpeaker.speakTyped = v; if (!v) com.optionslab.app.ira.JarvisSpeaker.stop() })
+            }
         }
         // On by itself with a headset or echo cancelling; Boss's own choice wins, and "Automatic" gives it back.
         var cutChoice by remember { mutableStateOf(JarvisVoice.cutInChoice) }
         val cutNow = remember(cutChoice) { JarvisVoice.cutInNow(ctx) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Let me cut in while Jarvis talks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = cutNow.on, onCheckedChange = { v -> JarvisVoice.cutInChoice = v; cutChoice = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.cutin") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Let me cut in while Jarvis talks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = cutNow.on, onCheckedChange = { v -> JarvisVoice.cutInChoice = v; cutChoice = v })
+            }
         }
         Note("Say \"Jarvis\" or \"stop\" while it speaks and it stops. " +
             (if (cutChoice == null) "Automatic: on with a headset or where the phone cancels its own voice (now ${cutNow.why.say}). "
@@ -455,48 +515,62 @@ internal fun VoiceSwitch() {
             "Some phones go silent when they listen while speaking: then Jarvis switches this off by itself.")
         if (cutChoice != null) androidx.compose.material3.TextButton({ JarvisVoice.cutInChoice = null; cutChoice = null }) { Text("Back to automatic") }
         var mute by remember { mutableStateOf(JarvisVoice.muted) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Mute Jarvis (replies on screen only)", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; if (v) { JarvisVoice.muteBy(com.optionslab.ira.VoiceMute.By.SETTINGS) } else { JarvisVoice.muted = false } })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.mute") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Mute Jarvis (replies on screen only)", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = mute, onCheckedChange = { v -> mute = v; if (v) { JarvisVoice.muteBy(com.optionslab.ira.VoiceMute.By.SETTINGS) } else { JarvisVoice.muted = false } })
+            }
         }
         Note("Or say \"Jarvis, mute\" and \"Jarvis, unmute\". A mute said by voice lasts until the end of the day.")
         // Boss, 5 Oct: answers short and precise, spoken and in the chat; detailed is the old way. Words only.
         var shortOn by remember { mutableStateOf(com.optionslab.app.ira.IraTools.shortAnswers) }
-        Text("Answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilterChip(selected = shortOn, onClick = { shortOn = true; com.optionslab.app.ira.IraTools.shortAnswers = true },
-                label = { Text("Short") })
-            androidx.compose.material3.FilterChip(selected = !shortOn, onClick = { shortOn = false; com.optionslab.app.ira.IraTools.shortAnswers = false },
-                label = { Text("Detailed") })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.answers") {
+            Column {
+                Text("Answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(selected = shortOn, onClick = { shortOn = true; com.optionslab.app.ira.IraTools.shortAnswers = true },
+                        label = { Text("Short") })
+                    androidx.compose.material3.FilterChip(selected = !shortOn, onClick = { shortOn = false; com.optionslab.app.ira.IraTools.shortAnswers = false },
+                        label = { Text("Detailed") })
+                }
+            }
         }
         Note(if (shortOn) "One precise line, spoken and in the chat. Say \"more\" or tap Details for the rest." else "The full answer in the chat; the first few sentences spoken.")
         // What Jarvis says aloud by himself (a display choice only: answers and safety warnings are always spoken).
         var speaksSel by remember { mutableStateOf(com.optionslab.app.ira.IraTools.speakChoice) }
-        Text("Jarvis speaks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 8.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            for (choiceItem in com.optionslab.ira.SpeakChoice.Choice.entries) {
-                androidx.compose.material3.FilterChip(selected = speaksSel == choiceItem,
-                    onClick = { speaksSel = choiceItem; com.optionslab.app.ira.IraTools.speakChoice = choiceItem },
-                    label = { Text(choiceItem.label) })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.speaks") {
+            Column {
+                Text("Jarvis speaks", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.padding(top = 8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    for (choiceItem in com.optionslab.ira.SpeakChoice.Choice.entries) {
+                        androidx.compose.material3.FilterChip(selected = speaksSel == choiceItem,
+                            onClick = { speaksSel = choiceItem; com.optionslab.app.ira.IraTools.speakChoice = choiceItem },
+                            label = { Text(choiceItem.label) })
+                    }
+                }
             }
         }
         Note("Answers to you and safety warnings are always spoken (unless muted or in quiet hours).")
         // Boss, 4 Oct: the phone's on-device recognizer did not hear "Jarvis"; the keyboard's voice typing does, fast.
         var google by remember { mutableStateOf(JarvisVoice.googleSpeech) }
         val vctx = androidx.compose.ui.platform.LocalContext.current
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Use Google's speech service", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = google, onCheckedChange = { v ->
-                google = v; JarvisVoice.googleSpeech = v
-                // Listening starts again from here (the app on screen) with the new ears.
-                if (JarvisVoice.wanted) { JarvisVoice.stop(vctx); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (JarvisVoice.wanted) JarvisVoice.start(vctx) }, 700) }
-            })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.google") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Use Google's speech service", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = google, onCheckedChange = { v ->
+                    google = v; JarvisVoice.googleSpeech = v
+                    // Listening starts again from here (the app on screen) with the new ears.
+                    if (JarvisVoice.wanted) { JarvisVoice.stop(vctx); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (JarvisVoice.wanted) JarvisVoice.start(vctx) }, 700) }
+                })
+            }
         }
         // Boss, 4 Oct: "ignore background noise, and hear only my voice".
         var onlyMe by remember { mutableStateOf(JarvisVoice.onlyBoss) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Answer only my voice", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = onlyMe, onCheckedChange = { v -> onlyMe = v; JarvisVoice.onlyBoss = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.onlyme") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Answer only my voice", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = onlyMe, onCheckedChange = { v -> onlyMe = v; JarvisVoice.onlyBoss = v })
+            }
         }
         Note(if (com.optionslab.app.ira.VoiceGuard.enrolled) "Words in other voices (TV, people nearby) are ignored. Your microphone is shared with noise reduction for this check."
             else "Teach me your voice first (above); until then this does nothing.")
@@ -511,34 +585,44 @@ internal fun VoiceSwitch() {
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics (for help)") }
         Note("Off: Jarvis hears you on this phone only. On: he listens through the phone's speech service (the one your keyboard's voice typing uses) - faster and better at hearing \"Jarvis\", but your speech may be sent to Google to be understood.")
         var brief by remember { mutableStateOf(com.optionslab.app.ira.IraTools.brief) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Short spoken answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = brief, onCheckedChange = { v -> brief = v; com.optionslab.app.ira.IraTools.brief = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.brief") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Short spoken answers", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = brief, onCheckedChange = { v -> brief = v; com.optionslab.app.ira.IraTools.brief = v })
+            }
         }
         Note("Only the key line is said; say \"Jarvis, tell me more\" for the rest. The full answer is always on screen.")
         var strict by remember { mutableStateOf(com.optionslab.app.ira.IraTools.wakeStrict) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Harder to wake", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = strict, onCheckedChange = { v -> strict = v; com.optionslab.app.ira.IraTools.wakeStrict = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.strict") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Harder to wake", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = strict, onCheckedChange = { v -> strict = v; com.optionslab.app.ira.IraTools.wakeStrict = v })
+            }
         }
         Note("Wakes only when \"Jarvis\" starts what you say: fewer false starts from the TV or other people.")
         var quiet by remember { mutableStateOf(JarvisVoice.quietHours) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Quiet hours 22:00 to 07:00", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = quiet, onCheckedChange = { v -> quiet = v; JarvisVoice.quietHours = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.quiet") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Quiet hours 22:00 to 07:00", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = quiet, onCheckedChange = { v -> quiet = v; JarvisVoice.quietHours = v })
+            }
         }
         Note("Nothing is said unasked at night (pop-ups instead); Jarvis still answers when you ask.")
         // Battery, round 1: Boss's own switch, off by default (off = listening exactly as before).
         var saver by remember { mutableStateOf(JarvisVoice.listenSaver) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Battery saver for listening", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = saver, onCheckedChange = { v -> saver = v; JarvisVoice.listenSaver = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.saver") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Battery saver for listening", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = saver, onCheckedChange = { v -> saver = v; JarvisVoice.listenSaver = v })
+            }
         }
         Note(com.optionslab.ira.ListenSaver.WHAT + " Alerts and stops never wait on listening.")
         var hin by remember { mutableStateOf(JarvisVoice.hindi) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-            Text("Spoken replies in Hindi", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
-            androidx.compose.material3.Switch(checked = hin, onCheckedChange = { v -> hin = v; JarvisVoice.hindi = v })
+        com.optionslab.app.ui.SettingSpot("jarvis.voice.hindi") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Spoken replies in Hindi", style = Type.label.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.weight(1f))
+                androidx.compose.material3.Switch(checked = hin, onCheckedChange = { v -> hin = v; JarvisVoice.hindi = v })
+            }
         }
         Note("The AI model translates each answer and every figure is checked (English is used when it cannot). Needs the model and the phone's offline Hindi voice.")
         JarvisVoice.heardText?.let { Note("Last heard: \"$it\"") }
@@ -713,24 +797,62 @@ private fun VoiceStyle() {
     }
 }
 
-/** Confirm / Cancel under something Jarvis will stop or close when the owner taps (one tap, no PIN: the owner's rule). */
+/**
+ * Yes / No under a request of Jarvis's - in the chat under its own message, in the Requests panel, on the pop-up's
+ * card. Tied to [id] alone: a tap answers that request only, never another waiting one, and only while it waits
+ * ([com.optionslab.ira.Requests.tapTarget]). Yes is [IraHub.confirm] with all its gates (the fingerprint for real money
+ * and the emergency exit, the live and proven-record checks inside it); No is [IraHub.cancelAction]. Answered, lapsed or
+ * gone: no buttons. Yes runs in the hub's own scope ([IraHub.confirmAsync]), never this card's: confirming takes the
+ * request off the list at once, the card leaves the screen, and a scope of its own would cancel the confirm mid-way.
+ */
 @Composable
-internal fun ActionConfirm(id: Long) {
+internal fun ActionConfirm(id: Long, yes: String = "Yes", no: String = "No") {
     val waiting by iraSlice(id) { id in it.pending }
-    val scope = rememberCoroutineScope()
     if (!waiting) return
+    fun mine(): Long? = com.optionslab.ira.Requests.tapTarget(id, IraHub.state.value.pending)
     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val activity = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
         if (IraHub.needsFingerprint(id) && activity != null) {
-            // A live Jarvis trade: real money, so the owner's fingerprint approves it.
-            BrassButton("Approve with fingerprint", tone = LocalPalette.current.oxblood) {
-                com.optionslab.app.security.BiometricGate.verify(activity, "Approve the live trade", "Jarvis places it on Zerodha") { ok ->
-                    if (ok) scope.launch { IraHub.confirm(id, fingerprint = true) }
+            // A live Jarvis trade (or the emergency exit): the owner's fingerprint approves it.
+            BrassButton("$yes · fingerprint", tone = LocalPalette.current.oxblood) {
+                com.optionslab.app.security.BiometricGate.verify(activity, "Approve the request", "Jarvis does it only after your fingerprint") { ok ->
+                    if (ok) mine()?.let { mineId -> IraHub.confirmAsync(mineId, fingerprint = true) }
                 }
             }
-        } else BrassButton("Confirm", tone = LocalPalette.current.oxblood) { scope.launch { IraHub.confirm(id) } }
-        BrassButton("Cancel", tone = LocalPalette.current.inkSoft) { IraHub.cancelAction(id) }
+        } else BrassButton(yes, tone = LocalPalette.current.oxblood) { mine()?.let { mineId -> IraHub.confirmAsync(mineId) } }
+        BrassButton(no, tone = LocalPalette.current.inkSoft) { mine()?.let { mineId -> IraHub.cancelAction(mineId, by = com.optionslab.ira.Requests.By.TAP) } }
     }
+}
+
+/**
+ * Yes / No under Jarvis's newest message when it ends offering a question ("BankNifty's levels next, Boss?", the morning
+ * "say yes for it"): Yes only asks that question, No ends the offer - nothing acts. Gone once superseded, ended or out of
+ * time, and never on a locked phone.
+ */
+@Composable
+internal fun OfferButtons(msgId: Long) {
+    val newestId by iraSlice { s -> s.messages.lastOrNull()?.id }
+    var tick by remember { mutableIntStateOf(0) }
+    if (newestId != msgId) return
+    // The offer's time runs out by itself: looked at again every 15 seconds while it is the newest message.
+    LaunchedEffect(msgId) { while (true) { delay(15_000); tick++ } }
+    val open = remember(newestId, tick) { newestId == msgId && runCatching { IraHub.offerOpen(msgId) }.getOrDefault(false) }
+    if (!open) return
+    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BrassButton("Yes") { if (IraHub.answerOffer(msgId, true)) tick++ }
+        BrassButton("No", tone = LocalPalette.current.inkSoft) { if (IraHub.answerOffer(msgId, false)) tick++ }
+    }
+}
+
+/** The Requests badge: "Requests 2" (a count only, nothing of what waits); none in IraGoldAlgo, where Jarvis only talks. */
+@Composable
+internal fun RequestsBadge(modifier: Modifier = Modifier, onOpen: () -> Unit) {
+    if (com.optionslab.app.BuildConfig.GOLD) return
+    val count by iraSlice { s -> IraHub.requestsOf(s).size }
+    val p = LocalPalette.current
+    Text(com.optionslab.ira.Requests.badge(count), style = Type.label.copy(color = if (count > 0) Color.White else p.inkSoft, fontSize = 13.sp),
+        modifier = modifier.background(if (count > 0) p.oxblood else p.card, RoundedCornerShape(12.dp)).clickable { onOpen() }
+            .padding(horizontal = 12.dp, vertical = 6.dp))
 }
 
 /**
@@ -925,27 +1047,72 @@ private fun Orb(vol: Float, trend: Float, mode: Int, onTap: (() -> Unit)? = null
     }
 }
 
+
+/** The voice's state as the globe draws it (0 rest, 1 listening, 2 thinking, 3 answering; listening for the name is rest). */
+internal fun voiceGlobe(m: JarvisVoice.Mode): Int = when (m) {
+    JarvisVoice.Mode.AWAKE -> com.optionslab.ira.GlobeThinking.LISTENING
+    JarvisVoice.Mode.THINKING -> com.optionslab.ira.GlobeThinking.THINKING
+    JarvisVoice.Mode.SPEAKING -> com.optionslab.ira.GlobeThinking.ANSWERING
+    else -> com.optionslab.ira.GlobeThinking.REST
+}
+
 /**
- * The mic: tap and talk to Jarvis, no "Jarvis" needed - it says "Yes, Boss?" and answers aloud. With listening off it
- * listens for that one question only. Asks for the microphone the first time.
+ * The globe's state (Boss, 7 Oct: THINKING showed at 09:05, market closed, nothing asked): the typed exchange ([typed]),
+ * else the voice; thinking only for Boss's own question - and [askedWork], his own backtest he waits on - never for
+ * the market read every minute or the model writing in the background ([com.optionslab.ira.GlobeThinking.globe]).
+ * The voice's thinking never sticks on the globe: after [com.optionslab.ira.GlobeThinking.MAX_MS] it rests (written once,
+ * by an effect after the wait - never in composition). [drafting]: a question being typed (listening).
  */
 @Composable
-private fun MicButton(label: String) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    var note by remember { mutableStateOf<String?>(null) }
-    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) JarvisVoice.talk(ctx) else note = "Jarvis needs the microphone to hear you."
+internal fun rememberGlobeMode(typed: Int, drafting: Boolean, askedWork: Boolean): Int {
+    val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val backtest by iraSlice { it.busy }
+    var staleOf by remember { mutableStateOf<JarvisVoice.VoiceState?>(null) }
+    LaunchedEffect(voice) {
+        if (voice.mode == JarvisVoice.Mode.THINKING) { delay(com.optionslab.ira.GlobeThinking.MAX_MS); staleOf = voice }
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        BrassButton(label) {
-            note = null
-            when {
-                !JarvisVoice.available(ctx) -> note = "This phone has no on-device speech recognizer (Android 12 or later needed)."
-                !JarvisVoice.permitted(ctx) -> ask.launch(android.Manifest.permission.RECORD_AUDIO)
-                !JarvisVoice.talk(ctx) -> note = "Jarvis could not start listening; try again."
-            }
+    val stale = voice.mode == JarvisVoice.Mode.THINKING && staleOf === voice
+    return com.optionslab.ira.GlobeThinking.globe(typed, voiceGlobe(voice.mode), stale, drafting, askedWork && backtest)
+}
+
+/** The globe's word for state [m]: at rest, plainly whether Jarvis can hear his name ("Mic off" with listening off). */
+internal fun globeWord(m: Int, voice: JarvisVoice.VoiceState, deaf: Boolean): String = when (m) {
+    1 -> "Listening"; 2 -> "Thinking"; 3 -> "Answering"
+    else -> when {
+        com.optionslab.app.BuildConfig.JARVIS && deaf -> "Mic off"
+        voice.mode == JarvisVoice.Mode.LISTENING -> "Say Jarvis"
+        voice.problem != null || voice.mode == JarvisVoice.Mode.OFF -> "Voice off"
+        else -> "Idle"
+    }
+}
+
+/** The word above the globe for state [mode]; mic off ("Don't listen") at rest adds a crossed-out microphone beside it. */
+@Composable
+internal fun GlobeLabel(mode: Int, modifier: Modifier = Modifier) {
+    val voice by JarvisVoice.state.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val deaf by JarvisVoice.deafState.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (com.optionslab.app.BuildConfig.JARVIS && deaf && mode == 0) {
+            MicGlyph(crossed = true, color = Color(0xFF4AA8FF)); Spacer(Modifier.width(6.dp))
         }
-        note?.let { Text(it, style = Type.label.copy(color = Color(0xFFB8C0E8), fontSize = 11.sp)) }
+        Text(globeWord(mode, voice, deaf).uppercase(),
+            style = Type.label.copy(color = Color(0xFF4AA8FF), fontSize = 12.sp, letterSpacing = 3.sp))
+    }
+}
+
+/** A small microphone, [crossed] out when Jarvis is not listening (decorative: its button or label says it in words). */
+@Composable
+internal fun MicGlyph(crossed: Boolean, color: Color) {
+    Canvas(Modifier.width(16.dp).height(18.dp).clearAndSetSemantics { }) {
+        val w = size.width; val h = size.height; val stroke = w * 0.11f
+        // The capsule, its cradle and the stand.
+        drawRoundRect(color, topLeft = Offset(w * 0.32f, 0f), size = androidx.compose.ui.geometry.Size(w * 0.36f, h * 0.58f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.18f, w * 0.18f))
+        drawArc(color, 0f, 180f, useCenter = false, topLeft = Offset(w * 0.16f, h * 0.22f),
+            size = androidx.compose.ui.geometry.Size(w * 0.68f, h * 0.52f), style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+        drawLine(color, Offset(w * 0.5f, h * 0.74f), Offset(w * 0.5f, h * 0.92f), stroke)
+        drawLine(color, Offset(w * 0.3f, h * 0.95f), Offset(w * 0.7f, h * 0.95f), stroke)
+        if (crossed) drawLine(color, Offset(w * 0.05f, h * 0.05f), Offset(w * 0.95f, h * 0.95f), stroke * 1.3f)
     }
 }
 
@@ -955,32 +1122,44 @@ fun JarvisSettingsPage() {
     com.optionslab.app.ui.Page {
         item { PageTitle("Jarvis settings", "Voice and the on-device AI model. Nothing you say or type leaves the phone.") }
         item { com.optionslab.app.ui.SettingSpot("jarvis.voice") { VoiceSwitch() } }
-        item { SoloCard() }
+        item { com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.SOLO_KEY) { SoloCard() } }
         item { com.optionslab.app.ui.SettingSpot("jarvis.automations") { AutomationsCard() } }
         item { com.optionslab.app.ui.SettingSpot("jarvis.model") { ModelCard() } }
     }
 }
 
-/** Solo (the owner's wish, 2026-10-03): Jarvis trades by himself on paper; the switch, the two-year test and the record. */
+/**
+ * Solo (the owner's wish, 2026-10-03; Solo (midday) since 06 Oct): Jarvis trades by himself on paper; the switch, the
+ * forward test at a glance ([SoloForwardGlance]: "x of 60" with its bar, the net, the drawdown against the switch-off line,
+ * today's state, the research line), the "not proven" label and the bar set in advance.
+ */
 @Composable
 private fun SoloCard() {
     val p = LocalPalette.current
     LedgerCard(title = "Solo: Jarvis trades by himself (paper)") {
-        var on by remember { mutableStateOf(com.optionslab.app.ira.IraSolo.on) }
+        // Solo's own state, not a copy: it shows off once Solo has switched itself off (the forward test's bar).
+        val on by com.optionslab.app.ira.IraSolo.onState.collectAsState()
+        LaunchedEffect(Unit) { com.optionslab.app.ira.IraSolo.refreshOn() }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(if (on) "Solo is on" else "Solo is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                Text("Paper account only - never real money. No strategy made in advance: every minute it reads the market, guesses the next 15 minutes and learns from what really happened. It trades (1 lot, one at a time, out after 15 minutes or by 15:10, a stop-loss 30% below the option's entry) only when it is sure and its own recent guesses have mostly been right. It stops for the day Rs 5,000 down, and pauses itself Rs 15,000 below its best.",
+                Text(if (on) "Solo (midday) is on" else "Solo (midday) is off", style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> on = v; com.optionslab.app.ira.IraSolo.on = v })
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.on = v })
         }
-        Note("The setup: a big 15-minute candle, then a 40% pullback that holds its low (or high); bought the candle's way, stop at that level, target twice the risk. Tested on two years of real option prices:")
-        com.optionslab.app.ira.IraSolo.BACKTEST.forEach { Note(it) }
-        Note("Honest reading: the index edge is real but small, and option costs and decay eat most of it - one year won, one lost. Treat Solo as a test on paper, not a money-maker yet.")
+        // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
+        var glance by remember { mutableStateOf<SoloGlanceRead?>(null) }
+        SoloForwardGlance(on, onRead = { glance = it }) { readSoloGlance(on) }
+        // The forward test set in advance, and the "not proven" label (the lines the glance shows are left out under it -
+        // only once it has been read; while it is not, or cannot be, the card keeps them).
+        val shown = glance
+        val lines = remember(on) { com.optionslab.app.ira.IraSolo.card() }
+        lines.filter { com.optionslab.app.BuildConfig.GOLD || shown == null || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
         val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
         Note(rec)
-        com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
+        // Why it switched itself off: said once - the glance's own line when it shows one, else the kept note.
+        if (shown?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
     }
 }
 
@@ -988,6 +1167,21 @@ private fun SoloCard() {
  * Jarvis's health (the owner's wish, 2026-10-03): everything it does by itself, each with its own switch and when it
  * last acted - one place to see and stop any of it.
  */
+/** A behaviour with its own switch beneath its group (e.g. Market alerts → skipped Liquidity breaks): on only while the group is. */
+@Composable
+private fun AutomationSubRow(a: com.optionslab.app.ira.Automations.Auto, groupOn: Boolean) {
+    val p = LocalPalette.current
+    var own by remember { mutableStateOf(com.optionslab.app.ira.Automations.ownSwitch(a)) }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 6.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(a.label, style = Type.label.copy(color = if (groupOn) p.ink else p.inkSoft, fontSize = 13.sp))
+            val group = com.optionslab.app.ira.Automations.groupOf(a)?.label ?: "Its group"
+            Text(a.what + (if (groupOn) "" else " ($group is off: this stays quiet.)"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+        }
+        androidx.compose.material3.Switch(checked = own, onCheckedChange = { v -> own = v; com.optionslab.app.ira.Automations.set(a, v) })
+    }
+}
+
 @Composable
 private fun AutomationsCard() {
     val p = LocalPalette.current
@@ -996,42 +1190,48 @@ private fun AutomationsCard() {
         // in Live, once their record is proven, each trade still asks him first and needs the fingerprint.
         val act = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
         var aiLive by remember { mutableStateOf(!com.optionslab.app.ira.IraNewsTrades.paperFirst) }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
-                Text(if (aiLive) "On: in Live, Jarvis's and Solo's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint."
-                    else "Off: Jarvis's and Solo's trades go on PAPER, even when the app is in Live.",
-                    style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+        com.optionslab.app.ui.SettingSpot("jarvis.ailive") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("AI trades go live", style = Type.label.copy(color = if (aiLive) p.oxblood else p.ink, fontSize = 14.sp))
+                    Text(if (aiLive) "On: in Live, Jarvis's trades go to Zerodha once their record is proven - each one asked first, approved with your fingerprint. Solo stays on paper always."
+                        else "Off: Jarvis's trades go on PAPER, even when the app is in Live (Solo always does).",
+                        style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                }
+                androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->
+                    if (!v) { aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+                    else if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
+                        com.optionslab.app.work.Alerts.error("AI trades go live is switched on with your fingerprint: set one up on the phone first.")
+                    else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's trades may go to Zerodha, each after your approval (Solo stays on paper)") { ok ->
+                        if (ok) { aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false } }
+                })
             }
-            androidx.compose.material3.Switch(checked = aiLive, onCheckedChange = { v ->
-                if (!v) { aiLive = false; com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
-                else if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
-                    com.optionslab.app.work.Alerts.error("AI trades go live is switched on with your fingerprint: set one up on the phone first.")
-                else com.optionslab.app.security.BiometricGate.verify(act, "AI trades go live", "Jarvis's and Solo's trades may go to Zerodha, each after your approval") { ok ->
-                    if (ok) { aiLive = true; com.optionslab.app.ira.IraNewsTrades.paperFirst = false } }
-            })
         }
         Note("Each runs on its own while IraAlgo watches the market. Nothing here opens a trade without asking you, except on paper (Solo, and Jarvis's own ideas when that switch is on); the guard and the trailing stop only add or raise stops.")
         com.optionslab.app.ira.Automations.Group.entries.forEach { g ->
             var on by remember { mutableStateOf(com.optionslab.app.ira.Automations.on(g)) }
             val last = remember(on) { com.optionslab.app.ira.Automations.last(g) }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
-                    Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
-                    Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
-                        style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+            // Its row a key of its own, so Today's notes' "Turn these off" brings this very switch into view.
+            com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.groupKey(g)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(g.label, style = Type.label.copy(color = p.ink, fontSize = 14.sp))
+                        Text(g.what, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+                        Text(last?.let { (t, w) -> "Last: ${t.toLocalDate()} ${"%02d:%02d".format(t.hour, t.minute)} - $w" } ?: "Has not acted yet.",
+                            style = Type.label.copy(color = p.inkSoft, fontSize = 11.sp))
+                    }
+                    androidx.compose.material3.Switch(checked = on, onCheckedChange = { v ->
+                        // The guard places real stop orders: switched on only with Boss's fingerprint (off needs nothing).
+                        if (v && g.fingerprint) {
+                            if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
+                                com.optionslab.app.work.Alerts.error("${g.label} is switched on with your fingerprint: set one up on the phone first.")
+                            else com.optionslab.app.security.BiometricGate.verify(act, g.label, "Jarvis may place stop orders on your positions") { ok ->
+                                if (ok) { on = true; com.optionslab.app.ira.Automations.set(g, true) } }
+                        } else { on = v; com.optionslab.app.ira.Automations.set(g, v) }
+                    })
                 }
-                androidx.compose.material3.Switch(checked = on, onCheckedChange = { v ->
-                    // The guard places real stop orders: switched on only with Boss's fingerprint (off needs nothing).
-                    if (v && g.fingerprint) {
-                        if (act == null || !com.optionslab.app.security.BiometricGate.fingerprintOn(act))
-                            com.optionslab.app.work.Alerts.error("${g.label} is switched on with your fingerprint: set one up on the phone first.")
-                        else com.optionslab.app.security.BiometricGate.verify(act, g.label, "Jarvis may place stop orders on your positions") { ok ->
-                            if (ok) { on = true; com.optionslab.app.ira.Automations.set(g, true) } }
-                    } else { on = v; com.optionslab.app.ira.Automations.set(g, v) }
-                })
             }
+            g.subs.forEach { a -> com.optionslab.app.ui.SettingSpot(com.optionslab.app.ira.IraNotes.subKey(a)) { AutomationSubRow(a, groupOn = on) } }
         }
         Note("Always on, with no switch: live prices stopped, the expiry-day heads-up, the cool-off after two losses, the backup reminder and the self-healing voice.")
     }

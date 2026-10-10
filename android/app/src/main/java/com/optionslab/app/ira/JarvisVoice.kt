@@ -73,7 +73,10 @@ class JarvisVoice : Service() {
          */
         fun announce(text: String, prompted: Boolean = false, urgent: Boolean = false, full: Boolean = false,
                      weight: com.optionslab.ira.SpeakChoice.Weight? = null, whole: Boolean = false): Boolean {
-            val v = instance?.get() ?: return false
+            val v = instance?.get()
+            // "Don't listen" (6 Oct): the ears are off, not the voice - with listening set on, his alerts and briefings are
+            // still said, through the plain voice ([JarvisSpeaker.aloud]); a reply he asked for goes its own way there.
+            if (v == null && (prompted || !wanted || !deaf || !com.optionslab.app.BuildConfig.JARVIS)) return false
             // Boss's "Jarvis speaks" choice (a display preference only): a reply, a safety warning, his own reminder or the
             // morning check is always said; an important note unless he chose "only answers"; a minor one only with "everything".
             val w = when {
@@ -90,7 +93,7 @@ class JarvisVoice : Service() {
             // Unasked on a locked phone (it may be overheard): never an amount, a P&L or a symbol - only that it is in
             // the chat (every caller has already put the full line there).
             val overheard = if (prompted) shortText else com.optionslab.ira.Overheard.said(shortText, runCatching { IraHub.locked() }.getOrDefault(true))
-            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v, "Jarvis", overheard) }; return true }
+            if (!prompted && quietNow()) { runCatching { JarvisPopup.show(v ?: IraHub.appContext()!!, "Jarvis", overheard) }; return true }
             // A long unasked briefing outside the hours Boss talks to him: its first sentence aloud, the rest in the chat
             // ([com.optionslab.ira.TalkHours]). Never a safety warning (urgent), a reply, the morning check or a
             // reminder (full); the voice only, nothing acts.
@@ -103,6 +106,14 @@ class JarvisVoice : Service() {
                 if (now == null) { note("an unasked note reached quiet hours while it waited: not said"); null }
                 else if (mayShorten) IraTools.talkAloud(now) else now
             })
+            // Not listening: said now through the plain voice (nobody is speaking into a turn), a warning over anything else.
+            if (v == null) {
+                if (muted) return false
+                val c = IraHub.appContext() ?: return false
+                val now = if (recheck == null) said else (runCatching { recheck() }.getOrNull() ?: return true)
+                JarvisSpeaker.aloud(c, now, flush = urgent)
+                return true
+            }
             // Not a reply to Boss's words (never timed as one); unless urgent, not said over him while he is speaking.
             v.main.post { if (urgent) { if (!v.stopped) v.say(said, "answer", reply = false) } else v.sayWhenFree(said, "answer", recheck = recheck) }
             return true
@@ -122,7 +133,7 @@ class JarvisVoice : Service() {
 
         /** For the diagnostics report: Jarvis's ears in full - settings, state, the voice check and the last 60 turns (never words). */
         fun report(context: Context?): String = buildString {
-            append("Listen for Jarvis: $wanted · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart} · battery saver for listening: $listenSaver (resting now: ${restingNow()})\n")
+            append("Listen for Jarvis: $wanted · don't listen: $deaf · running: ${instance?.get() != null} · started from the app on screen: ${instance?.get()?.visibleStart} · battery saver for listening: $listenSaver (resting now: ${restingNow()})\n")
             append("Ears: ${if (googleSpeech) "Google's speech service" else "on the phone only"} · language: ${instance?.get()?.lang} · voice taught: ${VoiceGuard.enrolled} · only my voice: $onlyBoss · muted: $muted\n")
             append("On-device recognition available: ${context?.let { c -> runCatching { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(c) }.getOrNull() }} · " +
                 "any recognizer: ${context?.let { c -> runCatching { SpeechRecognizer.isRecognitionAvailable(c) }.getOrNull() }}\n")
@@ -157,7 +168,8 @@ class JarvisVoice : Service() {
         fun diagnose(context: Context?, hint: Boolean = false): String {
             val out = ArrayList<String>()
             val v = instance?.get()
-            if (wanted && v == null) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
+            if (deaf) out += "\"Don't listen\" is on: my microphone is off and I hear nothing (your choice). I still speak; tap the crossed-out ear under the globe to let me hear you."
+            if (wanted && v == null && !deaf) out += "Listening is switched on but not running: open the Jarvis screen, or switch \"Listen for Jarvis\" off and on."
             // No on-device recognizer on the phone: Jarvis cannot hear at all (he listens on the phone only).
             if (v != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && runCatching { !SpeechRecognizer.isOnDeviceRecognitionAvailable(v) }.getOrDefault(false))
                 out += "This phone has no on-device speech recognition ready: update \"Speech Services by Google\" in the Play Store, then add English under Settings, System, Languages, On-device speech recognition."
@@ -232,6 +244,17 @@ class JarvisVoice : Service() {
             v.main.post { v.held = on; v.readyAt = SystemClock.elapsedRealtime(); if (on) { runCatching { v.rec?.cancel() }; v.listening = false; v.endTap() } else v.again(300) }
         }
 
+        /**
+         * Read-only: Jarvis has a yes-or-no question of his own waiting for Boss's answer (asked or about to be asked, its
+         * answer window not yet over). Nothing else may then invite a bare "yes" ([com.optionslab.ira.NextAsk]).
+         */
+        fun askingOpen(): Boolean {
+            val v = instance?.get() ?: return false
+            if (v.asking == null) return false
+            val until = v.askingUntil
+            return until == 0L || SystemClock.elapsedRealtime() < until
+        }
+
         /** [id] was answered elsewhere (a button, the Ira screen) or lapsed: stop waiting for it. */
         fun answered(id: Long) {
             val v = instance?.get() ?: return
@@ -275,6 +298,60 @@ class JarvisVoice : Service() {
         var wanted: Boolean
             get() = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean("jarvis.listen", false) }.getOrDefault(false)
             set(v) { keep(mapOf("jarvis.listen" to v), tightening = !v) }
+
+        /**
+         * "Don't listen" (Boss, 6 Oct: "so that he won't listen to all the conversations"): the microphone off altogether,
+         * over [wanted] - no wake word, no follow-ups, no cut-in, no Talk button, no voice teaching; the service stops, so
+         * Android's microphone dot goes off. Jarvis still speaks (his alerts through the plain voice, [announce]) and is
+         * still typed to. Kept on this phone across restarts and reboots, never in a backup or taken from one
+         * ([com.optionslab.ira.Upkeep.PRIVATE]: "jarvis.voice."). Switched on by the globe's button, Settings, or his
+         * words ([com.optionslab.ira.NoListen]); switched OFF by his tap only ([listenAgain]) - never by voice or a file.
+         * Unreadable settings count as "don't listen" (nothing heard rather than heard by mistake).
+         */
+        private const val DEAF_KEY = "jarvis.voice.nolisten"
+        private val _deaf = MutableStateFlow(false)
+        /** The switch as the screens show it (the globe and Settings follow the same one). */
+        val deafState: StateFlow<Boolean> get() { readDeaf(); return _deaf }
+        val deaf: Boolean get() = readDeaf()
+        /** Read from the settings each time (as the other switches are), the screens' copy kept in step. */
+        private fun readDeaf(): Boolean {
+            val d = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(DEAF_KEY, false) }.getOrDefault(true)
+            if (_deaf.value != d) _deaf.value = d
+            return d
+        }
+
+        /** Listening as Boss set it, and not stopped by "Don't listen": what everything that hears goes by. */
+        val listenOn: Boolean get() = wanted && !deaf
+
+        /**
+         * "Don't listen" on: kept at once (flushed - a tightening change), the listening stopped (the service, its recognizer,
+         * the shared capture), a voice teaching not started. [context]: to stop the service (else the running one stops itself).
+         */
+        fun dontListen(context: Context?) {
+            _deaf.value = true
+            keep(mapOf(DEAF_KEY to true), tightening = true)
+            note("don't listen: the microphone is off")
+            val v = instance?.get()
+            v?.main?.post { v.deafened() }
+            val c = context ?: v ?: IraHub.appContext()
+            c?.let { runCatching { stop(it) } }
+        }
+
+        /**
+         * Boss's tap (the globe's button or the Settings switch) - the only way back: listening goes on exactly as it was set
+         * before ([wanted]; off stays off). Never called from words, a file or a schedule.
+         */
+        fun listenAgain(context: Context) {
+            _deaf.value = false
+            keep(mapOf(DEAF_KEY to false), tightening = false)
+            note("listen again (Boss's tap)")
+            if (wanted) start(context)
+        }
+
+        /** Robolectric shares static state between tests: the switch read again from the settings. */
+        internal fun resetDeafForTest() { _deaf.value = false }
+        /** Tests only: the voice's state as the globe reads it (nothing listens or speaks). */
+        internal fun stateForTest(s: VoiceState) { _state.value = s }
 
         /**
          * Battery saver for listening (Boss's switch, OFF by default: off, listening is exactly as before). On: with the
@@ -332,7 +409,8 @@ class JarvisVoice : Service() {
         private const val EXTRA_VISIBLE = "ol.jarvis.visible"
 
         fun start(context: Context) {
-            if (!available(context) || !permitted(context)) return
+            // "Don't listen": nothing starts the microphone - not the app opening, a settings change or a restart.
+            if (deaf || !available(context) || !permitted(context)) return
             runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis start listening; try the switch again.") }
         }
@@ -344,6 +422,8 @@ class JarvisVoice : Service() {
         fun resume(context: Context) {
             if (!wanted) return
             val v = instance?.get()
+            // "Don't listen": one still running (it should not be) is stopped, never started.
+            if (deaf) { if (v != null) stop(context); return }
             if (v == null) { start(context); return }
             // Running, but started by Android in the background (after an update or a restart): with the microphone
             // allowed "only while using the app", Android gives such a service silence - no error, no sound (Boss,
@@ -357,6 +437,9 @@ class JarvisVoice : Service() {
 
         fun stop(context: Context) { context.stopService(Intent(context, JarvisVoice::class.java)) }
 
+        /** What the screens say while "Don't listen" is on. */
+        const val NOT_LISTENING = "Not listening: you switched my microphone off. Tap the crossed-out ear under the globe to let me hear you."
+
         const val ACTION_TALK = "com.optionslab.app.ira.JarvisVoice.TALK"
 
         /**
@@ -364,9 +447,41 @@ class JarvisVoice : Service() {
          * With listening off it listens just for that one question, then stops again. False when it cannot listen.
          */
         fun talk(context: Context): Boolean {
+            // "Don't listen": the Talk button does not open the microphone either.
+            if (deaf) { _state.value = VoiceState(problem = NOT_LISTENING); return false }
             if (!available(context) || !permitted(context)) return false
+            talkDropped = false
             return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_TALK).putExtra(EXTRA_VISIBLE, true)) }
                 .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis listen; try again with the app open.") }.isSuccess
+        }
+
+        const val ACTION_HOLD = "com.optionslab.app.ira.JarvisVoice.HOLD"
+
+        /**
+         * Hold to talk (Boss, 7 Oct): the mic pressed. As [talk] (the same checks, recognizer and speech choice), but
+         * silent - no "Yes, Boss?" - and the turn stays open while held: a pause sends nothing, the words are kept, and
+         * [talkEnd] asks them all at once ([com.optionslab.ira.HoldTalk]; capped at 60 s). False when it cannot listen.
+         */
+        fun holdTalk(context: Context): Boolean {
+            if (deaf) { _state.value = VoiceState(problem = NOT_LISTENING); return false }
+            if (!available(context) || !permitted(context)) return false
+            talkDropped = false
+            return runCatching { ContextCompat.startForegroundService(context, Intent(context, JarvisVoice::class.java).setAction(ACTION_HOLD).putExtra(EXTRA_VISIBLE, true)) }
+                .onFailure { _state.value = VoiceState(problem = "Android did not let Jarvis listen; try again with the app open.") }.isSuccess
+        }
+
+        /** The mic was let go before the service came up (the hold had not begun; nothing was heard): it is not opened. */
+        @Volatile private var talkDropped = false
+
+        /**
+         * Hold to talk (Boss, 7 Oct): the mic let go. [send]: the held turn closes now and all its words are asked once,
+         * the usual way (nothing heard: nothing is asked). False (a quick tap, the finger slid off): dropped - the turn is
+         * cancelled, nothing is sent, and a one-question listen stops. The wake word and switches are untouched.
+         */
+        fun talkEnd(send: Boolean) {
+            talkDropped = true
+            val v = instance?.get() ?: return
+            v.main.post { v.endTalk(send) }
         }
 
         /**
@@ -483,7 +598,7 @@ class JarvisVoice : Service() {
             runCatching { announce(text, weight = weight, whole = whole) }.getOrDefault(false)
 
         /** Robolectric shares static state between tests: the voice's own memory reset. */
-        internal fun resetForTest() { lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally() }
+        internal fun resetForTest() { lastHeld = null; cutStopTally = com.optionslab.ira.CutStops.Tally(); resetLangAskForTest() }
 
         /** Boss's cuts over Jarvis: how many, and how soon the voice went silent (durations only - [com.optionslab.ira.CutStops]). */
         @Volatile internal var cutStopTally = com.optionslab.ira.CutStops.Tally()
@@ -569,6 +684,25 @@ class JarvisVoice : Service() {
          * switch is never made to an English it lacks - which it may take silently and listen in another (round 20).
          */
         @Volatile internal var onDeviceLangs: List<String>? = null
+
+        /**
+         * Round 28: English (India) asked for once (aloud and in the chat) and taken by itself when the phone gets it
+         * ([com.optionslab.ira.ListenLanguage.arrival]) - codes and dates only, kept on the phone.
+         */
+        private const val LANG_ASK_KEY = "jarvis.voice.lang.ask"
+        @Volatile private var langAskKept: com.optionslab.ira.ListenLanguage.Ask? = null
+        internal val langAsk: com.optionslab.ira.ListenLanguage.Ask
+            get() = langAskKept ?: runCatching { com.optionslab.ira.ListenLanguage.loadAsk(com.optionslab.app.security.SecurePrefs.getString(LANG_ASK_KEY)) }
+                .getOrDefault(com.optionslab.ira.ListenLanguage.Ask()).also { langAskKept = it }
+        internal fun langAskSet(a: com.optionslab.ira.ListenLanguage.Ask) {
+            if (a == langAsk) return
+            langAskKept = a
+            runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf(LANG_ASK_KEY to com.optionslab.ira.ListenLanguage.saveAsk(a))) }
+        }
+        /** When the phone's on-device languages were last read for English (India) (elapsed ms; 0: not yet). */
+        @Volatile internal var langCheckedAt = 0L
+        /** Robolectric shares static state between tests: the language ask's memory reset. */
+        internal fun resetLangAskForTest() { langAskKept = null; langCheckedAt = 0L }
 
         /** Writes the hearing counts now (listening stopping). */
         internal fun hearingSave() {
@@ -758,7 +892,8 @@ class JarvisVoice : Service() {
             // A shared-capture turn that the recognizer opened and then never heard anything with (no words, no error) for
             // 12 s: this phone's recognizer cannot take our audio - back to its own microphone, for good.
             // (Not when speech began: the recognizer then did get our audio - a slow reading is not a broken capture.)
-            if (listening && tap != null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
+            // (Never mid-hold: a quiet hold - Boss thinking with the mic held - is no broken capture.)
+            if (listening && tap != null && hold == null && turnReadyAt > 0 && !turnHeardAny && !turnSpeech && now - turnReadyAt > 12_000 && !speaking) {
                 tapFailed = true
                 val n = silentShared + 1; silentShared = n
                 if (n >= 3) runCatching { com.optionslab.app.security.SecurePrefs.put(TAP_BROKEN, true) }
@@ -767,7 +902,7 @@ class JarvisVoice : Service() {
                 main.removeCallbacks(finish); runCatching { rec?.cancel() }; listening = false; endTap(); turnReadyAt = 0; again(300)
             }
             // Never while Boss is speaking into the turn (a reset then lost his words), unless it is stuck (45 s).
-            if (listening && com.optionslab.ira.ModelYield.mayResetTurn(listenedAt, bossSpeaking(), now)) {
+            if (listening && hold == null && com.optionslab.ira.ModelYield.mayResetTurn(listenedAt, bossSpeaking(), now)) {
                 // (Partial words read before the reset still count, as a lost turn does.)
                 val lost = com.optionslab.ira.Wake.lostTurn(7, turnPartial, awake())
                 note("turn timed out" + if (turnPartial != null) " (read words mid-turn)" else " (nothing read)")
@@ -779,6 +914,11 @@ class JarvisVoice : Service() {
             if (speaking && now - spokeAt > 60_000) { speaking = false; again() }
             // The mic button's one question was asked and answered (or never came): listening stops again.
             if (oneShot && !speaking && !awake() && !lateWaiting && _state.value.mode != Mode.THINKING && now - talkAt > 14_000) { stopSelf(); return }
+            // Thinking never sticks (Boss, 7 Oct): no answer left to wait for, or thinking for 45 s - back to listening.
+            if (_state.value.mode == Mode.THINKING && com.optionslab.ira.GlobeThinking.stale(now, thinkingAt, working(), speaking)) {
+                note("thinking had nothing left to wait for: back to listening")
+                _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING)
+            }
             // (Not inside a battery-saver rest: its own restart is already queued.)
             if (!listening && !speaking && !held && _state.value.mode != Mode.THINKING && now >= restUntil) again()
             // Self-healing: no listening turn for 3 minutes (the phone took the microphone, the recognizer died):
@@ -793,6 +933,8 @@ class JarvisVoice : Service() {
                 Automations.acted(Automations.Auto.SELFHEAL, "Restarted listening.")
                 again()
             }
+            // English (India) awaited: the phone's list read again, at most hourly (round 28).
+            runCatching { langCheck() }
             main.postDelayed(this, 5_000)
         }
     }
@@ -855,12 +997,37 @@ class JarvisVoice : Service() {
     /** What the recognizer heard last turn (for the voice check), then dropped. */
     private var lastHeard: ShortArray? = null
     /** The action Jarvis asked a yes or no about, heard until [askingUntil]. */
-    private var asking: Long? = null
+    @Volatile private var asking: Long? = null
     /** A trade needs Boss's own voice for its yes; a command (start, stop...) needs only a yes. */
     private var askingNeedsBoss = true
-    private var askingUntil = 0L
+    @Volatile private var askingUntil = 0L
     /** The words of the yes-or-no question about [asking], asked again when a yes is held ([com.optionslab.ira.AnswerWindow.hold]). */
     private var askingText: String? = null
+    /** The request Jarvis last asked about again by name, with more than one waiting ([com.optionslab.ira.Requests.pick]). */
+    private var requestFocus: Long? = null
+
+    /**
+     * Two or more requests waiting (Boss, 5 Oct): a bare yes or no picks none of them - Jarvis says how many and asks
+     * which; a request named is asked about again by itself, and only its next plain yes or no answers it (through the
+     * same confirm as ever). True when handled here; false leaves the yes or no to the usual handling.
+     */
+    private fun manyRequestsWaiting(id: Long, said: String?, yes: Boolean?): Boolean {
+        val waiting = runCatching { IraHub.pendingRequests().value }.getOrDefault(emptyList())
+        val pick = runCatching { com.optionslab.ira.Requests.pick(said.orEmpty(), yes, id, requestFocus, waiting) }
+            .getOrDefault(com.optionslab.ira.Requests.Pick.Pass)
+        when (pick) {
+            is com.optionslab.ira.Requests.Pick.Pass -> return false
+            is com.optionslab.ira.Requests.Pick.Ambiguous -> { note("a yes or no with ${pick.count} requests waiting: none picked"); say(pick.line, "question") }
+            is com.optionslab.ira.Requests.Pick.Reask -> {
+                // On a locked phone the request is not named aloud: how many wait, and the Requests panel after the unlock.
+                if (locked()) { say(com.optionslab.ira.Requests.ambiguousLine(waiting.count { it.voiced }), "question"); return true }
+                requestFocus = pick.id
+                asking = pick.id; askingText = pick.line; askingNeedsBoss = true; askingUntil = 0
+                say(pick.line, "question")
+            }
+        }
+        return true
+    }
     /**
      * What Jarvis last finished inviting an answer to ([com.optionslab.ira.AnswerWindow]): his own request's yes-or-no
      * question, or an offer of words (the morning check's "say yes for it"). A yes is only ever for the last one.
@@ -886,8 +1053,18 @@ class JarvisVoice : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { wanted = false; stopSelf(); return START_NOT_STICKY }
+        // "Don't listen": whatever started it (the notification's or lock screen's Talk, Android restarting a sticky
+        // service), no microphone - no recognizer is made, and it stops.
+        if (deaf) {
+            note("a start while \"don't listen\" is on: not listening")
+            _state.value = VoiceState(problem = NOT_LISTENING)
+            if (rec != null) deafened() else stopSelf()
+            return START_NOT_STICKY
+        }
         // The mic button with listening off: this one question only.
-        val talkNow = intent?.action == ACTION_TALK
+        // Hold to talk: the mic button's own start, silent and kept open while held.
+        val holdNow = intent?.action == ACTION_HOLD
+        val talkNow = intent?.action == ACTION_TALK || holdNow
         if (talkNow && rec == null) oneShot = !wanted
         if (!talkNow) oneShot = false                    // the switch turned on: listening stays on
         // Restarted by the system after a one-question listen with the switch off: do not listen.
@@ -912,6 +1089,9 @@ class JarvisVoice : Service() {
         }
         instance = java.lang.ref.WeakReference(this)
         restoreMuted()
+        // Hold to talk let go before the service came up: nothing to hear (a one-question listen stops again).
+        if (holdNow && talkDropped && oneShot) { stopSelf(); return START_NOT_STICKY }
+        if (holdNow && !talkDropped) beginHold()
         if (rec == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             rec = newRecognizer().also { it.setRecognitionListener(listener) }
             // The English that last gave words, not afresh each start (Boss, 5 Oct 08:53).
@@ -943,6 +1123,7 @@ class JarvisVoice : Service() {
             // when an answer needs it, and leaves memory after 10 minutes unused.)
             scope.launch(Dispatchers.Default) {
                 var n = 0
+                var screenLast: Boolean? = null
                 while (true) {
                     // Market hours on a trading day (battery round 1: an NSE holiday is not one - before, the clock alone was
                     // read, and a holiday weekday fetched prices every minute and the account every 30 s all session).
@@ -961,20 +1142,27 @@ class JarvisVoice : Service() {
                     // 5 minutes all night). An answer asked meanwhile reads afresh, as on a low battery.
                     // Battery (round 11): with the screen off and the words lane quiet (nothing held or armed), the account is
                     // read ahead about every 2 minutes, not every 30 s ([com.optionslab.ira.AccountWarmPace]). Words only.
-                    if ((open || n % (if (screen) 10 else 60) == 0) && IraHub.online()) runCatching {
+                    // Battery (round 17): market shut and the screen off, not at all (it was every 30 minutes all night and
+                    // weekend); at once on the first pass after the screen comes on ([com.optionslab.ira.OffHoursWarmPace]).
+                    // Learning (round 31): a quiet pass in market hours near a time Boss usually checks his P&L reads the account
+                    // ahead all the same, so his answer then is as of now ([com.optionslab.ira.CheckTimes]). A read only.
+                    if (com.optionslab.ira.OffHoursWarmPace.due(open, screen, n, screenLast) && IraHub.online()) runCatching {
                         val accountQuiet = !screen && com.optionslab.app.work.Tasks.wordsQuietNow() == true
-                        IraHub.warm(accountQuiet)
+                        IraHub.warm(IraTools.checkTimesQuiet(accountQuiet, open))
                     }
+                    screenLast = screen
                     n++
                     // Low battery and not charging: kept ready less often (answers then read afresh when asked).
                     kotlinx.coroutines.delay(com.optionslab.app.work.Battery.gap(this@JarvisVoice, 30_000))
                 }
             }
         }
-        if (talkNow) {
+        // The other Talks (the notification's, the lock screen's) greet as before; hold to talk listens silently.
+        val greeting = com.optionslab.ira.HoldTalk.greeting(hold = holdNow)
+        if (talkNow && greeting != null) {
             talkAt = SystemClock.elapsedRealtime()
             // Wait for the voice to be ready (the first time), then ask.
-            main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; called = true; say("Yes, Boss?") }, if (voiceReady) 0L else 800L)
+            main.postDelayed({ awakeUntil = SystemClock.elapsedRealtime() + AWAKE_MS + 4_000; called = true; say(greeting) }, if (voiceReady) 0L else 800L)
         }
         return if (oneShot) START_NOT_STICKY else START_STICKY
     }
@@ -1158,14 +1346,66 @@ class JarvisVoice : Service() {
                             langState.last?.takeIf { it.to == p && it.from == com.optionslab.ira.ListenLanguage.norm(was) }
                                 ?.let { IraActivity.add(com.optionslab.ira.ListenLanguage.line(it)) }
                         } }
+                        // English (India): asked for once, taken when it arrives (round 28) - after the pick above.
+                        main.post { langArrival(installed) }
                     }
                     override fun onError(error: Int) {}
                 })
+            langCheckedAt = SystemClock.elapsedRealtime()
+        }
+    }
+
+    /**
+     * While English (India) is awaited (seen missing), the phone's on-device list is read again at most hourly
+     * ([com.optionslab.ira.ListenLanguage.checkDue]) - on a recognizer of its own, made and dropped for the reading, so
+     * the listening one is never disturbed. Called from the watchdog.
+     */
+    private fun langCheck() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || stopped) return
+        val now = SystemClock.elapsedRealtime()
+        if (!com.optionslab.ira.ListenLanguage.checkDue(langAsk, langCheckedAt, now, googleSpeech)) return
+        langCheckedAt = now
+        val probe = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(this) }.getOrNull() ?: return
+        val done = runCatching {
+            probe.checkRecognitionSupport(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), ContextCompat.getMainExecutor(this),
+                object : android.speech.RecognitionSupportCallback {
+                    override fun onSupportResult(s: android.speech.RecognitionSupport) {
+                        val installed = s.installedOnDeviceLanguages.toList()
+                        onDeviceLangs = installed
+                        main.post { runCatching { probe.destroy() }; langArrival(installed) }
+                    }
+                    override fun onError(error: Int) { main.post { runCatching { probe.destroy() } } }
+                })
+        }.isSuccess
+        if (!done) runCatching { probe.destroy() }
+    }
+
+    /**
+     * The phone's on-device list read: [com.optionslab.ira.ListenLanguage.ASK_LINE] once (aloud and in the chat), or the
+     * move to English (India) when it has arrived ([com.optionslab.ira.ListenLanguage.SWITCHED_LINE]). Only a language
+     * code changes; never in a run whose English has given words ([langWorks]). Codes only in the trace.
+     */
+    private fun langArrival(installed: List<String>) {
+        if (stopped) return
+        val l = com.optionslab.ira.ListenLanguage
+        val r = runCatching { l.arrival(langAsk, langState, lang, installed, googleSpeech, hearingDay(), hhmm(), langWorks) }.getOrNull() ?: return
+        langAskSet(r.ask)
+        r.to?.let { to ->
+            val was = lang; lang = to; triedOtherLanguage = false
+            langCount { r.state }
+            note("$to now on this phone for on-device listening: $was -> $to")
+            r.state.last?.let { IraActivity.add(l.line(it)) }
+        }
+        r.say?.let { text ->
+            runCatching { IraHub.note(text) }
+            runCatching { announce(text, full = true) }
         }
     }
 
     private fun listen() {
         if (stopped || held || listening) return
+        // "Don't listen" switched on while this ran (it is being stopped): no new turn, not even one.
+        if (deaf) { deafened(); return }
         lastHeard = null                                 // a voice check only ever uses this turn's own audio
         turnInSpeech = speaking
         listenedAt = SystemClock.elapsedRealtime()
@@ -1176,8 +1416,10 @@ class JarvisVoice : Service() {
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             // End the turn soon after Boss stops speaking (recognizers that honour it answer sooner).
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 700L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 500L)
+            // Hold to talk: no end on a pause while the mic is held (let go, the turn is closed for it).
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, if (hold != null) com.optionslab.ira.HoldTalk.SILENCE_MS else 700L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, if (hold != null) com.optionslab.ira.HoldTalk.SILENCE_MS else 500L)
+        if (hold != null) i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, com.optionslab.ira.HoldTalk.SILENCE_MS)
         // Voice, round 27: lean the ears towards Jarvis's own trading words (Android 13+, RecognizerIntent.EXTRA_BIASING_STRINGS by its key; recognizers that ignore it are unchanged).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) runCatching {
             i.putStringArrayListExtra("android.speech.extra.BIASING_STRINGS", ArrayList<String>(com.optionslab.ira.ListenBias.words()))
@@ -1279,6 +1521,8 @@ class JarvisVoice : Service() {
         // turn is closed for it 0.7 s later (was 1.5 s: Boss, 4 Oct, "late response") (stopListening makes it give its result), not left to a 25 s reset.
         // A close already due sooner (the words stood still) is kept, never put off (Boss, 5 Oct: speed).
         override fun onEndOfSpeech() {
+            // Held: a pause is not the end - the turn stays open until the mic is let go.
+            if (hold != null) return
             // Boss, 5 Oct 09:57:05: "speech ended" logged twice in one turn - the recognizer says it again when our
             // close (stopListening) reaches it after its own end of speech. Only the first counts: once in the trace, and
             // the close already set for it is not set again.
@@ -1288,11 +1532,17 @@ class JarvisVoice : Service() {
             turnEndAt = now
             hushBeep(1_200)                               // the end beep
             if (!speaking) {
-                val wait = com.optionslab.ira.Turn.closeIn(now, finishAt)
+                val wait = com.optionslab.ira.Turn.closeIn(now, finishAt, com.optionslab.ira.Turn.unfinished(turnPartial))
                 main.removeCallbacks(finish); finishAt = now + wait; main.postDelayed(finish, wait)
             }
         }
         override fun onPartialResults(partialResults: Bundle?) {
+            // Held: the words are kept for the release; nothing closes the turn, cuts in or is answered early.
+            hold?.let { h ->
+                val w = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }
+                if (w != null) { h.partial(w); turnHeardAny = true }
+                return
+            }
             // Only words that changed restart the end-of-turn wait (a recognizer repeating the same reading pushed it back).
             var fresh = false
             partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.takeIf {
@@ -1345,7 +1595,8 @@ class JarvisVoice : Service() {
                 val nameOnly = asking == null && com.optionslab.ira.Wake.heard(first, awake()) is com.optionslab.ira.Wake.Heard.Awake
                 // Only the name: still closed, a little later - a lone "Jarvis" left to the recognizer's own silence often
                 // ended as "no match" and was lost (the mic button's turns are always closed, which is why they worked).
-                val wait = if (nameOnly) 1_800L else com.optionslab.ira.BossPace.endAfter(paceGaps)
+                // Words stopping mid-sentence ("Jarvis what is my"): closed no sooner than 1.8 s ([com.optionslab.ira.Turn.endAfter]).
+                val wait = if (nameOnly) 1_800L else com.optionslab.ira.Turn.endAfter(first, com.optionslab.ira.BossPace.endAfter(paceGaps))
                 finishAt = SystemClock.elapsedRealtime() + wait
                 main.postDelayed(finish, wait)
                 main.removeCallbacks(prepareAhead)
@@ -1358,6 +1609,15 @@ class JarvisVoice : Service() {
             main.removeCallbacks(finish)
             if (answeredEarly) { answeredEarly = false; return }      // already answered from its partial words
             listening = false
+            // Held: the recognizer closed its turn by itself (or for the release) - its words kept, then listen on or ask.
+            hold?.let { h ->
+                endTap()
+                val held = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+                // (The segment's audio, score and readings go with its words: the voice check, "faint" and read-backs.)
+                holdTurnEnded(h, held.firstOrNull { it.isNotBlank() },
+                    com.optionslab.ira.Sure.best(results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES), held.size), held)
+                return
+            }
             loudNoMatch = 0
             if (results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.any { it.isNotBlank() } == true) {
                 langWorks = true; val l = lang; langCount { com.optionslab.ira.ListenLanguage.gaveWords(it, l, hearingDay()) }
@@ -1388,6 +1648,28 @@ class JarvisVoice : Service() {
             main.removeCallbacks(finish)
             if (answeredEarly) { answeredEarly = false; return }      // the cancelled turn already answered: not a failure
             listening = false
+            // Held: a timeout or "no match" mid-hold is not the end (the words read mid-turn are kept); listen on after a
+            // growing wait (300, 600 ms), or ask once let go. Any other error, or a third in a row, ends the hold: its words
+            // heard so far are asked; none, "I didn't catch that." and the usual error handling below (the shared-audio
+            // fallback, the errors-in-row pace, a new recognizer) takes over.
+            var heldShared = false
+            hold?.let { h ->
+                heldShared = tap != null
+                endTap(); note("held turn ended (error $error)")
+                if (h.released) { holdTurnEnded(h, null); return }
+                // Our own close of the turn before the hold racing its error (as below): not a failure - listen on.
+                if (error == SpeechRecognizer.ERROR_CLIENT && SystemClock.elapsedRealtime() - stoppedAt < 3_000) { again(300); return }
+                // A timeout, "no match" (a pause) or a busy recognizer may pass: retried, at most 3 in a row.
+                val timeout = error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || error == SpeechRecognizer.ERROR_NO_MATCH ||
+                    error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY
+                val wait = h.turnFailed(timeout, lastHeard)
+                if (wait != null) { again(wait); return }
+                if (h.text() != null) { note("hold to talk: ended by errors"); sendHold(); return }
+                hold = null; main.removeCallbacks(holdCap); main.removeCallbacks(holdGiveUp); h.take()
+                awakeUntil = 0L; called = false
+                note("hold to talk: ended by errors, nothing heard")
+                say(com.optionslab.ira.HoldTalk.NOT_CAUGHT)
+            }
             // Boss, 4 Oct: "Jarvis" alone was caught while he spoke, then the final answer said "no match" (error 7) and
             // the name was lost - every turn. The name read mid-turn counts: as if the recognizer had said it.
             val partial = com.optionslab.ira.Wake.lostTurn(error, turnPartial, awake())
@@ -1401,7 +1683,7 @@ class JarvisVoice : Service() {
                 heard(listOf(partial), recovered = true)
                 return
             }
-            val shared = tap != null
+            val shared = tap != null || heldShared
             endTap(); lastHeard = null
             if (stopped) return
             // The recognizer would not take our audio: back to its own microphone (voice can ask, not trade).
@@ -1649,6 +1931,106 @@ class JarvisVoice : Service() {
         again(50)
     }
 
+    /**
+     * The mic let go ([talkEnd]). [send]: the open turn is closed now ([finish]: the words read so far, or the
+     * recognizer's final reading), answered as any spoken question. Otherwise the press is dropped: "Yes, Boss?" stops,
+     * the turn is cancelled unread, the awake window ends, and a one-question listen stops.
+     */
+    private fun endTalk(send: Boolean) {
+        if (stopped) return
+        // Let go: the hold's words are asked (no hold open - already asked at the 60 s cap - nothing more is done).
+        if (send) { releaseHold(); return }
+        // (No hold open: nothing to drop - the wake word's own turn and windows are left alone.)
+        if (hold == null) return
+        hold = null; main.removeCallbacks(holdCap); main.removeCallbacks(holdGiveUp)
+        main.removeCallbacks(finish); main.removeCallbacks(prepareAhead)
+        awakeUntil = 0L; called = false
+        if (listening) { runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null }
+        if (oneShot) { stopSelf(); return }
+        again(300)
+    }
+
+    /** The mic held now (hold to talk): its words so far; null when not held. */
+    private var hold: com.optionslab.ira.HoldTalk.Buffer? = null
+    /** Held 60 s: asked as if let go. */
+    private val holdCap = Runnable { if (hold?.released == false) { note("hold to talk: 60 s reached"); releaseHold() } }
+    /** Let go, and the recognizer's final reading never came: the words read so far are asked. */
+    private val holdGiveUp = Runnable {
+        val h = hold
+        if (h?.released == true) {
+            runCatching { rec?.cancel() }; listening = false; endTap()
+            // The open turn's words read mid-turn are its segment (with its audio for the voice check).
+            h.turnEnded(null, lastHeard)
+            sendHold()
+        }
+    }
+
+    /**
+     * The mic pressed (hold to talk): silent - no "Yes, Boss?" - Jarvis stops talking, any open turn (listening for the
+     * name) is closed unread and a held turn opens, its silences long. Asked by name, as the mic button always was.
+     */
+    private fun beginHold() {
+        main.removeCallbacks(finish); main.removeCallbacks(prepareAhead); main.removeCallbacks(holdGiveUp)
+        if (speaking) interrupt()
+        val now = SystemClock.elapsedRealtime()
+        hold = com.optionslab.ira.HoldTalk.Buffer(now)
+        talkAt = now
+        awakeUntil = now + com.optionslab.ira.HoldTalk.CAP_MS + AWAKE_MS; called = true
+        main.removeCallbacks(holdCap); main.postDelayed(holdCap, com.optionslab.ira.HoldTalk.CAP_MS)
+        // (The cancelled turn's own late "client" error, if the phone sends one, is not one of the hold's errors.)
+        if (listening) { stoppedAt = now; runCatching { rec?.cancel() }; listening = false; endTap(); lastHeard = null }
+        _state.value = VoiceState(Mode.AWAKE)
+        // (On a first start the recognizer is made next, and that start listens.)
+        if (rec != null) listen()
+    }
+
+    /**
+     * A held turn closed by the recognizer: [final] its reading (null: none), [sure] its score, [readings] all its readings;
+     * the turn's own audio ([lastHeard], just kept by [endTap]) goes with it - [listen] clears it for the next turn.
+     * Listen on while held; let go, ask.
+     */
+    private fun holdTurnEnded(h: com.optionslab.ira.HoldTalk.Buffer, final: String?, sure: Float? = null, readings: List<String> = emptyList()) {
+        when (h.turnEnded(final, lastHeard, sure, readings)) {
+            com.optionslab.ira.HoldTalk.Next.LISTEN -> again(if (final == null) 300L else 0L)
+            com.optionslab.ira.HoldTalk.Next.SEND -> sendHold()
+        }
+    }
+
+    /** Let go (or the cap): the open turn closes for its final reading, then all the hold's words are asked once. */
+    private fun releaseHold() {
+        val h = hold ?: return
+        if (h.released) return
+        h.release()
+        main.removeCallbacks(holdCap)
+        if (listening) {
+            stoppedAt = SystemClock.elapsedRealtime(); runCatching { rec?.stopListening() }
+            main.postDelayed(holdGiveUp, com.optionslab.ira.HoldTalk.RELEASE_WAIT_MS)
+        } else sendHold()
+    }
+
+    /** The hold's words asked once, as one spoken question (the usual way, by name); nothing heard, nothing asked. */
+    private fun sendHold() {
+        val h = hold ?: return
+        hold = null
+        main.removeCallbacks(holdCap); main.removeCallbacks(holdGiveUp)
+        val q = h.take()
+        if (q == null) { note("hold to talk: nothing heard"); awakeUntil = 0L; called = false; again(); return }
+        // (A count only in the trace, never the words.)
+        note("hold to talk: asked, " + q.split(' ').size + " words")
+        // A yes-or-no question waiting: only a short hold is its answer ([com.optionslab.ira.HoldTalk.shortAnswer]) - a long
+        // ramble with an "ok" in it is never a yes. Asked to say yes or no; the question stays open.
+        if (asking != null && SystemClock.elapsedRealtime() < askingUntil && !com.optionslab.ira.HoldTalk.shortAnswer(q)) {
+            note("hold to talk: too long for a yes or no")
+            awakeUntil = 0L; called = false
+            say(com.optionslab.ira.HoldTalk.SAY_YES_OR_NO, "question")
+            return
+        }
+        remember(q)
+        // The voice check hears the hold's segment with the most words (each new turn of the hold cleared the last's).
+        lastHeard = h.audio
+        heard(h.alternatives().ifEmpty { listOf(q) }, sure = h.sure, spliced = h.spliced())
+    }
+
     /** Cut in on: Jarvis stops talking and waits for the owner's question. */
     private fun interrupt() {
         if (!speaking) return
@@ -1695,8 +2077,11 @@ class JarvisVoice : Service() {
     /**
      * [sure]: the recognizer's score for its best reading ([com.optionslab.ira.Sure]; null: none, or words read mid-turn).
      * A faint one only ever lets words go (a follow-up without the name, a soft misreading of the name, a yes).
+     * [spliced]: a hold whose words came from more than one recognizer turn - the voice check heard only one of them, so
+     * an order, a risky command or a yes that needs Boss's voice is never taken as voice-verified (the on-screen
+     * Approve, or saying it again in one go, instead).
      */
-    private fun heard(alternatives: List<String>, recovered: Boolean = false, sure: Float? = null) {
+    private fun heard(alternatives: List<String>, recovered: Boolean = false, sure: Float? = null, spliced: Boolean = false) {
         // While Jarvis talks (or the turn began while it talked) it hears itself too: only its name counts then.
         val cutIn = speaking || turnInSpeech
         // Just woken ("Yes, Boss?" said, now finished): the question may have started over those two words - it is
@@ -1733,6 +2118,7 @@ class JarvisVoice : Service() {
                 say(com.optionslab.ira.AnswerWindow.hold(askingText), "question")
                 return
             }
+            if (manyRequestsWaiting(id, alternatives.firstOrNull(), yes)) return
             if (yes != null) {
                 // A faint yes (the room, the TV) is not a yes: anything unclear is not a yes. The question stays open.
                 if (yes && com.optionslab.ira.Sure.faintYes(sure)) { note("a faint yes (${com.optionslab.ira.Sure.say(sure)}): not taken"); again(); return }
@@ -1741,18 +2127,18 @@ class JarvisVoice : Service() {
                 // Only Boss's voice approves a trade; a no from anyone is still a no.
                 // "Answer only my voice": a yes in another voice never approves anything (a no from anyone still cancels).
                 if (yes && onlyBoss && VoiceGuard.enrolled && lastHeard != null && !VoiceGuard.isBoss(lastHeard)) { note("a yes in another voice: ignored"); again(); return }
-                if (yes && askingNeedsBoss && !boss()) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
+                if (yes && askingNeedsBoss && (spliced || !boss())) { say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say yes again, or tap Approve.", "question"); return }
                 // Whether a "no"'s words may be read for Boss's reason: his voice when enrolled (judged now, on this turn's audio).
                 val bossNo = !yes && (!VoiceGuard.enrolled || (lastHeard != null && VoiceGuard.isBoss(lastHeard)))
                 asking = null
-                _state.value = VoiceState(Mode.THINKING)
-                scope.launch {
+                think()
+                confirmJob = scope.launch {
                     // The emergency exit takes Boss's own voice in place of the fingerprint (checked just above).
-                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id)) } ?: "That had already lapsed; nothing was placed."
+                    val r = if (yes) withContext(Dispatchers.Default) { IraHub.confirm(id, ownerVoice = askingNeedsBoss && IraHub.isExit(id), by = com.optionslab.ira.Requests.By.VOICE) } ?: IraHub.alreadyLine(id, "That had already lapsed; nothing was placed.")
                         // (His words for the no go with it: a reason in them, "no, too late in the day", is noted - its kind
                         // only, and only in Boss's own voice when it is enrolled - a no with no voice heard is not his reason; a
                         // no from anyone still cancels.)
-                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }); "Rejected. Nothing was placed." }
+                        else { IraHub.cancelAction(id, said = alternatives.firstOrNull()?.takeIf { bossNo }, by = com.optionslab.ira.Requests.By.VOICE); "Rejected. Nothing was placed." }
                     // An order's result is read back as it is: its prices exact, never rounded for the ear.
                     say(com.optionslab.ira.Address.boss(com.optionslab.ira.Wake.spoken(r)), "answer")
                 }
@@ -1849,13 +2235,16 @@ class JarvisVoice : Service() {
                 }
                 // Muting, unmuting and the reply language are not actions: a follow-up "mute" works without the name.
                 val voiceOnly = parsedQ.command?.kind in VOICE_KINDS
-                val acts = !voiceOnly && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
+                // "Jarvis, don't listen": it only lowers what is heard, so a locked phone takes it too - but with the name
+                // (a stray follow-up must not switch the ears off until Boss's tap).
+                val earsOff = parsedQ.command?.kind == com.optionslab.ira.Command.Kind.LISTEN_OFF && com.optionslab.ira.Topic.ORDER !in topics
+                val acts = !voiceOnly && !earsOff && (com.optionslab.ira.Topic.COMMAND in topics || com.optionslab.ira.Topic.ORDER in topics)
                 // Locked phone: questions only; the account needs Boss's own voice.
                 // Mute, unmute and the voice check are not actions: they work on a locked phone too.
-                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
+                val lockedNo = if (locked()) com.optionslab.ira.LockRule.refuse(true, acts || com.optionslab.ira.Topic.COMMAND in topics && !voiceOnly && !earsOff && parsedQ.command?.kind != com.optionslab.ira.Command.Kind.VOICE_CHECK,
                     com.optionslab.ira.Topic.ACCOUNT in topics, com.optionslab.ira.Topic.ACCOUNT in topics && boss()) else null
                 if (lockedNo != null) say(lockedNo)
-                else if (!named && acts) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or tap the mic.") }
+                else if (!named && (acts || earsOff)) { IraTools.count("nameFirst"); say(if (recovered && called0) "Boss, I only caught part of that. Say it again with my name." else "Boss, to do that call me first: say my name, or hold the mic.") }
                 else {
                     // Trades, and commands that add risk (live mode, kill switch off, autopilot, starting arms), need
                     // Boss's own voice; without it a command is asked as a yes or no instead of done at once, and
@@ -1864,7 +2253,8 @@ class JarvisVoice : Service() {
                     // Loosening one of the app's limits (more lots, a bigger loss limit, a limit off) is Boss's alone.
                     val loosens = cmd != null && runCatching { IraActions.loosens(cmd) }.getOrDefault(true)
                     val risky = cmd != null && (!cmd.kind.reduces || loosens)
-                    val verified = (com.optionslab.ira.Topic.ORDER in topics || risky) && boss()
+                    // A hold spliced from several recognizer turns is never voice-verified (the check heard one of them).
+                    val verified = (com.optionslab.ira.Topic.ORDER in topics || risky) && !spliced && boss()
                     when {
                         com.optionslab.ira.Topic.ORDER in topics && !verified ->
                             say(VoiceGuard.blocked() ?: "Boss, that didn't sound like you, so I won't place it. Say it again, or use the Ira screen.")
@@ -1965,6 +2355,32 @@ class JarvisVoice : Service() {
 
     /** The answer being worked out (cancelled by "Jarvis, stop"). */
     private var answerJob: kotlinx.coroutines.Job? = null
+    /** A spoken yes or no being carried out (its result is said when done). */
+    private var confirmJob: kotlinx.coroutines.Job? = null
+    /** When the voice began thinking about Boss's question ([com.optionslab.ira.GlobeThinking]: it never sticks). */
+    @Volatile private var thinkingAt = 0L
+
+    /** Thinking about Boss's own question (only then: background work never shows it). */
+    private fun think() { thinkingAt = SystemClock.elapsedRealtime(); _state.value = VoiceState(Mode.THINKING) }
+
+    /** Boss's question or his yes or no is still being worked out. */
+    private fun working(): Boolean = answerJob?.isActive == true || confirmJob?.isActive == true
+
+    /**
+     * The answer was a news trade's yes-or-no question ([IraHub.asksYesNo]): it is asked aloud by [askYesNo] when the hub
+     * made it while Jarvis listened (queued on this thread before now). Nobody asked it (made while he was not listening)
+     * and no other question waits: asked here, the same way. Either way thinking ends now - never left stuck in it.
+     */
+    private fun yesNoAfterAnswer(id: Long) {
+        main.post {
+            if (stopped) return@post
+            if (asking == null) IraHub.requestAsk(id)?.let { shall ->
+                asking = id; askingText = shall; askingNeedsBoss = true; askingUntil = 0
+                sayWhenFree(shall, "question")
+            }
+            if (_state.value.mode == Mode.THINKING && !speaking) { _state.value = VoiceState(if (awake()) Mode.AWAKE else Mode.LISTENING); if (!listening) again() }
+        }
+    }
     /** A slow answer Boss was told is coming: the mic button's one-question listen is not ended before it. */
     @Volatile private var lateWaiting = false
 
@@ -1973,7 +2389,7 @@ class JarvisVoice : Service() {
         // From Boss's last word (Boss, 5 Oct): the turn's closing wait and the recognizer's final reading count too.
         heardAt = com.optionslab.ira.Turn.spokeEnd(turnPartialAt, turnEndAt, SystemClock.elapsedRealtime()); replyClock.heard(heardAt)
         learnPace()
-        _state.value = VoiceState(Mode.THINKING)
+        think()
         // Speed, round 4: this question's stages timed from Boss's last word ([com.optionslab.ira.AskStages]; durations only).
         val timed = IraHub.askStages.begin(heardAt, voice = true)
         askTimed = timed
@@ -2016,20 +2432,26 @@ class JarvisVoice : Service() {
             // How long Boss waited, for the diagnostics (Boss, 4 Oct: "getting late response").
             if (a != null) note("answer ready %.1f s after the words".format(java.util.Locale.ENGLISH, (SystemClock.elapsedRealtime() - heardAt) / 1000.0))
             val o = a?.order
-            // A suggested trade is asked aloud by itself (yes or no): nothing more to say here.
-            if (a?.action != null && IraHub.asksYesNo(a.action)) return@launch
+            // A suggested trade is asked aloud by itself (yes or no): nothing more to say here. Never left thinking (Boss,
+            // 7 Oct): the question is asked now if nobody has asked it (asked by the hub only while Jarvis listened), and
+            // thinking ends either way - queued behind this answer, the hub's own asking is said as before.
+            if (a?.action != null && IraHub.asksYesNo(a.action)) { yesNoAfterAnswer(a.action); return@launch }
             // The answer's full text (as in the chat), kept with what is said so "go on" can say the rest after a cut.
             var full: String? = null
             // The words already shaped for the speech engine ([com.optionslab.ira.SpokenReply.Said.shaped]): not shaped again.
             var shaped = false
             // The question read once here, for "tell me more" and the account below (it used to be read for each).
             val asked by lazy { com.optionslab.ira.Ask.parse(q) }
+            // The answer ends offering the question Boss usually asks next ([com.optionslab.ira.NextAsk]): an invitation (an
+            // OFFER) whatever its words, even when the short line leaves the offer in the chat - so a yes after it is never
+            // taken for an older request still waiting for his yes or no ([com.optionslab.ira.AnswerWindow]).
+            val offered = a != null && runCatching { IraTools.nextAskOfferIn(a.text) }.getOrDefault(false)
             say(when {
                 a == null -> if (late) "Boss, I could not finish what you asked earlier. Please ask me again." else "I could not work that out."
                 o != null && o.missing.isEmpty() && o.refusal == null -> "I have put that order on the Ira screen. Nothing is sent until you confirm it there."
                 a.action != null -> {
                     // Asked aloud instead of a button hidden in the chat: "Shall I stop ORB? Yes or no?"
-                    val shall = com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
+                    val shall = IraHub.requestAsk(a.action) ?: com.optionslab.ira.Address.boss("Shall I " + a.text.removePrefix("Tap Confirm to ").trimEnd('.') + "? Yes or no?")
                     asking = a.action; askingText = shall; askingNeedsBoss = IraHub.isExit(a.action); askingUntil = 0
                     say(shall, "question")
                     return@launch
@@ -2054,7 +2476,10 @@ class JarvisVoice : Service() {
                         echo = echo, late = late,
                         // Short answers (Boss's choice, the default): one precise line; "go on" / "more" gives the rest.
                         // Never an action's, confirm's or command's result ([IraHub.Msg.whole]; review, 5 Oct).
-                        short = !a.whole && runCatching { IraTools.shortAnswers }.getOrDefault(true))
+                        short = !a.whole && runCatching { IraTools.shortAnswers }.getOrDefault(true),
+                        // A kind Boss usually asks "more" after: said in full straight away, not the short line first
+                        // ([com.optionslab.ira.MoreAfter]; never on a locked phone - none passed then). Length only.
+                        fuller = { if (locked()) emptyList() else IraTools.moreAfterLearnedNow() })
                     // A question that named no index, read for the one Boss usually means ([com.optionslab.ira.UsualIndex]):
                     // "BankNifty, as usual:" before the answer, so he hears which index it is for (the chat's note says it
                     // in full). Speech wording only: never on a locked phone, never before a warning, never on a late answer.
@@ -2080,7 +2505,7 @@ class JarvisVoice : Service() {
             }, "answer", full = full,
                 // Said on an unlocked phone, any answer may hold Boss's side (make the case, his reasons): "go on" says its
                 // rest only while the phone is still unlocked (review, 5 Oct).
-                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in asked.topics, shaped = shaped)
+                account = !locked() || com.optionslab.ira.Topic.ACCOUNT in asked.topics, shaped = shaped, offer = offered)
         }
     }
 
@@ -2100,7 +2525,7 @@ class JarvisVoice : Service() {
      */
     /** [reply]: these words answer what Boss just said (timed from his words to their first sound); false for unasked ones. */
     private fun say(words: String, id: String = "say", full: String? = null, account: Boolean = false, slow: Boolean = false, keep: Boolean = true,
-                    reply: Boolean = true, shaped: Boolean = false) {
+                    reply: Boolean = true, shaped: Boolean = false, offer: Boolean = false) {
         // The voice first: a model rewrite under way gives the processor back before the speech engine starts (5 Oct).
         runCatching { IraModel.yieldToVoice() }
         // Figures as a trader says them: a lakh or more in lakh / crore, option symbols as words ([com.optionslab.ira.SayAs]).
@@ -2120,7 +2545,9 @@ class JarvisVoice : Service() {
         sayingFull = if (id == "answer") full else null; sayingAccount = account
         sayingReply = reply && (id == "answer" || id == "question")
         sayingText = text; reachedAt = -1
-        val invited = com.optionslab.ira.AnswerWindow.invites(words)
+        // [offer]: the caller knows these words end with an offer (the next question, [com.optionslab.ira.NextAsk]) - an
+        // invitation whatever the words say; else read from the words themselves.
+        val invited = offer || com.optionslab.ira.AnswerWindow.invites(words)
         // Muted: the words go on screen as a pop-up instead (answers and questions only; "One moment" is dropped).
         if (muted && !text.startsWith("Voice on")) {
             if (id == "answer" || id == "question") runCatching { JarvisPopup.show(this, "Jarvis (muted)", "${full ?: words}\n\nSay \"Jarvis, unmute\" to hear me.") }
@@ -2257,6 +2684,28 @@ class JarvisVoice : Service() {
         lastInvite = com.optionslab.ira.AnswerWindow.ended(false, true, lastInvite)
     }
 
+    /**
+     * A newer answer invited Boss's yes (an offer) while Jarvis's own yes-or-no question about [asking] was open: that
+     * question's answer window ends now - no yes is taken for the request until it is asked again - and, while the
+     * request still waits, its own question is asked again after the answer, so the next yes or no is that very
+     * question's (the last thing invited). Lapsed or answered elsewhere: nothing waits, and it is dropped. Never approves
+     * anything itself; every confirm and fingerprint step stays as it was.
+     */
+    private fun supersedeAsk() {
+        val id = asking ?: return
+        // Only a question still being asked (its window not yet begun: 0) or with its answer window still open is asked
+        // again; one whose window closed long ago is stale - an offer said now does not bring it back.
+        val windowEnd = askingUntil
+        if (windowEnd != 0L && windowEnd < SystemClock.elapsedRealtime()) return
+        askingUntil = 0L
+        val text = askingText
+        if (text != null && runCatching { IraHub.waitsFor(id) }.getOrDefault(false)) {
+            note("an offer said over a waiting question: its window closed, the question asked again")
+            // After this utterance's own end is done (posted), never from inside it; only while it is still the same ask.
+            main.post { if (asking == id && askingUntil == 0L) sayWhenFree(text, "question") }
+        } else asking = null
+    }
+
     /** [invited]: the utterance that ended ([id] its kind) itself ended inviting an answer ([invitesOf]). */
     private fun afterSpeech(id: String?, invited: Boolean = false) {
         speaking = false
@@ -2273,6 +2722,9 @@ class JarvisVoice : Service() {
         if (id == "question") lastInvite = com.optionslab.ira.AnswerWindow.ended(true, invited, lastInvite)
         else if (id != null && id != STOP_AFTER && invited) {
             offerEnded()
+            // An answer to Boss that ended with an offer, said while Jarvis's own yes-or-no question was still open: that
+            // earlier ask's window ends (a yes heard now may be for the offer), and it is asked again after while it waits.
+            if (id == "answer") supersedeAsk()
             awakeUntil = maxOf(awakeUntil, SystemClock.elapsedRealtime() + com.optionslab.ira.AnswerWindow.WINDOW_MS); called = false
         }
         // Battery (round 13, [com.optionslab.ira.CaptureEcho]): nothing playing now, so no echo to cancel. A taught voice's
@@ -2289,6 +2741,20 @@ class JarvisVoice : Service() {
 
     private fun giveUp(why: String) { _state.value = VoiceState(problem = why); stopSelf() }
 
+    /**
+     * "Don't listen": the microphone let go at once, before the service is gone - the recognizer's turn cancelled, the
+     * shared capture closed, any follow-up or awake window ended - then the service stops (its notification goes, and with
+     * it Android's microphone dot).
+     */
+    internal fun deafened() {
+        main.removeCallbacks(finish)
+        runCatching { rec?.cancel() }; listening = false
+        endTap(); lastHeard = null
+        awakeUntil = 0L; called = false; asking = null
+        _state.value = VoiceState(problem = NOT_LISTENING)
+        stopSelf()
+    }
+
     override fun onDestroy() {
         unmuteNow()
         runCatching { muteWriter.shutdown() }           // the marker's last write (above) still runs
@@ -2301,7 +2767,7 @@ class JarvisVoice : Service() {
         runCatching { rec?.destroy() }; rec = null
         runCatching { tts?.stop(); tts?.shutdown() }; tts = null
         scope.cancel()
-        _state.value = VoiceState(problem = _state.value.problem)
+        _state.value = VoiceState(problem = _state.value.problem ?: (if (deaf) NOT_LISTENING else null))
         super.onDestroy()
     }
 }

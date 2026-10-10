@@ -228,6 +228,39 @@ object Net {
         }
     }
 
+    /** Upstox's public MCX list (MCX.json.gz, about 0.3 MB zipped): unzipped JSON text for [com.optionslab.engine.mcx.McxInstruments.parseUpstox]. */
+    const val MCX_MASTER_URL = "https://assets.upstox.com/market-quote/instruments/exchange/MCX.json.gz"
+
+    /** The most the unzipped MCX list may be; a bigger answer is refused, not read. */
+    private const val MAX_MCX_BYTES = 40_000_000
+
+    fun fetchMcxMaster(): String {
+        val c = open(MCX_MASTER_URL, 60_000)
+        c.setRequestProperty("Accept", "*/*")
+        try {
+            if (c.responseCode != 200) throw HttpFailure(c.responseCode)
+            return c.inputStream.use { raw ->
+                GZIPInputStream(raw, 1 shl 16).use { z ->
+                    val out = java.io.ByteArrayOutputStream()
+                    val buf = ByteArray(1 shl 16)
+                    while (true) {
+                        val n = z.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        if (out.size() > MAX_MCX_BYTES) throw IOException("answer too large")
+                    }
+                    out.toString("UTF-8")
+                }
+            }
+        } catch (e: HttpFailure) {
+            throw e
+        } catch (_: IOException) {
+            throw Offline()
+        } finally {
+            c.disconnect()
+        }
+    }
+
     /**
      * Instrument keys for cash-market symbols ("NSE_EQ" to "RELIANCE"), from
      * one streamed pass over the master. Missing symbols are simply absent.

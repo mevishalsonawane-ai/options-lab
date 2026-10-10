@@ -170,11 +170,20 @@ object Hinglish {
         return text
     }
 
-    /** "haan" / "nahi" and friends: true, false, or null when it is neither. */
+    /**
+     * "haan" / "nahi" and friends: true, false, or null when it is neither. Any "no" word wins over a "yes".
+     *
+     * Voice round 25 (Requests by voice): "na" right after a word that asks for the thing done ("kar do na", "le lo na",
+     * "chalo na") is the Hindi "please", not a no - it used to cancel the very request Boss wanted. Only that tag is
+     * read so: a "na" anywhere else, "haan na" included, is still a no, as is every other no word ("kar do... nahi").
+     */
     fun yesNo(text: String): Boolean? {
-        val t = " " + text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim() + " "
-        if (rx(" (nahi|nahin|nahii|nhi|nai|na|mat karo|mat|rehne do|ruko|cancel karo) ").containsMatchIn(t)) return false
-        if (rx(" (haan|haa|ha|han|ji|ji haan|bilkul|theek hai|thik hai|kar do|kardo|le lo|lelo|chalo) ").containsMatchIn(t)) return true
+        val t = (" " + text.lowercase().replace(rx("[^a-z ]"), " ").replace(rx("\\s+"), " ").trim() + " ").replace(PLEASE_NA, " $1 ")
+        if (rx(" (nahi|nahin|nahii|nahee|nehi|nhi|nai|na|mat karo|mat|rehne do|rehne dijiye|ruko|ruk jao|chhodo|chhod do|cancel karo) ").containsMatchIn(t)) return false
+        if (rx(" (haan|haa|ha|han|ji|ji haan|bilkul|zaroor|zarur|theek hai|thik hai|kar do|kardo|kar dijiye|kar dijie|kar dena|le lo|lelo|le lijiye|chalo|chalega|ho jaye) ").containsMatchIn(t)) return true
         return null
     }
+
+    /** A "na" (or "naa") that only says "please" after a word asking for the thing done: read as that word alone. */
+    private val PLEASE_NA = rx("(?<= )(kar do|kardo|kar dijiye|kar dijie|kar dena|le lo|lelo|le lijiye|chalo) naa?(?= )")
 }

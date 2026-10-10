@@ -66,8 +66,10 @@ object Diag {
     /** Keep one event: "[area] text", time-stamped (IST) now, written in the background. Never throws. */
     fun record(area: String, text: String) {
         if (!::file.isInitialized) return
-        val line = "${TIME.format(Instant.now())} [$area] ${redact(text.replace('\n', ' '))}"
-        runCatching { writer.execute { keep(line) } }
+        // Redacted on the diary's own thread (round 2): the caller - an order being sent - never waits on the vault read it
+        // makes for the account holder's name.
+        val head = "${TIME.format(Instant.now())} [$area] "
+        runCatching { writer.execute { keep(head + redact(text.replace('\n', ' '))) } }
     }
 
     @Synchronized
@@ -128,6 +130,19 @@ object Diag {
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
+        // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
+        // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderFlowLive.coverageLine() }.getOrElse { "Order flow: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowGate.diagLine() }.getOrElse { "Order flow modes: could not read" }).append('\n')
+        // Honest paper (08 Oct): the bid/ask spread paper fills paid today (the "[paper] Stale price" lines below: fills on old prices).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { Paper.spreadTodayLine() }.getOrElse { "Paper spread: could not read" }).append('\n')
+        // Night (R3), paper only (08 Oct): on or off, what it holds overnight, its last decisions (the "[night]" lines below).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { NightArm.diagLine() }.getOrElse { "Night (R3): could not read" }).append('\n')
+        // VIX divergence (9 Oct, paper only, not proven): on or off, what it holds, each index's last decision (the "[vix-div]" lines below carry each signal's bid/ask).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { VixDivArm.diagLine() }.getOrElse { "VIX divergence: could not read" }).append('\n')
+        // The MCX paper arms (9 Oct, paper only, not proven): on or off, what each holds, its last decision (the "[mcx-arms]" lines below).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { McxPaperArms.diagLine() }.getOrElse { "MCX paper arms: could not read" }).append('\n')
         // Speed, round 4 (Boss, 5 Oct: "Answer is taking a lot after question is asked"): where a question's wait goes,
         // stage by stage (heard→routed, routed→answered, answered→spoken) and the slowest - durations only, never words.
         append(redact(runCatching { com.optionslab.app.ira.IraHub.askSpeedLine() }.getOrElse { "Speed (asks): could not read" })).append('\n')
@@ -155,7 +170,7 @@ object Diag {
                 listOf("AI trades go live: ${!com.optionslab.app.ira.IraNewsTrades.paperFirst}", "Stops done automatically: ${com.optionslab.app.ira.IraHub.autoStop}") }
             section("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.record() }
             section("Today's suggestions (scorecard)") { com.optionslab.app.ira.IraNewsTrades.scorecard() }
-            section("Solo") { com.optionslab.app.ira.IraSolo.status() + " Learning: " + com.optionslab.app.ira.IraSolo.learning() }
+            section("Solo") { com.optionslab.app.ira.IraSolo.status() }
             val goals = runCatching { com.optionslab.app.ira.IraGoals.say() }.getOrElse { "could not read" }
             section("Goals") { goals }
             val lessons = runCatching { com.optionslab.app.ira.IraAccount.lessons().let { (l, n) -> com.optionslab.ira.Lessons.say(l, n) } }.getOrElse { "could not read" }

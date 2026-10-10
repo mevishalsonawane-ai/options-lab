@@ -72,6 +72,47 @@ class TurnTest {
         assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 10_000))
     }
 
+    @Test fun wordsStoppingMidSentenceAreNeverAnsweredAndTheTurnWaitsForTheRest() {
+        // Voice, round 29: before, each of these still partials was answered as it stood (the market's overview or its
+        // "why") while Boss was taking a breath before "P&L", "lose money today", "BankNifty"...
+        for (w in listOf("Jarvis how is my", "Jarvis how is the", "Jarvis why did I", "Jarvis what happened to",
+                "Jarvis what is the trend of", "Jarvis what is the support for", "Jarvis how is nifty and",
+                "Jarvis how is nifty doing compared to", "Jarvis how is nifty today versus", "Jarvis what is the news about my",
+                "Jarvis why is nifty falling and what should", "Jarvis what is nifty's support and", "Jarvis how volatile is",
+                "Jarvis what is nifty's", "Jarvis nifty ka", "Jarvis mera", "Jarvis how is nifty aur")) {
+            assertTrue(Turn.unfinished(w), w)
+            assertNull(Turn.early(w, false, 5_000), w)
+            assertNull(Turn.ahead(w, false), w)
+            assertEquals(Turn.UNFINISHED_MS, Turn.endAfter(w, 600), w)
+        }
+        // Awake (no name): the same.
+        assertNull(Turn.early("how is my", awake = true, stableForMs = 5_000))
+        // Whole questions are as quick as before - also those ending in a word that may close a question.
+        for (w in listOf("Jarvis how is nifty", "Jarvis any news", "Jarvis what are the levels on banknifty", "Jarvis is the kill switch on",
+                "Jarvis am I logged in", "Jarvis what do I do", "Jarvis how are you", "Jarvis what is that", "Jarvis nifty kaisa hai")) {
+            assertFalse(Turn.unfinished(w), w)
+            assertEquals(600L, Turn.endAfter(w, 600), w)
+        }
+        assertEquals("Jarvis how is nifty", Turn.early("Jarvis how is nifty", false, 700))
+        // Review, 6 Oct: "at" and "we" also end whole questions; the commands and a yes or a no never wait.
+        for (w in listOf("Jarvis what is nifty trading at", "what is banknifty at", "Jarvis where are we", "how are we doing today so where are we",
+                "Jarvis stop", "kill switch on", "exit all", "sab band kar do", "Jarvis kill switch on", "Jarvis exit all")) {
+            assertFalse(Turn.unfinished(w), w)
+            assertEquals(600L, Turn.endAfter(w, 600), w)
+        }
+        // The name alone keeps its own wait (decided before this); a yes or a no is never unfinished, read exactly as before.
+        for (w in listOf("Jarvis", "yes", "no", "haan", "nahi", "ya", "yes do it", "no don't", "")) assertFalse(Turn.unfinished(w), w)
+        assertFalse(Turn.unfinished(null))
+        // A slower learned pace is kept.
+        assertEquals(2_400L, Turn.endAfter("Jarvis how is my", 2_400))
+        // "Speech ended" over unfinished words keeps the later close; otherwise as before.
+        assertEquals(1_100L, Turn.closeIn(now = 10_000, dueAt = 11_100, unfinished = true))
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 11_100, unfinished = false))
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 0, unfinished = true))
+        assertEquals(Turn.END_SPEECH_MS, Turn.closeIn(10_000, 9_500, unfinished = true))
+        assertEquals(300L, Turn.closeIn(10_600, 10_900, unfinished = true))
+    }
+
     @Test fun theFirstSentenceIsSpokenWhileTheRestIsMade() {
         val a = "Boss, Nifty is at 24,512.35, up 0.4 percent today. It holds above the opening range high. Support is 24,400."
         assertEquals(listOf("Boss, Nifty is at 24,512.35, up 0.4 percent today.", "It holds above the opening range high. Support is 24,400."), Wake.pieces(a))

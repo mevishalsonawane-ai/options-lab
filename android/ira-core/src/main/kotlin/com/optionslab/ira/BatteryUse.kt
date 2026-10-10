@@ -341,13 +341,22 @@ object StudyPace {
     fun studyDue(lastStudy: java.time.LocalDateTime?, lastClose: java.time.LocalDateTime?): Boolean =
         lastStudy == null || lastClose == null || lastStudy.isBefore(lastClose.plusHours(SECOND_AFTER_HOURS))
 
-    /** Hours between the study job's runs: 1 as before, or [SLOW_HOURS] while nothing of its work can fall due sooner. */
+    /** Saturday's "what's working" window for the pace ([LiquidityInsight.due]'s, from a little before it opens). */
+    private val LIQ_FROM = java.time.LocalTime.of(8, 0)
+
+    /**
+     * Hours between the study job's runs: 1 as before, or [SLOW_HOURS] while nothing of its work can fall due sooner. On a
+     * Saturday morning (08:00 to [LiquidityInsight.UNTIL]) it stays hourly until the week's "what's working" look is made
+     * ([liqInsightDone]: [LiquidityInsight.KEY_DONE] is today), so a 6-hour step after the report card cannot jump the window.
+     */
     fun everyHours(now: java.time.LocalDateTime, nextOpen: java.time.LocalDateTime?, lastStudy: java.time.LocalDateTime?,
-                   lastClose: java.time.LocalDateTime?, reportCardDone: Boolean): Long = when {
+                   lastClose: java.time.LocalDateTime?, reportCardDone: Boolean, liqInsightDone: Boolean = true): Long = when {
         nextOpen == null -> 1L
         !now.isBefore(nextOpen.minusHours(NightNewsPace.OVERNIGHT_HOURS + SLOW_HOURS)) -> 1L
         studyDue(lastStudy, lastClose) -> 1L
         now.dayOfWeek == java.time.DayOfWeek.SATURDAY && !reportCardDone -> 1L
+        now.dayOfWeek == java.time.DayOfWeek.SATURDAY && !liqInsightDone && !now.toLocalTime().isBefore(LIQ_FROM) &&
+            now.toLocalTime().isBefore(LiquidityInsight.UNTIL) -> 1L
         else -> SLOW_HOURS
     }
 }
@@ -432,6 +441,32 @@ object AccountWarmPace {
 }
 
 /**
+ * Battery (round 17): outside market hours the listening loop (a pass every 30 s) read Boss's account ahead - the
+ * Zerodha orders, position book and funds with a session, a paper snapshot (each held contract's day of candles) and
+ * the trade check - every 5 minutes with the screen on and every 30 minutes with it off: about 35 reads through a
+ * weeknight and 96 through a weekend day, screen off, with nothing in the account able to move. Now, market shut and
+ * the screen off: no read ahead (a question then reads afresh, as on a low battery). Screen on: every 5 minutes as
+ * before, and at once on the first pass after the screen comes on - so the Ira page's globe and the first question
+ * after unlocking find figures at least as fresh as before. Market hours: every pass, as before ([AccountWarmPace]
+ * then sets the pace). Words only - stops, targets, the loss limit, the guard, the order watch and every alert read
+ * their own. Unknown screen state counts as on. Pure.
+ */
+object OffHoursWarmPace {
+    /** Market shut, screen on: one read ahead every this many 30 s passes (5 minutes), as before. */
+    const val SCREEN_ON_EVERY = 10
+
+    /**
+     * Read the account ahead on listening pass [pass]? [open]: market hours on a trading day. [screenOn]: now.
+     * [wasOn]: the screen on the last pass (null: no pass has looked yet).
+     */
+    fun due(open: Boolean, screenOn: Boolean, pass: Int, wasOn: Boolean?): Boolean = when {
+        open -> true
+        !screenOn -> false
+        else -> pass % SCREEN_ON_EVERY == 0 || wasOn == false
+    }
+}
+
+/**
  * Battery (round 12): while the "Open" home-screen widget shows Zerodha orders still working, the live watch read
  * Zerodha's order book once a pass only to redraw it - once a minute, and every 15 s while something is held: up to
  * 4 requests a minute (about 1,500 a session), each waking the radio, screen on or off. The widget is display only and
@@ -478,4 +513,70 @@ object CaptureEcho {
      */
     fun plainAfter(listening: Boolean, inSpeech: Boolean, callSource: Boolean, speechBegan: Boolean, partial: Boolean): Boolean =
         listening && inSpeech && callSource && !speechBegan && !partial
+}
+
+/**
+ * Battery (round 16): the order watch's index levels in Live mode. Each pass (once a minute, screen on or off) read
+ * every index it has a reader for - the widget's NIFTY and BANKNIFTY, an open ticket's underlying, an alarm on an
+ * index - from Zerodha as a quote AND the day's 1-minute candles so far, the candles only for the day's high, low and
+ * sparkline. The watch reads none of those: the ticket's cushion, the alarms and the widget use the last price and the
+ * change from the open, both in the quote. So the watch now asks for the quote alone (not [wanted]): with the widget
+ * placed, 2 Kite requests a minute instead of 4 (about 750 fewer historical-candle reads a session). Screens that draw
+ * the spark still read the candles, once a minute per index as before. Every check reads the same quote as before. Pure.
+ */
+object IndexSpark {
+    /**
+     * Read the day's candles for an index quote? Only when the caller [wanted] the spark and none is kept for this
+     * [minute] ([keptMinute]: the minute the kept one was read, null: none; [keptEmpty]: that read had no candles).
+     */
+    fun candles(wanted: Boolean, keptMinute: Int?, minute: Int, keptEmpty: Boolean): Boolean =
+        wanted && (keptMinute != minute || keptEmpty)
+
+    /** Kite requests one index quote costs: the quote, and the candles when [candles] says so. */
+    fun requests(wanted: Boolean, keptMinute: Int?, minute: Int, keptEmpty: Boolean): Int =
+        1 + if (candles(wanted, keptMinute, minute, keptEmpty)) 1 else 0
+}
+
+/**
+ * Battery (round 18): the order watch's ongoing notice says the paper account's P&L once a pass (once a minute). It
+ * priced the paper book afresh for that line - without a Zerodha stream, a download of each held contract's whole day
+ * of 1-minute candles - seconds after the same pass's paper tick, loss limit and position cards had read the very same
+ * candles (the feed moves once a minute). That line and the calendar's day figure it records are display only (no
+ * stop, target, limit, guard or alert reads them), so they now share a price read in the last [REUSE_MS], as the
+ * position cards already do: one candle download per held contract a minute fewer (about 375 a session each). A price
+ * older than that (the pass's own reads failed), or none, is read afresh as before; with the stream up there was no
+ * download either way. Every money step keeps reading its own, at its own pace. Pure.
+ */
+object NoticePrice {
+    /** How old a price the notice's paper line may share: the position cards' 20 s (Paper.SHARED_QUOTE_MS). */
+    const val REUSE_MS = 20_000L
+
+    /**
+     * Does pricing one contract download its day of candles? [stream]: a stream tick for it now. [readAgoMs]: how long
+     * ago this process last priced it (null: never). [reuseMs]: how old a price the caller may share (0: none).
+     */
+    fun downloads(stream: Boolean, readAgoMs: Long?, reuseMs: Long): Boolean = when {
+        stream -> false
+        reuseMs > 0L && readAgoMs != null && readAgoMs in 0L..reuseMs -> false
+        else -> true
+    }
+}
+
+/**
+ * Battery (round 19): the ORB arms' book is an encrypted file (a Keystore encryption, the file and its folder synced).
+ * Every watch pass of a trading day (about once a minute) and every 15-second stop check while anything at all is held
+ * wrote it again - even with no arm switched on and nothing of the arms' own open or waiting for approval, when the
+ * pass changes nothing and the bytes written are the very ones already on disk. Now an idle book whose text is the one
+ * this process last wrote, to a file not touched since, is not written again: about 375 encrypted, synced writes a
+ * session fewer with nothing armed, about 1,500 when something else is held. Anything armed, open or waiting is
+ * written every time exactly as before, so the arms' stops, targets, entries and their records keep their cadence and
+ * inputs; the reads and decisions of a pass are unchanged either way. Pure.
+ */
+object OrbIdleSave {
+    /**
+     * Is the book written? [idle]: no arm on, no open position, no entry waiting for approval. [sameText]: the text is
+     * the one this process last wrote. [fileUntouched]: the file still has the size and time that write left (not set
+     * aside, deleted, restored or changed since).
+     */
+    fun writes(idle: Boolean, sameText: Boolean, fileUntouched: Boolean): Boolean = !(idle && sameText && fileUntouched)
 }

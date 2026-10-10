@@ -18,10 +18,16 @@ import java.util.Locale
  * at the end of the morning check ([MorningAsks]), the reasons he turns Jarvis's trade ideas down for said up front
  * before the next idea they fit ([TurnDowns]), the topics said in a sentence or in full aloud as Boss asks for them
  * ([TopicLength]), the index he means when he names none ([UsualIndex]), the nicknames he uses for his arms and positions
- * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the part of a market read he
+ * ([Nicknames]), the index he asks about by name, named first where both are given ([LeadIndex]), the index he follows on a
+ * given weekday, its read given first in "how's the market" on that weekday ([DayIndex]), the part of a market read he
  * asks for on its own, said right after the price in an overview ([LeadPart]), the question he usually asks next, offered in
- * one short question at the end of an answer ([NextAsk]) and his own goals for the week ([Improve]) - each with when and why it changed and, where one exists, the
- * words that undo it by voice.
+ * one short question at the end of an answer ([NextAsk]), the kinds of answer said in full straight away aloud as he
+ * usually asks for more after their short line ([MoreAfter]), where his trades that moved less than twice their own charges
+ * come from, said once in the 15:45 wrap-up ([SmallTrades], a fact of his record), the times of day he usually checks his P&L,
+ * his account read ahead just before them while the market is open ([CheckTimes]), the conditional instructions he keeps
+ * trying to give, the app's own tool for that need named once in the 15:45 wrap-up ([CondNeeds]) and his own goals for the
+ * week ([Improve]) -
+ * each with when and why it changed and, where one exists, the words that undo it by voice.
  *
  * "What have you learned this week?" ([Ask.WEEK]), "what changed in how you work?" ([Ask.CHANGED]) and "show me
  * everything you've learned about me" / "what did you learn about me?" / "tumne mere baare mein kya seekha" ([Ask.ALL]). Boss's own words, routines and records ([Item.personal]) are said
@@ -35,9 +41,13 @@ import java.util.Locale
  * in full at any hour again), the morning question offered ([MorningAsks]: no longer offered), his reasons said up front ([TurnDowns]: no longer
  * said), the topics said shorter or in full ([TopicLength]: the usual length again), the index taken when he names none
  * ([UsualIndex]: Nifty again), the nicknames learned this week ([Nicknames]: forgotten), the index named first ([LeadIndex]: Nifty
- * first again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
- * no longer offered) and his own goals. (His confidence words set to fit the
- * numbers beside them ([WordFit]) are listed with their own undo, but not reset here: that is a check on his own words
+ * first again), the index led with on a weekday ([DayIndex]: Nifty first every day again), the part said first in an overview ([LeadPart]: the usual order again), the question offered next ([NextAsk]:
+ * no longer offered), the answers said in full straight away ([MoreAfter]: the short line first again), his account read
+ * ahead before his usual P&L checks ([CheckTimes]: at the usual pace again), the conditional instructions he keeps giving
+ * ([CondNeeds]: counted afresh, nothing named) and his own goals.
+ * (His confidence words set to fit the
+ * numbers beside them ([WordFit]) and where his small trades come from ([SmallTrades], a fact of his record) are listed with
+ * their own undo, but not reset here: that is a check on his own words
  * against his own record, not a habit learned from Boss.)
  * for this week. Never a setting, the PIN, Live, the AI's live trading, a guard or the Google speech choice - and never
  * a record: the answers Boss marked wrong, the trades and the patterns' outcomes stay, as they are facts, not habits.
@@ -67,8 +77,13 @@ object Learnings {
         USUAL_INDEX("The index I take when you name none", true),
         NICKNAMES("Nicknames you use for your arms and positions", true),
         LEAD_INDEX("The index I name first", true),
+        DAY_INDEX("The index I lead the market read with, by weekday", true),
         LEAD_PART("What I say first in an overview", true),
         NEXT_ASK("The question I offer next, after an answer", true),
+        MORE_AFTER("Answers I say in full straight away, as you usually ask for more", true),
+        SMALL_TRADES("Your trades that moved less than twice their own charges, said once in the wrap-up", true),
+        CHECK_TIMES("Your account read ahead just before you usually check your P&L", true),
+        COND_NEEDS("The conditions you ask me to act on, the app's own tool for them named once in the wrap-up", true),
         ARM_HABITS("Your bots after losing days", true),
         SIT_OUT("Conditions I sit out", true),
         ANSWERS("Answer kinds I flag", true),
@@ -115,12 +130,23 @@ object Learnings {
         val nicknames: Nicknames.Log = Nicknames.Log(),
         /** The day Boss last asked for Nifty first again ([LeadIndex]; read with [tally]). */
         val leadIndex: LeadIndex.Log = LeadIndex.Log(),
+        /** The day Boss last asked for Nifty first every day again ([DayIndex]; read with [tally]). */
+        val dayIndex: DayIndex.Log = DayIndex.Log(),
         /** The day Boss last asked for his overviews in the usual order ([LeadPart]; read with [tally]). */
         val leadPart: LeadPart.Log = LeadPart.Log(),
         /** What Boss asked and when, keys only ([Routine]'s log; read by [NextAsk]). */
         val routineLog: List<Routine.Seen> = emptyList(),
         /** When Boss last asked to stop the next-question offers ([NextAsk]). */
         val nextAsk: NextAsk.Log = NextAsk.Log(),
+        /** Boss's "more" after a short answer, kinds and minutes only ([MoreAfter]; read with [tally]). */
+        val moreAfter: MoreAfter.Log = MoreAfter.Log(),
+        /** Boss's closed trades by book, and when he last asked to forget his small trades ([SmallTrades]). */
+        val smallBooks: List<SmallTrades.Book> = emptyList(),
+        val smallTrades: SmallTrades.Log = SmallTrades.Log(),
+        /** When Boss last asked to stop his account being read ahead before his usual P&L checks ([CheckTimes]; read with [routineLog]). */
+        val checkTimes: CheckTimes.Log = CheckTimes.Log(),
+        /** The kinds of conditional instruction Boss gave, kinds and minutes only ([CondNeeds]). */
+        val condNeeds: CondNeeds.Log = CondNeeds.Log(),
     )
 
     fun day(d: LocalDate): String = "${d.dayOfMonth} ${d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}"
@@ -221,6 +247,12 @@ object Learnings {
         LeadIndex.learned(i.tally, i.leadIndex, today)?.let { r ->
             out += Item(Area.LEAD_INDEX, LeadIndex.ledgerWhat(r), r.newest, LeadIndex.ledgerWhy(r), LeadIndex.UNDO)
         }
+        // The index Boss follows on a given weekday, its read given first in "how's the market" on that weekday ([DayIndex];
+        // from the kinds tally, counts only). Only the order of the index lines changes: never a figure, the verdict, or
+        // anything that acts.
+        DayIndex.learnedAll(i.tally, i.dayIndex, today).forEach { r ->
+            out += Item(Area.DAY_INDEX, DayIndex.ledgerWhat(r), r.newest, DayIndex.ledgerWhy(r), DayIndex.UNDO)
+        }
         // The part of a market read Boss asks for on its own, said right after the price in an overview ([LeadPart]; from
         // the kinds tally, counts only). Only the order of the sentences changes: never a figure, or anything that acts.
         LeadPart.learned(i.tally, i.leadPart, today)?.let { r ->
@@ -230,6 +262,26 @@ object Learnings {
         // routine log, keys and minutes only). Words only: never answered unasked, nothing that acts.
         NextAsk.learned(i.routineLog, i.nextAsk, today).forEach { r ->
             out += Item(Area.NEXT_ASK, NextAsk.ledgerWhat(r), r.newest, NextAsk.ledgerWhy(r), NextAsk.UNDO)
+        }
+        // The kinds of answer said in full straight away aloud, as Boss usually asks for more after their short line
+        // ([MoreAfter]; kinds and minutes only, against the kinds tally). Only the voice's length changes - nothing that acts.
+        MoreAfter.learned(i.moreAfter, i.tally, now).forEach { r ->
+            out += Item(Area.MORE_AFTER, MoreAfter.ledgerWhat(r), r.newest.toLocalDate(), MoreAfter.ledgerWhy(r), MoreAfter.UNDO)
+        }
+        // Where Boss's trades that moved less than twice their own charges come from ([SmallTrades]; by source and time of
+        // day, from his closed trades): a fact said once in the 15:45 wrap-up - never advice, nothing that acts.
+        SmallTrades.learned(i.smallBooks, i.smallTrades, now).forEach { r ->
+            out += Item(Area.SMALL_TRADES, SmallTrades.ledgerWhat(r), r.newest, SmallTrades.ledgerWhy(r), SmallTrades.UNDO)
+        }
+        // The times of day Boss usually checks his P&L, his account read ahead just before them while the market is open
+        // ([CheckTimes]; from his routine log, keys and minutes only). A read ahead only: nothing said unasked, nothing that acts.
+        CheckTimes.learned(i.routineLog, i.checkTimes, today).forEach { r ->
+            out += Item(Area.CHECK_TIMES, CheckTimes.ledgerWhat(r), r.newest, CheckTimes.ledgerWhy(r), CheckTimes.UNDO)
+        }
+        // The conditional instructions Boss keeps trying to give ([CondNeeds]; kinds and minutes only): the app's own alarm,
+        // stop loss or limit named once in the 15:45 wrap-up - a pointer only, nothing set, nothing that acts.
+        CondNeeds.learned(i.condNeeds, now).forEach { r ->
+            out += Item(Area.COND_NEEDS, CondNeeds.ledgerWhat(r), r.newest, CondNeeds.ledgerWhy(r), CondNeeds.UNDO)
         }
         // What Boss does with his bots after losing days ([ArmHabits]; switches and signs only): his record - it arms or
         // disarms nothing, changes nothing Jarvis does, and so has no undo.
@@ -288,7 +340,7 @@ object Learnings {
 
     enum class Ask { WEEK, CHANGED, ALL }
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?"
     private const val TAIL = "( please| boss| jarvis)* $"
@@ -375,10 +427,12 @@ object Learnings {
                     val turnDowns: List<TurnDowns.Record> = emptyList(), val lengths: List<TopicLength.Record> = emptyList(),
                     val usualIndex: List<UsualIndex.Record> = emptyList(), val nicknames: List<Nicknames.Note> = emptyList(),
                     val leadIndex: List<LeadIndex.Record> = emptyList(), val leadPart: List<LeadPart.Record> = emptyList(),
-                    val nextAsk: List<NextAsk.Record> = emptyList()) {
+                    val nextAsk: List<NextAsk.Record> = emptyList(), val moreAfter: List<MoreAfter.Record> = emptyList(),
+                    val dayIndex: List<DayIndex.Record> = emptyList(), val checkTimes: List<CheckTimes.Record> = emptyList(),
+                    val condNeeds: List<CondNeeds.Record> = emptyList()) {
         val empty: Boolean get() = words.isEmpty() && routines.isEmpty() && alerts.isEmpty() && goals == 0 && clarity.isEmpty() && figure.isEmpty() && morning.isEmpty() &&
             stars.isEmpty() && hours.isEmpty() && asks.isEmpty() && turnDowns.isEmpty() && lengths.isEmpty() && usualIndex.isEmpty() && nicknames.isEmpty() &&
-            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty()
+            leadIndex.isEmpty() && leadPart.isEmpty() && nextAsk.isEmpty() && moreAfter.isEmpty() && dayIndex.isEmpty() && checkTimes.isEmpty() && condNeeds.isEmpty()
     }
 
     fun undo(i: Inputs, now: LocalDateTime): Undo {
@@ -400,7 +454,11 @@ object Learnings {
             Nicknames.week(i.nicknames, today),
             listOfNotNull(LeadIndex.learned(i.tally, i.leadIndex, today)),
             listOfNotNull(LeadPart.learned(i.tally, i.leadPart, today)),
-            NextAsk.learned(i.routineLog, i.nextAsk, today))
+            NextAsk.learned(i.routineLog, i.nextAsk, today),
+            MoreAfter.learned(i.moreAfter, i.tally, now),
+            DayIndex.learnedAll(i.tally, i.dayIndex, today),
+            CheckTimes.learned(i.routineLog, i.checkTimes, today),
+            CondNeeds.learned(i.condNeeds, now))
     }
 
     /** [words] without those kept in the last [DAYS] days (the rest, and undated ones, stay). */
@@ -431,8 +489,12 @@ object Learnings {
         if (u.nicknames.isEmpty()) null else "the nicknames you use for your arms and positions (" + u.nicknames.take(SHOW).joinToString(", ") { "\"${it.words}\"" } +
             (if (u.nicknames.size > SHOW) ", ..." else "") + ") - forgotten",
         if (u.leadIndex.isEmpty()) null else "the index I name first (" + u.leadIndex.joinToString(", ") { it.phrase } + ") - Nifty first again",
+        if (u.dayIndex.isEmpty()) null else "the index I lead the market read with by weekday (" + u.dayIndex.joinToString(", ") { it.phrase } + ") - Nifty first every day again",
         if (u.leadPart.isEmpty()) null else "what I say first in an overview (" + u.leadPart.joinToString(", ") { it.phrase } + ") - the usual order again",
         if (u.nextAsk.isEmpty()) null else "the question I offer next after an answer (" + u.nextAsk.take(SHOW).joinToString(", ") { it.phrase + " after " + it.afterPhrase } + ") - no longer offered",
+        if (u.moreAfter.isEmpty()) null else "the answers I say in full straight away (" + u.moreAfter.take(SHOW).joinToString(", ") { it.phrase } + ") - the short line first again",
+        if (u.checkTimes.isEmpty()) null else "your account read ahead before your usual P&L checks (" + u.checkTimes.joinToString(", ") { it.phrase } + ") - at the usual pace again",
+        if (u.condNeeds.isEmpty()) null else "the conditional instructions you keep giving me (" + u.condNeeds.joinToString(", ") { it.need.asked.removePrefix("to ") } + ") - counted afresh",
         if (u.goals == 0) null else "my ${plural(u.goals, "goal")} for this week")
 
     const val ONLY = "Only learned behaviour: never a setting, your PIN, Live, AI trading, a guard or the Google speech choice. " +

@@ -97,14 +97,25 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         }
     }
     LaunchedEffect(s.live) { model.loadBankNiftyDaily() }
+    // "What's new": the changes not seen yet, one list with the Ira page's card (the seen ids are a setting); "Got it" keeps
+    // them as seen and hides both cards. Written only on that tap, never while composing. (Not in IraGoldAlgo: [WhatsNewStore.entries].)
+    val news by remember { com.optionslab.app.data.WhatsNewStore.shown() }.collectAsState()
+    // Each time the app comes back to the front: a settings read that failed before is tried again (a flow, not Compose state).
+    com.optionslab.app.ui.PollWhileStarted { com.optionslab.app.data.WhatsNewStore.shown() }
     AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
+        glance = { TodayGlanceCard(onGo) },
+        whatsNew = if (news.isNotEmpty()) {
+            { WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo) }
+        } else null,
         strategies = { StrategyArmCard(model) { onGo("strategy") } })
 }
 
 /**
  * Home from plain state and callbacks (what [AlmanacScreen] shows; tests drive it without an [AppModel]).
- * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart.
+ * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart; [glance]: the
+ * "Today at a glance" card at the top ([TodayGlanceCard]; null: none); [whatsNew]: the "What's new" card above it while some
+ * changes are unseen ([WhatsNewCardContent]; null: none).
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -119,9 +130,11 @@ internal fun AlmanacContent(
     onGo: (String) -> Unit,
     onRow: (RowTarget) -> Unit,
     owners: Map<String, String> = emptyMap(),
+    glance: (@Composable () -> Unit)? = null,
+    whatsNew: (@Composable () -> Unit)? = null,
     strategies: @Composable () -> Unit,
 ) {
-    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, strategies)
+    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, glance, whatsNew, strategies)
 }
 
 /** Home's money figures, its live-orders rows and the note under the money, from the books of the mode shown. */
@@ -133,7 +146,7 @@ private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.option
     val moneyNote: String?
     if (live) {
         val a = (account as? Load.Done)?.value
-        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = true) })
+        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = it.chargesEstimate) })
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",
@@ -188,6 +201,8 @@ private fun AlmanacBody(
     onGo: (String) -> Unit,
     onRow: (RowTarget) -> Unit,
     owners: Map<String, String>,
+    glance: (@Composable () -> Unit)?,
+    whatsNew: (@Composable () -> Unit)?,
     strategies: @Composable () -> Unit,
 ) {
     val p = LocalPalette.current
@@ -199,6 +214,12 @@ private fun AlmanacBody(
         homeBooks(live, loggedIn, account(), paper(), owners, p) } }
 
     Page {
+        // ---- what's new: the changes since the last "Got it", until Boss has seen them -----------------------------
+        if (whatsNew != null) item(key = "whatsnew") { whatsNew() }
+
+        // ---- today at a glance: the market, the cues or the risk, the strategies, the events -----------------
+        if (glance != null) item { glance() }
+
         // ---- the money: capital first and largest --------------------------------------
         item {
             val (money, _, moneyNote) = books.value

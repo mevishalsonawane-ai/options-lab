@@ -88,6 +88,8 @@ object Strategies {
         val pending: LinkedHashMap<Long, String> = LinkedHashMap(),
         /** The day the owner stopped the bot: no armed strategy starts for the rest of it. */
         var stoppedDay: String? = null,
+        /** Why the day was stopped ([com.optionslab.ira.DayStop.Why.wire]): by Boss, the daily loss limit or the tile. */
+        var stoppedWhy: String? = null,
     )
 
     private var cache: Book? = null
@@ -99,7 +101,58 @@ object Strategies {
     @Volatile var runningHint: Boolean = false
         private set
 
-    private fun hint(b: Book) { runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true } }
+    /**
+     * The running strategies' open legs as [com.optionslab.ira.AutoSide] reads them (one lean a strategy: its legs' net), as of
+     * the last load or save: read without the lock by the other automatic traders ([AutoExposure]).
+     */
+    @Volatile var exposureHint: List<com.optionslab.ira.AutoSide.Held> = emptyList()
+        private set
+
+    /** An open leg's lean: an option by its right and side, a future by its side; 0 when unknown. */
+    private fun legLean(symbol: String, buy: Boolean): Int = com.optionslab.ira.AutoSide.rightOf(symbol)?.let { com.optionslab.ira.AutoSide.direction(it, buy) }
+        ?: if (symbol.uppercase().endsWith("FUT")) (if (buy) 1 else -1) else 0
+
+    private fun exposureOf(b: Book): List<com.optionslab.ira.AutoSide.Held> = b.defs.mapNotNull { d ->
+        val run = b.runs[d.id]?.takeIf { Entry(d, it).running } ?: return@mapNotNull null
+        val legs = run.openLegs().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+        val lean = com.optionslab.ira.AutoSide.net(legs.map { legLean(it.symbol, it.position == "B") })
+        val one = legs.singleOrNull()
+        val what = when {
+            one != null && com.optionslab.ira.AutoSide.rightOf(one.symbol) != null ->
+                if (one.position == "B") "a ${if (one.symbol.uppercase().endsWith("CE")) "call" else "put"}" else "a short ${if (one.symbol.uppercase().endsWith("CE")) "call" else "put"}"
+            lean > 0 -> "a bullish position"
+            lean < 0 -> "a bearish position"
+            else -> "a neutral position"
+        }
+        com.optionslab.ira.AutoSide.Held(d.name, legs.joinToString("+") { it.symbol }, d.underlying.uppercase(), lean, what)
+    }
+
+    /** A strategy's planned lean from its legs (options by right and side, futures by side); 0 for a neutral one. */
+    private fun planned(def: StrategyDef): Int = com.optionslab.ira.AutoSide.net(def.legs.map { l ->
+        when {
+            l.optionType != null && l.position != null -> com.optionslab.ira.AutoSide.direction(l.optionType!!.wire, l.position == com.optionslab.engine.strategy.Position.B)
+            l.side == com.optionslab.engine.strategy.LegSide.LONG -> 1
+            l.side == com.optionslab.engine.strategy.LegSide.SHORT -> -1
+            else -> 0
+        }
+    })
+
+    private fun hint(b: Book) {
+        exposureHint = runCatching { exposureOf(b) }.getOrDefault(emptyList())
+        runningHint = b.defs.any { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }
+        stopHintDay = b.stoppedDay
+        stopHintWhy = com.optionslab.ira.DayStop.Why.of(b.stoppedWhy)
+    }
+
+    @Volatile private var stopHintDay: String? = null
+    @Volatile private var stopHintWhy: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS
+
+    /**
+     * Why the bot is stopped for today, as of the last load or save (null: it is not), read without the lock - for words on
+     * screen ([OrbArms.describe]) that must never wait on a pass placing orders. [stoppedWhy] reads it under the lock.
+     */
+    fun stopHint(): com.optionslab.ira.DayStop.Why? =
+        if (stopHintDay != null && stopHintDay == runCatching { Market.today().toString() }.getOrNull()) stopHintWhy else null
 
     private fun book(): Book {
         cache?.let { return it }
@@ -123,7 +176,7 @@ object Strategies {
             val pending = LinkedHashMap<Long, String>()
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> pending[k.toLong()] = m.getString(k) } }
             Book(defs, runs, history, ids, log, o.getLong("nextRunId"), o.getLong("nextStrategyId"), o.optLong("lastCheck", 0).takeIf { it > 0 }, owners, auto, pending,
-                o.optString("stoppedDay").takeIf { it.isNotBlank() })
+                o.optString("stoppedDay").takeIf { it.isNotBlank() }, o.optString("stoppedWhy").takeIf { it.isNotBlank() })
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -139,6 +192,9 @@ object Strategies {
         return loaded.also { cache = it; hint(it) }
     }
 
+    /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
+    private val written = Vault.LastWrite()
+
     private fun save(b: Book) {
         val o = JSONObject()
         o.put("defs", JSONArray().apply { b.defs.forEach { put(StrategyCodec.encode(it)) } })
@@ -153,7 +209,8 @@ object Strategies {
         o.put("autoApprove", JSONObject().apply { b.autoApprove.forEach { (k, v) -> put(k.toString(), v) } })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, v) -> put(k.toString(), v) } })
         b.stoppedDay?.let { o.put("stoppedDay", it) }
-        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        b.stoppedWhy?.let { o.put("stoppedWhy", it) }
+        written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         cache = b
         hint(b)
     }
@@ -193,12 +250,12 @@ object Strategies {
         if (i < 0) return@withLock "That strategy no longer exists."
         val d = b.defs[i]
         if (on && needsBreakoutRules(d)) return@withLock BREAKOUT_BLOCK
-        if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Trade → Strategies) before arming it live."
+        if (on && mode == RunMode.LIVE && !d.liveEnabled) return@withLock "Enable live trading for ${d.name} (Research → Strategies) before arming it live."
         val base = d.scheduler ?: com.optionslab.engine.strategy.SchedulerConfig(
             days = listOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
                 java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY),
             startTime = d.entryTime, autoStopTime = d.exitTime)
-        if (on && base.startTime == null) return@withLock "${d.name} has no start time. Set its entry time in Trade → Strategies, then arm it."
+        if (on && base.startTime == null) return@withLock "${d.name} has no start time. Set its entry time in Research → Strategies, then arm it."
         b.defs[i] = d.copy(scheduler = base.copy(enabled = on, defaultMode = if (on) mode else base.defaultMode))
         if (on) b.autoApprove[id] = automatic else b.pending.remove(id)
         save(b); null
@@ -327,8 +384,22 @@ object Strategies {
     /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
     suspend fun tagOwner(key: String, label: String) = lock.withLock { val b = book(); b.owners[key] = label; save(b) }
 
+    /**
+     * The order flow beside a one-leg strategy's option BUY entry (9 Oct; a basket's legs are never gated one by one: a
+     * skipped leg would leave the rest unhedged). Logged; under CONFIRM an entry the flow does not agree with is refused
+     * like a guard's refusal - the flow never places, enlarges or reverses anything. Null: not gated.
+     */
+    private fun flowGate(def: StrategyDef, order: Action.PlaceOrder, live: Boolean): FlowGate.Ticket? {
+        if (order.kind != "entry" || order.side.wire != "BUY" || def.legs.size != 1) return null
+        val side = when { order.symbol.endsWith("CE") -> 1; order.symbol.endsWith("PE") -> -1; else -> return null }
+        val at = runCatching { Market.now().toLocalDateTime().withSecond(0).withNano(0).toString() }.getOrDefault("")
+        return FlowGate.check("saved", def.underlying, side, live, at, "${def.id}:${order.legId}")
+    }
+
     private fun paperExec(b: Book, def: StrategyDef, v: Venue) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
+            val flow = flowGate(def, order, live = false)
+            if (flow?.skip == true) return StrategyHost.Placed.Refused("skipped by the order flow (CONFIRM: the flow did not agree)")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed")
             val c = ref.upstox ?: return StrategyHost.Placed.Refused("no price feed for ${order.symbol}")
             val pc = Paper.Contract(order.symbol, c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey)
@@ -341,6 +412,7 @@ object Strategies {
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
             b.owners["paper:$id"] = ownerLabel(def, order)
+            FlowGate.taken(flow, id)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()
             fill?.let { Notifier.orderFilled(app, it.action, it.quantity, it.symbol, it.price, "Paper", ownerLabel(def, order), it.orderId) }
             return if (fill != null) StrategyHost.Placed.Accepted("paper:$id", "complete", fill.quantity, fill.price)
@@ -362,6 +434,9 @@ object Strategies {
             if (order.kind == "entry" && (!s.live || !s.allowRealOrders)) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
             if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
+            // The order flow can only refuse this entry (CONFIRM), never add to it; exits are never asked.
+            val flow = flowGate(def, order, live = true)
+            if (flow?.skip == true) return StrategyHost.Placed.Refused("skipped by the order flow (CONFIRM: the flow did not agree)")
             val ref = v.refs[order.symbol] ?: return StrategyHost.Placed.Refused("${order.symbol} is not listed on Zerodha")
             val kiteSym = ref.kite ?: return StrategyHost.Placed.Refused("${order.symbol} has no Zerodha symbol")
             val side = if (order.side.wire == "BUY") Kite.Side.BUY else Kite.Side.SELL
@@ -405,6 +480,7 @@ object Strategies {
                         ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
                 }
                 b.owners["kite:$id"] = ownerLabel(def, order)
+                FlowGate.outcome(flow, "entered_live")
                 // From here the order exists at Zerodha: never report it as refused. An unknown
                 // state is polled on the next tick.
                 val f = runCatching { Broker.awaitOrder(id, 12_000) }.getOrNull()
@@ -474,14 +550,29 @@ object Strategies {
     /** Whether the owner stopped the bot for today. */
     suspend fun stoppedToday(): Boolean = lock.withLock { book().stoppedDay == Market.today().toString() }
 
+    /** Why the bot is stopped for today (by Boss, the daily loss limit, the tile), or null when it is not. */
+    suspend fun stoppedWhy(): com.optionslab.ira.DayStop.Why? = lock.withLock {
+        val b = book()
+        if (b.stoppedDay == Market.today().toString()) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
+    }
+
+    /** Whether today's stop was made by the daily loss limit (it is then never lifted today). */
+    suspend fun stoppedByLossToday(): Boolean =
+        stoppedWhy() == com.optionslab.ira.DayStop.Why.LOSS || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+
     /**
      * Stop the bot for the rest of today: no armed strategy starts, waiting approvals are dropped,
      * and with [stopRunning] every running strategy is stopped too (its positions closed by its own exits).
+     * [why]: who stopped it (kept and said wherever the stop is described); a stop by the daily loss limit stays one.
+     * ORB arms and Pine scripts read the same stop: they make no new entries and sell what they hold.
      */
-    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean): String {
+    suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean, why: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS): String {
         val running = lock.withLock {
             val b = book()
-            b.stoppedDay = Market.today().toString()
+            val today = Market.today().toString()
+            val wasLoss = b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS
+            b.stoppedWhy = (if (wasLoss) com.optionslab.ira.DayStop.Why.LOSS else why).wire
+            b.stoppedDay = today
             b.pending.clear()
             save(b)
             b.defs.filter { d -> b.runs[d.id]?.let { Entry(d, it).running } == true }.map { it.id to it.name }
@@ -492,10 +583,21 @@ object Strategies {
         return "Bot stopped for today. " + results.joinToString(" ")
     }
 
-    /** Undo [stopForToday]: armed strategies start at their times again. */
-    suspend fun startAgain(): String = lock.withLock {
-        val b = book(); b.stoppedDay = null; save(b)
-        "Bot running: armed strategies start at their times."
+    /**
+     * Undo [stopForToday]: armed strategies start at their times again (and the ORB arms and Pine scripts that are armed
+     * trade again). Never on a day the daily loss limit stopped: plans only lower risk, so that stop holds until tomorrow.
+     */
+    suspend fun startAgain(): String {
+        val loss = runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+        return lock.withLock {
+            val b = book()
+            val today = Market.today().toString()
+            if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS)) {
+                return@withLock "Not started: the daily loss limit stopped the bot today, so it stays stopped until tomorrow."
+            }
+            b.stoppedDay = null; b.stoppedWhy = null; save(b)
+            "Bot running: armed strategies start at their times."
+        }
     }
 
     suspend fun stop(id: Long, reason: String, compromised: Boolean): String = lock.withLock {
@@ -593,6 +695,16 @@ object Strategies {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (b.autoApprove[def.id] ?: (d.mode != RunMode.LIVE)) {
                             // Automatic: the owner chose this when arming (live arming needed the PIN or fingerprint).
+                            // One index, one side, for every automatic trader (Boss's 06 Oct rule): a strategy leaning the other
+                            // way from - or the same way as - another automatic position on its index does not start.
+                            // The account day lock first (08 Oct): the account this run goes to.
+                            val side = AutoExposure.check(AutoExposure.Source.STRATEGIES, def.underlying.uppercase(), planned(def), exposureOf(b),
+                                account = d.mode == RunMode.LIVE)
+                            if (side != null) {
+                                record(b, def.name, Event("start_refused", "Scheduled start refused: $side", "warn"), true)
+                                notes += "${def.name}: $side"
+                                continue
+                            }
                             val v = venueFor(d.mode)
                             if (v == null) { record(b, def.name, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
                             val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
@@ -636,7 +748,7 @@ object Strategies {
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
 
-    fun wipe() { cache = null; runningHint = false; file.delete() }
+    fun wipe() { cache = null; runningHint = false; exposureHint = emptyList(); stopHintDay = null; file.delete() }
 
     @Suppress("unused") private fun today(): LocalDate = Market.today()
 }

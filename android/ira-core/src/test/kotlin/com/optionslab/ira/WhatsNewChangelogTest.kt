@@ -1,0 +1,376 @@
+package com.optionslab.ira
+
+import java.time.LocalDate
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/** The app's own changelog ([WhatsNew]): its entries, what is unseen, Home's card's collapse, the seen ids, Jarvis's words. */
+class WhatsNewChangelogTest {
+    private val d1 = LocalDate.of(2026, 10, 5)
+    private val d2 = LocalDate.of(2026, 10, 6)
+    private fun e(id: String, d: LocalDate, ask: String? = null, gold: Boolean = false, jarvisOnly: Boolean = false) =
+        WhatsNew.Entry(id, d, "Title $id", "What $id.", "Where $id", ask, gold, jarvisOnly)
+
+    // ---- the entries ----
+
+    @Test fun everyEntryIsWholeAndPlain() {
+        val all = WhatsNew.ENTRIES
+        assertTrue(all.size >= 20, "${all.size}")
+        assertEquals(all.size, all.map { it.id }.distinct().size, "ids are unique")
+        for (x in all) {
+            // Each id starts with its own day (06 Oct, 07 Oct for the un-retired arms, 08 Oct for the locks).
+            assertTrue(Regex("^2026-10-0[6789]-[a-z0-9-]+$").matches(x.id), x.id)
+            assertEquals(LocalDate.parse(x.id.take(10)), x.date, x.id)
+            assertTrue(x.title.isNotBlank() && x.title.length <= 60, x.id)
+            assertTrue(x.what.isNotBlank() && x.where.isNotBlank(), x.id)
+            // One or two plain sentences; a few related fixes in one entry: up to eight short ones (20 words at most each).
+            val sentences = Regex("[.!?](\\s|$)").findAll(x.what).count()
+            val short = x.what.split(Regex("[.!?](\\s|$)")).all { it.trim().split(' ').size <= 20 }
+            assertTrue(sentences in 1..2 || (sentences <= 8 && short), "${x.id}: $sentences sentences")
+            // No internal names (camelCase words) and no developer jargon.
+            for (t in listOf(x.title, x.what, x.where, x.ask.orEmpty()))
+                assertFalse(Regex("\\b[a-z]+[A-Z][A-Za-z]*\\b|\\b[A-Z][a-z]+[A-Z][A-Za-z]*\\b").containsMatchIn(t.replace("BankNifty", "").replace("FinNifty", "")), "${x.id}: $t")
+            for (w in listOf("ATR", "CUSUM", "OrbArms", "IraHub", "ira-core", "Compose", "vault", "regex", "detector"))
+                assertFalse(w in x.what || w in x.where, "${x.id}: $w")
+            x.to?.let { assertTrue(it in setOf("chart", "pnl", "ira", "jarvis", "data", "pine", "strategy"), "${x.id}: $it") }
+            assertFalse(x.gold, "${x.id}: IraGoldAlgo only talks; none of today's changes is in it")
+        }
+    }
+
+    @Test fun todaysChangesAreAllThere() {
+        val ids = WhatsNew.ENTRIES.map { it.id.removePrefix("2026-10-06-") }.toSet()
+        for (want in listOf("liquidity-only", "liquidity-lots", "solo-midday", "chart-liquidity", "liquidity-level-alert", "liquidity-notifications",
+            "trade-lessons", "liquidity-replay", "liquidity-paper-record", "live-vs-backtest", "today-glance", "morning-cues", "big-move-risk",
+            "market-data-viewer", "weekly-review", "tomorrow-plan", "liquidity-record", "liquidity-why-not", "solo-day", "liquidity-levels",
+            "pine-30-60", "jarvis-trades-30-60"))
+            assertTrue(want in ids, want)
+        // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
+        // the day; the first one closes.
+        assertEquals("2026-10-09-big-move-recorder", WhatsNew.ENTRIES.first().id)
+        assertEquals("2026-10-09-fno-to-1540", WhatsNew.ENTRIES[1].id)
+        assertEquals("2026-10-09-order-flow-auction", WhatsNew.ENTRIES[2].id)
+        assertEquals("2026-10-09-order-flow", WhatsNew.ENTRIES[3].id)
+        assertEquals("2026-10-09-live-prices-everywhere", WhatsNew.ENTRIES[4].id)
+        assertEquals("2026-10-09-strategies-to-research", WhatsNew.ENTRIES[5].id)
+        assertEquals("2026-10-09-order-speed", WhatsNew.ENTRIES[6].id)
+        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES[7].id)
+        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[8].id)
+        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[9].id)
+        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[10].id)
+        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[11].id)
+        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[12].id)
+        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[13].id)
+        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[14].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[15].id)
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[16].id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[17].id)
+        assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
+        assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
+    }
+
+    @Test fun fnoTo1540SaysTheOrderWindowAndWatchFollowIt() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-fno-to-1540" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        assertTrue("NSE F&O now trades to 15:40; the app's order window and watch follow it." in x.what, x.what)
+        assertTrue("15:30" in x.what && "own entry and exit times" in x.what, x.what)
+        assertNull(x.ask)
+        assertFalse(x.jarvisOnly)
+    }
+
+    @Test fun theBigMoveRecorderSaysItOnlyRecordsAndRespectsTheBatterySaver() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-big-move-recorder" }
+        for (w in listOf("5 minutes before and after", "4.7 times", "Two ordinary minutes", "best bid and offer", "cash index",
+            "9:15 to 15:40", "battery saver", "turns it off", "12 months", "export with the market data", "no strategy uses it"))
+            assertTrue(w in x.what, w)
+        assertTrue("Order flow" in x.where && "Big moves" in x.where, x.where)
+        assertEquals(MoveEvents.Ask("BANKNIFTY", 10 * 60 + 32, 1), MoveEvents.asked(x.ask!!))
+    }
+
+    @Test fun orderFlowSaysItOnlySkipsAndItsQuestionIsAnswered() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-order-flow" }
+        assertTrue("only skips" in x.what && "never places" in x.what && "PIN" in x.what && "may skip winners" in x.what, x.what)
+        assertTrue("Order flow" in x.where, x.where)
+        assertEquals("BANKNIFTY", OrderFlow.asked(x.ask!!))
+    }
+
+    @Test fun theAuctionReadingsAreSaidAsDisplayAndLogOnly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-order-flow-auction" }
+        for (w in listOf("volume profile", "yesterday's value", "divergence", "footprint", "VWAP bands", "market profile", "liquidity heatmap",
+            "time and sales", "gamma regime", "zero-gamma", "both dealer-sign conventions", "start off", "no strategy uses it"))
+            assertTrue(w in x.what, w)
+        assertTrue("Order flow" in x.where && "GEX" in x.where && "POC/VA" in x.where, x.where)
+        assertEquals("BANKNIFTY", OrderFlow.asked(x.ask!!))
+        assertEquals(Auction.Topic.PROFILE, Auction.topic(x.ask!!))
+    }
+
+    @Test fun liquidityOnMidcapNiftyIsOnPaperUnderTheOneSwitch() {
+        val mid = WhatsNew.ENTRIES.first { it.id == "2026-10-07-liquidity-midcpnifty" }
+        assertEquals(LocalDate.of(2026, 10, 7), mid.date)
+        assertTrue("Midcap Nifty" in mid.title && "Liquidity 15+5" in mid.title, mid.title)
+        assertTrue("on paper" in mid.what && "PIN or fingerprint" in mid.what && "8-point index stop" in mid.what, mid.what)
+        assertTrue("Liquidity 15+5 row" in mid.where, mid.where)
+        assertNull(mid.ask)
+    }
+
+    @Test fun liquidityHasPriorityOverTheOrbArmsAndTheLiveGatesStay() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-07-liquidity-priority" }
+        assertEquals(LocalDate.of(2026, 10, 7), x.date)
+        for (arm in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade", "Liquidity 15+5")) assertTrue(arm in x.what, arm)
+        assertTrue("Liquidity has priority over ORB arms" in x.what && "beside them" in x.what, x.what)
+        assertTrue("PIN or fingerprint" in x.what && "kill switch" in x.what && "still refused" in x.what, "the live gates are said as unchanged")
+        assertTrue("Strategies card" in x.where && "evening replay" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theX1AndX2ChangesAreSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-08-x1-x2" }
+        assertEquals(LocalDate.of(2026, 10, 8), x.date)
+        assertTrue("within seconds of each bar close" in x.what, "A: entries at the bar close")
+        assertTrue("judged on its own" in x.what, "B: BANKNIFTY apart")
+        assertTrue("back to 1 lot unless you chose more" in x.what, "C: 1 lot")
+        assertTrue("after 30 trades" in x.what, "D: lessons")
+        assertTrue("FinNifty breakdown" in x.what && "arm it again" in x.what, "E: the Pine script")
+        assertTrue("Night (R3) on paper" in x.what && "Rs 207" in x.what && "Rs 150" in x.what && "not proven" in x.what, "F: the night arm")
+        assertTrue("Strategies card" in x.where && "Night (R3) row" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun savedStrategiesMovedToResearchIsSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-strategies-to-research" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        assertTrue("Your saved strategies moved from Trade to Research → Strategies." in x.what, x.what)
+        for (t in x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }) assertTrue(t.trim().split(' ').size <= 20, t)
+        assertTrue("Research tab → Strategies" in x.where, x.where)
+        assertEquals("strategy", x.to)
+        assertNull(x.ask)
+    }
+
+    @Test fun fasterOrdersAndTheOrderSpeedCardAreSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-order-speed" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        for (w in listOf("the moment a new price arrives", "not every 15 seconds", "the 15-second check stays as a backup",
+            "fill notice", "typical and worst time, paper and live", "relay is slow", "Mumbai relay",
+            "Every safety rule, approval and paper-only bot is unchanged"))
+            assertTrue(w in x.what, w)
+        val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
+        assertEquals(6, sentences.size, x.what)
+        for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
+        assertTrue("Settings → Zerodha → Order speed card" in x.where && "Copy diagnostics" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theTwoNewPaperBotsAndTheParkingAreSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-two-paper-bots-and-parking" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        for (w in listOf("two new paper-only bots", "not proven", "off until you switch them on", "VIX divergence", "0.2%", "India VIX is up 2%",
+            "10:30, 11:30, 12:30 and 13:30, first signal only", "Rs 70 and Rs 112 a day", "failed the luck checks", "US-night silver",
+            "1 lot", "09:05", "Rs 1,189 a trade", "tripling year", "sells too", "3% disaster stop",
+            "Liquidity 15+5 FINNIFTY (−₹8,035 over 8 paper trades) and ORB Sweep (−₹4,498 over 6) were switched off on your OK",
+            "Switch them back on in Home → Strategies any time"))
+            assertTrue(w in x.what, w)
+        // At most 20 words a sentence, eight sentences.
+        val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
+        assertEquals(8, sentences.size, x.what)
+        for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
+        assertTrue("Strategies card" in x.where && "VIX divergence row" in x.where && "MCX (commodities)" in x.where &&
+            "Switch FINNIFTY back on" in x.where && "Liquidity 15+5 row" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theMcxPaperArmsAreSaidPlainlyWithTheirResearchNumbers() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-mcx-paper-arms" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        assertTrue("MCX" in x.title && "paper" in x.title, x.title)
+        for (w in listOf("paper-only", "not proven", "off until you switch it on", "Natural gas evening breakout", "17:00-19:00", "22:00",
+            "23:15", "Rs 41 a day", "Rs 83", "not significant", "Rs 40,000 drawdown", "Silver mini morning call", "two strikes out",
+            "11-20 days", "4 hours", "Rs 454 a trade over 51 trades", "failed 2 of its 4 checks", "12-month trend", "Rs 8-10 lakh",
+            "often ruined at Rs 1 lakh", "1 lot", "never send an order to Zerodha", "5 trading days before expiry, not 2"))
+            assertTrue(w in x.what, w)
+        assertTrue("Home → Dashboard → Strategies card → MCX (commodities)" in x.where && "Commodities →" !in x.where, x.where)
+        assertTrue("Home → Strategies has three paper-only MCX bots" in x.what && "Commodities page" !in x.what, x.what)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun mcxIsSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-09-mcx" }
+        assertEquals(LocalDate.of(2026, 10, 9), x.date)
+        assertTrue("MCX" in x.title, x.title)
+        for (w in listOf("Crude oil", "natural gas", "gold", "silver", "near and next month futures", "23:30", "23:55 from 2 November",
+            "spread and charges", "closed by 23:00 the day before expiry", "15:00 the day before expiry", "5 trading days before expiry", "no bot does"))
+            assertTrue(w in x.what, w)
+        assertTrue("Options tab → Commodities" in x.where && "MCX expiry exit" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun honestPaperIsSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-08-honest-paper" }
+        assertEquals(LocalDate.of(2026, 10, 8), x.date)
+        assertTrue("bid/ask spread" in x.title, x.title)
+        assertTrue("like a real order" in x.what && "real bid and ask" in x.what && "measured spread" in x.what, x.what)
+        assertTrue("over a minute old" in x.what && "spread it paid" in x.what, x.what)
+        assertTrue("Trade → Paper" in x.where && "Strategies card" in x.where && "day report" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theEighthOfOctobersFiveFixesAreSaidPlainly() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-08-locks-and-day-lock" }
+        assertEquals(LocalDate.of(2026, 10, 8), x.date)
+        assertTrue("only moves up" in x.what && "every tick or minute high" in x.what, "fix 1: the resting stop")
+        assertTrue("barely trades" in x.what, "fix 2: thin options")
+        assertTrue("backup GTT" in x.what && "sold at once" in x.what && "loud warning" in x.what, "items 6-8: backup, sweeper, no-price warning")
+        assertTrue("every 15 seconds" in x.what && "Solo" in x.what && "Liquidity" in x.what, "fix 3: the 15-second check")
+        assertTrue("paper buy never fills" in x.what, "fix 4: stale prices")
+        assertTrue("net since 1 Oct" in x.what && "paper start date" in x.where, "the paper running total on Home")
+        assertTrue("+Rs 8,000" in x.what && "no new automatic trade" in x.what && "open trades keep their exits" in x.what, "fix 5: the day lock")
+        assertTrue("Bot settings" in x.where && "off at 0" in x.where && "Strategies card" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theProfitLockMovesTheRestingStop() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-07-profit-lock-stop" }
+        assertEquals(LocalDate.of(2026, 10, 7), x.date)
+        for (arm in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade")) assertTrue(arm in x.what, arm)
+        assertTrue("moved up to the lock" in x.what && "never down" in x.what && "app closed" in x.what, x.what)
+        assertTrue("+20, +40 and +60" in x.what, "ORB Sweep's rungs said as they are")
+        assertTrue("Strategies card" in x.where, x.where)
+        assertNull(x.ask)
+        assertFalse(x.gold)
+    }
+
+    @Test fun theFourArmsAreBackOnPaperAndNothingSaysRetired() {
+        val back = WhatsNew.ENTRIES.first { it.id == "2026-10-07-orb-arms-back" }
+        assertEquals(LocalDate.of(2026, 10, 7), back.date)
+        for (arm in listOf("ORB", "ORB Fresh", "ORB Sweep", "Range Fade")) assertTrue(arm in back.title, arm)
+        assertTrue("on paper" in back.what && "PIN or fingerprint" in back.what, back.what)
+        assertTrue("Strategies card" in back.where, back.where)
+        // No entry still says they are retired or can't be switched on, nor points to a Retired list.
+        for (x in WhatsNew.ENTRIES) for (t in listOf(x.title, x.what, x.where))
+            assertFalse(Regex("(?i)retired|can't be switched on|cannot be armed").containsMatchIn(t), "${x.id}: $t")
+    }
+
+    @Test fun eachQuestionToTryIsAnsweredByItsOwnFeature() {
+        val audit = CoverageTest()
+        val want = mapOf("why did banknifty jump at 10:32" to "MoveEvents", "what's the volume profile on banknifty" to "OrderFlow", "what is the order flow on banknifty" to "OrderFlow","what did Solo do today" to "SoloDay", "why no liquidity trade today" to "LiquidityWhyNot",
+            "what's the plan for tomorrow" to "TomorrowPlan", "how did liquidity do this week" to "LiquidityRecord",
+            "explain my bots' trades today" to "BotTrades", "weekly review" to "WeeklyReview", "where are the liquidity levels" to "LiquidityMap",
+            "how is Solo doing" to "Solo", "what's GIFT Nifty saying" to "MorningCues", "is a big move likely now" to "BigMoveRisk",
+            "what is the stop loss for news trades" to "Glossary", "how many lots is liquidity trading" to "Honest")
+        val asks = WhatsNew.ENTRIES.mapNotNull { it.ask }
+        assertEquals(want.keys, asks.toSet())
+        for (a in asks) {
+            assertEquals(want[a], audit.feature(a), a)
+            val p = Ask.parse(a)
+            assertNull(p.order, a); assertNull(p.command, a); assertFalse(Bundle.acts(a), a)
+        }
+    }
+
+    // ---- which build shows what ----
+
+    @Test fun goldShowsOnlyItsOwnAndABuildWithoutJarvisNoJarvisLines() {
+        assertTrue(WhatsNew.forBuild(gold = true, jarvis = true).isEmpty(), "none of today's is in IraGoldAlgo")
+        val mixed = listOf(e("a", d2, ask = "x", gold = true), e("b", d2, ask = "y"), e("c", d2, jarvisOnly = true))
+        assertEquals(listOf("a"), WhatsNew.forBuild(gold = true, jarvis = true, entries = mixed).map { it.id })
+        assertNull(WhatsNew.forBuild(gold = true, jarvis = true, entries = mixed).single().ask, "IraGoldAlgo names no question of the other build")
+        val noJarvis = WhatsNew.forBuild(gold = false, jarvis = false, entries = mixed)
+        assertEquals(listOf("a", "b"), noJarvis.map { it.id })
+        assertTrue(noJarvis.all { it.ask == null })
+        assertEquals(WhatsNew.ENTRIES, WhatsNew.forBuild(gold = false, jarvis = true))
+    }
+
+    // ---- unseen, newest first, collapsed ----
+
+    @Test fun unseenNewestFirstAndCollapsedToThree() {
+        val list = listOf(e("old1", d1), e("new1", d2), e("new2", d2), e("old2", d1), e("new3", d2))
+        assertEquals(listOf("new1", "new2", "new3", "old1", "old2"), WhatsNew.newestFirst(list).map { it.id })
+        val unseen = WhatsNew.unseen(list, setOf("new2", "gone"))
+        assertEquals(listOf("new1", "new3", "old1", "old2"), unseen.map { it.id })
+        assertEquals(listOf("new1", "new3", "old1"), WhatsNew.collapsed(unseen, all = false).map { it.id })
+        assertEquals(1, WhatsNew.hidden(unseen, all = false))
+        assertEquals(unseen, WhatsNew.collapsed(unseen, all = true))
+        assertEquals(0, WhatsNew.hidden(unseen, all = true))
+        assertEquals(0, WhatsNew.hidden(unseen.take(2), all = false))
+        assertTrue(WhatsNew.unseen(list, list.map { it.id }.toSet()).isEmpty())
+        // Nothing seen yet (a phone updated from a build before this card): every entry is new.
+        assertEquals(WhatsNew.ENTRIES.size, WhatsNew.unseen(WhatsNew.ENTRIES, WhatsNew.decode(null)).size)
+    }
+
+    @Test fun gotItMarksAllSeenAndTheIdsKeep() {
+        val list = listOf(e("a", d2), e("b", d2), e("c", d1))
+        val seen = WhatsNew.markSeen(setOf("a", "retired-entry"), list.take(2), known = list)
+        assertEquals(setOf("a", "b"), seen, "an id no longer in the changelog is dropped")
+        assertEquals(listOf("c"), WhatsNew.unseen(list, seen).map { it.id })
+        val all = WhatsNew.markSeen(emptySet(), WhatsNew.ENTRIES)
+        assertTrue(WhatsNew.unseen(WhatsNew.ENTRIES, all).isEmpty())
+        assertEquals(all, WhatsNew.decode(WhatsNew.encode(all)))
+        assertEquals("a,b", WhatsNew.encode(setOf("b", "a")))
+        assertEquals(emptySet(), WhatsNew.decode(""))
+        assertEquals(setOf("x", "y"), WhatsNew.decode(" x , ,y"))
+    }
+
+    @Test fun theCardsLines() {
+        val x = WhatsNew.ENTRIES.first { it.id.endsWith("liquidity-lots") }
+        assertEquals("Where: Home → Dashboard → Strategies card → Liquidity 15+5 row → \"Lots: 1 · 2 · 3\"", WhatsNew.whereLine(x))
+        assertEquals("Ask Jarvis: \"how many lots is liquidity trading\"", WhatsNew.askLine(x))
+        assertNull(WhatsNew.askLine(WhatsNew.ENTRIES.first { it.id.endsWith("today-glance") }))
+        assertEquals("6 Oct", WhatsNew.day(d2))
+    }
+
+    // ---- Jarvis ----
+
+    @Test fun theQuestion() {
+        for (s in listOf("what's new", "What's new?", "whats new", "what is new", "Jarvis, what's new?", "what's new jarvis", "what's new in the app",
+            "what is new in this update", "what's new in the latest version", "what's new in iraalgo", "show me what's new",
+            "what changed in the app", "what's changed in the update", "app me kya naya hai", "what has changed in this build", "what are the new features",
+            "any new features", "new features", "what features were added", "what's in the new update", "release notes", "show me the changelog",
+            "naya kya hai", "kya naya hai", "naya kya aaya", "app mein naya kya hai", "app mein kya naya hai", "update mein kya badla",
+            "is update mein naya kya hai", "naya kya hai app mein"))
+            assertTrue(WhatsNew.asked(s), s)
+        for (s in listOf("what's new in the market", "any news", "news", "what's happening", "latest news", "what's new today", "what is new today",
+            "what's new with nifty", "what's new in banknifty", "anything new", "naya kya hai market mein", "what's new since the open",
+            "what changed since this morning", "what's changed since i last asked", "what changed since last time", "what changed today",
+            "what changed in nifty", "what changed in my positions", "what changed in how you work", "what changed in my bots this week",
+            "what's the latest", "any updates", "subah se kya badla", "what's new on the news", "what can i ask you", "update the app",
+            "what's up", "what's new with you",
+            // A bare "what changed" is SinceLast's (the market since Boss last asked).
+            "what changed", "what's changed", "what has changed", "What changed?"))
+            assertFalse(WhatsNew.asked(s), s)
+    }
+
+    @Test fun jarvisSaysTheNewestSixWithTheirQuestions() {
+        val t = WhatsNew.answer(WhatsNew.ENTRIES)
+        val lines = t.lines()
+        // The newest six are all from one day (9 Oct): the day is said once, in the head.
+        assertEquals("What's new in the app (9 Oct), newest first:", lines.first())
+        assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
+        assertEquals("• Big moves saved, second by second: try \"why did banknifty jump at 10:32\".", lines[1])
+        assertEquals("• F&O trades to 15:40: Home's market status, the order forms and the market watch.", lines[2])
+        assertEquals("• Volume profile, gamma regime, heatmap and tape: try \"what's the volume profile on banknifty\".", lines[3])
+        assertEquals("• Live order flow, logged beside every strategy: try \"what is the order flow on banknifty\".", lines[4])
+        assertEquals("• Live exits from the price stream, local candles: Settings → Zerodha (the order speed card and the exchange stop setting).", lines[5])
+        assertEquals("• Saved strategies moved to Research: Research tab → Strategies (create, edit, arm, run and backtest your baskets).", lines[6])
+
+
+        assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
+        // Never a word of acting.
+        assertFalse(Regex("(?i)\\b(placed|bought|sold|armed|switched on)\\b").containsMatchIn(lines.first() + lines.last()))
+    }
+
+    @Test fun jarvisOnFewOrNoneAndOnTwoDays() {
+        assertEquals("Nothing new to tell you about the app just now, Boss.", WhatsNew.answer(emptyList()))
+        val t = WhatsNew.answer(listOf(e("o", d1), e("n", d2, ask = "how is nifty")))
+        assertEquals(listOf("What's new in the app, newest first:", "• Title n (6 Oct): try \"how is nifty\".", "• Title o (5 Oct): Where o.",
+            "Each one with where to find it is in Settings → What's new."), t.lines())
+        assertEquals(2, WhatsNew.answer(WhatsNew.ENTRIES, max = 2).lines().count { it.startsWith("• ") })
+    }
+}

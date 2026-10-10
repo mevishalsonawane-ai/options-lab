@@ -67,7 +67,11 @@ object ShortAnswer {
     private val Q_WHOLE = Regex("^ (tell me |say |some )?more( please| details| detail| boss)? $| (details?|in detail|detail mein|detail me|vistar se|" +
         "aur batao|aur bolo|aur bataiye|explain more|full answer|the full answer|go on|tell me more|in full|elaborate|say the rest|the rest) |" +
         // Understanding round 24: as Commands' "more" said as heard.
-        "^ (aur (bataao|btao|bata|boliye|sunao)|or (batao|bataao)|(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|carry on|continue)( please| boss| jarvis| now)? $")
+        "^ (aur (bataao|btao|bata|boliye|sunao)|or (batao|bataao)|(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|carry on|continue|" +
+        // Understanding round 26: as Commands' "more" said as heard.
+        "say more|keep going|the rest|rest of it|the rest of it|(tell me|say|give me) the rest( of it)?|" +
+        "(baaki|baki|baaki ka|baki ka|aage|aage ka) (batao|bataao|bolo|bataiye|boliye|sunao)|(poori|puri|pura|poora) baat (batao|bataao|bolo)|" +
+        "(give me |say )?(the )?full answer|(say |tell me )?the whole thing|(give me |say )?the whole answer)( please| boss| jarvis| now)? $")
     private val Q_TRADES_LEFT = Regex(" (trades? (left|remaining)|how many (more )?trades (can|may|left)|more trades) ")
     private val Q_THETA = Regex(" (theta|time decay|decay) ")
     private val Q_LAST = Regex(" last (trade|order|fill) ")
@@ -149,10 +153,51 @@ object ShortAnswer {
         return Short(line, answer, restText.joinToString(" ").ifBlank { null })
     }
 
+    // Speed, round 7: the patterns the helpers below used to compile on every call (each answer read compiled about a
+    // dozen, more for a long one), compiled once. The same patterns: every line as before.
+    private val SPACES = Regex("\\s+")
+    private val DIGIT_COMMA = Regex("\\d,$")
+    private val ZERODHA_NO_ANSWER = Regex("^Zerodha did not answer", RegexOption.IGNORE_CASE)
+    private val ZERODHA_NOT_LOGGED = Regex("^Zerodha: not logged in", RegexOption.IGNORE_CASE)
+    private val RS_SIGNED = Regex("Rs (-?)([\\d,]+(?:\\.\\d+)?)")
+    private val INDIAN_GROUPS = Regex("\\d,\\d{2},\\d{3}")
+    private val ON_THE_DAY = Regex("\\(([+\\-\\u2212]?)(\\d+(?:\\.\\d+)?)% on the day\\)")
+    private val DIRECTION = Regex("(\\d) (down|up|flat) ")
+    private val RS_PAISE = Regex("Rs ([\\d,]+\\.\\d+)")
+    private val LEVEL_DECIMALS = Regex("(?<![\\d.,])(\\d{1,3}(?:,\\d{2,3})+\\.\\d+)(?![\\d%])")
+
+    /**
+     * Speed, round 7: the chat's bubbles read through here. A bubble's short line was worked out again every time the
+     * bubble came into the list (scrolling back to it, opening the chat, coming back from the globe): the whole reading
+     * of [of] - the question's dozen kind patterns, the answer split, every sentence's safety patterns and the warning
+     * reader - on the screen's thread, once per bubble on screen. Now one reading per (question, answer, choice), kept
+     * for the last [MEMO_SIZE]; a hit is a map look-up. The same [Short] as [of], always (it is a pure function of these
+     * three). [clearCache] drops them (the conversation forgotten, everything erased).
+     */
+    fun cached(question: String?, answer: String, short: Boolean = true): Short {
+        val key = Triple(question, answer, short)
+        synchronized(memo) { memo[key]?.let { return it } }
+        val out = of(question, answer, short)
+        synchronized(memo) { memo[key] = out }
+        return out
+    }
+
+    /** Drops the remembered readings ([cached]). */
+    fun clearCache() { synchronized(memo) { memo.clear() } }
+
+    /** How many readings [cached] keeps (the latest used). */
+    const val MEMO_SIZE = 200
+
+    private val memo = object : LinkedHashMap<Triple<String?, String, Boolean>, Short>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Triple<String?, String, Boolean>, Short>?) = size > MEMO_SIZE
+    }
+
+    internal fun cachedCount(): Int = synchronized(memo) { memo.size }
+
     /** The trimmed fallback ends with this (the sentence went on). */
     private const val CUT = "…"
 
-    private fun words(s: String) = s.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
+    private fun words(s: String) = s.trim().split(SPACES).count { it.isNotEmpty() }
 
     /** The general fallback: the lead sentence (with the next one when the first is a short lead-in without a figure), at most about [MAX_WORDS] words. */
     private fun fallback(parts: List<String>): Pair<String, Set<Int>> {
@@ -171,13 +216,13 @@ object ShortAnswer {
 
     /** [s] cut to about [MAX_WORDS] words at a clause boundary (a comma, a colon, a semicolon or a dash), never inside a figure. */
     fun trim(s: String): String {
-        val w = s.trim().split(Regex("\\s+"))
+        val w = s.trim().split(SPACES)
         if (w.size <= MAX_WORDS + 5) return s.trim()
         // The last clause boundary within the first MAX_WORDS words (after at least 6 words).
         var cutAt = -1
         for (i in 5 until minOf(w.size, MAX_WORDS)) {
             val x = w[i]
-            if (x.endsWith(",") && !Regex("\\d,$").containsMatchIn(x) || x.endsWith(";") || x.endsWith(":") || w.getOrNull(i + 1) == "-") cutAt = i
+            if (x.endsWith(",") && !DIGIT_COMMA.containsMatchIn(x) || x.endsWith(";") || x.endsWith(":") || w.getOrNull(i + 1) == "-") cutAt = i
         }
         val upto = if (cutAt >= 0) cutAt + 1 else MAX_WORDS
         return w.take(upto).joinToString(" ").trimEnd(',', ';', ':', ' ') + CUT
@@ -185,8 +230,8 @@ object ShortAnswer {
 
     /** "Zerodha did not answer just now, so its orders are not included." -> "Zerodha could not be read just now." */
     private fun shortSafety(s: String): String = when {
-        Regex("^Zerodha did not answer", RegexOption.IGNORE_CASE).containsMatchIn(s) -> "Zerodha could not be read just now."
-        Regex("^Zerodha: not logged in", RegexOption.IGNORE_CASE).containsMatchIn(s) -> "Zerodha is not logged in today."
+        ZERODHA_NO_ANSWER.containsMatchIn(s) -> "Zerodha could not be read just now."
+        ZERODHA_NOT_LOGGED.containsMatchIn(s) -> "Zerodha is not logged in today."
         else -> s
     }
 
@@ -267,14 +312,14 @@ object ShortAnswer {
     /** "2,575.40" -> "2,575" (whole rupees, rounded; the grouping kept). */
     fun rupees(amount: String): String = whole(amount)
 
-    private fun rupeesText(s: String) = s.replace(Regex("Rs (-?)([\\d,]+(?:\\.\\d+)?)")) { m -> "Rs " + m.groupValues[1] + rupees(m.groupValues[2]) }
+    private fun rupeesText(s: String) = s.replace(RS_SIGNED) { m -> "Rs " + m.groupValues[1] + rupees(m.groupValues[2]) }
 
     /** [n] ("24,612.40", "1,23,456.7") rounded to a whole number, written with the same grouping. */
     fun whole(n: String): String {
         if (!n.contains('.')) return n
         val v = n.replace(",", "").toDoubleOrNull() ?: return n
         val r = Math.round(v)
-        val indian = Regex("\\d,\\d{2},\\d{3}").containsMatchIn(n)
+        val indian = INDIAN_GROUPS.containsMatchIn(n)
         val plain = r.toString()
         if (!n.contains(',') && plain.length <= 3) return plain
         return if (indian) indianGroup(plain) else "%,d".format(Locale.ENGLISH, r)
@@ -293,15 +338,15 @@ object ShortAnswer {
     /** A market line kept to its level, its day's change and its "as of": "Nifty is at 24,612, up 0.42% as of 14:05." */
     private fun level(s: String): String {
         var t = s.substringBefore(", in a range").trimEnd('.', ' ')
-        t = t.replace(Regex("\\(([+\\-\\u2212]?)(\\d+(?:\\.\\d+)?)% on the day\\)")) { m ->
+        t = t.replace(ON_THE_DAY) { m ->
             val down = m.groupValues[1] == "-" || m.groupValues[1] == "−"
             (if (down) "down " else if (m.groupValues[2].toDouble() == 0.0) "flat " else "up ") + m.groupValues[2] + "%"
-        }.replace(Regex("(\\d) (down|up|flat) ")) { m -> "${m.groupValues[1]}, ${m.groupValues[2]} " }
+        }.replace(DIRECTION) { m -> "${m.groupValues[1]}, ${m.groupValues[2]} " }
         return tidy(t) + "."
     }
 
     /** Paise and a level's decimals dropped (1,000 and over), rounded: "+Rs 2,575.40" -> "+Rs 2,575", "24,612.40" -> "24,612". */
     fun tidy(s: String): String = s
-        .replace(Regex("Rs ([\\d,]+\\.\\d+)")) { m -> "Rs " + whole(m.groupValues[1]) }
-        .replace(Regex("(?<![\\d.,])(\\d{1,3}(?:,\\d{2,3})+\\.\\d+)(?![\\d%])")) { m -> whole(m.groupValues[1]) }
+        .replace(RS_PAISE) { m -> "Rs " + whole(m.groupValues[1]) }
+        .replace(LEVEL_DECIMALS) { m -> whole(m.groupValues[1]) }
 }

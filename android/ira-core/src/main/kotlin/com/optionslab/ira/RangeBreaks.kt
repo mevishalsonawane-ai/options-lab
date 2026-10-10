@@ -50,7 +50,7 @@ object RangeBreaks {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the opening-range record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock, so it has no opening range, and India VIX is not traded."
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
+    private fun norm(text: String) = Spaced.words(text)
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))

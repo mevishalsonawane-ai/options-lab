@@ -33,9 +33,10 @@ import kotlin.math.sign
 object DailyPnl {
     /**
      * One day: [pnl] the P&L before charges (as shown; the calendar's tile), [trades] the count, [charges] that day's
-     * charges (0 when not kept - an older entry, whose [pnl] is then the figure as it was recorded).
+     * charges (0 when not kept - an older entry, whose [pnl] is then the figure as it was recorded), [exact] when they are
+     * Zerodha's own contract-note figure for every order of the day rather than the estimate from its trades.
      */
-    data class Day(val date: LocalDate, val pnl: Double, val trades: Int, val charges: Double = 0.0) {
+    data class Day(val date: LocalDate, val pnl: Double, val trades: Int, val charges: Double = 0.0, val exact: Boolean = false) {
         /** After charges. */
         val net: Double get() = pnl - charges
     }
@@ -70,27 +71,53 @@ object DailyPnl {
     /**
      * The current trading day's figure for the account; [trades] < 0 keeps the count already stored. [pnl] as each
      * account always kept it: paper after charges (Paper.Snapshot.dayPnl), Zerodha its own m2m (before charges);
-     * [charges] the day's charges (paper: paid; Zerodha: estimated), < 0 keeps the charges already stored. True when the
-     * kept figure changed (the calendar then reads again).
+     * [charges] the day's charges (paper: paid; Zerodha: estimated, or - [exact] - Zerodha's own figure for every order of
+     * the day, usefulness round 35), < 0 keeps the charges already stored. True when the kept figure changed (the
+     * calendar then reads again).
      *
      * Speed, round 5 ([com.optionslab.ira.DayFigure]): a reading equal to the kept one writes nothing, and a new one is
      * readable at once and written to the vault in the background ([SecurePrefs.putAllSoon]): the paper and Zerodha
      * refreshes that record it no longer wait on a Keystore encryption and two disk syncs before showing the new book.
      */
     @Synchronized
-    fun record(live: Boolean, pnl: Double, trades: Int, charges: Double = -1.0): Boolean {
+    fun record(live: Boolean, pnl: Double, trades: Int, charges: Double = -1.0, exact: Boolean = false): Boolean {
         if (!pnl.isFinite()) return false
         val today = (sessionDay(live) ?: return false).toString()
         val o = read(live)
-        val stored = o.optJSONArray(today)?.let { a -> runCatching { com.optionslab.ira.DayFigure.Kept(a.getDouble(0), a.optInt(1, 0), a.optDouble(2, 0.0)) }.getOrNull() }
-        val entry = com.optionslab.ira.DayFigure.next(stored, pnl, trades, charges) ?: return false
-        o.put(today, JSONArray().put(entry.pnl).put(entry.trades).put(entry.charges))
+        val stored = kept(o, today)
+        val entry = com.optionslab.ira.DayFigure.next(stored, pnl, trades, charges, exact) ?: return false
+        // An exact figure is marked by a fourth element (1); every other entry is written as it always was.
+        o.put(today, JSONArray().put(entry.pnl).put(entry.trades).put(entry.charges).also { if (entry.exact) it.put(1) })
         // About three years of days is plenty; the oldest go first.
         val keys = o.keys().asSequence().toList().sorted()
         keys.dropLast(1100).forEach { o.remove(it) }
-        SecurePrefs.putAllSoon(mapOf(key(live) to o.toString()))
+        // ANR fix (9 Oct): with a position open the figure moves on every price pass (the open Home / Trade page every
+        // 2-10 s, the watch every 15 s), and each write re-encrypted the whole settings vault through the Keystore. A reading
+        // that only moves the figure is kept in memory (readable at once) and written at most a minute later
+        // ([SecurePrefs.putAllLazy]); a new day, a new trade or new charges are written at once in the background, as before.
+        val write = mapOf(key(live) to o.toString())
+        if (com.optionslab.ira.DayFigure.marksOnly(stored, entry)) SecurePrefs.putAllLazy(write) else SecurePrefs.putAllSoon(write)
         changed()
         return true
+    }
+
+    /** The entry kept for [day] in [o], or null (none, or damaged). */
+    private fun kept(o: JSONObject, day: String): com.optionslab.ira.DayFigure.Kept? = o.optJSONArray(day)?.let { a ->
+        runCatching { com.optionslab.ira.DayFigure.Kept(a.getDouble(0), a.optInt(1, 0), a.optDouble(2, 0.0), a.optInt(3, 0) == 1) }.getOrNull()
+    }
+
+    /**
+     * Usefulness, round 35: the current trading day's [charges] alone ([exact]: Zerodha's own figure for every order of
+     * the day), its P&L and trade count kept as recorded; [onlyOverExact]: only in place of a kept exact figure (one that
+     * no longer covers the day's orders gives way to the estimate). Nothing when no figure is kept for the day yet. True
+     * when the kept entry changed.
+     */
+    @Synchronized
+    fun recordCharges(live: Boolean, charges: Double, exact: Boolean, onlyOverExact: Boolean = false): Boolean {
+        val today = (sessionDay(live) ?: return false).toString()
+        val stored = kept(read(live), today) ?: return false
+        if (onlyOverExact && !stored.exact) return false
+        return record(live, stored.pnl, -1, charges, exact)
     }
 
     /** The paper calendar starts empty again (Reset paper); the Zerodha days are kept. */
@@ -118,7 +145,7 @@ object DailyPnl {
             // An entry with no charges kept (an older build's) shows as it always did.
             val charges = a.optDouble(2, 0.0).takeIf { it.isFinite() && it > 0 } ?: 0.0
             val shown = if (live) a.getDouble(0) else com.optionslab.ira.DayFigure.paise(com.optionslab.ira.PnlCharges.gross(a.getDouble(0), charges))
-            out[d] = Day(d, shown, maxOf(a.optInt(1, 0), out[d]?.trades ?: 0), charges)
+            out[d] = Day(d, shown, maxOf(a.optInt(1, 0), out[d]?.trades ?: 0), charges, exact = charges > 0 && a.optInt(3, 0) == 1)
         }
         return out
     }

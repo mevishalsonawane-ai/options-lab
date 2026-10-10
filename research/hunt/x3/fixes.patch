@@ -1,0 +1,50 @@
+diff -ru a/hunt/h1/model.py b/hunt/h1/model.py
+--- a/hunt/h1/model.py	2026-10-08 13:41:25.501892189 +0000
++++ b/hunt/h1/model.py	2026-10-08 13:41:25.523269927 +0000
+@@ -30,7 +30,7 @@
+ OUT = os.path.join(C.SCRATCH, "hunt", "h1")
+ HOLD = D.dnum(date(2025, 10, 1))
+ EMBARGO = 2                                   # trading days dropped between train and test / CV folds
+-LOT = {0: 65, 1: 35, 2: 60}                   # today's lots: NIFTY, BANKNIFTY, FINNIFTY (1 lot per trade)
++LOT = {0: 65, 1: 30, 2: 60}                   # today's lots: NIFTY, BANKNIFTY, FINNIFTY (1 lot per trade)
+ UNAME = {0: "NIFTY", 1: "BANKNIFTY", 2: "FINNIFTY"}
+ LABELS = {  # name: (T, S, L) premium fractions / minutes; REG = signed 30-min forward return (time exit only)
+     "T20S10L30": (0.20, 0.10, 30), "T30S15L60": (0.30, 0.15, 60), "T15S15L30": (0.15, 0.15, 30),
+diff -ru a/hunt/h42/common.py b/hunt/h42/common.py
+--- a/hunt/h42/common.py	2026-10-08 13:41:25.491163174 +0000
++++ b/hunt/h42/common.py	2026-10-08 13:41:25.523164331 +0000
+@@ -16,7 +16,7 @@
+ HERE = os.path.dirname(os.path.abspath(__file__))
+ UNDS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
+ HOLD = (date(2025, 10, 1) - date(1970, 1, 1)).days
+-LOT = {"NIFTY": 65, "BANKNIFTY": 35, "FINNIFTY": 60, "MIDCPNIFTY": 120, "SENSEX": 20}     # today's lots
++LOT = {"NIFTY": 65, "BANKNIFTY": 30, "FINNIFTY": 60, "MIDCPNIFTY": 120, "SENSEX": 20}     # today's lots
+ HS = {"BANKNIFTY": 0.0016, "NIFTY": 0.0016, "MIDCPNIFTY": 0.0021, "FINNIFTY": 0.0042, "SENSEX": 0.0020}  # h24 real
+ COST = Costs("app")
+ UPS, DNS, HS_ = (15, 20, 25, 30), (10, 15, 20), (15, 30, 60)
+diff -ru a/obuy/config.py b/obuy/config.py
+--- a/obuy/config.py	2026-10-08 13:41:25.481019025 +0000
++++ b/obuy/config.py	2026-10-08 13:41:25.523055985 +0000
+@@ -29,7 +29,7 @@
+ # day's lot cannot be read from the data (the OI-move gcd, as Lots.lotFromChain) - see data.Index.lot.
+ LOT_SCHEDULE = {
+     "NIFTY": [("2000-01-01", 75), ("2021-07-23", 50), ("2024-04-26", 25), ("2024-11-28", 75), ("2025-12-31", 65)],
+-    "BANKNIFTY": [("2000-01-01", 25), ("2023-07-21", 15), ("2024-11-28", 30), ("2025-06-27", 35)],
++    "BANKNIFTY": [("2000-01-01", 25), ("2023-07-21", 15), ("2024-11-28", 30), ("2025-06-27", 35), ("2025-12-31", 30)],
+     "FINNIFTY": [("2000-01-01", 40), ("2024-07-24", 25), ("2024-11-28", 65), ("2025-12-31", 60)],
+     "SENSEX": [("2000-01-01", 10), ("2024-11-28", 20)],
+     "MIDCPNIFTY": [("2000-01-01", 75), ("2024-11-28", 120)],
+diff -ru a/obuy/data.py b/obuy/data.py
+--- a/obuy/data.py	2026-10-08 13:41:25.469945917 +0000
++++ b/obuy/data.py	2026-10-08 13:41:25.522880730 +0000
+@@ -99,7 +99,9 @@
+         a = {c: np.concatenate([x[c] for x in parts]) for c in parts[0]}
+         strike = np.rint(a["strike"]).astype(np.int64)
+         key = (((a["day"] - lo) * 2 + (a["right"] < 0)) * 2_000_000 + strike) * 1024 + a["m"]
+-        order = np.argsort(key, kind="stable")
++        # x3 fix: when a strike shows up at two offsets in one minute (monthly series), keep the row that TRADED
++        # (volume > 0); the other is a carried quote. Sorting on (key, no-volume) puts the live print first.
++        order = np.lexsort(((a["volume"] <= 0).astype(np.int8), key))
+         key = key[order]
+         dup = np.zeros(len(key), bool)
+         dup[1:] = key[1:] == key[:-1]        # a strike seen at two offsets in one minute: keep the first

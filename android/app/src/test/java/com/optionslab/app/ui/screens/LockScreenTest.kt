@@ -27,8 +27,20 @@ class LockScreenTest {
         compose.waitForIdle()
     }
 
-    private fun waitForText(text: String) =
-        compose.waitUntil(20_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }   // the pad checks off the main thread: a slow CI runner
+    /**
+     * The pad checks off the main thread (a slow CI runner), and its banner clears itself after 2.8 s of the test clock:
+     * with the clock running freely that can pass between two looks, so the clock is held and moved one frame per look.
+     */
+    private fun waitForText(text: String) {
+        val auto = compose.mainClock.autoAdvance
+        compose.mainClock.autoAdvance = false
+        try {
+            compose.waitUntil(20_000) {
+                compose.mainClock.advanceTimeByFrame()
+                compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+            }
+        } finally { compose.mainClock.autoAdvance = auto }
+    }
 
     private fun show(setup: Boolean, onPin: (CharArray) -> PinLock.Result = { PinLock.Result.Ok }, onCreate: (CharArray) -> String? = { null }) =
         compose.setContent {

@@ -31,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -62,13 +63,18 @@ data class Account(
     val trades: List<com.optionslab.app.data.Broker.Trade>,
     val holdings: List<com.optionslab.app.data.Broker.Holding>,
     val at: java.time.ZonedDateTime = Market.now(),
+    /** Zerodha's own charges for today's orders ([com.optionslab.app.data.ZerodhaCharges]), or null: the estimate. */
+    val exactCharges: Double? = null,
 ) {
     val positions: List<com.optionslab.app.data.Broker.Position> get() = book.net
     /**
-     * Today's charges, estimated from today's filled trades: Zerodha's P&L is before charges, and the screens show this on
-     * a small "Charges ≈ ₹X (estimate)" line under it. Display only: no limit reads it.
+     * Today's charges: Zerodha's exact figure when it answered ([exactCharges]), else estimated from today's filled
+     * trades. Zerodha's P&L is before charges, and the screens show this on a small line under it - "Charges ₹X", or
+     * "Charges ≈ ₹X (estimate)" ([chargesEstimate]). Display only: no limit reads it.
      */
-    val charges: Double by lazy { com.optionslab.app.data.TradeBook.liveCharges(trades) }
+    val charges: Double by lazy { exactCharges ?: com.optionslab.app.data.TradeBook.liveCharges(trades) }
+    /** Is [charges] the estimate (Zerodha's exact figure not known for today's orders)? */
+    val chargesEstimate: Boolean get() = exactCharges == null
 }
 
 /** Orders awaiting the owner's decision, with every gate's verdict attached. */
@@ -588,7 +594,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         broker.value = brokerState()
         account.value = Load.Idle; plan.value = Load.Idle; sending.value = Load.Idle; gttPlan.value = Load.Idle
         paper.value = Load.Idle; stuck.value = null; orb.value = null; strategies.value = emptyList()
-        orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false
+        orderOwners.value = emptyMap(); strategyPending.value = emptyMap(); botStopped.value = false; botStopWhy.value = null
+        dayLockLine.value = null; paperSinceLine.value = null
     }
 
     // ---- protections: stops, trailing stops, targets ------------------------------------------
@@ -800,22 +807,44 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 livePositions.value = book.net
                 com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
                 val trades = tradesQ.await()
-                // Zerodha's P&L is before charges: the widgets show today's charges, estimated from these trades, under it.
+                // Zerodha's P&L is before charges: the widgets show today's charges under it - Zerodha's exact figure when
+                // already kept for exactly the day's orders (usefulness, round 35; no ask here), else the estimate from these trades.
                 val liveCharges = com.optionslab.app.data.TradeBook.liveCharges(trades)
-                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges) }
-                runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, liveCharges) }
+                val keptExact = ordersQ.await().getOrNull()?.let { com.optionslab.app.data.ZerodhaCharges.kept(it) }
+                runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges, keptExact) }
+                runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, keptExact ?: liveCharges, exact = keptExact != null) }
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 // Speed, round 5: the calendar reads again only when the day's figure changed (a refresh that changes
                 // nothing no longer makes an open calendar re-read every book).
                 if (book.net.isNotEmpty() || trades.isNotEmpty()) runCatching {
                     // The calendar's bump comes from DailyPnl.changes (see pnlDays).
-                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, liveCharges)
+                    com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades.size, keptExact ?: liveCharges, exact = keptExact != null)
                 }
-                Load.Done(Account(fundsQ.await(), book, ordersQ.await().getOrThrow(), trades, holdingsQ.await()))
+                val dayOrders = ordersQ.await().getOrThrow()
+                // Zerodha's exact charges when already kept for these orders (no ask here: the screen is not held for it).
+                Load.Done(Account(fundsQ.await(), book, dayOrders, trades, holdingsQ.await(), exactCharges = keptExact))
             } catch (e: Exception) {
                 broker.value = brokerState()
                 Load.Failed(e.message ?: "could not read the account")
+            }
+            // Not kept yet (an order completed since, or none asked today): Zerodha's contract note is asked once the
+            // account is on screen (at most once a minute, only when the day's complete orders changed), and its exact
+            // figure replaces the estimate on the line if this read is still the one shown. Any failure: the estimate stays.
+            val shown = (account.value as? Load.Done)?.value
+            if (shown != null && shown.exactCharges == null) {
+                val exact = com.optionslab.app.data.ZerodhaCharges.exact(shown.orders)
+                if (exact != null) {
+                    // Only over the very read it was asked for: a newer read that landed meanwhile is never replaced by it.
+                    val current = account.value
+                    if ((current as? Load.Done)?.value === shown && account.compareAndSet(current, Load.Done(shown.copy(exactCharges = exact)))) {
+                        // Usefulness, round 35: the widgets' small line and the calendar's day say it too, in place of the
+                        // estimate (for every order of the day; Zerodha's P&L itself stays as the widgets and calendar keep it).
+                        runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, exact, exact = true) }
+                        runCatching { com.optionslab.app.widget.OpenWidget.exactCharges(ctx, exact) }
+                        runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, exact, exact = true) }
+                    }
+                }
             }
         }
     }
@@ -1081,10 +1110,42 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * One MCX order for review (9 Oct): Zerodha takes MCX in lots, so the order's quantity is [lots] (its value checks use
+     * the lot's units); MCX's expiry refusals first; then the usual review - margin from Zerodha, every gate, the swipe and
+     * the PIN or fingerprint. Nothing is sent from here.
+     */
+    fun planMcx(m: com.optionslab.engine.mcx.McxContract, side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?,
+                protect: ProtectSpec? = null, area: String = "Commodities") {
+        com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot ${m.tradingSymbol} $product ${limit?.let { "LIMIT $it" } ?: "MARKET"} ($area, ${if (_settings.value.live) "LIVE" else "Paper"})")
+        plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            plan.value = try {
+                com.optionslab.app.data.McxGuard.entryRefusal(m, side == com.optionslab.engine.Kite.Side.BUY)?.let { error(it) }
+                if (!com.optionslab.app.data.McxMarket.acceptsOrders()) error(com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS)
+                if (m.token <= 0) error("${m.tradingSymbol} is not in Zerodha's MCX list yet; try again in a moment")
+                val b = com.optionslab.app.data.Broker
+                val q = b.quotes(listOf(m.kiteKey))
+                val qt = q[m.kiteKey]
+                val px = limit ?: (if (side == com.optionslab.engine.Kite.Side.SELL) qt?.bid else qt?.ask) ?: qt?.last ?: 0.0
+                val o = com.optionslab.engine.Kite.Order(m.tradingSymbol, side, lots, 1, product, "LIMIT",
+                    com.optionslab.engine.Kite.onTick(px, m.tick, side), m.tick, com.optionslab.engine.mcx.Mcx.EXCHANGE, multiplier = m.multiplier)
+                Load.Done(withMargin(OrderPlan("${side.name} ${m.tradingSymbol}", null, listOf(o), q, gate(listOf(o), false), false,
+                    protect = protect?.takeIf { it.any }, source = com.optionslab.app.data.Origins.manual(area))))
+            } catch (x: Exception) { Load.Failed(x.message ?: "could not prepare the order") }
+        }
+    }
+
     /** A single order typed by hand on the Zerodha page. */
     fun planManual(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right,
                    side: com.optionslab.engine.Kite.Side, lots: Int, product: String, limit: Double?, protect: ProtectSpec? = null,
                    area: String = "Order form") {
+        // An MCX option from an MCX chain (9 Oct): its own review ([planMcx]).
+        if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying)) {
+            val m = com.optionslab.app.data.McxMarket.find(underlying, expiry, strike, right.takeIf { it != com.optionslab.engine.Right.IX })
+            if (m != null) { planMcx(m, side, lots, product, limit, protect, area); return }
+            plan.value = Load.Failed("$underlying ${com.optionslab.engine.fmtG(strike)} ${right.name} is not in today's MCX list"); return
+        }
         com.optionslab.app.data.Diag.record("tap", "Plan ${side.name} $lots lot $underlying $expiry ${com.optionslab.engine.fmtG(strike)} $right $product ${limit?.let { "LIMIT $it" } ?: "MARKET"}${protect?.let { " protect=$it" } ?: ""} ($area, ${if (_settings.value.live) "LIVE" else "Paper"})")
         plan.value = Load.Busy("Looking up the contract"); prewarm(entry = true)
         viewModelScope.launch(Dispatchers.IO) {
@@ -1217,6 +1278,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 stuck.value = null
+                // An MCX order filled (9 Oct): the watch keeps it in view through MCX's evening, and its expiry exit with it.
+                if (cur.legs.any { it.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE }) {
+                    com.optionslab.app.data.McxMarket.markLive()
+                    withContext(Dispatchers.Main) { runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) } }
+                }
                 cur.session?.let { day ->
                     val short = fills.last().avgPrice
                     val wing = if (fills.size > 1) fills.first().avgPrice else null
@@ -1335,7 +1401,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val st = com.optionslab.app.data.Strategies
             if (tick) runCatching { st.tickAll(compromisedFresh(60_000)) }
             runCatching { orderOwners.value = st.owners() }
-            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday() }
+            runCatching { strategyAuto.value = st.automatic(); strategyPending.value = st.pending(); botStopped.value = st.stoppedToday(); botStopWhy.value = st.stoppedWhy() }
+            runCatching { dayLockLine.value = com.optionslab.app.data.DayLockGuard.statusLine() }
+            // The paper account's own day figures after charges, read only (Boss's 08 Oct wish).
+            runCatching {
+                val since = com.optionslab.engine.risk.PaperSince.startOf(com.optionslab.app.data.AppSettings.load().paperSince)
+                val days = com.optionslab.app.data.DailyPnl.all(false).mapValues { it.value.net }
+                // Honest paper (08 Oct): the line says the figures now pay the bid/ask spread, and from when.
+                paperSinceLine.value = com.optionslab.engine.risk.PaperSince.line(com.optionslab.engine.risk.PaperSince.summary(days, since)) +
+                    ". " + com.optionslab.engine.risk.PaperSince.spreadNote(since)
+            }
             strategies.value = st.all()
             strategyLog.value = st.log()
             runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
@@ -1356,6 +1431,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** [pinConfirmed]: the UI took the PIN or fingerprint first (required when the app is in Live). */
     fun approveOrb(source: String, pinConfirmed: Boolean = false) = strategyDo { com.optionslab.app.data.OrbArms.approve(source, pinConfirmed) }
     fun skipOrb(source: String) = strategyDo { com.optionslab.app.data.OrbArms.skip(source) }
+
+    /** A shadow re-armed on paper (Boss's yes) switched off again: back to recording only. */
+    fun shadowOff(id: String) = strategyDo { com.optionslab.app.data.ShadowArms.disarm(id) }
+    /** Liquidity 15+5's size from its row (a raise was confirmed in the row's dialog first). */
+    fun liquidityLots(n: Int) = strategyDo { com.optionslab.app.data.OrbArms.setLiquidityLots(n, "Boss on the row") }
+    /** A Liquidity 15+5 index parked on Boss's OK (9 Oct) switched back on from its row, on paper. */
+    fun unparkLiquidity(index: String) = strategyDo { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
 
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1381,6 +1463,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The bot stopped for today (TODO A3). */
     val botStopped = MutableStateFlow(false)
+    /** Why it was stopped for today (by Boss, the daily loss limit, the tile), said on Home's bar; null when it is not. */
+    val botStopWhy = MutableStateFlow<com.optionslab.ira.DayStop.Why?>(null)
+    /** The account day lock's line when reached today (08 Oct, [com.optionslab.app.data.DayLockGuard]); null when not. */
+    val dayLockLine = MutableStateFlow<String?>(null)
+    /** Home's paper running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days (avg ...)"). */
+    val paperSinceLine = MutableStateFlow<String?>(null)
 
     fun stopBotForToday(stopRunning: Boolean) = strategyDo {
         com.optionslab.app.data.Strategies.stopForToday(stopRunning, compromisedFresh())
@@ -1519,6 +1607,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 toolsSource.value = source
                 val snap = com.optionslab.engine.options.ChainSnapshot.of(underlying, lc.expiry, lc.spot, lc.lotSize, rows, Market.now())
                 toolsCache[underlying] = snap to source
+                // The gamma regime from this same chain (at most every 5 minutes; display and the shadow log only).
+                runCatching { com.optionslab.app.data.GammaLive.offer(snap) }
                 Load.Done(snap)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
                 // A failed refresh keeps the last good chain on screen, saying why it is not fresh.
@@ -1632,6 +1722,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     suspend fun optionIntraday(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right): List<com.optionslab.engine.Upstox.Bar> =
         withContext(Dispatchers.IO) {
             val b = com.optionslab.app.data.Broker
+            // MCX (9 Oct): Zerodha's minute candles over MCX's day (09:00 to the close) in Live mode, else Upstox's.
+            if (com.optionslab.engine.mcx.Mcx.isMcxName(underlying)) {
+                val mcx = com.optionslab.app.data.McxMarket
+                val c = mcx.find(underlying, expiry, strike, right.takeIf { it != com.optionslab.engine.Right.IX })
+                    ?: mcx.contracts().firstOrNull { it.name == underlying && it.expiry == expiry && it.strike == strike && it.right == right }
+                    ?: error("that MCX contract is not listed")
+                return@withContext if (_settings.value.live && b.loggedIn && c.token > 0) b.minuteBars(c.token, Market.today(), "09:00:00", "23:59:00")
+                    else com.optionslab.app.data.Net.intraday(c.upstoxKey).filter { it.istDate == Market.today() }
+            }
             if (_settings.value.live && b.loggedIn) {
                 val ins = b.find(b.instruments(), underlying, expiry, strike, right) ?: error("that contract is not listed")
                 b.minuteBars(ins.token, Market.today())
@@ -1641,6 +1740,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 com.optionslab.app.data.Net.intraday(c.instrumentKey).filter { it.istDate == Market.today() }
             }
         }
+
+    /** The Commodities page (9 Oct): every commodity's near and next future with its price; read when the page asks. */
+    val commodities = MutableStateFlow<Load<List<com.optionslab.app.data.McxMarket.Quote>>>(Load.Idle)
+    private var commoditiesJob: kotlinx.coroutines.Job? = null
+
+    fun loadCommodities(quiet: Boolean = false) {
+        if (!quiet || commodities.value !is Load.Done) commodities.value = Load.Busy("Reading MCX prices")
+        commoditiesJob?.cancel()
+        commoditiesJob = viewModelScope.launch(Dispatchers.IO) {
+            commodities.value = try {
+                if (_settings.value.live && !com.optionslab.app.data.Broker.loggedIn) error("LIVE mode: log in to Zerodha for today to read MCX prices.")
+                val mcx = com.optionslab.app.data.McxMarket
+                val list = mcx.nearFutures(mcx.contracts())
+                runCatching { mcx.refreshMargins() }
+                val q = mcx.quotes(list)
+                Load.Done(list.mapNotNull { q[it.tradingSymbol] })
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                // A failed quiet refresh keeps the prices on screen; otherwise it says why.
+                commodities.value.takeIf { quiet && it is Load.Done } ?: Load.Failed(e.message ?: "could not read MCX prices")
+            }
+        }
+    }
 
     /** BANKNIFTY daily closes for the Home chart (a year), read once a day; Zerodha in LIVE mode, else public candles. */
     val bankNiftyDaily = MutableStateFlow<List<Pair<LocalDate, Double>>>(emptyList())
@@ -1700,7 +1821,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         else -> 300_000
     }
 
-    fun loadPaper(quiet: Boolean = false) {
+    /**
+     * Round 2 (Boss: "everything live"): an open paper page waits for the next price on Zerodha's stream (the stream's
+     * version moves at most every 250 ms) when the stream is live, else [paperRefreshMs] - the fallback for prices the
+     * stream does not carry or when it is down. Returns true when a tick woke it (the light re-mark is enough).
+     */
+    suspend fun paperWait(): Boolean {
+        val st = com.optionslab.app.data.KiteStream
+        val ms = paperRefreshMs()
+        // Only when every paper holding streams (else a tick-paced re-mark would read the candle feed): read off the screen's thread.
+        val covered = st.status.value == com.optionslab.app.data.KiteStream.Status.LIVE && kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runCatching { com.optionslab.app.data.Paper.streamCover().covered }.getOrDefault(false)
+        }
+        if (!covered) { kotlinx.coroutines.delay(ms); return false }
+        val seen = st.version.value
+        return kotlinx.coroutines.withTimeoutOrNull(ms) { st.version.first { it != seen } } != null
+    }
+
+    fun loadPaper(quiet: Boolean = false, light: Boolean = false) {
         // A quiet refresh while the last one is still running is not started beside it (the fast re-pricing never
         // piles up); it runs once as soon as that one ends, so what an order just changed is always read.
         if (quiet && paper.value is Load.Done) {
@@ -1716,8 +1854,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // With a Zerodha session the paper account is priced from its live stream.
                 runCatching { com.optionslab.app.data.KiteStream.ensure() }
                 runCatching { com.optionslab.app.data.Paper.tick() }
-                runCatching { com.optionslab.app.data.Protections.tick(); protections.value = com.optionslab.app.data.Protections.active() }
-                runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
+                // [light]: a re-mark woken by a stream tick (up to four a second): the paper book only; the stops' own check
+                // and the owners' labels keep their every-2-seconds pace (never a Zerodha read per tick).
+                if (!light) {
+                    runCatching { com.optionslab.app.data.Protections.tick(); protections.value = com.optionslab.app.data.Protections.active() }
+                    runCatching { orderOwners.value = com.optionslab.app.data.Strategies.owners() }
+                }
                 val snap = com.optionslab.app.data.Paper.snapshot()
                 recordPaperDay(snap)
                 runCatching { com.optionslab.app.widget.OpenWidget.fromPaper(ctx, snap) }
@@ -1734,8 +1876,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * [inHoursOnly]: a new order, a close or a change is refused outside market hours, as at the exchange
      * (the paper account would otherwise fill it at the last close). Cancelling a working order is always allowed.
      */
-    private fun paperDo(inHoursOnly: Boolean = true, action: suspend () -> com.optionslab.app.data.Paper.Result) {
-        if (inHoursOnly && !Market.acceptsOrders()) { com.optionslab.app.work.Alerts.error(Market.CLOSED_FOR_ORDERS); message.value = Market.CLOSED_FOR_ORDERS; return }
+    private fun paperDo(inHoursOnly: Boolean = true, mcx: Boolean = false, action: suspend () -> com.optionslab.app.data.Paper.Result) {
+        // An MCX order by MCX's own hours (9 Oct: to 23:30, 23:55 in US winter; its own holidays); NSE's exactly as before.
+        if (inHoursOnly && mcx && !com.optionslab.app.data.McxMarket.acceptsOrders()) {
+            com.optionslab.app.work.Alerts.error(com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS); message.value = com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS; return
+        }
+        if (inHoursOnly && !mcx && !Market.acceptsOrders()) { com.optionslab.app.work.Alerts.error(Market.CLOSED_FOR_ORDERS); message.value = Market.CLOSED_FOR_ORDERS; return }
         viewModelScope.launch(Dispatchers.IO) {
             try { say(action().message) } catch (e: Exception) { say("Paper order failed: ${e.message}") }
             loadPaper(quiet = true)
@@ -1744,9 +1890,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun paperPlace(underlying: String, expiry: LocalDate, strike: Double, right: com.optionslab.engine.Right, action: String, lots: Int,
                    priceType: String, product: String, price: Double?, trigger: Double?, protect: ProtectSpec? = null,
-                   area: String = "Order form") = paperDo {
+                   area: String = "Order form") = paperDo(mcx = com.optionslab.engine.mcx.Mcx.isMcxName(underlying)) {
         val c = com.optionslab.app.data.Paper.contractFor(underlying, expiry, strike, right)
             ?: error("$underlying ${expiry} ${com.optionslab.engine.fmtG(strike)} $right is not listed")
+        paperPlaceChecked(c, action, lots, priceType, product, price, trigger, protect, area)
+    }
+
+    /**
+     * An MCX contract on paper (9 Oct; the Commodities page's futures, an MCX chain's options): MCX's hours, its expiry
+     * refusals ([com.optionslab.app.data.McxGuard.entryRefusal]), then exactly as any paper order.
+     */
+    fun paperPlaceMcx(m: com.optionslab.engine.mcx.McxContract, action: String, lots: Int, priceType: String, product: String, price: Double?,
+                      protect: ProtectSpec? = null, area: String = "Commodities") = paperDo(mcx = true) {
+        paperPlaceChecked(com.optionslab.app.data.McxMarket.paperContract(m), action, lots, priceType, product, price, null, protect, area)
+    }
+
+    private suspend fun paperPlaceChecked(c: com.optionslab.app.data.Paper.Contract, action: String, lots: Int, priceType: String, product: String,
+                                          price: Double?, trigger: Double?, protect: ProtectSpec?, area: String): com.optionslab.app.data.Paper.Result {
+        if (c.isMcx) {
+            val held = com.optionslab.app.data.Paper.state.positions.filter { it.symbol == c.symbol }.sumOf { it.quantity }
+            val opens = if (action.equals("BUY", true)) held >= 0 else held <= 0
+            if (opens) com.optionslab.app.data.McxGuard.entryRefusal(c, action.equals("BUY", true))?.let { return com.optionslab.app.data.Paper.Result(false, it, emptyList()) }
+        }
         // Paper is practice: the owner's own paper orders are never refused by the account guard, the kill switch
         // included (it guards Zerodha orders and halts the bots). The one price read serves the fill.
         val quote = runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull()
@@ -1762,12 +1927,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (net != 0) say(com.optionslab.app.data.Protections.protectPaper(c.symbol, product, net, f.price, protect.stop, protect.trail, protect.target))
             refreshProtections()
         } else if (protect?.any == true) say("The bracket is set once the order fills; set it from the position when it does.")
-        r
+        // MCX trades into the evening: the watch is started for it (a no-op when it already runs).
+        if (c.isMcx && r.ok) withContext(Dispatchers.Main) { runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) } }
+        return r
     }
 
     fun paperCancel(id: String) = paperDo(inHoursOnly = false) { com.optionslab.app.data.Paper.cancel(id, "you") }
-    fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) = paperDo { com.optionslab.app.data.Paper.modify(id, qty, price, trigger) }
-    fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo {
+    fun paperModify(id: String, qty: Int?, price: Double?, trigger: Double?) =
+        // The book from memory (the screen's thread: never the vault, never the book's lock - ANR fix, 9 Oct).
+        paperDo(mcx = com.optionslab.app.data.Paper.stateIfLoaded()?.orders?.firstOrNull { it.orderId == id }?.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE) {
+            com.optionslab.app.data.Paper.modify(id, qty, price, trigger)
+        }
+    fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo(mcx = com.optionslab.app.data.Paper.contractIfLoaded(symbol)?.isMcx == true) {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
         com.optionslab.app.data.Paper.close(symbol, product).also { r ->
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }

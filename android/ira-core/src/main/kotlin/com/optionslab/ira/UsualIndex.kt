@@ -42,7 +42,7 @@ object UsualIndex {
     /** The corrections noted, and when Boss last asked to forget it (nothing before it counts). */
     data class Log(val notes: List<Note> = emptyList(), val resetAt: LocalDateTime? = null)
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     // ---- the unnamed market question ---------------------------------------------------------------------------------
 

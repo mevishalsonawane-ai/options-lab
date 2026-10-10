@@ -21,13 +21,27 @@ import kotlin.math.round
  *
  * Only days with option data on the phone can be priced (bundled and harvested sessions);
  * the rest are counted as skipped, with the reason.
+ *
+ * With [Protect] (the script's own auto-trade exits: Boss's 06 Oct rule makes the stop-loss, the target and the profit
+ * lock compulsory on every Pine strategy) each option is also sold, as the auto-trader would, at the first minute after
+ * the buy whose range reaches the premium stop (entry - stop), the target (entry + target) or the profit lock's level
+ * (com.optionslab.engine.orb.ProfitLock: the ladder and the trail, from the best price before that minute), whichever
+ * comes first - the stop first within a minute (the cautious reading).
  */
 object PinePremium {
     data class Result(val report: Pine.Report?, val priced: Int, val skipped: Int, val reasons: Map<String, Int>)
 
+    /** The auto-trader's own exits on the option, in premium points (0: none), and the profit lock with its [trail]. */
+    data class Protect(val stopPts: Double, val targetPts: Double, val lock: Boolean = true,
+                       val trail: com.optionslab.engine.orb.ProfitLock.Trail? = com.optionslab.engine.orb.ProfitLock.Trail())
+
+    /** Where [Protect] sold: the exit's name, price and moment (epoch seconds). */
+    internal data class Out(val why: String, val price: Double, val at: Long)
+
     fun run(
         base: List<Pine.Trade>, bars: List<Pine.Bar>, sessionFor: (LocalDate) -> Session?,
         strikeStep: Int, lots: Int, capital: Double, shortsBuyPuts: Boolean = true, slippage: Double = 0.0,
+        protect: Protect? = null,
     ): Result {
         val reasons = LinkedHashMap<String, Int>()
         fun skip(why: String) { reasons[why] = (reasons[why] ?: 0) + 1 }
@@ -65,19 +79,59 @@ object PinePremium {
             val o2 = s2?.options?.firstOrNull { it.expiry == expiry && it.right == right && it.strike == o1.strike }
                 ?: run { skip("no option data for the exit day"); null } ?: continue
             val pIn = priceAt(o1, inAtSec) ?: run { skip("no option price at entry"); null } ?: continue
-            val pOut = priceAt(o2, outAtSec) ?: run { skip("no option price at exit"); null } ?: continue
             val lot = if (o1.lot > 0) o1.lot else s1.lotHint ?: 1
             val qty = lot * pieceLots
+            val sold = protect?.let { protectedExit(o1, pIn, qty, inAtSec, outAtSec, it) }
+            val pOut = sold?.price ?: priceAt(o2, outAtSec) ?: run { skip("no option price at exit"); null } ?: continue
+            val exitSec = sold?.at ?: outAtSec
+            val exitBar = if (sold == null) t.exitBar else max(t.entryBar, bars.indexOfLast { it.time <= exitSec })
             val buy = pIn + slippage; val sell = max(0.05, pOut - slippage)
             val c = SandboxCosts.charge("BUY", BigDecimal(buy), qty).toDouble() + SandboxCosts.charge("SELL", BigDecimal(sell), qty).toDouble()
             commission += c
             val pnl = (sell - buy) * qty - c
-            out += Pine.Trade("${o1.strike.toInt()} ${right.name}", t.exitId, true, qty.toDouble(), t.entryBar, t.entryTime, buy,
-                t.exitBar, t.exitTime, sell, pnl, pnl / (buy * qty) * 100, c, false,
-                entryFillTime = inAtSec, exitFillTime = outAtSec)
+            out += Pine.Trade("${o1.strike.toInt()} ${right.name}", sold?.why ?: t.exitId, true, qty.toDouble(), t.entryBar, t.entryTime, buy,
+                exitBar, if (sold == null) t.exitTime else bars.getOrNull(exitBar)?.time ?: exitSec, sell, pnl, pnl / (buy * qty) * 100, c, false,
+                entryFillTime = inAtSec, exitFillTime = exitSec)
         }
         if (out.isEmpty()) return Result(null, 0, base.count { !it.open }, reasons)
         return Result(reportOf(out, bars, capital, commission), out.size, reasons.values.sum(), reasons)
+    }
+
+    /**
+     * The first minute of [o] after the buy at [entry] (at [inAt]) and up to the script's own exit ([outAt]; on a later
+     * day: the entry day's last minute) whose range reaches the stop, the target or the profit lock's level, and the price
+     * it sold at (the level, or the minute's open when it opened past it). Null when none was reached.
+     */
+    internal fun protectedExit(o: Series, entry: Double, qty: Int, inAt: Long, outAt: Long, p: Protect): Out? {
+        val zIn = Instant.ofEpochSecond(inAt).atZone(Pine.IST); val zOut = Instant.ofEpochSecond(outAt).atZone(Pine.IST)
+        val midnight = zIn.toLocalDate().atStartOfDay(Pine.IST).toEpochSecond()
+        val first = zIn.hour * 60 + zIn.minute + if (zIn.second == 0) 0 else 1
+        val sameDay = zOut.toLocalDate() == zIn.toLocalDate()
+        val last = if (sameDay) zOut.hour * 60 + zOut.minute - if (zOut.second == 0) 1 else 0 else Int.MAX_VALUE
+        val stop = if (p.stopPts > 0) entry - p.stopPts else null
+        val target = if (p.targetPts > 0) entry + p.targetPts else null
+        val ref = if (p.lock) com.optionslab.engine.orb.ProfitLock.pineReference(p.targetPts, p.stopPts) else null
+        val trail = if (p.lock) p.trail else null
+        val cost = com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(entry, qty)
+        var peak = entry
+        for (j in 0 until o.size) {
+            val m = o.minutes[j]
+            if (m < first) continue
+            if (m > last) break
+            val c = o.close[j]
+            val op = o.open?.get(j)?.takeIf { it > 0 } ?: c
+            val hi = o.high?.get(j)?.takeIf { it > 0 } ?: max(op, c)
+            val lo = o.low?.get(j)?.takeIf { it > 0 } ?: minOf(op, c)
+            val at = midnight + m * 60L + 59
+            val locked = if (p.lock) com.optionslab.engine.orb.ProfitLock.lockLevel(entry, ref, trail, cost, peak) else null
+            when {
+                stop != null && lo <= stop -> return Out("stop-loss", minOf(stop, op), at)
+                target != null && hi >= target -> return Out("target", max(target, op), at)
+                locked != null && lo <= locked -> return Out("profit lock", minOf(locked, op), at)
+            }
+            peak = max(peak, hi)
+        }
+        return null
     }
 
     /**

@@ -20,6 +20,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -62,7 +67,17 @@ private val GROUPS = listOf(
     "Data" to listOf(
         Drawer("data", "Data and harvest", "The record, nightly harvest, provenance"),
     ),
-)
+) + (if (!com.optionslab.app.BuildConfig.GOLD) listOf(
+    // What changed in recent updates and where to find it (WhatsNewPage); Home's card shows the unseen ones.
+    "App" to listOf(
+        Drawer("whatsnew", "What's new", "Recent changes to the app and where to find them"),
+        // Every question Jarvis answers, by topic (AskGuidePage); a tap asks it in the chat. The Ira page has it by the question box.
+        Drawer("askguide", ASK_GUIDE_TITLE, "Every question Jarvis answers, by topic; tap one to ask it"),
+    ) + (if (todayNotesShown()) listOf(
+        // What Jarvis said in the chat by himself today, by category (TodayNotesPage). The Ira page has it in the chat's header.
+        Drawer("todaynotes", TODAY_NOTES_TITLE, "What Jarvis said by himself today, newest first, by category"),
+    ) else emptyList()),
+) else emptyList())
 
 @Composable
 fun CabinetScreen(model: AppModel, page: String?, onPage: (String?) -> Unit) {
@@ -102,16 +117,35 @@ private fun DrawerPage(model: AppModel, pg: String, onPage: (String?) -> Unit) {
             "security" -> SecurityPage(model)
             "schedule" -> SchedulePage(model)
             "notes" -> NotesPage()
+            "whatsnew" -> WhatsNewPage()
+            // A question asked from the guide: the chat opens with it (the guide closes as the page changes).
+            "askguide" -> AskGuidePage(onAsked = { onPage("ira-chat") })
+            // "Turn these off": Settings → Jarvis with that switch's row brought into view (navigation only).
+            "todaynotes" -> TodayNotesPage(onTurnOff = { key -> com.optionslab.app.ui.SettingFocus.ask(key); onPage("jarvis") })
+            "ira-chat" -> IraPage(androidx.compose.runtime.remember(model) { iraOrderPathsFor(model) }, startInChat = true)
             else -> Drawers(onPage)
         }
     }
 }
 
+/** The pages this build's Settings shows (the drawers' keys): the search lists only settings on them. */
+private val SHOWN_PAGES: Set<String> by lazy { GROUPS.flatMap { (_, items) -> items.map { it.key } }.toSet() }
+
+/** [SHOWN_PAGES] for Jarvis's "where is the X setting" ([com.optionslab.ira.SettingWhere]): it names only what this search lists. */
+internal fun settingsShownPages(): Set<String> = SHOWN_PAGES
+
 @Composable
 private fun Drawers(onPage: (String) -> Unit) {
     val p = LocalPalette.current
+    // Settings search (07 Oct): typing lists the matching settings across every page; a tap opens that page with the row
+    // highlighted. Navigation only: nothing is switched from the list.
+    var query by rememberSaveable { mutableStateOf("") }
+    val found = remember(query) { if (query.isBlank()) emptyList() else settingsFound(query, gold = false, pages = SHOWN_PAGES) }
     Page {
-        GROUPS.forEach { (group, items) ->
+        item { SettingsSearchField(query) { query = it } }
+        if (query.isNotBlank()) {
+            item { SettingsResults(found, query) { e -> openSetting(e, onPage) } }
+        } else GROUPS.forEach { (group, items) ->
             item {
                 Text(group, style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp), modifier = Modifier.padding(start = 4.dp, top = 6.dp))
             }

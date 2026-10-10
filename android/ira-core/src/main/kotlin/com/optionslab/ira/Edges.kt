@@ -61,19 +61,26 @@ object IvRank {
     }
 }
 
-/** How many lots a Jarvis trade takes for the owner's rupee risk (the 15% stop on the premium); 1 when no risk is set. */
+/**
+ * How many lots a Jarvis trade takes for the owner's rupee risk: each lot risks its fixed 30-point stop
+ * ([JarvisTrades.STOP_POINTS] x the lot size, whatever the premium); 1 when no risk is set.
+ */
 object RiskSizing {
-    const val STOP_SHARE = 0.15
+    /** Rupees one lot risks at Jarvis's 30-point stop. */
+    fun perLot(lotSize: Int): Double = JarvisTrades.STOP_POINTS * lotSize
 
     /** Lots within [riskRs]: 1 when no risk is set; 0 when even one lot would risk more than the owner allows. */
     fun lots(riskRs: Double?, premium: Double, lotSize: Int, maxLots: Int): Int {
         if (riskRs == null || riskRs <= 0 || premium <= 0 || lotSize <= 0) return 1
-        val perLot = premium * STOP_SHARE * lotSize
-        return kotlin.math.floor(riskRs / perLot).toInt().coerceIn(0, maxOf(1, maxLots))
+        return kotlin.math.floor(riskRs / perLot(lotSize) + 1e-9).toInt().coerceIn(0, maxOf(1, maxLots))
     }
 
-    fun say(lots: Int, premium: Double, lotSize: Int): String =
-        "$lots lot${if (lots > 1) "s" else ""}: the 15%% stop risks about Rs %,.0f.".format(Locale.ENGLISH, lots * premium * STOP_SHARE * lotSize)
+    fun say(lots: Int, lotSize: Int): String =
+        "$lots lot${if (lots > 1) "s" else ""}: the 30-point stop risks about Rs %,.0f.".format(Locale.ENGLISH, lots * perLot(lotSize))
+
+    /** The words when the owner's risk per trade came out at 0 lots. */
+    fun tooSmall(lotSize: Int): String =
+        "Your risk per trade is smaller than one lot's stop risk (30 points x $lotSize, about ${AppFacts.amt(perLot(lotSize))}): not placed."
 }
 
 /**

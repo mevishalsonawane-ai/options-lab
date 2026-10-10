@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +46,7 @@ import com.optionslab.app.data.ChartFeed
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import com.optionslab.engine.orb.LiquidityRules
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -71,7 +73,13 @@ fun ChartScreen(model: AppModel, symbol: String, exchange: String, visible: Bool
     ChartPane(symbol, exchange, visible, ask, live = appSettings.live, source = FeedChartSource,
         orderSheet = { pick, buy, limit, close -> OptionOrderSheet(model, pick, initialBuy = buy, initialLimit = limit, area = "Chart", onClose = close) },
         alertDialog = { sym, close -> ChartAlertDialog(sym, FeedChartSource, onSave = { alarm, said -> model.saveAlarm(alarm); model.say(said) }, onClose = close) },
-        chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) })
+        chainDialog = { u, close, pick -> ChartChainDialog(model, u, close, pick) },
+        liquidity = if (com.optionslab.app.BuildConfig.GOLD) null else ArmLiquiditySource,
+        // The live order flow of the charted index (its future), in the toolbar; never in the gold build.
+        flowChip = if (com.optionslab.app.BuildConfig.GOLD) null else FlowChipSlot,
+        // A level's alert is one of the app's own price alarms (the Alarms page's store, the watch's minute check); the
+        // gold build has no NSE watch to ring it, and no layer.
+        levelAlarms = if (com.optionslab.app.BuildConfig.GOLD) null else remember(model) { StoreLevelAlarms(model.alarms) })
 }
 
 /**
@@ -116,6 +124,12 @@ internal fun ChartPane(
     chainDialog: @Composable (String, () -> Unit, (ChainPick) -> Unit) -> Unit,
     trading: Boolean = true,
     marketOpen: () -> Boolean = { com.optionslab.app.data.Market.isOpen() },
+    /** Liquidity 15+5's layer on BANKNIFTY / FINNIFTY / MIDCPNIFTY ([LiquidityPanel]); null: none (the gold build, most tests). */
+    liquidity: LiquiditySource? = null,
+    /** The price alarms a tapped liquidity level sets and lists ([LevelSheet]); null: the level's sheet has no alert button. */
+    levelAlarms: LevelAlarms? = null,
+    /** The order flow's chip for the charted index ([OrderFlowChip]); null: none (the gold build, most tests). */
+    flowChip: (@Composable (String, Modifier) -> Unit)? = null,
 ) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
@@ -144,6 +158,14 @@ internal fun ChartPane(
     var paintedOk by remember { mutableStateOf(false) }
     var autoBasic by remember { mutableStateOf<String?>(null) }      // why the basic chart was switched in
     val basic = basicChosen || autoBasic != null
+    // Liquidity 15+5's levels and trades on the index it runs on: on unless the owner switched them off (remembered).
+    var liqOn by remember { mutableStateOf(com.optionslab.app.security.SecurePrefs.getBoolean("chart.liq", true)) }
+    val liqCache = remember { LiquidityCache() }
+    val liqUnderlying = current.first.uppercase().takeIf { liquidity != null && it in LiquidityRules.UNDERLYINGS }
+    // A charted index option gets its own tape and heatmap in the order-flow detail (display only; off the main thread).
+    LaunchedEffect(current.first, flowChip != null) {
+        if (flowChip != null) withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.OrderFlowLive.watchSymbol(current.first) } }
+    }
 
     fun openOrder(buy: Boolean, price: Double?, type: String = if (price == null) "MARKET" else "LIMIT") {
         // IraGoldAlgo: paper only, its strategy buys by itself; the chart can place nothing.
@@ -276,12 +298,24 @@ internal fun ChartPane(
             // The option chain of the index: tap a price to chart that option (and buy or sell it there).
             if (trading && chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { chainFor = chainUnderlying }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // The live order flow of the charted index (its future): a tap opens its parts and its last 30 minutes.
+            val flowUnderlying = flowUnderlyingOf(current.first)
+            if (flowChip != null && flowUnderlying != null) flowChip(flowUnderlying, Modifier.align(Alignment.CenterVertically))
             // Basic (drawn by the app) or Advanced (indicators, drawings; needs the phone's WebView).
             Text(if (basic) "BASIC" else "ADV", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable {
                     if (basic) { basicChosen = false; autoBasic = null; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to false)); if (failed) { failed = false; retried = false; ready = false; gen++ } }
                     else { basicChosen = true; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.basic" to true)) }
                 }.padding(horizontal = 10.dp, vertical = 8.dp))
+            // The Liquidity 15+5 layer under the chart (beside it in landscape), on the two indices it trades.
+            if (liqUnderlying != null) Box(Modifier.align(Alignment.CenterVertically).heightIn(min = 48.dp)
+                .toggleable(value = liqOn, role = androidx.compose.ui.semantics.Role.Switch) {
+                    liqOn = it; com.optionslab.app.security.SecurePrefs.putAllSoon(mapOf("chart.liq" to it))
+                }, contentAlignment = Alignment.Center) {
+                Text(if (liqOn) "✓ Liquidity levels" else "Liquidity levels", textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                    style = Type.label.copy(color = if (liqOn) p.onPrimary else p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.background(if (liqOn) p.brass else p.chip, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 8.dp))
+            }
             // A price alert on whatever is charted, at a level you choose.
             if (trading) Text("ALERT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
                 modifier = chip.clickable { alerting = true }.padding(horizontal = 10.dp, vertical = 8.dp))
@@ -298,7 +332,8 @@ internal fun ChartPane(
                 }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        // The chart, and under it (beside it in landscape) the Liquidity 15+5 layer when shown.
+        val chartArea: @Composable (Modifier) -> Unit = { area -> Box(area) {
         androidx.compose.runtime.key(gen) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -332,7 +367,9 @@ internal fun ChartPane(
                         } },
                         onFail = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
                         // Only fatal before the first candles: one runtime error later must not drop the chart for the session.
-                        onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } }), "IraBridge")
+                        onPageError = { m -> if (holder[0] === this && !ready) { failed = true; why = m } },
+                        // The page's own 5-minute candles feed the liquidity layer, so it reads nothing more while they are fresh.
+                        onBars = { s, iv, list -> val clock = liquidity; if (iv == "5m" && clock != null) liqCache.offer(s, list, clock.now()) }), "IraBridge")
                     // A script error in the chart page shows as a red alert (the bundled chart only; no account data).
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onConsoleMessage(m: android.webkit.ConsoleMessage): Boolean {
@@ -387,7 +424,11 @@ internal fun ChartPane(
                 Text("$it Showing the basic chart. Tap ADV / BASIC above to try the advanced one again.",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), modifier = Modifier.fillMaxWidth().background(p.chip).padding(horizontal = 12.dp, vertical = 6.dp))
             }
-            NativeChart(current.first, Modifier.weight(1f), visible, open = marketOpen) { s, iv -> source.bars(s, iv, null, null) }
+            // The order flow's optional lines (POC/VA, VWAP; off until tapped) on an index the flow follows; none elsewhere.
+            val flowLevels by com.optionslab.app.data.OrderFlowLive.chartLevels.collectAsState(Dispatchers.Main.immediate)
+            val lines = if (flowChip == null || !com.optionslab.app.data.ChartFeed.isIndex(current.first)) null
+                else flowUnderlyingOf(current.first)?.let { flowLevels[it].orEmpty() }
+            NativeChart(current.first, Modifier.weight(1f), visible, open = marketOpen, levels = lines) { s, iv -> source.bars(s, iv, null, null) }
         }
         // Covers the blank page until the first candles are drawn, so the chart never shows as a white sheet.
         if (!basic && !ready) Box(Modifier.fillMaxSize().background(p.paper), contentAlignment = Alignment.Center) {
@@ -398,6 +439,42 @@ internal fun ChartPane(
                         .clickable { failed = false; retried = false; ready = false; gen++ }.padding(horizontal = 18.dp, vertical = 8.dp))
             }
         }
+        } }
+        val liqPanel: @Composable (Modifier) -> Unit = { area ->
+            val u = liqUnderlying
+            if (u != null && liqOn && liquidity != null) LiquidityPanel(u, visible, bars = { now ->
+                liqCache.fresh(u, now) ?: source.bars(u, "5m", null, null).also { liqCache.offer(u, it, liquidity.now(), history = true) }
+            }, source = liquidity, modifier = area, levelAlarms = levelAlarms, lastPrice = {
+                // The last traded price, as the chart's own alert reads it (the 1-minute feed).
+                val t = System.currentTimeMillis() / 1000
+                source.bars(u, "1m", t - 3 * 86400, t).lastOrNull()?.close
+            })
+        }
+        // The chart stays at one place in the composition whatever the layer does, so the WebView is never rebuilt: not
+        // when the layer is switched on or off, and not when the keyboard shrinks the height (a Row / Column chosen from
+        // the space left moved the chart between parents, which destroyed and reloaded the page). Beside it only in a
+        // landscape orientation.
+        val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (liquidity == null) chartArea(Modifier.weight(1f).fillMaxWidth())
+        else androidx.compose.ui.layout.Layout(content = {
+            chartArea(Modifier)
+            liqPanel(Modifier)
+        }, modifier = Modifier.weight(1f).fillMaxWidth()) { parts, c ->
+            val w = c.maxWidth; val h = c.maxHeight
+            fun fixed(cw: Int, ch: Int) = androidx.compose.ui.unit.Constraints.fixed(cw, ch)
+            if (parts.size < 2) {
+                val chart = parts.firstOrNull()?.measure(fixed(w, h))
+                layout(w, h) { chart?.place(0, 0) }
+            } else if (landscape) {
+                val cw = w / 2
+                val chart = parts[0].measure(fixed(cw, h)); val layer = parts[1].measure(fixed(w - cw, h))
+                layout(w, h) { chart.place(0, 0); layer.place(cw, 0) }
+            } else {
+                // The chart over the layer, 1 : 0.9.
+                val ch = (h / 1.9f).toInt()
+                val chart = parts[0].measure(fixed(w, ch)); val layer = parts[1].measure(fixed(w, h - ch))
+                layout(w, h) { chart.place(0, 0); layer.place(0, ch) }
+            }
         }
     }
     if (alerting) alertDialog(current.first) { alerting = false }
@@ -462,6 +539,8 @@ internal fun ChartAlertDialog(symbol: String, source: ChartSource, onSave: (com.
 /** The Zerodha instrument token for a chart symbol: an index by name, an option through the day's instrument list. */
 private suspend fun streamTokenOf(symbol: String): Long? {
     com.optionslab.app.data.Broker.indexToken(symbol.uppercase())?.let { return it }
+    // MCX (9 Oct): its token from the day's MCX list (futures too).
+    com.optionslab.app.data.McxMarket.find(symbol)?.let { return it.token.takeIf { t -> t > 0 } }
     val c = ChartFeed.contract(symbol) ?: return null
     val list = com.optionslab.app.data.Broker.cachedInstruments() ?: return null
     return com.optionslab.app.data.Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token
@@ -480,6 +559,8 @@ internal class Bridge(
     private val onFail: (String) -> Unit = {},
     private val onPageError: (String) -> Unit = {},
     private val onPainted: (Int, Int, Int) -> Unit = { _, _, _ -> },
+    /** Every batch of candles the page was given (symbol, interval, candles), on the reading thread. */
+    private val onBars: (String, String, List<com.optionslab.engine.Upstox.Bar>) -> Unit = { _, _, _ -> },
 ) {
     /** terminal.mjs: the chart drew its first candles at this size. */
     @JavascriptInterface
@@ -506,6 +587,7 @@ internal class Bridge(
                         .put("low", b.low).put("close", b.close).put("volume", b.volume))
                 }
                 reply(id, true, a.toString())
+                runCatching { onBars(symbol, interval, bars) }
                 web.post { onData() }
             } catch (e: Exception) {
                 // Say why on the cover at once, instead of waiting for the watchdog to give up.
@@ -529,6 +611,20 @@ internal class Bridge(
 
     @JavascriptInterface
     fun symbol(symbol: String, exchange: String) { web.post { onSymbol(symbol, exchange) } }
+
+    /**
+     * terminal.mjs: the order flow's lines for [symbol] (an index the flow follows; "[]" otherwise) as JSON
+     * [{"label","price","kind"}] - the "Ira:" indicators in the chart's indicator menu, off until Boss adds one. Memory only.
+     */
+    @JavascriptInterface
+    fun flowLevels(symbol: String): String = runCatching {
+        if (!com.optionslab.app.data.ChartFeed.isIndex(symbol)) return@runCatching "[]"
+        val u = flowUnderlyingOf(symbol) ?: return@runCatching "[]"
+        val arr = JSONArray()
+        for (l in com.optionslab.app.data.OrderFlowLive.chartLevels.value[u].orEmpty())
+            arr.put(JSONObject().put("label", l.label).put("price", l.price).put("kind", l.kind.name))
+        arr.toString()
+    }.getOrDefault("[]")
 
     /** terminal.mjs: the owner's Pine scripts, registered as indicators. */
     @JavascriptInterface

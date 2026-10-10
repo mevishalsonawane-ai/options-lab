@@ -114,4 +114,23 @@ class AccountTest {
         }
         assertTrue(Section.PNL in AppAnswers.sections("what is my p&l today"))
     }
+
+    @Test fun aPineArmsExitsSayWhetherTheProfitLockIsOn() {
+        val trail = "the trail on the gain: from +5% breakeven after charges; from +8% keeps 50% of the best gain, from +20% 65%, from +40% 75%"
+        assertEquals("stop -30, target +100, profit lock on (the target's ladder and $trail)", AppFacts.pineExits(30.0, 100.0, true))
+        assertEquals("stop -30, no target, profit lock on (the ladder on twice the stop, 60, and $trail)", AppFacts.pineExits(30.0, 0.0, true))
+        assertEquals("no stop, no target, profit lock on ($trail)", AppFacts.pineExits(0.0, 0.0, true),
+            "a script with no stop or target is protected by the trail")
+        assertEquals("stop -30, target +100, profit lock off", AppFacts.pineExits(30.0, 100.0, false))
+        val off = com.optionslab.engine.orb.ProfitLock.Trail(0.0, emptyList())
+        assertEquals("no stop, no target, profit lock on but idle (no stop or target, and the trail is off)", AppFacts.pineExits(0.0, 0.0, true, off))
+        assertEquals("stop -30, target +100, profit lock on (the target's ladder)", AppFacts.pineExits(30.0, 100.0, true, off))
+        assertEquals("stop -30, no target, profit lock on (the ladder on twice the stop, 60)", AppFacts.pineExits(30.0, 0.0, true, off))
+        val stepOnly = com.optionslab.engine.orb.ProfitLock.Trail(0.0, listOf(com.optionslab.engine.orb.ProfitLock.Trail.Step(10.0, 60.0)))
+        assertEquals("no stop, no target, profit lock on (the trail on the gain: from +10% keeps 60% of the best gain)",
+            AppFacts.pineExits(0.0, 0.0, true, stepOnly))
+        val line = AppFacts.arms(listOf(AppFacts.ArmLine("Jarvis: breakout", "Pine", true, "BANKNIFTY 15m, trade, " + AppFacts.pineExits(0.0, 80.0, true),
+            null, null)), rank = false)
+        assertTrue(line[1].contains("target +80, profit lock on"), line[1])
+    }
 }

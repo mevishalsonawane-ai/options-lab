@@ -56,6 +56,37 @@
         android:textSize="10sp"
         android:visibility="gone" />
 
+    <!-- Liquidity 15+5 (not in IraGoldAlgo): one line - its state, its open position or today's paper result - and, where the
+         widget is tall enough, a second (the contract's premium, or the next trigger). Tapping it opens the Strategies card. -->
+    <LinearLayout
+        android:id="@+id/w_liq_box"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/w_liq"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/widget_ink"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/w_liq2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/widget_soft"
+            android:textSize="10sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/w_status"
         android:layout_width="wrap_content"

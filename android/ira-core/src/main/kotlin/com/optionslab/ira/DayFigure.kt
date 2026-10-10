@@ -26,17 +26,30 @@ object DayFigure {
      * A day's kept entry with its charges (Boss, 5 Oct: the P&L is shown before charges, the charges on a small line):
      * [pnl] the figure as the account always kept it (paper: after charges; Zerodha: its own m2m, before them), [trades]
      * the count, [charges] that day's charges (0 when not known: an entry kept before charges were, which then shows as it
-     * always did - nothing is migrated).
+     * always did - nothing is migrated), [exact] when they are Zerodha's own contract-note figure for every order of the
+     * day rather than the estimate from its trades (usefulness, round 35: the calendar then says "Charges ₹X").
      */
-    data class Kept(val pnl: Double, val trades: Int, val charges: Double = 0.0)
+    data class Kept(val pnl: Double, val trades: Int, val charges: Double = 0.0, val exact: Boolean = false)
 
     /**
-     * [next] with the day's charges: [charges] < 0 keeps the charges already [stored] (0 when none). Null when the entry
-     * is exactly what is [stored] (nothing to write).
+     * ANR fix (9 Oct): [next] only moved the day's figure - the same day already kept, the same trade count, the same charges
+     * as [stored] - so it may wait in memory for a minute before it is written (a figure that moves with every price pass
+     * no longer re-encrypts the settings vault each pass). A first reading of the day, a new trade or new charges: false
+     * (written at once, as before).
      */
-    fun next(stored: Kept?, pnl: Double, trades: Int, charges: Double): Kept? {
-        val c = if (charges >= 0 && charges.isFinite()) paise(charges) else stored?.charges ?: 0.0
-        val entry = Kept(paise(pnl), if (trades >= 0) trades else stored?.trades ?: 0, c)
+    fun marksOnly(stored: Kept?, next: Kept): Boolean =
+        stored != null && next.trades == stored.trades && next.charges == stored.charges && next.exact == stored.exact
+
+    /**
+     * [next] with the day's charges: [charges] < 0 keeps the charges already [stored] (0 when none) with whether they were
+     * [Kept.exact]; a new figure is [exact] as said (never for no charges). Null when the entry is exactly what is
+     * [stored] (nothing to write).
+     */
+    fun next(stored: Kept?, pnl: Double, trades: Int, charges: Double, exact: Boolean = false): Kept? {
+        val given = charges >= 0 && charges.isFinite()
+        val c = if (given) paise(charges) else stored?.charges ?: 0.0
+        val isExact = if (given) exact && c > 0 else stored?.exact ?: false
+        val entry = Kept(paise(pnl), if (trades >= 0) trades else stored?.trades ?: 0, c, isExact)
         return if (entry == stored) null else entry
     }
 

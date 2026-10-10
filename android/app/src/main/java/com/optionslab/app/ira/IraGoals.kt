@@ -57,7 +57,7 @@ internal object IraGoals {
             JarvisPopup.show(c, "Boss, your goal: ${s.goal.text()}", text)
             IraActivity.add("Goal: $text")
             if (s.broken && s.goal.kind == Goals.Kind.MAX_LOSS) IraHub.offerKillSwitch("$text Shall I switch the kill switch on (no new positions; exits still go)?")
-            else IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR)
+            else IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         }
         // Saved only when it changed: each save re-encrypts and rewrites the whole vault, and this ran at every pass.
         val joined = told.joinToString("|")

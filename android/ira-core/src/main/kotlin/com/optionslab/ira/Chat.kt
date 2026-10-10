@@ -57,7 +57,7 @@ object Chat {
     )
 
     private fun norm(text: String): String {
-        var t = " " + spacedWords(text.lowercase()) + " "
+        var t = Spaced.words(text)
         repeat(2) { t = t.replace(rx(" (jarvis|hey|hi|hello|ok|okay|boss|please) "), " ").replace(rx("\\s+"), " ").let { " ${it.trim()} " } }
         return t
     }

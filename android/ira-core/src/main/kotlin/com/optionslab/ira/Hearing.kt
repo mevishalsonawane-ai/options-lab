@@ -160,7 +160,7 @@ object Hearing {
             Problem.NO_WORDS_CLEAR -> "Your voice is clear but the phone's speech pack isn't reading it: add English (India) under the phone's Settings, System, Languages, On-device speech recognition." + googleTip
             Problem.SERVICE -> "The phone's speech service keeps failing: update \"Speech Services by Google\" in the Play Store, and close other apps using the microphone." + googleTip
             Problem.SLOW_START -> "The phone's speech service is slow to start reading: close other apps using the microphone; restarting the phone often clears it."
-            Problem.LOST -> "Turns are getting stuck: pause a beat after \"Jarvis\", or tap the mic button for a question."
+            Problem.LOST -> "Turns are getting stuck: pause a beat after \"Jarvis\", or hold the mic button for a question."
             Problem.NAME -> "My name is reaching me unclear: say \"Jarvis\" clearly with a short pause after it, closer to the phone or through a headset."
         }
     }

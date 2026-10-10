@@ -17,7 +17,8 @@ internal object IraExpert {
         // Judged again only when the paper trips changed (the same list comes back while they have not): every pass read it.
         return judged.of(IraAccount.trips(false, owners)) { trips ->
             trips.filter { it.owner.isNotBlank() && it.owner != "Manual" && !it.owner.startsWith("Jarvis") }
-                .groupBy { it.owner }
+                // Liquidity 15+5 per index (research X1): BANKNIFTY's paper test apart from FINNIFTY's and MIDCPNIFTY's.
+                .groupBy { com.optionslab.ira.LiquiditySplit.owner(it.owner, it.symbol) }
                 .map { (owner, l) -> Vetting.judge(owner, l.sortedBy { it.closedAt }.map { it.net }) }
         }
     }
@@ -40,7 +41,7 @@ internal object IraExpert {
             IraActivity.add(v.text())
             if (v.state == Vetting.State.HELD_UP) {
                 val text = v.text() + " It may be worth trading live: arm it in Live yourself, with your PIN."
-                JarvisPopup.show(c, "Boss, ${v.name} held up", text); IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR)
+                JarvisPopup.show(c, "Boss, ${v.name} held up", text); IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
             } else {
                 // Switching it off is offered (Boss, 4 Oct: anything Jarvis thinks should stop is asked first).
                 val (what, act) = runCatching { IraActions.prepare(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = v.name)) }.getOrNull() ?: (null to null)
@@ -48,7 +49,7 @@ internal object IraExpert {
                 // in Paper: in Live, stopping a run sells what it holds - that is Boss's to do.
                 val exact = what != null && what.equals(com.optionslab.ira.Commands.describe(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = v.name), v.name), ignoreCase = true)
                 val paper = runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
-                if (act == null || what == null || !exact || !paper) { JarvisPopup.show(c, "Boss, ${v.name} failed its paper test", v.text()); IraHub.noteAloud(v.text(), com.optionslab.ira.SpeakChoice.Weight.MINOR) }
+                if (act == null || what == null || !exact || !paper) { JarvisPopup.show(c, "Boss, ${v.name} failed its paper test", v.text()); IraHub.noteAloud(v.text(), com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH) }
                 else IraHub.offer(what, "Boss, ${v.name} failed its paper test", v.text() + " Shall I $what?", act)
             }
         }
@@ -89,7 +90,7 @@ internal object IraExpert {
         for ((who, text) in tell) {
             runCatching { IraActivity.add("Told Boss ${who.whose} passed their paper test (once; nothing switched).") }
             runCatching { JarvisPopup.show(c, "Boss, ${who.whose} passed their paper test", text) }
-            runCatching { IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR) }
+            runCatching { IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH) }
         }
     }
 }

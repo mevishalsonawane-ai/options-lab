@@ -82,9 +82,32 @@ object Broker {
 
     // ---- credentials ------------------------------------------------------------
 
+    /**
+     * The order path's session, kept in memory (round 2, Boss: "don't wait even for a sec"): the API key, the day's access
+     * token, when it was issued and the account holder's name, read from the settings vault once and then answered from here,
+     * so placing, changing or reading an order takes no vault lock or decryption. Never written anywhere new and never
+     * logged; dropped on logout, a session end or expiry, a new login or new keys, the app's lock and the kill switch
+     * ([dropCreds]), and whenever the vault is wiped or read again ([SecurePrefs.generationHint]).
+     */
+    private class Creds(val key: String?, val token: String?, val loginAt: Long, val user: String?, val gen: Int) {
+        /** When the token dies (Kite's ~06:00 IST the next day), epoch ms; null without a login. */
+        val expiresMs: Long? = loginAt.takeIf { it > 0 }?.let { Kite.expiresAt(Instant.ofEpochMilli(it).atZone(IST)).toInstant().toEpochMilli() }
+    }
+    @Volatile private var credsKept: Creds? = null
+
+    private fun creds(): Creds {
+        val g = SecurePrefs.generationHint
+        credsKept?.takeIf { it.gen == g }?.let { return it }
+        return Creds(SecurePrefs.getString(K_KEY), SecurePrefs.getString(K_TOKEN), SecurePrefs.getLong(K_LOGIN_AT, 0L),
+            SecurePrefs.getString(K_USER), g).also { credsKept = it }
+    }
+
+    /** Forget the in-memory session (logout, lock, kill switch, expiry): the next use reads the vault again. */
+    fun dropCreds() { credsKept = null }
+
     val configured: Boolean get() = SecurePrefs.getString(K_KEY) != null &&
         (SecurePrefs.getString(K_SEALED) != null || SecurePrefs.getString(K_SECRET) != null || SecurePrefs.getString(K_BIO_SEALED) != null)
-    val apiKey: String? get() = SecurePrefs.getString(K_KEY)
+    val apiKey: String? get() = creds().key
     /**
      * The redirect URL to register in the Kite Connect app. The login page
      * inside IraAlgo catches it before it loads, so it never reaches the
@@ -92,7 +115,7 @@ object Broker {
      */
     const val REDIRECT = "http://127.0.0.1/iraalgo"
     val redirect: String get() = SecurePrefs.getString(K_REDIRECT) ?: REDIRECT
-    val userName: String? get() = SecurePrefs.getString(K_USER)
+    val userName: String? get() = creds().user
     val userId: String? get() = SecurePrefs.getString(K_UID)
 
     /** Linked: keys saved and at least one Zerodha login completed. The app opens only once linked. */
@@ -111,6 +134,7 @@ object Broker {
         require(pin != null || bioSealed != null) { "Enter your PIN, or use your fingerprint, to seal the secret" }
         SecurePrefs.putAll(mapOf(K_KEY to apiKey.trim(), K_SEALED to pin?.let { com.optionslab.app.security.SecretBox.seal(apiSecret.trim(), it) },
             K_BIO_SEALED to bioSealed, K_SECRET to null, K_REDIRECT to null, K_TOKEN to null, K_LOGIN_AT to null))
+        dropCreds()
     }
 
     /** The fingerprint-sealed copy of the secret, if there is one. */
@@ -124,25 +148,36 @@ object Broker {
         com.optionslab.app.security.BiometricGate.forgetSecretKey()
         SecurePrefs.putAll(mapOf(K_KEY to null, K_SECRET to null, K_SEALED to null, K_BIO_SEALED to null, K_REDIRECT to null, K_TOKEN to null,
             K_LOGIN_AT to null, K_USER to null, K_UID to null))
+        dropCreds(); dropKept()
         File(app.filesDir, "kite_instruments.json").delete()
+        File(app.filesDir, "kite_futures.json").delete()
         PnlTracker.clear()
     }
 
-    fun expiresAt(): ZonedDateTime? = SecurePrefs.getLong(K_LOGIN_AT, 0L).takeIf { it > 0 }
+    fun expiresAt(): ZonedDateTime? = creds().loginAt.takeIf { it > 0 }
         ?.let { Kite.expiresAt(Instant.ofEpochMilli(it).atZone(IST)) }
 
-    val loggedIn: Boolean get() {
-        if (SecurePrefs.getString(K_TOKEN) == null) return false
-        val exp = expiresAt() ?: return false
-        return ZonedDateTime.now(IST).isBefore(exp)
+    val loggedIn: Boolean get() = liveToken() != null
+
+    /** The day's token while it is alive (memory only); an expired one is forgotten from memory at once. */
+    private fun liveToken(): String? {
+        val c = creds()
+        val tok = c.token ?: return null
+        val exp = c.expiresMs ?: return null
+        if (System.currentTimeMillis() < exp) return tok
+        // Expired: the in-memory copy is dropped (the vault's is replaced at the next login).
+        credsKept = Creds(c.key, null, 0L, c.user, c.gen)
+        return null
     }
 
-    private fun token(): String = if (loggedIn) SecurePrefs.getString(K_TOKEN)!! else throw NotLoggedIn()
+    private fun token(): String = liveToken() ?: throw NotLoggedIn()
 
     /** The session token for the live price stream (never logged, never shown). */
-    internal fun streamToken(): String? = if (loggedIn) SecurePrefs.getString(K_TOKEN) else null
+    internal fun streamToken(): String? = liveToken()
 
-    private fun dropSession() { passBook.drop(); KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)) }
+    private fun dropSession() {
+        passBook.drop(); dropKept(); KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)); dropCreds()
+    }
 
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
     val sessionEnded = kotlinx.coroutines.flow.MutableStateFlow(0)
@@ -175,27 +210,31 @@ object Broker {
      * through the static-IP relay. No header, token or key is ever read here.
      */
     private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
-                             json: Boolean = false, viaRelay: Boolean = false): Any {
+                             json: Boolean = false, viaRelay: Boolean = false, readOnly: Boolean = false): Any {
         val t0 = System.currentTimeMillis()
+        // [readOnly]: a POST that only reads (Zerodha's contract note): sent direct like a GET, and it changes nothing,
+        // so no kept read is dropped and no diary line is written for it unless it fails.
+        val write = method != "GET" && !readOnly
         val where = "$method ${path.substringBefore('?')}"
         val asked = if (body == null || json) "" else body.split('&').mapNotNull { kv ->
             val k = kv.substringBefore('='); if (k in DIAG_FIELDS) "$k: ${java.net.URLDecoder.decode(kv.substringAfter('='), "UTF-8")}" else null
         }.joinToString(" ", prefix = " {", postfix = "}").takeIf { it != " {}" }.orEmpty()
-        val route = if ((method != "GET" || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
+        val route = if ((write || viaRelay) && testEndpoint == null && Relay.enabled) " via relay" else ""
         // A write (an order, a change, a cancel) changes the positions: the pass's shared read is dropped before it is
         // sent and again once it is answered, so no words-only check is given the book from before it.
-        if (method != "GET") passBook.drop()
+        if (write) { passBook.drop(); writes.incrementAndGet() }
         return try {
-            callInner(method, path, body, auth, raw, json, viaRelay).also { r ->
-                if (method != "GET") Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
+            callInner(method, path, body, auth, raw, json, viaRelay, readOnly).also { r ->
+                if (write) Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
             }
         } catch (e: Exception) {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
             throw e
         } finally {
-            if (method != "GET") {
+            if (write) {
                 passBook.drop()
+                writes.incrementAndGet()
                 // Jarvis's kept account figures are dropped too (an order, a change, a cancel or a GTT, from any screen,
                 // a strategy or the guard): no answer is said from before it ([com.optionslab.app.ira.IraAccount.invalidate]).
                 runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
@@ -204,17 +243,21 @@ object Broker {
     }
 
     private suspend fun callInner(method: String, path: String, body: String?, auth: Boolean, raw: Boolean,
-                                  json: Boolean, viaRelay: Boolean): Any {
+                                  json: Boolean, viaRelay: Boolean, readOnly: Boolean = false): Any {
         var attempt = 0
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
             // warms the order route).
             val test = testEndpoint
-            val relay = if ((method != "GET" || viaRelay) && test == null) Relay.proxy() else null
+            val relay = if (((method != "GET" && !readOnly) || viaRelay) && test == null) Relay.proxy() else null
             val url = URL((test?.base ?: Kite.API) + path)
             val c = (if (relay != null) url.openConnection(relay) else url.openConnection()) as HttpsURLConnection
-            c.sslSocketFactory = test?.ssl ?: com.optionslab.app.security.KitePin.socketFactory
+            // TCP_NODELAY on every socket (a small order body is sent at once, not held for Nagle); one wrapper per factory,
+            // so the HTTP stack's connection pool (keyed on the factory) keeps reusing the same warm connection.
+            c.sslSocketFactory = NoDelay.of(test?.ssl ?: com.optionslab.app.security.KitePin.socketFactory)
+            // A read on the event-driven path ([FastRead]) gives up in 3 s, so one slow answer never holds the next look.
+            val quick = method == "GET" && kotlinx.coroutines.currentCoroutineContext()[FastRead] != null
             // Speed: a reply read to its end leaves its connection (TCP + TLS, and through the relay its SSH
             // channel) in the HTTP stack's pool, so the next call - the order itself - skips the handshakes.
             // Any failure closes it. A POST is never re-sent on a pooled connection: its body is streamed at
@@ -222,13 +265,13 @@ object Broker {
             var reusable = false
             try {
                 c.requestMethod = method
-                c.connectTimeout = 20_000
-                c.readTimeout = 60_000
+                c.connectTimeout = if (quick) FAST_READ_MS else 20_000
+                c.readTimeout = if (quick) FAST_READ_MS else 60_000
                 c.instanceFollowRedirects = false
                 c.useCaches = false
                 c.setRequestProperty("X-Kite-Version", "3")
                 c.setRequestProperty("User-Agent", "IraAlgo-Android")
-                if (auth) c.setRequestProperty("Authorization", "token ${apiKey}:${token()}")
+                if (auth) { val tok = token(); c.setRequestProperty("Authorization", "token ${apiKey}:$tok") }
                 if (body != null) {
                     c.doOutput = true
                     c.setRequestProperty("Content-Type", if (json) "application/json" else "application/x-www-form-urlencoded")
@@ -288,6 +331,7 @@ object Broker {
                 throw IOException("Could not reach Zerodha")
             } finally {
                 if (!reusable) c.disconnect()
+                if (relay != null) relayUsedAt = System.currentTimeMillis()
             }
         }
     }
@@ -299,16 +343,50 @@ object Broker {
      * Get the order route ready while the owner is still reviewing (or, for the bots, during market hours):
      * the relay's SSH session and a pooled TLS connection to Zerodha through it, and the static-IP reading
      * an entry is checked against. Only removes waiting: every check at send still runs. Returns at once
-     * (the work runs in the background), never throws, and does something at most every 20 s.
+     * (the work runs in the background), never throws, and does something at most every [WARM_GAP_MS] -
+     * [force] (a bar close the armed arms decide on is seconds away) at most every [FORCED_WARM_MS].
+     * The relay's read is timed for the order-speed card ([OrderTiming.relayPing]).
      */
-    fun warmOrderRoute(entry: Boolean = true) {
+    fun warmOrderRoute(entry: Boolean = true, force: Boolean = false, gapMs: Long? = null) {
         val now = System.currentTimeMillis()
-        if (now - warmedAt < 20_000) return
+        if (now - warmedAt in 0 until (gapMs ?: if (force) FORCED_WARM_MS else WARM_GAP_MS)) return
         warmedAt = now
         if (testEndpoint != null) return            // JVM tests: the fake Kite needs no warming, and nothing may reach the internet
+        // Zerodha's address looked up ahead (the system keeps it), so the order's own connection skips the DNS wait.
+        warmScope.launch { runCatching { java.net.InetAddress.getAllByName(com.optionslab.app.security.KitePin.HOST) } }
         if (entry && StaticIp.registered != null) warmScope.launch { runCatching { StaticIp.current(maxAgeMs = 30_000) } }
         // Without the relay, the review's own reads have already pooled the connection the order uses.
-        if (Relay.enabled && loggedIn) warmScope.launch { runCatching { call("GET", "/user/profile", viaRelay = true) } }
+        if (Relay.enabled && loggedIn) warmScope.launch {
+            // Cold: nothing went through the relay for 4 minutes (its pooled connection is likely gone: handshakes again).
+            val cold = System.currentTimeMillis() - relayUsedAt > 240_000
+            val t0 = System.currentTimeMillis()
+            runCatching { call("GET", "/user/profile", viaRelay = true) }
+                .onSuccess { runCatching { OrderTiming.relayPing(System.currentTimeMillis() - t0, cold) } }
+        }
+    }
+
+    /** The order route is warmed at most this often (Zerodha's profile read through the relay, in market hours). */
+    const val WARM_GAP_MS = 60_000L
+    private const val FORCED_WARM_MS = 5_000L
+
+    /** When a request last went through the relay (cold or warm, for the order-speed card). */
+    @Volatile private var relayUsedAt = 0L
+    @Volatile private var directAt = 0L
+
+    /**
+     * The same cheap read as the relay's, straight to Zerodha (reads never use the relay): the network's own round trip,
+     * beside the relay's, for the order-speed card. At most once a minute, in the background; never an order, never the
+     * relay. Returns at once, never throws.
+     */
+    fun pingDirect() {
+        val now = System.currentTimeMillis()
+        if (now - directAt in 0 until WARM_GAP_MS) return
+        directAt = now
+        if (testEndpoint != null || !loggedIn) return
+        warmScope.launch {
+            val t0 = System.currentTimeMillis()
+            runCatching { call("GET", "/user/profile") }.onSuccess { runCatching { OrderTiming.directPing(System.currentTimeMillis() - t0) } }
+        }
     }
 
     // ---- login --------------------------------------------------------------------
@@ -347,6 +425,7 @@ object Broker {
         if (token.isBlank()) throw IOException("Zerodha returned no access token")
         SecurePrefs.putAll(mapOf(K_TOKEN to token, K_LOGIN_AT to System.currentTimeMillis(),
             K_USER to data.optString("user_name"), K_UID to data.optString("user_id")))
+        dropCreds(); dropKept()
         return data.optString("user_name", "you")
     }
 
@@ -404,12 +483,95 @@ object Broker {
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING")
 
     suspend fun funds(): Funds {
+        val at = System.currentTimeMillis()
         val eq = (call("GET", "/user/margins") as JSONObject).getJSONObject("equity")
         val a = eq.optJSONObject("available") ?: JSONObject()
         val u = eq.optJSONObject("utilised") ?: JSONObject()
         return Funds(a.optDouble("live_balance", a.optDouble("cash", 0.0)), u.optDouble("debits", 0.0), eq.optDouble("net", 0.0),
             a.optDouble("opening_balance", 0.0), a.optDouble("collateral", 0.0), u.optDouble("span", 0.0), u.optDouble("exposure", 0.0),
             u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0))
+            .also { fundsKept = at to it }
+    }
+
+    // ---- kept reads for the hot path (round 2) ---------------------------------------------------------------
+
+    /** The last margins read and when (memory only): the live entry's margin check ([accountNow] with a need). */
+    @Volatile private var fundsKept: Pair<Long, Funds>? = null
+
+    /** The kept margins as the pure check sees them (the free margin the guard compares with: equity net). */
+    private fun marginSnap(): com.optionslab.ira.MarginCache.Snapshot? =
+        fundsKept?.let { (at, f) -> com.optionslab.ira.MarginCache.Snapshot(f.net, at) }
+
+    /**
+     * Keep the margins snapshot fresh: read again in the background when it is [com.optionslab.ira.MarginCache.REFRESH_MS]
+     * old (at most every 30 s), only in market hours with a session. Returns at once, never throws, never on the caller's thread.
+     */
+    fun refreshMarginsIfDue() {
+        if (testEndpoint == null && !Market.isOpen()) return
+        if (!loggedIn || !com.optionslab.ira.MarginCache.due(marginSnap(), System.currentTimeMillis())) return
+        if (!marginRefreshing.compareAndSet(false, true)) return
+        warmScope.launch { try { runCatching { funds() } } finally { marginRefreshing.set(false) } }
+    }
+    private val marginRefreshing = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * Zerodha's orders and positions as last read, for the event-driven exits' looks between the 15-second passes: a stop,
+     * target or trail then decides from the stream's price and these, and only an order goes over REST. Used only while the
+     * read is under [RECON_MS] old, no write went to Zerodha since ([writes]: every order, change or cancel from this phone
+     * bumps it) and the price stream is live (Zerodha's order updates on it bump it too, from Kite web or a stop filling).
+     * Anything else reads Zerodha, as before. Memory only.
+     */
+    private class Kept<T>(val at: Long, val gen: Long, val value: T)
+    private val writes = java.util.concurrent.atomic.AtomicLong()
+    @Volatile private var keptOrders: Kept<List<OrderRow>>? = null
+    @Volatile private var keptBook: Kept<Positions>? = null
+    const val RECON_MS = 20_000L
+
+    /** An order changed at Zerodha (the stream said so): the kept orders and positions are not used again. */
+    fun reconStale() { writes.incrementAndGet() }
+
+    private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; writes.incrementAndGet() }
+
+    /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
+    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null }
+
+    private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
+        it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
+    }?.value
+
+    /** [orders], or the kept read when it may stand for it (see [Kept]). */
+    suspend fun ordersRecon(): List<OrderRow> = keptValue(keptOrders) ?: orders()
+
+    /** [positionBook], or the kept read when it may stand for it (see [Kept]). */
+    suspend fun positionsRecon(): Positions = keptValue(keptBook) ?: positionBook()
+
+    /** Marks a read on the event-driven path: Zerodha reads under it give up in [FAST_READ_MS]. */
+    class FastRead : kotlin.coroutines.AbstractCoroutineContextElement(FastRead) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<FastRead>
+    }
+    const val FAST_READ_MS = 3_000
+
+    /** TCP_NODELAY on each socket Zerodha's calls make; one wrapper per underlying factory (the connection pool's key). */
+    private object NoDelay {
+        @Volatile private var kept: Pair<javax.net.ssl.SSLSocketFactory, javax.net.ssl.SSLSocketFactory>? = null
+        fun of(f: javax.net.ssl.SSLSocketFactory): javax.net.ssl.SSLSocketFactory {
+            kept?.let { if (it.first === f) return it.second }
+            return Wrap(f).also { kept = f to it }
+        }
+        private class Wrap(private val d: javax.net.ssl.SSLSocketFactory) : javax.net.ssl.SSLSocketFactory() {
+            private fun <T : java.net.Socket> nd(s: T): T { runCatching { s.tcpNoDelay = true }; return s }
+            override fun getDefaultCipherSuites(): Array<String> = d.defaultCipherSuites
+            override fun getSupportedCipherSuites(): Array<String> = d.supportedCipherSuites
+            override fun createSocket(s: java.net.Socket?, host: String?, port: Int, autoClose: Boolean): java.net.Socket =
+                nd(d.createSocket(s, host, port, autoClose))
+            override fun createSocket(): java.net.Socket = nd(d.createSocket())
+            override fun createSocket(host: String?, port: Int): java.net.Socket = nd(d.createSocket(host, port))
+            override fun createSocket(host: String?, port: Int, localHost: java.net.InetAddress?, localPort: Int): java.net.Socket =
+                nd(d.createSocket(host, port, localHost, localPort))
+            override fun createSocket(host: java.net.InetAddress?, port: Int): java.net.Socket = nd(d.createSocket(host, port))
+            override fun createSocket(address: java.net.InetAddress?, port: Int, localAddress: java.net.InetAddress?, localPort: Int): java.net.Socket =
+                nd(d.createSocket(address, port, localAddress, localPort))
+        }
     }
 
     private fun position(it: JSONObject) = Position(
@@ -423,12 +585,14 @@ object Broker {
 
     suspend fun positionBook(): Positions {
         // Always read fresh (stops, targets, the loss limit and the bots rely on it); within a market-watch pass the
-        // answer is also kept for the words-only checks after it ([passPositionBook]).
+        // answer is also kept for the words-only checks after it ([passPositionBook]) and the event-driven exits ([positionsRecon]).
         val ticket = passBook.ticket()
         val at = passBook.now()
+        val gen = writes.get()
+        val t0 = System.currentTimeMillis()
         val d = call("GET", "/portfolio/positions") as JSONObject
         return Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
-            .also { passBook.put(ticket, at, it) }
+            .also { passBook.put(ticket, at, it); keptBook = Kept(t0, gen, it) }
     }
 
     /** The market watch opens and closes its pass: within it, [passPositionBook] reads Zerodha at most once. */
@@ -458,8 +622,11 @@ object Broker {
     }.sortedByDescending { it.at }
 
     suspend fun orders(): List<OrderRow> {
+        val gen = writes.get()
+        val t0 = System.currentTimeMillis()
         val arr = call("GET", "/orders") as JSONArray
         val list = rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
+        keptOrders = Kept(t0, gen, list)
         // The "Open" widget's pending orders come from the reads already made here, handed to its own thread so this
         // (an order path) never waits on its vault write or the launcher.
         runCatching { com.optionslab.app.widget.OpenWidget.fromOrdersSoon(app, list) }
@@ -484,12 +651,18 @@ object Broker {
     @Volatile private var tokenMap: Pair<LocalDate, Map<String, Long>>? = null
     fun tokenOf(key: String): Long? {
         INDEX.values.firstOrNull { it.first == key }?.let { return it.second }
+        // MCX: from the day's MCX list ([McxMarket]), so its contracts stream too.
+        if (key.startsWith("MCX:")) return McxMarket.tokenOf(key.removePrefix("MCX:"))
         if (!key.startsWith("NFO:")) return null
         val m = tokenMap?.takeIf { it.first == Market.today() }?.second
             ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
             ?: return null
         return m[key]
     }
+
+    /** [tokenOf] only from what is already in memory (never builds the day's map or reads a file): for timing an order. */
+    private fun tokenKnown(key: String): Long? =
+        INDEX.values.firstOrNull { it.first == key }?.second ?: tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
 
     /**
      * Quotes for "EXCHANGE:SYMBOL" keys. Instruments the live stream has a fresh tick for
@@ -517,11 +690,121 @@ object Broker {
         }.toMap()
     }
 
+    /**
+     * Last price and previous close for "EXCHANGE:SYMBOL" keys, from Kite's OHLC quote (500 keys a call): the Night (R3)
+     * arm's breadth ([com.optionslab.engine.orb.NightRules.breadth]). Reads only; a key Kite does not know is left out.
+     */
+    suspend fun lastAndPrevClose(keys: List<String>): Map<String, Pair<Double, Double>> {
+        val out = HashMap<String, Pair<Double, Double>>()
+        for (chunk in keys.chunked(500)) {
+            val data = call("GET", "/quote/ohlc?" + chunk.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
+            for (k in chunk) {
+                val q = data.optJSONObject(k) ?: continue
+                val pc = q.optJSONObject("ohlc")?.optDouble("close") ?: continue
+                out[k] = q.optDouble("last_price") to pc
+            }
+        }
+        return out
+    }
+
+    /** Kite's quote key for an index by its IraAlgo name ("NIFTY" -> "NSE:NIFTY 50"), null for one Kite has no index of. */
+    fun indexKey(symbol: String): String? = INDEX[symbol]?.first
+
+    /**
+     * The market recorder's read ([MarketRecorder]): every key's last price, volume, OI, best bid and offer with their
+     * quantities and the book's totals. A key with a fresh full-mode tick on the live stream is answered from it (no
+     * network); the rest in ONE quote call per 500 keys. Unlike [quotes] it never adds anything to the stream's follow
+     * list (so the recorder alone never keeps the stream, and the phone's radio, busy). Reads only.
+     */
+    suspend fun recorderQuotes(keys: Map<String, Long?>): Map<String, com.optionslab.ira.MarketRecord.Quote> {
+        if (keys.isEmpty()) return emptyMap()
+        val out = HashMap<String, com.optionslab.ira.MarketRecord.Quote>()
+        for ((k, token) in keys) {
+            val t = (token ?: tokenOf(k))?.let { KiteStream.tick(it) } ?: continue
+            if (t.bid == null && t.ask == null && t.tradable) continue          // no depth on this tick: the quote call has it
+            out[k] = com.optionslab.ira.MarketRecord.Quote(t.last, t.volume.takeIf { t.tradable }, t.oi.takeIf { t.tradable }, t.bid, t.bidQty,
+                t.ask, t.askQty, t.buyQty, t.sellQty, stream = true)
+        }
+        for (chunk in keys.keys.filter { it !in out }.chunked(500)) {
+            val data = call("GET", "/quote?" + chunk.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
+            for (k in chunk) {
+                val q = data.optJSONObject(k) ?: continue
+                val depth = q.optJSONObject("depth")
+                fun top(side: String) = depth?.optJSONArray(side)?.optJSONObject(0)
+                fun px(side: String) = top(side)?.optDouble("price")?.takeIf { it > 0 }
+                fun qty(side: String) = top(side)?.optLong("quantity")?.takeIf { px(side) != null }
+                fun long(name: String) = if (q.has(name)) q.optLong(name) else null
+                out[k] = com.optionslab.ira.MarketRecord.Quote(q.optDouble("last_price"), long("volume"), long("oi"), px("buy"), qty("buy"),
+                    px("sell"), qty("sell"), long("buy_quantity"), long("sell_quantity"))
+            }
+        }
+        return out
+    }
+
+    /** The index futures the market recorder follows, by name. */
+    val FUTURE_NAMES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+
+    private fun futuresFile() = File(app.filesDir, "kite_futures.json")
+
+    /** The futures kept: (the day NFO's were read, the day BFO's were read, the list). */
+    private fun futuresKept(): Triple<String, String, List<Kite.Future>> = runCatching {
+        val o = JSONObject(futuresFile().readText())
+        val a = o.getJSONArray("f")
+        Triple(o.optString("nfo"), o.optString("bfo"), (0 until a.length()).map { a.getJSONArray(it) }.map {
+            Kite.Future(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getInt(4), it.getString(5))
+        })
+    }.getOrDefault(Triple("", "", emptyList()))
+
+    private fun keepFutures(nfoDay: String, bfoDay: String, list: List<Kite.Future>) {
+        val a = JSONArray()
+        list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.lotSize).put(it.exchange)) }
+        futuresFile().writeText(JSONObject().put("nfo", nfoDay).put("bfo", bfoDay).put("f", a).toString())
+    }
+
+    /** NFO's futures from the day's instruments dump [instruments] has just downloaded (no second download for them). */
+    private fun keepNfoFutures(text: String) {
+        val (_, bfoDay, kept) = futuresKept()
+        val nfo = Kite.parseFutures(text.lineSequence(), FUTURE_NAMES)
+        keepFutures(Market.today().toString(), bfoDay, nfo + kept.filter { it.exchange == "BFO" })
+    }
+
+    @Volatile private var futuresTriedAt = 0L
+
+    /**
+     * Today's index futures (NFO's NIFTY, BANKNIFTY, FINNIFTY; BFO's SENSEX), for the market recorder. NFO's come with the
+     * day's instruments dump; BFO's dump is read once a day. A failed read is tried again after 30 minutes at most.
+     */
+    suspend fun futures(): List<Kite.Future> {
+        val today = Market.today().toString()
+        val (nfoDay, bfoDay, kept) = futuresKept()
+        if (nfoDay == today && bfoDay == today) return kept
+        val now = System.currentTimeMillis()
+        if (now - futuresTriedAt < 30 * 60_000L) return if (nfoDay == today) kept else emptyList()
+        futuresTriedAt = now
+        val nfo: List<Kite.Future> = if (nfoDay == today) kept.filter { it.exchange == "NFO" } else {
+            // The day's options list first: not downloaded yet today, its dump carries the futures too.
+            runCatching { instruments() }
+            val again = futuresKept()
+            if (again.first == today) again.third.filter { it.exchange == "NFO" }
+            else Kite.parseFutures((call("GET", "/instruments/NFO", raw = true) as String).lineSequence(), FUTURE_NAMES)
+        }
+        val bfo = if (bfoDay == today) kept.filter { it.exchange == "BFO" }
+            else runCatching { Kite.parseFutures((call("GET", "/instruments/BFO", raw = true) as String).lineSequence(), setOf("SENSEX")) }.getOrNull()
+        val all = nfo + bfo.orEmpty()
+        keepFutures(today, if (bfo != null) today else bfoDay, all)
+        return all
+    }
+
     private val KITE_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 
-    /** 1-minute candles with OI (needs a plan that includes historical data). */
-    suspend fun minuteBars(token: Long, day: LocalDate): List<Upstox.Bar> {
-        val q = "from=${Kite.enc("$day 09:15:00")}&to=${Kite.enc("$day 15:30:00")}&oi=1"
+    /**
+     * 1-minute candles with OI (needs a plan that includes historical data). [from] / [to]: the session's window (NSE's
+     * 09:15 to F&O's close of [day] unless asked - 15:40 from 3 Aug 2026, so a future's or an option's last 10 minutes are
+     * in; an index's candles end 15:29 either way; MCX's 09:00-23:59).
+     */
+    suspend fun minuteBars(token: Long, day: LocalDate, from: String = "09:15:00",
+                           to: String = "${com.optionslab.engine.NseHours.foCloseText(day)}:00"): List<Upstox.Bar> {
+        val q = "from=${Kite.enc("$day $from")}&to=${Kite.enc("$day $to")}&oi=1"
         val candles = (call("GET", "/instruments/historical/$token/minute?$q") as JSONObject).optJSONArray("candles") ?: JSONArray()
         return (0 until candles.length()).map { candles.getJSONArray(it) }.map { r ->
             val ts = r.getString(0)
@@ -530,16 +813,28 @@ object Broker {
         }
     }
 
+    /**
+     * Zerodha's MCX instrument list (GET /instruments/MCX, CSV): public, so it is read without the login when there is none
+     * ([McxMarket.contracts]). Reads only.
+     */
+    suspend fun mcxInstrumentsText(): String = call("GET", "/instruments/MCX", auth = loggedIn, raw = true) as String
+
+    /** Zerodha's public commodity margin list (JSON: each contract's NRML and MIS margin per lot). Reads only, no login. */
+    suspend fun mcxMarginsText(): String = call("GET", "/margins/commodity", auth = false, raw = true) as String
+
     /** Instrument token of an index Kite knows by its IraAlgo name (NIFTY, BANKNIFTY, INDIAVIX). */
     fun indexToken(symbol: String): Long? = INDEX[symbol]?.second
 
-    /** Daily candles (needs Kite's historical-data add-on); Kite serves about 2000 days a call. */
-    suspend fun dailyBars(token: Long, from: LocalDate, to: LocalDate): List<Upstox.Bar> {
+    /**
+     * Daily candles (needs Kite's historical-data add-on); Kite serves about 2000 days a call. [continuous]: a future's
+     * continuous near-month series (Kite's continuous=1; the MCX trend arm's 12-month history), not roll-adjusted. Reads only.
+     */
+    suspend fun dailyBars(token: Long, from: LocalDate, to: LocalDate, continuous: Boolean = false): List<Upstox.Bar> {
         val out = ArrayList<Upstox.Bar>()
         var lo = from
         while (!lo.isAfter(to)) {
             val hi = minOf(lo.plusDays(1900), to)
-            val q = "from=${Kite.enc("$lo 00:00:00")}&to=${Kite.enc("$hi 23:59:59")}"
+            val q = "from=${Kite.enc("$lo 00:00:00")}&to=${Kite.enc("$hi 23:59:59")}" + (if (continuous) "&continuous=1" else "")
             val candles = (call("GET", "/instruments/historical/$token/day?$q") as JSONObject).optJSONArray("candles") ?: JSONArray()
             for (i in 0 until candles.length()) {
                 val r = candles.getJSONArray(i)
@@ -559,15 +854,22 @@ object Broker {
 
     private val sparks = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, List<Double>>>()
 
-    suspend fun indexQuote(symbol: String): Market.Quote? {
+    /**
+     * [symbol]'s level from Zerodha. [spark] false (the order watch: it reads only the last price and the change from
+     * the open): the quote alone, no read of the day's candles - the high, low and spark are then this minute's kept
+     * ones, else the last price ([com.optionslab.ira.IndexSpark]).
+     */
+    suspend fun indexQuote(symbol: String, spark: Boolean = true): Market.Quote? {
         val (key, token) = INDEX[symbol] ?: return null
         val q = quotes(listOf(key))[key] ?: return null
         val minute = Market.minuteNow()
-        val spark = sparks[symbol]?.takeIf { it.first == minute && it.second.isNotEmpty() }?.second
-            ?: runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList()).also { sparks[symbol] = minute to it }
+        val kept = sparks[symbol]
+        val read = com.optionslab.ira.IndexSpark.candles(spark, kept?.first, minute, kept?.second.isNullOrEmpty())
+        val closes = if (read) runCatching { minuteBars(token, Market.today()).map { it.close } }.getOrDefault(emptyList()).also { sparks[symbol] = minute to it }
+            else kept?.takeIf { it.first == minute }?.second.orEmpty()
         val m = Market.now().let { it.hour * 60 + it.minute }
-        return Market.Quote(symbol, q.last, q.open.takeIf { it > 0 } ?: q.last, spark.maxOrNull() ?: q.last, spark.minOrNull() ?: q.last, m,
-            spark.ifEmpty { listOf(q.last) })
+        return Market.Quote(symbol, q.last, q.open.takeIf { it > 0 } ?: q.last, closes.maxOrNull() ?: q.last, closes.minOrNull() ?: q.last, m,
+            closes.ifEmpty { listOf(q.last) })
     }
 
     // ---- instruments ---------------------------------------------------------------------
@@ -601,6 +903,8 @@ object Broker {
         instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
         val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
+        // The market recorder's index futures from the same dump (never a second download for them).
+        runCatching { keepNfoFutures(text) }
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
         f.writeText(JSONObject().put("day", Market.today().toString()).put("i", a).toString())
@@ -668,13 +972,28 @@ object Broker {
 
     // ---- orders ------------------------------------------------------------------------
 
-    fun sentToday(): Int = if (SecurePrefs.getString(K_SENT_DAY) == Market.today().toString()) SecurePrefs.getInt(K_SENT, 0) else 0
+    /** Today's count of orders sent, kept in memory (read from the vault once a day / after a wipe; round 2). */
+    @Volatile private var sentKept: Triple<String, Int, Int>? = null
+
+    fun sentToday(): Int {
+        val day = Market.today().toString()
+        val g = SecurePrefs.generationHint
+        sentKept?.let { (d, n, gen) -> if (d == day && gen == g) return n }
+        val n = if (SecurePrefs.getString(K_SENT_DAY) == day) SecurePrefs.getInt(K_SENT, 0) else 0
+        sentKept = Triple(day, n, g)
+        return n
+    }
 
     /**
      * Counted in memory at once (the daily cap reads it from there), written to the vault in the background:
      * the Keystore encryption and two disk syncs no longer sit between Zerodha's answer and the fill check.
      */
-    @Synchronized private fun countSent() = SecurePrefs.putAllSoon(mapOf(K_SENT_DAY to Market.today().toString(), K_SENT to sentToday() + 1))
+    @Synchronized private fun countSent() {
+        val day = Market.today().toString()
+        val n = sentToday() + 1
+        sentKept = Triple(day, n, SecurePrefs.generationHint)
+        SecurePrefs.putAllSoon(mapOf(K_SENT_DAY to day, K_SENT to n))
+    }
 
     data class Fill(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String)
 
@@ -682,7 +1001,13 @@ object Broker {
     suspend fun placeOrder(o: Kite.Order, exit: Boolean = false): String {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
-        val data = call("POST", "/orders/regular", o.formBody()) as JSONObject
+        // Order speed: the body is built before the clock starts (a string; nothing is fetched for it), then the request is
+        // timed from its start to Zerodha's answer. The price's age is the stamp of this contract's last stream tick.
+        val body = o.formBody()
+        val stamp = runCatching { tokenKnown("${o.exchange}:${o.tradingSymbol}")?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
+        val t0 = runCatching { OrderTiming.sending(live = true, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
+        val data = call("POST", "/orders/regular", body) as JSONObject
+        runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
         return data.getString("order_id")
     }
@@ -695,19 +1020,29 @@ object Broker {
     internal val POLL_MS = longArrayOf(150, 200, 250, 300, 400, 500, 750, 1_000)
 
     /**
-     * Read an order until it is terminal or [timeoutMs] passes. The order's state always comes from Kite's
-     * REST order history; an order update pushed on the live stream only wakes the next read early.
+     * Read an order until it is terminal or [timeoutMs] passes. Zerodha's own order update pushed on the live stream
+     * ([KiteStream.orderUpdate]: COMPLETE, REJECTED or CANCELLED for this order id) answers at once, without another read;
+     * otherwise the order's state comes from Kite's REST order history on the same schedule as before ([POLL_MS]), and
+     * any update on the stream wakes the next look early.
      */
     suspend fun awaitOrder(orderId: String, timeoutMs: Long = 20_000): Fill {
-        val end = System.currentTimeMillis() + timeoutMs
+        val start = System.currentTimeMillis()
+        val end = start + timeoutMs
         var last: JSONObject? = null
         var i = 0
         while (true) {
+            streamed(orderId)?.let { f ->
+                runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = true) }
+                return f
+            }
             val seen = KiteStream.orderEvents.value
             val hist = call("GET", "/orders/$orderId") as JSONArray
             if (hist.length() > 0) last = hist.getJSONObject(hist.length() - 1)
             val st = last?.optString("status") ?: ""
-            if (st in setOf("COMPLETE", "REJECTED", "CANCELLED")) break
+            if (st in com.optionslab.ira.OrderUpdate.TERMINAL) {
+                runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = false) }
+                break
+            }
             val left = end - System.currentTimeMillis()
             if (left <= 0) break
             val wait = POLL_MS[minOf(i++, POLL_MS.size - 1)].coerceAtMost(left)
@@ -717,6 +1052,11 @@ object Broker {
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
             // Kite sends "status_message": null for an open order, which optString reads as the text "null".
             o.optString("status_message", "").let { if (it == "null") "" else it })
+    }
+
+    /** Order [orderId]'s end as Zerodha pushed it on the stream (COMPLETE, REJECTED or CANCELLED), or null when not (yet). */
+    private fun streamed(orderId: String): Fill? = KiteStream.orderUpdate(orderId)?.takeIf { it.terminal }?.let { u ->
+        Fill(orderId, u.status, u.avgPrice, u.filled, u.message)
     }
 
     /**
@@ -818,15 +1158,30 @@ object Broker {
     }
 
     /**
+     * POST /charges/orders (Kite Connect's virtual contract note): Zerodha's own charges for orders already executed,
+     * [body] being [com.optionslab.ira.ExactCharges.requestJson]. A read - it places, changes and cancels nothing - sent
+     * as JSON the way [basketMargin] is. Its data array, as text ([com.optionslab.ira.ExactCharges.total] reads it).
+     */
+    suspend fun contractNote(body: String): String = (call("POST", "/charges/orders", body, json = true, readOnly = true) as JSONArray).toString()
+
+    /**
      * The account as the guard judges it - positions, funds, today's order count - read in parallel (one
      * round trip instead of three). Null when the positions cannot be read; funds and orders are optional,
      * exactly as the sequential reads were.
      */
-    suspend fun accountNow(): com.optionslab.engine.risk.AccountGuard.Account? = kotlinx.coroutines.coroutineScope {
-        val bookQ = async { runCatching { positionBook() }.getOrNull() }
-        val fundsQ = async { runCatching { funds() }.getOrNull() }
-        val countQ = async { runCatching { orders().size }.getOrDefault(0) }
-        bookQ.await()?.let { runCatching { Guard.liveAccount(it, fundsQ.await(), countQ.await()) }.getOrNull() }
+    suspend fun accountNow(needed: Double? = null): com.optionslab.engine.risk.AccountGuard.Account? = kotlinx.coroutines.coroutineScope {
+        // Round 2: a live entry that says what it needs ([needed], rupees) may be checked against the kept margins (read in
+        // the background at most 30 s apart) and the kept orders and positions ([ordersRecon]); Zerodha is read now when the
+        // margins are old, or their headroom is within 20% of the need, or the kept reads may not stand ([Kept]).
+        val t0 = System.currentTimeMillis()
+        val kept = if (needed != null && com.optionslab.ira.MarginCache.decide(marginSnap(), needed, t0) == com.optionslab.ira.MarginCache.Use.CACHED)
+            fundsKept?.second else null
+        val bookQ = async { runCatching { if (needed != null) positionsRecon() else positionBook() }.getOrNull() }
+        val fundsQ = async { kept ?: runCatching { funds() }.getOrNull() }
+        val countQ = async { runCatching { (if (needed != null) ordersRecon() else orders()).size }.getOrDefault(0) }
+        val out = bookQ.await()?.let { runCatching { Guard.liveAccount(it, fundsQ.await(), countQ.await()) }.getOrNull() }
+        if (needed != null) runCatching { OrderTiming.marginCheck(System.currentTimeMillis() - t0) }
+        out
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */

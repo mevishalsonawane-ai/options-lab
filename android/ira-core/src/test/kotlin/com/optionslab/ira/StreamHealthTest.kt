@@ -77,11 +77,11 @@ class StreamHealthTest {
     }
 
     @Test fun waits() {
-        assertEquals(1_000L, StreamHealth.wait(0, null, Cause.DNS))
+        assertEquals(500L, StreamHealth.wait(0, null, Cause.DNS))
         assertEquals(2_000L, StreamHealth.wait(1_000, null, Cause.DNS))
         assertEquals(30_000L, StreamHealth.wait(20_000, null, Cause.DNS))
-        // Up a minute or more: at once again. Dropped within seconds of opening: the wait keeps growing (was reset to 1 s).
-        assertEquals(1_000L, StreamHealth.wait(16_000, 60_000, Cause.SILENT))
+        // Up a minute or more: at once again. Dropped within seconds of opening: the wait keeps growing (was reset to 0.5 s).
+        assertEquals(500L, StreamHealth.wait(16_000, 60_000, Cause.SILENT))
         assertEquals(8_000L, StreamHealth.wait(4_000, 3_000, Cause.CLOSED))
         assertEquals(30_000L, StreamHealth.wait(1_000, 600_000, Cause.TOO_MANY))
         assertEquals(30_000L, StreamHealth.wait(0, null, Cause.TOKEN))

@@ -14,7 +14,9 @@ import java.util.Locale
  * bots trade on the same account) - what their charges came to, their share of the profit before charges, and which
  * kind of trading paid most: quick trades or long holds, small trades (moved less than twice their own charges) or
  * big ones, and who placed them. The charges are the app's own (the paper account's, the same sum the app uses to
- * estimate Zerodha's). Facts only, never what to trade; an account answer, so never on a locked phone. Pure.
+ * estimate Zerodha's). "Why are my charges so high?" ([whyAsked], [whyLines]): the orders, fills and round trips of the
+ * day (or the span said), the charges by kind, who placed the most orders. Facts only, never what to trade; an account
+ * answer, so never on a locked phone. Pure.
  */
 object Charges {
     /** A closed trade: [gross] before charges, [charges] its own (both legs); [owner] who placed it ("Manual", "ORB"...). */
@@ -49,27 +51,112 @@ object Charges {
         "|(total|overall) $CHARGE|$CHARGE (this|last|previous|the) (week|month)|$CHARGE (today|so far)|(weekly|monthly) $CHARGE" +
         "|(what|how much) (did|have|do) (the |my )?$CHARGE (cost|take|eat|taken|eaten|come to|came to|add up)" +
         "|(which|what) (kind of |type of )?(trades?|trading) (cost|costs) (me )?(the )?most in $CHARGE|$CHARGE (ate|eat|eats|took|take|takes) (my|into my|of my)" +
-        "|(how much|kitna|kitni|kitne) (in |on )?$CHARGE|$CHARGE (how much|kitna|kitni|kitne)) ")
+        "|(how much|kitna|kitni|kitne) (in |on )?$CHARGE|$CHARGE (how much|kitna|kitni|kitne)" +
+        // Understanding round 25: "how much went in charges", "today's charges", "charges ne kitna khaya".
+        "|how much (went|has gone|was gone|is gone|goes|got eaten) (in|on|to|into|as) (the |my )?$CHARGE|(today|today s|todays|aaj ke|aaj ka|aaj ki) $CHARGE" +
+        "|$CHARGE (ne )?(kitna|kitne|kitni|how much) (khaya|kha liya|kha gaye|kha gayi|liya|le liya|kata|kaata|kat gaya|gaya|gaye)" +
+        // Understanding round 26: "charges lage kitne", "charges ka total kya hai", "charges batao", "how much tax did I pay on
+        // trades", "how much did I pay Zerodha".
+        "|$CHARGE (lage|laga|lagi|hue|hua|kate|kaate|gaye|gaya) (kitne|kitna|kitni|how much)|$CHARGE (ka |ki )?(total|hisaab|hisab|jod)" +
+        "|(show|tell|batao|bataao|dikhao|bolo) (me )?(my |the |today s |todays |aaj ke )?$CHARGE|$CHARGE (batao|bataao|dikhao|bolo)" +
+        "|how much (tax|taxes) (did|have|do) i (pay|paid) (on|for) (my )?(trades|trading|f o|options)" +
+        "|how much (did|have|do) i (pay|paid|give|given) (to )?(zerodha|kite|the broker|my broker)) ")
     /** One order's charges ("charges for one lot", "charges per order"): the cost calculator's question, not the account's. */
     private val ONE = Regex(" (per order|per lot|per trade|for (a|one|1) (lot|order|trade)|on (a|one|1) (lot|order|trade)|calculator|calculate|if i (buy|sell)|what is brokerage|what are charges) ")
 
-    /** Does [text] ask what Boss's trading paid in charges? */
+    /** Does [text] ask what Boss's trading paid in charges (or why they were so high, [whyAsked])? */
     fun asked(text: String): Boolean {
         val t = norm(Ask.reading(text))
-        return ASKED.containsMatchIn(t) && !ONE.containsMatchIn(t)
+        return (ASKED.containsMatchIn(t) || WHY.containsMatchIn(t)) && !ONE.containsMatchIn(t) || whyAsked(text)
+    }
+
+    // Usefulness round 34 (Boss saw about Rs 2,500 a day in charges and was surprised): "why are my charges so high",
+    // "charges itne zyada kyun", "what is eating my charges", "where are my charges going".
+    private const val HIGH = "(so |this |that |too |very |such |itne |itna |itni |bahut |kaafi )?(high|much|big|large|huge|expensive|heavy|zyada|jyada|jada|zada|more|higher)"
+    private const val KYUN = "(kyun|kyu|kyon|kiyon|kiu|why)"
+    private val WHY = Regex(" (why (are|is|were|was|have|has) (my |the |all |all the |today s |todays |aaj ke )?$CHARGE (been |gone |become )?$HIGH" +
+        "|why (so much|so many|such high|such big|this much|that much|such huge) (in |on )?(my |the )?$CHARGE" +
+        "|why (do|did|am|was|have) i (pay|paying|paid|spend|spending|spent) (so much|this much|that much|such high|such big|so many|so high) (in |on |as |for )?(the |my )?$CHARGE" +
+        "|what (is|s|are) (eating|driving|causing|pushing|making|behind|inflating) (up )?(my |the |all |all the |today s |todays )?$CHARGE" +
+        "|what (is|s) (eating|driving up|pushing up|inflating) (my |the )?(money|profit|pnl|p l) (in|on|as|with) (the )?$CHARGE" +
+        "|what makes (my |the )?$CHARGE (so )?(high|big|much)|where (are|is|do|does) (my |the |all |all my )?$CHARGE (going|go|coming from|come from)" +
+        "|(my |the )$CHARGE (are|is|were|was) (too|so|very|way too) (high|much|big)" +
+        "|$CHARGE ($HIGH )?$KYUN|$CHARGE ($KYUN )?(itne|itna|itni|bahut|kaafi) |$KYUN (itne|itna|itni|bahut|kaafi|zyada|jyada) (zyada |jyada )?$CHARGE" +
+        "|(itne|itna|itni|bahut|kaafi) (zyada |jyada )?$CHARGE ($KYUN|lage|lag rahe|kat rahe|gaye)" +
+        "|(break ?down|breakup|break up|split) (of )?(my |today s |todays |this week s )$CHARGE|(my |today s |todays )$CHARGE (break ?down|breakup|break up|split)" +
+        // Understanding round 27: "charges itne kyun lage", "charges itne kaise lage", "charges bahut zyada lag rahe hain", "how
+        // come charges are so high", "why charges so high", "why high charges", "reason for high charges", "why are my charges more".
+        "|$CHARGE (itne|itna|itni|bahut|kaafi) (zyada |jyada )?($KYUN|kaise|kese)" +
+        "|$CHARGE (itne|itna|itni|bahut|kaafi|zyada|jyada) (zyada |jyada )?(lag rahe|lag raha|lag rahi|lagte|lagta|kat rahe|kat raha|ja rahe|ja raha|aa rahe|aa raha|aaye|aaya)" +
+        "|how come (my |the |all |all the |today s |todays )?$CHARGE (are|is|were|was) (so |too |this |that |very |such )?(high|much|big|huge|expensive|heavy|more|higher)" +
+        "|why (my |the )?$CHARGE (are |is |were |was )?$HIGH|why (so |too |such )?(high|heavy|huge|big) $CHARGE" +
+        "|(reason|reasons|wajah|vajah) (for|of|behind|ki) (the |my |such |these )?(high|heavy|huge|big|so much|so many|more|zyada) $CHARGE) ")
+
+    /**
+     * The day's charges asked in detail (understanding round 27): what Zerodha actually charged - its contract note's figure
+     * ("what did Zerodha actually charge", "contract note ke hisaab se charges", "exact charges", "is that charge an
+     * estimate") - and the charges of one kind of trade ("charges on my futures", "delivery charges", "DP charges kitne
+     * lage"). Answered as [whyAsked]'s is: the orders, fills and charges by kind of the day (or the span said), each fill on
+     * its own schedule, with the contract note's figure for today when Zerodha gave one.
+     */
+    private const val SEG = "(dp|demat|delivery|futures|future|fut|stock|stocks|share|shares|equity|intraday|f o|fno|cnc|mis)"
+    private const val NOTE = "(contract|contact|contracts|contacts) notes?"
+    private val DETAIL = Regex(" ((what|how much) (did|has|have) (zerodha|kite|the broker|my broker) (actually |really |exactly |finally )?(charge|charged|take|took|cut|deduct|deducted|bill|billed)" +
+        "|zerodha ne (actually |asal mein |asal me |sach mein )?(kitna|kitne|kitni|kya) $CHARGE? ?(kiya|kiye|liya|liye|kaata|kaate|kata|kate|lagaya|lagaye|charge kiya|charge kiye)" +
+        "|$NOTE ((ke )?(hisaab|hisab) se |ke mutabik |ke anusar |according |wale |ka |ke |ki |says? |shows? )?$CHARGE" +
+        "|$CHARGE (as per|according to|from|in|per|on|by|as on) (the |my |today s |todays |aaj ke |aaj ka |aaj ki )?$NOTE" +
+        "|(what|kya) (does|did|do) (the |my |today s |todays |aaj ka |aaj ke |aaj ki )?$NOTE (say|show|says|shows)|$NOTE (kya|what) (kehta|kehti|bolta|bolti|batata|batati|says)" +
+        // ("The actual charge of a Nifty option" is the schedule's question, not the day's: "for today" and "on my" only.)
+        "|(exact|actual|real|final|precise|accurate|asli|sahi) (zerodha |broker )?$CHARGE(?! (of|for|on|per) (?!my |mere |today|todays|the day))" +
+        "|(is|are) (this |that |these |those |the |my |today s |todays )?$CHARGE (figure |number |amount )?(exact|accurate|real|final|an estimate|estimated|just an estimate|approximate|approx|an approximation|rough|a rough figure)" +
+        // Understanding round 28: the exact-or-estimate question as Boss says it - "charges exact hai ya estimate", "estimated
+        // charges", "kya ye charges exact hain", "how accurate are the charges", "exact or approximate charges".
+        "|$CHARGE (exact|accurate|sahi|asli|estimate|estimated|approx|approximate|andaza|andaaza) (hai |hain |he )?(ya|or) (estimate|estimated|exact|approx|approximate|andaza|andaaza|asli|sahi)" +
+        "|(kya )?(ye|yeh|these|this|that|those|mere|my|aaj ke|today s|todays) $CHARGE (exact|sahi|asli|estimate|estimated|approx|approximate|andaza|andaaza) (hai|hain|he|h)" +
+        "|how (accurate|exact|precise|reliable|correct) (are|is) (the |my |these |this |that |those |today s |todays )?$CHARGE" +
+        "|(exact|estimated|estimate|approximate|approx) or (estimated|estimate|approximate|approx|exact) $CHARGE" +
+        "|(my|mine|today s|todays|aaj ke|aaj ka|aaj ki|total|how much|kitna|kitne|kitni) (in |on )?$SEG $CHARGE" +
+        "|$SEG (ke |ka |ki |wale |par |pe )?$CHARGE (kitne|kitna|kitni|how much|lage|laga|lagi|today|this week|this month|last week|last month|so far)" +
+        "|$CHARGE (on|for|of|in) (my|mere|the) $SEG|$CHARGE (on|for|in) $SEG( trades| trade| positions| orders)? (today|this week|this month|last week|last month|so far)) ")
+    /** "DP charges", "delivery charges today", "futures charges": the kind of trade and the charges said alone. */
+    private val DETAIL_ALONE = rx("^ $SEG $CHARGE( today| this week| this month| so far)?( please| boss| jarvis)? $|^ $CHARGE (break ?down|breakup|break up)( today| please| boss)? $|" +
+        // Understanding round 28: "estimated charges", "charges estimate hai kya", "charges approx hai".
+        "^ (jarvis )?(are |is )?(the |my |these |today s |todays )?(estimated|approximate|approx) $CHARGE( today| please| boss| jarvis)* $|" +
+        "^ (jarvis )?(ye |yeh |mere |aaj ke )?$CHARGE (estimate|estimated|approx|approximate|andaza|andaaza|exact) (hai|hain|he|h)( kya)?( boss| jarvis)? $")
+
+    /**
+     * Does [text] ask WHY the charges are so high (what drove them: orders, fills, who placed them, the kinds of charge), or
+     * for the day's charges in that detail - Zerodha's exact figure, or one kind of trade's ([DETAIL])?
+     */
+    fun whyAsked(text: String): Boolean {
+        val raw = norm(text)
+        if (ONE.containsMatchIn(raw)) return false
+        val read = norm(Ask.reading(text))
+        return WHY.containsMatchIn(raw) || WHY.containsMatchIn(read) || DETAIL.containsMatchIn(raw) || DETAIL.containsMatchIn(read) ||
+            DETAIL_ALONE.containsMatchIn(raw)
     }
 
     /** The span asked about; this month when none is said. */
-    fun span(text: String): Span {
+    fun span(text: String): Span = said(text) ?: Span.MONTH
+
+    /** The span said in [text], or null when none is. */
+    private fun said(text: String): Span? {
         val t = norm(text)
         return when {
             rx(" (today|today s|todays|aaj|aaj ka|aaj ke) ").containsMatchIn(t) -> Span.TODAY
             rx(" (last|previous|past|pichle|pichla) (week|hafte|hafta) ").containsMatchIn(t) -> Span.LAST_WEEK
             rx(" (last|previous|past|pichle|pichla) (month|mahina|mahine) ").containsMatchIn(t) -> Span.LAST_MONTH
             rx(" (week|weekly|hafte|hafta) ").containsMatchIn(t) -> Span.WEEK
-            else -> Span.MONTH
+            rx(" (month|monthly|mahina|mahine) ").containsMatchIn(t) -> Span.MONTH
+            else -> null
         }
     }
+
+    /**
+     * The span of a "why so high" question: the one said, or null when none is - then the day ([whyLines] takes today, or
+     * the last day with fills when today has none).
+     */
+    fun whySpan(text: String): Span? = said(text)
 
     /** The days of [span] up to [today], first and last. */
     fun range(span: Span, today: LocalDate): Pair<LocalDate, LocalDate> {
@@ -161,6 +248,112 @@ object Charges {
         }
         if (byCharge.values.any { it >= 0.5 }) out += "$label every fill in ${month(span, today)?.month?.getDisplayName(TextStyle.FULL, Locale.ENGLISH) ?: span.label}, by kind of charge: " +
             byCharge.entries.filter { it.value >= 0.5 }.sortedByDescending { it.value }.joinToString(", ") { "${it.key} ${amt(it.value)}" } + "."
+        return out
+    }
+
+    /**
+     * One filled leg for "why are my charges so high": when, the order it belongs to, who placed that order ([owner]:
+     * "Manual", "ORB", a Pine arm, "Jarvis"...), and the leg itself. An order that filled in several pieces is several
+     * legs with one [orderId] (a blank one counts as its own order).
+     */
+    data class Leg(val at: LocalDateTime, val orderId: String, val owner: String, val side: String, val price: Double, val qty: Int,
+                   /** The contract or share, for its schedule ([PnlCharges.segment]); blank: an option's. */
+                   val symbol: String = "",
+                   /** Its exchange ("NSE", "NFO", "MCX") and product ("MIS", "CNC", "NRML") as the broker lists them, for its
+                    *  schedule (a share trade under MIS is a same-day one); blank: not known (the paper account's options). */
+                   val exchange: String = "", val product: String = "")
+
+    /** The kinds of charge said, in this order, as said; SEBI's fee is put with the exchange's (it is on turnover too). */
+    val KINDS: List<Pair<String, String>> = listOf("Brokerage" to "brokerage", "STT" to "STT", "Exchange" to "exchange", "GST" to "GST", "Stamp duty" to "stamp")
+
+    /** Who placed an order, from its label in the app's owners ("ORB · entry", "Strategy: Pine X", null): "ORB", "Pine X", "Manual". */
+    fun owner(label: String?): String =
+        label?.substringBefore(" · ")?.removePrefix("Strategy: ")?.trim()?.ifEmpty { null }?.let { ArmOwners.arm(it) } ?: "Manual"
+
+    private fun fills(legs: List<Leg>) =
+        legs.map { PnlCharges.Fill(it.side, it.price, it.qty, it.orderId, symbol = it.symbol, exchange = it.exchange, product = it.product, day = it.at.toLocalDate().toString()) }
+
+    /** [legs]' charges by kind ([KINDS]), with Zerodha's Rs 20 brokerage once per order ([PnlCharges.perFill]). */
+    fun split(legs: List<Leg>): Map<String, Double> {
+        val out = LinkedHashMap<String, Double>()
+        KINDS.forEach { out[it.first] = 0.0 }
+        PnlCharges.perFill(fills(legs)).forEach { m ->
+            m.forEach { (k, v) -> val key = if (k == "SEBI") "Exchange" else k; out[key] = (out[key] ?: 0.0) + v }
+        }
+        return out
+    }
+
+    /** The orders among [legs]: each order id once, a blank one each its own. */
+    fun orders(legs: List<Leg>): Int = legs.count { it.orderId.isBlank() } + legs.filter { it.orderId.isNotBlank() }.map { it.orderId }.distinct().size
+
+    /** A source's orders, fills and charges ("ORB": 62 orders, 70 fills, Rs 1,500). */
+    data class Source(val name: String, val orders: Int, val fills: Int, val charges: Double)
+
+    /** Who placed [legs]' orders: each source's orders, fills and charges, the most orders first (then the most charges). */
+    fun sources(legs: List<Leg>): List<Source> {
+        val perLeg = PnlCharges.perFill(fills(legs)).map { it.values.sum() }
+        return legs.indices.groupBy { legs[it].owner }.map { (o, ix) ->
+            val mine = ix.map { legs[it] }
+            Source(o, orders(mine), mine.size, ix.sumOf { perLeg[it] })
+        }.sortedWith(compareByDescending<Source> { it.orders }.thenByDescending { it.charges })
+    }
+
+    /** The GST on brokerage and on the exchange's fees: Zerodha's Rs 20 an order comes to Rs 23.60. */
+    private const val GST_RATE = 0.18
+
+    /**
+     * Why [label]'s ("Paper", "Zerodha") charges are what they are, from the fills of [span] (null: today, or the last day
+     * with fills when today has none): the biggest driver first, in one sentence (the short answer), then the orders,
+     * fills and round trips, the split into brokerage / STT / exchange / GST / stamp, a round trip's average, who placed
+     * the orders and which source placed the most. [trips]: the round trips (those closed in the span are counted).
+     * [estimated]: the charges are the app's estimate of Zerodha's; [exact]: Zerodha's own contract-note figure for the
+     * day, when it answered. Facts only, never what to trade.
+     */
+    fun whyLines(label: String, legs: List<Leg>, trips: List<Trip>, span: Span?, today: LocalDate, estimated: Boolean = false, exact: Double? = null): List<String> {
+        val (from, to) = when {
+            span != null -> range(span, today)
+            legs.any { it.at.toLocalDate() == today } -> today to today
+            else -> (legs.map { it.at.toLocalDate() }.filter { !it.isAfter(today) }.maxOrNull() ?: today).let { it to it }
+        }
+        val period = when {
+            span != null && from == to -> "${span.label} (${day(from)})"
+            span != null -> "${span.label} (${day(from)} to ${day(to)})"
+            from == today -> "today (${day(from)})"
+            else -> "on ${day(from)}, the last day with fills"
+        }
+        val w = legs.filter { it.at.toLocalDate().let { d -> !d.isBefore(from) && !d.isAfter(to) } }
+        if (w.isEmpty()) return listOf("$label: no fills $period, so no charges.")
+        val parts = split(w)
+        val total = parts.values.sum()
+        val orders = orders(w)
+        val rounds = trips.count { t -> t.closedAt.toLocalDate().let { !it.isBefore(from) && !it.isAfter(to) } }
+        val who = sources(w)
+        val top = who.first()
+
+        // The biggest driver: brokerage with its GST (Rs 23.60 an order), STT on the sells, or the exchange's fees with theirs.
+        val brokerage = parts.getValue("Brokerage") * (1 + GST_RATE)
+        val stt = parts.getValue("STT")
+        val exchange = parts.getValue("Exchange") * (1 + GST_RATE)
+        val sells = w.filter { it.side.uppercase() != "BUY" }.sumOf { it.price * kotlin.math.abs(it.qty) }
+        val driver = when {
+            brokerage >= stt && brokerage >= exchange -> "mostly brokerage on ${plural(orders, "order")} (${amt(brokerage)} with GST)"
+            stt >= exchange -> "mostly STT on ${amt(sells)} of sells (${amt(stt)})"
+            else -> "mostly exchange fees on the turnover (${amt(exchange)} with GST)"
+        }
+        val placed = if (who.size > 1) "; ${top.name} placed ${top.orders} of the $orders orders" else "; all placed by ${top.name}"
+        val out = ArrayList<String>()
+        out += "$label charges $period: ${amt(total)}${if (estimated) " (the app's estimate)" else ""}, $driver$placed."
+        out += "$label $period: ${plural(orders, "order")}, ${plural(w.size, "fill")}" +
+            (if (w.size > orders) " (an order filled in pieces pays its Rs 20 brokerage once)" else "") + ", ${plural(rounds, "round trip")} closed."
+        // A delivery sale's DP charge (round 27: "DP charges kitne lage") is said beside the kinds when there was one.
+        val dp = parts["DP charges"]?.takeIf { it >= 0.005 }
+        out += "$label split: " + KINDS.joinToString(", ") { (k, said) -> "$said ${amt(parts.getValue(k))}" } +
+            (if (dp != null) ", DP ${amt(dp)}" else "") + "; ${amt(total)} in all."
+        if (rounds > 0) out += "$label about ${amt(total / rounds)} in charges a round trip, " +
+            "${"%.1f".format(Locale.ENGLISH, orders.toDouble() / rounds)} orders a round trip (one order in and one out is Rs 40 brokerage, Rs 47 with GST)."
+        out += "$label orders by who placed them: " + who.joinToString(", ") { "${it.name} ${plural(it.orders, "order")} (${amt(it.charges)})" } + "."
+        if (who.size > 1) out += "$label most orders: ${top.name}, ${top.orders} of $orders (${pct(top.orders.toDouble() / orders)}), ${amt(top.charges)} of the ${amt(total)} in charges."
+        exact?.takeIf { PnlCharges.shown(it) && (span == null || span == Span.TODAY) && from == today }?.let { out += "$label: Zerodha's own contract note for ${day(from)} says ${amt(it)}." }
         return out
     }
 }

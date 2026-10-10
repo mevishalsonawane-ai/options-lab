@@ -140,7 +140,7 @@ object SinceMorning {
 
     // ---- the question ---------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     private const val SINCE = "(since|from) (this |the |today s |today )?(morning|open|opening|market open|start of (the )?(day|session)|" +
         "9 ?15|9 ?30|9 ?45|morning brief|brief|9 am|9 am brief|nine)"

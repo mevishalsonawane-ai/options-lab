@@ -31,7 +31,8 @@ import kotlin.math.abs
  *   15:45  day report      paper and Zerodha P&L, trades, the ORB arms, anything that went wrong
  *
  * and, for Jarvis, one on Sunday evening (18:00): the paper arms' week ([com.optionslab.ira.ArmWeek]) - said once, kept in
- * the chat, no notification; nothing acts.
+ * the chat, no notification; nothing acts - and one after each week's last session (15:47): Jarvis's weekly review
+ * ([com.optionslab.ira.WeeklyReview]), kept for the Ira page's card with a "Weekly review ready" notice; nothing acts.
  *
  * They run in a worker (the contract list can take a while to download), from
  * their own exact alarms, re-armed for the next trading day each time.
@@ -43,6 +44,11 @@ object DailyReports {
         EVENING("ol.report.evening", LocalTime.of(15, 45), 2022),
         /** Sundays only, Jarvis only (not IraGoldAlgo): the paper arms' week. */
         WEEK("ol.report.week", LocalTime.of(18, 0), 2023),
+        /**
+         * Jarvis only (not IraGoldAlgo): after the week's last session by the exchange calendar (Friday, or the last trading
+         * day of a week with a holiday), Jarvis's weekly review ([com.optionslab.app.ira.IraWeekly]). One alarm a week.
+         */
+        WEEKLY("ol.report.weekly", LocalTime.of(15, 47), 2024),
     }
 
     /** The Sunday report runs in Jarvis (not IraGoldAlgo) whether or not Zerodha is set up: the arms trade on paper. */
@@ -61,6 +67,24 @@ object DailyReports {
         val am = context.getSystemService(AlarmManager::class.java)
         val pi = intent(context, k)
         am.cancel(pi)
+        if (k == Kind.WEEKLY) {
+            if (!weekOn()) return
+            val now = Market.now()
+            var d = now.toLocalDate()
+            if (!now.toLocalTime().isBefore(k.at)) d = d.plusDays(1)
+            // The week's last session (at most three weeks ahead: a calendar with no session at all arms nothing).
+            var n = 0
+            while (!com.optionslab.ira.WeeklyReview.isLastSession(d) { Market.isTradingDay(it) } && n < 21) { d = d.plusDays(1); n++ }
+            if (n >= 21) return
+            val at = d.atTime(k.at).atZone(now.zone).toInstant().toEpochMilli()
+            try {
+                if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            } catch (_: SecurityException) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            }
+            return
+        }
         if (k == Kind.WEEK) {
             if (!weekOn()) return
             val now = Market.now()
@@ -96,6 +120,7 @@ object DailyReports {
     fun fired(context: Context, k: Kind) {
         schedule(context, k)
         if (k == Kind.WEEK) { if (!weekOn() || Market.today().dayOfWeek != java.time.DayOfWeek.SUNDAY) return }
+        else if (k == Kind.WEEKLY) { if (!weekOn() || !com.optionslab.ira.WeeklyReview.isLastSession(Market.today()) { Market.isTradingDay(it) }) return }
         else if (!Market.isTradingDay() && !(com.optionslab.app.BuildConfig.JARVIS && k == Kind.MORNING)) return
         val req = OneTimeWorkRequestBuilder<ReportWorker>()
             .setInputData(workDataOf("kind" to k.name))
@@ -138,9 +163,11 @@ object DailyReports {
         }
         runCatching { com.optionslab.app.ira.JarvisSpeaker.morning(context, "Good morning, Boss. The market is closed today, $why. It opens again ${next.dayOfWeek.name.lowercase()}." +
             (if (brief.isEmpty()) "" else " From my night's study: " + brief.take(2).joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })) }
-        com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }))
+        com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " + lines.joinToString(" ") { it.removePrefix("• ").trimEnd('.') + "." }), from = null, kind = com.optionslab.ira.TodayNotes.Category.PLANS)
         // Saturday: the week's report card comes with the morning (not left to the hourly study worker).
         runCatching { com.optionslab.app.ira.IraStudy.reportCardIfDue() }
+        // Saturday: Liquidity 15+5's weekly patterns too, when enough paper trades closed since the last look (words only).
+        runCatching { com.optionslab.app.ira.IraLiquidityInsight.watch() }
         return title to lines
     }
 
@@ -169,7 +196,7 @@ object DailyReports {
         val armed = orb?.arms?.filter { it.armed }?.map { it.arm.label }.orEmpty()
         lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE, automatic)" else " (paper)"
         val strat = runCatching { Strategies.all().count { it.def.scheduler?.enabled == true } }.getOrDefault(0)
-        lines += "• Strategies armed: $strat" + if (runCatching { Strategies.stoppedToday() }.getOrDefault(false)) " · bot stopped for today" else ""
+        lines += "• Strategies armed: $strat" + (runCatching { Strategies.stoppedWhy() }.getOrNull()?.let { " · bot stopped for today ${com.optionslab.ira.DayStop.by(it)}" } ?: "")
         ok(!s.guardKill, if (s.guardKill) "Kill switch is ON: every Zerodha order is refused (paper still trades)" else "Kill switch off")
         // Battery-optimized, Android may stop the order watch (and its stops and targets) in the background: said plainly,
         // and the notification's tap opens the Battery row. Only read: the setting is Boss's to change.
@@ -224,13 +251,16 @@ object DailyReports {
             // The strongest lesson in the results (part 5), when one stands out.
             if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraAccount.lessons().first.firstOrNull() }.getOrNull()?.let { lines += "• Lesson: ${it.text}" }
             lines += "• Jarvis: AI model ${com.optionslab.app.ira.IraModel.choice.name} ${if (com.optionslab.app.ira.IraModel.state.value.status == com.optionslab.app.ira.IraModel.Status.READY) "ready" else "not on the phone"}, " +
-                "voice ${if (com.optionslab.app.ira.JarvisVoice.wanted) "on" else "off"}"
+                "voice ${if (com.optionslab.app.ira.JarvisVoice.listenOn) "on" else "off"}"
             runCatching { com.optionslab.app.ira.IraHub.tradeCheck() }.getOrNull()?.let { v ->
                 lines += "• Trade check: " + when (v.level) { com.optionslab.ira.TradeCheck.Level.GO -> "normal"; com.optionslab.ira.TradeCheck.Level.CAREFUL -> "careful"; else -> "don't trade yet" } +
                     v.reasons.filter { it.level != com.optionslab.ira.TradeCheck.Level.GO && !it.text.startsWith("The market opens") }.take(2).joinToString("") { " · " + it.text.removeSuffix(".") }
             }
             runCatching { kotlinx.coroutines.withTimeoutOrNull(15_000) { com.optionslab.app.ira.IraHub.flows() } }.getOrNull()
                 ?.takeIf { it.isNotEmpty() }?.let { lines += "• " + com.optionslab.ira.Flows.lines(it).first() }
+            // The market recorder's morning cues ([com.optionslab.ira.MorningCues]): GIFT Nifty's gap from Nifty's previous close
+            // and the FIIs' index positioning from NSE's participant OI - each only when a recent one is held. Facts only.
+            runCatching { com.optionslab.app.ira.IraHub.morningCues() }.getOrDefault(emptyList()).forEach { lines += "• $it" }
             com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
             // A mute said by voice lasts that day only (Boss, 5 Oct): yesterday's ends here, and the check says so.
             val voiceBack = runCatching { com.optionslab.app.ira.JarvisVoice.morningUnmute() }.getOrNull()
@@ -238,7 +268,7 @@ object DailyReports {
             // Jarvis's own self-check: each part it needs, working or not (a part switched off is not counted).
             run {
                 val vs = com.optionslab.app.ira.JarvisVoice.state.value
-                val voiceOn = com.optionslab.app.ira.JarvisVoice.wanted
+                val voiceOn = com.optionslab.app.ira.JarvisVoice.listenOn
                 val mic = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
                     android.content.pm.PackageManager.PERMISSION_GRANTED
                 val model = com.optionslab.app.ira.IraModel.state.value.status
@@ -271,7 +301,7 @@ object DailyReports {
             brief.forEach { lines += "• Study: $it" }
             // Each index's day in one line: its trend, the range a usual day spans, the pivot.
             com.optionslab.app.ira.IraHub.morningOutlook().forEach { lines += "• Outlook: $it" }
-            // Its numbers noted, to be set against the close at the 15:35 wrap-up ([com.optionslab.ira.OutlookCheck]).
+            // Its numbers noted, to be set against the close at the 15:45 wrap-up ([com.optionslab.ira.OutlookCheck]).
             com.optionslab.app.ira.IraHub.outlookNoted()
             val title = "Good morning Boss · " + if (bad == 0) "we are set for today's trading" else "$bad thing${if (bad > 1) "s" else ""} need you"
             runCatching { com.optionslab.app.ira.JarvisPopup.show(context, title, lines.take(3).joinToString(" · ")) }
@@ -292,7 +322,7 @@ object DailyReports {
             com.optionslab.app.ira.IraHub.note(com.optionslab.ira.Address.boss("Good morning. " +
                 (if (bad == 0) "We are set for today's trading. " else "$bad thing${if (bad > 1) "s" else ""} need you before 09:15. ") +
                 lines.joinToString(" ") { it.removePrefix("✓ ").removePrefix("✗ ").removePrefix("• ").trimEnd('.') + "." } + (saver?.let { " $it" } ?: "") +
-                (usual?.let { " $it" } ?: "")))
+                (usual?.let { " $it" } ?: "")), from = null, kind = com.optionslab.ira.TodayNotes.Category.PLANS)
             return title to lines
         }
         val title = "Morning check · ${Market.today().format(DAY)}" + if (bad == 0) " · all set" else " · $bad to fix"
@@ -310,6 +340,8 @@ object DailyReports {
                 total += sn.dayGross
                 lines += "Paper: ${rs(sn.dayGross)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}" +
                     (com.optionslab.ira.PnlCharges.line(sn.dayCharges, estimate = false)?.let { " · ${it.lowercase()}" } ?: "")
+                // Honest paper (08 Oct): the figure above already paid the bid/ask spread; said so, with how much.
+                lines += "Paper now includes the bid/ask spread: Rs " + String.format(java.util.Locale.ENGLISH, "%,.2f", sn.daySpread) + " today"
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, sn.trades.size, sn.dayCharges) }
             }
             val open = sn.positions.positions.count { it.quantity != 0 }
@@ -322,10 +354,13 @@ object DailyReports {
             val trades = all.size
             if (book.net.isNotEmpty() || trades > 0) {
                 total += book.m2m
-                val zCharges = com.optionslab.app.data.TradeBook.liveCharges(all)
+                // Zerodha's exact figure when the app kept it for every order of the day's trades (never asked from here;
+                // usefulness, round 35), else the estimate from them.
+                val zExact = runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(Market.today()) }.getOrNull()
+                val zCharges = zExact ?: com.optionslab.app.data.TradeBook.liveCharges(all)
                 lines += "Zerodha: ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}" +
-                    (com.optionslab.ira.PnlCharges.line(zCharges, estimate = true)?.let { " · ${it.lowercase()}" } ?: "")
-                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades, zCharges) }
+                    (com.optionslab.ira.PnlCharges.line(zCharges, estimate = zExact == null)?.let { " · ${it.lowercase()}" } ?: "")
+                runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades, zCharges, exact = zExact != null) }
             }
             val open = book.net.count { it.qty != 0 }
             if (open > 0) lines += "⚠ Zerodha positions carried: $open (NRML)"
@@ -367,7 +402,7 @@ object DailyReports {
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) == today.toString() }.getOrDefault(false)) return
         val said = com.optionslab.app.ira.IraBots.armWeek(today) ?: return
         runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, today.toString()) }
-        com.optionslab.app.ira.IraHub.note(said.chat)
+        com.optionslab.app.ira.IraHub.note(said.chat, from = com.optionslab.app.ira.Automations.Auto.WEEK)
         runCatching { com.optionslab.app.ira.JarvisVoice.announce(said.aloud) }
         runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.WEEK, said.aloud) }
     }
@@ -385,13 +420,19 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val k = runCatching { DailyReports.Kind.valueOf(inputData.getString("kind") ?: "") }.getOrNull() ?: return Result.failure()
         return try {
             when (k) {
-                DailyReports.Kind.MORNING -> DailyReports.morning(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                DailyReports.Kind.MORNING -> {
+                    DailyReports.morning(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                    // Jarvis: a weekly review missed (the phone was off after the week's last session) is made now, once.
+                    if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraWeekly.prepare(applicationContext) }
+                }
                 // The reminder speaks only if the session is still missing.
                 DailyReports.Kind.LOGIN -> if (!Broker.loggedIn) DailyReports.post(applicationContext, k, "Log in to Zerodha now",
                     listOf("The market opens at 09:15 and there is no Zerodha session today. Open the app → ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha."))
                 DailyReports.Kind.EVENING -> DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
                 // Said and kept in the chat only: no notification.
                 DailyReports.Kind.WEEK -> DailyReports.week()
+                // Kept for the Ira page, noted in the chat, "Weekly review ready" notified (no rupee figure in it).
+                DailyReports.Kind.WEEKLY -> com.optionslab.app.ira.IraWeekly.prepare(applicationContext)
             }
             Result.success()
         } catch (e: Exception) {

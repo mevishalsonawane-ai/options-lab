@@ -23,7 +23,9 @@ object LossBreaker {
         if (trippedToday()) {
             // Tripped: keep asking until every running strategy has actually stopped (a stop that
             // could not be requested, e.g. contracts not loaded, is retried on the next pass).
-            if (Strategies.anyRunning()) runCatching { Strategies.stopForToday(stopRunning = true, compromised = false) }
+            // The day's stop is put back too if it was lifted (plans only lower risk: the limit holds until tomorrow).
+            if (Strategies.anyRunning() || !Strategies.stoppedToday())
+                runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }
             return
         }
         val s = AppSettings.load()
@@ -32,16 +34,19 @@ object LossBreaker {
         // keeps the safer, net figure (Boss, 5 Oct). Zerodha's is its own m2m, as it always was.
         val paper = runCatching { Paper.snapshot() }.getOrNull()?.dayPnl
         val live = if (Broker.loggedIn) runCatching { Broker.positionBook().m2m }.getOrNull() else null
+        // The day lock on the same figures (08 Oct): an account up by the Bot settings amount makes no new automatic entry today.
+        runCatching { DayLockGuard.update(context, paper, live) }
         val hit = when {
             live != null && s.guardDailyLoss > 0 && live <= -s.guardDailyLoss -> Triple("Live", live, s.guardDailyLoss)
             paper != null && s.guardPaperDailyLoss > 0 && paper <= -s.guardPaperDailyLoss -> Triple("Paper", paper, s.guardPaperDailyLoss)
             else -> null
         } ?: return
-        val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false) }.getOrElse { it.message ?: "" }
+        // Kept as the loss limit's stop (never "by you"): "start all" and Start bot do not lift it today.
+        val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }.getOrElse { it.message ?: "" }
         SecurePrefs.put(K_DAY, today)
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
             .format(hit.first, hit.second, hit.third, msg)
         // Also the in-app banner (Notifier.post drops it in): one call, one banner.
-        Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "strategy", setting = "risk.guards")
+        Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "almanac", setting = "risk.guards")
     }
 }

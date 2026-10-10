@@ -382,6 +382,7 @@ private fun OrderReviewBody(model: AppModel) {
         is Load.Failed -> { com.optionslab.app.ui.components.AlertOn(pl.why); LaunchedEffect(pl) { model.dismissPlan() } }
         is Load.Done -> {
             PreTradeNote(pl.value)
+            AgainstArmsNote(pl.value)
             PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }
         }
@@ -409,6 +410,22 @@ private fun PreTradeNote(plan: OrderPlan) {
         note = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.optionslab.app.ira.IraCoach.preTrade(symbols, plan.exit) }
     }
     note?.let { LedgerCard(title = "Jarvis: a moment, Boss", accent = p.amber, modifier = Modifier.padding(bottom = 10.dp)) { Note(it) } }
+}
+
+/**
+ * Boss's own order against an automatic position (Boss's 06 Oct rule, [com.optionslab.ira.AutoSide]): "ORB holds a call on
+ * BankNifty; this put works against it." Words only - his order is never blocked or changed.
+ */
+@Composable
+private fun AgainstArmsNote(plan: OrderPlan) {
+    val p = LocalPalette.current
+    val legs = plan.legs.map { it.tradingSymbol to (it.side == Kite.Side.BUY) }
+    var note by remember(legs, plan.exit) { mutableStateOf<String?>(null) }
+    LaunchedEffect(legs, plan.exit) {
+        note = if (plan.exit) null
+            else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.AutoExposure.warnFor(legs) }.getOrNull() }
+    }
+    note?.let { LedgerCard(title = "Against an automatic position", accent = p.amber, modifier = Modifier.padding(bottom = 10.dp)) { Note(it) } }
 }
 
 /** A leg still working at Zerodha after the send stopped: the owner decides, the rest wait. (`internal` for the JVM tests only.) */
@@ -459,6 +476,8 @@ internal fun PlanCard(
                 isError = mismatch,
                 modifier = Modifier.fillMaxWidth())
             if (mismatch) priceMismatch = true
+            // Where this price sits against the bid / offer (words only: the order is not changed).
+            if (!mismatch) com.optionslab.ira.LimitFit.note(leg.side.name, leg.orderType, leg.price, q?.bid, q?.ask, q?.last)?.let { Note(it) }
             com.optionslab.app.ui.components.AlertOn(plan.refusals.getOrNull(i)?.takeIf { it.isNotEmpty() }?.joinToString(" "))
         }
         plan.margin?.let { m ->
@@ -467,6 +486,13 @@ internal fun PlanCard(
             LedgerLine("Available", rs(m.available), if (m.short) p.oxblood else p.verdigris)
             if (m.charges > 0) LedgerLine("Charges, estimated", rs(m.charges))
             com.optionslab.app.ui.components.AlertOn(if (m.short) "Short of margin by ${rs(m.required - m.available)}: not sendable." else null)
+        }
+        // Beside Zerodha's one-way charges: getting in and out at this price, and the move that pays for it - shown even
+        // when the margin read failed. Words only: the order, its price and whether it can be sent are unchanged.
+        if (!plan.exit) plan.legs.forEachIndexed { i, leg ->
+            val tripPrice = leg.price ?: plan.quotes["${leg.exchange}:${leg.tradingSymbol}"]?.last
+            com.optionslab.ira.RoundTrip.line(leg.side.name, tripPrice, leg.quantity, leg.tradingSymbol, leg.exchange, leg.product)
+                ?.let { Note(if (plan.legs.size > 1) "Leg ${i + 1}: $it." else "$it.") }
         }
         plan.marginNote?.let { Note(it) }
         Spacer(Modifier.height(8.dp))
@@ -694,6 +720,8 @@ fun BrokerPage(
         item { PageTitle("Zerodha", "Your broker, as the PC trading app uses it: Kite Connect") }
         item { com.optionslab.app.ui.SettingSpot("broker.staticip") { StaticIpCard(model, staticIpStatus) } }
         if (b.configured) item { SelfTestCard() }
+        // Order speed (9 Oct): where the time goes from a signal to the fill, beside the self-test and "Copy diagnostics".
+        if (b.configured) item { OrderSpeedCard() }
         item { com.optionslab.app.ui.SettingSpot("broker.login") {
             LedgerCard(title = "Connection") {
                 LedgerLine("API key", b.maskedKey)
@@ -713,30 +741,41 @@ fun BrokerPage(
             }
         } }
         item {
-            LedgerCard(title = "Mode") {
-                ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
-                    if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
-                    else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
+            com.optionslab.app.ui.SettingSpot("broker.mode") {
+                LedgerCard(title = "Mode") {
+                    ParamTokens("Trading mode", listOf("Live · Zerodha" to s.live, "Paper · simulated" to !s.live)) { i ->
+                        if (i == 0 && !b.configured) model.say("Set up Zerodha first.")
+                        else model.update { it.copy(mode = if (i == 0) "live" else "sandbox", allowRealOrders = i == 0) }
+                    }
+                    Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
+                    else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
                 }
-                Note(if (s.live) "Every live figure - index levels, the option chain, the ticket, its live mark, settlement, the expiry calendar, the market watch and alarms - comes from Zerodha only. Without today's login the app says so rather than showing another feed."
-                else "Live figures come from Upstox's public candles and tickets stay paper; nothing touches your broker. Analysis (Backtests, Health, the IC table, Signal Lab) is the same in both modes.")
             }
         }
         item {
-            LedgerCard(title = "Real orders") {
-                Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
-                    if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
-                ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
-                    model.update { it.copy(prepareRealOrder = on) }
+            com.optionslab.app.ui.SettingSpot("broker.orders") {
+                LedgerCard(title = "Real orders") {
+                    Note("Live trading sends real orders to Zerodha; Paper never does. Switch with the PAPER / LIVE badge at the top." +
+                        if (s.oneTapOrders) " No PIN is on: an order goes to Zerodha when you confirm it in the review; cancels and square-offs need no PIN either." else " Every order needs your review and your PIN or fingerprint.")
+                    ToggleRow("Prepare the expiry order at 11:01", "Builds today's ticket and notifies you to review it. It is never sent by itself.", s.prepareRealOrder) { on ->
+                        model.update { it.copy(prepareRealOrder = on) }
+                    }
+                    ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
+                        if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
+                    }
+                    ToggleRow("Keep a stop-loss order at the exchange for live positions",
+                        "The bots already rest each live position's stop at Zerodha after the buy. With this on, a stop that could not be " +
+                            "placed, or that Zerodha refused or cancelled, is placed again at the bot's own level on the next check, so " +
+                            "Zerodha sells at the stop even if the phone is slow or off. The app takes it out before any exit of its own. " +
+                            "Live only; paper keeps its own stops.", s.exchangeStops) { on ->
+                        model.update { it.copy(exchangeStops = on) }
+                    }
+                    ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
+                    if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
+                    // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.
+                    LedgerLine("Sent today", "${Broker.sentToday()}" + if (s.guardMaxTrades > 0) " of ${s.guardMaxTrades}" else "")
+                    Note("Order limits (trades per day, lots, order value) are set in More → Bot → Bot settings and apply to paper and live alike.")
                 }
-                ToggleRow("Live orders without PIN", "Confirming the order review sends it to Zerodha at once: no PIN or fingerprint (also for Cancel, Square off and Protect). The margin check, kill switch and account limits still apply. Turning it on asks for your PIN.", s.oneTapOrders) { on ->
-                    if (on) noPinAuth = true else model.update { it.copy(oneTapOrders = false) }
-                }
-                ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
-                if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
-                // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.
-                LedgerLine("Sent today", "${Broker.sentToday()}" + if (s.guardMaxTrades > 0) " of ${s.guardMaxTrades}" else "")
-                Note("Order limits (trades per day, lots, order value) are set in More → Bot → Bot settings and apply to paper and live alike.")
             }
         }
         if (b.loggedIn) {
@@ -956,7 +995,14 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
     // off the main thread, and whatever is still pending when the form closes is written then.
     // Null until the draft has been read back (the vault is decrypted off the main thread, not while composing).
     var keyWritten by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    // Set (before the keys are saved) once this form's key belongs to the saved keys: its draft is then cleared, and the
+    // form leaving the page must not write it back. Not snapshot state: it is read in onDispose, possibly mid-save.
+    val keysSaved = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    // The form's state is set on the main thread only. Each vault read or write hops to IO and comes back to the main
+    // thread before the state is set: a coroutine of this screen resuming on the worker that finished its IO (as the
+    // Compose test rule's dispatcher does) would write the state there and send the snapshot's apply notifications from
+    // that worker, racing the main thread's own writes - one of those can then reach no observer and never redraw.
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
         val k = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             com.optionslab.app.security.SecurePrefs.run {
                 // A secret draft left by an older version is erased.
@@ -966,16 +1012,19 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
         }
         if (key.isEmpty()) key = k       // anything typed meanwhile wins
         keyWritten = k
-    }
+    } }
     LaunchedEffect(key, keyWritten) {
         if (keyWritten == null || key == keyWritten) return@LaunchedEffect
         kotlinx.coroutines.delay(600)
-        val v = key
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, v) }
-        keyWritten = v
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+            val v = key
+            // Not once the keys are being saved: their save clears the draft, and this must not land after it.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { if (!keysSaved.get()) draft(DRAFT_KEY, v) }
+            keyWritten = v
+        }
     }
     DisposableEffect(Unit) {
-        onDispose { val v = key; if (keyWritten != null && v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
+        onDispose { val v = key; if (!keysSaved.get() && keyWritten != null && v != keyWritten) Thread { draft(DRAFT_KEY, v) }.start() }
     }
     fun pasteInto(set: (String) -> Unit) = clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let(set)
     Column(Modifier.padding(top = 10.dp)) {
@@ -1016,16 +1065,23 @@ internal fun CredentialsForm(model: AppModel, onDone: () -> Unit) {
             // The PIN check and the sealing are slow on purpose (key stretching): off the screen's thread.
             val k = key; val s = secret; val pn = pin
             saving = true; err = null
-            fun finish(bioBlob: String?) = scope.launch {
-                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { model.saveBrokerCredentials(k, s, pn, bioBlob) }
-                saving = false; err = e; pin = ""
-                if (e == null) {
-                    // Said first: once the keys are saved this form leaves the page and its scope ends, so nothing
-                    // after the next suspension would run. The drafts are cleared even then (NonCancellable).
-                    model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
-                    keyWritten = ""; key = ""; secret = ""; onDone()
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
+            // On the main thread: the save runs off it and the form's state is set back here (see the effects above).
+            fun finish(bioBlob: String?) = scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                // Once the keys are saved this form leaves the page and its scope ends, possibly before the main thread
+                // takes the result back: what must happen after a save (the message, the drafts cleared) happens here,
+                // where cancelling cannot stop it.
+                val e = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.Default) {
+                    keysSaved.set(true)
+                    val why = try { model.saveBrokerCredentials(k, s, pn, bioBlob) } catch (t: Throwable) { keysSaved.set(false); throw t }
+                    if (why != null) keysSaved.set(false)
+                    else {
+                        model.say("Saved, the secret sealed with your " + when { bioBlob != null && pn.isNotBlank() -> "fingerprint and PIN"; bioBlob != null -> "fingerprint"; else -> "PIN" } + ". Now log in to Zerodha.")
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { draft(DRAFT_KEY, ""); draft(DRAFT_SECRET, "") }
+                    }
+                    why
                 }
+                saving = false; err = e; pin = ""
+                if (e == null) { keyWritten = ""; key = ""; secret = ""; onDone() }
             }
             if (fingerprint && activity != null && s.isNotBlank()) BiometricGate.sealWithFingerprint(activity, s.trim()) { blob, why ->
                 if (blob == null && pn.isBlank()) { saving = false; err = why?.let { "Fingerprint: $it" } ?: "Cancelled. Use the fingerprint, or enter your PIN." }

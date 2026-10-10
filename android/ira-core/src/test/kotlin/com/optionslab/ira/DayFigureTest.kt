@@ -2,6 +2,8 @@ package com.optionslab.ira
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.assertNull
 
 class DayFigureTest {
@@ -46,6 +48,18 @@ class DayFigureTest {
     @Test fun curveUnchangedMinuteIsNotWritten() {
         assertNull(DayFigure.sample(listOf(555 to 10.0, 556 to 12.5), 556, 12.5, 480))
         assertNull(DayFigure.sample(listOf(556 to 12.5), 556, 12.4999, 480))
+    }
+
+    @Test fun onlyAMovedFigureMayWaitInMemory() {
+        val kept = DayFigure.Kept(400.0, 2, 180.0)
+        // The price moved, nothing else: kept in memory a while.
+        assertTrue(DayFigure.marksOnly(kept, DayFigure.next(kept, 412.5, 2, 180.0)!!))
+        assertTrue(DayFigure.marksOnly(kept, DayFigure.next(kept, 380.0, -1, -1.0)!!))
+        // The day's first figure, a new trade, new charges, an exact figure: written at once.
+        assertFalse(DayFigure.marksOnly(null, DayFigure.next(null, 400.0, 2, 180.0)!!))
+        assertFalse(DayFigure.marksOnly(kept, DayFigure.next(kept, 400.0, 3, 180.0)!!))
+        assertFalse(DayFigure.marksOnly(kept, DayFigure.next(kept, 400.0, 2, 200.0)!!))
+        assertFalse(DayFigure.marksOnly(kept, DayFigure.next(kept, 400.0, 2, 180.0, exact = true)!!))
     }
 
     @Test fun curveKeepsTheNewestAndSorts() {

@@ -91,6 +91,26 @@ class Sandbox(
         tx(state, now) { modifyOrder(orderId, change) }
 
     /**
+     * A resting SELL SL-M (still trigger pending) filled as an exchange fills it, at [price]: its trigger, or the open of
+     * the minute that opened under it (the caller reads that from the minute candles or the stream's ticks since the stop
+     * last rested, [com.optionslab.engine.orb.ProfitLock.sellStopFill]). The stop slippage and the charges apply as on any
+     * stop fill. Not in the Python (an app addition, 07 Oct): the regular pass ([onQuotes]) fills a stop only at the last
+     * price it is handed, which missed a stop touched and left between two looks. Any other order is refused untouched.
+     * [quote]: the contract's quote now, when the caller has one (with [SandboxConfig.paperSpread] its bid/ask set the spread).
+     */
+    fun fillRestingStop(state: SandboxState, orderId: String, price: Double, now: ZonedDateTime, quote: Quote? = null): Outcome<OrderResult> =
+        tx(state, now) {
+            val o = order(orderId)
+            when {
+                o == null -> err("Order $orderId not found", 404)
+                o.status != OrderStatus.TRIGGER_PENDING || o.priceType != "SL-M" || o.action != "SELL" ->
+                    err("Only a resting SELL SL-M can be filled at its stop")
+                !(price.isFinite() && price > 0) -> err("Invalid fill price")
+                else -> { executeOrder(orderId, pyDec(price), quote = quote); OrderResult(true, 200, orderId, "Stop filled") }
+            }
+        }
+
+    /**
      * cancel_order: releases the margin the order blocked. [quote] is used only
      * by the Python's fallback for an order that blocked nothing and has no
      * price (an SL-M), where it recomputes a margin to release from the LTP.
@@ -105,11 +125,13 @@ class Sandbox(
     /**
      * One pass of the execution engine over every open and trigger-pending
      * order, each against the quote for its symbol ([key]); orders without a
-     * quote are left alone.
+     * quote are left alone, and so are the orders in [hold] (an app addition: the
+     * paper account holds back an entry whose only price is stale).
      */
-    fun onQuotes(state: SandboxState, quotes: Map<String, Quote>, now: ZonedDateTime): Outcome<Unit> =
+    fun onQuotes(state: SandboxState, quotes: Map<String, Quote>, now: ZonedDateTime, hold: Set<String> = emptySet()): Outcome<Unit> =
         tx(state, now) {
             for (id in pendingOrders().map { it.orderId }) {
+                if (id in hold) continue
                 val o = order(id) ?: continue
                 val q = quotes[key(o.symbol, o.exchange)] ?: continue
                 processOrder(id, q)
@@ -215,7 +237,7 @@ class Sandbox(
                 action = t.action, quantity = t.quantity, averagePrice = SandboxRules.round2(price),
                 price = SandboxRules.round2(price), tradeValue = SandboxRules.round2(price * kotlin.math.abs(t.quantity)),
                 product = t.product, strategy = t.strategy ?: "", timestamp = ts(t.timestamp),
-                charges = t.charges.toDouble(),
+                charges = t.charges.toDouble(), spread = t.spread.toDouble(),
             )
         }
     }
@@ -371,7 +393,14 @@ class Sandbox(
 
         /** calculate_margin_required: |qty| x price / leverage, or why not. */
         fun marginRequired(symbol: String, exchange: String, product: String, quantity: Int, price: BigDecimal, action: String?): Pair<BigDecimal?, String> {
-            instruments.lookup(symbol, exchange) ?: return null to "Symbol not found"
+            val inst = instruments.lookup(symbol, exchange) ?: return null to "Symbol not found"
+            // A contract with a known margin per lot (MCX: Zerodha's margin, the same for MIS and NRML) blocks that for a
+            // future, bought or sold, and for a sold option; a bought option pays its premium as before.
+            val perLot = inst.marginPerLot?.takeIf { it > 0 && it.isFinite() }
+            if (perLot != null && (isFuture(symbol, exchange) || (isOption(symbol, exchange) && action == "SELL"))) {
+                val lots = BigDecimal(kotlin.math.abs(quantity)).divide(BigDecimal(if (inst.lotSize > 0) inst.lotSize else 1), SandboxRules.PY)
+                return lots.multiply(pyDec(perLot)) to "Margin calculated successfully"
+            }
             val tradeValue = BigDecimal(kotlin.math.abs(quantity)).multiply(price)
             return div(tradeValue, SandboxRules.leverage(config, symbol, exchange, product, action)) to "Margin calculated successfully"
         }
@@ -586,7 +615,7 @@ class Sandbox(
 
             // MIS after square-off (or before 09:00) may only reduce an open position.
             if (product == "MIS") {
-                val sq = config.squareOffTimes[exchange]
+                val sq = config.squareOffTime(exchange, now.toLocalDate())
                 val t = now.toLocalTime()
                 if (sq != null && (!t.isBefore(sq) || t.isBefore(MARKET_OPEN))) {
                     val open = positions.firstOrNull { it.symbol == symbol && it.exchange == exchange && it.product == product && it.quantity != 0 }
@@ -699,7 +728,7 @@ class Sandbox(
                     val ltp = pyDec(cached.ltp)
                     if (priceType == "MARKET") processOrder(orderId, cached)
                     // A marketable LIMIT fills at the LTP (price improvement), as does a triggered stop.
-                    else if (ltp.signum() > 0) executeOrder(orderId, ltp)
+                    else if (ltp.signum() > 0) executeOrder(orderId, ltp, quote = cached)
                 }
             }
             return OrderResult(true, 200, orderId)
@@ -778,17 +807,19 @@ class Sandbox(
             val ltp = pyDec(q.ltp); val bid = pyDec(q.bid); val ask = pyDec(q.ask)
             if (ltp.signum() <= 0) return
             if (quoteLooksStale(q)) return
-            if (o.status == OrderStatus.TRIGGER_PENDING) { processTriggerPending(o, ltp); return }
+            if (o.status == OrderStatus.TRIGGER_PENDING) { processTriggerPending(o, ltp, q); return }
             val buy = o.action == "BUY"
             val fill: BigDecimal? = when (o.priceType) {
                 "MARKET" -> if (buy) (if (ask.signum() > 0) ask else ltp) else (if (bid.signum() > 0) bid else ltp)
-                "LIMIT" -> if ((buy && ltp <= o.price!!) || (!buy && ltp >= o.price!!)) o.price else null
+                // Honest paper: a resting limit fills only once the market trades THROUGH it (a touch may be someone else's fill).
+                "LIMIT" -> if (config.paperSpread) (if ((buy && ltp < o.price!!) || (!buy && ltp > o.price!!)) o.price else null)
+                    else if ((buy && ltp <= o.price!!) || (!buy && ltp >= o.price!!)) o.price else null
                 "SL" -> if ((buy && ltp >= o.triggerPrice!! && ltp <= o.price!!) || (!buy && ltp <= o.triggerPrice!! && ltp >= o.price!!)) ltp else null
                 "SL-M" -> if ((buy && ltp >= o.triggerPrice!!) || (!buy && ltp <= o.triggerPrice!!)) ltp else null
                 else -> null
             }
             val usedBook = o.priceType == "MARKET" && (if (buy) ask.signum() > 0 else bid.signum() > 0)
-            if (fill != null) executeOrder(orderId, fill, usedBook)
+            if (fill != null) executeOrder(orderId, fill, usedBook, q, passive = o.priceType == "LIMIT")
         }
 
         /**
@@ -796,11 +827,11 @@ class Sandbox(
          * SL fills too if its limit is also met on this tick, else it moves to
          * the regular book as "open".
          */
-        fun processTriggerPending(o: Order, ltp: BigDecimal) {
+        fun processTriggerPending(o: Order, ltp: BigDecimal, q: Quote) {
             val buy = o.action == "BUY"
             if (!((buy && ltp >= o.triggerPrice!!) || (!buy && ltp <= o.triggerPrice!!))) return
-            if (o.priceType == "SL-M") { executeOrder(o.orderId, ltp); return }
-            if ((buy && ltp <= o.price!!) || (!buy && ltp >= o.price!!)) { executeOrder(o.orderId, ltp); return }
+            if (o.priceType == "SL-M") { executeOrder(o.orderId, ltp, quote = q); return }
+            if ((buy && ltp <= o.price!!) || (!buy && ltp >= o.price!!)) { executeOrder(o.orderId, ltp, quote = q); return }
             putOrder(o.copy(status = OrderStatus.OPEN, updateTimestamp = now))
             events += SandboxEvent.OrderUpdate(o.orderId, OrderStatus.OPEN)
         }
@@ -810,18 +841,44 @@ class Sandbox(
          * With slippage configured (the desktop's sandbox/slippage.py), a stop
          * fill and a MARKET fill that found no bid/ask move against the order;
          * with charges on (sandbox/charges.py), the leg's cost is debited now.
+         * With [SandboxConfig.paperSpread] every aggressive fill pays the
+         * half-spread instead ([honestFill]); [passive]: a resting LIMIT reached.
          */
-        fun executeOrder(orderId: String, rawPx: BigDecimal, usedBook: Boolean = false) {
+        fun executeOrder(orderId: String, rawPx: BigDecimal, usedBook: Boolean = false, quote: Quote? = null, passive: Boolean = false) {
             val o = order(orderId) ?: return
-            val px = SandboxCosts.fillPrice(rawPx, o.action, o.priceType, usedBook, o.price, config)
+            val (px, spread) = if (config.paperSpread) honestFill(o, rawPx, usedBook, quote, passive)
+                else SandboxCosts.fillPrice(rawPx, o.action, o.priceType, usedBook, o.price, config) to BigDecimal.ZERO
             val tradeId = nextTradeId()
-            val charge = if (config.chargesEnabled) SandboxCosts.charge(o.action, px, o.quantity, contractValue(o.symbol, o.exchange)) else BigDecimal.ZERO
+            val charge = if (config.chargesEnabled) SandboxCosts.charge(o.action, px, o.quantity, contractValue(o.symbol, o.exchange), o.exchange, o.symbol) else BigDecimal.ZERO
             if (charge.signum() > 0) editFunds { available -= charge; realized -= charge; today -= charge; total = realized + unrealized }
-            trades += Trade(tradeId, o.orderId, o.symbol, o.exchange, o.action, o.quantity, store(px), o.product, o.strategy, now, if (charge.signum() > 0) store(charge) else BigDecimal.ZERO)
+            trades += Trade(tradeId, o.orderId, o.symbol, o.exchange, o.action, o.quantity, store(px), o.product, o.strategy, now,
+                if (charge.signum() > 0) store(charge) else BigDecimal.ZERO, if (spread.signum() > 0) store(spread) else BigDecimal.ZERO)
             val done = o.copy(status = OrderStatus.COMPLETE, averagePrice = store(px), filledQuantity = o.quantity, pendingQuantity = 0, updateTimestamp = now)
             putOrder(done)
             updatePosition(done, px)
             events += SandboxEvent.Fill(orderId, tradeId, o.symbol, o.exchange, o.action, o.quantity, px.toDouble(), o.product)
+        }
+
+        /**
+         * Honest paper ([PaperSpread]): the fill price and the rupees of spread in it. A MARKET order that crossed a real
+         * book fills at the ask/bid it found (the spread is its distance from the mid); a reached resting LIMIT fills at its
+         * limit with none; every other fill moves against the order by max(its slippage, the half-spread), on the tick, an
+         * SL or a marketable LIMIT never past its limit.
+         */
+        fun honestFill(o: Order, rawPx: BigDecimal, usedBook: Boolean, quote: Quote?, passive: Boolean): Pair<BigDecimal, BigDecimal> {
+            if (passive) return rawPx to BigDecimal.ZERO
+            val cv = contractValue(o.symbol, o.exchange)
+            if (usedBook) return rawPx to PaperSpread.charged(pyDec(PaperSpread.mid(quote, rawPx.toDouble())), rawPx, o.quantity, cv)
+            val floor = when (o.priceType) {
+                "SL", "SL-M" -> config.stopSlippageBps
+                "MARKET" -> config.spreadFallbackBps
+                else -> BigDecimal.ZERO
+            }
+            val tick = instruments.lookup(o.symbol, o.exchange)?.tickSize?.takeIf { it > 0 && it.isFinite() }?.let { BigDecimal(it.toString()) }
+                ?: BigDecimal("0.05")
+            val moved = PaperSpread.fill(rawPx, o.action, PaperSpread.halfSpread(o.symbol, quote, o.exchange, now.toLocalTime()), floor, tick)
+            val px = if (o.priceType == "SL" || o.priceType == "LIMIT") SandboxCosts.clampToLimit(moved, o.action, o.price) else moved
+            return px to PaperSpread.charged(rawPx, px, o.quantity, cv)
         }
 
         fun closePositionTx(symbol: String, exchange: String, product: String, quote: Quote?): OrderResult {
@@ -837,9 +894,9 @@ class Sandbox(
 
         fun checkAndSquareOff(quotes: Map<String, Quote>) {
             val t = now.toLocalTime()
-            val sq = config.squareOffTimes
+            val day = now.toLocalDate()
             for (o in pendingOrders().filter { it.product == "MIS" }) {
-                val cut = sq[o.exchange] ?: continue
+                val cut = config.squareOffTime(o.exchange, day) ?: continue
                 if (!t.isBefore(cut)) cancelOrder(o.orderId, quotes[key(o.symbol, o.exchange)])
             }
             for (o in pendingOrders()) {
@@ -848,7 +905,7 @@ class Sandbox(
             }
             cleanupExpiredContracts()
             val due = positions.filter { it.product == "MIS" && it.quantity != 0 }.filter { p ->
-                val cut = sq[p.exchange]
+                val cut = config.squareOffTime(p.exchange, day)
                 cut != null && !t.isBefore(cut)
             }
             for (p in due) {

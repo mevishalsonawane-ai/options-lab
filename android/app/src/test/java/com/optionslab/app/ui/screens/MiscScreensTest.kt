@@ -124,7 +124,7 @@ class MiscScreensTest {
         assertFalse("no Back on the first page", compose.has("Back"))
         tap("Next")
         compose.waitForText("Start automated trading")
-        tap("Take me to the ORB switch")
+        tap("Take me to the Liquidity switch")
         assertEquals(listOf("orb"), went)
         tap("Back")
         compose.waitForText("Welcome to IraAlgo")

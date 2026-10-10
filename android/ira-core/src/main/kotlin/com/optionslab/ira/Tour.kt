@@ -1,7 +1,6 @@
 package com.optionslab.ira
 
 import java.time.LocalDate
-import java.util.Locale
 
 /**
  * "What can I ask you?" (voice, round 15): a short spoken tour - five questions worth asking right now, matched to the
@@ -50,7 +49,7 @@ object Tour {
 
     private fun askedFresh(text: String): Boolean = ASKED.containsMatchIn(words(text))
 
-    private fun words(s: String) = " " + spacedWords(s.lowercase(Locale.ENGLISH).replace("'", " ").replace("’", " ").replace("-", " ")) + " "
+    private fun words(s: String) = Spaced.words(s)
 
     /** The part of the day at [minute] (minutes after midnight, IST) on a day that is or is not a [tradingDay]. */
     fun part(minute: Int, tradingDay: Boolean): Part = when {

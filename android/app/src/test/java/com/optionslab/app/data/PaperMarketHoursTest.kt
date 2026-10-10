@@ -56,6 +56,28 @@ class PaperMarketHoursTest : RobolectricTest() {
         assertFalse("a cancel is never refused for the hour", refused())
     }
 
+    private fun on(day: java.time.LocalDate, h: Int, m: Int) {
+        Market.testClock = Clock.fixed(day.atTime(h, m).atZone(IST).toInstant(), IST)
+    }
+
+    /** F&O trades to 15:40 from 3 Aug 2026: a hand order at 15:35 is taken on such a day. */
+    @Test fun at1535AfterThe3Aug2026ChangeOrdersAreTaken() {
+        on(java.time.LocalDate.of(2026, 8, 5), 15, 35)
+        assertTrue(Market.acceptsOrders())
+        model.paperPlace("BANKNIFTY", Market.today().plusDays(1), 54_100.0, Right.PE, "BUY", 1, "MARKET", "NRML", null, null)
+        assertFalse(refused())
+    }
+
+    /** Before 3 Aug 2026 F&O closed at 15:30: the same order at 15:35 on a July day is refused. */
+    @Test fun at1535OnAJuly2026DayOrdersAreRefused() {
+        on(java.time.LocalDate.of(2026, 7, 29), 15, 35)
+        assertFalse(Market.acceptsOrders())
+        model.paperPlace("BANKNIFTY", Market.today().plusDays(1), 54_100.0, Right.PE, "BUY", 1, "MARKET", "NRML", null, null)
+        assertTrue("told the market is closed", refused())
+        assertTrue(Market.CLOSED_FOR_ORDERS.contains("09:15-15:30"))
+        assertTrue("nothing reached the paper book", Paper.state.orders.isEmpty())
+    }
+
     @Test fun inMarketHoursOrdersAreTaken() {
         at(11, 0)
         assertTrue(Market.acceptsOrders())

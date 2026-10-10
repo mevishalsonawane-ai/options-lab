@@ -27,7 +27,11 @@ object SessionLock : DefaultLifecycleObserver {
     fun touch() { lastActive = SystemClock.elapsedRealtime() }
 
     fun unlock() { touch(); _locked.value = false }
-    fun lock() { _locked.value = true }
+    fun lock() {
+        _locked.value = true
+        // Round 2: the order path's in-memory session is cleared with the lock (read from the vault again when next needed).
+        runCatching { com.optionslab.app.data.Broker.dropCreds() }
+    }
 
     /** Seal if the session has been idle past the limit. */
     fun checkIdle() {

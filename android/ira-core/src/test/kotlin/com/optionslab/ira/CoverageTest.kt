@@ -27,21 +27,25 @@ class CoverageTest {
     private fun route(said: String): List<Kind> {
         if (Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null) return listOf(Kind.JARVIS)
         if (Routine.asked(said) || Routine.forgetAsked(said)) return listOf(Kind.ACCOUNT)
-        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null ||
+        val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) || PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || OrderFlow.asked(said) != null || MoveEvents.asked(said) != null || FlowShadow.helpAsked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || LiquidityMap.asked(said) != null ||
             Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null || PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
-            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
-            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || LiquidityWhyNot.asked(said) != null || SoloDay.asked(said) != null || HeroDay.asked(said) != null || BotTrades.asked(said) != null || DayClock.asked(said) != null ||
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || WeeklyReview.asked(said) != null || LotsWhatIf.asked(said) != null || LiquidityInsight.asked(said) != null || LiquidityHold.asked(said) != null || LiquidityDrawdown.asked(said) || LiquidityWhen.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || OpeningRead.asked(said) || TodayNotes.asked(said) || CatchUp.asked(said) || ForwardWatch.asked(said) || ForwardWatch.armAsked(said) != null || DayRecap.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) ||
+            RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WhatsNew.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || SettingWhere.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
+            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         return ((if (asSaid) null else Understand.questions(null, said)) ?: listOf(said)).map { kind(it, 0) }
     }
 
     private fun kind(q: String, depth: Int): Kind {
         val p = Ask.parse(q)
+        // An action set to wait for a condition: Jarvis says he can't (round 29) - his own answer, nothing acts.
+        if (p.order == null && p.command == null && Conditional.asked(q)) return Kind.JARVIS
         // The families added since round 5 (rounds 6-8), in the hub's order: Boss's journal is his; Jarvis's alerts, data,
         // reasons, pattern record and self-check are his own; the chain, the structure, a what-if, the case and the news desk
         // are the market's.
         if (p.order == null && p.command == null && !Bundle.acts(q)) {
+            // (What waits for Boss's yes - the Requests panel's list, read only; round 25.)
+            if (Requests.listAsked(q)) return Kind.ACCOUNT
             if (DayJournal.asked(q)) return Kind.ACCOUNT
             // (Clarity: the answers said shorter aloud - Jarvis's own voice; HeardBack is the voice path's alone, not a branch here.)
             if (AlertSense.asked(q) != null || Airtime.asked(q) || Hearing.asked(q) || PatternCalls.asked(q) || TrendReads.asked(q) || Clarity.asked(q) != null) return Kind.JARVIS
@@ -61,6 +65,11 @@ class CoverageTest {
             if (LeadIndex.asked(q) != null) return Kind.JARVIS
             if (LeadPart.asked(q) != null) return Kind.JARVIS
             if (NextAsk.asked(q) != null) return Kind.JARVIS
+            if (MoreAfter.asked(q) != null) return Kind.JARVIS
+            if (SmallTrades.asked(q) != null) return Kind.ACCOUNT
+            if (DayIndex.asked(q) != null) return Kind.JARVIS
+            if (CheckTimes.asked(q) != null) return Kind.ACCOUNT
+            if (CondNeeds.asked(q) != null) return Kind.JARVIS
             if (NewsMoves.asked(q) != null) return Kind.MARKET
             if (TaxRecords.exportAsked(q)) return Kind.ACCOUNT
             if (Learnings.asked(q) != null || Learnings.undoAsked(q)) return Kind.JARVIS
@@ -75,24 +84,77 @@ class CoverageTest {
             if (WhereIWin.asked(q) != null) return Kind.ACCOUNT
             if (TradesADay.asked(q) != null) return Kind.ACCOUNT
             if (AfterLoss.asked(q) != null) return Kind.ACCOUNT
+            if (StopNoise.asked(q)) return Kind.ACCOUNT
+            if (DayScore.asked(q)) return Kind.ACCOUNT
+            if (RequestBook.asked(q) != null) return Kind.ACCOUNT
             if (NetLean.asked(q)) return Kind.ACCOUNT
             if (ExpiryEve.asked(q)) return Kind.ACCOUNT
             if (BeforeTomorrow.asked(q)) return Kind.ACCOUNT
+            // (Why Liquidity 15+5 did or did not trade today, from its own records - Boss's own paper trades in it.)
+            if (LiquidityWhyNot.asked(q) != null) return Kind.ACCOUNT
+            // (Solo (midday)'s day from its own records - its paper trades in it.)
+            if (SoloDay.asked(q) != null) return Kind.ACCOUNT
+            // (The Hero arm's day from its own records - its paper trades in it.)
+            if (HeroDay.asked(q) != null) return Kind.ACCOUNT
             if (BotTrades.asked(q) != null) return Kind.ACCOUNT
             if (SwitchOff.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
             if (WeekAhead.asked(q) != null) return Kind.INFO
+            // (Jarvis's weekly review: the week's paper trading, his strategies and shadows, the market - Boss's own record.)
+            if (WeeklyReview.asked(q) != null) return Kind.ACCOUNT
+            // (A what-if on Liquidity 15+5's lots, from the arm's own book and its research - Boss's own record; nothing changes.)
+            if (LotsWhatIf.asked(q) != null) return Kind.ACCOUNT
+            // (What's working for Liquidity 15+5: its own paper trades cut into patterns - Boss's own record; nothing changes.)
+            if (LiquidityInsight.asked(q) != null) return Kind.ACCOUNT
+            // (How long Liquidity 15+5 holds its trades: its own paper trades timed - Boss's own record; nothing changes.)
+            if (LiquidityHold.asked(q) != null) return Kind.ACCOUNT
+            // (Liquidity 15+5's drawdown: its own paper trades as a running total per lot - Boss's own record; nothing changes.)
+            if (LiquidityDrawdown.asked(q)) return Kind.ACCOUNT
+            // (Liquidity 15+5 by day and time: its own paper trades split by weekday, expiry and entry time - Boss's own record; nothing changes.)
+            if (LiquidityWhen.asked(q) != null) return Kind.ACCOUNT
+            // (Liquidity 15+5's paper record over time, from the arm's own book - Boss's own record.)
+            if (LiquidityRecord.asked(q) != null) return Kind.ACCOUNT
+            // (Tomorrow's plan: the next session, Liquidity's day and levels, Solo and Hero, the events - Boss's own paper trades in it.)
+            if (TomorrowPlan.asked(q)) return Kind.ACCOUNT
+            // (The opening read: the gaps, the open against Liquidity's levels, the first candle, the arm's first trigger - the market's.)
+            if (OpeningRead.asked(q)) return Kind.MARKET
+            // (Today's notes: what Jarvis posted by himself today, counted and the latest named - his own words.)
+            if (TodayNotes.asked(q)) return Kind.JARVIS
+            // (Catch me up: the notes Jarvis posted since Boss last looked, said short - his own words.)
+            if (CatchUp.asked(q)) return Kind.JARVIS
+            // (The forward-test watch: each paper arm against its backtest - Boss's own paper records.)
+            if (ForwardWatch.asked(q) || ForwardWatch.armAsked(q) != null) return Kind.ACCOUNT
             if (ZerodhaSession.asked(q) != null) return Kind.ACCOUNT
             if (OrderWhy.asked(q) != null) return Kind.ACCOUNT
             if (RelayHealth.asked(q) != null) return Kind.ACCOUNT
             if (StreamHealth.asked(q)) return Kind.ACCOUNT
             if (BatteryUse.asked(q)) return Kind.JARVIS
             if (WatchAsk.asked(q) != null) return Kind.ACCOUNT
+            // (The day recap: the market that day, its events and news, and the paper arms' trades - Boss's own paper trades in it.)
+            if (DayRecap.asked(q) != null) return Kind.ACCOUNT
+            // (Where a setting is: the Settings search's catalogue - Jarvis's own answer, nothing switched.)
+            if (SettingWhere.asked(q) != null) return Kind.JARVIS
             if (Tour.asked(q)) return Kind.JARVIS
+            // (What's new in the app: its own changelog - Jarvis's own answer, nothing of the account.)
+            if (WhatsNew.asked(q)) return Kind.JARVIS
             if (DataAge.asked(q)) return Kind.JARVIS
+            // (A saved big move's minutes - what came first: the market's, timing only.)
+            if (MoveEvents.asked(q) != null) return Kind.MARKET
+            // (The order flow: its paper record beside the strategies' signals - Boss's own; the live read - the market's.)
+            if (FlowShadow.helpAsked(q)) return Kind.ACCOUNT
+            if (OrderFlow.asked(q) != null) return Kind.MARKET
+            // (What the market recorder keeps on this phone: his own data, read only.)
+            if (MarketRecord.asked(q)) return Kind.JARVIS
+            // (GIFT Nifty's gap and the FIIs' positioning from what the recorder keeps: the market's.)
+            if (MorningCues.asked(q) != null) return Kind.MARKET
             if (Honest.asked(q) != null) return Kind.HONEST
-            if (Thinking.asked(q) != null || Consistency.asked(q)) return Kind.JARVIS
-            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || RoundCloses.asked(q) != null || MonthTurns.asked(q) != null || LunchRange.asked(q) != null || OpenHighLow.asked(q) != null || BigCandles.asked(q) != null || ExtremeCloses.asked(q) != null || WeekRange.asked(q) != null || RelativeMove.asked(q) != null || Comebacks.asked(q) != null || VixBand.asked(q) != null || Overnight.asked(q) != null || DayAfter.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
+            if (Thinking.asked(q) != null) return Kind.JARVIS
+            // (How likely a big 5-minute candle is now: the market's, information only.)
+            if (BigMoveRisk.asked(q)) return Kind.MARKET
+            // (Liquidity 15+5's map of the market - its levels, what it waits for: the market's, information only.)
+            if (LiquidityMap.asked(q) != null) return Kind.MARKET
+            if (Consistency.asked(q)) return Kind.JARVIS
+            if (CoPilot.asked(q) || SinceMorning.asked(q) || ExpiryPin.asked(q) != null || ExpiryHour.asked(q) != null || StraddleDecay.asked(q) != null || AtmBuy.asked(q) != null || OtmReach.asked(q) != null || ChainDrift.asked(q) != null || ChainIntel.asked(q) != null || DayClock.asked(q) != null || GapRecord.asked(q) != null || RangeBreaks.asked(q) != null || PriorDay.asked(q) != null || LastHour.asked(q) != null || InsideDays.asked(q) != null || FirstMove.asked(q) != null || VixNext.asked(q) != null || SplitDays.asked(q) != null || RoundCloses.asked(q) != null || MonthTurns.asked(q) != null || LunchRange.asked(q) != null || OpenHighLow.asked(q) != null || BigCandles.asked(q) != null || ExtremeCloses.asked(q) != null || WeekRange.asked(q) != null || RelativeMove.asked(q) != null || Comebacks.asked(q) != null || VixBand.asked(q) != null || Overnight.asked(q) != null || DayAfter.asked(q) != null || OpenReach.asked(q) != null || MultiDay.asked(q) != null || MoveTime.asked(q) != null || GiveBack.asked(q) != null || Weekdays.asked(q) != null || DayCompare.asked(q) != null || LikeToday.asked(q) || Structure.asked(q) != null ||
                 MindChange.asked(q) || Breadth.asked(q) != null || TradeCase.asked(q) || Scenarios.asked(q) != null ||
                 Causes.asked(q) != null) return Kind.MARKET
         }
@@ -293,8 +355,8 @@ class CoverageTest {
         "is thursday expiry" to I, "what day is expiry this week" to I, "what's the lot size" to I, "what's atm right now" to I, "nifty atm" to I,
         "what's the premium of the atm call" to I, "nifty 25000 ce price" to I, "banknifty 52000 pe ltp" to I, "how much is the 25000 call" to M,
         "what's the iv today" to A, "what's the pcr today" to A, "nifty pcr" to A, "banknifty max pain" to A, "where is the max oi" to A,
-        "call writing kahan hai" to M, "what are fiis doing" to A, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
-        "gold rate" to M, "what's sgx nifty" to H, "gift nifty" to H, "how is gift nifty" to H, "what are global cues" to M, "any events today" to A,
+        "call writing kahan hai" to M, "what are fiis doing" to M, "fii dii data" to A, "did fiis buy or sell" to A, "how is gold today" to M,
+        "gold rate" to M, "what's sgx nifty" to M, "gift nifty" to M, "how is gift nifty" to M, "what are global cues" to M, "any events today" to A,
         "is there rbi policy today" to A, "when is the fed meeting" to A, "what is the budget date" to A, "explain the market today" to M,
         "summarize the market" to M, "give me a summary" to M, "market summary please" to M, "what's happening with banknifty" to M,
         "bank nifty update please" to M, "quick update" to M, "status update" to M, "how is everything" to M, "anything i should know" to M,
@@ -316,7 +378,7 @@ class CoverageTest {
         "banknifty ka target kya hai" to H, "nifty target today" to H, "nifty ka target batao" to H,
         "where is the bottom for banknifty" to H, "nifty kitna aur girega" to H, "banknifty vwap" to H, "is nifty above vwap" to H,
         "vwap kahan hai" to H, "how many lots can i take" to H, "kitne lots le sakta hu" to H, "how many lots can i buy" to H,
-        "gift nifty kya bol raha hai" to H, "natural gas price" to H, "how is europe" to H, "dax today" to H, "what's the s&p doing" to H,
+        "gift nifty kya bol raha hai" to M, "natural gas price" to H, "how is europe" to H, "dax today" to H, "what's the s&p doing" to H,
         "how is the dow jones today" to H, "how much can banknifty fall" to M, "what is vwap" to I, "vwap kya hota hai" to I,
         "what does vwap mean" to I, "nifty ka haal batao" to M, "bazaar kaisa chal raha hai" to M, "market ka mood kaisa hai" to M,
         "aaj market mein tezi hai kya" to M, "aaj mandi hai kya" to M, "nifty mein tezi hai kya" to M, "banknifty mein mandi hai kya" to M,
@@ -374,6 +436,7 @@ class CoverageTest {
         "is the watch running" to A, "why did the watch get stuck" to A, "battery setting kya hai" to A, "kya mera phone app ko rok raha hai" to A,
         // ---- What can I ask you (Tour, voice round 15): five questions for the part of the day - Jarvis's own ----
         "what can i ask you" to J, "what should i ask you now" to J, "main kya pooch sakta hoon" to J, "suggest some questions" to J,
+        "what's new in the app" to J, "what changed in this update" to J, "naya kya hai" to J, "what are the new features" to J,
         // ---- Two indices on opposite sides of the day (SplitDays, market intelligence round 23): the market's ----
         "how often do nifty and banknifty go opposite ways" to M, "nifty banknifty divergence record" to M,
         "nifty aur banknifty kitni baar ulte chalte hain" to M,
@@ -416,6 +479,92 @@ class CoverageTest {
         // ---- The day-after-a-big-day record (DayAfter, market intelligence round 35): the market's ----
         "after nifty falls 1% in a day what happens the next day" to M, "does banknifty bounce the day after a big down day" to M,
         "1% girne ke baad agle din nifty kya karta hai" to M,
+        // ---- The reach-from-the-open record (OpenReach, market intelligence round 36): the market's ----
+        "how far does nifty usually move from its open" to M, "how often does banknifty trade 0.5% on both sides of the open" to M,
+        "open se kitna door jata hai nifty" to M,
+        // ---- The few-sessions move record (MultiDay, market intelligence round 37): the market's ----
+        "how far does nifty usually move in 3 sessions" to M, "how often does banknifty move 2% in 3 days" to M,
+        "teen din mein nifty kitna chalta hai" to M,
+        // ---- The time-to-move record (MoveTime, market intelligence round 38): the market's ----
+        "how long does nifty usually take to move 50 points" to M, "how often does banknifty move 0.5% within 30 minutes" to M,
+        "nifty ko 50 point chalne mein kitna time lagta hai" to M,
+        // ---- The give-back record (GiveBack, market intelligence round 39): the market's ----
+        "after nifty runs 100 points in the first hour how much does it give back by the end of the day" to M, "give back record for banknifty" to M,
+        "100 point chalne ke baad nifty kitna wapas deta hai" to M,
+        // ---- The straddle decay record (StraddleDecay, market intelligence round 40): the market's ----
+        "how much does the atm straddle usually lose between 9:30 and 2:30" to M, "straddle decay record for banknifty" to M,
+        "nifty ka straddle din mein kitna girta hai" to M,
+        // ---- The expiry-day last-hour premium record (ExpiryHour, market intelligence round 42): the market's ----
+        "how does the atm option's premium behave in the last hour on expiry day" to M, "expiry last hour premium record for banknifty" to M,
+        "expiry ke aakhri ghante mein atm premium kitna girta hai" to M,
+        // ---- The at-the-money buyer's record (AtmBuy, market intelligence round 41): the market's ----
+        "how often does the atm option double from its 9:30 price before the end of the day" to M, "atm option double record for banknifty" to M,
+        "atm call kitni baar double hota hai" to M,
+        // ---- The out-of-the-money option's record (OtmReach, market intelligence round 43): the market's ----
+        // ---- What the market recorder keeps on this phone (MarketRecord): his own ----
+        "how much market data have we recorded" to J, "market recorder status" to J, "kitna market data record hua hai" to J,
+        // ---- GIFT Nifty's gap and the FIIs' positioning from the market recorder (MorningCues): the market's ----
+        "fii position" to M, "fii kya kar rahe hain" to M, "are fiis long or short" to M, "what is gift nifty saying" to M, "morning cues" to M,
+        // ---- How likely a big 5-minute candle is now (BigMoveRisk): the market's ----
+        "is a big move likely now" to M, "abhi kitna risk hai" to M, "volatile hai kya" to M, "is the market risky right now" to M,
+        "bada move aane wala hai kya" to M,
+        // ---- A saved big move: what came first (MoveEvents): the market's, timing only ----
+        "why did banknifty jump at 10:32" to M, "what happened in nifty at 11:05" to M, "banknifty 1:40 pm pe kyun gira" to M,
+        // ---- Liquidity 15+5's map of the market (LiquidityMap): the market's ----
+        "where are the liquidity levels" to M, "liquidity level kahan hai" to M, "how far is the next pool" to M,
+        // ---- Jarvis's weekly review (WeeklyReview): the week's paper trading and his strategies - Boss's own record ----
+        "weekly review" to A, "is hafte ka review" to A, "how did this week go" to A, "last week's review" to A, "weekly report" to A,
+        // ---- Liquidity 15+5's paper record over time (LiquidityRecord): the arm's own book - Boss's own record ----
+        "how did liquidity do this week" to A, "liquidity on 3 oct" to A, "liquidity last 10 trades" to A, "which index works best for liquidity" to A,
+        "liquidity win streak" to A, "is liquidity on track" to A, "liquidity ne is hafte kaisa kiya" to A,
+        // ---- A what-if on Liquidity 15+5's lots (LotsWhatIf): its own book and research recomputed - Boss's own record ----
+        "what if liquidity traded 3 lots" to A, "how much with 1 lot this week" to A, "3 lot pe kitna banta" to A, "is 2 lots better than 3" to A,
+        // ---- What's working for Liquidity 15+5 (LiquidityInsight): its own paper trades cut into patterns - Boss's own record ----
+        "what's working for liquidity" to A, "where does liquidity lose" to A, "liquidity patterns" to A, "liquidity kahan loss karta hai" to A,
+        // ---- How long Liquidity 15+5 holds its trades (LiquidityHold): its own paper trades timed - Boss's own record ----
+        "how long does liquidity hold its trades" to A, "liquidity hold time this week" to A, "do liquidity's losers last longer than its winners" to A,
+        "liquidity ke trades kitni der chalte hain" to A,
+        // ---- Liquidity 15+5's drawdown (LiquidityDrawdown): its own paper trades as a running total - Boss's own record ----
+        "how deep has liquidity fallen from its best" to A, "liquidity's current drawdown" to A, "liquidity's worst losing streak" to A,
+        "liquidity peak se kitna neeche hai" to A,
+        // ---- Liquidity 15+5 by day and time (LiquidityWhen): its own paper trades split - Boss's own record ----
+        "which day does liquidity do best" to A, "liquidity on expiry days" to A, "liquidity by weekday" to A,
+        "what time of entry works best for liquidity" to A, "liquidity kis din achha karta hai" to A,
+        // ---- Tomorrow's plan (TomorrowPlan): the next session prepared - Liquidity's day and levels, Solo, Hero, events ----
+        "what's the plan for tomorrow" to A, "tomorrow ka plan" to A, "kal ka plan kya hai" to A, "prepare me for tomorrow" to A,
+        "tomorrow's plan" to A, "get me ready for tomorrow" to A,
+        // ---- The opening read (OpeningRead): the gaps, the open against the levels, the first candle - the market's ----
+        "how did the market open" to M, "opening read" to M, "market kaisa khula" to M, "where did we open vs the levels" to M,
+        // ---- The forward-test watch (ForwardWatch): each paper arm against its backtest - Boss's own paper records ----
+        "is anything drifting" to A, "how are my arms vs backtest" to A, "forward test status" to A, "are my arms drifting" to A,
+        "liquidity vs backtest" to A, "is solo drifting" to A, "hero forward test" to A, "is liquidity in line with the backtest" to A,
+        // ---- The day recap (DayRecap): that day's market, events, news and the paper arms' trades - Boss's own paper trades in it ----
+        "what happened on 3 oct" to A, "recap of yesterday" to A, "how was monday" to A, "2 oct ka recap" to A, "what happened last friday" to A,
+        "kal kya hua" to A, "yesterday's recap" to A, "how did monday go" to A,
+        // ---- Today's notes (TodayNotes): what Jarvis posted by himself today - his own words ----
+        "what did you tell me today" to J, "today's notes" to J, "aaj kya bataya" to J, "what have you told me today" to J,
+        // ---- Catch me up (CatchUp): the notes Jarvis posted since Boss last looked, said short - his own words ----
+        "catch me up" to J, "read your notes" to J, "notes padh do" to J, "kya hua jab main nahi tha" to J, "read my notes" to A,
+        // ---- Where a setting is (SettingWhere): the Settings search's catalogue - Jarvis's own answer, nothing switched ----
+        "where is the quiet hours setting" to J, "where is the backup setting" to J, "how do i turn off quiet hours" to J,
+        "backup ki setting kahan hai" to J, "where can i find the fingerprint setting" to J, "how do i change the theme" to J,
+        // ---- Why Liquidity 15+5 did or did not trade today (LiquidityWhyNot): the arm's own records - Boss's own paper trades ----
+        "why no liquidity trade today" to A, "why didn't liquidity trade" to A, "liquidity ne trade kyu nahi liya" to A,
+        "what is liquidity waiting for" to A, "why did liquidity skip the break" to A, "why hasn't liquidity traded today" to A,
+        // ---- Solo (midday)'s day (SoloDay): its own records - its paper trades ----
+        "what did solo do today" to A, "why didn't solo trade" to A, "solo ne aaj kya kiya" to A, "how did solo decide" to A,
+        "why no solo trade today" to A, "which index did solo pick" to A,
+        // ---- The Hero arm's day (HeroDay): its own records - its paper trades ----
+        "what did hero do today" to A, "why no hero trade" to A, "hero ne aaj kya kiya" to A, "is today a hero day" to A,
+        "when is the next hero day" to A, "why didn't hero trade today" to A,
+        "how often does an otm option 100 points away end the day in the money" to M, "otm option record for banknifty" to M,
+        "100 point door ka otm call kitni baar itm hota hai" to M,
+        // ---- His stops against the index's swings (StopNoise, reasoning round 33): his own (no word of acting in them) ----
+        "is my sl too tight" to A, "mera sl bahut tight hai kya" to A, "is my sl inside the noise" to A,
+        // ---- Today's own trades scored (DayScore, reasoning round 34): his own ----
+        "my trades so far today" to A, "aaj ka scorecard" to A,
+        // ---- Liquidity 15+5's size asked (Honest's LiquidityLots, 06 Oct): read from the arms' book, never the budget sum ----
+        "how many lots is liquidity trading" to H, "liquidity kitne lot mein trade kar raha hai" to H, "what size is liquidity trading" to H,
     )
 
     /**
@@ -524,10 +673,11 @@ class CoverageTest {
 
     /**
      * Which feature answers [said] in Jarvis (not GOLD), taking IraHub.ask's branches in its own order (app/.../IraHub.kt,
-     * ask(): Boss's learned words and routine as said, fillers and follow-ups, then - for a question not said with
+     * ask(): Boss's learned words and routine as said, fillers and follow-ups, then an action set on a condition
+     * ([Conditional], said with something to do or not), then - for a question not said with
      * something to do (IraHub's `bundled`, [Bundle.acts]) - DayJournal, AlertSense, Airtime, Hearing, PatternCalls, TrendReads, Clarity,
-     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, BookDecay, WhereIWin, TradesADay, AfterLoss, NetLean, ExpiryEve, BeforeTomorrow, BotTrades, SaidAbout, WeekAhead, DataAge, Honest, Thinking,
-     * Consistency, CoPilot, SinceMorning, ExpiryPin, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
+     * WordFit, AskedAgain, FigureFirst, WrongThing, ArmHabits, MorningSense, HonestStars, TalkHours, MorningAsks, TurnDowns, TopicLength, OutlookCheck, UsualIndex, Nicknames, LeadIndex, LeadPart, NextAsk, MoreAfter, SmallTrades, DayIndex, CheckTimes, CondNeeds, NewsMoves, TaxExport, Learnings, PreMarket, Headroom, ArmFit, WeakLink, ArmChange, PnlGap, ArmDay, BookDecay, WhereIWin, TradesADay, AfterLoss, StopNoise, DayScore, RequestBook, NetLean, ExpiryEve, BeforeTomorrow, LiquidityWhyNot, SoloDay, HeroDay, BotTrades, SaidAbout, WeekAhead, WeeklyReview, LotsWhatIf, LiquidityInsight, LiquidityHold, LiquidityDrawdown, LiquidityWhen, LiquidityRecord, TomorrowPlan, OpeningRead, TodayNotes, CatchUp, ForwardWatch, DataAge, Honest, Thinking,
+     * Consistency, CoPilot, SinceMorning, ExpiryPin, ExpiryHour, StraddleDecay, AtmBuy, OtmReach, ChainDrift, ChainIntel, DayClock, GapRecord, RangeBreaks, PriorDay, LastHour, InsideDays, FirstMove, VixNext, SplitDays, RoundCloses, MonthTurns, LunchRange, OpenHighLow, BigCandles, ExtremeCloses, WeekRange, RelativeMove, Comebacks, VixBand, Overnight, DayAfter, OpenReach, MultiDay, MoveTime, GiveBack, Weekdays, DayCompare, LikeToday, Structure, MindChange, Breadth, TradeCase,
      * Scenarios, Causes, Agenda, Improve; the reminders and Jarvis's own checks,
      * Distance... Outlook, NewsDesk, down to the account's sections (PositionHealth, BotHealth and NeedsTrue are its HEALTH,
      * BOTS and NEED; HeardBack is the voice path's own read-back, never a branch of the hub), a pattern explained, Solo and IraHub.reasoned's readers over the candles, each in its
@@ -544,11 +694,11 @@ class CoverageTest {
         if (!understood && (Routine.asked(said) || Routine.forgetAsked(said))) return "Routine"
         val asSaid = Sources.asked(said) || AboutBoss.knowAsked(said) || Memory.recallAsked(said) || Memory.forgetAsked(said) ||
             Corrections.wordsAsked(said) || Corrections.forgetWordAsked(said) != null || Routine.asked(said) || Routine.forgetAsked(said) ||
-            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
+            PatternCalls.asked(said) || TrendReads.asked(said) || SinceMorning.asked(said) || ExpiryPin.asked(said) != null || ExpiryHour.asked(said) != null || StraddleDecay.asked(said) != null || AtmBuy.asked(said) != null || OtmReach.asked(said) != null || MarketRecord.asked(said) || OrderFlow.asked(said) != null || MoveEvents.asked(said) != null || FlowShadow.helpAsked(said) || MorningCues.asked(said) != null || BigMoveRisk.asked(said) || LiquidityMap.asked(said) != null || Learnings.asked(said) != null || Learnings.undoAsked(said) || NewsMoves.asked(said) != null ||
             PreMarket.asked(said) ||
-            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
-            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
-            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null
+            ChainDrift.asked(said) != null || Headroom.asked(said) != null || ArmFit.asked(said) || WeakLink.asked(said) || ArmChange.asked(said) || PnlGap.asked(said) || ArmDay.asked(said) != null || BookDecay.asked(said) || WhereIWin.asked(said) != null || TradesADay.asked(said) != null || AfterLoss.asked(said) != null || StopNoise.asked(said) || DayScore.asked(said) || RequestBook.asked(said) != null || NetLean.asked(said) || ExpiryEve.asked(said) || BeforeTomorrow.asked(said) || LiquidityWhyNot.asked(said) != null || SoloDay.asked(said) != null || HeroDay.asked(said) != null || BotTrades.asked(said) != null || NeedsTrue.asked(said) || Clarity.asked(said) != null || DayClock.asked(said) != null ||
+            SaidAbout.asked(said) != null || GapRecord.asked(said) != null || WordFit.asked(said) != null || Causes.asked(said) != null || WeekAhead.asked(said) != null || WeeklyReview.asked(said) != null || LotsWhatIf.asked(said) != null || LiquidityInsight.asked(said) != null || LiquidityHold.asked(said) != null || LiquidityDrawdown.asked(said) || LiquidityWhen.asked(said) != null || LiquidityRecord.asked(said) != null || TomorrowPlan.asked(said) || OpeningRead.asked(said) || TodayNotes.asked(said) || CatchUp.asked(said) || ForwardWatch.asked(said) || ForwardWatch.armAsked(said) != null || DayRecap.asked(said) != null || AskedAgain.asked(said) || FigureFirst.asked(said) != null || MindChange.asked(said) || Weekdays.asked(said) != null || DayCompare.asked(said) != null || LikeToday.asked(said) || RangeBreaks.asked(said) != null || PriorDay.asked(said) != null || LastHour.asked(said) != null || InsideDays.asked(said) != null || FirstMove.asked(said) != null || VixNext.asked(said) != null || SplitDays.asked(said) != null || RoundCloses.asked(said) != null || MonthTurns.asked(said) != null || LunchRange.asked(said) != null || OpenHighLow.asked(said) != null || BigCandles.asked(said) != null || ExtremeCloses.asked(said) != null || WeekRange.asked(said) != null || RelativeMove.asked(said) != null || Comebacks.asked(said) != null || VixBand.asked(said) != null || Overnight.asked(said) != null || DayAfter.asked(said) != null || OpenReach.asked(said) != null || MultiDay.asked(said) != null || MoveTime.asked(said) != null || GiveBack.asked(said) != null || ZerodhaSession.asked(said) != null || Tour.asked(said) || WhatsNew.asked(said) || WrongThing.asked(said) != null || WrongThing.objected(said) || OrderWhy.asked(said) != null || ArmHabits.asked(said) || MorningSense.asked(said) != null || HonestStars.asked(said) != null || TalkHours.asked(said) != null || MorningAsks.asked(said) != null || TurnDowns.asked(said) != null || TopicLength.asked(said) != null || OutlookCheck.asked(said) || UsualIndex.asked(said) != null || Nicknames.asked(said) != null || LeadIndex.asked(said) != null || LeadPart.asked(said) != null || NextAsk.asked(said) != null || MoreAfter.asked(said) != null || SmallTrades.asked(said) != null || DayIndex.asked(said) != null || Conditional.asked(said) || CheckTimes.asked(said) != null || CondNeeds.asked(said) != null || RelayHealth.asked(said) != null || StreamHealth.asked(said) || WatchAsk.asked(said) != null || SettingWhere.asked(said) != null || BatteryUse.asked(said) || SwitchOff.asked(said) != null ||
+            ReminderBook.listAsked(said) || ReminderBook.cancelOne(said) != null || Requests.listAsked(said)
         val qs = if (asSaid || understood || cleaned) null else Understand.questions(null, said)?.takeIf { it.isNotEmpty() && it != listOf(said) }
         if (qs != null) return if (qs.size == 1) feature(qs[0], cleaned = true) else qs.joinToString(" & ") { feature(it, understood = true) }
         val q = said
@@ -557,6 +707,9 @@ class CoverageTest {
         val p = Ask.parse(q)
         val plain = p.order == null && p.command == null
         val alone = plain && free
+        // (An action set to wait for a condition, right after the hub's parse - before every branch, said with an action or not.)
+        if (plain && Conditional.asked(q)) return "Conditional"
+        if (alone && Requests.listAsked(q)) return "Requests"
         if (alone && DayJournal.asked(q)) return "DayJournal"
         if (alone && AlertSense.asked(q) != null) return "AlertSense"
         if (alone && Airtime.asked(q)) return "Airtime"
@@ -582,6 +735,11 @@ class CoverageTest {
         if (alone && LeadIndex.asked(q) != null) return "LeadIndex"
         if (alone && LeadPart.asked(q) != null) return "LeadPart"
         if (alone && NextAsk.asked(q) != null) return "NextAsk"
+        if (alone && MoreAfter.asked(q) != null) return "MoreAfter"
+        if (alone && SmallTrades.asked(q) != null) return "SmallTrades"
+        if (alone && DayIndex.asked(q) != null) return "DayIndex"
+        if (alone && CheckTimes.asked(q) != null) return "CheckTimes"
+        if (alone && CondNeeds.asked(q) != null) return "CondNeeds"
         if (alone && NewsMoves.asked(q) != null) return "NewsMoves"
         if (alone && TaxRecords.exportAsked(q)) return "TaxExport"
         if (alone && Learnings.asked(q) != null) return "Learnings"
@@ -597,28 +755,60 @@ class CoverageTest {
         if (alone && WhereIWin.asked(q) != null) return "WhereIWin"
         if (alone && TradesADay.asked(q) != null) return "TradesADay"
         if (alone && AfterLoss.asked(q) != null) return "AfterLoss"
+        if (alone && StopNoise.asked(q)) return "StopNoise"
+        if (alone && DayScore.asked(q)) return "DayScore"
+        if (alone && RequestBook.asked(q) != null) return "RequestBook"
         if (alone && NetLean.asked(q)) return "NetLean"
         if (alone && ExpiryEve.asked(q)) return "ExpiryEve"
         if (alone && BeforeTomorrow.asked(q)) return "BeforeTomorrow"
+        if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
+        if (alone && SoloDay.asked(q) != null) return "SoloDay"
+        if (alone && HeroDay.asked(q) != null) return "HeroDay"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
         if (alone && SwitchOff.asked(q) != null) return "SwitchOff"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
         if (alone && WeekAhead.asked(q) != null) return "WeekAhead"
+        if (alone && WeeklyReview.asked(q) != null) return "WeeklyReview"
+        if (alone && LotsWhatIf.asked(q) != null) return "LotsWhatIf"
+        if (alone && LiquidityInsight.asked(q) != null) return "LiquidityInsight"
+        if (alone && LiquidityHold.asked(q) != null) return "LiquidityHold"
+        if (alone && LiquidityDrawdown.asked(q)) return "LiquidityDrawdown"
+        if (alone && LiquidityWhen.asked(q) != null) return "LiquidityWhen"
+        if (alone && LiquidityRecord.asked(q) != null) return "LiquidityRecord"
+        if (alone && TomorrowPlan.asked(q)) return "TomorrowPlan"
+        if (alone && OpeningRead.asked(q)) return "OpeningRead"
+        if (alone && TodayNotes.asked(q)) return "TodayNotes"
+        if (alone && CatchUp.asked(q)) return "CatchUp"
+        if (alone && (ForwardWatch.asked(q) || ForwardWatch.armAsked(q) != null)) return "ForwardWatch"
         if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
         if (alone && OrderWhy.asked(q) != null) return "OrderWhy"
         if (alone && RelayHealth.asked(q) != null) return "RelayHealth"
         if (alone && StreamHealth.asked(q)) return "StreamHealth"
         if (alone && BatteryUse.asked(q)) return "BatteryUse"
         if (alone && WatchAsk.asked(q) != null) return "WatchAsk"
+        if (alone && DayRecap.asked(q) != null) return "DayRecap"
+        if (alone && SettingWhere.asked(q) != null) return "SettingWhere"
         if (alone && Tour.asked(q)) return "Tour"
+        if (alone && WhatsNew.asked(q)) return "WhatsNew"
         if (alone && DataAge.asked(q)) return "DataAge"
+        if (alone && MoveEvents.asked(q) != null) return "MoveEvents"
+        if (alone && FlowShadow.helpAsked(q)) return "FlowShadow"
+        if (alone && OrderFlow.asked(q) != null) return "OrderFlow"
+        if (alone && MarketRecord.asked(q)) return "MarketRecord"
+        if (alone && MorningCues.asked(q) != null) return "MorningCues"
         if (alone && Honest.asked(q) != null) return "Honest"
         // (The hub's Thinking falls through to SelfWhy when no reason was written and SelfWhy takes the words.)
         if (alone && Thinking.asked(q) != null) return "Thinking"
+        if (alone && BigMoveRisk.asked(q)) return "BigMoveRisk"
+        if (alone && LiquidityMap.asked(q) != null) return "LiquidityMap"
         if (alone && Consistency.asked(q)) return "Consistency"
         if (alone && CoPilot.asked(q)) return "CoPilot"
         if (alone && SinceMorning.asked(q)) return "SinceMorning"
         if (alone && ExpiryPin.asked(q) != null) return "ExpiryPin"
+        if (alone && ExpiryHour.asked(q) != null) return "ExpiryHour"
+        if (alone && StraddleDecay.asked(q) != null) return "StraddleDecay"
+        if (alone && AtmBuy.asked(q) != null) return "AtmBuy"
+        if (alone && OtmReach.asked(q) != null) return "OtmReach"
         if (alone && ChainDrift.asked(q) != null) return "ChainDrift"
         if (alone && ChainIntel.asked(q) != null) return "ChainIntel"
         if (alone && DayClock.asked(q) != null) return "DayClock"
@@ -642,6 +832,10 @@ class CoverageTest {
         if (alone && VixBand.asked(q) != null) return "VixBand"
         if (alone && Overnight.asked(q) != null) return "Overnight"
         if (alone && DayAfter.asked(q) != null) return "DayAfter"
+        if (alone && OpenReach.asked(q) != null) return "OpenReach"
+        if (alone && MultiDay.asked(q) != null) return "MultiDay"
+        if (alone && MoveTime.asked(q) != null) return "MoveTime"
+        if (alone && GiveBack.asked(q) != null) return "GiveBack"
         if (alone && Weekdays.asked(q) != null) return "Weekdays"
         if (alone && DayCompare.asked(q) != null) return "DayCompare"
         if (alone && LikeToday.asked(q)) return "LikeToday"
@@ -684,7 +878,7 @@ class CoverageTest {
         if (plain && (Topic.ACCOUNT !in p.topics || !Regex("(?i)\\b(my|mine|our|me|i)\\b").containsMatchIn(q)) && Topic.EXPLAIN !in p.topics &&
             Glossary.explain(q) != null) return "Glossary"
         if (plain && Topic.ACCOUNT !in p.topics && !Regex("(?i)\\b(i|me|my|mine)\\b").containsMatchIn(q) && OptionQuote.asked(p.text.ifBlank { q }) != null) return "OptionQuote"
-        if (Topic.BACKTEST in p.topics) return "Backtest"
+        if (Topic.BACKTEST in p.topics && !ForwardWatch.notABacktest(q)) return "Backtest"
         if (Topic.ACCOUNT in p.topics) return "Account:" + AppAnswers.sections(q).joinToString("+")
         if (Topic.COMMAND in p.topics || Topic.ORDER in p.topics) return "Act"
         if (Topic.SUGGEST in p.topics) return "Suggest"
@@ -783,6 +977,79 @@ class CoverageTest {
         "what did you not tell me today" to "Airtime",
         // ---- AlertSense: the alerts he says less often ----
         "which alerts do you hold back" to "AlertSense", "say everything again" to "AlertSense",
+        // ---- MarketRecord: what the market recorder keeps ----
+        "how much market data have we recorded" to "MarketRecord", "is the market recorder running" to "MarketRecord",
+        "how much space does the recorded market data take" to "MarketRecord", "market data kitne din ka record hua hai" to "MarketRecord",
+        // ---- MorningCues: GIFT Nifty's gap, the FIIs' positioning ----
+        "gift nifty kya bol raha hai" to "MorningCues", "what are fiis doing" to "MorningCues", "fii position" to "MorningCues",
+        "fii ka position kya hai" to "MorningCues", "morning cues" to "MorningCues",
+        // ---- BigMoveRisk: how likely a big 5-minute candle is now ----
+        "is a big move likely now" to "BigMoveRisk", "abhi kitna risk hai" to "BigMoveRisk", "volatile hai kya" to "BigMoveRisk",
+        "is the market volatile right now" to "BigMoveRisk", "big move aa sakta hai kya" to "BigMoveRisk",
+        // ---- MoveEvents: a saved big move's minutes, what came first ----
+        "why did banknifty jump at 10:32" to "MoveEvents", "why did nifty fall at 2:15" to "MoveEvents",
+        "what happened in bank nifty at 10 32" to "MoveEvents", "why did the market crash at 11:00" to "MoveEvents",
+        // ---- LiquidityMap: Liquidity 15+5's levels and what it waits for ----
+        "where are the liquidity levels" to "LiquidityMap", "liquidity level kahan hai" to "LiquidityMap", "how far is the next pool" to "LiquidityMap",
+        "what is liquidity waiting for" to "LiquidityWhyNot", "banknifty liquidity levels" to "LiquidityMap",
+        // ---- WeeklyReview: Jarvis's review of the week (made after its last session, kept 12 weeks) ----
+        "weekly review" to "WeeklyReview", "is hafte ka review" to "WeeklyReview", "how did this week go" to "WeeklyReview",
+        "how was this week" to "WeeklyReview", "review of the week" to "WeeklyReview", "last week's review" to "WeeklyReview",
+        // ---- LotsWhatIf: Liquidity 15+5 at another size, from its own book and its research (nothing changes) ----
+        "what if liquidity traded 3 lots" to "LotsWhatIf", "how much with 1 lot this week" to "LotsWhatIf", "3 lot pe kitna banta" to "LotsWhatIf",
+        "is 2 lots better than 3" to "LotsWhatIf", "what would liquidity have made with 3 lots" to "LotsWhatIf",
+        // ---- LiquidityInsight: what's working for Liquidity 15+5, from its own paper trades (nothing changes) ----
+        "what's working for liquidity" to "LiquidityInsight", "where does liquidity lose" to "LiquidityInsight", "liquidity patterns" to "LiquidityInsight",
+        "liquidity kahan loss karta hai" to "LiquidityInsight", "what's not working for liquidity" to "LiquidityInsight",
+        // ---- LiquidityHold: how long Liquidity 15+5 holds its trades, from its own paper trades (nothing changes) ----
+        "how long does liquidity hold its trades" to "LiquidityHold", "liquidity hold time this week" to "LiquidityHold",
+        "do liquidity's losers last longer than its winners" to "LiquidityHold", "liquidity ke trades kitni der chalte hain" to "LiquidityHold",
+        "how long do liquidity trades last" to "LiquidityHold",
+        // ---- LiquidityDrawdown: how far Liquidity 15+5 has fallen from its best, from its own paper trades (nothing changes) ----
+        "how deep has liquidity fallen from its best" to "LiquidityDrawdown", "liquidity's current drawdown" to "LiquidityDrawdown",
+        "liquidity's worst losing streak" to "LiquidityDrawdown", "liquidity peak se kitna neeche hai" to "LiquidityDrawdown",
+        "how long did liquidity take to recover" to "LiquidityDrawdown",
+        // ---- LiquidityWhen: Liquidity 15+5 by weekday, expiry day and entry time, from its own paper trades (nothing changes) ----
+        "which day does liquidity do best" to "LiquidityWhen", "liquidity on expiry days" to "LiquidityWhen", "liquidity by weekday" to "LiquidityWhen",
+        "what time of entry works best for liquidity" to "LiquidityWhen", "liquidity kis din achha karta hai" to "LiquidityWhen",
+        // ---- LiquidityRecord: Liquidity 15+5's paper record over time, from the arm's own book ----
+        "how did liquidity do this week" to "LiquidityRecord", "liquidity on 3 oct" to "LiquidityRecord", "liquidity last 10 trades" to "LiquidityRecord",
+        "which index works best for liquidity" to "LiquidityRecord", "liquidity win streak" to "LiquidityRecord", "is liquidity on track" to "LiquidityRecord",
+        // ---- TomorrowPlan: the next session prepared (after the close, and asked) ----
+        "what's the plan for tomorrow" to "TomorrowPlan", "tomorrow ka plan" to "TomorrowPlan", "kal ka plan kya hai" to "TomorrowPlan",
+        "prepare me for tomorrow" to "TomorrowPlan", "tomorrow's plan" to "TomorrowPlan", "plan for the next session" to "TomorrowPlan",
+        // ---- OpeningRead: how the market opened (just after 09:20, and asked) ----
+        "how did the market open" to "OpeningRead", "opening read" to "OpeningRead", "market kaisa khula" to "OpeningRead",
+        "where did we open vs the levels" to "OpeningRead", "how was the open" to "OpeningRead", "aaj market kaisa khula" to "OpeningRead",
+        // ---- ForwardWatch: the paper arms against their backtests, one line an arm (and told when a verdict changes) ----
+        "is anything drifting" to "ForwardWatch", "how are my arms vs backtest" to "ForwardWatch", "forward test status" to "ForwardWatch",
+        "live vs backtest" to "ForwardWatch", "are my arms drifting" to "ForwardWatch", "kya koi arm drift kar raha hai" to "ForwardWatch",
+        "liquidity live vs backtest" to "ForwardWatch", "how is liquidity doing vs backtest" to "ForwardWatch", "solo vs backtest" to "ForwardWatch",
+        "hero vs backtest" to "ForwardWatch", "is solo drifting" to "ForwardWatch", "is hero drifting" to "ForwardWatch", "hero forward test" to "ForwardWatch",
+        // ---- DayRecap: one compact recap of a past trading day (the market, events, news, FII/DII, the paper arms) ----
+        "what happened on 3 oct" to "DayRecap", "recap of yesterday" to "DayRecap", "how was monday" to "DayRecap", "2 oct ka recap" to "DayRecap",
+        "what happened last friday" to "DayRecap", "kal kya hua" to "DayRecap", "what happened yesterday" to "DayRecap", "how was last friday" to "DayRecap",
+        "backtest a hammer on banknifty" to "Backtest", "backtest this pattern" to "Backtest", "run a backtest of inside bars" to "Backtest",
+        // ---- TodayNotes: what Jarvis posted by himself today (counted by category, the latest three named) ----
+        "what did you tell me today" to "TodayNotes", "today's notes" to "TodayNotes", "aaj kya bataya" to "TodayNotes",
+        "what have you told me today" to "TodayNotes", "your notes today" to "TodayNotes", "aaj tumne kya bataya" to "TodayNotes",
+        // ---- CatchUp: the notes Jarvis posted since Boss last looked (at most five headlines, by category, the rest counted) ----
+        "catch me up" to "CatchUp", "jarvis catch me up" to "CatchUp", "read your notes" to "CatchUp", "read me your notes" to "CatchUp",
+        "notes padh do" to "CatchUp", "tumhare notes padh do" to "CatchUp", "kya hua jab main nahi tha" to "CatchUp", "jab main nahi tha tab kya hua" to "CatchUp",
+        // (Boss's own notes keep the routes they had before the catch-up.)
+        "read my notes" to "Account:REASONS", "read me my notes" to "Account:REASONS", "mere notes padh do" to "Missed",
+        // ---- SettingWhere: where a setting is (the Settings search's catalogue), a reply only ----
+        "where is the quiet hours setting" to "SettingWhere", "where is the backup setting" to "SettingWhere", "how do i turn off quiet hours" to "SettingWhere",
+        "backup ki setting kahan hai" to "SettingWhere", "where can i find the fingerprint setting" to "SettingWhere", "how do i change the theme" to "SettingWhere",
+        // ---- LiquidityWhyNot: why Liquidity 15+5 did or did not trade today, and what it waits for ----
+        "why no liquidity trade today" to "LiquidityWhyNot", "why didn't liquidity trade" to "LiquidityWhyNot",
+        "liquidity ne trade kyu nahi liya" to "LiquidityWhyNot", "why is liquidity not trading" to "LiquidityWhyNot",
+        // ---- SoloDay: what Solo (midday) did today and why, from its own records ----
+        "what did solo do today" to "SoloDay", "why didn't solo trade" to "SoloDay", "solo ne aaj kya kiya" to "SoloDay",
+        "how did solo decide" to "SoloDay", "why no solo trade today" to "SoloDay", "solo ne trade kyu nahi liya" to "SoloDay",
+        // ---- HeroDay: the Hero arm's day (expiry days, paper only) and why, from its own records ----
+        "what did hero do today" to "HeroDay", "why no hero trade" to "HeroDay", "hero ne aaj kya kiya" to "HeroDay",
+        "is today a hero day" to "HeroDay", "when is the next hero day" to "HeroDay", "hero ne trade kyu nahi liya" to "HeroDay",
         // ---- DataAge: how old his data is ----
         "is your data fresh" to "DataAge", "how old is your data" to "DataAge", "is the data stale" to "DataAge", "is your data live" to "DataAge",
         "is the feed delayed" to "DataAge", "how fresh is the data" to "DataAge", "is the option chain fresh" to "DataAge",
@@ -804,7 +1071,7 @@ class CoverageTest {
         "forget that i trade on fridays" to "AboutBoss", "i get greedy after a win" to "AboutBoss", "remember that i trade on fridays" to "AboutBoss",
         // ---- Boss's week, month, charges and trades (the account's own sections) ----
         "how was my week" to ACCOUNT_REVIEW, "how was my weak" to ACCOUNT_REVIEW, "review my week" to ACCOUNT_REVIEW,
-        "how did my week go" to ACCOUNT_REVIEW, "weekly review" to ACCOUNT_REVIEW, "how was my week overall" to ACCOUNT_REVIEW,
+        "how did my week go" to ACCOUNT_REVIEW, "my weekly review" to ACCOUNT_REVIEW, "how was my week overall" to ACCOUNT_REVIEW,
         "mera hafta kaisa raha" to ACCOUNT_REVIEW, "any insights on my trading" to ACCOUNT_REVIEW, "what are my habits" to ACCOUNT_REVIEW,
         "review my trades" to ACCOUNT_REVIEW, "how did i do this week" to "Account:HISTORY",
         "how was my month" to "Account:MONTH", "mera mahina kaisa raha" to "Account:MONTH", "review last month" to "Account:MONTH",
@@ -827,6 +1094,11 @@ class CoverageTest {
         "is your data up to date" to "DataAge", "data taza hai kya" to "DataAge", "write my journal" to "DayJournal",
         "help me with my journal" to "DayJournal", "pichla mahina kaisa raha" to "Account:MONTH", "stt kitna laga" to "Account:CHARGES",
         "brokerage kitna gaya" to "Account:CHARGES", "what do you know about me jarvis" to "AboutBoss",
+        // (Round 34: why the charges are so high - the Charges answer's own, never Causes, SelfWhy or Thinking.)
+        "why are my charges so high" to "Account:CHARGES", "charges itne zyada kyun" to "Account:CHARGES",
+        "what is eating my charges" to "Account:CHARGES", "why is my brokerage so high today" to "Account:CHARGES",
+        "itne zyada charges kyun" to "Account:CHARGES", "why am i paying so much in charges" to "Account:CHARGES",
+        "where are my charges going" to "Account:CHARGES", "why were my charges so high this week" to "Account:CHARGES",
         // ---- TaxRecords: the financial year's facts, and its trades exported (on Boss's yes) ----
         "what's my f&o turnover this year" to "Account:TAX", "my fno turnover" to "Account:TAX", "my tax summary" to "Account:TAX",
         "mera turnover kitna hai" to "Account:TAX", "my p&l for last financial year" to "Account:TAX",
@@ -860,6 +1132,7 @@ class CoverageTest {
         "what if nifty falls 100 points what happens to my positions" to "Account:MOVE",
         "how much do i lose if nifty falls 1%" to "Account:MOVE", "if nifty drops 200 points what happens to my p&l" to "Account:MOVE",
         "what's my exposure if banknifty moves 500 points" to "Account:MOVE",
+        "agar nifty 50 point gire to mera kya hoga" to "Account:MOVE", "agar banknifty 1% chadhe to meri positions ka kya hoga" to "Account:MOVE",
         "what if i had taken that trade" to "Account:WHATIF",
         // ---- DayClock: when the high and low usually come, by now, and the busiest half hour (round 13) ----
         "when does nifty usually make its high" to "DayClock", "what time does banknifty normally make its low" to "DayClock",
@@ -962,6 +1235,38 @@ class CoverageTest {
         "after nifty falls 1% in a day what happens the next day" to "DayAfter", "does banknifty bounce the day after a big down day" to "DayAfter",
         "after a 2% up day does sensex follow through the next session" to "DayAfter", "big day follow through record" to "DayAfter",
         "1% girne ke baad agle din nifty kya karta hai" to "DayAfter", "how does nifty usually do the day after a 1.5% rally" to "DayAfter",
+        // ---- OpenReach: how far the days got from their own open (round 36) ----
+        "how far does nifty usually move from its open" to "OpenReach", "how often does nifty go 1% from the open" to "OpenReach",
+        "how often does banknifty trade 0.5% on both sides of the open" to "OpenReach", "open reach record" to "OpenReach",
+        "how often does sensex close within 0.3% of its open" to "OpenReach", "how often does nifty move 100 points from the open" to "OpenReach",
+        // ---- MultiDay: how far a few sessions went from the close they started from (round 37) ----
+        "how far does nifty usually move in 3 sessions" to "MultiDay", "how often does nifty move 2% in 3 days" to "MultiDay",
+        "how often does banknifty stay within 1.5% over 4 sessions" to "MultiDay", "3 day move record for sensex" to "MultiDay",
+        "teen din mein nifty kitna chalta hai" to "MultiDay", "how much does nifty usually move over the next two trading days" to "MultiDay",
+        // ---- MoveTime: how long the index took to travel a distance from a quarter-hour start (round 38) ----
+        "how long does nifty usually take to move 50 points" to "MoveTime", "how often does nifty move 0.3% within 30 minutes" to "MoveTime",
+        "how many minutes does banknifty take to move 200 points" to "MoveTime", "time to move record for sensex" to "MoveTime",
+        "nifty ko 50 point chalne mein kitna time lagta hai" to "MoveTime", "what are the odds sensex moves 0.4% in 15 minutes" to "MoveTime",
+        // ---- GiveBack: how much of a run from the open the close gave back, and the pullback inside it (round 39) ----
+        "after nifty runs 100 points in the first hour how much does it give back by the end of the day" to "GiveBack",
+        "how much of a 1% run from the open does banknifty usually give back" to "GiveBack", "how deep is the pullback after nifty runs 100 points" to "GiveBack",
+        "give back record for sensex" to "GiveBack", "100 point chalne ke baad nifty kitna wapas deta hai" to "GiveBack",
+        // ---- StraddleDecay: what 9:30 to 14:30 did to the at-the-money straddle (round 40) ----
+        "how much does the atm straddle usually lose between 9:30 and 2:30" to "StraddleDecay",
+        "how much does nifty's straddle decay on a quiet day vs a trending day" to "StraddleDecay", "straddle decay record for banknifty" to "StraddleDecay",
+        "on expiry day how much does the straddle usually lose" to "StraddleDecay", "nifty ka straddle din mein kitna girta hai" to "StraddleDecay",
+        // ---- ExpiryHour: the expiring at-the-money call and put from 14:30 to the end of expiry day (round 42) ----
+        "how does the atm option's premium behave in the last hour on expiry day" to "ExpiryHour",
+        "how much does the atm call lose in the last hour of expiry" to "ExpiryHour", "expiry last hour premium record for banknifty" to "ExpiryHour",
+        "how often does the atm put double in the final hour on expiry" to "ExpiryHour", "expiry ke aakhri ghante mein atm premium kitna girta hai" to "ExpiryHour",
+        // ---- AtmBuy: the at-the-money call and put bought at 9:30 and held (round 41) ----
+        "how often does the atm option double from its 9:30 price before the end of the day" to "AtmBuy",
+        "how often does a bought atm call end the day worth more" to "AtmBuy", "atm option double record for banknifty" to "AtmBuy",
+        "how often does nifty's atm put double on expiry day" to "AtmBuy", "atm call kitni baar double hota hai" to "AtmBuy",
+        // ---- OtmReach: the out-of-the-money call and put held from 9:30, how often each ended the day in the money (round 43) ----
+        "how often does an otm option 100 points away end the day in the money" to "OtmReach",
+        "how often does a call two strikes out of the money finish in the money" to "OtmReach", "otm option record for banknifty" to "OtmReach",
+        "how often does nifty's otm put double" to "OtmReach", "100 point door ka otm call kitni baar itm hota hai" to "OtmReach",
         // ---- Weekdays: each weekday's record, and expiry days against the rest (round 15) ----
         "are mondays more volatile" to "Weekdays", "which day of the week moves the most" to "Weekdays",
         "how does nifty usually do on fridays" to "Weekdays", "weekday record for banknifty" to "Weekdays",
@@ -987,6 +1292,15 @@ class CoverageTest {
         // ---- AfterLoss: his trades after a loss (usefulness round 32) ----
         "how do i trade after a loss" to "AfterLoss", "do i revenge trade" to "AfterLoss", "do i get careless after a win" to "AfterLoss",
         "loss ke baad mera agla trade kaisa jaata hai" to "AfterLoss",
+        // ---- StopNoise: each bought option's stop against the index's swings (reasoning round 33) ----
+        "is my stop too tight" to "StopNoise", "are my stops too close" to "StopNoise", "will normal noise hit my stop" to "StopNoise",
+        "mera stop bahut tight hai kya" to "StopNoise", "is my sl too tight" to "StopNoise",
+        // ---- DayScore: today's own trades scored (reasoning round 34) ----
+        "my scorecard today" to "DayScore", "did i trade against the trend today" to "DayScore", "how long did i hold my trades today" to "DayScore",
+        "aaj ka scorecard" to "DayScore",
+        // ---- RequestBook: the Requests panel said (usefulness round 33) ----
+        "what requests are waiting" to "RequestBook", "what did i approve today" to "RequestBook", "koi request hai" to "RequestBook",
+        "anything waiting for my approval" to "RequestBook",
         // ---- ArmChange: the arms' paper results this week against last week (reasoning round 23) ----
         "what's changed in my arms' results this week vs last" to "ArmChange", "how are my bots doing this week compared to last week" to "ArmChange",
         "my strategies week on week" to "ArmChange", "mere bots ka is hafte vs pichle hafte" to "ArmChange",
@@ -1156,6 +1470,9 @@ class CoverageTest {
         "mere bots kaise chal rahe hain" to "Account:BOTS", "mere algos kaise chal rahe hain" to "Account:BOTS",
         "meri strategies theek chal rahi hain" to "Account:BOTS", "mere bots ka haal" to "Account:BOTS",
         "kaun si strategy loss mein hai" to "Account:BOTS",
+        // The shadow tracker (06 Oct): the retired arms' shadows and the new candidate, no orders.
+        "how are the shadows doing" to "Account:BOTS", "how are the retired arms doing" to "Account:BOTS",
+        "how are the shadow arms doing" to "Account:BOTS", "are the shadows ok" to "Account:BOTS",
         // ---- MyStreaks (round 16): Boss's own runs of days and trades, his best and worst weekday; a market's run stays Streak ----
         "am i on a winning streak" to "Account:STREAKS", "how many green days in a row have i had" to "Account:STREAKS",
         "my losing streak" to "Account:STREAKS", "what's my best weekday" to "Account:STREAKS", "which day of the week do i lose most" to "Account:STREAKS",
@@ -1218,6 +1535,10 @@ class CoverageTest {
         "what questions can i ask" to "Tour", "what kind of questions should i ask you" to "Tour", "suggest some questions" to "Tour",
         "give me some ideas of what to ask" to "Tour", "what's worth asking right now" to "Tour", "give me a tour" to "Tour",
         "main kya pooch sakta hoon" to "Tour", "tumse kya puchu" to "Tour", "kya poochna chahiye" to "Tour", "kuch sawal batao" to "Tour",
+        // ---- WhatsNew: the app's own changelog, newest first, with where to find each change ----
+        "what's new in the latest version" to "WhatsNew", "what has changed in the app" to "WhatsNew", "app mein kya naya hai" to "WhatsNew",
+        "update mein kya badla" to "WhatsNew", "any new features" to "WhatsNew", "what's in the new update" to "WhatsNew",
+        "what's changed in the update" to "WhatsNew", "what changed" to "SinceLast", "what has changed" to "SinceLast",
         "hammer ke baare mein maine kya bola tha" to "SaidAbout",
         // ---- Clarity (round 11): the answers said shorter aloud, and back to usual ----
         "which answers do you keep short" to "Clarity", "which of your answers do you keep shorter" to "Clarity",
@@ -1310,6 +1631,30 @@ class CoverageTest {
         "what do i usually ask next" to "NextAsk", "what do i ask after the levels" to "NextAsk",
         "stop offering what i ask next" to "NextAsk", "don't suggest the next question" to "NextAsk",
         "agla sawal offer mat karo" to "NextAsk", "main uske baad kya puchta hoon" to "NextAsk",
+        // ---- MoreAfter (learning round 28): the short answers Boss usually asks more after, said in full straight away ----
+        "which answers do i usually ask more about" to "MoreAfter", "where do i usually ask for more" to "MoreAfter",
+        "why did you give me the whole answer" to "MoreAfter", "which answers do you give in full straight away" to "MoreAfter",
+        "keep my short answers short" to "MoreAfter", "stop skipping the short line" to "MoreAfter",
+        "don't give me the whole answer straight away" to "MoreAfter", "kaun se jawab ke baad main aur puchta hoon" to "MoreAfter",
+        // ---- SmallTrades (learning round 29): where Boss's trades that moved less than twice their charges come from ----
+        "what have you learned about my charges" to "SmallTrades", "which trades move less than twice their charges" to "SmallTrades",
+        "who makes the most small trades" to "SmallTrades", "where do my small trades come from" to "SmallTrades",
+        "stop mentioning my small trades" to "SmallTrades", "forget what you learned about my charges" to "SmallTrades",
+        "charges ke baare mein kya seekha" to "SmallTrades", "chhote trades mat batao" to "SmallTrades",
+        // ---- DayIndex (learning round 30): the index Boss follows on a given weekday, its read first that day ----
+        "which index do you lead with on wednesdays" to "DayIndex", "why did you start with banknifty today" to "DayIndex",
+        "which index do i ask about most on wednesdays" to "DayIndex", "lead with nifty every day again" to "DayIndex",
+        "stop leading with banknifty on wednesdays" to "DayIndex", "stop changing the index by day" to "DayIndex",
+        "aaj banknifty pehle kyun" to "DayIndex", "har din nifty pehle lo" to "DayIndex",
+        // ---- CheckTimes (learning round 31): the times Boss usually checks his P&L, his account read ahead just before ----
+        "when do i usually check my p&l" to "CheckTimes", "what time do i check my pnl" to "CheckTimes",
+        "do you read my account ahead" to "CheckTimes", "why was my p&l already ready" to "CheckTimes",
+        "stop getting my p&l ready" to "CheckTimes", "stop reading my account ahead" to "CheckTimes",
+        "forget when i check my p&l" to "CheckTimes", "p&l pehle se mat padho" to "CheckTimes",
+        // ---- CondNeeds (learning round 32): the conditional instructions Boss keeps trying to give ----
+        "what have you learned about my conditional orders" to "CondNeeds", "my conditional orders" to "CondNeeds",
+        "stop mentioning my conditional orders" to "CondNeeds", "dont tell me about my conditional orders" to "CondNeeds",
+        "forget what you learned about my conditional orders" to "CondNeeds", "conditional orders wali baat mat batao" to "CondNeeds",
         // ---- Its neighbours: the strategies listed, Solo, the positions' health ----
         "show my strategies" to "Account:STRATEGIES", "list my strategies" to "Account:STRATEGIES",
         "what strategies are running" to "Account:STRATEGIES", "which strategies are on" to "Account:STRATEGIES",
@@ -1358,11 +1703,11 @@ class CoverageTest {
             ("help me journal today" to "DayJournal") to ("how was my day" to "DaySummary"),
             ("remember when nifty gapped down" to "MarketMemory") to ("remember that i trade on fridays" to "AboutBoss"),
             ("how are you improving" to "Improve") to ("how are you" to "Chat"),
-            ("is your data fresh" to "DataAge") to ("what's sgx nifty" to "Honest"),
+            ("is your data fresh" to "DataAge") to ("what's sgx nifty" to "MorningCues"),
             // Round 7: the families added since, each beside the one it sounds like.
             ("what if nifty falls 1%" to "Scenarios") to ("how much do i lose if nifty falls 1%" to "Account:MOVE"),
             ("what if nifty moves 100 points" to "Scenarios") to ("what happens to my p&l if nifty moves 100 points" to "Account:MOVE"),
-            ("agar nifty 1% gir jaye to kya hoga" to "Scenarios") to ("agar nifty 1% gira to mera p&l kya hoga" to "Account:PNL"),
+            ("agar nifty 1% gir jaye to kya hoga" to "Scenarios") to ("agar nifty 1% gira to mera p&l kya hoga" to "Account:MOVE"),
             ("what if nifty swings 300 points" to "Scenarios") to ("nifty swing levels" to "Structure"),
             ("what if nifty opens 1% down" to "Scenarios") to ("what if i had taken that trade" to "Account:WHATIF"),
             ("what's the structure today" to "Structure") to ("how did the day go for nifty" to "DayStory"),
@@ -1498,6 +1843,26 @@ class CoverageTest {
             // Market intelligence round 35: the day after a big day beside the intraday comeback and the day after a close at the low.
             ("does nifty recover the day after a 1% fall" to "DayAfter") to ("does nifty recover from a 1% fall" to "Comebacks"),
             ("what happens the next day after a big down day" to "DayAfter") to ("what happens the day after nifty closes at the low" to "ExtremeCloses"),
+            // Market intelligence round 36: the reach from the open beside the open as the day's high and the opening range.
+            ("how often does nifty go 1% from the open" to "OpenReach") to ("how often is the open the high of the day" to "OpenHighLow"),
+            ("how often does nifty move 0.5% on both sides of the open" to "OpenReach") to ("do opening range breakouts usually hold" to "RangeBreaks"),
+            // Market intelligence round 37: a few sessions' move beside the reach from the open and a calendar week's range.
+            ("how often does nifty move 1% in 3 sessions" to "MultiDay") to ("how often does nifty go 1% from the open" to "OpenReach"),
+            ("how far does nifty usually move in 5 sessions" to "MultiDay") to ("how big is a normal week for nifty" to "WeekRange"),
+            // Market intelligence round 38: the time to move beside a few sessions' move and the busiest half hour.
+            ("how often does nifty move 100 points in an hour" to "MoveTime") to ("how often does nifty move 1% in 3 sessions" to "MultiDay"),
+            ("how long does nifty usually take to move 50 points" to "MoveTime") to ("which half hour moves the most" to "DayClock"),
+            // Market intelligence round 39: the give-back after a run from the open beside a comeback from the previous close and the reach from the open.
+            ("how much of a 1% run from the open does nifty usually give back" to "GiveBack") to ("does a 1% intraday rally usually hold" to "Comebacks"),
+            ("after nifty runs 100 points in the first hour how much does it give back by the end of the day" to "GiveBack") to ("how often does nifty go 1% from the open" to "OpenReach"),
+            // Market intelligence round 40: the straddle's record through the day beside the straddle's implied move now.
+            ("how much does the atm straddle usually lose between 9:30 and 2:30" to "StraddleDecay") to ("what does the banknifty straddle imply for expiry" to "ChainIntel"),
+            // Market intelligence round 42: the expiring option's last hour beside the index's own last hour.
+            ("how does the atm option's premium behave in the last hour on expiry day" to "ExpiryHour") to ("does nifty usually reverse in the last hour" to "LastHour"),
+            // Market intelligence round 43: the out-of-the-money option's record beside the at-the-money one's.
+            ("how often does an otm option 100 points away end the day in the money" to "OtmReach") to ("how often does a bought atm call end the day worth more" to "AtmBuy"),
+            // Market intelligence round 41: the bought at-the-money option's record beside the straddle's decay record.
+            ("how often does the atm option double from its 9:30 price before the end of the day" to "AtmBuy") to ("how often does the atm straddle gain by 2:30" to "StraddleDecay"),
             // Reasoning round 15: now against this morning, beside the co-pilot, the chain's drift, the OI shift, today against yesterday and the news.
             ("what changed since this morning" to "SinceMorning") to ("what matters right now" to "CoPilot"),
             ("what's different since the open" to "SinceMorning") to ("has the biggest put oi moved since morning" to "ChainDrift"),

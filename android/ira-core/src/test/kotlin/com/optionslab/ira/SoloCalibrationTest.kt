@@ -116,7 +116,7 @@ class SoloCalibrationTest {
         assertEquals(81.0, SoloCalibration.sellPrice(81.0, 80.0))
         assertNull(SoloCalibration.sellPrice(Double.NaN, Double.NaN))
         // Never scored past 15:10.
-        assertEquals(Solo.CUT, SoloCalibration.dueAt(340, 60))
+        assertEquals(SoloCalibration.CUT, SoloCalibration.dueAt(340, 60))
         assertEquals(101, SoloCalibration.dueAt(100, 0))
         // Scored shadows join the record; waiting ones do not.
         val o = SoloCalibration.outcomes(emptyList(), listOf(s, done))

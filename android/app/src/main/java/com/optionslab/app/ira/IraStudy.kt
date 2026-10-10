@@ -190,7 +190,7 @@ internal object IraStudy {
         // A locked phone may be overheard or seen: the card's figures stay in the chat; only that it is there is said.
         val locked = runCatching { IraHub.locked() }.getOrDefault(true)
         IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, your week's report card", if (locked) "It's in the chat." else lines.joinToString(" ")) }
-        IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")))
+        IraHub.note(com.optionslab.ira.Address.boss("Your week's report card. " + lines.joinToString(" ")), from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         JarvisVoice.announce(if (locked) "Good morning, Boss. Your week's report card is in the chat."
             else "Good morning, Boss. Your week's report card. " + lines.joinToString(" ") { com.optionslab.ira.Wake.spoken(it, 1) })
         IraActivity.add("Gave the weekly report card.")
@@ -205,8 +205,13 @@ internal object IraStudy {
         val local = now.toLocalDateTime()
         val trading: (LocalDate) -> Boolean = { com.optionslab.app.data.Market.isTradingDay(it) }
         val card = com.optionslab.app.security.SecurePrefs.getString("jarvis.reportcard") == now.toLocalDate().toString()
+        // Saturday's "what's working" look (IraLiquidityInsight): hourly through its morning until it is made.
+        // (Switched off, or not a Jarvis build: nothing to wait for, so no extra hourly runs.)
+        val liq = com.optionslab.app.security.SecurePrefs.getString(com.optionslab.ira.LiquidityInsight.KEY_DONE) == now.toLocalDate().toString() ||
+            !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD ||
+            !runCatching { Automations.on(Automations.Auto.LIQINSIGHT) }.getOrDefault(false)
         com.optionslab.ira.StudyPace.everyHours(local, com.optionslab.ira.NightNewsPace.nextOpen(local, trading),
-            _state.value.at?.atZone(IST)?.toLocalDateTime(), com.optionslab.ira.StudyPace.lastClose(local, trading), card)
+            _state.value.at?.atZone(IST)?.toLocalDateTime(), com.optionslab.ira.StudyPace.lastClose(local, trading), card, liq)
     }.getOrDefault(1L)
 
     fun ivHistory(u: String): List<Pair<LocalDate, Double>> = _state.value.iv[u].orEmpty()
@@ -232,7 +237,7 @@ internal object IraStudy {
         val slipping = checks.filter { it.slipping }
         if (slipping.isNotEmpty()) {
             IraHub.appContext()?.let { JarvisPopup.show(it, "Boss, an arm is slipping", slipping.joinToString(" ") { s -> s.text() }) }
-            IraHub.noteAloud(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")), com.optionslab.ira.SpeakChoice.Weight.MINOR)
+            IraHub.noteAloud(com.optionslab.ira.Address.boss("My monthly re-test of the arms. " + lines.joinToString(" ")), com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         }
     }
 
@@ -311,6 +316,8 @@ class StudyWorker(ctx: android.content.Context, params: androidx.work.WorkerPara
         runCatching { IraHub.nightNews() }
         runCatching { IraStudy.studyIfDue() }
         runCatching { IraStudy.reportCardIfDue() }
+        // Saturday morning: Liquidity 15+5's weekly patterns, once (the words lane does not run on a closed day).
+        runCatching { IraLiquidityInsight.watch() }
         // Battery (round 4): every 6 hours through the dead stretch of a weekend or a holiday, hourly again before anything
         // of this job can fall due ([com.optionslab.ira.StudyPace]). The run in progress is never cut short (UPDATE).
         runCatching { schedule(applicationContext, IraStudy.paceHours()) }

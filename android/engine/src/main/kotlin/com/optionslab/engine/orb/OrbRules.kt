@@ -12,10 +12,11 @@ data class Bar(val start: LocalDateTime, val open: Double, val high: Double, val
 
 /**
  * [sweep]: the liquidity-sweep reversal (SweepRules), not the break; [fade]: the range-edge fade (RangeFadeRules);
- * [liquidity]: the liquidity-pool break on 15- and 5-minute charts (LiquidityRules); [paperOnly]: it never sends to Zerodha.
+ * [liquidity]: the liquidity-pool break on 15- and 5-minute charts (LiquidityRules); [paperOnly]: it never sends to Zerodha;
+ * [hero]: the NIFTY expiry-day Hero arm (HeroRules), paper only and not proven.
  */
 data class Arm(val source: String, val label: String, val freshOnly: Boolean = false, val sweep: Boolean = false, val paperOnly: Boolean = false,
-               val fade: Boolean = false, val liquidity: Boolean = false)
+               val fade: Boolean = false, val liquidity: Boolean = false, val hero: Boolean = false)
 
 /**
  * The opening-range-break rule, exactly as the desktop's
@@ -119,6 +120,16 @@ object OrbRules {
         if (ltp >= entry + points - EPS) return "target"
         return null
     }
+
+    /** The arm's own premium target in points: ORB Sweep's +80 ([SweepRules]), every other fixed-target arm the ORB's +40. */
+    fun targetFor(arm: Arm): Double = if (arm.sweep) SweepRules.TARGET_POINTS else TARGET_POINTS
+
+    /**
+     * Each arm's own fixed exits (07 Oct, research/HUNT_H20.md F5): ORB Sweep's -40 / +80 ([SweepRules.exitReason]),
+     * every other arm's -40 / +40. The paper and the live paths both ask this, so a live Sweep never takes the ORB's +40.
+     */
+    fun exitReasonFor(arm: Arm, entry: Double, ltp: Double, now: LocalDateTime): String? =
+        if (arm.sweep) SweepRules.exitReason(entry, ltp, now) else exitReason(entry, ltp, now)
 
     /** The resting SL-M trigger on the 0.05 tick, or null when a 40-point stop has no level (premium <= 40). */
     fun stopTrigger(entry: Double): Double? {

@@ -326,7 +326,7 @@ class StrategiesLiveTest : RobolectricTest() {
     @Test fun armingRules() = runBlocking {
         assertNull(Strategies.save(AutomationSupport.strategy("Test basket", Position.B to OptionType.CE)))
         val id = Strategies.all().single().def.id
-        assertEquals("Enable live trading for Test basket (Trade → Strategies) before arming it live.", Strategies.setArmed(id, true, RunMode.LIVE))
+        assertEquals("Enable live trading for Test basket (Research → Strategies) before arming it live.", Strategies.setArmed(id, true, RunMode.LIVE))
         assertNull(Strategies.setArmed(id, true, RunMode.SANDBOX))
         val sc = Strategies.all().single().def.scheduler!!
         assertTrue(sc.enabled); assertEquals(RunMode.SANDBOX, sc.defaultMode)
@@ -341,7 +341,7 @@ class StrategiesLiveTest : RobolectricTest() {
         assertNull(Strategies.save(AutomationSupport.strategy("Positional", Position.B to OptionType.CE).copy(
             strategyType = com.optionslab.engine.strategy.StrategyType.POSITIONAL, entryTime = null, exitTime = null)))
         val pid = Strategies.all().single { it.def.name == "Positional" }.def.id
-        assertEquals("Positional has no start time. Set its entry time in Trade → Strategies, then arm it.", Strategies.setArmed(pid, true, RunMode.SANDBOX))
+        assertEquals("Positional has no start time. Set its entry time in Research → Strategies, then arm it.", Strategies.setArmed(pid, true, RunMode.SANDBOX))
     }
 
     @Test fun importedOrbCopiesAreBlocked() = runBlocking {

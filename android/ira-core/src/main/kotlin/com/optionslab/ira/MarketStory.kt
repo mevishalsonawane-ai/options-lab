@@ -37,7 +37,7 @@ object MarketStory {
     private fun pctAbs(x: Double) = "%.2f%%".format(Locale.ENGLISH, abs(x))
     private fun times(x: Double) = "%.1f".format(Locale.ENGLISH, x)
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
-    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     private const val LEAD = "(jarvis |hey jarvis |ok jarvis |boss |so |and |tell me |please )*"
     private const val MKT = "(the )?(markets?|stock market|share market|indices|indian market)"
@@ -74,7 +74,31 @@ object MarketStory {
 
     /** The sessions in [bars], oldest first. */
     fun sessions(bars: List<Candle>): List<Session> =
-        bars.groupBy { it.t.toLocalDate() }.toSortedMap().map { (d, b) -> Session(d, b.sortedBy { it.t }) }
+        // Speed round 9: a market-history answer (MoveTime, GiveBack, MultiDay, OpenReach, DayAfter and the rest) split
+        // the same months of 1-minute candles into sessions twice per ask (the record, then today's line), about 2 ms a
+        // split on a desktop. The split depends on nothing but the candles (no clock, no day, no account figure: index
+        // prices only), so it is kept by them ([BarsKept]: given back only for equal candles) and every answer is as before.
+        if (bars.size in SPLIT_KEEP_FROM..SPLIT_KEEP_UP_TO) split.of(bars, null) { sessionsNow(bars) } else sessionsNow(bars)
+
+    /** Histories of this many candles have their split kept (a day or more, up to about 130 sessions of 1-minute bars). */
+    private const val SPLIT_KEEP_FROM = 300
+    private const val SPLIT_KEEP_UP_TO = 50_000
+    /** A few histories at once (each index and India VIX). */
+    private val split = BarsKept<List<Session>>(6)
+    private val splitsRead = java.util.concurrent.atomic.AtomicInteger()
+
+    private fun sessionsNow(bars: List<Candle>): List<Session> {
+        splitsRead.incrementAndGet()
+        return bars.groupBy { it.t.toLocalDate() }.toSortedMap().map { (d, b) -> Session(d, b.sortedBy { it.t }) }
+    }
+
+    /** How many times candles were split into sessions afresh (tests count work by this, never by the clock). */
+    internal val splitsDone: Int get() = splitsRead.get()
+    /** How many splits are kept (tests). */
+    internal val splitsKept: Int get() = split.size
+
+    /** Every kept split forgotten and the count reset (the reset hook for tests). */
+    internal fun forgetSplits() { split.clear(); splitsRead.set(0) }
 
     /** What the phone says about one index today against its own recent sessions. */
     data class Read(
@@ -263,7 +287,7 @@ object MarketStory {
     }
 
     /**
-     * For the 15:35 wrap-up: the one thing that stood out most today (or that it was a usual day), which index led and
+     * For the 15:45 wrap-up: the one thing that stood out most today (or that it was a usual day), which index led and
      * which lagged when they were apart, and how to hear the whole story. Null without today's candles or enough earlier sessions.
      */
     fun wrapLine(bars: Map<Market, List<Candle>>, now: LocalDateTime, day: LocalDate = now.toLocalDate()): String? {

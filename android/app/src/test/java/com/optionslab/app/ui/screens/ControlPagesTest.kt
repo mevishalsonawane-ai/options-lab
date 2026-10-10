@@ -543,10 +543,11 @@ class ControlPagesTest {
             "14:00" to { it.guardCutoff == 14 * 60 },
         )
         for ((chip, ok) in picks) {
+            // "₹5,000" is also a Day lock choice further down the page: the Daily loss limit row comes first.
             compose.reveal(chip)
-            tap(chip)
+            compose.onAllNodesWithText(chip)[0].performSemanticsAction(SemanticsActions.OnClick); compose.frames()
             waitSettings(ok = ok)
-            compose.onNodeWithText(chip).assertIsSelected()
+            compose.onAllNodesWithText(chip)[0].assertIsSelected()
         }
         compose.until(10_000) { AppSettings.load().let { it.guardDailyLoss == 5_000.0 && it.guardCutoff == 14 * 60 } }
         // Paper has no limits of its own any more: the page says so and offers none.
@@ -598,6 +599,65 @@ class ControlPagesTest {
         tap("Delete")
         compose.until(15_000) { model.message.value == "Harvested data deleted." }
         compose.waitForNoText("Delete harvested data?")
+    }
+
+    // ---- The market recorder (Data & Harvest) ----------------------------------------------------------------------------
+
+    @Test fun theMarketRecorderCardSwitchesAndSaysWhatIsKept() {
+        com.optionslab.app.data.MarketRecorder.wipe()
+        com.optionslab.app.data.MarketRecorder.on = true
+        show { DataPage(model) }
+        compose.reveal("Export recorded data (CSV/zip)")
+        compose.waitForText("Days recorded")
+        compose.waitForText("none yet")
+        compose.onNodeWithText("Storage used").assertExists()
+        compose.onNodeWithText("Gaps").assertExists()
+        compose.onNodeWithText("Participant OI").assertExists()
+        compose.onNodeWithText("GIFT Nifty").assertExists()
+        // Nothing recorded: nothing to export.
+        compose.onNodeWithText("Export recorded data (CSV/zip)").assertIsNotEnabled()
+        compose.switchFor("Record market data").assertIsOn()
+        toggle("Record market data")
+        compose.until(10_000, "the switch off") { !com.optionslab.app.data.MarketRecorder.on }
+        compose.switchFor("Record market data").assertIsOff()
+        toggle("Record market data")
+        compose.until(10_000, "the switch on") { com.optionslab.app.data.MarketRecorder.on }
+    }
+
+    @Test fun theMarketRecorderExportsAZipToThePickedFile() {
+        com.optionslab.app.data.MarketRecorder.wipe()
+        val day = Market.today()
+        com.optionslab.app.data.MarketRecorder.append(day, listOf("H,v1,$day", "S,10:00:05,NIFTY,25010"))
+        val out = picker.writable("market.zip")
+        picker.answer = { out }
+        show { DataPage(model) }
+        compose.reveal("Export recorded data (CSV/zip)")
+        compose.waitForText("1 (since", substring = true)
+        clearAlerts()
+        tap("Export recorded data (CSV/zip)")
+        waitAlert("Market data exported: 1 day as CSV in one zip.")
+        assertEquals("iraalgo-market-data-$day.zip", picker.launched.single().toString())
+        val files = LinkedHashMap<String, String>()
+        java.util.zip.ZipInputStream(java.io.ByteArrayInputStream(picker.written(out)!!)).use { z ->
+            while (true) { val e = z.nextEntry ?: break; files[e.name] = z.readBytes().toString(Charsets.UTF_8) }
+        }
+        assertEquals(setOf("README.txt", "market-$day.csv"), files.keys)
+        assertEquals("H,v1,$day\nS,10:00:05,NIFTY,25010\n", files["market-$day.csv"])
+        com.optionslab.app.data.MarketRecorder.wipe()
+    }
+
+    @Test fun cancellingTheMarketRecorderExportWritesNothing() {
+        com.optionslab.app.data.MarketRecorder.wipe()
+        com.optionslab.app.data.MarketRecorder.append(Market.today(), listOf("H,v1,x"))
+        picker.answer = { null }
+        show { DataPage(model) }
+        compose.reveal("Export recorded data (CSV/zip)")
+        compose.waitForText("1 (since", substring = true)
+        clearAlerts()
+        tap("Export recorded data (CSV/zip)")
+        compose.until(10_000) { picker.launched.isNotEmpty() }
+        assertFalse(AreaE.alerted("Market data exported"))
+        com.optionslab.app.data.MarketRecorder.wipe()
     }
 
     // ---- Alarms ---------------------------------------------------------------------------------------
@@ -691,14 +751,17 @@ class ControlPagesTest {
         var page by mutableStateOf<String?>(null)
         show { CabinetScreen(model, page) { page = it } }
         for (t in listOf("Zerodha", "Alerts", "Security", "Schedules", "Bot settings", "Signal lab", "IC table", "Sizing and tail risk",
-            "Cost calculator", "Lot sizes", "Research notes", "Data and harvest")) {
+            "Cost calculator", "Lot sizes", "Research notes", "Data and harvest", "What's new", "What can I ask?", "Today's notes")) {
             compose.reveal(t)
             compose.onNodeWithText(t).assertExists()
         }
         val pages = listOf("Alerts" to ("alarms" to "Checked every minute by the market watch, and whenever the Home screen is open"),
             "Security" to ("security" to "Nothing personal leaves this phone, and nothing is logged"),
             "Schedules" to ("schedule" to "The strategy's day, kept by the phone"), "Bot settings" to ("risk" to "Limits on every order the bot or you place, paper and live"),
-            "Data and harvest" to ("data" to "No free source serves expired contracts: a day not collected is gone"))
+            "Data and harvest" to ("data" to "No free source serves expired contracts: a day not collected is gone"),
+            "What's new" to ("whatsnew" to "What changed in recent updates, and where to find it"),
+            "What can I ask?" to ("askguide" to "Search questions"),
+            "Today's notes" to ("todaynotes" to "No notes from Jarvis yet today. When he posts one by himself in the chat, it is listed here."))
         for ((title, target) in pages) {
             val (key, marker) = target
             compose.reveal(title)

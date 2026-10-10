@@ -45,7 +45,8 @@ object ExpirySquareOff {
         // The kill switch stops new orders, not this: closing what expires today only lowers risk.
         if (!s.expirySquareOff) return
         val today = todayIst()
-        if (minuteNow() < AT_MINUTE || minuteNow() >= Market.CLOSE) return
+        // Until F&O closes (15:40 from 3 Aug 2026): an expiring option still trades, and can be closed, to then.
+        if (minuteNow() < AT_MINUTE || minuteNow() >= Market.foClose(today)) return
         if (SecurePrefs.getString(K_DONE) == today.toString()) return
         val ticket = Ledger.openTicket()?.row?.ticket?.takeIf { s.keepExpiryPut && it.session == today }
         fun isTicketLeg(underlying: String?, strike: Double?, right: String?): Boolean =
@@ -62,7 +63,11 @@ object ExpirySquareOff {
             val snap = Paper.snapshot()
             for (p in snap.positions.positions.filter { it.quantity != 0 }) {
                 val c = Paper.contractOf(p.symbol) ?: continue
+                // MCX has its own expiry exit (the day before, by 23:00: [McxGuard]); never this 15:05 one.
+                if (c.isMcx) continue
                 if (c.expiry != today || isTicketLeg(c.underlying, c.strike, c.right.name)) continue
+                // Night (R3)'s own overnight position goes at its own 09:16 sale (it is never bought into its expiry).
+                if (NightArm.holds(p.symbol)) continue
                 stillOpen++
                 val r = Paper.close(p.symbol, p.product)
                 r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.EXPIRY) } }

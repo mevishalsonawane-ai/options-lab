@@ -47,6 +47,42 @@ object Heard {
         "(?=(?:what|whats|what s|how|hows|how s|why|when|where|which|who|is|are|was|were|did|do|does|can|could|will|would|tell|show|give|" +
         "any|good|hello|hi|hey|namaste|nifty|bank|banknifty|finnifty|sensex|vix|gold|market|markets|my|today|status|update|news) )")
 
+    /**
+     * Voice, round 27: an option named by its strike as the recognizer writes it - "52,000 PE" (a comma in the strike),
+     * "25000 p e" / "pee" / "c e" / "see" (the side said letter by letter), "25000 foot" / "putt" (put), "25000 strike
+     * call" (the word "strike" between) - read as "52000 PE", "25000 ce", "25000 put", "25000 call". Only right after a
+     * strike of four to six digits, so "see you", "my foot" or "pee" alone are never touched. For an option's QUOTE
+     * only ([OptionFacts.asked]): no word that acts is ever added, an order is still read from the words as heard, and
+     * a yes or a no is never changed (no strike in it). [text] itself when nothing needed fixing. Pure.
+     */
+    fun option(text: String): String = optioned.same(text) {
+        // (Rupees are no strike: "Rs 1,200" keeps its comma.)
+        var t = GROUPED_STRIKE.replace(text) { m -> if (RUPEES_BEFORE.containsMatchIn(text.substring(0, m.range.first))) m.value else m.value.replace(",", "") }
+        t = STRIKE_WORD.replace(t, "$1 $2")
+        for ((r, to) in SIDES) t = r.replace(t) { m -> m.groupValues[1] + " " + to }
+        if (t == text) text else t
+    }
+
+    /** A strike written with a thousands comma: "25,000", "1,25,000" (four to six digits in all). */
+    private val GROUPED_STRIKE = Regex("(?<![\\d.,])(?:\\d{1,3},\\d{3}|\\d,\\d{2},\\d{3})(?![\\d,]|\\.\\d)")
+
+    /** Words just before a figure that make it rupees. */
+    private val RUPEES_BEFORE = Regex("(?i)(?:\\brs\\.?|₹|\\binr|\\brupees)\\s*$")
+
+    /** "25000 strike call", "25000 strike price pe": the side right after the strike. */
+    private val STRIKE_WORD = Regex("(?i)(?<![\\d.])(\\d{4,6})\\s+(?:strike price|strikes|strike|stryke)\\s+(ce|pe|call|put|calls|puts)\\b")
+
+    /** The side as the recognizer writes it, right after a strike (to the side's own word). */
+    private val SIDES: List<Pair<Regex, String>> = listOf(
+        Regex("(?i)(?<![\\d.])(\\d{4,6})\\s*(?:c\\s*\\.?\\s*e\\b\\.?|see|sea|cee|si)(?!\\w)(?!\\s+(?:you|if|it|what|how|whether|that)\\b)") to "ce",
+        Regex("(?i)(?<![\\d.])(\\d{4,6})\\s*(?:p\\s*\\.?\\s*e\\b\\.?|pee|pea)(?!\\w)") to "pe",
+        Regex("(?i)(?<![\\d.])(\\d{4,6})\\s+(?:foot|putt|poot)(?!\\w)") to "put",
+        Regex("(?i)(?<![\\d.])(\\d{4,6})\\s+(?:caul|kall|cal|col)(?!\\w)") to "call",
+    )
+
+    /** The last options read ([Kept]; pure). */
+    private val optioned = Kept<String>(64)
+
     /** [text] with misheard words read as meant, or [text] itself when nothing needed fixing. */
     fun fix(text: String): String = fixed.same(text) { FIXES.fold(text) { t, (r, to) -> r.replace(t, to) } }
 

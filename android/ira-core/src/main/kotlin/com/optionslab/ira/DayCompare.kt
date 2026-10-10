@@ -49,7 +49,7 @@ object DayCompare {
 
     /** Lower case, words only, the index names and a few fillers taken out ("how is Nifty's day today ..." -> "how is today ..."). */
     private fun norm(text: String): String {
-        var t = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
+        var t = Spaced.words(text)
         for (a in Market.ALIASES_LONGEST_FIRST) t = t.replace(" $a ", " ")
         t = t.replace(rx(" (jarvis|hey|ok|boss|please|so|the|market|markets|index|indices|s|day s|session s|ka|ki|ke) "), " ")
         t = t.replace(rx(" (jarvis|hey|ok|boss|please|so|the|market|markets|index|indices|s|day s|session s|ka|ki|ke) "), " ")

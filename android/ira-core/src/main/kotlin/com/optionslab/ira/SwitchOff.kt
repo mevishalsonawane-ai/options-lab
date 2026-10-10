@@ -10,7 +10,7 @@ import kotlin.math.abs
  * had lost 10 of 15 trades (-Rs 977) - yet the two records were never put side by side for Boss in one answer. Each arm's
  * two-year BankNifty test ([TradeCheck.RECORD]) beside its own paper record (its closed paper trades): the arms that lost
  * in both, armed ones first; then the ones that lost in only one record (or have too few paper trades to say); and where
- * the switch is (Trade, then Strategies). Facts, never advice: what stays armed is Boss's call. Nothing here switches
+ * the switch is (Home, the Strategies card). Facts, never advice: what stays armed is Boss's call. Nothing here switches
  * anything: the app may put one armed arm to him as a question (yes or no, always asked - never done by itself, even with
  * automatic stops), and "stop <arm>" is the command that asks him to confirm. Boss's account, so never on a locked phone;
  * not in IraGoldAlgo. Pure.
@@ -33,7 +33,7 @@ object SwitchOff {
 
     const val LOCKED = "Unlock the phone for that, Boss."
     const val NOTE = "Facts from the arms' own records, Boss - not advice. I have switched nothing off; what stays armed is your call."
-    const val WHERE = "Each arm's switch is under Trade, then Strategies."
+    const val WHERE = "Each arm's switch is on Home, on the Strategies card."
 
     /** [name]'s arm with its tested record from [TradeCheck.RECORD]. */
     fun arm(name: String, armed: Boolean, paper: List<Double>): Arm = Arm(name, armed, TradeCheck.RECORD[name], paper)

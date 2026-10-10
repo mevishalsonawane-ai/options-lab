@@ -1,5 +1,7 @@
 package com.optionslab.ira
 
+import com.optionslab.ira.ListenLanguage.Arrival
+import com.optionslab.ira.ListenLanguage.Ask
 import com.optionslab.ira.ListenLanguage.State
 import com.optionslab.ira.ListenLanguage.Why
 import kotlin.test.Test
@@ -162,5 +164,102 @@ class ListenLanguageTest {
     @Test fun refusedAndMissingLinesNameWhatHappened() {
         val r = L.forced(State(), "en-IN", "en-US", day, "08:54", Why.REFUSED)
         assertEquals("Listening switched to English (US): the phone's speech service refused English (India).", L.line(r.last!!))
+    }
+
+    // --- Round 28: English (India) asked for once, and taken when it arrives. ---
+
+    private val usOnly = listOf("en_US", "hi_IN")
+    private val both = listOf("en-US", "en-IN", "hi-IN")
+    private val boss = L.gaveWords(State(), "en-US", "2026-10-04")
+
+    @Test fun asksOnceSpokenThenAgainOnlyAWeekOnIfStillMissing() {
+        val a1 = L.arrival(Ask(), boss, "en-US", usOnly, false, day, "09:00", wordsNow = false)
+        assertEquals(L.ASK_LINE, a1.say)
+        assertEquals("Boss, I'd hear you better in Indian English: add English (India) under Settings, System, Languages, On-device speech recognition.", a1.say)
+        assertNull(a1.to)
+        assertEquals(boss, a1.state)
+        assertTrue(a1.ask.waiting)
+        // Idempotent: the same day, a restart, six days on - nothing said, nothing changed.
+        assertEquals(Arrival(a1.ask, boss, null, null), L.arrival(a1.ask, boss, "en-US", usOnly, false, day, "09:05", false))
+        assertNull(L.arrival(a1.ask, boss, "en-US", usOnly, false, "2026-10-11", "09:00", false).say)
+        // Seven days on, still missing: once more; then never again.
+        val a2 = L.arrival(a1.ask, boss, "en-US", usOnly, false, "2026-10-12", "09:00", false)
+        assertEquals(L.ASK_LINE, a2.say)
+        assertEquals(2, a2.ask.asks)
+        assertNull(L.arrival(a2.ask, boss, "en-US", usOnly, false, "2026-10-19", "09:00", false).say)
+        assertNull(L.arrival(a2.ask, boss, "en-US", usOnly, false, "2027-01-19", "09:00", false).say)
+    }
+
+    @Test fun nothingAskedWhenThePhoneCannotSayOrGoogleIsOnOrItIsThere() {
+        assertEquals(Arrival(Ask(), boss, null, null), L.arrival(Ask(), boss, "en-US", null, false, day, "09:00", false))
+        assertEquals(Arrival(Ask(), boss, null, null), L.arrival(Ask(), boss, "en-US", emptyList(), false, day, "09:00", false))
+        assertEquals(Arrival(Ask(), boss, null, null), L.arrival(Ask(), boss, "en-US", usOnly, true, day, "09:00", false))
+        // Never seen missing: the existing rules alone (no move by this rule).
+        assertEquals(Arrival(Ask(), boss, null, null), L.arrival(Ask(), boss, "en-US", both, false, day, "09:00", false))
+    }
+
+    @Test fun switchesOnceWhenEnglishIndiaArrives() {
+        val asked = L.arrival(Ask(), boss, "en-US", usOnly, false, "2026-10-04", "20:00", false).ask
+        val d = L.arrival(asked, boss, "en-US", both, false, day, "10:15", wordsNow = false)
+        assertEquals("en-IN", d.to)
+        assertEquals("Switched to Indian English, Boss.", d.say)
+        assertEquals(1, d.state.soft)
+        assertEquals(Why.INSTALLED, d.state.last!!.why)
+        assertFalse(d.ask.waiting)
+        assertEquals("Listening switched to English (India): it was added to this phone for on-device listening.", L.line(d.state.last!!))
+        assertTrue(L.spoken(d.state, "en-IN", day, both).contains("because English (India) was added to this phone"))
+        // Idempotent: once switched, nothing more.
+        assertEquals(Arrival(d.ask, d.state, null, null), L.arrival(d.ask, d.state, "en-IN", both, false, day, "10:16", false))
+        assertEquals(Arrival(d.ask, d.state, null, null), L.arrival(d.ask, d.state, "en-US", both, false, day, "10:16", false))
+        // Kept across a restart of listening, today and on later days, though English (US) gave words before.
+        assertEquals("en-IN", L.start(d.state, day))
+        assertEquals("en-IN", L.start(d.state, "2026-10-09"))
+        assertEquals("en-IN", L.pick(both, d.state, "2026-10-09", false))
+        // English (India) giving words keeps it; English (India) removed again: English (US) by the phone's own list.
+        assertEquals("en-IN", L.start(L.gaveWords(d.state, "en-IN", "2026-10-06"), "2026-10-07"))
+        assertEquals("en-US", L.pick(usOnly, d.state, "2026-10-09", false))
+        // Saved and read back.
+        assertEquals(d.state, L.load(L.save(d.state)))
+        assertEquals(d.ask, L.loadAsk(L.saveAsk(d.ask)))
+    }
+
+    @Test fun theArrivalSwitchKeepsTheOldRules() {
+        val asked = Ask(askedOn = "2026-10-01", asks = 1, waiting = true)
+        // Never in a run whose English has given words: held, still awaited, nothing said.
+        val held = L.arrival(asked, boss, "en-US", both, false, day, "10:15", wordsNow = true)
+        assertEquals(Arrival(asked, boss, null, null), held)
+        // Today's one switch by itself already used: held to tomorrow.
+        val soft = L.clearNoWords(State(), "en-IN", day, "08:00", 4).state
+        assertNull(L.arrival(asked, soft, "en-US", both, false, day, "10:15", false).to)
+        assertEquals("en-IN", L.arrival(asked, soft, "en-US", both, false, "2026-10-06", "10:15", false).to)
+        // English (India) refused by the phone today: not taken today.
+        val refused = L.forced(State(), "en-IN", "en-US", day, "08:00", Why.REFUSED)
+        assertNull(L.arrival(asked, refused, "en-US", both, false, day, "10:15", false).to)
+        // After the move, the clear-speech rule may not switch again that day.
+        val d = L.arrival(asked, boss, "en-US", both, false, day, "10:15", false)
+        assertNull(L.clearNoWords(d.state, "en-IN", day, "11:00", 4, both).to)
+        // Already listening in English (India): awaited no more, nothing said.
+        val already = L.arrival(asked, boss, "en-IN", both, false, day, "10:15", false)
+        assertNull(already.to); assertNull(already.say); assertFalse(already.ask.waiting)
+    }
+
+    @Test fun readAgainAtMostHourlyAndOnlyWhileAwaited() {
+        val w = Ask(waiting = true)
+        assertTrue(L.checkDue(w, 0L, 5_000L, false))
+        assertFalse(L.checkDue(w, 1_000L, 1_000L + L.CHECK_MS - 1, false))
+        assertTrue(L.checkDue(w, 1_000L, 1_000L + L.CHECK_MS, false))
+        assertTrue(L.checkDue(w, 9_000L, 1_000L, false))   // the clock went back (a reboot): read
+        assertFalse(L.checkDue(Ask(), 0L, 5_000L, false))
+        assertFalse(L.checkDue(w, 0L, 5_000L, true))
+    }
+
+    @Test fun askMemoryReadsDamagedAsNothing() {
+        assertEquals(Ask(), L.loadAsk(null))
+        assertEquals(Ask(), L.loadAsk("garbage"))
+        assertEquals(Ask(), L.loadAsk("1|2026-10-05|9|1|-"))
+        assertEquals(Ask(), L.loadAsk("1|2026-10-05|1|x|-"))
+        val a = Ask("2026-10-05", 1, true, null)
+        assertEquals(a, L.loadAsk(L.saveAsk(a)))
+        assertEquals(L.saveAsk(a), L.saveAsk(L.loadAsk(L.saveAsk(a))))
     }
 }

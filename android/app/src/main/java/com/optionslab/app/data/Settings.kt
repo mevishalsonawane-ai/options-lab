@@ -55,6 +55,12 @@ data class AppSettings(
     val orderProduct: String = "NRML",
     /** Live orders without PIN: the review's confirm sends it (and a cancel, square-off or protect) - no PIN or fingerprint. The owner's choice. */
     val oneTapOrders: Boolean = false,
+    /**
+     * "Keep a stop-loss order at the exchange for live positions" (Settings → Zerodha; off unless the owner chooses it):
+     * a live arm position whose stop is not resting at Zerodha (it could not be placed, or was refused or cancelled) gets
+     * it placed again at the arm's own level, so Zerodha triggers it with no phone in the loop. Only lowers risk; live only.
+     */
+    val exchangeStops: Boolean = false,
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
@@ -80,10 +86,27 @@ data class AppSettings(
     val expirySquareOff: Boolean = true,
     /** ...except the Expiry Put ticket, which is meant to be held to the 15:30 settlement. */
     val keepExpiryPut: Boolean = true,
+    /**
+     * MCX expiry exit (9 Oct, [McxGuard]): MCX options closed by [mcxOptionExitMinute] on the trading day before expiry (they
+     * turn into futures otherwise), delivery futures [mcxFutureExitDays] trading days before expiry. On by default.
+     * [mcxFutureExitDays] was 2 until 9 Oct, now 5 (research/MCX_TREND.md: roll about 5 days before expiry); kept under a new
+     * key ("g.mcxFutDays5") so the old default saved on 9 Oct does not hold it at 2.
+     */
+    val mcxExpiryExit: Boolean = true,
+    val mcxOptionExitMinute: Int = 23 * 60,
+    val mcxFutureExitDays: Int = com.optionslab.engine.mcx.McxExpiry.DEFAULT_FUTURE_EXIT_DAYS,
     val prepareRealOrder: Boolean = true,
     // appearance
     val theme: String = "system",          // system | light | dark
     val reduceMotion: Boolean = false,
+    /**
+     * The day lock (08 Oct, research/PROFIT_LOCK_8OCT.md fix 5), rupees; 0 = off: once an account's day P&L reaches it, no new
+     * automatic entry in that account for the rest of the day ([com.optionslab.engine.risk.DayLock], [DayLockGuard]). It only
+     * ever stops entries. Set in Bot settings only: never by voice, never from a backup (a "g." setting stays on the phone).
+     */
+    val dayLock: Double = com.optionslab.engine.risk.DayLock.DEFAULT_RUPEES,
+    /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
+    val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
 ) {
     val entryMinute: Int get() = runCatching { hhmm(entry) }.getOrDefault(ExpiryPut.DEFAULT_ENTRY)
 
@@ -149,6 +172,7 @@ data class AppSettings(
                 allowRealOrders = p.getBoolean("k.allow", d.allowRealOrders) || p.getString("k.mode", d.mode) == "live",
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
                 oneTapOrders = p.getBoolean("k.oneTap", d.oneTapOrders),
+                exchangeStops = p.getBoolean("k.exStop", d.exchangeStops),
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
@@ -160,9 +184,14 @@ data class AppSettings(
                 guardMaxExposure = p.getDouble("g.expo", d.guardMaxExposure), guardPaperTrades = p.getInt("g.pTrades", d.guardPaperTrades),
                 guardPaperDailyLoss = p.getDouble("g.pLoss", d.guardPaperDailyLoss), guardPaperDrawdownPct = p.getDouble("g.pDd", d.guardPaperDrawdownPct),
                 expirySquareOff = p.getBoolean("g.expSq", d.expirySquareOff), keepExpiryPut = p.getBoolean("g.keepPut", d.keepExpiryPut),
+                mcxExpiryExit = p.getBoolean("g.mcxExit", d.mcxExpiryExit),
+                mcxOptionExitMinute = p.getInt("g.mcxOptAt", d.mcxOptionExitMinute).coerceIn(9 * 60, 23 * 60 + 40),
+                mcxFutureExitDays = p.getInt("g.mcxFutDays5", d.mcxFutureExitDays).coerceIn(1, 10),
                 prepareRealOrder = p.getBoolean("k.prepare", d.prepareRealOrder),
                 theme = p.getString("ui.theme", d.theme)!!,
                 reduceMotion = p.getBoolean("ui.calm", d.reduceMotion),
+                dayLock = com.optionslab.engine.risk.DayLock.clean(p.getDouble("g.dayLock", d.dayLock)),
+                paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
             )
         }
 
@@ -181,12 +210,15 @@ data class AppSettings(
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
-                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.exStop" to s.exchangeStops, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,
                 "g.naked" to s.guardNakedShort, "g.expo" to s.guardMaxExposure, "g.pTrades" to s.guardPaperTrades,
                 "g.pLoss" to s.guardPaperDailyLoss, "g.pDd" to s.guardPaperDrawdownPct, "g.v" to 2, "g.expSq" to s.expirySquareOff, "g.keepPut" to s.keepExpiryPut, "k.prepare" to s.prepareRealOrder,
+                "g.mcxExit" to s.mcxExpiryExit, "g.mcxOptAt" to s.mcxOptionExitMinute, "g.mcxFutDays5" to s.mcxFutureExitDays,
+                "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
+                "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
             ))
         }
     }

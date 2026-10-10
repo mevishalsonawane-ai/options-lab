@@ -44,7 +44,7 @@ object DayClock {
     const val NOTE = "A record of past days on this phone, Boss, not a forecast."
     const val NOT_HERE = "I keep the day clock for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
+    private fun norm(text: String) = Spaced.words(text)
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))

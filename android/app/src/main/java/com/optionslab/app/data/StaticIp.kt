@@ -28,8 +28,14 @@ object StaticIp {
 
     /** The IP registered with Zerodha, or null when not set (then nothing is checked). */
     var registered: String?
-        get() = SecurePrefs.getString(KEY)
-        set(v) = SecurePrefs.put(KEY, v?.trim()?.ifEmpty { null })
+        get() {
+            // Kept in memory for the order path (round 2: no vault read per entry); re-read when the vault changes.
+            val g = SecurePrefs.generationHint
+            kept?.let { (gen, ip) -> if (gen == g) return ip }
+            return SecurePrefs.getString(KEY).also { kept = g to it }
+        }
+        set(v) { SecurePrefs.put(KEY, v?.trim()?.ifEmpty { null }); kept = null }
+    @Volatile private var kept: Pair<Int, String?>? = null
 
     fun valid(ip: String) = IPV4.matches(ip.trim())
 

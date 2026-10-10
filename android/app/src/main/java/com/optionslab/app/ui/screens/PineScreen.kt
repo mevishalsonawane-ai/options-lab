@@ -412,6 +412,11 @@ private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: ()
     // How P&L is counted: index points x quantity, or the ATM option the auto-trader would buy.
     var premium by remember { mutableStateOf(false) }
     var lots by remember { mutableStateOf("1") }
+    // The option's stop-loss and target in a premium backtest: the script's own auto-trade numbers to start (Boss's 06 Oct
+    // rule: they, with the profit lock, are what it trades with), so the test sells as the auto-trader would. Blank: none
+    // (a research run).
+    var premStop by remember { mutableStateOf(fmtPts(item.auto.stopPts).takeIf { item.auto.stopPts > 0 } ?: "") }
+    var premTarget by remember { mutableStateOf(fmtPts(item.auto.targetPts).takeIf { item.auto.targetPts > 0 } ?: "") }
     var slippage by remember { mutableStateOf("") }
     var perOrder by remember { mutableStateOf("") }
     // An indicator trades its signals: which one buys, which one sells, and what a sell does.
@@ -469,6 +474,13 @@ private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: ()
         if (premium) {
             OutlinedTextField(lots, { v -> lots = v.filter { it.isDigit() }.take(3) }, label = { Text("Lots per trade") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(premStop, { v -> premStop = v.filter { it.isDigit() || it == '.' }.take(6) }, label = { Text("Option stop-loss (pts)") },
+                    singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(premTarget, { v -> premTarget = v.filter { it.isDigit() || it == '.' }.take(6) }, label = { Text("Option target (pts)") },
+                    singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+            }
+            Note("Stop-loss and target start at this script's auto-trade numbers, with the profit lock, so the test sells as it would trade. Blank: none.")
             Note("Each trade is re-priced on the ATM CALL (long) or PUT (short) of the nearest expiry after the entry day, at its own 1-minute prices, with Zerodha's charges. Only days with option data on the phone can be priced (about a month bundled, plus every day the harvester collects).")
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -488,6 +500,10 @@ private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: ()
             val cap = capital.toDoubleOrNull()?.takeIf { it > 0 } ?: 100_000.0
             val costs = Pine.Costs(slippagePoints = if (premium) 0.0 else slippage.toDoubleOrNull() ?: 0.0, perOrder = if (premium) 0.0 else perOrder.toDoubleOrNull() ?: 0.0)
             val prem = premium; val nLots = lots.toIntOrNull()?.coerceIn(1, 100) ?: 1; val slipPrem = slippage.toDoubleOrNull() ?: 0.0
+            val pStop = premStop.toDoubleOrNull()?.takeIf { it > 0 } ?: 0.0
+            val pTarget = premTarget.toDoubleOrNull()?.takeIf { it > 0 } ?: 0.0
+            // The profit lock rides with the stop and target, as on every Pine trade; with neither it is a research run.
+            val protect = if (pStop > 0 || pTarget > 0) com.optionslab.engine.pine.PinePremium.Protect(pStop, pTarget, true, item.auto.trail) else null
             runCatching { onInputs(ins) }                          // remembering the inputs must never stop the run
             // The run lives in the app's scope and reports into the draft, so leaving the page
             // does not throw away a run of up to a minute; this page only scrolls to the result.
@@ -514,14 +530,15 @@ private fun PineBacktest(env: PineEnv, d: PineDraft, s: Pine.Script, onChart: ()
                             val pr = withContext(Dispatchers.Default) {
                                 com.optionslab.engine.pine.PinePremium.run(report!!.trades, bars, { day -> com.optionslab.app.data.Store.barSession(sym, day) },
                                     com.optionslab.app.data.PineAuto.strikeStep(sym), nLots, if (strategy) s.settings.initialCapital else cap,
-                                    shortsBuyPuts = strategy || rev, slippage = slipPrem)
+                                    shortsBuyPuts = strategy || rev, slippage = slipPrem, protect = protect)
                             }
                             note = "Option premium: priced ${pr.priced} of ${pr.priced + pr.skipped} trades" +
                                 (if (pr.reasons.isNotEmpty()) " (skipped: " + pr.reasons.entries.joinToString { "${it.value} ${it.key}" } + ")" else "")
                             report = pr.report
                         }
                         val how = (if (strategy) "the strategy's own orders" else "buy on \"$bs\", ${if (rev) "reverse to short" else "exit"} on \"$ss\"") +
-                            if (prem) " · ATM options × $nLots lot${if (nLots == 1) "" else "s"}" else ""
+                            (if (prem) " · ATM options × $nLots lot${if (nLots == 1) "" else "s"}" else "") +
+                            (if (prem && protect != null) " · stop ${fmtPts(pStop)}, target ${fmtPts(pTarget)}, profit lock" else "")
                         Result.success(TestRun(run, report, bars, sym, iv, how, note, s.signals))
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e
                     } catch (e: Throwable) { Result.failure(e) }
@@ -913,7 +930,13 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     val typed = remember { mutableStateMapOf<String, Double>() }
     fun withTyped(au: PineScripts.Auto, m: Map<String, Double>) =
         if (au.on) au    // switched on meanwhile: its settings stay as they were armed
-        else au.copy(stopPts = m["stop"] ?: au.stopPts, targetPts = m["target"] ?: au.targetPts, maxDayLoss = m["day"] ?: au.maxDayLoss)
+        else au.copy(stopPts = m["stop"] ?: au.stopPts, targetPts = m["target"] ?: au.targetPts, maxDayLoss = m["day"] ?: au.maxDayLoss,
+            trail = if (m.keys.none { it == "be" || it.startsWith("trail") }) au.trail else com.optionslab.engine.orb.ProfitLock.Trail(
+                m["be"] ?: au.trail.breakevenPct,
+                (0 until TRAIL_BOXES).map { i ->
+                    val s = au.trail.steps.getOrNull(i) ?: com.optionslab.engine.orb.ProfitLock.Trail.Step(0.0, 0.0)
+                    com.optionslab.engine.orb.ProfitLock.Trail.Step(m["trailStart$i"] ?: s.startPct, m["trailKeep$i"] ?: s.keepPct)
+                }).clean())
     suspend fun flushTyped() {
         val m = typed.toMap()
         if (m.isEmpty()) return
@@ -938,7 +961,9 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
             try {
                 val id = (if (item.id == 0L) save() else item).id
                 if (on) runCatching { flushTyped() }               // what was just typed counts
-                withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.arm(id, on, pin) }
+                val r = withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.arm(id, on, pin) }
+                // Refused (Boss's 06 Oct rule: no stop-loss or target): said, nothing switched on.
+                if (r != "ok") com.optionslab.app.work.Alerts.error(r)
                 PineScripts.get(id)?.let(onItem)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Throwable) { com.optionslab.app.work.Alerts.error("Could not switch auto-trade ${if (on) "on" else "off"}: ${e.message ?: e.javaClass.simpleName}")
@@ -1007,12 +1032,42 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
                 if (!locked) set { au -> au.copy(shortWith = if (i == 0) "put" else "exit") }
             }
             Text("PROTECTION ON THE OPTION", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 8.dp))
+            // Boss's 06 Oct rule: the stop-loss and the target are required (never 0), the profit lock always on.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AutoNum("Stop-loss (pts)", a.stopPts, locked, Modifier.weight(1f)) { typed["stop"] = it }
-                AutoNum("Target (pts)", a.targetPts, locked, Modifier.weight(1f)) { typed["target"] = it }
+                AutoNum("Stop-loss (pts)", a.stopPts, locked, Modifier.weight(1f),
+                    problem = com.optionslab.ira.PineProtection::stopProblem) { typed["stop"] = it }
+                AutoNum("Target (pts)", a.targetPts, locked, Modifier.weight(1f),
+                    problem = com.optionslab.ira.PineProtection::targetProblem) { typed["target"] = it }
                 AutoNum("Day loss ₹", a.maxDayLoss, locked, Modifier.weight(1f)) { typed["day"] = it }
             }
-            Text("Checked every pass on the option's own price: below the stop or above the target it is sold at once; past the day's loss it is sold and the script trades no more today. 0 = off. The Bot settings daily loss limit also stops every bot.",
+            com.optionslab.ira.PineProtection.warning(a.stopPts, a.targetPts)?.let { Note(it) }
+            Text("Stop-loss and target are required on every Pine strategy (Boss's 06 Oct rule). Checked every pass on the option's own price: below the stop or above the target it is sold at once; past the day's loss it is sold and the script trades no more today (day loss blank = off). The Bot settings daily loss limit also stops every bot.",
+                style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text("Profit lock", style = Type.body.copy(color = p.ink), modifier = Modifier.weight(1f))
+                Text(com.optionslab.ira.PineProtection.LOCK_NOTE, style = Type.bodySmall.copy(color = p.inkSoft),
+                    modifier = Modifier.semantics { contentDescription = "Profit lock always on" })
+            }
+            run {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AutoNum("Breakeven from +%", a.trail.breakevenPct, locked, Modifier.weight(1f)) { typed["be"] = it }
+                    Spacer(Modifier.weight(1f))
+                }
+                for (i in 0 until TRAIL_BOXES) {
+                    val st = a.trail.steps.getOrNull(i)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AutoNum("From +% (step ${i + 1})", st?.startPct ?: 0.0, locked, Modifier.weight(1f)) { typed["trailStart$i"] = it }
+                        AutoNum("Keep % of best gain", st?.keepPct ?: 0.0, locked, Modifier.weight(1f)) { typed["trailKeep$i"] = it }
+                    }
+                }
+            }
+            val lockRef = com.optionslab.engine.orb.ProfitLock.pineReference(a.targetPts, a.stopPts)
+            Text("Profit lock: sells when the option gives back its gain, on every script. Trail: ${a.trail.describe()}. " +
+                when {
+                    a.targetPts > 0 -> "With the target (${fmtPts(a.targetPts)} pts) also the ladder: at 25% of it the stop moves to entry, at 50% it locks 25%, at 75% 50%; the higher counts."
+                    lockRef != null -> "With the stop-loss also the ladder on twice it (${fmtPts(lockRef)} pts): at 25% the stop moves to entry, at 50% it locks 25%, at 75% 50%; the higher counts."
+                    else -> "A trail step left at 0 is off."
+                },
                 style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp))
         }
         val mine = log.filter { it.script == item.id }.takeLast(40).asReversed()
@@ -1030,15 +1085,29 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
         { auth = false; arm(true, true) }, { auth = false })
 }
 
-/** A number box for an auto-trade setting: reported when it parses, 0 when cleared (the panel saves it). */
+/** The profit lock's trail steps shown as number boxes (start %, keep %): the default three. */
+private const val TRAIL_BOXES = 3
+
+private fun fmtPts(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else String.format(Locale.ENGLISH, "%.1f", v)
+
+/**
+ * A number box for an auto-trade setting: reported when it parses, 0 when cleared (the panel saves it). With [problem]
+ * (a required setting: the stop-loss, the target) a value it finds wrong is shown in red under the box and never
+ * reported - the saved one stays (PineScripts never saves a 0 stop or target).
+ */
 @Composable
-private fun AutoNum(label: String, value: Double, locked: Boolean, modifier: Modifier, onValue: (Double) -> Unit) {
+private fun AutoNum(label: String, value: Double, locked: Boolean, modifier: Modifier, problem: ((Double?) -> String?)? = null,
+                    onValue: (Double) -> Unit) {
     var text by remember { mutableStateOf(if (value == 0.0) "" else if (value == Math.floor(value)) value.toLong().toString() else value.toString()) }
+    val wrong = problem?.invoke(text.toDoubleOrNull())
     OutlinedTextField(text, { v ->
         if (locked) return@OutlinedTextField
         text = v.filter { it.isDigit() || it == '.' }.take(8)
         val d = text.toDoubleOrNull() ?: if (text.isEmpty()) 0.0 else return@OutlinedTextField
+        if (problem != null && problem(d) != null) return@OutlinedTextField
         onValue(d)
     }, label = { Text(label, fontSize = 11.sp) }, singleLine = true, enabled = !locked, modifier = modifier,
+        isError = wrong != null,
+        supportingText = if (wrong != null) { { Text(wrong, fontSize = 11.sp) } } else null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
 }

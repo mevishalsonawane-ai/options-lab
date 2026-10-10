@@ -28,6 +28,11 @@ object SettingsTalk {
         PRODUCT("the order product", Unit.PRODUCT, canOff = false),
         EXPIRY_SQUARE_OFF("the expiry-day square-off at 15:05", Unit.SWITCH, canOff = false),
         NAKED_SHORTS("blocking naked option shorts", Unit.SWITCH, canOff = false),
+        /**
+         * Liquidity 15+5's size: lots each new entry buys (1, 2 or 3; Boss's 06 Oct choice). Kept in the arms' book, not the
+         * app's settings; more lots is more risk ([loosens]), so a raise waits for Boss's own confirmed yes.
+         */
+        LIQUIDITY_LOTS("Liquidity 15+5's lots a trade", Unit.COUNT, canOff = false),
     }
 
     enum class Unit { RUPEES, COUNT, PERCENT, TIME, PRODUCT, SWITCH }
@@ -61,6 +66,7 @@ object SettingsTalk {
      * ([Command.Kind.SET_LIMIT], [Command.target] the key, [Command.level] the value), or null when it is not one.
      */
     fun parse(s: String): Command? {
+        liquidityLots(s)?.let { return it }
         // A change is asked for with a verb first ("set max lots to 3", "turn off the loss limit"), or as the whole
         // sentence "<name> <value>" ("max lots 5", "daily loss limit off"); anything else ("the loss limit is 5000
         // right?", "tell me if max lots is 3") is a question, never a change.
@@ -88,6 +94,52 @@ object SettingsTalk {
             else -> number(rest, key) ?: if (off && key.canOff) 0.0 else return null
         }
         return Command(Command.Kind.SET_LIMIT, target = key.name, level = value)
+    }
+
+    // ---- Liquidity 15+5's size (Boss, 06 Oct: "2-3 lots") -------------------------------------------------------------
+
+    private const val LIQ = "liquidity( 15 5| 15 plus 5| fifteen plus five)?( arm| strategy| bot)?"
+    private const val LOT_N = "(\\d{1,2}|one|two|three|four|five|ek|do|teen|char|paanch)"
+    /** "Set liquidity to 2 lots", "liquidity ko 3 lot karo", "make liquidity trade 3 lots", "liquidity lots 2", "liquidity 2 lot kar do". */
+    private val LIQ_SET = listOf(
+        // A verb first ("set", "change", "make", "increase", "raise", "decrease", "reduce", "lower", "put", "trade") with the
+        // arm and a number of lots.
+        "^ (set|change|make|update|put|increase|raise|decrease|reduce|lower|bump|take|move|trade) (the |my )?$LIQ( lots?| size| quantity)?( (to|at|on|in|with))? $LOT_N lots?( (a|per|each) trade| each)? $",
+        "^ (set|change|make|update|put|increase|raise|decrease|reduce|lower) (the |my )?$LIQ (lots?|size|quantity) (to |at )?$LOT_N( lots?)? $",
+        "^ (make|let|have) (the |my )?$LIQ (trade|take|buy|use) $LOT_N lots?( (a|per|each) trade)? $",
+        "^ (trade|use) $LOT_N lots? (on|for|in|with) (the |my )?$LIQ $",
+        // As said bare: "liquidity lots 3", "liquidity 3 lots", "liquidity size 2".
+        "^ (the |my )?$LIQ (lots?|size)( to| at)? $LOT_N( lots?)? $",
+        "^ (the |my )?$LIQ (to |at )?$LOT_N lots? $",
+        // Hinglish, verb last: "liquidity ko 3 lot karo", "liquidity 2 lot kar do", "liquidity mein 3 lot lagao" (and as the
+        // verb is turned round, "set liquidity 2 lot").
+        "^ (set )?(the |my )?$LIQ (ko |mein |me |main |par |pe )?$LOT_N lots? (ka |ke )?(karo|kar do|kardo|kar dijiye|kijiye|lagao|laga do|rakho|rakh do|chalao|kar)( na| please)? $",
+        "^ set (the |my )?$LIQ (ko |mein |me )?$LOT_N lots? $",
+    )
+    private val WORD_N = mapOf("one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5, "ek" to 1, "do" to 2, "teen" to 3, "char" to 4, "paanch" to 5)
+
+    /**
+     * [s] (lower-case, spaced, as [parse] takes it): a change of Liquidity 15+5's size ([Key.LIQUIDITY_LOTS], [Command.level]
+     * the lots said), or null. Any number of lots is read as said; the app says when it is not 1, 2 or 3.
+     */
+    fun liquidityLots(s: String): Command? {
+        if (LIQ_SET.none { rx(it).containsMatchIn(s) }) return null
+        val n = rx(" $LOT_N lots? ").find(s)?.groupValues?.get(1) ?: rx(" (lots?|size)( to| at)? $LOT_N ").find(s)?.groupValues?.lastOrNull() ?: return null
+        val lots = n.toIntOrNull() ?: WORD_N[n] ?: return null
+        if (lots < 1) return null
+        return Command(Command.Kind.SET_LIMIT, target = Key.LIQUIDITY_LOTS.name, level = lots.toDouble())
+    }
+
+    /**
+     * "How many lots is Liquidity trading?", "liquidity kitne lot mein trade kar raha hai", "what size is liquidity": Liquidity
+     * 15+5's size asked (the hub answers from the arms' book). Never a change: [liquidityLots] reads those.
+     */
+    fun liquidityLotsAsked(text: String): Boolean {
+        val t = " " + text.lowercase().replace(rx("[^a-z0-9 ]"), " ").replace(rx("\\s+"), " ").trim() + " "
+        if (!t.contains(" liquidity ")) return false
+        return rx(" (how many|kitne|kitna|kitni) lots?| what (size|lot size|position size)| (lots?|size) (is|does|do|will) (the |my )?liquidity|" +
+            " liquidity( 15 5)?( s)? (lots?|size|lot size|position size)( is| kya hai| kitna hai| kitne hai)? $").containsMatchIn(t) &&
+            !rx(" (set|change|make|increase|raise|decrease|reduce|lower|karo|kar do|kardo) ").containsMatchIn(t)
     }
 
     /** "Change my PIN": not by voice. */

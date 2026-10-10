@@ -118,6 +118,8 @@ object Jobs {
         Heartbeat.schedule(context)
         DailyReports.scheduleAll(context)
         com.optionslab.app.ira.StudyWorker.schedule(context)
+        // The market recorder's off-hours alarm: GIFT Nifty before the open and at night, NSE's participant files after 18:30.
+        runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context) }
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {
@@ -172,14 +174,53 @@ object Jobs {
         }
     }
 
-    /** Market hours today (from 09:14 to the close): the watch should be running now. */
-    fun watchDue(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN - 1)..Market.CLOSE
+    /**
+     * Market hours today (from 09:14 to the close): the watch should be running now. Also while MCX trades (to 23:30, or
+     * 23:55 in US winter; NSE holidays with an MCX evening session too) with an MCX position or order open (9 Oct).
+     */
+    fun watchDue(): Boolean = nseWatchDue() || runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
-    /** Start the watch now if it should be running; it is a no-op when it already is. */
+    /**
+     * NSE's part of [watchDue]: the clock and NSE's calendar only (no vault, no lock), safe on the main thread. To F&O's
+     * close (15:40 from 3 Aug 2026; 15:30 before): orders, positions and option prices run to then.
+     */
+    private fun nseWatchDue(): Boolean = nseWatchDueAt(Market.today(), Market.minuteNow())
+
+    /** [nseWatchDue] on [day] at [minute] (the clock given; NSE's calendar only). */
+    internal fun nseWatchDueAt(day: java.time.LocalDate, minute: Int): Boolean =
+        Market.isTradingDay(day) && minute in (Market.OPEN - 1)..Market.foClose(day)
+
+    /**
+     * [watchDue] for the main thread (ANR fix, 9 Oct): NSE's hours, else MCX's from memory only
+     * ([com.optionslab.app.data.McxMarket.watchDueQuick]); null when MCX's part cannot be told without a vault read.
+     */
+    internal fun watchDueQuick(): Boolean? =
+        if (nseWatchDue()) true else runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() }.getOrNull()
+
+    private fun onMainThread(): Boolean = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+
+    /** Where [ensureWatch] finishes a decision that needs a vault read when it was called on the main thread. */
+    private val offMain = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Start the watch now if it should be running; it is a no-op when it already is. On the main thread (the app's start,
+     * a switch, an order) nothing here reads a vault or waits on the paper book's lock (ANR fix, 9 Oct: MCX's part of the
+     * decision read the paper book, the MCX arms' book and the settings): NSE's hours decide at once, MCX's from memory,
+     * and only when memory cannot tell is the decision finished off the main thread.
+     */
     fun ensureWatch(context: Context) {
         // IraGoldAlgo has no NSE watch: its own always-on service instead.
         if (com.optionslab.app.BuildConfig.GOLD) { GoldService.ensure(context); return }
-        if (watchDue()) start(context, Kind.LIVE, manual = false)
+        if (!onMainThread()) { if (watchDue()) start(context, Kind.LIVE, manual = false); return }
+        when (watchDueQuick()) {
+            true -> start(context, Kind.LIVE, manual = false)
+            false -> Unit
+            null -> {
+                val app = context.applicationContext ?: context
+                // NSE's part was already false here: only MCX's part is left to tell (the clock may have moved on meanwhile).
+                offMain.launch { runCatching { if (com.optionslab.app.data.McxMarket.watchDue()) start(app, Kind.LIVE, manual = false) } }
+            }
+        }
     }
 
     fun stopLive(context: Context) {
@@ -203,6 +244,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // A command Boss set for this time (any day: it was confirmed when set).
         if (intent.action == com.optionslab.app.ira.IraLater.ACTION) { kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraLater.fire(context) }; return }
         DailyReports.of(intent.action)?.let { DailyReports.fired(context, it); return }
+        if (intent.action == com.optionslab.app.data.MarketRecorder.ACTION) { com.optionslab.app.data.MarketRecorder.fired(context); return }
         val k = runCatching { Jobs.Kind.valueOf(intent.getStringExtra(Jobs.EXTRA_KIND) ?: return) }.getOrNull() ?: return
         Jobs.schedule(context, k)
         val s = AppSettings.load()
@@ -249,10 +291,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
             val done = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {
-                    val open = if (!com.optionslab.app.data.Market.acceptsOrders()) {
-                        Alerts.post(com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
+                    // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
+                    val mcx = com.optionslab.app.data.Paper.contractOf(symbol)?.isMcx == true
+                    val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
+                    val open = if (!accepts) {
+                        Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
                     } else com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
-                    if (open.isEmpty() && com.optionslab.app.data.Market.acceptsOrders()) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+                    if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
                     for (p in open) {
                         val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
                         r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
@@ -350,6 +395,8 @@ object Tasks {
         runCatching { com.optionslab.app.data.OrbArms.replayIfDue() }
         // Jarvis: Ira reads the day's candles, learns them and reviews how its patterns did. No orders.
         runCatching { com.optionslab.app.ira.IraHub.evening() }
+        // Jarvis: then tomorrow's plan in the chat, once a day (the words lane's own check, should the watch run this late).
+        runCatching { com.optionslab.app.ira.IraTomorrow.watch() }
     }
 
     fun healthCheck(context: Context, s: AppSettings) {
@@ -436,6 +483,12 @@ object Tasks {
             }
             // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
             if (s.live && m.isOpen() && com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
+            // Order speed (9 Oct): the relay's round trip (the warm-up above times it; in Paper mode a read through the relay
+            // times it too) and the same read straight to Zerodha, each at most once a minute in market hours, in the background.
+            if (m.isOpen() && com.optionslab.app.data.Broker.loggedIn) {
+                if (!s.live && com.optionslab.app.data.Relay.enabled) runCatching { com.optionslab.app.data.Broker.warmOrderRoute(entry = false) }
+                runCatching { com.optionslab.app.data.Broker.pingDirect() }
+            }
         }
     }
 
@@ -540,6 +593,12 @@ object Tasks {
         // Jarvis: a strategy of Boss's behaving unusually against its tested record - told once a day without amounts,
         // stopping it asked first (reads the app's own books, every five minutes at most).
         word("bot review") { com.optionslab.app.ira.IraBots.watch() }
+        // Jarvis: an arm with 15+ closed paper trades and a net below zero after charges - switching it off is asked
+        // (Boss's 06 Oct rule; by itself only with automatic stops chosen in chat). Never arms anything.
+        word("arm cutoff") { com.optionslab.app.ira.IraBots.cutoffLosers() }
+        // Jarvis: a shadow at 60 closed trades, net above zero and PF 1.2 or more - re-arming its arm with it on
+        // paper is asked, once (never done by itself).
+        word("shadow promotion") { com.optionslab.app.ira.IraBots.shadowPromotions() }
         // Jarvis: every 15 minutes in market hours, Jarvis looks for a pattern worth a strategy and notifies it.
         word("pattern check") { com.optionslab.app.ira.IraHub.backgroundCheck() }
         // Jarvis: the news every 5 minutes, judged for your arms and positions.
@@ -548,6 +607,21 @@ object Tasks {
         word("candle expert") { com.optionslab.app.ira.IraHub.expertWatch() }
         word("ORB coach") { com.optionslab.app.ira.IraCoach.orbWatch() }
         word("moments") { com.optionslab.app.ira.IraCoach.momentsWatch() }
+        // Jarvis: the price nearing a Liquidity 15+5 entry level with room (09:20-14:00, the arm armed): one line a level a day.
+        word("liquidity heads-up") { com.optionslab.app.ira.IraLiquidity.watch() }
+        // Jarvis: each closed Liquidity 15+5 trade against its research - one chat line a trade, never spoken (words only).
+        word("trade lessons") { com.optionslab.app.ira.IraTradeLessons.watch() }
+        // Jarvis: a paper arm's live-vs-backtest verdict changed (or reached 20 trades; 40 and 60 for Solo) - one chat note
+        // an arm, the round after its trade closed (words only; nothing is switched, sized or changed).
+        word("forward-test watch") { com.optionslab.app.ira.IraForwardWatch.watch() }
+        // Jarvis: Saturday morning, once a week, Liquidity 15+5's patterns when 10+ paper trades closed since the last look
+        // (words only; nothing is switched, sized or changed). The lane rarely runs on a Saturday: the closed day's morning
+        // and the hourly study worker call it too.
+        word("what's working") { com.optionslab.app.ira.IraLiquidityInsight.watch() }
+        // Jarvis: from 15:45 on a trading day, tomorrow's plan in the chat - once a day (words only; nothing is armed or changed).
+        word("tomorrow's plan") { com.optionslab.app.ira.IraTomorrow.watch() }
+        // Jarvis: 09:20-09:25 on a trading day, the opening read in the chat - once a day (words only; nothing is armed or changed).
+        word("opening read") { com.optionslab.app.ira.IraOpening.watch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
         word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
@@ -596,12 +670,20 @@ object Tasks {
         step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
         // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
         step("ORB arms") { com.optionslab.app.data.OrbArms.tick() }
+        // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
+        step("Night (R3)") { com.optionslab.app.data.NightArm.tick() }
+        // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
+        step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() }
         // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
         step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() }
         // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
         step("stops and targets") { com.optionslab.app.data.Protections.tick() }
         // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
         step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
+        // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 5 trading days before (paper and live).
+        step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+        // The MCX paper arms (9 Oct, research M3/M4/M2; paper only, off by default): their exits, then their entries.
+        step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
         // Strategy Module: schedules, prices, per-leg and basket risk, exits.
         step("strategies") {
             val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
@@ -621,6 +703,12 @@ object Tasks {
         step("position cards") { PositionCards.refresh(context) }
         // The money steps are done: that is a check, whatever the quotes and Jarvis's words below wait on.
         runCatching { Heartbeat.beat(context) }
+        // The research shadows of ORB, ORB Fresh, ORB Sweep, Range Fade and the new candidate: what each rule WOULD have done, at live
+        // prices - no order, paper or live (until Boss re-arms one on paper). After the money steps; reads only on a decision.
+        step("shadow arms") { com.optionslab.app.data.ShadowArms.tick() }
+        // The market recorder (Boss's 06 Oct approval): what the app already reads, kept for a later study. It starts its pass
+        // in its own scope and returns at once - never awaited, never thrown (only in the service: tests' passes skip it).
+        if (lanes != null) runCatching { com.optionslab.app.data.MarketRecorder.kick() }
         // Jarvis's words-only checks in their own lane (outside the service - tests - they run here, in order).
         if (lanes != null) wordsLane(lanes) else wordsSteps()
     }
@@ -651,9 +739,11 @@ object Tasks {
         // Battery (round 2): only the ones something reads this pass - the open ticket's underlying, an enabled alarm
         // on the index, a widget on the home screen. None of them: no read at all (stops and targets never used these).
         val wanted = indexQuotesWanted(context, open?.row?.ticket?.underlying)
+        // Battery (round 16): every reader here takes the last price and the change from the open, never the day's
+        // high, low or spark - so in Live mode the quote alone, not the day's candles too ([com.optionslab.ira.IndexSpark]).
         val q = kotlinx.coroutines.coroutineScope {
             wanted.map { sym ->
-                async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true) } }.getOrNull() }
+                async(kotlinx.coroutines.Dispatchers.IO) { runCatching { kotlinx.coroutines.withTimeoutOrNull(20_000) { Market.quote(sym, quick = true, spark = false) } }.getOrNull() }
             }.mapNotNull { it.await() }.associateBy { it.symbol }
         }
         // The index quotes feed the alarms, the ticket's risk checks and the widget; the ongoing notice itself
@@ -688,21 +778,32 @@ object Tasks {
             val keys = Alarms.all().filter { it.enabled && ':' in it.symbol }.map { it.symbol }.distinct()
             if (keys.isNotEmpty()) runCatching { b.within(20_000) { b.quotes(keys) } }.getOrNull()?.forEach { (k, v) -> prices[k] = v.last }
             // The account's P&L: recorded for the day's curve, and alerted on the owner's levels.
-            runCatching { b.within(20_000) { b.passPositionBook() } }.getOrNull()?.takeIf { it.net.isNotEmpty() }?.let { book ->
+            runCatching { b.within(20_000) { b.passPositionBook() } }.getOrNull()?.also { book ->
+                // An open MCX position keeps the watch up through MCX's evening session (9 Oct).
+                runCatching { com.optionslab.app.data.McxMarket.noteLive(book.net) }
+            }?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
                 // Zerodha's P&L is before charges (as Zerodha shows it); the day's charges, estimated from the trades the
-                // app kept today (a vault read: this is the watch's worker thread), follow it.
+                // app kept today (a vault read: this is the watch's worker thread), follow it. Always the estimate here:
+                // this pass reads no order book, so an order placed outside the app (Kite web) since the contract-note
+                // ask cannot be seen, and a kept exact figure is never called exact from here (review: the app screen and
+                // the 15:45 report, which read the orders, still say the exact one).
                 val liveCharges = com.optionslab.app.data.TradeBook.liveChargesOn(Market.today())
                 val chargesSaid = com.optionslab.ira.PnlCharges.said(liveCharges, estimate = true)?.let { " ($it)" } ?: ""
-                if (liveCharges != null) runCatching { com.optionslab.app.widget.IraWidget.charges(context, liveCharges) }
+                liveCharges?.let { c -> runCatching { com.optionslab.app.widget.IraWidget.charges(context, c, exact = false) } }
+                // ... and the calendar's day: a kept exact figure gives way to the estimate - never an unverified one called exact.
+                if (liveCharges != null) runCatching { com.optionslab.app.data.DailyPnl.recordCharges(true, liveCharges, exact = false, onlyOverExact = true) }
                 lines.add(0, "Positions %s".format(if (s.hideAmountsOnLockScreen) "open: ${book.net.count { it.open }}" else "Rs %+,.0f".format(book.pnl) + chargesSaid))
                 pnlAlerts(context, s, book.pnl)
             }
         }
         runCatching { com.optionslab.app.data.Paper.state.positions.count { it.quantity != 0 } }.getOrDefault(0).takeIf { it > 0 }?.let { n ->
-            runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.let { snap ->
+            // Battery (round 18): the line and the calendar's kept figure are display only, so they share the price this
+            // pass's paper tick, loss limit and cards just read (under 20 s), not a fresh download of each held contract's
+            // day of candles ([com.optionslab.ira.NoticePrice]). The stops and limits above read their own, as before.
+            runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.ira.NoticePrice.REUSE_MS) }.getOrNull()?.let { snap ->
                 val pnl = snap.dayPnl
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size, snap.dayCharges) }
                 // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
@@ -742,6 +843,38 @@ object Tasks {
             else -> "almanac"
         }
         return Tick(title, lines, progress, dest)
+    }
+
+    /**
+     * The MCX pass (9 Oct): outside NSE's hours, while MCX trades and something is held or working there (or an MCX paper
+     * arm is on inside its minutes). Only the steps that protect money, each in its own try: Zerodha's stream, paper fills
+     * and MCX square-off, the daily loss limit, stops and targets, the MCX expiry exit, the MCX paper arms (paper only), the
+     * missed-lock sweep with the no-price failsafe, the position cards. Nothing NSE's (no NSE arm, no strategy, no Jarvis
+     * check) runs here, so NSE's behaviour is unchanged.
+     */
+    suspend fun mcxTick(context: Context, s: AppSettings): Tick {
+        com.optionslab.app.data.Broker.passBegin()
+        try {
+            step("live price stream") { com.optionslab.app.data.KiteStream.ensure() }
+            step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+            step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
+            step("stops and targets") { com.optionslab.app.data.Protections.tick() }
+            step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+            // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
+            step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
+            step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
+            if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
+                com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
+                    ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
+            }
+            step("position cards") { PositionCards.refresh(context) }
+            runCatching { Heartbeat.beat(context) }
+        } finally {
+            com.optionslab.app.data.Broker.passEnd()
+            Heartbeat.stepEnd()
+        }
+        val until = com.optionslab.app.data.McxMarket.todayWindow()?.close
+        return Tick("MCX watch", listOf("Watching your MCX positions and orders" + (until?.let { " until %02d:%02d".format(it.hour, it.minute) } ?: "")), -1, "trade")
     }
 
     /** The index quotes this watch pass has a reader for (an empty list = none fetched). */
@@ -835,12 +968,20 @@ class WatchService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /** False when Android refused the foreground (the service is then stopping: start nothing). */
-    private fun show(title: String, text: String, progress: Int = -1, dest: String = "almanac"): Boolean {
-        val n = Notifier.builder(this, Notifier.LIVE, title, text, dest)
-            .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
-            .apply { if (progress >= 0) setProgress(100, progress, false) }
-            .build()
+    /** What the ongoing notice shows now (as last posted), so a pass that changes nothing does not post it again. */
+    private data class Shown(val title: String, val text: String, val progress: Int, val dest: String, val type: Int)
+    @Volatile private var shown: Shown? = null
+
+    /**
+     * False when Android refused the foreground (the service is then stopping: start nothing).
+     *
+     * ANR fix (9 Oct): the notice is posted (startForeground: a binder call into Android's activity manager, which also
+     * re-posts the notification through the system) only when what it shows changed, or [force] - every start command
+     * must call startForeground, whatever it shows. The watch re-showed the same words every pass (every 15 s on MCX's
+     * evening, each minute in NSE's hours), each a round of work in system_server that the app's own main-thread calls
+     * to Android then waited behind.
+     */
+    private fun show(title: String, text: String, progress: Int = -1, dest: String = "almanac", force: Boolean = false): Boolean {
         // The watch runs longer than Android 15 allows a dataSync service (6h a day); it is
         // declared specialUse, which has no daily cap. One-shot jobs stay dataSync.
         val type = when {
@@ -848,10 +989,18 @@ class WatchService : Service() {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             else -> 0
         }
+        val now = Shown(title, text, progress, dest, type)
+        if (!force && now == shown) return true
+        val n = Notifier.builder(this, Notifier.LIVE, title, text, dest)
+            .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false).setSilent(true)
+            .apply { if (progress >= 0) setProgress(100, progress, false) }
+            .build()
         try {
             ServiceCompat.startForeground(this, Notifier.ID_LIVE, n, type)
+            shown = now
             return true
         } catch (e: Exception) {
+            shown = null
             // Not allowed now (e.g. the dataSync budget is spent, or a start from the background while Android
             // battery-optimizes the app): say so and stop cleanly - a service started in the foreground that never
             // calls startForeground is killed by the system.
@@ -895,7 +1044,9 @@ class WatchService : Service() {
         // No intent: Android restarted this sticky service after ending the app's process. In market hours that is the
         // watch coming back; otherwise there is nothing to resume (one-shot jobs are not sticky).
         val byAndroid = intent == null
-        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDue()) Jobs.Kind.LIVE
+        // On the main thread: from memory and the plain MCX hint only (ANR fix, 9 Oct; [Jobs.watchDueQuick]), never a vault
+        // decryption before the foreground. Unknown is not resumed here: the dead-man alarm (off the main thread) brings it back.
+        val k = if (byAndroid && !com.optionslab.app.BuildConfig.GOLD && Jobs.watchDueQuick() == true) Jobs.Kind.LIVE
             else runCatching { Jobs.Kind.valueOf(intent?.getStringExtra(Jobs.EXTRA_KIND) ?: "") }.getOrNull()
         if (byAndroid && k == null && running.isEmpty()) {
             // Past the watch's hours: nothing to resume. Not a foreground start (it would be refused from the background
@@ -904,8 +1055,11 @@ class WatchService : Service() {
             stopSelf(); return START_NOT_STICKY
         }
         if (k == Jobs.Kind.LIVE) watching = true   // show() then declares the specialUse type
-        // Refused: show() stopped the service, so no job is launched to run on after stopSelf.
-        if (!show("IraAlgo", "Starting…")) return START_NOT_STICKY
+        // Refused: show() stopped the service, so no job is launched to run on after stopSelf. Always posted here (Android
+        // requires it after every foreground-service start); a job already running keeps its own words, not "Starting…".
+        val again = shown?.takeIf { running.values.any { it.isActive } }
+        val ok = if (again != null) show(again.title, again.text, again.progress, again.dest, force = true) else show("IraAlgo", "Starting…", force = true)
+        if (!ok) return START_NOT_STICKY
         if (intent?.action == STOP) {
             if (endWhy == null) endWhy = com.optionslab.ira.WatchHealth.End.STOPPED_BY_BOSS to null
             stopEverything(); return START_NOT_STICKY
@@ -915,7 +1069,8 @@ class WatchService : Service() {
         if (k == null) { maybeStop(); return stickiness() }
         if (running[k]?.isActive == true) return stickiness()
         val session = intent?.getStringExtra(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
-        val run = if (k == Jobs.Kind.LIVE) noteStart(byAndroid) else 0L
+        // On the main thread only the run's number (memory); its vault and diary work runs first thing in the job (below).
+        val run = if (k == Jobs.Kind.LIVE) beginRun() else 0L
         // Registered before its work runs (it waits for [registered]): a maybeStop() in between never sees the service idle
         // and stops it. ATOMIC: the body always starts, so a stop that lands before the coroutine is first dispatched
         // still goes through the finally below (the end in the diary, the run's day cleared), never skipped.
@@ -924,6 +1079,9 @@ class WatchService : Service() {
             var end: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
             try {
                 registered.await()
+                // ANR fix (9 Oct): the watch's start note - a settings read and a vault WRITE (a Keystore encryption and two
+                // disk syncs, queued behind any other vault work), the battery question to Android - off the main thread.
+                if (k == Jobs.Kind.LIVE) noteStart(run, byAndroid)
                 val s = AppSettings.load()
                 when (k) {
                     Jobs.Kind.LIVE -> { watch(s, run); end = com.optionslab.ira.WatchHealth.End.MARKET_CLOSED to null }
@@ -959,6 +1117,8 @@ class WatchService : Service() {
                     // whoever sees the end in the diary (the owner, the next start) also sees the day cleared; and only
                     // by the run that set it, never over a newer run's day.
                     endRun(run)
+                    // The day's P&L figures kept in memory between writes go to disk with the watch's end (background).
+                    runCatching { SecurePrefs.saveSoon() }
                     Heartbeat.diary(com.optionslab.ira.WatchHealth.ended(why.first, why.second))
                     // A newer watch started meanwhile: its pulse and its "running" state are left alone. Checked and done
                     // under the one lock (both only set fields in memory), so a new run cannot start between the two.
@@ -981,13 +1141,17 @@ class WatchService : Service() {
         return stickiness()
     }
 
-    /**
-     * The watch starts: a start after a watch that was never seen to end means the app's process ended under it.
-     * Returns this run's number, which its end hands to [endRun].
-     */
-    private fun noteStart(byAndroid: Boolean): Long {
+    /** A watch run starts: its number (memory only, safe on the main thread), which [noteStart] and its end ([endRun]) take. */
+    private fun beginRun(): Long {
         endWhy = null
-        val run = synchronized(runDayLock) { ++watchRun }
+        return synchronized(runDayLock) { ++watchRun }
+    }
+
+    /**
+     * The watch run [run] starts: a start after a watch that was never seen to end means the app's process ended under it.
+     * Off the main thread (the job's first step): it reads and writes the settings vault.
+     */
+    private fun noteStart(run: Long, byAndroid: Boolean) {
         runCatching {
             val today = Market.today().toString()
             val crash = java.io.File(filesDir, com.optionslab.app.IraAlgoApp.CRASH_FILE).exists()
@@ -1000,7 +1164,6 @@ class WatchService : Service() {
             val battery = Heartbeat.batteryRestricted(this) == true
             Heartbeat.diary("started" + if (battery) " · battery OPTIMIZED: Android may stop the watch (set IraAlgo's battery to Unrestricted)" else "")
         }
-        return run
     }
 
     /** The newest watch run is ending, seen here (its own end clears [RUN_DAY] a moment later). */
@@ -1044,32 +1207,67 @@ class WatchService : Service() {
             setting = "broker.login")
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
-        while (Market.isTradingDay() && (Market.minuteNow() <= Market.CLOSE ||
-                (Market.minuteNow() <= Market.CLOSE + 15 && com.optionslab.app.data.Strategies.anyRunning()))) {
-            try {
-                watchPass(fired)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
-                // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
-                Tasks.stepFailed(Heartbeat.busy, e)
-                Heartbeat.stepEnd()
-                runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
-                delay(15_000)
+        // And while MCX trades with an MCX position or order open (9 Oct): the MCX pass ([Tasks.mcxTick]) outside NSE's hours.
+        // Order speed (9 Oct): the event-driven checks run beside the watch - a stream price or a candle close wakes the
+        // stops, exits and bar-close entries at once ([com.optionslab.app.data.FastPath]); these passes stay as the safety net.
+        com.optionslab.app.data.FastPath.start(this)
+        try {
+            while (nseWindow() || mcxDue()) {
+                try {
+                    watchPass(fired)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    // One bad pass (a Keystore or disk hiccup, even an Error) must not end the watch: note it and go on.
+                    // Its own id: 2014 is Heartbeat's "Market watch stopped", which every beat cancels.
+                    Tasks.stepFailed(Heartbeat.busy, e)
+                    Heartbeat.stepEnd()
+                    runCatching { Notifier.post(this, 2018, Notifier.SCHEDULE, "Order watch hiccup", "One pass failed (${e.javaClass.simpleName}); the watch goes on.") }
+                    delay(15_000)
+                }
             }
+        } finally {
+            com.optionslab.app.data.FastPath.stop()
         }
         // The watch is over for the day: the live price stream closes with it.
         runCatching { com.optionslab.app.data.KiteStream.stop() }
+    }
+
+    /**
+     * NSE's part of the watch: F&O's hours (to 15:40 from 3 Aug 2026), and a quarter-hour past that close while a strategy
+     * run is still open.
+     */
+    private suspend fun nseWindow(): Boolean = Market.isTradingDay() && (Market.minuteNow() <= Market.foClose() ||
+        (Market.minuteNow() <= Market.foClose() + 15 && com.optionslab.app.data.Strategies.anyRunning()))
+
+    private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+
+    /** The MCX pass and its wait: every 15 s while MCX trades and something is held or working there. */
+    private suspend fun mcxPass() {
+        Heartbeat.beat(this)
+        stepSec = 15
+        val t = Tasks.mcxTick(this, AppSettings.load())
+        Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
+        show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
+        delay(15_000)
     }
 
     /** One pass of the watch loop and the wait until the next one. */
     private suspend fun watchPass(fired: HashSet<String>) {
         run {
             Heartbeat.beat(this)
+            // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
+            val nseOpen = nseWindow() && Market.minuteNow() >= Market.OPEN
+            if (!nseOpen) {
+                if (mcxDue()) { mcxPass(); return }
+                // Past NSE's session (or an NSE holiday) with nothing due on MCX either: no NSE step runs; the loop ends next look.
+                if (!Market.isTradingDay() || Market.minuteNow() >= Market.OPEN) { delay(15_000); return }
+            }
             if (Market.minuteNow() < Market.OPEN) {
                 stepSec = 30
                 show(Tasks.WATCH_TITLE, Tasks.WATCH_IDLE)
+                // Before the open: the recorder keeps the morning's news (its own scope, never awaited).
+                runCatching { com.optionslab.app.data.MarketRecorder.kick() }
                 delay(30_000)
                 return
             }
@@ -1081,8 +1279,54 @@ class WatchService : Service() {
             // While an ORB position is open its stop, target and 15:10 exit are checked every 15 s, not once a minute.
             val next = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < next) {
-                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false)
+                val holding = PositionCards.anyOpen || runCatching { com.optionslab.app.data.OrbArms.holding() }.getOrDefault(false) ||
+                    com.optionslab.app.data.PineAuto.holding() ||
+                    (com.optionslab.app.BuildConfig.JARVIS && com.optionslab.app.ira.IraSolo.holding())
                 stepSec = if (holding) 15 else 60
+                // 08 Oct (research X1 change 2): with an arm armed, the arms decide a few seconds after each bar close, not on
+                // the next full pass a minute or more later. The same pass as the full one (paper fills, then the arms), so
+                // every guard applies; each bar is still decided once (the arms' own record of the bars decided).
+                val wake = if (com.optionslab.app.data.OrbArms.armedHint || com.optionslab.app.data.NightArm.view.value.armed ||
+                    com.optionslab.app.data.VixDivArm.view.value.armed) com.optionslab.engine.orb.BarClose.nextWake(System.currentTimeMillis()) else Long.MAX_VALUE
+                val waitEnd = if (holding) System.currentTimeMillis() + 15_000 else next
+                if (wake <= waitEnd && wake < next) {
+                    delay((wake - System.currentTimeMillis()).coerceAtLeast(0))
+                    Heartbeat.stepBegin("bar-close entry check")
+                    // Order speed: an order this check leads to is timed from the bar's close (the wake is 3 s after it).
+                    val closedAt = wake - com.optionslab.engine.orb.BarClose.AFTER_MS
+                    try { kotlinx.coroutines.withContext(com.optionslab.app.data.OrderTiming.Trigger(closedAt, null)) {
+                        try {
+                            com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this@WatchService, it) }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: paper orders", e)
+                        }
+                        try {
+                            com.optionslab.app.data.OrbArms.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: ORB arms", e)
+                        }
+                        try {
+                            com.optionslab.app.data.NightArm.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: Night (R3)", e)
+                        }
+                        try {
+                            com.optionslab.app.data.VixDivArm.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("bar-close entry check: VIX divergence", e)
+                        }
+                    } } finally { Heartbeat.stepEnd() }
+                    Heartbeat.beat(this)
+                    continue
+                }
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (holding && streaming) {
@@ -1108,6 +1352,40 @@ class WatchService : Service() {
                             throw e
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: ORB arms", e)
+                        }
+                        // Every money exit runs here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3): the Pine scripts' stops and
+                        // locks, Solo's exits (Liquidity's index exits run in the ORB arms' check above). Each under its own
+                        // lock, as in the full pass, so a holding never has two sells in flight. Jarvis's words stay in the full pass.
+                        try {
+                            com.optionslab.app.data.PineAuto.watchOnly()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: Pine scripts", e)
+                        }
+                        if (com.optionslab.app.BuildConfig.JARVIS) try {
+                            com.optionslab.app.ira.IraSolo.manageOnly()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: Solo", e)
+                        }
+                        // Jarvis's own trades: their profit-lock stop and exits (a money step, under its own lock).
+                        if (com.optionslab.app.BuildConfig.JARVIS) try {
+                            com.optionslab.app.ira.IraNewsTrades.tick()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: Jarvis's trades", e)
+                        }
+                        // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
+                        // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).
+                        try {
+                            com.optionslab.app.data.Sweeper.run(this)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            Tasks.stepFailed("15-second stop check: missed-lock sweep", e)
                         }
                         try {
                             com.optionslab.app.data.Protections.tick()

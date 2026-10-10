@@ -1,0 +1,56 @@
+{
+ "final": {
+  "h": 30,
+  "s": "strangle",
+  "ex": "T+SL25",
+  "fam": "D",
+  "model": "har",
+  "q1": 0.9,
+  "q2": 0.9
+ },
+ "family_best": [
+  {
+   "h": 30,
+   "s": "strangle",
+   "ex": "T+SL25",
+   "fam": "D",
+   "model": "har",
+   "q1": 0.9,
+   "q2": 0.9
+  },
+  {
+   "h": 240,
+   "s": "strangle",
+   "ex": "T+PT20",
+   "fam": "B",
+   "model": "mlp",
+   "q1": 0.8,
+   "q2": null
+  },
+  {
+   "h": 240,
+   "s": "strangle",
+   "ex": "T+PT40",
+   "fam": "C",
+   "model": "har",
+   "q1": null,
+   "q2": 0.9
+  },
+  {
+   "h": 240,
+   "s": "strangle",
+   "ex": "T+SL25",
+   "fam": "A",
+   "model": "-",
+   "q1": null,
+   "q2": null
+  }
+ ],
+ "eia_best": [
+  {
+   "s": "straddle",
+   "N": 5
+  }
+ ],
+ "comparison_same_h_s_ex": true
+}

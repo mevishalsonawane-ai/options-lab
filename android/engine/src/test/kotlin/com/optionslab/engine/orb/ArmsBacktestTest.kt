@@ -60,7 +60,11 @@ class ArmsBacktestTest {
         val pe = series(Right.PE, 54_000.0, all, { 200.0 })
         val fall = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else 250.0 })
         val t1 = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, fall)), 0.0, 0.0)!!.first { it.arm == "orb" }
-        assertEquals("stop", t1.why); assertEquals(-40.0 * 30, t1.net, 1e-9)
+        // The minute opened at 250, under the 260 stop: a resting SL-M fills at that open, not at its trigger.
+        assertEquals("stop", t1.why); assertEquals(-50.0 * 30, t1.net, 1e-9)
+        val touch = series(Right.CE, 54_000.0, all, { 300.0 }, lo = { m -> if (m == 620) 255.0 else 300.0 })
+        val t1b = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, touch)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals("stop", t1b.why); assertEquals(-40.0 * 30, t1b.net, 1e-9)
         val flat = series(Right.CE, 54_000.0, all, { m -> 300.0 + (m % 2) })
         val t2 = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, flat)), 0.0, 0.0)!!.first { it.arm == "orb" }
         assertEquals("session_end", t2.why)
@@ -75,7 +79,18 @@ class ArmsBacktestTest {
         val pe = series(Right.PE, 54_000.0, all, { 200.0 })
         val ce = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 290.0 })
         val t = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, ce)), 0.0, 0.0)!!.first { it.arm == "orb" }
-        assertEquals("profit_lock", t.why); assertEquals(10.0 * 30, t.net, 1e-9)              // 25% of 40 locked
+        // The stop rests at 310 (+10 locked); the 10:30 minute opened at 290, under it: filled at that open, as an SL-M.
+        assertEquals("profit_lock", t.why); assertEquals(-10.0 * 30, t.net, 1e-9)
+        // Touched inside a minute that opened above it: out at the lock itself.
+        val turn = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 315.0 },
+            lo = { m -> if (m < 620) 300.0 else if (m < 630) 322.0 else 305.0 })
+        val tl = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, turn)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals("profit_lock", tl.why); assertEquals(10.0 * 30, tl.net, 1e-9)              // 25% of 40 locked
+        // With charges, the breakeven rung is floored at entry + the round trip per unit (Rs 60 / 30 = 2 points).
+        val be = series(Right.CE, 54_000.0, all, { m -> if (m < 620) 300.0 else if (m < 630) 312.0 else 303.0 },
+            lo = { m -> if (m < 620) 300.0 else if (m < 630) 312.0 else 299.0 })
+        val tb = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, be)), 0.0, 60.0)!!.first { it.arm == "orb" }
+        assertEquals("profit_lock", tb.why); assertEquals(302.0, tb.exit, 1e-9)
         // A premium of 40 or less has no 40-point stop: the arms refuse it, so the backtest does too.
         val cheap = series(Right.CE, 54_000.0, all, { 35.0 })
         assertTrue(ArmsBacktest.day(Session(day, 30, listOf(ix, pe, cheap)), 0.0, 0.0)!!.none { it.arm == "orb" })
@@ -90,6 +105,30 @@ class ArmsBacktestTest {
         val next = listOf(leg(Right.CE, day.plusDays(7), 300.0), leg(Right.PE, day.plusDays(7), 300.0))
         val t = ArmsBacktest.day(Session(day, 30, listOf(ix) + today + next), 0.0, 0.0)!!.first { it.arm == "orb" }
         assertEquals(150.0, t.entry, 1e-9)
+    }
+
+    @Test fun theReplayGivesLiquidityPriorityOverTheOrbArms() {
+        // ORB buys the CE after the 10:05 break and holds it to 15:10; Liquidity 15+5 breaks a level at 11:00 the same way.
+        val ix = series(Right.IX, 0.0, all, { m -> if (m < 605) 53_800.0 + (m % 3) * 100 else 54_200.0 })
+        val pe = series(Right.PE, 54_000.0, all, { 200.0 })
+        val ce = series(Right.CE, 54_000.0, all, { m -> 300.0 + (m % 2) })
+        val orb = ArmsBacktest.day(Session(day, 30, listOf(ix, pe, ce)), 0.0, 0.0)!!.first { it.arm == "orb" }
+        assertEquals(day.atTime(10, 10), orb.entryTime); assertEquals(day.atTime(15, 10), orb.exitTime)
+        val liq = ArmPriority.Leg("liquidity15", ArmPriority.Rank.LIQUIDITY, "BANKNIFTY", 1, day.atTime(11, 0), day.atTime(11, 40))
+        val g = ArmsBacktest.guarded(listOf(orb), listOf(liq))
+        assertTrue(liq in g.taken, "a Liquidity entry while ORB holds BANKNIFTY is taken")
+        assertTrue(g.taken.any { it.who == "orb" }); assertTrue(g.refused.isEmpty())
+        // ORB's signal while Liquidity holds the index: refused, and the reason says Liquidity has priority.
+        val early = liq.copy(entry = day.atTime(9, 30), exit = day.atTime(10, 30))
+        val h = ArmsBacktest.guarded(listOf(orb), listOf(early))
+        assertEquals(listOf(early), h.taken)
+        assertEquals("orb refused: liquidity15 holds BANKNIFTY (Liquidity has priority over ORB arms)", h.refused.single().words)
+        // Trades made by hand (no times) stay out of the guard; an unknown arm is not one of the ORB family.
+        val hand = ArmsBacktest.Trade(day, "orb", "PE", "10:05", 1.0, 2.0, "target", 1.0)
+        assertTrue(ArmsBacktest.guarded(listOf(hand)).taken.isEmpty())
+        val odd = orb.copy(arm = "mystery", right = "PE")
+        assertEquals(ArmPriority.Rank.OTHER, ArmsBacktest.guarded(listOf(odd)).taken.single().rank)
+        assertEquals(-1, ArmsBacktest.guarded(listOf(odd)).taken.single().side)
     }
 
     @Test fun aDayWithoutItsIndexOrOptionsIsSkipped() {

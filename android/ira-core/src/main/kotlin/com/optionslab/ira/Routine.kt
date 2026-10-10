@@ -67,6 +67,11 @@ object Routine {
      * events ahead ("ACCOUNT|events"); never a command, an order, a trade idea or anything else.
      */
     fun key(text: String): String? {
+        // "When do I usually check my P&L?" / "stop getting my P&L ready": about Jarvis's read-ahead ([CheckTimes]), never a
+        // P&L ask - not logged, so asking or undoing it never counts toward it.
+        if (runCatching { CheckTimes.asked(text) != null }.getOrDefault(false)) return null
+        // "What have you learned about my conditional orders?" / its undo ([CondNeeds]): about Jarvis, never an orders ask.
+        if (runCatching { CondNeeds.asked(text) != null }.getOrDefault(false)) return null
         Habits.key(text)?.let { return it }
         val q = Ask.parse(text)
         if (q.command != null || q.order != null || q.topics.any { it in NEVER }) return null
@@ -130,7 +135,26 @@ object Routine {
 
     fun encode(s: Seen): String = "${s.at.withSecond(0).withNano(0)}#${s.key}#${if (s.afterLoss) 1 else 0}"
 
-    fun decode(line: String): Seen? = runCatching {
+    /**
+     * One line of the log as written by [encode], or null. Kept by the line ([com.optionslab.ira.Kept], speed round 8):
+     * the app decodes the whole log (up to [LOG_MAX] lines, about 3.5 us each on a desktop, many times that on a phone)
+     * several times per answer - the next-question offer read it twice before the answer was shown - and the lines barely
+     * change between questions. A line's reading depends on nothing but the line (no clock, no day, nothing of the
+     * account), so a kept one is exactly what reading it again would give; it holds a question's kind and minute only,
+     * never Boss's words.
+     */
+    fun decode(line: String): Seen? = decoded.of(line) { decodeFresh(line) }
+
+    /** The last lines read (twice the log, so a whole log read in order always fits). */
+    private val decoded = com.optionslab.ira.Kept<Seen?>(LOG_MAX * 2)
+
+    /** How many decoded lines are kept (tests). */
+    internal val decodedKept: Int get() = decoded.size
+
+    /** Every decoded line forgotten (tests). */
+    internal fun forgetDecoded() = decoded.clear()
+
+    private fun decodeFresh(line: String): Seen? = runCatching {
         val p = line.split("#")
         if (p.size != 3 || question(p[1]) == null) return null
         Seen(p[1], LocalDateTime.parse(p[0]), p[2] == "1")

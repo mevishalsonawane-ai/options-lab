@@ -106,8 +106,8 @@ object Heartbeat {
     /** One line in the diagnostics diary (words the app chose; [Diag] redacts anything secret-looking anyway). */
     fun diary(text: String) = runCatching { Diag.record(WatchHealth.AREA, text) }
 
-    /** Checks only make sense from a couple of minutes after the open to the close. */
-    private fun inHours(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN + 2) until Market.CLOSE
+    /** Checks only make sense from a couple of minutes after the open to F&O's close (the watch's hours: 15:40 from 3 Aug 2026). */
+    private fun inHours(): Boolean = Market.isTradingDay() && Market.minuteNow() in (Market.OPEN + 2) until Market.foClose()
 
     /** The same condition [Jobs] schedules the market watch on. */
     private fun watched(): Boolean = Jobs.enabled(Jobs.Kind.LIVE, com.optionslab.app.data.AppSettings.load())
@@ -127,13 +127,23 @@ object Heartbeat {
         // Armed whenever the watch is scheduled - paper bots run in it with no Zerodha account too.
         if (!watched()) return
         val now = Market.now()
-        val at = if (Market.isTradingDay() && Market.minuteNow() < Market.CLOSE && Market.minuteNow() >= Market.OPEN) {
+        // In NSE's hours, and while MCX trades with an MCX position or order open (9 Oct): every few minutes. On the main
+        // thread (a boot, an app update, a holiday added) from memory and MCX's plain hint only: never a vault decryption
+        // there (ANR fix, 9 Oct); the alarm's own check, off the main thread, reads the books themselves.
+        val main = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+        val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() == true }.getOrDefault(false)
+            else runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+        val at = if (mcx || Market.isTradingDay() && Market.minuteNow() < Market.foClose() && Market.minuteNow() >= Market.OPEN) {
             System.currentTimeMillis() + EVERY_MS
         } else {
             var d = now.toLocalDate()
             if (Market.minuteNow() >= Market.OPEN) d = d.plusDays(1)
             while (!Market.isTradingDay(d)) d = d.plusDays(1)
-            d.atTime(9, 20).atZone(now.zone).toInstant().toEpochMilli()
+            val nse = d.atTime(9, 20).atZone(now.zone).toInstant().toEpochMilli()
+            // Something open on MCX: also MCX's next session (an NSE holiday's evening, an early MCX open), a minute in.
+            val mcxNext = runCatching { if (main) com.optionslab.app.data.McxMarket.nextOpenMillisQuick() else com.optionslab.app.data.McxMarket.nextOpenMillis() }
+                .getOrNull()?.plus(60_000)
+            if (mcxNext != null && mcxNext < nse) mcxNext else nse
         }
         try {
             if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -146,6 +156,11 @@ object Heartbeat {
     /** The alarm fired: re-arm, and if the watch is silent, restart it and say so once. */
     fun check(context: Context) {
         schedule(context)
+        // MCX's evening (9 Oct): with an MCX position or order open the watch is brought back if Android stopped it.
+        // Only when the watch is not alive in this process (its own pulse): every start of a running watch is a foreground
+        // service start, run on the main thread with a binder call to Android and the notification posted again (ANR fix, 9 Oct).
+        val alive = alivePulse > 0L && System.currentTimeMillis() - alivePulse in 0L until WatchHealth.ALIVE_MS
+        if (!alive && watched() && runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)) runCatching { Jobs.ensureWatch(context) }
         if (!watched() || !stale()) return
         val now = System.currentTimeMillis()
         val state = WatchHealth.state(now, last(), alivePulse).let { if (it == WatchHealth.State.OK) WatchHealth.State.DEAD else it }

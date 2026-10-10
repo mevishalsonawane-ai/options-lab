@@ -38,6 +38,8 @@ object Turn {
 
     /** [p] said to Jarvis as a plain question: its question, else null. */
     private fun plain(p: String, awake: Boolean): String? {
+        // Cut off mid-sentence ("Jarvis how is my", "why did I"): never answered or worked out from - its end is to come.
+        if (unfinished(p)) return null
         val h = Wake.heard(p, awake) as? Wake.Heard.Ask ?: return null
         // One word ("Jarvis... how") is a breath inside the sentence, not a question.
         if (norm(h.question).split(' ').size < 2) return null
@@ -73,10 +75,43 @@ object Turn {
      * (elapsed ms; 0 or past: none). "Speech ended" only ever brings the close nearer: it used to replace a close due
      * sooner (the words standing still, 0.9 s after they last changed) with one [END_SPEECH_MS] later, so Boss waited
      * longer exactly when the recognizer agreed he had finished (Boss, 5 Oct: speed). The close itself is unchanged -
-     * it only ends the listening, and the words then go the usual way, with every rule.
+     * it only ends the listening, and the words then go the usual way, with every rule. [unfinished] (the words so far stop
+     * mid-sentence, [Turn.unfinished]): a close already due is kept even when later - his breath before the rest of the
+     * sentence is often read as "speech ended" - so the rest is still heard (Voice, round 29).
      */
-    fun closeIn(now: Long, dueAt: Long): Long =
-        if (dueAt > now && dueAt - now < END_SPEECH_MS) dueAt - now else END_SPEECH_MS
+    fun closeIn(now: Long, dueAt: Long, unfinished: Boolean = false): Long =
+        if (dueAt > now && (unfinished || dueAt - now < END_SPEECH_MS)) dueAt - now else END_SPEECH_MS
+
+    /**
+     * Voice, round 29 (Boss: "Jarvis what is my" answered before he said "P&L"): words whose last word cannot end a
+     * sentence - an article, "my", a preposition that needs what follows, a joining word, a question's verb or subject with
+     * the rest still to come, a possessive "'s", the Hinglish "ka / ki / ke / aur / mera / agar" - stop at a breath inside
+     * the sentence. A still partial reading ending so is never answered early ([early]) nor worked out ahead ([ahead]),
+     * and the turn is closed no sooner than [UNFINISHED_MS] after the words last changed ([endAfter], [closeIn]) - as for
+     * the name alone. Only the wait changes: the words then go the usual way, with every rule (a yes or a no reads
+     * exactly as before: "yes", "no", "haan", "nahi", "ya" are never such a word).
+     */
+    fun unfinished(words: String?): Boolean {
+        val w = norm(words.orEmpty()).split(' ').filter { it.isNotEmpty() }
+        return w.size >= 2 && w.last() in DANGLING
+    }
+
+    /** How long the words must stand still before the turn is closed: [paceMs] (Boss's own pause), longer for [unfinished] words. */
+    fun endAfter(words: String?, paceMs: Long): Long = if (unfinished(words)) maxOf(paceMs, UNFINISHED_MS) else paceMs
+
+    /** The least wait before a turn whose words stop mid-sentence is closed (the same as for the name alone). */
+    const val UNFINISHED_MS = 1_800L
+
+    /**
+     * Last words that leave a sentence open. Not those that also end a whole question ("on", "in", "off", "up", "do",
+     * "did", "this", "that", "you", "how", "why", "like", "before", "at", "we"): "is the kill switch on", "am I logged in", "what do
+     * I do", "how are you", "what is nifty trading at", "where are we" close as quickly as before (review, 6 Oct).
+     */
+    private val DANGLING = setOf("the", "a", "an", "my", "your", "our", "his", "her", "their", "its", "s",
+        "of", "for", "to", "about", "with", "from", "into", "versus", "vs", "than", "between", "compared", "per",
+        "and", "or", "but", "because", "if", "what", "which",
+        "is", "are", "was", "were", "does", "will", "would", "should", "can", "could", "i",
+        "ka", "ki", "ke", "ko", "aur", "mera", "meri", "mere", "agar")
 
     /** What a question may be about to be answered from its partial reading. */
     private val QUICK = setOf(Topic.OVERVIEW, Topic.WHY, Topic.TREND, Topic.LEVELS, Topic.PATTERNS, Topic.NEWS,

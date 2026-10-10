@@ -43,7 +43,8 @@ object SandboxRules {
     /**
      * Exchange close, for expiry-day settlement (position_manager.EXCHANGE_CLOSE_TIMES).
      * Distinct from the MIS square-off: an expiring contract trades to the bell,
-     * and NFO/BFO trade to about 15:40 under the closing-auction session.
+     * and NFO/BFO trade to 15:40 from 3 Aug 2026 (15:30 before: [com.optionslab.engine.NseHours.foClose], which
+     * [isContractExpiredNow] reads for them).
      */
     val EXCHANGE_CLOSE_TIMES: Map<String, LocalTime> = mapOf(
         "NFO" to LocalTime.of(15, 40), "BFO" to LocalTime.of(15, 40),
@@ -133,7 +134,10 @@ object SandboxRules {
         if (today.isAfter(expiry)) return true
         if (today.isBefore(expiry)) return false
         if (config.expirySettlementTiming != "expiry_day_close") return false
-        val close = EXCHANGE_CLOSE_TIMES[exchange] ?: DEFAULT_CLOSE_TIME
+        // NSE/BSE F&O by the day's own hours: 15:40 from 3 Aug 2026, 15:30 before it (an older day replays as it traded).
+        val close = if (config.mcxSessionAware && exchange == "MCX") com.optionslab.engine.mcx.McxSession.close(today)
+            else if (exchange == "NFO" || exchange == "BFO") com.optionslab.engine.NseHours.foCloseTime(today)
+            else EXCHANGE_CLOSE_TIMES[exchange] ?: DEFAULT_CLOSE_TIME
         return !now.toLocalTime().isBefore(close)
     }
 

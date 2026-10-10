@@ -79,6 +79,46 @@ object Vault {
         java.io.FileOutputStream(tmp).use { it.write(blob); it.fd.sync() }
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
         syncDir(file.parentFile)
+        fileWrites.merge(file.path, 1L) { a, b -> a + b }
+    }
+
+    /** How many times this process wrote each vault file (by path): a [LastWrite] knows when someone else wrote it since. */
+    private val fileWrites = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** How many times this process wrote [file] (tests: a save that changes nothing costs no encryption). */
+    internal fun writeCount(file: File): Long = fileWrites[file.path] ?: 0L
+    /** Bumped when the key is destroyed: everything written before must be written again (with the new key). */
+    @Volatile private var keyEpoch = 0
+
+    /**
+     * What one store last wrote to its vault file, so a save that would write exactly the same bytes to a file nobody touched
+     * since is skipped (ANR fix, 9 Oct). A book saved after every look of the watch (every 15 s while anything is held) and
+     * unchanged most of those times cost a Keystore encryption and two disk syncs each time, and the Keystore takes one
+     * operation at a time - every other vault read or write, the screen's included, queued behind them. Anything that
+     * changed is written exactly as before. Kept in memory only: a new process writes its first save.
+     */
+    class LastWrite {
+        private var path: String? = null
+        private var digest: ByteArray? = null
+        private var stat: Pair<Long, Long>? = null
+        private var writes = -1L
+        private var epoch = -1
+
+        /** [writeFile], unless [plain] is what this process last wrote to [file] and the file is untouched since. True when written. */
+        @Synchronized fun write(file: File, plain: ByteArray): Boolean {
+            val d = java.security.MessageDigest.getInstance("SHA-256").digest(plain)
+            if (same(file, d)) return false
+            path = null; digest = null; stat = null
+            writeFile(file, plain)
+            path = file.path; digest = d; stat = file.length() to file.lastModified()
+            writes = fileWrites[file.path] ?: 0L; epoch = keyEpoch
+            return true
+        }
+
+        private fun same(file: File, d: ByteArray): Boolean = digest?.contentEquals(d) == true && path == file.path &&
+            epoch == keyEpoch && writes == (fileWrites[file.path] ?: 0L) && file.exists() && stat == (file.length() to file.lastModified())
+
+        /** The next save writes whatever it holds (a wipe, a reset). */
+        @Synchronized fun forget() { path = null; digest = null; stat = null }
     }
 
     /**
@@ -116,6 +156,7 @@ object Vault {
 
     /** Destroys the key: every vault file becomes unreadable at once. */
     fun destroy() {
+        keyEpoch++
         runCatching { keyStore().deleteEntry(DATA_KEY) }
     }
 }

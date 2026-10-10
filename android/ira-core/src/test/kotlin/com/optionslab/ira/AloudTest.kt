@@ -106,4 +106,30 @@ class AloudTest {
         assertTrue(Aloud.say(text, 1).contains("India VIX is jumping"))
         assertTrue(TalkHours.aloud(text, java.time.LocalDateTime.of(2026, 10, 5, 22, 0), listOf(9, 10)).contains("Careful: India VIX is jumping."))
     }
+
+    @Test fun rupeesSaidWithTheCommaAfterTheFigureNotInIt() {
+        // Voice, round 26: "Rs 1,234, mostly brokerage" was said "1,234, rupees mostly", and a lakh followed by a comma
+        // was never said in lakh.
+        assertEquals("Charges 1,234 rupees, mostly brokerage.", Wake.spoken("Charges Rs 1,234, mostly brokerage."))
+        assertEquals("Boss, brokerage 240 rupees, STT 1.02 lakh rupees, exchange 12 rupees; 1.03 lakh rupees in all.",
+            Aloud.say("Boss, brokerage Rs 240, STT Rs 1,02,345, exchange Rs 12; Rs 1,02,600 in all."))
+        assertEquals("बॉस, STT 1.02 लाख रुपये, बाकी ठीक है।", Aloud.say("बॉस, STT Rs 1,02,345, बाकी ठीक है।"))
+        // Losses said with "minus"; unchanged figures and signs elsewhere.
+        assertEquals("Boss, minus 450 rupees before charges, minus 497 rupees after.", Aloud.say("Boss, -Rs 450 before charges, -Rs 497 after."))
+        assertEquals("P&L minus 500 rupees.", Wake.spoken("P&L Rs -500."))
+        assertEquals("Options: plus 1,200 rupees a lot.", Wake.spoken("Options: Rs +1,200 a lot."))
+    }
+
+    @Test fun smallAmountsInRupeesAndPaiseBigOnesWhole() {
+        assertEquals("Boss, P&L is 40 paise.", Aloud.say("Boss, P&L is Rs 0.40."))
+        assertEquals("Boss, charges 12 rupees 40 paise and 151 rupees.", Aloud.say("Boss, charges Rs 12.4 and Rs 150.5."))
+        assertEquals("Boss, 1 rupee 5 paise.", Aloud.say("Boss, Rs 1.05."))
+        assertEquals("Boss, minus 3 rupees.", Aloud.say("Boss, -Rs 3.00."))
+        assertEquals("Boss, net minus 12,346 rupees today.", Aloud.say("Boss, net -Rs 12,345.50 today."))
+        assertEquals("बॉस, शुल्क 12 रुपये 40 पैसे है।", Aloud.say("बॉस, शुल्क Rs 12.40 है।"))
+        assertEquals("बॉस, 1 रुपया 50 पैसे।", Aloud.say("बॉस, Rs 1.5।"))
+        // Not rupees: points and percent keep their decimals; applying it twice changes nothing.
+        assertEquals("Boss, Nifty minus 85.3 points, 0.46 percent.", Aloud.say("Boss, Nifty -85.30 pts, 0.46%."))
+        assertEquals("12 rupees 40 paise", SayAs.figures(SayAs.figures("12.4 rupees")))
+    }
 }

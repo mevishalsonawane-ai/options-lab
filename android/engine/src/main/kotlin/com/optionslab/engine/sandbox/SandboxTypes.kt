@@ -69,7 +69,23 @@ data class SandboxConfig(
     val spreadFallbackBps: BigDecimal = BigDecimal.ZERO,
     /** Debit brokerage, STT, exchange, SEBI, stamp and GST on each fill (sandbox/charges.py). */
     val chargesEnabled: Boolean = false,
+    /**
+     * Honest paper fills (08 Oct, [PaperSpread]): every aggressive fill pays the half-spread (the book's, else the measured
+     * default), by max(slippage, half-spread) and on the tick; a resting LIMIT fills only when the market trades through it.
+     * Not a sandbox_config key: off for the desktop parity, always on in the app's paper account.
+     */
+    val paperSpread: Boolean = false,
+    /**
+     * MCX by its real clock ([com.optionslab.engine.mcx.McxSession]): MIS squared off 10 minutes before the day's close
+     * (23:20, or 23:45 in US winter time) and an expiring contract settled from that close, instead of the fixed
+     * [mcxSquareOffTime] and 23:30. Not a sandbox_config key: off for the desktop parity, on in the app's paper account.
+     */
+    val mcxSessionAware: Boolean = false,
 ) {
+    /** The MIS square-off on [exchange] on [day]: [squareOffTimes]'s, except MCX by its date when [mcxSessionAware]. */
+    fun squareOffTime(exchange: String, day: java.time.LocalDate): LocalTime? =
+        if (mcxSessionAware && exchange == "MCX") com.optionslab.engine.mcx.McxSession.misCut(day) else squareOffTimes[exchange]
+
     companion object {
         /** Build from `sandbox_config` keys, as the Python's get_config would read them. */
         fun fromConfigMap(values: Map<String, String>): SandboxConfig {
@@ -132,6 +148,11 @@ data class Instrument(
     val strike: Double? = null,
     /** Multiplier on P&L (0.01 for a crypto perpetual); 1 for every Indian contract. */
     val contractValue: Double = 1.0,
+    /**
+     * Rupees blocked per lot ([lotSize] units) for a future, or a sold option, when the broker's margin is known (MCX:
+     * Zerodha's, [com.optionslab.engine.mcx.McxMargin]); null: the leverage rule, as before.
+     */
+    val marginPerLot: Double? = null,
 )
 
 /** get_symbol_info: null means "Symbol X not found on Y". */
@@ -160,6 +181,9 @@ data class Quote(
     val open: Double = 0.0,
     val prevClose: Double = 0.0,
     val volume: Long = 0,
+    /** Quantity at the best bid and offer (Zerodha's stream depth); 0: not known. Logged only, never priced from. */
+    val bidQty: Long = 0,
+    val askQty: Long = 0,
 )
 
 /**
@@ -236,6 +260,8 @@ data class Trade(
     val timestamp: LocalDateTime,
     /** Brokerage and statutory charges debited for this leg (0 when charges are off). */
     val charges: BigDecimal = BigDecimal.ZERO,
+    /** Rupees this fill paid for the bid/ask spread ([SandboxConfig.paperSpread]; 0 when off or none). In the price, not a debit. */
+    val spread: BigDecimal = BigDecimal.ZERO,
 )
 
 /**
@@ -404,6 +430,8 @@ data class TradeRow(
     val timestamp: String,
     /** Charges debited for this leg (0 with charges off). */
     val charges: Double = 0.0,
+    /** Rupees of bid/ask spread in this leg's price (0 when not charged). */
+    val spread: Double = 0.0,
 )
 
 data class HoldingRow(

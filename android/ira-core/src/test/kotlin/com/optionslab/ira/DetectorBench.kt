@@ -51,6 +51,7 @@ class DetectorBench {
         "Clarity.asked" to { q -> Clarity.asked(q) },
         "CoPilot.asked" to { q -> CoPilot.asked(q) },
         "Compare.asked" to { q -> Compare.asked(q) },
+        "Conditional.asked" to { q -> Conditional.asked(q) },
         "Consistency.asked" to { q -> Consistency.asked(q) },
         "Corrections.forgetWordAsked" to { q -> Corrections.forgetWordAsked(q) },
         "Corrections.wordsAsked" to { q -> Corrections.wordsAsked(q) },

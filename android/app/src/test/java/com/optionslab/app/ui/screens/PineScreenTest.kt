@@ -332,6 +332,29 @@ class PineScreenTest {
         compose.pineWaitFor("Auto-trading")
     }
 
+    @Test fun theStopAndTargetAreRequiredAndTheProfitLockIsAlwaysOn() {
+        // Boss's 06 Oct rule: no profit-lock switch, a note in its place; a stop or target cleared is never saved.
+        saved(auto = PineScripts.Auto(buy = "Buy", sell = "Sell"))
+        page()
+        open("Level")
+        compose.pineTap("Auto-trade")
+        compose.pineWaitFor("Stop-loss and target are required")
+        assertTrue(compose.pineShown("always on (Boss's rule)"))
+        assertTrue("no profit-lock switch", compose.onAllNodes(isToggleable() and androidx.compose.ui.test.hasContentDescription("Profit lock"))
+            .fetchSemanticsNodes().isEmpty())
+        assertFalse(compose.pineShown("0 = off"))
+        val a = PineScripts.items.value.single().auto
+        assertEquals(30.0, a.stopPts, 0.0); assertEquals(60.0, a.targetPts, 0.0); assertTrue(a.profitLock)
+        compose.onAllNodes(hasText("Stop-loss (pts)")).onFirst().performTextReplacement("")
+        compose.pineWaitFor("Required")
+        compose.onAllNodes(hasText("Target (pts)")).onFirst().performTextReplacement("0")
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitForIdle(); Thread.sleep(300); compose.waitForIdle()
+        val after = PineScripts.items.value.single().auto
+        assertEquals("a cleared stop is not saved", 30.0, after.stopPts, 0.0)
+        assertEquals("a zero target is not saved", 60.0, after.targetPts, 0.0)
+    }
+
     @Test fun protectionSettingsTypedAreSaved() {
         saved(auto = PineScripts.Auto(buy = "Buy", sell = "Sell"))
         page()
@@ -344,6 +367,14 @@ class PineScreenTest {
         compose.waitMain(5_000) { PineScripts.items.value.single().auto.shortWith == "exit" }
         compose.pineTap("3")
         compose.waitMain(5_000) { PineScripts.items.value.single().auto.lots == 3 }
+        // The profit lock's trail (on by default): its numbers are the script's own.
+        compose.onAllNodes(hasText("Breakeven from +%")).onFirst().performTextReplacement("6")
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.trail.breakevenPct == 6.0 }
+        compose.onAllNodes(hasText("Keep % of best gain")).onFirst().performTextReplacement("60")
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitMain(5_000) { PineScripts.items.value.single().auto.trail.steps.first().keepPct == 60.0 }
+        assertTrue(PineScripts.items.value.single().auto.trail.steps.first().startPct == 8.0)
     }
 }
 

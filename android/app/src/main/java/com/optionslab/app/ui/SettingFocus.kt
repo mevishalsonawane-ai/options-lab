@@ -51,7 +51,18 @@ object SettingFocus {
 
     fun done(key: String) { if (wanted.value == key) wanted.value = null }
 
-    fun reset() { wanted.value = null; reached.value = null; lit.value = null; askedAt = 0L }
+    /**
+     * A Settings page asked for from inside the app (Today's notes' "Turn these off"): the main screen opens it and clears
+     * this; its row [key] is then brought into view and pulses, as for a tapped notification. Navigation only.
+     */
+    val pageWanted = MutableStateFlow<String?>(null)
+
+    fun open(page: String, key: String) {
+        ask(key)
+        pageWanted.value = page
+    }
+
+    fun reset() { wanted.value = null; reached.value = null; lit.value = null; pageWanted.value = null; askedAt = 0L }
 }
 
 /**

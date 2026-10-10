@@ -113,6 +113,30 @@ class BackupTest : RobolectricTest() {
         assertEquals(0, orb.getJSONObject("auto").length())
         val pine = JSONArray(String(Vault.readFile(pineFile())!!))
         assertFalse(pine.getJSONObject(0).getJSONObject("auto").getBoolean("on"))
+        // Boss's 06 Oct rule: the backup's script had no stop or target: restored with 30 / 60 and the lock on.
+        assertEquals(30.0, pine.getJSONObject(0).getJSONObject("auto").getDouble("stopPts"), 0.0)
+        assertEquals(60.0, pine.getJSONObject(0).getJSONObject("auto").getDouble("targetPts"), 0.0)
+        assertTrue(pine.getJSONObject(0).getJSONObject("auto").getBoolean("profitLock"))
+    }
+
+    @Test fun aRestoreNeverBringsBackAPineScriptWithoutItsStopTargetOrLock() {
+        val text = JSONArray()
+            .put(JSONObject().put("id", 1).put("name", "Bare").put("code", "x")
+                .put("auto", JSONObject().put("on", true).put("stopPts", 0.0).put("targetPts", 0.0).put("profitLock", false).put("profitLockChosen", true)))
+            .put(JSONObject().put("id", 2).put("name", "Narrow").put("code", "x")
+                .put("auto", JSONObject().put("stopPts", 12.0).put("targetPts", 90.0)))
+            .put(JSONObject().put("id", 3).put("name", "No auto").put("code", "x"))
+            .toString()
+        val out = JSONArray(Backup.pineRestored(text))
+        val bare = out.getJSONObject(0).getJSONObject("auto")
+        assertFalse(bare.getBoolean("on"))
+        assertEquals(30.0, bare.getDouble("stopPts"), 0.0); assertEquals(60.0, bare.getDouble("targetPts"), 0.0); assertTrue(bare.getBoolean("profitLock"))
+        val narrow = out.getJSONObject(1).getJSONObject("auto")
+        assertEquals("a nonzero stop is kept", 12.0, narrow.getDouble("stopPts"), 0.0); assertEquals(90.0, narrow.getDouble("targetPts"), 0.0)
+        assertEquals(30.0, out.getJSONObject(2).getJSONObject("auto").getDouble("stopPts"), 0.0)
+        // And read back as the app reads it.
+        val items = PineScripts.parse(out.toString())
+        assertTrue(items.all { it.auto.stopPts > 0 && it.auto.targetPts > 0 && it.auto.profitLock && !it.auto.on })
     }
 
     @Test fun aCraftedFileCannotSwitchOnLiveTradingOrLoosenTheGuard() {
@@ -128,6 +152,28 @@ class BackupTest : RobolectricTest() {
         assertEquals(1_000.0, SecurePrefs.getDouble("g.loss", 0.0), 0.0)
         for (k in listOf("sec.refuse", "lock.idleSeconds", "kite.apiKey", "pin.hash", "relay.host")) assertNull(k, SecurePrefs.snapshot()[k])
         assertEquals(5.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+    }
+
+    /** Liquidity 15+5's size: a restore never raises it above this phone's; the backup's higher size waits for Boss. */
+    @Test fun aRestoreNeverRaisesLiquiditysLots() {
+        fun restoreWith(here: Int?, backup: Int?): JSONObject {
+            orbFile().delete()
+            if (here != null) Vault.writeFile(orbFile(), JSONObject().put("liqLots", here).toString().toByteArray())
+            val orb = JSONObject().put("armed", JSONObject().put("liquidity5", true)).apply { backup?.let { put("liqLots", it) } }
+            Backup.restore(context, Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!", JSONObject(),
+                JSONObject().put("f/orb.vault", b64(orb.toString()))), pass.copyOf()))
+            return JSONObject(String(Vault.readFile(orbFile())!!))
+        }
+        restoreWith(here = 1, backup = 3).let { o ->
+            assertEquals("kept at this phone's size", 1, o.getInt("liqLots"))
+            assertEquals("the backup's 3 waits for Boss", 3, o.getInt("liqLotsAsk"))
+            assertEquals(0, o.getJSONObject("armed").length())
+        }
+        restoreWith(here = 3, backup = 1).let { o -> assertEquals("lowering restores as it was", 1, o.getInt("liqLots")); assertFalse(o.has("liqLotsAsk")) }
+        // A new phone (no book here) holds at the default of 1 lot (research X1, 8 Oct).
+        restoreWith(here = null, backup = 3).let { o -> assertEquals(1, o.getInt("liqLots")); assertEquals(3, o.getInt("liqLotsAsk")) }
+        // A backup from before the setting reads as the default, 1: nothing waits.
+        restoreWith(here = 1, backup = null).let { o -> assertEquals(1, o.getInt("liqLots")); assertFalse(o.has("liqLotsAsk")) }
     }
 
     @Test fun oldPassphraseFilesStillOpen() {
@@ -149,6 +195,38 @@ class BackupTest : RobolectricTest() {
         assertTrue(c.pinSealed)
         assertTrue(Backup.restore(context, c).changePin)
         assertEquals("light", SecurePrefs.getString("ui.theme"))
+    }
+
+    /** Jarvis's weekly reviews moved to their own file: a backup carries it (sealed) and a restore puts it back. */
+    @Test fun theWeeklyReviewsFileIsCarried() = runBlocking {
+        val f = File(context.noBackupFilesDir, "weekly-reviews.vault")
+        Vault.writeFile(f, "the reviews".toByteArray())
+        val bytes = Backup.create(context, pass.copyOf())
+        f.delete()
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals("the reviews", String(Vault.readFile(f)!!))
+    }
+
+    /**
+     * An older backup (from before the reviews had their own file) has them under the old preferences key and no file:
+     * restored onto a phone that has the file, the phone's reviews stay and the backup's are merged in (IraWeekly.migrate).
+     */
+    @Test fun anOlderBackupsReviewsAreMergedWithThePhonesNotDropped() {
+        fun review(monday: java.time.LocalDate, summary: String = "A quiet week.") = com.optionslab.ira.WeeklyReview.Review(monday,
+            monday.plusDays(4), monday.plusDays(4).atTime(15, 45), summary, "A quiet week, Boss.", "Watch Thursday's expiry.", emptyList())
+        val mine = listOf(review(java.time.LocalDate.of(2026, 10, 5)), review(java.time.LocalDate.of(2026, 9, 28)))
+        val f = com.optionslab.app.ira.IraWeekly.file()!!
+        Vault.writeFile(f, com.optionslab.ira.WeeklyReview.encodeAll(mine).toByteArray(Charsets.UTF_8))
+        val old = listOf(review(java.time.LocalDate.of(2026, 9, 28), "From the backup."), review(java.time.LocalDate.of(2026, 9, 21)))
+        val c = Backup.open(craft("IRABK3", 600_000, "Test-Passphrase-42!",
+            JSONObject().put(com.optionslab.app.ira.IraWeekly.KEY, com.optionslab.ira.WeeklyReview.encodeAll(old))), pass.copyOf())
+        Backup.restore(context, c)
+        assertTrue("the phone's reviews file is kept", f.exists())
+        val kept = com.optionslab.app.ira.IraWeekly.kept()
+        assertEquals(listOf(java.time.LocalDate.of(2026, 10, 5), java.time.LocalDate.of(2026, 9, 28), java.time.LocalDate.of(2026, 9, 21)),
+            kept.map { it.monday })
+        assertEquals("A quiet week.", kept[1].summary)
+        assertNull(SecurePrefs.getString(com.optionslab.app.ira.IraWeekly.KEY))
     }
 
     @Test fun filesMissingFromTheBackupAreRemovedHere() {

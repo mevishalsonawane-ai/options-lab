@@ -298,7 +298,9 @@ internal object IraAccount {
                     if (z == null) orders += "Zerodha did not answer just now, so its orders are not included."
                     else {
                         val (zo, zp, zf) = z.first
-                        val zCharges = z.second?.let { com.optionslab.app.data.TradeBook.liveCharges(it) }
+                        // Zerodha's exact charges when the account page has had them for exactly these orders (never asked from here).
+                        val zExact = com.optionslab.app.data.ZerodhaCharges.kept(zo)
+                        val zCharges = zExact ?: z.second?.let { com.optionslab.app.data.TradeBook.liveCharges(it) }
                         orders += AppFacts.orders("Zerodha", zo.filter { it.placedAt.startsWith(today.toString()) || it.placedAt.length < 10 }.sortedBy { it.placedAt }.map {
                             AppFacts.OrderLine(it.placedAt.drop(11).take(5).ifBlank { it.placedAt.take(5) }, it.symbol, it.side, it.qty, it.status, it.avg,
                                 // Zerodha orders are kept under "kite:<id>" (the bare id never matched: the raw tag showed).
@@ -306,7 +308,7 @@ internal object IraAccount {
                                 it.message.takeIf { m -> m.isNotBlank() }, it.id)
                         }, byWho = true)
                         pos += AppFacts.positions("Zerodha", zp.net.filter { it.open }.map { AppFacts.Held(it.symbol, it.qty, it.avg, it.last, it.pnl) })
-                        pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised }, zCharges, estimate = true)
+                        pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised }, zCharges, estimate = zExact == null)
                         zf?.let { funds += "Zerodha funds: ${AppFacts.amt(it.available)} available, ${AppFacts.amt(it.used)} used, net ${AppFacts.amt(it.net)}." }
                     }
                 } else if (Broker.linked) orders += "Zerodha: not logged in today, so only the paper account is read."
@@ -344,15 +346,23 @@ internal object IraAccount {
                 }
                 val held = com.optionslab.app.data.PineAuto.held.value
                 com.optionslab.app.data.PineScripts.items.value.filter { it.auto.on || com.optionslab.app.data.PineAuto.todayOf(it.id) != null }.forEach { x ->
-                    arms += AppFacts.ArmLine(x.name, "Pine", x.auto.on, "${x.auto.symbol} ${x.auto.interval}, ${x.auto.mode}",
+                    arms += AppFacts.ArmLine(x.name, "Pine", x.auto.on, "${x.auto.symbol} ${x.auto.interval}, ${x.auto.mode}, " +
+                        AppFacts.pineExits(x.auto.stopPts, x.auto.targetPts, x.auto.profitLock, x.auto.trail),
                         com.optionslab.app.data.PineAuto.todayOf(x.id), held[x.id]?.let { h -> "${h.qty} ${h.symbol}" })
                 }
                 runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
                     val closed = a.today.filter { !it.open }
-                    arms += AppFacts.ArmLine(a.arm.label, "ORB", a.armed, a.status.ifBlank { if (a.armed) "armed" else "off" },
+                    // The day's stop said with who made it (never just "stopped_for_today"): Boss, the daily loss limit, the tile.
+                    arms += AppFacts.ArmLine(a.arm.label, "ORB", a.armed, if (a.status == "stopped_for_today") com.optionslab.app.data.OrbArms.describe(a.status)
+                        else a.status.ifBlank { if (a.armed) "armed" else "off" },
                         if (closed.isEmpty()) null else closed.sumOf { (it.grossPnl ?: 0.0) - it.charges }, a.open?.let { "${it.qty} ${it.symbol}" }, a.today.size)
                 }
-                out[Section.STRATEGIES] = AppFacts.arms(arms, rank = true)
+                // While the bot is stopped for today, that comes first: armed arms make no entries, and who stopped it.
+                val dayStop = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()?.let { w ->
+                    "Bot stopped for today ${com.optionslab.ira.DayStop.by(w)}: armed strategies, ORB arms and Pine scripts make no new entries today. " +
+                        if (com.optionslab.ira.DayStop.mayLift(w)) "\"Start all\" (or Start bot on Home) resumes them." else "It holds until tomorrow (\"start all\" does not lift it)."
+                }
+                out[Section.STRATEGIES] = listOfNotNull(dayStop) + AppFacts.arms(arms, rank = true)
             }
 
             if (wants(Section.RISK)) out[Section.RISK] = listOf(
@@ -472,7 +482,27 @@ internal object IraAccount {
                 val span = com.optionslab.ira.Charges.span(question)
                 val month = com.optionslab.ira.Charges.month(span, today)
                 val r = ArrayList<String>()
-                for (live in listOf(false, true)) {
+                // "Why are my charges so high?" (round 34): the day's (or the span's) orders, fills and round trips, the
+                // charges by kind and who placed the most orders - Zerodha first (its charges are what surprised Boss), each
+                // labelled; the GOLD build has no Zerodha.
+                val why = com.optionslab.ira.Charges.whyAsked(question)
+                if (why) for (live in if (com.optionslab.app.BuildConfig.GOLD) listOf(false) else listOf(true, false)) {
+                    // Each fill with its exchange and product: a Zerodha share trade under MIS pays the same-day schedule, as
+                    // the app's own estimate prices it (TradeBook.liveCharges).
+                    val legs = runCatching { com.optionslab.app.data.TradeBook.legs(live) }.getOrDefault(emptyList()).map { l ->
+                        val f = l.fill
+                        com.optionslab.ira.Charges.Leg(f.at, f.orderId, com.optionslab.ira.Charges.owner(owners[f.orderId]), if (f.side > 0) "BUY" else "SELL", f.price, f.qty, f.symbol,
+                            exchange = l.exchange, product = l.product)
+                    }
+                    if (live && legs.isEmpty()) continue
+                    val whyTrips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
+                        com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+                    }
+                    val whySpan = com.optionslab.ira.Charges.whySpan(question)
+                    val exact = if (live && (whySpan == null || whySpan == com.optionslab.ira.Charges.Span.TODAY)) runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(today) }.getOrNull() else null
+                    r += com.optionslab.ira.Charges.whyLines(if (live) "Zerodha" else "Paper", legs, whyTrips, whySpan, today, estimated = live, exact = exact)
+                }
+                if (!why) for (live in listOf(false, true)) {
                     val trips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
                         com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
                     }

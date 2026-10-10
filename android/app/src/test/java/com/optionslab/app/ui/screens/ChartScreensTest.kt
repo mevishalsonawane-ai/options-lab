@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
@@ -517,6 +518,28 @@ class ChartScreensTest {
     }
 
     private fun openOf(head: String) = Regex(" O ([0-9.,]+)").find(head)!!.groupValues[1].replace(",", "").toDouble()
+
+    @Test fun basicChartOrderFlowLinesAreOffUntilTapped() {
+        // The order flow's optional lines (POC/VA, VWAP) start OFF; a tap turns one on; without levels no toggle is shown.
+        assertFalse(OVERLAY_DEFAULT)
+        val lv = listOf(com.optionslab.ira.Auction.ChartLevel("POC", 129.5, com.optionslab.ira.Auction.ChartLevel.Kind.PROFILE),
+            com.optionslab.ira.Auction.ChartLevel("VWAP", 129.8, com.optionslab.ira.Auction.ChartLevel.Kind.VWAP))
+        set { NativeChart("NIFTY", levels = lv) { _, _ -> testBars(60) } }
+        until { shows("C 130.00") }
+        text("POC/VA").assertIsNotSelected()
+        text("VWAP").assertIsNotSelected()
+        text("POC/VA").performClick()
+        idle()
+        text("POC/VA").assertIsSelected()
+        text("VWAP").assertIsNotSelected()
+    }
+
+    @Test fun basicChartWithoutOrderFlowLevelsHasNoToggles() {
+        set { NativeChart("NIFTY") { _, _ -> testBars(60) } }
+        until { shows("C 130.00") }
+        assertFalse(shows("POC/VA", sub = false))
+        assertFalse(shows("VWAP", sub = false))
+    }
 
     @Test fun basicChartSaysWhenThereAreNoCandlesOrTheLoadFailed() {
         var fail by mutableStateOf(false)

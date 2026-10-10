@@ -2,7 +2,7 @@ package com.optionslab.ira
 
 /**
  * The words Jarvis could not place today, kept (redacted, the last [KEEP], each once) for the diagnostics and the
- * 15:35 wrap-up - so Boss can teach them by rephrasing, and each report shows what to handle next. Pure.
+ * 15:45 wrap-up - so Boss can teach them by rephrasing, and each report shows what to handle next. Pure.
  */
 object Missed {
     const val KEEP = 20

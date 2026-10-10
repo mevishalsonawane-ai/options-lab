@@ -229,7 +229,7 @@ object TradesADay {
 
     // ---- asked -------------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "").replace("'", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val PERF = "(better|worse|best|worst|more|less|most|well|badly|good|bad|money|profit|profits|loss|losses|win|wins|lose|make|made)"
     private const val FEW = "(less|fewer|more|lots of|a lot of|many|few|lots|a lot|too many|too much|heavily|a few)"

@@ -153,7 +153,7 @@ object WrongThing {
 
     // ---- what Boss says --------------------------------------------------------------------------------------------
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private val STOP = setOf("the", "a", "an", "is", "was", "my", "me", "i", "you", "jarvis", "please", "boss", "hey", "ok", "okay", "to", "of", "and", "so", "tell")
 

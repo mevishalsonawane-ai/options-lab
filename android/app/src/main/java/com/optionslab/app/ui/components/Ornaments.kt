@@ -139,6 +139,8 @@ fun BrassButton(
     enabled: Boolean = true,
     busy: Boolean = false,
     tone: Color? = null,
+    /** A small icon before the label, drawn in the label's colour (the globe's microphone). */
+    leading: (@Composable (Color) -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val p = LocalPalette.current
@@ -176,6 +178,7 @@ fun BrassButton(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (busy) { CircularProgressIndicator(Modifier.size(16.dp), color = textColor, strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
+            if (leading != null) { leading(textColor.copy(alpha = alpha)); Spacer(Modifier.width(8.dp)) }
             // More centred lines when a large font or a narrow screen leaves no room for one: the button grows
             // rather than cutting its label.
             // A label that is one number ("+30") shrinks on one line instead: a number never breaks ("+3 / 0").

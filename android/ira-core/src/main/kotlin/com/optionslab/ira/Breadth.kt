@@ -47,7 +47,7 @@ object Breadth {
     private fun pp(x: Double) = "%.2f".format(Locale.ENGLISH, abs(x))
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
     private val DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
-    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     /** Boss's own, something to do, the news, a why or a forecast: never read here. */
     private val NOT_HERE = Regex(" (i|me|my|mine|we|our|buy|sell|order|orders|alert|alerts|alarm|alarms|remind|set|exit|news|headline|headlines|why|kyun|reason|predict|prediction|forecast|will|tomorrow|option chain|chain|pcr|put call|oi|open interest|strike|strikes) ")

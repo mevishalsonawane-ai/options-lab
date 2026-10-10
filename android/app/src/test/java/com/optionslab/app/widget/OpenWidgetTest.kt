@@ -237,4 +237,42 @@ class OpenWidgetTest : RobolectricTest() {
         assertEquals("as of 15:20", text(R.id.ow_stamp))
         assertEquals("its positions were not read: never 'nothing open'", OpenBook.SEE_POSITIONS, text(R.id.ow_note))
     }
+
+    @Test fun zerodhasExactChargesReplaceTheEstimateOnceKept() {
+        allow()
+        val book = Broker.Positions(listOf(open, closed), emptyList())
+        OpenWidget.fromZerodha(context, book, 180.0)
+        assertEquals("+₹550", text(R.id.ow_pnl))
+        assertEquals("Charges ≈ ₹180 (estimate)", text(R.id.ow_charges))
+        OpenWidget.fromZerodha(context, book, 180.0, exact = 163.4)
+        assertEquals("the P&L stays Zerodha's, before charges", "+₹550", text(R.id.ow_pnl))
+        assertEquals("Charges ₹163", text(R.id.ow_charges))
+        OpenWidget.exactCharges(context, 171.0)
+        assertEquals("Charges ₹171", text(R.id.ow_charges))
+        // The watch finds no kept answer covering the day's trades (an order filled since): never an old figure called exact.
+        OpenWidget.fromWatch(context, true, true, book, null)
+        assertEquals("Charges ≈ ₹171 (estimate)", text(R.id.ow_charges))
+    }
+
+    @Test fun exactChargesWithTheSwitchOffKeepNothing() {
+        OpenWidget.exactCharges(context, 163.4)
+        OpenWidget.fromZerodha(context, Broker.Positions(listOf(open), emptyList()), 180.0, exact = 163.4)
+        assertEquals(OpenWidget.OFF, text(R.id.ow_note))
+        assertEquals(false, shown(R.id.ow_charges))
+        assertNull("nothing reaches the vault", SecurePrefs.getString("ow.zerodha"))
+    }
+
+    @Test fun afterHoursTheCalendarsExactChargesAreSaidAsExact() {
+        Background.linkZerodha()
+        AppSettings.save(AppSettings.load().copy(mode = "live"))
+        Background.at(WED, 15, 20)
+        PnlTracker.record(2_100.0)
+        DailyPnl.record(true, 2_150.0, 3, 163.4, exact = true)
+        Background.at(WED, 19, 0)
+        alreadyOn()
+        updated()
+        assertEquals("+₹2,150", text(R.id.ow_pnl))
+        assertEquals("Charges ₹163", text(R.id.ow_charges))
+        assertEquals(true, DailyPnl.all(true)[Market.today()]?.exact)
+    }
 }

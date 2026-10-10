@@ -48,7 +48,7 @@ object Weekdays {
     const val NOT_HERE = "I keep the weekday record for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
     private const val NO_EXPIRY = "I only know an expiry day from the option candles saved that day"
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'").replace("'", " ")) + " "
+    private fun norm(text: String) = Spaced.words(text)
     private fun p2(x: Double) = "%.2f%%".format(Locale.ENGLISH, x)
     private fun share(k: Int, of: Int) = "%d%%".format(Locale.ENGLISH, Math.round(k * 100.0 / of))
     private fun times(x: Double) = "%.1f".format(Locale.ENGLISH, x)

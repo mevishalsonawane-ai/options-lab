@@ -63,6 +63,12 @@ object Guard {
         return AccountGuard.Account(
             capital = capital, equity = equity, peakEquity = peak(true, equity), dayPnl = dayPnl,
             holdings = book.net.filter { it.qty != 0 }.map { p ->
+                // MCX (9 Oct): Zerodha keeps it in lots; the guard counts units (lots x the lot's multiplier), as for NFO.
+                if (p.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE) {
+                    val m = McxMarket.find(p.symbol)
+                    val mult = m?.multiplier ?: p.multiplier.toInt().coerceAtLeast(1)
+                    return@map AccountGuard.Holding(p.symbol, p.qty * mult, mult, m?.name, m?.expiry, m?.right?.name)
+                }
                 val i = ins[p.symbol]
                 AccountGuard.Holding(p.symbol, p.qty, i?.lotSize ?: 1, i?.name, i?.expiry, i?.right?.name)
             },
@@ -75,6 +81,13 @@ object Guard {
         AccountGuard.Order(c.symbol, action.uppercase(), lots * c.lotSize, c.lotSize, price, c.underlying, c.expiry, c.right.name)
 
     fun liveOrder(o: com.optionslab.engine.Kite.Order): AccountGuard.Order {
+        // MCX (9 Oct): in units (lots x multiplier) like its holdings above, with MCX's own entry cut-off.
+        if (o.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE) {
+            val m = McxMarket.find(o.tradingSymbol)
+            val mult = o.multiplier.coerceAtLeast(1)
+            return AccountGuard.Order(o.tradingSymbol, o.side.name, o.quantity * mult, mult, o.price ?: 0.0, m?.name, m?.expiry, m?.right?.name,
+                exchange = com.optionslab.engine.mcx.Mcx.EXCHANGE)
+        }
         val i = instruments()[o.tradingSymbol]
         return AccountGuard.Order(o.tradingSymbol, o.side.name, o.quantity, o.lotSize, o.price ?: 0.0, i?.name, i?.expiry, i?.right?.name)
     }
@@ -106,7 +119,7 @@ object Guard {
         judge(order, account, exit, paper).also { if (!exit && !paper) onRefusal(it) }
 
     private fun judge(order: AccountGuard.Order, account: AccountGuard.Account?, exit: Boolean, paper: Boolean): List<String> {
-        val limits = AppSettings.load().guardLimits(paper)
+        val limits = AppSettings.load().guardLimits(paper).copy(mcxEntryCutoffMinute = runCatching { McxMarket.entryCutoffMinute() }.getOrNull())
         val killed = listOf("The kill switch is on: no new positions until it is cleared.")
         // An exit is never stopped: not by the limits, not when the account cannot be read, and not by the
         // kill switch (a drawdown turns it on by itself, and must not trap the account in what it holds).

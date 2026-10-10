@@ -6,7 +6,7 @@ import java.util.Locale
 import kotlin.math.abs
 
 /**
- * The expiry-eve checklist (usefulness round 22, 2026-10-05): in the 15:35 wrap-up (and "wrap up my day") on the
+ * The expiry-eve checklist (usefulness round 22, 2026-10-05): in the 15:45 wrap-up (and "wrap up my day") on the
  * trading day before an expiry, which of Boss's open legs - paper and Zerodha - expire on the next trading day, how far
  * each is in or out of the money at the close, its product (MIS or NRML), what tomorrow's 15:05 expiry square-off will
  * do with it (or that it is off), any legs kept to the 15:30 settlement, and how an in-the-money one settles (index

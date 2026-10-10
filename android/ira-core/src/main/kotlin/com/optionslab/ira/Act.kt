@@ -10,7 +10,22 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
                    val market: Market? = null, val above: Boolean? = null, val level: Double? = null,
                    /** An event's day ([Kind.EVENT_ADD]). */ val day: java.time.LocalDate? = null,
                    /** An alarm by a move from the price now, in percent ([Kind.ALARM_ADD] without a level). */ val pct: Double? = null,
-                   /** Lots said with a close ("close 1 lot of ..."): only a whole position is closed, so this is refused. */ val lots: Int? = null) {
+                   /** Lots said with a close ("close 1 lot of ..."): only a whole position is closed, so this is refused. */ val lots: Int? = null,
+                   /**
+                    * Several arms named in one stop ([Kind.STOP_ONE]: "stop orb sweep and range fade", "stop arms 3 and 4"), each as
+                    * said (a name or a number) - one stop each, never all; or, with [keep], the ones that stay on ("stop all except
+                    * orb", "orb chhod ke baaki band karo"): every other one that is on is stopped, each by itself ([Commands.stops]).
+                    */
+                   val targets: List<String> = emptyList(), val keep: Boolean = false,
+                   /**
+                    * The [targets] were set apart by a comma or "&" ("stop orb, sweep"): each is its own arm, never read together as
+                    * one name ([Commands.stops]). Not shown in [toString] (the readings kept in tests stay as written).
+                    */
+                   val apart: Boolean = false) {
+    /** As before [targets] and [keep] were added (the readings kept in tests stay as written); they are shown only when said. */
+    override fun toString(): String = "Command(kind=$kind, target=$target, number=$number, market=$market, above=$above, level=$level, day=$day, pct=$pct, lots=$lots" +
+        (if (targets.isNotEmpty() || keep) ", targets=$targets, keep=$keep" else "") + ")"
+
     enum class Kind(val reduces: Boolean) {
         STOP_ALL(true), START_ALL(false), STOP_ONE(true), START_ONE(false),
         CANCEL_ALL(true), CANCEL_ONE(true), CLOSE_ALL(true), CLOSE_ONE(true),
@@ -42,6 +57,12 @@ data class Command(val kind: Kind, val target: String? = null, val number: Int? 
         PACE_SLOWER(true), PACE_FASTER(true), PACE_NORMAL(true),
         /** "Be quiet for 30 minutes": muted for [Command.number] minutes, then speaking again by itself. */
         MUTE_FOR(true),
+        /**
+         * "Don't listen", "mat suno", "sunna band karo" (Boss, 6 Oct): the microphone off altogether - no wake word, no
+         * follow-ups, nothing heard - until Boss taps the crossed-out ear on the globe or the switch in Settings. Only ever lowers what is
+         * heard: no words, typed or said, switch listening back on ([NoListen]).
+         */
+        LISTEN_OFF(true),
     }
 }
 
@@ -85,9 +106,16 @@ object Commands {
         "(pura|poora|puri|poori|pure|poore) (batao|bataao|bolo|bataiye|answer)|full details|the full details|" +
         "carry on|continue|" +
         "tell me more|more|more details|go on|details|aur batao|" +
+        // Understanding round 26: "say more", "keep going", "the rest", "tell me the rest", "baaki batao", "aage bolo", "poori baat
+        // batao", "the full answer", "the whole thing".
+        "say more|keep going|the rest|rest of it|the rest of it|(tell me|say|give me) the rest( of it)?|" +
+        "(baaki|baki|baaki ka|baki ka|aage|aage ka) (batao|bataao|bolo|bataiye|boliye|sunao)|(poori|puri|pura|poora) baat (batao|bataao|bolo)|" +
+        "(give me |say )?(the )?full answer|(say |tell me )?the whole thing|(give me |say )?the whole answer|" +
         // (As [Hinglish.normalize] turns "batao" round: "pura batao" -> "show pura". "Detail mein batao" and "explain in detail"
         // stay Boss's wish for the length of a topic, [TopicLength].)
-        "show (pura|poora|puri|poori|pure|poore|or|details|full details))( please| boss| jarvis| now)? $")
+        "show (pura|poora|puri|poori|pure|poore|or|details|full details|" +
+        // ("Baaki batao" -> "show baaki", "poori baat batao" -> "show poori baat": round 26.)
+        "baaki|baki|baaki ka|baki ka|aage|aage ka|(poori|puri|pura|poora) baat))( please| boss| jarvis| now)? $")
     private val ARM_NOUN = "(?:the )?(?:strategy|strategies|arm|arms|bot|bots|algo|script)?"
     /** Every market's names, longest first, as one alternation (for a removal by market). */
     private val ALIASES = Market.entries.flatMap { it.aliases }.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
@@ -118,14 +146,33 @@ object Commands {
             return Command(Command.Kind.NOTE, target = m.groupValues[1].trim())
         }
         // "Why aren't you speaking?" / "why only in chat?": the voice check (it only explains; nothing changes), asked or typed with "?".
-        if (VOICE_WHY.containsMatchIn(" " + spacedWords(said.lowercase().replace("'", " ")) + " ")) return Command(Command.Kind.VOICE_CHECK)
+        val asSaid = Spaced.words(said)
+        if (VOICE_WHY.containsMatchIn(asSaid)) return Command(Command.Kind.VOICE_CHECK)
         // A question ("is live mode on?") is never a command.
         if (said.trim().endsWith("?")) return null
-        val asSaid = " " + spacedWords(said.lowercase().replace("'", " ")) + " "
         if (MUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MUTE)
         if (UNMUTE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.UNMUTE)
+        // "Don't listen" (before the negation check: the "don't" is the command): the microphone off, until his button.
+        if (NoListen.asked(said)) return Command(Command.Kind.LISTEN_OFF)
         if (MORE_SAID.containsMatchIn(asSaid)) return Command(Command.Kind.MORE)
-        val text = Hinglish.normalize(said)
+        // An action said with a condition ("agar nifty 100 point gire to sab band kar do", "exit all if Nifty falls below 24000"):
+        // Jarvis can't set one to wait, so it is never a command - neither done now nor read as an arm's garbled name
+        // ([Conditional]; understanding round 29). The hub says so and suggests the app's own alarm, stop loss and limits.
+        // (Nor Boss supposing his own act, "if I square off now" / "agar main exit karu to margin": a what-if, round 30.)
+        // A risk-reducing command said with one - the kill switch on, stop all, exit all, close all - still goes through as
+        // itself, to its own confirmation: a stop, a kill or an exit never adds risk, so the condition is never a reason to
+        // refuse it (review, 6 Oct; [Conditional.passes]). A conditional order, start or one arm's stop stays refused.
+        if (Conditional.asked(said) || Conditional.supposed(said)) return body(said).takeIf { Conditional.passes(said, it) }
+        return body(said)
+    }
+
+    /** [parseAs] past the voice words and the conditional check. */
+    private fun body(said: String): Command? {
+        // "Stop too close?", "SL too tight": his stops asked about, never a STOP of an arm called "too close" ([StopNoise], round 30).
+        if (StopNoise.asked(said)) return null
+        // "Haan sab band kar do", "yes stop everything", "theek hai, stop orb": the yes is Boss agreeing with himself, never part
+        // of what to stop (it was read as an arm called "haan all"): left out before the verb is turned round.
+        val text = Hinglish.normalize(withoutYes(said))
         // "25,000" is one number; a full stop ends a sentence (but "52.5" keeps its point).
         val t = " " + text.lowercase().replace("%", " percent ").replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\.(?!\\d)"), " ")
             .replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " "
@@ -157,6 +204,15 @@ object Commands {
         if (QUESTION.containsMatchIn(s) || NEGATION.containsMatchIn(s)) return null
         fun has(r: String) = rx(r).containsMatchIn(s)
         fun num(r: String) = rx(r).find(s)?.groupValues?.get(1)?.toIntOrNull()
+        // The words of a stop as read for the arms: a comma or "&" between names is an "and" here.
+        val sl = (" " + text.lowercase().replace(rx("(\\d),(?=\\d{3})"), "$1").replace(rx("\\s*[,&]\\s*"), " and ").replace(rx("\\.(?!\\d)"), " ")
+            .replace(rx("[^a-z0-9. ]"), " ").replace(rx("\\s+"), " ").trim() + " ")
+            .replace(rx(" (please|jarvis|hey|ok|okay|now|right now|immediately|can you|could you|for me) "), " ").replace(rx("\\s+"), " ").let { " ${it.trim()} " }
+        // A stop of all but some ("stop all except orb", "orb chhod ke baaki band karo", "stop everything but keep orb running"):
+        // once said, it is that or nothing - the ones kept read as names, or nothing is done (Jarvis asks again). Never the stop
+        // of everything, a close or anything else read from the rest of it ("stop all except orb and close positions", "stop
+        // everything except orb in paper mode", a list too long; review, 6 Oct). Before every other action here.
+        if (keepSaid(sl)) return stopAllBut(sl)
 
         if (rx("^ (undo|undo (that|it|the last change|my last change|last change|the change)|revert( that| it| the last change)?|put (it|that) back|change (it|that) back) $").containsMatchIn(s)) return Command(Command.Kind.UNDO)
         // The day's target: "my target today is 3000", "set my daily target to 5k", "clear my target".
@@ -190,6 +246,8 @@ object Commands {
         rx(" (?:your|jarvis s|jarvis) (?:own )?(?:trades? )?weekly loss limit (?:to |at |of )?(?:rs |rupees )?(\\d{3,7}) ").find(t)?.let { m ->
             return Command(Command.Kind.JTRADES_WEEKLY, level = m.groupValues[1].toDouble())
         }
+        // Boss's 06 Oct rule: a Pine strategy's stop-loss, target and profit lock never go off (refused, [PineProtection]).
+        if (PineProtection.breaksRule(s)) return Command(Command.Kind.SET_REFUSED, target = PineProtection.REFUSED_TARGET)
         // The app's limits ("set max lots to 3"); never the PIN, real orders or the lock.
         if (SettingsTalk.forbidden(s)) return Command(Command.Kind.SET_REFUSED)
         if (!rx(" (your|jarvis s) | jarvis (own )?(trades? )?(daily )?(loss limit|risk) ").containsMatchIn(t)) SettingsTalk.parse(s)?.let { return it }
@@ -268,7 +326,12 @@ object Commands {
         }
         if (rx("^ book (?:my |the )?profits? $").containsMatchIn(s)) return Command(Command.Kind.CLOSE_ONE)
         rx("^ book (?:my |the )?profits? (?:in|on) (?:the |my )?(.+?) $").find(s)?.let { return Command(Command.Kind.CLOSE_ONE, target = it.groupValues[1].trim()) }
-        // The bots: everything at once, or one strategy / arm by its number or name.
+        // The bots: everything at once, or one strategy / arm by its number or name. All but some ("stop all except orb", "orb
+        // chhod ke baaki band karo") and several by name ("stop the arms orb sweep and range fade", "range fade aur sweep band
+        // kardo") are read first: each is stopped by itself, never all of them (Boss, 6 Oct: two arms switched off became a stop
+        // of everything). A comma or "&" between names is an "and" here.
+        // (All but some was read above, before the other actions.)
+        stopSeveral(sl, rx("[a-z0-9)]\\s*(?:,(?!\\d{3})|&)\\s*[a-z0-9(]").containsMatchIn(text.lowercase()))?.let { return it }
         if (has(" (stop|halt|pause|disarm|switch off|turn off) (all|every|everything)( the| my)?( strategies| arms| bots| algos| scripts| trading)? | stop trading | stop (the |my )?(bots|algos|arms|strategies) ")) return Command(Command.Kind.STOP_ALL)
         if (has(" (start|resume|restart) (all |the |my )?(bots|arms|strategies|algos|trading) again | (resume|restart) (all|trading|the bots|everything) | start trading again ") ||
             has(" (start|arm|switch on|turn on|run|enable|resume) (all|every)( the| my)? (strategies|strategy|arms|arm|bots|algos|scripts) | (start|arm|switch on|turn on|run|enable|resume) (everything|all) $| (start|arm|switch on|turn on|run|enable) (the |my )?(strategies|arms|bots|algos) $"))
@@ -284,7 +347,10 @@ object Commands {
             // "Stop stop" / "stop, wait" is Boss hushing Jarvis's voice ([BargeIn]), never a strategy called "stop" (5 Oct).
             "|^(stop|bas|ruko|rukko|chup|wait|enough|quiet|please)( (stop|bas|ruko|rukko|chup|wait|enough|quiet|please|now|it))*$" +
             // "Awaz band karo" / "awaz chalu karo" is Jarvis's voice (round 24), never a strategy called "awaz".
-            "|^(apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz)\\b")
+            "|^(apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz)\\b" +
+            // "Stop the follow up questions", "follow up band karo", "turn off follow ups": Jarvis's question offered at the end of
+            // an answer ([NextAsk]'s undo, round 25), never a strategy called "follow up questions".
+            "|^(the |your |these |ye |yeh )?(follow ?ups?|follow ?up (questions?|offers?|suggestions?|sawal|sawaal)|next questions?|next question offers?)$")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what) && !habitUndo(s)) return one(Command.Kind.STOP_ONE, what)
@@ -297,12 +363,12 @@ object Commands {
     }
 
     /** "Stop offering", "stop reminding me", "stop saying", "stop shortening"...: a speech habit of Jarvis's own named after "stop". */
-    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out|mentioning|naming|listing|putting|starting with|starting on|beginning with|beginning on|suggesting|asking|ending|finishing) ")
+    private val HABIT_VERB = rx("^ stop (offering|reminding|saying|shortening|cutting|skipping|adding|qualifying|giving|telling|leaving out|mentioning|naming|listing|putting|starting with|starting on|beginning with|beginning on|leading with|opening with|changing|switching|getting|checking|preparing|reading|keeping|loading|fetching|warming up|suggesting|asking|ending|finishing) ")
 
     /**
      * "Stop offering my morning question", "stop shortening your briefings", "stop reminding me why I turn your ideas down":
      * the undo of a speech habit Jarvis learned ([MorningAsks], [TurnDowns], [TalkHours], [HonestStars], [WordFit],
-     * [MorningSense], [TopicLength], [LeadIndex], [LeadPart], [NextAsk]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
+     * [MorningSense], [TopicLength], [LeadIndex], [LeadPart], [NextAsk], [MoreAfter], [SmallTrades], [DayIndex], [CheckTimes], [CondNeeds]) - never a strategy called "offering my morning question" (understanding round 17). Only when that
      * habit's own undo takes the very words: "stop orb", "stop the order watch", "stop offering trades" stay as they were.
      */
     private fun habitUndo(s: String): Boolean = HABIT_VERB.containsMatchIn(s) && (
@@ -310,7 +376,164 @@ object Commands {
             TalkHours.asked(s) == TalkHours.Request.RESET || HonestStars.asked(s) == HonestStars.Request.RESET ||
             WordFit.asked(s) == WordFit.Request.OFF || MorningSense.asked(s) == MorningSense.Request.RESET ||
             TopicLength.asked(s) == TopicLength.Request.RESET || LeadIndex.asked(s) == LeadIndex.Request.RESET ||
-            LeadPart.asked(s) == LeadPart.Request.RESET || NextAsk.asked(s) == NextAsk.Request.RESET)
+            LeadPart.asked(s) == LeadPart.Request.RESET || NextAsk.asked(s) == NextAsk.Request.RESET ||
+            MoreAfter.asked(s) == MoreAfter.Request.RESET || SmallTrades.asked(s) == SmallTrades.Request.RESET ||
+            DayIndex.asked(s) == DayIndex.Request.RESET || CheckTimes.asked(s) == CheckTimes.Request.RESET ||
+            CondNeeds.asked(s) == CondNeeds.Request.RESET)
+
+    // ---- several arms in one stop, or all but some (Boss, 6 Oct) ---------------------------------------------------------
+
+    /** "Haan", "yes", "ok", "theek hai" said first, before a verb that acts. */
+    private val YES_FIRST = Regex("(?i)^\\s*(?:(?:haan ji|ji haan|haan|haa|han|ha|hanji|ji|yes|yeah|yep|yup|ok|okay|theek hai|thik hai|theek|thik|bilkul|sure)\\s*[,.!]*\\s+)+(?=\\S)")
+    private val ACTS_AFTER_YES = Regex("(?i)\\b(stop|band|bandh|close|exit|square|cancel|halt|pause|disarm|switch|turn|start|chalu|shuru|resume|kill|roko|rok)\\b")
+
+    /** [said] without a leading yes-word when a verb that acts follows it ("haan sab band kar do" -> "sab band kar do"). */
+    internal fun withoutYes(said: String): String {
+        // As [Hinglish.normalize] turns the verb round, the yes lands after it: "stop haan all".
+        YES_AFTER_VERB.find(said)?.let { m -> if (m.range.last + 1 < said.trimEnd().length) return said.replaceRange(m.range, m.groupValues[1]) }
+        val m = YES_FIRST.find(said) ?: return said
+        val rest = said.substring(m.range.last + 1)
+        return if (ACTS_AFTER_YES.containsMatchIn(rest)) rest else said
+    }
+    private val YES_AFTER_VERB = Regex("(?i)^(\\s*(?:stop|start|close|cancel)\\s+)(?:(?:haan ji|ji haan|haan|haa|han|ha|hanji|ji|yes|yeah|ok|okay|theek hai|thik hai|theek|thik|bilkul)\\s*[,.!]*\\s+)+(?=\\S)")
+
+    private const val STOP_VERB = "(?:stop|halt|pause|disarm|switch off|turn off|shut down|shut off)"
+    private const val GROUP = "(?:strategies|strategy|arms|arm|bots|bot|algos|algo|scripts|script|trading)"
+    private const val EVERY = "(?:all of them|all|every|everything|each|sab|sabhi|saare)"
+    private const val REST = "(?:everything else|all else|all the rest|the rest|rest|the others|all others|all the others|others|baaki all|baki all|all baaki|all baki|baaki|baki|bache hue|everyone else)"
+    private const val EXCEPT = "(?:except for|except|but not|but|apart from|other than|besides|excluding|save for|leaving out|leaving|minus)"
+    /** Hindi "chhod ke" / "ke alawa" as [Hinglish.normalize] leaves it ("ke" dropped, "sab" turned to "all"). */
+    private const val SPARE = "(?:ko )?(?:chhod kar|chod kar|chhod ke|chod ke|chhodke|chodke|chhodkar|chodkar|chhod|chod|chhoda|chodo|chhodo|alawa|alava|siva|sivay|sivaay|siwa)"
+    private const val TAIL = "(?: (?:for today|today|for the day|for the rest of the day|as well|too|also|bhi|ko))*"
+
+    private val ALL_BUT = listOf(
+        // "stop everything but keep orb running", "stop the rest, keep orb on"
+        rx("^ $STOP_VERB (?:the |my )?(?:$EVERY|$REST)(?: the| my| of the| of my)?(?: $GROUP)?$TAIL(?: and| but)? (?:keep|leave) (.+?)(?: running| on| going| armed| alone| active| as it is| as they are)?$TAIL $"),
+        // "stop all except orb", "stop all strategies except orb and orb fresh", "halt everything apart from range fade"
+        rx("^ $STOP_VERB (?:the |my )?$EVERY(?: the| my| of the| of my)?(?: $GROUP)?$TAIL $EXCEPT (?:the |my )?(.+?)$TAIL $"),
+        // "except orb stop all", "apart from orb stop everything"
+        rx("^ $EXCEPT (?:the |my )?(.+?) $STOP_VERB (?:the |my )?(?:$EVERY|$REST)(?: the| my)?(?: $GROUP)?$TAIL $"),
+        // "keep orb running and stop the rest", "keep orb on, stop everything else"
+        rx("^ keep (?:the |my )?(.+?) (?:running|on|going|armed|alive|active)(?: and)?(?: then)? $STOP_VERB (?:the |my )?(?:$REST|$EVERY)(?: the| my)?(?: $GROUP)?$TAIL $"),
+        // As [Hinglish.normalize] turns it round: "stop orb aur orb fresh chhod baaki", "stop range fade ko chhod all".
+        rx("^ stop (?:the |my )?(.+?) $SPARE (?:$REST|$EVERY)(?: $GROUP)?$TAIL $"),
+        // "sab band karo range fade chhod ke" (the verb in the middle): "stop all range fade chhod".
+        rx("^ stop (?:$EVERY|$REST)(?: $GROUP)? (?:the |my )?(.+?) $SPARE$TAIL $"),
+    )
+
+    /** Words a name in a list never holds: another action, a setting, or "all". */
+    private val NOT_A_NAME = rx("\\b(all|every|everything|close|exit|cancel|square|kill|switch|start|buy|sell|positions?|orders?|mode|paper|live|alerts?|alarms?|then|phir|stop|band|lots?|target|loss|sl|limit|except|keep|when|if|agar|jab)\\b")
+
+    /** The names in [list] ("orb aur orb fresh", "3 and 4", "strategy 2 and strategy 3"), each as said, or null when one is not a name. */
+    private fun names(list: String): List<String>? {
+        val parts = list.trim().split(rx(" (?:and|aur|or|plus|ya|tatha) ")).map { p ->
+            p.trim().replace(rx("^(?:(?:the|my|also|and) )+"), "").replace(rx("^$GROUP "), "").replace(rx("^(?:number |no |#)"), "")
+                .replace(rx("(?: (?:running|on|going|armed|alone|active|for today|today|for the day|as well|too|also|bhi|ko|only|wala|wali))+$"), "").trim()
+        }.filter { it.isNotEmpty() }
+        if (parts.isEmpty() || parts.size > 8) return null
+        if (parts.any { it.split(' ').size > 5 || NOT_A_NAME.containsMatchIn(it) }) return null
+        return parts
+    }
+
+    /** "Stop all except orb" and its kin: the ones that stay ([Command.keep]), never a stop of everything; null when unclear. */
+    private fun stopAllBut(s: String): Command? {
+        for (r in ALL_BUT) {
+            val m = r.find(s) ?: continue
+            val kept = names(m.groupValues[1]) ?: return null
+            return Command(Command.Kind.STOP_ONE, targets = kept, keep = true)
+        }
+        return null
+    }
+
+    /** A stop word, "all" (or "the rest"), and an "except" / "chhod ke" / "keep ... running": all but some said, however it goes on. */
+    private val KEEP_SAID = listOf(
+        rx(" $EXCEPT( |$)"), rx(" $SPARE( |$)"),
+        rx(" (?:keep|leave) (?:.+ )?(?:running|on|going|armed|alive|active|alone|as it is|as they are)( |$)"),
+    )
+
+    /** Is [s] a stop of all but some ([stopAllBut]) - read as that or as nothing, never as anything else? */
+    private fun keepSaid(s: String): Boolean {
+        if (ALL_BUT.any { it.containsMatchIn(s) }) return true
+        if (!rx(" $STOP_VERB ").containsMatchIn(s) || !rx(" (?:$EVERY|$REST)( |$)").containsMatchIn(s)) return false
+        return KEEP_SAID.any { it.containsMatchIn(s) }
+    }
+
+    /** What is never an arm's name in a stop: Jarvis's own voice and the like (as [body]'s own list). */
+    private val NOT_ARM_NAME = rx("^(it|that|this|them|these|those|jarvis|yourself|talking|speaking|listening|voice|music|the music|notifications?|follow ?ups?|correcting)\\b")
+
+    /**
+     * "Stop the arms orb sweep and range fade", "stop arms 3 and 4", "turn off orb sweep and range fade", "stop range fade aur
+     * sweep" (as normalized), "stop the bots orb sweep", "stop trading orb sweep": each one named is stopped by itself. One
+     * name after "the bots" / "trading" is that one arm; "stop trading for today" names none (the stop of everything).
+     */
+    private fun stopSeveral(s: String, apart: Boolean): Command? {
+        val m = rx("^ $STOP_VERB (?:the |my )?(?:($GROUP) )?(.+?) $").find(s) ?: return null
+        val group = m.groupValues[1].isNotEmpty()
+        val rest = m.groupValues[2].trim()
+        if (rx("^(?:$EVERY|$REST|$GROUP)( |$)").containsMatchIn(rest)) return null
+        if (rx("^(?:for today|today|for the day|for the rest of the day|as well|too|also|bhi|again)( |$)").containsMatchIn(rest)) return null
+        // "Stop offering trades and news", "stop sending alerts": a habit of Jarvis's own, never arms ([habitUndo]).
+        if (HABIT_VERB.containsMatchIn(s) || rx("^[a-z]+ing( |$)").containsMatchIn(rest)) return null
+        val parts = names(rest) ?: return null
+        if (parts.any { NOT_ARM_NAME.containsMatchIn(it) }) return null
+        return when {
+            parts.size >= 2 -> Command(Command.Kind.STOP_ONE, targets = parts, apart = apart)
+            group -> one(Command.Kind.STOP_ONE, parts.single())
+            else -> null
+        }
+    }
+
+    /** What a stop of several ([Command.targets]) or of all but some ([Command.keep]) comes to among the arms named [names]. */
+    data class Stops(
+        /** The ones to stop, by index into the names (each stopped by itself). */
+        val stop: List<Int>,
+        /** The ones that stay on (said to be kept). */
+        val stay: List<Int>,
+        /** Names said that match no arm, or more than one: then nothing is stopped and Jarvis asks. */
+        val unclear: List<String>,
+    )
+
+    /**
+     * [c]'s arms among [names] ([on]: whether each is armed or running now). Several named: each must match exactly one; only
+     * when they do not each name an arm of its own is the whole read as one name ("buy and hold", "range and fade") - never
+     * when set apart by a comma or "&" ([Command.apart]), and never over arms each named ("stop orb and sweep" is ORB and ORB
+     * Sweep, not "ORB Sweep" alone: review, 6 Oct). All but some: every one that is on and not kept. A name that matches none,
+     * or several, is [Stops.unclear] - nothing is stopped then (Boss is asked).
+     */
+    fun stops(c: Command, names: List<String>, on: List<Boolean>): Stops {
+        fun find(t: String): Int? = pick(one(Command.Kind.STOP_ONE, t), names)
+        if (!c.keep) {
+            val found = c.targets.map { it to find(it) }
+            val each = found.map { it.second }
+            val apart = each.all { it != null } && each.distinct().size == each.size
+            if (!apart && !c.apart) exact(c.targets.joinToString(" and "), names)?.let { return Stops(listOf(it), emptyList(), emptyList()) }
+            return Stops(found.mapNotNull { it.second }.distinct(), emptyList(), found.filter { it.second == null }.map { it.first })
+        }
+        val kept = c.targets.map { it to find(it) }
+        val stay = kept.mapNotNull { it.second }.distinct()
+        val unclear = kept.filter { it.second == null }.map { it.first }
+        return Stops(names.indices.filter { it !in stay && on.getOrElse(it) { false } }, stay, unclear)
+    }
+
+    /** [st] in words for the confirm: "stop ORB Sweep and Range Fade, each by itself - ORB stays on". */
+    fun sayStops(st: Stops, names: List<String>): String {
+        fun list(ix: List<Int>) = ix.map { names[it] }.let { n -> if (n.size <= 1) n.joinToString("") else n.dropLast(1).joinToString(", ") + " and " + n.last() }
+        val stays = if (st.stay.isEmpty()) "" else " - ${list(st.stay)} ${if (st.stay.size == 1) "stays" else "stay"} on"
+        return "stop ${list(st.stop)}${if (st.stop.size > 1) ", each by itself" else ""}$stays"
+    }
+
+    /** Said when a name in a stop of several (or a kept one) matches no arm or more than one: nothing is stopped. */
+    fun unclearStops(st: Stops, names: List<String>, keep: Boolean): String =
+        "I couldn't tell which arm you meant by ${st.unclear.joinToString(" or ") { "\"$it\"" }}, Boss, so nothing was stopped. " +
+            (if (keep) "Say the ones to keep running by name or number - " else "Say each one to stop by name or number - ") +
+            names.mapIndexed { n, a -> "${n + 1}. $a" }.joinToString("; ") + "."
+
+    /** The one name in [names] that [target] says in full ("ORB" is ORB, never ORB Fresh or ORB Sweep), or null. */
+    private fun exact(target: String?, names: List<String>): Int? {
+        fun key(x: String) = x.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.length > 1 && it !in STOP_WORDS }.joinToString(" ")
+        val want = target?.let { key(it) }?.takeIf { it.isNotEmpty() } ?: return null
+        return names.indices.filter { key(names[it]) == want }.singleOrNull()
+    }
 
     private fun one(kind: Command.Kind, what: String): Command {
         val n = rx("^(?:number |no |#)?(\\d{1,2})$").find(what)?.groupValues?.get(1)?.toIntOrNull()
@@ -332,6 +555,8 @@ object Commands {
         c.number?.let { return (it - 1).takeIf { i -> i in names.indices } }
         val want = c.target?.lowercase()?.replace(rx("[^a-z0-9 ]"), " ")?.split(rx("\\s+"))?.filter { it.length > 1 && it !in STOP_WORDS } ?: return null
         if (want.isEmpty()) return null
+        // A name said in full wins over the names it begins ("stop ORB" is ORB, not ORB Fresh or ORB Sweep: Boss, 6 Oct).
+        exact(c.target, names)?.let { return it }
         val toks = names.map { n -> n.lowercase().replace(rx("[^a-z0-9 ]"), " ").split(rx("\\s+")).filter { it.isNotEmpty() }.toSet() }
         val rights = toks.map { w -> w.firstNotNullOfOrNull { x -> OPTION_RIGHT.find(x)?.groupValues?.get(1) } }
         val saysPut = want.any { it in PUT_WORDS }
@@ -364,7 +589,11 @@ object Commands {
     fun describe(c: Command, name: String? = null): String = when (c.kind) {
         Command.Kind.STOP_ALL -> "stop every strategy and arm for today (and close what they hold)"
         Command.Kind.START_ALL -> "start every strategy and arm (and let them trade again today)"
-        Command.Kind.STOP_ONE -> "stop ${name ?: "that strategy"}"
+        Command.Kind.STOP_ONE -> name?.let { "stop $it" } ?: when {
+            c.keep -> "stop every strategy and arm that is on except ${c.targets.joinToString(" and ")}, each by itself"
+            c.targets.isNotEmpty() -> "stop ${c.targets.joinToString(" and ")}, each by itself"
+            else -> "stop that strategy"
+        }
         Command.Kind.START_ONE -> "start ${name ?: "that strategy"}"
         Command.Kind.CANCEL_ALL -> "cancel every open order"
         Command.Kind.CANCEL_ONE -> "cancel ${name ?: "that order"}"
@@ -411,6 +640,7 @@ object Commands {
         Command.Kind.PACE_FASTER -> "speak faster"
         Command.Kind.PACE_NORMAL -> "speak at the normal pace"
         Command.Kind.MUTE_FOR -> "stay quiet for ${c.number} minutes"
+        Command.Kind.LISTEN_OFF -> "stop listening (the microphone off until you tap to listen again)"
         Command.Kind.JTRADES_WEEKLY -> "set my trades' weekly loss limit to ${c.level?.let { "Rs %,.0f".format(java.util.Locale.ENGLISH, it) } ?: "?"}"
     }
 }

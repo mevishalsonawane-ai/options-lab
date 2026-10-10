@@ -18,10 +18,17 @@ internal object IraTools {
 
     private const val MISTAKES = "jarvis.mistakes"
 
-    fun mistakes(): List<com.optionslab.ira.Mistakes.Entry> = runCatching {
-        val a = JSONArray(prefs().getString(MISTAKES) ?: "[]")
+    fun mistakes(): List<com.optionslab.ira.Mistakes.Entry> = runCatching { mistakesRead.of(prefs().getString(MISTAKES)) }.getOrDefault(emptyList())
+
+    /**
+     * The mistakes list read out of its JSON once and kept while the stored text is the same (speed round 12): every
+     * answer's caution ([doubt]) read and parsed the whole list (up to 100 entries) before the first word, though it
+     * changes only when Boss says "that was wrong". Any write - a wipe or a restore too - is other text, read afresh.
+     */
+    private val mistakesRead = com.optionslab.ira.StoredOnce<List<com.optionslab.ira.Mistakes.Entry>> { text ->
+        val a = JSONArray(text ?: "[]")
         (0 until a.length()).map { a.getJSONObject(it).let { o -> com.optionslab.ira.Mistakes.Entry(LocalDateTime.parse(o.getString("t")), o.getString("s"), o.getString("a")) } }
-    }.getOrDefault(emptyList())
+    }
 
     /** "That was wrong": the last question and answer before it are kept. */
     @Synchronized fun markWrong(): String {
@@ -500,10 +507,20 @@ internal object IraTools {
     private const val ROUTINE_OFFERED = "jarvis.routine.offered"
 
     /** What Boss asked and when (keys only, never his words), the last eight weeks. */
-    fun routineLog(): List<com.optionslab.ira.Routine.Seen> = runCatching {
-        val a = JSONArray(prefs().getString(ROUTINE_LOG) ?: "[]")
+    fun routineLog(): List<com.optionslab.ira.Routine.Seen> = runCatching { routineRead.of(prefs().getString(ROUTINE_LOG)) }.getOrDefault(emptyList())
+
+    /**
+     * The routine log read out of its JSON once and kept while the stored text is the same (speed round 12): the
+     * next-question offer at the end of an answer read the whole log (up to [com.optionslab.ira.Routine.LOG_MAX] lines)
+     * twice before the answer was shown. Any write (a question noted, "forget my routine", a wipe) is other text, read afresh.
+     */
+    private val routineRead = com.optionslab.ira.StoredOnce<List<com.optionslab.ira.Routine.Seen>> { text ->
+        val a = JSONArray(text ?: "[]")
         (0 until a.length()).mapNotNull { com.optionslab.ira.Routine.decode(a.optString(it)) }
-    }.getOrDefault(emptyList())
+    }
+
+    /** The kept readings of the mistakes list and the routine log forgotten (tests; static state). */
+    internal fun forgetReadsForTest() { mistakesRead.forget(); routineRead.forget() }
 
     /** The routines Boss said yes to (said at their time, words only). */
     fun routineKept(): List<com.optionslab.ira.Routine.Kept> = runCatching {
@@ -1029,7 +1046,7 @@ internal object IraTools {
         val u = runCatching { com.optionslab.ira.MorningAsks.offer(asksLog(), today) }.getOrNull()
         asksUpdate { com.optionslab.ira.MorningAsks.checked(it, today) }
         asksOffered = u?.let { it.key to asksNow() }
-        return u?.let { runCatching { com.optionslab.ira.MorningAsks.line(it) }.getOrNull() }
+        return u?.let { runCatching { com.optionslab.ira.MorningAsks.line(it) }.getOrNull() }.also { asksLineShown = it }
     }
 
     /**
@@ -1464,6 +1481,180 @@ internal object IraTools {
         return said
     }
 
+    // ---- the index Boss follows on a given weekday, its read first in "how's the market" ([com.optionslab.ira.DayIndex]) ----
+
+    /** Only the day Boss last asked for Nifty first every day again: the learning reads the kinds tally already kept ([askedKinds]). */
+    private const val DAY_INDEX = "jarvis.dayIndex"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun dayIndexLog(): com.optionslab.ira.DayIndex.Log = runCatching {
+        val o = JSONObject(prefs().getString(DAY_INDEX) ?: "{}")
+        com.optionslab.ira.DayIndex.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { java.time.LocalDate.parse(it) })
+    }.getOrDefault(com.optionslab.ira.DayIndex.Log())
+
+    @Synchronized private fun dayIndexSave(log: com.optionslab.ira.DayIndex.Log) {
+        runCatching {
+            val o = JSONObject()
+            log.resetOn?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(DAY_INDEX to o.toString()))
+        }
+    }
+
+    /** Every weekday's learned index now (counts only; nothing here acts). */
+    private fun dayIndexAll(): List<com.optionslab.ira.DayIndex.Record> = runCatching {
+        com.optionslab.ira.DayIndex.learnedAll(askedKinds(), dayIndexLog(), com.optionslab.app.data.Market.today())
+    }.getOrDefault(emptyList())
+
+    /**
+     * The index whose read "how's the market" gives first today, or null: Nifty first, as always. Never on a [locked]
+     * phone, never in IraGoldAlgo. Only the order of the index lines changes - never a figure, the verdict, or anything that acts.
+     */
+    fun dayIndexLead(locked: Boolean): com.optionslab.ira.Market? {
+        if (locked || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        return runCatching { com.optionslab.ira.DayIndex.lead(askedKinds(), dayIndexLog(), com.optionslab.app.data.Market.today(), locked) }.getOrNull()
+    }
+
+    /** "Which index do you lead with on Wednesdays?". */
+    fun dayIndexSay(): String = runCatching { com.optionslab.ira.DayIndex.say(dayIndexAll(), com.optionslab.app.data.Market.today()) }
+        .getOrDefault("I could not read my count of the index you follow on each weekday just now, Boss.")
+
+    /**
+     * "Lead with Nifty every day again": Nifty first every day, the count afresh from tomorrow. On a [locked] phone, one
+     * neutral reply that never names the index or the weekday learned (nor whether one was).
+     */
+    fun dayIndexReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.DayIndex.RESET_LOCKED
+            else runCatching { com.optionslab.ira.DayIndex.sayReset(dayIndexAll()) }.getOrDefault("Done, Boss: Nifty first every day again.")
+        dayIndexSave(com.optionslab.ira.DayIndex.reset(com.optionslab.app.data.Market.today()))
+        IraActivity.add("Leading the market read with Nifty every day again (as asked).")
+        return said
+    }
+
+    // ---- the times Boss usually checks his P&L, his account read ahead just before them ([com.optionslab.ira.CheckTimes]) ----
+
+    /** Only the time Boss last asked to stop it: the learning reads the routine log already kept ([routineLog]). */
+    private const val CHECK_TIMES = "jarvis.checkTimes"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun checkTimesLog(): com.optionslab.ira.CheckTimes.Log = runCatching {
+        val o = JSONObject(prefs().getString(CHECK_TIMES) ?: "{}")
+        com.optionslab.ira.CheckTimes.Log(o.optString("r").takeIf { it.isNotEmpty() }?.let { java.time.LocalDateTime.parse(it) })
+    }.getOrDefault(com.optionslab.ira.CheckTimes.Log())
+
+    @Synchronized private fun checkTimesSave(log: com.optionslab.ira.CheckTimes.Log) {
+        runCatching {
+            val o = JSONObject()
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(CHECK_TIMES to o.toString()))
+        }
+    }
+
+    /** The times learned now (keys and minutes only; nothing here acts). */
+    private fun checkTimesAll(): List<com.optionslab.ira.CheckTimes.Record> = runCatching {
+        com.optionslab.ira.CheckTimes.learned(routineLog(), checkTimesLog(), com.optionslab.app.data.Market.today())
+    }.getOrDefault(emptyList())
+
+    /**
+     * The listening loop's quiet flag for the account read ahead ([com.optionslab.ira.AccountWarmPace]): [quiet] lifted only
+     * while the market is [open] and it is near a time Boss usually checks his P&L. Only read when it could matter (a quiet
+     * pass in market hours), never in IraGoldAlgo. A read ahead only: nothing is said, shown or done.
+     */
+    fun checkTimesQuiet(quiet: Boolean, open: Boolean): Boolean {
+        if (!quiet || !open || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return quiet
+        return runCatching { com.optionslab.ira.CheckTimes.quiet(quiet, open, checkTimesAll(), minuteNow()) }.getOrDefault(quiet)
+    }
+
+    /** "When do I usually check my P&L?". */
+    fun checkTimesSay(): String = runCatching { com.optionslab.ira.CheckTimes.say(checkTimesAll()) }
+        .getOrDefault("I could not read my count of when you check your P&L just now, Boss.")
+
+    /**
+     * "Stop getting my P&L ready": the usual pace again, the count afresh from now. On a [locked] phone, one neutral reply
+     * that never names the times learned (nor whether any were).
+     */
+    fun checkTimesReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.CheckTimes.RESET_LOCKED
+            else runCatching { com.optionslab.ira.CheckTimes.sayReset(checkTimesAll()) }.getOrDefault("Done, Boss: your account read ahead at the usual pace again.")
+        checkTimesSave(com.optionslab.ira.CheckTimes.reset(minuteNow()))
+        IraActivity.add("Reading the account ahead at the usual pace again, not before Boss's usual P&L checks (as asked).")
+        return said
+    }
+
+    // ---- the conditional instructions Boss keeps trying to give ([com.optionslab.ira.CondNeeds]) ----------------------
+
+    /** Each conditional instruction's kind and minute (never his words, a level or an amount), the undo time and the kinds told. */
+    private const val COND_NEEDS = "jarvis.condNeeds"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun condNeedsLog(): com.optionslab.ira.CondNeeds.Log = runCatching {
+        val o = JSONObject(prefs().getString(COND_NEEDS) ?: "{}")
+        val s = o.optJSONArray("s") ?: JSONArray()
+        val t = o.optJSONArray("t") ?: JSONArray()
+        com.optionslab.ira.CondNeeds.Log(
+            seen = (0 until s.length()).mapNotNull { i ->
+                val parts = s.getString(i).split("|")
+                runCatching { com.optionslab.ira.CondNeeds.Seen(com.optionslab.ira.CondNeeds.Need.valueOf(parts[0]), LocalDateTime.parse(parts[1])) }.getOrNull()
+            },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) },
+            told = (0 until t.length()).map { i -> t.getString(i) }.toSet())
+    }.getOrDefault(com.optionslab.ira.CondNeeds.Log())
+
+    @Synchronized private fun condNeedsSave(log: com.optionslab.ira.CondNeeds.Log) {
+        runCatching {
+            val o = JSONObject()
+                .put("s", JSONArray().apply { log.seen.forEach { x -> put(x.need.name + "|" + x.at) } })
+                .put("t", JSONArray().apply { log.told.sorted().forEach { k -> put(k) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(COND_NEEDS to o.toString()))
+        }
+    }
+
+    /**
+     * A conditional instruction Boss just gave ([com.optionslab.ira.Conditional]: answered, nothing done): its kind and
+     * minute kept, nothing else. Never in IraGoldAlgo. Nothing here acts.
+     */
+    @Synchronized fun condNeedsNote(text: String) {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
+        runCatching {
+            val log = condNeedsLog()
+            val next = com.optionslab.ira.CondNeeds.noted(log, text, minuteNow())
+            if (next != log) condNeedsSave(next)
+        }
+    }
+
+    private fun condNeedsNow(): List<com.optionslab.ira.CondNeeds.Record> =
+        runCatching { com.optionslab.ira.CondNeeds.learned(condNeedsLog(), minuteNow()) }.getOrDefault(emptyList())
+
+    /**
+     * The 15:45 wrap-up's one pointer to the app's own tool for a conditional instruction Boss keeps giving, said once
+     * ([com.optionslab.ira.CondNeeds.next]) and kept as told - or null. Never on a [locked] phone (nothing kept as told then),
+     * never in IraGoldAlgo. A fact and a pointer only: nothing is set, armed or placed.
+     */
+    @Synchronized fun condNeedsWrapLine(locked: Boolean): String? {
+        if (locked || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        val log = condNeedsLog()
+        val r = com.optionslab.ira.CondNeeds.next(condNeedsNow(), log) ?: return null
+        condNeedsSave(com.optionslab.ira.CondNeeds.told(log, r))
+        IraActivity.add(com.optionslab.ira.CondNeeds.toldNote(r))
+        return com.optionslab.ira.CondNeeds.wrapLine(r)
+    }
+
+    /** "What have you learned about my conditional orders?". */
+    fun condNeedsSay(): String = runCatching { com.optionslab.ira.CondNeeds.say(condNeedsNow()) }
+        .getOrDefault("I could not read my count of your conditional orders just now, Boss.")
+
+    /**
+     * "Stop mentioning my conditional orders": nothing before now counts, nothing kept as told. On a [locked] phone, one
+     * neutral reply that never names what was learned (nor whether).
+     */
+    fun condNeedsReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.CondNeeds.RESET_LOCKED
+            else runCatching { com.optionslab.ira.CondNeeds.sayReset(condNeedsNow()) }.getOrDefault("Done, Boss: my count of your conditional orders starts afresh from now.")
+        condNeedsSave(com.optionslab.ira.CondNeeds.reset(minuteNow()))
+        IraActivity.add("Forgot what I noted about Boss's conditional orders (as asked).")
+        return said
+    }
+
     // ---- the part Boss asks for on its own, said right after the price in an overview ([com.optionslab.ira.LeadPart]) ----
 
     /** Only the day Boss last asked for his overviews in the usual order: the learning reads the kinds tally already kept ([askedKinds]). */
@@ -1540,15 +1731,57 @@ internal object IraTools {
 
     /**
      * The one short question ending Boss's answer to [question] ("BankNifty's levels next, Boss?"), or null - never on a
-     * [locked] phone. The offer is remembered for his very next words only; nothing is answered unasked.
+     * [locked] phone, never while anything else waits for Boss's yes or Confirm ([waiting]: a pending action, or Jarvis's
+     * yes-or-no window open - a "yes" meant for the offer must never approve an older request). The offer is remembered
+     * for his very next words only; nothing is answered unasked.
      */
-    fun nextAskOffer(question: String, locked: Boolean): String? {
-        if (locked) { nextAskOffered = null; return null }
+    fun nextAskOffer(question: String, locked: Boolean, waiting: Boolean): String? {
+        if (!com.optionslab.ira.NextAsk.mayOffer(locked, waiting)) { nextAskOffered = null; nextAskOfferedLine = null; return null }
         val at = asksNow()
-        val r = runCatching { com.optionslab.ira.NextAsk.offer(nextAskRecords(), question, routineLog(), at, false) }.getOrNull()
+        val r = runCatching { com.optionslab.ira.NextAsk.offer(nextAskRecords(), question, routineLog(), at, false, waiting) }.getOrNull()
         nextAskOffered = r?.let { it.next to at }
-        return r?.let { runCatching { com.optionslab.ira.NextAsk.line(it) }.getOrNull() }
+        val line = r?.let { runCatching { com.optionslab.ira.NextAsk.line(it) }.getOrNull() }
+        nextAskOfferedLine = line
+        nextAskLineShown = line
+        return line
     }
+
+    /** The words of the last offer made ([nextAskOffer]; null: the last answer offered nothing). In memory only. */
+    @Volatile private var nextAskOfferedLine: String? = null
+
+    /**
+     * Does [text] (an answer about to be said) carry the offer just made? Jarvis then counts it as an invitation (an
+     * OFFER, [com.optionslab.ira.AnswerWindow]), so a yes after it is never taken for an older request waiting for one.
+     */
+    fun nextAskOfferIn(text: String?): Boolean {
+        val line = nextAskOfferedLine ?: return false
+        return text != null && text.contains(line)
+    }
+
+    // ---- Yes / No buttons under an offer of words (Boss, 5 Oct) --------------------------------------------------------
+    /** The words of the offers last made, to find the very message that made them. */
+    @Volatile private var nextAskLineShown: String? = null
+    @Volatile private var asksLineShown: String? = null
+
+    /**
+     * The offer of words still open (the question Boss asks next, or the morning one), as its line ends Jarvis's message -
+     * or null once it ended, was taken or ran out of time. Words only: a Yes on it only asks that question.
+     */
+    fun offerLine(): String? {
+        val now = asksNow()
+        nextAskOffered?.let { (_, at) ->
+            if (!now.isBefore(at) && !now.isAfter(at.plusMinutes(com.optionslab.ira.NextAsk.YES_MINUTES))) nextAskLineShown?.let { return it }
+        }
+        asksOffered?.let { (_, at) -> if (com.optionslab.ira.MorningAsks.fresh(at, now)) asksLineShown?.let { return it } }
+        return null
+    }
+
+    /**
+     * Yes tapped under the offer's own message: the offered question (checked as a spoken yes is - safe, in time, the
+     * phone unlocked), or null. The tap names its offer, so a request waiting elsewhere does not stop it. Ends the offer.
+     */
+    fun offerTapped(locked: Boolean): String? =
+        nextAskYes("yes", false, locked) ?: if (locked) { asksOffered = null; null } else morningAsksYes("yes", false)
 
     /**
      * Boss's words [said] after a follow-up was offered: a bare "yes" in time - nothing else waiting for his yes
@@ -1578,6 +1811,161 @@ internal object IraTools {
         return said
     }
 
+    // ---- the short answers Boss usually asks "more" after ([com.optionslab.ira.MoreAfter]) ---------------------------
+
+    /** Boss's "more" after a short answer: that answer's kind and the minute only - never his words or the answer. */
+    private const val MORE_AFTER = "jarvis.moreAfter"
+    @Volatile private var moreAfterCache: com.optionslab.ira.MoreAfter.Log? = null
+
+    fun moreAfterLog(): com.optionslab.ira.MoreAfter.Log = moreAfterCache ?: runCatching {
+        val o = JSONObject(prefs().getString(MORE_AFTER) ?: "{}")
+        val n = o.optJSONArray("n") ?: JSONArray()
+        com.optionslab.ira.MoreAfter.Log(
+            notes = (0 until n.length()).map { i -> n.getJSONObject(i).let { x ->
+                com.optionslab.ira.MoreAfter.Note(LocalDateTime.parse(x.getString("t")), x.getString("k")) } },
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) },
+            learnedAt = (o.optJSONArray("l") ?: JSONArray()).let { l -> (0 until l.length()).mapNotNull { i -> runCatching { l.getJSONObject(i).let { x ->
+                com.optionslab.ira.MoreAfter.Record(x.getString("k"), x.getInt("m"), x.getInt("a"), x.getInt("d"), LocalDateTime.parse(x.getString("t"))) } }.getOrNull() }
+                .associateBy { it.kind } })
+    }.getOrDefault(com.optionslab.ira.MoreAfter.Log()).also { moreAfterCache = it }
+
+    @Synchronized private fun moreAfterUpdate(f: (com.optionslab.ira.MoreAfter.Log) -> com.optionslab.ira.MoreAfter.Log) {
+        runCatching {
+            val log = f(moreAfterLog())
+            if (log == moreAfterCache) return@runCatching
+            moreAfterCache = log
+            val o = JSONObject().put("n", JSONArray().apply { log.notes.forEach { x -> put(JSONObject().put("t", x.at.toString()).put("k", x.kind)) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            if (log.learnedAt.isNotEmpty()) o.put("l", JSONArray().apply { log.learnedAt.values.forEach { r ->
+                put(JSONObject().put("k", r.kind).put("m", r.more).put("a", r.asked).put("d", r.days).put("t", r.newest.toString())) } })
+            prefs().putAllSoon(mapOf(MORE_AFTER to o.toString()))
+        }
+    }
+
+    /** The kinds learned now (kinds and counts only), against the question kinds tally already kept. Nothing here acts. */
+    fun moreAfterLearnedNow(): List<com.optionslab.ira.MoreAfter.Record> =
+        runCatching { com.optionslab.ira.MoreAfter.learned(moreAfterLog(), askedKinds(), minuteNow()) }.getOrDefault(emptyList())
+
+    /**
+     * Boss said [said] - "more", "tell me more", "go on" - right after [last] (Jarvis's last answer and the question it
+     * answered): when that answer was said as a short line (short answers on, Boss's own "shorter" off), its kind is noted.
+     * Never on a [locked] phone (more is not said then), never for a note nobody asked for, never his words. Nothing acts.
+     */
+    fun moreAfterAsked(said: String, last: com.optionslab.ira.MoreAnswer.Last?, locked: Boolean) {
+        if (locked || last == null || last.unasked) return
+        if (!runCatching { shortAnswers && !brief }.getOrDefault(false)) return
+        if (!com.optionslab.ira.MoreAfter.wantsMore(said)) return
+        val kind = com.optionslab.ira.MoreAfter.kindAfter(last.question, last.text) ?: return
+        val now = minuteNow()
+        val before = moreAfterLearnedNow().any { it.kind == kind }
+        val tally = askedKinds()
+        moreAfterUpdate { com.optionslab.ira.MoreAfter.heard(it, kind, now, tally) }
+        if (!before) moreAfterLearnedNow().firstOrNull { it.kind == kind }?.let { r ->
+            IraActivity.add(com.optionslab.ira.MoreAfter.learnedNote(r))
+        }
+    }
+
+    /**
+     * Is the answer to [said] one to say in full straight away aloud ([com.optionslab.ira.MoreAfter])? Never on a [locked]
+     * phone, never with Boss's own "shorter" on, never for a command or an order. The voice's length only.
+     */
+    fun moreAfterFull(said: String, locked: Boolean): Boolean {
+        if (locked || runCatching { brief }.getOrDefault(true)) return false
+        val rs = moreAfterLearnedNow()
+        return rs.isNotEmpty() && runCatching { com.optionslab.ira.MoreAfter.detailed(said, rs) }.getOrDefault(false)
+    }
+
+    /** "Which answers do I usually ask more about?". */
+    fun moreAfterSay(): String = runCatching { com.optionslab.ira.MoreAfter.say(moreAfterLearnedNow()) }
+        .getOrDefault("I could not read my record of when you ask for more just now, Boss.")
+
+    /**
+     * "Keep my short answers short": every answer starts with its short line again, the count afresh from now. On a
+     * [locked] phone, one neutral reply that never names what was learned (nor whether).
+     */
+    fun moreAfterReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.MoreAfter.RESET_LOCKED
+            else runCatching { com.optionslab.ira.MoreAfter.sayReset(moreAfterLearnedNow()) }.getOrDefault("Done, Boss: every answer starts with its short line again.")
+        val now = minuteNow()
+        moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }
+        IraActivity.add("Every answer starts with its short line again (as asked).")
+        return said
+    }
+
+    // ---- where Boss's small trades come from ([com.optionslab.ira.SmallTrades]) -----------------------------------------
+
+    /** When Boss last asked to forget his small trades, and the facts already said once in a wrap-up (keys only, no amounts). */
+    private const val SMALL_TRADES = "jarvis.smallTrades"
+
+    /** Read from the kept preferences each time (they are held in memory there): no state of its own here. */
+    fun smallTradesLog(): com.optionslab.ira.SmallTrades.Log = runCatching {
+        val o = JSONObject(prefs().getString(SMALL_TRADES) ?: "{}")
+        val t = o.optJSONArray("t") ?: JSONArray()
+        com.optionslab.ira.SmallTrades.Log(
+            resetAt = o.optString("r").takeIf { it.isNotEmpty() }?.let { LocalDateTime.parse(it) },
+            told = (0 until t.length()).map { i -> t.getString(i) }.toSet())
+    }.getOrDefault(com.optionslab.ira.SmallTrades.Log())
+
+    @Synchronized private fun smallTradesSave(log: com.optionslab.ira.SmallTrades.Log) {
+        runCatching {
+            val o = JSONObject().put("t", JSONArray().apply { log.told.sorted().forEach { k -> put(k) } })
+            log.resetAt?.let { o.put("r", it.toString()) }
+            prefs().putAllSoon(mapOf(SMALL_TRADES to o.toString()))
+        }
+    }
+
+    /**
+     * Boss's closed trades, Paper and (when it has any) Zerodha, each with who placed it - read only. Never in IraGoldAlgo
+     * (none passed: it learns nothing there).
+     */
+    suspend fun smallBooks(): List<com.optionslab.ira.SmallTrades.Book> {
+        if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return emptyList()
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        return listOf(false, true).mapNotNull { live ->
+            val trips = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()).map { t ->
+                com.optionslab.ira.Charges.Trip(t.openedAt, t.closedAt, t.gross, t.charges, com.optionslab.app.data.TradeBook.ownerOf(t, owners))
+            }
+            if (trips.isEmpty()) null else com.optionslab.ira.SmallTrades.Book(if (live) "Zerodha" else "Paper", trips)
+        }
+    }
+
+    /** The facts learned now from Boss's closed trades (since his last "stop mentioning my small trades"). Nothing acts. */
+    suspend fun smallTradesNow(): List<com.optionslab.ira.SmallTrades.Record> {
+        val books = runCatching { smallBooks() }.getOrDefault(emptyList())
+        return runCatching { com.optionslab.ira.SmallTrades.learned(books, smallTradesLog(), minuteNow()) }.getOrDefault(emptyList())
+    }
+
+    /**
+     * The 15:45 wrap-up's one fact about his small trades, said once ([com.optionslab.ira.SmallTrades.next]) and kept as
+     * told - or null. Never on a [locked] phone (nothing kept as told then, so it waits for a wrap-up heard unlocked), never
+     * in IraGoldAlgo. A fact only: nothing is stopped, changed or traded.
+     */
+    suspend fun smallTradesWrapLine(locked: Boolean): String? {
+        if (locked || !com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return null
+        val log = smallTradesLog()
+        val r = com.optionslab.ira.SmallTrades.next(smallTradesNow(), log) ?: return null
+        smallTradesSave(com.optionslab.ira.SmallTrades.told(log, r))
+        IraActivity.add(com.optionslab.ira.SmallTrades.toldNote(r))
+        return com.optionslab.ira.SmallTrades.wrapLine(r)
+    }
+
+    /** "What have you learned about my charges?". */
+    suspend fun smallTradesSay(): String {
+        val rs = smallTradesNow()
+        return runCatching { com.optionslab.ira.SmallTrades.say(rs) }.getOrDefault("I could not read your trades' record just now, Boss.")
+    }
+
+    /**
+     * "Stop mentioning my small trades": nothing before now counts, nothing kept as told. On a [locked] phone, one neutral
+     * reply that never names what was learned (nor whether).
+     */
+    suspend fun smallTradesReset(locked: Boolean = false): String {
+        val said = if (locked) com.optionslab.ira.SmallTrades.RESET_LOCKED else com.optionslab.ira.SmallTrades.sayReset(smallTradesNow())
+        smallTradesSave(com.optionslab.ira.SmallTrades.reset(minuteNow()))
+        IraActivity.add("Forgot what I noted about Boss's small trades (as asked).")
+        return said
+    }
+
     // ---- the morning outlook checked against the close ([com.optionslab.ira.OutlookCheck]) ---------------------------
 
     /** Each index's 09:00 outlook numbers (previous close, range, direction read, pivot) and the day's open, high, low, close. Market data only. */
@@ -1597,7 +1985,7 @@ internal object IraTools {
         }
     }
 
-    /** The 09:00 check made [entries] (its outlook's numbers): noted for the 15:35 check. */
+    /** The 09:00 check made [entries] (its outlook's numbers): noted for the 15:45 check. */
     fun outlookMade(entries: List<com.optionslab.ira.OutlookCheck.Entry>) {
         if (entries.isEmpty()) return
         outlookUpdate { com.optionslab.ira.OutlookCheck.made(it, entries) }
@@ -1617,7 +2005,7 @@ internal object IraTools {
     // ---- what he has learned, in one view ([com.optionslab.ira.Learnings]) ------------------------------------------
 
     /** Every learning store read with its own accessor (the goals are added by [IraImprove], which holds them). */
-    fun learnings(plan: com.optionslab.ira.Improve.Plan?): com.optionslab.ira.Learnings.Inputs = com.optionslab.ira.Learnings.Inputs(
+    fun learnings(plan: com.optionslab.ira.Improve.Plan?, smallBooks: List<com.optionslab.ira.SmallTrades.Book> = emptyList()): com.optionslab.ira.Learnings.Inputs = com.optionslab.ira.Learnings.Inputs(
         words = runCatching { learned() }.getOrDefault(emptyList()),
         routines = runCatching { routineKept() }.getOrDefault(emptyList()),
         alerts = runCatching { alertLog() }.getOrDefault(com.optionslab.ira.AlertSense.Log()),
@@ -1645,9 +2033,15 @@ internal object IraTools {
         usualIndex = runCatching { indexLog() }.getOrDefault(com.optionslab.ira.UsualIndex.Log()),
         nicknames = runCatching { nickLog() }.getOrDefault(com.optionslab.ira.Nicknames.Log()),
         leadIndex = runCatching { firstIndexLog() }.getOrDefault(com.optionslab.ira.LeadIndex.Log()),
+        dayIndex = runCatching { dayIndexLog() }.getOrDefault(com.optionslab.ira.DayIndex.Log()),
         leadPart = runCatching { leadPartLog() }.getOrDefault(com.optionslab.ira.LeadPart.Log()),
         routineLog = runCatching { routineLog() }.getOrDefault(emptyList()),
-        nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()))
+        nextAsk = runCatching { nextAskLog() }.getOrDefault(com.optionslab.ira.NextAsk.Log()),
+        moreAfter = runCatching { moreAfterLog() }.getOrDefault(com.optionslab.ira.MoreAfter.Log()),
+        smallBooks = smallBooks,
+        smallTrades = runCatching { smallTradesLog() }.getOrDefault(com.optionslab.ira.SmallTrades.Log()),
+        checkTimes = runCatching { checkTimesLog() }.getOrDefault(com.optionslab.ira.CheckTimes.Log()),
+        condNeeds = runCatching { condNeedsLog() }.getOrDefault(com.optionslab.ira.CondNeeds.Log()))
 
     /**
      * "Undo everything you learned this week", on Boss's Confirm: the wordings and routines kept in the last 7 days
@@ -1672,8 +2066,12 @@ internal object IraTools {
         if (u.usualIndex.isNotEmpty()) { indexUpdate { com.optionslab.ira.UsualIndex.reset(it, now) }; indexLast = null }
         if (u.nicknames.isNotEmpty()) { nickUpdate { com.optionslab.ira.Nicknames.forgetWeek(it, today) }; nickAsked = null }
         if (u.leadIndex.isNotEmpty()) firstIndexSave(com.optionslab.ira.LeadIndex.reset(today))
+        if (u.dayIndex.isNotEmpty()) dayIndexSave(com.optionslab.ira.DayIndex.reset(today))
         if (u.leadPart.isNotEmpty()) leadPartSave(com.optionslab.ira.LeadPart.reset(today))
         if (u.nextAsk.isNotEmpty()) { nextAskSave(com.optionslab.ira.NextAsk.reset(now)); nextAskOffered = null }
+        if (u.moreAfter.isNotEmpty()) moreAfterUpdate { com.optionslab.ira.MoreAfter.reset(now) }
+        if (u.checkTimes.isNotEmpty()) checkTimesSave(com.optionslab.ira.CheckTimes.reset(now))
+        if (u.condNeeds.isNotEmpty()) condNeedsSave(com.optionslab.ira.CondNeeds.reset(now))
         IraActivity.add("Undid this week's learning, as Boss confirmed: ${u.words.size} wording(s), ${u.routines.size} routine(s), " +
             "${u.alerts.size} alert kind(s) aloud again, ${u.clarity.size} answer kind(s) as usual aloud again, ${u.figure.size} market read kind(s) in the usual order again, ${u.morning.size} morning-check item(s) read out in full again, " +
             "${u.stars.size} confidence score(s) said plainly again, " + (if (u.hours.isNotEmpty()) "briefings in full at any hour again, " else "briefings unchanged, ") +
@@ -1684,7 +2082,10 @@ internal object IraTools {
             (if (u.nicknames.isNotEmpty()) "${u.nicknames.size} nickname(s) forgotten, " else "nicknames unchanged, ") +
             (if (u.leadIndex.isNotEmpty()) "Nifty named first again, " else "the index named first unchanged, ") +
             (if (u.leadPart.isNotEmpty()) "overviews in the usual order again, " else "overviews unchanged, ") +
-            (if (u.nextAsk.isNotEmpty()) "no question offered next." else "next-question offers unchanged."))
+            (if (u.nextAsk.isNotEmpty()) "no question offered next, " else "next-question offers unchanged, ") +
+            (if (u.moreAfter.isNotEmpty()) "every answer with its short line first again, " else "short lines unchanged, ") +
+            (if (u.checkTimes.isNotEmpty()) "the account read ahead at the usual pace again, " else "the account's read ahead unchanged, ") +
+            (if (u.condNeeds.isNotEmpty()) "conditional orders counted afresh." else "conditional orders' count unchanged."))
         return u
     }
 

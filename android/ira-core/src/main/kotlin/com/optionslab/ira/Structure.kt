@@ -31,7 +31,7 @@ object Structure {
     const val NOTE = "Facts from today's candles, Boss, not a forecast."
     const val NOT_HERE = "I read the day's structure for Nifty, BankNifty, FinNifty and Sensex only, Boss: gold trades round the clock and India VIX is not traded."
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase(Locale.ENGLISH).replace("’", "'")) + " "
+    private fun norm(text: String) = Spaced.words(text)
     private fun n(x: Double) = "%,.2f".format(Locale.ENGLISH, x)
     private fun pts(x: Double) = "%+,.2f".format(Locale.ENGLISH, x)
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)

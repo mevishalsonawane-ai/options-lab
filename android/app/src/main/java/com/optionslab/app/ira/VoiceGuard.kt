@@ -65,6 +65,8 @@ object VoiceGuard {
     /** Records the next teaching phrase (about 3 seconds); after the fifth, the print is made and kept. */
     suspend fun teachNext(context: Context) {
         if (_teach.value.busy) return
+        // "Don't listen": no recording at all, not even to teach the voice.
+        if (JarvisVoice.deaf) { _teach.value = _teach.value.copy(message = JarvisVoice.NOT_LISTENING); return }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             _teach.value = _teach.value.copy(message = "Jarvis needs the microphone permission: switch listening on once to grant it."); return
         }
@@ -110,6 +112,7 @@ object VoiceGuard {
 
     @SuppressLint("MissingPermission")
     private fun record(ms: Int): ShortArray? {
+        if (JarvisVoice.deaf) return null
         val min = AudioRecord.getMinBufferSize(VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         if (min <= 0) return null
         val r = runCatching { AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
@@ -149,6 +152,8 @@ object VoiceGuard {
             val min = AudioRecord.getMinBufferSize(VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             var r: AudioRecord? = null
             try {
+                // "Don't listen": never a capture (the caller takes the failure as "no shared microphone").
+                check(!JarvisVoice.deaf) { "not listening" }
                 r = AudioRecord(source, VoicePrint.RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, maxOf(min, VoicePrint.RATE))
                 check(r.state == AudioRecord.STATE_INITIALIZED) { "no microphone" }

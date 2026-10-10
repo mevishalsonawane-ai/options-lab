@@ -1,0 +1,626 @@
+{
+ "written": "2026-10-09 13:24:24",
+ "n_variants": 1711,
+ "picks": [
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|brk|OPT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|brk|T30"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf5|OPT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|T30"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|OPT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf60|NAT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|OPT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|bnc|T30"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "G5_ANG",
+   "var": "G5_ANG|1x1|NAT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "G6_TOPEN",
+   "var": "G6_TOPEN|eve|T60"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "H_ABCD",
+   "var": "H_ABCD|tf3|NAT1"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|NAT2"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|rOpen|OPT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|r1700|NATk1"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|minor|OPT"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g100|T30"
+  },
+  {
+   "book": "CRUDEOIL opt",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15eve|OPT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|brk|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|brk|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf3|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf60|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|bnc|T30"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "G5_ANG",
+   "var": "G5_ANG|1x1|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "G6_TOPEN",
+   "var": "G6_TOPEN|eve|T60"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "H_ABCD",
+   "var": "H_ABCD|tf3|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|rPC|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|r1700|NATk1"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|minor|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g100|PCT"
+  },
+  {
+   "book": "CRUDEOILM fut",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15|PCT"
+  },
+  {
+   "book": "GOLDM opt",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf3|T30"
+  },
+  {
+   "book": "GOLDM opt",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|T60"
+  },
+  {
+   "book": "GOLDM opt",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf5|NAT"
+  },
+  {
+   "book": "GOLDM opt",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g50|OPT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|brk|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|bnc|NAT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf15|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "F7_CONF",
+   "var": "F7_CONF|rnd|T30"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf5|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|NAT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|brk|T30"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "G5_ANG",
+   "var": "G5_ANG|2x1|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "H_ABCD",
+   "var": "H_ABCD|tf5|NAT2"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|rOpen|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|rPC|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|major|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g100|PCT"
+  },
+  {
+   "book": "GOLDPETAL fut",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|bnc|NAT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|brk|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf15|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf5|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|bnc|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "G5_ANG",
+   "var": "G5_ANG|1x1|NAT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "G6_TEXT",
+   "var": "G6_TEXT|90-144|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "G6_TOPEN",
+   "var": "G6_TOPEN|eve|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|r1700|NATk1"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|r1700|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|minor|T30"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g100|PCT"
+  },
+  {
+   "book": "NATGASMINI fut",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15|PCT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|brk|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|brk|T30"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf3|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf5|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|brk|NAT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "G6_TOPEN",
+   "var": "G6_TOPEN|eve|T30"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|NAT2"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|r1700|NATk1"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|r1700|T30"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|minor|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g50|OPT"
+  },
+  {
+   "book": "NATGASMINI opt",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15eve|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|bnc|NAT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|brk|T30"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf15|T30"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf5|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|T30"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|brk|NAT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "G5_ANG",
+   "var": "G5_ANG|1x1|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "G6_TOPEN",
+   "var": "G6_TOPEN|eve|T30"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|NAT2"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|r1700|NATk1"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|r1700|T30"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|minor|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g50|OPT"
+  },
+  {
+   "book": "NATURALGAS opt",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15eve|OPT"
+  },
+  {
+   "book": "SILVERM opt",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf5|T30"
+  },
+  {
+   "book": "SILVERM opt",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|T30"
+  },
+  {
+   "book": "SILVERM opt",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|OPT"
+  },
+  {
+   "book": "SILVERM opt",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf15|OPT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "F1_FIBPIV",
+   "var": "F1_FIBPIV|bnc|T30"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "F2_PDRFIB",
+   "var": "F2_PDRFIB|bnc|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "F3_GP",
+   "var": "F3_GP|tf5|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "F4_UPX61",
+   "var": "F4_UPX61|tf3|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "F6_FTZ",
+   "var": "F6_FTZ|tf5|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "G2_HILO",
+   "var": "G2_HILO|tf15|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "G3_SWING",
+   "var": "G3_SWING|tf15|NAT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "G4_MID50",
+   "var": "G4_MID50|bnc|T30"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "G5_ANG",
+   "var": "G5_ANG|1x1|NAT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "G6_TOPEN",
+   "var": "G6_TOPEN|open|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "H_ABCD",
+   "var": "H_ABCD|tf3|NAT2"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "H_ALL",
+   "var": "H_ALL|tf5|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "M1_SQ9I",
+   "var": "M1_SQ9I|rOpen|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "M2_SQ9H",
+   "var": "M2_SQ9H|rPC|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "M3_RMAG",
+   "var": "M3_RMAG|minor|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "M4_RFADE",
+   "var": "M4_RFADE|g100|PCT"
+  },
+  {
+   "book": "SILVERMIC fut",
+   "fam": "M9_ORFIB",
+   "var": "M9_ORFIB|or15eve|PCT"
+  }
+ ]
+}

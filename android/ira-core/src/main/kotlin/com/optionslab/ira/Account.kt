@@ -81,6 +81,32 @@ object AppFacts {
             "; charges $about${amt(c)}${if (estimate) " (an estimate from today's trades)" else ""}, so $about${rs(PnlCharges.net(day, c))} after charges."
     }
 
+    /**
+     * A Pine arm's own exits on the option, for "my strategies": its premium stop and target (points) and the profit lock
+     * (com.optionslab.engine.orb.ProfitLock: the ladder on the target, else on twice the stop, else none; and the
+     * percentage trail on the gain, [trail], which needs neither - the higher of the two counts).
+     */
+    fun pineExits(stopPts: Double, targetPts: Double, profitLock: Boolean,
+                  trail: com.optionslab.engine.orb.ProfitLock.Trail = com.optionslab.engine.orb.ProfitLock.Trail()): String {
+        val n = { x: Double -> if (x == Math.floor(x)) x.toLong().toString() else "%.1f".format(Locale.ENGLISH, x) }
+        val parts = ArrayList<String>()
+        parts += if (stopPts > 0) "stop -${n(stopPts)}" else "no stop"
+        parts += if (targetPts > 0) "target +${n(targetPts)}" else "no target"
+        val ref = com.optionslab.engine.orb.ProfitLock.pineReference(targetPts, stopPts)
+        val trailOn = trail.breakevenPct > 0 || trail.steps.any { it.startPct > 0 }
+        val trailSays = "the trail on the gain: ${trail.describe()}"
+        parts += when {
+            !profitLock -> "profit lock off"
+            ref == null && !trailOn -> "profit lock on but idle (no stop or target, and the trail is off)"
+            ref == null -> "profit lock on ($trailSays)"
+            !trailOn && targetPts > 0 -> "profit lock on (the target's ladder)"
+            !trailOn -> "profit lock on (the ladder on twice the stop, ${n(ref)})"
+            targetPts > 0 -> "profit lock on (the target's ladder and $trailSays)"
+            else -> "profit lock on (the ladder on twice the stop, ${n(ref)}, and $trailSays)"
+        }
+        return parts.joinToString(", ")
+    }
+
     fun arms(a: List<ArmLine>, rank: Boolean): List<String> {
         if (a.isEmpty()) return listOf("No strategies or arms are set up.")
         val on = a.filter { it.on }
@@ -120,7 +146,9 @@ object AppAnswers {
         Section.ALARMS to Regex(" (alarm|alarms|alert|alerts) "),
         Section.FUNDS to Regex(" (funds|fund|margin|margins|balance|cash|capital|money|buying power|trade with) "),
         Section.HISTORY to Regex(" (yesterday|week|weekly|month|monthly|history|calendar|journal|last \\d+ days|best day|worst day|so far|this year|all time) "),
-        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)) "),
+        Section.PNL to Regex(" (p l|pnl|profit|profits|made|lost|earned|returns?|loss|losses|mtm|m2m|(did|have) i (make|earn|lose)|" +
+            // (Understanding round 26: "charges ke baad kitna bacha".)
+            "(charges|brokerage) (ke )?(baad|bad|kaat|kat|katke) (ke )?(how much|kitna|kitne) (bacha|bache|bachi|bachta|mila)) "),
         Section.ORDERS to Regex(" (order|orders|trades|fills|filled|rejected|rejection|rejections) "),
         // ("Is Nifty holding up", "how's the market holding above 25000": the index holding a level, never Boss's holdings - round 21.)
         Section.POSITIONS to Regex(" (position|positions|holding(?! (up|on|above|below|its|at|steady|firm|strong) )|holdings|open trades|exposure) "),
@@ -273,8 +301,8 @@ object AppAnswers {
             rx(" (zerodha|kite|login|log in|live|real orders|api|mode|paper) ") to "Zerodha login, Paper or Live mode and order limits: More, then Zerodha. The PAPER TRADING badge at the top switches the mode.",
             rx(" (alarm|alarms|alert|alerts) ") to "Price alarms and P&L alerts: More, then Alerts.",
             rx(" (pine|script|scripts|indicator) ") to "Pine scripts (write, backtest, put on the chart, auto-trade): Research, then Pine.",
-            rx(" (strategy|strategies|arm|arms|orb) ") to "Strategies and the ORB arms: Trade, then Strategies. Pine arms (and the strategies Jarvis made): Research, then Pine.",
-            rx(" (order|orders|position|positions|funds|account) ") to "Orders, positions and funds: Trade, then Account.",
+            rx(" (strategy|strategies|arm|arms|orb) ") to "Your saved strategies (baskets): Research, then Strategies. The ORB arms and the other bots: Home, the Strategies card. Pine arms (and the strategies Jarvis made): Research, then Pine.",
+            rx(" (order|orders|position|positions|funds|account) ") to "Orders, positions and funds: the Trade tab.",
             rx(" (p l|pnl|calendar|journal|history) ") to "P&L by day, the calendar and the journal: the P&L tab.",
             rx(" (option chain|chain|options|straddle|oi|iv|greeks|builder) ") to "Option chain, OI, IV, straddle and the strategy builder: the Options tab.",
             rx(" (chart|charts) ") to "Charts: the Chart tab; tap Options on a chart for option prices and buy or sell.",
@@ -284,7 +312,7 @@ object AppAnswers {
             rx(" (backtest|portfolio|sip|replay|health) ") to "Backtests, portfolio, SIP, replay and strategy health: the Research tab.",
             rx(" (voice|jarvis|listen|model|ai) ") to "Jarvis's voice and AI model: Home, Ira, the Voice and AI model cards at the top.",
         ).filter { it.first.containsMatchIn(t) }.map { it.second }
-        return map.ifEmpty { listOf("The tabs: Home (Ira and the dashboard), Chart, Trade (account and strategies), P&L, Options, Research, More (Zerodha, Alerts, Security, Schedules, Bot settings, Data).") }
+        return map.ifEmpty { listOf("The tabs: Home (Ira and the dashboard), Chart, Trade (your account), P&L, Options, Research (backtests, Pine and your saved strategies), More (Zerodha, Alerts, Security, Schedules, Bot settings, Data).") }
     }
 
     /** The home-screen widgets: how to add one, what each shows, and the switch their P&L waits for. */
@@ -294,7 +322,7 @@ object AppAnswers {
         "The Open widget and the P&L stay blank until you turn on \"Show my P&L on the widget\" in More, then Security - off by default, " +
         "as anyone holding the unlocked phone sees the home screen."
 
-    /** "Can you listen to me?", "what can you do?" - about Ira (Jarvis) itself. */
+    /** "Can you listen to me?", "what can you do?" - about Ira (Jarvis) itself; the latter ends with where the question guide is ([AskGuide.helpLine]). */
     fun help(q: Question, voice: Boolean): Answer {
         val t = q.text.lowercase()
         val aboutVoice = rx("\\b(listen|hear|voice|speak|talk|mic|microphone)").containsMatchIn(t)
@@ -313,6 +341,6 @@ object AppAnswers {
             "\"what is theta\", and \"the usual\". Quick ones: \"price of BankNifty 52000 PE\", \"which strike is ATM\", \"how many lots " +
             "can I buy with 20000\", \"how far is Nifty from 25000\", \"when is the next expiry\", \"is tomorrow a holiday\", \"remind me at 3 pm " +
             "to check Nifty\", \"wrap up my day\", \"how was my last trade\", \"how was my month\", \"how much did I pay in charges this week\", \"what did I miss\", \"run a self check\", \"speak slower\" - Hinglish too. " +
-            "I don't give buy or sell advice. " + Toolbox.say() + " " + voiceLine, emptyList())
+            "I don't give buy or sell advice. " + Toolbox.say() + " " + AskGuide.helpLine() + " " + voiceLine, emptyList())
     }
 }

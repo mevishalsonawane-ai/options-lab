@@ -110,10 +110,13 @@ object NextAsk {
     /**
      * The follow-up to offer at the end of Boss's answer to [question] at [now], or null. Never on a [locked] phone, never
      * for an order, a command or anything but a market question, nor when that answer already gives it or [log] shows he
-     * asked it in the last [RECENT_MINUTES] minutes.
+     * asked it in the last [RECENT_MINUTES] minutes. Never while anything else waits for Boss's yes or Confirm ([waiting]:
+     * a pending action - a stop, an exit, a news trade - or Jarvis's own yes-or-no question still open): a bare "yes" can
+     * only ever be for ONE thing, and an offer said then could have his yes meant for it approve the older request.
      */
-    fun offer(records: List<Record>, question: String, log: List<Routine.Seen>, now: LocalDateTime, locked: Boolean): Record? {
-        if (locked || records.isEmpty()) return null
+    fun offer(records: List<Record>, question: String, log: List<Routine.Seen>, now: LocalDateTime, locked: Boolean,
+              waiting: Boolean = false): Record? {
+        if (!mayOffer(locked, waiting) || records.isEmpty()) return null
         val q = runCatching { Ask.parse(question) }.getOrNull() ?: return null
         if (q.command != null || q.order != null || Topic.ORDER in q.topics || Topic.COMMAND in q.topics) return null
         val key = runCatching { Routine.key(question) }.getOrNull()?.takeIf { market(it) } ?: return null
@@ -129,6 +132,12 @@ object NextAsk {
         if (log.any { it.key == r.next && !it.at.isAfter(now) && Duration.between(it.at, now).toMinutes() < RECENT_MINUTES }) return null
         return r
     }
+
+    /**
+     * May an answer end with an offer at all: never on a [locked] phone, never while anything waits for Boss's yes or
+     * Confirm ([waiting]: actions pending, or Jarvis's yes-or-no window open).
+     */
+    fun mayOffer(locked: Boolean, waiting: Boolean): Boolean = !locked && !waiting
 
     private val KIND = mapOf(Topic.LEVELS to "levels", Topic.TREND to "trend", Topic.PATTERNS to "patterns", Topic.NEWS to "news",
         Topic.VOLATILITY to "volatility", Topic.WHY to "why", Topic.OVERVIEW to "overview")
@@ -155,12 +164,14 @@ object NextAsk {
 
     enum class Request { WHICH, RESET }
 
-    private fun norm(text: String) = " " + spacedWords(text.lowercase().replace("'", "").replace("’", "")) + " "
+    private fun norm(text: String) = Spaced.joined(text)
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(can you |could you |would you )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis| now| any ?more| from now on| again| for me)* $"
     /** What is offered: the next question, a follow-up, what Boss asks next. */
-    private const val WHAT = "((the |my |a |that |your )?(usual )?(next questions?|follow ?ups?|follow ?up questions?)|what (i|to) ask( you)? next|whats next|what is next|what comes next)"
+    private const val WHAT = "((the |my |a |that |your )?(usual )?(next questions?|follow ?ups?|follow ?up questions?)|what (i|to) ask( you)? next|whats next|what s next|what is next|what comes next|" +
+        // Understanding round 25: "what next" said short, and the offers named as offers.
+        "what next|(the |your )?(next question|follow ?up) (offers?|suggestions?))"
     private const val PARTS = "(the levels|levels|the trend|trend|patterns|the patterns|the news|news|volatility|the overview|an overview|my p ?l|the p ?l|my pnl|pnl|an answer|your answer|your answers|each answer)"
 
     private val WHICH = rx(LEAD + "what do i (usually |normally |always |mostly )?ask( you)? next" + TAIL + "|" +
@@ -183,7 +194,17 @@ object NextAsk {
         LEAD + "no more (next question|follow ?up|follow ?up question) offers" + TAIL + "|" +
         LEAD + "(stop|dont|do not) (end|ending|finish|finishing) (your |the |each )?answers? with (a |the )?(next )?questions?" + TAIL + "|" +
         LEAD + "(agla|aage ka) sawal (mat|na) (poocho|pucho|offer karo|bolo|suggest karo)" + TAIL + "|" +
-        LEAD + "(agla|aage ka) sawal offer (mat|na) (karo|kiya karo)" + TAIL)
+        LEAD + "(agla|aage ka) sawal offer (mat|na) (karo|kiya karo)" + TAIL + "|" +
+        // Understanding round 25: "stop the follow up questions", "turn off follow ups", "no more follow ups", "don't end with a
+        // question", "undo the next question thing", and in Hinglish with "mujhe" or "next question" ("follow up band karo").
+        LEAD + "(stop|quit|turn off|switch off|disable|no more|no) $WHAT" + TAIL + "|" +
+        LEAD + "(stop|dont|do not) (end|ending|finish|finishing) with (a |the )?(next )?questions?" + TAIL + "|" +
+        LEAD + "undo (the )?(next question|follow ?up|follow ?up question|what i ask next)( thing| offers?| feature| habit)?" + TAIL + "|" +
+        "^ (jarvis )?(mujhe |muje )?(agla|aage ka|next|agle) (sawal|sawaal|question|questions) (mat|na) (poocho|pucho|puchho|offer karo|bolo|suggest karo|do)" + TAIL + "|" +
+        "^ (jarvis )?(mujhe |muje )?(agla|aage ka|next|agle) (sawal|sawaal|question|questions) offer (mat|na) (karo|kiya karo)" + TAIL + "|" +
+        "^ (jarvis )?(ye |yeh |the )?(follow ?ups?|follow ?up questions?|follow ?up (sawal|sawaal)|next questions?) (band karo|band kar do|band kardo|mat karo|mat do|nahi chahiye|off karo)" + TAIL + "|" +
+        // (As [Hinglish.normalize] turns "band karo" round: "follow up band karo" -> "stop follow up".)
+        "^ (jarvis )?stop (the |your )?(follow ?ups?|follow ?up questions?|next questions?)" + TAIL)
 
     /** "What do I usually ask next?" or "stop offering what I ask next", else null. */
     fun asked(text: String): Request? = askedKept.of(text) { askedFresh(text) }

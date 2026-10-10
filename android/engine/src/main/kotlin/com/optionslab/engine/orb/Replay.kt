@@ -12,8 +12,9 @@ data class ReplayTrade(val signalBar: String, val exitBar: String, val right: St
 /**
  * A day replayed on bars (the desktop's orb_shadow / the phone port's Replay):
  * decide on a completed bar's close, fill on the NEXT bar's open (filling on the
- * signal bar was the look-ahead bug that faked +23,727). A stop fills at
- * entry - 40, or at the open if the bar gaps through it.
+ * signal bar was the look-ahead bug that faked +23,727). The stop rests at
+ * entry - 40, moved up to the profit lock once a bar's high earns a rung, and
+ * fills at its trigger, or at the open if the bar gaps through it.
  *
  * [index], [ce] and [pe] must be aligned bar for bar (same starts).
  */
@@ -36,15 +37,17 @@ object Replay {
             val entry = leg[k + 1].open
             if (!(entry > 0)) { k++; continue }
             var exitPx = leg[n - 1].close; var x = n - 1; var why = "last_bar"
-            // The profit-lock ladder as the arm trades it: a rung earned on a bar's high counts from the next bar on.
+            // The profit-lock ladder as the arm trades it (07 Oct, research/HUNT_H20.md F6): one resting stop, the -40 moved
+            // up to the lock a bar's HIGH earned (from the next bar on), filled at its trigger or at the open under it.
             val target = ProfitLock.targetOf(arm)?.takeIf { ladder }
+            val base = (entry - points).takeIf { it > 1e-9 }
             var peak = entry
             for (j in k + 1 until n) {
                 val t = index[j].start
                 if (!t.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) { exitPx = leg[j].open; x = j; why = "session_end"; break }
-                if (OrbRules.exitReason(entry, leg[j].low, t, points) == "stop") { exitPx = minOf(entry - points, leg[j].open); x = j; why = "stop"; break }
-                val lock = target?.let { ProfitLock.level(entry, it, peak) }
-                if (lock != null && leg[j].low <= lock) { exitPx = minOf(lock, leg[j].open); x = j; why = "profit_lock"; break }
+                val rest = ProfitLock.restingStop(entry, base, target, peak)
+                val hit = rest?.let { ProfitLock.sellStopFill(it, leg[j].open, leg[j].low) }
+                if (hit != null) { exitPx = hit; x = j; why = if (rest == base) "stop" else "profit_lock"; break }
                 if (OrbRules.exitReason(entry, leg[j].high, t, points) == "target") { exitPx = entry + points; x = j; why = "target"; break }
                 peak = maxOf(peak, leg[j].high)
             }

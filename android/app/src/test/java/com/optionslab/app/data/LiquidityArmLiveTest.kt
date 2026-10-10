@@ -13,6 +13,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -59,16 +60,23 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
-    /** The arms' saved state: both liquidity books armed in Live, the 5-minute book with a signal waiting for approval. */
-    private fun state(expires: LocalDateTime = now.plusMinutes(9)) {
+    /**
+     * The arms' saved state: both liquidity books armed in Live, the 5-minute book with a signal waiting for approval, at
+     * [lots] a trade (null: no size saved, a book from before the setting).
+     */
+    private fun state(expires: LocalDateTime = now.plusMinutes(9), lots: Int? = 1, held: JSONArray = JSONArray()) {
         val books = listOf("liquidity15", "liquidity5")
         fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
         val bar = maxOf(now.minusMinutes(1), now.toLocalDate().atStartOfDay())
         AutomationSupport.orbState(context, JSONObject()
             .put("armed", flags(true)).put("auto", flags(false)).put("liveOk", flags(true))
-            .put("positions", JSONArray())
+            // Saved after the 06 Oct update (its one-time switch-off already done): armed again by Boss.
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", held)
             .put("pending", JSONObject().put("liquidity5", JSONObject().put("right", "CE").put("bar", bar.toString())
-                .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0))))
+                .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0)))
+            // A size saved by Boss's own choice (kept by the 08 Oct one-lot change).
+            .apply { lots?.let { put("liqLots", it); put("liqLotsChosen", true) } })
     }
 
     private fun row() = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "liquidity" }
@@ -80,6 +88,29 @@ class LiquidityArmLiveTest : RobolectricTest() {
         val armed = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, pinConfirmed = true) }
         assertTrue(armed, armed.startsWith("Liquidity 15+5 armed on ZERODHA (live), fully automatic"))
         assertTrue(row().armed); assertTrue(row().liveOk)
+        assertTrue("arming sends nothing", kite.placed.isEmpty())
+    }
+
+    /**
+     * Research h4 (07 Oct): the MIDCPNIFTY books join a switch armed in Live on paper terms only - never cleared for
+     * Zerodha by the update; only Boss arming it again with his PIN clears every book, theirs too.
+     */
+    @Test fun theMidcpniftyBooksJoiningALiveSwitchAreNotClearedForZerodha() {
+        // The four books of the update before, all armed in Live with the PIN.
+        fun flags(v: Boolean) = JSONObject().apply { listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin").forEach { put(it, v) } }
+        AutomationSupport.orbState(context, JSONObject()
+            .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(true)).put("liqLots", 1)
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", JSONArray()))
+        val books = runBlocking { OrbArms.liquidityDay(now.toLocalDate()) }.first
+        assertTrue(books.toString(), books.filter { it.book.endsWith("_mid") }.let { m -> m.size == 2 && m.all { it.armed } })
+        assertFalse("not cleared for Zerodha by the update", row().liveOk)
+        assertTrue("the update sends nothing", kite.placed.isEmpty())
+        val refused = runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, pinConfirmed = false) }
+        assertEquals("The app is in Live: arm it with your PIN or fingerprint.", refused)
+        assertFalse(row().liveOk)
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, pinConfirmed = true) }
+        assertTrue("Boss's PIN clears all six books", row().liveOk)
         assertTrue("arming sends nothing", kite.placed.isEmpty())
     }
 
@@ -99,6 +130,48 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertNull("the approval is used up", row().pending)
     }
 
+    @Test fun twoLotsAtZerodhaBuyTwiceTheLotAndTheStopCoversThemAll() {
+        state(lots = 2)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val (buy, stop) = kite.placed
+        assertEquals("60", buy.form["quantity"]); assertEquals("BUY", buy.form["transaction_type"])
+        assertEquals("60", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
+        val p = row().open!!
+        assertEquals(60, p.qty); assertEquals(30, p.lot)
+    }
+
+    @Test fun aBookSavedBeforeTheSizeTradesOneLot() {
+        state(lots = null)
+        assertEquals("the default is 1 lot since 08 Oct (research X1)", 1, row().lots)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("30", kite.placed.first().form["quantity"])
+    }
+
+    /** 08 Oct (research X1): 2 lots Boss never chose by hand go back to 1 lot once, with a notice; a chosen 2 stays. */
+    @Test fun twoLotsNotChosenByHandGoBackToOneOnce() {
+        AutomationSupport.orbState(context, JSONObject().put("positions", JSONArray()).put("liqLots", 2)
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN)))
+        assertEquals(1, row().lots)
+        // Boss's own 2 afterwards is kept, across a restart.
+        runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(2, row().lots)
+    }
+
+    @Test fun threeLotsOverTheBotSettingsTwoAreRefusedByNameNeverSentSmaller() {
+        state(lots = 3)
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.startsWith("Refused: Bot settings allow 2 lots; Liquidity is set to 3."))
+        assertTrue("nothing sent, not even 2 lots", kite.placed.isEmpty())
+        assertNull(row().open)
+        // Raised in Bot settings: the same size goes.
+        SecurePrefs.put("g.lots", 3)
+        state(lots = 3)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("90", kite.placed.first().form["quantity"])
+    }
+
     @Test fun inLiveAnApprovalWithoutThePinSendsNothing() {
         state()
         assertEquals("The app is in Live: approve with your PIN on Home → Strategies.", runBlocking { OrbArms.approve("liquidity", pinConfirmed = false) })
@@ -113,10 +186,102 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertTrue(kite.placed.isEmpty())
     }
 
+    // ---- Liquidity has priority over the ORB arms (Boss's 07 Oct decision); the live gates are unchanged ----
+
+    /** ORB holding a BANKNIFTY call since 20 minutes ago: on paper, or at Zerodha when [live]. */
+    private fun orbHolds(live: Boolean): JSONArray = JSONArray().put(JSONObject().put("arm", "orb")
+        .put("symbol", "BANKNIFTY-ORB-52000CE").put("right", "CE").put("qty", 30).put("entry", 300.0)
+        .put("entryTime", now.minusMinutes(20).toString()).put("signalBar", now.minusMinutes(25).toString()).put("live", live)
+        .apply { if (live) put("kite", "BANKNIFTY26OCT52100CE") })
+
+    @Test fun aLiveLiquidityEntryGoesBesideAPaperOrbPositionWithThePin() {
+        state(held = orbHolds(live = false))
+        // Without the PIN nothing is sent, as always.
+        assertEquals("The app is in Live: approve with your PIN on Home → Strategies.", runBlocking { OrbArms.approve("liquidity", pinConfirmed = false) })
+        assertTrue(kite.requests.isEmpty())
+        // With it, ORB's paper call no longer stops Liquidity: it buys at Zerodha beside it.
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+        assertTrue(row().open!!.live)
+        assertNotNull("ORB's paper call is untouched", runBlocking { OrbArms.view() }.arms.single { it.arm.source == "orb" }.open)
+    }
+
+    @Test fun twoLiveAutomaticPositionsOnOneIndexAreStillRefused() {
+        state(held = orbHolds(live = true))
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.startsWith("same_side_already_held: ORB holds BANKNIFTY-ORB-52000CE"))
+        assertFalse("no priority over a live position", msg.contains("Liquidity has priority over ORB arms"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertNull(row().open)
+    }
+
+    @Test fun theKillSwitchStillRefusesLiquidityBesideAPaperOrbPosition() {
+        SecurePrefs.put("g.kill", true)
+        state(held = orbHolds(live = false))
+        assertEquals("Refused: the kill switch is on", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue(kite.placed.isEmpty())
+    }
+
     @Test fun anExpiredSignalIsNotEntered() {
         state(expires = now.minusMinutes(1))
         val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
         assertTrue(msg, msg.startsWith("The Liquidity 15+5 signal expired at "))
         assertTrue(kite.placed.isEmpty())
+    }
+
+    // ---- the order flow at a LIVE entry (9 Oct): CONFIRM may only skip; turning it on in Live takes the PIN ----
+
+    private fun flow(buyers: Int) {
+        FlowGate.testNowSec = 1_000
+        OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, buyers, 1_000) }
+    }
+
+    @Test fun turningOrderFlowConfirmOnForALiveStrategyTakesThePin() {
+        val confirm = com.optionslab.ira.OrderFlow.Mode.CONFIRM
+        assertEquals(FlowGate.PIN_NEEDED, FlowGate.set("liquidity:BANKNIFTY", confirm))
+        assertEquals("unchanged without the PIN", com.optionslab.ira.OrderFlow.Mode.SHADOW, FlowGate.setting("liquidity:BANKNIFTY").mode)
+        assertTrue(FlowGate.needsPin("liquidity:BANKNIFTY", confirm))
+        // A paper-only bot, or a mode that can skip nothing: no PIN.
+        assertFalse(FlowGate.needsPin("orb_sweep", confirm))
+        assertFalse(FlowGate.needsPin("orb", com.optionslab.ira.OrderFlow.Mode.OFF))
+        FlowGate.set("liquidity:BANKNIFTY", confirm, pinConfirmed = true)
+        assertEquals(confirm, FlowGate.setting("liquidity:BANKNIFTY").mode)
+        // Already on: its threshold moves without asking again.
+        assertFalse(FlowGate.needsPin("liquidity:BANKNIFTY", confirm))
+        FlowGate.set("liquidity:BANKNIFTY", confirm, threshold = 65)
+        assertEquals(65, FlowGate.setting("liquidity:BANKNIFTY").threshold)
+        assertTrue("setting it sends nothing", kite.requests.isEmpty())
+    }
+
+    @Test fun orderFlowConfirmSkipsALiveEntryWhenTheFlowDisagrees() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM, pinConfirmed = true)
+        flow(30)                                                             // sellers: against the call
+        state()
+        assertEquals(OrbArms.describe(FlowGate.SKIPPED), runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
+        assertNull(row().open)
+        val s = FlowGate.signalsForTest().single()
+        assertTrue(s.live && s.skipped)
+    }
+
+    @Test fun orderFlowNeverPlacesATradeTheStrategyDidNotSignal() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM, pinConfirmed = true)
+        flow(95)                                                             // the flow strongly agrees with buying calls
+        // Armed in Live, nothing waiting: however strong the flow, nothing is sent and nothing is logged.
+        fun flags(v: Boolean) = JSONObject().apply { listOf("liquidity15", "liquidity5").forEach { put(it, v) } }
+        AutomationSupport.orbState(context, JSONObject()
+            .put("armed", flags(true)).put("auto", flags(false)).put("liveOk", flags(true)).put("liqLots", 1).put("liqLotsChosen", true)
+            .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", JSONArray()))
+        assertEquals("Nothing is waiting for approval.", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(FlowGate.signalsForTest().isEmpty())
+        // The strategy's own signal with the flow agreeing: exactly its own entry (1 lot and its stop), nothing more.
+        state()
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals(2, kite.placed.size)
+        assertEquals("30", kite.placed.first().form["quantity"])
+        val s = FlowGate.signalsForTest().single()
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.AGREES, s.agreement); assertFalse(s.skipped); assertTrue(s.live)
     }
 }

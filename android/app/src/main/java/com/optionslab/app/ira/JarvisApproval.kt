@@ -42,6 +42,8 @@ object JarvisApproval {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            // On the lock screen only how many requests wait - never the trade, the symbol or an amount.
+            .setPublicVersion(lockedVersion(context))
             .setTimeoutAfter(IraHub.NEWS_ANSWER_MS)
             .setOngoing(true)
             // Tapped (not a button): the app opens with the trade's whole text over it and the chat's own Approve / Reject
@@ -53,6 +55,13 @@ object JarvisApproval {
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(notificationId(id), n) }
     }
+
+    /** What a locked phone shows of a request's notification: the count of requests waiting, nothing else. */
+    internal fun lockedVersion(context: Context): android.app.Notification =
+        NotificationCompat.Builder(context, Notifier.POPUP)
+            .setSmallIcon(R.drawable.ic_notification_art)
+            .setContentTitle(com.optionslab.ira.Requests.lockedLine(runCatching { IraHub.state.value.pending.size }.getOrDefault(1).coerceAtLeast(1)))
+            .build()
 
     fun hide(context: Context, id: Long) {
         runCatching { NotificationManagerCompat.from(context).cancel(notificationId(id)) }
@@ -72,10 +81,10 @@ class JarvisActionReceiver : BroadcastReceiver() {
             try {
                 when (intent.action) {
                     JarvisApproval.ACTION_APPROVE -> {
-                        val r = IraHub.confirm(id) ?: "That news trade had already lapsed; nothing was placed."
+                        val r = IraHub.confirm(id, by = com.optionslab.ira.Requests.By.NOTIFICATION) ?: IraHub.alreadyLine(id, "That news trade had already lapsed; nothing was placed.")
                         JarvisPopup.show(context, "News trade", r)
                     }
-                    JarvisApproval.ACTION_REJECT -> IraHub.cancelAction(id)
+                    JarvisApproval.ACTION_REJECT -> IraHub.cancelAction(id, by = com.optionslab.ira.Requests.By.NOTIFICATION)
                 }
             } finally { done.finish() }
         }

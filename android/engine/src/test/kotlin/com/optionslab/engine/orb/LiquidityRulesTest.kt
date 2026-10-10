@@ -30,12 +30,18 @@ class LiquidityRulesTest {
     @Test fun theArmIsOneSwitchOverTwoBooks() {
         assertTrue(LiquidityRules.ARM.liquidity)
         assertFalse(LiquidityRules.ARM.paperOnly, "it follows the Paper / Live switch like the ORB")
-        assertEquals(listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin"), LiquidityRules.BOOKS.map { it.source })
-        assertEquals(listOf(15, 5, 30, 5), LiquidityRules.BOOKS.map { LiquidityRules.minutesOf(it) })
-        assertEquals(listOf("BANKNIFTY", "BANKNIFTY", "FINNIFTY", "FINNIFTY"), LiquidityRules.BOOKS.map { LiquidityRules.underlyingOf(it) })
+        assertEquals(listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin", "liquidity15_mid", "liquidity5_mid"),
+            LiquidityRules.BOOKS.map { it.source })
+        assertEquals(listOf(15, 5, 30, 5, 15, 5), LiquidityRules.BOOKS.map { LiquidityRules.minutesOf(it) })
+        assertEquals(listOf("BANKNIFTY", "BANKNIFTY", "FINNIFTY", "FINNIFTY", "MIDCPNIFTY", "MIDCPNIFTY"),
+            LiquidityRules.BOOKS.map { LiquidityRules.underlyingOf(it) })
         assertEquals(100, LiquidityRules.strikeStep("BANKNIFTY")); assertEquals(50, LiquidityRules.strikeStep("FINNIFTY"))
+        assertEquals(25, LiquidityRules.strikeStep("MIDCPNIFTY"))
         assertEquals(24_050, OrbRules.atmStrike(24_070.0, LiquidityRules.strikeStep("FINNIFTY")))
+        assertEquals(listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"), LiquidityRules.UNDERLYINGS)
         assertEquals(LiquidityRules.UNDERLYINGS.toSet(), LiquidityRules.INDEX_KEYS.keys)
+        assertEquals("NSE_INDEX|NIFTY MID SELECT", LiquidityRules.INDEX_KEYS["MIDCPNIFTY"])
+        assertEquals(LiquidityRules.BOOKS.map { it.source }.toSet().size, LiquidityRules.BOOKS.size, "every book has its own source")
         assertTrue(LiquidityRules.BOOKS.all { !it.paperOnly && it.liquidity })
         assertEquals(15, LiquidityRules.minutesOf(LiquidityRules.ARM15))
         assertEquals(5, LiquidityRules.minutesOf(LiquidityRules.ARM5))
@@ -132,6 +138,8 @@ class LiquidityRulesTest {
 
     @Test fun theTurnExitsIndexStopAndTimeStop() {
         assertEquals(30.0, LiquidityRules.indexStopPoints("BANKNIFTY")); assertEquals(15.0, LiquidityRules.indexStopPoints("FINNIFTY"))
+        // MIDCPNIFTY: fixed in advance at ~0.065% of the index (research/hunt/h4/comps.py IDX_STOP_EXT), never tuned.
+        assertEquals(8.0, LiquidityRules.indexStopPoints("MIDCPNIFTY"))
         val t = day.atTime(13, 5)
         val dip = listOf(Bar(t, 54_150.0, 54_150.0, 54_071.0, 54_140.0))
         assertFalse(LiquidityRules.indexStopHit(1, 54_100.0, 30.0, dip), "29 points back: held")
@@ -161,5 +169,85 @@ class LiquidityRulesTest {
         h[2] = 110.0; h[8] = 109.0; c[12] = 111.0; o[12] = 100.0; h[12] = 111.5
         val pools = LiquidityRules.poolZones(bars(o, h, l, c))
         assertTrue(pools.none { it.side > 0 && it.top == 110.0 })
+    }
+
+    @Test fun aBreakNeedsOneIndexStopOfRoomToTheNextLevel() {
+        assertEquals(1.0, LiquidityRules.MIN_ROOM_STOPS)
+        // BANKNIFTY: the stop unit is 30 points. Long: target above the close.
+        val up = LiquidityRules.Signal(1, 52_000.0, 52_080.0)
+        assertTrue(LiquidityRules.hasRoom(up, 52_050.0, "BANKNIFTY"))           // exactly 30 points: room
+        assertFalse(LiquidityRules.hasRoom(up, 52_050.05, "BANKNIFTY"))         // 29.95: too close
+        assertFalse(LiquidityRules.hasRoom(up, 52_090.0, "BANKNIFTY"))          // already past the level ahead
+        // Short: target below the close.
+        val down = LiquidityRules.Signal(-1, 52_000.0, 51_900.0)
+        assertTrue(LiquidityRules.hasRoom(down, 51_950.0, "BANKNIFTY"))
+        assertFalse(LiquidityRules.hasRoom(down, 51_920.0, "BANKNIFTY"))
+        // FINNIFTY: 15 points.
+        val fin = LiquidityRules.Signal(1, 24_000.0, 24_030.0)
+        assertTrue(LiquidityRules.hasRoom(fin, 24_015.0, "FINNIFTY"))
+        assertFalse(LiquidityRules.hasRoom(fin, 24_016.0, "FINNIFTY"))
+        // MIDCPNIFTY: 8 points.
+        val mid = LiquidityRules.Signal(-1, 12_800.0, 12_770.0)
+        assertTrue(LiquidityRules.hasRoom(mid, 12_778.0, "MIDCPNIFTY"))
+        assertFalse(LiquidityRules.hasRoom(mid, 12_777.95, "MIDCPNIFTY"))
+        // No level ahead: room.
+        assertTrue(LiquidityRules.hasRoom(LiquidityRules.Signal(1, 52_000.0, null), 52_010.0, "BANKNIFTY"))
+        assertTrue(LiquidityRules.hasRoom(LiquidityRules.Signal(-1, 52_000.0, null), 51_990.0, "BANKNIFTY"))
+    }
+
+    @Test fun theEntryBuysOneStrikeInTheMoney() {
+        assertEquals(1, LiquidityRules.ITM_STEPS)
+        // BANKNIFTY ATM 52,100 for a close of 52,070: the CE buys 52,000, the PE 52,200.
+        assertEquals(52_000, LiquidityRules.entryStrike(1, 52_070.0, "BANKNIFTY"))
+        assertEquals(52_200, LiquidityRules.entryStrike(-1, 52_070.0, "BANKNIFTY"))
+        // FINNIFTY ATM 24,050 for 24,070: CE 24,000, PE 24,100.
+        assertEquals(24_000, LiquidityRules.entryStrike(1, 24_070.0, "FINNIFTY"))
+        assertEquals(24_100, LiquidityRules.entryStrike(-1, 24_070.0, "FINNIFTY"))
+        // MIDCPNIFTY ATM 12,825 for 12,830 (25-point strikes): CE 12,800, PE 12,850 (h4: atm(close, 25) - side * 25).
+        assertEquals(12_800, LiquidityRules.entryStrike(1, 12_830.0, "MIDCPNIFTY"))
+        assertEquals(12_850, LiquidityRules.entryStrike(-1, 12_830.0, "MIDCPNIFTY"))
+        // Always on the strike grid, one step from ATM.
+        for (c in listOf(51_949.0, 51_950.0, 52_049.99)) for (side in listOf(1, -1)) {
+            val k = LiquidityRules.entryStrike(side, c, "BANKNIFTY")
+            assertEquals(0, k % 100)
+            assertEquals(-side * 100, k - OrbRules.atmStrike(c, 100))
+        }
+    }
+
+    @Test fun theRoomFilterUsesTheSignalsOwnTarget() {
+        // On the research series every signal either has no level ahead or a target beyond its close.
+        val b = wave()
+        val sigs = (60 until b.size).mapNotNull { i ->
+            val sub = b.subList(0, i + 1)
+            LiquidityRules.signal(sub, LiquidityRules.zones(sub))?.let { it to sub.last().close }
+        }
+        assertTrue(sigs.isNotEmpty())
+        for ((s, close) in sigs) {
+            val room = LiquidityRules.hasRoom(s, close, "BANKNIFTY")
+            if (s.target == null) assertTrue(room) else assertEquals(s.side * (s.target!! - close) >= 30.0, room)
+        }
+    }
+
+    @Test fun theMidcpBooksJoinTheSwitchOnPaperOnlyWhenItIsOn() {
+        val mid = listOf(LiquidityRules.MID15.source, LiquidityRules.MID5.source)
+        // The switch on (any other book armed): both MIDCPNIFTY books join, each said once in the arm log.
+        val on = mapOf("liquidity15" to true, "liquidity5" to true, "liquidity30_fin" to true, "liquidity5_fin" to true)
+        val j = LiquidityRules.joinMidcp(on, done = false, restoring = false)
+        assertEquals(mid, j.map { it.source })
+        assertEquals("Liquidity 15m MIDCPNIFTY: ${LiquidityRules.MIDCP_JOINED}", j.first().log)
+        assertTrue(LiquidityRules.MIDCP_JOINED.contains("never cleared for Zerodha"))
+        assertEquals(mid, LiquidityRules.joinMidcp(mapOf("liquidity5_fin" to true), done = false, restoring = false).map { it.source })
+        // Already armed: left as it is.
+        assertEquals(listOf(LiquidityRules.MID5.source),
+            LiquidityRules.joinMidcp(on + (LiquidityRules.MID15.source to true), done = false, restoring = false).map { it.source })
+        // The switch off, done already, or a restore not yet disarmed: nothing switched on.
+        assertTrue(LiquidityRules.joinMidcp(emptyMap(), done = false, restoring = false).isEmpty())
+        assertTrue(LiquidityRules.joinMidcp(on.mapValues { false }, done = false, restoring = false).isEmpty())
+        assertTrue(LiquidityRules.joinMidcp(mapOf(LiquidityRules.MID15.source to true), done = false, restoring = false).isEmpty())
+        assertTrue(LiquidityRules.joinMidcp(on, done = true, restoring = false).isEmpty())
+        assertTrue(LiquidityRules.joinMidcp(on, done = false, restoring = true).isEmpty())
+        // The arm's own rules: only the index stop and the strike step are its index's.
+        assertTrue(LiquidityRules.MID15.liquidity && LiquidityRules.MID5.liquidity)
+        assertEquals("Liquidity 5m MIDCPNIFTY", LiquidityRules.MID5.label)
     }
 }

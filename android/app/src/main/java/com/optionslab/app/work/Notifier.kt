@@ -255,11 +255,24 @@ object Notifier {
                 .takeIf { it.isNotEmpty() }?.sumOf { it.quantity } }.getOrNull() == 0) {
             PositionCards.dismiss(context, card, symbol); return
         }
-        PositionCards.card(context, card, symbol, if (buy) qty else -qty, price, price, 0.0, alert = true, headline = headline)
+        // A Liquidity 15+5 paper fill shows in the shade without a sound, a buzz or a pop-up (Boss, 07 Oct 2026), as its own
+        // entry / exit notice (LiquidityNotices) does. Every other fill - a live Liquidity order too - sounds as before.
+        val quiet = quietFill(venue, source)
+        PositionCards.card(context, card, symbol, if (buy) qty else -qty, price, price, 0.0, alert = !quiet, headline = headline, quiet = quiet)
         // Zerodha: read the book again shortly, so a fill that closed the position takes its card down.
         if (venue != "Paper") kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
             kotlinx.coroutines.delay(2_000); runCatching { PositionCards.refresh(context) }
         }
+    }
+
+    /**
+     * A fill told silently: a PAPER order of Liquidity 15+5 ([source] "Liquidity 15+5 · entry", or a book's own name on its
+     * exits and stops, "Liquidity 5m · exit" - [com.optionslab.ira.ArmOwners]). Live orders and every other source sound.
+     */
+    internal fun quietFill(venue: String, source: String?): Boolean {
+        if (venue != "Paper" || source == null) return false
+        val owner = source.substringBefore(" · ").trim()
+        return owner.isNotEmpty() && com.optionslab.ira.ArmOwners.arm(owner) == com.optionslab.ira.ArmOwners.LIQUIDITY
     }
 
     fun canPost(context: Context): Boolean =

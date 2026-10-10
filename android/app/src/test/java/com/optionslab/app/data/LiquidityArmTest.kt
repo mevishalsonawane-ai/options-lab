@@ -38,6 +38,8 @@ class LiquidityArmTest : RobolectricTest() {
     private lateinit var day: LocalDate
     private val ceKey = "NSE_FO|LIQCE"
     private val peKey = "NSE_FO|LIQPE"
+    /** The put at the call's strike: candidate (f)'s opposite right. */
+    private val pe0Key = "NSE_FO|LIQPE0"
     private var failDay = true
     /** The 13:05 bar dips to 54,060 (40 under the broken 54,100) and closes back above it: the index stop, not a failed break. */
     private var dipDay = false
@@ -73,12 +75,15 @@ class LiquidityArmTest : RobolectricTest() {
         at(LocalTime.of(12, 50))
         val expiry = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54100CE"),
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54100PE")))
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.PE, 30, pe0Key, "BANKNIFTY-LIQ-54000PE")))
         upstox.price(ceKey, 300.0)
         upstox.price(peKey, 280.0)
         OrbArms.testIndexBars = { t -> feed(t) }
         OrbArms.testHistoryBars = { emptyList() }
+        // The day's figures below are one lot's (the default since 08 Oct); the size tests set their own.
+        runBlocking { OrbArms.setLiquidityLots(1, "test") }
     }
 
     @After fun down() {
@@ -132,6 +137,13 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("CE", p.right); assertEquals(30, p.qty); assertFalse("paper, never live", p.live)
         assertEquals(54_100.0, p.level!!, 0.0)
         assertNull("no liquidity above yet: no target", p.target)
+        // Candidate (a)'s shadow (pre-registered 06 Oct) is recorded with every signal: no level ahead, so it would not skip it.
+        assertEquals(false, p.near)
+        // Candidate (c), the volatility filter (06 Oct), is recorded too: with no earlier sessions loaded it cannot tell, so
+        // it is recorded as not skipped - and the trade went ahead exactly as before (it never changes what the arm trades).
+        assertEquals(false, p.volSkip)
+        // Candidate (f) (a forward test): no option candles in this feed, so its momentum cannot be read - not recorded.
+        assertNull(p.strong)
         assertEquals(day.atTime(13, 0), p.signalBar)
         // The owner's 15% stop rests in the book at 85% of the fill.
         assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), p.stopTrigger)
@@ -146,6 +158,15 @@ class LiquidityArmTest : RobolectricTest() {
         val closed = row().today.single()
         assertFalse(closed.open)
         assertEquals("failed_break", closed.why)
+        // The row counts it from 06 Oct, with and without each candidate (neither would have dropped it).
+        val s = row().shadow!!
+        assertEquals(1, s.all.trades); assertEquals(1, s.withoutNear.trades); assertEquals(1, s.withoutFin30.trades)
+        assertEquals(1, s.volAll.trades); assertEquals(1, s.withoutVol.trades)
+        assertEquals((closed.grossPnl ?: 0.0) - closed.charges, s.all.net, 0.01)
+        // Saved and read back: the flag survives a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(false, row().today.single().near)
+        assertEquals(false, row().today.single().volSkip)
         assertEquals(1, Paper.state.orders.count { it.action == "SELL" && it.status == "complete" })
         assertEquals("the resting stop was taken out first", "cancelled", Paper.state.orders.single { it.orderId == p.stopOrderId }.status)
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
@@ -242,13 +263,15 @@ class LiquidityArmTest : RobolectricTest() {
         val r = row()
         assertTrue("nothing bought before the approval", Paper.state.orders.isEmpty())
         val pd = r.pending!!
-        assertEquals("CE", pd.right); assertEquals(54_100, pd.strike); assertEquals(54_100.0, pd.level!!, 0.0)
+        assertEquals("CE", pd.right); assertEquals(54_000, pd.strike); assertEquals(54_100.0, pd.level!!, 0.0)   // strike: one in the money (liq2)
         assertEquals(day.atTime(13, 10), pd.expires)                         // valid until the next 5-minute bar closes
         assertTrue(r.status, r.status.contains("Breakout: waiting for your approval."))
+        assertEquals("candidate (c)'s flag waits with the signal", false, pd.volSkip)
         val msg = runBlocking { OrbArms.approve("liquidity") }
         assertEquals("Entered (paper).", msg)
         val p = row().today.single()
         assertTrue(p.open); assertEquals("CE", p.right); assertEquals(54_100.0, p.level!!, 0.0)
+        assertEquals(false, p.volSkip)
         assertNull("the approval is used up", row().pending)
         assertEquals(1, Paper.state.orders.count { it.action == "BUY" })
     }
@@ -277,13 +300,27 @@ class LiquidityArmTest : RobolectricTest() {
     }
 
     @Test fun finniftyIsTradedTooOnItsOwnChartAndOptions() {
+        finniftyDay()
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_fin", p.arm)
+        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24000CE"))                // one strike in the money (liq2)
+        assertEquals(65, p.qty)                                              // FINNIFTY's own lot
+        assertEquals(24_050.0, p.level!!, 0.0)
+        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
+        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
+    }
+
+    /** Only FINNIFTY breaks today (at 13:00, its own lot 65). */
+    private fun finniftyDay() {
         bankFlat = true
         val expiry = day.plusDays(7)
         AutomationSupport.contracts(context, listOf(
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54100CE"),
-            Upstox.Contract("BANKNIFTY", expiry, 54_100.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54100PE"),
-            Upstox.Contract("FINNIFTY", expiry, 24_050.0, Right.CE, 65, "NSE_FO|LIQFINCE", "FINNIFTY-LIQ-24050CE"),
-            Upstox.Contract("FINNIFTY", expiry, 24_050.0, Right.PE, 65, "NSE_FO|LIQFINPE", "FINNIFTY-LIQ-24050PE")))
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE"),
+            Upstox.Contract("FINNIFTY", expiry, 24_000.0, Right.CE, 65, "NSE_FO|LIQFINCE", "FINNIFTY-LIQ-24000CE"),
+            Upstox.Contract("FINNIFTY", expiry, 24_100.0, Right.PE, 65, "NSE_FO|LIQFINPE", "FINNIFTY-LIQ-24100PE")))
         upstox.price("NSE_FO|LIQFINCE", 120.0)
         upstox.price("NSE_FO|LIQFINPE", 110.0)
         OrbArms.testOtherIndexBars = { u, t ->
@@ -292,15 +329,182 @@ class LiquidityArmTest : RobolectricTest() {
                 .map { start -> val b = finBar((start.hour * 60 + start.minute - (9 * 60 + 15)) / 5)
                     Upstox.Bar(start.atZone(IST).toEpochSecond(), b[0], b[1], b[2], b[3], 1000, 0) }
         }
+    }
+
+    /** MIDCPNIFTY's day (research h4): the FINNIFTY shape at 12,800 - swing high 12,850 at 10:55, second rejection 11:25, break at 13:00. */
+    private fun midBar(k: Int): DoubleArray = finBar(k).map { it - 24_000.0 + 12_800.0 }.toDoubleArray()
+
+    /** Only MIDCPNIFTY breaks today (at 13:00, its own lot 140, monthly expiry, 25-point strikes). */
+    private fun midcpniftyDay() {
+        bankFlat = true
+        val expiry = day.plusDays(20)
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("BANKNIFTY", expiry, 54_000.0, Right.CE, 30, ceKey, "BANKNIFTY-LIQ-54000CE"),
+            Upstox.Contract("BANKNIFTY", expiry, 54_200.0, Right.PE, 30, peKey, "BANKNIFTY-LIQ-54200PE"),
+            Upstox.Contract("MIDCPNIFTY", expiry, 12_850.0, Right.CE, 140, "NSE_FO|LIQMIDCE", "MIDCPNIFTY-LIQ-12850CE"),
+            Upstox.Contract("MIDCPNIFTY", expiry, 12_875.0, Right.CE, 140, "NSE_FO|LIQMIDCE2", "MIDCPNIFTY-LIQ-12875CE")))
+        upstox.price("NSE_FO|LIQMIDCE", 120.0)
+        upstox.price("NSE_FO|LIQMIDCE2", 100.0)
+        OrbArms.testOtherIndexBars = { u, t ->
+            if (u != "MIDCPNIFTY") emptyList() else (9 * 60 + 15 until 15 * 60 + 30).map { day.atTime(it / 60, it % 60) }
+                .filter { !it.plusMinutes(1).isAfter(t) }
+                .map { start -> val b = midBar((start.hour * 60 + start.minute - (9 * 60 + 15)) / 5)
+                    Upstox.Bar(start.atZone(IST).toEpochSecond(), b[0], b[1], b[2], b[3], 1000, 0) }
+        }
+    }
+
+    @Test fun midcpniftyIsTradedOnItsOwnChartAndOptionsOnPaper() {
+        midcpniftyDay()
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_mid", p.arm)
+        // One strike in the money on its 25-point grid: ATM 12,875 for the 12,870 close, the call one step below.
+        assertTrue(p.symbol, p.symbol.startsWith("MIDCPNIFTY") && p.symbol.endsWith("12850CE"))
+        assertEquals("MIDCPNIFTY's own lot from the instrument master", 140, p.qty)
+        assertEquals(12_850.0, p.level!!, 0.0)
+        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
+        assertFalse("paper only", p.live)
+        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
+        assertTrue(row().status, row().status.contains("MIDCPNIFTY 15-min:") && row().status.contains("MIDCPNIFTY 5-min:"))
+    }
+
+    /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
+    @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
+        val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")
+        fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(true))
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
+            .put("positions", org.json.JSONArray()))
+        val r = row()
+        assertTrue(r.armed); assertTrue(r.automatic)
+        assertFalse("the MIDCPNIFTY books are never cleared for Zerodha by this change", r.liveOk)
+        val joined = com.optionslab.engine.orb.LiquidityRules.MIDCP_JOINED
+        assertTrue(r.status, r.status.contains("MIDCPNIFTY 15-min: $joined") && r.status.contains("MIDCPNIFTY 5-min: $joined"))
+        val states = runBlocking { OrbArms.liquidityDay(day) }.first
+        assertTrue(states.toString(), states.filter { it.book.endsWith("_mid") }.let { m -> m.size == 2 && m.all { it.armed } })
+        assertEquals(2, Diag.lines().count { it.contains(joined) })
+        // Once: switched off afterwards, a restart leaves them off and says nothing again.
+        runBlocking { OrbArms.setArmed("liquidity", false, automatic = true) }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertFalse(row().armed)
+        assertEquals(2, Diag.lines().count { it.contains(joined) })
+    }
+
+    @Test fun aSwitchedOffBookLeavesTheMidcpniftyBooksOffUntilTheSwitchComesOn() {
+        // (9 Oct's parking marked done: this test is about the MIDCPNIFTY books alone.)
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
+            .put("positions", org.json.JSONArray()))
+        assertFalse(row().armed)
+        assertTrue(runBlocking { OrbArms.liquidityDay(day) }.first.none { it.armed })
+        armLiquidity()
+        assertTrue(runBlocking { OrbArms.liquidityDay(day) }.first.all { it.armed })
+    }
+
+    // ---- Liquidity's size (Boss's 06 Oct choice: 2-3 lots) ----------------------------------------------------------------
+
+    @Test fun twoLotsBuyTwiceTheContractsLotAndTheStopAndExitCoverIt() {
+        assertTrue(runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }.startsWith("Liquidity 15+5 now buys 2 lots"))
+        assertEquals(2, row().lots)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("2 x BANKNIFTY's lot of 30", 60, p.qty)
+        assertEquals(30, p.lot); assertEquals(2.0, p.lots, 0.0)
+        // The 15% resting stop covers the full quantity.
+        val stop = Paper.state.orders.single { it.action == "SELL" }
+        assertEquals(60, stop.quantity); assertEquals(p.stopOrderId, stop.orderId)
+        assertEquals(60, Paper.state.orders.single { it.action == "BUY" }.quantity)
+        tick(LocalTime.of(13, 10))                                          // the failed break sells it all
+        val closed = row().today.single()
+        assertEquals("failed_break", closed.why)
+        assertEquals(60, Paper.state.orders.single { it.action == "SELL" && it.status == "complete" }.quantity)
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+        // The row's P&L is the trade's rupees at its real quantity; the shadow counts it per lot.
+        val net = (closed.grossPnl ?: 0.0) - closed.charges
+        assertEquals((closed.exit!! - closed.entry) * 60, closed.grossPnl!!, 0.001)
+        assertEquals(net / 2, row().shadow!!.all.net, 0.01)
+        // Saved and read back: the lot and the size survive a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(30, row().today.single().lot); assertEquals(2, row().lots)
+    }
+
+    @Test fun aNewSizeLeavesTheOpenPositionAsItWasAndAppliesToTheNextEntry() {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(13, 0), LocalTime.of(13, 5))
+        assertEquals(30, row().today.single().qty)
+        upstox.price(ceKey, row().today.single().entry * 1.10)              // +10%: past the 20-minute time stop's +5%
+        val msg =runBlocking { OrbArms.setLiquidityLots(3, "Boss on the row") }
+        assertTrue(msg, msg.contains("the open position keeps its own quantity"))
+        assertEquals(3, row().lots)
+        val held = row().today.single()
+        assertTrue(held.open); assertEquals("bought 1 lot: still 1 lot", 30, held.qty)
+        tick(LocalTime.of(15, 10))
+        val closed = row().today.single()
+        assertEquals("session_end", closed.why)
+        assertEquals("its exit sells what it holds, no more", 30, Paper.state.orders.filter { it.action == "SELL" && it.status == "complete" }.sumOf { it.quantity })
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+    }
+
+    @Test fun finniftyTakesItsOwnLotTimesTheSize() {
+        finniftyDay()
+        runBlocking { OrbArms.setLiquidityLots(3, "Boss on the row") }
         armLiquidity()
         passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
         val p = row().today.single()
         assertEquals("liquidity5_fin", p.arm)
-        assertTrue(p.symbol, p.symbol.startsWith("FINNIFTY") && p.symbol.endsWith("24050CE"))
-        assertEquals(65, p.qty)                                              // FINNIFTY's own lot
-        assertEquals(24_050.0, p.level!!, 0.0)
-        assertEquals(p.entry * 0.85, p.stopTrigger!!, 0.06)                  // the same 15% stop
-        assertTrue("nothing bought on BANKNIFTY", Paper.state.orders.none { it.symbol.startsWith("BANKNIFTY") })
+        assertEquals("3 x FINNIFTY's lot of 65", 195, p.qty)
+        assertEquals(195, Paper.state.orders.single { it.action == "SELL" }.quantity)
+    }
+
+    @Test fun aBookSavedBeforeTheSizeTakesOneLotOnceAndTheArmLogSaysSo() {
+        AutomationSupport.orbState(context, org.json.JSONObject().put("positions", org.json.JSONArray()))
+        assertEquals("1 lot by default since 08 Oct (research X1)", 1, row().lots)
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains(com.optionslab.engine.orb.LiquidityLots.MIGRATED) })
+        // Boss's own choice afterwards stays: the change ran once.
+        runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(2, row().lots)
+        assertTrue(Diag.lines().any { it.contains("Liquidity 15+5: size 1 lot -> 2 lots (Boss on the row)") })
+    }
+
+    /** "Liquidity ko 3 lot karo": said back and asked; nothing changes until Boss's yes, and a raise counts as more risk. */
+    @Test fun jarvisAsksBeforeRaisingTheLotsAndChangesNothingUntilTheYes() {
+        val raise = com.optionslab.ira.Ask.parse("liquidity ko 3 lot karo").command!!
+        assertEquals(com.optionslab.ira.Command.Kind.SET_LIMIT, raise.kind)
+        assertTrue("a raise needs Boss's own voice", com.optionslab.app.ira.IraActions.loosens(raise))
+        val (said, act) = runBlocking { com.optionslab.app.ira.IraActions.prepare(raise) }
+        assertTrue(said, said.startsWith("change Liquidity 15+5's lots a trade from 1 to 3 (this allows more risk"))
+        assertEquals("nothing changed before the yes", 1, row().lots)
+        val done = runBlocking { act!!() }
+        assertTrue(done, done.startsWith("Liquidity 15+5 now buys 3 lots"))
+        assertEquals(3, row().lots)
+        assertTrue(Diag.lines().any { it.contains("Liquidity 15+5: size 1 lot -> 3 lots (Jarvis, on Boss's yes)") })
+        // Fewer lots: still said back and confirmed, but no more risk.
+        val cut = com.optionslab.ira.Ask.parse("set liquidity to 2 lots").command!!
+        assertFalse(com.optionslab.app.ira.IraActions.loosens(cut))
+        val (cutSaid, cutAct) = runBlocking { com.optionslab.app.ira.IraActions.prepare(cut) }
+        assertEquals("change Liquidity 15+5's lots a trade from 3 to 2", cutSaid)
+        // Changed on the row meanwhile: the yes applies nothing.
+        runBlocking { OrbArms.setLiquidityLots(1, "Boss on the row") }
+        assertTrue(runBlocking { cutAct!!() }.contains("changed since you asked"))
+        assertEquals(1, row().lots)
+        // Only 1, 2 or 3; the same size is said, not asked.
+        assertEquals("Liquidity 15+5 trades 1, 2 or 3 lots, Boss - not 5." to null,
+            runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 5 lots").command!!) })
+        assertEquals("Liquidity 15+5 already trades 1 lot." to null,
+            runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 1 lot").command!!) })
+    }
+
+    @Test fun onlyOneTwoOrThreeLots() {
+        assertEquals("Liquidity 15+5 trades 1, 2 or 3 lots, not 4.", runBlocking { OrbArms.setLiquidityLots(4, "test") })
+        assertEquals(1, row().lots)
+        assertEquals("Liquidity 15+5 already trades 1 lot.", runBlocking { OrbArms.setLiquidityLots(1, "test") })
     }
 
     /** A build that ran FINNIFTY on 15 + 5 minutes saved its 15-minute book as "liquidity15_fin": it carries on as the 30-minute book. */
@@ -310,6 +514,8 @@ class LiquidityArmTest : RobolectricTest() {
         val t = day.atTime(12, 50)
         AutomationSupport.orbState(context, org.json.JSONObject()
             .put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
+            // Saved after the 06 Oct update (its one-time switch-off already done): armed again by Boss.
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "liquidity15_fin")
                 .put("symbol", "FINNIFTY-LIQ-24050CE").put("right", "CE").put("qty", 65).put("entry", 120.0)
                 .put("entryTime", t.minusMinutes(20).toString()).put("signalBar", t.minusMinutes(50).toString())
@@ -321,9 +527,117 @@ class LiquidityArmTest : RobolectricTest() {
         assertTrue(r.status, r.status.contains("BANKNIFTY 15-min:") && r.status.contains("BANKNIFTY 5-min:"))
     }
 
+    /**
+     * Boss's 07 Oct decision (research/HUNT_H21.md): Liquidity 15+5 has priority over the ORB arms. ORB holds a BANKNIFTY call
+     * on paper since 12:30; the 13:00 break is still bought at 13:05, beside it, and the arms' log says why.
+     */
+    @Test fun aLiquidityEntryWhileOrbHoldsBankNiftyIsTakenAndTheLogSaysLiquidityHasPriority() {
+        failDay = false
+        val t = day.atTime(12, 30)
+        AutomationSupport.orbState(context, org.json.JSONObject().put("liqLots", 1)
+            .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "orb")
+                .put("symbol", "BANKNIFTY-ORB-54000CE").put("right", "CE").put("qty", 30).put("entry", 300.0)
+                .put("entryTime", t.toString()).put("signalBar", t.minusMinutes(5).toString()))))
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue("taken beside ORB's call", p.open)
+        assertEquals("CE", p.right); assertEquals("liquidity5", p.arm)
+        assertEquals("one paper buy: Liquidity's", 1, Paper.state.orders.count { it.action == "BUY" })
+        val orb = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "orb" }
+        assertTrue("ORB's call is untouched", orb.open != null)
+        val log = Diag.lines()
+        assertTrue(log.toString(), log.any { it.contains("Liquidity 5m is not held back by ORB's BANKNIFTY-ORB-54000CE: Liquidity has priority over ORB arms.") })
+    }
+
     @Test fun disarmedItBuysNothing() {
         passes(LocalTime.of(12, 50), LocalTime.of(13, 15))
         assertTrue(row().today.isEmpty())
         assertTrue(Paper.state.orders.isEmpty())
+    }
+
+    /** An option's 1-minute candles at [t] from 12:30: [from] moving [step] a minute. */
+    private fun option(t: LocalDateTime, from: Double, step: Double): List<Upstox.Bar> = (12 * 60 + 30 until 15 * 60 + 30)
+        .map { day.atTime(it / 60, it % 60) }.filter { !it.plusMinutes(1).isAfter(t) }
+        .mapIndexed { i, start -> val c = from + step * i; Upstox.Bar(start.atZone(IST).toEpochSecond(), c, c, c, c, 1000, 0) }
+
+    @Test fun candidateFIsRecordedWithTheSignalAndNeverChangesTheTrade() {
+        // The call's premium rising and the put's at the same strike falling: momentum. But the 13:00 bar closed 40 points
+        // (7.4 bp) beyond the swept 54,100, not more than 10.4 bp: (f) would not have taken it.
+        OrbArms.testOptionBars = { key, t -> when (key) { ceKey -> option(t, 200.0, 1.0); pe0Key -> option(t, 300.0, -1.0); else -> emptyList() } }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue("the arm traded exactly as before", p.open)
+        assertEquals(false, p.strong)
+        assertTrue(com.optionslab.engine.orb.LiquidityShadow.premiumMomentum(
+            option(day.atTime(13, 5), 200.0, 1.0).map { com.optionslab.engine.orb.Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(IST).toLocalDateTime(), it.open, it.high, it.low, it.close) },
+            option(day.atTime(13, 5), 300.0, -1.0).map { com.optionslab.engine.orb.Bar(java.time.Instant.ofEpochSecond(it.epochSecond).atZone(IST).toLocalDateTime(), it.open, it.high, it.low, it.close) },
+            day.atTime(13, 5)) == true)
+        tick(LocalTime.of(13, 10))
+        assertFalse(row().today.single().open)
+        val s = row().shadow!!
+        assertEquals("counted for (f): its flag was recorded", 1, s.strongAll.trades)
+        assertEquals("and it would have skipped it", 0, s.withStrong.trades)
+        // Saved and read back: the flag survives a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(false, row().today.single().strong)
+    }
+
+    // ---- the order flow beside the entry (9 Oct): SHADOW logs, CONFIRM only ever skips ----
+
+    /** The flow's read for every index: [buyers] the buyers' share (30: sellers at 70, against a call). */
+    private fun flow(buyers: Int) {
+        com.optionslab.app.data.FlowGate.testNowSec = 1_000
+        OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, buyers, 1_000) }
+    }
+
+    @Test fun orderFlowShadowLogsTheSignalAndChangesNothing() {
+        flow(30)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue("the arm traded exactly as before, against the flow", p.open)
+        assertEquals("CE", p.right)
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertEquals(com.optionslab.ira.OrderFlow.Mode.SHADOW, s.mode)
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.DISAGREES, s.agreement)
+        assertFalse(s.skipped); assertFalse(s.live); assertEquals(1, s.side); assertEquals(30, s.buyers)
+        assertTrue("its paper order is kept for the result", s.taken && s.orderId == p.entryOrderId)
+    }
+
+    @Test fun orderFlowConfirmSkipsAPaperEntryTheFlowDisagreesWithAndLogsIt() {
+        val said = FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        assertTrue(said, said.startsWith("Liquidity 15+5 BankNifty: an entry is skipped unless the order flow agrees"))
+        flow(30)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue("skipped: nothing bought", row().today.isEmpty())
+        assertTrue("no paper order at all", Paper.state.orders.isEmpty())
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertTrue(s.skipped); assertEquals(FlowGate.SKIPPED, s.verdict); assertFalse(s.taken)
+        assertTrue(Diag.lines().any { "skipped by flow" in it })
+    }
+
+    @Test fun orderFlowConfirmTakesTheEntryWhenTheFlowAgrees() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        flow(72)
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.open); assertEquals(30, p.qty)
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.AGREES, s.agreement); assertFalse(s.skipped); assertTrue(s.taken)
+    }
+
+    @Test fun orderFlowConfirmWithNoFlowHasNoOpinionAndTheEntryGoesAhead() {
+        FlowGate.set("liquidity:BANKNIFTY", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        com.optionslab.app.data.FlowGate.testNowSec = 1_000
+        OrderFlowLive.testRead = { null }                                   // no Zerodha stream: no flow at all
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue("the strategy's own entry, as without the flow", row().today.single().open)
+        val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
+        assertEquals(com.optionslab.ira.OrderFlow.Agreement.UNKNOWN, s.agreement); assertFalse(s.skipped); assertTrue(s.taken)
     }
 }

@@ -36,7 +36,8 @@ object StreamHealth {
 
     /** A connection up at least this long was healthy: the next try starts again at once. */
     const val STABLE_MS = 60_000L
-    const val FIRST_WAIT_MS = 1_000L
+    /** Round 2 (9 Oct): the first try again after half a second, not a whole one (then doubling, as before). */
+    const val FIRST_WAIT_MS = 500L
     const val MAX_WAIT_MS = 30_000L
 
     /** Kite: at most 3000 instruments on one connection. */

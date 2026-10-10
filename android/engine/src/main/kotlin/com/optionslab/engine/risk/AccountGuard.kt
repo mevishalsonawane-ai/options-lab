@@ -33,6 +33,11 @@ object AccountGuard {
         val blockNakedShort: Boolean = true,
         /** Rupees; 0 = off. What one instrument may be held at (|held| x price + this order), as the desktop's ACCOUNT_MAX_SYMBOL_EXPOSURE. */
         val maxSymbolExposure: Double = 0.0,
+        /**
+         * The entry cut-off for an MCX order ([Order.exchange] "MCX"), which trades to 23:30 / 23:55: [entryCutoffMinute]
+         * is NSE's. Null = no cut-off for MCX (the app sets it from the day's MCX close).
+         */
+        val mcxEntryCutoffMinute: Int? = null,
     )
 
     /** One held instrument; [qty] is signed (short negative), in units. */
@@ -52,7 +57,9 @@ object AccountGuard {
 
     /** The order being judged. [right] is "CE"/"PE" for an option, null otherwise. */
     data class Order(val symbol: String, val side: String, val qty: Int, val lot: Int, val price: Double,
-                     val underlying: String? = null, val expiry: LocalDate? = null, val right: String? = null)
+                     val underlying: String? = null, val expiry: LocalDate? = null, val right: String? = null,
+                     /** "MCX" for a commodity order (its own entry cut-off); anything else is judged as before. */
+                     val exchange: String = "NFO")
 
     /** True when the order only reduces an existing position of the same instrument. */
     fun isExit(o: Order, a: Account): Boolean {
@@ -99,7 +106,7 @@ object AccountGuard {
             val exposure = (held + o.qty) * o.price
             if (exposure > l.maxSymbolExposure) out += "Exposure limit: ${o.symbol} would be Rs %,.0f held (limit Rs %,.0f).".format(exposure, l.maxSymbolExposure)
         }
-        l.entryCutoffMinute?.let { cut ->
+        (if (o.exchange == "MCX") l.mcxEntryCutoffMinute else l.entryCutoffMinute)?.let { cut ->
             if (a.minuteOfDay >= cut) out += "No new entries after %02d:%02d.".format(cut / 60, cut % 60)
         }
         if (l.blockNakedShort && o.right != null && o.side.equals("SELL", true)) {

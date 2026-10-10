@@ -87,7 +87,6 @@ import com.optionslab.app.ui.screens.HealthScreen
 import com.optionslab.app.ui.screens.LockScreen
 import com.optionslab.app.ui.screens.RefusedScreen
 import com.optionslab.app.ui.screens.TradeScreen
-import com.optionslab.app.ui.screens.TradeHub
 import com.optionslab.app.ui.screens.ToolsScreen
 import com.optionslab.app.ui.screens.LabScreen
 import com.optionslab.app.ui.screens.TrialsScreen
@@ -333,6 +332,8 @@ fun eraseEverything() {
     com.optionslab.app.data.Alarms.wipe()
     com.optionslab.app.data.Paper.wipe()
     com.optionslab.app.data.OrbArms.wipe()
+    com.optionslab.app.data.ShadowArms.wipe()
+    com.optionslab.app.data.MarketRecorder.wipe()
     com.optionslab.app.data.PineScripts.wipe()
     com.optionslab.app.data.PineAuto.wipe()
     com.optionslab.app.data.Protections.wipe()
@@ -353,6 +354,7 @@ fun eraseEverything() {
     val main = android.os.Looper.getMainLooper()
     if (android.os.Looper.myLooper() == main) web.run() else android.os.Handler(main).post(web)
     SecurePrefs.wipe()
+    com.optionslab.ira.ShortAnswer.clearCache()
     BiometricGate.forget()
     com.optionslab.app.security.PinPepper.destroy()
     Vault.destroy()
@@ -371,7 +373,6 @@ private fun Main(model: AppModel) {
     var tab by rememberSaveable { mutableStateOf(Tab.ALMANAC) }
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
     var labPage by rememberSaveable { mutableStateOf("trials") }
-    var tradePage by rememberSaveable { mutableStateOf("account") }
     var toolsView by rememberSaveable { mutableStateOf("chain") }
     var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
     // Bumped on every ask, so asking again for the same symbol after browsing another one still switches back.
@@ -392,8 +393,8 @@ private fun Main(model: AppModel) {
     }
 
     // Every move goes through [NavState], which holds the rules (and is what the tests drive).
-    fun navNow() = NavState(tab, cabinetPage, labPage, tradePage, toolsView)
-    fun go(n: NavState) { tab = n.tab; cabinetPage = n.cabinetPage; labPage = n.labPage; tradePage = n.tradePage; toolsView = n.toolsView }
+    fun navNow() = NavState(tab, cabinetPage, labPage, toolsView)
+    fun go(n: NavState) { tab = n.tab; cabinetPage = n.cabinetPage; labPage = n.labPage; toolsView = n.toolsView }
     LaunchedEffect(requested) {
         go(navNow().request(requested))
         MainActivity.tabRequests.value = null
@@ -402,7 +403,7 @@ private fun Main(model: AppModel) {
     val closeAsk by MainActivity.closeRequests.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     LaunchedEffect(closeAsk) {
         val sym = closeAsk ?: return@LaunchedEffect
-        if (linked) { tab = Tab.TRADE; tradePage = "account"; model.openLiveClose(sym) }
+        if (linked) { tab = Tab.TRADE; model.openLiveClose(sym) }
         MainActivity.closeRequests.value = null
     }
 
@@ -416,6 +417,15 @@ private fun Main(model: AppModel) {
             go(navNow().setting(r.page))
             com.optionslab.app.ui.SettingFocus.ask(r.key)
         }
+    }
+
+    // A Settings row asked for from inside the app (Today's notes' "Turn these off"): its page opens, the row is brought
+    // into view and pulses ([com.optionslab.app.ui.SettingSpot]). Navigation only: nothing is switched.
+    val settingPage by com.optionslab.app.ui.SettingFocus.pageWanted.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    LaunchedEffect(settingPage) {
+        val pg = settingPage ?: return@LaunchedEffect
+        go(navNow().setting(pg))
+        com.optionslab.app.ui.SettingFocus.pageWanted.value = null
     }
 
     // The market watch runs by itself on market days; opening the app restarts it if Android stopped it.
@@ -453,17 +463,17 @@ private fun Main(model: AppModel) {
                 ) { t ->
                     when (t) {
                         Tab.ALMANAC -> {
-                            val dashboard: @Composable () -> Unit = {
-                                AlmanacScreen(model, onGo = { dest ->
-                                    if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
-                                    go(navNow().home(dest))
-                                })
+                            val homeGo: (String) -> Unit = { dest ->
+                                if (dest == "chart") { chartAsk = "BANKNIFTY" to "NSE"; chartNonce++ }
+                                go(navNow().home(dest))
                             }
+                            val dashboard: @Composable () -> Unit = { AlmanacScreen(model, onGo = homeGo) }
                             // Jarvis: Home opens on Ira, with the usual dashboard one tap away.
-                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(remember(model) { com.optionslab.app.ui.screens.iraOrderPathsFor(model) }, dashboard) else dashboard()
+                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.app.ui.screens.IraHome(remember(model) { com.optionslab.app.ui.screens.iraOrderPathsFor(model) }, onGo = homeGo, dashboard = dashboard) else dashboard()
                         }
                         Tab.CHART -> Box(Modifier.fillMaxSize())   // the chart itself is kept alive below
-                        Tab.TRADE -> TradeHub(model, tradePage) { tradePage = it }
+                        // Trade is the account book itself; the saved strategies are a Research page.
+                        Tab.TRADE -> TradeScreen(model)
                         Tab.PNL -> com.optionslab.app.ui.screens.PnlCalendarScreen(model)
                         Tab.TOOLS -> ToolsScreen(model, toolsView, { toolsView = it }) { s, e -> chartAsk = s to e; chartNonce++; tab = Tab.CHART }
                         Tab.LAB -> LabScreen(model, labPage, { labPage = it }) {
@@ -490,7 +500,7 @@ private fun Main(model: AppModel) {
                     // The app's own close paths: a Zerodha position's goes the way of its notification's "Close…" button
                     // (the close popup, its review and PIN / fingerprint); a paper one opens its row's popup (slide to close).
                     if (venue == "Live") MainActivity.closeRequests.value = sym
-                    else { tab = Tab.TRADE; tradePage = "account"; model.openPaperClose(sym) }
+                    else { tab = Tab.TRADE; model.openPaperClose(sym) }
                 }, entries = { kind ->
                     // Home's own rows, read fresh: their Approve / Skip (and in Live the PIN or fingerprint) as on Home.
                     LaunchedEffect(kind) { model.refreshStrategies() }
@@ -538,7 +548,6 @@ internal data class NavState(
     val tab: Tab = Tab.ALMANAC,
     val cabinetPage: String? = null,
     val labPage: String = "trials",
-    val tradePage: String = "account",
     val toolsView: String = "chain",
 ) {
     /** A trusted deep link ([MainActivity.EXTRA_TAB]); an unknown or absent one changes nothing. */
@@ -546,8 +555,8 @@ internal data class NavState(
         "almanac" -> copy(tab = Tab.ALMANAC)
         "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
         "chart" -> copy(tab = Tab.CHART)
-        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
-        "strategy" -> copy(tab = Tab.TRADE, tradePage = "strategies")
+        "trade" -> copy(tab = Tab.TRADE)
+        "strategy" -> copy(tab = Tab.LAB, labPage = "strategies")
         "health" -> copy(tab = Tab.LAB, labPage = "health")
         "trials" -> copy(tab = Tab.LAB, labPage = "trials")
         "pine" -> copy(tab = Tab.LAB, labPage = "pine")
@@ -565,11 +574,15 @@ internal data class NavState(
     /** A shortcut on Home; anything else it names is a More page. */
     fun home(dest: String): NavState = when (dest) {
         "trials" -> copy(tab = Tab.LAB, labPage = "trials")
-        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
-        "strategy" -> copy(tab = Tab.TRADE, tradePage = "strategies")
+        "trade" -> copy(tab = Tab.TRADE)
+        "strategy" -> copy(tab = Tab.LAB, labPage = "strategies")
         "ticket" -> copy(tab = Tab.TOOLS, toolsView = "expiryput")
         "chart" -> copy(tab = Tab.CHART)
         "health" -> copy(tab = Tab.LAB, labPage = "health")
+        // "Today at a glance": its live-vs-backtest lines open the P&L tab, where that card is.
+        "pnl" -> copy(tab = Tab.PNL)
+        // "What's new": the Pine change opens the Pine scripts page.
+        "pine" -> copy(tab = Tab.LAB, labPage = "pine")
         else -> copy(tab = Tab.CABINET, cabinetPage = dest)
     }
 
@@ -577,7 +590,7 @@ internal data class NavState(
     fun tour(dest: String): NavState = when (dest) {
         "orb" -> copy(tab = Tab.ALMANAC)
         "chart" -> copy(tab = Tab.CHART)
-        "trade" -> copy(tab = Tab.TRADE, tradePage = "account")
+        "trade" -> copy(tab = Tab.TRADE)
         else -> this
     }
 
@@ -704,7 +717,7 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
                         StatusDot(if (open) p.verdigris else p.inkFaint, pulsing = open && !calm, modifier = Modifier.size(6.dp))
                         Spacer(Modifier.width(4.dp))
                         // Shut on a weekday in session hours: the holiday's name, so a wrong list is visible (and fixable in Schedule).
-                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.CLOSE) null else
+                        val why = remember(now, open) { if (open || !Market.isWeekday() || Market.minuteNow() !in Market.OPEN until Market.foClose()) null else
                             runCatching { com.optionslab.app.data.Holidays.book().upcoming(Market.today()).firstOrNull { it.first == Market.today() }?.second }.getOrNull() }
                         Text(if (open) "Market open" else "Market closed", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                         if (why != null) Text(" · $why", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))

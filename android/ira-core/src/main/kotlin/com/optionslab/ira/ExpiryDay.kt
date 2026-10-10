@@ -35,7 +35,7 @@ object ExpiryDay {
     private fun k(x: Double) = if (x % 1.0 == 0.0) "%,.0f".format(Locale.ENGLISH, x) else "%,.1f".format(Locale.ENGLISH, x)
     private fun pts(x: Double) = "%,.0f".format(Locale.ENGLISH, abs(x))
     private fun hm(t: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, t.hour, t.minute)
-    private fun norm(text: String) = " " + spacedWords(text.lowercase()) + " "
+    private fun norm(text: String) = Spaced.words(text)
 
     /** The slot due at [now], or null: at or after its time and within [WINDOW] minutes. */
     fun due(now: LocalTime): Slot? = Slot.entries.lastOrNull { !now.isBefore(it.at) && now.isBefore(it.at.plusMinutes(WINDOW)) }

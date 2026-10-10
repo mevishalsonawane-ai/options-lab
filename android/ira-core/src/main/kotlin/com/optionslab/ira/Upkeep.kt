@@ -39,9 +39,21 @@ object Upkeep {
         // phone only, never run from a file (round 7). His reminders - words only - are a separate key and are carried.
         "jarvis.later",
         // Whether Jarvis's ears may use Google's speech service (speech may leave the phone): Boss's choice on this phone.
+        // So is "Don't listen" (jarvis.voice.nolisten, 6 Oct): a restore never switches the microphone back on behind him.
         "jarvis.voice.",
         // The history of this phone's limits: what "Jarvis, undo" puts back, so a file's history could set a limit (round 7).
-        "settings.")
+        "settings.",
+        // The market recorder (06 Oct): its days are this phone's files (never in a backup), so its switch and gap counts stay too.
+        "recorder.",
+        // The forward-test watch's last told verdicts (jarvis.forward.told.): read from Solo's record, which never leaves
+        // the phone - restored over a fresh record they would silence its milestones (07 Oct).
+        ForwardWatch.KEY_PREFIX,
+        // The weekly "what's working" note's day and newest counted exit (jarvis.liqinsight.): read from the arms' book,
+        // which never leaves the phone - restored over a fresh book they would hold back or skip its notes (07 Oct).
+        LiquidityInsight.KEY_PREFIX,
+        // When the Ira page was last seen and the last "catch me up" (jarvis.catchup.): this phone's own moments - restored
+        // from a file they would hide today's notes from the catch-up (07 Oct).
+        CatchUp.KEY_PREFIX)
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }
