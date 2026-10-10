@@ -127,9 +127,20 @@ object Broker {
      * Why an entry may not be sent NOW, asked inside the door (null: it may). Reads memory and the settings already in it:
      * no lock any bot holds (the bots call [placeOrder] holding their own).
      */
+    @Volatile private var killKept: Pair<Int, Boolean>? = null
+
+    private fun killOn(): Boolean {
+        val g = SecurePrefs.generationHint
+        killKept?.let { if (it.first == g) return it.second }
+        val on = SecurePrefs.getBoolean(AppSettings.KILL_KEY, false)
+        killKept = g to on
+        return on
+    }
+
     internal fun entryRecheck(o: Kite.Order): String? {
-        // One in-memory read of the kill switch (the settings' own key), not the whole settings: the door stays fast.
-        if (SecurePrefs.getBoolean(AppSettings.KILL_KEY, false)) return "refused: the kill switch is on"
+        // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
+        // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
+        if (killOn()) return "refused: the kill switch is on"
         if (o.tag in BOT_TAGS) {
             if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
             if (Strategies.stopHint() != null) return "stopped_for_today"
