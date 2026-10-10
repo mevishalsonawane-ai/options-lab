@@ -613,6 +613,7 @@ object SmartWorkers {
         out += "  Consensus: " + consensusLines(now).joinToString(" · ")
         out += "  Findings (newest first, ${bus.posted} posted since start):"
         feed(15, now).ifEmpty { listOf("none standing") }.forEach { out += "    $it" }
+        runCatching { TradeManagerHost.diagLines() }.getOrDefault(emptyList()).forEach { out += "  $it" }
         return out
     }
 

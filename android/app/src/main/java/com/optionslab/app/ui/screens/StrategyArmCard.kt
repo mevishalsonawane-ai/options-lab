@@ -88,7 +88,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
         // Then the Order flow section (9 Oct): the live read, and each strategy's OFF / SHADOW / CONFIRM with its record.
         // Then the Brain (10 Oct): each strategy's health against its backtest, the market's regime, the bots' consensus.
-        nightRow = { NightRow(); VixDivRow(); OrderFlowSection(model); BrainSection() },
+        // Then the trade manager (10 Oct): its modes per strategy and its record against the original rules.
+        nightRow = { NightRow(); VixDivRow(); OrderFlowSection(model); BrainSection(); TradeManagerSection(model) },
         mcxRows = { McxArmRows() },
     )
 }

@@ -4,6 +4,7 @@ import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.FakeUpstox
+import com.optionslab.app.testing.ManagerShadow
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.app.testing.TradeFixtures
@@ -119,7 +120,10 @@ class McxPaperArmsTest : RobolectricTest() {
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
-    private fun tick(t: LocalTime, on: LocalDate = day) { at(t, on = on); runBlocking { McxPaperArms.tick() } }
+    /** [looks]: the trade manager takes a look after each pass (the SHADOW re-runs, [shadowed]). */
+    private var looks = false
+
+    private fun tick(t: LocalTime, on: LocalDate = day) { at(t, on = on); runBlocking { McxPaperArms.tick() }; if (looks) ManagerShadow.look() }
 
     /** Not one order, modify or cancel was sent to Zerodha. */
     private fun assertNothingAtZerodha() {
@@ -179,6 +183,31 @@ class McxPaperArmsTest : RobolectricTest() {
         assertEquals(done, runBlocking { McxPaperArms.refresh() }.closed.single())
         assertNothingAtZerodha()
     }
+
+    // ---- the trade manager in SHADOW (10 Oct; every leg hooked, SHADOW by default) ------------------------------------------
+
+    /**
+     * [scenario] run again with the trade manager in SHADOW disagreeing at every pass ([ManagerShadow.adverse]): its own exact
+     * assertions on the trades, their exits and the paper book hold unchanged, and the manager recorded would-have exits for
+     * [family] that nothing acted on - its arm's real exit stands as the original rules'.
+     */
+    private fun shadowed(family: String, scenario: () -> Unit) {
+        assertEquals(com.optionslab.ira.TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode(family, com.optionslab.ira.TradeManager.Account.PAPER))
+        ManagerShadow.adverse()
+        looks = true
+        try { scenario() } finally { looks = false }
+        val notes = ManagerShadow.wouldHaveExited(family)
+        assertTrue("the manager disagreed with $family", notes.isNotEmpty())
+        assertTrue(notes.none { it.acted })
+        for (r in TradeManagerHost.records.value.filter { it.trade.family == family && it.closed }) assertEquals(r.actual, r.original)
+        TradeManagerHost.resetForTest()
+    }
+
+    @Test fun inShadowTheEveningBreakTradesExactlyAsBefore() = shadowed("mcx-eve") { theEveningBreakBuysAndSellsOnPaperOnlyEvenWithEverythingLive() }
+
+    @Test fun inShadowTheTrendLegTradesExactlyAsBefore() = shadowed("mcx-trend") { theTrendLegBuysItsMiniFutureOnPaperOnly() }
+
+    @Test fun inShadowUsNightSilverTradesExactlyAsBefore() = shadowed("silver-night") { usNightSilverBuysOnPaperOnlyWithEverythingLiveAndItsDisasterStopReadsTheMinutesLow() }
 
     @Test fun theKillSwitchRefusesAnEntry() {
         runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }

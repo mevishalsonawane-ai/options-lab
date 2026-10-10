@@ -292,6 +292,15 @@ object Paper {
         }
     }
 
+    /**
+     * [symbol]'s price from memory only (the trade manager's look, 10 Oct): the stream's fresh tick, else a price read in the
+     * last [maxAgeMs]; null otherwise. No network read, no vault read (a book not loaded yet answers from the reads kept).
+     */
+    fun memPrice(symbol: String, maxAgeMs: Long = 60_000L): Double? {
+        cache?.contracts?.get(symbol)?.let { c -> runCatching { streamQuote(c) }.getOrNull()?.ltp?.takeIf { it > 0 }?.let { return it } }
+        return lastQuotes[symbol]?.takeIf { System.currentTimeMillis() - it.first in 0..maxAgeMs }?.second?.ltp?.takeIf { it > 0 }
+    }
+
     /** The last price read for each symbol and when (the screen re-prices every few seconds). */
     private val lastQuotes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Quote>>()
     private fun remember(symbol: String, q: Quote) { lastQuotes[symbol] = System.currentTimeMillis() to q }

@@ -189,6 +189,37 @@ object McxPaperArms {
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } })
+        // The trade manager's one call (10 Oct), every leg: SHADOW by default - it records only; the arms' own exits stay authoritative.
+        runCatching {
+            val since = McxMarket.now().minusDays(2)
+            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it) })
+        }
+    }
+
+    /** [p]'s id for the trade manager. */
+    private fun managerId(p: Pos): String = "mcx:${p.arm}:${p.symbol}:${p.entryTime}"
+
+    /** Each arm's family for the trade manager ([com.optionslab.ira.TradeManager.FAMILIES]). */
+    private fun familyOf(arm: String): String? = when (arm) {
+        McxEveRules.SOURCE -> "mcx-eve"
+        McxMorningRules.SOURCE -> "mcx-morning"
+        McxTrendRules.SOURCE -> "mcx-trend"
+        McxUsSilverRules.SOURCE -> "silver-night"
+        else -> null
+    }
+
+    /**
+     * [p] as the trade manager follows it: a bought option (its bet: a call up, a put down) or a future (its own stop and target
+     * on the future's price; a short one followed negated). MCX's long sessions: followed up to 20 hours after the entry.
+     */
+    private fun managed(p: Pos): TradeManagerHost.ArmTrade? {
+        val fam = familyOf(p.arm) ?: return null
+        val put = p.option && p.symbol.endsWith("PE")
+        val dir = if (p.option) (if (put) -1 else 1) * p.side else p.side
+        val at = p.entryTime.atZone(IST).toInstant().toEpochMilli()
+        return TradeManagerHost.ArmTrade(fam, managerId(p), label(p.arm), SmartWorkers.underlyingOf(p.symbol), dir, p.symbol, p.entry, p.qty,
+            if (p.option) null else p.stopF, if (p.option) null else p.targetF, at + 20 * 3_600_000L, live = false, entryMs = at,
+            exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.atZone(IST)?.toInstant()?.toEpochMilli(), shortFuture = p.side < 0, tick = if (p.option) 0.05 else 1.0)
     }
 
     private fun note(b: Book, arm: String, text: String) {
@@ -412,9 +443,10 @@ object McxPaperArms {
                 p.arm == McxUsSilverRules.SOURCE -> silverExit(p, c, now, window)
                 else -> null   // the trend's legs close on their own month's signal and rolls ([trend])
             }
-            if (why == null) continue
+            // The trade manager wants it out: only when Boss switched this arm to ACT (SHADOW by default: never here).
+            val due = why ?: TradeManagerHost.exitDue(managerId(p))?.let { "trade_manager" } ?: continue
             if (!McxMarket.isOpen()) continue      // nothing fills while MCX is shut: tried again at its next session
-            val next = exit(b, p, c, why)
+            val next = exit(b, p, c, due)
             if (next != p) { b.positions[i] = next; changed = true }
         }
         return changed

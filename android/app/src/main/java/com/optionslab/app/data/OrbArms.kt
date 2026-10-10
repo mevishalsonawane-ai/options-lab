@@ -616,6 +616,32 @@ object OrbArms {
         }
         cache = b
         hints(b)
+        // The trade manager's one call (10 Oct; memory only, after the book is written): the ORB arms, Liquidity 15+5 and the
+        // Hero arm, SHADOW by default - it records only; these arms' own exits stay authoritative (their exits do not take its word).
+        runCatching {
+            val today = today()
+            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.mapNotNull { runCatching { managed(it) }.getOrNull() })
+        }
+    }
+
+    /** [p]'s id for the trade manager. */
+    private fun managerId(p: Position): String = "orb:${p.arm}:${p.symbol}:${p.entryTime}"
+
+    private fun epochMs(t: LocalDateTime): Long = t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+
+    /**
+     * [p] as the trade manager follows it: a bought option; its resting stop on the premium as it was handed over (the ORB
+     * arms', Liquidity's 15%), the ORB arms' fixed target on the premium (Liquidity's target is an index level and the Hero
+     * arm has none: none here), out by 15:10. A position not confirmed at Zerodha yet is not handed over.
+     */
+    private fun managed(p: Position): TradeManagerHost.ArmTrade? {
+        if (p.unconfirmed) return null
+        val arm = armOf(p.arm)
+        val fam = when { arm.liquidity -> "liquidity"; arm.hero -> "hero"; else -> "orb" }
+        val target = if (arm.liquidity || arm.hero) null else ProfitLock.targetOf(arm)?.let { p.entry + it }
+        return TradeManagerHost.ArmTrade(fam, managerId(p), arm.label, com.optionslab.ira.AutoSide.underlyingOf(p.symbol) ?: OrbRules.UNDERLYING,
+            if (p.right == "PE") -1 else 1, p.symbol, p.entry, p.qty, if (arm.hero) null else p.stopTrigger, target,
+            epochMs(p.day.atTime(OrbRules.SQUARE_OFF)), p.live, epochMs(p.entryTime), p.exit, p.why, p.exitTime?.let { epochMs(it) }, kite = p.kite)
     }
 
     /** The book's text as this process last wrote it, and the file's size and time just after (null: not since a load). */

@@ -123,7 +123,19 @@ object NightArm {
     private fun publish(b: Book) {
         _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(20),
             b.log.takeLast(30))
+        // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own 09:16 sale stays the exit.
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
     }
+
+    /** [p]'s id for the trade manager. */
+    private fun managerId(p: Pos): String = "night:${p.symbol}:${p.entryTime}"
+
+    private fun ms(t: LocalDateTime): Long = t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+
+    /** [p] as the trade manager follows it: a bought option, no stop or target on its premium, out by the next session's 09:16. */
+    private fun managed(p: Pos) = TradeManagerHost.ArmTrade("night", managerId(p), NightRules.LABEL, p.index, if (p.right == "PE") -1 else 1,
+        p.symbol, p.entry, p.qty, null, null, ms(p.entryDay.plusDays(1).atTime(9, 16)), live = false, entryMs = ms(p.entryTime),
+        exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.let { ms(it) })
 
     private fun note(b: Book, text: String) {
         b.log += "${LocalDateTime.now(com.optionslab.engine.IST).withNano(0)} $text"
@@ -191,7 +203,9 @@ object NightArm {
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
         var changed = false
         for ((i, p) in b.positions.withIndex().toList()) {
-            if (!p.open || !NightRules.exitDue(p.entryDay, now)) continue
+            // The trade manager wants it out sooner: only when Boss switched this arm to ACT (SHADOW by default: never here).
+            val manager = if (p.open) TradeManagerHost.exitDue(managerId(p)) else null
+            if (!p.open || (!NightRules.exitDue(p.entryDay, now) && manager == null)) continue
             val c = Paper.contractOf(p.symbol) ?: continue
             val lots = (p.qty / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
             val r = Paper.place(c, "SELL", lots, "MARKET", "NRML", null, null)
@@ -203,7 +217,7 @@ object NightArm {
             }
             r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${NightRules.LABEL} · exit") } }
             val charges = p.charges + chargesOf(r.orderId)
-            val done = p.copy(exit = fill.price, exitTime = now, why = "night_exit_0916", charges = charges)
+            val done = p.copy(exit = fill.price, exitTime = now, why = if (NightRules.exitDue(p.entryDay, now)) "night_exit_0916" else "trade_manager", charges = charges)
             b.positions[i] = done
             b.status[p.index] = "sold at 09:16"
             note(b, "${p.symbol}: sold ${fill.quantity} @ %.2f, %s after charges".format(Locale.ENGLISH, fill.price, rs(done.net ?: 0.0)))

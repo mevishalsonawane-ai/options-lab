@@ -77,6 +77,8 @@ class TestApp : Application() {
         // The smart workers (10 Oct): no finding, health sample, brain or setting left from an earlier test.
         com.optionslab.app.data.SmartWorkers.resetForTest()
         com.optionslab.app.data.FlowGate.resetForTest()
+        com.optionslab.app.data.TradeManagerHost.init(this)
+        com.optionslab.app.data.TradeManagerHost.resetForTest()
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.
         com.optionslab.app.data.AutoExposure.resetForTest()
         com.optionslab.app.data.AppState.resetForTest()

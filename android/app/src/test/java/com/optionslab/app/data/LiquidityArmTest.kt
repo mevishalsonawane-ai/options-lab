@@ -2,6 +2,7 @@ package com.optionslab.app.data
 
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeUpstox
+import com.optionslab.app.testing.ManagerShadow
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.app.testing.TradeFixtures
@@ -99,7 +100,10 @@ class LiquidityArmTest : RobolectricTest() {
         Market.testClock = Clock.fixed(z.toInstant(), IST)
     }
 
-    private fun tick(t: LocalTime) { at(t); runBlocking { OrbArms.tick() } }
+    /** [looks]: the trade manager takes a look after each pass (the SHADOW re-runs, [ManagerShadow.rerun]). */
+    private var looks = false
+
+    private fun tick(t: LocalTime) { at(t); runBlocking { OrbArms.tick() }; if (looks) ManagerShadow.look() }
 
     private fun passes(from: LocalTime, until: LocalTime) {
         var t = from
@@ -640,4 +644,10 @@ class LiquidityArmTest : RobolectricTest() {
         val s = FlowGate.signalsForTest().single { it.key == "liquidity:BANKNIFTY" }
         assertEquals(com.optionslab.ira.OrderFlow.Agreement.UNKNOWN, s.agreement); assertFalse(s.skipped); assertTrue(s.taken)
     }
+
+    // ---- the trade manager in SHADOW (10 Oct; hooked, SHADOW by default): the same trades and P&L, its would-have exits recorded only ----
+
+    @Test fun inShadowLiquidityTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { buysTheCallWhenAPoolOnASwingHighIsTakenAndSellsWhenTheBreakFails() }
+
+    @Test fun inShadowLiquidityStopTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { theOptionFalling15PercentIsSoldByItsStop() }
 }

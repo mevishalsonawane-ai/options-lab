@@ -354,6 +354,8 @@ object OrderFlowLive {
     private suspend fun perSecond(now: Long) {
         FlowGate.onReads(_reads.value, now)
         publishAuction(now)
+        // The trade manager's look at what is held (10 Oct): the reads just published, memory only.
+        runCatching { TradeManagerHost.onLook() }
         // The closed seconds since each instrument's own cursor, and the indices' prints: the 1-second file's and the
         // big-move recorder's rows (each with its gap and OI change).
         val rows = takeRows(now)

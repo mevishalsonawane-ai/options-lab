@@ -537,9 +537,13 @@ internal object IraSolo {
             val sold = runCatching { exitOf(Paper.state.trades, t) }.getOrNull()
             finish(t, list, sold?.first, if (sold != null) "closed outside Solo" else "closed while the app was away (no result read)",
                 exitOrderId = sold?.second)
+            runCatching { com.optionslab.app.data.TradeManagerHost.closed(managerId(t), sold?.first, "closed outside Solo") }
             return
         }
         val a = t.atr
+        // The trade manager (10 Oct): Solo's open trade handed over (memory only; paper acts by default). It may only want it
+        // out sooner - Solo has no target, so nothing is ever extended - and Solo's own exits below come first.
+        val mid = if (t.midday && a != null) runCatching { attachManager(t, a) }.getOrNull() else null
         // The retired Solo's trade, still open when Solo (midday) replaced it: its rules are gone, so it is closed now.
         val walked: Pair<SoloMidday.Open, SoloMidday.Walk>? = if (!t.midday || a == null) null else {
             // From the 12:00 decision minute (the research's entry bar), not the minute the paper order filled.
@@ -553,7 +557,7 @@ internal object IraSolo {
             walked == null -> "the retired Solo's trade, closed when Solo (midday) replaced it"
             walked.second.exit != null -> walked.second.exit!!
             t.day != today.toString() -> SoloMidday.TIME
-            else -> return
+            else -> mid?.let { com.optionslab.app.data.TradeManagerHost.exitDue(it) } ?: return
         }
         val r = Paper.close(t.symbol, "MIS")
         val px = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.price
@@ -567,11 +571,57 @@ internal object IraSolo {
             com.optionslab.app.data.Strategies.tagOwner("paper:$oid", "Jarvis solo · exit")
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "SELL", t.qty, t.symbol, px, "Paper", "Jarvis solo · exit", oid) }
         }
-        val words = if (walked != null) {
+        val early = walked != null && walked.second.exit == null && t.day == today.toString()
+        val words = if (early) "Out early: $exit (the trade manager, paper; Solo's own exits would have held)." else if (walked != null) {
             val last = runCatching { bars(IraMarket.valueOf(t.market), now).lastOrNull()?.close }.getOrNull()
             SoloMidday.exitSay(walked.first, walked.second.copy(exit = exit), last, (px - t.entry) * t.qty)
         } else exit
         finish(t, list, px, words, exitOrderId = r.orderId)
+        mid?.let { runCatching { com.optionslab.app.data.TradeManagerHost.closed(it, px, if (early) "trade manager" else exit) } }
+    }
+
+    /** Solo's trade's id for the trade manager. */
+    internal fun managerId(t: T): String = "solo:${t.day}:${t.symbol}:${t.entryMinute}"
+
+    private fun epochMs(at: LocalDateTime): Long = at.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+
+    /**
+     * [t] handed to the trade manager (one call; idempotent): a bought option betting [t]'s way, its stop on the index
+     * (0.3 ATR from the 12:00 price), no target (never extended), out by 14:30. Its original rules are judged on the index's
+     * minutes as Solo judges them ([SoloMidday.walk]) and priced on the option's minute. Its id ([managerId]).
+     */
+    private fun attachManager(t: T, atr: Double): String {
+        val id = managerId(t)
+        val day = LocalDate.parse(t.day)
+        val side = if (t.call) 1 else -1
+        val entryAt = day.atTime(9, 15).plusMinutes(t.entryMinute.toLong())
+        val trade = com.optionslab.ira.TradeManager.ManagedTrade("solo", id, "Solo", t.market, side, t.symbol, t.entry, t.qty, null, null,
+            com.optionslab.ira.TradeManager.Caps(epochMs(day.atTime(SoloMidday.EXIT))), com.optionslab.ira.TradeManager.Account.PAPER,
+            epochMs(entryAt), ShadowRules.charges(t.entry, t.entry, t.qty) / t.qty.coerceAtLeast(1),
+            stopUnderlying = SoloMidday.stopLevel(side, t.index, atr), entryUnderlying = t.index)
+        val m = IraMarket.valueOf(t.market)
+        com.optionslab.app.data.TradeManagerHost.attach(com.optionslab.app.data.TradeManagerHost.Registration(
+            trade,
+            premium = { Paper.memPrice(t.symbol) },
+            bars = {
+                Paper.contractOf(t.symbol)?.let { c -> Paper.minutes(c) }?.map {
+                    com.optionslab.ira.TradeManager.Bar(it.epochSecond * 1000L, it.open, it.high, it.low, it.close)
+                }
+            },
+            originalExit = { optionBars, nowMs ->
+                val at = java.time.Instant.ofEpochMilli(nowMs).atZone(com.optionslab.engine.IST).toLocalDateTime()
+                val o = SoloMidday.Open(t.market, side, t.index, atr, SoloMidday.entryTime(day))
+                val w = SoloMidday.walk(o, bars(m, at), at)
+                val why = when (w.exit) { SoloMidday.INDEX_STOP -> "STOP"; SoloMidday.LOCK -> "LOCK"; SoloMidday.TIME -> "TIME"; else -> null }
+                val on = w.decidedOn
+                if (why == null || on == null) null else com.optionslab.ira.TradeManager.priced(optionBars, epochMs(on), why)
+            },
+            underlyingPrice = {
+                com.optionslab.app.data.Broker.indexToken(t.market)?.let { tok -> com.optionslab.app.data.KiteStream.tick(tok, 10_000)?.last }?.takeIf { it > 0 }
+            },
+            wake = { manageOnly() },
+        ))
+        return id
     }
 
     /**

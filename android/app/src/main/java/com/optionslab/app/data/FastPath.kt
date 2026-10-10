@@ -249,6 +249,8 @@ object FastPath {
         withContext(OrderTiming.Trigger(triggerMs, exchMs, source) + Broker.FastRead() + priority) {
             when (lane) {
                 FastLane.Lane.STREAM -> {
+                    // The trade manager first (10 Oct; memory only, at most once a second): an exit it wants is then taken here.
+                    runCatching { TradeManagerHost.onLook() }
                     if (s?.paper != false) step("paper orders") { com.optionslab.app.work.Tasks.paperEventsPublic(ctx, Paper.tick()) }
                     if (OrbArms.holdingHint && !OrbArms.liveHint) step("ORB arms") { OrbArms.priceCheckOnly(fast = true) }
                 }
@@ -257,12 +259,14 @@ object FastPath {
                 FastLane.Lane.LIVE -> com.optionslab.app.work.TradingBusy.during {
                     // Real-money exits: Jarvis's model gives way while they run (10 Oct).
                     val stream = s?.st?.liveFresh == true
+                    runCatching { TradeManagerHost.onLook() }
                     if (OrbArms.liveHint) step("ORB arms") { OrbArms.priceCheckOnly(fast = true, stream = stream) }
                     if (PineAuto.holding()) step("Pine scripts") { PineAuto.watchOnly(fast = true, stream = stream) }
                     if (Protections.activeHint != false) step("stops and targets") { Protections.tick(fast = true, stream = stream) }
                     Unit
                 }
                 FastLane.Lane.MINUTE -> {
+                    runCatching { TradeManagerHost.onLook() }
                     step("Night (R3)") { NightArm.tick() }
                     step("VIX divergence") { VixDivArm.tick() }
                     step("MCX paper arms") { McxPaperArms.tick() }

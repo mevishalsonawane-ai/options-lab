@@ -123,7 +123,19 @@ object VixDivArm {
         val closed = b.positions.filter { !it.open }
         _view.value = View(b.armed, b.status.toMap(), b.positions.filter { it.open }, closed.takeLast(20), b.log.takeLast(30),
             closed.map { it.net ?: 0.0 })
+        // The trade manager's one call (10 Oct): SHADOW by default - it records only; this arm's own exits stay authoritative.
+        runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
     }
+
+    /** [p]'s id for the trade manager. */
+    private fun managerId(p: Pos): String = "vixdiv:${p.symbol}:${p.entryTime}"
+
+    private fun ms(t: LocalDateTime): Long = t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+
+    /** [p] as the trade manager follows it: a bought option, NIFTY's -15% stop on its premium, out by 15:10. */
+    private fun managed(p: Pos) = TradeManagerHost.ArmTrade("vixdiv", managerId(p), VixDivRules.LABEL, p.index, if (p.right == "PE") -1 else 1,
+        p.symbol, p.entry, p.qty, if (VixDivRules.liquidityExit(p.index)) VixDivRules.stop(p.entry) else null, null,
+        ms(p.entryDay.atTime(15, 10)), live = false, entryMs = ms(p.entryTime), exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.let { ms(it) })
 
     private fun note(b: Book, text: String) {
         b.log += "${Market.now().toLocalDateTime().withNano(0)} $text"
@@ -315,7 +327,7 @@ object VixDivArm {
                         .map { VixDivRules.Minute(it.istMinute, it.low, it.close) }
                     VixDivRules.exit(VixDivRules.Held(p.index, p.entry, p.entryMinute), bars, minute)
                 }
-            } ?: continue
+            } ?: TradeManagerHost.exitDue(managerId(p))?.let { "trade_manager" } ?: continue   // ACT only (Boss's switch; SHADOW by default)
             val next = sell(b, p, c, why)
             if (next != p) { b.positions[i] = next; changed = true }
         }

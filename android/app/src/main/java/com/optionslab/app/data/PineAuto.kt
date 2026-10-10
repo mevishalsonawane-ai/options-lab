@@ -431,6 +431,7 @@ object PineAuto {
         // Sold outside the app (a notification's Close, the Trade tab, the broker's square-off).
         if (h != null && !h.unconfirmed && gone(h)) {
             note(b, id, "${h.symbol} is no longer held (closed outside the auto-trader)")
+            managerClosed(id, h, null, "closed outside")
             dropStop(h)
             b.held.remove(id); h = null
         }
@@ -570,11 +571,22 @@ object PineAuto {
         val coversStop = h.live && rest != null && base != null && rest >= base - 1e-9 && !runThrough
         val coversLock = h.live && rest != null && lockNow != null && rest >= lockNow - 1e-9 && !runThrough
         val today = todayIst().toString()
+        // The trade manager (10 Oct): this holding handed over (memory only; paper acts, live records only by default). In ACT
+        // its target may have moved out - only ever with its lock raised to breakeven plus charges or better - and it may want
+        // the holding out now. The script's own stop, target and profit lock stay as they are; nothing here waits for it.
+        val mid = runCatching { attachManager(id, item, h, lockRef, trail, cost, tick) }.getOrNull()
+        val mgr = mid?.let { TradeManagerHost.levels(it) }
+        val mgrTarget = mgr?.first?.takeIf { a.targetPts > 0 && it > h.entry + a.targetPts }
+        val mgrLock = mgr?.second
+        val coversMgr = h.live && rest != null && mgrLock != null && rest >= mgrLock - 1e-9 && !runThrough
+        val due = mid?.let { TradeManagerHost.exitDue(it) }
         val why = when {
             a.stopPts > 0 && ltp <= h.entry - a.stopPts && !coversStop -> "stop-loss"
-            a.targetPts > 0 && ltp >= h.entry + a.targetPts -> "target"
+            a.targetPts > 0 && ltp >= (mgrTarget ?: (h.entry + a.targetPts)) -> if (mgrTarget != null) "target (extended by the trade manager)" else "target"
             ProfitLock.lockExits(h.entry, lockRef, trail, cost, h.peak, ltp) && !coversLock -> "profit lock"
+            mgrLock != null && ltp <= mgrLock && !coversMgr -> "profit lock (the trade manager's)"
             a.maxDayLoss > 0 && realizedToday(b, id) + (ltp - h.entry) * h.qty <= -a.maxDayLoss -> "daily loss limit"
+            due != null -> due
             else -> null
         }
         if (why != null) {
@@ -601,8 +613,52 @@ object PineAuto {
                 "(best ${"%.2f".format(java.util.Locale.ENGLISH, peak)})")
         }
         // The lock moves the resting stop up to what the best price has earned.
-        b.held[id] = raiseStop(b, id, item, cur, ltp, lockRef, trail, cost, tick)
+        b.held[id] = raiseStop(b, id, item, cur, ltp, lockRef, trail, cost, tick, mgrLock)
         return false
+    }
+
+    /** A holding's id for the trade manager. */
+    internal fun managerId(id: Long, h: Held): String = "pine:$id:${h.symbol}:${h.at}"
+
+    /**
+     * [h] handed to the trade manager (one call; idempotent, memory only): a bought option, its stop and target on the premium
+     * from the script's settings, its own profit lock ([ProfitLock.lockLevel]) for the counterfactual, out by 15:15 (or F&O's
+     * close). Its price: the stream's tick (live) or the paper book's price in memory. Its id ([managerId]).
+     */
+    private fun attachManager(id: Long, item: PineScripts.Item, h: Held, lockRef: Double?, trail: ProfitLock.Trail?, cost: Double, tick: Double): String {
+        val mid = managerId(id, h)
+        val a = item.auto
+        val day = runCatching { java.time.LocalDate.parse(h.day) }.getOrDefault(todayIst())
+        val offMin = if (a.squareOff) minOf(15 * 60 + 15, Market.foClose(day)) else Market.foClose(day)
+        val off = day.atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli() + offMin * 60_000L
+        val trade = com.optionslab.ira.TradeManager.ManagedTrade("pine:$id", mid, label(item),
+            com.optionslab.ira.AutoSide.underlyingOf(h.symbol) ?: a.symbol, if (h.right == "CE") 1 else -1, h.kite ?: h.symbol, h.entry, h.qty,
+            if (a.stopPts > 0) h.entry - a.stopPts else null, if (a.targetPts > 0) h.entry + a.targetPts else null,
+            com.optionslab.ira.TradeManager.Caps(off, tick = tick),
+            if (h.live) com.optionslab.ira.TradeManager.Account.LIVE else com.optionslab.ira.TradeManager.Account.PAPER,
+            if (h.at > 0) h.at else clock().toInstant().toEpochMilli(), cost)
+        val sym = h.symbol
+        val kite = h.kite
+        val live = h.live
+        val entry = h.entry
+        val lockAt: ((Double) -> Double?)? =
+            if (lockRef != null || trail != null) { { peak: Double -> ProfitLock.lockLevel(entry, lockRef, trail, cost, peak) } } else null
+        TradeManagerHost.attach(TradeManagerHost.Registration(
+            trade,
+            premium = {
+                if (!live) Paper.memPrice(sym)
+                else kite?.let { k -> Broker.tokenOf("NFO:$k")?.let { tok -> KiteStream.tick(tok)?.last }?.takeIf { it > 0 } }
+            },
+            bars = { contractAny(sym)?.let { c -> Paper.minutes(c) }?.map { com.optionslab.ira.TradeManager.Bar(it.epochSecond * 1000L, it.open, it.high, it.low, it.close) } },
+            lockAt = lockAt,
+            wake = { watchOnly(fast = true) },
+        ))
+        return mid
+    }
+
+    /** The trade manager told how [h] really ended ([price] null: no result read). */
+    private fun managerClosed(id: Long, h: Held, price: Double?, why: String) {
+        runCatching { TradeManagerHost.closed(managerId(id, h), price, why) }
     }
 
     /** A sell stop-limit's limit price: 5% (at least 2 points) under its trigger, so it fills in a fast fall (as the ORB arms'). */
@@ -629,14 +685,18 @@ object PineAuto {
      * and is asked again on the next look. Never an order to Zerodha for a paper holding.
      */
     private suspend fun raiseStop(b: Book, id: Long, item: PineScripts.Item, h: Held, ltp: Double, ref: Double?, trail: ProfitLock.Trail?,
-                                  cost: Double, tick: Double): Held {
+                                  cost: Double, tick: Double, mgrLock: Double? = null): Held {
         val sid = h.stop ?: return h
-        val to = ProfitLock.pineRaise(h.entry, ref, trail, cost, h.peak, h.stopAt, ltp, tick) ?: return h
+        // The trade manager's lock (ACT, after an extension) moves the same resting stop: only up, never to or above the price.
+        val mine = mgrLock?.takeIf { it > (h.stopAt ?: Double.NEGATIVE_INFINITY) + 1e-9 && it < ltp - 1e-9 }
+        val pine = ProfitLock.pineRaise(h.entry, ref, trail, cost, h.peak, h.stopAt, ltp, tick)
+        val to = listOfNotNull(pine, mine).maxOrNull() ?: return h
+        val by = if (mine != null && (pine == null || mine > pine)) "the trade manager's lock" else "profit lock"
         val was = h.stopAt?.let { "%.2f".format(java.util.Locale.ENGLISH, it) } ?: "none"
         if (!h.live) {
             val r = runCatching { Paper.modify(sid, null, null, to) }
             if (r.getOrNull()?.ok == true) {
-                note(b, id, "${h.symbol}: resting stop moved up to ${"%.2f".format(java.util.Locale.ENGLISH, to)} (profit lock)")
+                note(b, id, "${h.symbol}: resting stop moved up to ${"%.2f".format(java.util.Locale.ENGLISH, to)} ($by)")
                 return h.copy(stopAt = to)
             }
             val why = r.getOrNull()?.message ?: r.exceptionOrNull()?.javaClass?.simpleName ?: "an error"
@@ -653,7 +713,7 @@ object PineAuto {
             if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, to) else Broker.modify(so, so.qty, "SL", stopLimit(to, tick), to)
         }
         if (r.isSuccess) {
-            note(b, id, "$sym: resting stop moved up to ${"%.2f".format(java.util.Locale.ENGLISH, to)} at Zerodha (profit lock)")
+            note(b, id, "$sym: resting stop moved up to ${"%.2f".format(java.util.Locale.ENGLISH, to)} at Zerodha ($by)")
             return h.copy(stopAt = to)
         }
         com.optionslab.app.work.Alerts.post("${label(item)}: Zerodha did not move the stop on $sym up to the profit lock " +
@@ -748,7 +808,7 @@ object PineAuto {
         val why = if ((h.stopAt ?: Double.NEGATIVE_INFINITY) >= h.entry - 1e-9) "profit lock" else "stop-loss"
         val sold = qty.coerceIn(0, h.qty)
         addPnl(b, id, (px - h.entry) * sold)
-        if (sold >= h.qty) b.held.remove(id) else b.held[id] = h.copy(qty = h.qty - sold, stop = null)
+        if (sold >= h.qty) { b.held.remove(id); managerClosed(id, h, px, why) } else b.held[id] = h.copy(qty = h.qty - sold, stop = null)
         val sym = if (h.live) h.kite ?: h.symbol else h.symbol
         runCatching { Notifier.orderFilled(app, "SELL", sold, sym, px, if (h.live) "Live" else "Paper", label(item), orderId) }
         note(b, id, "Sold $sold $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, the resting stop" +
@@ -971,7 +1031,7 @@ object PineAuto {
                 else { note(b, id, "${h.symbol}: its resting stop could not be taken out; the sale is tried again next pass"); return }
             }
             val net = Paper.state.positions.filter { it.symbol == h.symbol && it.product == "MIS" }.sumOf { it.quantity }
-            if (net <= 0) { b.held.remove(id); note(b, id, "${h.symbol} already closed"); return }
+            if (net <= 0) { b.held.remove(id); managerClosed(id, h, null, "already closed"); note(b, id, "${h.symbol} already closed"); return }
             val lots = (minOf(net, h.qty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
             val sell = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
             val fill = filledOrCancelled(sell) ?: run {
@@ -984,6 +1044,7 @@ object PineAuto {
             Notifier.orderFilled(app, "SELL", fill.first, h.symbol, fill.second, "Paper", label(item), sell.orderId)
             addPnl(b, id, (fill.second - h.entry) * fill.first)
             b.held.remove(id)
+            managerClosed(id, h, fill.second, why)
             note(b, id, "Sold ${fill.first} ${h.symbol} at ${"%.2f".format(java.util.Locale.ENGLISH, fill.second)} ($why) · P&L ${"%+.0f".format(java.util.Locale.ENGLISH, (fill.second - h.entry) * fill.first)}")
             return
         }
@@ -1004,7 +1065,7 @@ object PineAuto {
         }
         val still = runCatching { Broker.positionBook().net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } }
             .getOrNull() ?: return
-        if (minOf(still, h.qty) <= 0 && !h.unconfirmed) { b.held.remove(id); note(b, id, "$sym already closed"); return }
+        if (minOf(still, h.qty) <= 0 && !h.unconfirmed) { b.held.remove(id); managerClosed(id, h, null, "already closed"); note(b, id, "$sym already closed"); return }
         // Its own exits still working (an earlier pass's, or one whose reply was lost) come out first; every other sell
         // resting on the symbol (a protection's stop, an ORB stop, the owner's own limit) is left alone and subtracted:
         // together they never sell more than is held, and none of them can block this exit.
@@ -1053,7 +1114,8 @@ object PineAuto {
         val px = f.avgPrice.takeIf { it > 0 } ?: h.entry
         Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label(item), f.orderId)
         addPnl(b, id, (px - h.entry) * f.filled)
-        if (f.filled >= h.qty && !h.unconfirmed) b.held.remove(id) else b.held[id] = h.copy(qty = (h.qty - f.filled).coerceAtLeast(0))
+        if (f.filled >= h.qty && !h.unconfirmed) { b.held.remove(id); managerClosed(id, h, px, why) }
+        else b.held[id] = h.copy(qty = (h.qty - f.filled).coerceAtLeast(0))
         note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, LIVE)")
     }
 

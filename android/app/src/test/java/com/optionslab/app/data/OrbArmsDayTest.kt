@@ -2,6 +2,7 @@ package com.optionslab.app.data
 
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeUpstox
+import com.optionslab.app.testing.ManagerShadow
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.app.testing.TradeFixtures
@@ -102,7 +103,10 @@ class OrbArmsDayTest : RobolectricTest() {
     }
 
     /** One pass of the market watch at [t]. */
-    private fun tick(t: LocalTime) { at(t); runBlocking { OrbArms.tick() } }
+    /** [looks]: the trade manager takes a look after each pass (the SHADOW re-runs, [ManagerShadow.rerun]). */
+    private var looks = false
+
+    private fun tick(t: LocalTime) { at(t); runBlocking { OrbArms.tick() }; if (looks) ManagerShadow.look() }
 
     /** A pass every [every] minutes from [from] to [until], both included when on the step. */
     private fun passes(from: LocalTime, until: LocalTime, every: Long = 1) {
@@ -664,4 +668,8 @@ class OrbArmsDayTest : RobolectricTest() {
         assertEquals(day.atTime(10, 30), p.signalBar)
         assertTrue("the ORB itself stays off", arm("orb").today.isEmpty())
     }
+
+    // ---- the trade manager in SHADOW (10 Oct; hooked, SHADOW by default): the same trades and P&L, its would-have exits recorded only ----
+
+    @Test fun inShadowTheOrbTradesExactlyAsBefore() = ManagerShadow.rerun("orb", { looks = it }) { aTradeThatGotAQuarterOfTheWayIsSoldAtThePricePaidNotTheFullStop() }
 }

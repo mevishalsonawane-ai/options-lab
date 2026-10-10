@@ -158,7 +158,7 @@ private fun BrainHeading(text: String) {
 /** One choice: its [label] and a chip per option ([current] lit); a tap on another calls [onPick]. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun BrainChoice(label: String, options: List<String>, current: String, onPick: (String) -> Unit) {
+internal fun BrainChoice(label: String, options: List<String>, current: String, onPick: (String) -> Unit) {
     val p = LocalPalette.current
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Text(label, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))

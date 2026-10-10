@@ -4,6 +4,7 @@ import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.testing.AutomationSupport
 import com.optionslab.app.testing.FakeKite
 import com.optionslab.app.testing.FakeUpstox
+import com.optionslab.app.testing.ManagerShadow
 import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.app.testing.TradeFixtures
@@ -151,6 +152,43 @@ class VixDivArmTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(VixDivArm)
         assertEquals(done, runBlocking { VixDivArm.refresh() }.closed.single())
         assertNothingAtZerodha()
+    }
+
+    /** The day's trade from the 10:30 buy to the 20-minute sale, [look] after each pass: what the book holds and made. */
+    private fun dayOfTrading(look: () -> Unit): List<String> {
+        assertTrue(runBlocking { VixDivArm.setArmed(true) }.contains("paper only"))
+        for (t in listOf(LocalTime.of(10, 30), LocalTime.of(10, 32), LocalTime.of(10, 40), LocalTime.of(10, 50))) {
+            market(t); tick(t); look()
+        }
+        val v = VixDivArm.view.value
+        return (v.open + v.closed).map { "${it.symbol}|${it.qty}|${it.entry}|${it.exit}|${it.why}|${it.charges}|${it.net}|${it.entryTime}|${it.exitTime}" } +
+            Paper.state.trades.map { "${it.symbol}|${it.action}|${it.quantity}|${it.price}|${it.charges}|${it.timestamp}" }
+    }
+
+    @Test fun inShadowTheTradeManagerLeavesItsTradesAndPnlIdentical() {
+        // Off: the arm alone.
+        ManagerShadow.off("vixdiv")
+        val alone = dayOfTrading {}
+        assertTrue(TradeManagerHost.records.value.none { it.trade.family == "vixdiv" })
+        // The same day again with the manager in SHADOW (the default) disagreeing at every look.
+        runBlocking { VixDivArm.setArmed(false) }
+        VixDivArm.wipe(); java.io.File(context.filesDir, "vix_div.vault").delete()
+        Paper.wipe()
+        AutomationSupport.contracts(context, listOf(
+            Upstox.Contract("NIFTY", day.plusDays(7), 25_100.0, Right.PE, 65, peKey, "NIFTY-VXD-25100PE"),
+            Upstox.Contract("NIFTY", day.plusDays(7), 25_000.0, Right.CE, 65, "NSE_FO|VXDN25000CE", "NIFTY-VXD-25000CE"),
+            Upstox.Contract("BANKNIFTY", day.plusDays(7), 56_100.0, Right.PE, 30, "NSE_FO|VXDB56100PE", "BANKNIFTY-VXD-56100PE")))
+        ManagerShadow.shadow("vixdiv")
+        assertEquals(com.optionslab.ira.TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode("vixdiv", com.optionslab.ira.TradeManager.Account.PAPER))
+        ManagerShadow.adverse()
+        val shadowed = dayOfTrading { ManagerShadow.look() }
+        assertEquals("byte-identical trades and P&L", alone, shadowed)
+        assertTrue(alone.isNotEmpty())
+        assertTrue("the manager did disagree (recorded only)", ManagerShadow.wouldHaveExited("vixdiv").isNotEmpty())
+        assertTrue(ManagerShadow.wouldHaveExited("vixdiv").none { it.acted })
+        val r = TradeManagerHost.records.value.single { it.trade.family == "vixdiv" }
+        assertEquals("the arm's real exit is the original rules'", r.actual, r.original)
+        TradeManagerHost.resetForTest()
     }
 
     @Test fun theKillSwitchRefusesTheSignalAndTheDayIsDone() {

@@ -900,6 +900,7 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
     val live = settings.live && settings.allowRealOrders
     val held by com.optionslab.app.data.PineAuto.held.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val log by com.optionslab.app.data.PineAuto.log.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val managed by com.optionslab.app.data.TradeManagerHost.records.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     var auth by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { com.optionslab.app.data.PineAuto.load() } }
@@ -998,6 +999,9 @@ private fun PineAutoPanel(env: PineEnv, start: PineScripts.Item, s: Pine.Script,
                 Spacer(Modifier.height(6.dp))
                 LedgerLine("Holding", "${h.qty} ${h.kite ?: h.symbol}${if (h.live) " · LIVE" else ""}")
                 LedgerLine("Bought at", String.format(Locale.ENGLISH, "%.2f", h.entry))
+                // The trade manager's target and lock beside the holding (10 Oct; memory only).
+                val mid = com.optionslab.app.data.PineAuto.managerId(item.id, h)
+                managed.lastOrNull { it.trade.tradeId == mid }?.let { r -> Note(com.optionslab.ira.TradeManager.cardLine(r)) }
             }
         }
         com.optionslab.app.data.PineAuto.todayOf(item.id)?.takeIf { it != 0.0 }?.let {

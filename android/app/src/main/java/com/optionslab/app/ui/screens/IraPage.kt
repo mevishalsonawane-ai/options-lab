@@ -1158,6 +1158,9 @@ private fun SoloCard() {
         lines.filter { com.optionslab.app.BuildConfig.GOLD || shown == null || !com.optionslab.ira.SoloProgress.shownAtAGlance(it) }.forEach { Note(it) }
         val rec = remember(on) { com.optionslab.app.ira.IraSolo.record() }
         Note(rec)
+        // The trade manager on Solo's newest trade: its lock (Solo has no target to extend), an early exit, against the original rules.
+        val managed by com.optionslab.app.data.TradeManagerHost.records.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+        managed.lastOrNull { it.trade.family == "solo" }?.let { Note(com.optionslab.ira.TradeManager.cardLine(it)) }
         // Why it switched itself off: said once - the glance's own line when it shows one, else the kept note.
         if (shown?.glance?.offLine == null) com.optionslab.app.ira.IraSolo.paused?.let { Note(it) }
     }
