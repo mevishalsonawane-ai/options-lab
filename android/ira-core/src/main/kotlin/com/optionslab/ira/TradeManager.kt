@@ -197,6 +197,17 @@ object TradeManager {
         val vixChangePct: Double? = null,
         val brain: MarketBrain.Context? = null,
         val findings: List<Findings.Finding> = emptyList(),
+        // ---- the specialists' extra readings ([ManagerTeam]; each optional: null or empty decides nothing) ----
+        /** Today's point of control and high- / low-volume nodes (the future's profile). */
+        val poc: Double? = null, val hvns: List<Double> = emptyList(), val lvns: List<Double> = emptyList(),
+        /** The future's volume per minute lately (minute start, epoch s, to volume), oldest first. */
+        val minuteVolumes: List<Pair<Long, Long>> = emptyList(),
+        /** The held option's implied volatility change over the last 5 minutes, % (null: not known). */
+        val ivChangePct: Double? = null,
+        /** The gamma regime under Boss's convention: the net GEX (+ choppy, − trending) and the zero-gamma level. */
+        val gammaNet: Double? = null, val zeroGamma: Double? = null,
+        /** How old the held option's price is, ms (null: not known). */
+        val premiumAgeMs: Long? = null,
     )
 
     // ---- the rules ------------------------------------------------------------------------------------------------------
@@ -210,6 +221,8 @@ object TradeManager {
         CONSENSUS("consensus", 30_000L, "3 or more strong findings against the trade for 30 s"),
         DATA("data", 10_000L, "data unreliable for 10 s with the price near the stop"),
         LOCK("lock", 0L, "the manager's profit lock was hit"),
+        /** The specialists' weighted quorum ([ManagerTeam]) led by a specialist with no rule of its own above. */
+        TEAM("team", 0L, "the specialists' weighted quorum agreed"),
         EXTEND("extend", 30_000L, "strong agreeing flow, price accepted beyond VWAP and value, rising agreeing OI, nothing against, for 30 s"),
     }
 
@@ -228,6 +241,7 @@ object TradeManager {
             Rule.CONSENSUS -> "the bots turned against it"
             Rule.DATA -> "data unreliable near the stop"
             Rule.LOCK -> "profit lock hit"
+            Rule.TEAM -> "the specialists agreed"
             Rule.EXTEND -> "more room"
         }
     }
@@ -281,6 +295,11 @@ object TradeManager {
     private fun freshFlow(s: Snapshot): OrderFlow.Read? =
         s.flow?.takeIf { it.warm && s.atMs / 1000 - it.atSec <= OrderFlow.STALE_SEC }
 
+    /** The data is unreliable at this look: the flow's flag, the brain's trap flags, or self-healing's finding on the underlying. */
+    fun unreliable(t: ManagedTrade, s: Snapshot): Boolean = s.flow?.flags?.contains(TrapGuard.Trap.UNRELIABLE) == true ||
+        s.brain?.traps?.get(t.underlying.uppercase(Locale.ENGLISH))?.contains("UNRELIABLE") == true ||
+        s.findings.any { it.kind == Findings.Kind.DATA_UNRELIABLE && it.alive(s.atMs) && it.on(t.underlying) }
+
     /** The exit rules whose conditions hold at this look, each with its words and numbers (no persistence here). */
     fun against(t: ManagedTrade, s: Snapshot): Map<Rule, Pair<String, Map<String, Double>>> {
         val out = LinkedHashMap<Rule, Pair<String, Map<String, Double>>>()
@@ -316,44 +335,76 @@ object TradeManager {
         // Strong findings against it (not its own, not the manager's).
         val opp = s.findings.filter {
             it.alive(now) && now - it.atMs <= CONSENSUS_MS && it.direction == -side && it.strength >= CONSENSUS_STRENGTH &&
-                it.instrument.equals(t.underlying, ignoreCase = true) && !it.who.startsWith(familyName(t.family)) && it.who != WHO
+                it.instrument.equals(t.underlying, ignoreCase = true) && !it.who.startsWith(familyName(t.family)) && !it.who.startsWith(WHO)
         }
         if (opp.size >= CONSENSUS_MIN) out[Rule.CONSENSUS] = "${opp.size} strong ${if (side > 0) "bearish" else "bullish"} findings (" +
             opp.take(3).joinToString(", ") { it.who } + ")" to mapOf("against" to opp.size.toDouble())
         // Unreliable data near the stop.
-        val unreliable = s.flow?.flags?.contains(TrapGuard.Trap.UNRELIABLE) == true ||
-            s.brain?.traps?.get(t.underlying.uppercase(Locale.ENGLISH))?.contains("UNRELIABLE") == true ||
-            s.findings.any { it.kind == Findings.Kind.DATA_UNRELIABLE && it.alive(now) && it.on(t.underlying) }
+        val unreliable = unreliable(t, s)
         val left = riskLeft(t, s)
         if (unreliable && left != null && left <= NEAR_STOP)
             out[Rule.DATA] = "data unreliable with ${pct(left)} of the risk left before the stop" to mapOf("riskLeft" to left)
         return out
     }
 
-    /** Whether there is more room now (no persistence or cooldown here): its words and numbers, else null. */
-    fun scope(t: ManagedTrade, s: Snapshot, st: State): Pair<String, Map<String, Double>>? {
+    /**
+     * The extension's conditions one by one at this look (the specialists each read their own part, [ManagerTeam]); [scope]
+     * needs every one. [target]: a target to move with extensions left; [time]: far enough from the square-off; [near]: the
+     * premium most of the way to the target; [flow]: fresh agreeing flow, strong, executed, with no flag against it; [traps]:
+     * no pull against it and no stop hunt or failed break its way; [vwap]: accepted beyond VWAP; [value]: beyond the value
+     * area; [oi]: agreeing build-up with OI rising; [vix]: VIX not spiking.
+     */
+    data class Room(val target: Boolean, val time: Boolean, val near: Boolean, val flow: Boolean, val traps: Boolean, val vwap: Boolean,
+                    val value: Boolean, val oi: Boolean, val vix: Boolean) {
+        val all: Boolean get() = target && time && near && flow && traps && vwap && value && oi && vix
+    }
+
+    /** The flags that spoil an agreeing flow for an extension (the pulls are the trap guard's part, [Room.traps]). */
+    private val BAD_FLOW_LONG = setOf(TrapGuard.Trap.NO_EXECUTED, TrapGuard.Trap.PRICE_AGAINST, TrapGuard.Trap.CONTRADICTION,
+        TrapGuard.Trap.UNRELIABLE, TrapGuard.Trap.BOOK_OFF, TrapGuard.Trap.ABSORPTION_BUY)
+    private val BAD_FLOW_SHORT = setOf(TrapGuard.Trap.NO_EXECUTED, TrapGuard.Trap.PRICE_AGAINST, TrapGuard.Trap.CONTRADICTION,
+        TrapGuard.Trap.UNRELIABLE, TrapGuard.Trap.BOOK_OFF, TrapGuard.Trap.ABSORPTION_SELL)
+
+    /** [Room] at this look (no persistence or cooldown here). */
+    fun room(t: ManagedTrade, s: Snapshot, st: State): Room {
         val side = if (t.side >= 0) 1 else -1
-        val target = st.target ?: return null
-        if (t.originalTarget == null || st.extensions >= minOf(t.caps.maxExtensions, MAX_EXTENSIONS)) return null
-        if (s.atMs > t.caps.squareOffMs - EXT_MIN_LEFT_MS) return null
-        val px = s.premium ?: return null
-        if (target - t.entry <= 0 || (px - t.entry) / (target - t.entry) < EXT_NEAR) return null
+        val target = st.target
+        val hasTarget = target != null && t.originalTarget != null && st.extensions < minOf(t.caps.maxExtensions, MAX_EXTENSIONS)
+        val time = s.atMs <= t.caps.squareOffMs - EXT_MIN_LEFT_MS
+        val px = s.premium
+        val near = px != null && target != null && target - t.entry > 0 && (px - t.entry) / (target - t.entry) >= EXT_NEAR
+        val r = freshFlow(s)
+        val bad = if (side > 0) BAD_FLOW_LONG else BAD_FLOW_SHORT
+        val flow = r != null && r.side == (if (side > 0) OrderFlow.Side.BUYERS else OrderFlow.Side.SELLERS) && r.strength >= EXT_FLOW &&
+            r.cvd60 * side > 0 && r.flags.none { it in bad }
+        val pull = if (side > 0) TrapGuard.Trap.PULL_BID else TrapGuard.Trap.PULL_ASK
+        val traps = r != null && r.huntDir != side && pull !in r.flags
+        val fut = s.futPrice ?: r?.mid
+        val vw = s.vwap
+        val vwap = fut != null && vw != null && vw.sdUnits(fut).let { sdU -> if (sdU == null) (fut - vw.vwap) * side > 0 else sdU * side >= EXT_VWAP_SD }
+        val value = fut != null && (if (side > 0) s.valueHigh?.let { fut > it } == true else s.valueLow?.let { fut < it } == true)
+        val agreeing = if (side > 0) OrderFlow.BuildUp.LONG_BUILDUP else OrderFlow.BuildUp.SHORT_BUILDUP
+        val oi = r != null && r.buildUp == agreeing && (r.oiChange ?: 0L) > 0L
+        val vix = (s.vixChangePct ?: 0.0) < VIX_SPIKE_PCT
+        return Room(hasTarget, time, near, flow, traps, vwap, value, oi, vix)
+    }
+
+    /** The fresh, warm order-flow read at this look (null: none; a stale or cold read decides nothing). */
+    fun flowNow(s: Snapshot): OrderFlow.Read? = freshFlow(s)
+
+    /** Whether there is more room now (no persistence or cooldown here): its words and numbers, else null. Every [Room] part. */
+    fun scope(t: ManagedTrade, s: Snapshot, st: State): Pair<String, Map<String, Double>>? {
+        if (!room(t, s, st).all) return null
+        return scopeWords(t, s)
+    }
+
+    /** The extension's words and numbers (asked only once every [Room] part holds). */
+    fun scopeWords(t: ManagedTrade, s: Snapshot): Pair<String, Map<String, Double>>? {
+        val side = if (t.side >= 0) 1 else -1
         val r = freshFlow(s) ?: return null
-        if (r.side != (if (side > 0) OrderFlow.Side.BUYERS else OrderFlow.Side.SELLERS) || r.strength < EXT_FLOW || r.cvd60 * side <= 0) return null
-        val bad = setOf(TrapGuard.Trap.NO_EXECUTED, TrapGuard.Trap.PRICE_AGAINST, TrapGuard.Trap.CONTRADICTION, TrapGuard.Trap.UNRELIABLE,
-            TrapGuard.Trap.BOOK_OFF, if (side > 0) TrapGuard.Trap.ABSORPTION_BUY else TrapGuard.Trap.ABSORPTION_SELL,
-            if (side > 0) TrapGuard.Trap.PULL_BID else TrapGuard.Trap.PULL_ASK)
-        if (r.flags.any { it in bad }) return null
-        if (r.huntDir == side) return null
         val fut = s.futPrice ?: r.mid
         val vw = s.vwap ?: return null
-        val sdU = vw.sdUnits(fut)
-        if (sdU == null) { if ((fut - vw.vwap) * side <= 0) return null } else if (sdU * side < EXT_VWAP_SD) return null
-        if (side > 0) { val h = s.valueHigh ?: return null; if (fut <= h) return null } else { val l = s.valueLow ?: return null; if (fut >= l) return null }
-        val bu = r.buildUp
         val agreeing = if (side > 0) OrderFlow.BuildUp.LONG_BUILDUP else OrderFlow.BuildUp.SHORT_BUILDUP
-        if (bu != agreeing || (r.oiChange ?: 0L) <= 0L) return null
-        if ((s.vixChangePct ?: 0.0) >= VIX_SPIKE_PCT) return null
         return "${if (side > 0) "buyers" else "sellers"} ${r.strength} with executed volume ${r.cvd60.toLong()}, price ${num(fut)} beyond VWAP " +
             "${num(vw.vwap)} and value, ${agreeing.words} (OI +${r.oiChange})" to
             mapOf("strength" to r.strength.toDouble(), "cvd60" to r.cvd60, "price" to fut, "vwap" to vw.vwap, "oiChange" to (r.oiChange ?: 0L).toDouble())
@@ -496,7 +547,11 @@ object TradeManager {
 
     /** One manager decision with its evidence; [acted] false in SHADOW (what it would have done). */
     data class Note(val atMs: Long, val kind: String, val rule: String, val words: String, val premium: Double?, val acted: Boolean,
-                    val evidence: Map<String, Double> = emptyMap(), val target: Double? = null, val lock: Double? = null)
+                    val evidence: Map<String, Double> = emptyMap(), val target: Double? = null, val lock: Double? = null,
+                    /** The specialist that led the decision ([ManagerTeam]; null: none - the lock, or an older record). */
+                    val lead: String? = null,
+                    /** Every specialist that voted for it (its report card is credited or debited when the trade settles). */
+                    val voters: List<String> = emptyList())
 
     const val EXIT_EARLY = "EXIT_EARLY"
     const val EXTEND_NOTE = "EXTEND"
@@ -607,17 +662,45 @@ object TradeManager {
         return tally(records).map { t -> tallyLine(t, policy?.mode(t.family, t.account)) }
     }
 
-    /** A Jarvis question about the manager: [family] null for "how is it doing", else "why did <family> exit early". */
-    data class Ask(val why: Boolean, val family: String?)
+    /**
+     * A Jarvis question about the manager: [family] null for "how is it doing", else "why did <family> exit early"; [team]:
+     * about its specialists ([ManagerTeam]) - which one made a strategy exit, how they are doing, mute or un-mute one.
+     */
+    data class Ask(val why: Boolean, val family: String?, val team: TeamAsk? = null)
+
+    enum class TeamKind { WHICH, HOW, MUTE, UNMUTE }
+
+    /** [specialist]: the [ManagerTeam] id named (null: none named). */
+    data class TeamAsk(val kind: TeamKind, val specialist: String? = null)
 
     private val FAMILY_WORDS = listOf("solo" to Regex(" solo "), "pine" to Regex(" (pine|script|scripts) "),
         "liquidity" to Regex(" liquidity "), "hero" to Regex(" hero "), "orb" to Regex(" orb "), "silver-night" to Regex(" silver "),
         "night" to Regex(" night "), "vixdiv" to Regex(" vix "), "mcx-eve" to Regex(" evening "), "mcx-morning" to Regex(" morning "),
         "mcx-trend" to Regex(" trend "))
 
+    private val SPECIALIST_WORD = Regex(" specialists? ")
+    private val UNMUTE_WORDS = Regex(" (un ?mute|unmuted|bring back|switch on|turn on|enable|restore) ")
+    private val MUTE_WORDS = Regex(" (mute|muted|silence|switch off|turn off|disable|ignore) ")
+    private val WHICH_WORDS = Regex(" (which|who|what) ")
+    private val EXIT_WORDS = Regex(" (exit|exited|exits|exiting|out|sell|sold|close|closed|cut|extend|extended) ")
+
     fun asked(text: String): Ask? {
         val t = " " + text.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
-        val early = Regex(" (exit|exited|exits|exiting|sell|sold|close|closed|cut|get out|got out) early | early exit ").containsMatchIn(t)
+        // The manager's specialists: "which specialist made Solo exit?", "how are the manager's specialists doing?",
+        // "mute the OI specialist for Pine" (the specialist's own words taken out before the strategy is looked for).
+        if (SPECIALIST_WORD.containsMatchIn(t)) {
+            val spec = ManagerTeam.specialistIn(t)
+            val rest = spec?.let { t.replaceFirst(it.second, " ") } ?: t
+            val fam = FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(rest) }?.first
+            val kind = when {
+                UNMUTE_WORDS.containsMatchIn(t) -> TeamKind.UNMUTE
+                MUTE_WORDS.containsMatchIn(t) -> TeamKind.MUTE
+                WHICH_WORDS.containsMatchIn(t) && EXIT_WORDS.containsMatchIn(t) -> TeamKind.WHICH
+                else -> TeamKind.HOW
+            }
+            return Ask(false, fam, TeamAsk(kind, spec?.first))
+        }
+        val early =Regex(" (exit|exited|exits|exiting|sell|sold|close|closed|cut|get out|got out) early | early exit ").containsMatchIn(t)
         if (early && Regex(" why ").containsMatchIn(t)) return Ask(true, FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(t) }?.first)
         if (Regex(" trade manager| trade managers ").containsMatchIn(t)) return Ask(Regex(" why ").containsMatchIn(t), FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(t) }?.first)
         return null
