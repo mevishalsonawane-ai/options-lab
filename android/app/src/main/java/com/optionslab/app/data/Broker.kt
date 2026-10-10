@@ -145,6 +145,8 @@ object Broker {
             if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
             if (Strategies.stopHint() != null) return "stopped_for_today"
             DayLockGuard.refusal(true)?.let { return it }
+            // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.
+            runCatching { SmartWorkers.doorRefusal(o.tradingSymbol) }.getOrNull()?.let { return it }
         }
         return null
     }
@@ -300,10 +302,14 @@ object Broker {
         return try {
             callInner(method, path, body, auth, raw, json, viaRelay, readOnly).also { r ->
                 if (write) Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
+                // Self-healing (10 Oct): the answer's time, after it came back (memory only; nothing added before the request).
+                SmartWorkers.restSample(true, System.currentTimeMillis() - t0)
             }
         } catch (e: Exception) {
             if (e !is kotlinx.coroutines.CancellationException)
                 Diag.record("zerodha", "$where$asked$route -> FAILED ${e.javaClass.simpleName}: ${e.message} (${System.currentTimeMillis() - t0} ms)")
+            // A network failure counts against Zerodha's health; Zerodha's own refusal (a KiteError) or no login does not.
+            if (e is java.io.IOException && e !is KiteError && e !is NotLoggedIn) SmartWorkers.restSample(false, System.currentTimeMillis() - t0)
             throw e
         } finally {
             if (write) {
@@ -362,7 +368,7 @@ object Broker {
                     c.outputStream.use { it.write(bytes) }
                 }
                 val code = c.responseCode
-                if (code == 429 && attempt < 3) { attempt++; delay(1_000L * attempt); continue }
+                if (code == 429 && attempt < 3) { SmartWorkers.restLimited(); attempt++; delay(1_000L * attempt); continue }
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
                 val text = stream?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
                 reusable = true

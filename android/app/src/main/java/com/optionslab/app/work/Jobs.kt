@@ -481,6 +481,32 @@ object Tasks {
         }
     }
 
+    /**
+     * Smart scheduling (10 Oct): in the service ([smart]), the arms the scheduler finds due ([com.optionslab.app.data.SmartWorkers.dueSteps]:
+     * every one while anything is held; else each on its own wake rules, counted); outside it (a test's pass) all of them, as before.
+     */
+    private fun armsDue(smart: Boolean, steps: List<com.optionslab.ira.Supervisor.Step>): List<com.optionslab.ira.Supervisor.Step> =
+        if (!smart) steps else runCatching { com.optionslab.app.data.SmartWorkers.dueSteps(steps) }.getOrDefault(steps)
+
+    /**
+     * The safety-net round with nothing held (10 Oct, smart scheduling): paper fills, then only the arms the scheduler finds due
+     * (a candle closed for them, an order update, a position change, a news window) - usually none, then nothing runs at all.
+     * Stops and exits are not here: nothing is held (anything held runs the 15-second stop check instead).
+     */
+    internal suspend fun dueRound(context: Context) {
+        val all = listOfNotNull(
+            com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
+            com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
+            com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
+            com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+        )
+        val due = armsDue(true, all)
+        if (due.isEmpty()) return
+        step("safety net: paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+        together("safety-net round", due, WatchWorkers.ARMS_WAIT_MS, inOrder = false)
+    }
+
     /** Is the coroutine running this pass still active (false: it was cancelled, and a cancellation must go up)? */
     private suspend fun passActive(): Boolean = kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive ?: true
 
@@ -520,6 +546,8 @@ object Tasks {
                     relayTriedAt = now
                     val ok = runCatching { com.optionslab.app.data.Relay.warm() }.getOrDefault(false)
                     relayFails = if (ok) 0 else relayFails + 1
+                    // Self-healing (10 Oct): the relay's health (two failed pings in a row: new live entries wait at the door).
+                    com.optionslab.app.data.SmartWorkers.relaySample(ok, enabled = true)
                 }
             }
             // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
@@ -741,7 +769,7 @@ object Tasks {
         }
         // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
         // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
-        together("arms", listOf(
+        together("arms", armsDue(lanes != null, listOf(
             // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
             // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
@@ -750,7 +778,7 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
-        ), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
         safely {
             // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
@@ -762,7 +790,7 @@ object Tasks {
         // After the square-off (so what it closed is booked as closed), side by side as above: the MCX paper arms (9 Oct,
         // research M3/M4/M2; paper only, off by default), the Strategy Module (schedules, prices, per-leg and basket risk,
         // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
-        together("arms after the square-off", listOfNotNull(
+        together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
                 val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
@@ -770,7 +798,7 @@ object Tasks {
             },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
-        ), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        )), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
         step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
         // Jarvis: your own stops trailed up automatically (Boss's switch).
@@ -972,6 +1000,10 @@ object Tasks {
     fun paperEventsPublic(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) = paperEvents(context, events)
 
     private fun paperEvents(context: Context, events: List<com.optionslab.engine.sandbox.SandboxEvent>) {
+        // Smart scheduling (10 Oct): a paper fill is a position change - the workers waiting on one are woken.
+        if (events.any { it is com.optionslab.engine.sandbox.SandboxEvent.Fill }) runCatching {
+            com.optionslab.app.data.SmartWorkers.event(com.optionslab.ira.WorkerWake.Cause.POSITION_CHANGE)
+        }
         for (e in events) when (e) {
             is com.optionslab.engine.sandbox.SandboxEvent.Fill -> Notifier.orderFilled(context, e.action, e.quantity, e.symbol, e.price, "Paper",
                 kotlinx.coroutines.runBlocking { runCatching { com.optionslab.app.data.Strategies.owners()["paper:${e.orderId}"] }.getOrNull() }, e.orderId)
@@ -1273,7 +1305,20 @@ class WatchService : Service() {
         if (com.optionslab.app.BuildConfig.JARVIS) {
             val app = this@WatchService
             workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.WORDS, "analysis", timeoutMs = 5 * 60_000L,
-                cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) })) { Tasks.wordsRound() }
+                cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) }, restart = com.optionslab.ira.SelfHeal.Restart())) { Tasks.wordsRound() }
+        }
+        // The shared market brain (10 Oct): its own worker every 10 s in market hours (regime, event windows, trap flags, the
+        // data's health and incidents, the findings log, the daily self-review); words and readings only - it never orders.
+        // A read-only worker: cut at its time limit, restarted fresh after repeated failures.
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            val app = this@WatchService
+            var brainAt = 0L
+            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.BRAIN, "analysis", timeoutMs = 30_000L,
+                cancelOnTimeout = true, nextDelayMs = { com.optionslab.app.data.SmartWorkers.refreshDelay(brainAt) },
+                restart = com.optionslab.ira.SelfHeal.Restart())) {
+                brainAt = System.currentTimeMillis()
+                com.optionslab.app.data.SmartWorkers.refresh(app)
+            }
         }
         try {
             watchLoop(s, workers)
@@ -1403,6 +1448,9 @@ class WatchService : Service() {
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: Night (R3)") { com.optionslab.app.data.NightArm.tick() },
                             com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
                         ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
+                        // Smart scheduling: the minute arms just looked at this minute; the next pass need not look again for it.
+                        // (Not the ORB arms: a bar the feed has not finished yet is looked at again on the next minute, as before.)
+                        runCatching { com.optionslab.app.data.SmartWorkers.ranByLane(listOf("Night (R3)", "VIX divergence")) }
                     } } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
                     continue
@@ -1414,7 +1462,19 @@ class WatchService : Service() {
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
                     val step = Battery.gap(this, 3_000)
                     while (System.currentTimeMillis() < until) { delay(step); runCatching { PositionCards.tickLive(this) } }
-                } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
+                } else if (holding) delay(15_000) else {
+                    // Smart scheduling (10 Oct): nothing held - the wait to the next full pass is cut into the safety-net interval
+                    // (Boss's 15-60 s, 30 by default), ended early by an event a worker waits for (an order update, a position
+                    // change, a news window); then only the arms the scheduler finds due run (usually none: nothing runs).
+                    val gap = com.optionslab.app.data.SmartWorkers.safetyNetMs(false)
+                    com.optionslab.app.data.SmartWorkers.awaitWake(minOf(next - System.currentTimeMillis(), gap))
+                    if (System.currentTimeMillis() < next - 1_000L) {
+                        val roundAt = System.currentTimeMillis()
+                        try { Tasks.dueRound(this@WatchService) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                            Tasks.stepFailed("safety-net round", e)
+                        } finally { WatchWorkers.timed("safety-net round (total)", System.currentTimeMillis() - roundAt) }
+                    }
+                }
                 if (holding) {
                     Heartbeat.stepBegin("15-second stop check")
                     val checkAt = System.currentTimeMillis()

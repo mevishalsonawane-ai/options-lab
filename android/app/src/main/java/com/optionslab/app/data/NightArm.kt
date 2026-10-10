@@ -283,7 +283,7 @@ object NightArm {
             ?.let { return "night_thin_option: $it" }
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(NightRules.SOURCE, u, d.side, false, now.withSecond(0).withNano(0).toString(), right.name, contract = c)
-        if (flow.skip) return "${FlowGate.SKIPPED} ($facts)"
+        if (flow.skip) return "${flow.pausedWhy ?: FlowGate.SKIPPED} ($facts)"
         val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {

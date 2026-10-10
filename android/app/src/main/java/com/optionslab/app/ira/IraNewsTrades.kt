@@ -288,7 +288,7 @@ internal object IraNewsTrades {
         // or Zerodha alike - it only ever skips; it never places, enlarges or reverses a trade).
         val flow = com.optionslab.app.data.FlowGate.gate("jarvis", u, if (idea.call) 1 else -1, s.live && earned(solo),
             java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).withSecond(0).withNano(0).toString(), c.symbol, contract = c)
-        if (flow.skip) return "Not placed: the order flow did not agree with this ${if (idea.call) "call" else "put"} (order-flow confirm is on for my trades)."
+        if (flow.skip) return flow.pausedWhy?.let { "Not placed: $it." } ?: "Not placed: the order flow did not agree with this ${if (idea.call) "call" else "put"} (order-flow confirm is on for my trades)."
 
         val nowMin = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata")).let { it.hour * 60 + it.minute }
         if (lots < 1) return com.optionslab.ira.RiskSizing.tooSmall(c.lotSize)

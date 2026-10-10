@@ -40,6 +40,8 @@ object LocalCandles {
             KiteStream.candles.reconcile(token, feed.filter { it.epochSecond + 60 <= nowSec })
             KiteStream.candles.overlay(token, feed, nowSec)
         }.getOrNull()
+        // Self-healing (10 Oct): the candle feed's health - in market hours a read that brought no candle counts against it.
+        if (runCatching { Market.isOpen() && Market.minuteNow() >= Market.OPEN + 2 }.getOrDefault(false)) SmartWorkers.candleSample(feed.isNotEmpty())
         val local = out != null && out.source == com.optionslab.ira.LiveCandles.Source.LOCAL
         runCatching { OrderTiming.candles(if (local) OrderSpeed.Source.LOCAL_CANDLE else OrderSpeed.Source.FEED) }
         return if (local && out != null) out.bars else feed

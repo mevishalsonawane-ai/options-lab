@@ -841,7 +841,7 @@ object PineAuto {
         // skipped (paper and live alike: it only ever skips, never places or reverses anything).
         val flow = FlowGate.gate("pine", u, if (right == Right.CE) 1 else -1, live,
             Market.now().toLocalDateTime().withSecond(0).withNano(0).toString(), "$id:${right.name}", contract = c)
-        if (flow.skip) { note(b, id, "Not bought: skipped by the order flow (CONFIRM; the flow did not agree)"); return }
+        if (flow.skip) { note(b, id, flow.pausedWhy?.let { "Not bought: $it" } ?: "Not bought: skipped by the order flow (CONFIRM; the flow did not agree)"); return }
         val lots = item.auto.lots.coerceIn(1, 50)
         if (!live) {
             val ltp = Paper.lastPrice(c) ?: run { note(b, id, "No price for ${c.symbol}: nothing bought"); return }

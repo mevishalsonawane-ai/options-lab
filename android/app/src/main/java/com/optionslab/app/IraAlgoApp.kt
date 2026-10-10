@@ -99,6 +99,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.KiteStream.init(this)
         // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).
         com.optionslab.app.data.FlowGate.init(this)
+        com.optionslab.app.data.SmartWorkers.init(this)
         com.optionslab.app.data.OrderFlowLive.init(this)
         // The gold books and Jarvis's memory are decrypted on a background thread (Speed, round 2); every change to them
         // waits until they are read, so nothing is ever saved over them empty.

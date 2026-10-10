@@ -98,7 +98,9 @@ object FlowGate {
     // ---- the gate -------------------------------------------------------------------------------------------------------
 
     /** One signal's gate: its id (for the later lines), whether to skip it, and the flow's agreement. */
-    data class Ticket(val id: String, val skip: Boolean, val agreement: OrderFlow.Agreement, val key: String)
+    data class Ticket(val id: String, val skip: Boolean, val agreement: OrderFlow.Agreement, val key: String,
+                      /** The smart workers' pause that skipped it (10 Oct: a news window, a reaction acting); null: none. */
+                      val pausedWhy: String? = null)
 
     /** The verdict a skipped entry returns and is logged with. */
     const val SKIPPED = FlowShadow.SKIPPED
@@ -120,22 +122,40 @@ object FlowGate {
     fun check(key: String, underlying: String, side: Int, live: Boolean, at: String, what: String = "", decide: Boolean = true,
               contract: Paper.Contract? = null): Ticket {
         val id = FlowShadow.id(key, at, what)
+        // The smart workers' brake (10 Oct): the global "pause new entries during ..." (news windows ON by default, paper and
+        // live), the findings' reactions and a paper pause by the strategy's own review - memory only; it can only skip. An
+        // exit never comes here. [decide] false (waiting for Boss's approval): logged only, decided at the approval.
+        val brake = if (com.optionslab.app.BuildConfig.GOLD) null
+            else runCatching { SmartWorkers.entry(key, underlying, side) }.getOrNull()
+        val paused = decide && brake?.block == true
+        if (paused) runCatching {
+            val label = FlowShadow.strategy(key)?.label ?: key
+            Diag.record("brain", "$label: ${if (live) "live" else "paper"} entry on $underlying not taken - ${brake?.why}")
+        }
         return runCatching {
             val s = setting(key)
-            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, false, OrderFlow.Agreement.UNKNOWN, key)
+            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) brake?.why else null)
             val now = System.currentTimeMillis()
             val r = OrderFlowLive.readNow(underlying, now)
             val a = OrderFlow.agreement(r, side, s.threshold, (testNowSec ?: (now / 1000)))
             // [decide] false: the signal waits for Boss's approval - logged now, decided (and maybe skipped) at the approval.
-            val skip = decide && OrderFlow.skips(s.mode, a)
+            val flowSkip = decide && OrderFlow.skips(s.mode, a)
+            val skip = flowSkip || paused
             loadOnce()
             synchronized(lock) {
                 if (seen.add(id)) {
                     append(FlowShadow.signal(id, now / 1000, key, underlying, side, live, s.mode, s.threshold, a, skip, r, bookOf(contract),
                         contextOf(underlying, r, now)))
                     r?.takeIf { it.mid > 0 }?.let { moves += Move(id, underlying, side, it.mid, now / 1000) }
+                    // The brain and the findings at this signal (10 Oct): the pause that took it or the SHADOW causes that would
+                    // have, and the findings' consensus on the index - so the record can say later whether each helped.
+                    if (brake != null) {
+                        append(FlowShadow.brain(id, if (paused) brake.why else null, brake.shadowKeys, brake.shadow))
+                        append(FlowShadow.consensus(id, brake.consensus))
+                    }
                 }
-                if (skip) append(FlowShadow.verdict(id, SKIPPED))
+                if (paused) append(FlowShadow.verdict(id, FlowShadow.PAUSED))
+                else if (skip) append(FlowShadow.verdict(id, SKIPPED))
             }
             // CONFIRM with no opinion (no read, an unreliable feed, a time trap): the trade follows the strategy, logged so.
             if (decide && s.mode == OrderFlow.Mode.CONFIRM && a == OrderFlow.Agreement.UNKNOWN) runCatching {
@@ -148,13 +168,13 @@ object FlowGate {
                 }
                 synchronized(lock) { append(FlowShadow.verdict(id, "flow_no_opinion: $why")) }
             }
-            if (skip) runCatching {
+            if (flowSkip) runCatching {
                 val label = FlowShadow.strategy(key)?.label ?: key
                 Diag.record("flow", "$label: skipped by flow (${if (live) "live" else "paper"} ${if (side > 0) "bullish" else "bearish"} entry on $underlying; " +
                     "${OrderFlow.word(r)}, needs ${s.threshold}" + (r?.takeIf { it.flags.isNotEmpty() }?.let { "; trap guard: ${OrderFlow.trapWords(it)}" } ?: "") + ")")
             }
-            Ticket(id, skip, a, key)
-        }.getOrElse { Ticket(id, false, OrderFlow.Agreement.UNKNOWN, key) }
+            Ticket(id, skip, a, key, if (paused) brake?.why else null)
+        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) brake?.why else null) }
     }
 
     /** [check] off the caller's thread (it may read the log once after a restart): for the strategies' suspend paths. */
@@ -162,7 +182,8 @@ object FlowGate {
                      contract: Paper.Contract? = null): Ticket = kotlinx.coroutines.withContext(Dispatchers.IO) {
         // A CONFIRM decision on a closed candle waits until 3 s after the minute for late packets (trades arrive 1-2 s late,
         // p95 3-6 s: HUNT R8). SHADOW and OFF never wait: they change nothing, not even the timing.
-        if (decide && setting(key).mode == OrderFlow.Mode.CONFIRM && testNowSec == null) {
+        if (decide && setting(key).mode == OrderFlow.Mode.CONFIRM && testNowSec == null &&
+            runCatching { !SmartWorkers.entry(key, underlying, side).block }.getOrDefault(true)) {
             val into = System.currentTimeMillis() % 60_000L
             if (into < com.optionslab.ira.TrapGuard.DECIDE_WAIT_MS) delay(com.optionslab.ira.TrapGuard.DECIDE_WAIT_MS - into)
         }
@@ -305,6 +326,12 @@ object FlowGate {
         synchronized(lock) { if (buf.isNotEmpty()) out += buf.toString().lines() }
         return out.asSequence()
     }
+
+    /**
+     * The smart workers' SHADOW pauses so far, per strategy and cause (10 Oct): the signals each would have paused against the
+     * rest, from the log ([FlowShadow.pauseEffects]). Reads the file: call off the main thread.
+     */
+    fun pauseEffectLines(): List<String> = FlowShadow.pauseEffects(FlowShadow.parse(lines())).map { FlowShadow.pauseLine(it) }
 
     /** After a restart: the signals already logged (never logged twice) and the paper entries still waiting for a result. */
     private fun loadOnce() {

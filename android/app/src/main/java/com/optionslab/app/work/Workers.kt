@@ -49,6 +49,9 @@ object WatchWorkers {
     /** The words worker's name. */
     const val WORDS = "Jarvis words"
 
+    /** The shared market brain's worker (10 Oct): regime, windows, traps, health, findings, the daily self-review. */
+    const val BRAIN = "Market brain"
+
     /** Today's date as text, worked out once a minute (the hot paths time every step: no date arithmetic per step). */
     @Volatile private var dayKept: Pair<Long, String>? = null
 
@@ -106,7 +109,9 @@ object WatchWorkers {
         }
         val fast = "Event-driven lanes (stream, live exits, minute, bar close): " +
             if (runCatching { com.optionslab.app.data.FastPath.running }.getOrDefault(false)) "running" else "off"
-        return listOf(head) + rows.map { "  $it" } + listOf("  $fast")
+        // The smart workers (10 Oct): the market brain, health incidents, the findings and each arm's wakes and skips.
+        val brain = runCatching { com.optionslab.app.data.SmartWorkers.diagLines() }.getOrElse { listOf("Brain: could not read") }
+        return listOf(head) + rows.map { "  $it" } + listOf("  $fast") + brain
     }
 
     /** The slowest steps today, in one line. */
@@ -121,7 +126,10 @@ object WatchWorkers {
         val main = listOf(Tasks.PASS_TOTAL, "15-second stop check (total)", "arms (together)", "arms after the square-off (together)",
             "bar-close entry check (together)", "15-second stop check (together)")
             .mapNotNull { rows[it]?.let { r -> StepStats.words(r) } }
-        return main + slowestLine()
+        // Smart scheduling (10 Oct): the safety-net rounds' time and each arm's wakes and skips today.
+        val smart = listOfNotNull(rows["safety-net round (total)"]?.let { StepStats.words(it) },
+            runCatching { com.optionslab.app.data.SmartWorkers.speedLine() }.getOrNull())
+        return main + smart + slowestLine()
     }
 
     /** TEST ONLY. */

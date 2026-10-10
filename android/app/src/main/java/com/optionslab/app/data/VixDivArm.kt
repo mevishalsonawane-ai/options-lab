@@ -261,7 +261,7 @@ object VixDivArm {
             ?.let { return Decision(true, "vix_thin_option: $it ($said)") }
         // The order flow at the decision (9 Oct; paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(VixDivRules.SOURCE, u, sig.side, false, "$today ${hhmm(sig.check)}", right.name, contract = c)
-        if (flow.skip) return Decision(true, "vix_${FlowGate.SKIPPED} ($said)")
+        if (flow.skip) return Decision(true, flow.pausedWhy?.let { "vix_$it ($said)" } ?: "vix_${FlowGate.SKIPPED} ($said)")
         val r = Paper.place(c, "BUY", VixDivRules.LOTS, "MARKET", "MIS", null, null)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {

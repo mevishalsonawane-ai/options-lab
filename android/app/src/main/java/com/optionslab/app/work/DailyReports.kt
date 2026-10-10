@@ -428,7 +428,12 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 // The reminder speaks only if the session is still missing.
                 DailyReports.Kind.LOGIN -> if (!Broker.loggedIn) DailyReports.post(applicationContext, k, "Log in to Zerodha now",
                     listOf("The market opens at 09:15 and there is no Zerodha session today. Open the app → ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha."))
-                DailyReports.Kind.EVENING -> DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                DailyReports.Kind.EVENING -> {
+                    // The daily self-review after F&O's close (10 Oct): each strategy against its backtest; a drifting live one
+                    // parks itself to paper and asks (once a day; the watch's brain worker does it too when it is still running).
+                    if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.data.SmartWorkers.reviewIfDue(applicationContext) }
+                    DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
+                }
                 // Said and kept in the chat only: no notification.
                 DailyReports.Kind.WEEK -> DailyReports.week()
                 // Kept for the Ira page, noted in the chat, "Weekly review ready" notified (no rupee figure in it).

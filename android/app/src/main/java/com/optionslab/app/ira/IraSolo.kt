@@ -458,7 +458,7 @@ internal object IraSolo {
         // The order flow at this decision (9 Oct; paper only): logged; under CONFIRM skipped unless the flow agrees.
         val flow = com.optionslab.app.data.FlowGate.gate("solo", s.underlying, if (s.call) 1 else -1, false,
             t.withSecond(0).withNano(0).toString(), right.name)    // (the strike is chosen below; no book logged)
-        if (flow.skip) return "the order flow did not agree (CONFIRM)"
+        if (flow.skip) return flow.pausedWhy ?: "the order flow did not agree (CONFIRM)"
         for (k in SoloMidday.strikesToTry(s.underlying, s.side, s.index)) {
             val c = Paper.contractFor(s.underlying, expiry, k.toDouble(), right) ?: continue
             // Boss's own paper position in this contract is never mixed with Solo's (its exit would touch it).

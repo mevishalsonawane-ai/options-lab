@@ -533,6 +533,8 @@ object KiteStream {
                 runCatching { Broker.reconStale() }
                 _orderEvents.value = System.currentTimeMillis()
                 runCatching { com.optionslab.app.ira.IraAccount.invalidate() }
+                // Smart scheduling (10 Oct): the workers waiting on an order update are woken (a set add and a wake; no I/O).
+                runCatching { SmartWorkers.event(com.optionslab.ira.WorkerWake.Cause.ORDER_UPDATE) }
             }
             // e.g. a token Kite no longer accepts: kept in the diary (scrubbed), once a minute per message.
             "error" -> {

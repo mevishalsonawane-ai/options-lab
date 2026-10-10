@@ -719,6 +719,15 @@ object OrbArms {
     /** Every closed paper trade the arms' book keeps (its last 2000 positions), oldest first. Reads only. */
     suspend fun closedPaper(): List<Position> = lock.withLock { book().positions.filter { !it.open && !it.live } }
 
+    /** The arms' closed Zerodha positions (the self-review sets them against the backtest apart from paper; reads only). */
+    suspend fun closedLive(): List<Position> = lock.withLock { book().positions.filter { !it.open && it.live } }
+
+    /** Today's closed positions, paper and live (the findings bus: a stop or a target hit). Reads only. */
+    suspend fun closedToday(): List<Position> {
+        val d = now().toLocalDate()
+        return lock.withLock { book().positions.filter { !it.open && it.exitTime?.toLocalDate() == d } }
+    }
+
     /** Liquidity 15+5 as one row: armed when its books are, both books' trades, each book's state. */
     private fun liquidityView(b: Book, day: LocalDate): ArmView {
         val books = LiquidityRules.BOOKS.map { it.source }
@@ -939,6 +948,8 @@ object OrbArms {
                 b.armed[a.source] = on; b.auto[a.source] = automatic; b.liveOk[a.source] = on && live && pinConfirmed
                 if (!on) b.pending.remove(a.source)
             }
+            // Boss himself switched it on again (in Live with his PIN, or on paper): no longer parked or paused by its review.
+            if (on && (!live || pinConfirmed)) runCatching { SmartWorkers.ownerRearmed("liquidity") }
             save(b)
             val holding = b.positions.any { it.open && it.arm in LiquidityRules.BOOKS.map { a -> a.source } }
             return@withLock if (on) "${LiquidityRules.ARM.label} armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
@@ -1198,6 +1209,9 @@ object OrbArms {
         }
         val right = if (direction > 0) "CE" else "PE"
         val c = if (direction > 0) legs.ce else legs.pe
+        // The findings bus (10 Oct): the range broken, for the other workers (a finding only).
+        SmartWorkers.found(arm.label, com.optionslab.ira.Findings.Kind.BREAK, OrbRules.UNDERLYING, direction, last.close, 60,
+            "range broken ${if (direction > 0) "up" else "down"}")
         val live = liveNow()
         // Automatic unless the owner chose approvals, or the arm was armed in Paper and now finds the app in Live.
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
@@ -1244,7 +1258,7 @@ object OrbArms {
         // The order flow at this decision (9 Oct): logged beside the signal; under CONFIRM an entry it does not agree with is
         // skipped - it never places, enlarges or reverses anything (paper and live alike; the live path is only ever skipped).
         val flow = FlowGate.gate(arm.source, OrbRules.UNDERLYING, if (c.right == Right.CE) 1 else -1, live, signalBar.toString(), c.right.name, contract = c)
-        if (flow.skip) return FlowGate.SKIPPED
+        if (flow.skip) return flow.pausedWhy ?: FlowGate.SKIPPED
         if (live) return enterLive(b, arm, c, signalBar).also { FlowGate.outcome(flow, it) }
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"             // never enter blind
         // The Upstox feed has no bid/ask, so the paper fill is the LTP slipped 5 bps: price the checks the same way.
@@ -1590,7 +1604,7 @@ object OrbArms {
         exposureRefusal(b, c, HeroRules.ARM)?.let { return kept(it, pick, limit, lots) }
         // The order flow at this minute (paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(HeroRules.ARM.source, HeroRules.UNDERLYING, scan.signal, false, day.atTime(at).toString(), c.right.name, contract = c)
-        if (flow.skip) return kept(FlowGate.SKIPPED, pick, limit, lots)
+        if (flow.skip) return kept(flow.pausedWhy ?: FlowGate.SKIPPED, pick, limit, lots)
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
@@ -2186,7 +2200,12 @@ object OrbArms {
         // and premium momentum on both rights at the strike over the 5 minutes before now (one minute read of each, on a signal
         // only); recorded, never acted on. Unreadable: not recorded.
         val strong = runCatching { strongOf(und, s, last.close, strike, t) }.getOrNull()
-        val live = liveNow()
+        // The findings bus (10 Oct): the sweep, for the other workers (a finding only; nothing acts on it by itself).
+        SmartWorkers.found(LiquidityRules.ARM.label, com.optionslab.ira.Findings.Kind.SWEEP, und, s.side, s.level, 70,
+            "sweep taken at ${"%,.0f".format(java.util.Locale.ENGLISH, s.level)} (${tf}-minute pool)")
+        // Self-review (10 Oct): parked to paper by its own review, its entries go to the paper account until Boss re-arms it
+        // in Live with his PIN ([SmartWorkers.ownerRearmed]); open live positions keep their exits.
+        val live = liveNow() && !SmartWorkers.parkedToPaper("liquidity")
         // As the ORB: automatic unless the owner chose approvals, or it was armed in Paper and now finds the app in Live.
         if (b.auto[arm.source] == false || (live && b.liveOk[arm.source] != true)) {
             val right = if (s.side > 0) "CE" else "PE"
@@ -2242,7 +2261,7 @@ object OrbArms {
         exposureRefusal(b, c, arm, live)?.let { return it }
         // The order flow at this decision (per index; logged, and only ever a skip under CONFIRM), as the ORB's.
         val flow = FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, signalBar.toString(), arm.source, contract = c)
-        if (flow.skip) return FlowGate.SKIPPED
+        if (flow.skip) return flow.pausedWhy ?: FlowGate.SKIPPED
         // Boss's size (1, 2 or 3 lots of this contract's own lot): read at the entry, so a change applies to new entries only.
         val lots = lotsOf(b)
         if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong, lots = lots)

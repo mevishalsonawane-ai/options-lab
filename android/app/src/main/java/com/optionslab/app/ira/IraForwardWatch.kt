@@ -69,7 +69,11 @@ internal object IraForwardWatch {
     suspend fun answer(): String {
         val checks = kotlinx.coroutines.withTimeoutOrNull(WATCH_MS) { checks() }
             ?: return "I could not read the arms' records in time just now, Boss - ask me again in a moment."
-        return ForwardWatch.summary(checks, soloBar())
+        // The daily self-review (10 Oct): each strategy's recent trades against its backtest, paper and live apart, and what
+        // was parked or paused (reads only; nothing is switched here).
+        runCatching { com.optionslab.app.data.SmartWorkers.refreshReviews() }
+        val review = runCatching { com.optionslab.app.data.SmartWorkers.reviewAnswer() }.getOrNull()
+        return ForwardWatch.summary(checks, soloBar()) + (review?.let { "\n\n$it" } ?: "")
     }
 
     /**

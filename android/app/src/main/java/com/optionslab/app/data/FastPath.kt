@@ -268,6 +268,8 @@ object FastPath {
                     step("MCX paper arms") { McxPaperArms.tick() }
                     if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.manageOnly() }
                     step("missed-lock sweep") { Sweeper.run(ctx) }
+                    // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
+                    runCatching { SmartWorkers.ranByLane(MINUTE_ARMS) }
                 }
                 FastLane.Lane.BAR_CLOSE -> {
                     if (s?.paper != false) step("paper orders") { com.optionslab.app.work.Tasks.paperEventsPublic(ctx, Paper.tick()) }
@@ -277,6 +279,9 @@ object FastPath {
             Unit
         }
     }
+
+    /** The watch's step names of the arms these lanes run (the smart scheduler counts their looks as done). */
+    private val MINUTE_ARMS = listOf("Night (R3)", "VIX divergence", "MCX paper arms")
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.

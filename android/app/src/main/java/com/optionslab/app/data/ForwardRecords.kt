@@ -28,6 +28,12 @@ object ForwardRecords {
         return closed.filter { it.arm in books && !it.open && !it.live }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
     }
 
+    /** Liquidity 15+5's closed LIVE (Zerodha) trades, per lot - the self-review judges them apart from paper. */
+    fun liquidityLive(closed: List<OrbArms.Position>): List<ForwardCheck.Trade> {
+        val books = LiquidityRules.BOOKS.map { it.source }.toSet()
+        return closed.filter { it.arm in books && !it.open && it.live }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
+    }
+
     /**
      * Liquidity 15+5's closed paper trades for its "Paper record" chart ([LiquidityEquity]): per lot as [liquidity], with the
      * index its book trades and the entry time (the order on a day).

@@ -67,6 +67,18 @@ object MoveRecorder {
         rings.getOrPut(n) { MoveEvents.Ring(MoveEvents.RING_SEC) }.put(ms / 1000, last)
     }
 
+    /**
+     * [name]'s last [n] minute closes up to [toSec] from its ring (each minute's start, epoch s, and its last print; minutes
+     * with no print left out), oldest first - the market brain's regime reads them (memory only).
+     */
+    @Synchronized fun minuteCloses(name: String, toSec: Long, n: Int): List<Pair<Long, Double>> {
+        val r = rings[name] ?: return emptyList()
+        val lastMinute = Math.floorDiv(toSec, 60L) - 1
+        val out = ArrayList<Pair<Long, Double>>(n)
+        for (m in lastMinute - n + 1..lastMinute) r.at(m * 60 + 59, 59)?.let { out += m * 60 to it }
+        return out
+    }
+
     /** India VIX at [sec] (its last print up to a minute before), or null. */
     @Synchronized fun vixAt(sec: Long): Double? = rings[MoveEvents.VIX]?.at(sec)
 
@@ -160,6 +172,8 @@ object MoveRecorder {
     }
 
     private suspend fun start(t: MoveEvents.Trigger, nowMs: Long, feed: Feed) {
+        // The shared market brain (10 Oct): a big move (never a control) is its alarm and a finding - memory only, at once.
+        if (t.kind != MoveEvents.Kind.CONTROL) runCatching { SmartWorkers.bigMove(t.name, t.dir, nowMs) }
         val dir = dir() ?: return
         val f = File(dir, MoveEvents.fileName(t))
         val sb = StringBuilder(512 * 1024)
