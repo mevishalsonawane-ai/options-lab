@@ -13,6 +13,10 @@ kotlin {
 dependencies {
     // The Strategy Lab writes Pine strategies and backtests them with the engine's own Pine interpreter.
     implementation(project(":engine"))
+    // The watch's workers ([Supervisor], [RateGate], [SingleFlight], [EntryGate]) are coroutines. Compile-only: the app
+    // already ships kotlinx-coroutines (the same version), so nothing new reaches the APK; the tests bring it themselves.
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     testImplementation(kotlin("test"))
 }
 

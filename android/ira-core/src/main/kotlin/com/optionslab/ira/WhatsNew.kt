@@ -47,10 +47,20 @@ object WhatsNew {
     private val OCT7: LocalDate = LocalDate.of(2026, 10, 7)
     private val OCT8: LocalDate = LocalDate.of(2026, 10, 8)
     private val OCT9: LocalDate = LocalDate.of(2026, 10, 9)
+    private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-10-parallel-workers", OCT10, "The watch works on many things at once",
+            "The order watch now runs the strategies side by side instead of one after another. " +
+                "Stops, exits and the daily loss limit still run first, and never wait behind an entry. " +
+                "Every new position passes one door, one at a time: the kill switch is checked again there. " +
+                "Two bots can no longer enter the same index in the same second. " +
+                "Zerodha is asked at most 8 times a second, and reads asked at once are shared. " +
+                "The phone's own AI model uses fewer cores in market hours and gives way to trading. " +
+                "Diagnostics list each worker and the slowest steps today.",
+            "Settings → Zerodha → Order speed, and Copy diagnostics"),
         Entry("2026-10-09-big-move-recorder", OCT9, "Big moves saved, second by second",
             "The order flow now saves each big minute in full: 5 minutes before and after, second by second. " +
                 "A big minute is a futures candle 4.7 times its usual size for that time of day. " +
