@@ -245,6 +245,8 @@ object IraModel {
                 }
                 // The voice got busy while this waited for the lock or loaded the model: it gives way now (5 Oct).
                 if (runCatching { JarvisVoice.busyForModel }.getOrDefault(false)) { yieldedForVoice = true; return@withLock null }
+                // Trading work running (10 Oct): a screen-only rewrite waits a few hundred ms for it, else gives way.
+                if (!tradingQuiet()) { yieldedForVoice = true; return@withLock null }
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
                 rewriting = true
                 val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } }
@@ -278,6 +280,8 @@ object IraModel {
                     if (handle == 0L) return@withLock null
                     _state.update { it.copy(loaded = true, message = null) }
                 }
+                // Trading work running (10 Oct): an answer the voice waits for starts once it is done, a few hundred ms at most.
+                tradingQuiet()
                 val watchdog = scope.launch { delay(timeoutMs) ; LlmNative.cancel() }
                 val bytes = try { gently { LlmNative.generate(handle, prompt, maxTokens, slots.pick(prompt), oneLine) } } finally { watchdog.cancel() }
                 bytes?.let { String(it, Charsets.UTF_8) }
@@ -333,6 +337,9 @@ object IraModel {
         val c = app ?: return
         if (!usable() || JarvisVoice.listenOn) return
         scope.launch {
+            // Never loaded ahead in market hours while trading may need the phone (10 Oct): a Live arm armed, a live position
+            // held, or an order or exit running. A question still loads it when asked. (Off the main thread: it reads settings.)
+            if (tradingNeedsThePhone()) return@launch
             lock.withLock {
                 if (handle != 0L || !usable() || JarvisVoice.listenOn) return@withLock
                 idle?.cancel()
@@ -361,6 +368,8 @@ object IraModel {
                 // Listening wanted meanwhile: the model makes way at once, as preload does (it starved the recognizer, 4 Oct).
                 if (JarvisVoice.listenOn) { if (handle != 0L) unloadLocked(); return@withLock false }
                 if (handle == 0L || !usable()) return@withLock false
+                // Trading work running (10 Oct): reading ahead stops; the question will read it if it comes.
+                if (com.optionslab.app.work.TradingBusy.active) return@withLock false
                 if (slots.holds(p)) return@withLock true
                 idle?.cancel()
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
@@ -398,7 +407,32 @@ object IraModel {
                 .mapNotNull { File(it, "cpufreq/cpuinfo_max_freq").takeIf { f -> f.canRead() }?.readText()?.trim()?.toLongOrNull() }
         }.getOrDefault(emptyList())
         val fast = freqs.maxOrNull()?.let { top -> freqs.count { it >= top * 0.8 } }
-        return (fast ?: (Runtime.getRuntime().availableProcessors() / 2)).coerceIn(2, 4)
+        val n = (fast ?: (Runtime.getRuntime().availableProcessors() / 2)).coerceIn(2, 4)
+        // In NSE's or MCX's hours (10 Oct): two threads at most, so trading work always has cores of its own.
+        return if (marketHours()) minOf(n, MARKET_THREADS) else n
+    }
+
+    /** The model's threads at most while NSE or MCX trades. */
+    const val MARKET_THREADS = 2
+
+    private fun marketHours(): Boolean = runCatching {
+        com.optionslab.app.data.Market.isOpen() || com.optionslab.app.data.McxMarket.isOpen()
+    }.getOrDefault(true)
+
+    /** In market hours with a Live arm armed, a live position held, or trading work running now. */
+    private fun tradingNeedsThePhone(): Boolean = com.optionslab.app.work.TradingBusy.active || (marketHours() && runCatching {
+        com.optionslab.app.data.OrbArms.liveHint || com.optionslab.app.data.PineAuto.liveSymbols().isNotEmpty() ||
+            com.optionslab.app.data.Protections.activeHint == true ||
+            (com.optionslab.app.data.OrbArms.armedHint && com.optionslab.app.data.OrbArms.liveNow())
+    }.getOrDefault(true))
+
+    /**
+     * Waits up to [com.optionslab.app.work.TradingBusy]'s few hundred ms for trading work to finish; true when quiet. While
+     * this writes, trading work starting stops a screen-only rewrite at once ([yieldToVoice]'s way).
+     */
+    private suspend fun tradingQuiet(): Boolean {
+        com.optionslab.app.work.TradingBusy.onBusy = { yieldToVoice() }
+        return com.optionslab.app.work.TradingBusy.awaitQuiet(300L)
     }
 
     /** Stops what the model is writing now (a new question came): the answer already shown stands. */

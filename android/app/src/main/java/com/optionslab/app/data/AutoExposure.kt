@@ -40,8 +40,55 @@ object AutoExposure {
      */
     fun check(source: Source, underlying: String, direction: Int, own: List<AutoSide.Held>,
               rank: com.optionslab.engine.orb.ArmPriority.Rank = com.optionslab.engine.orb.ArmPriority.Rank.OTHER,
-              live: Boolean = false, account: Boolean? = live): String? =
-        DayLockGuard.refusal(account) ?: AutoSide.check(underlying, direction, own + others(source), rank, live)
+              live: Boolean = false, account: Boolean? = live, trader: String = source.name): String? {
+        DayLockGuard.refusal(account)?.let { return it }
+        // 10 Oct: the traders now decide side by side (the watch's workers, the event-driven checks). The check and a claim on
+        // the index are one step ([com.optionslab.ira.EntryHolds]): a trader let through holds "an entry being placed" there,
+        // which every other trader counts as a position until its own published positions show it booked (or 30 s pass).
+        // Each trader's published positions read once (as [others] reads them, in the same order), for the check and the claims.
+        val pub = published()
+        val others = pub.filterKeys { k -> k != source.name && !(source == Source.ORB && k == SHADOW) }.values.flatten()
+        return holds.checkAndHold(trader, whoOf(trader), underlying, direction, own + others, pub,
+            System.currentTimeMillis(), rank, live)
+    }
+
+    /** The claims of entries on their way ([check]); memory only. */
+    private val holds = com.optionslab.ira.EntryHolds(ttlMs = HOLD_MS)
+
+    /** How long a claim stands at most when its entry is never booked (refused later, not filled). */
+    const val HOLD_MS = 30_000L
+
+    /** The trader ShadowArms' re-armed variants claim as (they share [Source.ORB]'s refusals but not its book or lock). */
+    const val SHADOW = "SHADOW"
+
+    private fun whoOf(trader: String): String = when (trader) {
+        Source.ORB.name -> "ORB arms"
+        SHADOW -> "a re-armed shadow"
+        Source.PINE.name -> "a Pine script"
+        Source.STRATEGIES.name -> "a strategy"
+        Source.SOLO.name -> "Jarvis solo"
+        Source.JARVIS.name -> "Jarvis"
+        else -> trader
+    }
+
+    /** Each trader's published open positions now: what retires its claims once its entry is booked. */
+    private fun published(): Map<String, List<AutoSide.Held>> = mapOf(
+        Source.ORB.name to runCatching { OrbArms.exposureHint }.getOrDefault(emptyList()),
+        SHADOW to runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList()),
+        Source.PINE.name to runCatching { PineAuto.exposure() }.getOrDefault(emptyList()),
+        Source.STRATEGIES.name to runCatching { Strategies.exposureHint }.getOrDefault(emptyList()),
+        Source.SOLO.name to runCatching { com.optionslab.app.ira.IraSolo.exposure() }.getOrDefault(emptyList()),
+        Source.JARVIS.name to runCatching { com.optionslab.app.ira.IraNewsTrades.exposure() }.getOrDefault(emptyList()),
+    )
+
+    /** [trader]'s claims dropped (its entry was refused after the check); others may enter that index at once. */
+    fun release(trader: String, underlying: String? = null) = holds.release(trader, underlying)
+
+    /** The claims standing now, for the diagnostics: "ORB arms: a BANKNIFTY entry being placed". */
+    fun claims(): List<String> = holds.standing(System.currentTimeMillis(), published()).map { "${it.who}: ${it.symbol}" }
+
+    /** TEST ONLY: no claim left from an earlier test. */
+    internal fun resetForTest() = holds.clear()
 
     /** The activity log's word when a Liquidity entry goes beside an ORB arm's position ([AutoSide.priorityNote]); null when none. */
     fun priorityNote(source: Source, who: String, underlying: String, direction: Int, own: List<AutoSide.Held>,

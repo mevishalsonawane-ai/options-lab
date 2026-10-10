@@ -131,6 +131,9 @@ data class AppSettings(
     )
 
     companion object {
+        /** The kill switch's key in the settings vault: read alone by the entry door ([Broker.placeOrder]). */
+        const val KILL_KEY = "g.kill"
+
         fun load(): AppSettings {
             val d = AppSettings()
             val p = SecurePrefs

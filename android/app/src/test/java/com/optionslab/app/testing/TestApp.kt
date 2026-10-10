@@ -74,6 +74,11 @@ class TestApp : Application() {
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.FlowGate.init(this)
         com.optionslab.app.data.FlowGate.resetForTest()
+        // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.
+        com.optionslab.app.data.AutoExposure.resetForTest()
+        com.optionslab.app.data.AppState.resetForTest()
+        com.optionslab.app.work.WatchWorkers.resetForTest()
+        com.optionslab.app.work.TradingBusy.resetForTest()
         com.optionslab.app.data.OrderFlowLive.init(this)
         com.optionslab.app.data.OrderFlowLive.resetForTest()
         com.optionslab.app.ira.IraHub.init(this)

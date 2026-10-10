@@ -638,7 +638,7 @@ object ShadowArms {
         if (Strategies.stoppedToday()) return null
         val own = OrbArms.exposureHint + exposureHint
         if (AutoExposure.check(AutoExposure.Source.ORB, c.underlying, com.optionslab.ira.AutoSide.direction(c.right.name, true), own,
-                com.optionslab.engine.orb.ArmPriority.rankOf(v.arms)) != null) return null
+                com.optionslab.engine.orb.ArmPriority.rankOf(v.arms), trader = AutoExposure.SHADOW) != null) return null
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         if (Guard.check(Guard.paperOrder(c, "BUY", 1, base.entry), snap?.let { Guard.paperAccount(it) }, paper = true).isNotEmpty()) return null
         val buy = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)

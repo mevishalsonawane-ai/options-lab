@@ -133,6 +133,15 @@ object Diag {
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')
+        // The watch's workers (10 Oct): each worker and step - its state, last run, time, errors - the slowest steps today,
+        // Zerodha's shared request budget and reads, the entry door, the shared state and the one-index claims standing now.
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            runCatching { com.optionslab.app.work.WatchWorkers.diagLines() }.getOrElse { listOf("Workers: could not read") }.forEach { append(it).append('\n') }
+            append(runCatching { com.optionslab.app.work.WatchWorkers.slowestLine(8) }.getOrElse { "Slowest steps today: could not read" }).append('\n')
+            append(runCatching { Broker.sharingLine() }.getOrElse { "Zerodha requests: could not read" }).append('\n')
+            append(runCatching { AppState.line() }.getOrElse { "Shared state: could not read" }).append('\n')
+            append("One-index claims standing: ").append(runCatching { AutoExposure.claims().ifEmpty { listOf("none") }.joinToString("; ") }.getOrElse { "could not read" }).append('\n')
+        }
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderFlowLive.coverageLine() }.getOrElse { "Order flow: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowGate.diagLine() }.getOrElse { "Order flow modes: could not read" }).append('\n')
         // Honest paper (08 Oct): the bid/ask spread paper fills paid today (the "[paper] Stale price" lines below: fills on old prices).

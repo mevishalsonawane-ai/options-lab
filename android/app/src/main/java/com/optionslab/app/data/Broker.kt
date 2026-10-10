@@ -75,6 +75,69 @@ object Broker {
     private const val PASS_BOOK_MS = 20_000L
     private val passBook = com.optionslab.ira.PassShare<Positions>(PASS_BOOK_MS)
 
+    // ---- the watch's workers (10 Oct): one request budget, shared reads, one door for entries ----------------------
+
+    /**
+     * Which lane a Zerodha request belongs to (Boss, 10 Oct: the watch's workers run side by side): exits, stops and the
+     * loss limit first ([com.optionslab.ira.RateGate.Priority.SAFETY]), then entries and ordinary reads, then Jarvis's
+     * analysis. Put on a coroutine's context; a request with none is an ordinary read. Every order is SAFETY.
+     */
+    class Lane(val priority: com.optionslab.ira.RateGate.Priority) : kotlin.coroutines.AbstractCoroutineContextElement(Lane) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<Lane>
+    }
+
+    /** At most 8 requests to Zerodha in any second from this phone, whatever runs at once (Kite allows about 10). */
+    private val rate = com.optionslab.ira.RateGate(perSecond = 8)
+
+    /**
+     * Positions, orders and margins asked for by several workers at once are read once: a caller whose read is already on
+     * its way (started at most [SHARE_MS] ago, with no order, change or cancel since) waits for that one. Nothing is kept
+     * after a read ends ([com.optionslab.ira.SingleFlight]), so no caller gets an older answer than it would have.
+     */
+    const val SHARE_MS = 2_000L
+    private val positionsShared = com.optionslab.ira.SingleFlight<Positions>()
+    private val ordersShared = com.optionslab.ira.SingleFlight<List<OrderRow>>()
+    private val fundsShared = com.optionslab.ira.SingleFlight<Funds>()
+
+    /** What a shared read runs with: the caller's quick-read marker and lane (never its job). */
+    private suspend fun shareContext(): kotlin.coroutines.CoroutineContext {
+        val c = kotlinx.coroutines.currentCoroutineContext()
+        return (c[FastRead] ?: kotlin.coroutines.EmptyCoroutineContext) + (c[Lane] ?: kotlin.coroutines.EmptyCoroutineContext)
+    }
+
+    /** The shared reads' key: the change count (an order from here, or one the stream reported) and the quick-read marker. */
+    private suspend fun shareKey(gen: Long): Pair<Long, Boolean> = gen to (kotlinx.coroutines.currentCoroutineContext()[FastRead] != null)
+
+    /** The diagnostics' line: requests sent through the budget, how many waited, reads shared, entries at the door. */
+    fun sharingLine(): String = "Zerodha requests: ${rate.taken} sent (8 a second at most), ${rate.waited} waited for the budget; " +
+        "reads shared: positions ${positionsShared.joins}, orders ${ordersShared.joins}, margins ${fundsShared.joins}; " +
+        "entry door: ${entryGate.went} through, ${entryGate.refused} refused" + (entryGate.lastRefusal?.let { " (last: $it)" } ?: "")
+
+    /**
+     * The one door every new Zerodha position goes through (10 Oct, [com.optionslab.ira.EntryGate]): one entry at a time from
+     * any worker, the kill switch read again at the last moment (and, for the bots' own entries, the daily loss limit, the
+     * bot's day stop and the Zerodha day lock). Exits never come here.
+     */
+    private val entryGate = com.optionslab.ira.EntryGate(maxWaitMs = 15_000L)
+
+    /** The order tags of the bots' own entries (ORB and Liquidity, the Pine scripts, the scheduled strategies). */
+    private val BOT_TAGS = setOf("iraorb", "irapine", "iraalgostrat")
+
+    /**
+     * Why an entry may not be sent NOW, asked inside the door (null: it may). Reads memory and the settings already in it:
+     * no lock any bot holds (the bots call [placeOrder] holding their own).
+     */
+    internal fun entryRecheck(o: Kite.Order): String? {
+        // One in-memory read of the kill switch (the settings' own key), not the whole settings: the door stays fast.
+        if (SecurePrefs.getBoolean(AppSettings.KILL_KEY, false)) return "refused: the kill switch is on"
+        if (o.tag in BOT_TAGS) {
+            if (LossBreaker.trippedToday()) return "refused: the daily loss limit was reached today"
+            if (Strategies.stopHint() != null) return "stopped_for_today"
+            DayLockGuard.refusal(true)?.let { return it }
+        }
+        return null
+    }
+
     fun init(context: Context) { app = context.applicationContext }
 
     class NotLoggedIn : IOException("Log in to Zerodha for today first")
@@ -250,6 +313,12 @@ object Broker {
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
             // warms the order route).
             val test = testEndpoint
+            // One budget for every request from this phone (10 Oct): orders first, then the caller's lane. A wait suspends.
+            if (test == null) {
+                val p = if (method != "GET" && !readOnly) com.optionslab.ira.RateGate.Priority.SAFETY
+                    else kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY
+                rate.acquire(p)
+            }
             val relay = if (((method != "GET" && !readOnly) || viaRelay) && test == null) Relay.proxy() else null
             val url = URL((test?.base ?: Kite.API) + path)
             val c = (if (relay != null) url.openConnection(relay) else url.openConnection()) as HttpsURLConnection
@@ -483,14 +552,18 @@ object Broker {
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING")
 
     suspend fun funds(): Funds {
-        val at = System.currentTimeMillis()
-        val eq = (call("GET", "/user/margins") as JSONObject).getJSONObject("equity")
-        val a = eq.optJSONObject("available") ?: JSONObject()
-        val u = eq.optJSONObject("utilised") ?: JSONObject()
-        return Funds(a.optDouble("live_balance", a.optDouble("cash", 0.0)), u.optDouble("debits", 0.0), eq.optDouble("net", 0.0),
-            a.optDouble("opening_balance", 0.0), a.optDouble("collateral", 0.0), u.optDouble("span", 0.0), u.optDouble("exposure", 0.0),
-            u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0))
-            .also { fundsKept = at to it }
+        // Workers asking at once share one read ([SHARE_MS]); kept and published with when that read began.
+        val r = fundsShared.run(shareKey(writes.get()), SHARE_MS, shareContext()) {
+            val eq = (call("GET", "/user/margins") as JSONObject).getJSONObject("equity")
+            val a = eq.optJSONObject("available") ?: JSONObject()
+            val u = eq.optJSONObject("utilised") ?: JSONObject()
+            Funds(a.optDouble("live_balance", a.optDouble("cash", 0.0)), u.optDouble("debits", 0.0), eq.optDouble("net", 0.0),
+                a.optDouble("opening_balance", 0.0), a.optDouble("collateral", 0.0), u.optDouble("span", 0.0), u.optDouble("exposure", 0.0),
+                u.optDouble("option_premium", 0.0), u.optDouble("m2m_realised", 0.0), u.optDouble("m2m_unrealised", 0.0))
+        }
+        fundsKept = r.startedAt to r.value
+        runCatching { AppState.publishFunds(r.value, r.startedAt) }
+        return r.value
     }
 
     // ---- kept reads for the hot path (round 2) ---------------------------------------------------------------
@@ -589,10 +662,15 @@ object Broker {
         val ticket = passBook.ticket()
         val at = passBook.now()
         val gen = writes.get()
-        val t0 = System.currentTimeMillis()
-        val d = call("GET", "/portfolio/positions") as JSONObject
-        return Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
-            .also { passBook.put(ticket, at, it); keptBook = Kept(t0, gen, it) }
+        // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
+        val r = positionsShared.run(shareKey(gen), SHARE_MS, shareContext()) {
+            val d = call("GET", "/portfolio/positions") as JSONObject
+            Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
+        }
+        passBook.put(ticket, at, r.value)
+        keptBook = Kept(r.startedAt, gen, r.value)
+        runCatching { AppState.publishPositions(r.value, r.startedAt) }
+        return r.value
     }
 
     /** The market watch opens and closes its pass: within it, [passPositionBook] reads Zerodha at most once. */
@@ -623,10 +701,13 @@ object Broker {
 
     suspend fun orders(): List<OrderRow> {
         val gen = writes.get()
-        val t0 = System.currentTimeMillis()
-        val arr = call("GET", "/orders") as JSONArray
-        val list = rows(arr).map(::orderRow).sortedByDescending { it.placedAt }
-        keptOrders = Kept(t0, gen, list)
+        // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
+        val r = ordersShared.run(shareKey(gen), SHARE_MS, shareContext()) {
+            rows(call("GET", "/orders") as JSONArray).map(::orderRow).sortedByDescending { it.placedAt }
+        }
+        val list = r.value
+        keptOrders = Kept(r.startedAt, gen, list)
+        runCatching { AppState.publishOrders(list, r.startedAt) }
         // The "Open" widget's pending orders come from the reads already made here, handed to its own thread so this
         // (an order path) never waits on its vault write or the launcher.
         runCatching { com.optionslab.app.widget.OpenWidget.fromOrdersSoon(app, list) }
@@ -1001,6 +1082,21 @@ object Broker {
     suspend fun placeOrder(o: Kite.Order, exit: Boolean = false): String {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
+        // An exit never waits behind an entry.
+        if (exit) return com.optionslab.app.work.TradingBusy.during { send(o) }
+        // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
+        // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
+        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o) }) { com.optionslab.app.work.TradingBusy.during { send(o) } }) {
+            is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
+            is com.optionslab.ira.EntryGate.Outcome.Refused -> {
+                runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): ${r.why}") }
+                throw KiteError("entry_gate", r.why)
+            }
+        }
+    }
+
+    /** Sends [o] (the order itself, timed); [placeOrder] decides whether it may. */
+    private suspend fun send(o: Kite.Order): String {
         // Order speed: the body is built before the clock starts (a string; nothing is fetched for it), then the request is
         // timed from its start to Zerodha's answer. The price's age is the stamp of this contract's last stream tick.
         val body = o.formBody()

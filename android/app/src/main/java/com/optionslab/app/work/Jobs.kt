@@ -428,6 +428,8 @@ object Tasks {
      */
     private suspend inline fun step(name: String, block: () -> Unit) {
         Heartbeat.stepBegin(name)
+        // Measured (10 Oct): every step's time today, for the diagnostics' and the Order speed card's slowest steps.
+        val t0 = System.currentTimeMillis()
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -436,6 +438,45 @@ object Tasks {
         } catch (e: Throwable) {
             stepFailed(name, e)
         } finally {
+            WatchWorkers.timed(name, System.currentTimeMillis() - t0)
+            Heartbeat.stepEnd()
+        }
+    }
+
+    /**
+     * [block] as safety work (10 Oct): its Zerodha requests go first in the shared budget ([com.optionslab.app.data.Broker.Lane]),
+     * and Jarvis's model gives way while it runs ([TradingBusy]).
+     */
+    internal suspend fun <T> safely(block: suspend () -> T): T = TradingBusy.during {
+        kotlinx.coroutines.withContext(com.optionslab.app.data.Broker.Lane(com.optionslab.ira.RateGate.Priority.SAFETY)) { block() }
+    }
+
+    /** When a group last said some of its steps were still running (one diary line a minute at most). */
+    @Volatile private var lateToldAt = 0L
+
+    /**
+     * [steps] side by side as one group of the watch's workers ([WatchWorkers], [com.optionslab.ira.Supervisor.group]): each in
+     * its own try, with this pass's context; a step still running after [waitMs] is left to finish by itself (never cut: it
+     * may be placing an order) and the pass goes on. [inOrder] (a test's pass), or no watch running: one after another in
+     * the given order, exactly as before.
+     */
+    internal suspend fun together(group: String, steps: List<com.optionslab.ira.Supervisor.Step>, waitMs: Long, inOrder: Boolean) {
+        val sup = WatchWorkers.supervisor
+        if (inOrder || sup == null) {
+            for (st in steps) step(st.name) { st.body() }
+            return
+        }
+        Heartbeat.stepBegin("$group, side by side: " + steps.joinToString(", ") { it.name })
+        val t0 = System.currentTimeMillis()
+        try {
+            val late = sup.group(group, steps, waitMs)
+            val now = System.currentTimeMillis()
+            if (late.isNotEmpty() && now - lateToldAt >= 60_000L) {
+                lateToldAt = now
+                Heartbeat.diary("Still running after ${waitMs / 1000} s, left to finish: ${late.joinToString(", ")} (the pass goes on)")
+            }
+        } finally {
+            WatchWorkers.timed("$group (together)", System.currentTimeMillis() - t0)
             Heartbeat.stepEnd()
         }
     }
@@ -552,6 +593,7 @@ object Tasks {
 
     private suspend inline fun word(name: String, block: () -> Unit) {
         wordsStep = name
+        val t0 = System.currentTimeMillis()
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -560,6 +602,30 @@ object Tasks {
             stepFailed("Jarvis $name", e)
         } catch (e: Throwable) {
             stepFailed("Jarvis $name", e)
+        } finally {
+            WatchWorkers.timed("Jarvis $name", System.currentTimeMillis() - t0)
+        }
+    }
+
+    @Volatile private var wordsRoundAt = 0L
+
+    /**
+     * The words worker's pace (10 Oct): a round a minute in NSE's session (two with the battery saver on), as the pass gave
+     * it; null (asleep) outside it.
+     */
+    internal fun wordsDelay(context: Context?): Long? {
+        if (!(Market.isTradingDay() && Market.minuteNow() in Market.OPEN..Market.foClose())) return null
+        val every = if (WatchWorkers.saver(context)) 120_000L else 60_000L
+        return (every - (System.currentTimeMillis() - wordsRoundAt)).coerceIn(0L, every)
+    }
+
+    /** One round of Jarvis's words-only checks as the lowest-priority worker: its Zerodha reads go last in the budget. */
+    internal suspend fun wordsRound() {
+        wordsRoundAt = System.currentTimeMillis()
+        wordsSince = wordsRoundAt
+        kotlinx.coroutines.withContext(com.optionslab.app.data.Broker.Lane(com.optionslab.ira.RateGate.Priority.ANALYSIS)) {
+            com.optionslab.app.data.Broker.passBegin()
+            try { wordsSteps() } finally { com.optionslab.app.data.Broker.passEnd(); wordsStep = null }
         }
     }
 
@@ -665,36 +731,46 @@ object Tasks {
         // The static-IP relay and the order route: connected ahead of the first order, in the background ([warmRoutes]).
         warmRoutes(s)
         // Paper account (also used by paper strategy runs in LIVE mode): resting orders fill, MIS squares off, expiries settle.
-        step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
-        // One daily loss limit over every bot: past it, all of them sell and stop for the day.
-        step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
-        // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
-        step("ORB arms") { com.optionslab.app.data.OrbArms.tick() }
-        // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
-        step("Night (R3)") { com.optionslab.app.data.NightArm.tick() }
-        // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
-        step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() }
-        // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
-        step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() }
-        // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
-        step("stops and targets") { com.optionslab.app.data.Protections.tick() }
-        // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
-        step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
-        // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 5 trading days before (paper and live).
-        step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
-        // The MCX paper arms (9 Oct, research M3/M4/M2; paper only, off by default): their exits, then their entries.
-        step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
-        // Strategy Module: schedules, prices, per-leg and basket risk, exits.
-        step("strategies") {
-            val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
-            com.optionslab.app.data.Strategies.tickAll(bad)
+        // The safety steps first, in order (10 Oct: their Zerodha requests go first, and Jarvis's model gives way meanwhile).
+        safely {
+            step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
+            // One daily loss limit over every bot: past it, all of them sell and stop for the day.
+            step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
+            // The guards as they stand now, in the shared state (memory: the settings and the breaker's record).
+            runCatching { com.optionslab.app.data.AppState.refreshGuards() }
         }
-        // Jarvis's own trade management after the stops, the square-off and the strategies (their Zerodha reads are
-        // bounded, but they never go first).
-        // Jarvis: approved news trades - the best price seen, the profit-lock stop moved up, the result recorded.
-        if (com.optionslab.app.BuildConfig.JARVIS) step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() }
-        // Solo (paper only, Boss's switch): its open trade managed, or the next one looked for.
-        if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.tick() }
+        // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
+        // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
+        together("arms", listOf(
+            // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
+            com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
+            // Night (R3), paper only (08 Oct): its 09:16 sales, and its 15:20 decisions when armed.
+            com.optionslab.ira.Supervisor.Step("Night (R3)") { com.optionslab.app.data.NightArm.tick() },
+            // VIX divergence, paper only (9 Oct, research R1 N13): its exits, and its 10:30-13:30 checks when armed.
+            com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+            // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
+            com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
+        ), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
+        safely {
+            // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
+            step("stops and targets") { com.optionslab.app.data.Protections.tick() }
+            // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
+            step("expiry square-off") { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
+            // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 5 trading days before (paper and live).
+            step("MCX expiry exit") { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
+        }
+        // After the square-off (so what it closed is booked as closed), side by side as above: the MCX paper arms (9 Oct,
+        // research M3/M4/M2; paper only, off by default), the Strategy Module (schedules, prices, per-leg and basket risk,
+        // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
+        together("arms after the square-off", listOfNotNull(
+            com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            com.optionslab.ira.Supervisor.Step("strategies") {
+                val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
+                com.optionslab.app.data.Strategies.tickAll(bad)
+            },
+            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
+            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
+        ), WatchWorkers.ARMS_WAIT_MS, inOrder = lanes == null)
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
         step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
         // Jarvis: your own stops trailed up automatically (Boss's switch).
@@ -709,8 +785,9 @@ object Tasks {
         // The market recorder (Boss's 06 Oct approval): what the app already reads, kept for a later study. It starts its pass
         // in its own scope and returns at once - never awaited, never thrown (only in the service: tests' passes skip it).
         if (lanes != null) runCatching { com.optionslab.app.data.MarketRecorder.kick() }
-        // Jarvis's words-only checks in their own lane (outside the service - tests - they run here, in order).
-        if (lanes != null) wordsLane(lanes) else wordsSteps()
+        // Jarvis's words-only checks in their own lane (outside the service - tests - they run here, in order); since 10 Oct
+        // a worker of their own when the watch started one ([wordsRound]).
+        if (lanes != null) { if (!WatchWorkers.wordsByWorker) wordsLane(lanes) } else wordsSteps()
     }
 
 
@@ -722,13 +799,18 @@ object Tasks {
         // One pass: the words-only checks and the notice's P&L line share one Zerodha positions read (dropped on any
         // order, change or cancel); everything that orders still reads fresh.
         com.optionslab.app.data.Broker.passBegin()
+        val t0 = System.currentTimeMillis()
         try {
             return watchTickOnce(context, s, fired, lanes)
         } finally {
             com.optionslab.app.data.Broker.passEnd()
             Heartbeat.stepEnd()
+            WatchWorkers.timed(PASS_TOTAL, System.currentTimeMillis() - t0)
         }
     }
+
+    /** The whole pass's time, beside its steps' (the Order speed card says it). */
+    const val PASS_TOTAL = "watch pass (total)"
 
     private suspend fun watchTickOnce(context: Context, s: AppSettings, fired: MutableSet<String>, lanes: CoroutineScope?): Tick {
         riskSteps(context, s, lanes)
@@ -783,6 +865,7 @@ object Tasks {
                 runCatching { com.optionslab.app.data.McxMarket.noteLive(book.net) }
             }?.takeIf { it.net.isNotEmpty() }?.let { book ->
                 com.optionslab.app.data.PnlTracker.record(book.pnl)
+                runCatching { com.optionslab.app.data.AppState.publishPnl(book.pnl, null) }
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, -1) }
                 accountPnl = book.pnl
                 // Zerodha's P&L is before charges (as Zerodha shows it); the day's charges, estimated from the trades the
@@ -805,6 +888,7 @@ object Tasks {
             // day of candles ([com.optionslab.ira.NoticePrice]). The stops and limits above read their own, as before.
             runCatching { com.optionslab.app.data.Paper.snapshot(com.optionslab.ira.NoticePrice.REUSE_MS) }.getOrNull()?.let { snap ->
                 val pnl = snap.dayPnl
+                runCatching { com.optionslab.app.data.AppState.publishPnl(null, pnl) }
                 runCatching { com.optionslab.app.data.DailyPnl.record(false, pnl, snap.trades.size, snap.dayCharges) }
                 // Orders on the same contract net into one position (two arms buying it = one position of 2 lots),
                 // so the line says positions and the quantity they hold, not orders.
@@ -854,7 +938,7 @@ object Tasks {
      */
     suspend fun mcxTick(context: Context, s: AppSettings): Tick {
         com.optionslab.app.data.Broker.passBegin()
-        try {
+        try { safely {
             step("live price stream") { com.optionslab.app.data.KiteStream.ensure() }
             step("paper orders") { paperEvents(context, com.optionslab.app.data.Paper.tick()) }
             step("daily loss limit") { com.optionslab.app.data.LossBreaker.check(context) }
@@ -869,7 +953,7 @@ object Tasks {
             }
             step("position cards") { PositionCards.refresh(context) }
             runCatching { Heartbeat.beat(context) }
-        } finally {
+        } } finally {
             com.optionslab.app.data.Broker.passEnd()
             Heartbeat.stepEnd()
         }
@@ -1183,9 +1267,18 @@ class WatchService : Service() {
         val pulse = launch {
             while (true) { Heartbeat.pulse(); delay(com.optionslab.ira.WatchHealth.PULSE_MS) }
         }
+        // The watch's workers (10 Oct): the arms' groups run under this run's supervisor, and Jarvis's words-only checks as
+        // the lowest-priority worker of their own. They end with this run.
+        val workers = WatchWorkers.begin(this)
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            val app = this@WatchService
+            workers.supervisor.start(com.optionslab.ira.Supervisor.Spec(WatchWorkers.WORDS, "analysis", timeoutMs = 5 * 60_000L,
+                cancelOnTimeout = true, nextDelayMs = { Tasks.wordsDelay(app) })) { Tasks.wordsRound() }
+        }
         try {
-            watchLoop(s)
+            watchLoop(s, workers)
         } finally {
+            WatchWorkers.end(workers)
             pulse.cancel()
             // Only the newest run's end stops the pulse (an old run ending after a new start leaves the new one's).
             // Checked and done under the one lock (fields in memory only), so a new run cannot start between the two.
@@ -1198,7 +1291,7 @@ class WatchService : Service() {
         }
     }
 
-    private suspend fun watchLoop(s: AppSettings) {
+    private suspend fun watchLoop(s: AppSettings, workers: WatchWorkers.Run) {
         val fired = HashSet<String>()
         if (Holidays.stale(Market.today())) runCatching { Holidays.refresh() }
         val b = com.optionslab.app.data.Broker
@@ -1226,6 +1319,8 @@ class WatchService : Service() {
                     delay(15_000)
                 }
             }
+            // The day's end (not a stop): an arm still finishing an entry or an exit gets a minute before its worker ends.
+            WatchWorkers.drain(workers)
         } finally {
             com.optionslab.app.data.FastPath.stop()
         }
@@ -1302,27 +1397,12 @@ class WatchService : Service() {
                         } catch (e: Throwable) {
                             Tasks.stepFailed("bar-close entry check: paper orders", e)
                         }
-                        try {
-                            com.optionslab.app.data.OrbArms.tick()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("bar-close entry check: ORB arms", e)
-                        }
-                        try {
-                            com.optionslab.app.data.NightArm.tick()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("bar-close entry check: Night (R3)", e)
-                        }
-                        try {
-                            com.optionslab.app.data.VixDivArm.tick()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("bar-close entry check: VIX divergence", e)
-                        }
+                        // The three arms side by side (10 Oct), each in its own try, with this check's timing trigger.
+                        Tasks.together("bar-close entry check", listOf(
+                            com.optionslab.ira.Supervisor.Step("bar-close entry check: ORB arms") { com.optionslab.app.data.OrbArms.tick() },
+                            com.optionslab.ira.Supervisor.Step("bar-close entry check: Night (R3)") { com.optionslab.app.data.NightArm.tick() },
+                            com.optionslab.ira.Supervisor.Step("bar-close entry check: VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
+                        ), WatchWorkers.ARMS_WAIT_MS, inOrder = false)
                     } } finally { Heartbeat.stepEnd() }
                     Heartbeat.beat(this)
                     continue
@@ -1337,8 +1417,9 @@ class WatchService : Service() {
                 } else delay(if (holding) 15_000 else next - System.currentTimeMillis())
                 if (holding) {
                     Heartbeat.stepBegin("15-second stop check")
+                    val checkAt = System.currentTimeMillis()
                     // Each in its own try: a paper or ORB failure never skips the stops and targets.
-                    try {
+                    try { Tasks.safely {
                         try {
                             com.optionslab.app.data.Paper.tick().let { Tasks.paperEventsPublic(this, it) }
                         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1346,38 +1427,16 @@ class WatchService : Service() {
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: paper orders", e)
                         }
-                        try {
-                            com.optionslab.app.data.OrbArms.priceCheckOnly()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: ORB arms", e)
-                        }
-                        // Every money exit runs here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3): the Pine scripts' stops and
-                        // locks, Solo's exits (Liquidity's index exits run in the ORB arms' check above). Each under its own
-                        // lock, as in the full pass, so a holding never has two sells in flight. Jarvis's words stay in the full pass.
-                        try {
-                            com.optionslab.app.data.PineAuto.watchOnly()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: Pine scripts", e)
-                        }
-                        if (com.optionslab.app.BuildConfig.JARVIS) try {
-                            com.optionslab.app.ira.IraSolo.manageOnly()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: Solo", e)
-                        }
-                        // Jarvis's own trades: their profit-lock stop and exits (a money step, under its own lock).
-                        if (com.optionslab.app.BuildConfig.JARVIS) try {
-                            com.optionslab.app.ira.IraNewsTrades.tick()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Throwable) {
-                            Tasks.stepFailed("15-second stop check: Jarvis's trades", e)
-                        }
+                        // The arms' exits side by side (10 Oct): ORB's (with Liquidity's index exits), and every money exit run
+                        // here too (08 Oct, research/PROFIT_LOCK_8OCT.md fix 3) - the Pine scripts' stops and locks, Solo's exits,
+                        // Jarvis's own trades' profit-lock stop and exits. Each under its own lock, as in the full pass, so a
+                        // holding never has two sells in flight; each in its own try. Jarvis's words stay in the full pass.
+                        Tasks.together("15-second stop check", listOfNotNull(
+                            com.optionslab.ira.Supervisor.Step("15-second stop check: ORB arms") { com.optionslab.app.data.OrbArms.priceCheckOnly() },
+                            com.optionslab.ira.Supervisor.Step("15-second stop check: Pine scripts") { com.optionslab.app.data.PineAuto.watchOnly() },
+                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Solo") { com.optionslab.app.ira.IraSolo.manageOnly() } else null,
+                            if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
+                        ), WatchWorkers.EXITS_WAIT_MS, inOrder = false)
                         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the
                         // bots' live stops, and the no-price failsafe (REST quotes; a loud warning after two minutes).
                         try {
@@ -1394,7 +1453,10 @@ class WatchService : Service() {
                         } catch (e: Throwable) {
                             Tasks.stepFailed("15-second stop check: stops and targets", e)
                         }
-                    } finally { Heartbeat.stepEnd() }
+                    } } finally {
+                        WatchWorkers.timed("15-second stop check (total)", System.currentTimeMillis() - checkAt)
+                        Heartbeat.stepEnd()
+                    }
                     runCatching { PositionCards.refresh(this) }
                 }
                 Heartbeat.beat(this)

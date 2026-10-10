@@ -243,7 +243,10 @@ object FastPath {
 
     /** One lane's steps, each in its own try (one failing never skips the next), timed from [triggerMs]. */
     private suspend fun runLane(ctx: Context, lane: FastLane.Lane, triggerMs: Long, exchMs: Long?, source: OrderSpeed.Source, s: Snap?) {
-        withContext(OrderTiming.Trigger(triggerMs, exchMs, source) + Broker.FastRead()) {
+        // 10 Oct: the exits' lanes go first in Zerodha's shared request budget (the entries' lanes as ordinary requests).
+        val priority = if (lane == FastLane.Lane.STREAM || lane == FastLane.Lane.LIVE) Broker.Lane(com.optionslab.ira.RateGate.Priority.SAFETY)
+            else kotlin.coroutines.EmptyCoroutineContext
+        withContext(OrderTiming.Trigger(triggerMs, exchMs, source) + Broker.FastRead() + priority) {
             when (lane) {
                 FastLane.Lane.STREAM -> {
                     if (s?.paper != false) step("paper orders") { com.optionslab.app.work.Tasks.paperEventsPublic(ctx, Paper.tick()) }
@@ -251,11 +254,13 @@ object FastPath {
                 }
                 // Jarvis's news trades are left to the watch's passes: their exits rest as protections, checked here.
                 // [stream]: every held instrument has a fresh tick - decided from the stream, Zerodha's books as last read.
-                FastLane.Lane.LIVE -> {
+                FastLane.Lane.LIVE -> com.optionslab.app.work.TradingBusy.during {
+                    // Real-money exits: Jarvis's model gives way while they run (10 Oct).
                     val stream = s?.st?.liveFresh == true
                     if (OrbArms.liveHint) step("ORB arms") { OrbArms.priceCheckOnly(fast = true, stream = stream) }
                     if (PineAuto.holding()) step("Pine scripts") { PineAuto.watchOnly(fast = true, stream = stream) }
                     if (Protections.activeHint != false) step("stops and targets") { Protections.tick(fast = true, stream = stream) }
+                    Unit
                 }
                 FastLane.Lane.MINUTE -> {
                     step("Night (R3)") { NightArm.tick() }
@@ -274,12 +279,16 @@ object FastPath {
     }
 
     private suspend inline fun step(name: String, block: () -> Unit) {
+        // Measured (10 Oct): each check's time today, beside the watch's steps.
+        val t0 = System.currentTimeMillis()
         try {
             block()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Throwable) {
             com.optionslab.app.work.Tasks.stepFailed("fast check: $name", e)
+        } finally {
+            com.optionslab.app.work.WatchWorkers.timed("fast check: $name", System.currentTimeMillis() - t0)
         }
     }
 }
