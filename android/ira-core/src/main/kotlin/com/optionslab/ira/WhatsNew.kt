@@ -52,6 +52,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-10-manager-specialists", OCT10, "The trade manager is now a team of specialists",
+            "Sixteen specialists watch an open trade, each reading its own data: order flow, VWAP, volume, OI, traps, news. " +
+                "They share what they see, and a chair weighs their votes into one decision. " +
+                "News, traps and bad data can still order an exit alone. " +
+                "The lock still only rises, a stop is never widened and nothing is ever added. " +
+                "Each specialist keeps a report card against the original rules. " +
+                "On paper and shadow their weights tune slowly; a specialist that hurts is muted, and you can mute one yourself. " +
+                "Live trades keep fixed weights until you accept a change with your PIN.",
+            "Home → Dashboard → Strategies card → Trade manager → Specialists",
+            ask = "how are the manager's specialists doing"),
         Entry("2026-10-10-trade-manager", OCT10, "Solo and Pine manage their open trades",
             "After a fill, a trade manager watches the trade with the live order flow, VWAP, value area and findings. " +
                 "It exits early when sellers or buyers take over, a trap turns against it, or news is about to start. " +
