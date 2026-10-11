@@ -55,6 +55,8 @@ object AreaE {
         com.optionslab.app.ira.IraNotes.clear()
         // Jarvis's lessons from the agents start empty in each test (a singleton: never carried from an earlier test).
         com.optionslab.app.ira.JarvisLearning.resetForTest()
+        // Autopilot's change log, knobs and setting start fresh in each test (a singleton too).
+        com.optionslab.app.ira.Autopilot.resetForTest()
         SessionLock.lock()
     }
 

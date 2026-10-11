@@ -65,6 +65,20 @@ object MarketBrain {
      * a single value for all). Realised: the mean |move| against the normal; range: high-low of the closes against the random
      * walk's expected range (2·√n·normal). z = ln(ratio) / [SIGMA_LN].
      */
+    /**
+     * [r]'s state read with other thresholds ([busyZ], [quietZ]): what Autopilot's learned regime thresholds would say, shown
+     * beside the real regime (shadow only - the brain's pauses keep [BUSY_Z] and [QUIET_Z]).
+     */
+    fun stateWith(r: Regime, busyZ: Double, quietZ: Double = QUIET_Z): State {
+        val rv = r.rvZ ?: return r.state
+        val rg = r.rangeZ ?: return r.state
+        return when {
+            rv >= busyZ || rg >= busyZ -> State.BUSY
+            rv <= quietZ && rg <= quietZ -> State.QUIET
+            else -> State.NORMAL
+        }
+    }
+
     fun regime(name: String, closes: List<Double>, normalBp: List<Double>): Regime {
         val c = closes.filter { it > 0 }.takeLast(WINDOW_MINUTES + 1)
         val n = c.size - 1

@@ -148,6 +148,8 @@ private fun LessonRow(l: AgentLessons.Lesson) {
         }
         Text("${l.topic.title} · ${l.status.word}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp))
         Text(AgentLessons.evidenceLine(l), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        // What Autopilot made of it (applied, kept or reverted): he learns from his own changes.
+        l.auto?.let { Text("Autopilot: $it", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp)) }
     }
 }
 

@@ -92,6 +92,8 @@ object AgentLessons {
         val cooldownUntil: LocalDate? = null,
         val proposedOn: LocalDate? = null,
         val accepted: Boolean = false,
+        /** What Autopilot made of it ([AutoChange]): "applied 11 Oct", "kept 18 Oct", "reverted 18 Oct"; null: nothing. */
+        val auto: String? = null,
     ) {
         /** Its evidence, worked out once (a copy works it out afresh); not part of what it equals. */
         internal val ev: Evidence by lazy(LazyThreadSafetyMode.PUBLICATION) { evidence(kind, id, buckets) }
@@ -578,7 +580,7 @@ object AgentLessons {
                 firstSeen = minOf(o.firstSeen, l.firstSeen), lastSeen = maxOf(o.lastSeen, l.lastSeen),
                 confidence = confidence(e), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
                 rejections = o.rejections + l.rejections, cooldownUntil = listOfNotNull(o.cooldownUntil, l.cooldownUntil).maxOrNull(),
-                proposedOn = listOfNotNull(o.proposedOn, l.proposedOn).maxOrNull(), accepted = o.accepted || l.accepted,
+                proposedOn = listOfNotNull(o.proposedOn, l.proposedOn).maxOrNull(), accepted = o.accepted || l.accepted, auto = o.auto ?: l.auto,
                 status = if (o.status.ordinal >= l.status.ordinal) o.status else l.status)
         }
         return out.values.toList()
@@ -605,7 +607,7 @@ object AgentLessons {
 
     /** At most this many characters a lesson takes in the file (its line, and [BUCKET_CHARS] a day). */
     private fun bound(l: Lesson): Int = 160 + 2 * l.id.length + l.name.length + l.tags.sumOf { it.length + 1 } + l.agents.sumOf { it.length + 1 } +
-        l.buckets.size * BUCKET_CHARS
+        l.buckets.size * BUCKET_CHARS + (l.auto?.length ?: 0)
     private const val BUCKET_CHARS = 48
 
     /**
@@ -773,6 +775,23 @@ object AgentLessons {
             (book.timeline + Milestone(day, "first-accepted", "First proposal you accepted: ${book.lessons.firstOrNull { it.id == id }?.let { statement(it) } ?: id}")).takeLast(TIMELINE)
             else book.timeline
         return book.copy(lessons = ls, timeline = tl)
+    }
+
+    /**
+     * What Autopilot made of [lessonId]'s change on [on] ([AutoChange]): "applied", "kept" or "reverted" - so Jarvis learns
+     * from his own changes. A change kept raises the lesson's weight a little; one reverted by its own check lowers it as a
+     * no would, and rests the lesson's proposals [COOLDOWN_DAYS] days.
+     */
+    fun autoStatus(book: Book, lessonId: String, status: String, on: LocalDate): Book {
+        val id = norm(lessonId)
+        if (book.lessons.none { it.id == id }) return book
+        return book.copy(lessons = book.lessons.map { l ->
+            if (l.id != id) l else when (status) {
+                "kept" -> l.copy(auto = "kept ${day(on)}", weight = minOf(2.0, l.weight + 0.1))
+                "reverted" -> l.copy(auto = "reverted ${day(on)}", weight = maxOf(0.1, l.weight * 0.6), cooldownUntil = on.plusDays(COOLDOWN_DAYS))
+                else -> l.copy(auto = "$status ${day(on)}")
+            }
+        })
     }
 
     // ---- questions ------------------------------------------------------------------------------------------------------------
@@ -981,7 +1000,8 @@ object AgentLessons {
                 .append('|').append(l.sign).append('|').append(l.status.name).append('|').append(l.confidence.name)
                 .append('|').append(l.firstSeen).append('|').append(l.lastSeen).append('|').append(l.statusOn)
                 .append('|').append(l.checkedN).append('|').append(l.flips).append('|').append(d(l.weight)).append('|').append(l.rejections)
-                .append('|').append(l.cooldownUntil ?: "").append('|').append(l.proposedOn ?: "").append('|').append(if (l.accepted) "1" else "0").append('\n')
+                .append('|').append(l.cooldownUntil ?: "").append('|').append(l.proposedOn ?: "").append('|').append(if (l.accepted) "1" else "0")
+                .append('|').append(l.auto?.let { cleanText(it) } ?: "").append('\n')
             sb.append("D|").append(clean(l.id)).append('|')
             for ((k, bk) in l.buckets.withIndex()) {
                 if (k > 0) sb.append(';')
@@ -1016,7 +1036,7 @@ object AgentLessons {
                         lessons[id] = Lesson(id, Topic.valueOf(f[2]), Kind.valueOf(f[3]), f[4], f[5].split(',').filter { it.isNotEmpty() },
                             f[6].split(',').filter { it.isNotEmpty() }.toSet(), emptyList(), f[7].toInt(), Status.valueOf(f[8]), Confidence.valueOf(f[9]),
                             LocalDate.parse(f[10]), LocalDate.parse(f[11]), LocalDate.parse(f[12]), f[13].toInt(), f[14].toInt(), f[15].toDouble().coerceIn(0.1, 2.0),
-                            f[16].toInt(), date(f[17]), date(f[18]), f[19] == "1")
+                            f[16].toInt(), date(f[17]), date(f[18]), f[19] == "1", f.getOrNull(20)?.takeIf { it.isNotEmpty() })
                     }
                     "D" -> for (part in f[2].split(';')) runCatching {
                         val x = part.split(',')

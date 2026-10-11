@@ -656,6 +656,8 @@ fun RiskPage(model: AppModel) {
     Page {
         item { PageTitle("Bot settings", "Limits on every order the bot or you place, paper and live") }
         item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
+        // Autopilot learning (11 Oct): OFF / SAFE / SHADOW-ONLY; SAFE asks for the PIN while live. Never from a backup.
+        if (com.optionslab.app.ira.Autopilot.enabled()) item { com.optionslab.app.ui.SettingSpot("jarvis.autolearn") { AutopilotSettingCard(model) } }
     }
 }
 

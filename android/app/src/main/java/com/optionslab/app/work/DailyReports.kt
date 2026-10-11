@@ -385,6 +385,8 @@ object DailyReports {
         // Jarvis: what he learned from the agents today (his pass runs now if the brain's worker has not run it yet).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching {
             com.optionslab.app.ira.JarvisLearning.learnIfDue(context)
+            // Autopilot learning right after his pass (its own once-a-day check; it tells its own changes).
+            runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
             com.optionslab.app.ira.JarvisLearning.eveningLine()
         }.getOrNull()?.let { lines += it }
         val title = "Day report · ${Market.today().format(DAY)}" + if (lines.first() != "No trades today.") " · ${rs(total)}" else ""

@@ -110,7 +110,8 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         } else null,
         strategies = { StrategyArmCard(model) { onGo("strategy") } },
         // Under the Strategies card: the MCX bots, then the trade manager; at the end, after the live orders, the reads.
-        afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }, "manager" to @Composable { TradeManagerHomeCard(model) }),
+        afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }, "manager" to @Composable { TradeManagerHomeCard(model) },
+            "autopilot" to @Composable { AutopilotHomeCard(model) }),
         reads = listOf("orderflow" to @Composable { OrderFlowHomeCard(model) }, "brain" to @Composable { BrainHomeCard() }))
 }
 

@@ -469,8 +469,11 @@ internal object IraActions {
             }
             Command.Kind.AUTOPILOT_ON, Command.Kind.AUTOPILOT_OFF -> Commands.describe(c) to suspend {
                 IraHub.autopilot = c.kind == Command.Kind.AUTOPILOT_ON
+                // "Turn off autopilot" also turns Autopilot learning off (it only lowers risk); "turn on" never raises it (Settings, PIN).
+                val learningOff = c.kind == Command.Kind.AUTOPILOT_OFF && Autopilot.enabled() &&
+                    runCatching { Autopilot.voiceSet(com.optionslab.ira.AutoChange.Mode.OFF); Autopilot.mode.value == com.optionslab.ira.AutoChange.Mode.OFF }.getOrDefault(false)
                 if (IraHub.autopilot) "Autopilot on, Boss: strategies that pass two years of testing are added on paper by themselves, and ones I added that stop working are retired. Live still follows your mode switch."
-                else "Autopilot off: I will ask before adding a strategy."
+                else "Autopilot off: I will ask before adding a strategy." + if (learningOff) " Autopilot learning is off too: nothing changes by itself." else ""
             }
             Command.Kind.EVENT_ADD -> {
                 val d = c.day; val n = c.target

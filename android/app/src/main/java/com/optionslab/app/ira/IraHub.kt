@@ -1685,7 +1685,7 @@ object IraHub {
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
-                com.optionslab.ira.AgentLessons.asked(q) != null ||
+                com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null ||
                 (com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text)) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
@@ -1731,6 +1731,17 @@ object IraHub {
                 // One question (fillers gone, or a follow-up read in full) goes on as Boss's own words, so remembering,
                 // "the usual" and his everyday wordings still work; parts of a split stay questions only.
                 if (qs.size == 1) ask(qs[0], understood = false, cleaned = true) else qs.forEach { ask(it, understood = true) }
+                return
+            }
+        }
+        // Autopilot learning by voice (11 Oct): "turn off autopilot learning" lowers it at once; turning it up is refused (only in
+        // Settings, with the PIN when the live account is on). Before anything that acts, so "learning" said never reaches the
+        // old autopilot's command. Not in IraGoldAlgo.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) {
+            val autoVoice = runCatching { com.optionslab.ira.AutoChange.asked(q) }.getOrNull()
+            if (autoVoice != null && (autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.OFF || autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.RAISE)) {
+                val said = runCatching { Autopilot.answer(autoVoice) }.getOrElse { "I could not change Autopilot learning just now, Boss." }
+                _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
             }
         }
@@ -3762,6 +3773,17 @@ object IraHub {
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { com.optionslab.app.data.FlowGate.helpAnswer() }.getOrElse { "I could not read the order flow's log just now, Boss." })
             }
+            return true
+        }
+        // Autopilot learning (11 Oct): "what did you change today?", "why did you mute the OI specialist?", "how is autopilot
+        // doing?" from its own log ([Autopilot]); "undo your last change" is put to Boss as a request (with the PIN when it raises
+        // live risk). Nothing else acts. Not in IraGoldAlgo.
+        val autoAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.AutoChange.asked(q) }.getOrNull() else null
+        if (autoAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val said = runCatching { Autopilot.answer(autoAsk) }.getOrElse { "I could not read Autopilot's log just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
         // "Why do you think that?" / "what's the evidence?" right after a lessons answer (11 Oct): each lesson's evidence - how

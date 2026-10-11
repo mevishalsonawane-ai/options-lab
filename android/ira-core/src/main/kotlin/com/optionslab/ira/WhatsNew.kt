@@ -53,6 +53,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-autopilot-learning", OCT11, "Autopilot learning: the agents learn and heal by themselves",
+            "Jarvis and the agents now make the changes their lessons point to, by themselves, within strict bounds. " +
+                "On shadow and paper they tune themselves: thresholds, weights, mutes and pausing a losing paper strategy. " +
+                "On live they only lower risk by themselves; anything that adds live risk is still asked, with your PIN. " +
+                "Every change is logged with its reason and numbers and can be undone with one tap. " +
+                "After 15 trades or 5 days it is checked again, and reverts itself if it made things worse. " +
+                "It never touches the PIN, Live, AI-live, the guard, the app lock, the day lock, sizes or open orders. " +
+                "Switch it OFF, SAFE or SHADOW-ONLY in Settings; \"turn off autopilot\" by voice always works.",
+            "Home → Autopilot card → Change log; Settings → Jarvis → Autopilot learning",
+            ask = "how is autopilot doing", jarvisOnly = true),
         Entry("2026-10-11-jarvis-learns", OCT11, "Jarvis learns from the bots",
             "Each evening after the close, Jarvis studies what every bot, the trade manager, its specialists and the order flow kept. " +
                 "He turns it into lessons, each with its numbers: how many trades, the rupees and how often it worked. " +

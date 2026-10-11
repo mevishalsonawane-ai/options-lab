@@ -53,8 +53,14 @@ object DriftReview {
 
     private fun rs(x: Double) = ForwardCheck.rs(x)
 
-    /** [nets] (the forward trades in order, oldest first; rupees as the expectation's unit) of [e] on [live] or paper. */
-    fun review(e: ForwardCheck.Expectation, nets: List<Double>, live: Boolean): Review {
+    /**
+     * [nets] (the forward trades in order, oldest first; rupees as the expectation's unit) of [e] on [live] or paper.
+     * [zCrit] and [ddX]: the thresholds, which Autopilot ([AutoChange]) may only ever make stricter (lower) by itself -
+     * never past [Z_CRIT] or [DD_X] the other way.
+     */
+    fun review(e: ForwardCheck.Expectation, nets: List<Double>, live: Boolean, zCrit: Double = Z_CRIT, ddX: Double = DD_X): Review {
+        val zc = minOf(zCrit, Z_CRIT)
+        val dx = minOf(ddX, DD_X)
         val n = nets.size
         val recent = nets.takeLast(WINDOWS.max())
         val dd = ForwardCheck.drawdown(recent)
@@ -71,14 +77,14 @@ object DriftReview {
         val reasons = ArrayList<String>()
         for (w in windows) {
             val z = w.z ?: continue
-            if (z <= -Z_CRIT) reasons += "the last ${w.m} trades made ${rs(w.mean)} a trade against the backtest's ${rs(e.mean)} " +
+            if (z <= -zc) reasons += "the last ${w.m} trades made ${rs(w.mean)} a trade against the backtest's ${rs(e.mean)} " +
                 "(${String.format(Locale.ENGLISH, "%.1f", -z)} standard errors below)"
         }
         val cusNow = cus.lastOrNull() ?: 0.0
         if (cusNow >= CUSUM_H) reasons += "a sustained run below the backtest over its last ${recent.size} trades (CUSUM " +
             String.format(Locale.ENGLISH, "%.1f", cusNow) + ", alarm at $CUSUM_H)"
-        val ddX = if (e.lottery) LOTTERY_DD_X else DD_X
-        if (dd < ddX * e.maxDrawdown) reasons += "a drawdown of ${rs(dd)} over its last ${recent.size} trades, past ${ddX}x the backtest's worst ${rs(e.maxDrawdown)}"
+        val ddLimit = if (e.lottery) LOTTERY_DD_X else dx
+        if (dd < ddLimit * e.maxDrawdown) reasons += "a drawdown of ${rs(dd)} over its last ${recent.size} trades, past ${ddLimit}x the backtest's worst ${rs(e.maxDrawdown)}"
         return Review(e.key, e.name, live, n, if (reasons.isEmpty()) Verdict.ON_TRACK else Verdict.DRIFTING, reasons, windows,
             cus.lastOrNull() ?: 0.0, dd, e)
     }

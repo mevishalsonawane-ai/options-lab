@@ -194,6 +194,25 @@ object ManagerSpecialists {
         return "${f.name}'s live trades now use the tuned specialists' weights."
     }
 
+    /**
+     * Autopilot's undo of a weight the nightly tuning set ([com.optionslab.app.ira.Autopilot]): the self-tuned book only (shadow
+     * and paper ACT; the frozen live weights never move here), within [SpecialistBook.MIN_X]..[SpecialistBook.MAX_X] of the
+     * default. What to say; null when there is no such weight.
+     */
+    fun setTunedWeight(family: String, id: String, w: Double): String? {
+        val f = TradeManager.familyOf(family) ?: return null
+        if (id !in ManagerTeam.IDS || !w.isFinite()) return null
+        val def = base(_book.value, family).spec(id).weight
+        if (def <= 0) return null
+        val x = w.coerceIn(SpecialistBook.MIN_X * def, SpecialistBook.MAX_X * def)
+        changed { b ->
+            val t = b.tuned[family] ?: SpecialistBook.Tuning()
+            b.copy(tuned = b.tuned + (family to t.copy(weights = t.weights + (id to x))))
+        }
+        runCatching { Diag.record("trade manager", "${f.name}: ${ManagerTeam.nameOf(id)} weight set back by Autopilot's undo") }
+        return "${ManagerTeam.nameOf(id)} weight on ${f.name}: ${String.format(java.util.Locale.ENGLISH, "%.2f", x)} (shadow and paper)."
+    }
+
     /** The research's block (key=value or JSON) for one or more strategies. What to say. */
     fun importResearch(text: String): String {
         // (A per-index committee, "vixdiv/nifty", belongs to its family.)
@@ -228,17 +247,23 @@ object ManagerSpecialists {
         val cards = SpecialistBook.cards(records)
         val lines = ArrayList<String>()
         val muted = ArrayList<Pair<String, Pair<String, String>>>()
+        // Each strategy's tuning before and after (and its committee), for Autopilot's change log.
+        val logged = ArrayList<Triple<String, Pair<SpecialistBook.Tuning?, SpecialistBook.Tuning>, ManagerConfig>>()
         changed { b ->
             val tuned = HashMap(b.tuned)
+            logged.clear()
             for (f in cards.map { it.family }.distinct()) {
+                val before = tuned[f]
                 val r = SpecialistBook.tune(f, base(b, f), tuned[f] ?: SpecialistBook.Tuning(), cards, day)
                 tuned[f] = r.tuning
+                logged += Triple(f, before to r.tuning, base(b, f))
                 for (m in r.newlyMuted) muted += f to m
                 val trades = records.count { it.trade.family == f && it.vsOriginal != null && it.notes.any { n -> n.voters.isNotEmpty() } }
                 lines += SpecialistBook.nightLine(f, cards, r.tuning, trades)
             }
             b.copy(tuned = tuned, lines = lines, reviewedOn = day)
         }
+        for ((f, ba, cfg) in logged) runCatching { com.optionslab.app.ira.Autopilot.logTuning(f, ba.first, ba.second, cfg) }
         for ((f, m) in muted) runCatching {
             val words = "${ManagerTeam.nameOf(m.first)} specialist muted for ${TradeManager.familyName(f)} on paper and shadow: ${m.second}"
             SmartWorkers.found("${TradeManager.WHO} · self-review", Findings.Kind.DRIFT, Findings.ALL, 0, null, 60, words, ttlMs = 24 * 3_600_000L)

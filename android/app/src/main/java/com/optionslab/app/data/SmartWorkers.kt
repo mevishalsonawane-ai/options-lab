@@ -377,6 +377,8 @@ object SmartWorkers {
         runCatching { ManagerSpecialists.reviewIfDue() }
         // Jarvis's learning from all of the above, once a day after the close (memory checks only until it is due).
         runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
+        // Autopilot learning: after Jarvis's pass (15:45+), and at 12:30 for risk-lowering only (memory checks until due).
+        runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */
@@ -495,15 +497,18 @@ object SmartWorkers {
         fun nets(e: ForwardCheck.Expectation, t: List<ForwardCheck.Trade>) =
             t.filter { x -> e.since?.let { !x.day.isBefore(it) } ?: true }.sortedBy { it.day }.map { it.net }
         val liqPaper = nets(ForwardCheck.LIQUIDITY, ForwardRecords.liquidity(paper))
-        out += DriftReview.review(ForwardCheck.LIQUIDITY, liqPaper, live = false)
+        // The thresholds as Autopilot learned them: only ever stricter than researched (DriftReview keeps the cap).
+        val zc = runCatching { com.optionslab.app.ira.Autopilot.knob("drift.z_crit") }.getOrNull()?.takeIf { it.isFinite() } ?: DriftReview.Z_CRIT
+        val dx = runCatching { com.optionslab.app.ira.Autopilot.knob("drift.dd_x") }.getOrNull()?.takeIf { it.isFinite() } ?: DriftReview.DD_X
+        out += DriftReview.review(ForwardCheck.LIQUIDITY, liqPaper, live = false, zCrit = zc, ddX = dx)
         val liqLive = nets(ForwardCheck.LIQUIDITY, ForwardRecords.liquidityLive(live))
-        if (liqLive.isNotEmpty()) out += DriftReview.review(ForwardCheck.LIQUIDITY, liqLive, live = true)
+        if (liqLive.isNotEmpty()) out += DriftReview.review(ForwardCheck.LIQUIDITY, liqLive, live = true, zCrit = zc, ddX = dx)
         val hero = nets(ForwardCheck.HERO, ForwardRecords.hero(paper))
-        if (hero.isNotEmpty()) out += DriftReview.review(ForwardCheck.HERO, hero, live = false)
+        if (hero.isNotEmpty()) out += DriftReview.review(ForwardCheck.HERO, hero, live = false, zCrit = zc, ddX = dx)
         if (com.optionslab.app.BuildConfig.JARVIS) {
             val solo = runCatching { com.optionslab.app.ira.IraSolo.all().filter { it.midday && it.closed && it.net != null } }.getOrDefault(emptyList())
                 .mapNotNull { t -> runCatching { ForwardCheck.Trade(LocalDate.parse(t.day), t.net!!) }.getOrNull() }
-            if (solo.isNotEmpty()) out += DriftReview.review(ForwardCheck.SOLO, nets(ForwardCheck.SOLO, solo), live = false)
+            if (solo.isNotEmpty()) out += DriftReview.review(ForwardCheck.SOLO, nets(ForwardCheck.SOLO, solo), live = false, zCrit = zc, ddX = dx)
         }
         return out
     }
@@ -571,6 +576,38 @@ object SmartWorkers {
         return "New paper entries of ${reviews.value.firstOrNull { it.key == key }?.name ?: key} are paused. Exits always go; switch it back on yourself when you want it to carry on."
     }
 
+    private fun nameOfKey(key: String): String = reviews.value.firstOrNull { it.key == key }?.name ?: com.optionslab.ira.FlowShadow.strategy(key)?.label ?: key
+
+    /** Autopilot paused [key]'s new paper entries (its record says it loses; risk-lowering, exits always go). Null: already paused. */
+    fun pausePaperByAutopilot(key: String): String? {
+        ensureLoaded()
+        val s = _settings.value
+        if (key in s.paused) return null
+        save(s.copy(paused = s.paused + key), "$key: new paper entries paused by Autopilot")
+        return "New paper entries of ${nameOfKey(key)} are paused by Autopilot. Exits always go."
+    }
+
+    /** Autopilot resumed [key]'s new paper entries (paper only; one it paused itself, or Boss's undo). Null: not paused. */
+    fun resumePaperByAutopilot(key: String): String? {
+        ensureLoaded()
+        val s = _settings.value
+        if (key !in s.paused) return null
+        save(s.copy(paused = s.paused - key), "$key: new paper entries resumed by Autopilot")
+        return "${nameOfKey(key)} takes new paper entries again."
+    }
+
+    /**
+     * Autopilot parked [key] to paper (its self-review says it is broken): its next entries go to paper, open live trades are
+     * still managed to their exits. Lowers risk only; only Boss puts it back on live, with his PIN. Null: already parked.
+     */
+    fun parkByAutopilot(key: String): String? {
+        ensureLoaded()
+        val s = _settings.value
+        if (key in s.parked) return null
+        save(s.copy(parked = s.parked + key), "$key: parked to paper by Autopilot")
+        return "${nameOfKey(key)} is parked to paper: its next entries go to the paper account; open live trades are still managed to their exits."
+    }
+
     /** Home's chip for each reviewed strategy: name and venue to "on track" / "drifting" / "parked" / "too few trades". */
     fun chips(reviews: List<DriftReview.Review>, s: Settings): List<Pair<String, String>> = reviews.map { r ->
         "${r.name} (${r.venue})" to DriftReview.chip(r, parked = if (r.live) r.key in s.parked else r.key in s.paused)
@@ -628,6 +665,7 @@ object SmartWorkers {
         feed(15, now).ifEmpty { listOf("none standing") }.forEach { out += "    $it" }
         runCatching { TradeManagerHost.diagLines() }.getOrDefault(emptyList()).forEach { out += "  $it" }
         if (com.optionslab.app.ira.JarvisLearning.enabled()) runCatching { out += "  " + com.optionslab.app.ira.JarvisLearning.diagLine() }
+        if (com.optionslab.app.ira.Autopilot.enabled()) runCatching { out += "  " + com.optionslab.app.ira.Autopilot.diagLine() }
         return out
     }
 

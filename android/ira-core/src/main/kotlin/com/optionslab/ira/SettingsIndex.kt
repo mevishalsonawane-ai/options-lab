@@ -227,6 +227,8 @@ object SettingsIndex {
             GUARD, listOf("mcx", "commodity", "expiry", "crude", "gold", "silver")),
         Entry("risk", "risk.guards", "Block naked option shorts", "Selling to open needs a bought option of the same index, expiry and type first.",
             GUARD, listOf("naked", "short", "selling")),
+        Entry("risk", "jarvis.autolearn", "Autopilot learning", "OFF, SAFE or SHADOW-ONLY: what the agents change by themselves, logged and undoable; SAFE asks for your PIN when live.",
+            listOf("Bot settings", "Autopilot learning"), listOf("autopilot", "learning", "auto heal", "self tuning"), guarded = true),
 
         // ---- Settings → Data and harvest ----
         Entry("data", "data.record", "Include this phone's captures", "The days this phone collected extend the record forward.",

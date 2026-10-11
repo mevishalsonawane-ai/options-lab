@@ -129,7 +129,7 @@ object SelfHeal {
         private var battery: Int? = null
         private var charging = true
         private var thermal = 0
-        private val breakers = Dep.entries.associateWith { Breaker() }
+        private val breakers = HashMap(Dep.entries.associateWith { Breaker() })
         private val open = LinkedHashMap<Dep, Incident>()
         private val okSince = HashMap<Dep, Long>()
         private val history = ArrayDeque<Incident>()
@@ -173,6 +173,25 @@ object SelfHeal {
         @Synchronized fun allow(dep: Dep, now: Long = clock()): Boolean = breakers.getValue(dep).allow(now)
 
         @Synchronized fun breaker(dep: Dep): Breaker.State = breakers.getValue(dep).state
+
+        /** The deps whose retry pause Autopilot may tune ([AutoChange]'s heal knobs): never Zerodha's requests (they carry orders). */
+        val TUNABLE: Set<Dep> get() = setOf(Dep.RELAY, Dep.CANDLES)
+
+        /**
+         * [dep]'s breaker pause set to [openMs] (5-60 s), taking effect at once only while it is closed (an open one keeps its
+         * pause). Only [TUNABLE] deps; false when nothing changed.
+         */
+        @Synchronized fun tune(dep: Dep, openMs: Long): Boolean {
+            if (dep !in TUNABLE) return false
+            val ms = openMs.coerceIn(5_000L, 60_000L)
+            val b = breakers.getValue(dep)
+            if (b.openMs == ms || b.state != Breaker.State.CLOSED) return false
+            breakers[dep] = Breaker(b.failures, ms, b.capMs)
+            return true
+        }
+
+        /** [dep]'s breaker pause now (ms). */
+        @Synchronized fun openMs(dep: Dep): Long = breakers.getValue(dep).openMs
 
         private fun median(xs: List<Long>): Long = xs.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] }
 
@@ -260,7 +279,7 @@ object SelfHeal {
         @Synchronized fun reset() {
             rest.clear(); limits.clear(); streamLastTick = null; streamExpected = false; relayFails = 0; candleFails = 0
             keystoreMs = 0; battery = null; charging = true; thermal = 0; open.clear(); okSince.clear(); history.clear()
-            breakers.values.forEach { it.success() }
+            Dep.entries.forEach { breakers[it] = Breaker() }
         }
     }
 

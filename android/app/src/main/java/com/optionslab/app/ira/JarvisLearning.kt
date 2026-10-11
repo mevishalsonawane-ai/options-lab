@@ -184,6 +184,13 @@ internal object JarvisLearning {
         IraHub.offer(p.title, "Boss, a lesson suggests a change", p.text, act, alwaysAsk = true, declined = { answered(p.lessonId, false) })
     }
 
+    /** What Autopilot made of a lesson's change ("applied", "kept", "reverted"): kept on the lesson, so he learns from his own changes. */
+    fun autoStatus(lessonId: String, status: String) {
+        val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
+        synchronized(lock) { _book.value = AgentLessons.autoStatus(_book.value, lessonId, status, today) }
+        scope.launch { synchronized(lock) { save(_book.value) } }
+    }
+
     /** Boss's yes or no to a lesson's proposal: kept, and it moves the lesson. */
     fun answered(lessonId: String, accepted: Boolean) {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }

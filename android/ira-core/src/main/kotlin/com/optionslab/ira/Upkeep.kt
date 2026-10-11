@@ -28,6 +28,8 @@ object Upkeep {
         // switch -, loss limit, risk) and the autopilot are this phone's alone, like the other limits. Its learning (the
         // study, records) is carried.
         "jarvis.voiceprint", "jarvis.trades.", "jarvis.autopilot",
+        // Autopilot learning's level (11 Oct): what the agents may change by themselves - a safety setting, never from a file.
+        "jarvis.autolearn",
         // The record that earns live trading and lot sizing, and the model's verified mark, are never taken from a file.
         "jarvis.newstrades", "ira.model.verified",
         // Solo: its switch, its pause, and its paper record - which earns its trades real orders, like Jarvis's own
