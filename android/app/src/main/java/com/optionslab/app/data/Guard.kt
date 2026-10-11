@@ -58,10 +58,14 @@ object Guard {
         // screens show beside it is display only and never moves this limit.
         val dayPnl = book.m2m
         // Zerodha's opening balance is the day's capital; equity is that plus today's mark-to-market.
-        val capital = funds?.openingBalance?.takeIf { it > 0 } ?: funds?.net ?: 0.0
+        // G1-1: when the margins could not be read (a timeout, a 429, a dropped connection) - or read as nothing - the capital
+        // is UNKNOWN, not zero. Zero made the equity just the day's m2m, which against the stored peak read as a ~100%
+        // drawdown and turned the kill switch on for a network glitch. Unknown (NaN) gives the guard's "Equity is unknown"
+        // refusal instead (see [judge]): the entry waits, the kill switch stays off, and the peak is not touched.
+        val capital = (funds?.openingBalance?.takeIf { it > 0 } ?: funds?.net)?.takeIf { it > 0 } ?: Double.NaN
         val equity = capital + dayPnl
         return AccountGuard.Account(
-            capital = capital, equity = equity, peakEquity = peak(true, equity), dayPnl = dayPnl,
+            capital = capital, equity = equity, peakEquity = if (capital.isNaN()) Double.NaN else peak(true, equity), dayPnl = dayPnl,
             holdings = book.net.filter { it.qty != 0 }.map { p ->
                 // MCX (9 Oct): Zerodha keeps it in lots; the guard counts units (lots x the lot's multiplier), as for NFO.
                 if (p.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE) {
@@ -131,6 +135,15 @@ object Guard {
         // Without the account the limits cannot be judged, so entries wait.
         if (account == null) return if (limits.killSwitch) killed
             else listOf("The account could not be read to check its limits; try again in a moment.")
-        return AccountGuard.refusals(order, account, limits)
+        val out = AccountGuard.refusals(order, account, limits)
+        // G1-1: unknown funds refuse an entry even when no drawdown limit is set (so the engine said nothing about equity).
+        // The reason never starts with "Drawdown limit", so it never engages the kill switch ([onRefusal]).
+        if (!account.capital.isFinite() && out.none { it.startsWith("Equity is unknown") || it.startsWith("The kill switch") } &&
+            !AccountGuard.isExit(order, account))
+            return out + FUNDS_UNKNOWN
+        return out
     }
+
+    /** The refusal when Zerodha's margins could not be read: the entry waits; it is never a drawdown. */
+    const val FUNDS_UNKNOWN = "Zerodha's funds could not be read, so the account's equity is unknown; the entry waits - try again in a moment."
 }

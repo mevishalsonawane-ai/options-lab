@@ -128,4 +128,28 @@ class GuardTest : RobolectricTest() {
         assertFalse(SecurePrefs.snapshot().containsKey("guard.peak.paper"))
         assertEquals(a.equity, Guard.paperAccount(snap).peakEquity, 0.01)
     }
+
+    // G1-1: a failed margins read (funds = null) is unknown equity, never a 100% drawdown: the entry waits, the kill switch stays off.
+    @Test fun aFailedMarginsReadRefusesTheEntryButNeverEngagesTheKillSwitch() {
+        limits { it.copy(guardDrawdownPct = 10.0, guardDailyLoss = 0.0, guardKill = false) }
+        SecurePrefs.put("guard.peak.live", 500_000.0)
+        val book = Broker.Positions(listOf(Broker.Position("NIFTY26OCT24500PE", "MIS", 75, 100.0, 95.0, -375.0, m2m = -500.0)), emptyList())
+        val a = Guard.liveAccount(book, null, 1).copy(minuteOfDay = 10 * 60)   // not the real clock
+        assertTrue("capital unknown, not zero", a.capital.isNaN())
+        val why = Guard.check(order(sym = "NIFTY26OCT24600PE"), a)
+        assertTrue(why.toString(), why.isNotEmpty())
+        assertTrue(why.toString(), why.none { it.startsWith("Drawdown limit") })
+        assertFalse("a network glitch must not engage the kill switch", AppSettings.load().guardKill)
+        assertEquals("the stored peak is untouched", 500_000.0, SecurePrefs.getDouble("guard.peak.live", -1.0), 0.01)
+        // With no drawdown limit set the entry still waits, with its own reason.
+        limits { it.copy(guardDrawdownPct = 0.0, guardDailyLoss = 0.0, guardKill = false) }
+        assertEquals(listOf(Guard.FUNDS_UNKNOWN), Guard.check(order(sym = "NIFTY26OCT24600PE"), a))
+        // An exit still goes.
+        assertEquals(emptyList<String>(), Guard.check(order(side = "SELL"), a, exit = true))
+        assertEquals(emptyList<String>(), Guard.check(order(side = "SELL", qty = 75), a))
+        assertFalse(AppSettings.load().guardKill)
+        // Funds read: as before, a real capital.
+        val ok = Guard.liveAccount(book, Broker.Funds(available = 400_000.0, used = 0.0, net = 400_000.0, openingBalance = 400_000.0), 1)
+        assertEquals(400_000.0, ok.capital, 0.01)
+    }
 }
