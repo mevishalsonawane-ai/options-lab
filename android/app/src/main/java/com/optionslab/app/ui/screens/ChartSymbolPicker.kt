@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -274,6 +275,30 @@ internal fun ChartSymbolSheet(
         Unit
     } }
 
+    // The option roots, a root's expiries and an expiry's strikes filter the whole NFO list (tens of thousands of contracts):
+    // worked out off the main thread, each tagged with what it was worked out for so a stale list is never shown.
+    val roots by produceState<List<OptionRoot>?>(null, nfo, nfoWhy, mcx) {
+        withContext(Dispatchers.Main.immediate) {
+            val n = nfo; val w = nfoWhy; val m = mcx
+            value = withContext(Dispatchers.Default) { ChartSymbols.optionRoots(n, w, m, today) }
+        }
+    }
+    val rootExpiries by produceState<Pair<OptionRoot, List<LocalDate>>?>(null, root, nfo, mcx) {
+        withContext(Dispatchers.Main.immediate) {
+            val r = root ?: return@withContext
+            val n = nfo; val m = mcx
+            value = r to withContext(Dispatchers.Default) { ChartSymbols.expiries(r, n, m, today) }
+        }
+    }
+    val expiryStrikes by produceState<Pair<Pair<OptionRoot, LocalDate>, List<StrikeRow>>?>(null, root, expiry, nfo, mcx) {
+        withContext(Dispatchers.Main.immediate) {
+            val r = root ?: return@withContext
+            val e = expiry ?: return@withContext
+            val n = nfo; val m = mcx
+            value = (r to e) to withContext(Dispatchers.Default) { ChartSymbols.strikes(r, e, n, m) }
+        }
+    }
+
     fun pick(c: SymbolChoice) { if (c.why == null) onPick(c.symbol, c.exchange) }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
@@ -318,12 +343,13 @@ internal fun ChartSymbolSheet(
                     Text("Pick an underlying, then the expiry, then a strike's CE or PE.", style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
                         modifier = Modifier.padding(bottom = 6.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        remember(nfo, nfoWhy, mcx) { ChartSymbols.optionRoots(nfo, nfoWhy, mcx, today) }.forEach { r ->
+                        roots.orEmpty().forEach { r ->
                             PickChip(r.name, if (r.mcx) "MCX" else "NSE", r.why, root?.name == r.name, "pick:root:${r.name}") { root = r; expiry = null }
                         }
                     }
                     root?.let { r ->
-                        val exps = remember(r, nfo, mcx) { ChartSymbols.expiries(r, nfo, mcx, today) }
+                        val worked = rootExpiries?.takeIf { it.first == r }?.second
+                        val exps = worked.orEmpty()
                         PickHeader("${r.name} expiry")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             exps.take(8).forEach { e ->
@@ -332,9 +358,9 @@ internal fun ChartSymbolSheet(
                             // The chart's own priced chain (nearest expiry): tap a price there to chart it.
                             if (onChain != null) PickChip("Priced chain ›", "nearest expiry", null, false, "pick:chain:${r.name}") { onChain(r.name) }
                         }
-                        if (exps.isEmpty()) Text("No ${r.name} expiry in the list on the phone.", style = Type.bodySmall.copy(color = p.inkSoft))
+                        if (worked != null && exps.isEmpty()) Text("No ${r.name} expiry in the list on the phone.", style = Type.bodySmall.copy(color = p.inkSoft))
                         expiry?.let { e ->
-                            val all = remember(r, e, nfo, mcx) { ChartSymbols.strikes(r, e, nfo, mcx) }
+                            val all = expiryStrikes?.takeIf { it.first == (r to e) }?.second.orEmpty()
                             val rows = ChartSymbols.near(all, spot)
                             PickHeader("${r.name} ${e.format(EXPIRY_DAY)} strikes" + (spot?.let { " · last ${fmtG(Math.round(it * 100) / 100.0)}" } ?: ""))
                             val ex = if (r.mcx) Mcx.EXCHANGE else "NFO"
