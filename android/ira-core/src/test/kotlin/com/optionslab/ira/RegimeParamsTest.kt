@@ -106,7 +106,9 @@ class RegimeParamsTest {
         assertNull(RegimeParams.overrideToday("liquidity", date = d0.plusDays(30)))
         assertTrue(RegimeParams.line().contains("event day"))
         // Tonight the lesson is gone: so is the override; one that stays keeps its days and approval.
-        assertTrue(RegimeParams.refresh(b, emptyList()).overrides.isEmpty())
+        assertTrue(RegimeParams.refresh(b, listOf(lesson("strat:ORB", -1, "regime:quiet", 0.5))).overrides.isEmpty())
+        // No lessons at all is a book not read yet: nothing dropped (G9-1).
+        assertEquals(b, RegimeParams.refresh(b, emptyList()))
         assertEquals(b.overrides, RegimeParams.refresh(b, listOf(lesson("strat:Liquidity 15+5", -1, "regime:busy", 0.03))).overrides.map { it.copy(q = 0.04) })
     }
 

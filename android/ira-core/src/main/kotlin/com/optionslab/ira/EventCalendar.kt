@@ -152,6 +152,11 @@ object LearningFilter {
     /** Whether [day]'s results are evidence (false on an event day while [excludeEventDays]). */
     fun include(day: LocalDate): Boolean = !excludeEventDays || !cal.isEventDay(day)
 
+    /** [include] for a moment in epoch milliseconds (its day in IST): a trade record's entry time. */
+    fun includeMs(ms: Long): Boolean = include(java.time.Instant.ofEpochMilli(ms).atZone(IST).toLocalDate())
+
+    private val IST: java.time.ZoneId = java.time.ZoneId.of("Asia/Kolkata")
+
     fun bucket(day: LocalDate): Bucket = if (cal.isEventDay(day)) Bucket.EVENT_DAY else Bucket.EVIDENCE
 
     /** [items] split by their day ([dayOf]): the evidence, and the event days kept apart. */

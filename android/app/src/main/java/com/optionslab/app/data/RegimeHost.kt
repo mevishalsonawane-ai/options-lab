@@ -13,7 +13,8 @@ import java.time.LocalDate
  *    the day (with the expiry-day and event-day flags) - it never flips mid-day, even after a restart (kept in the settings);
  *  - each override of that regime records "would have used the busy-day setting" (Diag, and the findings bus once) while in
  *    SHADOW; one that has done its [RegimeParams.SHADOW_DAYS] trading days applies on paper by itself, and a finding is
- *    posted for Autopilot to put to Boss for live (his PIN; nothing here turns anything on for live);
+ *    posted and Boss asked: for live he approves it with his PIN on the Brain's Regime row ([approveLive]; nothing here
+ *    turns anything on for live by itself);
  *  - after 15:45, once a day, the overrides are rebuilt from Jarvis's lessons (only passing regime-conditional ones).
  *
  * The arms read [RegimeParams.overrideToday] and the trade manager [managerConfig] - memory only, nothing on the order path.
@@ -62,18 +63,36 @@ object RegimeHost {
             // Jarvis's note on an event day (TODO S11): "Event day: learning ignores today's results".
             if (event && com.optionslab.app.BuildConfig.JARVIS) runCatching { EventDays.todayNote()?.let { com.optionslab.app.ira.IraNotes.add(it) } }
             for (l in RegimeParams.wouldUse(b1, today)) runCatching { Diag.record("brain", "Regime setting: $l") }
-            for (o in ready) runCatching {
-                SmartWorkers.found("regime settings", Findings.Kind.OTHER, Findings.ALL, 0, null, 60,
-                    "${o.words}: shadow → paper after ${RegimeParams.SHADOW_DAYS} ${o.regime.words} days in shadow; " +
-                        "for live it needs your PIN (Autopilot asks). [${o.key}]", 24 * 3_600_000L)
+            for (o in ready) {
+                runCatching {
+                    SmartWorkers.found("regime settings", Findings.Kind.OTHER, Findings.ALL, 0, null, 60,
+                        "${o.words}: shadow → paper after ${RegimeParams.SHADOW_DAYS} ${o.regime.words} days in shadow; " +
+                            "for live, approve it with your PIN in $WHERE. [${o.key}]", 24 * 3_600_000L)
+                }
+                // Put to Boss (G9-2): live only with his PIN, on the Brain's Regime row - never by a yes alone.
+                if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
+                    com.optionslab.app.ira.IraHub.offer("regime setting: ${o.key}", "Boss, a regime setting for live?",
+                        "Boss, ${o.words} finished ${RegimeParams.SHADOW_DAYS} ${o.regime.words} days in shadow and now applies on paper. " +
+                            "It only lowers risk; for live too, approve it with your PIN in $WHERE.",
+                        suspend { "Approve it for live with your PIN in $WHERE." }, alwaysAsk = true)
+                }
             }
         }
         if (rebuiltOn != today && minute >= 15 * 60 + 45) {
+            // Jarvis's lessons read first (G9-1): before they are, the book is empty and every override - its shadow days and
+            // live approval - would be dropped for good. Not read yet: no rebuild now; the next look tries again.
+            val lessons = runCatching { com.optionslab.app.ira.JarvisLearning.ensureLoaded(); com.optionslab.app.ira.JarvisLearning.book.value.lessons }
+                .getOrNull() ?: return
             rebuiltOn = today
-            val lessons = runCatching { com.optionslab.app.ira.JarvisLearning.book.value.lessons }.getOrDefault(emptyList())
             save(RegimeParams.refresh(RegimeParams.book, lessons))
         }
     }
+
+    /** Where Boss approves an override for live with his PIN. */
+    const val WHERE = "Home → Automation → Brain"
+
+    /** The overrides on paper, waiting for Boss's PIN to apply on live too (the Brain's Regime row). Off the main thread. */
+    fun readyForLive(): List<RegimeParams.Override> { ensureLoaded(); return RegimeParams.readyForLive() }
 
     /** No override moves from shadow to paper by itself now: learning frozen, or Autopilot learning off or shadow-only. */
     private fun holdPromotions(): Boolean {

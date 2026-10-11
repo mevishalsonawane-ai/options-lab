@@ -25,11 +25,11 @@ import java.util.concurrent.TimeUnit
 class DiscoveryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         if (!VariantRunner.enabled()) return Result.success()
-        runCatching { VariantRunner.settleIfDue() }
+        guarded { VariantRunner.settleIfDue() }
         val now = Market.now()
         if (allowed(charging(applicationContext), idle(applicationContext), now.hour * 60 + now.minute, Market.isTradingDay(now.toLocalDate())))
             try {
-                runCatching { VariantRunner.forgeIfDue(now.toLocalDate()) { isStopped || !BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE) } }
+                guarded { VariantRunner.forgeIfDue(now.toLocalDate()) { isStopped || !BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE) } }
             } finally { runCatching { BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.FORGE) } }
         return Result.success()
     }
@@ -39,6 +39,14 @@ class DiscoveryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
         const val EVENING = 18 * 60
         const val MARKET_FROM = 9 * 60
         const val MARKET_UNTIL = 15 * 60 + 45
+
+        /**
+         * [block]'s value, or null when it failed - but a cancellation (WorkManager stopping the worker) goes on up, never
+         * swallowed into "the next step and a success" (G7-14).
+         */
+        internal suspend fun <T> guarded(block: suspend () -> T): T? = try { block() } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) { null }
 
         /**
          * May the forge run now? Charging and idle, or from 18:00 - and never between 09:00 and 15:45 of a trading day,

@@ -47,12 +47,13 @@ object PortfolioHost {
 
     /** The records and the settings read (a worker thread), then handed to the guard. */
     suspend fun refresh() {
-        refreshedAt = System.currentTimeMillis()
         val today = Market.today()
-        val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
+        // A read that fails (or is cancelled) keeps the last good matrix and stops (G9-3): "no owners" or "no trades" from a
+        // failure would empty the guard, which then blocks nothing for ten minutes. Retried at the next look.
+        val owners = readOrNull { testOwners?.invoke() ?: Strategies.owners() } ?: return
         val trades = ArrayList<PortfolioRisk.Trade>()
         for (live in listOf(false, true)) {
-            val trips = runCatching { TradeBook.trips(live) }.getOrDefault(emptyList())
+            val trips = readOrNull { TradeBook.trips(live) } ?: return
             for (t in trips) {
                 val arm = PortfolioRisk.canonOrNull(TradeBook.ownerOf(t, owners), t.symbol) ?: continue
                 trades += PortfolioRisk.Trade(arm, t.closedAt.toLocalDate(), t.net, live)
@@ -65,8 +66,17 @@ object PortfolioHost {
         val on = runCatching { SecurePrefs.getBoolean(K_ON, true) }.getOrDefault(true)
         val cfg = PortfolioGuard.Config(capital = s?.capital ?: 0.0, capPct = capPct, on = on)
         guard.update(m, stops, cfg)
+        refreshedAt = System.currentTimeMillis()
         publish(today)
     }
+
+    /** [block]'s value, or null when it failed; a cancellation goes on up, never read as "nothing" (G9-3). */
+    private suspend fun <T> readOrNull(block: suspend () -> T): T? = try { block() } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Throwable) { null }
+
+    /** TEST ONLY: the arms' owners read instead of the strategies' book. */
+    @Volatile internal var testOwners: (suspend () -> Map<String, String>)? = null
 
     private fun publish(today: LocalDate) {
         val c = guard.config
@@ -141,5 +151,5 @@ object PortfolioHost {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config()); refreshedAt = 0L; _view.value = View() }
+    internal fun resetForTest() { guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config()); refreshedAt = 0L; _view.value = View(); testOwners = null }
 }

@@ -136,7 +136,8 @@ object VariantLab {
                 Param(ArmParams.LOCK, "profit lock", 0.0, 1.0, 0.15, Unit.LOCK)),
             maxAlive = LIQUIDITY_MAX, alpha = LIQUIDITY_ALPHA),
         Strategy("vix_div", "VIX divergence", listOf("NIFTY", "BANKNIFTY"),
-            listOf(Param(ArmParams.MOVE, "index move", 0.0015, 0.003, 0.00025, Unit.PCT),
+            // The index move steps by 0.025%: shown to 3 decimals (BPS), or 0.175% and 0.2% would both read "0.2%" (G7-7).
+            listOf(Param(ArmParams.MOVE, "index move", 0.0015, 0.003, 0.00025, Unit.BPS),
                 Param(ArmParams.STOP_PCT, "stop (NIFTY)", 0.10, 0.15, 0.0125, Unit.PCT),
                 Param(ArmParams.TS, "time-stop minutes (NIFTY)", 10.0, 30.0, 5.0, Unit.MIN, grid = 1.0))),
     )
@@ -327,7 +328,9 @@ object VariantLab {
         if (want <= 0) return b
         val cur = b.currentOf(key)
         val scale = b.scales[key] ?: 1.0
-        val fresh = neighbours(s, cur, scale, rng, want, b.variants.filter { it.strategy == key && it.alive }.map { it.values })
+        // Every variant of this strategy ever kept is taken (retired, failed, promoted too): a failed neighbour is never re-tried
+        // night after night (each try tightens the penalty), and a reverted one is never spawned again (G7-10).
+        val fresh = neighbours(s, cur, scale, rng, want, b.variants.filter { it.strategy == key }.map { it.values })
         for (v in fresh) {
             val pre = precheck(s, v, cur, history)
             val ok = pre.first >= pre.second
@@ -370,10 +373,12 @@ object VariantLab {
      * days (the pre-check of new neighbours, and Liquidity's earlier sessions), [from] the next session (a change decided now
      * is traded from then: never mid-day), [actual] each strategy's real result that day on the account it ran (rupees a lot;
      * absent: the lab's own replay of what it ran). The safety net first; then each living variant against the current rules;
-     * then the judgement; then refill.
+     * then the judgement; then refill. [evidence] false (an event day, [LearningFilter.include]): the safety net still runs
+     * (it only lowers risk), but no variant is compared or judged on that day, so it never counts toward a promotion.
      */
     fun day(book: Book, date: LocalDate, runs: Map<String, Run>, days: Map<String, ShadowSim.Day>, history: List<ShadowSim.Day>,
-            rng: DiscoveryStats.Rng, from: LocalDate = date.plusDays(1), actual: Map<String, Double> = emptyMap()): Pass {
+            rng: DiscoveryStats.Rng, from: LocalDate = date.plusDays(1), actual: Map<String, Double> = emptyMap(),
+            evidence: Boolean = true): Pass {
         if (book.lastDay != null && !date.isAfter(book.lastDay)) return Pass(book, emptyList())
         var b = book.copy(runs = book.runs + runs, lastDay = date)
         val events = ArrayList<Event>()
@@ -395,6 +400,11 @@ object VariantLab {
             actual[key] ?: strategy(key)?.takeIf { s -> s.underlyings.any { it in days } }?.let { result(it, values).first }
         }
         b = sn.book; events += sn.events
+        // An event day is not evidence (G9-6): nothing compared, nothing judged; the refill still runs.
+        if (!evidence) {
+            for (s in STRATEGIES) if (b.runOf(s.key) != Run.OFF || b.alive(s.key).isNotEmpty()) b = spawn(b, s.key, date, history, rng)
+            return Pass(trim(b), events)
+        }
         // 1. Compare.
         b = b.copy(variants = b.variants.map { v ->
             if (!v.alive) return@map v
@@ -510,6 +520,8 @@ object VariantLab {
     fun undo(b: Book, id: String, from: LocalDate? = null): Book? {
         val c = b.change(id) ?: return null
         if (c.status != ChangeStatus.APPLIED || c.kind != ChangeKind.AUTO_PAPER) return null
+        // Only the newest change in force: undoing one a later change replaced would bring back stale rules (G7-5).
+        if (superseded(b, id)) return null
         var out = b.copy(current = b.current + (c.strategy to c.from), changes = b.changes.map { if (it.id == id) it.copy(status = ChangeStatus.UNDONE) else it })
         if (from != null) out = tune(out, c.strategy, false, from, c.from, id)
         return out
@@ -520,9 +532,34 @@ object VariantLab {
      * tune dropped - the arm never trades it - the change marked undone. Null when it is not an applied paper promotion.
      */
     fun withhold(b: Book, id: String): Book? {
+        val c = b.change(id) ?: return null
         val out = undo(b, id) ?: return null
-        return out.copy(tunes = out.tunes.filter { !(it.change == id && !it.live) })
+        // The promotion never happened: the winner and the siblings it retired as superseded shadow on (G7-9).
+        val superseded = "superseded by ${c.variant}"
+        var back = 0
+        val vs = out.variants.map {
+            when {
+                it.id == c.variant && it.status == Status.PROMOTED -> it.copy(status = Status.ALIVE, why = "")
+                it.strategy == c.strategy && it.status == Status.RETIRED && it.why == superseded -> { back++; it.copy(status = Status.ALIVE, why = "") }
+                else -> it
+            }
+        }
+        return out.copy(tunes = out.tunes.filter { !(it.change == id && !it.live) }, variants = vs,
+            retiredCount = (out.retiredCount - back).coerceAtLeast(0),
+            changes = out.changes.map { if (it.id == id) it.copy(why = it.why + " - withheld: learning is frozen, never traded") else it })
     }
+
+    /** Whether a later change of [id]'s strategy is in force (applied or accepted): [id] is then no longer the one to undo. */
+    fun superseded(b: Book, id: String): Boolean {
+        val i = b.changes.indexOfFirst { it.id == id }
+        if (i < 0) return false
+        val c = b.changes[i]
+        return b.changes.drop(i + 1).any { it.strategy == c.strategy && (it.status == ChangeStatus.APPLIED || it.status == ChangeStatus.ACCEPTED) }
+    }
+
+    /** Whether the card may offer Undo for paper change [id]: applied, by itself, and still the newest in force. */
+    fun undoable(b: Book, id: String): Boolean =
+        b.change(id)?.let { it.kind == ChangeKind.AUTO_PAPER && it.status == ChangeStatus.APPLIED && !superseded(b, id) } == true
 
     // ---- which way a parameter moves risk ------------------------------------------------------------------------------------
 
@@ -532,16 +569,29 @@ object VariantLab {
      */
     val WIDER_IS_RISKIER: Set<String> = setOf(ArmParams.STOP_PTS, ArmParams.STOP_PCT)
 
-    /** Does moving [s] from [from] to [to] widen a stop (raise the risk of a trade)? */
-    fun widensStop(s: Strategy, from: Map<String, Double>, to: Map<String, Double>): Boolean {
-        val a = s.values(from); val c = s.values(to)
-        return WIDER_IS_RISKIER.any { k -> s.param(k) != null && (c[k] ?: 0.0) > (a[k] ?: 0.0) + 1e-12 }
+    /**
+     * Every exit parameter whose move can delay or skip an exit (G7-4): the stops, the time stop (more minutes is later), its
+     * gain (less is laxer) and the profit lock (none, or a later rung, is less protective).
+     */
+    val EXIT_KEYS: Set<String> = WIDER_IS_RISKIER + setOf(ArmParams.TS, ArmParams.TSG, ArmParams.LOCK)
+
+    /** How loose exit [k] is at [x]: higher is riskier (a later or laxer exit). */
+    fun looseness(k: String, x: Double): Double = when (k) {
+        ArmParams.TSG -> -x
+        ArmParams.LOCK -> if (x <= 0) Double.POSITIVE_INFINITY else x
+        else -> x
     }
 
-    /** [to] with each stop no wider than in [cap] (the defaults put back, but never a wider live stop than the one trading). */
+    /** Does moving [s] from [from] to [to] widen a stop or loosen an exit (raise the risk of a trade)? */
+    fun widensStop(s: Strategy, from: Map<String, Double>, to: Map<String, Double>): Boolean {
+        val a = s.values(from); val c = s.values(to)
+        return EXIT_KEYS.any { k -> s.param(k) != null && looseness(k, c[k] ?: 0.0) > looseness(k, a[k] ?: 0.0) + 1e-12 }
+    }
+
+    /** [to] with each exit no looser than in [cap] (the defaults put back, but never a wider live stop or later exit than the one trading). */
     fun capStops(s: Strategy, to: Map<String, Double>, cap: Map<String, Double>): Map<String, Double> {
         val t = s.values(to); val c = s.values(cap)
-        return t.mapValues { (k, v) -> if (k in WIDER_IS_RISKIER) minOf(v, c[k] ?: v) else v }
+        return t.mapValues { (k, v) -> val cv = c[k]; if (k in EXIT_KEYS && cv != null && looseness(k, v) > looseness(k, cv)) cv else v }
     }
 
     /** The values [s]'s arm trades on the [live] account from its newest tune on (its defaults when none). */
@@ -641,12 +691,20 @@ object VariantLab {
             val livePending = b.tunes.filter { it.strategy == s.key && it.live }.maxByOrNull { it.from }
             val liveTo = livePending?.let { capStops(s, s.defaults, it.values) } ?: s.defaults
             val kept = !same(liveTo, s.defaults)
-            val keptWords = if (!kept) "" else "; the live arm keeps its tighter stop (" +
-                s.params.filter { it.key in WIDER_IS_RISKIER }.joinToString(", ") { p -> "${p.words} ${p.say(liveTo.getValue(p.key))}" } +
-                "): the defaults' wider stop needs your PIN"
+            val keptWords = if (!kept) "" else "; the live arm keeps its tighter exits (" +
+                s.params.filter { it.key in EXIT_KEYS && abs((liveTo[it.key] ?: 0.0) - (s.defaults[it.key] ?: 0.0)) > 1e-12 }
+                    .joinToString(", ") { p -> "${p.words} ${p.say(liveTo.getValue(p.key))}" } +
+                "): the defaults' wider stop or later exit needs your PIN"
             val rc = Change("C${b.nextId}", s.key, c?.variant ?: "", ChangeKind.SAFETY_REVERT, ChangeStatus.APPLIED, date, values, s.defaults,
                 "$why - back to the defaults from ${DiscoveryStats.day(from)} (lower risk)$keptWords", effective = from)
-            b = b.copy(changes = b.changes + rc, nextId = b.nextId + 1, current = b.current + (s.key to s.defaults), streaks = b.streaks - s.key)
+            // The living siblings were measured against the rules just thrown out: retired as superseded, as a promotion and an
+            // accepted proposal retire them, so none can win later on a lead over rules no longer running (G7-3).
+            var superseded = 0
+            val vs = b.variants.map {
+                if (it.strategy == s.key && it.status == Status.ALIVE) { superseded++; it.copy(status = Status.RETIRED, why = "superseded by the safety net") } else it
+            }
+            b = b.copy(changes = b.changes + rc, nextId = b.nextId + 1, current = b.current + (s.key to s.defaults), streaks = b.streaks - s.key,
+                variants = vs, retiredCount = b.retiredCount + superseded, scales = b.scales + (s.key to 1.0))
             // Both accounts back to the defaults wherever a variant is in force or waiting (live: never a wider stop).
             for (acct in listOf(true, false)) {
                 val pending = b.tunes.filter { it.strategy == s.key && it.live == acct }.maxByOrNull { it.from }
@@ -656,6 +714,18 @@ object VariantLab {
             events += Event.Reverted(rc, liveStopKept = kept)
         }
         return Pass(b, events)
+    }
+
+    /**
+     * Whether day [d] may be settled now ([stored]: each index's stored days; [today] the clock's date): some index has [d],
+     * and every index that kept a day in the week before [d] has [d] too - the harvest writes one index at a time, so a settle
+     * on half the indices would judge on half the data and mark the day done for good (G7-2). From two days after [d], what
+     * is there is settled (a missing index is given up).
+     */
+    fun readyToSettle(d: LocalDate, stored: Map<String, Collection<LocalDate>>, today: LocalDate): Boolean {
+        if (stored.values.none { d in it }) return false
+        if (today.isAfter(d.plusDays(1))) return true
+        return stored.values.all { ds -> d in ds || ds.none { it.isBefore(d) && !it.isBefore(d.minusDays(7)) } }
     }
 
     fun fmtP(p: Double): String = if (p < 0.001) "<0.001" else "%.3f".format(Locale.ENGLISH, p)

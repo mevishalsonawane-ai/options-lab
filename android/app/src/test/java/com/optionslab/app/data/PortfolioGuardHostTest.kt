@@ -206,4 +206,20 @@ class PortfolioGuardHostTest : RobolectricTest() {
         assertTrue(HistoryKeeper.usageLine().contains("of 100 MB"))
         assertTrue(v.root.path.contains("no_backup") || v.root.path.contains("noBackup") || v.root.path.endsWith("history"))
     }
+
+    /** G9-3: a read that fails or is cancelled keeps the guard's last matrix and stops; never "no trades" from a failure. */
+    @Test fun aFailedOrCancelledReadKeepsTheLastMatrix() = runBlocking<Unit> {
+        correlated()
+        val before = PortfolioHost.guard.matrix
+        val stops = PortfolioHost.guard.stops
+        PortfolioHost.testOwners = { throw java.io.IOException("the book could not be read") }
+        PortfolioHost.refresh()
+        assertTrue(PortfolioHost.guard.matrix === before)
+        assertEquals(stops, PortfolioHost.guard.stops)
+        PortfolioHost.testOwners = { throw kotlinx.coroutines.CancellationException("the brain worker's deadline") }
+        var cancelled = false
+        try { PortfolioHost.refresh() } catch (e: kotlinx.coroutines.CancellationException) { cancelled = true }
+        assertTrue("a cancellation goes on up", cancelled)
+        assertTrue(PortfolioHost.guard.matrix === before)
+    }
 }

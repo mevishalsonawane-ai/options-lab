@@ -219,7 +219,8 @@ private fun ChangeRow(ch: VariantLab.Change, variants: VariantLab.Book, onAction
             modifier = Modifier.padding(top = 4.dp))
         Text("Why: ${ch.why}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         ch.effective?.let { Text("Traded from ${DiscoveryStats.day(it)}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp)) }
-        if (ch.kind == VariantLab.ChangeKind.AUTO_PAPER && ch.status == VariantLab.ChangeStatus.APPLIED)
+        // Only the newest change in force offers Undo: an older one a later change replaced would bring stale rules back (G7-5).
+        if (VariantLab.undoable(variants, ch.id))
             BrassButton("Undo", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("lab-undo-" + ch.id), tone = p.inkSoft) { onAction(LabAction.UNDO, ch.id) }
         if (ch.kind == VariantLab.ChangeKind.LIVE_PROPOSAL && ch.status == VariantLab.ChangeStatus.ACCEPTED)
             BrassButton(if (VariantLab.restoresDefault(variants, ch.id)) "Undo" else "Undo (PIN)", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("lab-undo-" + ch.id),
@@ -247,7 +248,7 @@ private fun StrategyRow(s: VariantLab.Strategy, variants: VariantLab.Book, today
             val ch = r.change ?: r.next?.let { variants.change(it.change) }
             val action = when {
                 ch == null -> null
-                !live && ch.kind == VariantLab.ChangeKind.AUTO_PAPER && ch.status == VariantLab.ChangeStatus.APPLIED -> LabAction.UNDO
+                !live && VariantLab.undoable(variants, ch.id) -> LabAction.UNDO
                 live && ch.kind == VariantLab.ChangeKind.LIVE_PROPOSAL && ch.status == VariantLab.ChangeStatus.ACCEPTED -> LabAction.UNDO_LIVE
                 else -> null
             }

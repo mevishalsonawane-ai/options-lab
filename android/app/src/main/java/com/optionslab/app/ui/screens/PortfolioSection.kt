@@ -54,22 +54,44 @@ import java.time.LocalDate
  * results"), today's frozen regime, and the "Portfolio" line - a tap opens the arms' correlation matrix. Memory only.
  */
 @Composable
-internal fun BrainExtras() {
+internal fun BrainExtras(model: com.optionslab.app.ui.AppModel? = null) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     val p = LocalPalette.current
     val view by PortfolioHost.view.collectAsState(Dispatchers.Main.immediate)
     val cal by EventDays.calendar.collectAsState(Dispatchers.Main.immediate)
     var regime by remember { mutableStateOf<String?>(null) }
     var sheet by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    // The regime settings past their shadow, on paper, waiting for Boss's PIN to apply on live too (G9-2).
+    var forLive by remember { mutableStateOf<List<RegimeParams.Override>>(emptyList()) }
+    var pinFor by remember { mutableStateOf<String?>(null) }
+    var said by remember { mutableStateOf<String?>(null) }
+    var tick by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(tick) {
         while (true) {
             regime = withContext(Dispatchers.Default) { runCatching { RegimeParams.line() }.getOrNull() }
+            forLive = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.RegimeHost.readyForLive() }.getOrDefault(emptyList()) }
             kotlinx.coroutines.delay(60_000)
         }
     }
     val today = remember(cal) { runCatching { com.optionslab.app.data.Market.today() }.getOrDefault(LocalDate.now()) }
     EventCalendar.note(cal, today)?.let { Note(it, Modifier.padding(top = 2.dp)) }
     regime?.let { Note("Regime: $it", Modifier.padding(top = 2.dp)) }
+    if (model != null) forLive.forEach { o ->
+        Note("Regime setting on paper: ${o.words}. It only lowers risk; for live too, your PIN.", Modifier.padding(top = 2.dp))
+        BrassButton("Approve for live (PIN)", Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { pinFor = o.key }
+    }
+    said?.let { Note(it, Modifier.padding(top = 2.dp)) }
+    if (model != null) pinFor?.let { key ->
+        Reauth(model, pinOnly = false, why = "Enter your app PIN to apply this regime setting on the live account too.",
+            onOk = {
+                pinFor = null
+                scope.launch {
+                    said = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.RegimeHost.approveLive(key, pinConfirmed = true) }.getOrElse { "Could not do that just now." } }
+                    tick++
+                }
+            }, onCancel = { pinFor = null })
+    }
     Text(view.line, style = Type.bodySmall.copy(color = p.ink), maxLines = 3, overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             .semantics { contentDescription = "Portfolio risk: ${view.line} Tap for the correlations." }

@@ -478,14 +478,14 @@ internal object IraActions {
             Command.Kind.EVENT_ADD -> {
                 val d = c.day; val n = c.target
                 if (d == null || n.isNullOrBlank()) "Tell me the event and the day: \"add event RBI policy on 5 Dec\"." to null
-                else Commands.describe(c) to suspend { IraEvents.add(d, n); "Noted, Boss: ${n} on $d. I will remind you in the morning check." }
+                else Commands.describe(c) to suspend { IraEvents.add(d, n); eventDaysChanged(); "Noted, Boss: ${n} on $d. I will remind you in the morning check." }
             }
             Command.Kind.EVENT_REMOVE -> {
                 val e = IraEvents.owner()
                 if (e.isEmpty()) return "You have not added any events." to null
                 val i = c.number?.let { (it - 1).takeIf { x -> x in e.indices } } ?: Commands.pick(c, e.map { it.name })
                     ?: return ("Which event? " + e.mapIndexed { n, x -> "${n + 1}. ${x.name} on ${x.day}" }.joinToString("; ") + ".") to null
-                Commands.describe(c, "the event ${e[i].name} on ${e[i].day}") to suspend { IraEvents.remove(e[i]); "Event removed." }
+                Commands.describe(c, "the event ${e[i].name} on ${e[i].day}") to suspend { IraEvents.remove(e[i]); eventDaysChanged(); "Event removed." }
             }
             Command.Kind.ALARM_REMOVE -> {
                 val a = com.optionslab.app.data.Alarms.all()
@@ -680,5 +680,13 @@ internal object IraActions {
         m.planManual(t.underlying, t.expiry, t.strike, t.right, if (t.buy) com.optionslab.engine.Kite.Side.BUY else com.optionslab.engine.Kite.Side.SELL,
             t.lots, AppSettings.load().orderProduct, null, null, "Jarvis")
         return sendPlan(m)
+    }
+
+    /**
+     * Boss's own event days changed by voice: the learning calendar rebuilt now (off the main thread: it reads the settings), so
+     * tonight's lessons, Autopilot and the lab already leave the day out (G9-6).
+     */
+    private suspend fun eventDaysChanged() {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.EventDays.refresh() } }
     }
 }

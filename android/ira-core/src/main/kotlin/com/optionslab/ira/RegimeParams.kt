@@ -16,7 +16,7 @@ import java.util.Locale
  *    a side - or from a [Candidate] that passes the same bar. They only ever lower risk: an arm that loses on busy days is
  *    sat out on them (size 0); a specialist that helps on them weighs more, one that hurts weighs less.
  *  - SHADOW first: each override records "would have used" on every matching (non-event) day; after [SHADOW_DAYS] such
- *    trading days it applies on PAPER by itself; LIVE only once Boss approved it with his PIN (Autopilot's ASK, [approveLive]).
+ *    trading days it applies on PAPER by itself; LIVE only once Boss approved it with his PIN (the Brain's Regime row, [approveLive]).
  *
  * Pure apart from its in-memory [book] (set by the app; read without locks on the hot paths).
  */
@@ -64,7 +64,7 @@ object RegimeParams {
         val words: String,
         /** The days it would have been used (shadow days), newest last. */
         val shadowDays: List<LocalDate> = emptyList(),
-        /** Boss approved it for live with his PIN (Autopilot's ASK). */
+        /** Boss approved it for live with his PIN (the Brain's Regime row). */
         val liveApproved: Boolean = false,
     ) {
         val key: String get() = "$target|${regime.name}"
@@ -137,6 +137,9 @@ object RegimeParams {
      * approval; a new one starts in shadow; one no longer supported is dropped.
      */
     fun refresh(b: Book, lessons: Collection<AgentLessons.Lesson>, candidates: List<Candidate> = emptyList()): Book {
+        // No lessons at all is a book not read yet (or lost), never "nothing supported": every override's shadow days and live
+        // approval are kept rather than wiped (G9-1).
+        if (lessons.isEmpty() && candidates.isEmpty()) return b
         val fresh = fromLessons(lessons) + candidates.filter { passes(it) }.map {
             Override("arm:" + armKey(it.arm), it.regime, it.params, it.source, it.q, "${it.arm}: ${it.source} on ${it.regime.words} days")
         }
@@ -166,7 +169,10 @@ object RegimeParams {
         return Book(next, day) to ready
     }
 
-    /** Boss approved [key] for live (his PIN, through Autopilot's ask): only an override past its shadow. */
+    /** Boss approved [key] for live (his PIN, on the Brain's Regime row): only an override past its shadow. */
+    /** The overrides past their shadow, applied on paper and waiting for Boss's PIN to apply on live too. */
+    fun readyForLive(b: Book = book): List<Override> = b.overrides.filter { it.stage == Stage.PAPER }
+
     fun approveLive(b: Book, key: String): Book =
         b.copy(overrides = b.overrides.map { if (it.key == key && it.shadowDays.size >= SHADOW_DAYS) it.copy(liveApproved = true) else it })
 

@@ -102,4 +102,19 @@ object SelfTalk {
         }
         return null
     }
+
+    /** Boss's own trades, refused on a locked phone. */
+    const val LOCKED = "Unlock the phone for that, Boss: it is about your own trades."
+    /** The bots' results on his account (the scorecard's rupees, today's changes, the lab, Autopilot), refused on a locked phone. */
+    const val LOCKED_BOTS = "Unlock the phone for that, Boss: it is about your account's bots and their results."
+
+    /**
+     * What to say instead of answering [kind] on a [locked] phone, or null to answer: his habits, rules and a trade's replay
+     * are his own; the scorecard and today's changes carry the bots' rupees on his account (G9-4, review R5 #2).
+     */
+    fun lockedRefusal(kind: Kind, locked: Boolean): String? = if (!locked) null else when (kind) {
+        Kind.HABITS, Kind.RULES, Kind.REPLAY -> LOCKED
+        Kind.SCORECARD, Kind.TIMELINE -> LOCKED_BOTS
+        else -> null
+    }
 }

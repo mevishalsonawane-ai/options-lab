@@ -164,7 +164,7 @@ internal fun AutomationSectionBody(model: AppModel, s: AutomationSummary.Section
         AutomationSummary.Section.AUTOPILOT -> AutopilotSection(model)
         AutomationSummary.Section.LAB -> StrategyLabSection(model)
         AutomationSummary.Section.ORDER_FLOW -> OrderFlowSection(model, divider = false)
-        AutomationSummary.Section.BRAIN -> BrainSection(divider = false)
+        AutomationSummary.Section.BRAIN -> BrainSection(divider = false, model = model)
     }
 }
 

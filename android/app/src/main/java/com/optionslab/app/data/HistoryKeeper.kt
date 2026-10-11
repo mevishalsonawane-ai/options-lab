@@ -166,6 +166,20 @@ object HistoryKeeper {
     /** Nothing kept: given up (false) when every read answered, else thrown so the next run tries again. */
     private fun nothing(t: Tally): Boolean = if (t.failed > 0) throw java.io.IOException("${t.failed} reads failed") else false
 
+    /** Each piece's attempts with failed reads (this process; memory only). */
+    private val partialTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /**
+     * A piece with some reads failed is not written yet - written, it is never fetched again - but thrown so the next run
+     * tries again, until [HistoryKeep.PARTIAL_TRIES] runs have tried; then what it has is kept (G9-7).
+     */
+    private fun partial(t: Tally, p: HistoryKeep.Piece) {
+        if (t.failed <= 0) { partialTries.remove("${p.day}|${p.family}"); return }
+        val n = partialTries.merge("${p.day}|${p.family}", 1) { a, b -> a + b } ?: 1
+        if (!HistoryKeep.keepPartial(t.failed, n)) throw java.io.IOException("${t.failed} reads failed (try $n)")
+        partialTries.remove("${p.day}|${p.family}")
+    }
+
     /** True: written; false: the source has nothing for it; throws: a read failed (tried again). */
     private suspend fun fetch(v: HistoryVault, p: HistoryKeep.Piece, today: LocalDate): Boolean {
         val f = p.family
@@ -176,7 +190,7 @@ object HistoryKeeper {
                     val key = Upstox.INDEX_KEYS[n] ?: ChartFeed.EXTRA_INDICES[n] ?: return@mapNotNull null
                     tryRead(t) { publicDay(key, p.day, today) }?.takeIf { it.isNotEmpty() }?.let { HistoryCodec.Series(n, it) }
                 }
-                if (out.isEmpty()) nothing(t) else { v.putBars(f, p.day, out); true }
+                if (out.isEmpty()) nothing(t) else { partial(t, p); v.putBars(f, p.day, out); true }
             }
             f == HistoryVault.Family.FUTURES -> {
                 if (!Broker.loggedIn) throw java.io.IOException("no Zerodha session for the futures")
@@ -186,7 +200,7 @@ object HistoryKeeper {
                     tryRead(t) { Broker.minuteBars(fu.token, p.day) }?.filter { it.istDate == p.day }?.takeIf { it.isNotEmpty() }
                         ?.let { HistoryCodec.Series(fu.tradingSymbol, it.map { b -> bar(b) }) }.also { delay(PAUSE_MS) }
                 }
-                if (out.isEmpty()) nothing(t) else { v.putBars(f, p.day, out); true }
+                if (out.isEmpty()) nothing(t) else { partial(t, p); v.putBars(f, p.day, out); true }
             }
             f == HistoryVault.Family.MCX -> {
                 val near = McxMarket.nearFutures(runCatching { McxMarket.contracts() }.getOrDefault(McxMarket.cached()))
@@ -195,7 +209,7 @@ object HistoryKeeper {
                     tryRead(t) { publicDay(c.upstoxKey, p.day, today) }?.takeIf { it.isNotEmpty() }
                         ?.let { HistoryCodec.Series(c.tradingSymbol, it) }.also { delay(PAUSE_MS) }
                 }
-                if (out.isEmpty()) nothing(t) else { v.putBars(f, p.day, out); true }
+                if (out.isEmpty()) nothing(t) else { partial(t, p); v.putBars(f, p.day, out); true }
             }
             f.startsWith("opt-") || HistoryVault.Family.isChain(f) -> options(v, f.substringAfter('-'), p.day, today)
             else -> false
@@ -210,10 +224,19 @@ object HistoryKeeper {
         val master = Market.cachedContracts()?.second ?: runCatching { Market.contracts() }.getOrNull() ?: throw java.io.IOException("no contract list")
         val listed = master.filter { it.underlying == u && !it.expiry.isBefore(day) }
         if (listed.isEmpty()) return false
+        // A past day whose nearest expiry has since expired: today's list no longer has it (nor does the public feed), so its
+        // two nearest cannot be kept - given up, said, never stored as the later ones (G9-8).
+        if (HistoryKeep.missesNearest(day, today, listed.map { it.expiry })) {
+            runCatching { Diag.record("history", "$u options of $day given up: its nearest expiry has expired since") }
+            return false
+        }
         val t = Tally()
-        val spot = v.bars(u, day).lastOrNull()?.close
-            ?: (Upstox.INDEX_KEYS[u] ?: ChartFeed.EXTRA_INDICES[u])?.let { k -> tryRead(t) { publicDay(k, day, today) }?.lastOrNull()?.close }
+        // The index's last bar (about 15:29): each option is priced at the same minute for its IV, not at its own 15:39 (G9-5).
+        val spotBar = v.bars(u, day).lastOrNull()
+            ?: (Upstox.INDEX_KEYS[u] ?: ChartFeed.EXTRA_INDICES[u])?.let { k -> tryRead(t) { publicDay(k, day, today) }?.lastOrNull() }
             ?: return nothing(t)
+        val spot = spotBar.close
+        val spotAt = java.time.Instant.ofEpochSecond(spotBar.epochSec).atZone(java.time.ZoneId.of("Asia/Kolkata")).toLocalDateTime()
         val expiries = listed.map { it.expiry }.distinct().sorted().take(2)
         val series = ArrayList<HistoryCodec.Series>()
         val rows = ArrayList<HistoryCodec.ChainRow>()
@@ -227,13 +250,15 @@ object HistoryKeeper {
                 series += HistoryCodec.Series(c.tradingSymbol, bars)
                 val last = bars.last()
                 val call = c.right == Right.CE
-                val iv = runCatching {
-                    com.optionslab.ira.MarketRecord.iv(last.close, call, spot, c.strike, day.atTime(15, 29), e)
-                }.getOrNull()
-                rows += HistoryCodec.ChainRow(e, c.strike, call, last.close, last.oi, iv)
+                val paired = HistoryKeep.pairedBar(bars, spotBar.epochSec)
+                val iv = paired?.let { pb ->
+                    runCatching { com.optionslab.ira.MarketRecord.iv(pb.close, call, spot, c.strike, spotAt, e) }.getOrNull()
+                }
+                rows += HistoryCodec.ChainRow(e, c.strike, call, paired?.close ?: last.close, last.oi, iv)
             }
         }
         if (series.isEmpty()) return nothing(t)
+        partial(t, HistoryKeep.Piece(day, HistoryVault.Family.options(u)))
         v.putBars(HistoryVault.Family.options(u), day, series)
         val at = day.atTime(15, 30).atZone(java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond()
         v.putChains(u, day, listOf(HistoryCodec.Chain(u, at, spot, rows)))

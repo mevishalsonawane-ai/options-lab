@@ -117,14 +117,16 @@ class HistoryVault(val root: File, capMb: Int = DEFAULT_CAP_MB) {
         val dropped = ArrayList<LocalDate>()
         val ds = days().toMutableList()
         var used = usageBytes()
-        while (used > capBytes && ds.size > 1) {
-            val oldest = ds.first()
-            if (oldest == keep || oldest == ds.last()) break
+        // [keep] is skipped, not a stop: the next oldest day goes instead (G9-9); the newest day is never dropped.
+        var i = 0
+        while (used > capBytes && i < ds.size - 1) {
+            val oldest = ds[i]
+            if (oldest == keep) { i++; continue }
             val dir = dayDir(oldest)
             val size = dir.listFiles()?.sumOf { it.length() } ?: 0L
             dir.listFiles()?.forEach { decoded.remove(it.path); it.delete() }
             dir.delete()
-            ds.removeAt(0)
+            ds.removeAt(i)
             used -= size
             dropped += oldest
         }

@@ -63,6 +63,40 @@ object HistoryKeep {
         return s.subList((atm - each).coerceAtLeast(0), (atm + each + 1).coerceAtMost(s.size))
     }
 
+    /** Runs a piece with some failed reads is tried again before what it has is kept as the day's (G9-7). */
+    const val PARTIAL_TRIES = 3
+
+    /**
+     * Whether a piece read with [failed] failed reads may be written now, on its [tries]th attempt: whole (no failure) at once;
+     * a partial one only after [PARTIAL_TRIES] attempts - once written, [plan] never fetches it again, so a passing timeout must
+     * not leave a series out for good.
+     */
+    fun keepPartial(failed: Int, tries: Int): Boolean = failed <= 0 || tries >= PARTIAL_TRIES
+
+    /**
+     * The option's bar paired with the index's last bar ([indexAt], its start in epoch seconds): the last at or before it. F&O
+     * trades to 15:40 and the index closes at 15:30, so the option's own last bar is ten minutes after the spot an IV is worked
+     * from (G9-5). Null when the option has no bar by then.
+     */
+    fun pairedBar(option: List<HistoryCodec.Bar>, indexAt: Long): HistoryCodec.Bar? = option.lastOrNull { it.epochSec <= indexAt }
+
+    /**
+     * Whether a past [day]'s nearest expiry may be missing from today's contract list ([listed]: the expiries listed now, all
+     * on or after today): the list only has live contracts, so an expiry between [day] and [today] is gone. Worked out from the
+     * listed cadence (the gap between the two nearest): an expiry before the nearest listed one, on or after [day], was then
+     * the nearest (G9-8). True: the two nearest of that day cannot be kept from today's list.
+     */
+    fun missesNearest(day: LocalDate, today: LocalDate, listed: List<LocalDate>): Boolean {
+        if (!day.isBefore(today)) return false
+        val e = listed.filter { !it.isBefore(today) }.distinct().sorted()
+        if (e.isEmpty()) return false
+        // Before the nearest listed expiry: one cadence back (one listed: a month). A holiday moves an expiry earlier, never
+        // later, so the real one is on or before this estimate.
+        val gap = if (e.size >= 2) java.time.temporal.ChronoUnit.DAYS.between(e[0], e[1]) else 31L
+        val previous = e[0].minusDays(gap)
+        return !day.isAfter(previous)
+    }
+
     /** One run's budget, from [startMs] for [maxMs]; the clock is given. */
     class Budget(private val startMs: Long, private val maxMs: Long = BUDGET_MS) {
         fun spent(nowMs: Long): Boolean = nowMs - startMs !in 0 until maxMs

@@ -349,6 +349,8 @@ object ShadowSim {
         val (stop, target) = levels(r, entry)
         val ix0 = d.index.c[maxOf(0, d.index.atOrBefore(atMin - 1))]
         var peak = entry
+        // The no-progress check runs once, on the first minute at or past its time (a thin strike's minutes have gaps: G7-15).
+        var npChecked = false
         for (i in j until s.size) {
             val m = s.minutes[i]
             if (m >= r.squareOff) return done(d, atMin, m, dir, entry, s.o[i], "TIME", false)
@@ -356,7 +358,7 @@ object ShadowSim {
             if (s.h[i] >= target) return done(d, atMin, m, dir, entry, maxOf(target, s.o[i]), "TARGET", false)
             peak = maxOf(peak, s.h[i])
             val held = m - s.minutes[j] + 1
-            r.noProgressMin?.let { t -> if (held == t && peak < entry * (1 + r.noProgressGain)) return done(d, atMin, m, dir, entry, s.c[i], "NO_PROGRESS", false) }
+            r.noProgressMin?.let { t -> if (!npChecked && held >= t) { npChecked = true; if (peak < entry * (1 + r.noProgressGain)) return done(d, atMin, m, dir, entry, s.c[i], "NO_PROGRESS", false) } }
             r.timeStopMin?.let { t -> if (held >= t) return done(d, atMin, m, dir, entry, s.c[i], "TIME_STOP", false) }
             r.indexStopPct?.let { p ->
                 val ii = d.index.atOrBefore(m)
@@ -376,6 +378,7 @@ object ShadowSim {
         fun prem(ix: Double, held: Int) = (p0 + APPROX_DELTA * dir * (ix - ix0) - p0 * APPROX_DECAY * held / 375.0).coerceAtLeast(0.05)
         val (stop, target) = levels(r, p0)
         var peak = p0
+        var npChecked = false
         for (i in j until s.size) {
             val m = s.minutes[i]
             val held = m - s.minutes[j] + 1
@@ -387,7 +390,7 @@ object ShadowSim {
             if (stop > 0 && lo <= stop) return done(d, atMin, m, dir, p0, minOf(stop, o), "STOP", true)
             if (hi >= target) return done(d, atMin, m, dir, p0, maxOf(target, o), "TARGET", true)
             peak = maxOf(peak, hi)
-            r.noProgressMin?.let { t -> if (held == t && peak < p0 * (1 + r.noProgressGain)) return done(d, atMin, m, dir, p0, c, "NO_PROGRESS", true) }
+            r.noProgressMin?.let { t -> if (!npChecked && held >= t) { npChecked = true; if (peak < p0 * (1 + r.noProgressGain)) return done(d, atMin, m, dir, p0, c, "NO_PROGRESS", true) } }
             r.timeStopMin?.let { t -> if (held >= t) return done(d, atMin, m, dir, p0, c, "TIME_STOP", true) }
             r.indexStopPct?.let { p -> if (dir * (s.c[i] - ix0) <= -p * ix0) return done(d, atMin, m, dir, p0, c, "INDEX_STOP", true) }
         }

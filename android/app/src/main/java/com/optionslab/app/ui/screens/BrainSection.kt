@@ -51,7 +51,7 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun BrainSection(divider: Boolean = true) {
+internal fun BrainSection(divider: Boolean = true, model: com.optionslab.app.ui.AppModel? = null) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     val p = LocalPalette.current
     val brain by SmartWorkers.brain.collectAsState(Dispatchers.Main.immediate)
@@ -89,7 +89,7 @@ internal fun BrainSection(divider: Boolean = true) {
         consensus.forEach { Note("Bots on $it", Modifier.padding(top = 2.dp)) }
         if (brain.health.words().isNotEmpty()) Note("Data: " + brain.health.words().joinToString("; "), Modifier.padding(top = 2.dp))
         // The event-day note, today's frozen regime and the Portfolio line (TODO S8, S11, S12; a tap shows the correlations).
-        BrainExtras()
+        BrainExtras(model)
         BrassButton("Findings and pauses", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { sheet = true }
     }
     if (sheet) BrainSheet { sheet = false }

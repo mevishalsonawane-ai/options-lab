@@ -53,7 +53,11 @@ object LabTalk {
 
     // ---- the answers -----------------------------------------------------------------------------------------------------
 
-    fun answer(a: Ask, f: StrategyForge.Book, v: VariantLab.Book): String = when (a.kind) {
+    /**
+     * The answer to [a]. On a [locked] phone, none: the lab's books carry the rupees of the bots on Boss's account
+     * ([SelfTalk.LOCKED_BOTS]; G9-4).
+     */
+    fun answer(a: Ask, f: StrategyForge.Book, v: VariantLab.Book, locked: Boolean = false): String = if (locked) SelfTalk.LOCKED_BOTS else when (a.kind) {
         Kind.IMPROVING -> improving(v)
         Kind.FOUND -> found(f)
         Kind.CANDIDATE -> candidate(f, a.id ?: "")
@@ -72,11 +76,14 @@ object LabTalk {
             lines += "• ${s.label} (${v.runOf(s.key).words}): ${alive.size} variant${if (alive.size == 1) "" else "s"} shadowing" +
                 (best?.let { "; best ${it.id} (${it.moved()}): ${VariantLab.state(it)}" } ?: "; none compared yet") + "."
         }
-        val applied = v.changes.filter { it.status == VariantLab.ChangeStatus.APPLIED }.takeLast(2)
+        // Paper promotions only: a safety-net revert acts on both accounts and has no Undo (G7-8); it is said apart.
+        val applied = v.changes.filter { it.status == VariantLab.ChangeStatus.APPLIED && it.kind == VariantLab.ChangeKind.AUTO_PAPER }.takeLast(2)
+        val reverted = v.changes.filter { it.status == VariantLab.ChangeStatus.APPLIED && it.kind == VariantLab.ChangeKind.SAFETY_REVERT }.takeLast(2)
         val waiting = v.changes.filter { it.status == VariantLab.ChangeStatus.OFFERED }
-        if (lines.isEmpty() && applied.isEmpty()) return "No strategy is running for the lab to tune yet, Boss. Arm one and its shadow variants start the next day."
+        if (lines.isEmpty() && applied.isEmpty() && reverted.isEmpty()) return "No strategy is running for the lab to tune yet, Boss. Arm one and its shadow variants start the next day."
         val tail = listOfNotNull(
             applied.takeIf { it.isNotEmpty() }?.let { "Changed on paper by itself: " + it.joinToString("; ") { c -> "${label(c.strategy)} on ${DiscoveryStats.day(c.day)}" } + " (undo on Home → Strategy lab)." },
+            reverted.takeIf { it.isNotEmpty() }?.let { "Put back to its defaults by the safety net: " + it.joinToString("; ") { c -> "${label(c.strategy)} on ${DiscoveryStats.day(c.day)}" } + "." },
             waiting.takeIf { it.isNotEmpty() }?.let { "Waiting for you (live, your PIN): " + it.joinToString("; ") { c -> label(c.strategy) } + "." },
             "${v.tried} variant${if (v.tried == 1) "" else "s"} tried so far; ${v.retiredCount} retired. A variant must beat the current rules for at least " +
                 "${VariantLab.MIN_N} days and pass the false-discovery check across all of them.")

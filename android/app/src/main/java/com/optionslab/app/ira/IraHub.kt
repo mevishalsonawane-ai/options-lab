@@ -3824,8 +3824,10 @@ object IraHub {
         if (labAsk != null) {
             // Off the main thread: the lab's files may be read the first time (review R5 #12).
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            // The lab's results are the bots' rupees on Boss's account: none on a locked phone (G9-4).
+            val labLocked = phoneLocked()
             scope.launch(Dispatchers.IO) {
-                reply(runCatching { com.optionslab.app.data.VariantRunner.answer(labAsk) }.getOrElse { "I could not read the strategy lab just now, Boss." })
+                reply(runCatching { com.optionslab.app.data.VariantRunner.answer(labAsk, labLocked) }.getOrElse { "I could not read the strategy lab just now, Boss." })
             }
             return true
         }
@@ -3836,6 +3838,8 @@ object IraHub {
             runCatching { com.optionslab.ira.AutoChange.asked(q) }.getOrNull() else null
         if (autoAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            // Autopilot's log is what the bots did on Boss's account, with their rupees: none on a locked phone (G9-4).
+            if (phoneLocked()) { reply(com.optionslab.ira.SelfTalk.LOCKED_BOTS); return true }
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { Autopilot.answer(autoAsk) }.getOrElse { "I could not read Autopilot's log just now, Boss." })
             }

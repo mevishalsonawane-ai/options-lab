@@ -191,6 +191,8 @@ object PortfolioRisk {
     }
 
     private val ARM_WORDS = listOf("orb", "liquidity", "night", "hero", "solo", "vix", "pine", "mcx", "range fade", "sweep", "fresh", "arm", "bot", "entry", "strategy")
+    /** The words that name one arm (not "arm", "bot", "entry" or "strategy"). */
+    private val NAMED_ARMS = listOf("orb fresh", "orb sweep", "range fade", "orb", "liquidity", "night", "hero", "solo", "vix", "pine", "mcx")
 
     fun answerCorrelation(m: Matrix, stops: Map<String, Double>, cap: Double): String {
         if (m.empty) return "Boss, I need at least two arms with $MIN_COMMON or more days of trades in the last $WINDOW_DAYS to say how alike they are."
@@ -207,8 +209,12 @@ object PortfolioRisk {
         if (blocks.isEmpty()) return "Boss, the portfolio guard has blocked nothing today."
         val t = q.lowercase(Locale.ENGLISH)
         val hit = blocks.lastOrNull { b -> label(b.arm).lowercase(Locale.ENGLISH).split(' ').any { w -> w.length >= 3 && Regex("\\b${Regex.escape(w)}\\b").containsMatchIn(t) } }
-            ?: blocks.last()
-        return "Boss, " + hit.why + "."
+        if (hit != null) return "Boss, " + hit.why + "."
+        // An arm named that the guard did not block: said so, never another arm's block as its answer (G9-10).
+        val named = NAMED_ARMS.firstOrNull { Regex("\\b${Regex.escape(it)}\\b").containsMatchIn(t) }
+        if (named != null) return "Boss, the portfolio guard has not blocked ${label(canon(named))} today; it blocked " +
+            blocks.map { label(it.arm) }.distinct().joinToString(", ") + ". Something else may have stopped it (a regime sit-out, a news pause)."
+        return "Boss, " + blocks.last().why + "."
     }
 }
 

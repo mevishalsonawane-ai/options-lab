@@ -239,4 +239,78 @@ class VariantRunnerTest : RobolectricTest() {
         assertTrue(ask("which ideas keep failing?").startsWith("Too few tries"))
         assertTrue(ask("what are you exploring next?").startsWith("Next I lean toward"))
     }
+
+    // ---- the line-by-line review (G7, G9-4) ---------------------------------------------------------------------------------
+
+    /** G7-1: how each strategy ran today is on the disk, so a settle in a new process after the close still knows it. */
+    @Test fun theDaysRunsSurviveARestartBeforeTheSettle() {
+        VariantRunner.saw("orb", true)
+        val f = File(context.noBackupFilesDir, "strategylab/runs.txt")
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && !(f.isFile && f.readText().contains("orb|"))) Thread.sleep(10)
+        VariantRunner.unloadForTest()
+        assertEquals(VariantLab.Run.OFF, VariantRunner.runsOn(day)["orb"])
+        VariantRunner.ensureLoaded()
+        assertEquals(VariantLab.Run.LIVE, VariantRunner.runsOn(day)["orb"])
+    }
+
+    /** G7-12: one strategy, several books - live when any of them ran live, whichever pass came last. */
+    @Test fun aStrategyWithOneLiveBookRanLive() {
+        VariantRunner.saw("liquidity15", true)
+        VariantRunner.saw("liquidity30", false)
+        assertEquals(VariantLab.Run.LIVE, VariantRunner.runsOn(day)["liquidity"])
+    }
+
+    /** G7-11: a book that exists but cannot be read is never taken as empty, and nothing is saved over it. */
+    @Test fun anUnreadableBookIsNotLoadedAndNeverSavedOver() = runBlocking<Unit> {
+        val dir = File(context.noBackupFilesDir, "strategylab")
+        val vf = File(dir, "variants.txt")
+        vf.mkdirs()
+        File(vf, "keep").writeText("x")
+        VariantRunner.unloadForTest()
+        VariantRunner.ensureLoaded()
+        assertFalse(VariantRunner.isLoaded)
+        assertEquals("the lab's book could not be read", VariantRunner.settleIfDue(Market.now()).said)
+        assertTrue(vf.isDirectory && File(vf, "keep").isFile)
+    }
+
+    /** G7-13: the first arm pass after a start reads the book (off the main thread), so it never trades the defaults first. */
+    @Test fun theFirstArmPassReadsTheBook() {
+        val s = VariantLab.strategy("liquidity")!!
+        val b = VariantLab.Book(tunes = listOf(VariantLab.Tune("liquidity", false, day, s.defaults + (com.optionslab.ira.ArmParams.STOP_PCT to 0.125), "C1")))
+        File(context.noBackupFilesDir, "strategylab").mkdirs()
+        File(context.noBackupFilesDir, "strategylab/variants.txt").writeText(VariantLab.encode(b))
+        VariantRunner.unloadForTest()
+        var stop = Double.NaN
+        val t = Thread { stop = VariantRunner.liquidityParams(day, false).stopPct }
+        t.start(); t.join(10_000)
+        assertEquals(0.125, stop, 1e-12)
+    }
+
+    /** G7-14: the worker's guard swallows a failure but passes WorkManager's cancellation on. */
+    @Test fun theWorkersGuardPassesACancellationOn() = runBlocking<Unit> {
+        assertNull(DiscoveryWorker.guarded<Unit> { throw IllegalStateException("a failed settle") })
+        var cancelled = false
+        try { DiscoveryWorker.guarded<Unit> { throw kotlinx.coroutines.CancellationException("stopped") } } catch (e: kotlinx.coroutines.CancellationException) { cancelled = true }
+        assertTrue(cancelled)
+    }
+
+    /** G9-4: the lab, Autopilot and the scorecard carry the bots' rupees on Boss's account: not said on a locked phone. */
+    @Test fun theBotsResultsWaitForAnUnlockedPhone() {
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
+        fun ask(q: String): String {
+            val start = IraHub.state.value.messages.maxOfOrNull { it.id } ?: 0L
+            IraHub.ask(q)
+            val end = System.currentTimeMillis() + 10_000
+            while (System.currentTimeMillis() < end && IraHub.state.value.messages.none { it.fromIra && it.id > start }) Thread.sleep(10)
+            return IraHub.state.value.messages.last().text
+        }
+        val km = org.robolectric.Shadows.shadowOf(context.getSystemService(android.app.KeyguardManager::class.java))
+        km.setIsKeyguardLocked(true)
+        try {
+            for (q in listOf("how are my strategies improving?", "how is autopilot doing", "how did the automation do last month"))
+                assertEquals(q, com.optionslab.ira.SelfTalk.LOCKED_BOTS, ask(q))
+        } finally { km.setIsKeyguardLocked(false) }
+        assertTrue(ask("how many ideas have you tried?").startsWith("0 new ideas tried"))
+    }
 }

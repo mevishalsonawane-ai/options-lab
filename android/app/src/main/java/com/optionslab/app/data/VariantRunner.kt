@@ -50,6 +50,8 @@ object VariantRunner {
     private const val DIR = "strategylab"
     private const val VARIANTS = "variants.txt"
     private const val FORGE = "forge.txt"
+    /** How each strategy ran on its last day (kept: the day's settle may run in a later process - G7-1). */
+    private const val RUNS = "runs.txt"
     /** Stored days the pre-check of a new variant reads; days the forge backtests on per index. */
     const val PRECHECK_DAYS = 40
     const val FORGE_DAYS = 100
@@ -72,6 +74,7 @@ object VariantRunner {
 
     @Volatile private var loaded = false
     @Volatile private var settling = false
+    @Volatile private var armLoadTried = false
 
     /** Each arm's last day seen running, and whether live (the arms' hook writes it; memory only). */
     private val seen = ConcurrentHashMap<String, Pair<Long, Boolean>>()
@@ -90,18 +93,41 @@ object VariantRunner {
 
     private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }
 
+    /**
+     * The lab's files read once. A file that is absent is an empty book; one that exists but cannot be read leaves the lab
+     * NOT loaded (G7-11): nothing is saved over it, the arms trade their defaults, and the next call tries again.
+     */
     fun ensureLoaded() {
         if (loaded) return
         synchronized(lock) {
             if (loaded) return
-            val d = dir()
-            if (_variants.value == VariantLab.Book()) _variants.value = VariantLab.decode(runCatching { d?.let { File(it, VARIANTS) }?.takeIf { it.isFile }?.readText() }.getOrNull())
-            if (_forge.value == StrategyForge.Book()) _forge.value = StrategyForge.decode(runCatching { d?.let { File(it, FORGE) }?.takeIf { it.isFile }?.readText() }.getOrNull())
+            // Before init there is no folder to read: not loaded (never an empty book saved over the real one later).
+            val d = dir() ?: return
+            val (vText, fText) = try { readOrNull(d, VARIANTS) to readOrNull(d, FORGE) } catch (e: Exception) {
+                runCatching { Diag.record("strategylab", "the lab's book could not be read (${e.javaClass.simpleName}): not loaded, nothing saved over it") }
+                return
+            }
+            if (_variants.value == VariantLab.Book()) _variants.value = VariantLab.decode(vText)
+            if (_forge.value == StrategyForge.Book()) _forge.value = StrategyForge.decode(fText)
+            // How each strategy ran on its last days, kept across a restart (G7-1): the settle after the close may run in a new process.
+            runCatching { readOrNull(d, RUNS) }.getOrNull()?.lines()?.forEach { l ->
+                val p = l.split('|')
+                val day = p.getOrNull(1)?.toLongOrNull() ?: return@forEach
+                if (p[0].isNotEmpty()) seen.merge(p[0], day to (p.getOrNull(2) == "1")) { a, b -> mergeSeen(a, b) }
+            }
             loaded = true
         }
     }
 
+    /** [f]'s text; null when it does not exist; throws when it exists but cannot be read. */
+    private fun readOrNull(d: File?, name: String): String? {
+        val f = File(d ?: return null, name)
+        return if (f.exists()) f.readText() else null
+    }
+
     private fun save() {
+        // Never over a book that could not be read (G7-11).
+        if (!loaded) return
         val d = dir() ?: return
         runCatching {
             d.mkdirs()
@@ -110,10 +136,33 @@ object VariantRunner {
         }
     }
 
+    /** Written whole: a temporary file synced to the disk, then renamed over (a power loss never leaves half a book: G7-11). */
     private fun write(f: File, text: String) {
         val tmp = File(f.parentFile, f.name + ".tmp")
-        tmp.writeText(text)
+        java.io.FileOutputStream(tmp).use { out -> out.write(text.toByteArray(Charsets.UTF_8)); out.flush(); out.fd.sync() }
         if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+    }
+
+    /** The newer day wins; the same day is live when either pass was (G7-12). */
+    private fun mergeSeen(a: Pair<Long, Boolean>, b: Pair<Long, Boolean>): Pair<Long, Boolean> = when {
+        b.first > a.first -> b
+        b.first < a.first -> a
+        else -> a.first to (a.second || b.second)
+    }
+
+    private val seenLock = Any()
+
+    /** The runs written off the arms' pass, on IO (one small file; only when a strategy's day or account changed). */
+    private fun saveSeenSoon() {
+        scope.launch {
+            runCatching {
+                synchronized(seenLock) {
+                    val d = dir() ?: return@synchronized
+                    d.mkdirs()
+                    write(File(d, RUNS), seen.entries.sortedBy { it.key }.joinToString("\n") { "${it.key}|${it.value.first}|${if (it.value.second) 1 else 0}" })
+                }
+            }
+        }
     }
 
     private fun saveSoon() { scope.launch { synchronized(lock) { save() } } }
@@ -126,7 +175,18 @@ object VariantRunner {
      */
     fun saw(key: String, live: Boolean) {
         if (!enabled()) return
-        runCatching { seen[lab(key)] = Market.today().toEpochDay() to live }
+        runCatching {
+            val day = Market.today().toEpochDay()
+            var changed = false
+            // One strategy, several books (Liquidity's): live when any of them ran live that day, never the last one's (G7-12).
+            seen.compute(lab(key)) { _, prev ->
+                val next = if (prev == null) day to live else mergeSeen(prev, day to live)
+                if (next != prev) changed = true
+                next
+            }
+            // Kept on the disk for the settle after the close (G7-1): written on IO, only when the day or account changed.
+            if (changed) saveSeenSoon()
+        }
     }
 
     /** An arm's source as the lab's strategy key (Liquidity's books are one strategy; MCX's arms one family). */
@@ -163,6 +223,13 @@ object VariantRunner {
 
     @Suppress("UNCHECKED_CAST")
     private fun <T : Any> cached(key: String, day: LocalDate, live: Boolean, make: (Map<String, Double>?) -> T, default: T): T {
+        // The first arm pass after a start finds the book not read yet: it is read here, once, off the main thread (as the arms
+        // read their own book on their first pass), so no entry of the session is taken on the defaults and the next on a
+        // variant (G7-13). Tried once: a book that cannot be read is not read again on every pass.
+        if (!loaded && !armLoadTried && appContext != null && enabled() && android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            armLoadTried = true
+            runCatching { ensureLoaded() }
+        }
         if (!loaded || !enabled() || _variants.value.tunes.isEmpty()) return default
         val b = _variants.value
         var t = tuned
@@ -272,32 +339,43 @@ object VariantRunner {
         if (Market.isTradingDay(today) && minute in (9 * 60) until SETTLE_FROM) return Settled(null, "market hours")
         if (settling) return Settled(null, "busy")
         withContext(Dispatchers.IO) { ensureLoaded() }
+        if (!loaded) return Settled(null, "the lab's book could not be read")
         val vb = _variants.value; val fb = _forge.value
         if ((vb.lastDay?.let { !d.isAfter(it) } == true) && (fb.lastForward?.let { !d.isAfter(it) } == true)) return Settled(null, "already settled")
         // While the day's minutes are not stored yet: the day lists only (a manifest and a directory), not every session decoded.
-        if (testDays == null && withContext(Dispatchers.IO) { VARIANT_UNDERLYINGS.none { u -> runCatching { d in Store.barDays(u) }.getOrDefault(false) } })
+        // Every index that keeps days must have this one (the harvest writes one at a time: G7-2).
+        if (testDays == null && withContext(Dispatchers.IO) {
+                !VariantLab.readyToSettle(d, VARIANT_UNDERLYINGS.associateWith { u -> runCatching { Store.barDays(u) }.getOrDefault(emptyList()).filter { !it.isAfter(d) && !it.isBefore(d.minusDays(8)) } }, today)
+            })
             return Settled(null, "waiting for $d's stored minutes")
         if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE)) return Settled(null, "battery / heat budget")
         settling = true
         try {
             val data = withContext(Dispatchers.IO) { VARIANT_UNDERLYINGS.associateWith { u -> runCatching { days(u, d, PRECHECK_DAYS + 1) }.getOrDefault(emptyList()) } }
             val todays = data.mapNotNull { (u, ds) -> ds.lastOrNull()?.takeIf { it.date == d }?.let { u to it } }.toMap()
-            if (todays.isEmpty()) return Settled(null, "waiting for $d's stored minutes")
+            if (todays.isEmpty() || !VariantLab.readyToSettle(d, data.mapValues { (_, ds) -> ds.map { it.date } }, today))
+                return Settled(null, "waiting for $d's stored minutes")
             val history = data.values.flatMap { ds -> ds.filter { it.date.isBefore(d) } }
             val runs = runsOn(d)
             // A change decided tonight is traded from the next session, never the one running (S1); the safety net reads what
             // each arm really made that day, where its book has it.
             val from = fromAfter(d, now)
             val actual = if (vb.tunes.isEmpty()) emptyMap() else actualOn(d, runs)
-            val (vp, fp) = withContext(Dispatchers.Default) {
+            // An event day is not evidence (G9-6, [com.optionslab.ira.LearningFilter]): no variant compared or judged and no
+            // forward day counted on it; the safety net still runs.
+            val evidence = runCatching { com.optionslab.ira.LearningFilter.include(d) }.getOrDefault(true)
+            // The day's books and their save in one critical section (G7-14): a cancel can never leave memory settled and the
+            // disk not.
+            val (vp, fp) = withContext(Dispatchers.IO) {
                 synchronized(lock) {
-                    val v = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history, DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual))
-                    val f = StrategyForge.forwardDay(_forge.value, d, todays.filterKeys { it in UNDERLYINGS })
+                    val v = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history,
+                        DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence))
+                    val f = StrategyForge.forwardDay(_forge.value, d, if (evidence) todays.filterKeys { it in UNDERLYINGS } else emptyMap())
                     _variants.value = v.book; _forge.value = f.book
+                    save()
                     v to f
                 }
             }
-            withContext(Dispatchers.IO) { synchronized(lock) { save() } }
             runCatching { tell(vp.events, fp.events) }
             val said = "settled $d: ${vp.book.alive().size} variants shadowing, ${fp.book.forward.size} ideas in forward test, " +
                 "${vp.events.size + fp.events.size} decisions"
@@ -326,9 +404,9 @@ object VariantRunner {
                 // accepted live change in the Strategy lab).
                 if (e.liveStopKept) runCatching {
                     com.optionslab.app.ira.IraHub.offer("strategy lab: $label live stop", "Boss, $label's live stop",
-                        "Boss, the safety net put $label back to its defaults, but its live trades keep their tighter stop: the default stop " +
-                            "is wider and adds live risk. To widen it, Undo the live change with your PIN in $WHERE.",
-                        suspend { "Undo the live change with your PIN in $WHERE (a wider live stop adds risk)." }, addsRisk = true, alwaysAsk = true)
+                        "Boss, the safety net put $label back to its defaults, but its live trades keep their tighter stop and exits: the " +
+                            "defaults' are wider or later and add live risk. To go back to them, Undo the live change with your PIN in $WHERE.",
+                        suspend { "Undo the live change with your PIN in $WHERE (a wider live stop or a later exit adds risk)." }, addsRisk = true, alwaysAsk = true)
                 }
             }
             is VariantLab.Event.Proposed -> offerLive(e.change)
@@ -372,7 +450,7 @@ object VariantRunner {
     suspend fun forgeIfDue(today: LocalDate = Market.today(), stopped: () -> Boolean = { false }): StrategyForge.Night? {
         if (!enabled()) return null
         withContext(Dispatchers.IO) { ensureLoaded() }
-        if (_forge.value.lastNight == today) return null
+        if (!loaded || _forge.value.lastNight == today) return null
         val hist = withContext(Dispatchers.IO) { UNDERLYINGS.associateWith { u -> runCatching { days(u, today, FORGE_DAYS) }.getOrDefault(emptyList()) } }
         if (hist.values.all { it.size < 30 }) return null
         val t0 = System.nanoTime()
@@ -462,7 +540,11 @@ object VariantRunner {
 
     // ---- Jarvis -------------------------------------------------------------------------------------------------------------
 
-    fun answer(a: LabTalk.Ask): String { ensureLoaded(); return LabTalk.answer(a, _forge.value, _variants.value) }
+    /** Jarvis's answer; on a [locked] phone none (the lab's books carry the bots' rupees on Boss's account: G9-4). */
+    fun answer(a: LabTalk.Ask, locked: Boolean = false): String {
+        if (!locked) ensureLoaded()
+        return LabTalk.answer(a, _forge.value, _variants.value, locked)
+    }
 
     fun lessons(): List<LabLessons.Lesson> = runCatching { LabLessons.lessons(_forge.value, _variants.value) }.getOrDefault(emptyList())
 
@@ -490,8 +572,16 @@ object VariantRunner {
     /** TEST ONLY. */
     internal fun resetForTest() {
         synchronized(lock) { _variants.value = VariantLab.Book(); _forge.value = StrategyForge.Book() }
-        seen.clear(); loaded = true; settling = false; testDays = null; tuned = Tuned(VariantLab.Book())
+        seen.clear(); loaded = true; settling = false; testDays = null; tuned = Tuned(VariantLab.Book()); armLoadTried = false
     }
+
+    /** TEST ONLY: as a fresh process - nothing in memory, the files not read yet. */
+    internal fun unloadForTest() {
+        synchronized(lock) { _variants.value = VariantLab.Book(); _forge.value = StrategyForge.Book() }
+        seen.clear(); loaded = false; armLoadTried = false; tuned = Tuned(VariantLab.Book())
+    }
+
+    internal val isLoaded: Boolean get() = loaded
 
     internal fun setForTest(v: VariantLab.Book, f: StrategyForge.Book) { synchronized(lock) { _variants.value = v; _forge.value = f }; loaded = true }
 }

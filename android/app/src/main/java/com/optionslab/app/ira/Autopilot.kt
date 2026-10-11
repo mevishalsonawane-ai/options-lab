@@ -275,7 +275,9 @@ internal object Autopilot {
         runCatching { SmartWorkers.refreshReviews() }
         val s = SmartWorkers.settings.value
         val own = _book.value.entries.filter { it.applied && it.by == WHO.lowercase(Locale.ENGLISH) && it.change.to == AutoChange.PAUSED }.map { it.change.target }.toSet()
-        return AutoChange.Inputs(today, lessons, TradeManagerHost.records.value, policy,
+        // Event days are not evidence (G9-6, LearningFilter): their trades are left out, as the lessons already leave them out.
+        val records = TradeManagerHost.records.value.filter { runCatching { com.optionslab.ira.LearningFilter.includeMs(it.trade.entryMs) }.getOrDefault(true) }
+        return AutoChange.Inputs(today, lessons, records, policy,
             sb.tuned.mapValues { it.value.muted }, sb.frozen.mapValues { it.value.muted }, SmartWorkers.reviews.value,
             s.parked, s.paused, FlowGate.modes.value, _knobs.value, own)
     }
