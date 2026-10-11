@@ -873,7 +873,7 @@ object Broker {
     private fun keepFutures(nfoDay: String, bfoDay: String, list: List<Kite.Future>) {
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.lotSize).put(it.exchange)) }
-        futuresFile().writeText(JSONObject().put("nfo", nfoDay).put("bfo", bfoDay).put("f", a).toString())
+        writeAtomic(futuresFile(), JSONObject().put("nfo", nfoDay).put("bfo", bfoDay).put("f", a).toString())
     }
 
     /** NFO's futures from the day's instruments dump [instruments] has just downloaded (no second download for them). */
@@ -1006,8 +1006,18 @@ object Broker {
                     it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
             }
             InstrumentsMemo(stamp, o.optString("day"), list).also { instrumentsMemo = it }
-        }.getOrNull()
+        }.getOrNull() ?: instrumentsMemo   // G1-6: a file that does not parse never loses the list already in memory
     }
+
+    /** G1-6: written whole to a temp file, then renamed over [f], so a reader on another lane never parses a half-written file. */
+    private fun writeAtomic(f: File, text: String) {
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.writeText(text)
+        if (!tmp.renameTo(f)) { f.delete(); if (!tmp.renameTo(f)) throw IOException("could not replace ${f.name}") }
+    }
+
+    /** True when the instruments list in memory is today's download (memory only: no file read). */
+    internal fun instrumentsAreToday(): Boolean = instrumentsMemo?.day == Market.today().toString()
 
     /** The last instruments list fetched (any day), without touching the network; parsed again only when the file changes. */
     fun cachedInstruments(): List<Kite.Instrument>? = instrumentsFile()?.list
@@ -1022,13 +1032,24 @@ object Broker {
         runCatching { keepNfoFutures(text) }
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
-        f.writeText(JSONObject().put("day", Market.today().toString()).put("i", a).toString())
+        writeAtomic(f, JSONObject().put("day", Market.today().toString()).put("i", a).toString())
         instrumentsMemo = InstrumentsMemo(f.lastModified() to f.length(), Market.today().toString(), list)
+        // G1-2: the day's token map follows the list just downloaded. One built earlier today from yesterday's file (the watch's
+        // first pass) would otherwise miss every contract listed since - new strikes too - for the rest of the day.
+        tokenMap = Market.today() to list.associate { "NFO:" + it.tradingSymbol to it.token }
         return list
     }
 
-    private val specs = HashMap<String, Kite.Spec>()
-    private var specDay: LocalDate? = null
+    /**
+     * G1-5: the day and its specs in one volatile pair, the map a concurrent one: [spec] runs on several lanes at once (the
+     * fast path's LIVE and MINUTE lanes, the history, the protections), so a plain map could lose entries or break mid-resize.
+     */
+    @Volatile private var specsOfDay: Pair<LocalDate, java.util.concurrent.ConcurrentHashMap<String, Kite.Spec>>? = null
+    private fun specsToday(): java.util.concurrent.ConcurrentHashMap<String, Kite.Spec> {
+        val today = Market.today()
+        specsOfDay?.let { if (it.first == today) return it.second }
+        return java.util.concurrent.ConcurrentHashMap<String, Kite.Spec>().also { specsOfDay = today to it }
+    }
 
     /**
      * Lot and tick for any instrument, e.g. to square off a position the app
@@ -1037,7 +1058,7 @@ object Broker {
      * in memory for the day.
      */
     suspend fun spec(exchange: String, symbol: String): Kite.Spec {
-        if (specDay != Market.today()) { specs.clear(); specDay = Market.today() }
+        val specs = specsToday()
         specs["$exchange:$symbol"]?.let { return it }
         if (exchange == "NFO") (cachedInstruments() ?: emptyList()).firstOrNull { it.tradingSymbol == symbol }?.let {
             return Kite.Spec("NFO", symbol, it.token, it.lotSize, it.tickSize).also { s -> specs["$exchange:$symbol"] = s }

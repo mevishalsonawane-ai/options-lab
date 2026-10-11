@@ -338,7 +338,9 @@ object Paper {
         }
         val list = Broker.cachedInstruments() ?: return null
         val t = Broker.find(list, c.underlying, c.expiry, c.strike, c.right)?.token ?: 0L
-        kiteTokens[c.symbol] = t
+        // G1-2: "not listed" (0) is remembered only from today's list; from an older one the contract may simply be new, so it
+        // is looked up again once the day's list has been downloaded.
+        if (t > 0 || Broker.instrumentsAreToday()) kiteTokens[c.symbol] = t
         return t.takeIf { it > 0 }
     }
 
@@ -363,7 +365,10 @@ object Paper {
     data class StreamCover(val tokens: Set<Long>, val covered: Boolean, val any: Boolean)
 
     fun streamCover(): StreamCover {
-        val b = book()
+        // G1-3: memory only, never [book] - that waits on this object's monitor, which [save] holds through a vault write
+        // (and tick/snapshot through whole engine passes); the fast-path consumer calling this also dispatches the LIVE
+        // exit lane, which must never wait behind a paper write. Not loaded yet: not covered (the watch pass loads it).
+        val b = cache ?: return StreamCover(emptySet(), covered = false, any = false)
         val syms = watched(b.state)
         if (syms.isEmpty()) return StreamCover(emptySet(), covered = true, any = false)
         var covered = true

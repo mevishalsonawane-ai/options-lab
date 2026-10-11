@@ -110,6 +110,7 @@ object FastPath {
         inbox.drain()
         snap = null
         modeAt = 0L
+        faultForTest = null
     }
 
     // ---- what is held and armed, re-read at most every [STATE_MS] -----------------------------------------------------
@@ -174,44 +175,58 @@ object FastPath {
         var minuteTrigger: Long? = null
         var lastWarm: Long? = null
         while (currentCoroutineContext().isActive) {
-            val before = System.currentTimeMillis()
-            val s0 = snap
-            val warmAt = com.optionslab.ira.RouteWarm.next(before, lastWarm, liveActive = s0?.liveActive == true, armed = OrbArms.armedHint)
-            val until = listOfNotNull(retryAt, minuteAt, minuteAgain, warmAt).minOrNull() ?: (before + 60_000)
-            if (until > before) withTimeoutOrNull(until - before) { wake.receive() }
-            val now = System.currentTimeMillis()
-            if (warmAt != null && now >= warmAt) {
-                lastWarm = now
-                runCatching { warmAhead() }
-            }
-            // The kept margins for a live entry's check: read again in the background when 25 s old (never on this thread).
-            if (s0?.liveActive == true) runCatching { Broker.refreshMarginsIfDue() }
-            val again = minuteAgain
-            if (again != null && now >= again) {
-                minuteAgain = if (launchLane(FastLane.Lane.MINUTE, minuteTrigger ?: now, null, OrderSpeed.Source.FEED)) null else now + 500
-            }
-            val fresh = inbox.drain()
-            val evs = if (carry.isEmpty()) fresh else (carry + fresh).associateBy { it.token }.values.toList()
-            if (evs.isNotEmpty()) {
-                val s = snapshot(now)
-                val plan = FastLane.plan(evs, rolls, gate, now, s.st, busy.now()) { it in s.tokens }
-                carry = if (plan.retryMs != null) evs else emptyList()
-                retryAt = plan.retryMs?.let { now + it }
-                plan.minuteAtMs?.let { minuteAt = it; minuteTrigger = plan.triggerMs }
-                plan.minuteAgainMs?.let { minuteAgain = it }
-                for (lane in plan.lanes) {
-                    val src = if (lane == FastLane.Lane.LIVE && !s.st.liveFresh) OrderSpeed.Source.FEED else OrderSpeed.Source.STREAM
-                    launchLane(lane, plan.triggerMs ?: now, plan.triggerExchMs, src, s)
+            // G1-7: one pass that throws is recorded and the consumer carries on; it never ends the event-driven exits silently.
+            try {
+                val before = System.currentTimeMillis()
+                val s0 = snap
+                val warmAt = com.optionslab.ira.RouteWarm.next(before, lastWarm, liveActive = s0?.liveActive == true, armed = OrbArms.armedHint)
+                val until = listOfNotNull(retryAt, minuteAt, minuteAgain, warmAt).minOrNull() ?: (before + 60_000)
+                if (until > before) withTimeoutOrNull(until - before) { wake.receive() }
+                faultForTest?.invoke()
+                val now = System.currentTimeMillis()
+                if (warmAt != null && now >= warmAt) {
+                    lastWarm = now
+                    runCatching { warmAhead() }
                 }
-            } else retryAt = null
-            // The minute lane at once when due now (at the close on local candles), else at its time.
-            val due = minuteAt
-            if (due != null && System.currentTimeMillis() >= due) {
-                minuteAt = null
-                if (!launchLane(FastLane.Lane.MINUTE, minuteTrigger ?: now, null, OrderSpeed.Source.FEED)) minuteAgain = minuteAgain ?: (now + 500)
+                // The kept margins for a live entry's check: read again in the background when 25 s old (never on this thread).
+                if (s0?.liveActive == true) runCatching { Broker.refreshMarginsIfDue() }
+                val again = minuteAgain
+                if (again != null && now >= again) {
+                    minuteAgain = if (launchLane(FastLane.Lane.MINUTE, minuteTrigger ?: now, null, OrderSpeed.Source.FEED)) null else now + 500
+                }
+                val fresh = inbox.drain()
+                val evs = if (carry.isEmpty()) fresh else (carry + fresh).associateBy { it.token }.values.toList()
+                if (evs.isNotEmpty()) {
+                    val s = snapshot(now)
+                    val plan = FastLane.plan(evs, rolls, gate, now, s.st, busy.now()) { it in s.tokens }
+                    carry = if (plan.retryMs != null) evs else emptyList()
+                    retryAt = plan.retryMs?.let { now + it }
+                    plan.minuteAtMs?.let { minuteAt = it; minuteTrigger = plan.triggerMs }
+                    plan.minuteAgainMs?.let { minuteAgain = it }
+                    for (lane in plan.lanes) {
+                        val src = if (lane == FastLane.Lane.LIVE && !s.st.liveFresh) OrderSpeed.Source.FEED else OrderSpeed.Source.STREAM
+                        launchLane(lane, plan.triggerMs ?: now, plan.triggerExchMs, src, s)
+                    }
+                } else retryAt = null
+                // The minute lane at once when due now (at the close on local candles), else at its time.
+                val due = minuteAt
+                if (due != null && System.currentTimeMillis() >= due) {
+                    minuteAt = null
+                    if (!launchLane(FastLane.Lane.MINUTE, minuteTrigger ?: now, null, OrderSpeed.Source.FEED)) minuteAgain = minuteAgain ?: (now + 500)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                runCatching { com.optionslab.app.work.Tasks.stepFailed("fast check: consumer", e) }
+                carry = emptyList(); retryAt = null
+                // A fault that repeats never spins this thread.
+                kotlinx.coroutines.delay(200)
             }
         }
     }
+
+    /** TEST ONLY: run at each pass of the consumer, after its wait (a test makes it throw). */
+    @Volatile internal var faultForTest: (() -> Unit)? = null
 
     /**
      * The order route warmed (relay, pooled connection, Zerodha's address, the static-IP reading): every 20 s while a Live
