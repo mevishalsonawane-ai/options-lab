@@ -114,6 +114,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.VariantRunner.init(this)
         // The trade manager (10 Oct): its modes and record read on its own thread; it only lowers risk.
         com.optionslab.app.data.TradeManagerHost.init(this)
+        // The history vault (TODO S5, 11 Oct): nothing read now; its folder is opened by its own thread after the close.
+        com.optionslab.app.data.HistoryKeeper.init(this)
         com.optionslab.app.data.OrderFlowLive.init(this)
         // The gold books and Jarvis's memory are decrypted on a background thread (Speed, round 2); every change to them
         // waits until they are read, so nothing is ever saved over them empty.

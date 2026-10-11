@@ -658,6 +658,12 @@ fun RiskPage(model: AppModel) {
         item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
         // Autopilot learning (11 Oct): OFF / SAFE / SHADOW-ONLY; SAFE asks for the PIN while live. Never from a backup.
         if (com.optionslab.app.ira.Autopilot.enabled()) item { com.optionslab.app.ui.SettingSpot("jarvis.autolearn") { AutopilotSettingCard(model) } }
+        // Risk across the arms, the event days learning leaves out and the market history kept on the phone (TODO S5, S11, S12).
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            item { PortfolioSettingCard() }
+            item { EventCalendarCard() }
+            item { HistoryVaultCard() }
+        }
     }
 }
 

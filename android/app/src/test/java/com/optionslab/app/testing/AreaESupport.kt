@@ -64,6 +64,11 @@ object AreaE {
         com.optionslab.app.data.VariantRunner.resetForTest()
         // The approved forge ideas on paper (S2): no hosted idea or paper trade carried from an earlier test.
         com.optionslab.app.data.GrammarArm.wipe()
+        // Risk across the arms, the day's regime, the event calendar and the history vault (TODO S5/S8/S11/S12): singletons too.
+        com.optionslab.app.data.PortfolioHost.resetForTest()
+        com.optionslab.app.data.RegimeHost.resetForTest()
+        com.optionslab.app.data.EventDays.resetForTest()
+        com.optionslab.app.data.HistoryKeeper.resetForTest()
         SessionLock.lock()
     }
 

@@ -441,6 +441,8 @@ class ReportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                     // The daily self-review after F&O's close (10 Oct): each strategy against its backtest; a drifting live one
                     // parks itself to paper and asks (once a day; the watch's brain worker does it too when it is still running).
                     if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.data.SmartWorkers.reviewIfDue(applicationContext) }
+                    // The history vault (TODO S5): the day's 1-minute history kept after the close (its own thread; resumes).
+                    if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.data.HistoryKeeper.kick() }
                     DailyReports.evening(applicationContext).let { (t, l) -> DailyReports.post(applicationContext, k, t, l) }
                 }
                 // Said and kept in the chat only: no notification.

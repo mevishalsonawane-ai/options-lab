@@ -3295,6 +3295,19 @@ object IraHub {
             }
             return true
         }
+        // "How correlated are my strategies?", "why was ORB Fresh blocked?" (TODO S12, [com.optionslab.ira.PortfolioRisk]): the
+        // arms' 60-day correlation and the combined worst case, or the portfolio guard's block today and why. Boss's records,
+        // so never on a locked phone; facts only - the guard only ever blocks. (Not in IraGoldAlgo.)
+        val portfolioAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.PortfolioRisk.asked(q) }.getOrNull() else null
+        if (portfolioAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the app first, Boss: that is about your own arms."); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.PortfolioHost.answer(q) }.getOrElse { "I could not read your arms' records just now, Boss." })
+            }
+            return true
+        }
         // "Explain my bots' trades today", "why did ORB take that trade?", "did my bots follow their rules?", "mere bots ne aaj kya
         // kiya" ([com.optionslab.ira.BotTrades]): each of today's arm trades chained from its signal (the opening range and the
         // break bar, the sweep, the fade, the liquidity level) to its exit and reason and its points and rupees, against the

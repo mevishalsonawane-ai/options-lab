@@ -147,6 +147,8 @@ object Broker {
             DayLockGuard.refusal(true)?.let { return it }
             // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.
             runCatching { SmartWorkers.doorRefusal(o.tradingSymbol) }.getOrNull()?.let { return it }
+            // The portfolio guard (TODO S12): a live entry its arm was just blocked from by the guard - memory only, it only blocks.
+            runCatching { PortfolioHost.doorRefusal(o.tradingSymbol, o.side == Kite.Side.BUY) }.getOrNull()?.let { return it }
         }
         return null
     }

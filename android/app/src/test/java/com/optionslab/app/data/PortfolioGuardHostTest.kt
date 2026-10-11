@@ -1,0 +1,174 @@
+package com.optionslab.app.data
+
+import com.optionslab.app.security.SecurePrefs
+import com.optionslab.app.testing.FakeKite
+import com.optionslab.app.testing.NetworkGuard
+import com.optionslab.app.testing.RobolectricTest
+import com.optionslab.engine.Kite
+import com.optionslab.ira.EventCalendar
+import com.optionslab.ira.LearningFilter
+import com.optionslab.ira.PortfolioGuard
+import com.optionslab.ira.PortfolioRisk
+import com.optionslab.ira.RegimeParams
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+import org.robolectric.annotation.ConscryptMode
+import java.time.LocalDate
+
+/**
+ * TODO S5, S8, S11, S12 in the app: the portfolio guard at the arms' entry check (FlowGate, paper and live) and at the entry
+ * door (Broker) - it only ever skips or refuses a NEW entry, never an exit or Boss's own order, and reads no setting on the
+ * order path; the regime weights reach the trade manager's config only out of shadow; the event calendar reaches the
+ * learning filter; the history vault's read API and cap.
+ */
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class PortfolioGuardHostTest : RobolectricTest() {
+    private lateinit var kite: FakeKite
+    private val today: LocalDate get() = Market.today()
+
+    @Before fun up() {
+        kite = FakeKite(); kite.login()
+        SmartWorkers.resetForTest(); PortfolioHost.resetForTest(); RegimeHost.resetForTest(); EventDays.resetForTest(); HistoryKeeper.resetForTest()
+    }
+
+    @After fun down() {
+        SecurePrefs.countedThread = null
+        PortfolioHost.resetForTest(); RegimeHost.resetForTest(); EventDays.resetForTest(); SmartWorkers.resetForTest(); HistoryKeeper.resetForTest()
+        kite.close()
+        assertEquals(emptyList<String>(), NetworkGuard.blocked.toList())
+    }
+
+    /** ORB and ORB Fresh moving together for 30 days; Hero on its own. Stops of Rs 5,000 each against a 2% cap of 4 lakh. */
+    private fun correlated() {
+        val r = java.util.Random(5)
+        val t = ArrayList<PortfolioRisk.Trade>()
+        for (i in 0 until 30) {
+            val d = today.minusDays(30L - i)
+            val m = r.nextGaussian() * 1_000
+            t += PortfolioRisk.Trade("orb", d, m); t += PortfolioRisk.Trade("orb_fresh", d, m * 1.2 + r.nextGaussian() * 100)
+            t += PortfolioRisk.Trade("hero", d, r.nextGaussian() * 1_000)
+        }
+        PortfolioHost.guard.update(PortfolioRisk.matrix(t, today), mapOf("orb" to 5_000.0, "orb_fresh" to 5_000.0, "hero" to 5_000.0),
+            PortfolioGuard.Config(capital = 400_000.0, capPct = 2.0))
+    }
+
+    private fun order(tag: String = "iraorb", side: Kite.Side = Kite.Side.BUY) =
+        Kite.Order("BANKNIFTY26OCT52000CE", side, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", tag)
+
+    @Test fun aLaterCorrelatedPaperEntryIsSkippedWithItsReasonAndNoSettingIsRead() {
+        correlated()
+        // Warm what the entry check keeps in memory (the brain's settings, the flow's modes) with an unrelated arm.
+        assertFalse(FlowGate.check("hero", "NIFTY", -1, live = false, at = "2026-10-12T09:30", what = "PE").skip)
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        val first = FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE")
+        val later = FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:05", what = "CE")
+        val other = FlowGate.check("orb_fresh", "BANKNIFTY", -1, live = false, at = "2026-10-12T10:06", what = "PE")
+        SecurePrefs.countedThread = null
+        assertEquals("settings reads on the entry checks", 0L, SecurePrefs.readsForTest.get())
+        assertFalse(first.skip)
+        assertTrue(later.skip)
+        assertTrue(later.pausedWhy!!, later.pausedWhy!!.contains("portfolio guard"))
+        assertFalse("the other direction is not blocked", other.skip)
+        assertTrue(PortfolioHost.view.value.line.contains("1 entry blocked today"))
+        assertTrue(SmartWorkers.feed(10).any { it.contains("portfolio guard") })
+        // Waiting for Boss's approval: logged only, never blocked (and not counted as opened).
+        assertFalse(FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:07", what = "CE", decide = false).skip)
+    }
+
+    @Test fun aLiveEntryIsRefusedAtTheDoorButNeverAnExitOrBossesOwnOrder() = runBlocking {
+        correlated()
+        assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = true, at = "2026-10-12T10:01", what = "CE").skip)
+        assertTrue(FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = true, at = "2026-10-12T10:02", what = "CE").skip)
+        // The door's own check reads memory only.
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        val why = PortfolioHost.doorRefusal("BANKNIFTY26OCT52000CE", buy = true)
+        SecurePrefs.countedThread = null
+        assertEquals(0L, SecurePrefs.readsForTest.get())
+        assertNotNull(why)
+        try { Broker.placeOrder(order()); fail("a bot's entry its arm was blocked from went through") } catch (e: Broker.KiteError) {
+            assertEquals("entry_gate", e.type)
+            assertTrue(e.message, e.message!!.contains("portfolio guard"))
+        }
+        assertTrue(kite.placed.isEmpty())
+        // A put (the other direction), an exit and Boss's own order all go.
+        assertNull(PortfolioHost.doorRefusal("BANKNIFTY26OCT52000PE", buy = true))
+        Broker.placeOrder(order(side = Kite.Side.SELL), exit = true)
+        Broker.placeOrder(order(tag = "iraalgo"))
+        assertEquals(2, kite.placed.size)
+    }
+
+    @Test fun offOrUncorrelatedTheGuardNeverBlocks() {
+        correlated()
+        PortfolioHost.setOn(false)
+        assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE").skip)
+        assertFalse(FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:02", what = "CE").skip)
+        PortfolioHost.setOn(true)
+        assertFalse(FlowGate.check("hero", "NIFTY", 1, live = false, at = "2026-10-12T10:03", what = "CE").skip)
+        assertTrue(PortfolioHost.setCapPct(50.0).contains("10.0%"))
+        assertFalse("under a 10% cap two stops fit", FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:04", what = "CE").skip)
+    }
+
+    @Test fun jarvisSaysHowAlikeTheArmsAreAndWhyOneWasBlocked() = runBlocking {
+        correlated()
+        FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE")
+        FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:02", what = "CE")
+        // A refresh from the (empty) records would replace the test's matrix: the answers read memory when fresh.
+        val m = PortfolioHost.guard.matrix
+        assertTrue(m.of("orb", "orb_fresh")!! > 0.6)
+        val why = PortfolioRisk.answerBlocked("why was orb fresh blocked?", PortfolioHost.guard.blocksToday(today))
+        assertTrue(why, why.contains("ORB Fresh's paper bullish entry was blocked"))
+    }
+
+    @Test fun regimeWeightsReachTheManagerOnlyOutOfShadowAndNeverOnAnEventDay() {
+        val o = RegimeParams.Override("spec:pine:news", RegimeParams.Regime.BUSY, mapOf("weight" to 0.5), "spec:pine:news", 0.02, "news on pine")
+        val cfg = com.optionslab.ira.ManagerConfig("pine")
+        val busy = RegimeParams.Day(today, RegimeParams.Regime.BUSY, false, false, 585)
+        RegimeParams.use(RegimeParams.Book(listOf(o), busy))
+        assertEquals(cfg, RegimeHost.managerConfig(cfg, live = false))
+        RegimeParams.use(RegimeParams.Book(listOf(o.copy(shadowDays = (0 until 10).map { today.minusDays(20L - it) })), busy))
+        assertEquals(0.5, RegimeHost.managerConfig(cfg, live = false).spec("news").weight, 1e-9)
+        assertEquals("live waits for Boss's PIN", cfg, RegimeHost.managerConfig(cfg, live = true))
+        assertEquals("Live regime settings need your PIN.", RegimeHost.approveLive("spec:pine:news|BUSY", pinConfirmed = false))
+        RegimeHost.approveLive("spec:pine:news|BUSY", pinConfirmed = true)
+        assertEquals(0.5, RegimeHost.managerConfig(cfg, live = true).spec("news").weight, 1e-9)
+        RegimeParams.use(RegimeParams.book.copy(day = busy.copy(event = true)))
+        assertEquals(cfg, RegimeHost.managerConfig(cfg, live = false))
+    }
+
+    @Test fun theEventCalendarReachesTheLearningFilterWithBossesOwnDays() {
+        EventDays.refresh()
+        assertFalse(LearningFilter.include(LocalDate.of(2026, 2, 1)))
+        val d = today.plusDays(3)
+        EventDays.add(d, "State election results")
+        assertFalse(LearningFilter.include(d))
+        assertTrue(EventDays.upcoming(10).any { it.day == d && it.kind == EventCalendar.Kind.OWNER })
+        EventDays.remove(d)
+        assertTrue(LearningFilter.include(d))
+        assertTrue(EventDays.isEventDay(LocalDate.of(2026, 2, 1)))
+    }
+
+    @Test fun theHistoryVaultKeepsAndReadsADayUnderItsCap() {
+        HistoryKeeper.init(context)
+        val v = HistoryKeeper.vault()!!
+        val day = LocalDate.of(2026, 10, 9)
+        v.putBars(com.optionslab.ira.HistoryVault.Family.INDEX, day, listOf(com.optionslab.ira.HistoryCodec.Series("NIFTY",
+            listOf(com.optionslab.ira.HistoryCodec.Bar(1_791_517_500, 25_000.0, 25_010.0, 24_990.0, 25_005.5, 0, 0)))))
+        assertEquals(25_005.5, HistoryKeeper.bars("NIFTY", day).single().close, 0.0)
+        assertTrue(HistoryKeeper.bars("NIFTY", day.minusDays(1)).isEmpty())
+        assertNull(HistoryKeeper.chain("NIFTY", day))
+        assertTrue(HistoryKeeper.setCapMb(50).contains("100 MB"))
+        assertEquals(100, v.capMb)
+        assertTrue(HistoryKeeper.usageLine().contains("of 100 MB"))
+        assertTrue(v.root.path.contains("no_backup") || v.root.path.contains("noBackup") || v.root.path.endsWith("history"))
+    }
+}

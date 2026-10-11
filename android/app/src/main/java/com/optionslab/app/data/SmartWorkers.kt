@@ -384,6 +384,12 @@ object SmartWorkers {
         // pass), the weekly consolidation and the weekly self-report when due (memory checks until then).
         runCatching { AppHealth.tick(context) }
         runCatching { com.optionslab.app.ira.SelfGrowth.tick(context) }
+        // TODO S5/S8/S11/S12 (11 Oct): the event-day calendar (once a day), the day's regime (frozen at 09:45), risk across the
+        // arms (every 10 minutes) and the history keeper (after 15:45, its own thread) - memory checks until due.
+        runCatching { EventDays.refreshIfStale() }
+        runCatching { RegimeHost.tick() }
+        runCatching { PortfolioHost.refreshIfDue() }
+        runCatching { HistoryKeeper.kick() }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */

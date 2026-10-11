@@ -366,7 +366,11 @@ object TradeManagerHost {
         val act = r0.mode == TradeManager.Mode.ACT
         // The committee: LIVE trades the manager acts on use the frozen weights; SHADOW and paper the self-tuned ones (memory only).
         val frozen = act && t.account == TradeManager.Account.LIVE
-        val step = ManagerTeam.decide(t, s, l.team, ManagerSpecialists.configFor(t.family, frozen, t.underlying))
+        // Today's regime weights (TODO S8): out of shadow only, live only once Boss approved them; memory only.
+        val cfg = ManagerSpecialists.configFor(t.family, frozen, t.underlying).let { c ->
+            runCatching { RegimeHost.managerConfig(c, t.account == TradeManager.Account.LIVE) }.getOrDefault(c)
+        }
+        val step = ManagerTeam.decide(t, s, l.team, cfg)
         l.team = step.state
         runCatching { ManagerSpecialists.observe(id, t, step, now, frozen) }
         val lead = step.lead?.specialist

@@ -127,14 +127,19 @@ object FlowGate {
         // exit never comes here. [decide] false (waiting for Boss's approval): logged only, decided at the approval.
         val brake = if (com.optionslab.app.BuildConfig.GOLD) null
             else runCatching { SmartWorkers.entry(key, underlying, side) }.getOrNull()
-        val paused = decide && brake?.block == true
+        // The portfolio guard (TODO S12, 11 Oct): correlated arms already in the same way today past the cap - the later entry
+        // is skipped for the day. Memory only; it can only skip, and only a decided entry asks it.
+        val portfolio = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { PortfolioHost.entry(key, side, live) }.getOrNull() else null
+        val paused = decide && (brake?.block == true || portfolio != null)
+        val pauseWhy = if (brake?.block == true) brake?.why else portfolio
         if (paused) runCatching {
             val label = FlowShadow.strategy(key)?.label ?: key
-            Diag.record("brain", "$label: ${if (live) "live" else "paper"} entry on $underlying not taken - ${brake?.why}")
+            Diag.record("brain", "$label: ${if (live) "live" else "paper"} entry on $underlying not taken - $pauseWhy")
         }
         return runCatching {
             val s = setting(key)
-            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) brake?.why else null)
+            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null)
             val now = System.currentTimeMillis()
             val r = OrderFlowLive.readNow(underlying, now)
             val a = OrderFlow.agreement(r, side, s.threshold, (testNowSec ?: (now / 1000)))
@@ -150,7 +155,7 @@ object FlowGate {
                     // The brain and the findings at this signal (10 Oct): the pause that took it or the SHADOW causes that would
                     // have, and the findings' consensus on the index - so the record can say later whether each helped.
                     if (brake != null) {
-                        append(FlowShadow.brain(id, if (paused) brake.why else null, brake.shadowKeys, brake.shadow))
+                        append(FlowShadow.brain(id, if (paused) pauseWhy else null, brake.shadowKeys, brake.shadow))
                         append(FlowShadow.consensus(id, brake.consensus))
                     }
                 }
@@ -173,8 +178,8 @@ object FlowGate {
                 Diag.record("flow", "$label: skipped by flow (${if (live) "live" else "paper"} ${if (side > 0) "bullish" else "bearish"} entry on $underlying; " +
                     "${OrderFlow.word(r)}, needs ${s.threshold}" + (r?.takeIf { it.flags.isNotEmpty() }?.let { "; trap guard: ${OrderFlow.trapWords(it)}" } ?: "") + ")")
             }
-            Ticket(id, skip, a, key, if (paused) brake?.why else null)
-        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) brake?.why else null) }
+            Ticket(id, skip, a, key, if (paused) pauseWhy else null)
+        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null) }
     }
 
     /** [check] off the caller's thread (it may read the log once after a restart): for the strategies' suspend paths. */

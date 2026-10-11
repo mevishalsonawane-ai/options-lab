@@ -88,6 +88,8 @@ internal fun BrainSection(divider: Boolean = true) {
             (brain.activeWindows(now).firstOrNull()?.let { " · ${it.name} window now" } ?: ""), Modifier.padding(top = 4.dp))
         consensus.forEach { Note("Bots on $it", Modifier.padding(top = 2.dp)) }
         if (brain.health.words().isNotEmpty()) Note("Data: " + brain.health.words().joinToString("; "), Modifier.padding(top = 2.dp))
+        // The event-day note, today's frozen regime and the Portfolio line (TODO S8, S11, S12; a tap shows the correlations).
+        BrainExtras()
         BrassButton("Findings and pauses", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { sheet = true }
     }
     if (sheet) BrainSheet { sheet = false }

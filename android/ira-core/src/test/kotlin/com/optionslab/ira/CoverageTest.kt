@@ -97,6 +97,8 @@ class CoverageTest {
             if (SoloDay.asked(q) != null) return Kind.ACCOUNT
             // (The Hero arm's day from its own records - its paper trades in it.)
             if (HeroDay.asked(q) != null) return Kind.ACCOUNT
+            // (How alike the arms are and the portfolio guard's blocks: his own records.)
+            if (PortfolioRisk.asked(q) != null) return Kind.ACCOUNT
             if (BotTrades.asked(q) != null) return Kind.ACCOUNT
             if (SwitchOff.asked(q) != null) return Kind.ACCOUNT
             if (SaidAbout.asked(q) != null) return Kind.ACCOUNT
@@ -780,6 +782,7 @@ class CoverageTest {
         if (alone && LiquidityWhyNot.asked(q) != null) return "LiquidityWhyNot"
         if (alone && SoloDay.asked(q) != null) return "SoloDay"
         if (alone && HeroDay.asked(q) != null) return "HeroDay"
+        if (alone && PortfolioRisk.asked(q) != null) return "PortfolioRisk"
         if (alone && BotTrades.asked(q) != null) return "BotTrades"
         if (alone && SwitchOff.asked(q) != null) return "SwitchOff"
         if (alone && SaidAbout.asked(q) != null) return "SaidAbout"
