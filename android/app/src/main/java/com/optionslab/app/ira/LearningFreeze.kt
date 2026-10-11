@@ -180,7 +180,8 @@ object LearningFreeze {
         val applied = pass.events.filterIsInstance<com.optionslab.ira.VariantLab.Event.Applied>()
         if (applied.isEmpty()) return pass
         var b = pass.book
-        for (e in applied) b = com.optionslab.ira.VariantLab.undo(b, e.change.id) ?: b
+        // Withheld, not merely marked undone: the promotion's tune goes too, so the arm never trades it.
+        for (e in applied) b = com.optionslab.ira.VariantLab.withhold(b, e.change.id) ?: b
         runCatching { Diag.record("learning", "frozen: ${applied.size} lab promotion(s) recorded, not applied") }
         return com.optionslab.ira.VariantLab.Pass(b, pass.events - applied.toSet())
     }

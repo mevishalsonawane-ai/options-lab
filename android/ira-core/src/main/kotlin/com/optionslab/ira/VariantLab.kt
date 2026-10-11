@@ -353,8 +353,11 @@ object VariantLab {
         data class Proposed(val change: Change) : Event()
         data class Retired(val variant: Variant) : Event()
         data class Waiting(val variant: Variant, val why: String) : Event()
-        /** The safety net put a strategy back to its defaults ([Change] of kind SAFETY_REVERT). */
-        data class Reverted(val change: Change) : Event()
+        /**
+         * The safety net put a strategy back to its defaults ([Change] of kind SAFETY_REVERT). [liveStopKept]: the live arm kept
+         * its tighter stop (the defaults' wider one would raise live risk: Boss's PIN, through the accepted change's Undo).
+         */
+        data class Reverted(val change: Change, val liveStopKept: Boolean = false) : Event()
     }
 
     data class Pass(val book: Book, val events: List<Event>)
@@ -506,11 +509,48 @@ object VariantLab {
         return out
     }
 
-    /** Whether undoing live change [id] only puts the arm's defaults back (a lower-or-equal-risk action: no PIN needed). */
+    /**
+     * A paper promotion [id] withdrawn before it was ever traded (learning frozen): the paper rules back to before it and its
+     * tune dropped - the arm never trades it - the change marked undone. Null when it is not an applied paper promotion.
+     */
+    fun withhold(b: Book, id: String): Book? {
+        val out = undo(b, id) ?: return null
+        return out.copy(tunes = out.tunes.filter { !(it.change == id && !it.live) })
+    }
+
+    // ---- which way a parameter moves risk ------------------------------------------------------------------------------------
+
+    /**
+     * The parameters whose higher value is a wider stop - more rupees at risk on every live trade. Lots are not a parameter
+     * at all, so the stop is what bounds a trade's loss; the other parameters choose which trades to take and when to exit.
+     */
+    val WIDER_IS_RISKIER: Set<String> = setOf(ArmParams.STOP_PTS, ArmParams.STOP_PCT)
+
+    /** Does moving [s] from [from] to [to] widen a stop (raise the risk of a trade)? */
+    fun widensStop(s: Strategy, from: Map<String, Double>, to: Map<String, Double>): Boolean {
+        val a = s.values(from); val c = s.values(to)
+        return WIDER_IS_RISKIER.any { k -> s.param(k) != null && (c[k] ?: 0.0) > (a[k] ?: 0.0) + 1e-12 }
+    }
+
+    /** [to] with each stop no wider than in [cap] (the defaults put back, but never a wider live stop than the one trading). */
+    fun capStops(s: Strategy, to: Map<String, Double>, cap: Map<String, Double>): Map<String, Double> {
+        val t = s.values(to); val c = s.values(cap)
+        return t.mapValues { (k, v) -> if (k in WIDER_IS_RISKIER) minOf(v, c[k] ?: v) else v }
+    }
+
+    /** The values [s]'s arm trades on the [live] account from its newest tune on (its defaults when none). */
+    private fun newest(b: Book, s: Strategy, live: Boolean): Map<String, Double> =
+        b.tunes.filter { it.strategy == s.key && it.live == live }.maxByOrNull { it.from }?.let { s.values(it.values) } ?: s.defaults
+
+    /**
+     * Whether undoing live change [id] only puts the arm's defaults back AND never widens the live stop (against the change
+     * itself and against what the live arm trades now): a lower-or-equal-risk action, no PIN needed. Defaults whose stop is
+     * wider than the variant's raise live risk: the PIN.
+     */
     fun restoresDefault(b: Book, id: String): Boolean {
         val c = b.change(id) ?: return false
         val s = strategy(c.strategy) ?: return false
-        return same(s.values(c.from), s.defaults)
+        return same(s.values(c.from), s.defaults) && !widensStop(s, c.to, c.from) && !widensStop(s, newest(b, s, true), c.from)
     }
 
     /**
@@ -566,6 +606,8 @@ object VariantLab {
             val values = valuesFor(b, s.key, live, date)
             if (values == null) { if ((b.streaks[s.key] ?: 0) != 0) b = b.copy(streaks = b.streaks - s.key); continue }
             val t = effective(b, s.key, live, date)!!
+            // Already put back by the safety net (the live arm's defaults with its tighter stop kept): nothing lower to go to.
+            if (b.change(t.change)?.kind == ChangeKind.SAFETY_REVERT) continue
             val made = net(s.key, values) ?: continue
             val c = b.change(t.change)
             val avg = (c?.avgLoss ?: 0.0).coerceAtLeast(MIN_AVG_LOSS)
@@ -578,15 +620,24 @@ object VariantLab {
                     "${SAFETY_LOSS_X.roundToInt()} x its backtest's average losing day (${DiscoveryStats.rs(-avg)})"
                 else "$SAFETY_STREAK losing days in a row on ${run.words} under ${c?.variant ?: "a variant"}, each below its forward " +
                     "expectation (${DiscoveryStats.rs(expect)} a day; the last ${DiscoveryStats.rs(made)})"
+            // The live arm never gets a wider stop by itself: where the defaults' stop is wider than the one it trades, it goes back
+            // to the defaults but keeps its own stop (lower risk); the wider default stop waits for Boss's PIN.
+            val livePending = b.tunes.filter { it.strategy == s.key && it.live }.maxByOrNull { it.from }
+            val liveTo = livePending?.let { capStops(s, s.defaults, it.values) } ?: s.defaults
+            val kept = !same(liveTo, s.defaults)
+            val keptWords = if (!kept) "" else "; the live arm keeps its tighter stop (" +
+                s.params.filter { it.key in WIDER_IS_RISKIER }.joinToString(", ") { p -> "${p.words} ${p.say(liveTo.getValue(p.key))}" } +
+                "): the defaults' wider stop needs your PIN"
             val rc = Change("C${b.nextId}", s.key, c?.variant ?: "", ChangeKind.SAFETY_REVERT, ChangeStatus.APPLIED, date, values, s.defaults,
-                "$why - back to the defaults from ${DiscoveryStats.day(from)} (lower risk)", effective = from)
+                "$why - back to the defaults from ${DiscoveryStats.day(from)} (lower risk)$keptWords", effective = from)
             b = b.copy(changes = b.changes + rc, nextId = b.nextId + 1, current = b.current + (s.key to s.defaults), streaks = b.streaks - s.key)
-            // Both accounts back to the defaults wherever a variant is in force or waiting.
+            // Both accounts back to the defaults wherever a variant is in force or waiting (live: never a wider stop).
             for (acct in listOf(true, false)) {
                 val pending = b.tunes.filter { it.strategy == s.key && it.live == acct }.maxByOrNull { it.from }
-                if (pending != null && !same(s.values(pending.values), s.defaults)) b = tune(b, s.key, acct, from, s.defaults, rc.id)
+                val to = if (acct) liveTo else s.defaults
+                if (pending != null && !same(s.values(pending.values), s.defaults)) b = tune(b, s.key, acct, from, to, rc.id)
             }
-            events += Event.Reverted(rc)
+            events += Event.Reverted(rc, liveStopKept = kept)
         }
         return Pass(b, events)
     }

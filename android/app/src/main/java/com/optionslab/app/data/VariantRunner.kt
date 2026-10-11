@@ -322,6 +322,14 @@ object VariantRunner {
                 val label = VariantLab.strategy(e.change.strategy)?.label ?: e.change.strategy
                 post("$WHO · safety net", "$label back to its defaults: ${e.change.why}")
                 runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab safety net: $label back to its defaults - ${e.change.why}") }
+                // The live arm kept its tighter stop: the defaults' wider one adds live risk - Boss's, with his PIN (the Undo of the
+                // accepted live change in the Strategy lab).
+                if (e.liveStopKept) runCatching {
+                    com.optionslab.app.ira.IraHub.offer("strategy lab: $label live stop", "Boss, $label's live stop",
+                        "Boss, the safety net put $label back to its defaults, but its live trades keep their tighter stop: the default stop " +
+                            "is wider and adds live risk. To widen it, Undo the live change with your PIN in $WHERE.",
+                        suspend { "Undo the live change with your PIN in $WHERE (a wider live stop adds risk)." }, addsRisk = true, alwaysAsk = true)
+                }
             }
             is VariantLab.Event.Proposed -> offerLive(e.change)
             is VariantLab.Event.Retired -> {}

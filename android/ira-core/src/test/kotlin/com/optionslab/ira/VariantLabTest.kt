@@ -91,6 +91,56 @@ class VariantLabTest {
         assertTrue(off.events.single() is VariantLab.Event.Waiting)
     }
 
+    @Test fun aWithheldPromotionLeavesNoTuneBehind() {
+        // Review 2 #3: learning frozen - the night's paper promotion is put straight back; the arm must never trade it.
+        val b0 = VariantLab.Book(runs = mapOf("orb" to VariantLab.Run.PAPER), variants = listOf(variant("V1", "orb", strong)), tried = 1, nextId = 2)
+        val next = day.plusDays(1)
+        val pass = VariantLab.judge(b0, day, next)
+        val c = pass.events.filterIsInstance<VariantLab.Event.Applied>().single().change
+        assertEquals(c.to, VariantLab.valuesFor(pass.book, "orb", false, next))
+        val held = VariantLab.withhold(pass.book, c.id)!!
+        assertTrue(held.tunes.none { it.change == c.id }, "no tune of the withheld change is left")
+        assertNull(VariantLab.valuesFor(held, "orb", false, next))
+        assertNull(VariantLab.valuesFor(held, "orb", false, next.plusDays(30)))
+        assertEquals(VariantLab.ChangeStatus.UNDONE, held.change(c.id)!!.status)
+        assertEquals(c.from, held.currentOf("orb"))
+        // Only an applied paper promotion can be withheld.
+        assertNull(VariantLab.withhold(held, c.id))
+    }
+
+    @Test fun backToTheDefaultsNeverWidensALiveStopWithoutThePin() {
+        // Review 2 #5: Liquidity's accepted live variant has a tighter stop than its defaults.
+        val s = VariantLab.strategy("liquidity")!!
+        val b0 = VariantLab.Book(runs = mapOf("liquidity" to VariantLab.Run.LIVE), variants = listOf(variant("V1", "liquidity", strong)), tried = 1, nextId = 2)
+        val p = VariantLab.judge(b0, day)
+        val c = p.events.filterIsInstance<VariantLab.Event.Proposed>().single().change
+        val tight = c.to.getValue(ArmParams.STOP_PCT)
+        assertTrue(tight < s.defaults.getValue(ArmParams.STOP_PCT))
+        val from = day.plusDays(1)
+        val yes = VariantLab.accept(p.book, c.id, pinConfirmed = true, from = from)!!
+        // Boss's undo would widen the live stop: the PIN.
+        assertTrue(!VariantLab.restoresDefault(yes, c.id))
+        assertNull(VariantLab.undoLive(yes, c.id, pinConfirmed = false, from = from.plusDays(1)))
+        // The safety net puts it back by itself, but the live arm keeps its tighter stop; paper goes to the full defaults.
+        val live = mapOf("liquidity" to VariantLab.Run.LIVE)
+        val net = VariantLab.safety(yes, from, live, from.plusDays(1)) { _, _ -> -1e6 }
+        val r = net.events.filterIsInstance<VariantLab.Event.Reverted>().single()
+        assertTrue(r.liveStopKept)
+        assertTrue("needs your PIN" in r.change.why, r.change.why)
+        val after = from.plusDays(1)
+        val liveValues = VariantLab.valuesFor(net.book, "liquidity", true, after)!!
+        assertEquals(tight, liveValues.getValue(ArmParams.STOP_PCT), 1e-12)
+        assertEquals(s.defaults - ArmParams.STOP_PCT, liveValues - ArmParams.STOP_PCT)
+        assertNull(VariantLab.valuesFor(net.book, "liquidity", false, after))
+        // Already back as far as it goes by itself: another bad day does nothing more.
+        assertTrue(VariantLab.safety(net.book, after, live, after.plusDays(1)) { _, _ -> -1e6 }.events.isEmpty())
+        // The wider default stop only with Boss's PIN.
+        assertTrue(!VariantLab.restoresDefault(net.book, c.id))
+        assertNull(VariantLab.undoLive(net.book, c.id, pinConfirmed = false, from = after.plusDays(1)))
+        val pinned = VariantLab.undoLive(net.book, c.id, pinConfirmed = true, from = after.plusDays(1))!!
+        assertNull(VariantLab.valuesFor(pinned, "liquidity", true, after.plusDays(1)))
+    }
+
     @Test fun aLoserIsRetiredAndTheStepShrinks() {
         val bad = variant("V1", "orb", List(VariantLab.MIN_N) { -700.0 - (it % 3) * 40 })
         val b = VariantLab.judge(VariantLab.Book(runs = mapOf("orb" to VariantLab.Run.PAPER), variants = listOf(bad), tried = 1), day).book
