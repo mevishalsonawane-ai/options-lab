@@ -14,7 +14,7 @@ import java.util.Locale
  *
  * Over time Jarvis forms "your rules" from them ([rules]): each group - by reason, by reason and part of the day, by
  * regime - with its trades, wins and rupees, its RUPEES tested against zero (a sign-flip test on its per-day sums,
- * [LearnStats.signFlipP]: a group that wins often but loses big is no good rule) and corrected for testing many groups at
+ * [LearnStats.signFlipAlwaysValidP]: a group that wins often but loses big is no good rule) and corrected for testing many groups at
  * once (Benjamini-Hochberg q). Exit reasons are not groups (R3 finding 6): trades closed "on target" win and those closed
  * "on stop" lose by definition, so testing them only padded the family with sure discoveries; [sayHabits] still counts them. A rule HOLDS at q ≤ [Q_HOLD] over at least [MIN_N]
  * trades; a soft warning before an order ([warn]) needs a losing group at q ≤ [Q_WARN]. Words only: nothing is ever
@@ -41,8 +41,14 @@ object BossTrades {
         val id: String, val symbol: String, val live: Boolean, val openedMs: Long,
         val why: Why? = null, val note: String = "", val exitWhy: ExitWhy? = null, val closedMs: Long? = null,
         val net: Double? = null, val regime: String? = null, val votes: List<String> = emptyList(), val rr: Double? = null,
+        /** The closing order's id ("kite:123") while its net waits for the trade book ([settle]). */
+        val closeId: String? = null,
     ) {
         val closed: Boolean get() = net != null
+        /** Closed at [closedMs], its net not in the trade book yet (G6-4: a live exit's round trip comes on the next account load). */
+        val pending: Boolean get() = net == null && closedMs != null
+        /** Still held: neither closed nor waiting for its close's net. */
+        val open: Boolean get() = net == null && closedMs == null
         val minute: Int get() = Instant.ofEpochMilli(openedMs).atZone(IST).let { it.hour * 60 + it.minute }
         val day: LocalDate get() = Instant.ofEpochMilli(openedMs).atZone(IST).toLocalDate()
     }
@@ -87,8 +93,14 @@ object BossTrades {
         val out = groups.map { (k, v) ->
             val xs = v.second
             val wins = xs.count { (it.net ?: 0.0) > 0 }
-            val perDay = xs.groupBy { it.day }.values.map { d -> d.sumOf { it.net ?: 0.0 } }.toDoubleArray()
-            Rule(k, v.first, xs.size, wins, xs.sumOf { it.net ?: 0.0 }, LearnStats.signFlipP(perDay), 1.0, v.third.first, v.third.second)
+            // Oldest day first, tested always-valid (G6-10): the rules are looked at on every order review and every ask as
+            // trades come in, and a fixed-sample p looked at that often crosses the bar by luck (R3 finding 8's fix, here too).
+            // Tested the way its rupees point: "made" or "lost" is what a rule says.
+            val perDay = xs.groupBy { it.day }.toSortedMap().values.map { d -> d.sumOf { it.net ?: 0.0 } }.toDoubleArray()
+            val net = xs.sumOf { it.net ?: 0.0 }
+            val side = if (net > 1e-9) 1 else if (net < -1e-9) -1 else 0
+            val p = if (side == 0) 1.0 else LearnStats.signFlipAlwaysValidP(perDay, side = side)
+            Rule(k, v.first, xs.size, wins, net, p, 1.0, v.third.first, v.third.second)
         }
         if (out.isEmpty()) return out
         val q = LearnStats.bh(out.map { it.p }.toDoubleArray())
@@ -159,7 +171,8 @@ object BossTrades {
 
     fun encode(ts: List<Trade>): String = ts.joinToString("\n") { t ->
         listOf("T1", clean(t.id), clean(t.symbol), t.live, t.openedMs, t.why?.name ?: "", clean(t.note), t.exitWhy?.name ?: "", t.closedMs ?: "",
-            t.net ?: "", clean(t.regime ?: ""), t.votes.joinToString(";") { clean(it).replace(";", ",") }, t.rr ?: "").joinToString("|")
+            t.net ?: "", clean(t.regime ?: ""), t.votes.joinToString(";") { clean(it).replace(";", ",") }, t.rr ?: "").joinToString("|") +
+            (t.closeId?.let { "|" + clean(it) } ?: "")
     }
 
     fun decode(text: String?): List<Trade> = text.orEmpty().lineSequence().mapNotNull { l ->
@@ -168,9 +181,20 @@ object BossTrades {
         runCatching {
             Trade(p[1], p[2], p[3].toBoolean(), p[4].toLong(), p[5].takeIf { it.isNotEmpty() }?.let { Why.valueOf(it) }, p[6],
                 p[7].takeIf { it.isNotEmpty() }?.let { ExitWhy.valueOf(it) }, p[8].toLongOrNull(), p[9].toDoubleOrNull(), p[10].ifEmpty { null },
-                p[11].split(';').filter { it.isNotBlank() }, p[12].toDoubleOrNull())
+                p[11].split(';').filter { it.isNotBlank() }, p[12].toDoubleOrNull(), p.getOrNull(13)?.ifEmpty { null })
         }.getOrNull()
     }.toList()
+
+    /**
+     * [trades] with each [Trade.pending] close given its net from the trade book (G6-4): [nets] is the rupees per closing
+     * order id ("kite:123", the round trips it closed summed). A close the book does not hold yet stays pending - its net is
+     * never guessed (not 0, not an earlier trip's on the same symbol).
+     */
+    fun settle(trades: List<Trade>, nets: Map<String, Double>): List<Trade> =
+        if (trades.none { it.pending }) trades else trades.map { t ->
+            val n = if (t.pending) t.closeId?.let { nets[it] } else null
+            if (n == null || !n.isFinite()) t else t.copy(net = n)
+        }
 
     /** At most this many trades kept (the oldest go first). */
     const val KEEP = 2_000

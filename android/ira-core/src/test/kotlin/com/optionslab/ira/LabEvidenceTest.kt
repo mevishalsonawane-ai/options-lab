@@ -83,9 +83,10 @@ class LabEvidenceTest {
             VariantLab.Variant("V2", "liquidity", s.defaults + ("stopPct" to 0.2), s.defaults, d(2), 1.0, VariantLab.Status.ALIVE)))
         val rs = LabLessons.results(f, v, since = d(5))
         val entry = rs.filter { it.key == "block:$vwap" }
-        assertEquals(3, entry.size, "the idea born before 'since' is left out")
-        assertEquals(listOf(true, false, false), entry.map { it.passed })
-        assertEquals(-1_200.0, entry[2].rs, 1e-9)
+        // The idea born before 'since' is left out, and so is the one still in its forward test (not settled: G6-3).
+        assertEquals(2, entry.size)
+        assertEquals(listOf(false, false), entry.map { it.passed })
+        assertEquals(-1_200.0, entry[1].rs, 1e-9)
         assertEquals(listOf(true), rs.filter { it.key == "filter:EXPIRY_ONLY" }.map { it.passed })
         val par = rs.filter { it.key.startsWith("param:liquidity:stopPct:") }
         assertEquals(1, par.size, "the alive variant is not decided")

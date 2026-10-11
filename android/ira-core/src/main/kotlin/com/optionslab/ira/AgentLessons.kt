@@ -185,19 +185,22 @@ object AgentLessons {
     fun dayOf(ms: Long): LocalDate = LocalDate.ofEpochDay(Math.floorDiv(ms + IST_MS, DAY_MS))
     fun minuteOf(ms: Long): Int = (Math.floorMod(ms + IST_MS, DAY_MS) / 60_000L).toInt()
 
+    /** The afternoon ends with F&O's close, 15:40 since Aug 2026 (G6-6): its last ten minutes are not MCX's evening. */
+    private const val AFTERNOON_END = 15 * 60 + 40
+
     /** The part of the day an entry at [minute] (IST) falls in. */
     fun slot(minute: Int): String = when {
         minute < 10 * 60 + 30 -> "morning"
         minute < 13 * 60 + 30 -> "midday"
-        minute < 15 * 60 + 30 -> "afternoon"
+        minute < AFTERNOON_END -> "afternoon"
         else -> "evening"
     }
 
     private fun slotWords(s: String): String = when (s) {
         "morning" -> "in the morning (before 10:30)"
         "midday" -> "at midday (10:30-13:30)"
-        "afternoon" -> "in the afternoon (13:30-15:30)"
-        else -> "in the evening (after 15:30)"
+        "afternoon" -> "in the afternoon (13:30-15:40)"
+        else -> "in the evening (after 15:40)"
     }
 
     // ---- the evidence, worked out from a lesson's days --------------------------------------------------------------------
@@ -491,7 +494,7 @@ object AgentLessons {
     private fun slotIndex(minute: Int): Int = when {
         minute < 10 * 60 + 30 -> 0
         minute < 13 * 60 + 30 -> 1
-        minute < 15 * 60 + 30 -> 2
+        minute < AFTERNOON_END -> 2
         else -> 3
     }
 
@@ -728,7 +731,9 @@ object AgentLessons {
             buckets = buckets, firstSeen = minOf(old.firstSeen, first), lastSeen = maxOf(old.lastSeen, last), p = p, q = q)
         // Nothing new since it was last judged (the same count: a day read again, or the file's rounding): kept as it was.
         if (e.n == old.checkedN) return base.copy(confidence = conf) to emptyList()
-        val flipped = old.sign != 0 && e.sign != 0 && e.sign != old.sign
+        // A sign flip counts against a lesson only once it had some weight (G6-2), as [against] does: a weak lesson's early
+        // noise (a sum that crosses zero twice in its first days) never retires it.
+        val flipped = old.sign != 0 && e.sign != 0 && e.sign != old.sign && old.confidence != Confidence.WEAK
         val against = old.sign != 0 && e.recent == -old.sign && old.confidence != Confidence.WEAK
         val changes = ArrayList<ChangeKind>()
         var status = old.status
@@ -826,6 +831,17 @@ object AgentLessons {
         }
         val pOf = HashMap<String, Double>(family.size * 2); val qOf = HashMap<String, Double>(family.size * 2)
         for ((k, id) in family.withIndex()) { pOf[id] = ps[k]; qOf[id] = qs[k] }
+        // A retired lesson new evidence reached (G6-2) stays out of the night's family (the BH cut is the active lessons'),
+        // but gets a conservative q of its own - Bonferroni over its family and itself - so strong new evidence can confirm
+        // it again. Without a q it could never be strong, so a retired lesson never came back.
+        for ((id, bs) in merged) {
+            val old = byId[id] ?: continue
+            if (old.status != Status.RETIRED || bs.isEmpty()) continue
+            val lab = prefix(id) == "lab"
+            val m = family.count { (prefix(it) == "lab") == lab } + 1
+            val p = pValue(kinds[id] ?: old.kind, id, bs)
+            pOf[id] = p; qOf[id] = minOf(1.0, p * m)
+        }
         for (a in accs) {
             if (merged[a.id].isNullOrEmpty()) continue
             val (l, ch) = update(byId[a.id], a.id, a.topic, a.kind, a.name, a.tags, a.agents, emptyList(), day, pOf[a.id], qOf[a.id], merged[a.id])
@@ -1182,9 +1198,25 @@ object AgentLessons {
             (if (ls.size > max) " And ${ls.size - max} more." else "") + " Ask \"why do you think that?\" for the evidence."
     }
 
-    /** "Why do you think that?": the evidence behind [ls], and why each has its confidence. */
-    fun sayWhy(ls: List<Lesson>): String {
+    /**
+     * Said for a lessons question on a locked phone (G6-1): the lessons carry the bots' rupees, live round trips among them,
+     * so only the counts are said - as [DailyLesson.LOCKED] and the self answers do.
+     */
+    const val LOCKED = "Unlock the phone for my lessons, Boss: they carry the bots' rupees."
+
+    /** The lessons answer on a locked phone: how many and how strong - no rupee, no lesson's words. */
+    fun sayLocked(book: Book): String {
+        val act = active(book)
+        if (act.isEmpty()) return "I haven't learned anything from the agents yet, Boss."
+        val c = counts(book)
+        return "I hold ${act.size} lesson${if (act.size == 1) "" else "s"} from the agents, Boss: ${c[Confidence.STRONG]} strong, " +
+            "${c[Confidence.BUILDING]} building, ${c[Confidence.WEAK]} weak. $LOCKED"
+    }
+
+    /** "Why do you think that?": the evidence behind [ls], and why each has its confidence ([locked]: only [LOCKED]). */
+    fun sayWhy(ls: List<Lesson>, locked: Boolean = false): String {
         if (ls.isEmpty()) return "That answer had no lesson behind it, Boss."
+        if (locked) return LOCKED
         return "The evidence, Boss: " + ls.take(4).joinToString(" ") { l ->
             val e = evidence(l)
             val why = when (l.confidence) {

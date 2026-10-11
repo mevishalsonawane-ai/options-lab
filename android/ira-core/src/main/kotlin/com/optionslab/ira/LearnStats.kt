@@ -104,11 +104,13 @@ object LearnStats {
      * mixture's scale is the running sd, and an sd from three or four days is too often far too small (a seeded simulation of
      * a no-effect lesson re-tested nightly over days 10 to 60: about 12% false alarms judged from day 3, under 3% from day 10).
      */
-    fun signFlipAlwaysValidP(sums: DoubleArray, minSd: Double = 1.0, minDays: Int = EXACT_DAYS): Double {
+    fun signFlipAlwaysValidP(sums: DoubleArray, minSd: Double = 1.0, minDays: Int = EXACT_DAYS, side: Int = 0): Double {
         val xs = sums.filter { it.isFinite() && abs(it) > 1e-9 }
         if (xs.size < minDays) return 1.0
-        val up = alwaysValidP(xs, 1, minSd, minDays)
-        val dn = alwaysValidP(xs, -1, minSd, minDays)
+        // [side] +1 / -1: only that way, still doubled (a claim about one side chosen from the data, e.g. "this loses", is
+        // never backed by early evidence the other way - G6-10).
+        val up = if (side < 0) 1.0 else alwaysValidP(xs, 1, minSd, minDays)
+        val dn = if (side > 0) 1.0 else alwaysValidP(xs, -1, minSd, minDays)
         return minOf(1.0, 2.0 * minOf(up, dn))
     }
 

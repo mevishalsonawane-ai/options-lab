@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    longer, within its cap; the move recorder's files of a goal's index trimmed last) - never a trade;
  *  - the weekly memory consolidation ([Consolidation]): on Sunday, or the first run after it - his lessons' near-duplicates
  *    merged by their own rule, the findings history compacted, old recordings beyond their caps trimmed, a week summary kept;
- *  - the weekly self-report ([GrowthReport]): Saturday morning, or the first open after Friday's close - one notification,
+ *  - the weekly self-report ([GrowthReport]): Saturday morning, or the first open after Friday ends - one notification,
  *    the "Weekly report" sheet from Home's Autopilot card, and "how did you grow this week?".
  *
  * Everything runs off the main thread, reads the agents' own records and writes only noBackupFilesDir/growth (never the
@@ -160,7 +160,16 @@ internal object SelfGrowth {
     internal suspend fun consolidateIfDue(): Consolidation.Done? {
         val today = now().toLocalDate()
         val sunday = Consolidation.due(today, consolidatedOn) ?: return null
-        if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.CONSOLIDATION)) return null   // S18: battery / heat budget
+        // S18: battery / heat budget; its CPU is counted when it ends ([BackgroundBudget.done], G6-9), however long it ran.
+        try {
+            if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.CONSOLIDATION)) return null
+            return consolidate(today, sunday)
+        } finally {
+            runCatching { com.optionslab.app.work.BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.CONSOLIDATION) }
+        }
+    }
+
+    private suspend fun consolidate(today: LocalDate, sunday: LocalDate): Consolidation.Done? {
         val first = consolidatedOn == null
         consolidatedOn = sunday
         // The very first run on this phone only sets the week (nothing kept yet to tidy; the first consolidation is next Sunday).
@@ -220,7 +229,7 @@ internal object SelfGrowth {
     }
 
     /**
-     * Saturday morning, or the first run after Friday's close: the week's report, once - kept, notified. The week, or null. The
+     * Saturday morning, or the first run after Friday ends: the week's report, once - kept, notified. The week, or null. The
      * first run on a phone only notes the week due (no report of a week the app did not watch).
      */
     internal suspend fun reportIfDue(context: Context?): GrowthReport.Week? {
@@ -262,12 +271,12 @@ internal object SelfGrowth {
         return null
     }
 
-    /** The answer from memory (the files were read at start). */
-    fun answer(a: Ask): String = when (a) {
+    /** The answer from memory (the files were read at start). [locked]: the phone is locked - no bot's rupees (G6-1). */
+    fun answer(a: Ask, locked: Boolean = false): String = when (a) {
         Ask.HEALTHY -> AppHealth.sayHealthy()
         Ask.SLOW -> AppHealth.sayWhySlow()
-        Ask.GOALS -> { ensureLoaded(); LearningGoals.say(_goals.value) }
-        Ask.WEEK -> { ensureLoaded(); GrowthReport.say(_weeks.value.lastOrNull()) }
+        Ask.GOALS -> { ensureLoaded(); LearningGoals.say(_goals.value, locked) }
+        Ask.WEEK -> { ensureLoaded(); GrowthReport.say(_weeks.value.lastOrNull(), locked) }
     }
 
     /** TEST ONLY: nothing kept. */

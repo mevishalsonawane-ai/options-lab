@@ -814,6 +814,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 runCatching { com.optionslab.app.widget.OpenWidget.fromZerodha(ctx, book, liveCharges, keptExact) }
                 runCatching { com.optionslab.app.widget.IraWidget.charges(ctx, keptExact ?: liveCharges, exact = keptExact != null) }
                 runCatching { com.optionslab.app.data.TradeBook.recordLive(trades) }
+                // Boss's hand exits waiting for their round trip get its net now (G6-4; memory only when none waits).
+                runCatching { com.optionslab.app.ira.BossTradeLog.settleSoon() }
                 // Today's Zerodha P&L for the calendar (Zerodha has no past days through its API).
                 // Speed, round 5: the calendar reads again only when the day's figure changed (a refresh that changes
                 // nothing no longer makes an open calendar re-read every book).

@@ -8,7 +8,7 @@ import java.util.Locale
 
 /**
  * The weekly self-report (Boss, 11 Oct: "enhance the self improvement" - report its growth weekly): on Saturday morning, or
- * the first open after Friday's close, one report of the week Monday to Friday ("Week of 12-16 Oct"):
+ * the first open after Friday ends, one report of the week Monday to Friday ("Week of 12-16 Oct"):
  *
  *  - Jarvis's lessons learned or confirmed, and retired, this week; how many are strong and building now;
  *  - Autopilot's changes made this week, those kept and reverted this week, and their rupee effect against what would have
@@ -21,8 +21,12 @@ import java.util.Locale
  * nothing in it says so. Pure: no clock (the app passes the time), no file.
  */
 object GrowthReport {
-    /** Friday's close: the week's report is due from then (the first open after it, or Saturday's morning report). */
-    val FRIDAY_CLOSE: LocalTime = LocalTime.of(15, 30)
+    /**
+     * The week's report is due from Saturday 00:00 (the first open after it, or Saturday's morning report), not at Friday's
+     * close (G6-5): F&O trades to 15:40, Jarvis's learning pass and Autopilot's night run come at 15:45 or later, and a
+     * report made before them missed Friday's lessons, keeps and reverts - and was never made again.
+     */
+    val DUE_FROM: LocalTime = LocalTime.MIDNIGHT
     const val KEEP_WEEKS = 26
 
     data class Week(
@@ -46,10 +50,10 @@ object GrowthReport {
 
     fun mondayOf(d: LocalDate): LocalDate = d.minusDays((d.dayOfWeek.value - 1).toLong())
 
-    /** The week whose report is due at [now]: this week's from Friday's close on, else last week's. Its Monday. */
+    /** The week whose report is due at [now]: this week's from Saturday 00:00 on ([DUE_FROM]), else last week's. Its Monday. */
     fun dueWeek(now: LocalDateTime): LocalDate {
         val mon = mondayOf(now.toLocalDate())
-        val close = mon.plusDays(4).atTime(FRIDAY_CLOSE)
+        val close = mon.plusDays(5).atTime(DUE_FROM)
         return if (!now.isBefore(close)) mon else mon.minusWeeks(1)
     }
 
@@ -154,8 +158,12 @@ object GrowthReport {
     /** "How did you grow this week?" */
     fun asked(text: String): Boolean = ASK.containsMatchIn(Spaced.joined(text))
 
-    /** Jarvis's answer from the latest report (null: none made yet). */
-    fun say(w: Week?): String = if (w == null) "No weekly report yet, Boss: the first comes after Friday's close." else
+    /** Said for the weekly report on a locked phone (G6-1): it carries Autopilot's rupee effect on the bots. */
+    const val LOCKED = "Unlock the phone for my weekly report, Boss: it carries the bots' rupees."
+
+    /** Jarvis's answer from the latest report (null: none made yet; [locked]: the phone is locked). */
+    fun say(w: Week?, locked: Boolean = false): String = if (w == null) "No weekly report yet, Boss: the first comes after Friday's close."
+        else if (locked) LOCKED else
         "How I grew, ${title(w.monday).replaceFirstChar { it.lowercase() }}, Boss:\n" + sections(w).joinToString("\n") { (h, ls) -> "• $h: " + ls.joinToString(" ") }
 
     // ---- the file ----------------------------------------------------------------------------------------------------------------

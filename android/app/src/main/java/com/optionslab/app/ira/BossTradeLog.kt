@@ -114,6 +114,8 @@ object BossTradeLog {
             if (closing) closeOne(f) else openOne(f)
             if (_prompt.value?.tradeId == f.venueId) _prompt.value = _prompt.value?.copy(exit = closing)
         }
+        // A paper close's round trip is in the paper book now; a live one's (this or an earlier close's) once the account loads.
+        settle()
         rulesKept = null
         save()
     }
@@ -124,7 +126,7 @@ object BossTradeLog {
             val net = runCatching { com.optionslab.app.data.Paper.state.positions.filter { it.symbol == f.symbol }.sumOf { it.quantity } }.getOrNull()
             if (net != null) return if (f.buy) net <= 0 else net >= 0
         }
-        return !f.buy && trades.any { it.symbol == f.symbol && it.live == f.live && !it.closed }
+        return !f.buy && trades.any { it.symbol == f.symbol && it.live == f.live && it.open }
     }
 
     private fun regimeOf(symbol: String): String? = runCatching {
@@ -148,14 +150,38 @@ object BossTradeLog {
     }
 
     private fun closeOne(f: Fill) {
-        val open = trades.lastOrNull { it.symbol == f.symbol && it.live == f.live && !it.closed } ?: return
-        val net = runCatching {
-            com.optionslab.app.data.TradeBook.trips(f.live).filter { it.symbol == f.symbol }.maxByOrNull { it.closedAt }?.net
-        }.getOrNull() ?: 0.0
-        synchronized(lock) { trades = trades.map { if (it.id == open.id) it.copy(closedMs = f.atMs, net = net) else it } }
+        val open = trades.lastOrNull { it.symbol == f.symbol && it.live == f.live && it.open } ?: return
+        // Pending until the trade book holds this close's own round trip (G6-4): a live exit's comes only on the next account
+        // load, so its net is filled in then ([settle]) - never 0, never an earlier trip's on the same symbol.
+        synchronized(lock) { trades = trades.map { if (it.id == open.id) it.copy(closedMs = f.atMs, closeId = f.venueId) else it } }
         // The exit's "why?" is kept on the trade it closes.
         val cur = _prompt.value
         if (cur != null && cur.tradeId == f.venueId) _prompt.value = cur.copy(tradeId = open.id, exit = true)
+    }
+
+    /** The pending closes given their nets from the trade book (memory; the caller saves). True when one was settled. */
+    private fun settle(): Boolean {
+        val ts = trades
+        if (ts.none { it.pending }) return false
+        val nets = HashMap<String, Double>()
+        for (live in ts.filter { it.pending }.map { it.live }.distinct()) runCatching {
+            for (t in com.optionslab.app.data.TradeBook.trips(live)) nets[t.closeOrderId] = (nets[t.closeOrderId] ?: 0.0) + t.net
+        }
+        synchronized(lock) {
+            val next = BossTrades.settle(trades, nets)
+            if (next == trades) return false
+            trades = next
+        }
+        return true
+    }
+
+    /**
+     * The live trade book was read again ([com.optionslab.app.data.TradeBook.recordLive]): the closes waiting for their round
+     * trip get their nets. A worker thread; memory only when nothing waits.
+     */
+    fun settleSoon() {
+        if (!enabled() || trades.none { it.pending }) return
+        scope.launch { runCatching { synchronized(io) { ensureLoaded(); if (settle()) { rulesKept = null; save() } } } }
     }
 
     // ---- Boss's answer -----------------------------------------------------------------------------------------------------

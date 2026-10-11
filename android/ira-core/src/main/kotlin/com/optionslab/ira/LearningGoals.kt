@@ -173,10 +173,14 @@ object LearningGoals {
 
     fun line(g: Goal): String = "${g.text} (${g.have} of ${g.target} so far; about ${AgentLessons.rs(g.valueRs).removePrefix("+")} at stake)"
 
-    /** "What are you trying to learn?" */
-    fun say(b: Book): String {
+    /** Said for the goals on a locked phone (G6-1): each carries the bots' rupees at stake. */
+    const val LOCKED = "Unlock the phone for my learning goals, Boss: they carry the bots' rupees."
+
+    /** "What are you trying to learn?" ([locked]: the phone is locked - how many only). */
+    fun say(b: Book, locked: Boolean = false): String {
         if (b.goals.isEmpty()) return "Nothing in particular just now, Boss: no lesson is both thin on evidence and worth at least " +
             "${AgentLessons.rs(MIN_VALUE_RS).removePrefix("+")}. I set my goals each evening after I study the agents."
+        if (locked) return "I have ${b.goals.size} learning goal${if (b.goals.size == 1) "" else "s"} just now. $LOCKED"
         return "What I'm trying to learn next, Boss:\n" + b.goals.joinToString("\n") { "• " + line(it) } +
             "\nI only record more for these (the order flow's shadow log and the move recorder, within their storage caps); a goal never places, changes or sizes a trade."
     }

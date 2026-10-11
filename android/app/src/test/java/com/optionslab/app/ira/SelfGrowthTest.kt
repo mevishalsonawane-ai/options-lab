@@ -12,6 +12,7 @@ import com.optionslab.ira.LearningGoals
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -143,5 +144,45 @@ class SelfGrowthTest : RobolectricTest() {
         assertTrue(w, "• Autopilot: 1 change made, 1 kept and 0 reverted this week." in w)
         // Nothing was asked of Boss, nothing changed.
         assertTrue(IraHub.state.value.pending.isEmpty())
+    }
+
+    @Test fun onALockedPhoneTheGoalsAndTheWeekCarryNoRupee() {
+        // G6-1: the goals' rupees at stake and Autopilot's rupee effect are the bots' - not said on a locked phone.
+        val goal = LearningGoals.next(LearningGoals.Book(), listOf(lesson("spec:liquidity:oi", "The OI specialist on Liquidity 15+5", 12, -6_000.0, mon)),
+            emptyMap(), mon)
+        SelfGrowth.setForTest(goal, listOf(GrowthReport.Week(mon, learned = 2, made = 1, kept = 1, effectRs = 4_200.0, effectN = 3)))
+        assertTrue(SelfGrowth.answer(SelfGrowth.Ask.GOALS).contains("at stake"))
+        val g = SelfGrowth.answer(SelfGrowth.Ask.GOALS, locked = true)
+        assertTrue(g, g.endsWith(LearningGoals.LOCKED) && !Regex("Rs|₹|at stake").containsMatchIn(g))
+        assertEquals(GrowthReport.LOCKED, SelfGrowth.answer(SelfGrowth.Ask.WEEK, locked = true))
+    }
+
+    @Test fun theConsolidationsCpuIsChargedToTheNightsBudget() = runBlocking<Unit> {
+        // G6-9: a one-shot consolidation asks the budget once; its CPU is counted when it ends (done), however long it ran.
+        val budget = com.optionslab.app.work.BackgroundBudget
+        try {
+            budget.resetForTest()
+            budget.testNow = mon.plusDays(6).atTime(21, 0)
+            budget.testPhone = com.optionslab.ira.BudgetRule.Phone(80, true, 33.0, false)
+            var wall = 1_000_000L
+            var cpu = 0L
+            budget.testWallMs = { wall }
+            // Each read of the CPU clock: the work done since the last (the consolidation's own, from its ask to its end).
+            budget.testCpuMs = { cpu.also { cpu += com.optionslab.ira.BudgetRule.NIGHT_CPU_MS + 1; wall += 5 * 60_000L } }
+            val sunday = mon.plusDays(6)
+            SelfGrowth.testNow = { sunday.minusDays(7).atTime(10, 0) }
+            assertNull(SelfGrowth.consolidateIfDue())   // the first run on a phone only notes the week
+            budget.resetForTest()
+            budget.testNow = sunday.atTime(21, 0)
+            budget.testPhone = com.optionslab.ira.BudgetRule.Phone(80, true, 33.0, false)
+            budget.testWallMs = { wall }
+            budget.testCpuMs = { cpu.also { cpu += com.optionslab.ira.BudgetRule.NIGHT_CPU_MS + 1; wall += 5 * 60_000L } }
+            SelfGrowth.testNow = { sunday.atTime(10, 0) }
+            assertNotNull(SelfGrowth.consolidateIfDue())
+            // Half an hour later (no run in between): the night's budget is spent by the consolidation.
+            wall += 30 * 60_000L
+            budget.testCpuMs = { cpu }
+            assertFalse("the consolidation's CPU was counted", budget.allow(com.optionslab.ira.BudgetRule.Job.HISTORY))
+        } finally { budget.resetForTest() }
     }
 }

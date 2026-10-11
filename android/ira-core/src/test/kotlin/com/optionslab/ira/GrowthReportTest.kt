@@ -95,7 +95,9 @@ class GrowthReportTest {
     @Test fun dueSaturdayMorningOrTheFirstOpenAfterFridaysClose() {
         val fri = d(4)
         assertEquals(mon.minusWeeks(1), GrowthReport.dueWeek(fri.atTime(15, 29)))
-        assertEquals(mon, GrowthReport.dueWeek(fri.atTime(15, 30)))
+        // Not at Friday's close: after Friday's learning pass and Autopilot's night run (G6-5).
+        assertEquals(mon.minusWeeks(1), GrowthReport.dueWeek(fri.atTime(15, 30)))
+        assertEquals(mon, GrowthReport.dueWeek(d(5).atTime(0, 0)))
         assertEquals(mon, GrowthReport.dueWeek(d(5).atTime(8, 0)))
         assertEquals(mon, GrowthReport.dueWeek(d(7).atTime(9, 0)))
         assertTrue(GrowthReport.due(d(5).atTime(8, 0), mon.minusWeeks(1)))

@@ -143,6 +143,10 @@ class JarvisLearningTest : RobolectricTest() {
         assertEquals(muted, com.optionslab.app.data.ManagerSpecialists.book.value)
         // His no: kept on the lesson, nothing changed.
         IraHub.cancelAction(pending.first())
+        // Kept off the main thread (G6-7): the tap never waits on the lessons' lock.
+        com.optionslab.app.testing.Background.await("his no kept") {
+            JarvisLearning.book.value.lessons.first { it.id == "spec:pine:oi" }.rejections == 1
+        }
         val oi = JarvisLearning.book.value.lessons.first { it.id == "spec:pine:oi" }
         assertEquals(1, oi.rejections)
         assertTrue(oi.weight < 1.0)
@@ -181,5 +185,62 @@ class JarvisLearningTest : RobolectricTest() {
         assertTrue(notes.all { Regex("\\d").containsMatchIn(it) })
         JarvisLearning.resetForTest()
         assertTrue(JarvisLearning.modelNotes("how is pine doing").isEmpty())
+    }
+
+    @Test fun onALockedPhoneHisLessonsAreCountsOnly() {
+        // G6-1: the lessons carry the bots' rupees (live round trips among them) - never said on a locked phone.
+        val b = AgentLessons.pass(AgentLessons.Book(), inputs(day)).book
+        JarvisLearning.setForTest(b)
+        val money = Regex("Rs|₹")
+        val (open, openFacts) = JarvisLearning.answer(AgentLessons.Ask(AgentLessons.AskKind.ALL))
+        assertTrue(open, money.containsMatchIn(open + openFacts.joinToString()))
+        for (k in AgentLessons.AskKind.entries) {
+            val (said, facts) = JarvisLearning.answer(AgentLessons.Ask(k, AgentLessons.Topic.SPECIALIST), locked = true)
+            assertEquals(AgentLessons.sayLocked(b), said)
+            assertFalse(said, money.containsMatchIn(said))
+            assertTrue(facts.isEmpty())
+        }
+        assertEquals(AgentLessons.LOCKED, JarvisLearning.why(locked = true))
+    }
+
+    @Test fun hisNoAndAutopilotsWordNeverWaitOnTheLessonsLock() {
+        // G6-7: a consolidation (or a pass) holds the lessons' lock across its work and its save; "no" is tapped on the main thread.
+        JarvisLearning.setForTest(AgentLessons.pass(AgentLessons.Book(), inputs(day)).book)
+        val holding = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val worker = Thread { JarvisLearning.consolidate { b -> holding.countDown(); release.await(20, java.util.concurrent.TimeUnit.SECONDS); b to 0 } }
+        worker.start()
+        try {
+            assertTrue(holding.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            val t0 = System.nanoTime()
+            JarvisLearning.answered("spec:pine:oi", false)
+            JarvisLearning.autoStatus("spec:pine:oi", "applied")
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue("the callers returned at once (${ms} ms), not after the lock", ms < 5_000)
+        } finally { release.countDown(); worker.join(20_000) }
+        com.optionslab.app.testing.Background.await("his no and Autopilot's word kept") {
+            JarvisLearning.book.value.lessons.first { it.id == "spec:pine:oi" }.let { it.rejections == 1 && it.auto != null }
+        }
+    }
+
+    @Test fun aLessonsFileThatCannotBeReadIsNeverSavedOver() = runBlocking<Unit> {
+        // G6-8: one failed read of lessons.txt must not be taken as "no lessons" and written over.
+        val kept = AgentLessons.pass(AgentLessons.Book(), inputs(day.minusDays(1))).book
+        val f = File(context.noBackupFilesDir, "jarvis/lessons.txt").apply { parentFile?.mkdirs(); writeText(AgentLessons.encode(kept)) }
+        val text = f.readText()
+        JarvisLearning.reloadForTest()
+        JarvisLearning.testRead = { throw java.io.IOException("read failed") }
+        JarvisLearning.ensureLoaded()
+        JarvisLearning.testInputs = { d -> inputs(d) }
+        assertNull("no pass on an unread book", JarvisLearning.runPass(day))
+        JarvisLearning.answered("spec:pine:oi", false)
+        assertEquals(0, JarvisLearning.consolidate { it to 0 })
+        Thread.sleep(300)
+        assertEquals("the file is as it was", text, f.readText())
+        // The next read works: his lessons are back, and the pass runs on them.
+        JarvisLearning.testRead = null
+        JarvisLearning.ensureLoaded()
+        assertEquals(kept.lessons.map { it.id }, JarvisLearning.book.value.lessons.map { it.id })
+        assertNotNull(JarvisLearning.runPass(day))
     }
 }

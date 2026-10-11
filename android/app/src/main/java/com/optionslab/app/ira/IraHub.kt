@@ -1937,7 +1937,8 @@ object IraHub {
         if (growthAsk != null) {
             // Off the main thread: its books may be read the first time (review R5 #12).
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            scope.launch(Dispatchers.IO) { reply(runCatching { SelfGrowth.answer(growthAsk) }.getOrElse { "I could not read my own records just now, Boss." }) }
+            val growthLocked = phoneLocked()   // the goals and the week carry the bots' rupees (G6-1)
+            scope.launch(Dispatchers.IO) { reply(runCatching { SelfGrowth.answer(growthAsk, growthLocked) }.getOrElse { "I could not read my own records just now, Boss." }) }
             return
         }
         // "Run a self check": each part Jarvis needs, working or not, from what the app knows now (no account figures).
@@ -3846,7 +3847,8 @@ object IraHub {
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
             runCatching { com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text) }.getOrDefault(false)) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            scope.launch(Dispatchers.IO) { reply(runCatching { JarvisLearning.why() }.getOrElse { "I could not read my lessons just now, Boss." }) }
+            val whyLocked = phoneLocked()   // the evidence is the bots' rupees (G6-1)
+            scope.launch(Dispatchers.IO) { reply(runCatching { JarvisLearning.why(whyLocked) }.getOrElse { "I could not read my lessons just now, Boss." }) }
             return true
         }
         // "What have you learned?", "what did you learn today?", "how are you growing?", "what do you know about Liquidity / the
@@ -3858,8 +3860,9 @@ object IraHub {
             runCatching { com.optionslab.ira.AgentLessons.asked(q) }.getOrNull() else null
         if (lessonsAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val lessonsLocked = phoneLocked()   // the lessons carry the bots' rupees (G6-1)
             scope.launch(Dispatchers.IO) {
-                val (said, facts) = runCatching { JarvisLearning.answer(lessonsAsk) }.getOrElse { "I could not read my lessons just now, Boss." to emptyList() }
+                val (said, facts) = runCatching { JarvisLearning.answer(lessonsAsk, lessonsLocked) }.getOrElse { "I could not read my lessons just now, Boss." to emptyList() }
                 _state.update { it.copy(messages = (it.messages + Msg(true, said, facts = facts)).takeLast(MAX_MESSAGES)) }
             }
             return true

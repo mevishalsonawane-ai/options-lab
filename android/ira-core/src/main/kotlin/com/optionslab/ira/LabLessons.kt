@@ -80,10 +80,11 @@ object LabLessons {
     /**
      * The lab's records as Jarvis's evidence ([AgentLessons.LabResult]; his nightly digest forms "lab:" lessons from them with
      * the same confidence and Benjamini-Hochberg rules as every other agent's), one result per test, dated by the day it was
-     * born (an idea) or last judged (a variant):
+     * settled (an idea's stage day, a filter's birth) or last judged (a variant):
      *
-     *  - each forge idea, once per building block it used (entry and exit): passed = it passed the backtest and was not
-     *    retired by its forward test; rupees = its forward net when it has one, else its backtest's;
+     *  - each settled forge idea (not one still in its forward test), once per building block it used (entry and exit):
+     *    passed = it passed the backtest and was not retired by its forward test; rupees = its forward net when it has one,
+     *    else its backtest's;
      *  - each forge survivor, once per filter it used: passed = the filter made it better than without;
      *  - each decided variant, once per parameter it moved: passed = promoted, failed = worse on the stored days or retired.
      *
@@ -93,21 +94,26 @@ object LabLessons {
     fun results(f: StrategyForge.Book, v: VariantLab.Book, since: LocalDate? = null): List<AgentLessons.LabResult> {
         val out = ArrayList<AgentLessons.LabResult>()
         for (r in f.records) {
-            val day = r.c.born
-            if (since != null && day.isBefore(since)) continue
+            val born = r.c.born
             val bt = r.bt ?: continue
             if (bt.gates.isEmpty()) continue
             val passed = bt.passed && r.stage != StrategyForge.Stage.RETIRED
             val rs = if (r.fwd.isNotEmpty()) r.fwdNet else bt.net
-            for (k in r.c.blocks.distinct()) {
+            // An idea's block result is dated by the day it was settled (G6-3): its stage's day ([StrategyForge.Record.since]).
+            // One still in its forward test is not settled - not a result yet: dated by its birth it was read once as a pass,
+            // and its retirement 20 to 60 days later fell on a day never read again, so a failed idea counted as passed.
+            val day = r.since ?: born
+            val settled = r.stage != StrategyForge.Stage.FORWARD
+            if (settled && (since == null || !day.isBefore(since))) for (k in r.c.blocks.distinct()) {
                 if (k.startsWith("filter:")) continue
                 val w = StrategyForge.words(k)
                 out += AgentLessons.LabResult(day, "block:$k", "Ideas using $w", passed, rs, 1, w.lowercase(Locale.ENGLISH).split(' ').filter { it.length > 2 })
             }
-            if (bt.passed) for (fl in r.c.rules.filters) {
+            // A filter's result is its backtest's (it never changes): dated by the idea's birth.
+            if (bt.passed && (since == null || !born.isBefore(since))) for (fl in r.c.rules.filters) {
                 val k = StrategyForge.key(fl)
                 val w = StrategyForge.words(k)
-                out += AgentLessons.LabResult(day, k, w.replaceFirstChar { it.uppercase() }, fl in bt.helped, 0.0, 1, listOf("filter", fl.name.lowercase(Locale.ENGLISH)))
+                out += AgentLessons.LabResult(born, k, w.replaceFirstChar { it.uppercase() }, fl in bt.helped, 0.0, 1, listOf("filter", fl.name.lowercase(Locale.ENGLISH)))
             }
         }
         for (s in VariantLab.STRATEGIES) for (x in v.variants) {

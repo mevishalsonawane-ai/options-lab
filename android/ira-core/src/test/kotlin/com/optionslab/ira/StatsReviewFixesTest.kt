@@ -159,13 +159,14 @@ class StatsReviewFixesTest {
         assertTrue(rules.none { it.key.startsWith("exit:") }, rules.map { it.key }.toString())
         val g = rules.single { it.key == "why:GUT" }
         assertEquals(-1, g.sign, "the sign follows the rupees (-Rs 4,000), not the 83% win rate")
-        val perDay = gut.groupBy { it.day }.values.map { d -> d.sumOf { it.net!! } }.toDoubleArray()
-        assertEquals(LearnStats.signFlipP(perDay), g.p, 1e-12)
+        // Per-day sums, oldest first, tested always-valid the way the rupees point (review G6-10).
+        val perDay = gut.groupBy { it.day }.toSortedMap().values.map { d -> d.sumOf { it.net!! } }.toDoubleArray()
+        assertEquals(LearnStats.signFlipAlwaysValidP(perDay, side = -1), g.p, 1e-12)
         // Two trades a day count as one day's sum.
         val twice = gut.map { it.copy(openedMs = at(it.id.removePrefix("paper:g").toInt() / 2, 14)) }
         assertEquals(6, twice.map { it.day }.distinct().size)
         val p6 = BossTrades.rules(twice).single { it.key == "why:GUT" }.p
-        assertEquals(LearnStats.signFlipP(twice.groupBy { it.day }.values.map { d -> d.sumOf { it.net!! } }.toDoubleArray()), p6, 1e-12)
+        assertEquals(LearnStats.signFlipAlwaysValidP(twice.groupBy { it.day }.toSortedMap().values.map { d -> d.sumOf { it.net!! } }.toDoubleArray(), side = -1), p6, 1e-12)
     }
 
     // ---- 8 and 9: the nightly lessons' p ------------------------------------------------------------------------------------

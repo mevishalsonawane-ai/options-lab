@@ -68,14 +68,23 @@ internal object JarvisLearning {
         if (loaded) return
         synchronized(lock) {
             if (loaded) return
-            val text = runCatching { file()?.takeIf { it.isFile }?.readText() }.getOrNull()
+            val f = file()
+            val read = runCatching { f?.takeIf { it.isFile }?.let { testRead?.invoke(it) ?: it.readText() } }
+            // A file there that could not be read (G6-8) is never taken as "no lessons": [loaded] stays false, nothing is saved
+            // over it ([save]) and the next look reads it again - one failed read never wipes his history.
+            if (read.isFailure && f != null && f.exists()) return
             // (A pass or an answer in the moment before the file was read wins: it is written over the file next.)
-            if (_book.value == AgentLessons.Book()) _book.value = AgentLessons.decode(text)
+            if (_book.value == AgentLessons.Book()) _book.value = AgentLessons.decode(read.getOrNull())
             loaded = true
         }
     }
 
+    /** TEST ONLY: the file's read (a failing read). */
+    @Volatile internal var testRead: ((File) -> String)? = null
+
     private fun save(b: AgentLessons.Book) {
+        // Never over a file that was not read (a failed load would otherwise wipe what he has learned).
+        if (!loaded) return
         val f = file() ?: return
         runCatching {
             f.parentFile?.mkdirs()
@@ -96,11 +105,12 @@ internal object JarvisLearning {
         val today = Market.today()
         if (passedOn == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
-        if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.LEARNING)) return false   // S18: battery / heat budget
         // One pass at a time (the brain's worker and the day report's worker both ask); the day is marked done only once its
         // pass has run, so a pass cut short (cancelled, its records unreadable) is tried again on a later look.
         if (!passing.compareAndSet(false, true)) return false
         try {
+            // S18: battery / heat budget - asked inside the try (G6-9), so every ask is ended by its [BackgroundBudget.done].
+            if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.LEARNING)) return false
             if (passedOn == today) return false
             withContext(Dispatchers.IO) { ensureLoaded() }
             if (_book.value.lastPass == today) { passedOn = today; return false }
@@ -122,6 +132,9 @@ internal object JarvisLearning {
 
     /** The pass itself (and by tests): read, digest, keep, tell, propose. */
     internal suspend fun runPass(today: LocalDate): AgentLessons.Pass? {
+        // Never a pass on an unread book (G6-8): its result would be saved over the lessons the file holds.
+        withContext(Dispatchers.IO) { ensureLoaded() }
+        if (!loaded) return null
         val read = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(today) ?: gather(today) }.getOrNull() } ?: return null
         // The strategy lab's results are evidence like every other agent's (S, 11 Oct): one digest, one set of rules.
         val inputs = if (read.lab.isNotEmpty()) read else read.copy(lab = withContext(Dispatchers.IO) { labResults(today) })
@@ -233,8 +246,12 @@ internal object JarvisLearning {
     /** What Autopilot made of a lesson's change ("applied", "kept", "reverted"): kept on the lesson, so he learns from his own changes. */
     fun autoStatus(lessonId: String, status: String) {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
-        synchronized(lock) { _book.value = AgentLessons.autoStatus(_book.value, lessonId, status, today) }
-        scope.launch { synchronized(lock) { save(_book.value) } }
+        // On the IO pool (G6-7): the lock is held across a whole pass and its save, and a caller may be the main thread.
+        scope.launch {
+            ensureLoaded()
+            if (!loaded) return@launch
+            synchronized(lock) { _book.value = AgentLessons.autoStatus(_book.value, lessonId, status, today); save(_book.value) }
+        }
     }
 
     /**
@@ -243,6 +260,7 @@ internal object JarvisLearning {
      */
     fun experimentResult(lessonId: String?, target: String, what: String, won: Boolean, pairs: List<Pair<LocalDate, Double>>) {
         ensureLoaded()
+        if (!loaded) return
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
         synchronized(lock) { _book.value = AgentLessons.experimentResult(_book.value, lessonId, target, what, won, pairs, today) }
         scope.launch { synchronized(lock) { save(_book.value) } }
@@ -251,17 +269,26 @@ internal object JarvisLearning {
     /** Boss's yes or no to a lesson's proposal: kept, and it moves the lesson. */
     fun answered(lessonId: String, accepted: Boolean) {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
-        synchronized(lock) { _book.value = AgentLessons.answered(_book.value, lessonId, accepted, today) }
-        scope.launch { synchronized(lock) { save(_book.value) } }
+        // On the IO pool (G6-7): "no" is tapped on the main thread, and the lock is held across a whole pass and its save.
+        scope.launch {
+            ensureLoaded()
+            if (!loaded) return@launch
+            synchronized(lock) { _book.value = AgentLessons.answered(_book.value, lessonId, accepted, today); save(_book.value) }
+        }
         runCatching { com.optionslab.app.data.Diag.record("jarvis", if (accepted) "a lesson's proposal: yes" else "a lesson's proposal: no") }
     }
 
     // ---- answers ------------------------------------------------------------------------------------------------------------
 
     /** "What have you learned?", "what did you learn today?", "how are you growing?", "what do you know about X?": words and facts. */
-    fun answer(a: AgentLessons.Ask): Pair<String, List<String>> {
+    fun answer(a: AgentLessons.Ask, locked: Boolean = false): Pair<String, List<String>> {
         ensureLoaded()
         val b = _book.value
+        // A locked phone (G6-1): the counts only - the lessons carry the bots' rupees, live round trips among them.
+        if (locked) {
+            shown = AgentLessons.ranked(AgentLessons.active(b)).take(4).map { it.id }
+            return AgentLessons.sayLocked(b).also { shownText = it; shownAt = System.currentTimeMillis() } to emptyList()
+        }
         val today = Market.today()
         val todays: List<AgentLessons.Lesson> = if (b.lastPass != today) emptyList()
             else b.today.mapNotNull { c -> b.lessons.firstOrNull { it.id == c.id } }.filter { it.confidence != AgentLessons.Confidence.WEAK }.take(4)
@@ -280,9 +307,9 @@ internal object JarvisLearning {
         System.currentTimeMillis() - shownAt in 0..WHY_MS
 
     /** "Why do you think that?": the evidence behind the lessons of the last answer. */
-    fun why(): String {
+    fun why(locked: Boolean = false): String {
         val b = _book.value
-        return AgentLessons.sayWhy(shown.mapNotNull { id -> b.lessons.firstOrNull { it.id == id } })
+        return AgentLessons.sayWhy(shown.mapNotNull { id -> b.lessons.firstOrNull { it.id == id } }, locked)
     }
 
     /** One strong lesson for an answer about [tag] (a strategy family) or [topic], or null (memory only: nothing read here). */
@@ -312,6 +339,7 @@ internal object JarvisLearning {
     internal fun consolidate(f: (AgentLessons.Book) -> Pair<AgentLessons.Book, Int>): Int {
         if (!enabled()) return 0
         ensureLoaded()
+        if (!loaded) return 0
         val n = synchronized(lock) {
             val (b, n) = f(_book.value)
             _book.value = b
@@ -325,7 +353,11 @@ internal object JarvisLearning {
     internal fun resetForTest() {
         synchronized(lock) { _book.value = AgentLessons.Book() }
         loaded = true; passedOn = null; passing.set(false); retryAtMs = 0L; shown = emptyList(); shownText = null; shownAt = 0L; testInputs = null
+        testRead = null
     }
+
+    /** TEST ONLY: nothing in memory and the file not read yet (a new process). */
+    internal fun reloadForTest() { synchronized(lock) { _book.value = AgentLessons.Book() }; loaded = false }
 
     /** TEST ONLY: [b] as what he has learned. */
     internal fun setForTest(b: AgentLessons.Book) { synchronized(lock) { _book.value = b }; loaded = true }
