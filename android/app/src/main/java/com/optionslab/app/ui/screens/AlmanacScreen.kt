@@ -81,6 +81,9 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val accountState = model.account.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val paperState = model.paper.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val owners by model.orderOwners.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    // The session as state (not the plain [com.optionslab.app.data.Broker.loggedIn] getter): logging in, or the session
+    // ending, recomposes Home so the "Log in to Zerodha" note comes and goes with it.
+    val loggedIn = model.broker.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate).value.loggedIn
 
     // Prices poll only while Home is on screen and the app is in front.
     com.optionslab.app.ui.PollWhileStarted {
@@ -92,7 +95,12 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         var last = 0L
         while (true) {
             val now = System.currentTimeMillis()
-            if (s.live) { if (com.optionslab.app.data.Broker.loggedIn) model.loadAccount(quiet = true) } else model.loadPaper(quiet = true)
+            if (s.live) {
+                val inNow = com.optionslab.app.data.Broker.loggedIn
+                // The money note follows [AppModel.broker] (state), not this plain getter: a token that ran out keeps it in step.
+                if (inNow != model.broker.value.loggedIn) model.refreshBroker()
+                if (inNow) model.loadAccount(quiet = true)
+            } else model.loadPaper(quiet = true)
             if (now - last >= 20_000) { model.refreshStrategies(); last = now }
             delay(if (s.live) 20_000 else model.paperRefreshMs().coerceAtMost(20_000))
         }
@@ -105,7 +113,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     com.optionslab.app.ui.PollWhileStarted { com.optionslab.app.data.WhatsNewStore.shown() }
     // Typed up front: an annotated lambda inside an if-expression is not taken as @Composable by the compiler.
     val automationCard: (@Composable () -> Unit)? = if (com.optionslab.app.BuildConfig.GOLD) null else { { AutomationHomeCard(model) } }
-    AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
+    AlmanacBody(s.live, loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
         glance = { TodayGlanceCard(onGo) },
         whatsNew = if (news.isNotEmpty()) {

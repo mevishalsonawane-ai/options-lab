@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -375,17 +376,22 @@ private fun Main(model: AppModel) {
     var labPage by rememberSaveable { mutableStateOf("trials") }
     var toolsView by rememberSaveable { mutableStateOf("chain") }
     // The chart reopens on the symbol charted last (kept by the chart's picker), BANKNIFTY the first time.
-    var chartAsk by remember { mutableStateOf(com.optionslab.app.ui.screens.ChartSymbols.lastAsk() ?: ("BANKNIFTY" to "NSE")) }
+    // BANKNIFTY until the kept symbol is read, off the main thread (never the settings vault while composing).
+    var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
     // Bumped on every ask, so asking again for the same symbol after browsing another one still switches back.
     var chartNonce by remember { mutableStateOf(0) }
     var chartOpened by remember { mutableStateOf(false) }
-    // A remembered option or MCX contract that has since expired (or left the lists) falls back to BANKNIFTY instead of an
-    // error; checked once, off the main thread, before the chart is first opened.
+    // The tab bar's height as laid out (its navigation-bar inset included; 0 while hidden): the "why?" card sits above it.
+    var tabBarPx by remember { mutableStateOf(0) }
+    // The kept symbol, read once off the main thread; a remembered option or MCX contract that has since expired (or left
+    // the lists) stays BANKNIFTY instead of an error. Taken only while nothing asked the chart for a symbol yet.
     LaunchedEffect(Unit) {
-        val kept = chartAsk.first
-        if (com.optionslab.app.data.ChartFeed.isIndex(kept)) return@LaunchedEffect
-        val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.ChartFeed.instrumentKey(kept) }.isSuccess }
-        if (!ok && !chartOpened && chartAsk.first == kept) chartAsk = "BANKNIFTY" to "NSE"
+        val kept = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.optionslab.app.ui.screens.ChartSymbols.lastAsk()?.takeIf {
+                com.optionslab.app.data.ChartFeed.isIndex(it.first) || runCatching { com.optionslab.app.data.ChartFeed.instrumentKey(it.first) }.isSuccess
+            }
+        } ?: return@LaunchedEffect
+        if (chartNonce == 0 && chartAsk == ("BANKNIFTY" to "NSE")) chartAsk = kept
     }
     LaunchedEffect(tab) { if (tab == Tab.CHART) chartOpened = true }
     val message by model.message.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -500,7 +506,11 @@ private fun Main(model: AppModel) {
             }
             // While typing, the tab bar steps aside so the field keeps the room.
             val typing = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-            if (!fullChart && !typing) TabBar(tab, tabs) { go(navNow().pick(it)) }
+            if (!fullChart && !typing) Box(Modifier.fillMaxWidth().onSizeChanged { tabBarPx = it.height }) {
+                // Hidden (typing, the full chart): nothing at the bottom to stay above but the navigation bar.
+                androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tabBarPx = 0 } }
+                TabBar(tab, tabs) { go(navNow().pick(it)) }
+            }
         }
         // A tapped notification's banner: over the pages, under the popups it may open (a close review, the PIN, the login).
         card?.let { c ->
@@ -521,7 +531,7 @@ private fun Main(model: AppModel) {
             }
         }
         // Today's changes, the automation scorecard, a study page, a bot trade's replay and the "why?" card after a hand trade (S10-S21).
-        com.optionslab.app.ui.screens.SelfSheetHost(model)
+        com.optionslab.app.ui.screens.SelfSheetHost(model, bottomChrome = with(androidx.compose.ui.platform.LocalDensity.current) { tabBarPx.toDp() })
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
         var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }

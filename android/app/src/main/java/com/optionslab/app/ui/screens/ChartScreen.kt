@@ -96,6 +96,8 @@ internal interface ChartSource {
     suspend fun streamToken(symbol: String): Long?
     /** The NSE option list already on the phone (any day; never the network), or null when there is none. Off the main thread. */
     fun cachedContracts(): List<com.optionslab.engine.Upstox.Contract>? = contracts()
+    /** The day [cachedContracts] was read (null: unknown, taken as today's). Never the network; off the main thread. */
+    fun cachedContractsDay(): java.time.LocalDate? = null
     /** The MCX contracts already on the phone (never the network); empty before the first read. Off the main thread. */
     fun mcx(): List<com.optionslab.engine.mcx.McxContract> = emptyList()
     /** Today's MCX list: the phone's when read today, else read now (network: off the main thread). */
@@ -109,6 +111,7 @@ internal object FeedChartSource : ChartSource {
     override fun contracts() = com.optionslab.app.data.Market.contracts()
     override suspend fun streamToken(symbol: String) = streamTokenOf(symbol)
     override fun cachedContracts() = com.optionslab.app.data.Market.cachedContracts()?.second
+    override fun cachedContractsDay() = com.optionslab.app.data.Market.cachedContracts()?.first
     override fun mcx() = com.optionslab.app.data.McxMarket.cached()
     override suspend fun loadMcx() = com.optionslab.app.data.McxMarket.contracts()
 }
@@ -167,9 +170,17 @@ internal fun ChartPane(
     var returnTo by remember { mutableStateOf<Pair<String, String>?>(null) }
     // The symbol picker over the chart (11 Oct), and the last symbols charted (kept in the settings, written off the main thread).
     var picking by remember { mutableStateOf(false) }
-    var recents by remember { mutableStateOf(runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())) }
+    // Read off the main thread (never the settings vault while composing), before the first push writes them back.
+    var recents by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    var recentsRead by remember { mutableStateOf(false) }
     LaunchedEffect(current, symbolPicker) {
         if (!symbolPicker) return@LaunchedEffect
+        if (!recentsRead) {
+            recents = withContext(Dispatchers.IO) {
+                runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())
+            }
+            recentsRead = true
+        }
         val now = current
         recents = ChartSymbols.pushRecent(recents, now)
         val kept = mapOf(ChartSymbols.RECENT_KEY to ChartSymbols.encode(recents), ChartSymbols.LAST_KEY to ChartSymbols.encode(listOf(now)))

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -80,7 +81,7 @@ internal const val SCORECARD_TITLE = "Automation scorecard"
  * opens above any other sheet (the trade manager's record, say) it was opened from. None in IraGoldAlgo.
  */
 @Composable
-fun SelfSheetHost(model: AppModel) {
+fun SelfSheetHost(model: AppModel, bottomChrome: androidx.compose.ui.unit.Dp = 0.dp) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     val timeline by SelfSheets.timeline.collectAsState(Dispatchers.Main.immediate)
     val scorecard by MonthlyScorecard.open.collectAsState(Dispatchers.Main.immediate)
@@ -91,7 +92,7 @@ fun SelfSheetHost(model: AppModel) {
     if (scorecard) ScorecardDialog { MonthlyScorecard.close() }
     study?.let { id -> StudyPageDialog(id) { StudyLibrary.close() } }
     replay?.let { id -> BotReplayDialog(id) { BotReplayStore.close() } }
-    prompt?.let { p -> ManualReasonCard(p) }
+    prompt?.let { p -> ManualReasonCard(p, bottomChrome) }
 }
 
 /** A dialog that takes most of the screen, in either orientation, with a title row that wraps beside Close. */
@@ -315,7 +316,7 @@ internal fun BossRuleNote(entry: Boolean) {
 @Composable
 internal fun TodayLessonSlot() {
     val lesson by com.optionslab.app.ira.SelfJobs.lesson.collectAsState(Dispatchers.Main.immediate)
-    val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
+    val today = rememberToday()   // rolls over at midnight: yesterday's lesson is not "Today's lesson"
     lesson?.takeIf { it.day == today }?.let { TodayLessonCard(it) }
 }
 
@@ -350,16 +351,21 @@ internal fun AutopilotSelfButtons() {
  * the page under it keeps every tap - a dialog here swallowed Boss's next tap after a fill.
  */
 @Composable
-internal fun ManualReasonCard(prompt: BossTradeLog.Prompt) {
+internal fun ManualReasonCard(prompt: BossTradeLog.Prompt, bottomChrome: androidx.compose.ui.unit.Dp = 0.dp) {
     LaunchedEffect(prompt) { kotlinx.coroutines.delay(BossTradeLog.PROMPT_MS); if (BossTradeLog.prompt.value == prompt) BossTradeLog.dismiss() }
     // A plain box with no pointer input of its own: only the card takes touches; around it they reach the page.
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().imePadding().padding(start = 12.dp, end = 12.dp, bottom = 72.dp),
+    // Above the bottom chrome: the tab bar's measured height ([bottomChrome], its own navigation-bar inset included), or
+    // the navigation bar alone while the tab bar is hidden - never over the tab icons, whatever the font or navigation mode.
+    val box = Modifier.fillMaxSize().imePadding()
+    androidx.compose.foundation.layout.Box((if (bottomChrome > 0.dp) box.padding(bottom = bottomChrome) else box.navigationBarsPadding())
+        .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
         contentAlignment = Alignment.BottomCenter) {
-        ManualReasonContent(prompt.symbol, prompt.exit,
+        // A new fill's card starts with an empty note (never the last trade's text recorded against this one).
+        androidx.compose.runtime.key(prompt.tradeId) { ManualReasonContent(prompt.symbol, prompt.exit,
             onEntry = { why, note -> BossTradeLog.answer(prompt, why = why, note = note) },
             onExit = { why, note -> BossTradeLog.answer(prompt, exitWhy = why, note = note) },
             onDismiss = { BossTradeLog.dismiss() },
-            modifier = Modifier.shadow(8.dp, RoundedCornerShape(16.dp)))
+            modifier = Modifier.shadow(8.dp, RoundedCornerShape(16.dp))) }
     }
 }
 
@@ -369,7 +375,7 @@ internal fun ManualReasonCard(prompt: BossTradeLog.Prompt) {
 internal fun ManualReasonContent(symbol: String, exit: Boolean, onEntry: (BossTrades.Why, String) -> Unit, onExit: (BossTrades.ExitWhy, String) -> Unit,
                                  onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
-    var note by remember { mutableStateOf("") }
+    var note by remember(symbol, exit) { mutableStateOf("") }
     Column(modifier.fillMaxWidth().background(p.paper, RoundedCornerShape(16.dp)).padding(14.dp).testTag("manual-reason")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(if (exit) "Why did you close $symbol?" else "Why this trade?", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold),

@@ -230,6 +230,16 @@ class ChartSymbolPickerTest {
         compose.onNodeWithText("BANKNIFTY").assertIsDisplayed()
     }
 
+    @Test fun theKeptRecentsAreReadOffTheMainThreadAndNotOverwritten() {
+        // Kept from an earlier run: read in an effect (not while composing), then the charted symbol goes first.
+        SecurePrefs.put(ChartSymbols.RECENT_KEY, ChartSymbols.encode(listOf("NIFTY" to "NSE", "SENSEX" to "BSE")))
+        pane()
+        until { ChartSymbols.decode(SecurePrefs.getString(ChartSymbols.RECENT_KEY)).map { it.first } == listOf("BANKNIFTY", "NIFTY", "SENSEX") }
+        openPicker()
+        assertTrue(has("pick:recent:NIFTY"))
+        assertTrue(has("pick:recent:SENSEX"))
+    }
+
     @Test fun pickingAnMcxCommodityChartsItsNearFutureAndItsChainIsUnderOpt() {
         pane()
         openPicker()
@@ -264,6 +274,28 @@ class ChartSymbolPickerTest {
         // Buy opens the app's order sheet for that option (paper or the review: the existing rules).
         compose.onNodeWithText("BUY").performClick()
         until { shows("sheet BUY NIFTY 24800.0 PE") }
+    }
+
+    @Test fun anOptionListFromAnEarlierDayIsReplacedByTodays() {
+        // The phone's list is from an earlier day and lacks the 24900 strike: shown first, then today's (with it) replaces it.
+        source.saved = listOf(PickerFixtures.NIFTY_CE, PickerFixtures.NIFTY_PE)
+        source.savedDay = LocalDate.of(2000, 1, 1)
+        pane()
+        openPicker()
+        tap("pick:root:NIFTY")
+        tap("pick:expiry:${PickerFixtures.EXP}")
+        until { has("pick:CE:24900") }
+    }
+
+    @Test fun todaysSavedOptionListIsNotReadAgain() {
+        source.saved = listOf(PickerFixtures.NIFTY_CE, PickerFixtures.NIFTY_PE)
+        source.savedDay = null   // today's
+        pane()
+        openPicker()
+        tap("pick:root:NIFTY")
+        tap("pick:expiry:${PickerFixtures.EXP}")
+        until { has("pick:CE:24800") }
+        assertFalse(has("pick:CE:24900"))
     }
 
     @Test fun anMcxOptionCanBePickedToo() {

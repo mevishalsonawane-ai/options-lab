@@ -242,11 +242,18 @@ internal fun ChartSymbolSheet(
         Unit
     } }
     LaunchedEffect(source) { withContext(Dispatchers.Main.immediate) {
-        val saved = withContext(Dispatchers.IO) { runCatching { source.cachedContracts() }.getOrNull() }
-        if (!saved.isNullOrEmpty()) { nfo = saved; return@withContext }
+        val (saved, day) = withContext(Dispatchers.IO) {
+            runCatching { source.cachedContracts() }.getOrNull() to runCatching { source.cachedContractsDay() }.getOrNull()
+        }
+        if (!saved.isNullOrEmpty()) {
+            nfo = saved
+            // Today's already: done. An earlier day's is shown at once, then today's (new strikes and expiries) replaces it.
+            if (day == null || !day.isBefore(today)) return@withContext
+        }
         val fresh = withContext(Dispatchers.IO) { runCatching { source.contracts() } }
-        nfo = fresh.getOrNull()
-        if (nfo == null) nfoWhy = "The option list could not be read" + (fresh.exceptionOrNull()?.message?.let { ": $it" } ?: "")
+        val got = fresh.getOrNull()
+        if (got != null && (got.isNotEmpty() || nfo == null)) { nfo = got; nfoWhy = null }
+        else if (nfo == null) nfoWhy = "The option list could not be read" + (fresh.exceptionOrNull()?.message?.let { ": $it" } ?: "")
         Unit
     } }
 

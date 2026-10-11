@@ -1,6 +1,11 @@
 package com.optionslab.app.ui.screens
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.foundation.clickable
@@ -140,6 +145,50 @@ class SelfSheetsTest {
         compose.onNodeWithTag("under").performTouchInput { click() }
         compose.frames(); compose.waitForIdle()
         assertEquals(1, under)
+    }
+
+    @Test fun aNewFillsWhyCardStartsWithAnEmptyNote() {
+        // Review G10 F6: trade B's card must not carry trade A's half-typed note (one chip tap would record it against B).
+        var prompt by androidx.compose.runtime.mutableStateOf(com.optionslab.app.ira.BossTradeLog.Prompt("t1", "NIFTY26OCT25000CE", exit = false, atMs = at(10, 0)))
+        set { ManualReasonCard(prompt) }
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction()).performTextInput("A broke out")
+        compose.frames(); compose.waitForIdle()
+        assertTrue(shows("A broke out"))
+        prompt = com.optionslab.app.ira.BossTradeLog.Prompt("t2", "NIFTY26OCT25000CE", exit = false, atMs = at(10, 1))
+        compose.frames(); compose.waitForIdle()
+        assertTrue(compose.onAllNodesWithTag("manual-reason").fetchSemanticsNodes().isNotEmpty())
+        assertTrue("the last trade's note carried over", !shows("A broke out"))
+    }
+
+    @Config(qualifiers = "w320dp-h640dp")
+    @Test fun theWhyCardSitsAboveTheTabBarAtLargeFontOnASmallPhone() {
+        // Review G10 F5: the card is placed above the bottom chrome as laid out (the tab bar with its navigation-bar inset).
+        RuntimeEnvironment.setFontScale(2f)
+        val chrome = 130.dp
+        set {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
+                    .fillMaxWidth().height(chrome).testTag("tab-bar"))
+                ManualReasonCard(com.optionslab.app.ira.BossTradeLog.Prompt("t1", "NIFTY26OCT25000CE", exit = true, atMs = at(10, 0)), bottomChrome = chrome)
+            }
+        }
+        val card = compose.onNodeWithTag("manual-reason").getBoundsInRoot()
+        val bar = compose.onNodeWithTag("tab-bar").getBoundsInRoot()
+        assertTrue("the card overlaps the tab bar: $card vs $bar", card.bottom <= bar.top)
+    }
+
+    @Test fun todayRollsOverAtMidnight() {
+        // Review G10 F4: a card left composed overnight reads the new day (the Automation card's counts, Today's lesson).
+        val ist = com.optionslab.engine.IST
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(day.atTime(23, 59, 30).atZone(ist).toInstant(), ist)
+        try {
+            set { androidx.compose.material3.Text("day " + rememberToday()) }
+            assertTrue(shows("day $day"))
+            com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(day.plusDays(1).atTime(0, 0, 30).atZone(ist).toInstant(), ist)
+            compose.mainClock.advanceTimeBy(61_000)
+            compose.waitForIdle()
+            assertTrue(shows("day ${day.plusDays(1)}"))
+        } finally { com.optionslab.app.data.Market.testClock = null }
     }
 
     @Test fun theFreezeCardSaysWhyAndOffersTheUnfreeze() {

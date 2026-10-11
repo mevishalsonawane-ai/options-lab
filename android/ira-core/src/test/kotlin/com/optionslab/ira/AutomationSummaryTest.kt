@@ -54,6 +54,17 @@ class AutomationSummaryTest {
         assertEquals("Autopilot: 1 change today, 1 reverted · 1 asked", AutomationSummary.autopilotLine(b, day))
     }
 
+    @Test fun aChangeMadeAndRevertedOrUndoneTodayStillCountsAsMade() {
+        var b = AutoChange.record(AutoChange.Book(), change("spec:pine:vwap"), AutoChange.Status.PROBATION, 1, day).first
+        b = b.copy(entries = b.entries.map { it.copy(status = AutoChange.Status.REVERTED, closedOn = day) })
+        assertEquals("Autopilot: 1 change today, 1 reverted", AutomationSummary.autopilotLine(b, day))
+        b = b.copy(entries = b.entries.map { it.copy(status = AutoChange.Status.UNDONE) })
+        assertEquals("Autopilot: 1 change today, 0 reverted", AutomationSummary.autopilotLine(b, day))
+        // Never applied: not made.
+        b = b.copy(entries = b.entries.map { it.copy(status = AutoChange.Status.DECLINED) })
+        assertEquals("Autopilot: 0 changes today, 0 reverted", AutomationSummary.autopilotLine(b, day))
+    }
+
     @Test fun theLabCountsVariantsAndIdeasOnPaper() {
         val v = VariantLab.Book(variants = listOf(
             VariantLab.Variant("V1", "liquidity", emptyMap(), emptyMap(), day, 1.0, VariantLab.Status.ALIVE),

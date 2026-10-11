@@ -117,6 +117,19 @@ internal object AutomationFeed {
 }
 
 /**
+ * Today's date (IST, [Market.today]) as state that turns over at midnight: checked once a minute while composed, so a card
+ * left on screen (or in the background) overnight reads the new day. The clock only; never the vault or a file.
+ */
+@Composable
+internal fun rememberToday(): LocalDate {
+    fun day() = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+    val today by androidx.compose.runtime.produceState(remember { day() }) {
+        while (true) { kotlinx.coroutines.delay(60_000); value = day() }
+    }
+    return today
+}
+
+/**
  * Home's Automation card (11 Oct, Boss: trading first, less clutter): the trade manager, Autopilot, the strategy lab, the
  * order flow and the Brain in one line each, and a warning while learning is frozen. A tap on a line opens that section in
  * full, the same section as before with every button and sheet. None in GOLD.
@@ -133,7 +146,8 @@ fun AutomationHomeCard(model: AppModel) {
 @Composable
 internal fun AutomationFeedCard(load: suspend () -> Unit, section: @Composable (AutomationSummary.Section) -> Unit) {
     if (com.optionslab.app.BuildConfig.GOLD) return
-    val today = remember { runCatching { Market.today() }.getOrElse { LocalDate.now() } }
+    // Rolls over at midnight (a card left composed overnight counts the new day's activity, not yesterday's).
+    val today = rememberToday()
     val scope = rememberCoroutineScope()
     // A StateFlow derived from the books in memory, alive while the card is composed (nothing kept between screens or tests).
     val lines = remember(scope, today) { AutomationFeed.lines(today).stateIn(scope, SharingStarted.Eagerly, AutomationFeed.now(today)) }

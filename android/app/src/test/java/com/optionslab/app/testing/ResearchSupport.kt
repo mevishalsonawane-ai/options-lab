@@ -150,6 +150,11 @@ class FakeChartSource(
         .map { ChartFeed.Match(it.tradingSymbol, "NFO", "lot ${it.lotSize}") }
     override fun contracts() = contracts
     override suspend fun streamToken(symbol: String): Long? = null
+    /** The list "on the phone" and its day (null: [contracts], taken as today's). */
+    var saved: List<Upstox.Contract>? = null
+    var savedDay: java.time.LocalDate? = null
+    override fun cachedContracts() = saved ?: contracts
+    override fun cachedContractsDay() = savedDay
 }
 
 /**
