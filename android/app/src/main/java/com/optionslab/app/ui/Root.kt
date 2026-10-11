@@ -520,6 +520,8 @@ private fun Main(model: AppModel) {
                 })
             }
         }
+        // Today's changes, the automation scorecard, a study page, a bot trade's replay and the "why?" card after a hand trade (S10-S21).
+        com.optionslab.app.ui.screens.SelfSheetHost(model)
         // Order reviews open over any page, wherever the order was asked for.
         // First use only: a short guide the first time the app opens after Zerodha is linked, never again.
         var tour by remember { mutableStateOf(!SecurePrefs.getBoolean(com.optionslab.app.ui.screens.GETTING_STARTED, false)) }

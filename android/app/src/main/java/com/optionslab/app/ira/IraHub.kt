@@ -1686,6 +1686,7 @@ object IraHub {
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null || SelfGrowth.asked(q) != null || com.optionslab.ira.LabTalk.asked(q) != null ||
+                com.optionslab.ira.SelfTalk.asked(q) != null ||
                 (com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text)) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
@@ -1805,6 +1806,18 @@ object IraHub {
             val reqSaid = runCatching { com.optionslab.ira.Requests.listSay(requestsOf(_state.value), System.currentTimeMillis(), phoneLocked(),
                 GOLD_ONLY_TALK || com.optionslab.app.BuildConfig.GOLD) }.getOrDefault("I could not read the requests just now, Boss.")
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, reqSaid)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // The roadmap's questions (S10-S21): today's changes and undoing them all (a request), the learning freeze, last month's
+        // scorecard, Boss's habits and rules (his account: unlocked phone only), a study page, today's lesson, a bot trade's
+        // replay ("replay ..." also reads as the read-only practice command, so it may come through with it). Not in IraGoldAlgo.
+        val selfAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && parsed.order == null &&
+            ((!bundled && parsed.command == null) || parsed.command?.kind == com.optionslab.ira.Command.Kind.PRACTICE))
+            runCatching { com.optionslab.ira.SelfTalk.asked(q) }.getOrNull()?.takeIf { parsed.command == null || it.kind == com.optionslab.ira.SelfTalk.Kind.REPLAY } else null
+        if (selfAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val selfLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) { reply(runCatching { SelfAnswers.answer(selfAsk, selfLocked, app) }.getOrElse { "I could not read that just now, Boss." }) }
             return
         }
         if (askedOfHisWays(q, parsed, bundled, understood)) return

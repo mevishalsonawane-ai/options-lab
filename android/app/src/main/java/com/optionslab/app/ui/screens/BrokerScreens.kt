@@ -382,6 +382,8 @@ private fun OrderReviewBody(model: AppModel) {
         is Load.Failed -> { com.optionslab.app.ui.components.AlertOn(pl.why); LaunchedEffect(pl) { model.dismissPlan() } }
         is Load.Done -> {
             PreTradeNote(pl.value)
+            // His own record's losing rule, softly (S10; words only).
+            if (pl.value.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) BossRuleNote(!pl.value.exit)
             AgainstArmsNote(pl.value)
             PlanCard(pl.value, s.allowRealOrders && s.live, sending, onPrice = model::setLegPrice, onSend = { confirming = true }, onClose = model::dismissPlan)
             st?.takeIf { it.plan == pl.value }?.let { stk -> StuckCard(stk) { stuckAction = it } }

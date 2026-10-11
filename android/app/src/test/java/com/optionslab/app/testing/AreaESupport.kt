@@ -69,6 +69,15 @@ object AreaE {
         com.optionslab.app.data.RegimeHost.resetForTest()
         com.optionslab.app.data.EventDays.resetForTest()
         com.optionslab.app.data.HistoryKeeper.resetForTest()
+        // The roadmap's singletons (S10-S21): the freeze, Boss's trades, the jobs, the sheets, the replay, the budget.
+        com.optionslab.app.ira.LearningFreeze.resetForTest()
+        com.optionslab.app.ira.BossTradeLog.resetForTest()
+        com.optionslab.app.ira.SelfJobs.resetForTest()
+        com.optionslab.app.ira.MonthlyScorecard.resetForTest()
+        com.optionslab.app.ira.BotReplayStore.resetForTest()
+        com.optionslab.app.ira.StudyLibrary.resetForTest()
+        com.optionslab.app.ui.screens.SelfSheets.resetForTest()
+        com.optionslab.app.work.BackgroundBudget.resetForTest()
         SessionLock.lock()
     }
 

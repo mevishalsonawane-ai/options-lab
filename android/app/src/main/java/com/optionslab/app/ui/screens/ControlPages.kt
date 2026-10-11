@@ -664,6 +664,8 @@ fun RiskPage(model: AppModel) {
             item { EventCalendarCard() }
             item { HistoryVaultCard() }
         }
+        // The learning freeze (S14): its state, Boss's own line and the unfreeze (PIN when live). Never from a backup.
+        if (com.optionslab.app.ira.LearningFreeze.enabled()) item { com.optionslab.app.ui.SettingSpot("learn.freeze") { LearningFreezeCard(model) } }
     }
 }
 

@@ -229,6 +229,8 @@ object SettingsIndex {
             GUARD, listOf("naked", "short", "selling")),
         Entry("risk", "jarvis.autolearn", "Autopilot learning", "OFF, SAFE or SHADOW-ONLY: what the agents change by themselves, logged and undoable; SAFE asks for your PIN when live.",
             listOf("Bot settings", "Autopilot learning"), listOf("autopilot", "learning", "auto heal", "self tuning"), guarded = true),
+        Entry("risk", "learn.freeze", "Learning freeze", "Every automatic change stops when the P&L falls past a line after the agents' changes; your own line, and the unfreeze (PIN when live).",
+            listOf("Bot settings", "Learning freeze"), listOf("freeze", "frozen", "unfreeze", "learning", "drawdown", "autopilot"), guarded = true),
 
         // ---- Settings → Data and harvest ----
         Entry("data", "data.record", "Include this phone's captures", "The days this phone collected extend the record forward.",

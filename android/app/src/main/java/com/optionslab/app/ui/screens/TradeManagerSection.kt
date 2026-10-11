@@ -1,7 +1,10 @@
 package com.optionslab.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -275,8 +278,12 @@ internal fun TradeManagerContent(
                 Text("TRADES (NEWEST FIRST)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
                 if (records.isEmpty()) Note("No trade managed yet.")
                 records.reversed().take(40).forEach { r ->
-                    Text("${r.trade.label} · ${r.trade.instrument} · ${r.trade.account.name.lowercase(java.util.Locale.ENGLISH)}",
-                        style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp))
+                    // A closed trade opens its replay with the specialists' commentary (S21).
+                    Text("${r.trade.label} · ${r.trade.instrument} · ${r.trade.account.name.lowercase(java.util.Locale.ENGLISH)}" + if (r.closed) " · replay ›" else "",
+                        style = Type.bodySmall.copy(color = if (r.closed) p.verdigris else p.ink, fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.padding(top = 8.dp).then(if (r.closed) Modifier.heightIn(min = 48.dp)
+                            .clickable(onClickLabel = "Replay this trade") { com.optionslab.app.ira.BotReplayStore.show(r.trade.tradeId) }
+                            .testTag("replay-" + r.trade.tradeId) else Modifier))
                     Note(TradeManager.cardLine(r))
                     r.notes.takeLast(6).forEach { n ->
                         Note("${com.optionslab.app.data.SmartWorkers.hhmm(n.atMs)} ${if (n.acted) "" else "(shadow) "}${n.kind.lowercase(java.util.Locale.ENGLISH).replace('_', ' ')}: ${n.words}",

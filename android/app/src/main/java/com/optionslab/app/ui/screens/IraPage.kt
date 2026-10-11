@@ -282,6 +282,8 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
             if (learnedShown()) item(key = "learned") { JarvisLearnedCard(rememberLearnedBook(), onOpen = { learnedOpen = true }) }
             // Jarvis's weekly review: the newest week's three sentences, the whole review and the last 12 weeks (not IraGoldAlgo).
             if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item { WeeklyReviewSlot() }
+            // Today's lesson (S20): after the close, from today's own records only; no card when nothing qualifies.
+            if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item(key = "lesson") { TodayLessonSlot() }
             if (st.messages.isEmpty() && memoryReady) item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

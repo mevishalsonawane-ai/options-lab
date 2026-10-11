@@ -64,6 +64,8 @@ fun AutopilotHomeCard(model: AppModel) {
         AutopilotCardContent(book, mode, today, onOpen = { open = true })
         // Jarvis's weekly self-report (11 Oct): its sheet from here.
         WeeklyReportButton()
+        // S13-S15: every agent's changes today (undo everything today), last month's scorecard, the learning freeze.
+        AutopilotSelfButtons()
     }
     if (open) AutopilotLogDialog(model) { open = false }
 }

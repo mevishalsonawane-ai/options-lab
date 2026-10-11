@@ -214,6 +214,8 @@ fun OptionOrderSheet(model: AppModel, pick: ChainPick, initialBuy: Boolean = tru
                 val bracketProblem = protect?.let { pr -> px?.let { e -> com.optionslab.engine.risk.Protection.validate(if (buy) 1 else -1, e, pr.stop, pr.trail, pr.target) } }
                 com.optionslab.app.ui.components.AlertOn(bracketProblem)
                 val ok = (!limit || price.toDoubleOrNull()?.let { it > 0 } == true) && bracketProblem == null
+                // His own record's losing rule, softly, before a paper entry (S10; the live review shows it too). Words only.
+                if (!s.live) BossRuleNote(buy)
                 if (s.live) {
                     BrassButton("Review ${if (buy) "buy" else "sell"} order", Modifier.fillMaxWidth(), enabled = ok, tone = side) {
                         model.planManual(pick.underlying, pick.expiry, pick.strike, pick.right,
