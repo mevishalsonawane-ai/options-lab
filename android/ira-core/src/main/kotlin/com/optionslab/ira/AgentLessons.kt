@@ -23,6 +23,9 @@ import kotlin.math.abs
  *    ([LearnStats.bh], [BH_Q] = 0.10). Strong also needs q <= [BH_Q]; the evidence line shows q. A lesson may be conditional
  *    ("on busy days only", [conditions]): its days split by the market brain's regime, the expiry-day flag or the part of
  *    the day, [COND_N]+ cases a side, the split's own BH family passing at [BH_Q], and the two sides pointing opposite ways.
+ *  - The strategy lab (S, 11 Oct): its results ([LabResult]: one forge idea's test of a building block or a filter, one
+ *    variant's parameter direction - passed or failed, its rupees) are evidence like any other agent's: per day, a rate
+ *    against a half, the same confidence, the same Benjamini-Hochberg family ("lab:" lessons). [LabLessons.results] makes them.
  *  - Hard caps: [MAX_LESSONS] lessons and [MAX_BYTES] encoded, retired and then the oldest weak lessons dropped first.
  *  - A strong lesson that implies a change becomes a [Proposal] for Boss - only ever one that lowers risk or acts on paper
  *    ([ProposalKind]); never the PIN, the lock, Live, AI-live, a guard, the Google speech choice, the day lock or real
@@ -40,6 +43,7 @@ object AgentLessons {
         REGIME("Market regime", "trades"),
         TIME_OF_DAY("Time of day", "trades"),
         DATA_HEALTH("Data health", "days watched"),
+        LAB("Strategy lab", "lab tests"),
     }
 
     enum class Confidence(val word: String) { WEAK("weak"), BUILDING("building"), STRONG("strong") }
@@ -150,7 +154,17 @@ object AgentLessons {
         val paused: Set<String> = emptySet(),
         /** The trade manager's mode on paper per family now. */
         val paperModes: Map<String, TradeManager.Mode> = emptyMap(),
+        /** The strategy lab's results ([LabLessons.results]): forge ideas' blocks and filters, variants' parameter moves. */
+        val lab: List<LabResult> = emptyList(),
     )
+
+    /**
+     * One strategy-lab result (S, 11 Oct: lab lessons as Jarvis's own): on [day], [n] tests of [key] (a block "block:entry:X",
+     * a filter "filter:X", a parameter direction "param:liquidity:stopPct:wider"), [passed] or not, with [rs] rupees (the
+     * backtest's or the forward test's net; 0 when there are none). [name] says it ("Ideas using VWAP reclaim").
+     */
+    data class LabResult(val day: LocalDate, val key: String, val name: String, val passed: Boolean, val rs: Double = 0.0, val n: Int = 1,
+                         val tags: List<String> = emptyList())
 
     enum class ProposalKind(val words: String) {
         MUTE_SPECIALIST("mute a specialist for one strategy"),
@@ -396,6 +410,7 @@ object AgentLessons {
             "health" -> if (pos) "has been reliable" else "has had trouble often"
             "moves" -> if (pos) "are common" else "are rare"
             "exp" -> if (pos) "did better than the current setting" else "did worse than the current setting"
+            "lab" -> if (pos) "mostly passed in the strategy lab" else "mostly failed in the strategy lab"
             else -> if (pos) "goes well" else "goes badly"
         }
         return "${l.name} $verb" + (condWords(l.cond)?.let { " $it" } ?: "")
@@ -412,7 +427,11 @@ object AgentLessons {
                 val won = e.hitRate?.let { (if (p == "mgr" || p == "spec") ", helped in " else ", ") + pct(it) + (if (p == "mgr" || p == "spec") "" else " won") } ?: ""
                 "${e.n} ${l.topic.unit}, ${rs(e.rs)}$won"
             }
-            Kind.RATE -> if (p == "moves") "${e.hits} of ${e.n} big moves" else "trouble on ${e.hits} of ${e.n} days watched"
+            Kind.RATE -> when (p) {
+                "moves" -> "${e.hits} of ${e.n} big moves"
+                "lab" -> "passed ${e.hits} of ${e.n} ${l.topic.unit}, ${rs(e.rs)}"
+                else -> "trouble on ${e.hits} of ${e.n} days watched"
+            }
             Kind.SNAPSHOT -> "${e.n} trades judged, drifting on ${e.hits} of ${e.of} daily reviews, latest ${rs(e.rs)} a trade"
         }
         return "$body, $span, $from" + (l.q?.let { ", " + qWords(it) } ?: "") +
@@ -461,6 +480,7 @@ object AgentLessons {
     private const val A_FINDINGS = "the findings bus"
     private const val A_HEAL = "self-healing"
     private const val A_MOVES = "the move recorder"
+    private const val A_LAB = "the strategy lab"
 
     private val SKIP_OWNERS = setOf("", "manual", "protection")
     private val SLOTS = listOf("morning", "midday", "afternoon", "evening")
@@ -630,6 +650,12 @@ object AgentLessons {
                     a.add(mv.day.toEpochDay(), 1, 0.0, if (slotIndex(hm / 100 * 60 + hm % 100) == si) 1 else 0)
                 }
             }
+        }
+        // The strategy lab: each block, filter or parameter direction as a rate of tests passed, per day.
+        for (r in i.lab) {
+            if (r.n <= 0 || r.key.isBlank()) continue
+            acc("lab:${r.key}", Topic.LAB, Kind.RATE, r.name, (r.tags + listOf("lab", "forge")).distinct(), A_LAB)
+                .add(r.day.toEpochDay(), r.n, r.rs, if (r.passed) r.n else 0)
         }
         // The self-review: each strategy's health against its backtest, one reading a day.
         for (r in i.drift) {
@@ -858,7 +884,7 @@ object AgentLessons {
 
     /** The prefixes whose evidence counts toward each topic's skill without counting a trade twice. */
     private val SKILL_BASE = mapOf(Topic.STRATEGY to "strat", Topic.MANAGER to "mgr", Topic.SPECIALIST to "spec", Topic.ORDER_FLOW to "flow",
-        Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health")
+        Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health", Topic.LAB to "lab")
 
     /** Each topic's level (its best active lesson's confidence) and its evidence count. */
     fun skills(book: Book): List<Skill> = Topic.entries.map { t ->
@@ -1079,6 +1105,7 @@ object AgentLessons {
         if (Regex(" big moves? ").containsMatchIn(r)) return null to "moves"
         if (Regex(" (time of day|times of day|timing) ").containsMatchIn(r)) return Topic.TIME_OF_DAY to null
         for ((w, key) in FAMILY_TAGS.drop(8)) if (r.contains(" $w ")) return null to key
+        if (Regex(" (strategy lab|the lab|lab|forge|the forge) ").containsMatchIn(r)) return Topic.LAB to null
         if (Regex("^ (strategies|bots|agents|arms|my bots|the bots|the agents) $").containsMatchIn(r)) return Topic.STRATEGY to null
         return null
     }

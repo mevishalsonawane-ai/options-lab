@@ -105,7 +105,9 @@ internal object JarvisLearning {
 
     /** The pass itself (and by tests): read, digest, keep, tell, propose. */
     internal suspend fun runPass(today: LocalDate): AgentLessons.Pass? {
-        val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(today) ?: gather(today) }.getOrNull() } ?: return null
+        val read = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(today) ?: gather(today) }.getOrNull() } ?: return null
+        // The strategy lab's results are evidence like every other agent's (S, 11 Oct): one digest, one set of rules.
+        val inputs = if (read.lab.isNotEmpty()) read else read.copy(lab = withContext(Dispatchers.IO) { labResults(today) })
         val pass = withContext(Dispatchers.Default) {
             synchronized(lock) {
                 val p = AgentLessons.pass(_book.value, inputs)
@@ -121,10 +123,21 @@ internal object JarvisLearning {
                 ttlMs = 24 * 3_600_000L)
         }
         for (p in pass.proposals) runCatching { propose(p) }
-        // The strategy lab (11 Oct): what the new strategies and the variants taught - each lesson with its counts, posted once.
-        runCatching { com.optionslab.app.data.VariantRunner.learnedForJarvis() }
+        // (The strategy lab's separate notes post is gone: its results are in this pass's lessons and its one finding.)
         return pass
     }
+
+    /** Days of the lab's records read again each night once Jarvis holds lab lessons (older days stay as he read them). */
+    private const val LAB_REREAD_DAYS = 5L
+
+    /** The strategy lab's results ([com.optionslab.ira.LabLessons.results]): its small files, in memory once loaded; empty when off. */
+    private fun labResults(today: LocalDate): List<AgentLessons.LabResult> = runCatching {
+        val vr = com.optionslab.app.data.VariantRunner
+        if (!vr.enabled()) return@runCatching emptyList<AgentLessons.LabResult>()
+        vr.ensureLoaded()
+        val since = if (_book.value.lessons.any { it.id.startsWith("lab:") }) today.minusDays(LAB_REREAD_DAYS) else null
+        com.optionslab.ira.LabLessons.results(vr.forge.value, vr.variants.value, since)
+    }.getOrDefault(emptyList())
 
     /** Every agent's records, read from where they already live (files and memory; no network). */
     private suspend fun gather(today: LocalDate): AgentLessons.Inputs {

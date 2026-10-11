@@ -1,5 +1,6 @@
 package com.optionslab.ira
 
+import java.time.LocalDate
 import java.util.Locale
 
 /**
@@ -73,6 +74,60 @@ object LabLessons {
                 "and ${f.proposed} reached you; of $variantsTried strategy variant${if (variantsTried == 1) "" else "s"}, " +
                 "${v.changes.count { it.status == VariantLab.ChangeStatus.APPLIED || it.status == VariantLab.ChangeStatus.ACCEPTED }} changed a strategy.",
             f.passed, f.tried)
+        return out
+    }
+
+    /**
+     * The lab's records as Jarvis's evidence ([AgentLessons.LabResult]; his nightly digest forms "lab:" lessons from them with
+     * the same confidence and Benjamini-Hochberg rules as every other agent's), one result per test, dated by the day it was
+     * born (an idea) or last judged (a variant):
+     *
+     *  - each forge idea, once per building block it used (entry and exit): passed = it passed the backtest and was not
+     *    retired by its forward test; rupees = its forward net when it has one, else its backtest's;
+     *  - each forge survivor, once per filter it used: passed = the filter made it better than without;
+     *  - each decided variant, once per parameter it moved: passed = promoted, failed = worse on the stored days or retired.
+     *
+     * Only days on or after [since] (null: all): the forge keeps only its newest rejected ideas, so an older day read again
+     * would be thinner than it was; Jarvis's book keeps the days it already read.
+     */
+    fun results(f: StrategyForge.Book, v: VariantLab.Book, since: LocalDate? = null): List<AgentLessons.LabResult> {
+        val out = ArrayList<AgentLessons.LabResult>()
+        for (r in f.records) {
+            val day = r.c.born
+            if (since != null && day.isBefore(since)) continue
+            val bt = r.bt ?: continue
+            if (bt.gates.isEmpty()) continue
+            val passed = bt.passed && r.stage != StrategyForge.Stage.RETIRED
+            val rs = if (r.fwd.isNotEmpty()) r.fwdNet else bt.net
+            for (k in r.c.blocks.distinct()) {
+                if (k.startsWith("filter:")) continue
+                val w = StrategyForge.words(k)
+                out += AgentLessons.LabResult(day, "block:$k", "Ideas using $w", passed, rs, 1, w.lowercase(Locale.ENGLISH).split(' ').filter { it.length > 2 })
+            }
+            if (bt.passed) for (fl in r.c.rules.filters) {
+                val k = StrategyForge.key(fl)
+                val w = StrategyForge.words(k)
+                out += AgentLessons.LabResult(day, k, w.replaceFirstChar { it.uppercase() }, fl in bt.helped, 0.0, 1, listOf("filter", fl.name.lowercase(Locale.ENGLISH)))
+            }
+        }
+        for (s in VariantLab.STRATEGIES) for (x in v.variants) {
+            if (x.strategy != s.key) continue
+            val lost = x.status == VariantLab.Status.PRECHECK_FAILED ||
+                (x.status == VariantLab.Status.RETIRED && !x.why.startsWith("superseded") && !x.why.startsWith("you declined"))
+            val won = x.status == VariantLab.Status.PROMOTED
+            if (!lost && !won) continue
+            val day = x.lastDay ?: x.born
+            if (since != null && day.isBefore(since)) continue
+            for (p in s.params) {
+                val a = x.values[p.key] ?: continue
+                val b0 = x.base[p.key] ?: continue
+                if (kotlin.math.abs(a - b0) <= 1e-12) continue
+                val stop = p.key.startsWith("stop")
+                val dir = if (a > b0) (if (stop) "wider" else "higher") else (if (stop) "tighter" else "lower")
+                out += AgentLessons.LabResult(day, "param:${s.key}:${p.key}:$dir", "${s.label} with a $dir ${p.words}", won, x.vSum - x.cSum, 1,
+                    listOf(s.key, "variant", p.key.lowercase(Locale.ENGLISH)))
+            }
+        }
         return out
     }
 
