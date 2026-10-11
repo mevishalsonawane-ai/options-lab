@@ -382,6 +382,11 @@ object DailyReports {
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraPreMarket.remember(com.optionslab.app.ira.IraPreMarket.armedNow()) }
         if (AppSettings.load().guardKill) lines += "⚠ The kill switch is on"
         if (lines.isEmpty()) lines += "No trades today."
+        // Jarvis: what he learned from the agents today (his pass runs now if the brain's worker has not run it yet).
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching {
+            com.optionslab.app.ira.JarvisLearning.learnIfDue(context)
+            com.optionslab.app.ira.JarvisLearning.eveningLine()
+        }.getOrNull()?.let { lines += it }
         val title = "Day report · ${Market.today().format(DAY)}" + if (lines.first() != "No trades today.") " · ${rs(total)}" else ""
         // Review: DailyPnl.record writes in the background (SecurePrefs.putAllSoon) and this worker is short-lived, so the
         // day's final figures are put on disk before it ends - off the main thread (flush waits on the vault's writer).

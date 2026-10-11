@@ -85,7 +85,9 @@ internal object IraForwardWatch {
         val checks = kotlinx.coroutines.withTimeoutOrNull(WATCH_MS) { checks() }
             ?: return "I could not read ${ForwardWatch.name(arm)}'s record in time just now, Boss - ask me again in a moment."
         val r = checks.firstOrNull { it.first.key == arm.key }?.second
-        return ForwardWatch.armAnswer(arm, r, if (arm.key == ForwardCheck.SOLO.key) soloBar() else null)
+        // One strong lesson of Jarvis's about the strategy, where he has one (11 Oct; memory only).
+        val lesson = runCatching { JarvisLearning.appendFor(arm.key) }.getOrNull()
+        return ForwardWatch.armAnswer(arm, r, if (arm.key == ForwardCheck.SOLO.key) soloBar() else null) + (lesson?.let { " $it" } ?: "")
     }
 
     private fun told(e: ForwardCheck.Expectation): ForwardWatch.Told? =

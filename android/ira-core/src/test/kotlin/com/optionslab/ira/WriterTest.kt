@@ -56,4 +56,24 @@ class WriterTest {
         // The prompt carries the chosen ones only.
         assertTrue(!Writer.prompt("where is nifty", facts, "Nifty is at 24,612.40, Boss.").contains("number 29 "))
     }
+
+    @Test fun jarvisLessonsGoToTheModelShortAndTheirNumbersAreCheckedLikeFacts() {
+        val facts = listOf("Liquidity 15+5 paper: 3 trades today")
+        val draft = "Liquidity 15+5 took 3 paper trades today."
+        val lessons = listOf("Liquidity 15+5 makes money: 64 trades, +Rs 12,400 (strong)") + List(40) { "Filler lesson $it with a long tail of words to pad it out" }
+        val p = Writer.prompt("how is liquidity doing", facts, draft, lessons)
+        assertTrue("LESSONS (what Jarvis learned from the agents, with their numbers):\n- Liquidity 15+5 makes money: 64 trades, +Rs 12,400 (strong)" in p, p)
+        // At most 600 characters of them.
+        val kept = Writer.capLessons(lessons)
+        assertTrue(kept.sumOf { it.length + 2 } <= AgentLessons.MODEL_CHARS && kept.size < lessons.size)
+        assertTrue(p.substringAfter("LESSONS (what").substringBefore("DRAFT:").length <= AgentLessons.MODEL_CHARS + 80)
+        // No lessons: the prompt as it always was, its system part the same either way.
+        assertFalse("LESSONS (what" in Writer.prompt("how is liquidity doing", facts, draft))
+        assertEquals(Writer.prompt("q", facts, draft).substringBefore("<|im_start|>user"), p.substringBefore("<|im_start|>user"))
+        // The check: a lesson's number passes only when the lessons are among the facts; any other number never.
+        val out = "Liquidity 15+5 took 3 paper trades today; over 64 trades it made +Rs 12,400."
+        assertEquals(null, Writer.check(out, facts, draft))
+        assertEquals(out, Writer.check(out, facts + kept, draft))
+        assertEquals(null, Writer.check("Liquidity 15+5 took 3 paper trades today; over 65 trades it made money.", facts + kept, draft))
+    }
 }

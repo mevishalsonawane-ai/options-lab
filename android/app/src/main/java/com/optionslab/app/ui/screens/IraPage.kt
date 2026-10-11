@@ -193,6 +193,14 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
             onClose = { notesOpen = false })
         return
     }
+    // "What Jarvis has learned" (11 Oct): his lessons from the agents, his growth and its timeline, from the card in the
+    // chat's list. Read only; Back closes it.
+    var learnedOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = learnedOpen) { learnedOpen = false }
+    if (learnedOpen && learnedShown()) {
+        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false })
+        return
+    }
     // The phone's Back closes the chat (back to the globe) in Jarvis.
     androidx.activity.compose.BackHandler(enabled = chat && com.optionslab.app.BuildConfig.JARVIS) { chat = false }
     if (!chat) {
@@ -270,6 +278,8 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
             // Its own slice (speed round 3): a new message or a busy flag no longer recomposes this card.
             item { val record by iraSlice { IraRecord.of(it) }; HowIraIsDoing(record) }
             if (com.optionslab.app.BuildConfig.JARVIS) item { JarvisStudyCard() }
+            // What Jarvis has learned from the agents (not IraGoldAlgo): the counts and the day's line; the sheet on a tap.
+            if (learnedShown()) item(key = "learned") { JarvisLearnedCard(rememberLearnedBook(), onOpen = { learnedOpen = true }) }
             // Jarvis's weekly review: the newest week's three sentences, the whole review and the last 12 weeks (not IraGoldAlgo).
             if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item { WeeklyReviewSlot() }
             if (st.messages.isEmpty() && memoryReady) item {

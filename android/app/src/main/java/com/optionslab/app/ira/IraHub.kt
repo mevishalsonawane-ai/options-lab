@@ -1093,7 +1093,9 @@ object IraHub {
      * screen, a pop-up and a spoken yes or no; [act] runs only on his yes, and lapses after 30 minutes.
      */
     fun offer(what: String, title: String, text: String, act: suspend () -> String, addsRisk: Boolean = false,
-              /** Always put to Boss, even with automatic stops on (a lesson from Jarvis's study is never kept unasked). */ alwaysAsk: Boolean = false) {
+              /** Always put to Boss, even with automatic stops on (a lesson from Jarvis's study is never kept unasked). */ alwaysAsk: Boolean = false,
+              /** Run when Boss says no (never on a lapse): a lesson's proposal keeps his no ([JarvisLearning.answered]). */
+              declined: (() -> Unit)? = null) {
         val c = app ?: return
         // Boss said "do it automatically" in chat: done now and told - only what stops or parks; anything that adds risk
         // (arming again) is always asked (review, 4 Oct).
@@ -1107,6 +1109,7 @@ object IraHub {
         // Jarvis's own offer (unasked): its question's first line leads the chat's short line, so it reads as his note
         // beside an answer, never as the answer ([replyAfter]); the details and buttons are in the panel.
         val id = pend(what, act, "$text Tap Confirm to go ahead.", kind = com.optionslab.ira.Requests.Kind.OFFER, lead = com.optionslab.ira.Requests.why(text))
+        if (declined != null) synchronized(actions) { if (actions.containsKey(id)) declinedCbs[id] = declined }
         JarvisPopup.show(c, title, text, action = id)
         JarvisVoice.askYesNo(id, com.optionslab.ira.Requests.spoken(com.optionslab.ira.Requests.title(what), Wake.spoken(text, 2) + " Yes or no?"))
         IraActivity.add("Asked: $text")
@@ -1319,9 +1322,12 @@ object IraHub {
     private val soloAsks = HashSet<Long>()
     private val liveApproved = HashSet<Long>()
 
+    /** What to run when Boss says no to a request (a lesson's proposal: [JarvisLearning] keeps his no); guarded by [actions]. */
+    private val declinedCbs = HashMap<Long, () -> Unit>()
+
     /** [id] was answered or lapsed: its pop-up hides and Jarvis stops waiting for a yes or no. */
     private fun settled(id: Long) {
-        synchronized(actions) { newsAsks.remove(id); soloAsks.remove(id) }
+        synchronized(actions) { newsAsks.remove(id); soloAsks.remove(id); declinedCbs.remove(id) }
         app?.let { JarvisApproval.hide(it, id) }
         JarvisVoice.answered(id)
     }
@@ -1679,6 +1685,8 @@ object IraHub {
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
+                com.optionslab.ira.AgentLessons.asked(q) != null ||
+                (com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text)) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
                 com.optionslab.ira.ExpiryPin.asked(q) != null || com.optionslab.ira.ExpiryHour.asked(q) != null || com.optionslab.ira.StraddleDecay.asked(q) != null || com.optionslab.ira.AtmBuy.asked(q) != null || com.optionslab.ira.OtmReach.asked(q) != null || com.optionslab.ira.MarketRecord.asked(q) || com.optionslab.ira.MorningCues.asked(q) != null || com.optionslab.ira.BigMoveRisk.asked(q) || com.optionslab.ira.LiquidityMap.asked(q) != null ||
@@ -3756,6 +3764,27 @@ object IraHub {
             }
             return true
         }
+        // "Why do you think that?" / "what's the evidence?" right after a lessons answer (11 Oct): each lesson's evidence - how
+        // many, the rupees, the hit rate, first and last seen, which agents - and why it has its confidence. Only then: said
+        // after anything else these words go on as before. Nothing acts. Not in IraGoldAlgo.
+        if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text) }.getOrDefault(false)) {
+            val why = runCatching { JarvisLearning.why() }.getOrElse { "I could not read my lessons just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, why)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
+        // "What have you learned?", "what did you learn today?", "how are you growing?", "what do you know about Liquidity / the
+        // OI specialist / mornings?" (11 Oct): Jarvis's lessons from the agents, each with the numbers behind it, his growth
+        // and milestones ([com.optionslab.ira.AgentLessons]; memory and his own small file). The lessons' evidence goes with the
+        // answer as its facts ("how do you know that"). Nothing acts: a change a lesson suggests is only ever put to Boss.
+        // Not in IraGoldAlgo.
+        val lessonsAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.AgentLessons.asked(q) }.getOrNull() else null
+        if (lessonsAsk != null) {
+            val (said, facts) = runCatching { JarvisLearning.answer(lessonsAsk) }.getOrElse { "I could not read my lessons just now, Boss." to emptyList() }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, facts = facts)).takeLast(MAX_MESSAGES)) }
+            return true
+        }
         // "What are the bots saying about BankNifty?" (10 Oct): the findings the strategies and checkers posted on the index -
         // their consensus and the newest ones, in plain words ([com.optionslab.ira.Findings]; memory only). Nothing acts.
         // Not in IraGoldAlgo.
@@ -3776,7 +3805,10 @@ object IraHub {
             runCatching { com.optionslab.ira.TradeManager.asked(q) }.getOrNull() else null
         if (managerAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            reply(runCatching { com.optionslab.app.data.TradeManagerHost.answer(managerAsk) }.getOrElse { "I could not read the trade manager's record just now, Boss." })
+            reply(runCatching { com.optionslab.app.data.TradeManagerHost.answer(managerAsk) +
+                // One strong lesson of Jarvis's about it, where he has one (11 Oct; memory only).
+                (JarvisLearning.appendFor(managerAsk.family, if (managerAsk.family == null) com.optionslab.ira.AgentLessons.Topic.MANAGER else null)?.let { " $it" } ?: "") }
+                .getOrElse { "I could not read the trade manager's record just now, Boss." })
             return true
         }
         // "What is the order flow on BankNifty?", "nifty me buyers or sellers?" (9 Oct): the live read of the index's near future
@@ -5452,6 +5484,9 @@ object IraHub {
         // Only what is still waiting can be cancelled: one already confirmed (or lapsed) is not said to be undone.
         val (was, trade) = synchronized(actions) { exitIds.remove(id); (actions.remove(id) != null) to (id in newsAsks) }
         if (!was) { _state.update { it.copy(pending = it.pending - id) }; return }
+        // A lesson's proposal turned down: his no is kept ([JarvisLearning]); nothing else is done.
+        val onNo = synchronized(actions) { declinedCbs.remove(id) }
+        runCatching { onNo?.invoke() }
         requestDone(id, com.optionslab.ira.Requests.Outcome.DECLINED, by,
             if (trade) "Rejected; nothing was placed." else "Cancelled; nothing was done.", askedFp)
         if (trade) IraNewsTrades.answered(id, "rejected")
@@ -5487,7 +5522,7 @@ object IraHub {
         scope.launch {
             kotlinx.coroutines.delay(CONFIRM_LAPSE_MS)
             val lapsedFp = runCatching { needsFingerprint(id) }.getOrNull()
-            if (synchronized(actions) { exitIds.remove(id); actions.remove(id) } != null) {
+            if (synchronized(actions) { exitIds.remove(id); declinedCbs.remove(id); actions.remove(id) } != null) {
                 requestDone(id, com.optionslab.ira.Requests.Outcome.LAPSED, result = "No Confirm in 30 minutes; nothing was done.", fingerprint = lapsedFp)
                 _state.update { it.copy(pending = it.pending - id) }
                 reply("Nothing was done about \"$what\": it waited 30 minutes for your Confirm.", whole = true)

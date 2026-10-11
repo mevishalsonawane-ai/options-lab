@@ -389,6 +389,9 @@ object FlowGate {
     /** TEST ONLY: every signal logged so far (the file and what is buffered). */
     internal fun signalsForTest(): List<FlowShadow.Signal> = FlowShadow.parse(lines())
 
+    /** Every signal in the log with its outcome, for Jarvis's nightly learning ([com.optionslab.app.ira.JarvisLearning]). Reads the file: off the main thread. */
+    fun signalsForLearning(): List<FlowShadow.Signal> = FlowShadow.parse(lines())
+
     /** TEST ONLY: forget the modes, the log in memory and the pending results. Throws unless BuildConfig.DEBUG. */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }

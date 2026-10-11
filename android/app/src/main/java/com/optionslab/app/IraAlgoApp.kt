@@ -100,6 +100,8 @@ class IraAlgoApp : Application() {
         // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).
         com.optionslab.app.data.FlowGate.init(this)
         com.optionslab.app.data.SmartWorkers.init(this)
+        // Jarvis's lessons from the agents (11 Oct): his small file read on a background thread; learned once a day after the close.
+        com.optionslab.app.ira.JarvisLearning.init(this)
         // The trade manager (10 Oct): its modes and record read on its own thread; it only lowers risk.
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.OrderFlowLive.init(this)

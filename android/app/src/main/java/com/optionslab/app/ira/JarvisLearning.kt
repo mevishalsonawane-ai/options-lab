@@ -1,0 +1,251 @@
+package com.optionslab.app.ira
+
+import android.content.Context
+import com.optionslab.app.data.Market
+import com.optionslab.ira.AgentLessons
+import com.optionslab.ira.Findings
+import com.optionslab.ira.TradeManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.time.Instant
+import java.time.LocalDate
+
+/**
+ * Jarvis learns from the agents (Boss, 11 Oct): once a trading day after F&O's close (15:45, on the brain's worker or the
+ * 15:45 day report, whichever comes first - never the main thread, no network), every agent's records are read from where
+ * they already live (the bots' trades, the market brain, the self-review, the trade manager and its specialists, the order
+ * flow's shadow log with the trap guard's flags, the findings logs, self-healing's incidents, the move recorder's files) and
+ * digested ([AgentLessons.pass]) into his lessons, kept in noBackupFilesDir/jarvis/lessons.txt (never the settings vault,
+ * never a backup). One finding says what he learned; the evening report gets the line.
+ *
+ * A strong lesson that implies a change is put to Boss as a request ([IraHub.offer], always asked): mute a specialist, pause
+ * a strategy's new paper entries, or let the trade manager act on a strategy's paper trades. His yes or no is kept and moves
+ * the lesson ([AgentLessons.answered]); two noes rest it 30 days. Nothing here touches the PIN, the lock, Live, AI-live, a
+ * guard, the Google speech choice, the day lock or real orders, and nothing changes without his yes. Not in IraGoldAlgo.
+ */
+internal object JarvisLearning {
+    private const val DIR = "jarvis"
+    private const val FILE = "lessons.txt"
+    /** "Why do you think that?" reads the lessons of the answer said this recently. */
+    private const val WHY_MS = 10 * 60_000L
+
+    @Volatile private var appContext: Context? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lock = Any()
+
+    private val _book = MutableStateFlow(AgentLessons.Book())
+    /** What Jarvis has learned (the sheet on the Ira page reads it). */
+    val book: StateFlow<AgentLessons.Book> = _book
+
+    @Volatile private var loaded = false
+    @Volatile private var passedOn: LocalDate? = null
+
+    /** The lessons the last answer was built from, its words and when (for "why do you think that?"). */
+    @Volatile private var shown: List<String> = emptyList()
+    @Volatile private var shownText: String? = null
+    @Volatile private var shownAt = 0L
+
+    /** TEST ONLY: the agents' records instead of the stores. */
+    @Volatile internal var testInputs: ((LocalDate) -> AgentLessons.Inputs)? = null
+
+    fun enabled(): Boolean = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        if (enabled()) scope.launch { runCatching { ensureLoaded() } }
+    }
+
+    private fun file(): File? = appContext?.let { File(File(it.noBackupFilesDir, DIR), FILE) }
+
+    /** The kept lessons read once (a worker thread; the file is small). */
+    fun ensureLoaded() {
+        if (loaded) return
+        synchronized(lock) {
+            if (loaded) return
+            val text = runCatching { file()?.takeIf { it.isFile }?.readText() }.getOrNull()
+            // (A pass or an answer in the moment before the file was read wins: it is written over the file next.)
+            if (_book.value == AgentLessons.Book()) _book.value = AgentLessons.decode(text)
+            loaded = true
+        }
+    }
+
+    private fun save(b: AgentLessons.Book) {
+        val f = file() ?: return
+        runCatching {
+            f.parentFile?.mkdirs()
+            val tmp = File(f.parentFile, f.name + ".tmp")
+            tmp.writeText(AgentLessons.encode(b))
+            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        }
+    }
+
+    // ---- the nightly pass -------------------------------------------------------------------------------------------------
+
+    /**
+     * Once a trading day after 15:45: the day's learning pass. Cheap when not due (memory only). True when it ran.
+     */
+    suspend fun learnIfDue(context: Context? = null): Boolean {
+        if (!enabled()) return false
+        if (context != null && appContext == null) appContext = context.applicationContext
+        val today = Market.today()
+        if (passedOn == today) return false
+        if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
+        withContext(Dispatchers.IO) { ensureLoaded() }
+        if (_book.value.lastPass == today) { passedOn = today; return false }
+        passedOn = today
+        runPass(today)
+        return true
+    }
+
+    /** The pass itself (and by tests): read, digest, keep, tell, propose. */
+    internal suspend fun runPass(today: LocalDate): AgentLessons.Pass? {
+        val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(today) ?: gather(today) }.getOrNull() } ?: return null
+        val pass = withContext(Dispatchers.Default) {
+            synchronized(lock) {
+                val p = AgentLessons.pass(_book.value, inputs)
+                _book.value = p.book
+                p
+            }
+        }
+        withContext(Dispatchers.IO) { synchronized(lock) { save(_book.value) } }
+        runCatching { com.optionslab.app.data.Diag.record("jarvis", pass.finding) }
+        // One finding, only when something was learned (nothing posted on a day with nothing new).
+        if (AgentLessons.learnedCount(pass.book, pass.changes) > 0) runCatching {
+            com.optionslab.app.data.SmartWorkers.found("Jarvis", Findings.Kind.OTHER, Findings.ALL, words = pass.finding, strength = 50,
+                ttlMs = 24 * 3_600_000L)
+        }
+        for (p in pass.proposals) runCatching { propose(p) }
+        return pass
+    }
+
+    /** Every agent's records, read from where they already live (files and memory; no network). */
+    private suspend fun gather(today: LocalDate): AgentLessons.Inputs {
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        val trips = runCatching { IraAccount.trips(false, owners) }.getOrDefault(emptyList()) +
+            runCatching { IraAccount.trips(true, owners) }.getOrDefault(emptyList())
+        val brain = com.optionslab.app.data.SmartWorkers.brain.value
+        val regime = brain.regimes["NIFTY"]?.state?.takeIf { it != com.optionslab.ira.MarketBrain.State.UNKNOWN }?.words
+        runCatching { com.optionslab.app.data.SmartWorkers.refreshReviews() }
+        val drift = com.optionslab.app.data.SmartWorkers.reviews.value
+        val managed = com.optionslab.app.data.TradeManagerHost.records.value
+        val flow = runCatching { com.optionslab.app.data.FlowGate.signalsForLearning() }.getOrDefault(emptyList())
+        val health = com.optionslab.app.data.SmartWorkers.health
+        val incidents = runCatching { health.past() + health.openIncidents() }.getOrDefault(emptyList())
+        val moves = runCatching { com.optionslab.app.data.MoveRecorder.files().map { it.first } }.getOrDefault(emptyList())
+        val book = com.optionslab.app.data.ManagerSpecialists.book.value
+        val muted = (book.tuned.entries + book.frozen.entries).flatMap { (f, t) -> t.muted.map { (id, why) -> "$f:$id" to why } }.toMap()
+        val paused = com.optionslab.app.data.SmartWorkers.settings.value.paused
+        val policy = com.optionslab.app.data.TradeManagerHost.policy.value
+        val modes = TradeManager.FAMILIES.associate { it.key to policy.mode(it.key, TradeManager.Account.PAPER) }
+        return AgentLessons.Inputs(today, trips, regime, drift, managed, flow, findingsKept(), incidents, moves, muted, paused, modes)
+    }
+
+    /**
+     * The findings logs (30 days, noBackupFilesDir/findings): the data-health posts, and one note a day the log was kept (the
+     * days watched). Only those lines are read in whole.
+     */
+    private fun findingsKept(): List<Findings.Finding> {
+        val dir = appContext?.let { File(it.noBackupFilesDir, "findings") } ?: return emptyList()
+        val out = ArrayList<Findings.Finding>()
+        for (f in dir.listFiles().orEmpty()) runCatching {
+            val day = LocalDate.parse(f.name.removeSuffix(".log"))
+            out += Findings.Finding("findings bus", Findings.Kind.OTHER, Findings.ALL, atMs = day.atTime(12, 0).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli())
+            f.useLines { lines -> for (l in lines) if (l.contains("|DATA_")) Findings.parse(l)?.let { out += it } }
+        }
+        return out
+    }
+
+    // ---- proposals and Boss's answers ---------------------------------------------------------------------------------------
+
+    /** A strong lesson's change put to Boss (always asked; done only on his yes). */
+    private fun propose(p: AgentLessons.Proposal) {
+        if (!AgentLessons.safe(p)) return
+        val act: suspend () -> String = when (p.kind) {
+            AgentLessons.ProposalKind.MUTE_SPECIALIST -> suspend {
+                answered(p.lessonId, true)
+                com.optionslab.app.data.ManagerSpecialists.mute(p.family, p.specialist ?: "", by = "Jarvis's lesson, on your yes")
+            }
+            AgentLessons.ProposalKind.PAUSE_PAPER_ENTRIES -> suspend {
+                answered(p.lessonId, true)
+                com.optionslab.app.data.SmartWorkers.pausePaperByOwner(p.family)
+            }
+            AgentLessons.ProposalKind.MANAGER_ACT_PAPER -> suspend {
+                answered(p.lessonId, true)
+                // Paper only: the trade manager's live mode is never touched here (that stays Boss's, with his PIN).
+                com.optionslab.app.data.TradeManagerHost.setMode(p.family, TradeManager.Account.PAPER, TradeManager.Mode.ACT)
+            }
+        }
+        IraHub.offer(p.title, "Boss, a lesson suggests a change", p.text, act, alwaysAsk = true, declined = { answered(p.lessonId, false) })
+    }
+
+    /** Boss's yes or no to a lesson's proposal: kept, and it moves the lesson. */
+    fun answered(lessonId: String, accepted: Boolean) {
+        val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
+        synchronized(lock) { _book.value = AgentLessons.answered(_book.value, lessonId, accepted, today) }
+        scope.launch { synchronized(lock) { save(_book.value) } }
+        runCatching { com.optionslab.app.data.Diag.record("jarvis", if (accepted) "a lesson's proposal: yes" else "a lesson's proposal: no") }
+    }
+
+    // ---- answers ------------------------------------------------------------------------------------------------------------
+
+    /** "What have you learned?", "what did you learn today?", "how are you growing?", "what do you know about X?": words and facts. */
+    fun answer(a: AgentLessons.Ask): Pair<String, List<String>> {
+        ensureLoaded()
+        val b = _book.value
+        val today = Market.today()
+        val todays: List<AgentLessons.Lesson> = if (b.lastPass != today) emptyList()
+            else b.today.mapNotNull { c -> b.lessons.firstOrNull { it.id == c.id } }.filter { it.confidence != AgentLessons.Confidence.WEAK }.take(4)
+        val (text, used) = when (a.kind) {
+            AgentLessons.AskKind.ALL -> Pair(AgentLessons.sayAll(b), AgentLessons.ranked(AgentLessons.active(b)).filter { it.confidence != AgentLessons.Confidence.WEAK }.take(4))
+            AgentLessons.AskKind.TODAY -> Pair(AgentLessons.sayToday(b, today), todays)
+            AgentLessons.AskKind.GROWTH -> Pair(AgentLessons.sayGrowth(b), emptyList<AgentLessons.Lesson>())
+            AgentLessons.AskKind.ABOUT -> Pair(AgentLessons.sayAbout(b, a), AgentLessons.about(b, a).take(4))
+        }
+        shown = used.map { it.id }; shownText = text; shownAt = System.currentTimeMillis()
+        return text to AgentLessons.facts(used)
+    }
+
+    /** Is "why do you think that?" about the lessons answer just said ([lastIra]: the newest thing Jarvis said)? */
+    fun whyFresh(lastIra: String?): Boolean = shown.isNotEmpty() && lastIra != null && lastIra == shownText &&
+        System.currentTimeMillis() - shownAt in 0..WHY_MS
+
+    /** "Why do you think that?": the evidence behind the lessons of the last answer. */
+    fun why(): String {
+        val b = _book.value
+        return AgentLessons.sayWhy(shown.mapNotNull { id -> b.lessons.firstOrNull { it.id == id } })
+    }
+
+    /** One strong lesson for an answer about [tag] (a strategy family) or [topic], or null (memory only: nothing read here). */
+    fun appendFor(tag: String?, topic: AgentLessons.Topic? = null): String? =
+        if (!enabled() || !loaded) null else runCatching { AgentLessons.appendFor(_book.value, tag, topic) }.getOrNull()
+
+    /** The model's notes for [question]: the relevant lessons, short with their numbers, at most 600 characters. */
+    fun modelNotes(question: String): List<String> =
+        if (!enabled() || !loaded) emptyList() else runCatching { AgentLessons.forModel(_book.value, question) }.getOrDefault(emptyList())
+
+    /** The evening report's "What I learned today" line (null: no pass today, or nothing learned from the agents yet). */
+    fun eveningLine(today: LocalDate = Market.today()): String? = _book.value.takeIf { it.lastPass == today && it.lessons.isNotEmpty() }?.line
+
+    /** A line for Copy diagnostics: how many lessons, how strong, when last studied. */
+    fun diagLine(): String {
+        val b = _book.value
+        val c = AgentLessons.counts(b)
+        return "Jarvis's lessons: ${AgentLessons.active(b).size} (${c[AgentLessons.Confidence.STRONG]} strong, ${c[AgentLessons.Confidence.BUILDING]} building), " +
+            "last studied ${b.lastPass ?: "never"}" + (if (shownAt > 0) ", last asked ${Instant.ofEpochMilli(shownAt)}" else "")
+    }
+
+    /** TEST ONLY: nothing kept, nothing shown (in memory). */
+    internal fun resetForTest() {
+        synchronized(lock) { _book.value = AgentLessons.Book() }
+        loaded = true; passedOn = null; shown = emptyList(); shownText = null; shownAt = 0L; testInputs = null
+    }
+
+    /** TEST ONLY: [b] as what he has learned. */
+    internal fun setForTest(b: AgentLessons.Book) { synchronized(lock) { _book.value = b }; loaded = true }
+}

@@ -247,11 +247,15 @@ object IraModel {
                 if (runCatching { JarvisVoice.busyForModel }.getOrDefault(false)) { yieldedForVoice = true; return@withLock null }
                 // Trading work running (10 Oct): a screen-only rewrite waits a few hundred ms for it, else gives way.
                 if (!tradingQuiet()) { yieldedForVoice = true; return@withLock null }
+                // What Jarvis learned from the agents that bears on the question (11 Oct): short, with their numbers, at most
+                // 600 characters ([com.optionslab.ira.AgentLessons.forModel]). Their numbers are facts too, so the check that
+                // every number in the answer is among the facts stays as strict as ever.
+                val lessons = com.optionslab.ira.Writer.capLessons(runCatching { JarvisLearning.modelNotes(question) }.getOrDefault(emptyList()))
                 val watchdog = scope.launch { delay(TIMEOUT_MS); LlmNative.cancel() }
                 rewriting = true
-                val bytes = try { gently { Writer.prompt(question, facts, draft).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } }
+                val bytes = try { gently { Writer.prompt(question, facts, draft, lessons).let { p -> LlmNative.generate(handle, p, MAX_TOKENS, slots.pick(p), false) } } }
                     finally { rewriting = false; watchdog.cancel() }
-                bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts, draft) }
+                bytes?.let { Writer.check(String(it, Charsets.UTF_8), facts + lessons, draft) }
             } finally {
                 _state.update { it.copy(writing = false) }
                 idle = idleUnload()

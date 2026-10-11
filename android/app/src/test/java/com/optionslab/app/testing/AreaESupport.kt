@@ -53,6 +53,8 @@ object AreaE {
         // The Requests panel's recent list and views start empty in each test.
         com.optionslab.app.ira.IraHub.clearRequests()
         com.optionslab.app.ira.IraNotes.clear()
+        // Jarvis's lessons from the agents start empty in each test (a singleton: never carried from an earlier test).
+        com.optionslab.app.ira.JarvisLearning.resetForTest()
         SessionLock.lock()
     }
 

@@ -375,6 +375,8 @@ object SmartWorkers {
         runCatching { reviewIfDue(context) }
         // The trade manager's specialists: their nightly report cards and slow self-tuning (paper and shadow only), once a day.
         runCatching { ManagerSpecialists.reviewIfDue() }
+        // Jarvis's learning from all of the above, once a day after the close (memory checks only until it is due).
+        runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */
@@ -560,6 +562,15 @@ object SmartWorkers {
         if (key !in s.paused) save(s.copy(paused = s.paused + key), "$key: new paper entries paused on your yes")
     }
 
+    /**
+     * Boss said yes to a lesson of Jarvis's that suggested pausing [key]'s new paper entries ([com.optionslab.app.ira.JarvisLearning]):
+     * lowers risk only (paper entries; exits always go). What to say.
+     */
+    fun pausePaperByOwner(key: String): String {
+        setPausedByOwner(key)
+        return "New paper entries of ${reviews.value.firstOrNull { it.key == key }?.name ?: key} are paused. Exits always go; switch it back on yourself when you want it to carry on."
+    }
+
     /** Home's chip for each reviewed strategy: name and venue to "on track" / "drifting" / "parked" / "too few trades". */
     fun chips(reviews: List<DriftReview.Review>, s: Settings): List<Pair<String, String>> = reviews.map { r ->
         "${r.name} (${r.venue})" to DriftReview.chip(r, parked = if (r.live) r.key in s.parked else r.key in s.paused)
@@ -616,6 +627,7 @@ object SmartWorkers {
         out += "  Findings (newest first, ${bus.posted} posted since start):"
         feed(15, now).ifEmpty { listOf("none standing") }.forEach { out += "    $it" }
         runCatching { TradeManagerHost.diagLines() }.getOrDefault(emptyList()).forEach { out += "  $it" }
+        if (com.optionslab.app.ira.JarvisLearning.enabled()) runCatching { out += "  " + com.optionslab.app.ira.JarvisLearning.diagLine() }
         return out
     }
 

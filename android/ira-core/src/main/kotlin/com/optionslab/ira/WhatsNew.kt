@@ -53,6 +53,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-jarvis-learns", OCT11, "Jarvis learns from the bots",
+            "Each evening after the close, Jarvis studies what every bot, the trade manager, its specialists and the order flow kept. " +
+                "He turns it into lessons, each with its numbers: how many trades, the rupees and how often it worked. " +
+                "A lesson is strong only with 30 or more cases that agree over time. " +
+                "New evidence strengthens a lesson; evidence against it weakens and then retires it. " +
+                "When a strong lesson suggests a change, he asks you first and never changes anything himself. " +
+                "He only suggests lowering risk or acting on paper; two noes rest a suggestion for 30 days. " +
+                "He never touches the PIN, Live, the app lock or real orders.",
+            "Home → Ira → What Jarvis has learned",
+            ask = "what have you learned", jarvisOnly = true, to = "ira"),
         Entry("2026-10-11-chart-any-symbol", OCT11, "Chart any index, commodity or option",
             "Tap the symbol at the top of the Chart tab to chart something else. " +
                 "Pick an index, Sensex and India VIX included, or any MCX commodity's near-month future. " +

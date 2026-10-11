@@ -8,14 +8,20 @@ package com.optionslab.ira
  */
 object Writer {
     /** Qwen's chat format (ChatML). */
-    fun prompt(question: String, facts: List<String>, draft: String): String {
+    fun prompt(question: String, facts: List<String>, draft: String,
+               /** What Jarvis learned from the agents that bears on the question, short with their numbers ([AgentLessons.forModel]). */
+               lessons: List<String> = emptyList()): String {
         val sys = "You are Jarvis, the market assistant inside the owner's trading app. Rewrite the DRAFT answer in clear, " +
-            "natural English. Rules: use only the FACTS and the DRAFT; copy every number exactly as written; add no other " +
+            "natural English. Rules: use only the FACTS, the LESSONS (if any) and the DRAFT; copy every number exactly as written; add no other " +
             "numbers, dates, names or events; give no advice, prediction or opinion about buying or selling; " +
             "at most four short sentences; reply with the answer only."
         val user = buildString {
             append("QUESTION: ").append(question.take(300)).append('\n')
             append("FACTS:\n"); relevant(facts, question, draft).forEach { append("- ").append(it).append('\n') }
+            // At most [AgentLessons.MODEL_CHARS] characters of lessons, after the facts (the system part, and so the model's
+            // reused memory slot, is the same as ever). Their numbers count as facts in [check] only when the caller adds them.
+            val notes = capLessons(lessons)
+            if (notes.isNotEmpty()) { append("LESSONS (what Jarvis learned from the agents, with their numbers):\n"); notes.forEach { append("- ").append(it).append('\n') } }
             append("DRAFT: ").append(draft)
         }
         return "<|im_start|>system\n$sys<|im_end|>\n<|im_start|>user\n$user<|im_end|>\n<|im_start|>assistant\n"
@@ -38,6 +44,19 @@ object Writer {
         val keep = facts.withIndex().map { it to score(it.value) }.filter { it.second > 0 }
             .sortedByDescending { it.second }.take(max).map { it.first }.sortedBy { it.index }.map { it.value }
         return keep.ifEmpty { facts.take(max) }
+    }
+
+    /** [lessons] in their order while they fit in [AgentLessons.MODEL_CHARS] characters. */
+    fun capLessons(lessons: List<String>): List<String> {
+        val out = ArrayList<String>()
+        var used = 0
+        for (l in lessons) {
+            val s = l.replace('\n', ' ').trim()
+            if (s.isEmpty()) continue
+            if (used + s.length + 2 > AgentLessons.MODEL_CHARS) break
+            out += s; used += s.length + 2
+        }
+        return out
     }
 
     /** Shorter than this, and one sentence: not rewritten. */
