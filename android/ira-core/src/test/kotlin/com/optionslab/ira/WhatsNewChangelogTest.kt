@@ -111,7 +111,7 @@ class WhatsNewChangelogTest {
     }
 
     @Test fun theSelfHealingAppIsSaidPlainlyWithItsSafety() {
-        val x = WhatsNew.ENTRIES.first()
+        val x = WhatsNew.ENTRIES[1]
         assertEquals("2026-10-11-self-healing-app", x.id)
         assertEquals(LocalDate.of(2026, 10, 11), x.date)
         for (w in listOf("watches its own health on this phone", "screen stalls, freezes, crashes and order speed", "slows that refresh a little",
