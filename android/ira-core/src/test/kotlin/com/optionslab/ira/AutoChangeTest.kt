@@ -280,9 +280,14 @@ class AutoChangeTest {
     @Test fun probationKeepsWhatHeldAndRevertsWhatGotWorse() {
         val c = mute(AutoChange.Scope.PAPER, BUILDING)
         val (b, e) = A.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, 0, d0)
-        // Under the window: waits.
-        val (w, wj) = A.review(b, d0.plusDays(2)) { List(5) { 100.0 } }
+        // Under the window and still unclear: waits, its sequential test in words.
+        val (w, wj) = A.review(b, d0.plusDays(2)) { List(5) { i -> if (i % 2 == 0) 100.0 else -90.0 } }
         assertEquals(AutoChange.Verdict.WAIT, wj.single().verdict); assertEquals(AutoChange.Status.PROBATION, A.entry(w, e.id)!!.status)
+        assertTrue(A.entry(w, e.id)!!.test.startsWith("deciding: "), A.entry(w, e.id)!!.test)
+        // Under the window but already clear (five cases, every one against it): the sequential test reverts it early.
+        val (ew, ewj) = A.review(b, d0.plusDays(2)) { List(5) { 100.0 } }
+        assertEquals(AutoChange.Verdict.REVERT, ewj.single().verdict)
+        assertTrue(A.entry(ew, e.id)!!.note.startsWith("reverted: the sequential test decided early, after 5 cases"), A.entry(ew, e.id)!!.note)
         // 15 cases: the muted specialist's votes kept losing - kept, with the rupees it saved.
         val (k, kj) = A.review(b, d0.plusDays(2)) { List(15) { i -> -100.0 + i } }
         assertEquals(AutoChange.Verdict.KEEP, kj.single().verdict)

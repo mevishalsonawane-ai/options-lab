@@ -30,11 +30,18 @@ import kotlin.math.sqrt
  * changes a day of which [MAX_LIVE_DAY] live; nothing on the same target within [FLIP_DAYS] days of its last change; a target
  * Boss undid or said no to rests [REST_DAYS] days; a blacklisted target ([BLACKLIST_DAYS]) is left alone.
  *
- * Every auto change is on probation ([review]): after [PROBATION_N] settled trades or [PROBATION_DAYS] trading days the
- * outcome since is set against what the change expected (a muted specialist's would-be votes, the manager against the
- * original rules, the stream that moved a threshold). Worse beyond noise ([Z_NOISE] standard errors, at least [MIN_JUDGE]
- * cases): reverted by itself - unless the revert would itself raise live risk, which is asked instead. Two reverts on one
- * target within [REVERT_WINDOW_DAYS] days blacklist it for [BLACKLIST_DAYS] days.
+ * Every auto change is on probation ([review]), judged by a sequential test (11 Oct, "smarter learning"): each night the
+ * outcomes since it was made (a muted specialist's would-be votes, the manager against the original rules, the stream that
+ * moved a threshold), each signed by what the change expected, go through Wald's SPRT ([LearnStats.Sprt]: "it hurts" at
+ * -0.2 sd a case against "it helps" at +0.2 sd; alpha 0.05 bounds keeping a change that hurts, beta 0.20 reverting one that
+ * helps). It keeps or reverts as soon as the evidence is clear (never before [MIN_JUDGE] cases); the old limit -
+ * [PROBATION_N] settled cases or [PROBATION_DAYS] trading days - is the cap, where an undecided test falls back to the old
+ * rule (reverted only if worse beyond noise, [Z_NOISE] standard errors). A revert that would itself raise live risk is asked
+ * instead. Two reverts on one target within [REVERT_WINDOW_DAYS] days blacklist it for [BLACKLIST_DAYS] days. Each entry
+ * keeps the test's state in words ([Entry.test]: "deciding: 62% of the way"), the lesson's q ([Entry.q]) and its pre-flight
+ * replay ([Entry.preflight], [Preflight]); a change skipped by its pre-flight or held by a regime condition is logged as
+ * [Status.SKIPPED]. [Book.trials] counts every configuration Autopilot has tried (it raises the evidence bar, [AutoGate]);
+ * paper experiments live in [Book.experiments] ([Experiments]).
  *
  * Pure: no clock, no storage. The app ([com.optionslab.app]'s Autopilot) applies each change through the agents' own setters.
  */
@@ -53,6 +60,8 @@ object AutoChange {
     enum class Status(val words: String) {
         PROBATION("on probation"), KEPT("kept"), REVERTED("reverted"), REVERT_ASKED("revert asked"), UNDONE("undone"),
         OFFERED("asked"), DECLINED("declined"),
+        /** Not applied: its pre-flight replay was worse (or over its time budget), or its lesson holds under one regime only. */
+        SKIPPED("skipped"),
     }
 
     /** What changes, by which agent family. NEVER kinds are listed so the denylist is a test, not a hope. */
@@ -513,6 +522,12 @@ object AutoChange {
         val closedOn: LocalDate? = null, val note: String = "",
         /** Since it was made: the cases settled and the rupee effect against what it avoided or did (kept at the last review). */
         val afterN: Int = 0, val effect: Double = 0.0,
+        /** The lesson's q-value when it was made (null: no lesson behind it, or not tested). */
+        val q: Double? = null,
+        /** The probation's sequential test in words ("deciding: 62% of the way (leaning keep), 9 cases"); empty: not run yet. */
+        val test: String = "",
+        /** Its pre-flight replay in words ([Preflight.Result.words]); empty: none (shadow, asked, or logged by an agent). */
+        val preflight: String = "",
     ) {
         val applied: Boolean get() = status == Status.PROBATION || status == Status.KEPT || status == Status.REVERT_ASKED
     }
@@ -523,7 +538,21 @@ object AutoChange {
         val rest: Map<String, LocalDate> = emptyMap(),
         val lastRun: LocalDate? = null,
         val lastMidday: LocalDate? = null,
+        /** Every configuration Autopilot has ever tried (applied by itself, applied on Boss's yes, or started as an experiment). */
+        val trials: Int = 0,
+        /** The paper experiments, running and ended ([Experiments]). */
+        val experiments: List<Experiments.Experiment> = emptyList(),
     )
+
+    /** Who counts as a trial when recorded on probation: Autopilot itself and a graduated experiment (not the specialists' own tuning). */
+    private val TRIERS = setOf("autopilot", Experiments.BY)
+
+    /**
+     * Can [kind] take a regime-conditional value (one setting per market regime)? None can yet: the specialists' weights,
+     * mutes and the manager's mode are per strategy only ([SpecialistBook], [TradeManager.Policy]). A change whose lesson holds
+     * under one regime only is therefore recorded ([Status.SKIPPED]) and not applied everywhere ([AutoGate]).
+     */
+    fun condCapable(kind: Kind): Boolean = false
 
     /** What [plan] decided for each candidate. */
     data class Plan(val auto: List<Change>, val ask: List<Change>, val held: List<Pair<Change, String>>, val never: List<Change>)
@@ -551,8 +580,8 @@ object AutoChange {
     fun plan(book: Book, candidates: List<Change>, day: LocalDate, mode: Mode, healthOnly: Boolean = false): Plan {
         val auto = ArrayList<Change>(); val ask = ArrayList<Change>(); val held = ArrayList<Pair<Change, String>>(); val never = ArrayList<Change>()
         val todays = book.entries.filter { it.day == day && it.by == "autopilot" }
-        var autos = todays.count { it.status != Status.OFFERED && it.status != Status.DECLINED }
-        var lives = todays.count { it.status != Status.OFFERED && it.status != Status.DECLINED && it.change.scope == Scope.LIVE }
+        var autos = todays.count { it.status != Status.OFFERED && it.status != Status.DECLINED && it.status != Status.SKIPPED }
+        var lives = todays.count { it.status != Status.OFFERED && it.status != Status.DECLINED && it.status != Status.SKIPPED && it.change.scope == Scope.LIVE }
         var asks = todays.count { it.status == Status.OFFERED || it.status == Status.DECLINED }
         val seen = HashSet<String>()
         val ordered = candidates.sortedWith(compareBy<Change>({ if (riskOf(it) == Risk.LOWER) 0 else 1 }, { scopeRank(it) },
@@ -581,12 +610,14 @@ object AutoChange {
     private fun nextId(book: Book, day: LocalDate, k: Int = 0): String = "$day#${book.entries.size + k + 1}"
 
     /** [c] kept in the book with [status] (an AUTO change applied: PROBATION; one asked: OFFERED). The book and the entry. */
-    fun record(book: Book, c: Change, status: Status, atMs: Long, day: LocalDate, by: String = "autopilot", note: String = ""): Pair<Book, Entry> {
+    fun record(book: Book, c: Change, status: Status, atMs: Long, day: LocalDate, by: String = "autopilot", note: String = "",
+               q: Double? = null, preflight: String = ""): Pair<Book, Entry> {
         var id = nextId(book, day)
         var k = 1
         while (book.entries.any { it.id == id }) id = nextId(book, day, k++)
-        val e = Entry(id, atMs, day, c, status, by, note = note)
-        return capped(book.copy(entries = book.entries + e)) to e
+        val e = Entry(id, atMs, day, c, status, by, note = note, q = q, preflight = preflight)
+        val tried = if (status == Status.PROBATION && by in TRIERS) 1 else 0
+        return capped(book.copy(entries = book.entries + e, trials = book.trials + tried)) to e
     }
 
     private fun capped(b: Book): Book {
@@ -602,8 +633,10 @@ object AutoChange {
     fun entry(book: Book, id: String): Entry? = book.entries.firstOrNull { it.id == id }
 
     /** Boss said yes to an asked change: done, on probation from now. */
-    fun accepted(book: Book, id: String, atMs: Long, day: LocalDate): Book =
-        update(book, id) { if (it.status == Status.OFFERED) it.copy(status = Status.PROBATION, atMs = atMs, day = day, note = "on your yes") else it }
+    fun accepted(book: Book, id: String, atMs: Long, day: LocalDate): Book {
+        if (entry(book, id)?.status != Status.OFFERED) return book
+        return update(book, id) { it.copy(status = Status.PROBATION, atMs = atMs, day = day, note = "on your yes") }.let { it.copy(trials = it.trials + 1) }
+    }
 
     /** Boss said no: nothing done, and that target rests [REST_DAYS] days. */
     fun declined(book: Book, id: String, day: LocalDate): Book {
@@ -659,10 +692,15 @@ object AutoChange {
         return se <= 1e-9 || abs(mean) > Z_NOISE * se
     }
 
+    /** The probation's sequential test over [xs] (each signed by what [c] expected; nothing to test when it expected nothing). */
+    fun sequential(c: Change, xs: List<Double>): LearnStats.Sprt.State? =
+        if (c.expect == 0) null else LearnStats.Sprt.run(xs.map { c.expect * it }, minN = MIN_JUDGE)
+
     /**
-     * Every change on probation judged on [day] from [after] (its outcomes since it was made; null: no stream for it). Over
-     * ([PROBATION_N] cases or [PROBATION_DAYS] trading days): kept, or - worse beyond noise - reverted by itself (or asked
-     * when the revert would raise live risk). Two reverts on one target blacklist it. The book and what to do.
+     * Every change on probation judged on [day] from [after] (its outcomes since it was made; null: no stream for it). The
+     * sequential test ([sequential]) keeps or reverts it as soon as it is clear; otherwise, once over the cap ([PROBATION_N]
+     * cases or [PROBATION_DAYS] trading days): kept, or - worse beyond noise - reverted by itself (or asked when the revert
+     * would raise live risk). Two reverts on one target blacklist it. The book and what to do.
      */
     fun review(book: Book, day: LocalDate, after: (Entry) -> List<Double>?): Pair<Book, List<Judged>> {
         var b = book
@@ -671,20 +709,33 @@ object AutoChange {
             if (e.status != Status.PROBATION) continue
             val xs = after(e).orEmpty()
             val effect = e.change.effect * xs.sum()
+            val seq = sequential(e.change, xs)
+            val test = seq?.words().orEmpty()
             val over = xs.size >= PROBATION_N || tradingDays(e.day, day) >= PROBATION_DAYS
-            if (!over) { b = update(b, e.id) { it.copy(afterN = xs.size, effect = effect) }; out += Judged(e, Verdict.WAIT, null, "on probation", xs.size, effect); continue }
-            if (!worse(xs, e.change.expect)) {
-                val why = if (xs.size < MIN_JUDGE) "kept: too few cases since (${xs.size}) to judge it worse" else
-                    "kept: ${xs.size} cases since, ${AgentLessons.rs(xs.sum())}, not worse than it expected"
-                b = update(b, e.id) { it.copy(status = Status.KEPT, closedOn = day, note = why, afterN = xs.size, effect = effect) }
+            val call = seq?.call
+            val n0 = seq?.n ?: xs.size
+            if (call == null && !over) {
+                b = update(b, e.id) { it.copy(afterN = xs.size, effect = effect, test = test) }
+                out += Judged(e, Verdict.WAIT, null, "on probation", xs.size, effect); continue
+            }
+            if (call == LearnStats.Sprt.Call.KEEP || (call == null && !worse(xs, e.change.expect))) {
+                val why = when {
+                    call != null -> "kept: the sequential test decided early, after $n0 cases (${AgentLessons.rs(xs.take(n0).sum())}), as it expected"
+                    xs.size < MIN_JUDGE -> "kept: too few cases since (${xs.size}) to judge it worse"
+                    else -> "kept: ${xs.size} cases since, ${AgentLessons.rs(xs.sum())}, not worse than it expected"
+                }
+                b = update(b, e.id) { it.copy(status = Status.KEPT, closedOn = day, note = why, afterN = xs.size, effect = effect, test = test) }
                 out += Judged(e, Verdict.KEEP, null, why, xs.size, effect)
                 continue
             }
-            val why = "reverted: since it was made ${xs.size} cases came to ${AgentLessons.rs(xs.sum())} (${AgentLessons.rs(xs.average())} each), " +
+            val why = if (call == LearnStats.Sprt.Call.REVERT)
+                "reverted: the sequential test decided early, after $n0 cases (${AgentLessons.rs(xs.take(n0).sum())}, " +
+                    "${AgentLessons.rs(xs.take(n0).average())} each), against what it expected"
+                else "reverted: since it was made ${xs.size} cases came to ${AgentLessons.rs(xs.sum())} (${AgentLessons.rs(xs.average())} each), " +
                 "against what it expected, beyond noise"
             val inv = inverse(e.change, why)
             val asks = inv.scope == Scope.LIVE && riskOf(inv) == Risk.RAISE
-            b = update(b, e.id) { it.copy(status = if (asks) Status.REVERT_ASKED else Status.REVERTED, closedOn = day, note = why, afterN = xs.size, effect = effect) }
+            b = update(b, e.id) { it.copy(status = if (asks) Status.REVERT_ASKED else Status.REVERTED, closedOn = day, note = why, afterN = xs.size, effect = effect, test = test) }
             if (!asks) b = blacklistIfRepeated(b, e.change.key, day)
             out += Judged(e, if (asks) Verdict.ASK_REVERT else Verdict.REVERT, inv, why, xs.size, effect)
         }
@@ -766,7 +817,8 @@ object AutoChange {
 
     // ---- what Boss asks ------------------------------------------------------------------------------------------------------
 
-    enum class AskKind { TODAY, WHY, UNDO, OFF, RAISE, HOW }
+    /** SURE: "how sure are you about X?" ([subject]: X); EXPERIMENTS: "what experiments are running?". */
+    enum class AskKind { TODAY, WHY, UNDO, OFF, RAISE, HOW, SURE, EXPERIMENTS }
 
     data class Ask(val kind: AskKind, val subject: String? = null)
 
@@ -788,6 +840,17 @@ object AutoChange {
     private val HOW = Regex(LEAD + "(how is $AP doing|how s $AP doing|hows $AP doing|how is $AP|is $AP (helping|working)|$AP report|" +
         "how is (your|the) autopilot learning (doing|going)|how are your (own )?changes doing)" + TAIL)
 
+    /** Its one capturing group is what Boss asks about ("how sure are you about the OI specialist on Pine?"). */
+    private val SURE = Regex("^ (?:hey |ok |okay )?(?:jarvis )?(?:so )?(?:please )?(?:tell me )?(?:how (?:sure|confident|certain) (?:are you|is (?:the )?(?:autopilot|auto pilot)|r u)" +
+        "|how much do you trust (?:your lesson |the lesson )?) (?:about|of|on|in) (.+?)(?: please| boss| jarvis)* $")
+    private val EXPERIMENTS = Regex(LEAD + "((what|which) (paper )?experiments? (are|is) (running|going on|on)( now| right now)?|(any|are there any) (paper )?experiments( running)?|" +
+        "(show|list)( me)? (the |your |autopilots )?(paper )?experiments|(what|which) experiments (are you|is autopilot|is the autopilot) running|" +
+        "what are you testing on paper|what is autopilot testing|your experiments|autopilot experiments)" + TAIL)
+
+    /** Words "how sure are you about X?" may name: one of Jarvis's lessons or one of Autopilot's own targets (never the market). */
+    private val SURE_SUBJECT = Regex(" (specialists?|manager|autopilot|experiments?|lessons?|mute|muting|pause|pausing|park|parking|threshold|weight|" +
+        "night|pine|solo|hero|orb|liquidity|vix divergence|mcx|order flow|trap guard|traps?|mornings?|middays?|afternoons?|busy days|quiet days|change|changes) ")
+
     private val askedKept = Kept<Ask?>(64)
 
     /** What Boss asked of Autopilot, or null. */
@@ -795,6 +858,13 @@ object AutoChange {
 
     private fun askedFresh(text: String): Ask? {
         val t = Spaced.joined(text)
+        if (t.contains(" sure ") || t.contains(" confident ") || t.contains(" certain ") || t.contains(" trust ")) {
+            SURE.find(t)?.let { m ->
+                val s = m.groupValues[1].trim()
+                if (s.isNotEmpty() && SURE_SUBJECT.containsMatchIn(" $s ")) return Ask(AskKind.SURE, s)
+            }
+        }
+        if (t.contains(" experiment") || t.contains(" testing")) EXPERIMENTS.find(t)?.let { return Ask(AskKind.EXPERIMENTS) }
         if (!t.contains(" auto") && !t.contains(" change") && !t.contains(" mute") && !t.contains(" un mute") && !t.contains(" unmute") &&
             !t.contains(" pause") && !t.contains(" park") && !t.contains(" demote") && !t.contains(" badla") && !t.contains(" resume") &&
             !t.contains(" stop")) return null
@@ -823,25 +893,39 @@ object AutoChange {
         sb.append("R|").append(b.lastRun ?: "").append('|').append(b.lastMidday ?: "").append('\n')
         for ((k, d) in b.blacklist.toSortedMap()) sb.append("B|").append(clean(k)).append('|').append(d).append('\n')
         for ((k, d) in b.rest.toSortedMap()) sb.append("S|").append(clean(k)).append('|').append(d).append('\n')
+        if (b.trials > 0) sb.append("T|").append(b.trials).append('\n')
         for (e in b.entries) {
-            val c = e.change
             sb.append("E|").append(clean(e.id)).append('|').append(e.atMs).append('|').append(e.day).append('|').append(e.status.name)
                 .append('|').append(clean(e.by)).append('|').append(e.closedOn ?: "").append('|').append(clean(e.note))
                 .append('|').append(e.afterN).append('|').append(e.effect)
-                .append('|').append(c.kind.name).append('|').append(clean(c.target)).append('|').append(clean(c.from)).append('|').append(clean(c.to))
-                .append('|').append(clean(c.reason)).append('|').append(c.evidence.n).append('|').append(c.evidence.rs).append('|').append(c.evidence.confidence.name)
-                .append('|').append(c.evidence.sign).append('|').append(c.risk.name).append('|').append(c.scope.name).append('|').append(clean(c.lessonId.orEmpty()))
-                .append('|').append(c.expect).append('|').append(c.effect).append('|').append(c.lo ?: "").append('|').append(c.hi ?: "").append('|').append(clean(c.what))
-                .append('\n')
+            appendChange(sb, e.change)
+            sb.append('|').append(e.q ?: "").append('|').append(clean(e.test)).append('|').append(clean(e.preflight)).append('\n')
         }
+        for (x in b.experiments) sb.append(Experiments.encode(x)).append('\n')
         return sb.toString()
     }
+
+    /** A change's 17 fields, each after a '|' (the log's and the experiments' lines share them). */
+    internal fun appendChange(sb: StringBuilder, c: Change) {
+        sb.append('|').append(c.kind.name).append('|').append(clean(c.target)).append('|').append(clean(c.from)).append('|').append(clean(c.to))
+            .append('|').append(clean(c.reason)).append('|').append(c.evidence.n).append('|').append(c.evidence.rs).append('|').append(c.evidence.confidence.name)
+            .append('|').append(c.evidence.sign).append('|').append(c.risk.name).append('|').append(c.scope.name).append('|').append(clean(c.lessonId.orEmpty()))
+            .append('|').append(c.expect).append('|').append(c.effect).append('|').append(c.lo ?: "").append('|').append(c.hi ?: "").append('|').append(clean(c.what))
+    }
+
+    /** The change whose 17 fields start at [f]'s index [i] (throws on garbage: the caller skips the line). */
+    internal fun changeAt(f: List<String>, i: Int): Change = Change(Kind.valueOf(f[i]), f[i + 1], f[i + 2], f[i + 3], f[i + 4],
+        Evidence(f[i + 5].toInt(), f[i + 6].toDouble(), AgentLessons.Confidence.valueOf(f[i + 7]), f[i + 8].toInt()),
+        Risk.valueOf(f[i + 9]), Scope.valueOf(f[i + 10]), f[i + 11].ifEmpty { null }, f[i + 12].toInt(), f[i + 13].toInt(),
+        f[i + 14].toDoubleOrNull(), f[i + 15].toDoubleOrNull(), f[i + 16])
 
     fun decode(text: String?): Book {
         if (text.isNullOrBlank()) return Book()
         val entries = ArrayList<Entry>()
         val black = HashMap<String, LocalDate>(); val rest = HashMap<String, LocalDate>()
         var last: LocalDate? = null; var mid: LocalDate? = null
+        var trials = 0
+        val exps = ArrayList<Experiments.Experiment>()
         fun date(s: String?): LocalDate? = s?.takeIf { it.isNotEmpty() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         for (raw in text.lineSequence()) {
             val f = raw.split('|')
@@ -850,16 +934,16 @@ object AutoChange {
                     "R" -> { last = date(f.getOrNull(1)); mid = date(f.getOrNull(2)) }
                     "B" -> black[f[1]] = LocalDate.parse(f[2])
                     "S" -> rest[f[1]] = LocalDate.parse(f[2])
+                    "T" -> trials = f[1].toInt().coerceAtLeast(0)
+                    "X" -> Experiments.decode(f)?.let { exps += it }
                     "E" -> if (f.size >= 27) {
-                        val c = Change(Kind.valueOf(f[10]), f[11], f[12], f[13], f[14],
-                            Evidence(f[15].toInt(), f[16].toDouble(), AgentLessons.Confidence.valueOf(f[17]), f[18].toInt()),
-                            Risk.valueOf(f[19]), Scope.valueOf(f[20]), f[21].ifEmpty { null }, f[22].toInt(), f[23].toInt(),
-                            f[24].toDoubleOrNull(), f[25].toDoubleOrNull(), f[26])
-                        entries += Entry(f[1], f[2].toLong(), LocalDate.parse(f[3]), c, Status.valueOf(f[4]), f[5], date(f[6]), f[7], f[8].toInt(), f[9].toDouble())
+                        val c = changeAt(f, 10)
+                        entries += Entry(f[1], f[2].toLong(), LocalDate.parse(f[3]), c, Status.valueOf(f[4]), f[5], date(f[6]), f[7], f[8].toInt(), f[9].toDouble(),
+                            q = f.getOrNull(27)?.toDoubleOrNull()?.takeIf { it in 0.0..1.0 }, test = f.getOrNull(28).orEmpty(), preflight = f.getOrNull(29).orEmpty())
                     }
                 }
             }
         }
-        return Book(entries.distinctBy { it.id }, black, rest, last, mid)
+        return Book(entries.distinctBy { it.id }, black, rest, last, mid, trials, exps.distinctBy { it.id })
     }
 }

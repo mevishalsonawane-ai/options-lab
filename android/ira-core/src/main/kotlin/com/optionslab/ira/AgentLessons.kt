@@ -18,6 +18,11 @@ import kotlin.math.abs
  *    again retires. One key, one lesson: duplicates merge ([merge]).
  *  - Confidence ([confidence]): strong needs [STRONG_N] or more and the same sign in at least [AGREE] of [SPLITS] time
  *    splits; building needs [BUILDING_N]; else weak. Nothing is said about rupees without the numbers beside it.
+ *  - Honest statistics (11 Oct, "smarter learning"): every lesson gets a p-value ([pValue]: a sign-flip test on its per-day
+ *    rupees, an exact binomial test on a rate) and, each night, a Benjamini-Hochberg q-value across all active lessons
+ *    ([LearnStats.bh], [BH_Q] = 0.10). Strong also needs q <= [BH_Q]; the evidence line shows q. A lesson may be conditional
+ *    ("on busy days only", [conditions]): its days split by the market brain's regime, the expiry-day flag or the part of
+ *    the day, [COND_N]+ cases a side, the split's own BH family passing at [BH_Q], and the two sides pointing opposite ways.
  *  - Hard caps: [MAX_LESSONS] lessons and [MAX_BYTES] encoded, retired and then the oldest weak lessons dropped first.
  *  - A strong lesson that implies a change becomes a [Proposal] for Boss - only ever one that lowers risk or acts on paper
  *    ([ProposalKind]); never the PIN, the lock, Live, AI-live, a guard, the Google speech choice, the day lock or real
@@ -57,6 +62,10 @@ object AgentLessons {
     const val MODEL_CHARS = 600
     const val TIMELINE = 100
     const val REGIME_DAYS = 400
+    /** The false-discovery rate the night's lessons are held to (Benjamini-Hochberg). */
+    const val BH_Q = 0.10
+    /** A conditional lesson needs this many cases on each side of its split. */
+    const val COND_N = 20
 
     /** Data trouble on this share of the days watched or more: "trouble often". */
     const val HEALTH_RATE = 0.2
@@ -94,6 +103,13 @@ object AgentLessons {
         val accepted: Boolean = false,
         /** What Autopilot made of it ([AutoChange]): "applied 11 Oct", "kept 18 Oct", "reverted 18 Oct"; null: nothing. */
         val auto: String? = null,
+        /** Its p-value ([pValue]) and its Benjamini-Hochberg q-value across tonight's active lessons ([pass]); null: not tested yet. */
+        val p: Double? = null, val q: Double? = null,
+        /**
+         * The one condition its effect holds under, when a split passes ([conditions]): "regime:busy", "expiry:yes",
+         * "expiry:no", "tod:morning"; null: it holds everywhere (or no split could say otherwise). [condQ]: the split's q.
+         */
+        val cond: String? = null, val condQ: Double? = null,
     ) {
         /** Its evidence, worked out once (a copy works it out afresh); not part of what it equals. */
         internal val ev: Evidence by lazy(LazyThreadSafetyMode.PUBLICATION) { evidence(kind, id, buckets) }
@@ -230,6 +246,138 @@ object AgentLessons {
 
     fun evidence(l: Lesson): Evidence = l.ev
 
+    /** [confidence], with strong also needing the night's q-value [q] at or under [BH_Q] (null: not tested yet - not strong). */
+    fun confidence(e: Evidence, q: Double?): Confidence {
+        val c = confidence(e)
+        return if (c == Confidence.STRONG && (q == null || q > BH_Q + 1e-12)) Confidence.BUILDING else c
+    }
+
+    // ---- honest statistics --------------------------------------------------------------------------------------------------
+
+    /**
+     * A lesson's p-value: rupees - a sign-flip test of its per-day sums against zero ([LearnStats.signFlipP]); a rate - an
+     * exact binomial test of its hits against its threshold ([HEALTH_RATE], [MOVES_RATE], else a half); a daily review - the
+     * chance of so many reviews agreeing with the latest by luck ([LearnStats.binomUpper] at a half).
+     */
+    fun pValue(kind: Kind, id: String, buckets: List<Bucket>): Double {
+        if (buckets.isEmpty()) return 1.0
+        return when (kind) {
+            Kind.RUPEES -> LearnStats.signFlipP(DoubleArray(buckets.size) { buckets[it].rs })
+            Kind.RATE -> {
+                var n = 0; var h = 0
+                for (b in buckets) { n += b.n; h += b.hits }
+                val p0 = when (prefix(id)) { "health" -> HEALTH_RATE; "moves" -> MOVES_RATE; else -> 0.5 }
+                LearnStats.binomTwoSided(h, n, p0)
+            }
+            Kind.SNAPSHOT -> {
+                val last = buckets.last().hits > 0
+                LearnStats.binomUpper(buckets.count { (it.hits > 0) == last }, buckets.size, 0.5)
+            }
+        }
+    }
+
+    /** [l]'s p-value: kept from the night's pass, else worked out from its days. */
+    fun pValue(l: Lesson): Double = l.p ?: pValue(l.kind, l.id, l.buckets)
+
+    /** A candidate condition and its split's p (side [inside] against the rest, each side's mean per case). */
+    private class Split(val cond: String, val p: Double, val inside: Double, val outside: Double)
+
+    private fun side(bs: List<Bucket>): LearnStats.Side = LearnStats.Side(IntArray(bs.size) { bs[it].n }, DoubleArray(bs.size) { bs[it].rs })
+
+    /** The weekly expiry flag of a day (Nifty's weekly options expire on Tuesdays; a holiday's shift is not known here). */
+    fun expiryDay(d: LocalDate): Boolean = d.dayOfWeek == java.time.DayOfWeek.TUESDAY
+
+    /**
+     * The splits worth testing for a rupee lesson [l]: by the market brain's regime of each day ([regimes]), by the expiry-day
+     * flag, and for a strategy by its parts of the day (its own `tod:` lessons in [byId], set against the rest of its days).
+     * Only single days count (a folded run of old days has no one regime); each side needs [COND_N] cases.
+     */
+    private val SPLIT_PREFIXES = setOf("strat", "mgr", "spec", "flow", "trap", "bots")
+    private val REGIMES = listOf("busy", "quiet", "normal")
+
+    private fun splits(l: Lesson, regimes: Map<LocalDate, String>, byId: Map<String, Lesson>): List<Split> {
+        if (l.kind != Kind.RUPEES || prefix(l.id) !in SPLIT_PREFIXES || evidence(l).n < 2 * COND_N) return emptyList()
+        val days = l.buckets.filter { it.from == it.day }
+        val m = days.size
+        val out = ArrayList<Split>(6)
+        fun add(cond: String, a: List<Bucket>, b: List<Bucket>) {
+            val sa = side(a); val sb = side(b)
+            if (sa.total < COND_N || sb.total < COND_N) return
+            out += Split(cond, LearnStats.twoSampleP(sa, sb), sa.mean, sb.mean)
+        }
+        // Each day's tag read once; the sides filled straight from the days (a year of lessons a night).
+        fun addBy(cond: String, inside: (Int) -> Boolean, known: (Int) -> Boolean) {
+            var ni = 0; var no = 0
+            for (i in 0 until m) if (known(i)) { if (inside(i)) ni += days[i].n else no += days[i].n }
+            if (ni < COND_N || no < COND_N) return
+            val a = ArrayList<Bucket>(); val b = ArrayList<Bucket>()
+            for (i in 0 until m) if (known(i)) { if (inside(i)) a += days[i] else b += days[i] }
+            add(cond, a, b)
+        }
+        if (regimes.isNotEmpty()) {
+            val reg = arrayOfNulls<String>(m)
+            for (i in 0 until m) reg[i] = regimes[days[i].day]
+            for (r in REGIMES) addBy("regime:$r", { reg[it] == r }, { reg[it] != null })
+        }
+        val exp = BooleanArray(m) { expiryDay(days[it].day) }
+        addBy("expiry:yes", { exp[it] }, { true })
+        if (prefix(l.id) == "strat") for (s in SLOTS) {
+            val child = byId[l.id.replaceFirst("strat:", "tod:") + ":" + s] ?: continue
+            val inDay = child.buckets.filter { it.from == it.day }.associateBy { it.day }
+            val rest = days.mapNotNull { b ->
+                val c = inDay[b.day]
+                if (c == null) b else (b.n - c.n).takeIf { it > 0 }?.let { b.copy(n = it, rs = b.rs - c.rs, hits = maxOf(0, b.hits - c.hits)) }
+            }
+            add("tod:$s", inDay.values.sortedBy { it.day }, rest)
+        }
+        return out
+    }
+
+    /**
+     * Tonight's conditions: every candidate split of every active rupee lesson in one Benjamini-Hochberg family at [BH_Q];
+     * a lesson takes the passing split with the smallest q whose inside points its way and whose outside does not (for the
+     * expiry flag either side may be the inside: "on expiry days only" or "except on expiry days"). Id to (cond, q).
+     */
+    fun conditions(lessons: Collection<Lesson>, regimes: Map<LocalDate, String>): Map<String, Pair<String, Double>> {
+        val byId = lessons.associateBy { it.id }
+        val all = ArrayList<Pair<Lesson, Split>>()
+        for (l in lessons) if (l.status != Status.RETIRED) for (sp in splits(l, regimes, byId)) all += l to sp
+        if (all.isEmpty()) return emptyMap()
+        val q = LearnStats.bh(DoubleArray(all.size) { all[it].second.p })
+        val out = HashMap<String, Pair<String, Double>>()
+        for ((i, x) in all.withIndex()) {
+            val (l, sp) = x
+            if (q[i] > BH_Q + 1e-12 || l.sign == 0) continue
+            val si = sgn(sp.inside); val so = sgn(sp.outside)
+            val cond = when {
+                si == l.sign && so != l.sign -> sp.cond
+                sp.cond == "expiry:yes" && so == l.sign && si != l.sign -> "expiry:no"
+                else -> null
+            } ?: continue
+            val have = out[l.id]
+            if (have == null || q[i] < have.second) out[l.id] = cond to q[i]
+        }
+        return out
+    }
+
+    /** "on busy days only", "on expiry days only", "except on expiry days", "when entered in the morning only". */
+    fun condWords(cond: String?): String? {
+        if (cond == null) return null
+        val k = cond.substringBefore(':'); val v = cond.substringAfter(':', "")
+        return when (k) {
+            "regime" -> "on $v days only"
+            "expiry" -> if (v == "yes") "on expiry days only" else "except on expiry days"
+            "tod" -> "when entered ${slotWords(v)} only"
+            else -> null
+        }
+    }
+
+    /** "q 0.03" ("q 0.004" under 0.01; "q < 0.001" when tiny). */
+    fun qWords(q: Double): String = if (q < 0.001) "q < 0.001" else "q " + fmtQ(q)
+
+    /** A q or a bar in plain digits: "0.10", "0.004". */
+    fun fmtQ(q: Double): String = String.format(Locale.ENGLISH, if (q < 0.01) "%.3f" else "%.2f", q)
+
     // ---- words --------------------------------------------------------------------------------------------------------
 
     fun rs(x: Double): String = (if (x < 0) "-Rs " else "+Rs ") + "%,.0f".format(Locale.ENGLISH, abs(x))
@@ -247,9 +395,10 @@ object AgentLessons {
             "drift" -> if (pos) "is on track with its backtest" else "is drifting from its backtest"
             "health" -> if (pos) "has been reliable" else "has had trouble often"
             "moves" -> if (pos) "are common" else "are rare"
+            "exp" -> if (pos) "did better than the current setting" else "did worse than the current setting"
             else -> if (pos) "goes well" else "goes badly"
         }
-        return "${l.name} $verb"
+        return "${l.name} $verb" + (condWords(l.cond)?.let { " $it" } ?: "")
     }
 
     /** The numbers behind it: "64 trades, +Rs 12,400, 55% won, 2 Sep-10 Oct, from the bot trades and the market brain". */
@@ -266,7 +415,8 @@ object AgentLessons {
             Kind.RATE -> if (p == "moves") "${e.hits} of ${e.n} big moves" else "trouble on ${e.hits} of ${e.n} days watched"
             Kind.SNAPSHOT -> "${e.n} trades judged, drifting on ${e.hits} of ${e.of} daily reviews, latest ${rs(e.rs)} a trade"
         }
-        return "$body, $span, $from"
+        return "$body, $span, $from" + (l.q?.let { ", " + qWords(it) } ?: "") +
+            (if (l.cond != null) l.condQ?.let { " (the split: " + qWords(it) + ")" } ?: "" else "")
     }
 
     /** "Statement (evidence; strong)". */
@@ -535,17 +685,18 @@ object AgentLessons {
 
     /** One lesson brought up to date with [fresh] days (null: none new); what changed in it. */
     internal fun update(old: Lesson?, id: String, topic: Topic, kind: Kind, name: String, tags: List<String>, agents: Set<String>,
-                        fresh: List<Bucket>, day: LocalDate): Pair<Lesson, List<ChangeKind>> {
-        val buckets = mergeBuckets(old?.buckets.orEmpty(), fresh)
+                        fresh: List<Bucket>, day: LocalDate, p: Double? = null, q: Double? = null,
+                        merged: List<Bucket>? = null): Pair<Lesson, List<ChangeKind>> {
+        val buckets = merged ?: mergeBuckets(old?.buckets.orEmpty(), fresh)
         val e = evidence(kind, id, buckets)
-        val conf = confidence(e)
+        val conf = confidence(e, q)
         val first = buckets.first().from; val last = buckets.last().day
         if (old == null) {
             val st = if (conf == Confidence.STRONG) Status.CONFIRMED else Status.NEW
-            return Lesson(id, topic, kind, name, tags.distinct(), agents, buckets, e.sign, st, conf, first, last, day, e.n) to listOf(ChangeKind.NEW)
+            return Lesson(id, topic, kind, name, tags.distinct(), agents, buckets, e.sign, st, conf, first, last, day, e.n, p = p, q = q) to listOf(ChangeKind.NEW)
         }
         val base = old.copy(topic = topic, kind = kind, name = name, tags = (old.tags + tags).distinct().take(16), agents = old.agents + agents,
-            buckets = buckets, firstSeen = minOf(old.firstSeen, first), lastSeen = maxOf(old.lastSeen, last))
+            buckets = buckets, firstSeen = minOf(old.firstSeen, first), lastSeen = maxOf(old.lastSeen, last), p = p, q = q)
         // Nothing new since it was last judged (the same count: a day read again, or the file's rounding): kept as it was.
         if (e.n == old.checkedN) return base.copy(confidence = conf) to emptyList()
         val flipped = old.sign != 0 && e.sign != 0 && e.sign != old.sign
@@ -578,7 +729,7 @@ object AgentLessons {
             val e = evidence(o.kind, o.id, bs)
             out[l.id] = o.copy(buckets = bs, agents = o.agents + l.agents, tags = (o.tags + l.tags).distinct().take(16),
                 firstSeen = minOf(o.firstSeen, l.firstSeen), lastSeen = maxOf(o.lastSeen, l.lastSeen),
-                confidence = confidence(e), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
+                confidence = confidence(e, o.q ?: l.q), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
                 rejections = o.rejections + l.rejections, cooldownUntil = listOfNotNull(o.cooldownUntil, l.cooldownUntil).maxOrNull(),
                 proposedOn = listOfNotNull(o.proposedOn, l.proposedOn).maxOrNull(), accepted = o.accepted || l.accepted, auto = o.auto ?: l.auto,
                 status = if (o.status.ordinal >= l.status.ordinal) o.status else l.status)
@@ -622,10 +773,41 @@ object AgentLessons {
         val keptRegimes = if (regimes.size > REGIME_DAYS) regimes.entries.sortedByDescending { it.key }.take(REGIME_DAYS).associate { it.key to it.value } else regimes
         val byId = merge(book.lessons).associateBy { it.id }.toMutableMap()
         val changes = ArrayList<Change>()
-        for (a in samples(inputs, keptRegimes)) {
-            val (l, ch) = update(byId[a.id], a.id, a.topic, a.kind, a.name, a.tags, a.agents, a.buckets(), day)
+        val accs = samples(inputs, keptRegimes).sortedBy { it.id }
+        // Each lesson's days brought up to date first, so that tonight's p-values are adjusted together (Benjamini-Hochberg
+        // across every lesson still active) before any lesson is judged strong.
+        val merged = HashMap<String, List<Bucket>>(accs.size * 2)
+        for (a in accs) merged[a.id] = mergeBuckets(byId[a.id]?.buckets.orEmpty(), a.buckets())
+        val kinds = HashMap<String, Kind>()
+        for (a in accs) kinds[a.id] = a.kind
+        val family = (byId.keys + merged.keys).filter { byId[it]?.status != Status.RETIRED }.sorted()
+        val ps = DoubleArray(family.size) { k ->
+            val id = family[k]
+            val bs = merged[id] ?: byId[id]?.buckets.orEmpty()
+            pValue(kinds[id] ?: byId[id]?.kind ?: Kind.RUPEES, id, bs)
+        }
+        val qs = LearnStats.bh(ps)
+        val pOf = HashMap<String, Double>(family.size * 2); val qOf = HashMap<String, Double>(family.size * 2)
+        for ((k, id) in family.withIndex()) { pOf[id] = ps[k]; qOf[id] = qs[k] }
+        for (a in accs) {
+            if (merged[a.id].isNullOrEmpty()) continue
+            val (l, ch) = update(byId[a.id], a.id, a.topic, a.kind, a.name, a.tags, a.agents, emptyList(), day, pOf[a.id], qOf[a.id], merged[a.id])
             byId[a.id] = l
             ch.forEach { changes += Change(a.id, it) }
+        }
+        // The lessons nothing new reached: their q moves with the night's family (strong only while it passes).
+        for ((id, l) in byId.entries.toList()) {
+            if (id in merged) continue
+            if (l.status == Status.RETIRED) { if (l.q != null) byId[id] = l.copy(q = null); continue }
+            val q = qOf[id]
+            val conf = confidence(evidence(l), q)
+            if (q != l.q || conf != l.confidence || pOf[id] != l.p) byId[id] = l.copy(p = pOf[id], q = q, confidence = conf)
+        }
+        // Regime-aware: a lesson whose effect holds only under one condition says so ([conditions]).
+        val conds = conditions(byId.values, keptRegimes)
+        for ((id, l) in byId.entries.toList()) {
+            val c = conds[id]
+            if (c?.first != l.cond || c?.second != l.condQ) byId[id] = l.copy(cond = c?.first, condQ = c?.second)
         }
         var next = capped(Book(byId.values.sortedBy { it.id }, keptRegimes, book.timeline, day, changes, book.line))
         val kept = next.lessons.map { it.id }.toSet()
@@ -794,6 +976,39 @@ object AgentLessons {
         })
     }
 
+    /**
+     * A paper experiment's end ([Experiments]): its pairs (the day, and the variant's lead over the control in rupees) kept as
+     * a lesson of its own - "The paper experiment on X did worse than the current setting" when it lost (a negative lesson),
+     * "did better" when it won - and the lesson that started it moved as Autopilot's own changes move one: a win raises its
+     * weight a little; a loss lowers it as a no would and rests its proposals [COOLDOWN_DAYS] days.
+     */
+    fun experimentResult(book: Book, lessonId: String?, target: String, what: String, won: Boolean, pairs: List<Pair<LocalDate, Double>>, on: LocalDate): Book {
+        val ls = book.lessons.toMutableList()
+        if (pairs.isNotEmpty()) {
+            val id = norm("exp:$target")
+            val days = java.util.TreeMap<LocalDate, Bucket>()
+            for ((d, x) in pairs) {
+                val b = days[d]
+                days[d] = if (b == null) Bucket(d, 1, x, if (x > 0) 1 else 0) else b.copy(n = b.n + 1, rs = b.rs + x, hits = b.hits + if (x > 0) 1 else 0)
+            }
+            val bs = cap(days.values.toList())
+            val e = evidence(Kind.RUPEES, id, bs)
+            val sign = if (won) 1 else -1
+            val old = ls.indexOfFirst { it.id == id }
+            val l = Lesson(id, Topic.STRATEGY, Kind.RUPEES, "The paper experiment on $what", words(what) + listOf("experiment", "paper"),
+                setOf("Autopilot's experiments"), bs, sign, Status.CONFIRMED, confidence(e, null), bs.first().from, bs.last().day, on, e.n,
+                auto = (if (won) "experiment won " else "experiment lost ") + day(on))
+            if (old >= 0) ls[old] = l else ls += l
+        }
+        val src = lessonId?.let { norm(it) }
+        val out = ls.map { l ->
+            if (l.id != src) l
+            else if (won) l.copy(auto = "experiment won ${day(on)}", weight = minOf(2.0, l.weight + 0.1))
+            else l.copy(auto = "experiment lost ${day(on)}", weight = maxOf(0.1, l.weight * 0.6), cooldownUntil = on.plusDays(COOLDOWN_DAYS))
+        }
+        return capped(book.copy(lessons = out))
+    }
+
     // ---- questions ------------------------------------------------------------------------------------------------------------
 
     enum class AskKind { ALL, TODAY, GROWTH, ABOUT }
@@ -935,8 +1150,11 @@ object AgentLessons {
         return "The evidence, Boss: " + ls.take(4).joinToString(" ") { l ->
             val e = evidence(l)
             val why = when (l.confidence) {
-                Confidence.STRONG -> "strong: $STRONG_N or more and ${e.agreeing} of $SPLITS periods point the same way"
-                Confidence.BUILDING -> "building: ${e.n} so far" + (if (e.splits.size == SPLITS) ", ${e.agreeing} of $SPLITS periods agree" else "") + "; strong needs $STRONG_N and agreement over time"
+                Confidence.STRONG -> "strong: $STRONG_N or more and ${e.agreeing} of $SPLITS periods point the same way" +
+                    (l.q?.let { ", and ${qWords(it)} across all my lessons (the bar is ${fmtQ(BH_Q)})" } ?: "")
+                Confidence.BUILDING -> "building: ${e.n} so far" + (if (e.splits.size == SPLITS) ", ${e.agreeing} of $SPLITS periods agree" else "") +
+                    (if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
+                    else "; strong needs $STRONG_N, agreement over time and q at most ${fmtQ(BH_Q)}")
                 Confidence.WEAK -> "weak: only ${e.n} so far"
             }
             "• ${statement(l)}: ${evidenceLine(l)}. It is $why" + (if (l.status == Status.WEAKENED) "; recent evidence went against it, so it is weakened" else "") + "."
@@ -986,6 +1204,12 @@ object AgentLessons {
         return (if (c < 0) "-" else "") + (a / 100) + "." + (if (frac < 10) "0" else "") + frac
     }
 
+    /** A probability in four significant digits ("0.03412", "1.200e-08"). */
+    private fun sig(x: Double): String = if (!x.isFinite()) "1" else String.format(Locale.ENGLISH, "%.4g", x.coerceIn(0.0, 1.0))
+
+    /** A probability read back (blank, garbage or out of 0..1: null). */
+    private fun prob(s: String?): Double? = s?.takeIf { it.isNotEmpty() }?.toDoubleOrNull()?.takeIf { it in 0.0..1.0 }
+
     /** The book as lines (V, L, D, R, M, P, C); every free text cleaned of the separators. */
     fun encode(b: Book): String {
         val sb = StringBuilder()
@@ -1001,7 +1225,9 @@ object AgentLessons {
                 .append('|').append(l.firstSeen).append('|').append(l.lastSeen).append('|').append(l.statusOn)
                 .append('|').append(l.checkedN).append('|').append(l.flips).append('|').append(d(l.weight)).append('|').append(l.rejections)
                 .append('|').append(l.cooldownUntil ?: "").append('|').append(l.proposedOn ?: "").append('|').append(if (l.accepted) "1" else "0")
-                .append('|').append(l.auto?.let { cleanText(it) } ?: "").append('\n')
+                .append('|').append(l.auto?.let { cleanText(it) } ?: "")
+                .append('|').append(l.p?.let { sig(it) } ?: "").append('|').append(l.q?.let { sig(it) } ?: "")
+                .append('|').append(l.cond?.let { clean(it) } ?: "").append('|').append(l.condQ?.let { sig(it) } ?: "").append('\n')
             sb.append("D|").append(clean(l.id)).append('|')
             for ((k, bk) in l.buckets.withIndex()) {
                 if (k > 0) sb.append(';')
@@ -1036,7 +1262,9 @@ object AgentLessons {
                         lessons[id] = Lesson(id, Topic.valueOf(f[2]), Kind.valueOf(f[3]), f[4], f[5].split(',').filter { it.isNotEmpty() },
                             f[6].split(',').filter { it.isNotEmpty() }.toSet(), emptyList(), f[7].toInt(), Status.valueOf(f[8]), Confidence.valueOf(f[9]),
                             LocalDate.parse(f[10]), LocalDate.parse(f[11]), LocalDate.parse(f[12]), f[13].toInt(), f[14].toInt(), f[15].toDouble().coerceIn(0.1, 2.0),
-                            f[16].toInt(), date(f[17]), date(f[18]), f[19] == "1", f.getOrNull(20)?.takeIf { it.isNotEmpty() })
+                            f[16].toInt(), date(f[17]), date(f[18]), f[19] == "1", f.getOrNull(20)?.takeIf { it.isNotEmpty() },
+                            p = prob(f.getOrNull(21)), q = prob(f.getOrNull(22)), cond = f.getOrNull(23)?.takeIf { it.isNotEmpty() },
+                            condQ = prob(f.getOrNull(24)))
                     }
                     "D" -> for (part in f[2].split(';')) runCatching {
                         val x = part.split(',')

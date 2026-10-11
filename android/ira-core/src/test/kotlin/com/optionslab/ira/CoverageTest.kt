@@ -1428,6 +1428,12 @@ class CoverageTest {
         "undo the last autopilot change" to "AutoChange", "how is autopilot doing" to "AutoChange", "how is the autopilot doing" to "AutoChange",
         "is autopilot helping" to "AutoChange", "autopilot report" to "AutoChange", "turn off autopilot learning" to "AutoChange",
         "turn on autopilot learning" to "AutoChange", "set autopilot to safe" to "AutoChange",
+        // ---- AutoChange (11 Oct, smarter learning): how sure a lesson or change is (q, n, its test), and the paper experiments ----
+        "how sure are you about the oi specialist" to "AutoChange", "how confident are you about night" to "AutoChange",
+        "how sure are you about liquidity" to "AutoChange", "how certain are you about the trade manager" to "AutoChange",
+        "how sure are you about mornings" to "AutoChange", "what experiments are running" to "AutoChange",
+        "which experiments are running now" to "AutoChange", "any experiments running" to "AutoChange", "show me your experiments" to "AutoChange",
+        "what are you testing on paper" to "AutoChange", "what is autopilot testing" to "AutoChange",
 
         // ==== Round 8 (5 Oct): last round's open items, and NewsDesk, Consistency, PatternCalls and BotHealth ====
         // ---- The market's "we" is the structure; Boss's "we" stays his book ----

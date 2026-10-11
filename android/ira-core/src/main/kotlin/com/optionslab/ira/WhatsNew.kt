@@ -53,6 +53,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-smarter-learning", OCT11, "Smarter learning: tested, replayed and tried on paper first",
+            "Each lesson now carries a q-value: it is strong only if it holds when all lessons are tested together. " +
+                "A lesson that holds only on busy days, or only on expiry days, says so. " +
+                "Before Autopilot changes a paper or live setting, it replays the change on your stored trades. " +
+                "If it would have done worse, the change is skipped. " +
+                "A lesson still building is tried first as a paper experiment on alternate trades, never on live. " +
+                "Each change is kept or reverted as soon as the evidence is clear. " +
+                "And the bar rises with every setting it has tried.",
+            "Home → Autopilot card → Change log",
+            ask = "what experiments are running", jarvisOnly = true),
         Entry("2026-10-11-self-healing-app", OCT11, "The app heals itself and reports its growth",
             "The app now watches its own health on this phone: screen stalls, freezes, crashes and order speed. " +
                 "When stalls pile up on something minor, it slows that refresh a little and restores it after three healthy days. " +
