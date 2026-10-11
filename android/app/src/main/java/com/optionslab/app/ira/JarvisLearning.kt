@@ -159,7 +159,13 @@ internal object JarvisLearning {
         val paused = com.optionslab.app.data.SmartWorkers.settings.value.paused
         val policy = com.optionslab.app.data.TradeManagerHost.policy.value
         val modes = TradeManager.FAMILIES.associate { it.key to policy.mode(it.key, TradeManager.Account.PAPER) }
-        return AgentLessons.Inputs(today, trips, regime, drift, managed, flow, findingsKept(), incidents, moves, muted, paused, modes)
+        // Event days (TODO S11): RBI policy, the Budget, results, rebalances and shifted expiries are kept out of the evidence -
+        // a day like that teaches about the event, not about the strategy.
+        val f = com.optionslab.ira.LearningFilter
+        val keptTrips = trips.filter { runCatching { f.include(it.closedAt.toLocalDate()) }.getOrDefault(true) }
+        val keptManaged = managed.filter { r -> runCatching {
+            f.include(java.time.Instant.ofEpochMilli(r.trade.entryMs).atZone(com.optionslab.engine.IST).toLocalDate()) }.getOrDefault(true) }
+        return AgentLessons.Inputs(today, keptTrips, regime, drift, keptManaged, flow, findingsKept(), incidents, moves, muted, paused, modes)
     }
 
     /**

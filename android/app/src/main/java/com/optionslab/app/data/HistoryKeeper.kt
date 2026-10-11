@@ -96,6 +96,8 @@ object HistoryKeeper {
         if (now - lookedAt in 0 until LOOK_EVERY_MS) return
         val due = runCatching { HistoryKeep.due(Market.minuteNow(), Market.isTradingDay()) }.getOrDefault(false)
         if (!due || app == null) return
+        // The background budget (S18): not on a low battery, a hot phone, power saving or past tonight's CPU cap.
+        if (!runCatching { com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.HISTORY) }.getOrDefault(true)) return
         if (!running.compareAndSet(false, true)) return
         lookedAt = now
         scope.launch {

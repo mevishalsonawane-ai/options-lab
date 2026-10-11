@@ -53,6 +53,17 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-self-improvement-round-2", OCT11, "The learning closes its loops, with brakes",
+            "A proven variant now changes its strategy: on paper from the next session, live only with your PIN. " +
+                "After a bad day it goes back to the defaults by itself; Liquidity may only tune its exits. " +
+                "Ideas you approve trade on the paper account, never Zerodha, three at most. " +
+                "The phone keeps the market's history, and learning leaves out event days. " +
+                "A portfolio guard blocks a later entry when linked strategies would stack the same risk. " +
+                "Today's changes sit on one screen with Undo everything today; learning freezes itself after a drawdown. " +
+                "A monthly scorecard says what the automation earned or cost. " +
+                "Jarvis learns your own habits, and Research has Learn pages, today's lesson and bot trade replays.",
+            "Home → Autopilot card → Today's changes; Research → Learn",
+            jarvisOnly = true),
         Entry("2026-10-11-strategy-lab-auto", OCT11, "Strategy lab: strategies improve and new ones are tried",
             "Each running strategy now has a few nearby variants that trade virtually beside it: no orders, not even paper. " +
                 "A variant must beat the current rules for 20 days and pass strict luck checks. " +

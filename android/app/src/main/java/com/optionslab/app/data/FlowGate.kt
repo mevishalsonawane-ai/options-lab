@@ -131,8 +131,13 @@ object FlowGate {
         // is skipped for the day. Memory only; it can only skip, and only a decided entry asks it.
         val portfolio = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD)
             runCatching { PortfolioHost.entry(key, side, live) }.getOrNull() else null
-        val paused = decide && (brake?.block == true || portfolio != null)
-        val pauseWhy = if (brake?.block == true) brake?.why else portfolio
+        // The day's regime (TODO S8, 11 Oct): a strategy whose proven regime lesson says it loses on today's kind of day sits it
+        // out (size 0) - paper by itself after its shadow days, live only once Boss approved it with the PIN. Memory only; skip only.
+        val regime = if (decide && brake?.block != true && portfolio == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.RegimeParams.overrideToday(key, live)?.get(com.optionslab.ira.RegimeParams.SIZE_KEY)?.takeIf { it <= 0.0 }
+                ?.let { "sits out today's kind of day (a proven regime lesson; it lowers risk only)" } }.getOrNull() else null
+        val paused = decide && (brake?.block == true || portfolio != null || regime != null)
+        val pauseWhy = if (brake?.block == true) brake?.why else portfolio ?: regime
         if (paused) runCatching {
             val label = FlowShadow.strategy(key)?.label ?: key
             Diag.record("brain", "$label: ${if (live) "live" else "paper"} entry on $underlying not taken - $pauseWhy")
