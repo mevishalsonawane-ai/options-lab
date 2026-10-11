@@ -115,7 +115,8 @@ class StrategyLabCardTest {
         assertTrue(shows(LAB_SHEET_TITLE))
         titleAndCloseApart()
         scrollToTag("lab-undo-C5")
-        tap("Undo")
+        // The intro also says "with Undo": the button is tapped by its tag.
+        compose.onNodeWithTag("lab-undo-C5").performSemanticsAction(SemanticsActions.OnClick); compose.frames(); compose.waitForIdle()
         assertEquals(LabAction.UNDO to "C5", asked.last())
         scrollToTag("lab-apply-C6")
         tap("Apply (PIN)")
