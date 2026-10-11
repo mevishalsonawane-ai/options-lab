@@ -103,6 +103,8 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val news by remember { com.optionslab.app.data.WhatsNewStore.shown() }.collectAsState()
     // Each time the app comes back to the front: a settings read that failed before is tried again (a flow, not Compose state).
     com.optionslab.app.ui.PollWhileStarted { com.optionslab.app.data.WhatsNewStore.shown() }
+    // Typed up front: an annotated lambda inside an if-expression is not taken as @Composable by the compiler.
+    val automationCard: (@Composable () -> Unit)? = if (com.optionslab.app.BuildConfig.GOLD) null else { { AutomationHomeCard(model) } }
     AlmanacBody(s.live, com.optionslab.app.data.Broker.loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
         glance = { TodayGlanceCard(onGo) },
@@ -114,7 +116,7 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }),
         // Last, after the chart (11 Oct, Boss: trading first, less clutter): the trade manager, Autopilot, the strategy lab,
         // the order flow and the Brain, one line each in one card, each section in full a tap away. None in GOLD.
-        automation = if (com.optionslab.app.BuildConfig.GOLD) null else @Composable { AutomationHomeCard(model) })
+        automation = automationCard)
 }
 
 /**
