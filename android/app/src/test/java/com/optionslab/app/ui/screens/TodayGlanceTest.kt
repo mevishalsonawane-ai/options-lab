@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.data.GlanceSource
 import com.optionslab.app.testing.DeviceConfig
@@ -191,6 +192,9 @@ class TodayGlanceTest {
         compose.waitUntil(10_000) { shows("Nifty: high · 2.5x") }   // read on Dispatchers.IO, outside Compose's idling
         compose.waitForIdle()
         text("Nifty: high · 2.5x").assertIsDisplayed()
+        // Home is a lazy list, and the live orders now sit above the strategies (11 Oct): scrolled to before it is asserted.
+        compose.onAllNodes(androidx.compose.ui.test.hasScrollToIndexAction())[0]
+            .performScrollToNode(androidx.compose.ui.test.hasText("strategies card"))
         text("strategies card").assertIsDisplayed()
         compose.waitForIdle()
         val n = reads.get()

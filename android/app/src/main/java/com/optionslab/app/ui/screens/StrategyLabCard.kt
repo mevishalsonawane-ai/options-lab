@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.VariantRunner
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
-import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
@@ -47,18 +46,19 @@ internal const val LAB_TITLE = "Strategy lab"
 internal const val LAB_SHEET_TITLE = "Strategy lab: variants and new ideas"
 
 /**
- * Home's Strategy lab card (11 Oct, after the Autopilot card): each running strategy's shadow variants (the best against the
- * current rules and its test state), the new ideas in forward test, the graveyard (ideas tried / passed / retired) and the
- * proposals waiting. Memory only on screen; the lab's files are read off the main thread the first time. None in GOLD.
+ * The Strategy lab section (Home → Automation card → Strategy lab; its own Home card until 11 Oct): each running strategy's
+ * shadow variants (the best against the current rules and its test state), the new ideas in forward test, the graveyard
+ * (ideas tried / passed / retired) and the proposals waiting. Memory only on screen; the lab's files are read off the main
+ * thread the first time. None in GOLD.
  */
 @Composable
-fun StrategyLabHomeCard(model: AppModel) {
+internal fun StrategyLabSection(model: AppModel) {
     if (!VariantRunner.enabled()) return
     val variants by VariantRunner.variants.collectAsState(Dispatchers.Main.immediate)
     val forge by VariantRunner.forge.collectAsState(Dispatchers.Main.immediate)
     var open by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { VariantRunner.ensureLoaded() } } }
-    LedgerCard { StrategyLabCardContent(variants, forge, onOpen = { open = it ?: "" }) }
+    StrategyLabCardContent(variants, forge, onOpen = { open = it ?: "" })
     open?.let { sel -> StrategyLabDialog(model, sel.ifEmpty { null }) { open = null } }
 }
 

@@ -47,20 +47,20 @@ internal const val AUTOPILOT_TITLE = "Autopilot"
 internal const val AUTOPILOT_LOG_TITLE = "Autopilot change log"
 
 /**
- * Home's Autopilot card (11 Oct, after the Trade manager card): Autopilot learning's level, today's changes, how many are on
- * probation and how many reverted themselves, and the change log with Undo. Memory only on screen; the log is read off the
- * main thread the first time; every Undo and Apply runs off the main thread, and one that raises live risk asks for the PIN.
- * None in GOLD.
+ * The Autopilot section (Home → Automation card → Autopilot; its own Home card until 11 Oct): Autopilot learning's level,
+ * today's changes, how many are on probation and how many reverted themselves, and the change log with Undo. Memory only on
+ * screen; the log is read off the main thread the first time; every Undo and Apply runs off the main thread, and one that
+ * raises live risk asks for the PIN. None in GOLD.
  */
 @Composable
-fun AutopilotHomeCard(model: AppModel) {
+internal fun AutopilotSection(model: AppModel) {
     if (!Autopilot.enabled()) return
     val book by Autopilot.book.collectAsState(Dispatchers.Main.immediate)
     val mode by Autopilot.mode.collectAsState(Dispatchers.Main.immediate)
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { Autopilot.ensureLoaded() } } }
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { LocalDate.now() } }
-    LedgerCard {
+    Column(Modifier.fillMaxWidth()) {
         AutopilotCardContent(book, mode, today, onOpen = { open = true })
         // Jarvis's weekly self-report (11 Oct): its sheet from here.
         WeeklyReportButton()

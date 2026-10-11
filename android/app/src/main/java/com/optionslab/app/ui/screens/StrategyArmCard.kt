@@ -86,7 +86,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         dayLock = dayLock,
         paperSince = paperSince,
         // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
-        // MCX, the trade manager, order flow and the Brain are their own Home cards (11 Oct, Boss: "it should separate").
+        // MCX is its own Home card (11 Oct, Boss: "it should separate"); the trade manager, order flow and the Brain are lines of
+        // Home's Automation card, each opening its section ([AutomationHomeCard]).
         nightRow = { NightRow(); VixDivRow() },
     )
 }
@@ -95,26 +96,8 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
 @Composable
 fun McxHomeCard() { LedgerCard { McxArmRows(divider = false) } }
 
-/** Home's trade manager card: its modes, record and specialists (11 Oct: out of the Strategies card). None in GOLD. */
-@Composable
-fun TradeManagerHomeCard(model: AppModel) {
-    if (com.optionslab.app.BuildConfig.GOLD) return
-    LedgerCard { TradeManagerSection(model, divider = false) }
-}
-
-/** Home's order flow card: the live read and each strategy's OFF / SHADOW / CONFIRM (11 Oct: its own card). None in GOLD. */
-@Composable
-fun OrderFlowHomeCard(model: AppModel) {
-    if (com.optionslab.app.BuildConfig.GOLD) return
-    LedgerCard { OrderFlowSection(model, divider = false) }
-}
-
-/** Home's Brain card: each strategy's health, the market's regime, the bots' consensus (11 Oct: its own card). None in GOLD. */
-@Composable
-fun BrainHomeCard() {
-    if (com.optionslab.app.BuildConfig.GOLD) return
-    LedgerCard { BrainSection(divider = false) }
-}
+// The trade manager, order flow and the Brain (their own Home cards on 11 Oct) are sections of Home's Automation card
+// ([AutomationHomeCard]) since 11 Oct's second change: one line each on Home, the section in full a tap away.
 
 /** What Home's Strategies card asks the model to do (an interface so tests can record it without an [AppModel]). */
 internal interface StrategyArmActions {

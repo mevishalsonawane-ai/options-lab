@@ -53,6 +53,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-home-automation-card", OCT11, "Home puts trading first",
+            "Home now starts with your money and live orders, then Strategies, MCX and the BANKNIFTY chart. " +
+                "The trade manager, Autopilot, Strategy lab, Order flow and Brain now share one Automation card. " +
+                "Each has a one-line summary; tap it to open that section in full. " +
+                "Every button and sheet is still there, one tap away. " +
+                "A warning line shows when learning is frozen. " +
+                "Home is lighter too: those sections refresh only while they are open.",
+            "Home → Automation card → tap a line"),
         Entry("2026-10-11-self-improvement-round-2", OCT11, "The learning closes its loops, with brakes",
             "A proven variant now changes its strategy: on paper from the next session, live only with your PIN. " +
                 "After a bad day it goes back to the defaults by itself; Liquidity may only tune its exits. " +

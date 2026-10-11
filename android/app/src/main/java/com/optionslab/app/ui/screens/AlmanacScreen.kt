@@ -65,9 +65,10 @@ private data class Money(val pnlToday: Double?, val unused: Double?, val used: D
 }
 
 /**
- * Home: the BANKNIFTY chart, today's P&L, unused and used money, and the
- * orders that are live right now. In PAPER mode every figure is the paper
- * account; in LIVE mode, Zerodha.
+ * Home, trading first (11 Oct): what's new (while unseen), today at a glance, the money and today's P&L, the orders live
+ * right now, the strategies, the MCX bots, the BANKNIFTY chart, and last the Automation card (the trade manager, Autopilot,
+ * the strategy lab, the order flow and the Brain, one line each). In PAPER mode every figure is the paper account; in LIVE
+ * mode, Zerodha.
  */
 @Composable
 fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
@@ -109,19 +110,19 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
             { WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo) }
         } else null,
         strategies = { StrategyArmCard(model) { onGo("strategy") } },
-        // Under the Strategies card: the MCX bots, then the trade manager; at the end, after the live orders, the reads.
-        afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }, "manager" to @Composable { TradeManagerHomeCard(model) },
-            "autopilot" to @Composable { AutopilotHomeCard(model) },
-            // The strategy lab (11 Oct): shadow variants of the running strategies and the forge's new ideas, after Autopilot.
-            "strategylab" to @Composable { StrategyLabHomeCard(model) }),
-        reads = listOf("orderflow" to @Composable { OrderFlowHomeCard(model) }, "brain" to @Composable { BrainHomeCard() }))
+        // Under the Strategies card: the MCX bots.
+        afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }),
+        // Last, after the chart (11 Oct, Boss: trading first, less clutter): the trade manager, Autopilot, the strategy lab,
+        // the order flow and the Brain, one line each in one card, each section in full a tap away. None in GOLD.
+        automation = if (com.optionslab.app.BuildConfig.GOLD) null else @Composable { AutomationHomeCard(model) })
 }
 
 /**
  * Home from plain state and callbacks (what [AlmanacScreen] shows; tests drive it without an [AppModel]).
- * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the money and the chart; [glance]: the
+ * [loggedIn]: a Zerodha session for today; [strategies]: the strategy card between the live orders and the chart; [glance]: the
  * "Today at a glance" card at the top ([TodayGlanceCard]; null: none); [whatsNew]: the "What's new" card above it while some
- * changes are unseen ([WhatsNewCardContent]; null: none).
+ * changes are unseen ([WhatsNewCardContent]; null: none); [afterStrategies]: the cards under the strategies, by key (the MCX
+ * bots); [automation]: the Automation card at the end ([AutomationHomeCard]; null: none).
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -138,9 +139,33 @@ internal fun AlmanacContent(
     owners: Map<String, String> = emptyMap(),
     glance: (@Composable () -> Unit)? = null,
     whatsNew: (@Composable () -> Unit)? = null,
+    afterStrategies: List<Pair<String, @Composable () -> Unit>> = emptyList(),
+    automation: (@Composable () -> Unit)? = null,
     strategies: @Composable () -> Unit,
 ) {
-    AlmanacBody(live, loggedIn, { quotes }, { note }, { daily }, { account }, { paper }, onGo, onRow, owners, glance, whatsNew, strategies)
+    // Speed, round 3 here too: the changing values are held as states and read only by the cards that show them, so a new
+    // price (or a repriced paper book) recomposes the chart and the money, never the strategies or the automation.
+    val q = androidx.compose.runtime.rememberUpdatedState(quotes)
+    val n = androidx.compose.runtime.rememberUpdatedState(note)
+    val d = androidx.compose.runtime.rememberUpdatedState(daily)
+    val a = androidx.compose.runtime.rememberUpdatedState(account)
+    val pp = androidx.compose.runtime.rememberUpdatedState(paper)
+    AlmanacBody(live, loggedIn, remember { { q.value } }, remember { { n.value } }, remember { { d.value } }, remember { { a.value } },
+        remember { { pp.value } }, onGo, onRow, owners, glance, whatsNew, strategies, afterStrategies, automation)
+}
+
+/**
+ * A test's probe of Home's cards (the speed test): called with the card's name each time that card is composed. None in the
+ * app (null): one composition-local read per card.
+ */
+internal val LocalHomeProbe = androidx.compose.runtime.staticCompositionLocalOf<((String) -> Unit)?> { null }
+
+/** Tells the probe that [card] was composed (not restartable: it runs whenever the card around it does). */
+@androidx.compose.runtime.NonRestartableComposable
+@Composable
+private fun Probe(card: String) {
+    val probe = LocalHomeProbe.current ?: return
+    androidx.compose.runtime.SideEffect { probe(card) }
 }
 
 /** Home's money figures, its live-orders rows and the note under the money, from the books of the mode shown. */
@@ -211,7 +236,7 @@ private fun AlmanacBody(
     whatsNew: (@Composable () -> Unit)?,
     strategies: @Composable () -> Unit,
     afterStrategies: List<Pair<String, @Composable () -> Unit>> = emptyList(),
-    reads: List<Pair<String, @Composable () -> Unit>> = emptyList(),
+    automation: (@Composable () -> Unit)? = null,
 ) {
     val p = LocalPalette.current
     var range by rememberSaveable { mutableStateOf("1D") }
@@ -226,10 +251,11 @@ private fun AlmanacBody(
         if (whatsNew != null) item(key = "whatsnew") { whatsNew() }
 
         // ---- today at a glance: the market, the cues or the risk, the strategies, the events -----------------
-        if (glance != null) item { glance() }
+        if (glance != null) item(key = "glance") { glance() }
 
         // ---- the money: capital first and largest --------------------------------------
-        item {
+        item(key = "money") {
+            Probe("money")
             val (money, _, moneyNote) = books.value
             val cap = money.capital
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
@@ -253,13 +279,43 @@ private fun AlmanacBody(
             }
         }
 
+        // ---- live orders: right under the money, what matters while trading (11 Oct) ------------
+        item(key = "orders") {
+            Probe("orders")
+            val orders = books.value.second
+            LedgerCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Live orders", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
+                    Text("All in Trade ›", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.clickable { onGo("trade") }.padding(4.dp))
+                }
+                if (orders.isEmpty()) Note("No open positions or pending orders.", Modifier.padding(top = 6.dp))
+                orders.forEachIndexed { i, o ->
+                    if (i > 0) Rule()
+                    Row(Modifier.fillMaxWidth().clickable { onRow(o.target) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            // Wrapped, not cut, when a large font leaves too little room beside the amount.
+                            Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+                            Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                            o.source?.let { SourcePill(it) }
+                        }
+                        Spacer(Modifier.padding(start = 8.dp))
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(o.value, style = Type.figure.copy(color = o.valueColor ?: p.ink, fontSize = 14.sp))
+                            StatusPill(o.status)
+                        }
+                    }
+                }
+            }
+        }
+
         // ---- strategies: arm the ones you want ------------------------------------------
-        item { strategies() }
-        // ---- the MCX bots and the trade manager: each its own card (11 Oct) -----------------------
-        afterStrategies.forEach { (k, card) -> item(key = k) { card() } }
+        item(key = "strategies") { Probe("strategies"); strategies() }
+        // ---- the MCX bots: their own card (11 Oct) ------------------------------------------------
+        afterStrategies.forEach { (k, card) -> item(key = k) { Probe(k); card() } }
 
         // ---- BANKNIFTY ------------------------------------------------------------------
-        item {
+        item(key = "chart") {
+            Probe("chart")
             val q = quotes()["BANKNIFTY"]
             val dailyNow = daily()
             val today = Market.today()
@@ -310,36 +366,8 @@ private fun AlmanacBody(
             }
         }
 
-        // ---- live orders -----------------------------------------------------------------
-        item {
-            val orders = books.value.second
-            LedgerCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Live orders", style = Type.title.copy(color = p.ink, fontSize = 16.sp), modifier = Modifier.weight(1f))
-                    Text("All in Trade ›", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.clickable { onGo("trade") }.padding(4.dp))
-                }
-                if (orders.isEmpty()) Note("No open positions or pending orders.", Modifier.padding(top = 6.dp))
-                orders.forEachIndexed { i, o ->
-                    if (i > 0) Rule()
-                    Row(Modifier.fillMaxWidth().clickable { onRow(o.target) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            // Wrapped, not cut, when a large font leaves too little room beside the amount.
-                            Text(o.name, style = Type.body.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
-                            Text(o.detail, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
-                            o.source?.let { SourcePill(it) }
-                        }
-                        Spacer(Modifier.padding(start = 8.dp))
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(o.value, style = Type.figure.copy(color = o.valueColor ?: p.ink, fontSize = 14.sp))
-                            StatusPill(o.status)
-                        }
-                    }
-                }
-            }
-        }
-
-        // ---- the reads: order flow, then the Brain, each its own card (11 Oct) -----------------------
-        reads.forEach { (k, card) -> item(key = k) { card() } }
+        // ---- automation: the trade manager, Autopilot, the lab, the order flow, the Brain - one line each (11 Oct) ----
+        if (automation != null) item(key = "automation") { Probe("automation"); automation() }
     }
 }
 

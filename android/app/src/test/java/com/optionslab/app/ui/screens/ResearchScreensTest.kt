@@ -298,7 +298,11 @@ class ResearchScreensTest {
         val c = home(live = false, paper = Load.Done(HomeFixtures.paper))
         text("Capital").assertIsDisplayed()
         text("25% of capital in use").assertIsDisplayed()
-        text("strategies card").assertIsDisplayed()
+        // 11 Oct: the live orders right under the money, then the strategies.
+        scrollTo("Live orders").assertIsDisplayed()
+        val top = { t: String -> compose.onNodeWithText(t).fetchSemanticsNode().boundsInRoot.top }
+        assertTrue("the live orders sit above the strategies", top("Live orders") < top("strategies card"))
+        scrollTo("strategies card").assertIsDisplayed()
         scrollTo("Live orders").assertIsDisplayed()
         text("SELL 75 · avg 120.00 · LTP 100.00").assertIsDisplayed()
         text("OPEN").assertIsDisplayed()

@@ -5,7 +5,9 @@ import android.os.Build
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -94,11 +96,27 @@ class SmokeTest {
         assumeFalse("IraGoldAlgo has its own Home", BuildConfig.GOLD)
         tap("Home")
         if (BuildConfig.JARVIS) tap("Dashboard")
-        // A lazy list: each card is scrolled to before it is asserted.
-        for (card in listOf("Strategies", "MCX (commodities)", "Trade manager", "Autopilot", "Strategy lab")) {
+        // A lazy list: each card is scrolled to before it is asserted. Trading first (11 Oct): the live orders under the money,
+        // then the strategies and MCX; the trade manager, Autopilot, the lab, the order flow and the Brain are one Automation card.
+        for (card in listOf("Live orders", "Strategies", "MCX (commodities)", "Automation")) {
             compose.waitUntil(10_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText(card))
             assertTrue(card, compose.onAllNodesWithText(card).fetchSemanticsNodes().isNotEmpty())
+        }
+        // Each section is one tap away: its line opens a sheet with the section's own buttons, and Close shuts it.
+        val sections = buildList {
+            add("manager" to "Trade manager record"); add("orderflow" to "Order flow per strategy"); add("brain" to "Findings and pauses")
+            if (BuildConfig.JARVIS) { add("autopilot" to "Change log"); add("lab" to "Details") }
+        }
+        for ((key, button) in sections) {
+            val sheet = hasAnyAncestor(hasTestTag("automation-sheet-$key"))
+            compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasTestTag("automation-line-$key"))
+            compose.onNodeWithTag("automation-line-$key").performClick()
+            compose.waitUntil(10_000) { compose.onAllNodes(hasScrollAction() and sheet).fetchSemanticsNodes().isNotEmpty() }
+            compose.onAllNodes(hasScrollAction() and sheet).onFirst().performScrollToNode(hasText(button))
+            assertTrue("$key: $button", compose.onAllNodes(hasText(button) and sheet).fetchSemanticsNodes().isNotEmpty())
+            compose.onAllNodes(hasText("Close") and sheet).onFirst().performClick()
+            compose.waitUntil(10_000) { compose.onAllNodes(hasTestTag("automation-sheet-$key")).fetchSemanticsNodes().isEmpty() }
         }
     }
 
