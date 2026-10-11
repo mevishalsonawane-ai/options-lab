@@ -369,7 +369,7 @@ internal object Autopilot {
     // ---- asking --------------------------------------------------------------------------------------------------------------
 
     /** Where a live raise is confirmed with the PIN. */
-    const val WHERE = "Home → Autopilot → Change log"
+    const val WHERE = "Home → Automation card → Autopilot → Change log"
 
     private fun ask(c: AutoChange.Change, today: LocalDate, nowMs: Long) {
         val e = synchronized(lock) { AutoChange.record(_book.value, c, AutoChange.Status.OFFERED, nowMs, today).also { _book.value = it.first }.second }

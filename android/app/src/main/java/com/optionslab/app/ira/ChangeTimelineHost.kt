@@ -104,7 +104,7 @@ object ChangeTimelineHost {
         IraHub.offer("undo everything today", "Boss, undo today's automatic changes?", ChangeTimeline.askText(p), suspend { undoAll(pinConfirmed = false) },
             addsRisk = p.needPin.isNotEmpty(), alwaysAsk = true)
         return "Asked: undo ${p.now.size} of today's automatic change${if (p.now.size == 1) "" else "s"}" +
-            (if (p.needPin.isNotEmpty()) "; ${p.needPin.size} more need your PIN in Home → Autopilot → Today's changes." else ".")
+            (if (p.needPin.isNotEmpty()) "; ${p.needPin.size} more need your PIN in Home → Automation card → Autopilot → Today's changes." else ".")
     }
 
     /** "What changed today across the app?" */

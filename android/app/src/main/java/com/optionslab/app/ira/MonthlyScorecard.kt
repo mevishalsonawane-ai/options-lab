@@ -14,7 +14,7 @@ import java.time.YearMonth
 /**
  * The monthly automation scorecard (S15; the figures are ira-core's [AutoScorecard]): on the 1st (from [SelfJobs]) the month
  * before's automatic changes per system against making no change, kept against reverted, the specialists muted and the
- * strategy lab's promotions - a sheet (Home → Autopilot → Monthly scorecard), one notification, and Jarvis's "how did the
+ * strategy lab's promotions - a sheet (Home → Automation card → Autopilot → Monthly scorecard), one notification, and Jarvis's "how did the
  * automation do last month?". Reads the agents' books only; changes nothing.
  */
 object MonthlyScorecard {

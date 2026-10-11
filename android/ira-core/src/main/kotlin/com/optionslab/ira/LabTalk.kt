@@ -82,7 +82,7 @@ object LabTalk {
         val waiting = v.changes.filter { it.status == VariantLab.ChangeStatus.OFFERED }
         if (lines.isEmpty() && applied.isEmpty() && reverted.isEmpty()) return "No strategy is running for the lab to tune yet, Boss. Arm one and its shadow variants start the next day."
         val tail = listOfNotNull(
-            applied.takeIf { it.isNotEmpty() }?.let { "Changed on paper by itself: " + it.joinToString("; ") { c -> "${label(c.strategy)} on ${DiscoveryStats.day(c.day)}" } + " (undo on Home → Strategy lab)." },
+            applied.takeIf { it.isNotEmpty() }?.let { "Changed on paper by itself: " + it.joinToString("; ") { c -> "${label(c.strategy)} on ${DiscoveryStats.day(c.day)}" } + " (undo on Home → Automation card → Strategy lab)." },
             reverted.takeIf { it.isNotEmpty() }?.let { "Put back to its defaults by the safety net: " + it.joinToString("; ") { c -> "${label(c.strategy)} on ${DiscoveryStats.day(c.day)}" } + "." },
             waiting.takeIf { it.isNotEmpty() }?.let { "Waiting for you (live, your PIN): " + it.joinToString("; ") { c -> label(c.strategy) } + "." },
             "${v.tried} variant${if (v.tried == 1) "" else "s"} tried so far; ${v.retiredCount} retired. A variant must beat the current rules for at least " +

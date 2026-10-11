@@ -165,6 +165,6 @@ object ChangeTimeline {
     fun askText(plan: Plan): String {
         if (plan.now.isEmpty() && plan.needPin.isEmpty()) return "There is nothing of today's to undo, Boss."
         return "Undo ${plural(plan.now.size, "automatic change")} made today, newest first, each through its own undo?" +
-            (if (plan.needPin.isNotEmpty()) " ${plural(plan.needPin.size, "more")} would add live risk: those only with your PIN in Home → Autopilot → Today's changes." else "")
+            (if (plan.needPin.isNotEmpty()) " ${plural(plan.needPin.size, "more")} would add live risk: those only with your PIN in Home → Automation card → Autopilot → Today's changes." else "")
     }
 }

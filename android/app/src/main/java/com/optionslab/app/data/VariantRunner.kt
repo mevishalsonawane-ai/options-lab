@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
  *    ([orbParams], [liquidityParams], [vixParams]: the book loaded at start on IO; no settings read, no I/O, nothing new on
  *    the order path). A paper strategy's winning variant is applied to the arm's PAPER entries by itself from the next
  *    session, logged with undo, and posted on the findings bus as "variant ready"; a live strategy's is put to Boss
- *    ([com.optionslab.app.ira.IraHub.offer]) and applied only with his PIN (Home → Strategy lab), from the next session.
+ *    ([com.optionslab.app.ira.IraHub.offer]) and applied only with his PIN (Home → Automation card → Strategy lab), from the next session.
  *    The safety net puts an arm back to its defaults by itself when its variant loses too much ([VariantLab.safety]).
  *    A forge survivor that keeps passing is put to Boss as "start it on paper"; the forge never proposes live.
  *  - The nightly forge ([forgeIfDue], from [com.optionslab.app.work.DiscoveryWorker]) runs only while charging and idle or
@@ -394,7 +394,7 @@ object VariantRunner {
                 val v = _variants.value.variants.firstOrNull { it.id == e.change.variant }
                 val from = e.change.effective?.let { " from ${DiscoveryStats.day(it)}" } ?: ""
                 post("$WHO · $label", "variant ready: ${v?.moved() ?: "new rules"} applied to its paper trades$from by itself - ${e.change.why}")
-                runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab: $label's paper rules change$from (${v?.moved()}); undo on Home → Strategy lab.") }
+                runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab: $label's paper rules change$from (${v?.moved()}); undo on Home → Automation card → Strategy lab.") }
             }
             is VariantLab.Event.Reverted -> {
                 val label = VariantLab.strategy(e.change.strategy)?.label ?: e.change.strategy
@@ -424,7 +424,7 @@ object VariantRunner {
     }
 
     /** Where the PIN applies a live change. */
-    const val WHERE = "Home → Strategy lab"
+    const val WHERE = "Home → Automation card → Strategy lab"
 
     private fun offerLive(c: VariantLab.Change) {
         val label = VariantLab.strategy(c.strategy)?.label ?: c.strategy

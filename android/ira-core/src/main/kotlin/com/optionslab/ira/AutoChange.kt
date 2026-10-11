@@ -833,7 +833,7 @@ object AutoChange {
         val lines = t.map { "• " + it.change.what + ": " + it.change.from + " → " + it.change.to + " (" + it.change.scope.words + ", " +
             (if (it.status == Status.OFFERED) "asked you" else riskOf(it.change).words) + ") - " + it.change.reason } +
             reverted.map { "• Reverted ${it.change.what}: ${it.note}" }
-        return "Today, Boss:\n" + lines.joinToString("\n") + "\nEach is on probation and undoable in Home → Autopilot → Change log."
+        return "Today, Boss:\n" + lines.joinToString("\n") + "\nEach is on probation and undoable in Home → Automation card → Autopilot → Change log."
     }
 
     /** "Why did you mute X?": the newest change whose target or name holds [subject]. */

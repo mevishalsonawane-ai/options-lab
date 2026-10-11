@@ -332,7 +332,7 @@ internal fun TodayLessonCard(l: com.optionslab.ira.DailyLesson.Lesson) {
 
 // ---- the Autopilot card's buttons (Home) -------------------------------------------------------------------------------------
 
-/** Home → Autopilot: Today's changes (S13) and the monthly scorecard (S15), and a line while learning is frozen (S14). */
+/** Home → Automation card → Autopilot: Today's changes (S13) and the monthly scorecard (S15), and a line while learning is frozen (S14). */
 @Composable
 internal fun AutopilotSelfButtons() {
     val p = LocalPalette.current
