@@ -111,6 +111,11 @@ object AutoChange {
         val lo: Double? = null, val hi: Double? = null,
         /** The plain name ("the OI specialist on Solo (live)"). */
         val what: String = target,
+        /**
+         * This change puts an earlier one back ([inverse]: an undo or a revert). Only such a change may turn the order flow
+         * back to CONFIRM (where an earlier change took it from); never kept in the log (worked out when needed).
+         */
+        val revert: Boolean = false,
     ) {
         val key: String get() = "${kind.name}:$target"
     }
@@ -200,7 +205,8 @@ object AutoChange {
         "autopilot learning", "lot size", "real orders")
 
     fun never(c: Change): Boolean = c.kind.never || DENY.containsMatchIn(c.target) || DENY.containsMatchIn(c.from) || DENY.containsMatchIn(c.to) ||
-        (c.kind == Kind.FLOW_MODE && c.to == OrderFlow.Mode.CONFIRM.name) ||
+        // The order flow to CONFIRM: never by itself, except putting back a CONFIRM an earlier change took away (it only skips).
+        (c.kind == Kind.FLOW_MODE && c.to == OrderFlow.Mode.CONFIRM.name && !(c.revert && c.from == OrderFlow.Mode.SHADOW.name)) ||
         (c.lo != null && c.to.toDoubleOrNull()?.let { it < c.lo - 1e-9 } == true) || (c.hi != null && c.to.toDoubleOrNull()?.let { it > c.hi + 1e-9 } == true) ||
         knobOutOfBounds(c)
 
@@ -221,7 +227,8 @@ object AutoChange {
             Kind.MANAGER_MODE -> if (c.to == TradeManager.Mode.ACT.name) Risk.RAISE else Risk.LOWER
             Kind.PAPER_ENTRIES -> if (c.to == PAUSED) Risk.LOWER else Risk.RAISE
             Kind.LIVE_ENTRIES -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
-            Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else Risk.RAISE
+            // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
+            Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
                 val a = c.from.toDoubleOrNull(); val b = c.to.toDoubleOrNull()
                 if (a != null && b != null && b < a) Risk.LOWER else Risk.RAISE
@@ -280,7 +287,7 @@ object AutoChange {
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
-        val back = c.copy(from = c.to, to = c.from, reason = reason, risk = Risk.NEUTRAL_SHADOW)
+        val back = c.copy(from = c.to, to = c.from, reason = reason, risk = Risk.NEUTRAL_SHADOW, revert = true)
         return back.copy(risk = riskOf(back))
     }
 
@@ -579,7 +586,8 @@ object AutoChange {
      */
     fun plan(book: Book, candidates: List<Change>, day: LocalDate, mode: Mode, healthOnly: Boolean = false): Plan {
         val auto = ArrayList<Change>(); val ask = ArrayList<Change>(); val held = ArrayList<Pair<Change, String>>(); val never = ArrayList<Change>()
-        val todays = book.entries.filter { it.day == day && it.by == "autopilot" }
+        // A graduated experiment's change counts toward the day's caps like Autopilot's own.
+        val todays = book.entries.filter { it.day == day && it.by in TRIERS }
         var autos = todays.count { it.status != Status.OFFERED && it.status != Status.DECLINED && it.status != Status.SKIPPED }
         var lives = todays.count { it.status != Status.OFFERED && it.status != Status.DECLINED && it.status != Status.SKIPPED && it.change.scope == Scope.LIVE }
         var asks = todays.count { it.status == Status.OFFERED || it.status == Status.DECLINED }
@@ -740,6 +748,31 @@ object AutoChange {
             out += Judged(e, if (asks) Verdict.ASK_REVERT else Verdict.REVERT, inv, why, xs.size, effect)
         }
         return b to out
+    }
+
+    /**
+     * A revert [review] decided could not be made by itself (its agent refused: it needs Boss's PIN there, or nothing could be
+     * changed): not recorded as reverted - asked of Boss instead ([Status.REVERT_ASKED], his PIN in the change log).
+     */
+    fun revertNotApplied(book: Book, id: String, why: String): Book {
+        val e = entry(book, id) ?: return book
+        if (e.status != Status.REVERTED) return book
+        return update(book, id) { it.copy(status = Status.REVERT_ASKED, note = "$why - the revert could not be made by itself: yours, with your PIN") }
+    }
+
+    /**
+     * Why a won experiment's paper change may not be made by itself on [day] under [mode] (null: it may) - the same gates as
+     * any other automatic change: SAFE only, never a NEVER, paper only, a resting or blacklisted target left alone, and the
+     * day's cap of automatic changes.
+     */
+    fun graduateHeld(book: Book, c: Change, day: LocalDate, mode: Mode): String? {
+        if (never(c)) return "never changed by itself"
+        if (c.scope != Scope.PAPER) return "experiments graduate on paper only"
+        if (mode != Mode.SAFE) return if (mode == Mode.OFF) "Autopilot learning is off" else "Autopilot learning is on for shadow changes only"
+        blocked(book, c.key, day)?.let { return it }
+        val made = book.entries.count { it.day == day && it.by in TRIERS && it.status != Status.OFFERED && it.status != Status.DECLINED && it.status != Status.SKIPPED }
+        if (made >= MAX_AUTO_DAY) return "today's $MAX_AUTO_DAY changes are made"
+        return null
     }
 
     /** Boss said yes to an asked revert: reverted, and counted toward the blacklist. */

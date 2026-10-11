@@ -16,6 +16,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -291,6 +292,132 @@ class AutopilotTest : RobolectricTest() {
         Autopilot.voiceSet(AutoChange.Mode.OFF)
         assertEquals(AutoChange.Mode.OFF, Autopilot.mode.value)
         assertNotEquals(AutoChange.Mode.SAFE, Autopilot.mode.value)
+    }
+
+    // ---- review 2 ----
+
+    private fun paperMute(fam: String = "pine") = AutoChange.Change(AutoChange.Kind.SPECIALIST_MUTE, "spec:$fam:oi", AutoChange.COUNTS, AutoChange.MUTED, "hurt",
+        AutoChange.Evidence(40, -4_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER, "spec:$fam:oi", -1, -1,
+        what = "the OI specialist on Pine (paper)")
+
+    @Test fun aFrozenLearningStillLowersRisk() = runBlocking<Unit> {
+        // Review 2 #9: the freeze holds every change that does not lower risk; a risk-lowering one still goes.
+        LearningFreeze.setForTest(com.optionslab.ira.FreezeRule.State(frozen = true, why = "test"))
+        try {
+            Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30),
+                lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }
+            Autopilot.run(day, healthOnly = false)
+            assertTrue("night_r3" in SmartWorkers.settings.value.paused)
+            val es = Autopilot.book.value.entries
+            assertEquals(AutoChange.Status.PROBATION, es.single { it.change.target == "paper:night_r3" }.status)
+            val knob = es.single { it.change.target == "knob:trap.lockout_sec" }
+            assertEquals(AutoChange.Status.SKIPPED, knob.status)
+            assertEquals(LearningFreeze.NOTE, knob.note)
+            assertTrue(Autopilot.knobs.value.isEmpty())
+        } finally {
+            LearningFreeze.resetForTest()
+        }
+    }
+
+    @Test fun thePassDayIsKeptOnDiskBeforeAnythingElse() = runBlocking<Unit> {
+        // Review 2 #11: a pass that dies half-way never runs again the same day after a restart.
+        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
+        f.delete()
+        Autopilot.testInputs = { _ -> error("the agents' stores could not be read") }
+        assertNull(Autopilot.run(day, healthOnly = false))
+        assertTrue(f.isFile)
+        assertEquals(day, AutoChange.decode(f.readText()).lastRun)
+    }
+
+    @Test fun undoingAPaperMuteWhereTheManagerActsLiveTakesThePin() {
+        // Review 2 #12: a paper mute also mutes the live book; with the manager acting on live, its undo raises live risk.
+        ManagerSpecialists.mute("pine", "oi", by = "Autopilot")
+        val (b, e) = AutoChange.record(AutoChange.Book(), paperMute(), AutoChange.Status.PROBATION, ms(day), day)
+        Autopilot.setForTest(b)
+        assertFalse(Autopilot.undoNeedsPin(e.id))
+        TradeManagerHost.setMode("pine", TradeManager.Account.LIVE, TradeManager.Mode.ACT, pinConfirmed = true)
+        assertTrue(Autopilot.undoNeedsPin(e.id))
+        assertEquals(Autopilot.PIN_UNDO, Autopilot.undo(e.id))
+        assertFalse(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
+        assertEquals(AutoChange.Status.PROBATION, Autopilot.book.value.entries.single().status)
+        assertTrue(Autopilot.undo(e.id, pinConfirmed = true).startsWith("Undone"))
+        assertTrue(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
+    }
+
+    @Test fun aRevertItsAgentRefusesIsAskedNotRecordedAsReverted() = runBlocking<Unit> {
+        // Review 2 #12: the paper mute's probation says revert, but un-muting where the manager acts on live takes the PIN.
+        ManagerSpecialists.mute("pine", "oi", by = "Autopilot")
+        TradeManagerHost.setMode("pine", TradeManager.Account.LIVE, TradeManager.Mode.ACT, pinConfirmed = true)
+        val then = ms(day.minusDays(8))
+        Autopilot.setForTest(AutoChange.record(AutoChange.Book(), paperMute(), AutoChange.Status.PROBATION, then, day.minusDays(8)).first)
+        TradeManagerHost.recordsForTest((0 until 20).map { settled(it, then + (it + 1) * 3_600_000L, 400.0 + it) })
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d) }
+        Autopilot.run(day, healthOnly = false)
+        val e = Autopilot.book.value.entries.single()
+        assertEquals(AutoChange.Status.REVERT_ASKED, e.status)
+        assertFalse(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
+        // Boss's revert with his PIN.
+        assertTrue(Autopilot.revertWithPin(e.id).startsWith("Reverted"))
+        assertEquals(AutoChange.Status.REVERTED, Autopilot.book.value.entries.single().status)
+        assertTrue(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
+    }
+
+    @Test fun aMuteBossSaidYesToIsHisHand() {
+        // Review 2 #6: an asked mute applied on Boss's yes is "muted by you": Autopilot never un-mutes it by itself.
+        val c = paperMute().copy(scope = AutoChange.Scope.LIVE, evidence = AutoChange.Evidence(20, -2_000.0, AgentLessons.Confidence.BUILDING, -1))
+        val (b, e) = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.OFFERED, ms(day), day)
+        Autopilot.setForTest(b)
+        Autopilot.acceptAsked(e.id, pinConfirmed = false)
+        val why = checkNotNull(ManagerSpecialists.book.value.frozen["pine"]?.muted?.get("oi"))
+        assertTrue(why, why.startsWith("muted by you"))
+        val sb = ManagerSpecialists.book.value
+        TradeManagerHost.setMode("pine", TradeManager.Account.LIVE, TradeManager.Mode.ACT, pinConfirmed = true)
+        val cs = AutoChange.candidates(AutoChange.Inputs(day, listOf(lesson("spec:pine:oi", "The OI specialist on Pine", 1)), policy = TradeManagerHost.policy.value,
+            mutedPaper = sb.tuned.mapValues { it.value.muted }, mutedLive = sb.frozen.mapValues { it.value.muted }))
+        assertTrue(cs.none { it.kind == AutoChange.Kind.SPECIALIST_MUTE && it.to == AutoChange.COUNTS })
+    }
+
+    @Test fun anOrderFlowChangeFromConfirmIsUndoneBackToConfirm() {
+        // Review 2 #7: Night's order flow taken from CONFIRM to SHADOW (paper); its undo puts CONFIRM back.
+        com.optionslab.app.data.FlowGate.set("night_r3", com.optionslab.ira.OrderFlow.Mode.CONFIRM)
+        val c = AutoChange.Change(AutoChange.Kind.FLOW_MODE, "flow:night_r3", "CONFIRM", "SHADOW", "the skipped entries make money",
+            AutoChange.Evidence(20, 2_000.0, AgentLessons.Confidence.BUILDING, 1), AutoChange.Risk.RAISE, AutoChange.Scope.PAPER, null, 1, 1,
+            what = "Night (R3)'s order flow")
+        assertNotNull(Autopilot.apply(c, pinConfirmed = false))
+        assertEquals(com.optionslab.ira.OrderFlow.Mode.SHADOW, com.optionslab.app.data.FlowGate.setting("night_r3").mode)
+        val (b, e) = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, ms(day), day)
+        Autopilot.setForTest(b)
+        assertFalse(Autopilot.undoNeedsPin(e.id))
+        val said = Autopilot.undo(e.id)
+        assertTrue(said, said.startsWith("Undone"))
+        assertEquals(com.optionslab.ira.OrderFlow.Mode.CONFIRM, com.optionslab.app.data.FlowGate.setting("night_r3").mode)
+        assertEquals(AutoChange.Status.UNDONE, Autopilot.book.value.entries.single().status)
+        // Nothing turns it to CONFIRM by itself otherwise.
+        assertNull(Autopilot.apply(c.copy(from = "SHADOW", to = "CONFIRM"), pinConfirmed = false))
+    }
+
+    @Test fun aWonExperimentDoesNotGraduateWhileAutopilotIsOff() = runBlocking<Unit> {
+        // Review 2 #4: Autopilot learning off - a won paper experiment is recorded, not applied.
+        val pause = AutoChange.Change(AutoChange.Kind.PAPER_ENTRIES, "paper:night_r3", AutoChange.ON, AutoChange.PAUSED, "loses",
+            AutoChange.Evidence(20, -2_000.0, AgentLessons.Confidence.BUILDING, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER, null, -1, -1,
+            what = "Night (R3)'s new paper entries")
+        val start = ms(day.minusDays(10))
+        Autopilot.setForTest(com.optionslab.ira.Experiments.start(AutoChange.Book(), pause, day.minusDays(10), start))
+        // Night's paper trades since: every one lost, so the variant (paused: not taken) leads every pair.
+        val trips = (0 until 30).map { k ->
+            val d = day.minusDays(9L).atTime(9, 0).plusMinutes(k * 20L)
+            com.optionslab.ira.Insights.Trip("X", d, d.plusMinutes(10), -800.0, "Night (R3)")
+        }
+        Autopilot.testReplay = { com.optionslab.ira.Preflight.Data(paperTrips = trips) }
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d) }
+        Autopilot.setMode(AutoChange.Mode.OFF)
+        Autopilot.run(day, healthOnly = false)
+        val x = Autopilot.book.value.experiments.single()
+        assertEquals(com.optionslab.ira.Experiments.Status.WON, x.status)
+        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
+        val e = Autopilot.book.value.entries.single()
+        assertEquals(AutoChange.Status.SKIPPED, e.status)
+        assertTrue(e.note, e.note.startsWith("won, not applied: Autopilot learning is off"))
     }
 
     @Test fun jarvisAnswersWhatChangedAndUndoIsAsked() = runBlocking<Unit> {

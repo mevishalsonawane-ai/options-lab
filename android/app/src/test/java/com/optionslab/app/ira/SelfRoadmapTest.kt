@@ -76,10 +76,12 @@ class SelfRoadmapTest : RobolectricTest() {
         assumeTrue("the learning freeze and Boss's trades are in IraAlgo with Jarvis only", Autopilot.enabled())
         LearningFreeze.setForTest(FreezeRule.State(true, setOf(FreezeRule.Account.PAPER), day, "paper fell"))
         assertTrue(LearningFreeze.holds())
-        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        // A shadow knob (not risk-lowering): recorded, not applied. (A risk-lowering change still goes: AutopilotTest, review 2 #9.)
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }
         Autopilot.run(day, healthOnly = false)
-        assertFalse("nothing applied while frozen", "night_r3" in SmartWorkers.settings.value.paused)
+        assertTrue("nothing applied while frozen", Autopilot.knobs.value.isEmpty())
         val e = Autopilot.book.value.entries.single()
+        assertEquals("knob:trap.lockout_sec", e.change.target)
         assertEquals(AutoChange.Status.SKIPPED, e.status)
         assertEquals(LearningFreeze.NOTE, e.note)
     }

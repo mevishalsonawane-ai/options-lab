@@ -80,7 +80,8 @@ internal object Autopilot {
     val knobs: StateFlow<Map<String, Double>> = _knobs
 
     @Volatile private var loaded = false
-    @Volatile private var running = false
+    /** One pass at a time (compare-and-set: two workers waking together never both run it). */
+    private val running = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /** TEST ONLY: the inputs instead of the agents' stores; and whether the live account is on. */
     @Volatile internal var testInputs: ((LocalDate) -> AutoChange.Inputs)? = null
@@ -187,10 +188,11 @@ internal object Autopilot {
 
     /** One pass (and by tests): gather, plan, apply, ask, review the probations, tell. */
     internal suspend fun run(today: LocalDate, healthOnly: Boolean, nowMs: Long = System.currentTimeMillis()): AutoChange.Plan? {
-        if (running) return null
-        running = true
+        if (!running.compareAndSet(false, true)) return null
         try {
             synchronized(lock) { _book.value = if (healthOnly) _book.value.copy(lastMidday = today) else _book.value.copy(lastRun = today) }
+            // The pass's day kept on disk before anything is applied: a crash or a kill never runs it twice.
+            withContext(Dispatchers.IO) { synchronized(lock) { save() } }
             val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(today) ?: gather(today) }.getOrNull() } ?: return null
             // The stored history the pre-flight replays and the experiments are judged on (files and memory; no network).
             val data = withContext(Dispatchers.IO) {
@@ -214,13 +216,16 @@ internal object Autopilot {
             }
             val made = ArrayList<AutoChange.Change>()
             for (g in routed.apply) {
-                // S14: learning frozen - recorded as skipped, not applied.
-                if (LearningFreeze.holds()) { synchronized(lock) { _book.value = AutoChange.record(_book.value, g.change, AutoChange.Status.SKIPPED, nowMs, today, note = LearningFreeze.NOTE, q = g.q).first }; continue }
+                // S14: learning frozen - recorded as skipped, not applied; a change that only lowers risk still goes (the freeze
+                // is there to stop learning from adding to a fall, never to keep risk up).
+                if (AutoChange.riskOf(g.change) != AutoChange.Risk.LOWER && LearningFreeze.holds()) { synchronized(lock) { _book.value = AutoChange.record(_book.value, g.change, AutoChange.Status.SKIPPED, nowMs, today, note = LearningFreeze.NOTE, q = g.q).first }; continue }
                 val c = g.change
                 val said = runCatching { apply(c, pinConfirmed = false) }.getOrNull() ?: continue
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.PROBATION, nowMs, today, q = g.q, preflight = g.preflight?.words().orEmpty()).first
                 }
+                // Kept on disk at once: a crash later in the pass never forgets a change that was made.
+                withContext(Dispatchers.IO) { synchronized(lock) { save() } }
                 made += c
                 tellOne(c, said)
                 c.lessonId?.let { id -> runCatching { JarvisLearning.autoStatus(id, "applied") } }
@@ -233,7 +238,7 @@ internal object Autopilot {
             if (!healthOnly || made.isNotEmpty()) runCatching { notifyDay(today) }
             return plan
         } finally {
-            running = false
+            running.set(false)
         }
     }
 
@@ -257,7 +262,7 @@ internal object Autopilot {
      * [c] applied through its agent's setter: what was said, or null when the agent refused or nothing changed. A change that
      * raises live risk goes only with [pinConfirmed]. Never an order, a size, a stop or a safety setting.
      */
-    internal fun apply(c: AutoChange.Change, pinConfirmed: Boolean): String? {
+    internal fun apply(c: AutoChange.Change, pinConfirmed: Boolean, byBoss: Boolean = false): String? {
         if (AutoChange.never(c)) return null
         val raisesLive = c.scope == AutoChange.Scope.LIVE && AutoChange.riskOf(c) == AutoChange.Risk.RAISE
         if (raisesLive && !pinConfirmed) return null
@@ -265,7 +270,8 @@ internal object Autopilot {
         return when (c.kind) {
             AutoChange.Kind.SPECIALIST_MUTE -> {
                 if (parts.size != 3 || parts[0] != "spec") return null
-                if (c.to == AutoChange.MUTED) ManagerSpecialists.mute(parts[1], parts[2], by = WHO)
+                // A mute Boss said yes to is his hand ("muted by you"): Autopilot never un-mutes it by itself.
+                if (c.to == AutoChange.MUTED) ManagerSpecialists.mute(parts[1], parts[2], by = if (byBoss) "you (on Autopilot's ask)" else WHO)
                 else ManagerSpecialists.unmute(parts[1], parts[2], pinConfirmed).takeIf { it != ManagerSpecialists.PIN_UNMUTE }
             }
             AutoChange.Kind.SPECIALIST_WEIGHT -> {
@@ -301,9 +307,10 @@ internal object Autopilot {
             AutoChange.Kind.FLOW_MODE -> {
                 val key = c.target.removePrefix("flow:")
                 val to = OrderFlow.Mode.entries.firstOrNull { it.name == c.to } ?: return null
-                // Only toward SHADOW or OFF (CONFIRM takes Boss's PIN in the Order flow card).
-                if (to == OrderFlow.Mode.CONFIRM) return null
-                FlowGate.set(key, to)
+                // Only toward SHADOW or OFF - or back to the CONFIRM an earlier change took away (it only skips); the order
+                // flow's own rule stands: CONFIRM on a live-capable strategy in Live takes Boss's PIN.
+                if (to == OrderFlow.Mode.CONFIRM && !(c.revert && c.from == OrderFlow.Mode.SHADOW.name)) return null
+                FlowGate.set(key, to, pinConfirmed = pinConfirmed).takeIf { it != FlowGate.PIN_NEEDED }
             }
             AutoChange.Kind.TRAP_THRESHOLD, AutoChange.Kind.WAKE_SCHEDULE, AutoChange.Kind.HEAL_BACKOFF, AutoChange.Kind.REGIME_THRESHOLD,
             AutoChange.Kind.DRIFT_THRESHOLD -> setKnob(c.target.removePrefix("knob:"), c.to.toDoubleOrNull() ?: return null)
@@ -354,7 +361,7 @@ internal object Autopilot {
         if (e.status != AutoChange.Status.OFFERED) return "That change is no longer waiting."
         val live = e.change.scope == AutoChange.Scope.LIVE && AutoChange.riskOf(e.change) == AutoChange.Risk.RAISE
         if (live && !pinConfirmed) return "It adds live risk, Boss: apply it with your PIN in $WHERE."
-        val said = runCatching { apply(e.change, pinConfirmed) }.getOrNull() ?: return "Nothing changed: ${e.change.what} could not be changed just now."
+        val said = runCatching { apply(e.change, pinConfirmed, byBoss = true) }.getOrNull() ?: return "Nothing changed: ${e.change.what} could not be changed just now."
         val today = Market.today()
         synchronized(lock) { _book.value = AutoChange.accepted(_book.value, id, System.currentTimeMillis(), today) }
         e.change.lessonId?.let { runCatching { JarvisLearning.autoStatus(it, "applied") } }
@@ -372,13 +379,29 @@ internal object Autopilot {
     const val PIN_UNDO = "Undoing that raises live risk: confirm with your PIN in $WHERE. Nothing changed."
 
     /** Does undoing [id] need the PIN (it raises live risk)? */
-    fun undoNeedsPin(id: String): Boolean = AutoChange.undo(_book.value, id)?.needsPin == true
+    fun undoNeedsPin(id: String): Boolean = AutoChange.undo(_book.value, id)?.let { needsPin(it.inverse, it.needsPin) } == true
+
+    /**
+     * Does applying [inverse] need the PIN: by its scope ([scopeSays]), or by what its agent holds now - un-muting where the
+     * trade manager acts on live (any mute also mutes the live book), the order flow's CONFIRM where its own rule takes the PIN.
+     */
+    private fun needsPin(inverse: AutoChange.Change, scopeSays: Boolean): Boolean {
+        if (scopeSays) return true
+        val p = inverse.target.split(':')
+        return when (inverse.kind) {
+            AutoChange.Kind.SPECIALIST_MUTE -> inverse.to != AutoChange.MUTED && p.size == 3 &&
+                runCatching { ManagerSpecialists.liveActs(p[1]) }.getOrDefault(true)
+            AutoChange.Kind.FLOW_MODE -> inverse.to == OrderFlow.Mode.CONFIRM.name &&
+                runCatching { FlowGate.needsPin(inverse.target.removePrefix("flow:"), OrderFlow.Mode.CONFIRM) }.getOrDefault(true)
+            else -> false
+        }
+    }
 
     /** Boss's Undo on [id] (the change log): the inverse through the same setter; a live raise only with [pinConfirmed]. */
     fun undo(id: String, pinConfirmed: Boolean = false): String {
         ensureLoaded()
         val u = AutoChange.undo(_book.value, id) ?: return "That change can't be undone now (it was already undone or reverted)."
-        if (u.needsPin && !pinConfirmed) return PIN_UNDO
+        if (needsPin(u.inverse, u.needsPin) && !pinConfirmed) return PIN_UNDO
         val said = runCatching { apply(u.inverse, pinConfirmed) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
         synchronized(lock) { _book.value = AutoChange.undone(_book.value, id, Market.today()) }
         runCatching { Diag.record("autopilot", "undone by you: ${u.entry.change.what}") }
@@ -390,7 +413,7 @@ internal object Autopilot {
     fun offerUndoLast(): String {
         ensureLoaded()
         val e = AutoChange.lastUndoable(_book.value) ?: return "I have no change of my own to undo, Boss."
-        val pin = AutoChange.undoNeedsPin(e.change)
+        val pin = undoNeedsPin(e.id)
         val text = "Undo ${e.change.what}: ${e.change.to} → ${e.change.from}?" + if (pin) " It raises live risk, so it needs your PIN in $WHERE." else ""
         IraHub.offer("undo Autopilot's last change", "Boss, undo Autopilot's last change?", text,
             suspend { if (pin) PIN_UNDO else undo(e.id) }, addsRisk = pin, alwaysAsk = true)
@@ -424,7 +447,13 @@ internal object Autopilot {
             AutoChange.Verdict.KEEP -> j.entry.change.lessonId?.let { runCatching { JarvisLearning.autoStatus(it, "kept") } }
             AutoChange.Verdict.REVERT -> {
                 val inv = j.inverse ?: continue
-                runCatching { apply(inv, pinConfirmed = false) }
+                // Recorded as reverted only when it really was: an agent that refused (its PIN rule, nothing to change) leaves
+                // the revert to Boss, asked like a live one.
+                if (runCatching { apply(inv, pinConfirmed = false) }.getOrNull() == null) {
+                    synchronized(lock) { _book.value = AutoChange.revertNotApplied(_book.value, j.entry.id, j.why) }
+                    offerRevert(j)
+                    continue
+                }
                 j.entry.change.lessonId?.let { runCatching { JarvisLearning.autoStatus(it, "reverted") } }
                 runCatching { SmartWorkers.found(WHO, Findings.Kind.OTHER, Findings.ALL, words = "Autopilot reverted ${j.entry.change.what}: ${j.why}", strength = 55,
                     ttlMs = 24 * 3_600_000L) }
@@ -433,13 +462,20 @@ internal object Autopilot {
             AutoChange.Verdict.ASK_REVERT -> {
                 if (j.inverse == null) continue
                 j.entry.change.lessonId?.let { runCatching { JarvisLearning.autoStatus(it, "reverted") } }
-                val id = j.entry.id
-                IraHub.offer("autopilot: revert ${j.entry.change.what}", "Boss, revert an Autopilot change?",
-                    "Boss, ${j.entry.change.what} did worse since I changed it (${j.why}). Putting it back adds live risk: confirm here, then revert it with your PIN in $WHERE.",
-                    suspend { "Revert it with your PIN in $WHERE (it adds live risk)." }, addsRisk = true, alwaysAsk = true,
-                    declined = { synchronized(lock) { _book.value = AutoChange.declined(_book.value, id, Market.today()) }; saveSoon() })
+                offerRevert(j)
             }
             AutoChange.Verdict.WAIT -> {}
+        }
+    }
+
+    /** A revert left to Boss: asked, done with his PIN in the change log ([revertWithPin]). */
+    private fun offerRevert(j: AutoChange.Judged) {
+        val id = j.entry.id
+        runCatching {
+            IraHub.offer("autopilot: revert ${j.entry.change.what}", "Boss, revert an Autopilot change?",
+                "Boss, ${j.entry.change.what} did worse since I changed it (${j.why}). Putting it back needs your PIN: confirm here, then revert it with your PIN in $WHERE.",
+                suspend { "Revert it with your PIN in $WHERE." }, addsRisk = true, alwaysAsk = true,
+                declined = { synchronized(lock) { _book.value = AutoChange.declined(_book.value, id, Market.today()) }; saveSoon() })
         }
     }
 
@@ -481,6 +517,12 @@ internal object Autopilot {
     /** A won experiment's paper change made: pre-flight first, then through its agent's setter, on probation like any other. */
     private suspend fun graduate(c: AutoChange.Change, today: LocalDate, data: Preflight.Data, nowMs: Long) {
         if (c.scope != AutoChange.Scope.PAPER || AutoChange.never(c) || LearningFreeze.holds()) return
+        // The same gates as any automatic change: SAFE only, a resting or blacklisted target left alone, the day's cap.
+        val held = AutoChange.graduateHeld(_book.value, c, today, _mode.value)
+        if (held != null) {
+            synchronized(lock) { _book.value = AutoChange.record(_book.value, c, AutoChange.Status.SKIPPED, nowMs, today, by = Experiments.BY, note = "won, not applied: $held").first }
+            return
+        }
         val pre = withContext(Dispatchers.Default) { Preflight.check(c, data) }
         if (!pre.ok) {
             synchronized(lock) { _book.value = AutoChange.record(_book.value, c, AutoChange.Status.SKIPPED, nowMs, today, by = Experiments.BY, note = pre.words()).first }
@@ -513,6 +555,17 @@ internal object Autopilot {
     }
 
     // ---- the specialists' own nightly tuning, logged as Autopilot's ------------------------------------------------------------
+
+    /**
+     * The specialists of [family] whose weight Boss undid (or said no to) and which still rest on [day]: the nightly tuning
+     * leaves their weight alone ([SpecialistBook.tune]). Memory (the log is read once on a worker thread).
+     */
+    fun restedWeights(family: String, day: LocalDate): Set<String> {
+        if (!enabled()) return emptySet()
+        ensureLoaded()
+        val pre = "${AutoChange.Kind.SPECIALIST_WEIGHT.name}:weight:$family:"
+        return _book.value.rest.filter { (k, until) -> k.startsWith(pre) && !day.isAfter(until) }.keys.map { it.removePrefix(pre) }.toSet()
+    }
 
     /** [ManagerSpecialists]' nightly tuning of [family] (already applied there): logged here, undoable. */
     fun logTuning(family: String, before: SpecialistBook.Tuning?, after: SpecialistBook.Tuning, base: com.optionslab.ira.ManagerConfig) {
@@ -589,7 +642,7 @@ internal object Autopilot {
     internal fun resetForTest() {
         synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
         _mode.value = AutoChange.Mode.SAFE
-        loaded = true; running = false; notifiedOn = null; testInputs = null; testLive = null; testReplay = null
+        loaded = true; running.set(false); notifiedOn = null; testInputs = null; testLive = null; testReplay = null
     }
 
     /** TEST ONLY: [b] as the log. */

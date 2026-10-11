@@ -326,6 +326,66 @@ class AutoChangeTest {
         assertEquals(AutoChange.Verdict.REVERT, A.review(pb, d0.plusDays(8)) { List(10) { 400.0 + it } }.second.single().verdict)
     }
 
+    // ---- review 2 -------------------------------------------------------------------------------------------------------------
+
+    @Test fun anOrderFlowChangeFromConfirmCanBeRevertedButNeverTurnedToConfirmByItself() {
+        // Review 2 #7: CONFIRM -> SHADOW on paper (it adds risk: the skips go), reverted when it got worse.
+        val c = ch(AutoChange.Kind.FLOW_MODE, AutoChange.Scope.PAPER, "CONFIRM", "SHADOW", BUILDING, AutoChange.Risk.RAISE, target = "flow:night_r3")
+        assertEquals(AutoChange.Risk.RAISE, A.riskOf(c))
+        val (b, e) = A.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, 0, d0)
+        val j = A.review(b, d0.plusDays(2)) { List(15) { 200.0 + it } }.second.single()
+        assertEquals(AutoChange.Verdict.REVERT, j.verdict)
+        val inv = j.inverse!!
+        assertEquals("CONFIRM", inv.to); assertTrue(inv.revert)
+        // Its revert back to CONFIRM is not a NEVER and lowers risk (CONFIRM only skips).
+        assertFalse(A.never(inv))
+        assertEquals(AutoChange.Risk.LOWER, A.riskOf(inv))
+        assertFalse(A.undo(b, e.id)!!.needsPin)
+        // A live one's undo lowers risk too (the order flow's own PIN rule is the app's to apply).
+        assertFalse(A.undoNeedsPin(c.copy(scope = AutoChange.Scope.LIVE)))
+        // But nothing turns the order flow to CONFIRM by itself.
+        assertEquals(AutoChange.Decision.NEVER, A.classify(ch(AutoChange.Kind.FLOW_MODE, AutoChange.Scope.PAPER, "SHADOW", "CONFIRM")))
+        assertTrue(A.never(ch(AutoChange.Kind.FLOW_MODE, AutoChange.Scope.PAPER, "OFF", "CONFIRM").copy(revert = true)))
+    }
+
+    @Test fun aRevertItsAgentRefusedIsAskedNotRecordedAsReverted() {
+        // Review 2 #7, #12: the revert could not be made (its agent's PIN rule): REVERT_ASKED, for Boss's PIN.
+        val c = mute(AutoChange.Scope.PAPER, BUILDING)
+        val (b, e) = A.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, 0, d0)
+        val (r, _) = A.review(b, d0.plusDays(2)) { List(15) { 200.0 + it } }
+        assertEquals(AutoChange.Status.REVERTED, A.entry(r, e.id)!!.status)
+        val asked = A.revertNotApplied(r, e.id, "worse")
+        assertEquals(AutoChange.Status.REVERT_ASKED, A.entry(asked, e.id)!!.status)
+        assertTrue("yours, with your PIN" in A.entry(asked, e.id)!!.note)
+        assertEquals(AutoChange.Status.REVERTED, A.entry(A.revertAccepted(asked, e.id, d0.plusDays(2)), e.id)!!.status)
+        // Only a reverted entry moves.
+        assertEquals(b, A.revertNotApplied(b, e.id, "x"))
+    }
+
+    @Test fun aWonExperimentGraduatesOnlyUnderTheUsualGates() {
+        // Review 2 #4: mode, NEVER, blocked targets and the day's cap apply to a graduation as to any automatic change.
+        val c = ch(AutoChange.Kind.PAPER_ENTRIES, AutoChange.Scope.PAPER, A.ON, A.PAUSED, BUILDING, target = "paper:night_r3")
+        assertNull(A.graduateHeld(AutoChange.Book(), c, d0, AutoChange.Mode.SAFE))
+        assertEquals("Autopilot learning is off", A.graduateHeld(AutoChange.Book(), c, d0, AutoChange.Mode.OFF))
+        assertNotNull(A.graduateHeld(AutoChange.Book(), c, d0, AutoChange.Mode.SHADOW_ONLY))
+        assertNotNull(A.graduateHeld(AutoChange.Book(), c.copy(scope = AutoChange.Scope.LIVE), d0, AutoChange.Mode.SAFE))
+        assertNotNull(A.graduateHeld(AutoChange.Book(), c.copy(target = "paper:k.mode"), d0, AutoChange.Mode.SAFE))
+        // Resting after Boss's undo, or blacklisted.
+        val rested = AutoChange.Book(rest = mapOf(c.key to d0.plusDays(10)))
+        assertTrue(A.graduateHeld(rested, c, d0, AutoChange.Mode.SAFE)!!.startsWith("resting"))
+        assertTrue(A.graduateHeld(AutoChange.Book(blacklist = mapOf(c.key to d0.plusDays(10))), c, d0, AutoChange.Mode.SAFE)!!.startsWith("blacklisted"))
+        // The day's cap, counting graduations and Autopilot's own alike.
+        var b = AutoChange.Book()
+        for (i in 0 until A.MAX_AUTO_DAY) b = A.record(b, mute(AutoChange.Scope.PAPER, BUILDING, fam = "night", id = ManagerTeam.IDS[i]),
+            AutoChange.Status.PROBATION, 0, d0, by = if (i % 2 == 0) Experiments.BY else "autopilot").first
+        assertEquals("today's ${A.MAX_AUTO_DAY} changes are made", A.graduateHeld(b, c, d0, AutoChange.Mode.SAFE))
+        // ...and the plan counts a graduation toward the cap too.
+        var g = AutoChange.Book()
+        for (i in 0 until A.MAX_AUTO_DAY) g = A.record(g, mute(AutoChange.Scope.PAPER, BUILDING, fam = "night", id = ManagerTeam.IDS[i]),
+            AutoChange.Status.PROBATION, 0, d0, by = Experiments.BY).first
+        assertTrue(A.plan(g, listOf(c), d0, AutoChange.Mode.SAFE).auto.isEmpty())
+    }
+
     @Test fun twoRevertsBlacklistTheTargetFor30Days() {
         val c = mute(AutoChange.Scope.PAPER, BUILDING)
         var b = A.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, 0, d0).first
