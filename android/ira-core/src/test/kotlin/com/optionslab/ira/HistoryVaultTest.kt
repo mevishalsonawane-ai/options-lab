@@ -73,6 +73,30 @@ class HistoryVaultTest {
         assertFailsWith<java.io.IOException> { HistoryCodec.decodeBars(cut) }
     }
 
+    @Test fun aKeptFileThatCannotBeDecodedIsRemovedSoTheDayIsFetchedAgain() {
+        val root = tmp()
+        val v = HistoryVault(root)
+        v.putBars(HistoryVault.Family.INDEX, day, listOf(series("NIFTY", 25_000.0)))
+        v.putChains("NIFTY", day, listOf(HistoryCodec.Chain("NIFTY", 1, 25_000.0, listOf(HistoryCodec.ChainRow(day.plusDays(2), 25_000.0, true, 120.0, 9, 0.12)))))
+        assertTrue(v.has(HistoryVault.Family.INDEX, day))
+        // Torn by a crash: half of each file.
+        for (fam in listOf(HistoryVault.Family.INDEX, HistoryVault.Family.chain("NIFTY"))) {
+            val f = File(File(root, day.toString()), fam + HistoryVault.EXT)
+            f.writeBytes(f.readBytes().copyOf(f.length().toInt() / 2))
+        }
+        assertTrue(v.bars("NIFTY", day).isEmpty())
+        assertFalse(v.has(HistoryVault.Family.INDEX, day), "removed, so the keeper fetches it again")
+        assertNull(v.chain("NIFTY", day))
+        assertFalse(v.has(HistoryVault.Family.chain("NIFTY"), day))
+        // Fetched again: read as normal.
+        v.putBars(HistoryVault.Family.INDEX, day, listOf(series("NIFTY", 25_000.0)))
+        assertEquals(375, v.bars("NIFTY", day).size)
+        // An empty file is not "kept".
+        val empty = File(File(root, day.toString()), HistoryVault.Family.FUTURES + HistoryVault.EXT).also { it.writeBytes(ByteArray(0)) }
+        assertTrue(empty.isFile)
+        assertFalse(v.has(HistoryVault.Family.FUTURES, day))
+    }
+
     @Test fun theReadApiFindsEachSymbolInItsFamilyAndTheChain() {
         val v = HistoryVault(tmp())
         v.putBars(HistoryVault.Family.INDEX, day, listOf(series("NIFTY", 25_000.0), series("INDIAVIX", 11.0)))

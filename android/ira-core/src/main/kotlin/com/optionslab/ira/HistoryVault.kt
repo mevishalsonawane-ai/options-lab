@@ -68,8 +68,8 @@ class HistoryVault(val root: File, capMb: Int = DEFAULT_CAP_MB) {
         return family
     }
 
-    /** Whether [family] of [day] is already kept. */
-    fun has(family: String, day: LocalDate): Boolean = file(clean(family), day).isFile
+    /** Whether [family] of [day] is already kept (an empty file is not; one that cannot be decoded is removed when read). */
+    fun has(family: String, day: LocalDate): Boolean = file(clean(family), day).let { it.isFile && it.length() > 0 }
 
     /** [series] of [day] kept as [family] (replacing what was there); the cap enforced after, [day] itself kept. Bytes written. */
     fun putBars(family: String, day: LocalDate, series: List<HistoryCodec.Series>): Long =
@@ -84,7 +84,8 @@ class HistoryVault(val root: File, capMb: Int = DEFAULT_CAP_MB) {
             val dir = dayDir(day)
             if (!dir.isDirectory && !dir.mkdirs()) throw IOException("cannot create $dir")
             val tmp = File(dir, "$family$EXT.tmp")
-            tmp.writeBytes(bytes)
+            // Synced before the rename: a power cut leaves the old file or the whole new one, never a torn one.
+            java.io.FileOutputStream(tmp).use { it.write(bytes); it.fd.sync() }
             val dst = file(family, day)
             if (!tmp.renameTo(dst)) { dst.delete(); if (!tmp.renameTo(dst)) { tmp.delete(); throw IOException("cannot write $dst") } }
             decoded.remove(dst.path)
@@ -135,7 +136,8 @@ class HistoryVault(val root: File, capMb: Int = DEFAULT_CAP_MB) {
         synchronized(lock) {
             decoded[f.path]?.let { return it }
             if (!f.isFile) return null
-            val s = runCatching { HistoryCodec.decodeBars(f.readBytes()) }.getOrNull() ?: return null
+            val bytes = runCatching { f.readBytes() }.getOrNull() ?: return null
+            val s = runCatching { HistoryCodec.decodeBars(bytes) }.getOrNull() ?: return dropUnreadable(f)
             decoded[f.path] = s
             return s
         }
@@ -164,8 +166,21 @@ class HistoryVault(val root: File, capMb: Int = DEFAULT_CAP_MB) {
     /** [underlying]'s end-of-day chain on [day], or null. */
     fun chain(underlying: String, day: LocalDate): HistoryCodec.Chain? {
         val f = file(Family.chain(underlying), day)
-        val all = synchronized(lock) { if (f.isFile) runCatching { HistoryCodec.decodeChains(f.readBytes()) }.getOrNull() else null } ?: return null
+        val all = synchronized(lock) {
+            val bytes = if (f.isFile) runCatching { f.readBytes() }.getOrNull() else null
+            if (bytes != null) runCatching { HistoryCodec.decodeChains(bytes) }.getOrNull() ?: dropUnreadable<List<HistoryCodec.Chain>>(f) else null
+        } ?: return null
         return all.firstOrNull { it.underlying.equals(underlying, ignoreCase = true) }
+    }
+
+    /**
+     * A kept file that cannot be decoded (torn by a crash, damaged): removed, so [has] says no and the keeper fetches the day
+     * again (market data from the source, nothing of Boss's own). Under [lock]. Always null.
+     */
+    private fun <T> dropUnreadable(f: File): T? {
+        decoded.remove(f.path)
+        f.delete()
+        return null
     }
 
     /** "212 MB of 300 MB · 143 days (12 Mar - 10 Oct)". */
