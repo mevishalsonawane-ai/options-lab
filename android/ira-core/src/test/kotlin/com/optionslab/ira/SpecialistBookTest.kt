@@ -95,6 +95,25 @@ class SpecialistBookTest {
         assertEquals("oi", r.newlyMuted.single().first)
     }
 
+    @Test fun anOriginalRuleIsNeverTunedUnderTheQuorumOnlyMuted() {
+        // Review G4 M1: Delta (an original rule, weight 1 = the quorum) behind the original rules: muted with the reason, and
+        // its weight never stepped to 0.9 - else, once Boss un-mutes it, its lone vote could never reach the quorum again.
+        val base = ManagerConfig("liquidity")
+        val bad = B.cards(many(34, "delta", -50.0))
+        val t1 = B.tune("liquidity", base, SpecialistBook.Tuning(), bad, "d1")
+        assertEquals("delta", t1.newlyMuted.single().first)
+        assertTrue((t1.tuning.weights["delta"] ?: 1.0) >= base.quorum - 1e-9, "${t1.tuning.weights}")
+        // Boss un-mutes it by hand; the record stays behind for nights: it still exits alone.
+        var t = B.unmute(t1.tuning, "delta", 34)
+        for (d in 2..10) t = B.tune("liquidity", base, t, bad, "d$d").tuning
+        assertTrue("delta" !in t.muted)
+        val applied = B.apply(base, t)
+        assertTrue(applied.weight("delta") >= applied.quorum - 1e-9, "weight ${applied.weight("delta")} under the quorum ${applied.quorum}")
+        // A quarter-weight specialist still steps down to a quarter of its default.
+        val oi = B.tune("liquidity", base, SpecialistBook.Tuning(), B.cards(many(34, "oi", -50.0)), "d1").tuning
+        assertEquals(0.225, oi.weights.getValue("oi"), 1e-9)
+    }
+
     @Test fun theSuggestionForLiveIsWhatTuningChangedAgainstTheFrozenWeights() {
         val base = ManagerConfig("pine")
         val tuned = SpecialistBook.Tuning(weights = mapOf("vwap" to 0.3), muted = mapOf("oi" to "hurt"))

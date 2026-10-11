@@ -95,8 +95,14 @@ object ManagerSpecialists {
     fun liveActs(family: String): Boolean =
         TradeManagerHost.policy.value.mode(family, TradeManager.Account.LIVE) == TradeManager.Mode.ACT
 
+    /** The changes made before the file was read: replayed onto it when it is (review G4 M2). Guarded by this object. */
+    private val early = ArrayList<(Book) -> Book>()
+
     private fun changed(f: (Book) -> Book) {
-        synchronized(this) { _book.value = f(_book.value) }
+        synchronized(this) {
+            _book.value = f(_book.value)
+            if (!loaded) early += f
+        }
         dirty()
     }
 
@@ -237,6 +243,8 @@ object ManagerSpecialists {
      */
     fun reviewIfDue(nowMs: Long = TradeManagerHost.nowMs()) {
         runCatching {
+            // Not read yet (a file that could not be set aside at start): tried again here, on the worker thread.
+            if (!loaded) load()
             if (!loaded) return
             val today = Market.today()
             if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return
@@ -326,6 +334,8 @@ object ManagerSpecialists {
         scope.launch {
             kotlinx.coroutines.delay(SAVE_MS)
             pendingSave.set(false)
+            // (Not read yet: read first - the changes made meanwhile are replayed onto the file's book, then written.)
+            if (!loaded) runCatching { load() }
             runCatching { save() }
         }
     }
@@ -391,30 +401,44 @@ object ManagerSpecialists {
             val research = ManagerConfig.parse(o.optString("research", ""))
             val got = perArm(Book(research, decMap(o.optJSONObject("tuned")), decMap(o.optJSONObject("frozen")), lines,
                 if (o.has("reviewedOn")) o.getString("reviewedOn") else null))
-            // (A change Boss made in the moment before the file was read wins: it is written over the file next.)
-            synchronized(this) { if (_book.value == Book()) _book.value = got }
+            // A change made in the moment before the file was read (a mute, an un-mute, an import) is replayed onto the file's
+            // book - never the file thrown away for it: the tuned weights, the research blocks and the frozen live mutes stay.
+            synchronized(this) {
+                var b = got
+                for (op in early) b = op(b)
+                _book.value = b
+            }
         }
         if (read.isFailure && f.exists()) {
             // Unreadable (cut short, corrupt): moved aside so Boss's mutes and the tuned weights are kept for a look, never
-            // overwritten. If it cannot be moved, nothing is saved over it ([save] waits for [loaded]) and it is read again later.
+            // overwritten. If it cannot be moved, nothing is saved over it ([save] waits for [loaded]) and it is read again
+            // later ([reviewIfDue], the next save).
             runCatching { com.optionslab.app.security.Vault.setAside(f) }
             if (f.exists()) return
         }
-        loaded = true
+        val replayed = synchronized(this) { val n = early.size; early.clear(); loaded = true; n }
+        // The changes made before the read are written with the file's book now (their own save ran before it was read).
+        if (replayed > 0) dirty()
     }
 
     /** TEST ONLY: the file read again, as a new process would. */
     internal fun reloadForTest(context: Context) {
         appContext = context.applicationContext
-        synchronized(this) { _book.value = Book() }
+        synchronized(this) { _book.value = Book(); early.clear() }
         loaded = false
         load()
+    }
+
+    /** TEST ONLY: as at a cold start - [context] known, nothing read yet (a change made now is made before the read). */
+    internal fun unloadForTest(context: Context) {
+        appContext = context.applicationContext
+        synchronized(this) { _book.value = Book(); early.clear(); loaded = false }
     }
     internal fun fileForTest(): File? = file()
 
     /** TEST ONLY: nothing kept, nothing shown (in memory). */
     internal fun resetForTest() {
-        synchronized(this) { _book.value = Book() }
+        synchronized(this) { _book.value = Book(); early.clear() }
         cache.clear(); lastView.clear()
         synchronized(_views) { _views.value = emptyMap() }
         loaded = true

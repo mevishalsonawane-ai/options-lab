@@ -107,7 +107,10 @@ object SpecialistBook {
                 val w0 = weights[c.specialist] ?: def
                 val up = c.net > 0 && (c.hitRate ?: 0.0) >= 0.5
                 val down = c.net < 0
-                val w1 = when { up -> w0 * (1 + STEP); down -> w0 * (1 - STEP); else -> w0 }.coerceIn(MIN_X * def, MAX_X * def)
+                // A specialist whose lone vote reaches the quorum (an original rule, a research member) never tunes under it: a
+                // step down would silently turn its rule off. Turning it off is a mute - recorded, said, un-mutable (review G4 M1).
+                val lo = if (def >= base.quorum - 1e-9) maxOf(MIN_X * def, base.quorum) else MIN_X * def
+                val w1 = when { up -> w0 * (1 + STEP); down -> w0 * (1 - STEP); else -> w0 }.coerceIn(lo, MAX_X * def)
                 if (abs(w1 - w0) > 1e-9) {
                     weights[c.specialist] = w1
                     changes += "${ManagerTeam.nameOf(c.specialist)} weight ${w(w0)} → ${w(w1)}"

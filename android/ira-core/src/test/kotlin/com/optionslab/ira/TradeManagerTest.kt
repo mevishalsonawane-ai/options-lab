@@ -421,6 +421,46 @@ class TradeManagerTest {
         assertTrue("has not exited early" in M.answerWhy("pine", listOf(r)) { "x" })
         val s = M.answerStatus(listOf(r), TradeManager.Policy())
         assertTrue("Pine: paper acting, live shadow" in s && "Solo: paper acting" in s && "every other strategy records only" in s && "Liquidity 15+5: paper shadow (records only), live shadow" in s && "Night (R3): paper off;" in s && "ORB Fresh: paper acting, live shadow" in s, s)
+
+        // Review G4 L5: Boss switched Solo off on paper - the fixed sentence is said as the defaults, never as what holds now.
+        val off = M.answerStatus(listOf(r), TradeManager.Policy().with("solo", TradeManager.Account.PAPER, TradeManager.Mode.OFF))
+        assertTrue("Solo: paper off" in off, off)
+        assertFalse(". Solo, Pine and ORB Fresh act on paper" in off, off)
+        assertTrue("By default Solo, Pine and ORB Fresh act on paper" in off, off)
+    }
+
+    @Test fun theBestWickCountsFromTheEntrysMinuteOnClosedMinutesOnly() {
+        // Review G4 L2: an entry at 09:20:00.000 - the 09:19 bar (it ended at the entry) is before the trade; the 09:22 bar is
+        // still forming at 09:22:30.
+        val m = 60_000L
+        val entry = 29_333_340L * m
+        val bars = listOf(TradeManager.Bar(entry - m, 100.0, 130.0, 99.0, 101.0), TradeManager.Bar(entry, 101.0, 104.0, 100.0, 103.0),
+            TradeManager.Bar(entry + m, 103.0, 106.0, 102.0, 105.0), TradeManager.Bar(entry + 2 * m, 105.0, 140.0, 90.0, 120.0))
+        val (high, atr) = TradeManager.sinceEntry(bars, entry, entry + 2 * m + 30_000L)
+        assertEquals(106.0, high)
+        assertEquals(4.0, atr!!, 1e-9)
+        // An entry inside a minute: that minute counts (the trade was in it).
+        assertEquals(130.0, TradeManager.sinceEntry(bars, entry - 30_000L, entry + 2 * m).first)
+        assertEquals(null to null, TradeManager.sinceEntry(bars, entry, entry + 30_000L))
+    }
+
+    @Test fun thePinIsAskedOnlyWhenTheLiveChangeWouldBeMade() {
+        // Review G4 L4: ORB Fresh's live exits do not take the manager's word - refused with its reason, no PIN asked first.
+        assertFalse(TradeManager.asksPin("orb_fresh", TradeManager.Account.LIVE, TradeManager.Mode.ACT))
+        assertFalse(TradeManager.asksPin("solo", TradeManager.Account.LIVE, TradeManager.Mode.ACT), "paper only")
+        assertTrue(TradeManager.asksPin("pine", TradeManager.Account.LIVE, TradeManager.Mode.ACT))
+        assertFalse(TradeManager.asksPin("pine", TradeManager.Account.PAPER, TradeManager.Mode.ACT))
+        assertFalse(TradeManager.asksPin("pine", TradeManager.Account.LIVE, TradeManager.Mode.SHADOW))
+    }
+
+    @Test fun theResearchAnswerLeavesTheModesOutOnALockedPhone() {
+        // Review G4 L6: the research's verdicts are said on a locked phone, Boss's modes (the live manager's) are not.
+        val p = TradeManager.Policy().with("solo", TradeManager.Account.LIVE, TradeManager.Mode.ACT)
+        assertTrue("Modes now:" in M.answerResearch(p))
+        val locked = M.answerResearch(p, locked = true)
+        assertFalse("Modes now:" in locked, locked)
+        assertFalse("live " in locked.substringAfter("manager only records"), locked)
+        assertTrue("What research round 12 found for the trade manager" in locked)
     }
 
     @Test fun theQuestionsAreTheTradeManagersAndNeverAct() {

@@ -2,6 +2,7 @@ package com.optionslab.ira
 
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.sqrt
 
 /**
  * The trade manager's rules as research round 12 tested them (research/HUNT_R12_TRADE_MANAGER.md; the exact code is
@@ -109,6 +110,23 @@ object R12Rules {
 
     /** One minute of the index (the future in the app): its close and the session VWAP with its standard deviation then. */
     data class IndexMinute(val startMs: Long, val close: Double, val vwap: Double? = null, val sd: Double? = null)
+
+    /**
+     * The index's minutes from the future's day [ms] (oldest first): each minute's close with the session VWAP and its
+     * volume-weighted SD up to that close (as [Auction.vwap] then). Memory only, one pass.
+     */
+    fun indexMinutes(ms: List<Auction.Minute>): List<IndexMinute> {
+        var v = 0L; var pv = 0.0; var p2v = 0.0
+        val out = ArrayList<IndexMinute>(ms.size)
+        for (m in ms.sortedBy { it.startSec }) {
+            if (!(m.close > 0) || !m.close.isFinite()) continue
+            if (m.vol > 0) { v += m.vol; pv += m.pv; p2v += m.p2v }
+            val mean = if (v > 0) pv / v else null
+            val sd = mean?.let { sqrt((p2v / v - it * it).coerceAtLeast(0.0)) }
+            out += IndexMinute(m.startSec * 1000L, m.close, mean, sd)
+        }
+        return out
+    }
 
     /**
      * VW(z, p), the VWAP exit (specs.VW): the index closes on the wrong side of the session VWAP by more than z SD

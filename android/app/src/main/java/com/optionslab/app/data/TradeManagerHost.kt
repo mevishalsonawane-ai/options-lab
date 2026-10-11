@@ -75,6 +75,12 @@ object TradeManagerHost {
     private val _policy = MutableStateFlow(TradeManager.Policy())
     val policy: StateFlow<TradeManager.Policy> = _policy
     @Volatile private var policyLoaded = false
+    private val readingPolicy = AtomicBoolean(false)
+    /** TEST ONLY: the stored modes' read instead of the vault's (a throw: the vault could not be read). */
+    @Volatile internal var testPolicyRead: (() -> String?)? = null
+
+    /** TEST ONLY: as at a cold start - Boss's modes not read yet. */
+    internal fun unloadPolicyForTest() { _policy.value = TradeManager.Policy(); policyLoaded = false }
 
     /** Set once the old "orb" family mode has been moved to every ORB arm (round 2, [TradeManager.perArm]). */
     private const val K_PER_ARM = "trademanager.policy.perarm"
@@ -88,7 +94,9 @@ object TradeManagerHost {
         if (policyLoaded) return
         synchronized(this) {
             if (policyLoaded) return
-            var p = runCatching { TradeManager.decode(SecurePrefs.getString(K_POLICY)) }.getOrNull() ?: return
+            var p = runCatching { TradeManager.decode(testPolicyRead?.let { it() } ?: SecurePrefs.getString(K_POLICY)) }.getOrNull() ?: return
+            // (An unreadable vault reads as empty: not taken as Boss's modes - read again later, nothing written over them.)
+            if (testPolicyRead == null && SecurePrefs.unreadable) return
             if (runCatching { SecurePrefs.getString(K_PER_ARM) }.getOrNull() != "1") {
                 val moved = TradeManager.perArm(p)
                 if (moved != p) runCatching { SecurePrefs.putAllSoon(mapOf(K_POLICY to TradeManager.encode(moved))) }
@@ -103,6 +111,9 @@ object TradeManagerHost {
     const val PIN_NEEDED = "The app trades live here: confirm with your PIN or fingerprint to let the trade manager act on live trades. " +
         TradeManager.UNPROVEN
 
+    /** The stored modes could not be read: nothing is changed over them. */
+    const val NOT_READ = "The trade manager's settings could not be read just now: nothing changed. Try again in a moment."
+
     /** [family]'s mode on [account] set to [m] (an unwired family stays OFF). LIVE to ACT needs [pinConfirmed]. What to say. */
     fun setMode(family: String, account: TradeManager.Account, m: TradeManager.Mode, pinConfirmed: Boolean = false): String {
         val f = TradeManager.familyOf(family) ?: return "No such strategy for the trade manager."
@@ -113,6 +124,9 @@ object TradeManagerHost {
         if (m == TradeManager.Mode.ACT && account == TradeManager.Account.LIVE && !f.canActLive)
             return "${f.name} live: its live exits do not take the trade manager's word yet, so it records only (SHADOW); nothing changed."
         if (TradeManager.needsPin(m, account) && !pinConfirmed) return PIN_NEEDED
+        // Boss's stored modes read first (a worker thread): the defaults plus this one change never written over them (G4 M3).
+        ensureLoaded()
+        if (!policyLoaded) return NOT_READ
         synchronized(this) {
             val next = _policy.value.with(family, account, m)
             _policy.value = next
@@ -191,6 +205,12 @@ object TradeManagerHost {
         }
         val existing = synchronized(recs) { recs[t.tradeId] }
         if (existing?.closed == true) return TradeManager.Mode.OFF
+        // A new trade before Boss's modes are read: not taken on a default mode he may have changed (OFF, SHADOW) - read in
+        // the background (never on the caller's thread) and taken on a later look, once known (review G4 M3).
+        if (existing == null && !policyLoaded) {
+            if (readingPolicy.compareAndSet(false, true)) scope.launch { try { runCatching { ensureLoaded() } } finally { readingPolicy.set(false) } }
+            return TradeManager.Mode.OFF
+        }
         val mode = existing?.mode ?: _policy.value.mode(t.family, t.account)
         if (mode == TradeManager.Mode.OFF) return mode
         val st = TradeManager.start(t).let { s ->
@@ -334,7 +354,7 @@ object TradeManagerHost {
     @Volatile internal var testBars: ((String) -> List<TradeManager.Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test bars exist only in debug builds" }; field = v }
 
-    private fun snapshot(l: Live, now: Long): TradeManager.Snapshot {
+    private fun snapshot(l: Live, now: Long, research: Boolean = false): TradeManager.Snapshot {
         val t = l.reg.trade
         testSnapshot?.let { return it(t, now) }
         val u = t.underlying.uppercase(Locale.ENGLISH)
@@ -359,6 +379,8 @@ object TradeManagerHost {
             // The research's rules (R12): the option's closed minutes as last read, the prior day's value area. Its OI and
             // signed-flow z-scores are not measured live yet (null: those rules wait, recording "no reading").
             minuteBars = l.bars, priorValueHigh = auc?.prior?.vah, priorValueLow = auc?.prior?.vaLow,
+            // A research committee's VW and MP: the index's minutes today, before the entry and after a restart too (G4 M4).
+            indexMinutes = if (research && auc != null) com.optionslab.ira.R12Rules.indexMinutes(auc.minutes) else emptyList(),
         )
     }
 
@@ -396,7 +418,6 @@ object TradeManagerHost {
         // Out already (the strategy has not closed it yet): nothing more to decide, and the last look stays on show.
         if (l.state.exited) return
         val t = l.reg.trade
-        val s = snapshot(l, now)
         val act = r0.mode == TradeManager.Mode.ACT
         // The committee: LIVE trades the manager acts on use the frozen weights; SHADOW and paper the self-tuned ones (memory only).
         val frozen = act && t.account == TradeManager.Account.LIVE
@@ -404,6 +425,7 @@ object TradeManagerHost {
         val cfg = ManagerSpecialists.configFor(t.family, frozen, t.underlying).let { c ->
             runCatching { RegimeHost.managerConfig(c, t.account == TradeManager.Account.LIVE) }.getOrDefault(c)
         }
+        val s = snapshot(l, now, cfg.isResearch)
         val step = ManagerTeam.decide(t, s, l.team, cfg)
         l.team = step.state
         runCatching { ManagerSpecialists.observe(id, t, step, now, frozen) }
@@ -499,12 +521,10 @@ object TradeManagerHost {
                 val bars = testBars?.invoke(id) ?: l.reg.bars?.invoke() ?: return@runCatching
                 // The research's rules read only minutes that had closed when read (a minute still forming is never kept).
                 l.bars = bars.filter { it.startMs + 60_000L <= now }.sortedBy { it.startMs }
-                val mine = bars.filter { it.startMs >= t.entryMs - 60_000L }
-                if (mine.isNotEmpty()) {
-                    l.high = mine.filter { it.startMs + 60_000L <= now }.maxOfOrNull { it.high } ?: l.high
-                    val last = mine.takeLast(10)
-                    l.atr = last.map { it.high - it.low }.average().takeIf { it.isFinite() && it > 0 }
-                }
+                // The best wick and the recent range from the entry's minute on, closed minutes only (G4 L2).
+                val (high, atr) = TradeManager.sinceEntry(bars, t.entryMs, now)
+                if (high != null) l.high = high
+                if (atr != null) l.atr = atr
                 val r = synchronized(recs) { recs[id] } ?: return@runCatching
                 if (!r.closed) return@runCatching
                 var x = r
@@ -539,8 +559,8 @@ object TradeManagerHost {
     fun recordLines(): List<String> = TradeManager.recordLines(_records.value, _policy.value)
 
     /** Jarvis: "how is the trade manager doing?" / "why did Solo exit early?". */
-    fun answer(a: TradeManager.Ask): String {
-        if (a.research) return TradeManager.answerResearch(_policy.value)
+    fun answer(a: TradeManager.Ask, locked: Boolean = false): String {
+        if (a.research) return TradeManager.answerResearch(_policy.value, locked)
         if (a.team != null) return ManagerSpecialists.answer(a)
         val rs = _records.value
         return if (a.why) TradeManager.answerWhy(a.family, rs) { SmartWorkers.hhmm(it) } else TradeManager.answerStatus(rs, _policy.value)
@@ -590,18 +610,24 @@ object TradeManagerHost {
     internal fun load() {
         if (loaded) return
         val f = file() ?: return
+        // The records read, and how many could not be.
         val read = runCatching {
-            val text = if (f.isFile) f.readText() else return@runCatching emptyList<TradeManager.Record>()
+            val text = if (f.isFile) f.readText() else return@runCatching emptyList<TradeManager.Record>() to 0
             val a = JSONArray(text)
-            (0 until a.length()).mapNotNull { runCatching { dec(a.getJSONObject(it)) }.getOrNull() }
+            var bad = 0
+            val out = (0 until a.length()).mapNotNull { i -> runCatching { dec(a.getJSONObject(i)) }.onFailure { bad++ }.getOrNull() }
+            out to bad
         }
-        if (read.isFailure && f.exists()) {
-            // Unreadable (cut short, corrupt): moved aside, never overwritten; if it cannot be moved, nothing is saved over it.
+        val bad = read.getOrNull()?.second ?: 0
+        if ((read.isFailure || bad > 0) && f.exists()) {
+            // Unreadable (cut short, corrupt) - or a record in it that is: moved aside, never overwritten (the next save would
+            // rewrite it without that record, lost for good; review G4 L7); if it cannot be moved, nothing is saved over it.
+            if (bad > 0) runCatching { Diag.record("trade manager", "$bad record(s) could not be read: the file was set aside, the rest kept") }
             runCatching { com.optionslab.app.security.Vault.setAside(f) }
             if (f.exists()) return
         }
         loaded = true
-        val got = read.getOrDefault(emptyList())
+        val got = read.getOrNull()?.first.orEmpty()
         val early = synchronized(recs) { val e = recs.isNotEmpty(); for (r in got) if (r.trade.tradeId !in recs) recs[r.trade.tradeId] = r; e }
         publish()
         // A trade followed in the moment before the file was read: its save was held until now.
@@ -670,7 +696,7 @@ object TradeManagerHost {
     /** TEST ONLY: nothing followed, recorded or set (in memory). */
     internal fun resetForTest() {
         live.clear(); synchronized(recs) { recs.clear() }; publish()
-        _policy.value = TradeManager.Policy(); policyLoaded = true; loaded = true
+        _policy.value = TradeManager.Policy(); policyLoaded = true; loaded = true; testPolicyRead = null
         lastEval = 0L; minuteSettled = -1L
         ManagerSpecialists.resetForTest()
         if (com.optionslab.app.BuildConfig.DEBUG) { testSnapshot = null; testBars = null; testNoWake = false }

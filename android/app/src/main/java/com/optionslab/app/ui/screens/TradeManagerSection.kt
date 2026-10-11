@@ -206,7 +206,7 @@ internal fun TradeManagerSheet(model: AppModel, onClose: () -> Unit) {
     var pin by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     fun choose(family: String, account: TradeManager.Account, m: TradeManager.Mode) {
-        if (TradeManager.needsPin(m, account) && TradeManager.familyOf(family)?.canAct == true) { pin = family; return }
+        if (TradeManager.asksPin(family, account, m)) { pin = family; return }
         scope.launch(Dispatchers.IO) {
             val msg = runCatching { TradeManagerHost.setMode(family, account, m) }.getOrElse { "Could not save that." }
             withContext(Dispatchers.Main) { said = msg }

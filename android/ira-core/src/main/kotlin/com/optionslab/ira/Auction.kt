@@ -264,6 +264,8 @@ object Auction {
         val streamedFrom: Long?, val seeded: Boolean,
         /** The last 30 minutes' volume per minute (minute start to volume, streamed or from candles), oldest first. */
         val vols: List<Pair<Long, Long>> = emptyList(),
+        /** Every minute of the day so far, oldest first (the trade manager's research rules read the index's closes). */
+        val minutes: List<Minute> = emptyList(),
     )
 
     /**
@@ -377,7 +379,7 @@ object Auction {
             return Snapshot(name, nowSec, last, bin, levels(), prior, regime(prior, last, closes30(ms, nowSec, openMin)),
                 signed.sumOf { it.delta }, d15, divergence(ms, nowSec), deltas, footprint(nowSec), vwap(ms),
                 MarketProfile.read(ms, nowSec, openMin, bin), firstStreamed, unsigned.isNotEmpty(),
-                ms.filter { Math.floorDiv(it.startSec, 60L) > now - 30 }.map { it.startSec to it.vol })
+                ms.filter { Math.floorDiv(it.startSec, 60L) > now - 30 }.map { it.startSec to it.vol }, ms)
         }
     }
 

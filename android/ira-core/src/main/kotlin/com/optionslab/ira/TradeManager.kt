@@ -199,6 +199,14 @@ object TradeManager {
     /** Turning a LIVE account to ACT takes the PIN or fingerprint. */
     fun needsPin(to: Mode, account: Account): Boolean = to == Mode.ACT && account == Account.LIVE
 
+    /**
+     * Does the screen ask for the PIN before setting [family]'s [account] to [to]? Only when the change would then be made: a
+     * strategy whose live exits do not take the manager's word (ORB Fresh), or that trades on paper only, is refused with
+     * its reason before any PIN is asked (review G4 L4).
+     */
+    fun asksPin(family: String, account: Account, to: Mode): Boolean =
+        needsPin(to, account) && familyOf(family)?.let { it.canAct && it.canActLive && !it.paperOnly } == true
+
     const val UNPROVEN = "Unproven: the trade manager may cut winners early."
 
     // ---- the trade ------------------------------------------------------------------------------------------------------
@@ -265,6 +273,12 @@ object TradeManager {
         val oiZ: Double? = null,
         /** The 10-minute signed option flow as a z-score (R12's delta proxy; null: not measured live yet). */
         val flowZ: Double? = null,
+        /**
+         * The index's (the future's) minutes today with the session VWAP and its SD at each close ([R12Rules.indexMinutes]),
+         * oldest first: a research committee's VW and MP read the minutes before the entry and after a restart from them
+         * (review G4 M4). Empty: only the minutes seen since the first look.
+         */
+        val indexMinutes: List<R12Rules.IndexMinute> = emptyList(),
     )
 
     // ---- the rules ------------------------------------------------------------------------------------------------------
@@ -553,6 +567,17 @@ object TradeManager {
     /** One minute of the option: its start (epoch ms) and its prices. */
     data class Bar(val startMs: Long, val open: Double, val high: Double, val low: Double, val close: Double)
 
+    /**
+     * The option's best wick high since the entry and its mean 1-minute range over the last 10 minutes, both from the minutes
+     * that had closed by [nowMs]: the entry's own minute counts, a minute that ended at or before [entryMs] does not (as
+     * [walk]), and a minute still forming never does (review G4 L2). Null: none yet.
+     */
+    fun sinceEntry(bars: List<Bar>, entryMs: Long, nowMs: Long): Pair<Double?, Double?> {
+        val closed = bars.filter { it.startMs + 60_000L > entryMs && it.startMs + 60_000L <= nowMs }.sortedBy { it.startMs }
+        val atr = closed.takeLast(10).map { it.high - it.low }.takeIf { it.isNotEmpty() }?.average()?.takeIf { it.isFinite() && it > 0 }
+        return closed.maxOfOrNull { it.high } to atr
+    }
+
     /** Where a way of managing ended: when, at what price, and why ("STOP", "TARGET", "LOCK", "TIME", "EARLY: ..." or the strategy's words). */
     data class Exit(val atMs: Long, val price: Double, val why: String)
 
@@ -724,11 +749,14 @@ object TradeManager {
             if (f?.paperOnly == true) "" else ", live ${modeWords(policy.mode(family, Account.LIVE))}"
     }
 
-    /** "What did the research say about the trade manager?": the verdict per strategy, then the modes per arm now. */
-    fun answerResearch(policy: Policy): String =
+    /**
+     * "What did the research say about the trade manager?": the verdict per strategy, then the modes per arm now - not on a
+     * [locked] phone (the modes are Boss's account settings: whether the manager acts on his live trades; review G4 L6).
+     */
+    fun answerResearch(policy: Policy, locked: Boolean = false): String =
         "What research round 12 found for the trade manager, Boss:\n" + researchLines().joinToString("\n") { "• $it" } +
             "\nOn the money-making strategies every manager tested made them worse, so they keep their original exits and the " +
-            "manager only records. Modes now: " + FAMILIES.joinToString("; ") { modeLine(it.key, policy) } + "."
+            "manager only records." + if (locked) "" else " Modes now: " + FAMILIES.joinToString("; ") { modeLine(it.key, policy) } + "."
 
     /** The "Trade manager record" lines: per strategy, paper and live apart. */
     fun recordLines(records: List<Record>, policy: Policy? = null): List<String> {
@@ -807,7 +835,8 @@ object TradeManager {
                 ", live ${modeWords(policy.mode(f.key, Account.LIVE))}"
         }
         val open = records.filter { !it.closed }.map { "${it.trade.label}: ${cardLine(it).removePrefix("Trade manager ")}" }
-        return "The trade manager, Boss - $modes. Solo, Pine and ORB Fresh act on paper (ORB Fresh on the research's proven rule); " +
+        // (The defaults, said as defaults: the modes just read out are what holds now - review G4 L5.)
+        return "The trade manager, Boss - $modes. By default Solo, Pine and ORB Fresh act on paper (ORB Fresh on the research's proven rule), " +
             "every other strategy records only until you switch it on, and Night and MCX trend are off (nothing to manage).\n" +
             recordLines(records, policy).joinToString("\n") { "• $it" } +
             (if (open.isNotEmpty()) "\nNow: " + open.joinToString("; ") else "") +

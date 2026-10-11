@@ -3887,7 +3887,8 @@ object IraHub {
         if (managerAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             // His trades' record and open trades: never said on a locked phone (review R5 #2).
-            com.optionslab.ira.TradeManager.refuseLocked(managerAsk, phoneLocked())?.let { reply(it); return true }
+            val managerLocked = phoneLocked()
+            com.optionslab.ira.TradeManager.refuseLocked(managerAsk, managerLocked)?.let { reply(it); return true }
             // "Mute the OI specialist for Pine" by voice: put to Boss first, always (a misheard question never mutes; R5 #1).
             val team = managerAsk.team
             val muteFam = managerAsk.family
@@ -3898,9 +3899,9 @@ object IraHub {
                     suspend { com.optionslab.app.data.ManagerSpecialists.mute(muteFam, muteId, "you (by voice)") }, alwaysAsk = true)
                 return true
             }
-            reply(runCatching { com.optionslab.app.data.TradeManagerHost.answer(managerAsk) +
-                // One strong lesson of Jarvis's about it, where he has one (11 Oct; memory only).
-                (JarvisLearning.appendFor(managerAsk.family, if (managerAsk.family == null) com.optionslab.ira.AgentLessons.Topic.MANAGER else null)?.let { " $it" } ?: "") }
+            reply(runCatching { com.optionslab.app.data.TradeManagerHost.answer(managerAsk, managerLocked) +
+                // One strong lesson of Jarvis's about it, where he has one (11 Oct; memory only) - not on a locked phone (G4 L6).
+                (if (managerLocked) "" else (JarvisLearning.appendFor(managerAsk.family, if (managerAsk.family == null) com.optionslab.ira.AgentLessons.Topic.MANAGER else null)?.let { " $it" } ?: "")) }
                 .getOrElse { "I could not read the trade manager's record just now, Boss." })
             return true
         }

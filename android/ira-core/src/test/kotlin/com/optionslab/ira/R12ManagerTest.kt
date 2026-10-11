@@ -125,6 +125,29 @@ class R12ManagerTest {
         assertTrue("closed 12% or more under" in assertIs<TradeManager.Decision.ExitEarly>(pb.decision).reason)
     }
 
+    @Test fun theValueAreaRuleReadsTheMinuteBeforeTheEntryFromTheDaysMinutes() {
+        // Review G4 M4: Hero's MP (1 minute): the index was above the prior day's value area at the minute before the entry
+        // (column 49) and closed back inside at the entry's minute (50). R12 exits on column 50's close - also on the first
+        // look, and after a restart (no minutes kept).
+        val hero = R12Defaults.configs.getValue("hero")
+        val t = fresh().copy(strategyId = "hero:Hero")
+        fun m(col: Int, c: Double) = Auction.Minute(at(col) / 1000, c, c, c, c, 0, 0, 100, c * 100, c * c * 100)
+        val minutes = R12Rules.indexMinutes(listOf(m(48, 25_010.0), m(49, 25_012.0), m(50, 24_990.0)))
+        assertEquals(3, minutes.size)
+        assertEquals(at(49), minutes[1].startMs)
+        assertEquals((25_010.0 + 25_012.0) / 2, minutes[1].vwap!!, 1e-6)
+        val s = TradeManager.Snapshot(at(51, 2), 101.0, futPrice = 24_990.0, priorValueHigh = 25_000.0, priorValueLow = 24_900.0, indexMinutes = minutes)
+        for (st in listOf(ManagerTeam.start(t), ManagerTeam.resume(TradeManager.start(t)))) {
+            val r = ManagerTeam.decide(t, s, st, hero)
+            val mp = r.votes.first { it.specialist == "profile" }
+            assertEquals(ManagerTeam.Kind.EXIT, mp.kind, mp.reason)
+            assertEquals("r12-mp", mp.tag)
+        }
+        // Without the day's minutes (as before): the minute before the entry is never seen, and MP stays silent.
+        val blind = ManagerTeam.decide(t, s.copy(indexMinutes = emptyList()), ManagerTeam.start(t), hero)
+        assertEquals(ManagerTeam.Kind.HOLD, blind.votes.first { it.specialist == "profile" }.kind)
+    }
+
     @Test fun theLiveOnlySpecialistsOnlyRecordUnderTheResearchCommittee() {
         val t = fresh()
         val news = MarketBrain.Context(windows = listOf(MarketBrain.Window("RBI policy", at(55), at(65))))

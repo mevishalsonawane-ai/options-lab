@@ -268,6 +268,24 @@ class ManagerTeamTest {
         assertEquals(40, l2!!.votes.first { it.specialist == "momentum" }.strength)
     }
 
+    @Test fun aShortFuturesNegatedPricesReadRightByPriceAndMomentum() {
+        // Review G4 L1: a short future is followed on negated prices (entry -500). Before any best there is nothing to give back.
+        val t = trade(entry = -500.0, stop = -520.0, target = null)
+        val flat = votes(t, snap(t0, premium = -500.0, flow = read(t0)))
+        assertEquals(ManagerTeam.Kind.HOLD, flat.getValue("price").kind, flat.getValue("price").reason)
+        // A real give-back: best -400 (100 up, 20%), now -470 (70% of it given back).
+        val st = T.resume(TradeManager.start(t).copy(peak = -400.0))
+        val gave = votes(t, snap(t0, premium = -470.0, flow = read(t0)), st)
+        assertEquals(ManagerTeam.Kind.EXIT, gave.getValue("price").kind, gave.getValue("price").reason)
+        assertTrue("gave back 70%" in gave.getValue("price").reason, gave.getValue("price").reason)
+        // Momentum has its history on negated prices too.
+        var s2 = T.start(t)
+        var last: ManagerTeam.Step? = null
+        for (i in 0..70) { val now = t0 + i * 1000L; last = T.decide(t, snap(now, premium = -500.0, flow = read(now)), s2); s2 = last.state }
+        val mom = last!!.votes.first { it.specialist == "momentum" }
+        assertFalse("not enough history" in mom.reason, mom.reason)
+    }
+
     // ---- the Chair --------------------------------------------------------------------------------------------------------
 
     @Test fun theNewSpecialistsAloneNeedFourToReachTheQuorum() {
@@ -327,6 +345,8 @@ class ManagerTeamTest {
         val strict = ManagerConfig("pine", superMajority = 1.0)
         assertTrue(extends(strict))
         assertFalse(extends(strict, flip), "100%: one exit vote is enough to hold it back")
+        // Review G4 L3: muting Gamma does not take its objection out of the supermajority (a mute never adds an extension).
+        assertFalse(extends(strict.with("gamma") { it.copy(enabled = false) }, flip), "a muted specialist's exit vote still weighs")
         // Not a gate any more (the research's choice): OI's agreement is not needed.
         assertTrue(extends(ManagerConfig("pine").with("oi") { it.copy(gate = false) }) { now ->
             room(now).copy(flow = read(now, OrderFlow.Side.BUYERS, 75, cvd60 = 8_000.0, mid = 25_030.0, buildUp = OrderFlow.BuildUp.NEUTRAL, oi = 0)) })

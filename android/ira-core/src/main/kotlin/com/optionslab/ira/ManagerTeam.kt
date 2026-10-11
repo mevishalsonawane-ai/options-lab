@@ -318,8 +318,9 @@ object ManagerTeam {
             val back = m.th(id, "lookbackSec", 60.0).toLong() * 1000
             var old: Sample? = null
             for (i in m.tape.indices.reversed()) { val x = m.tape[i]; if (m.now - x.atMs >= back) { old = x; break } }
-            if (old == null || old.premium <= 0) return hold(id, "momentum: not enough history yet")
-            val roc = (px / old.premium - 1) * 100
+            // (A short future's prices are negated: its rate of change is taken against the size of the old price - G4 L1.)
+            if (old == null || old.premium == 0.0 || !old.premium.isFinite()) return hold(id, "momentum: not enough history yet")
+            val roc = (px - old.premium) / abs(old.premium) * 100
             val idx = if (m.fut != null && old.fut != null && old.fut > 0) (m.fut - old.fut) / old.fut * 1e4 * m.side else 0.0
             val tired = board.tag("vwap") == "stretched" && board.tag("volume") in TIRED
             if (roc <= -m.th(id, "fadePct", 3.0) && idx <= 0) {
@@ -348,12 +349,14 @@ object ManagerTeam {
                 val tg = m.st.target ?: 0.0
                 return Vote(id, Kind.EXTEND, 70, "${((px - t.entry) / (tg - t.entry) * 100).toInt()}% of the way to the target ${num(tg)}", proposedLock = tr)
             }
+            // (Thresholds on the price's size: a short future's entry is negated, and nothing was given back before any best - G4 L1.)
+            val size = abs(t.entry)
             val mfe = m.st.peak - t.entry
-            if (mfe >= m.th(id, "minMfePct", 0.15) * t.entry && px <= t.entry + (1 - m.th(id, "giveBack", 0.6)) * mfe)
+            if (mfe > 0 && mfe >= m.th(id, "minMfePct", 0.15) * size && px <= t.entry + (1 - m.th(id, "giveBack", 0.6)) * mfe)
                 return Vote(id, Kind.EXIT, 45, "gave back ${((m.st.peak - px) / mfe * 100).toInt()}% of its best (${num(m.st.peak)})", proposedLock = tr,
                     needsHoldSec = 30, tag = "giveback", evidence = mapOf("peak" to m.st.peak, "premium" to px))
             val ageMin = (m.now - t.entryMs) / 60_000.0
-            if (ageMin >= m.th(id, "noProgressMin", 30.0) && m.st.peak < t.entry * (1 + m.th(id, "progressPct", 0.05)))
+            if (ageMin >= m.th(id, "noProgressMin", 30.0) && m.st.peak < t.entry + size * m.th(id, "progressPct", 0.05))
                 return Vote(id, Kind.EXIT, 40, "no progress in ${ageMin.toInt()} minutes", proposedLock = tr, needsHoldSec = 60, tag = "stalled")
             if (tr != null) return hold(id, "a new best ${num(m.st.peak)}: the lock trails to ${num(tr)}", lock = tr)
             return hold(id, if (m.st.target != null) "on its way to the target" else "no target (never extended)")
@@ -565,6 +568,21 @@ object ManagerTeam {
         return out
     }
 
+    /**
+     * The day's closed index minutes ([TradeManager.Snapshot.indexMinutes]) under the ones kept since the first look: the
+     * research's MP reads the minute before the entry and VW's run counts from before it, also after a restart (G4 M4).
+     */
+    private fun seeded(kept: List<R12Rules.IndexMinute>, day: List<R12Rules.IndexMinute>, now: Long): List<R12Rules.IndexMinute> {
+        if (day.isEmpty()) return kept
+        val closed = day.filter { it.startMs + R12Rules.MINUTE_MS <= now }
+        if (closed.isEmpty()) return kept
+        val to = closed.last().startMs
+        val out = ArrayList<R12Rules.IndexMinute>(minOf(closed.size, MINUTES_KEEP) + 2)
+        out.addAll(if (closed.size > MINUTES_KEEP) closed.subList(closed.size - MINUTES_KEEP, closed.size) else closed)
+        for (x in kept) if (x.startMs > to) out += x
+        return out
+    }
+
     /** A vote's hold is kept per specialist and signal: a different signal from the same specialist starts its own hold. */
     private fun holdKey(v: Vote): String = v.specialist + ":" + (v.rule?.key ?: v.tag ?: "")
 
@@ -592,7 +610,7 @@ object ManagerTeam {
         val fut = s.futPrice ?: flow?.mid
         val side = if (t.side >= 0) 1 else -1
         val tape = taped(st0.tape, now, px, fut)
-        val minutes = if (cfg.isResearch) minuted(st0.minutes, now, fut, s.vwap) else st0.minutes
+        val minutes = if (cfg.isResearch) minuted(seeded(st0.minutes, s.indexMinutes, now), now, fut, s.vwap) else st0.minutes
         val hits = TradeManager.against(t, s)
         val view = MarketView(s, core, px, flow, fut, hits, TradeManager.room(t, s, core), tape, cfg, side, minutes)
 
@@ -709,8 +727,11 @@ object ManagerTeam {
             if (gate && (v.kind != Kind.EXTEND || !cfg.counts(v.specialist))) return false
             if (v.blocksExtend || (v.kind == Kind.EXIT && v.strength >= cfg.exitFloor)) return false
             val w = cfg.weight(v.specialist) * v.strength
+            // A muted specialist's EXIT still weighs against an extension at its own weight: muting only ever moves the
+            // manager back toward the original rules, never turns a failing extension into a passing one (review G4 L3).
+            if (v.kind == Kind.EXIT) { all += if (w > 0) w else cfg.spec(v.specialist).weight.coerceAtLeast(0.0) * v.strength; continue }
             if (w <= 0) continue
-            if (v.kind == Kind.EXTEND) { yes += w; all += w } else if (v.kind == Kind.EXIT) all += w
+            if (v.kind == Kind.EXTEND) { yes += w; all += w }
         }
         return all > 0 && yes / all >= cfg.superMajority - 1e-9
     }
