@@ -48,7 +48,9 @@ object AppHealth {
     @Volatile private var book = HealthBook.Book()
     @Volatile private var loaded = false
     private val saving = AtomicBoolean(false)
-    @Volatile private var tickedAt = 0L
+    private val tickedAt = java.util.concurrent.atomic.AtomicLong(0L)
+    /** One write of the file at a time (the coalesced save and a tick share one ".tmp"). */
+    private val writeLock = Any()
     @Volatile private var trimmedAt = 0L
 
     /** The cadences now, by key (memory: one map read; the readers never wait). */
@@ -99,12 +101,15 @@ object AppHealth {
     /** Written now (a worker thread). */
     fun saveNow() {
         val f = file() ?: return
-        val text = synchronized(lock) { if (!loaded) return; HealthBook.encode(book) }
-        runCatching {
-            f.parentFile?.mkdirs()
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(text)
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        synchronized(writeLock) {
+            // Encoded under the write lock, so the last write is always the newest book.
+            val text = synchronized(lock) { if (!loaded) return; HealthBook.encode(book) }
+            runCatching {
+                f.parentFile?.mkdirs()
+                val tmp = File(f.parentFile, f.name + ".tmp")
+                tmp.writeText(text)
+                if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+            }
         }
     }
 
@@ -199,8 +204,10 @@ object AppHealth {
      */
     fun tick(context: Context? = null, force: Boolean = false): List<HealthTuner.Adjust> {
         val now = System.currentTimeMillis()
-        if (!force && now - tickedAt < TICK_MS) return emptyList()
-        tickedAt = now
+        // Claimed with a CAS: two threads looking at once never both tick.
+        val last = tickedAt.get()
+        if (!force && now - last < TICK_MS) return emptyList()
+        if (force) tickedAt.set(now) else if (!tickedAt.compareAndSet(last, now)) return emptyList()
         if (context != null && appContext == null) appContext = context.applicationContext
         ensureLoaded()
         val ctx = context ?: appContext
@@ -260,7 +267,7 @@ object AppHealth {
     /** TEST ONLY: nothing kept, normal cadences. */
     internal fun resetForTest() {
         synchronized(lock) { book = HealthBook.Book(); cadences = emptyMap(); loaded = true }
-        tickedAt = 0L; trimmedAt = 0L
+        tickedAt.set(0L); trimmedAt = 0L
     }
 
     /** TEST ONLY: [b] as what is kept. */
