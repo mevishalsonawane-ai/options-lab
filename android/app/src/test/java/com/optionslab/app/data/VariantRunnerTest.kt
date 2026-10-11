@@ -306,11 +306,11 @@ class VariantRunnerTest : RobolectricTest() {
             return IraHub.state.value.messages.last().text
         }
         val km = org.robolectric.Shadows.shadowOf(context.getSystemService(android.app.KeyguardManager::class.java))
-        km.setIsKeyguardLocked(true)
+        km.setKeyguardLocked(true)
         try {
             for (q in listOf("how are my strategies improving?", "how is autopilot doing", "how did the automation do last month"))
                 assertEquals(q, com.optionslab.ira.SelfTalk.LOCKED_BOTS, ask(q))
-        } finally { km.setIsKeyguardLocked(false) }
+        } finally { km.setKeyguardLocked(false) }
         assertTrue(ask("how many ideas have you tried?").startsWith("0 new ideas tried"))
     }
 }
