@@ -274,6 +274,10 @@ object VariantRunner {
         withContext(Dispatchers.IO) { ensureLoaded() }
         val vb = _variants.value; val fb = _forge.value
         if ((vb.lastDay?.let { !d.isAfter(it) } == true) && (fb.lastForward?.let { !d.isAfter(it) } == true)) return Settled(null, "already settled")
+        // While the day's minutes are not stored yet: the day lists only (a manifest and a directory), not every session decoded.
+        if (testDays == null && withContext(Dispatchers.IO) { VARIANT_UNDERLYINGS.none { u -> runCatching { d in Store.barDays(u) }.getOrDefault(false) } })
+            return Settled(null, "waiting for $d's stored minutes")
+        if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE)) return Settled(null, "battery / heat budget")
         settling = true
         try {
             val data = withContext(Dispatchers.IO) { VARIANT_UNDERLYINGS.associateWith { u -> runCatching { days(u, d, PRECHECK_DAYS + 1) }.getOrDefault(emptyList()) } }

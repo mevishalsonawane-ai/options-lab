@@ -115,6 +115,15 @@ class VariantRunnerTest : RobolectricTest() {
         assertEquals("already settled", VariantRunner.settleIfDue(Market.now()).said)
     }
 
+    @Test fun theSettleWaitsOnAHotPhone() = runBlocking<Unit> {
+        try {
+            com.optionslab.app.work.BackgroundBudget.resetForTest()
+            com.optionslab.app.work.BackgroundBudget.testPhone = com.optionslab.ira.BudgetRule.Phone(80, true, 45.0, false)
+            assertEquals("battery / heat budget", VariantRunner.settleIfDue(Market.now()).said)
+            assertTrue(VariantRunner.variants.value.lastDay != day)
+        } finally { com.optionslab.app.work.BackgroundBudget.resetForTest() }
+    }
+
     @Test fun nothingRunsInMarketHours() = runBlocking<Unit> {
         at(day, LocalTime.of(11, 0))
         assertEquals("market hours", VariantRunner.settleIfDue(Market.now()).said)
