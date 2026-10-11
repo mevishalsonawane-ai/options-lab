@@ -96,6 +96,7 @@ internal object JarvisLearning {
         val today = Market.today()
         if (passedOn == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
+        if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.LEARNING)) return false   // S18: battery / heat budget
         withContext(Dispatchers.IO) { ensureLoaded() }
         if (_book.value.lastPass == today) { passedOn = today; return false }
         passedOn = today

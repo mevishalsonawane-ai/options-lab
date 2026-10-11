@@ -1260,6 +1260,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     fills += f
                     // The notification is posted beside the send, not before the next leg or the fill shown.
                     if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source, f.orderId) } }
+                    // S10: a hand order's fill (one memory write; the "why?" card and the context come off this path).
+                    if (f.filled > 0 && cur.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) com.optionslab.app.ira.BossTradeLog.filled("kite:${f.orderId}",
+                        leg.tradingSymbol, leg.side == com.optionslab.engine.Kite.Side.BUY, live = true, entry = f.avgPrice, closing = if (cur.exit) true else null)
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
                         if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
@@ -1920,6 +1923,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", source) }
         val fills = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>()
         fills.forEach { com.optionslab.app.work.Notifier.orderFilled(ctx, it.action, it.quantity, it.symbol, it.price, "Paper", source, it.orderId) }
+        // S10: a hand fill - the optional "why?" card and the trade kept with its context (one memory write here; the rest off this path).
+        fills.firstOrNull()?.let { fl -> com.optionslab.app.ira.BossTradeLog.filled("paper:${fl.orderId}", c.symbol, fl.action.equals("BUY", true), live = false, entry = fl.price,
+            stop = protect?.stop, target = protect?.target) }
         // The bracket: the whole position gets the stop / trail / target once the entry has filled.
         val f = fills.firstOrNull()
         if (protect?.any == true && f != null) {
@@ -1942,6 +1948,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
         com.optionslab.app.data.Paper.close(symbol, product).also { r ->
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
+            r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { fl ->
+                com.optionslab.app.ira.BossTradeLog.filled("paper:${fl.orderId}", symbol, fl.action.equals("BUY", true), live = false, entry = fl.price, closing = true) }
         }
     }
 

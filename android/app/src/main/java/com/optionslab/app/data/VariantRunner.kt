@@ -287,7 +287,7 @@ object VariantRunner {
             val actual = if (vb.tunes.isEmpty()) emptyMap() else actualOn(d, runs)
             val (vp, fp) = withContext(Dispatchers.Default) {
                 synchronized(lock) {
-                    val v = VariantLab.day(_variants.value, d, runs, todays, history, DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual)
+                    val v = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history, DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual))
                     val f = StrategyForge.forwardDay(_forge.value, d, todays.filterKeys { it in UNDERLYINGS })
                     _variants.value = v.book; _forge.value = f.book
                     v to f

@@ -214,6 +214,8 @@ internal object Autopilot {
             }
             val made = ArrayList<AutoChange.Change>()
             for (g in routed.apply) {
+                // S14: learning frozen - recorded as skipped, not applied.
+                if (LearningFreeze.holds()) { synchronized(lock) { _book.value = AutoChange.record(_book.value, g.change, AutoChange.Status.SKIPPED, nowMs, today, note = LearningFreeze.NOTE, q = g.q).first }; continue }
                 val c = g.change
                 val said = runCatching { apply(c, pinConfirmed = false) }.getOrNull() ?: continue
                 synchronized(lock) {
@@ -478,7 +480,7 @@ internal object Autopilot {
 
     /** A won experiment's paper change made: pre-flight first, then through its agent's setter, on probation like any other. */
     private suspend fun graduate(c: AutoChange.Change, today: LocalDate, data: Preflight.Data, nowMs: Long) {
-        if (c.scope != AutoChange.Scope.PAPER || AutoChange.never(c)) return
+        if (c.scope != AutoChange.Scope.PAPER || AutoChange.never(c) || LearningFreeze.holds()) return
         val pre = withContext(Dispatchers.Default) { Preflight.check(c, data) }
         if (!pre.ok) {
             synchronized(lock) { _book.value = AutoChange.record(_book.value, c, AutoChange.Status.SKIPPED, nowMs, today, by = Experiments.BY, note = pre.words()).first }

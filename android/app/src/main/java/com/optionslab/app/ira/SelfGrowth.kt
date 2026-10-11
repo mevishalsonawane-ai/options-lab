@@ -160,6 +160,7 @@ internal object SelfGrowth {
     internal suspend fun consolidateIfDue(): Consolidation.Done? {
         val today = now().toLocalDate()
         val sunday = Consolidation.due(today, consolidatedOn) ?: return null
+        if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.CONSOLIDATION)) return null   // S18: battery / heat budget
         val first = consolidatedOn == null
         consolidatedOn = sunday
         // The very first run on this phone only sets the week (nothing kept yet to tidy; the first consolidation is next Sunday).

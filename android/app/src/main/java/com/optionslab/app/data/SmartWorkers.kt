@@ -390,6 +390,8 @@ object SmartWorkers {
         runCatching { RegimeHost.tick() }
         runCatching { PortfolioHost.refreshIfDue() }
         runCatching { HistoryKeeper.kick() }
+        // The learning freeze, today's lesson, the replays' candles and the monthly scorecard when due (S14-S21; memory checks until then).
+        runCatching { com.optionslab.app.ira.SelfJobs.tick(context) }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */

@@ -117,6 +117,9 @@ class IraAlgoApp : Application() {
         // The history vault (TODO S5, 11 Oct): nothing read now; its folder is opened by its own thread after the close.
         com.optionslab.app.data.HistoryKeeper.init(this)
         com.optionslab.app.data.OrderFlowLive.init(this)
+        // The roadmap's trust, learning-from-Boss and study pieces (S10-S21): the learning freeze, Boss's own trades, the
+        // scorecard, the battery budget; small files read on background threads.
+        com.optionslab.app.ira.SelfJobs.init(this)
         // The gold books and Jarvis's memory are decrypted on a background thread (Speed, round 2); every change to them
         // waits until they are read, so nothing is ever saved over them empty.
         timed("gold books") { com.optionslab.app.data.GoldBooks.init(this) }

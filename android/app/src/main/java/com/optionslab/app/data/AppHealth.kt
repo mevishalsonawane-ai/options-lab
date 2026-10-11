@@ -211,7 +211,8 @@ object AppHealth {
             var b = book
             if (saver != null) b = HealthBook.saver(b, now, saver)
             if (order != null) b = HealthBook.orderPath(b, today, order.first, order.second)
-            val (nb, adj) = HealthTuner.evaluate(b, today)
+            // S14: while learning is frozen the samples are kept and nothing is retuned.
+            val (nb, adj) = if (com.optionslab.app.ira.LearningFreeze.holds()) b to emptyList<HealthTuner.Adjust>() else HealthTuner.evaluate(b, today)
             book = nb
             cadences = nb.tuned.mapValues { (k, t) -> HealthTuner.bounded(k, t.ms) }
             adj
@@ -222,6 +223,23 @@ object AppHealth {
         }
         saveNow()
         return changes
+    }
+
+    /**
+     * "Today's changes" undo (S13): [key]'s cadence back to normal now (the tuner may lengthen it again on a later day if stalls
+     * cluster there again). What to say, or null when it was not lengthened.
+     */
+    fun restoreCadence(key: String): String? {
+        ensureLoaded()
+        val was = synchronized(lock) {
+            val t = book.tuned[key] ?: return null
+            book = book.copy(tuned = book.tuned - key)
+            cadences = book.tuned.mapValues { (k, x) -> HealthTuner.bounded(k, x.ms) }
+            t
+        }
+        saveSoon()
+        runCatching { Diag.record("health", "undone by you: ${HealthTuner.words(key)} back to normal") }
+        return "${HealthTuner.words(key)} is back to every ${HealthBook.msWords(HealthTuner.defaultMs(key))} (it was every ${HealthBook.msWords(was.ms)})."
     }
 
     // ---- words -----------------------------------------------------------------------------------------------------------------

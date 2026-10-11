@@ -237,6 +237,8 @@ object ManagerSpecialists {
             val today = Market.today()
             if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return
             if (_book.value.reviewedOn == today.toString()) return
+            // S14: learning frozen - no self-tuning tonight (the records go on being kept by the trade manager).
+            if (com.optionslab.app.ira.LearningFreeze.holds()) return
             review(today.toString(), nowMs)
         }
     }
