@@ -79,6 +79,22 @@ class SpecialistBookTest {
         assertTrue(B.tune("pine", ManagerConfig("pine"), SpecialistBook.Tuning(), bad, "d1").tuning.weights.isEmpty())
     }
 
+    @Test fun aWeightBossUndidRestsFromTheNightlyTuning() {
+        // Review 2 #8: Boss undid VWAP's weight step on Liquidity: tonight's tuning leaves it where he put it.
+        val base = ManagerConfig("liquidity")
+        val good = B.cards(many(30, "vwap", 100.0))
+        val undone = SpecialistBook.Tuning(weights = mapOf("vwap" to 0.25), lastDay = "d1")
+        val t = B.tune("liquidity", base, undone, good, "d2", rested = setOf("vwap")).tuning
+        assertEquals(0.25, t.weights.getValue("vwap"), 1e-12)
+        // Its rest over: stepped again.
+        assertEquals(0.275, B.tune("liquidity", base, undone, good, "d3").tuning.weights.getValue("vwap"), 1e-9)
+        // A rested weight is still muted when it hurts (a mute only lowers risk).
+        val bad = B.cards(many(34, "oi", -50.0))
+        val r = B.tune("liquidity", base, SpecialistBook.Tuning(), bad, "d1", rested = setOf("oi"))
+        assertTrue("oi" !in r.tuning.weights)
+        assertEquals("oi", r.newlyMuted.single().first)
+    }
+
     @Test fun theSuggestionForLiveIsWhatTuningChangedAgainstTheFrozenWeights() {
         val base = ManagerConfig("pine")
         val tuned = SpecialistBook.Tuning(weights = mapOf("vwap" to 0.3), muted = mapOf("oi" to "hurt"))

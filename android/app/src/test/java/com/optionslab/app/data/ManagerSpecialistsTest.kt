@@ -83,6 +83,11 @@ class ManagerSpecialistsTest : RobolectricTest() {
         // Solo is not acting on live: its un-mute needs no PIN.
         ManagerSpecialists.mute("solo", "vwap")
         assertTrue(ManagerSpecialists.unmute("solo", "vwap").startsWith("VWAP specialist counts again"))
+        // ...but only on paper and shadow (review 2 #6): the frozen live book keeps its mute until the PIN.
+        assertTrue(ManagerSpecialists.configFor("solo", frozen = false).counts("vwap"))
+        assertFalse(ManagerSpecialists.configFor("solo", frozen = true).counts("vwap"))
+        ManagerSpecialists.unmute("solo", "vwap", pinConfirmed = true)
+        assertTrue(ManagerSpecialists.configFor("solo", frozen = true).counts("vwap"))
         // The live weights change only on the PIN.
         assertEquals(ManagerSpecialists.PIN_ACCEPT, ManagerSpecialists.acceptSuggestion("pine", pinConfirmed = false))
     }

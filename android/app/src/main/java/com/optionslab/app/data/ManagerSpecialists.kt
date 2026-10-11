@@ -168,14 +168,18 @@ object ManagerSpecialists {
         val live = liveActs(family)
         if (live && !pinConfirmed) return PIN_UNMUTE
         val n = settledOf(family, id)
+        // Without the PIN only the self-tuned book (shadow and paper): the frozen live book keeps its mute even while the manager
+        // does not act on live now - it would count again the day live ACT is switched on.
+        val liveMuted = _book.value.frozen[family]?.muted?.containsKey(id) == true
         changed { b ->
             val tuned = b.tuned + (family to SpecialistBook.unmute(b.tuned[family] ?: SpecialistBook.Tuning(), id, n))
-            val frozen = if (!live || pinConfirmed) b.frozen + (family to SpecialistBook.unmute(b.frozen[family] ?: SpecialistBook.Tuning(), id, n)) else b.frozen
+            val frozen = if (pinConfirmed) b.frozen + (family to SpecialistBook.unmute(b.frozen[family] ?: SpecialistBook.Tuning(), id, n)) else b.frozen
             b.copy(tuned = tuned, frozen = frozen)
         }
         val name = ManagerTeam.nameOf(id)
-        runCatching { Diag.record("trade manager", "${f.name}: $name specialist un-muted") }
-        return "$name specialist counts again for ${f.name}."
+        runCatching { Diag.record("trade manager", "${f.name}: $name specialist un-muted" + if (!pinConfirmed && liveMuted) " (paper and shadow; live stays muted)" else "") }
+        return "$name specialist counts again for ${f.name}" +
+            if (!pinConfirmed && liveMuted) " on paper and shadow; on live trades it stays muted until you un-mute it there with your PIN." else "."
     }
 
     /** What the tuned weights would change on [family]'s LIVE trades (empty: nothing). */
@@ -251,12 +255,16 @@ object ManagerSpecialists {
         val muted = ArrayList<Pair<String, Pair<String, String>>>()
         // Each strategy's tuning before and after (and its committee), for Autopilot's change log.
         val logged = ArrayList<Triple<String, Pair<SpecialistBook.Tuning?, SpecialistBook.Tuning>, ManagerConfig>>()
+        // A weight Boss undid rests (Autopilot's rest): not stepped again until its rest is over (read before the book's lock).
+        val rested = cards.map { it.family }.distinct().associateWith { f ->
+            runCatching { com.optionslab.app.ira.Autopilot.restedWeights(f, java.time.LocalDate.parse(day)) }.getOrDefault(emptySet())
+        }
         changed { b ->
             val tuned = HashMap(b.tuned)
             logged.clear()
             for (f in cards.map { it.family }.distinct()) {
                 val before = tuned[f]
-                val r = SpecialistBook.tune(f, base(b, f), tuned[f] ?: SpecialistBook.Tuning(), cards, day)
+                val r = SpecialistBook.tune(f, base(b, f), tuned[f] ?: SpecialistBook.Tuning(), cards, day, rested[f].orEmpty())
                 tuned[f] = r.tuning
                 logged += Triple(f, before to r.tuning, base(b, f))
                 for (m in r.newlyMuted) muted += f to m

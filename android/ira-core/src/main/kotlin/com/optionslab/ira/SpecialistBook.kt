@@ -91,9 +91,10 @@ object SpecialistBook {
      * Tonight's step for [family] from its [cards] on [day]: each specialist with [MIN_SETTLED] settled decisions or more moves
      * its weight one [STEP] up (ahead of the original rules, right at least half the time) or down (behind them), kept within
      * [MIN_X]..[MAX_X] of [base]'s default; one that hurt more than it helped is muted with the reason (not again within
-     * [MIN_SETTLED] decisions of Boss un-muting it). Nothing the second time on the same day.
+     * [MIN_SETTLED] decisions of Boss un-muting it). Nothing the second time on the same day. A specialist in [rested] (Boss
+     * undid its weight: it rests) keeps its weight.
      */
-    fun tune(family: String, base: ManagerConfig, cur: Tuning, cards: List<Card>, day: String): Tuned {
+    fun tune(family: String, base: ManagerConfig, cur: Tuning, cards: List<Card>, day: String, rested: Set<String> = emptySet()): Tuned {
         if (cur.lastDay == day) return Tuned(cur, emptyList(), emptyList())
         val weights = HashMap(cur.weights)
         val muted = LinkedHashMap(cur.muted)
@@ -102,7 +103,7 @@ object SpecialistBook {
         for (c in cards) {
             if (c.family != family || c.settled < MIN_SETTLED || c.specialist !in ManagerTeam.IDS) continue
             val def = base.spec(c.specialist).weight
-            if (def > 0) {
+            if (def > 0 && c.specialist !in rested) {
                 val w0 = weights[c.specialist] ?: def
                 val up = c.net > 0 && (c.hitRate ?: 0.0) >= 0.5
                 val down = c.net < 0
