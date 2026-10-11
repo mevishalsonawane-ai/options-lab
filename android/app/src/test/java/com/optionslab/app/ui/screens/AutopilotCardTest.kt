@@ -134,7 +134,7 @@ class AutopilotCardTest {
         // The experiment, marked as one, paper only, with its pairs and its test.
         assertTrue(scrolledShows("the OI specialist on Night (paper): counts → muted"))
         assertTrue(scrolledShows("experiment · paper only · running"))
-        assertTrue(scrolledShows("0 pairs on alternate paper trades"))
+        assertTrue(scrolledShows("0 pairs on paper trades (each one both ways)"))
         // The probation: its lesson's q, the sequential test's state, the pre-flight it passed.
         assertTrue(scrolledShows("Lesson: q 0.004"))
         assertTrue(scrolledShows("% of the way (leaning keep), 6 cases"))

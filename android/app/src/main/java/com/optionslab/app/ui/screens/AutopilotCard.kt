@@ -197,7 +197,7 @@ private fun ExperimentRow(x: Experiments.Experiment) {
         Text("${c.what}: ${c.from} → ${c.to}", style = Type.body.copy(color = p.ink, fontSize = 14.sp))
         Text("${com.optionslab.ira.AgentLessons.day(x.startedOn)} · experiment · paper only · ${x.status.words}",
             style = Type.label.copy(color = if (x.status == Experiments.Status.LOST) p.oxblood else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp))
-        Text("${x.pairs} pair${if (x.pairs == 1) "" else "s"} on alternate paper trades, the variant ${com.optionslab.ira.AgentLessons.rs(x.lead)} " +
+        Text("${x.pairs} pair${if (x.pairs == 1) "" else "s"} on paper trades (each one both ways), the variant ${com.optionslab.ira.AgentLessons.rs(x.lead)} " +
             (if (x.lead >= 0) "ahead" else "behind"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         if (x.test.isNotEmpty()) Text("Test: ${x.test}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         if (x.note.isNotEmpty()) Text(x.note, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))

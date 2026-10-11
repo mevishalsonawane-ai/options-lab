@@ -87,7 +87,7 @@ object WhatsNew {
                 "A lesson that holds only on busy days, or only on expiry days, says so. " +
                 "Before Autopilot changes a paper or live setting, it replays the change on your stored trades. " +
                 "If it would have done worse, the change is skipped. " +
-                "A lesson still building is tried first as a paper experiment on alternate trades, never on live. " +
+                "A lesson still building is tried first as a paper experiment on each paper trade both ways, never on live. " +
                 "Each change is kept or reverted as soon as the evidence is clear. " +
                 "And the bar rises with every setting it has tried.",
             "Home → Automation card → Autopilot → Change log",

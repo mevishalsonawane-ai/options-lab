@@ -245,7 +245,7 @@ class AutopilotTest : RobolectricTest() {
         askAndWait("what experiments are running")
         val exps = IraHub.state.value.messages.last().text
         assertTrue(exps, exps.startsWith("1 paper experiment is running, Boss"))
-        assertTrue(exps, "Night (R3)'s new paper entries: on → paused on alternate paper trades" in exps && "Trials so far: 2" in exps)
+        assertTrue(exps, "Night (R3)'s new paper entries: on → paused on each paper trade, both ways" in exps && "Trials so far: 2" in exps)
         // Questions only: nothing waits for a yes, nothing changed.
         assertTrue(IraHub.state.value.pending.isEmpty())
         assertFalse("night_r3" in SmartWorkers.settings.value.paused)

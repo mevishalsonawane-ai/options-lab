@@ -162,7 +162,7 @@ class WhatsNewChangelogTest {
         assertEquals("2026-10-11-smarter-learning", x.id)
         assertEquals(LocalDate.of(2026, 10, 11), x.date)
         for (w in listOf("q-value", "all lessons are tested together", "only on busy days", "replays the change on your stored trades",
-            "would have done worse", "paper experiment on alternate trades, never on live", "as soon as the evidence is clear",
+            "would have done worse", "paper experiment on each paper trade both ways, never on live", "as soon as the evidence is clear",
             "the bar rises with every setting it has tried"))
             assertTrue(w in x.what, w)
         assertTrue("Autopilot" in x.where && "Change log" in x.where, x.where)

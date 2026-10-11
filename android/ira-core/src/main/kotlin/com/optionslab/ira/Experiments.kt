@@ -135,7 +135,7 @@ object Experiments {
         val head = if (run.isEmpty()) "No paper experiment is running, Boss." else
             "${run.size} paper experiment${if (run.size == 1) " is" else "s are"} running, Boss (at most $MAX_RUNNING, paper only):"
         val body = run.joinToString("") { x ->
-            " • ${x.change.what}: ${x.change.from} → ${x.change.to} on alternate paper trades since ${AgentLessons.day(x.startedOn)}, " +
+            " • ${x.change.what}: ${x.change.from} → ${x.change.to} on each paper trade, both ways, since ${AgentLessons.day(x.startedOn)}, " +
                 "${x.pairs} pair${if (x.pairs == 1) "" else "s"} so far, the variant ${AgentLessons.rs(x.lead)} ${if (x.lead >= 0) "ahead" else "behind"}; ${x.test}."
         }
         val tail = if (ended.isEmpty()) "" else " Lately: " + ended.joinToString("; ") { "${it.change.what} ${it.status.words}" } + "."
