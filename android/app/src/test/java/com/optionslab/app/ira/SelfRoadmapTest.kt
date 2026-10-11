@@ -183,7 +183,7 @@ class SelfRoadmapTest : RobolectricTest() {
     @Test fun aHandTradeIsKeptWithItsReasonAndJarvisFormsHisRules() {
         assumeTrue("the learning freeze and Boss's trades are in IraAlgo with Jarvis only", Autopilot.enabled())
         BossTradeLog.filled("paper:1", "NIFTY26OCT25000CE", buy = true, live = false, entry = 100.0, stop = 90.0, target = 120.0, closing = false)
-        val p = assertNotNull(BossTradeLog.prompt.value)
+        val p = checkNotNull(BossTradeLog.prompt.value)
         assertFalse(p.exit)
         BossTradeLog.drain()
         BossTradeLog.answer(p, why = BossTrades.Why.LEVEL, note = "held the level")
@@ -260,14 +260,14 @@ class SelfRoadmapTest : RobolectricTest() {
 
     @Test fun todaysLessonComesFromTodaysRecordsAndAReplayOpensFromJarvis() = runBlocking<Unit> {
         TradeManagerHost.recordsForTest(listOf(closed("liq-1", "liquidity", "Liquidity 15+5", ms(10, 30), 110.0, 130.0)))
-        val l = assertNotNull(SelfJobs.buildLesson(day))
+        val l = checkNotNull(SelfJobs.buildLesson(day))
         assertTrue(l.text, l.text.contains("trailed the original rules by ₹1,500"))
         assertTrue(SelfJobs.answerLesson().startsWith("Today's lesson"))
         val said = SelfAnswers.answer(SelfTalk.Ask(SelfTalk.Kind.REPLAY, "liquidity"), locked = false)
         assertTrue(said, said.startsWith("Opening the replay of Liquidity 15+5"))
         assertEquals("liq-1", BotReplayStore.open.value)
         BotReplayStore.testBars = { emptyList() }
-        val r = assertNotNull(BotReplayStore.load("liq-1"))
+        val r = checkNotNull(BotReplayStore.load("liq-1"))
         assertTrue(r.counterfactual!!.startsWith("The original rules would have exited at 130"))
         assertNull(BotReplayStore.load("gone"))
     }
