@@ -45,14 +45,14 @@ import kotlinx.coroutines.withContext
  * trade's decisions. Memory only on screen; a mode is written off the main thread; LIVE to ACT asks for the PIN.
  */
 @Composable
-internal fun TradeManagerSection(model: AppModel) {
+internal fun TradeManagerSection(model: AppModel, divider: Boolean = true) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     val records by TradeManagerHost.records.collectAsState(Dispatchers.Main.immediate)
     val policy by TradeManagerHost.policy.collectAsState(Dispatchers.Main.immediate)
     var sheet by remember { mutableStateOf(false) }
     var team by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { TradeManagerHost.ensureLoaded() } } }
-    Rule()
+    if (divider) Rule()
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
         val p = LocalPalette.current
         Text("Trade manager", style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))

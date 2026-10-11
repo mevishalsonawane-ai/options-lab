@@ -108,7 +108,10 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
         whatsNew = if (news.isNotEmpty()) {
             { WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo) }
         } else null,
-        strategies = { StrategyArmCard(model) { onGo("strategy") } })
+        strategies = { StrategyArmCard(model) { onGo("strategy") } },
+        // Under the Strategies card: the MCX bots, then the trade manager; at the end, after the live orders, the reads.
+        afterStrategies = listOf("mcx" to @Composable { McxHomeCard() }, "manager" to @Composable { TradeManagerHomeCard(model) }),
+        reads = listOf("orderflow" to @Composable { OrderFlowHomeCard(model) }, "brain" to @Composable { BrainHomeCard() }))
 }
 
 /**
@@ -204,6 +207,8 @@ private fun AlmanacBody(
     glance: (@Composable () -> Unit)?,
     whatsNew: (@Composable () -> Unit)?,
     strategies: @Composable () -> Unit,
+    afterStrategies: List<Pair<String, @Composable () -> Unit>> = emptyList(),
+    reads: List<Pair<String, @Composable () -> Unit>> = emptyList(),
 ) {
     val p = LocalPalette.current
     var range by rememberSaveable { mutableStateOf("1D") }
@@ -247,6 +252,8 @@ private fun AlmanacBody(
 
         // ---- strategies: arm the ones you want ------------------------------------------
         item { strategies() }
+        // ---- the MCX bots and the trade manager: each its own card (11 Oct) -----------------------
+        afterStrategies.forEach { (k, card) -> item(key = k) { card() } }
 
         // ---- BANKNIFTY ------------------------------------------------------------------
         item {
@@ -327,6 +334,9 @@ private fun AlmanacBody(
                 }
             }
         }
+
+        // ---- the reads: order flow, then the Brain, each its own card (11 Oct) -----------------------
+        reads.forEach { (k, card) -> item(key = k) { card() } }
     }
 }
 

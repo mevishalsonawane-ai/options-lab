@@ -52,7 +52,7 @@ class McxArmsCardTest {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 StrategyArmContent(false, false, emptyList(), emptyMap(), emptyMap(), false, RecordingStrategyActions(), {},
                     orbRows = { Text("ORB rows") }, reauth = StrategyFakes.reauth, nightRow = { Text("Night row") },
-                    mcxRows = { McxArmsGroup(v, onArm) })
+                    mcxRows = { McxArmsGroup(v, onArm = onArm) })
             }
         }
     }

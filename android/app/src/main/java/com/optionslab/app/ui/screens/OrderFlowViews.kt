@@ -453,7 +453,7 @@ private fun FlowHistory(points: List<Pair<Long, Int>>, modifier: Modifier) {
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun OrderFlowSection(model: AppModel) {
+internal fun OrderFlowSection(model: AppModel, divider: Boolean = true) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     val p = LocalPalette.current
     val reads by OrderFlowLive.reads.collectAsState(Dispatchers.Main.immediate)
@@ -461,7 +461,7 @@ internal fun OrderFlowSection(model: AppModel) {
     var detail by remember { mutableStateOf<String?>(null) }
     var settings by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { FlowGate.setting("orb") } } }   // the modes read once, off the main thread
-    Rule()
+    if (divider) Rule()
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
         Text("Order flow", style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
         // "Flow BN: buyers 72 · NF: balanced 51": the read of each index the stream gives, BankNifty first.

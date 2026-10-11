@@ -45,19 +45,19 @@ internal const val MCX_ARMS_WHERE = "MCX paper bots are on Home → Strategies (
  * off the main thread.
  */
 @Composable
-internal fun McxArmRows() {
+internal fun McxArmRows(divider: Boolean = true) {
     val v by McxPaperArms.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { McxPaperArms.refresh() } } }
-    McxArmsGroup(v) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
+    McxArmsGroup(v, divider) { arm, on -> scope.launch(Dispatchers.IO) { runCatching { McxPaperArms.setArmed(arm, on) } } }
 }
 
 /** The group from plain state ([v]) and the switches' callback (arm, on); it sits in the Strategies card's column. */
 @Composable
-internal fun McxArmsGroup(v: McxPaperArms.View, onArm: (String, Boolean) -> Unit) {
+internal fun McxArmsGroup(v: McxPaperArms.View, divider: Boolean = true, onArm: (String, Boolean) -> Unit) {
     val p = LocalPalette.current
-    Rule()
-    Text(MCX_GROUP, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = 10.dp))
+    if (divider) Rule()
+    Text(MCX_GROUP, style = Type.title.copy(color = p.ink, fontSize = 15.sp), modifier = Modifier.padding(top = if (divider) 10.dp else 0.dp))
     Note("Research ideas on paper only: none is proven. 1 lot each, never sent to Zerodha, off until you switch one on.",
         Modifier.padding(bottom = 4.dp))
     McxPaperArms.ARMS.forEach { arm -> McxArmRow(arm, v, onArm) }

@@ -51,7 +51,7 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun BrainSection() {
+internal fun BrainSection(divider: Boolean = true) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     val p = LocalPalette.current
     val brain by SmartWorkers.brain.collectAsState(Dispatchers.Main.immediate)
@@ -67,7 +67,7 @@ internal fun BrainSection() {
             kotlinx.coroutines.delay(15_000L)
         }
     }
-    Rule()
+    if (divider) Rule()
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
         Text("Brain", style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
         val chips = SmartWorkers.chips(reviews, settings)

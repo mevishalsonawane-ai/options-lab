@@ -86,12 +86,34 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
         dayLock = dayLock,
         paperSince = paperSince,
         // Night (R3), then VIX divergence (9 Oct, research R1 N13): the NSE paper-only arms under the ORB rows.
-        // Then the Order flow section (9 Oct): the live read, and each strategy's OFF / SHADOW / CONFIRM with its record.
-        // Then the Brain (10 Oct): each strategy's health against its backtest, the market's regime, the bots' consensus.
-        // Then the trade manager (10 Oct): its modes per strategy and its record against the original rules.
-        nightRow = { NightRow(); VixDivRow(); OrderFlowSection(model); BrainSection(); TradeManagerSection(model) },
-        mcxRows = { McxArmRows() },
+        // MCX, the trade manager, order flow and the Brain are their own Home cards (11 Oct, Boss: "it should separate").
+        nightRow = { NightRow(); VixDivRow() },
     )
+}
+
+/** Home's MCX paper bots, a card of their own under the Strategies card (11 Oct). */
+@Composable
+fun McxHomeCard() { LedgerCard { McxArmRows(divider = false) } }
+
+/** Home's trade manager card: its modes, record and specialists (11 Oct: out of the Strategies card). None in GOLD. */
+@Composable
+fun TradeManagerHomeCard(model: AppModel) {
+    if (com.optionslab.app.BuildConfig.GOLD) return
+    LedgerCard { TradeManagerSection(model, divider = false) }
+}
+
+/** Home's order flow card: the live read and each strategy's OFF / SHADOW / CONFIRM (11 Oct: its own card). None in GOLD. */
+@Composable
+fun OrderFlowHomeCard(model: AppModel) {
+    if (com.optionslab.app.BuildConfig.GOLD) return
+    LedgerCard { OrderFlowSection(model, divider = false) }
+}
+
+/** Home's Brain card: each strategy's health, the market's regime, the bots' consensus (11 Oct: its own card). None in GOLD. */
+@Composable
+fun BrainHomeCard() {
+    if (com.optionslab.app.BuildConfig.GOLD) return
+    LedgerCard { BrainSection(divider = false) }
 }
 
 /** What Home's Strategies card asks the model to do (an interface so tests can record it without an [AppModel]). */
