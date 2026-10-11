@@ -127,8 +127,8 @@ jobs:
         env:
           QUICK: ${{ startsWith(github.event.head_commit.message, '[quick]') }}
         run: |
-          if [ "$QUICK" = "true" ]; then ./gradlew --no-daemon :app:assembleRelease
-          else ./gradlew --no-daemon :app:assembleIraDebug :app:assembleRelease; fi
+          if [ "$QUICK" = "true" ]; then ./gradlew --no-daemon --max-workers=2 :app:assembleRelease
+          else ./gradlew --no-daemon --max-workers=2 :app:assembleIraDebug :app:assembleRelease; fi
       - name: Sandbox report (every permission the APK holds)
         run: cat app/build/reports/sandbox/*.txt
       # The microphone is for "Jarvis": both apps hold it (on-device recognition only).
