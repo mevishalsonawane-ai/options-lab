@@ -174,6 +174,8 @@ object ArmDay {
         "stop" -> "out at its stop"
         "target" -> "out at its target"
         "profit_lock" -> "out at the profit lock"
+        "trade_manager" -> "out early on the trade manager's word"
+        "trade_manager_lock" -> "out at the trade manager's lock"
         "session_end" -> "out at the ${"%02d:%02d".format(Locale.ENGLISH, OrbRules.SQUARE_OFF.hour, OrbRules.SQUARE_OFF.minute)} square-off"
         "time_stop" -> "out at its time stop"
         "index_stop" -> "out at its index stop"

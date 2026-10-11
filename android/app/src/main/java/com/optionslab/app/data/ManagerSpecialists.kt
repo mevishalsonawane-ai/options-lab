@@ -4,6 +4,7 @@ import android.content.Context
 import com.optionslab.ira.Findings
 import com.optionslab.ira.ManagerConfig
 import com.optionslab.ira.ManagerTeam
+import com.optionslab.ira.R12Defaults
 import com.optionslab.ira.SpecialistBook
 import com.optionslab.ira.TradeManager
 import kotlinx.coroutines.CoroutineScope
@@ -73,15 +74,22 @@ object ManagerSpecialists {
      * The committee for [family]'s trade: the research's config (else the defaults) with the tuning applied - the [frozen] one
      * for a LIVE trade the manager acts on, the self-tuned one otherwise. Memory only; the same object until something changes.
      */
-    fun configFor(family: String, frozen: Boolean): ManagerConfig {
+    fun configFor(family: String, frozen: Boolean, underlying: String? = null): ManagerConfig {
         val b = _book.value
-        val k = if (frozen) "$family|live" else family
+        val u = underlying?.lowercase(java.util.Locale.ENGLISH)
+        val k = (if (frozen) "$family|live" else family) + (u?.let { "|$it" } ?: "")
         cache[k]?.takeIf { it.book === b }?.let { return it.cfg }
-        val base = b.research[family] ?: ManagerConfig(family)
-        val cfg = SpecialistBook.apply(base, if (frozen) b.frozen[family] else b.tuned[family])
+        val cfg = SpecialistBook.apply(base(b, family, u), if (frozen) b.frozen[family] else b.tuned[family])
         cache[k] = Cached(b, cfg)
         return cfg
     }
+
+    /**
+     * [family]'s committee before tuning: a research block Boss imported (per index first, "vixdiv/nifty"), else the bundled
+     * research defaults ([R12Defaults]: R12's rules, per index first), else the original committee. Memory only.
+     */
+    private fun base(b: Book, family: String, u: String? = null): ManagerConfig =
+        u?.let { b.research["$family/$it"] } ?: b.research[family] ?: R12Defaults.config(family, u) ?: ManagerConfig(family)
 
     /** The manager acts on [family]'s LIVE trades (its frozen weights apply; un-muting there takes the PIN). */
     fun liveActs(family: String): Boolean =
@@ -173,7 +181,7 @@ object ManagerSpecialists {
     /** What the tuned weights would change on [family]'s LIVE trades (empty: nothing). */
     fun suggestion(family: String): List<String> {
         val b = _book.value
-        return SpecialistBook.suggestion(b.tuned[family], b.frozen[family], b.research[family] ?: ManagerConfig(family))
+        return SpecialistBook.suggestion(b.tuned[family], b.frozen[family], base(b, family))
     }
 
     /** Boss accepts the tuned weights and mutes for [family]'s LIVE trades: only with his PIN. */
@@ -188,11 +196,12 @@ object ManagerSpecialists {
 
     /** The research's block (key=value or JSON) for one or more strategies. What to say. */
     fun importResearch(text: String): String {
-        val got = runCatching { ManagerConfig.parse(text) }.getOrDefault(emptyMap()).filterKeys { TradeManager.familyOf(it) != null }
+        // (A per-index committee, "vixdiv/nifty", belongs to its family.)
+        val got = runCatching { ManagerConfig.parse(text) }.getOrDefault(emptyMap()).filterKeys { TradeManager.familyOf(it.substringBefore('/')) != null }
         if (got.isEmpty()) return "Nothing in that block for the trade manager's specialists."
         changed { b -> b.copy(research = b.research + got) }
         runCatching { Diag.record("trade manager", "research's specialists block for ${got.keys.joinToString(", ")}") }
-        return "The research's specialists settings are in for ${got.keys.joinToString(", ") { TradeManager.familyName(it) }}."
+        return "The research's specialists settings are in for ${got.keys.map { it.substringBefore('/') }.distinct().joinToString(", ") { TradeManager.familyName(it) }}."
     }
 
     // ---- the nightly self-review ------------------------------------------------------------------------------------------
@@ -222,8 +231,7 @@ object ManagerSpecialists {
         changed { b ->
             val tuned = HashMap(b.tuned)
             for (f in cards.map { it.family }.distinct()) {
-                val base = b.research[f] ?: ManagerConfig(f)
-                val r = SpecialistBook.tune(f, base, tuned[f] ?: SpecialistBook.Tuning(), cards, day)
+                val r = SpecialistBook.tune(f, base(b, f), tuned[f] ?: SpecialistBook.Tuning(), cards, day)
                 tuned[f] = r.tuning
                 for (m in r.newlyMuted) muted += f to m
                 val trades = records.count { it.trade.family == f && it.vsOriginal != null && it.notes.any { n -> n.voters.isNotEmpty() } }
@@ -321,6 +329,20 @@ object ManagerSpecialists {
         }
     }
 
+    /**
+     * Round 2 (one mode per ORB arm): what was kept for the whole old "orb" family - Boss's mutes, the tuned and frozen
+     * weights, an imported block - carries on for each ORB arm that has nothing of its own, so no stored choice is lost.
+     */
+    internal fun perArm(b: Book): Book {
+        val arms = TradeManager.ORB_ARMS.filter { it != "orb" }
+        fun <T> spread(m: Map<String, T>, f: (String, T) -> T): Map<String, T> {
+            val o = m["orb"] ?: return m
+            return m + arms.filter { it !in m }.associateWith { f(it, o) }
+        }
+        return b.copy(research = spread(b.research) { arm, c -> c.copy(strategyId = arm) },
+            tuned = spread(b.tuned) { _, t -> t }, frozen = spread(b.frozen) { _, t -> t })
+    }
+
     /** Read once (a worker thread). */
     internal fun load() {
         if (loaded) return
@@ -330,8 +352,8 @@ object ManagerSpecialists {
             val o = JSONObject(text)
             val lines = o.optJSONArray("lines")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
             val research = ManagerConfig.parse(o.optString("research", ""))
-            val got = Book(research, decMap(o.optJSONObject("tuned")), decMap(o.optJSONObject("frozen")), lines,
-                if (o.has("reviewedOn")) o.getString("reviewedOn") else null)
+            val got = perArm(Book(research, decMap(o.optJSONObject("tuned")), decMap(o.optJSONObject("frozen")), lines,
+                if (o.has("reviewedOn")) o.getString("reviewedOn") else null))
             // (A change Boss made in the moment before the file was read wins: it is written over the file next.)
             synchronized(this) { if (_book.value == Book()) _book.value = got }
         }

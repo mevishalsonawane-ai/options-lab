@@ -388,9 +388,12 @@ class TradeManagerTest {
         assertEquals(TradeManager.Mode.ACT, p.mode("solo", TradeManager.Account.PAPER))
         assertEquals(TradeManager.Mode.ACT, p.mode("pine", TradeManager.Account.PAPER))
         assertEquals(TradeManager.Mode.SHADOW, p.mode("pine", TradeManager.Account.LIVE))
-        // Every other strategy: SHADOW by default, on paper too (records only); ACT only when Boss switches it on.
-        for (f in TradeManager.FAMILIES.filter { it.key !in TradeManager.ACT_ON_PAPER })
+        // Every other strategy: SHADOW by default, on paper too (records only); ACT only when Boss switches it on. Night and MCX
+        // trend are OFF (R12: nothing to manage); ORB Fresh acts on paper (R12's one proven rule), SHADOW on live.
+        for (f in TradeManager.FAMILIES.filter { it.key !in TradeManager.ACT_ON_PAPER && it.key !in setOf("night", "mcx-trend") })
             for (a in TradeManager.Account.entries) assertEquals(TradeManager.Mode.SHADOW, p.mode(f.key, a), f.key)
+        for (f in listOf("night", "mcx-trend")) assertEquals(TradeManager.Mode.OFF, p.mode(f, TradeManager.Account.PAPER), f)
+        assertEquals(TradeManager.Mode.SHADOW, p.mode("orb_fresh", TradeManager.Account.LIVE))
         assertEquals(TradeManager.Mode.SHADOW, p.mode("some-new-arm", TradeManager.Account.PAPER))
         assertEquals(TradeManager.Mode.ACT, p.with("night", TradeManager.Account.PAPER, TradeManager.Mode.ACT).mode("night", TradeManager.Account.PAPER))
         // An arm whose exits do not take the manager's word never acts, whatever is stored.
@@ -417,7 +420,7 @@ class TradeManagerTest {
         assertTrue("Solo exited early at 12:41: sellers took over" in a && "strength 70" in a && "lock none" in a, a)
         assertTrue("has not exited early" in M.answerWhy("pine", listOf(r)) { "x" })
         val s = M.answerStatus(listOf(r), TradeManager.Policy())
-        assertTrue("Pine: paper acting, live shadow" in s && "Solo: paper acting" in s && "every other strategy records only" in s && "Liquidity 15+5: paper shadow (records only), live shadow" in s && "Night (R3): paper shadow (records only);" in s, s)
+        assertTrue("Pine: paper acting, live shadow" in s && "Solo: paper acting" in s && "every other strategy records only" in s && "Liquidity 15+5: paper shadow (records only), live shadow" in s && "Night (R3): paper off;" in s && "ORB Fresh: paper acting, live shadow" in s, s)
     }
 
     @Test fun theQuestionsAreTheTradeManagersAndNeverAct() {

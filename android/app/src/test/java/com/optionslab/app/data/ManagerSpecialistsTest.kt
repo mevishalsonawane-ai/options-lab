@@ -87,6 +87,55 @@ class ManagerSpecialistsTest : RobolectricTest() {
         assertEquals(ManagerSpecialists.PIN_ACCEPT, ManagerSpecialists.acceptSuggestion("pine", pinConfirmed = false))
     }
 
+    // ---- ORB Fresh (R12 round 2): its paper trades take the manager's word, its live ones are only recorded -----------------
+
+    private fun orbFresh(live: Boolean) = TradeManagerHost.ArmTrade("orb_fresh", "orb:orb_fresh:X:${if (live) "L" else "P"}", "ORB Fresh",
+        "BANKNIFTY", 1, "BANKNIFTY26OCT52000CE", 300.0, 30, 260.0, 340.0, t0 + 3 * 3_600_000L, live, t0)
+
+    /** 25 flat minutes from the entry's: never 3% above 300, so R12's "no progress" fires on the 20th minute's close. */
+    private fun flat(at: Long) = TradeManager.Snapshot(at, 300.0,
+        minuteBars = (0 until 25).map { i -> val s = t0 / 60_000L * 60_000L + i * 60_000L; TradeManager.Bar(s, 300.0, 301.0, 299.0, 300.0) })
+
+    @Test fun orbFreshOnPaperActsOnTheResearchsRule() {
+        TradeManagerHost.sync(listOf(orbFresh(live = false)))
+        val r = TradeManagerHost.records.value.single()
+        assertEquals("orb_fresh", r.trade.family)
+        assertEquals(TradeManager.Mode.ACT, r.mode)
+        TradeManagerHost.testSnapshot = { _, at -> flat(at) }
+        TradeManagerHost.evaluate(t0 + 19 * 60_000L)
+        assertEquals(null, TradeManagerHost.exitDue(r.trade.tradeId))
+        TradeManagerHost.evaluate(t0 + 21 * 60_000L)
+        val due = TradeManagerHost.exitDue(r.trade.tradeId)
+        assertNotNull(due)
+        val exit = TradeManagerHost.records.value.single().notes.single { it.kind == TradeManager.EXIT_EARLY }
+        assertTrue(exit.acted); assertEquals("price", exit.lead)
+        assertTrue(exit.words, "no progress" in exit.words)
+    }
+
+    @Test fun liveOrbFreshIsOnlyRecordedAndLiveActTakesThePinAndStillRecordsOnly() {
+        TradeManagerHost.sync(listOf(orbFresh(live = true)))
+        val r = TradeManagerHost.records.value.single()
+        assertEquals(TradeManager.Account.LIVE, r.trade.account)
+        assertEquals(TradeManager.Mode.SHADOW, r.mode)
+        TradeManagerHost.testSnapshot = { _, at -> flat(at) }
+        TradeManagerHost.evaluate(t0 + 21 * 60_000L)
+        val would = TradeManagerHost.records.value.single().notes.single { it.kind == TradeManager.EXIT_EARLY }
+        assertFalse("recorded only", would.acted)
+        assertEquals(null, TradeManagerHost.exitDue(r.trade.tradeId))
+        assertEquals(null, TradeManagerHost.levels(r.trade.tradeId))
+        // LIVE to ACT: the PIN with its warning first; with the PIN, still records only (its live exits are not wired).
+        assertEquals(TradeManagerHost.PIN_NEEDED, TradeManagerHost.setMode("orb_fresh", TradeManager.Account.LIVE, TradeManager.Mode.ACT))
+        val said = TradeManagerHost.setMode("orb_fresh", TradeManager.Account.LIVE, TradeManager.Mode.ACT, pinConfirmed = true)
+        assertTrue(said, "records only" in said && "nothing changed" in said)
+        assertEquals(TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode("orb_fresh", TradeManager.Account.LIVE))
+    }
+
+    @Test fun jarvisSaysWhatTheResearchFound() {
+        val a = TradeManagerHost.answer(TradeManager.asked("what did the research say about the trade manager?")!!)
+        assertTrue(a, "ORB Fresh: research-proven to cut losses (+₹14,365 on 474 holdout trades); the arm still loses overall." in a)
+        assertTrue(a, "Liquidity: research says keep the original exits; recording only." in a)
+    }
+
     @Test fun theNightlyReviewTunesPaperAndShadowOnlyAndSaysOneLine() {
         val notes = { lead: String -> listOf(TradeManager.Note(t0, TradeManager.EXIT_EARLY, "team", "out", 110.0, true, lead = lead, voters = listOf(lead))) }
         // 34 settled Pine trades where the OI specialist's exits hurt.

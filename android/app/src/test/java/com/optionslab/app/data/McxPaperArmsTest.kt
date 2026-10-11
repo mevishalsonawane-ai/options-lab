@@ -205,7 +205,11 @@ class McxPaperArmsTest : RobolectricTest() {
 
     @Test fun inShadowTheEveningBreakTradesExactlyAsBefore() = shadowed("mcx-eve") { theEveningBreakBuysAndSellsOnPaperOnlyEvenWithEverythingLive() }
 
-    @Test fun inShadowTheTrendLegTradesExactlyAsBefore() = shadowed("mcx-trend") { theTrendLegBuysItsMiniFutureOnPaperOnly() }
+    // MCX trend is OFF by default since R12 (multi-month holds: nothing for a minute manager); switched to SHADOW here.
+    @Test fun inShadowTheTrendLegTradesExactlyAsBefore() {
+        com.optionslab.app.testing.ManagerShadow.shadow("mcx-trend")
+        shadowed("mcx-trend") { theTrendLegBuysItsMiniFutureOnPaperOnly() }
+    }
 
     @Test fun inShadowUsNightSilverTradesExactlyAsBefore() = shadowed("silver-night") { usNightSilverBuysOnPaperOnlyWithEverythingLiveAndItsDisasterStopReadsTheMinutesLow() }
 

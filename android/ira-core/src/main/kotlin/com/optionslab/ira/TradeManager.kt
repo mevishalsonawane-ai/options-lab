@@ -83,13 +83,20 @@ object TradeManager {
      * only ever trades on paper, and whether its own exit path takes the manager's word in ACT ([canAct]; false: it records
      * only, whatever its mode says).
      */
-    data class Family(val key: String, val name: String, val paperOnly: Boolean, val canAct: Boolean)
+    data class Family(val key: String, val name: String, val paperOnly: Boolean, val canAct: Boolean, val canActLive: Boolean = canAct)
 
-    /** Every hooked strategy (the record's order). Solo and Pine act on paper by default; every other one is SHADOW. */
+    /**
+     * Every hooked strategy (the record's order). The ORB family is one mode per arm (R12 round 2): ORB, ORB Fresh, ORB Sweep
+     * and Range Fade each their own, like Liquidity 15+5 and Hero. ORB Fresh's paper exits take the manager's word (R12's one
+     * proven rule); its LIVE exits do not yet ([Family.canActLive] false: LIVE ACT reads SHADOW).
+     */
     val FAMILIES: List<Family> = listOf(
         Family("solo", "Solo", paperOnly = true, canAct = true),
         Family("pine", "Pine", paperOnly = false, canAct = true),
-        Family("orb", "ORB arms", paperOnly = false, canAct = false),
+        Family("orb", "ORB", paperOnly = false, canAct = false),
+        Family("orb_fresh", "ORB Fresh", paperOnly = false, canAct = true, canActLive = false),
+        Family("orb_sweep", "ORB Sweep", paperOnly = true, canAct = false),
+        Family("range_fade", "Range Fade", paperOnly = true, canAct = false),
         Family("liquidity", "Liquidity 15+5", paperOnly = false, canAct = false),
         Family("hero", "Expiry Hero", paperOnly = false, canAct = false),
         Family("night", "Night (R3)", paperOnly = true, canAct = true),
@@ -100,8 +107,14 @@ object TradeManager {
         Family("silver-night", "US-night silver", paperOnly = true, canAct = true),
     )
 
-    /** The families that act on paper by default (their effect shows on paper): Solo and Pine. Every other one is SHADOW. */
-    val ACT_ON_PAPER: Set<String> = setOf("solo", "pine")
+    /** The ORB family's arms, each with its own mode (they shared the "orb" one before 10 Oct's round 2). */
+    val ORB_ARMS: List<String> = listOf("orb", "orb_fresh", "orb_sweep", "range_fade")
+
+    /** The families that act on paper by default (their effect shows on paper): Solo, Pine and ORB Fresh ([R12Defaults]). */
+    val ACT_ON_PAPER: Set<String> get() = FAMILIES.map { it.key }.filter { defaultMode(it, Account.PAPER) == Mode.ACT }.toSet()
+
+    /** Solo's and Pine's caveat in their record line: R12 did not test them. */
+    const val SOLO_PINE_NOTE = "R12: not tested; on history, early exits and trails hurt profitable strategies. Paper only until the record proves it."
 
     fun familyOf(key: String): Family? = FAMILIES.firstOrNull { it.key == key }
 
@@ -111,22 +124,28 @@ object TradeManager {
     // ---- modes ----------------------------------------------------------------------------------------------------------
 
     /**
-     * The default: Solo and Pine act on PAPER (their real effect shows there) and are SHADOW on LIVE until proven; every other
-     * strategy is SHADOW (records only; its own exits stay authoritative) - ACT only when Boss switches it on.
+     * The default where Boss has stored nothing: the bundled research block's ([R12Defaults]) - ORB Fresh, Solo and Pine act on
+     * PAPER and are SHADOW on LIVE; Night and MCX trend are OFF (nothing to manage); every other strategy is SHADOW (records
+     * only; its own exits stay authoritative). LIVE is never ACT by default. A strategy the block does not name: SHADOW.
      */
     fun defaultMode(family: String, account: Account): Mode =
-        if (family in ACT_ON_PAPER && account == Account.PAPER) Mode.ACT else Mode.SHADOW
+        R12Defaults.configs[family]?.mode(account) ?: if (family in LEGACY_ACT_ON_PAPER && account == Account.PAPER) Mode.ACT else Mode.SHADOW
+
+    private val LEGACY_ACT_ON_PAPER = setOf("solo", "pine")
 
     fun key(family: String, account: Account): String = "$family.${account.name.lowercase(Locale.ENGLISH)}"
 
     /**
      * Boss's choices per strategy family and account ("pine.live" -> ACT); the rest at their defaults. ACT on a family
-     * whose exits do not take the manager's word ([Family.canAct] false) reads as SHADOW: it never acts there.
+     * whose exits do not take the manager's word ([Family.canAct] false; on LIVE [Family.canActLive] false) reads as SHADOW:
+     * it never acts there.
      */
     data class Policy(val modes: Map<String, Mode> = emptyMap()) {
         fun mode(family: String, account: Account): Mode {
             val m = modes[key(family, account)] ?: defaultMode(family, account)
-            return if (m == Mode.ACT && familyOf(family)?.canAct != true) Mode.SHADOW else m
+            val f = familyOf(family)
+            val acts = f != null && f.canAct && (account == Account.PAPER || f.canActLive)
+            return if (m == Mode.ACT && !acts) Mode.SHADOW else m
         }
         fun with(family: String, account: Account, m: Mode): Policy {
             val k = key(family, account)
@@ -146,6 +165,35 @@ object TradeManager {
             m[k] = runCatching { Mode.valueOf(part.substringAfter('=').trim()) }.getOrNull() ?: continue
         }
         return Policy(m)
+    }
+
+    /**
+     * Round 2's one-time move to one mode per ORB arm: a mode Boss stored for the old "orb" family ("orb.paper=OFF") is kept
+     * for every arm that has nothing stored of its own (ORB keeps the key itself). A choice equal to the arm's default is not
+     * stored (as [Policy.with]). Run once (the app marks it done), so a later choice of Boss's is never overwritten.
+     */
+    fun perArm(p: Policy): Policy {
+        val m = LinkedHashMap(p.modes)
+        for (a in Account.entries) {
+            val old = p.modes[key("orb", a)] ?: continue
+            for (arm in ORB_ARMS) {
+                val k = key(arm, a)
+                if (arm == "orb" || k in p.modes) continue
+                if (old != defaultMode(arm, a)) m[k] = old
+            }
+        }
+        return Policy(m)
+    }
+
+    /**
+     * A record's strategy id from before round 2 ("orb:ORB Fresh", the family "orb" for every arm) moved to its arm's family
+     * ("orb_fresh:ORB Fresh"), so the record per arm counts it there. Any other id: as it is.
+     */
+    fun perArmId(strategyId: String): String {
+        if (strategyId.substringBefore(':') != "orb") return strategyId
+        val label = strategyId.substringAfter(':', "")
+        val arm = FAMILIES.firstOrNull { it.key in ORB_ARMS && it.name.equals(label, ignoreCase = true) }?.key ?: return strategyId
+        return "$arm:$label"
     }
 
     /** Turning a LIVE account to ACT takes the PIN or fingerprint. */
@@ -208,6 +256,15 @@ object TradeManager {
         val gammaNet: Double? = null, val zeroGamma: Double? = null,
         /** How old the held option's price is, ms (null: not known). */
         val premiumAgeMs: Long? = null,
+        // ---- the research's rules' readings ([R12Rules]; each optional: empty or null decides nothing) ----
+        /** The held option's 1-minute bars today (the whole day: the ATR reads the minutes before the entry too), as loaded. */
+        val minuteBars: List<Bar> = emptyList(),
+        /** The prior day's value area (the future's profile). */
+        val priorValueHigh: Double? = null, val priorValueLow: Double? = null,
+        /** The ATM±2 put-minus-call OI change over 15 minutes as a z-score (R12's OI; null: not measured live yet). */
+        val oiZ: Double? = null,
+        /** The 10-minute signed option flow as a z-score (R12's delta proxy; null: not measured live yet). */
+        val flowZ: Double? = null,
     )
 
     // ---- the rules ------------------------------------------------------------------------------------------------------
@@ -654,7 +711,24 @@ object TradeManager {
             "${n(t.extensions, "extension")} (${t.extHelped} helped, ${t.extHurt} hurt), ${n(t.lockExits, "lock exit")}; " +
             (if (t.settled == 0) "nothing settled yet" else "manager vs original rules ${rs(t.net)} on ${t.settled} settled") +
             (if (t.open > 0) " (${t.open} still followed)" else "") +
-            (if (t.ready && mode != Mode.ACT) " - ready to turn on? (${t.settled} settled, ahead by ${rs(t.net)}; a hint only, nothing switches by itself)" else "")
+            (if (t.ready && mode != Mode.ACT) " - ready to turn on? (${t.settled} settled, ahead by ${rs(t.net)}; a hint only, nothing switches by itself)" else "") +
+            (if (t.family == "solo" || t.family == "pine") " · $SOLO_PINE_NOTE" else "")
+
+    /** The research's verdict per strategy in one plain sentence each (the bundled block, [R12Defaults]), the record's order. */
+    fun researchLines(): List<String> = FAMILIES.mapNotNull { R12Defaults.verdict(it.key) }
+
+    /** [family]'s modes in a few words: "ORB Fresh: paper acting, live shadow (records only)". */
+    fun modeLine(family: String, policy: Policy): String {
+        val f = familyOf(family)
+        return "${familyName(family)}: paper ${modeWords(policy.mode(family, Account.PAPER))}" +
+            if (f?.paperOnly == true) "" else ", live ${modeWords(policy.mode(family, Account.LIVE))}"
+    }
+
+    /** "What did the research say about the trade manager?": the verdict per strategy, then the modes per arm now. */
+    fun answerResearch(policy: Policy): String =
+        "What research round 12 found for the trade manager, Boss:\n" + researchLines().joinToString("\n") { "• $it" } +
+            "\nOn the money-making strategies every manager tested made them worse, so they keep their original exits and the " +
+            "manager only records. Modes now: " + FAMILIES.joinToString("; ") { modeLine(it.key, policy) } + "."
 
     /** The "Trade manager record" lines: per strategy, paper and live apart. */
     fun recordLines(records: List<Record>, policy: Policy? = null): List<String> {
@@ -666,7 +740,7 @@ object TradeManager {
      * A Jarvis question about the manager: [family] null for "how is it doing", else "why did <family> exit early"; [team]:
      * about its specialists ([ManagerTeam]) - which one made a strategy exit, how they are doing, mute or un-mute one.
      */
-    data class Ask(val why: Boolean, val family: String?, val team: TeamAsk? = null)
+    data class Ask(val why: Boolean, val family: String?, val team: TeamAsk? = null, val research: Boolean = false)
 
     enum class TeamKind { WHICH, HOW, MUTE, UNMUTE }
 
@@ -674,13 +748,15 @@ object TradeManager {
     data class TeamAsk(val kind: TeamKind, val specialist: String? = null)
 
     private val FAMILY_WORDS = listOf("solo" to Regex(" solo "), "pine" to Regex(" (pine|script|scripts) "),
-        "liquidity" to Regex(" liquidity "), "hero" to Regex(" hero "), "orb" to Regex(" orb "), "silver-night" to Regex(" silver "),
+        "liquidity" to Regex(" liquidity "), "hero" to Regex(" hero "), "orb_fresh" to Regex(" orb fresh "),
+        "orb_sweep" to Regex(" (orb )?sweep "), "range_fade" to Regex(" range fade "), "orb" to Regex(" orb "), "silver-night" to Regex(" silver "),
         "night" to Regex(" night "), "vixdiv" to Regex(" vix "), "mcx-eve" to Regex(" evening "), "mcx-morning" to Regex(" morning "),
         "mcx-trend" to Regex(" trend "))
 
     private val SPECIALIST_WORD = Regex(" specialists? ")
     private val UNMUTE_WORDS = Regex(" (un ?mute|unmuted|bring back|switch on|turn on|enable|restore) ")
     private val MUTE_WORDS = Regex(" (mute|muted|silence|switch off|turn off|disable|ignore) ")
+    private val RESEARCH_WORDS = Regex(" (research|researched|study|studies|r12|backtest|backtests|backtested|tested|evidence) ")
     private val WHICH_WORDS = Regex(" (which|who|what) ")
     private val EXIT_WORDS = Regex(" (exit|exited|exits|exiting|out|sell|sold|close|closed|cut|extend|extended) ")
 
@@ -702,6 +778,9 @@ object TradeManager {
             }
             return Ask(false, fam, TeamAsk(kind, spec?.first))
         }
+        // "What did the research say about the trade manager?" (R12): the verdict per strategy.
+        if (Regex(" trade manager| trade managers ").containsMatchIn(t) && RESEARCH_WORDS.containsMatchIn(t))
+            return Ask(false, FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(t) }?.first, research = true)
         val early =Regex(" (exit|exited|exits|exiting|sell|sold|close|closed|cut|get out|got out) early | early exit ").containsMatchIn(t)
         if (early && Regex(" why ").containsMatchIn(t)) return Ask(true, FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(t) }?.first)
         if (Regex(" trade manager| trade managers ").containsMatchIn(t)) return Ask(Regex(" why ").containsMatchIn(t), FAMILY_WORDS.firstOrNull { it.second.containsMatchIn(t) }?.first)
@@ -715,7 +794,8 @@ object TradeManager {
                 ", live ${modeWords(policy.mode(f.key, Account.LIVE))}"
         }
         val open = records.filter { !it.closed }.map { "${it.trade.label}: ${cardLine(it).removePrefix("Trade manager ")}" }
-        return "The trade manager, Boss - $modes. Solo and Pine act on paper; every other strategy records only until you switch it on.\n" +
+        return "The trade manager, Boss - $modes. Solo, Pine and ORB Fresh act on paper (ORB Fresh on the research's proven rule); " +
+            "every other strategy records only until you switch it on, and Night and MCX trend are off (nothing to manage).\n" +
             recordLines(records, policy).joinToString("\n") { "• $it" } +
             (if (open.isNotEmpty()) "\nNow: " + open.joinToString("; ") else "") +
             "\nIt only lowers risk: early exits, and a target moved out only with the lock raised to breakeven plus charges or better."

@@ -127,6 +127,11 @@ object OrbArms {
          * lesson ([com.optionslab.ira.TradeLesson]). Null: not recorded (an entry from before it was kept, or another arm).
          */
         val low: Double? = null,
+        /**
+         * ORB Fresh on paper with the trade manager acting (R12): the level the manager's lock raised the resting stop to
+         * (null: it never did - every other position). A stop that fills there is the manager's lock exit.
+         */
+        val mgrStop: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -239,7 +244,8 @@ object OrbArms {
                         sold = p.optInt("sold", 0), soldAt = if (p.has("soldAt")) p.getDouble("soldAt") else null,
                         soldTime = p.optString("soldTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
                         seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty(),
-                        lot = if (p.has("lot")) p.getInt("lot") else null, low = if (p.has("low")) p.getDouble("low") else null)
+                        lot = if (p.has("lot")) p.getInt("lot") else null, low = if (p.has("low")) p.getDouble("low") else null,
+                        mgrStop = if (p.has("mgrStop")) p.getDouble("mgrStop") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -585,7 +591,8 @@ object OrbArms {
                     .put("ladder", p.ladder).apply { p.peak?.let { put("peak", it) } }.put("timed", p.timed)
                     .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) } }
                     .apply { if (p.sold > 0) put("sold", p.sold); p.soldAt?.let { put("soldAt", it) }; p.soldTime?.let { put("soldTime", it.toString()) }
-                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) }; p.low?.let { put("low", it) } })
+                        if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) }; p.low?.let { put("low", it) }
+                        p.mgrStop?.let { put("mgrStop", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -637,11 +644,57 @@ object OrbArms {
     private fun managed(p: Position): TradeManagerHost.ArmTrade? {
         if (p.unconfirmed) return null
         val arm = armOf(p.arm)
-        val fam = when { arm.liquidity -> "liquidity"; arm.hero -> "hero"; else -> "orb" }
+        // One mode per arm (R12 round 2): ORB, ORB Fresh, ORB Sweep and Range Fade each their own family.
+        val fam = when { arm.liquidity -> "liquidity"; arm.hero -> "hero"; else -> arm.source }
         val target = if (arm.liquidity || arm.hero) null else ProfitLock.targetOf(arm)?.let { p.entry + it }
+        // The arm's own profit-lock ladder, so the record follows its original rules honestly (the record only).
+        val ladder = ladderTarget(p)
+        val cost = ProfitLock.roundTripPerUnit(p.entry, p.qty)
+        val lockAt: ((Double) -> Double?)? = ladder?.let { tg -> { peak: Double -> ProfitLock.level(p.entry, tg, peak, cost)?.let { ProfitLock.onTick(it) } } }
         return TradeManagerHost.ArmTrade(fam, managerId(p), arm.label, com.optionslab.ira.AutoSide.underlyingOf(p.symbol) ?: OrbRules.UNDERLYING,
             if (p.right == "PE") -1 else 1, p.symbol, p.entry, p.qty, if (arm.hero) null else p.stopTrigger, target,
-            epochMs(p.day.atTime(OrbRules.SQUARE_OFF)), p.live, epochMs(p.entryTime), p.exit, p.why, p.exitTime?.let { epochMs(it) }, kite = p.kite)
+            epochMs(p.day.atTime(OrbRules.SQUARE_OFF)), p.live, epochMs(p.entryTime), p.exit, p.why, p.exitTime?.let { epochMs(it) }, kite = p.kite,
+            lockAt = lockAt)
+    }
+
+    /** Why a position's resting stop filled: the trade manager's lock (R12, ORB Fresh paper), the profit lock, or its stop. */
+    private fun stopWhy(p: Position): String = when {
+        p.mgrStop != null && p.stopTrigger != null && kotlin.math.abs(p.stopTrigger - p.mgrStop) < 1e-9 -> MANAGER_LOCK
+        lockedStop(p) -> "profit_lock"
+        else -> "stop"
+    }
+
+    /** An exit the trade manager decided (R12, ORB Fresh on paper only), and the fill of the stop its lock raised. */
+    const val MANAGER_EXIT = "trade_manager"
+    const val MANAGER_LOCK = "trade_manager_lock"
+    /** ORB Fresh after a trade-manager exit: no new entry today (R12 did not test re-entries; fewer trades only lower risk). */
+    const val MANAGER_DONE = "done_after_trade_manager_exit"
+
+    /**
+     * The trade manager's word for [p], from memory only (its records and policy; no settings vault, no Keystore): its exit
+     * reason and its lock - ONLY for ORB Fresh on PAPER with the manager in ACT ([TradeManagerHost.exitDue] and
+     * [TradeManagerHost.levels] are null in SHADOW). Null for every other arm and every live position: they record only.
+     */
+    private fun managerWord(p: Position): Pair<String?, Double?>? {
+        if (p.live || p.arm != OrbRules.ORB_FRESH.source) return null
+        val id = managerId(p)
+        val lock = runCatching { TradeManagerHost.levels(id)?.second }.getOrNull()
+        val exit = runCatching { TradeManagerHost.exitDue(id) }.getOrNull()
+        return if (exit == null && lock == null) null else exit to lock
+    }
+
+    /**
+     * The trade manager's lock moves the paper resting stop UP (raise-only, R12's chandelier lock): never down, never to or
+     * above the price now (a price through the lock is the manager's exit instead). A refused modify leaves the stop as it was.
+     */
+    private fun raiseManagerStop(p: Position, lock: Double, ltp: Double): Position {
+        val id = p.stopOrderId ?: return p
+        val to = ProfitLock.onTick(lock)
+        if (!to.isFinite() || to <= (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 || to >= ltp - 1e-9) return p
+        val r = runCatching { Paper.modify(id, null, null, to) }
+        if (r.getOrNull()?.ok != true) return p
+        runCatching { Diag.record("orb", "${armOf(p.arm).label}: the trade manager's lock raised the paper stop to %.2f".format(Locale.ENGLISH, to)) }
+        return p.copy(stopTrigger = to, mgrStop = to)
     }
 
     /** The book's text as this process last wrote it, and the file's size and time just after (null: not since a load). */
@@ -1204,6 +1257,11 @@ object OrbArms {
         val spent = b.decided.getOrPut("${arm.source}|$day") { HashSet() }
         if (!spent.add(last.start.toString())) return "no_decision_bar"
         val lastExit = b.positions.filter { it.arm == arm.source && it.day == day }.mapNotNull { it.exitTime }.maxOrNull()
+        // ORB Fresh after the trade manager took it out today (its exit or its lock): no new entry today. R12 did not test
+        // re-entries after an early exit, and fewer trades only lower risk.
+        if (arm.freshOnly && b.positions.any { it.arm == arm.source && it.day == day && (it.why == MANAGER_EXIT || it.why == MANAGER_LOCK) }) {
+            watching(); return MANAGER_DONE
+        }
         if (arm.fade) {
             // Range Fade: a bar at the edge of the range that closes back inside is faded toward the middle; paper only, automatic.
             val entries = b.positions.count { it.arm == arm.source && it.day == day }
@@ -1324,9 +1382,10 @@ object OrbArms {
             // The resting stop filled in the paper book: that is the exit.
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "complete") {
-                // A stop the profit lock had moved up is the lock's exit (F1: the lock IS the resting stop).
+                // A stop the profit lock had moved up is the lock's exit (F1: the lock IS the resting stop); one the trade
+                // manager's lock moved up (ORB Fresh paper, R12) is the manager's.
                 b.positions[i] = p.copy(exit = so.averagePrice?.toDouble() ?: p.stopTrigger, exitTime = so.updateTimestamp,
-                    why = if (lockedStop(p)) "profit_lock" else "stop", charges = p.charges + chargesOf(so.orderId))
+                    why = stopWhy(p), charges = p.charges + chargesOf(so.orderId))
                 continue
             }
             // A stop found cancelled or rejected is gone, not retried.
@@ -1357,6 +1416,8 @@ object OrbArms {
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
             // close), checked here every pass; the operator's stop still sells it all at once below.
             if (armOf(cur.arm).hero && !stopped) { b.positions[i] = heroManage(seen, c, ltp, t); continue }
+            // The trade manager's word: ORB Fresh on paper in ACT only (R12's proven rule); null for every other position.
+            val mgr = managerWord(seen)
             val why = when {
                 stopped -> "operator_stop"
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "session_end"
@@ -1369,11 +1430,16 @@ object OrbArms {
                 // The arm's own target (ORB Sweep +80), reached on the price now or on a high since the entry (F2).
                 targetHit(cur, ltp, high) -> "target"
                 else -> OrbRules.exitReasonFor(armOf(cur.arm), cur.entry, ltp, t).takeIf { it == "stop" && cur.stopOrderId == null }
+                    // Where its own rules hold, the trade manager's early exit, through the arm's own paper exit.
+                    ?: mgr?.first?.let { MANAGER_EXIT }
             } ?: run {
-                // Held: the profit lock moves the resting stop up to what the best price has earned (F1).
-                b.positions[i] = raisePaperStop(seen, ltp)
+                // Held: the profit lock moves the resting stop up to what the best price has earned (F1); then the trade
+                // manager's lock, where it acts (ORB Fresh paper), up only.
+                val raised = raisePaperStop(seen, ltp)
+                b.positions[i] = mgr?.second?.let { raiseManagerStop(raised, it, ltp) } ?: raised
                 null
             } ?: continue
+            if (why == MANAGER_EXIT) runCatching { Diag.record("orb", "${armOf(cur.arm).label}: exited early by the trade manager - ${mgr?.first}") }
             b.positions[i] = if (armOf(cur.arm).hero) heroExit(seen, c, why) else exit(seen, c, why)
         }
     }
@@ -1385,7 +1451,7 @@ object OrbArms {
             Paper.cancel(id, "exit:$why")
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
             if (so?.status == "complete") return p.copy(exit = so.averagePrice?.toDouble(), exitTime = so.updateTimestamp,
-                why = if (lockedStop(p)) "profit_lock" else "stop", charges = p.charges + chargesOf(id))
+                why = stopWhy(p), charges = p.charges + chargesOf(id))
         }
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null)
         // Nothing sold (no price): the resting stop goes back in the book so the position is never left without one; the
@@ -2630,6 +2696,7 @@ object OrbArms {
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
         s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
+        s == MANAGER_DONE -> "Done for today: the trade manager took today's trade out early (research R12's rule); no re-entry today."
         s == "no_decision_bar" -> "No decision bars now (entries 10:05-13:55; ORB Sweep to 14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."
         s == "stopped_for_today" -> DayStop.line(Strategies.stopHint() ?: DayStop.Why.BOSS)

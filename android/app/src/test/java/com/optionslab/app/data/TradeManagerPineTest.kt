@@ -131,8 +131,8 @@ class TradeManagerPineTest : RobolectricTest() {
         assertEquals(TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode("liquidity", TradeManager.Account.PAPER))
         assertTrue("records only" in TradeManagerHost.setMode("liquidity", TradeManager.Account.PAPER, TradeManager.Mode.ACT))
         assertEquals(TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode("liquidity", TradeManager.Account.PAPER))
-        // A paper-only arm may act, switched on by hand (no PIN on paper); never by default.
-        assertEquals(TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode("night", TradeManager.Account.PAPER))
+        // A paper-only arm may act, switched on by hand (no PIN on paper); never by default (Night is OFF since R12).
+        assertEquals(TradeManager.Mode.OFF, TradeManagerHost.policy.value.mode("night", TradeManager.Account.PAPER))
         assertFalse(TradeManagerHost.setMode("night", TradeManager.Account.PAPER, TradeManager.Mode.ACT) == TradeManagerHost.PIN_NEEDED)
         assertEquals(TradeManager.Mode.ACT, TradeManagerHost.policy.value.mode("night", TradeManager.Account.PAPER))
     }

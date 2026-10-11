@@ -671,5 +671,48 @@ class OrbArmsDayTest : RobolectricTest() {
 
     // ---- the trade manager in SHADOW (10 Oct; hooked, SHADOW by default): the same trades and P&L, its would-have exits recorded only ----
 
+    /**
+     * R12 round 2: ORB Fresh on PAPER with the trade manager in ACT (its default). 20 minutes without 3% progress: the
+     * manager's exit closes the paper position through the arm's own exit (its stop taken out first, then a market sell),
+     * the reason recorded, and the arm does not enter again today.
+     */
+    @Test fun orbFreshOnPaperTakesTheTradeManagersExitAndStaysOutForTheDay() {
+        at(LocalTime.of(9, 50))
+        val msg = runBlocking { OrbArms.setArmed("orb_fresh", true, automatic = true) }
+        assertTrue(msg, msg.startsWith("ORB Fresh armed on paper"))
+        passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+        val p = arm("orb_fresh").today.single()
+        assertTrue(p.open)
+        val rec = TradeManagerHost.records.value.single { it.trade.family == "orb_fresh" }
+        assertEquals(com.optionslab.ira.TradeManager.Mode.ACT, rec.mode)
+        assertEquals(com.optionslab.ira.TradeManager.Account.PAPER, rec.trade.account)
+        // The manager's readings: the option flat at 300 from the entry's minute (never 3% above the entry).
+        TradeManagerHost.testNoWake = true
+        val first = rec.trade.entryMs / 60_000L * 60_000L
+        TradeManagerHost.testSnapshot = { _, now -> com.optionslab.ira.TradeManager.Snapshot(now, 300.0,
+            minuteBars = (0 until 30).map { i -> com.optionslab.ira.TradeManager.Bar(first + i * 60_000L, 300.0, 301.0, 299.0, 300.0) }) }
+        try {
+            at(LocalTime.of(10, 55, 30))
+            TradeManagerHost.evaluate(TradeManagerHost.nowMs())
+            assertNotNull("20 minutes without progress: the manager wants it out", TradeManagerHost.exitDue(rec.trade.tradeId))
+            tick(LocalTime.of(10, 56))
+            val out = arm("orb_fresh").today.single()
+            assertFalse(out.open)
+            assertEquals(OrbArms.MANAGER_EXIT, out.why)
+            val orders = Paper.state.orders.filter { it.symbol == p.symbol }
+            assertEquals("the resting stop taken out first", "cancelled", orders.single { it.orderId == p.stopOrderId }.status)
+            assertEquals(1, orders.count { it.action == "SELL" && it.status == "complete" })
+            val done = TradeManagerHost.records.value.single { it.trade.family == "orb_fresh" }
+            assertTrue(done.closed)
+            assertTrue(done.notes.single { it.kind == com.optionslab.ira.TradeManager.EXIT_EARLY }.acted)
+            // No re-entry today.
+            passes(LocalTime.of(10, 57), LocalTime.of(11, 30))
+            assertEquals(1, arm("orb_fresh").today.size)
+            assertEquals(OrbArms.MANAGER_DONE, arm("orb_fresh").status)
+        } finally {
+            TradeManagerHost.resetForTest()
+        }
+    }
+
     @Test fun inShadowTheOrbTradesExactlyAsBefore() = ManagerShadow.rerun("orb", { looks = it }) { aTradeThatGotAQuarterOfTheWayIsSoldAtThePricePaidNotTheFullStop() }
 }

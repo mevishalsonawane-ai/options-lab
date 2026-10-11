@@ -52,6 +52,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-10-manager-research", OCT10, "The trade manager follows the research",
+            "Research round 12 tested 14 ways to manage an open trade against random early exits. " +
+                "One rule passed, on ORB Fresh: out after 20 minutes without 3% gain, or a close 12% under entry. " +
+                "A lock under its best price, sized by its recent swings, only rises. " +
+                "It now acts on ORB Fresh's paper trades only; the arm still loses overall. " +
+                "Live stays a record, and every other strategy keeps its own exits while the manager records. " +
+                "Each ORB arm has its own mode, and your own choices and mutes are kept.",
+            "Home → Dashboard → Strategies card → Trade manager record",
+            ask = "what did the research say about the trade manager"),
         Entry("2026-10-10-manager-specialists", OCT10, "The trade manager is now a team of specialists",
             "Sixteen specialists watch an open trade, each reading its own data: order flow, VWAP, volume, OI, traps, news. " +
                 "They share what they see, and a chair weighs their votes into one decision. " +

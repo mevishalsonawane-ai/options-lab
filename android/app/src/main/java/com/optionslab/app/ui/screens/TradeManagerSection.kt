@@ -155,7 +155,10 @@ internal fun SpecialistsContent(
                     v.top.forEachIndexed { i, r -> Note("${i + 1}. $r", Modifier.padding(start = 8.dp)) }
                     val vcfg = ManagerSpecialists.configFor(family, v.frozen)
                     v.votes.forEach { vote ->
-                        Note(ManagerTeam.voteLine(vote, vcfg.spec(vote.specialist).weight, !vcfg.counts(vote.specialist)), Modifier.padding(start = 8.dp, top = 2.dp))
+                        // Under a research committee (R12) the specialists outside it look and are recorded, but do not decide.
+                        val outside = vcfg.isResearch && vote.specialist !in vcfg.members && vote.specialist !in vcfg.extendMembers
+                        Note(ManagerTeam.voteLine(vote, vcfg.spec(vote.specialist).weight, !outside && !vcfg.counts(vote.specialist)) +
+                            (if (outside) " · records only (research committee)" else ""), Modifier.padding(start = 8.dp, top = 2.dp))
                     }
                 }
                 Text("SPECIALISTS (WEIGHT, MUTE, REPORT CARD)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
@@ -168,7 +171,10 @@ internal fun SpecialistsContent(
                             Text(sp.name + if (sp.id in ManagerTeam.VETOES) " (hard veto)" else "",
                                 style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
                             Note("Weight ${String.format(java.util.Locale.ENGLISH, "%.2f", cfg.spec(sp.id).weight)}" +
-                                (if (cfg.spec(sp.id).gate) " · extension gate" else "") + (mutedWhy?.let { " · muted: $it" } ?: ""))
+                                (if (cfg.spec(sp.id).gate && !cfg.isResearch) " · extension gate" else "") +
+                                (if (cfg.isResearch) (if (sp.id in cfg.members) " · runs the research's rule" else if (sp.id in cfg.extendMembers)
+                                    " · the research's extension vote" else " · records only (research committee)") else "") +
+                                (mutedWhy?.let { " · muted: $it" } ?: ""))
                             Note(card?.let { SpecialistBook.cardLine(it) } ?: "No decision voted yet.")
                         }
                         if (mutedWhy == null) TextButton({ onMute(family, sp.id) }) { Text("Mute") }
@@ -240,22 +246,30 @@ internal fun TradeManagerContent(
                 "the trade, and may move the target out only together with a lock at breakeven plus charges or better, raised on each " +
                 "move and trailing new highs at half the open profit. It never adds lots, never widens a stop and never moves a " +
                 "square-off. SHADOW records what it would do beside what the original rules did; nothing changes. Live to ACT asks " +
-                "for your PIN. Solo and Pine act on paper by default; every other strategy records only until you switch it on. " +
+                "for your PIN. Solo, Pine and ORB Fresh act on paper by default (ORB Fresh on research R12's proven rule: no " +
+                "progress in 20 minutes, a close 12% under the entry, a lock 3 option ATRs under the best high); each ORB arm has " +
+                "its own mode; every other strategy records only until you switch it on, and Night and MCX trend are off. " +
                 "A strategy with 30 settled trades and the manager ahead says \"ready to turn on?\" - a hint only, nothing switches by itself.")
             said?.let { Text(it, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(vertical = 4.dp)) }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 for (f in TradeManager.FAMILIES) {
                     val accounts = if (f.paperOnly) listOf(TradeManager.Account.PAPER) else TradeManager.Account.entries
-                    // An arm whose exits do not take the manager's word yet: OFF or SHADOW only.
+                    // An arm whose exits do not take the manager's word yet: OFF or SHADOW only. (ORB Fresh's live row offers
+                    // ACT behind the PIN and its warning, and says plainly that live still records only.)
                     val options = if (f.canAct) TradeManager.Mode.entries else listOf(TradeManager.Mode.OFF, TradeManager.Mode.SHADOW)
                     for (a in accounts) {
                         val label = "${f.name} ${a.name.lowercase(java.util.Locale.ENGLISH)}" +
-                            (if (f.paperOnly) " (paper only)" else "") + (if (f.canAct) "" else " - records only for now")
+                            (if (f.paperOnly) " (paper only)" else "") + (if (f.canAct) "" else " - records only for now") +
+                            (if (f.canAct && !f.canActLive && a == TradeManager.Account.LIVE) " - live records only for now" else "")
                         BrainChoice(label, options.map { it.name }, policy.mode(f.key, a).name) { m ->
                             onChoose(f.key, a, TradeManager.Mode.valueOf(m))
                         }
                     }
                 }
+                Text("MODES NOW (ONE PER ARM)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
+                TradeManager.FAMILIES.forEach { f -> Note(TradeManager.modeLine(f.key, policy), Modifier.padding(vertical = 1.dp)) }
+                Text("WHAT THE RESEARCH SAID (R12)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
+                TradeManager.researchLines().forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
                 Text("RECORD (PER STRATEGY, PAPER AND LIVE APART)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
                 TradeManager.recordLines(records, policy).forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
                 Text("TRADES (NEWEST FIRST)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))

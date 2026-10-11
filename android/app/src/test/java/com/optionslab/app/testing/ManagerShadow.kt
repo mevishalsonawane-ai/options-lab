@@ -10,6 +10,9 @@ import com.optionslab.ira.TradeManager
  */
 object ManagerShadow {
     fun adverse() {
+        // The original committee everywhere (a block as Boss could import it): its News veto disagrees at once. Under the
+        // bundled research committees (R12) News only records, so it would not disagree. Cleared by resetForTest.
+        com.optionslab.app.data.ManagerSpecialists.importResearch(TradeManager.FAMILIES.joinToString("\n") { "[${it.key}]\nquorum=1" })
         TradeManagerHost.testNoWake = true
         TradeManagerHost.testBars = { emptyList() }
         TradeManagerHost.testSnapshot = { t, at ->

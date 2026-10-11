@@ -137,6 +137,7 @@ object OrderWhy {
             "index_stop" in l -> "index stop (the index went back through the level the trade was taken on)"
             "time_stop" in l -> "time stop (the trade had not moved in its time)"
             "profit_lock" in l -> "profit lock"
+            "trade_manager" in l -> "the trade manager's exit (research R12's rule)"
             "session_end" in l -> "end-of-session exit"
             "operator_stop" in l -> "exit when the arm was stopped"
             "backstop_square_off" in l || "square_off" in l || "square-off" in l -> "15:15 square-off"

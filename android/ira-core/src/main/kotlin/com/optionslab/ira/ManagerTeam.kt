@@ -53,6 +53,11 @@ object ManagerTeam {
         val tag: String? = null,
         val rule: TradeManager.Rule? = null,
         val evidence: Map<String, Double> = emptyMap(),
+        /**
+         * [proposedLock] is a lock rule of its own (the research's VC and BE, [R12Rules]): it raises the lock from the next look
+         * whether or not the target was ever extended - only ever up, and never under the stop already there.
+         */
+        val ownLock: Boolean = false,
     )
 
     /** One specialist: pure and side-effect free; reads only [MarketView] and the [Board]. */
@@ -75,9 +80,14 @@ object ManagerTeam {
         val s: TradeManager.Snapshot, val st: TradeManager.State, val px: Double?, val flow: OrderFlow.Read?, val fut: Double?,
         val hits: Map<TradeManager.Rule, Pair<String, Map<String, Double>>>, val room: TradeManager.Room, val tape: List<Sample>,
         val cfg: ManagerConfig, val side: Int,
+        /** The index's (the future's) minutes since the trade was first looked at: close, VWAP and its SD (the research's VW, MP). */
+        val minutes: List<R12Rules.IndexMinute> = emptyList(),
     ) {
         val now: Long get() = s.atMs
         fun th(id: String, key: String, d: Double): Double = cfg.th(id, key, d)
+        /** [id] runs the research's rules (a member of a research committee, [ManagerConfig.members]). */
+        fun research(id: String): Boolean = cfg.isResearch && (id in cfg.members || id in cfg.extendMembers)
+        fun p(id: String, key: String): Double? = cfg.param(id, key)
     }
 
     /**
@@ -124,6 +134,18 @@ object ManagerTeam {
     object DeltaSpec : Specialist {
         override val id = "delta"; override val name = "Delta"
         override fun look(t: TradeManager.ManagedTrade, m: MarketView, board: Board): Vote {
+            // The research's delta PROXY (R12 DP; the extension's xDP): the 10-minute signed option flow as a z-score.
+            if (m.research(id)) {
+                val z = m.s.flowZ
+                val z0 = m.p(id, "dpZ0")
+                if (id in m.cfg.members && z0 != null && R12Rules.dp(z, m.side, z0))
+                    return Vote(id, Kind.EXIT, 100, "signed option flow ${f1(z ?: 0.0)} SD against it over 10 minutes (the research's delta proxy)",
+                        tag = "r12-dp", evidence = mapOf("flowZ" to (z ?: Double.NaN)))
+                val x = m.p(id, "xdp")
+                if (id in m.cfg.extendMembers && x != null && R12Rules.xdp(z, m.side, x))
+                    return Vote(id, Kind.EXTEND, 60, "signed option flow ${f1(z ?: 0.0)} SD its way")
+                return hold(id, z?.let { "signed option flow ${f1(it)} SD" } ?: "no signed option-flow reading yet (the research's delta proxy waits for it)")
+            }
             ruleVote(id, TradeManager.Rule.DIVERGENCE, m)?.let { return it }
             val favour = if (m.side > 0) Auction.Divergence.BULLISH else Auction.Divergence.BEARISH
             if (m.s.divergence == favour) return Vote(id, Kind.EXTEND, 55, "delta divergence in its favour")
@@ -161,6 +183,20 @@ object ManagerTeam {
     object VwapSpec : Specialist {
         override val id = "vwap"; override val name = "VWAP"
         override fun look(t: TradeManager.ManagedTrade, m: MarketView, board: Board): Vote {
+            // The research's VW (R12): z SD on the wrong side of VWAP for p minute closes in a row; and the extension's xVW.
+            if (m.research(id)) {
+                val z = m.p(id, "vwZ"); val p = m.p(id, "vwP")
+                if (id in m.cfg.members && z != null && p != null) {
+                    val at = R12Rules.vw(m.minutes, m.side, t.entryMs, m.now, z, p.toInt())
+                    if (at != null) return Vote(id, Kind.EXIT, 100, "the index ${p.toInt()} minute${if (p.toInt() == 1) "" else "s"} on the wrong side of VWAP " +
+                        "by over ${f1(z)} SD (the research's VWAP rule)", tag = "r12-vw", evidence = mapOf("z" to z, "minutes" to p))
+                }
+                val x = m.p(id, "xvw")
+                val last = m.minutes.lastOrNull { it.startMs + R12Rules.MINUTE_MS <= m.now }
+                if (id in m.cfg.extendMembers && x != null && R12Rules.xvw(last?.close, last?.vwap, last?.sd, m.side, x))
+                    return Vote(id, Kind.EXTEND, 60, "at least ${f1(x)} SD beyond VWAP its way")
+                return hold(id, "VWAP: the research's rule does not hold")
+            }
             val vw = m.s.vwap ?: return hold(id, "no VWAP yet")
             val fut = m.fut ?: return hold(id, "no future price")
             val sd = vw.sdUnits(fut)?.let { it * m.side }
@@ -215,6 +251,15 @@ object ManagerTeam {
     object ProfileSpec : Specialist {
         override val id = "profile"; override val name = "Profile"
         override fun look(t: TradeManager.ManagedTrade, m: MarketView, board: Board): Vote {
+            // The research's MP (R12): outside the prior day's value area the trade's way, then back inside for p minutes.
+            if (m.research(id)) {
+                val p = m.p(id, "mpP") ?: return hold(id, "the research's value-area rule has no setting")
+                val at = R12Rules.mp(m.minutes, m.side, t.entryMs, m.now, m.s.priorValueHigh, m.s.priorValueLow, p.toInt())
+                if (at != null) return Vote(id, Kind.EXIT, 100, "the index went outside the prior day's value area its way and has been back " +
+                    "inside ${p.toInt()} minute${if (p.toInt() == 1) "" else "s"} (the research's value-area rule)", tag = "r12-mp",
+                    evidence = mapOf("minutes" to p))
+                return hold(id, if (m.s.priorValueHigh == null) "no prior day's value area" else "the prior day's value area: nothing against it")
+            }
             val fut = m.fut ?: return hold(id, "no future price")
             if (m.room.value) {
                 val hvn = m.s.hvns.firstOrNull { (it - fut) * m.side > 0 && abs(it - fut) <= m.th(id, "hvnNearPct", 0.0015) * fut }
@@ -233,6 +278,14 @@ object ManagerTeam {
     object OiSpec : Specialist {
         override val id = "oi"; override val name = "OI"
         override fun look(t: TradeManager.ManagedTrade, m: MarketView, board: Board): Vote {
+            // The research's OI (R12): ATM±2 put-minus-call OI change over 15 minutes against the trade at −z0 SD or worse.
+            if (m.research(id)) {
+                val z0 = m.p(id, "oiZ0") ?: return hold(id, "the research's OI rule has no setting")
+                val z = m.s.oiZ
+                if (R12Rules.oi(z, m.side, z0)) return Vote(id, Kind.EXIT, 100, "put-minus-call OI change ${f1(z ?: 0.0)} SD against it " +
+                    "over 15 minutes (the research's OI rule)", tag = "r12-oi", evidence = mapOf("oiZ" to (z ?: Double.NaN)))
+                return hold(id, z?.let { "OI change ${f1(it)} SD" } ?: "no OI z-reading yet (the research's OI rule waits for it)")
+            }
             val r = m.flow ?: return hold(id, "no fresh OI read")
             val bu = r.buildUp ?: return hold(id, "no OI change yet")
             if (m.room.oi) return Vote(id, Kind.EXTEND, 65, "${bu.words} its way (OI +${r.oiChange})")
@@ -286,6 +339,7 @@ object ManagerTeam {
     object PriceSpec : Specialist {
         override val id = "price"; override val name = "Price action"
         override fun look(t: TradeManager.ManagedTrade, m: MarketView, board: Board): Vote {
+            if (m.research(id)) return research(t, m)
             val px = m.px ?: return hold(id, "no premium")
             val lk = m.st.lock
             val tr = lk?.let { TradeManager.trail(t, m.st.peak).takeIf { x -> x > it + 1e-9 } }
@@ -304,6 +358,33 @@ object ManagerTeam {
             if (tr != null) return hold(id, "a new best ${num(m.st.peak)}: the lock trails to ${num(tr)}", lock = tr)
             return hold(id, if (m.st.target != null) "on its way to the target" else "no target (never extended)")
         }
+
+        /**
+         * The research's price rules (R12, on the option's 1-minute bars, decided on minute closes): PA "no progress", PB the
+         * adverse close, and the locks VC (best high less k option ATRs, once a ATRs up) and BE (breakeven plus charges once
+         * b up). Each runs only with its parameters set.
+         */
+        private fun research(t: TradeManager.ManagedTrade, m: MarketView): Vote {
+            val bars = m.s.minuteBars
+            val vcK = m.p(id, "vcK"); val vcA = m.p(id, "vcArm"); val beB = m.p(id, "beB")
+            val vc = if (vcK != null && vcA != null) R12Rules.vc(bars, t.entry, t.entryMs, m.now, vcK, vcA, t.caps.tick) else null
+            val be = if (beB != null) R12Rules.be(bars, t.entry, t.entryMs, m.now, beB, t.entry + t.chargesPerUnit, t.caps.tick) else null
+            val lock = listOfNotNull(vc, be).maxOrNull()
+            val paT = m.p(id, "paT"); val paM = m.p(id, "paM")
+            if (paT != null && paM != null && R12Rules.pa(bars, t.entry, t.entryMs, m.now, paT.toInt(), paM) != null)
+                return Vote(id, Kind.EXIT, 100, "no progress: ${paT.toInt()} minutes in, never ${pc(paM)} above the entry ${num(t.entry)} " +
+                    "(the research's rule)", proposedLock = lock, ownLock = lock != null, tag = "r12-pa", evidence = mapOf("minutes" to paT, "progress" to paM))
+            val pbA = m.p(id, "pbA")
+            if (pbA != null && R12Rules.pb(bars, t.entry, t.entryMs, m.now, pbA) != null)
+                return Vote(id, Kind.EXIT, 100, "a minute closed ${pc(pbA)} or more under the entry ${num(t.entry)} (the research's rule)",
+                    proposedLock = lock, ownLock = lock != null, tag = "r12-pb", evidence = mapOf("adverse" to pbA))
+            if (lock != null) return Vote(id, Kind.TRAIL, 0, "the research's lock at ${num(lock)} (" +
+                (if (lock == vc && vcK != null) "the best high less ${f1(vcK)} option ATRs" else "breakeven plus charges") + ")",
+                proposedLock = lock, ownLock = true, tag = "r12-lock", evidence = mapOf("lock" to lock))
+            return hold(id, if (bars.isEmpty()) "the option's minutes not loaded yet" else "the research's price rules: hold")
+        }
+
+        private fun pc(x: Double) = String.format(Locale.ENGLISH, "%.0f%%", x * 100)
     }
 
     /** 12. Time and theta: the square-off, a time stop, and theta in the expiry hour. */
@@ -428,6 +509,8 @@ object ManagerTeam {
         val extendSince: Long = 0L,
         val votes: List<Vote> = emptyList(),
         val tape: List<Sample> = emptyList(),
+        /** The index's minutes (a research committee's VW and MP read them; kept only for one). */
+        val minutes: List<R12Rules.IndexMinute> = emptyList(),
     )
 
     fun start(t: TradeManager.ManagedTrade): TeamState = TeamState(TradeManager.start(t))
@@ -466,6 +549,22 @@ object ManagerTeam {
         return out
     }
 
+    private const val MINUTES_KEEP = 420
+
+    /** The index minute [now] falls in updated with the latest price and VWAP (its close is the last one seen in it). */
+    private fun minuted(ms: List<R12Rules.IndexMinute>, now: Long, fut: Double?, vw: Auction.Vwap?): List<R12Rules.IndexMinute> {
+        if (fut == null || !(fut > 0)) return ms
+        val start = R12Rules.col(now) * R12Rules.MINUTE_MS
+        val x = R12Rules.IndexMinute(start, fut, vw?.vwap, vw?.sd)
+        val last = ms.lastOrNull()
+        if (last != null && last.startMs > start) return ms
+        val out = ArrayList<R12Rules.IndexMinute>(minOf(ms.size + 1, MINUTES_KEEP))
+        val keep = if (last != null && last.startMs == start) ms.size - 1 else ms.size
+        for (i in maxOf(0, keep - MINUTES_KEEP + 1) until keep) out += ms[i]
+        out += x
+        return out
+    }
+
     /** A vote's hold is kept per specialist and signal: a different signal from the same specialist starts its own hold. */
     private fun holdKey(v: Vote): String = v.specialist + ":" + (v.rule?.key ?: v.tag ?: "")
 
@@ -493,8 +592,9 @@ object ManagerTeam {
         val fut = s.futPrice ?: flow?.mid
         val side = if (t.side >= 0) 1 else -1
         val tape = taped(st0.tape, now, px, fut)
+        val minutes = if (cfg.isResearch) minuted(st0.minutes, now, fut, s.vwap) else st0.minutes
         val hits = TradeManager.against(t, s)
-        val view = MarketView(s, core, px, flow, fut, hits, TradeManager.room(t, s, core), tape, cfg, side)
+        val view = MarketView(s, core, px, flow, fut, hits, TradeManager.room(t, s, core), tape, cfg, side, minutes)
 
         // Every specialist looks, in order, each one's vote on the board as it comes.
         val arr = arrayOfNulls<Vote>(SPECIALISTS.size)
@@ -513,7 +613,8 @@ object ManagerTeam {
         // specialist proposes it (never under breakeven plus charges). Up only.
         var trailed: Double? = null
         var trailLead: Vote? = null
-        core.lock?.let { lk ->
+        // (Only after an extension: a lock that stands for any other reason - a research lock - is not trailed at half the profit.)
+        core.lock?.takeIf { core.extensions > 0 }?.let { lk ->
             var best = TradeManager.trail(t, peak)
             for (v in votes) {
                 val p = v.proposedLock ?: continue
@@ -522,10 +623,17 @@ object ManagerTeam {
             }
             if (best > lk + 1e-9) { core = core.copy(lock = best); trailed = best }
         }
+        // A research committee's own locks (VC, BE): from any counting member, raised only, never under the stop already there.
+        if (cfg.isResearch) for (v in votes) {
+            val p = v.proposedLock ?: continue
+            if (!v.ownLock || !p.isFinite() || !cfg.counts(v.specialist)) continue
+            val floor = maxOf(core.lock ?: Double.NEGATIVE_INFINITY, t.originalStop ?: Double.NEGATIVE_INFINITY)
+            if (p > floor + 1e-9) { core = core.copy(lock = p); trailed = p; trailLead = v }
+        }
         val lk = core.lock
         if (px != null && lk != null && px <= lk + 1e-9)
             return Step(TradeManager.Decision.ExitEarly(TradeManager.Rule.LOCK, "profit lock ${num(lk)} hit at ${num(px)}", mapOf("lock" to lk, "premium" to px)),
-                TeamState(core.copy(exited = true), since0, 0L, votes, tape), votes, trailLead, top(votes, null), 0.0, posts)
+                TeamState(core.copy(exited = true), since0, 0L, votes, tape, minutes), votes, trailLead, top(votes, null), 0.0, posts)
 
         // The exits: each EXIT vote's hold; the weighted quorum of those that have lasted, or a hard veto.
         val since = HashMap<String, Long>()
@@ -539,9 +647,11 @@ object ManagerTeam {
             val key = holdKey(v)
             val from = since0[key] ?: now
             since[key] = from
-            if (v.strength >= cfg.exitFloor) against = true
+            // (A research committee: only its members decide; the others - their hard vetoes too - are recorded only.)
+            val decides = !cfg.isResearch || v.specialist in cfg.members
+            if (v.strength >= cfg.exitFloor && decides) against = true
             if (now - from < v.needsHoldSec * 1000L) continue
-            if (v.veto) { if (vetoLead == null) vetoLead = v; continue }
+            if (v.veto) { if (vetoLead == null && decides) vetoLead = v; continue }
             val w = cfg.weight(v.specialist)
             if (w <= 0) continue
             val x = w * v.strength / 100.0
@@ -557,32 +667,39 @@ object ManagerTeam {
                 else TradeManager.Decision.ExitEarly(TradeManager.Rule.TEAM, "${nameOf(exitBy.specialist)}: ${exitBy.reason}" +
                     (if (score > 0) " (the specialists' weight ${f1(score)} against the quorum ${f1(cfg.quorum)})" else ""),
                     exitBy.evidence + mapOf("premium" to (px ?: Double.NaN), "heldSec" to held, "score" to score))
-            return Step(d, TeamState(core.copy(exited = true), since, 0L, votes, tape), votes, exitBy, top(votes, exitBy), score, posts)
+            return Step(d, TeamState(core.copy(exited = true), since, 0L, votes, tape, minutes), votes, exitBy, top(votes, exitBy), score, posts)
         }
 
         // The extension: every gate agrees, a supermajority of the weighted votes, no objection; then its hold and the cooldown.
+        // A research committee: only if its block allows one, every extension member agreeing and the premium 90% of the way.
         var extSince = 0L
+        val agreed = cfg.extend && if (cfg.isResearch) researchExtendAgreed(votes, cfg) && view.room.near else extendAgreed(votes, cfg)
         // (The caps are the Chair's own, whatever the gates: a target with extensions left, and not near the square-off.)
-        if (view.room.target && view.room.time && extendAgreed(votes, cfg) && px != null) {
+        if (view.room.target && view.room.time && agreed && px != null) {
             extSince = if (extSince0 > 0) extSince0 else now
             val cool = (core.lastExtendMs <= 0L || now - core.lastExtendMs >= TradeManager.COOLDOWN_MS) &&
                 (core.lastAgainstMs <= 0L || now - core.lastAgainstMs >= TradeManager.COOLDOWN_MS)
             if (cool && now - extSince >= cfg.extendHoldSec * 1000L) {
                 val lv = TradeManager.levels(t, core, px, s.premiumAtr)
-                val words = TradeManager.scopeWords(t, s)
+                val words = TradeManager.scopeWords(t, s) ?: if (cfg.isResearch) "the research's extension votes agree" to emptyMap<String, Double>() else null
                 if (lv != null && words != null) {
                     val (nt, ns) = lv
                     val d = TradeManager.Decision.Extend(nt, ns, words.first, words.second + mapOf("premium" to px, "oldTarget" to (core.target ?: 0.0)))
-                    val leadX = votes.filter { it.kind == Kind.EXTEND && cfg.counts(it.specialist) }.maxByOrNull { cfg.weight(it.specialist) * it.strength }
-                    return Step(d, TeamState(core.copy(target = nt, lock = ns, extensions = core.extensions + 1, lastExtendMs = now), since, 0L, votes, tape),
+                    val leadX = votes.filter { it.kind == Kind.EXTEND && (cfg.counts(it.specialist) || it.specialist in cfg.extendMembers) }
+                        .maxByOrNull { maxOf(cfg.weight(it.specialist), if (it.specialist in cfg.extendMembers) 1.0 else 0.0) * it.strength }
+                    return Step(d, TeamState(core.copy(target = nt, lock = ns, extensions = core.extensions + 1, lastExtendMs = now), since, 0L, votes, tape, minutes),
                         votes, leadX, top(votes, leadX), score, posts)
                 }
             }
         }
         val decision = trailed?.let { TradeManager.Decision.Trail(it) } ?: TradeManager.Decision.Hold
-        return Step(decision, TeamState(core, since, extSince, votes, tape), votes, if (trailed != null) trailLead else null,
+        return Step(decision, TeamState(core, since, extSince, votes, tape, minutes), votes, if (trailed != null) trailLead else null,
             top(votes, if (trailed != null) trailLead else null), score, posts)
     }
+
+    /** A research committee's extension: every one of its extension members votes EXTEND (R12: "quorum" 2 of its 2 votes). */
+    fun researchExtendAgreed(votes: List<Vote>, cfg: ManagerConfig): Boolean =
+        cfg.extendMembers.isNotEmpty() && cfg.extendMembers.all { id -> votes.any { it.specialist == id && it.kind == Kind.EXTEND } }
 
     /** Every gate agrees (a muted gate does not), a supermajority of the weighted votes, no EXIT at the floor, no block. */
     fun extendAgreed(votes: List<Vote>, cfg: ManagerConfig): Boolean {

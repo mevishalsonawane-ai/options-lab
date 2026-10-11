@@ -40,6 +40,7 @@ object TradeManagerHost {
     private const val KEEP = 300
     private const val EVAL_MS = 1_000L
     private const val SAVE_MS = 5_000L
+    private const val SETTLE_LAG_MS = 5_000L
 
     @Volatile private var appContext: Context? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -75,12 +76,25 @@ object TradeManagerHost {
     val policy: StateFlow<TradeManager.Policy> = _policy
     @Volatile private var policyLoaded = false
 
-    /** Boss's modes read once (a worker thread: never the main thread, never the order path). */
+    /** Set once the old "orb" family mode has been moved to every ORB arm (round 2, [TradeManager.perArm]). */
+    private const val K_PER_ARM = "trademanager.policy.perarm"
+
+    /**
+     * Boss's modes read once (a worker thread: never the main thread, never the order path; the looks and the arms read
+     * [policy] and the records from memory). The first time after round 2, a mode stored for the whole ORB family is kept
+     * for each arm, once.
+     */
     fun ensureLoaded() {
         if (policyLoaded) return
         synchronized(this) {
             if (policyLoaded) return
-            val p = runCatching { TradeManager.decode(SecurePrefs.getString(K_POLICY)) }.getOrNull() ?: return
+            var p = runCatching { TradeManager.decode(SecurePrefs.getString(K_POLICY)) }.getOrNull() ?: return
+            if (runCatching { SecurePrefs.getString(K_PER_ARM) }.getOrNull() != "1") {
+                val moved = TradeManager.perArm(p)
+                if (moved != p) runCatching { SecurePrefs.putAllSoon(mapOf(K_POLICY to TradeManager.encode(moved))) }
+                runCatching { SecurePrefs.putAllSoon(mapOf(K_PER_ARM to "1")) }
+                p = moved
+            }
             _policy.value = p
             policyLoaded = true
         }
@@ -96,6 +110,9 @@ object TradeManagerHost {
             return "${f.name}: its own exits do not take the trade manager's word yet, so it records only (SHADOW); nothing changed."
         if (m == TradeManager.Mode.ACT && f.paperOnly && account == TradeManager.Account.LIVE) return "${f.name} trades on paper only."
         if (TradeManager.needsPin(m, account) && !pinConfirmed) return PIN_NEEDED
+        // ORB Fresh (R12): its paper exits take the manager's word; its live exits do not yet - live stays SHADOW.
+        if (m == TradeManager.Mode.ACT && account == TradeManager.Account.LIVE && !f.canActLive)
+            return "${f.name} live: its live exits do not take the trade manager's word yet, so it records only (SHADOW); nothing changed."
         synchronized(this) {
             val next = _policy.value.with(family, account, m)
             _policy.value = next
@@ -133,7 +150,9 @@ object TradeManagerHost {
 
     /** One followed trade: its registration, its team's memory ([team]: the manager's state, each specialist's hold and vote). */
     private class Live(@Volatile var reg: Registration, @Volatile var team: ManagerTeam.TeamState, @Volatile var pendingExit: String? = null,
-                       @Volatile var high: Double? = null, @Volatile var atr: Double? = null, @Volatile var noteLock: Double? = null) {
+                       @Volatile var high: Double? = null, @Volatile var atr: Double? = null, @Volatile var noteLock: Double? = null,
+                       /** The option's 1-minute bars today that had closed when read (the research's rules read them; memory only). */
+                       @Volatile var bars: List<TradeManager.Bar> = emptyList()) {
         val state: TradeManager.State get() = team.core
     }
 
@@ -228,6 +247,8 @@ object TradeManagerHost {
         val entry: Double, val qty: Int, val stop: Double?, val target: Double?, val squareOffMs: Long, val live: Boolean, val entryMs: Long,
         val exit: Double? = null, val exitWhy: String? = null, val exitMs: Long? = null, val kite: String? = null,
         val shortFuture: Boolean = false, val tick: Double = 0.05,
+        /** The arm's own profit lock for a best price (its ladder), so the original rules are followed honestly; null: none. */
+        val lockAt: ((Double) -> Double?)? = null,
     )
 
     /**
@@ -263,7 +284,8 @@ object TradeManagerHost {
                         if (k > 0) TradeManager.Bar(it.epochSecond * 1000L, it.open, it.high, it.low, it.close)
                         else TradeManager.Bar(it.epochSecond * 1000L, -it.open, -it.low, -it.high, -it.close)
                     }
-                }))
+                },
+                lockAt = if (a.shortFuture) null else a.lockAt))
         }
     }
 
@@ -306,6 +328,9 @@ object TradeManagerHost {
             poc = auc?.today?.poc, hvns = auc?.today?.hvns.orEmpty(), lvns = auc?.today?.lvns.orEmpty(),
             minuteVolumes = auc?.vols.orEmpty(),
             gammaNet = if (gex != null && conv != null) gex.net(conv) else null, zeroGamma = gex?.zeroGamma,
+            // The research's rules (R12): the option's closed minutes as last read, the prior day's value area. Its OI and
+            // signed-flow z-scores are not measured live yet (null: those rules wait, recording "no reading").
+            minuteBars = l.bars, priorValueHigh = auc?.prior?.vah, priorValueLow = auc?.prior?.vaLow,
         )
     }
 
@@ -323,7 +348,8 @@ object TradeManagerHost {
             lastEval = now
             for ((id, l) in live) runCatching { one(id, l, now) }
         }
-        val minute = now / 60_000L
+        // Once a minute, 5 s after it turns (the minute just closed is then in the candles): the bars the research's rules read.
+        val minute = (now - SETTLE_LAG_MS) / 60_000L
         if (minute != minuteSettled && !testNoWake) { minuteSettled = minute; scope.launch { runCatching { settleNow(now) } } }
     }
 
@@ -340,7 +366,7 @@ object TradeManagerHost {
         val act = r0.mode == TradeManager.Mode.ACT
         // The committee: LIVE trades the manager acts on use the frozen weights; SHADOW and paper the self-tuned ones (memory only).
         val frozen = act && t.account == TradeManager.Account.LIVE
-        val step = ManagerTeam.decide(t, s, l.team, ManagerSpecialists.configFor(t.family, frozen))
+        val step = ManagerTeam.decide(t, s, l.team, ManagerSpecialists.configFor(t.family, frozen, t.underlying))
         l.team = step.state
         runCatching { ManagerSpecialists.observe(id, t, step, now, frozen) }
         val lead = step.lead?.specialist
@@ -350,7 +376,9 @@ object TradeManagerHost {
             is TradeManager.Decision.Hold -> {}
             is TradeManager.Decision.Trail -> {
                 val was = l.noteLock
-                update(id) { it.copy(lock = d.newStop) }
+                // In ACT a lock the strategy rests (the research's, R12) is the manager acting: the original rules are then
+                // followed on as the counterfactual from here. In SHADOW only the level is kept.
+                update(id) { it.copy(lock = d.newStop, actedAtMs = if (act) it.actedAtMs ?: now else it.actedAtMs) }
                 // Said when it first trails and then on each rise of 1% of the entry or more (not a line a second).
                 if (was == null || d.newStop >= was + maxOf(0.01 * t.entry, t.caps.tick)) {
                     l.noteLock = d.newStop
@@ -431,6 +459,8 @@ object TradeManagerHost {
             for ((id, l) in live.toMap()) runCatching {
                 val t = l.reg.trade
                 val bars = testBars?.invoke(id) ?: l.reg.bars?.invoke() ?: return@runCatching
+                // The research's rules read only minutes that had closed when read (a minute still forming is never kept).
+                l.bars = bars.filter { it.startMs + 60_000L <= now }.sortedBy { it.startMs }
                 val mine = bars.filter { it.startMs >= t.entryMs - 60_000L }
                 if (mine.isNotEmpty()) {
                     l.high = mine.filter { it.startMs + 60_000L <= now }.maxOfOrNull { it.high } ?: l.high
@@ -472,6 +502,7 @@ object TradeManagerHost {
 
     /** Jarvis: "how is the trade manager doing?" / "why did Solo exit early?". */
     fun answer(a: TradeManager.Ask): String {
+        if (a.research) return TradeManager.answerResearch(_policy.value)
         if (a.team != null) return ManagerSpecialists.answer(a)
         val rs = _records.value
         return if (a.why) TradeManager.answerWhy(a.family, rs) { SmartWorkers.hhmm(it) } else TradeManager.answerStatus(rs, _policy.value)
@@ -549,7 +580,8 @@ object TradeManagerHost {
     }
 
     private fun dec(o: JSONObject): TradeManager.Record {
-        val t = TradeManager.ManagedTrade(o.getString("sid"), o.getString("tid"), o.getString("label"), o.getString("u"), o.getInt("side"),
+        // (A record from before round 2 - "orb:ORB Fresh" - counts under its arm's own family now.)
+        val t = TradeManager.ManagedTrade(TradeManager.perArmId(o.getString("sid")), o.getString("tid"), o.getString("label"), o.getString("u"), o.getInt("side"),
             o.getString("inst"), o.getDouble("entry"), o.getInt("qty"), dn(o, "os"), dn(o, "ot"),
             TradeManager.Caps(o.getLong("sq"), o.optInt("maxx", TradeManager.MAX_EXTENSIONS), o.optDouble("tick", 0.05)),
             TradeManager.Account.valueOf(o.getString("acct")), o.getLong("ems"), o.optDouble("chg", 0.0), dn(o, "su"), dn(o, "eu"))

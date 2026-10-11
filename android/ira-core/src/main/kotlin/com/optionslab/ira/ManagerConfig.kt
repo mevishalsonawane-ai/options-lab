@@ -35,11 +35,35 @@ data class ManagerConfig(
     val extendHoldSec: Int = 30,
     val postAt: Int = 70,
     val specialists: Map<String, SpecConfig> = ManagerTeam.DEFAULT_SPECS,
+    /**
+     * A research committee (R12, research/HUNT_R12_TRADE_MANAGER.md): only these specialists count - their EXIT votes and
+     * their locks - each running the research's own rule with its parameters ([R12Rules]); every other specialist still
+     * looks and is recorded (SHADOW) but decides nothing, its hard veto included. Empty: the original committee, as before.
+     */
+    val members: Set<String> = emptySet(),
+    /** A research committee's extension votes (all must agree, and the premium 90% of the way to the target). */
+    val extendMembers: Set<String> = emptySet(),
+    /** False: this committee never extends a target (the research's `"extend": null`). */
+    val extend: Boolean = true,
+    /** The default mode on each account when nothing is stored (null: the app's own default). LIVE is never ACT by default. */
+    val paperMode: TradeManager.Mode? = null,
+    val liveMode: TradeManager.Mode? = null,
+    /** The research's verdict in one plain sentence (the record and Jarvis say it). */
+    val verdict: String? = null,
 ) {
+    /** A research committee ([members]): its members alone decide. */
+    val isResearch: Boolean get() = members.isNotEmpty() || extendMembers.isNotEmpty()
+
     fun spec(id: String): SpecConfig = specialists[id] ?: ManagerTeam.DEFAULT_SPECS[id] ?: SpecConfig(0.0, enabled = false)
 
-    /** The specialist's weight when it counts (enabled, weight above 0); 0 otherwise. */
-    fun weight(id: String): Double = spec(id).let { if (it.enabled && it.weight > 0) it.weight else 0.0 }
+    /** The specialist's weight when it counts (enabled, weight above 0, a member of a research committee); 0 otherwise. */
+    fun weight(id: String): Double {
+        if (isResearch && id !in members) return 0.0
+        return spec(id).let { if (it.enabled && it.weight > 0) it.weight else 0.0 }
+    }
+
+    /** A research parameter of [id]'s ([R12Rules]): set by the block, never a default; null: not set. */
+    fun param(id: String, key: String): Double? = specialists[id]?.thresholds?.get(key)?.takeIf { it.isFinite() }
 
     fun counts(id: String): Boolean = weight(id) > 0
 
@@ -60,7 +84,14 @@ data class ManagerConfig(
         specialists = specialists.filterKeys { it in ManagerTeam.IDS }.mapValues { (_, s) ->
             s.copy(weight = s.weight.finiteOr(0.0).coerceIn(0.0, MAX_WEIGHT), thresholds = s.thresholds.filterValues { it.isFinite() })
         },
+        members = members.filter { it in ManagerTeam.IDS }.toSet(),
+        extendMembers = extendMembers.filter { it in ManagerTeam.IDS }.toSet(),
+        // LIVE to ACT always takes Boss's PIN: never a default.
+        liveMode = liveMode?.let { if (it == TradeManager.Mode.ACT) TradeManager.Mode.SHADOW else it },
     )
+
+    /** The default mode on [account] this block sets (null: none). */
+    fun mode(account: TradeManager.Account): TradeManager.Mode? = if (account == TradeManager.Account.PAPER) paperMode else liveMode
 
     companion object {
         const val MIN_QUORUM = 0.25
@@ -70,6 +101,14 @@ data class ManagerConfig(
         const val MIN_EXTEND_HOLD_SEC = 30
 
         private fun Double.finiteOr(d: Double) = if (isFinite()) this else d
+
+        /** The block's words that are not a number or a specialist ([apply]). */
+        private val META = setOf("mode", "paper_mode", "papermode", "live_mode", "livemode", "members", "member", "extend_members",
+            "extend_member", "extend", "verdict")
+
+        private fun mode(v: String): TradeManager.Mode? = runCatching { TradeManager.Mode.valueOf(v.trim().uppercase(Locale.ENGLISH)) }.getOrNull()
+
+        private fun ids(v: String): Set<String> = v.split(',', ' ', ';').map { it.trim().lowercase(Locale.ENGLISH) }.filter { it in ManagerTeam.IDS }.toSet()
 
         private val TOP = mapOf("quorum" to "quorum", "supermajority" to "supermajority", "super_majority" to "supermajority",
             "exitfloor" to "exitfloor", "exit_floor" to "exitfloor", "extendholdsec" to "extendholdsec", "extend_hold_sec" to "extendholdsec",
@@ -106,6 +145,21 @@ data class ManagerConfig(
         private fun apply(c: ManagerConfig, key: String, v: String): ManagerConfig? {
             val k = key.trim()
             val num = v.trim().toDoubleOrNull()
+            when (k.lowercase(Locale.ENGLISH)) {
+                // The research's one mode (R12): ACT acts on PAPER only (LIVE stays SHADOW: LIVE to ACT takes the PIN).
+                "mode" -> {
+                    val m = mode(v) ?: return null
+                    return c.copy(paperMode = m, liveMode = if (m == TradeManager.Mode.ACT) TradeManager.Mode.SHADOW else m)
+                }
+                "paper_mode", "papermode" -> return mode(v)?.let { c.copy(paperMode = it) }
+                "live_mode", "livemode" -> return mode(v)?.let { c.copy(liveMode = it) }
+                "members" -> return c.copy(members = ids(v))
+                "member" -> return ids(v).takeIf { it.isNotEmpty() }?.let { c.copy(members = c.members + it) }
+                "extend_members" -> return c.copy(extendMembers = ids(v))
+                "extend_member" -> return ids(v).takeIf { it.isNotEmpty() }?.let { c.copy(extendMembers = c.extendMembers + it) }
+                "extend" -> return if (v.trim() == "null") c.copy(extend = false) else bool(v)?.let { c.copy(extend = it) }
+                "verdict" -> return v.trim().takeIf { it.isNotEmpty() }?.let { c.copy(verdict = it.replace('\n', ' ').take(300)) }
+            }
             TOP[k.lowercase(Locale.ENGLISH)]?.let { top ->
                 val n = num ?: return null
                 return when (top) {
@@ -140,7 +194,8 @@ data class ManagerConfig(
                 val value = line.substringAfter('=').trim().removeSurrounding("\"")
                 if (key.equals("strategy", ignoreCase = true) || key.equals("strategyId", ignoreCase = true)) { section = value; continue }
                 val first = key.substringBefore('.').lowercase(Locale.ENGLISH)
-                if (first in ManagerTeam.IDS || TOP.containsKey(key.lowercase(Locale.ENGLISH))) out += Triple(section, key, value)
+                if (first in ManagerTeam.IDS || TOP.containsKey(key.lowercase(Locale.ENGLISH)) || key.lowercase(Locale.ENGLISH) in META)
+                    out += Triple(section, key, value)
                 else if ('.' in key) out += Triple(first, key.substringAfter('.'), value)
             }
             return out
@@ -160,6 +215,14 @@ data class ManagerConfig(
                                 for ((tk, tv) in fv) out += Triple(sid, "$id.$tk", tv.toString())
                             } else out += Triple(sid, "$id.$f", fv.toString())
                         }
+                        // The research's rules (R12): each one onto the specialist that covers its family, as its parameters.
+                        (key == "exit" || key == "lock") && v is List<*> -> for (x in v) if (x is Map<*, *>) out += research(sid, x)
+                        key == "extend" && v == null -> out += Triple(sid, "extend", "false")
+                        key == "extend" && v is Map<*, *> -> out += researchExtend(sid, (v["votes"] as? List<*>).orEmpty())
+                        key == "extend" && v is List<*> -> out += researchExtend(sid, (v.firstOrNull() as? List<*>).orEmpty())
+                        // Per index (R12's VIX divergence: "NIFTY", "BANKNIFTY"): its own committee, "vixdiv/nifty".
+                        v is Map<*, *> && key.any { it.isLetter() } && key == key.uppercase(Locale.ENGLISH) ->
+                            one("$sid/${key.lowercase(Locale.ENGLISH)}", v)
                         v !is Map<*, *> && v !is List<*> -> out += Triple(sid, key, v.toString())
                     }
                 }
@@ -169,9 +232,58 @@ data class ManagerConfig(
                 is List<*> -> for (o in root) if (o is Map<*, *> && strategyObject(o)) one((o["strategy"] ?: o["strategyId"]).toString(), o)
                 is Map<*, *> -> when {
                     strategyObject(root) -> one((root["strategy"] ?: root["strategyId"]).toString(), root)
+                    // The research's settings block (R12 Part D): {"version": ..., "strategies": {"orb_fresh": {...}, ...}}.
+                    root["strategies"] is Map<*, *> -> for ((sid, o) in root["strategies"] as Map<*, *>) if (o is Map<*, *>) one(sid.toString(), o)
                     root["strategies"] is List<*> -> for (o in root["strategies"] as List<*>)
                         if (o is Map<*, *> && strategyObject(o)) one((o["strategy"] ?: o["strategyId"]).toString(), o)
                     else -> for ((sid, o) in root) if (o is Map<*, *>) one(sid.toString(), o)
+                }
+            }
+            return out
+        }
+
+        private fun numOf(m: Map<*, *>, vararg keys: String): Double? = keys.firstNotNullOfOrNull { k ->
+            when (val x = m[k]) { is Number -> x.toDouble(); is String -> x.toDoubleOrNull(); else -> null }
+        }
+
+        /**
+         * One research rule ({"spec": "PA", "T_min": 20, "m": 0.03, "weight": 1}) as the parameters of the specialist that
+         * covers its family: PA, PB, VC and BE on Price action; VW on VWAP; MP on Profile (the prior day's value area); OI on
+         * OI; DP (the delta proxy) on Delta. The specialist becomes a member of the committee. An unknown or incomplete rule
+         * adds nothing.
+         */
+        private fun research(sid: String, m: Map<*, *>): List<Triple<String, String, String>> {
+            val spec = m["spec"]?.toString()?.trim()?.uppercase(Locale.ENGLISH) ?: return emptyList()
+            val (id, ths) = when (spec) {
+                "PA" -> "price" to listOf("paT" to numOf(m, "T_min", "T"), "paM" to numOf(m, "m"))
+                "PB" -> "price" to listOf("pbA" to numOf(m, "a"))
+                "VC" -> "price" to listOf("vcK" to numOf(m, "k_atr", "k"), "vcArm" to numOf(m, "arm_atr", "a"))
+                "BE" -> "price" to listOf("beB" to numOf(m, "b"))
+                "OI" -> "oi" to listOf("oiZ0" to numOf(m, "z0"))
+                "VW" -> "vwap" to listOf("vwZ" to numOf(m, "z_sd", "z"), "vwP" to numOf(m, "persist_min", "p"))
+                // Only the prior day's value area was a frozen rule (R12); the developing one is not this parameter.
+                "MP" -> if ((m["value_area"] ?: m["which"])?.toString()?.lowercase(Locale.ENGLISH)?.startsWith("dev") == true) return emptyList()
+                    else "profile" to listOf("mpP" to numOf(m, "persist_min", "p"))
+                "DP" -> "delta" to listOf("dpZ0" to numOf(m, "z0"))
+                else -> return emptyList()
+            }
+            if (ths.any { it.second == null }) return emptyList()
+            return listOf(Triple(sid, "member", id), Triple(sid, "$id.weight", (numOf(m, "weight") ?: 1.0).toString())) +
+                ths.map { Triple(sid, "$id.${it.first}", it.second.toString()) }
+        }
+
+        private val NUMBER = Regex("[-+]?[0-9]*\\.?[0-9]+")
+
+        /** The research's extension votes ("VWAP>=0.5SD" or "xVW", "flow>=+0.5SD" or "xDP") as the committee's extension members. */
+        private fun researchExtend(sid: String, votes: List<*>): List<Triple<String, String, String>> {
+            val out = arrayListOf(Triple(sid, "extend", "true"))
+            for (x in votes) {
+                val w = x.toString().trim()
+                val low = w.lowercase(Locale.ENGLISH)
+                val n = NUMBER.find(w.substringAfter(">=", ""))?.value?.toDoubleOrNull() ?: 0.5
+                when {
+                    low.startsWith("vwap") || low == "xvw" -> { out += Triple(sid, "extend_member", "vwap"); out += Triple(sid, "vwap.xvw", n.toString()) }
+                    low.startsWith("flow") || low == "xdp" -> { out += Triple(sid, "extend_member", "delta"); out += Triple(sid, "delta.xdp", n.toString()) }
                 }
             }
             return out
@@ -187,6 +299,12 @@ data class ManagerConfig(
             if (c.exitFloor != d.exitFloor) lines += "exit_floor=${c.exitFloor}"
             if (c.extendHoldSec != d.extendHoldSec) lines += "extend_hold_sec=${c.extendHoldSec}"
             if (c.postAt != d.postAt) lines += "post_at=${c.postAt}"
+            c.paperMode?.let { lines += "paper_mode=${it.name}" }
+            c.liveMode?.let { lines += "live_mode=${it.name}" }
+            if (c.members.isNotEmpty()) lines += "members=${c.members.sorted().joinToString(",")}"
+            if (c.extendMembers.isNotEmpty()) lines += "extend_members=${c.extendMembers.sorted().joinToString(",")}"
+            if (!c.extend) lines += "extend=false"
+            c.verdict?.let { lines += "verdict=${it.replace('#', ' ').replace('\n', ' ')}" }
             for (id in ManagerTeam.IDS) {
                 val s = c.spec(id); val ds = d.spec(id)
                 if (s.weight != ds.weight) lines += "$id.weight=${s.weight}"
