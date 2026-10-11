@@ -62,6 +62,8 @@ object AreaE {
         com.optionslab.app.ira.SelfGrowth.resetForTest()
         // The strategy lab's variants, ideas and the arms' "ran today" marks start fresh in each test (a singleton too).
         com.optionslab.app.data.VariantRunner.resetForTest()
+        // The approved forge ideas on paper (S2): no hosted idea or paper trade carried from an earlier test.
+        com.optionslab.app.data.GrammarArm.wipe()
         SessionLock.lock()
     }
 

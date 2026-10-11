@@ -270,6 +270,7 @@ object FastPath {
                     step("Night (R3)") { NightArm.tick() }
                     step("VIX divergence") { VixDivArm.tick() }
                     step("MCX paper arms") { McxPaperArms.tick() }
+                    step("Forge ideas") { GrammarArm.tick() }
                     if (com.optionslab.app.BuildConfig.JARVIS) step("Solo") { com.optionslab.app.ira.IraSolo.manageOnly() }
                     step("missed-lock sweep") { Sweeper.run(ctx) }
                     // Smart scheduling (10 Oct): these looked at this minute; the watch's passes need not look again for it.
@@ -285,7 +286,7 @@ object FastPath {
     }
 
     /** The watch's step names of the arms these lanes run (the smart scheduler counts their looks as done). */
-    private val MINUTE_ARMS = listOf("Night (R3)", "VIX divergence", "MCX paper arms")
+    private val MINUTE_ARMS = listOf("Night (R3)", "VIX divergence", "MCX paper arms", "Forge ideas")
 
     private suspend inline fun step(name: String, block: () -> Unit) {
         // Measured (10 Oct): each check's time today, beside the watch's steps.

@@ -185,6 +185,7 @@ internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Bo
             item(key = "ideas-h") { Text("New ideas", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold)) }
             if (ideas.isEmpty()) item(key = "ideas-none") { Note("No idea tried yet: the forge runs at night, while the phone charges or after 18:00.") }
             items(ideas, key = { "i:" + it.c.id }) { r -> IdeaRow(r, onAction) }
+            item(key = "hosted") { HostedIdeasSection() }
         }
     }
 }

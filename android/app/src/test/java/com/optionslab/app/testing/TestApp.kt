@@ -66,6 +66,7 @@ class TestApp : Application() {
         ShadowArms.init(this)
         com.optionslab.app.data.McxPaperArms.init(this)
         com.optionslab.app.data.VixDivArm.init(this)
+        com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
         PineAuto.init(this)
         Protections.init(this)
@@ -102,6 +103,7 @@ class TestApp : Application() {
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
         com.optionslab.app.data.VixDivArm.wipe()
+        com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
         com.optionslab.app.work.PositionCards.forgetPostedForTest()
         com.optionslab.app.widget.IraWidget.forgetDrawnForTest()

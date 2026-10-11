@@ -253,7 +253,7 @@ object SmartWorkers {
         WorkerWake.Spec("ORB arms", setOf(WorkerWake.Cause.CANDLE_1M, WorkerWake.Cause.CANDLE_5M, WorkerWake.Cause.ORDER_UPDATE,
             WorkerWake.Cause.POSITION_CHANGE, WorkerWake.Cause.SIGNAL_WINDOW, WorkerWake.Cause.NEWS, WorkerWake.Cause.NEAR_LEVEL),
             maxSleepMs = 60_000L, minIntervalMs = 10_000L),
-    ) + listOf("Night (R3)", "VIX divergence", "Pine scripts", "MCX paper arms", "strategies", "Jarvis's trades", "Solo").map {
+    ) + listOf("Night (R3)", "VIX divergence", "Pine scripts", "MCX paper arms", "Forge ideas", "strategies", "Jarvis's trades", "Solo").map {
         WorkerWake.Spec(it, setOf(WorkerWake.Cause.CANDLE_1M, WorkerWake.Cause.ORDER_UPDATE, WorkerWake.Cause.POSITION_CHANGE,
             WorkerWake.Cause.NEWS), maxSleepMs = 60_000L, minIntervalMs = 10_000L)
     }

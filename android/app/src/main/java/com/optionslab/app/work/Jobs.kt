@@ -500,6 +500,7 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("VIX divergence") { com.optionslab.app.data.VixDivArm.tick() },
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
+            com.optionslab.ira.Supervisor.Step("Forge ideas") { com.optionslab.app.data.GrammarArm.tick() },
         )
         val due = armsDue(true, all)
         if (due.isEmpty()) return
