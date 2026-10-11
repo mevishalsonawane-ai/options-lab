@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object TradeManagerHost {
     private const val K_POLICY = "trademanager.policy"
-    private const val KEEP = 300
+    internal const val KEEP = 300
     private const val EVAL_MS = 1_000L
     private const val SAVE_MS = 5_000L
     private const val SETTLE_LAG_MS = 5_000L
@@ -162,7 +162,21 @@ object TradeManagerHost {
     /** Every managed trade's record, oldest first (the cards, the "Trade manager record" section and Jarvis read it). */
     val records: StateFlow<List<TradeManager.Record>> = _records
 
-    private fun publish() { _records.value = synchronized(recs) { recs.values.toList() } }
+    private fun publish() { _records.value = synchronized(recs) { trimLocked(); recs.values.toList() } }
+
+    /**
+     * At most [KEEP] records in memory, as on disk: the oldest closed ones (no longer followed) go first; a trade still open
+     * or followed is never dropped. Under [recs]'s lock; nothing to do (one size check) until there are more than [KEEP].
+     */
+    private fun trimLocked() {
+        var over = recs.size - KEEP
+        if (over <= 0) return
+        val it = recs.values.iterator()
+        while (over > 0 && it.hasNext()) {
+            val r = it.next()
+            if (r.closed && !live.containsKey(r.trade.tradeId)) { it.remove(); over-- }
+        }
+    }
 
     /**
      * [r]'s trade handed to the manager (the one call a strategy makes; cheap and idempotent - call it on every look). OFF for
@@ -536,6 +550,8 @@ object TradeManagerHost {
 
     /** Written now (tests, and the coalesced save). */
     internal fun save() {
+        // Never over a file that was not read yet (or could not be moved aside): that would lose the records kept in it.
+        if (!loaded) return
         val f = file() ?: return
         val list = synchronized(recs) { recs.values.toList().takeLast(KEEP) }
         val a = JSONArray()
@@ -543,8 +559,10 @@ object TradeManagerHost {
         runCatching {
             f.parentFile?.mkdirs()
             val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(a.toString())
+            // Synced before the rename, so a power cut leaves the old file or the new one, never an empty one.
+            java.io.FileOutputStream(tmp).use { it.write(a.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
             if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+            com.optionslab.app.security.Vault.syncDir(f.parentFile)
         }
     }
 
@@ -552,11 +570,22 @@ object TradeManagerHost {
     internal fun load() {
         if (loaded) return
         val f = file() ?: return
+        val read = runCatching {
+            val text = if (f.isFile) f.readText() else return@runCatching emptyList<TradeManager.Record>()
+            val a = JSONArray(text)
+            (0 until a.length()).mapNotNull { runCatching { dec(a.getJSONObject(it)) }.getOrNull() }
+        }
+        if (read.isFailure && f.exists()) {
+            // Unreadable (cut short, corrupt): moved aside, never overwritten; if it cannot be moved, nothing is saved over it.
+            runCatching { com.optionslab.app.security.Vault.setAside(f) }
+            if (f.exists()) return
+        }
         loaded = true
-        val text = runCatching { if (f.isFile) f.readText() else null }.getOrNull() ?: return
-        val got = runCatching { val a = JSONArray(text); (0 until a.length()).mapNotNull { runCatching { dec(a.getJSONObject(it)) }.getOrNull() } }.getOrDefault(emptyList())
-        synchronized(recs) { for (r in got) if (r.trade.tradeId !in recs) recs[r.trade.tradeId] = r }
+        val got = read.getOrDefault(emptyList())
+        val early = synchronized(recs) { val e = recs.isNotEmpty(); for (r in got) if (r.trade.tradeId !in recs) recs[r.trade.tradeId] = r; e }
         publish()
+        // A trade followed in the moment before the file was read: its save was held until now.
+        if (early) dirty()
     }
 
     private fun dn(o: JSONObject, k: String): Double? = if (o.has(k) && !o.isNull(k)) o.getDouble(k).takeIf { it.isFinite() } else null
@@ -599,6 +628,15 @@ object TradeManagerHost {
             decExit(o.optJSONObject("actual")), decExit(o.optJSONObject("mgr")), decExit(o.optJSONObject("orig")),
             if (o.has("acted")) o.getLong("acted") else null)
     }
+
+    /** TEST ONLY: the records file read again, as a new process would. */
+    internal fun reloadForTest(context: Context) {
+        appContext = context.applicationContext
+        synchronized(recs) { recs.clear() }
+        loaded = false
+        load()
+    }
+    internal fun fileForTest(): File? = file()
 
     /** TEST ONLY: the records as given (none followed). */
     internal fun recordsForTest(rs: List<TradeManager.Record>) {

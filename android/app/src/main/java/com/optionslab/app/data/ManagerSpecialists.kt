@@ -351,8 +351,10 @@ object ManagerSpecialists {
         runCatching {
             f.parentFile?.mkdirs()
             val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(o.toString())
+            // Synced before the rename, so a power cut leaves the old file or the new one, never an empty one.
+            java.io.FileOutputStream(tmp).use { it.write(o.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
             if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+            com.optionslab.app.security.Vault.syncDir(f.parentFile)
         }
     }
 
@@ -374,8 +376,8 @@ object ManagerSpecialists {
     internal fun load() {
         if (loaded) return
         val f = file() ?: return
-        val text = runCatching { if (f.isFile) f.readText() else null }.getOrNull()
-        if (text != null) runCatching {
+        val read = runCatching {
+            val text = if (f.isFile) f.readText() else return@runCatching
             val o = JSONObject(text)
             val lines = o.optJSONArray("lines")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
             val research = ManagerConfig.parse(o.optString("research", ""))
@@ -384,8 +386,23 @@ object ManagerSpecialists {
             // (A change Boss made in the moment before the file was read wins: it is written over the file next.)
             synchronized(this) { if (_book.value == Book()) _book.value = got }
         }
+        if (read.isFailure && f.exists()) {
+            // Unreadable (cut short, corrupt): moved aside so Boss's mutes and the tuned weights are kept for a look, never
+            // overwritten. If it cannot be moved, nothing is saved over it ([save] waits for [loaded]) and it is read again later.
+            runCatching { com.optionslab.app.security.Vault.setAside(f) }
+            if (f.exists()) return
+        }
         loaded = true
     }
+
+    /** TEST ONLY: the file read again, as a new process would. */
+    internal fun reloadForTest(context: Context) {
+        appContext = context.applicationContext
+        synchronized(this) { _book.value = Book() }
+        loaded = false
+        load()
+    }
+    internal fun fileForTest(): File? = file()
 
     /** TEST ONLY: nothing kept, nothing shown (in memory). */
     internal fun resetForTest() {
