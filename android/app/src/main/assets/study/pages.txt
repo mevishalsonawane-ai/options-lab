@@ -1,0 +1,128 @@
+# IraAlgo study pages (S19). Summarised from the app's own research (research/HUNT_*.md and the strategy notes it cites);
+# the numbers are the research's, rounded. Format: "@@ id | title | group | keywords" starts a page; the lines after it,
+# up to the next "@@", are its paragraphs (a blank line between paragraphs). "#" lines are comments.
+
+@@ liquidity | Liquidity 15+5 | Strategies | liquidity, 15+5, level, sweep, banknifty, the one edge
+What it does: on BANKNIFTY it waits for the price to break a level the market has respected (a liquidity level from the 15- and 5-minute charts), then buys one lot of the option in the break's direction. It exits on its own rules: a stop under the option's low, out after 20 minutes unless the trade is at least 5% up.
+
+The research's numbers (HUNT h24, h36): about ₹65 a day after all costs before the locked year, ₹167 a day in the locked year (1 Oct 2025 - 6 Oct 2026), at one lot. That is ₹1,400-3,500 a month on average, with 40-50% of months losing and drawdowns of ₹32-40k. A ₹5,000 day comes about once in 30-45 sessions; the best ten days make the whole year.
+
+Why it is the one kept: it is the only rule in over two million versions tested that kept a small edge after the real bid/ask spread (BANKNIFTY about 0.16%), charges and a correction for everything tried. Point targets (+20/-15) hurt it badly (h34): they cut the rare big runners that pay for everything.
+
+What to do: keep it on paper until about 300 more paper trades line up with the backtest; then, if at all, one lot.
+
+@@ orb | The ORB family | Strategies | orb, opening range, orb fresh, orb sweep, range fade, breakout
+What they do: the opening-range arms watch the first minutes of the day (the opening range) and buy an option when the index breaks out of it (ORB), breaks out on a fresh high (ORB Fresh), sweeps a side and comes back (ORB Sweep) or fades back into the range (Range Fade).
+
+The research's numbers (HUNT h19, h20, h21): all four lost in every 1-, 3- and 6-month window to 5 Oct 2026. ORB had 3 winning months out of 63; Fresh, Sweep and Fade 9-10 each, never three in a row. ORB took 930 trades in six months: gross about -₹10k, charges about ₹1.03 lakh. Their losses are mostly charges from over-trading.
+
+On the worst 20% of days they were never green and averaged -₹5,000; on Liquidity's best days they still lost about ₹1,200 a day. Smarter entries and adaptive profit locks did not make them pay (h21).
+
+What to do: paper only. ORB Fresh's trade manager rule (R12) is the one exit refinement that held on history.
+
+@@ hero | Expiry Hero | Strategies | hero, expiry, zero to hero, straddle, expiry day
+What it does: on a NIFTY expiry day, from 12:00, it watches the ATM straddle (call plus put); when the straddle expands late with momentum it buys the moving side, sells half at 5× and holds the rest to the end.
+
+The research's numbers (the zero-to-hero study): in-sample (NIFTY 2023-24) +₹4.40 lakh on 20 trades, three of which made all of it. Out of sample (NIFTY 2025 - Apr 2026): 13 trades, 0 wins, -₹64,190.
+
+The lesson: a rule whose whole profit comes from three trades is a lottery ticket. It looked great on the data it was found on and failed on the data it had not seen.
+
+What to do: paper only, never live.
+
+@@ night | Night (R3) | Strategies | night, overnight, r3, strong close, oi build-up
+What it does: at 15:20 on a strong close that the day-end open-interest build-up agrees with, it buys one lot of a 1-ITM NIFTY weekly or BANKNIFTY monthly option and sells it at 09:16 the next session.
+
+The research's numbers (HUNT h31, PREREG rule R3): about ₹207 a day before the holdout, ₹150 in it - and the holdout was not significant. Strong closes do carry on overnight a little, but the edge is small and decaying.
+
+What to do: paper only until a long paper record says otherwise.
+
+@@ vixdiv | VIX divergence | Strategies | vix divergence, vixdiv, divergence, india vix
+What it does: at 10:30, 11:30, 12:30 and 13:30 it takes the day's first divergence between NIFTY (or BANKNIFTY) and India VIX - index up over 0.2% while VIX is up over 2% buys the 1-ITM put; both down buys the call.
+
+The research's numbers (HUNT R1, idea N13): it failed the luck checks - the result was within what random entries with the same exits produce. It needs about 150 paper trades before anyone trusts it.
+
+What to do: off by default; paper only.
+
+@@ mcx | MCX bots | Strategies | mcx, commodity, crude, natural gas, natgas, silver, gold, evening
+What they do: the MCX paper arms trade the commodity evening and morning sessions - an evening range breakout, a morning move, a trend follower and the US-night silver arm - on the mini contracts a ₹1 lakh account can hold.
+
+The research's numbers (MCX_GUIDE, MCX_INTRADAY): with ₹1 lakh, six option books and about ten mini futures are usable; GOLD and SILVER options cost ₹1.6-2.7 lakh an ATM lot and are out of reach. The best honest case was a NATURALGAS evening breakout, about +₹40-80 a day, not significant, with a ₹40k drawdown. Busy evenings are not cheap: the evening premiums already carry the expected move.
+
+What to do: paper only.
+
+@@ solo | Solo and Pine | Strategies | solo, pine, pine script, jarvis trades, auto-trade
+What they do: Solo is Jarvis trading by himself on paper (a strong 15-minute candle, a 40% pullback, the ATM option the candle's way, stop at the level, target 2× risk). Pine runs your own Pine scripts and can auto-trade them on paper.
+
+The research's numbers (SOLO.md, 1 lot): the chosen variant made +₹52,151 on NIFTY 2024-25 (217 trades, t 0.92) and lost ₹42,968 on NIFTY 2025-26 (219 trades, t -1.72); +₹6,906 on BANKNIFTY 2025-26. One good year and one bad: no edge you can rely on.
+
+What to do: paper only. The trade manager acts on their paper trades by default, but R12 did not test them: early exits and trails hurt profitable strategies on history.
+
+@@ why-fail | Why most ideas fail | Ideas | why most ideas fail, costs, charges, spread, random, random twins, multiple testing, overfitting, luck
+Costs come first. An option buyer pays the bid/ask spread (BANKNIFTY about 0.16%, MIDCPNIFTY 0.21%, FINNIFTY 0.42%), theta and charges on every trade. Most signals are worth a few hundredths of a percent - several times smaller than what a trade costs. ORB lost ₹1.03 lakh in charges in six months on a gross of about -₹10k.
+
+Random twins: every idea is compared with random entries on the same day, same side and same exit. A random minute's trade loses about ₹90-240 on average. All 61 candlestick patterns, 9 chart patterns, every moving average and 25 indicators (215,280 versions, h25) made ₹0.2 a trade more than their random twins - that is zero.
+
+Multiple testing: try enough rules and some look great by luck. The research tested over two million versions in the hunt alone, plus a 26-million-rule search; it corrects for that (Benjamini-Hochberg, a penalised bar) and keeps a locked last year opened once. The outside "bake-off" champion won 25 days by luck and lost over five years (h43).
+
+So: a rule earns trust only when it beats its random twin after costs, survives the correction for everything tried, and holds on data it was not found on.
+
+@@ orderflow | Reading order flow | Reading the market | order flow, orderflow, delta, absorption, bid, ask, depth, tape, buyers, sellers
+Order flow is who is hitting whom: trades at the ask are buyers lifting offers, trades at the bid are sellers hitting bids. Delta is buys minus sells over a window; absorption is heavy selling (or buying) that does not move the price, because a large resting order soaks it up.
+
+What the app does: it reads the future's tick-rule delta and the book's top five levels each second, and keeps a log of every strategy signal with whether the flow agreed. It starts in SHADOW: it only records, and the trap guard (stop hunts, failed breaks, pulled bids) is judged on paper before it may ever skip a trade.
+
+What the research says: the big-move recorder shows the future's flow and the options' signed volume often turn a few seconds to minutes before a big candle - but every warning sign also precedes drops (h32), and no free history exists to test it properly. The phone's own recordings (2-4 weeks of sessions) are the test that is still waiting (S7).
+
+@@ vwap | VWAP | Reading the market | vwap, volume weighted average price, average price, vwap reject
+VWAP is the day's volume-weighted average price: the average price paid for every unit traded today. Above it, today's buyers are on average in profit; below it, today's sellers are. Big participants use it as a benchmark, so the price often returns to it.
+
+How the app uses it: the market profile and the big-move recorder note where the price sits against VWAP in standard deviations (the "VWAP bands"), as context for a move. No strategy enters on VWAP alone.
+
+What the research says: the "VWAP reject" strategy (EMA9 against VWAP, buy the rejection candle, exit on EMA9) did not pay after costs (h46), and signals on the option premium's own VWAP were worse than random - they bought the top (h30).
+
+@@ value-area | The value area | Reading the market | value area, market profile, poc, point of control, vah, val, profile
+The value area is the price range where about 70% of the day's volume (or time) traded; its middle, the busiest price, is the point of control (POC). Its top and bottom (VAH and VAL) are levels the market often tests: inside the value area the market is balanced; outside it, one side is in control.
+
+How the app uses it: the market profile (round 20) gives the opening type, the initial balance and where the price is against the value area, as context in the brain and the recorder.
+
+What the research says: Market Profile and Wyckoff, as option-buying triggers, were equal to random (h37). They describe the day well; they do not hand a buyer an edge after costs.
+
+@@ oi | Open interest | Reading the market | oi, open interest, pcr, put call ratio, build-up, oi build-up, unwinding
+Open interest (OI) is how many contracts are open. Price up with OI up is long build-up; price down with OI up is short build-up; price up with OI down is short covering; down with OI down is long unwinding. The put-call ratio compares put OI with call OI.
+
+What the research says (h26, h38, h40): OI leans the right way, by 1-2 basis points - far below what an option buyer pays. End-of-day positioning (FII, Pro, Client OI) predicts the gap, not the day. Minute futures OI history for expired contracts does not exist, so intraday OI ideas could not be tested on years of data.
+
+How the app uses it: the option chain shows OI and PCR; Night (R3) needs the day-end OI build-up to agree with a strong close.
+
+@@ vix | India VIX | Reading the market | vix, india vix, volatility, implied volatility, iv, fear index
+India VIX is the market's expected volatility over the next 30 days, from NIFTY option prices. High VIX means options are expensive and moves are expected; a VIX spike usually comes with a falling market.
+
+What the research says: implied volatility and skew did not tell a buyer when options are cheap enough to pay (h29). The VIX-divergence idea (index and VIX moving the same way) failed its luck checks.
+
+How the app uses it: VIX bands and spikes are findings on the brain's bus, context for the trade manager and the recorder; VIX divergence is a paper-only arm.
+
+@@ trade-manager | How the trade manager decides | How the app decides | trade manager, specialists, chair, exit early, extend, lock, trail
+After a fill the trade manager keeps watching the trade with live readings: the order flow, the brain, the findings bus, the option's own price. A committee of specialists votes (each with a weight) and the Chair decides: hold, exit early when the picture turns against the trade, or move the target out - but only together with a lock at breakeven plus charges or better, which then trails new highs at half the open profit.
+
+It never adds lots, never widens a stop and never moves a square-off. In SHADOW it records what it would do beside what the original rules did, so every decision has a counterfactual. Each specialist has a report card; the nightly tuning moves weights a little on paper and shadow only; live weights move only with your PIN.
+
+What the research said (R12): on history, early exits and trails hurt profitable strategies; the one proven refinement is ORB Fresh's (no progress in 20 minutes, a close 12% under the entry, a lock 3 option ATRs under the best high).
+
+@@ autopilot | How Autopilot decides | How the app decides | autopilot, autopilot learning, probation, preflight, experiment, undo, freeze
+Autopilot turns the agents' lessons into changes - a specialist's weight or mute, the manager's mode, a paper pause, a shadow threshold - within strict bounds. SAFE (the default): shadow and paper by itself, live only to lower risk, anything that adds risk asked.
+
+Before a change: the lesson must clear tonight's bar (Benjamini-Hochberg q, raised as trials grow), and the change is replayed on the stored trades (pre-flight); a worse replay is skipped. A lesson still building is tried as a paper experiment first.
+
+After a change: probation. A sequential test keeps it or reverts it as soon as the evidence is clear, at the latest after 15 trades or 5 trading days. Every change is logged and undoable; Today's changes undoes them all at once. If the account falls too far after automatic changes, the learning freeze stops every agent from applying anything until you unfreeze it.
+
+@@ lab | How the strategy lab decides | How the app decides | strategy lab, lab, variants, forge, discovery, promotion, shadow variants
+The lab runs variants of each strategy's rules in the shadow on the day's stored minutes, beside the current rules. A variant wins only when its daily lead passes a sequential test and the false-discovery check across every variant ever tried, plus a penalty for how many were tried. On paper a winner replaces the paper rules by itself (logged, undoable); on live it is only proposed, and moves only with your PIN.
+
+The forge tries new strategy ideas at night (charging and idle, or after 18:00) within a time budget; an idea that keeps passing in its forward test is put to you to start on paper - never live.
+
+@@ risk | Risk and position sizing at ₹1 lakh | Risk | risk, position sizing, sizing, lots, capital, drawdown, 1 lakh, fixed lots, kelly
+With ₹1 lakh, one lot is the size the research could carry safely (h17, h36): fixed lots, no Kelly, no growing size. The honest plan made about ₹100-300 a day net at one lot (₹2-6k a month), with losing months and drawdowns of ₹32-40k - a third of the account.
+
+Reaching ₹5,000 a day at the same edge would need 30-77 BANKNIFTY lots, about ₹22-63 lakh of capital (h36). Pyramiding and room-based sizing did not change the per-trade edge (h7).
+
+Rules that keep you in the game: a daily loss limit, a cap on trades a day (over-trading is mostly charges), no averaging down, a stop you never widen, and the kill switch. A bad day costs more than a good day makes when size grows faster than the edge.
