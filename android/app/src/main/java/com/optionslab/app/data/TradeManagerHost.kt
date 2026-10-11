@@ -309,8 +309,11 @@ object TradeManagerHost {
 
     @Volatile private var lastEval = 0L
 
-    /** From the fast lanes' looks: [evaluate] at most once a second. Cheap; never throws. */
-    fun onLook() { if (live.isEmpty()) return; val n = nowMs(); if (n - lastEval >= EVAL_MS || n < lastEval) evaluate(n) }
+    /**
+     * From the fast lanes' looks: [evaluate] at most once a second. Cheap; never throws; never waits - while another lane's
+     * look is evaluating, this one skips (that look covers this second), so a live lane is never held behind it.
+     */
+    fun onLook() { if (live.isEmpty()) return; val n = nowMs(); if (n - lastEval >= EVAL_MS || n < lastEval) evaluateWith(n, wait = false) }
 
     /** TEST ONLY: the readings at a look (null in the app, always: they come from memory). Throws unless BuildConfig.DEBUG. */
     @Volatile internal var testSnapshot: ((TradeManager.ManagedTrade, Long) -> TradeManager.Snapshot)? = null
@@ -348,7 +351,7 @@ object TradeManagerHost {
         )
     }
 
-    private val evalLock = Any()
+    private val evalLock = java.util.concurrent.locks.ReentrantLock()
     @Volatile private var minuteSettled = -1L
 
     /**
@@ -356,11 +359,17 @@ object TradeManagerHost {
      * strategy (its own look woken at once) and a moved target / lock is read by it on that look; in SHADOW only recorded.
      * Memory only. Once a minute the counterfactual is settled off this thread.
      */
-    fun evaluate(now: Long = nowMs()) {
+    fun evaluate(now: Long = nowMs()) = evaluateWith(now, wait = true)
+
+    /** [evaluate]; [wait] false: skipped when another look holds the lock (the fast lanes). */
+    private fun evaluateWith(now: Long, wait: Boolean) {
         if (live.isEmpty()) return
-        synchronized(evalLock) {
+        if (wait) evalLock.lock() else if (!evalLock.tryLock()) return
+        try {
             lastEval = now
             for ((id, l) in live) runCatching { one(id, l, now) }
+        } finally {
+            evalLock.unlock()
         }
         // Once a minute, 5 s after it turns (the minute just closed is then in the candles): the bars the research's rules read.
         val minute = (now - SETTLE_LAG_MS) / 60_000L

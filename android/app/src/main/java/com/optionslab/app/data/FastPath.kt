@@ -259,10 +259,12 @@ object FastPath {
                 FastLane.Lane.LIVE -> com.optionslab.app.work.TradingBusy.during {
                     // Real-money exits: Jarvis's model gives way while they run (10 Oct).
                     val stream = s?.st?.liveFresh == true
-                    runCatching { TradeManagerHost.onLook() }
                     if (OrbArms.liveHint) step("ORB arms") { OrbArms.priceCheckOnly(fast = true, stream = stream) }
                     if (PineAuto.holding()) step("Pine scripts") { PineAuto.watchOnly(fast = true, stream = stream) }
                     if (Protections.activeHint != false) step("stops and targets") { Protections.tick(fast = true, stream = stream) }
+                    // The trade manager after the exits (R4): nothing runs before a real-money exit; an exit it decides here wakes
+                    // the strategy's own look at once. Never waits on another lane's look ([TradeManagerHost.onLook]).
+                    runCatching { TradeManagerHost.onLook() }
                     Unit
                 }
                 FastLane.Lane.MINUTE -> {
