@@ -4,6 +4,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -98,6 +101,8 @@ class AutopilotCardTest {
     @Test fun onItsSideTheTitleAndCloseKeepApart() {
         set { AutopilotLogSheet(book, null, onAction = { _, _ -> }, onClose = {}) }
         titleAndCloseApart()
+        // Landscape is short: the list scrolls to the paper change (a lazy list composes only what is on screen).
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("the VWAP specialist on Pine (paper): counts → muted", substring = true))
         assertTrue(shows("the VWAP specialist on Pine (paper): counts → muted"))
     }
 
