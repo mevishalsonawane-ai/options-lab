@@ -435,8 +435,11 @@ object VariantLab {
     /** Is [v] done losing: worse by the same test the other way, or out of days? */
     fun loses(v: Variant): Boolean = (v.n >= MIN_N / 2 && v.pWorse <= ALPHA) || v.n >= MAX_N
 
-    /** Every p the false-discovery check runs across: each variant ever judged (the retired at their last p), the forgotten as 1. */
-    fun allP(b: Book): List<Double> = b.variants.filter { it.status != Status.PRECHECK_FAILED }.map { it.pBetter } +
+    /**
+     * Every p the false-discovery check runs across: each variant ever judged (the retired at their last p), the forgotten
+     * and those that failed their pre-check as 1 (they were tried: leaving them out shrank the family - R3 finding 10).
+     */
+    fun allP(b: Book): List<Double> = b.variants.map { if (it.status == Status.PRECHECK_FAILED) 1.0 else it.pBetter } +
         List((b.tried - b.variants.size).coerceAtLeast(0)) { 1.0 }
 
     /**
@@ -576,9 +579,19 @@ object VariantLab {
     fun accept(b: Book, id: String, pinConfirmed: Boolean, from: LocalDate? = null): Book? {
         if (!pinConfirmed) return null
         val c = b.changes.firstOrNull { it.id == id && it.status == ChangeStatus.OFFERED } ?: return null
+        // The siblings still alive were measured against the rules this replaces: retired as superseded (R3 finding 11), as
+        // a paper promotion retires them, so none can win later on a lead over rules no longer running.
+        var superseded = 0
         var out = b.copy(current = b.current + (c.strategy to c.to),
             changes = b.changes.map { if (it.id == id) it.copy(status = ChangeStatus.ACCEPTED, effective = from) else it },
-            variants = b.variants.map { if (it.id == c.variant) it.copy(status = Status.PROMOTED) else it })
+            variants = b.variants.map {
+                when {
+                    it.id == c.variant -> it.copy(status = Status.PROMOTED)
+                    it.strategy == c.strategy && it.status == Status.ALIVE -> { superseded++; it.copy(status = Status.RETIRED, why = "superseded by ${c.variant}") }
+                    else -> it
+                }
+            })
+        out = out.copy(retiredCount = out.retiredCount + superseded)
         if (from != null) { out = tune(out, c.strategy, true, from, c.to, id); out = tune(out, c.strategy, false, from, c.to, id) }
         return out
     }

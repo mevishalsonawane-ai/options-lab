@@ -570,7 +570,7 @@ object TradeManager {
         var p = p0
         if (p.exit != null) return p
         for (b in bars.sortedBy { it.startMs }) {
-            if (b.startMs < t.entryMs - 60_000L) continue
+            if (b.startMs + 60_000L <= t.entryMs) continue // a minute that ended by the entry is before it (R3 finding 14)
             if (b.startMs >= fromMs) {
                 if (b.startMs >= p.timeMs) return p.copy(exit = Exit(b.startMs, b.open, "TIME"))
                 val lockNow = lockAt?.invoke(p.peak)

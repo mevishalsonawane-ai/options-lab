@@ -284,6 +284,16 @@ object ShadowSim {
 
     private fun vixOpen(d: Day): Double? = d.vix?.takeIf { it.size > 0 }?.c?.get(0)
 
+    /** The busy / quiet read is known from this minute on (its first 30 minutes' range, [markBusy]). */
+    const val BUSY_KNOWN = OPEN + 30
+
+    /**
+     * The first decision minute [r] may use: a busy / quiet filter reads the day's first 30 minutes, so no entry may be
+     * decided before 09:45 under it (R3 finding 4: deciding at 09:20 on a read made at 09:45 was look-ahead).
+     */
+    fun firstDecision(r: Rules): Int =
+        if (Filter.BUSY_ONLY in r.filters || Filter.QUIET_ONLY in r.filters) maxOf(r.fromMin, BUSY_KNOWN) else r.fromMin
+
     /** [r] followed on [d]: its virtual trades. Never throws on thin data (a day it cannot read is no trade). */
     fun run(r: Rules, d: Day): List<Trade> {
         if (r.invalid() != null || d.index.size < 30 || !allowed(r, d)) return emptyList()
@@ -292,9 +302,10 @@ object ShadowSim {
         var busyUntil = -1
         var fired = false
         val ctx = Ctx(r, d, f)
+        val first = firstDecision(r)
         for (k in 0 until f.size) {
             val closeMin = f.start[k] + r.barMin
-            if (closeMin < r.fromMin) continue
+            if (closeMin < first) continue
             if (closeMin >= r.untilMin) break
             if (out.size >= r.maxTrades) break
             if (closeMin <= busyUntil) continue
@@ -502,9 +513,10 @@ object ShadowSim {
         val perDay = trades.groupingBy { it.day }.eachCount()
         for ((date, n) in perDay) {
             val d = days[date] ?: continue
-            val span = (r.untilMin - r.fromMin).coerceAtLeast(1)
+            val from = firstDecision(r)
+            val span = (r.untilMin - from).coerceAtLeast(1)
             repeat(n) {
-                val at = r.fromMin + rng.nextInt(span)
+                val at = from + rng.nextInt(span)
                 val dir = if (rng.nextInt(2) == 0) 1 else -1
                 val ii = d.index.atOrBefore(at - 1)
                 if (ii >= 0) enter(r, d, dir, at, d.index.c[ii])?.let { out += it }

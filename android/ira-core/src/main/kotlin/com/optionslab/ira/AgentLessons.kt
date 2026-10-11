@@ -18,14 +18,14 @@ import kotlin.math.abs
  *    again retires. One key, one lesson: duplicates merge ([merge]).
  *  - Confidence ([confidence]): strong needs [STRONG_N] or more and the same sign in at least [AGREE] of [SPLITS] time
  *    splits; building needs [BUILDING_N]; else weak. Nothing is said about rupees without the numbers beside it.
- *  - Honest statistics (11 Oct, "smarter learning"): every lesson gets a p-value ([pValue]: a sign-flip test on its per-day
- *    rupees, an exact binomial test on a rate) and, each night, a Benjamini-Hochberg q-value across all active lessons
- *    ([LearnStats.bh], [BH_Q] = 0.10). Strong also needs q <= [BH_Q]; the evidence line shows q. A lesson may be conditional
+ *  - Honest statistics (11 Oct, "smarter learning"): every lesson gets a p-value ([pValue]: an always-valid test on its
+ *    per-day rupees - it is looked at every night - an exact binomial test on a rate) and, each night, a Benjamini-Hochberg
+ *    q-value across all active lessons ([LearnStats.bh], [BH_Q] = 0.10; the lab's own lessons in a family of their own). Strong also needs q <= [BH_Q]; the evidence line shows q. A lesson may be conditional
  *    ("on busy days only", [conditions]): its days split by the market brain's regime, the expiry-day flag or the part of
  *    the day, [COND_N]+ cases a side, the split's own BH family passing at [BH_Q], and the two sides pointing opposite ways.
  *  - The strategy lab (S, 11 Oct): its results ([LabResult]: one forge idea's test of a building block or a filter, one
  *    variant's parameter direction - passed or failed, its rupees) are evidence like any other agent's: per day, a rate
- *    against a half, the same confidence, the same Benjamini-Hochberg family ("lab:" lessons). [LabLessons.results] makes them.
+ *    against a half, the same confidence, a Benjamini-Hochberg family of their own ("lab:" lessons). [LabLessons.results] makes them.
  *  - Hard caps: [MAX_LESSONS] lessons and [MAX_BYTES] encoded, retired and then the oldest weak lessons dropped first.
  *  - A strong lesson that implies a change becomes a [Proposal] for Boss - only ever one that lowers risk or acts on paper
  *    ([ProposalKind]); never the PIN, the lock, Live, AI-live, a guard, the Google speech choice, the day lock or real
@@ -269,14 +269,17 @@ object AgentLessons {
     // ---- honest statistics --------------------------------------------------------------------------------------------------
 
     /**
-     * A lesson's p-value: rupees - a sign-flip test of its per-day sums against zero ([LearnStats.signFlipP]); a rate - an
-     * exact binomial test of its hits against its threshold ([HEALTH_RATE], [MOVES_RATE], else a half); a daily review - the
-     * chance of so many reviews agreeing with the latest by luck ([LearnStats.binomUpper] at a half).
+     * A lesson's p-value: rupees - an ALWAYS-VALID test of its per-day sums against zero ([LearnStats.signFlipAlwaysValidP]:
+     * the lesson is re-tested every night as its days come in, and a fixed-sample p looked at nightly is "significant" on
+     * some night far more often than it says - R3 finding 8); a rate - an exact binomial test of its hits against its
+     * threshold ([HEALTH_RATE], [MOVES_RATE], else a half); a daily review - the chance of so many of the EARLIER reviews
+     * agreeing with the latest by luck ([LearnStats.binomUpper] at a half; the latest itself is not evidence for itself -
+     * R3 finding 9).
      */
     fun pValue(kind: Kind, id: String, buckets: List<Bucket>): Double {
         if (buckets.isEmpty()) return 1.0
         return when (kind) {
-            Kind.RUPEES -> LearnStats.signFlipP(DoubleArray(buckets.size) { buckets[it].rs })
+            Kind.RUPEES -> LearnStats.signFlipAlwaysValidP(DoubleArray(buckets.size) { buckets[it].rs })
             Kind.RATE -> {
                 var n = 0; var h = 0
                 for (b in buckets) { n += b.n; h += b.hits }
@@ -285,7 +288,7 @@ object AgentLessons {
             }
             Kind.SNAPSHOT -> {
                 val last = buckets.last().hits > 0
-                LearnStats.binomUpper(buckets.count { (it.hits > 0) == last }, buckets.size, 0.5)
+                LearnStats.binomUpper(buckets.count { (it.hits > 0) == last } - 1, buckets.size - 1, 0.5)
             }
         }
     }
@@ -812,7 +815,15 @@ object AgentLessons {
             val bs = merged[id] ?: byId[id]?.buckets.orEmpty()
             pValue(kinds[id] ?: byId[id]?.kind ?: Kind.RUPEES, id, bs)
         }
-        val qs = LearnStats.bh(ps)
+        // Two Benjamini-Hochberg families (R3 finding 5): the strategy lab's "lab:" lessons in their own. Nearly every forge
+        // idea fails, so against a half its blocks are all overwhelmingly "mostly failed" - in the agents' family those
+        // hundreds of easy discoveries would raise everyone's BH cut and let marginal trading lessons through.
+        val qs = DoubleArray(family.size)
+        for (lab in listOf(true, false)) {
+            val idx = family.indices.filter { (prefix(family[it]) == "lab") == lab }
+            val q = LearnStats.bh(DoubleArray(idx.size) { ps[idx[it]] })
+            for ((j, k) in idx.withIndex()) qs[k] = q[j]
+        }
         val pOf = HashMap<String, Double>(family.size * 2); val qOf = HashMap<String, Double>(family.size * 2)
         for ((k, id) in family.withIndex()) { pOf[id] = ps[k]; qOf[id] = qs[k] }
         for (a in accs) {

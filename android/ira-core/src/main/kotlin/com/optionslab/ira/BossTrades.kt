@@ -12,9 +12,11 @@ import java.util.Locale
  * with its context: the market's regime then, the time, the trade manager's specialists' votes on that index then, and
  * its risk to reward when a stop and a target were set.
  *
- * Over time Jarvis forms "your rules" from them ([rules]): each group - by reason, by reason and part of the day, by exit
- * reason, by regime - with its trades, wins and rupees, tested against a coin toss (exact binomial on the wins) and
- * corrected for testing many groups at once (Benjamini-Hochberg q). A rule HOLDS at q ≤ [Q_HOLD] over at least [MIN_N]
+ * Over time Jarvis forms "your rules" from them ([rules]): each group - by reason, by reason and part of the day, by
+ * regime - with its trades, wins and rupees, its RUPEES tested against zero (a sign-flip test on its per-day sums,
+ * [LearnStats.signFlipP]: a group that wins often but loses big is no good rule) and corrected for testing many groups at
+ * once (Benjamini-Hochberg q). Exit reasons are not groups (R3 finding 6): trades closed "on target" win and those closed
+ * "on stop" lose by definition, so testing them only padded the family with sure discoveries; [sayHabits] still counts them. A rule HOLDS at q ≤ [Q_HOLD] over at least [MIN_N]
  * trades; a soft warning before an order ([warn]) needs a losing group at q ≤ [Q_WARN]. Words only: nothing is ever
  * blocked, sized or changed. Pure.
  */
@@ -59,7 +61,8 @@ object BossTrades {
     data class Rule(val key: String, val label: String, val n: Int, val wins: Int, val net: Double, val p: Double, val q: Double,
                     val why: Why? = null, val part: Part? = null) {
         val rate: Double get() = if (n == 0) 0.0 else wins.toDouble() / n
-        val sign: Int get() = if (rate > 0.5) 1 else if (rate < 0.5) -1 else 0
+        /** Which way its rupees point (the test is on rupees, so the sign is too). */
+        val sign: Int get() = if (net > 1e-9) 1 else if (net < -1e-9) -1 else 0
         val holds: Boolean get() = n >= MIN_N && q <= Q_HOLD
         fun words(): String = "$label ${if (net >= 0) "made" else "lost"} ${rs(kotlin.math.abs(net))} over $n trades, won ${pct(rate)} (${wins} of $n)"
     }
@@ -67,7 +70,7 @@ object BossTrades {
     private fun rs(x: Double): String = "₹" + String.format(Locale.ENGLISH, "%,.0f", x)
     private fun pct(x: Double): String = String.format(Locale.ENGLISH, "%.0f%%", x * 100)
 
-    /** Every group with at least [MIN_N] closed trades, its binomial p against a coin toss and BH q across all of them. */
+    /** Every group with at least [MIN_N] closed trades, its rupees' p against zero (per-day sums) and BH q across all of them. */
     fun rules(trades: List<Trade>): List<Rule> {
         val closed = trades.filter { it.closed }
         val groups = LinkedHashMap<String, Triple<String, List<Trade>, Pair<Why?, Part?>>>()
@@ -80,12 +83,12 @@ object BossTrades {
             for (p in Part.entries) add("why:${w.name}:${p.name}", "your ${w.words} trades ${p.words}", xs.filter { Part.of(it.minute) == p }, w, p)
         }
         for (p in Part.entries) add("part:${p.name}", "your trades ${p.words}", closed.filter { Part.of(it.minute) == p }, part = p)
-        for (e in ExitWhy.entries) add("exit:${e.name}", "trades you closed on ${e.words}", closed.filter { it.exitWhy == e })
         for (r in closed.mapNotNull { it.regime }.distinct()) add("regime:$r", "your trades on $r days", closed.filter { it.regime == r })
         val out = groups.map { (k, v) ->
             val xs = v.second
             val wins = xs.count { (it.net ?: 0.0) > 0 }
-            Rule(k, v.first, xs.size, wins, xs.sumOf { it.net ?: 0.0 }, LearnStats.binomTwoSided(wins, xs.size, 0.5), 1.0, v.third.first, v.third.second)
+            val perDay = xs.groupBy { it.day }.values.map { d -> d.sumOf { it.net ?: 0.0 } }.toDoubleArray()
+            Rule(k, v.first, xs.size, wins, xs.sumOf { it.net ?: 0.0 }, LearnStats.signFlipP(perDay), 1.0, v.third.first, v.third.second)
         }
         if (out.isEmpty()) return out
         val q = LearnStats.bh(out.map { it.p }.toDoubleArray())
@@ -136,7 +139,7 @@ object BossTrades {
         val parts = ArrayList<String>()
         if (work.isNotEmpty()) parts += "What works: " + work.take(3).joinToString("; ") { it.words() } + "."
         if (lose.isNotEmpty()) parts += "What loses: " + lose.take(3).joinToString("; ") { it.words() } + "."
-        if (holds.isEmpty()) parts += "None of your groups is clear of chance yet (each tested against a coin toss and corrected for testing ${rules.size} at once)."
+        if (holds.isEmpty()) parts += "None of your groups is clear of chance yet (each group's rupees tested against luck and corrected for testing ${rules.size} at once)."
         if (building.isNotEmpty()) parts += "Still building: " + building.joinToString("; ") { "${it.words()}, ${AgentLessons.qWords(it.q)}" } + "."
         return parts.joinToString(" ")
     }

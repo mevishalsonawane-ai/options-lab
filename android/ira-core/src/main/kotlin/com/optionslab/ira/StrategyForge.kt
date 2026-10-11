@@ -14,7 +14,9 @@ import java.util.Locale
  *  - at least [MIN_TRADES] trades ([APPROX_MIN_TRADES] on the approximation);
  *  - walk-forward: the days in three folds, positive after costs in at least two;
  *  - the random twin: the same number of random entries on the same days with the same exits, beaten with p < [TWIN_ALPHA]
- *    ([APPROX_TWIN_ALPHA] on the approximation);
+ *    ([APPROX_TWIN_ALPHA] on the approximation). The p is continuous ([LearnStats.twinZP]: the observed mean's z among
+ *    the [TWIN_REPS] twins' means): a counted p could not go below 1 / 200, and with BH across hundreds of ideas no idea
+ *    could ever pass (R3 finding 1);
  *  - Benjamini-Hochberg at [Q] across EVERY candidate ever generated (the global counter: [Book.tried], [Book.pvals]);
  *  - the deepest fall within [MAX_DD] (the Rs 1 lakh capital's rule).
  *
@@ -212,7 +214,7 @@ object StrategyForge {
                 means += if (tw.isEmpty()) 0.0 else tw.sumOf { it.net } / tw.size
             }
             twinMean = if (means.isEmpty()) 0.0 else means.average()
-            if (means.size < TWIN_REPS) 1.0 else DiscoveryStats.twinP(mean, means)
+            if (means.size < TWIN_REPS) 1.0 else LearnStats.twinZP(mean, means)
         }
         val dd = DiscoveryStats.maxDrawdown(nets)
         val gates = listOf(

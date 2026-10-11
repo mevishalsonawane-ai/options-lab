@@ -161,8 +161,16 @@ internal object JarvisLearning {
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
         val trips = runCatching { IraAccount.trips(false, owners) }.getOrDefault(emptyList()) +
             runCatching { IraAccount.trips(true, owners) }.getOrDefault(emptyList())
-        val brain = com.optionslab.app.data.SmartWorkers.brain.value
-        val regime = brain.regimes["NIFTY"]?.state?.takeIf { it != com.optionslab.ira.MarketBrain.State.UNKNOWN }?.words
+        // The day's regime as the regime settings used it: frozen at 09:45 from the morning's read (RegimeParams), not the
+        // brain's state now after the close (the last half hour's) - a "busy days only" lesson must mean the days the busy
+        // setting would apply on (R3 finding 3). Not frozen today (a phone that first looked after 10:15): not known.
+        val regime = runCatching { com.optionslab.ira.RegimeParams.book.day?.takeIf { it.day == today }?.regime }.getOrNull()?.let {
+            when (it) {
+                com.optionslab.ira.RegimeParams.Regime.BUSY -> "busy"
+                com.optionslab.ira.RegimeParams.Regime.QUIET -> "quiet"
+                com.optionslab.ira.RegimeParams.Regime.TRENDING, com.optionslab.ira.RegimeParams.Regime.SIDEWAYS -> "normal"
+            }
+        }
         runCatching { com.optionslab.app.data.SmartWorkers.refreshReviews() }
         val drift = com.optionslab.app.data.SmartWorkers.reviews.value
         val managed = com.optionslab.app.data.TradeManagerHost.records.value

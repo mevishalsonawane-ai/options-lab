@@ -63,15 +63,16 @@ object LearnStats {
 
     /**
      * Two-sided p that the per-day sums [sums] are centred on zero (no effect), flipping each day's sign. Fewer than three
-     * days with anything in them say nothing (1.0).
+     * days with anything in them say nothing (1.0). A non-finite day (NaN, an infinity: a broken record) is dropped, never
+     * read as overwhelming evidence.
      */
     fun signFlipP(sums: DoubleArray): Double {
         var g = 0
-        for (s in sums) if (abs(s) > 1e-9) g++
+        for (s in sums) if (s.isFinite() && abs(s) > 1e-9) g++
         if (g < 3) return 1.0
         val xs = DoubleArray(g)
         var k = 0
-        for (s in sums) if (abs(s) > 1e-9) xs[k++] = s
+        for (s in sums) if (s.isFinite() && abs(s) > 1e-9) xs[k++] = s
         var total = 0.0
         var sq = 0.0
         for (x in xs) { total += x; sq += x * x }
@@ -90,7 +91,25 @@ object LearnStats {
             }
             return count.toDouble() / patterns
         }
-        return pOfZ(total / sqrt(sq))
+        val z = total / sqrt(sq)
+        return if (z.isFinite()) pOfZ(z) else 1.0
+    }
+
+    /**
+     * Two-sided ALWAYS-VALID p that the per-day sums [sums] (oldest first) are centred on zero: the mixture SPRT's
+     * [alwaysValidP] each way, the smaller doubled (Bonferroni over the two sides). Unlike [signFlipP] it may be looked at
+     * every night as the days come in without its false-alarm rate growing with the looks (R3 finding 8): a lesson re-tested
+     * nightly on a fixed-sample p is "significant" on some night far more often than its p says. Non-finite days dropped;
+     * zero days (nothing that day) are skipped as [signFlipP] skips them. Nothing is judged before [minDays] days: the
+     * mixture's scale is the running sd, and an sd from three or four days is too often far too small (a seeded simulation of
+     * a no-effect lesson re-tested nightly over days 10 to 60: about 12% false alarms judged from day 3, under 3% from day 10).
+     */
+    fun signFlipAlwaysValidP(sums: DoubleArray, minSd: Double = 1.0, minDays: Int = EXACT_DAYS): Double {
+        val xs = sums.filter { it.isFinite() && abs(it) > 1e-9 }
+        if (xs.size < minDays) return 1.0
+        val up = alwaysValidP(xs, 1, minSd, minDays)
+        val dn = alwaysValidP(xs, -1, minSd, minDays)
+        return minOf(1.0, 2.0 * minOf(up, dn))
     }
 
     // ---- binomial ------------------------------------------------------------------------------------------------------------
@@ -158,11 +177,13 @@ object LearnStats {
 
     /**
      * Benjamini-Hochberg q-values of [p] (same order): the smallest false-discovery rate at which each would be called. A
-     * test passes at level q when its q-value is at most q.
+     * test passes at level q when its q-value is at most q. A non-finite p (NaN: a test that could not be worked out) counts
+     * as 1.0 - it never passes and never turns the whole family's q-values into NaN.
      */
-    fun bh(p: DoubleArray): DoubleArray {
-        val m = p.size
+    fun bh(p0: DoubleArray): DoubleArray {
+        val m = p0.size
         if (m == 0) return DoubleArray(0)
+        val p = DoubleArray(m) { if (p0[it].isNaN()) 1.0 else p0[it].coerceIn(0.0, 1.0) }
         val idx = (0 until m).sortedWith(compareBy({ p[it] }, { it }))
         val q = DoubleArray(m)
         var run = 1.0
@@ -209,10 +230,11 @@ object LearnStats {
 
     /**
      * One-sided bootstrap p that the mean of [xs] is above zero: resample the centred values [b] times (seeded), the share of
-     * resampled means at or above the observed one. 1.0 for fewer than two values.
+     * resampled means at or above the observed one. 1.0 for fewer than [BOOT_MIN_N] values: a bootstrap of a handful of
+     * values is far too sure of itself (two positives resample to "always above zero", R3 finding 13).
      */
     fun bootstrapP(xs: List<Double>, seed: Long, b: Int = 1_000): Double {
-        if (xs.size < 2) return 1.0
+        if (xs.size < BOOT_MIN_N) return 1.0
         val m = xs.average()
         val c = DoubleArray(xs.size) { xs[it] - m }
         val r = Rng(seed)
@@ -249,12 +271,31 @@ object LearnStats {
         return p.coerceIn(0.0, 1.0)
     }
 
+    /** Below this many values [bootstrapP] says nothing (1.0). */
+    const val BOOT_MIN_N = 10
+
     /** The lab's trial-count penalty: [alpha] / (1 + ln(tried)), every idea or variant ever tried counted. */
     fun penalizedAlpha(alpha: Double, tried: Int): Double = alpha / (1.0 + ln(maxOf(1, tried).toDouble()))
 
     /** The random-twin p: the share of [twinMeans] at or above [observed] (with the observed itself counted once). */
     fun twinP(observed: Double, twinMeans: List<Double>): Double =
         (1.0 + twinMeans.count { it >= observed }) / (twinMeans.size + 1.0)
+
+    /**
+     * The random-twin p as a CONTINUOUS number (R3 finding 1): how far [observed] stands above the twins' means in their own
+     * standard deviations, z = (observed - mean) / sd, read off the normal's upper tail. The counted [twinP] cannot go below
+     * 1 / (reps + 1) (0.005 at 199 twins), so once the false-discovery check runs across a few hundred ideas no idea could
+     * ever pass it however real its edge; a twin's mean over 40+ trades is close to normal, so the tail is honest. With no
+     * spread in the twins (or fewer than two) it falls back to [twinP].
+     */
+    fun twinZP(observed: Double, twinMeans: List<Double>): Double {
+        val ms = twinMeans.filter { it.isFinite() }
+        if (ms.size < 2 || !observed.isFinite()) return twinP(observed, twinMeans)
+        val m = ms.average()
+        val sd = sqrt(ms.sumOf { (it - m) * (it - m) } / (ms.size - 1))
+        if (sd <= 1e-12 * maxOf(1.0, abs(m))) return twinP(observed, twinMeans)
+        return (0.5 * erfc((observed - m) / sd / sqrt(2.0))).coerceIn(0.0, 1.0)
+    }
 
     /** The deepest fall of the running sum of [pnls] (a positive number of rupees; 0 for none). */
     fun maxDrawdown(pnls: List<Double>): Double {
@@ -375,6 +416,48 @@ object LearnStats {
                 if (n >= minN) {
                     if (llr >= up) return State(n, llr, up, lo, Call.KEEP)
                     if (llr <= lo) return State(n, llr, up, lo, Call.REVERT)
+                }
+            }
+            return State(n, llr, up, lo, null)
+        }
+
+        /**
+         * The paper experiments' test (R3 finding 7): [run] asks "helps by [effect] sd, or hurts by as much?", so a variant
+         * with NO effect sits halfway and is kept about a quarter of the time. Here the null is zero: two one-sided SPRTs on
+         * the same stream, each against "no effect" -
+         *
+         *  - KEEP: H0 mean 0 against H1 mean +[effect] sd, llr = effect x sum / sd - n x effect^2 / 2, called at ln(1 / [alpha])
+         *    (Ville's bound: a no-effect stream ever reaches it with chance at most alpha, however long it runs);
+         *  - REVERT: the same against -[effect] sd, called at ln(1 / [revertAlpha]) (default [BETA]: reverting is the safe
+         *    side, so a no-effect variant may be called lost more readily than kept).
+         *
+         * No boundary accepts "no effect": the drift term pulls noise down on both sides, and it stays undecided until the
+         * experiment's cap. The sd as in [run]. The state's llr is the leading side's (positive: toward keep).
+         */
+        fun runVsZero(ys: List<Double>, alpha: Double = ALPHA, effect: Double = EFFECT, minN: Int = MIN_N, revertAlpha: Double = BETA): State {
+            val up = ln(1.0 / alpha)
+            val lo = -ln(1.0 / revertAlpha)
+            var n = 0
+            var mean = 0.0
+            var m2 = 0.0
+            var sum = 0.0
+            var llr = 0.0
+            for (y in ys) {
+                if (!y.isFinite()) continue
+                n++
+                sum += y
+                val d = y - mean
+                mean += d / n
+                m2 += d * (y - mean)
+                val sd = if (n > 2) sqrt(m2 / (n - 1) * n / (n - 2)) else if (n > 1) sqrt(m2) * 2 else 0.0
+                val sigma = max(max(sd, abs(mean)), 1e-9)
+                val drift = n * effect * effect / 2
+                val keep = effect * sum / sigma - drift
+                val lose = -effect * sum / sigma - drift
+                llr = if (sum >= 0) max(0.0, keep) else -max(0.0, lose)
+                if (n >= minN) {
+                    if (keep >= up) return State(n, keep, up, lo, Call.KEEP)
+                    if (lose >= -lo) return State(n, -lose, up, lo, Call.REVERT)
                 }
             }
             return State(n, llr, up, lo, null)

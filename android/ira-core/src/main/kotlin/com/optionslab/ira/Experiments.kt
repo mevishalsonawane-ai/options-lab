@@ -7,14 +7,15 @@ import java.time.LocalDate
  * bar ([AutoGate]) - Autopilot does not change the paper setting outright; it may start an EXPERIMENT instead.
  *
  *  - Paper only, never live or shadow ([eligible]); at most [MAX_RUNNING] at a time; one per target.
- *  - A/B by alternation: from its start, the eligible paper trades of that strategy are taken in time order and alternate -
- *    the 1st, 3rd, 5th... are the CONTROL (the current setting), the 2nd, 4th, 6th... the VARIANT (the proposed one). The
- *    setting itself is never switched: each variant trade is judged on its shadow copy - the trade manager's records carry
- *    both ends of every managed trade (the manager's way and the original rules', settled on the option's 1-minute wicks),
- *    and a paused strategy's trade is simply not taken - the same replay as the pre-flight's ([Preflight.cases]).
- *  - Each pair (a control then a variant) gives the variant's lead in rupees; the pairs go through the same sequential test
- *    as a probation ([LearnStats.Sprt]), with alpha shared by the trials so far ([LearnStats.bar]): the more Autopilot has
- *    tried, the more a variant must show.
+ *  - PAIRED on the same trade (R3 finding 2; it used to alternate trades, setting one trade's "with" against ANOTHER
+ *    trade's "without", so the trades' own spread drowned the effect): from its start, every eligible paper trade of that
+ *    strategy is one pair - the same trade both ways, the variant (the proposed setting) less the control (the current
+ *    one). The setting itself is never switched: the variant side is the trade's shadow copy - the trade manager's records
+ *    carry both ends of every managed trade (the manager's way and the original rules', settled on the option's 1-minute
+ *    wicks), and a paused strategy's trade is simply not taken - the same replay as the pre-flight's ([Preflight.cases]).
+ *  - The pairs' leads go through a sequential test against NO effect ([LearnStats.Sprt.runVsZero]; R3 finding 7), with
+ *    alpha shared by the trials so far ([LearnStats.bar]): the more Autopilot has tried, the more a variant must show, and
+ *    a variant that changes nothing graduates at most about alpha of the time.
  *  - WON: it graduates - the paper change is made as a normal AUTO change (pre-flight and probation as ever); when it is the
  *    trade manager acting on a strategy that may act on live, the live twin is only ever asked (a live raise, the PIN).
  *  - LOST: it ends, its target rests [AutoChange.REST_DAYS] days, and Jarvis keeps a negative lesson of it
@@ -69,17 +70,9 @@ object Experiments {
     /** Ended experiments kept in the log (running ones always stay). */
     const val MAX_KEPT = 60
 
-    /** The alternation: case 1 control, case 2 variant, ...; each pair's day and the variant's lead (its "with" less the control's "without"). */
-    fun pairs(cases: List<Preflight.Case>): List<Pair<LocalDate, Double>> {
-        val out = ArrayList<Pair<LocalDate, Double>>(cases.size / 2)
-        var i = 0
-        while (i + 1 < cases.size) {
-            val control = cases[i]; val variant = cases[i + 1]
-            out += AgentLessons.dayOf(variant.atMs) to (variant.with - control.without)
-            i += 2
-        }
-        return out
-    }
+    /** Each case is one pair, the same trade both ways: its day and the variant's lead (its "with" less its own "without"). */
+    fun pairs(cases: List<Preflight.Case>): List<Pair<LocalDate, Double>> =
+        cases.map { c -> AgentLessons.dayOf(c.atMs) to (c.with - c.without) }
 
     /** One experiment's night: what it now is, the change it graduates to and the live question it raises, and its pairs. */
     data class Outcome(val experiment: Experiment, val graduate: AutoChange.Change?, val ask: AutoChange.Change?, val pairs: List<Pair<LocalDate, Double>>)
@@ -96,7 +89,7 @@ object Experiments {
             if (x.status != Status.RUNNING) return@map x
             val cases = runCatching { Preflight.cases(x.change, data, sinceMs = x.startedAtMs) }.getOrNull().orEmpty()
             val ps = pairs(cases).take(MAX_PAIRS)
-            val s = LearnStats.Sprt.run(ps.map { it.second }, alpha = alpha)
+            val s = LearnStats.Sprt.runVsZero(ps.map { it.second }, alpha = alpha)
             val lead = ps.sumOf { it.second }
             val over = ps.size >= MAX_PAIRS || AutoChange.tradingDays(x.startedOn, day) >= MAX_DAYS
             val y = when {
