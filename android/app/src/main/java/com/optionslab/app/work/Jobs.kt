@@ -537,20 +537,31 @@ object Tasks {
     @Volatile private var relayFails = 0
     @Volatile private var relayTriedAt = 0L
 
+    /**
+     * The relay's part of [warmRoutes] (market hours, a background thread). Switched off ([enabled] false): self-healing is
+     * told there is no relay, so a "relay down" from before never keeps refusing live entries that now go direct (review
+     * G8-3). On: a ping when its gap has passed and its breaker lets one through (review G8-7: the breaker's pause, which
+     * Autopilot may tune, now acts), the result its health (two failed pings in a row: new live entries wait at the door).
+     */
+    internal fun relayLook(enabled: Boolean, now: Long = System.currentTimeMillis(), warm: () -> Boolean = { com.optionslab.app.data.Relay.warm() }) {
+        val sw = com.optionslab.app.data.SmartWorkers
+        if (!enabled) { relayFails = 0; sw.relaySample(true, enabled = false); return }
+        if (now - relayTriedAt < com.optionslab.ira.WatchHealth.warmGapMs(relayFails)) return
+        if (!runCatching { sw.health.allow(com.optionslab.ira.SelfHeal.Dep.RELAY, now) }.getOrDefault(true)) return
+        relayTriedAt = now
+        val ok = runCatching { warm() }.getOrDefault(false)
+        relayFails = if (ok) 0 else relayFails + 1
+        sw.relaySample(ok, enabled = true)
+    }
+
+    /** TEST ONLY. */
+    internal fun resetRelayForTest() { relayFails = 0; relayTriedAt = 0L }
+
     private fun warmRoutes(s: AppSettings) {
         if (warmJob?.isActive == true) return
         warmJob = warmScope.launch {
             val m = com.optionslab.app.data.Market
-            if (m.isOpen() && com.optionslab.app.data.Relay.enabled) {
-                val now = System.currentTimeMillis()
-                if (now - relayTriedAt >= com.optionslab.ira.WatchHealth.warmGapMs(relayFails)) {
-                    relayTriedAt = now
-                    val ok = runCatching { com.optionslab.app.data.Relay.warm() }.getOrDefault(false)
-                    relayFails = if (ok) 0 else relayFails + 1
-                    // Self-healing (10 Oct): the relay's health (two failed pings in a row: new live entries wait at the door).
-                    com.optionslab.app.data.SmartWorkers.relaySample(ok, enabled = true)
-                }
-            }
+            if (m.isOpen()) relayLook(com.optionslab.app.data.Relay.enabled)
             // A bot's entry or exit then finds a pooled connection through the relay and a fresh static-IP reading, not handshakes.
             if (s.live && m.isOpen() && com.optionslab.app.data.Broker.loggedIn) runCatching { com.optionslab.app.data.Broker.warmOrderRoute() }
             // Order speed (9 Oct): the relay's round trip (the warm-up above times it; in Paper mode a read through the relay

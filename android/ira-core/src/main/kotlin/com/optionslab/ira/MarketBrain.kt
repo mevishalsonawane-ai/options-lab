@@ -154,6 +154,22 @@ object MarketBrain {
         return out.distinctBy { Triple(it.name, it.startMs, it.scope) }.sortedBy { it.startMs }
     }
 
+    /**
+     * [today]'s windows (IST day) from the calendar's events by their day ([events]: day to name): [windows] of today's events,
+     * and those of TOMORROW's events whose window falls on today - FOMC's line is dated the Indian session after the decision,
+     * so its window (14:00 New York, IST night) is tonight's (review G8-11: it was never active).
+     */
+    fun windowsFor(today: LocalDate, events: List<Pair<LocalDate, String>>, expiries: List<String> = emptyList(),
+                   foCloseMin: Int = 15 * 60 + 40, mcx: Boolean = true): List<Window> {
+        val todays = windows(today, events.filter { it.first == today }.map { it.second }, expiries, foCloseMin, mcx)
+        val tomorrow = today.plusDays(1)
+        val startMs = today.atStartOfDay(IST).toInstant().toEpochMilli()
+        val endMs = tomorrow.atStartOfDay(IST).toInstant().toEpochMilli()
+        val tonight = windows(tomorrow, events.filter { it.first == tomorrow }.map { it.second }, mcx = false)
+            .filter { it.startMs < endMs && it.endMs >= startMs }
+        return (todays + tonight).distinctBy { Triple(it.name, it.startMs, it.scope) }.sortedBy { it.startMs }
+    }
+
     // ---- the picture ---------------------------------------------------------------------------------------------------
 
     /** The big-move alarm: [name]'s move [dir] (+1 up, -1 down) seen at [atMs]. */

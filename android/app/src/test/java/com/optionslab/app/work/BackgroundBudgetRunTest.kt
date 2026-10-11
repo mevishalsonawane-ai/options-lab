@@ -45,4 +45,27 @@ class BackgroundBudgetRunTest : RobolectricTest() {
         wall += 30 * 60_000L
         assertTrue(BackgroundBudget.allow(BudgetRule.Job.HISTORY))
     }
+
+    /** Review G8-10: the afternoon's work spends the day's budget, not the night's that follows. */
+    @Test fun theAfternoonsWorkLeavesTheNightsBudgetWhole() {
+        BackgroundBudget.testNow = LocalDateTime.of(2026, 10, 12, 15, 50)
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.HISTORY))
+        cpu += BudgetRule.NIGHT_CPU_MS + 1
+        BackgroundBudget.done(BudgetRule.Job.HISTORY)
+        wall += 30 * 60_000L
+        assertFalse("the day's own budget is spent", BackgroundBudget.allow(BudgetRule.Job.HISTORY))
+        BackgroundBudget.testNow = LocalDateTime.of(2026, 10, 12, 16, 30)
+        assertTrue("tonight's 10 minutes are untouched", BackgroundBudget.allow(BudgetRule.Job.LEARNING))
+    }
+
+    /** Review G8-10: two jobs running at once count the process's CPU once. */
+    @Test fun twoJobsAtOnceCountTheCpuOnce() {
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.LEARNING))
+        // Six minutes of the process's CPU while both run: six minutes spent, not twelve.
+        cpu += 6 * 60_000L
+        wall += 60_000L
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        assertTrue("6 of the 10 minutes, counted once", BackgroundBudget.allow(BudgetRule.Job.LEARNING))
+    }
 }

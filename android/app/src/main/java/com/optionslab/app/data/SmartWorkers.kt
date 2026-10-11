@@ -13,6 +13,7 @@ import com.optionslab.ira.WorkerWake
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -52,7 +53,14 @@ object SmartWorkers {
     val brain: StateFlow<MarketBrain.Context> = _brain
 
     @Volatile private var appContext: Context? = null
-    fun init(context: Context) { appContext = context.applicationContext }
+    private val ioScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    @Volatile private var warmJob: kotlinx.coroutines.Job? = null
+
+    /** At the app's start: Boss's brain settings read on an IO thread (review G8-4), so no entry is ever the first to read them. */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        if (!loaded) warmJob = ioScope.launch { runCatching { ensureLoaded() } }
+    }
 
     // ---- Boss's settings (memory; read once off the hot paths) -------------------------------------------------------------
 
@@ -79,13 +87,24 @@ object SmartWorkers {
     private val _settings = MutableStateFlow(Settings())
     val settings: StateFlow<Settings> = _settings
     @Volatile private var loaded = false
+    /** Held while the settings are read from the vault and while one is changed (read, change, write: no lost update, G8-2). */
+    private val settingsLock = Any()
 
-    /** The settings read once (a worker thread: never the main thread, never the order path). */
+    /** A vault read on this object's own paths, its wait given to self-healing's secure-storage health (review G8-7). */
+    private inline fun <T> timedVault(read: () -> T): T {
+        val t0 = System.nanoTime()
+        try { return read() } finally { runCatching { health.keystore((System.nanoTime() - t0) / 1_000_000L) } }
+    }
+
+    /**
+     * The settings read once (a worker thread: never the main thread, never the order path - the app's start reads them on
+     * an IO thread, [init]; the entry checks only ever read memory).
+     */
     fun ensureLoaded() {
         if (loaded) return
-        synchronized(this) {
+        synchronized(settingsLock) {
             if (loaded) return
-            val s = runCatching {
+            val s = runCatching { timedVault {
                 Settings(
                     MarketBrain.decode(SecurePrefs.getString(K_PAUSE)), Findings.decode(SecurePrefs.getString(K_REACT)),
                     SecurePrefs.getInt(K_NET, WorkerWake.NET_FLAT_DEFAULT_SEC).coerceIn(WorkerWake.NET_MIN_SEC, WorkerWake.NET_MAX_SEC),
@@ -93,26 +112,36 @@ object SmartWorkers {
                     SecurePrefs.getString(K_PARKED).orEmpty().split(',').filter { it.isNotBlank() }.toSet(),
                     SecurePrefs.getString(K_PAUSED).orEmpty().split(',').filter { it.isNotBlank() }.toSet(),
                 )
-            }.getOrNull() ?: return       // unreadable now: defaults stay (they only ever pause more), tried again next time
+            } }.getOrNull() ?: return       // unreadable now: defaults stay (they only ever pause more), tried again next time
             _settings.value = s
             loaded = true
         }
     }
 
-    private fun save(s: Settings, what: String) {
-        _settings.value = s
-        runCatching {
-            SecurePrefs.putAllSoon(mapOf(K_PAUSE to MarketBrain.encode(s.pause), K_REACT to Findings.encode(s.reactions), K_NET to s.netFlatSec,
-                K_PAPER to s.paperDrift.name, K_PARKED to s.parked.sorted().joinToString(","), K_PAUSED to s.paused.sorted().joinToString(",")))
+    /**
+     * One change to the settings: [f] maps the settings now to the new ones and the diary's words (null: nothing to change);
+     * read, changed, kept and written under one lock, so two changes at once (the Brain sheet, Autopilot, the review) never
+     * lose one another (review G8-2). True when something changed.
+     */
+    private fun change(f: (Settings) -> Pair<Settings, String>?): Boolean {
+        val what = synchronized(settingsLock) {
+            val r = f(_settings.value) ?: return false
+            val n = r.first
+            _settings.value = n
+            runCatching {
+                SecurePrefs.putAllSoon(mapOf(K_PAUSE to MarketBrain.encode(n.pause), K_REACT to Findings.encode(n.reactions), K_NET to n.netFlatSec,
+                    K_PAPER to n.paperDrift.name, K_PARKED to n.parked.sorted().joinToString(","), K_PAUSED to n.paused.sorted().joinToString(",")))
+            }
+            r.second
         }
         runCatching { Diag.record("brain", what) }
+        return true
     }
 
     /** Boss sets one pause cause (OFF / SHADOW / ON). Returns what to say. */
     fun setPause(c: MarketBrain.Cause, m: MarketBrain.Mode): String {
         ensureLoaded()
-        val s = _settings.value
-        save(s.copy(pause = MarketBrain.Policy(s.pause.modes + (c to m))), "pause new entries during ${c.words}: ${m.name}")
+        change { s -> s.copy(pause = MarketBrain.Policy(s.pause.modes + (c to m))) to "pause new entries during ${c.words}: ${m.name}" }
         return when (m) {
             MarketBrain.Mode.ON -> "New entries now wait during ${c.words} (paper and live). Exits always go."
             MarketBrain.Mode.SHADOW -> "During ${c.words} entries go ahead; what a pause would have done is logged beside each signal."
@@ -123,11 +152,12 @@ object SmartWorkers {
     /** Boss sets a reaction for every strategy ([key] null) or one. */
     fun setReaction(key: String?, r: Findings.Reaction, m: Findings.Mode): String {
         ensureLoaded()
-        val s = _settings.value
-        val p = s.reactions
-        val next = if (key == null) p.copy(global = p.global + (r to m))
-            else p.copy(perStrategy = p.perStrategy + (key to (p.perStrategy[key].orEmpty() + (r to m))))
-        save(s.copy(reactions = next), "reaction ${r.key} ${key ?: "(all)"}: ${m.name}")
+        change { s ->
+            val p = s.reactions
+            val next = if (key == null) p.copy(global = p.global + (r to m))
+                else p.copy(perStrategy = p.perStrategy + (key to (p.perStrategy[key].orEmpty() + (r to m))))
+            s.copy(reactions = next) to "reaction ${r.key} ${key ?: "(all)"}: ${m.name}"
+        }
         return when (m) {
             Findings.Mode.ACT -> "It now skips new entries when this applies: ${r.words}. Exits always go."
             Findings.Mode.SHADOW -> "Logged only: ${r.words}."
@@ -138,24 +168,29 @@ object SmartWorkers {
     fun setNetFlatSec(sec: Int): String {
         ensureLoaded()
         val v = sec.coerceIn(WorkerWake.NET_MIN_SEC, WorkerWake.NET_MAX_SEC)
-        save(_settings.value.copy(netFlatSec = v), "safety-net pass with nothing held: every $v s")
+        change { s -> s.copy(netFlatSec = v) to "safety-net pass with nothing held: every $v s" }
         return "With nothing held, the safety-net check runs every $v s (every ${WorkerWake.NET_HOLDING_SEC} s while anything is held, always)."
     }
 
     fun setPaperDrift(p: DriftReview.PaperPolicy): String {
         ensureLoaded()
-        save(_settings.value.copy(paperDrift = p), "paper strategy drifting: ${p.name}")
+        change { s -> s.copy(paperDrift = p) to "paper strategy drifting: ${p.name}" }
         return if (p == DriftReview.PaperPolicy.PAUSE) "A paper strategy drifting from its backtest now pauses its new entries and asks you."
             else "A paper strategy drifting from its backtest only warns you."
     }
 
-    /** Is the review key [key] ("liquidity") parked to paper by its own review? Read by the arm at each entry (memory). */
-    fun parkedToPaper(key: String): Boolean { ensureLoaded(); return key in _settings.value.parked }
+    /**
+     * Is the review key [key] ("liquidity") parked to paper by its own review? Read by the arm at each entry: memory only
+     * (review G8-4: never a vault read on the entry path). Before the settings are read (the first moments after the start,
+     * or a vault not readable yet) it answers parked: the entry then goes to paper, never live on a guess.
+     */
+    fun parkedToPaper(key: String): Boolean = !loaded || key in _settings.value.parked
 
     /** Boss re-armed [key] himself (in Live, with his PIN): it is no longer parked. Only ever called from Boss's own action. */
     fun ownerRearmed(key: String) {
-        val s = _settings.value
-        if (key in s.parked || key in s.paused) save(s.copy(parked = s.parked - key, paused = s.paused - key), "$key switched back on by you")
+        // Read first (Boss's action, off the entry path): clearing the defaults would let the saved park come back on the read.
+        ensureLoaded()
+        change { s -> if (key in s.parked || key in s.paused) s.copy(parked = s.parked - key, paused = s.paused - key) to "$key switched back on by you" else null }
     }
 
     // ---- the entry check ---------------------------------------------------------------------------------------------------
@@ -169,7 +204,7 @@ object SmartWorkers {
      * by an exit.
      */
     fun entry(key: String, underlying: String?, side: Int, nowMs: Long = System.currentTimeMillis()): EntryBrake.Decision {
-        ensureLoaded()
+        // Memory only (review G8-4): the settings are read at the start ([init]); until then the defaults (news windows ON).
         val s = _settings.value
         val d = EntryBrake.decide(_brain.value, s.pause, underlying?.let { bus.recent(nowMs, it) } ?: bus.recent(nowMs), s.reactions,
             key, underlying, side, nowMs)
@@ -222,7 +257,7 @@ object SmartWorkers {
     /** The move recorder's trigger (its own thread): the big-move alarm in the brain and a finding. */
     fun bigMove(name: String, dir: Int, atMs: Long) {
         runCatching {
-            _brain.value = _brain.value.copy(bigMove = MarketBrain.BigMove(name, dir, atMs))
+            _brain.update { it.copy(bigMove = MarketBrain.BigMove(name, dir, atMs)) }
             found("move recorder", Findings.Kind.BIG_MOVE, name, dir, null, 80,
                 "big move ${if (dir > 0) "up" else "down"} started ${MoveEvents.hhmm(atMs / 1000 - 60)}", 30 * 60_000L)
         }
@@ -344,10 +379,10 @@ object SmartWorkers {
         if (countsDay != today) { countsDay = today; runCatching { sched.resetCounts() }; synchronized(closedSeen) { closedSeen.clear() } }
         val regs = runCatching { regimes(now) }.getOrDefault(_brain.value.regimes)
         if (windowsDay != today || now - windowsAt > 5 * 60_000L) runCatching {
-            val events = com.optionslab.app.ira.IraEvents.upcoming(0).filter { it.day == today }
-            val names = events.map { it.name }
-            val expiries = names.filter { it.endsWith(" expiry") }.map { it.removeSuffix(" expiry") }
-            windows = MarketBrain.windows(today, names, expiries, Market.foClose(today))
+            // Today's and tomorrow's events: FOMC's line is dated the session after the decision, its window is tonight (G8-11).
+            val events = com.optionslab.app.ira.IraEvents.upcoming(1).filter { it.day == today || it.day == today.plusDays(1) }
+            val expiries = events.filter { it.day == today }.map { it.name }.filter { it.endsWith(" expiry") }.map { it.removeSuffix(" expiry") }
+            windows = MarketBrain.windowsFor(today, events.map { it.day to it.name }, expiries, Market.foClose(today))
             windowsDay = today; windowsAt = now
         }
         val traps = runCatching { OrderFlowLive.reads.value.mapValues { (_, r) -> r.flags.map { it.name }.toSet() } }.getOrDefault(emptyMap())
@@ -363,8 +398,9 @@ object SmartWorkers {
                 emptyMap(), "no reliable prices (stream stale and Zerodha failing)")) }
         }
         val incidents = runCatching { health.openIncidents().map { "${it.dep.words}: ${it.what}" } }.getOrDefault(emptyList())
-        val cur = _brain.value
-        _brain.value = cur.copy(atMs = now, regimes = regs, windows = windows, traps = traps, health = fb, incidents = incidents)
+        // One atomic step (review G8-6): a big-move alarm set meanwhile on the move recorder's thread is kept.
+        val wins = windows
+        _brain.update { it.copy(atMs = now, regimes = regs, windows = wins, traps = traps, health = fb, incidents = incidents) }
         // A news window opening wakes the workers waiting on one, and is a finding (once a window).
         for (w in windows) if (w.kind == MarketBrain.Kind.NEWS && w.active(now) && activeWindowsSeen.add("$today ${w.name} ${w.startMs}")) {
             event(WorkerWake.Cause.NEWS)
@@ -530,12 +566,20 @@ object SmartWorkers {
     /** The latest reviews (paper and live separately), for Home's chips and Jarvis. */
     val reviews: StateFlow<List<DriftReview.Review>> = _reviews
     @Volatile private var reviewedOn: String? = null
+    /** One review at a time, the day marked only once a pass got its reads (review G8-1, G8-5). */
+    private val reviewGuard = DriftReview.DayOnce()
 
-    /** The reviews now from the strategies' own books (reads only). */
-    private suspend fun reviewNow(): List<DriftReview.Review> {
+    /** TEST ONLY: the books' reads fail (as a pass cut at its time limit, or a book that cannot be read). */
+    @Volatile internal var testReadsFail = false
+
+    /**
+     * The reviews now from the strategies' own books (reads only); null when a book could not be read (review G8-1: never a
+     * review of empty books). A cancellation goes through.
+     */
+    private suspend fun reviewNow(): List<DriftReview.Review>? {
         val out = ArrayList<DriftReview.Review>()
-        val paper = runCatching { OrbArms.closedPaper() }.getOrDefault(emptyList())
-        val live = runCatching { OrbArms.closedLive() }.getOrDefault(emptyList())
+        val paper = tried { check(!testReadsFail) { "test" }; OrbArms.closedPaper() } ?: return null
+        val live = tried { check(!testReadsFail) { "test" }; OrbArms.closedLive() } ?: return null
         fun nets(e: ForwardCheck.Expectation, t: List<ForwardCheck.Trade>) =
             t.filter { x -> e.since?.let { !x.day.isBefore(it) } ?: true }.sortedBy { it.day }.map { it.net }
         val liqPaper = nets(ForwardCheck.LIQUIDITY, ForwardRecords.liquidity(paper))
@@ -556,34 +600,48 @@ object SmartWorkers {
     }
 
     /** Home's chips with no review yet today (the app just opened): the reviews worked out, nothing done. Off the main thread. */
-    suspend fun refreshReviews() { if (_reviews.value.isEmpty()) runCatching { _reviews.value = reviewNow() } }
+    suspend fun refreshReviews() { if (_reviews.value.isEmpty()) tried { reviewNow()?.let { _reviews.value = it } } }
 
     /**
      * After F&O's close (15:45) on a trading day, once a day: each strategy reviewed; a drifting live one parks itself to
      * paper and asks Boss, a drifting paper one warns (or pauses under Boss's setting) and asks. Never un-parks anything.
+     * The day counts as reviewed only once the books were read (a pass cut or failed before is tried again), and two callers
+     * at once (the brain's worker, the evening report) never both review.
      */
     suspend fun reviewIfDue(context: Context?) {
         val today = Market.today()
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return
-        if (reviewedOn == today.toString()) return
-        ensureLoaded()
-        if (runCatching { SecurePrefs.getString(K_REVIEWED) }.getOrNull() == today.toString()) { reviewedOn = today.toString(); refreshReviews(); return }
-        reviewedOn = today.toString()
-        runCatching { SecurePrefs.putAllSoon(mapOf(K_REVIEWED to today.toString())) }
-        val list = reviewNow()
+        val day = today.toString()
+        if (!reviewGuard.claim(day)) return
+        try {
+            ensureLoaded()
+            if (timedVault { SecurePrefs.getString(K_REVIEWED) } == day) { reviewGuard.done(day); reviewedOn = day; refreshReviews(); return }
+            val list = reviewNow() ?: return
+            // The books were read: the day is reviewed (the steps below are memory and posts; none waits).
+            reviewGuard.done(day)
+            reviewedOn = day
+            runCatching { SecurePrefs.putAllSoon(mapOf(K_REVIEWED to day)) }
+            act(context, list)
+        } finally { reviewGuard.release() }
+    }
+
+    private fun act(context: Context?, list: List<DriftReview.Review>) {
         _reviews.value = list
         val ctx = context ?: appContext
         for ((i, r) in list.withIndex()) {
-            val s = _settings.value
             val key = r.key
-            val already = if (r.live) key in s.parked else key in s.paused
-            val a = DriftReview.action(r, s.paperDrift, alreadyParked = already)
-            if (a == DriftReview.Action.NONE) continue
-            when (a) {
-                DriftReview.Action.PARK_TO_PAPER -> save(s.copy(parked = s.parked + key), "${r.name}: parked to paper by its self-review")
-                DriftReview.Action.PAUSE -> save(s.copy(paused = s.paused + key), "${r.name}: new paper entries paused by its self-review")
-                else -> runCatching { Diag.record("brain", "${r.name} (${r.venue}): drifting from its backtest (warned)") }
+            var a = DriftReview.Action.NONE
+            change { s ->
+                val already = if (r.live) key in s.parked else key in s.paused
+                a = DriftReview.action(r, s.paperDrift, alreadyParked = already)
+                when (a) {
+                    DriftReview.Action.PARK_TO_PAPER -> s.copy(parked = s.parked + key) to "${r.name}: parked to paper by its self-review"
+                    DriftReview.Action.PAUSE -> s.copy(paused = s.paused + key) to "${r.name}: new paper entries paused by its self-review"
+                    else -> null
+                }
             }
+            if (a == DriftReview.Action.NONE) continue
+            if (a == DriftReview.Action.WARN) runCatching { Diag.record("brain", "${r.name} (${r.venue}): drifting from its backtest (warned)") }
             val text = DriftReview.ask(r, a)
             found("self-review", Findings.Kind.DRIFT, Findings.ALL, 0, null, 70, "${r.name} (${r.venue}) drifting from its backtest", 24 * 3_600_000L)
             if (ctx != null) runCatching { com.optionslab.app.work.Notifier.post(ctx, 5120 + i, com.optionslab.app.work.Notifier.HEALTH,
@@ -605,8 +663,7 @@ object SmartWorkers {
     /** Boss said yes to pausing [key]'s paper entries (an offer he confirmed): lowers risk only. */
     private fun setPausedByOwner(key: String) {
         ensureLoaded()
-        val s = _settings.value
-        if (key !in s.paused) save(s.copy(paused = s.paused + key), "$key: new paper entries paused on your yes")
+        change { s -> if (key !in s.paused) s.copy(paused = s.paused + key) to "$key: new paper entries paused on your yes" else null }
     }
 
     /**
@@ -623,18 +680,14 @@ object SmartWorkers {
     /** Autopilot paused [key]'s new paper entries (its record says it loses; risk-lowering, exits always go). Null: already paused. */
     fun pausePaperByAutopilot(key: String): String? {
         ensureLoaded()
-        val s = _settings.value
-        if (key in s.paused) return null
-        save(s.copy(paused = s.paused + key), "$key: new paper entries paused by Autopilot")
+        if (!change { s -> if (key !in s.paused) s.copy(paused = s.paused + key) to "$key: new paper entries paused by Autopilot" else null }) return null
         return "New paper entries of ${nameOfKey(key)} are paused by Autopilot. Exits always go."
     }
 
     /** Autopilot resumed [key]'s new paper entries (paper only; one it paused itself, or Boss's undo). Null: not paused. */
     fun resumePaperByAutopilot(key: String): String? {
         ensureLoaded()
-        val s = _settings.value
-        if (key !in s.paused) return null
-        save(s.copy(paused = s.paused - key), "$key: new paper entries resumed by Autopilot")
+        if (!change { s -> if (key in s.paused) s.copy(paused = s.paused - key) to "$key: new paper entries resumed by Autopilot" else null }) return null
         return "${nameOfKey(key)} takes new paper entries again."
     }
 
@@ -644,9 +697,7 @@ object SmartWorkers {
      */
     fun parkByAutopilot(key: String): String? {
         ensureLoaded()
-        val s = _settings.value
-        if (key in s.parked) return null
-        save(s.copy(parked = s.parked + key), "$key: parked to paper by Autopilot")
+        if (!change { s -> if (key !in s.parked) s.copy(parked = s.parked + key) to "$key: parked to paper by Autopilot" else null }) return null
         return "${nameOfKey(key)} is parked to paper: its next entries go to the paper account; open live trades are still managed to their exits."
     }
 
@@ -696,7 +747,9 @@ object SmartWorkers {
             (reviewedOn?.let { " · last review $it" } ?: "")
         _reviews.value.forEach { out += "    ${DriftReview.line(it, if (it.live) it.key in s.parked else it.key in s.paused)}" }
         val open = health.openIncidents()
-        val past = health.past().takeLast(10)
+        // Over today only (review G8-8: the lines carry times only, an older day's read as today's).
+        val dayStart = runCatching { Market.today().atStartOfDay(Market.now().zone).toInstant().toEpochMilli() }.getOrDefault(0L)
+        val past = health.pastSince(dayStart).takeLast(10)
         out += "  Health incidents: " + if (open.isEmpty() && past.isEmpty()) "none today" else ""
         (open + past).forEach { out += "    " + SelfHeal.line(it, { hhmmss(it) }) }
         out += "  Breakers: " + SelfHeal.Dep.entries.joinToString(", ") { "${it.name.lowercase(Locale.ENGLISH)} ${health.breaker(it).name.lowercase(Locale.ENGLISH)}" }
@@ -722,12 +775,20 @@ object SmartWorkers {
     internal fun resetForTest() {
         // A nightly pass a test's look launched ends before the next test starts.
         nightlyJob?.let { j -> kotlinx.coroutines.runBlocking { withTimeoutOrNull(20_000L) { j.join() } } }
+        // The start's settings read ends before the test's own settings.
+        warmJob?.let { j -> kotlinx.coroutines.runBlocking { withTimeoutOrNull(5_000L) { j.join() } } }
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
-        _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L
+        _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L; reviewGuard.reset(); testReadsFail = false
         synchronized(trapsSeen) { trapsSeen.clear() }; synchronized(sideSeen) { sideSeen.clear() }
         activeWindowsSeen.clear(); synchronized(closedSeen) { closedSeen.clear() }
     }
+
+    /** TEST ONLY: as before the start's read (the settings not read yet). */
+    internal fun unloadForTest() { synchronized(settingsLock) { loaded = false; _settings.value = Settings() } }
+
+    /** TEST ONLY: whether the settings were read. */
+    internal val loadedForTest: Boolean get() = loaded
 
     /** TEST ONLY: the brain as given (a news window, traps). */
     internal fun setBrainForTest(c: MarketBrain.Context) { _brain.value = c }

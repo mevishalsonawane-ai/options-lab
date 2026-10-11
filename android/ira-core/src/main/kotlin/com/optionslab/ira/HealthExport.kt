@@ -65,9 +65,21 @@ object HealthExport {
         return out
     }
 
-    /** A trace cut to the top [TRACE_LINES] lines, each trimmed; messages after "Exception:" kept only as the class name. */
-    fun trimTrace(text: String): String = text.lineSequence().map { it.trimEnd() }.filter { it.isNotBlank() }.take(TRACE_LINES)
-        .map { l -> ex.find(l)?.let { m -> m.groupValues[1] + ": ‹message left out›" } ?: l }.joinToString("\n")
+    /**
+     * A trace cut to the top [TRACE_LINES] lines, each trimmed; messages after "Exception:" kept only as the class name. An
+     * ANR dump (Android's runtime statistics first, the threads after "DALVIK THREADS") starts at the main thread's stack
+     * (review G8-9: its first 60 lines were only the runtime's statistics).
+     */
+    fun trimTrace(text: String): String {
+        val lines = text.lineSequence().map { it.trimEnd() }.filter { it.isNotBlank() }.toList()
+        val from = lines.indexOfFirst { MAIN.containsMatchIn(it) }.takeIf { it > 0 }
+            ?: lines.indexOfFirst { it.trimStart().startsWith("DALVIK THREADS") }.takeIf { it > 0 } ?: 0
+        return lines.drop(from).take(TRACE_LINES)
+            .map { l -> ex.find(l)?.let { m -> m.groupValues[1] + ": ‹message left out›" } ?: l }.joinToString("\n")
+    }
+
+    /** An ANR dump's main-thread header: `"main" prio=5 tid=1 Blocked`. */
+    private val MAIN = Regex("^\\s*\"main\"\\s")
 
     /** "java.lang.IllegalStateException: anything" -> the class only (a message can carry a URL, a symbol or a token). */
     private val ex = Regex("^\\s*(?:Caused by: )?([a-zA-Z_$][\\w$.]*(?:Exception|Error|Throwable))(?::\\s.*)$")

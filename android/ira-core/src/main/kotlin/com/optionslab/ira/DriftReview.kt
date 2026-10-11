@@ -152,4 +152,31 @@ object DriftReview {
         return head + "\n" + reviews.joinToString("\n") { "• " + line(it, "${it.key}:${it.venue}" in parked) } +
             "\nA drifting live strategy parks itself to paper and asks you; it never goes back to live by itself."
     }
+
+    /**
+     * The once-a-day guard of the review (review G8-1, G8-5): ONE caller at a time gets in ([claim]); the day counts as reviewed
+     * only once a pass got its reads ([done]) - a pass cut or failed before that ([release]) leaves the day to the next try, and
+     * two callers at once (the brain's worker and the evening report) never both review. Thread-safe.
+     */
+    class DayOnce {
+        private val running = java.util.concurrent.atomic.AtomicBoolean(false)
+        @Volatile var doneOn: String? = null; private set
+
+        /** May a pass for [day] start now? False when [day] is done or another pass is running. */
+        fun claim(day: String): Boolean {
+            if (doneOn == day) return false
+            if (!running.compareAndSet(false, true)) return false
+            if (doneOn == day) { running.set(false); return false }
+            return true
+        }
+
+        /** [day] is reviewed (the claimed pass got its reads). */
+        fun done(day: String) { doneOn = day }
+
+        /** The claimed pass ended (done or not): the next claim may run. */
+        fun release() { running.set(false) }
+
+        /** TEST ONLY. */
+        fun reset() { doneOn = null; running.set(false) }
+    }
 }

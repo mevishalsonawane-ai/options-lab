@@ -5,9 +5,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import com.optionslab.ira.BudgetRule
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * The battery and heat budget for nightly and background work (S18; the rule is ira-core's [BudgetRule]). The strategy
@@ -21,7 +19,8 @@ import java.util.concurrent.atomic.AtomicLong
  */
 object BackgroundBudget {
     @Volatile private var appContext: Context? = null
-    @Volatile private var night: LocalDate? = null
+    /** The budget now ([BudgetRule.budgetOf]: "2026-10-12 day" or "2026-10-12 night"). */
+    @Volatile private var night: String? = null
     @Volatile private var lastSaid: String? = null
 
     /** TEST ONLY: the phone's state and the CPU time instead of Android's. */
@@ -47,31 +46,29 @@ object BackgroundBudget {
 
     private fun cpuMs(): Long = testCpuMs?.invoke() ?: runCatching { android.os.Process.getElapsedCpuTime() }.getOrDefault(0L)
 
-    /** Per job: the CPU clock and the wall clock at its last [allow] (a run is the calls less than [RUN_GAP_MS] apart). */
-    private val last = java.util.concurrent.ConcurrentHashMap<BudgetRule.Job, Pair<Long, Long>>()
-    private val spentMs = AtomicLong(0)
     private const val RUN_GAP_MS = 120_000L
+    /**
+     * Per job: the CPU clock at its last [allow] (a run is the calls less than [RUN_GAP_MS] apart); two jobs running at
+     * once count the process's CPU once, not once each (review G8-10).
+     */
+    private val meter = BudgetRule.CpuMeter(RUN_GAP_MS)
 
     /**
-     * The background CPU spent this night so far: within a job's run (its [allow] calls between steps), the process's CPU
+     * The background CPU spent in this budget so far: within a job's run (its [allow] calls between steps), the process's CPU
      * time from one call to the next is counted; the gaps between runs are not (the rest of the app is not the jobs').
      */
     private fun spent(job: BudgetRule.Job): Long {
         roll()
-        val cpu = cpuMs()
-        val wall = wallMs()
-        val prev = last.put(job, cpu to wall)
-        if (prev != null && wall - prev.second in 0..RUN_GAP_MS && cpu >= prev.first) spentMs.addAndGet(cpu - prev.first)
-        return spentMs.get()
+        return meter.ask(job, cpuMs(), wallMs())
     }
 
     private fun wallMs(): Long = testWallMs?.invoke() ?: System.currentTimeMillis()
 
-    /** A new night starts afresh. */
+    /** A new budget starts afresh: the day's (08:00-16:00) and the night's are separate (review G8-10). */
     private fun roll() {
         val now = testNow ?: runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
-        val n = BudgetRule.nightOf(now)
-        if (night != n) { night = n; spentMs.set(0); last.clear(); lastSaid = null }
+        val n = BudgetRule.budgetOf(now)
+        if (night != n) { night = n; meter.reset(); lastSaid = null }
     }
 
     /**
@@ -80,9 +77,7 @@ object BackgroundBudget {
      */
     fun done(job: BudgetRule.Job) {
         roll()
-        val prev = last.remove(job) ?: return
-        val cpu = cpuMs()
-        if (cpu >= prev.first) spentMs.addAndGet(cpu - prev.first)
+        meter.done(job, cpuMs())
     }
 
     /** May [job] run (or go on) now? Each call is cheap: one sticky-broadcast read and the CPU clock. */
@@ -96,5 +91,5 @@ object BackgroundBudget {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { night = null; spentMs.set(0); last.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
+    internal fun resetForTest() { night = null; meter.reset(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
 }

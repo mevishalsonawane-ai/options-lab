@@ -275,6 +275,9 @@ object SelfHeal {
         /** Incidents over, the newest last (at most 50). */
         @Synchronized fun past(): List<Incident> = history.toList()
 
+        /** Incidents over at or after [fromMs] (the start of today, for "today" in the diagnostics: review G8-8), newest last. */
+        @Synchronized fun pastSince(fromMs: Long): List<Incident> = history.filter { (it.recoveredAt ?: it.startedAt) >= fromMs }
+
         /** TEST / a new day. */
         @Synchronized fun reset() {
             rest.clear(); limits.clear(); streamLastTick = null; streamExpected = false; relayFails = 0; candleFails = 0

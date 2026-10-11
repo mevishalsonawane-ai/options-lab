@@ -12,7 +12,7 @@ import java.time.LocalDateTime
  *  - the battery is hotter than [MAX_TEMP_C] °C (BatteryManager's EXTRA_TEMPERATURE, tenths of a degree);
  *  - Android's power-save mode is on;
  *  - tonight's CPU time for the background jobs is spent ([NIGHT_CPU_MS]; a "night" runs from [NIGHT_FROM_HOUR]:00 to the
- *    next morning's [NIGHT_TO_HOUR]:00, and the day's work before it counts toward the day's own budget).
+ *    next morning's [NIGHT_TO_HOUR]:00, and the day's work before it counts toward the day's own budget: [budgetOf]).
  *
  * Nothing on the order path, the market watch, stops or exits ever asks: only background jobs that can wait. Pure.
  */
@@ -35,6 +35,46 @@ object BudgetRule {
 
     /** The budget's "night" a moment belongs to: the date its evening started (before 08:00 counts to the day before). */
     fun nightOf(t: LocalDateTime): LocalDate = if (t.hour < NIGHT_TO_HOUR) t.toLocalDate().minusDays(1) else t.toLocalDate()
+
+    /**
+     * The budget a moment spends (review G8-10): the day's own from [NIGHT_TO_HOUR]:00 to [NIGHT_FROM_HOUR]:00 ("2026-10-12 day"),
+     * else the night's ("2026-10-12 night", the date its evening started) - the day's work never spends the night's 10 minutes.
+     */
+    fun budgetOf(t: LocalDateTime): String =
+        if (t.hour in NIGHT_TO_HOUR until NIGHT_FROM_HOUR) "${t.toLocalDate()} day" else "${nightOf(t)} night"
+
+    /**
+     * The background jobs' CPU, each moment counted once (review G8-10): a job's run counts the process's CPU clock from its last
+     * ask to this one ([ask]; asks more than [runGapMs] apart start a new run, the gap not counted) or to its end ([done]), but
+     * a stretch another job running at the same time already counted is not counted again. Thread-safe; the clocks are given.
+     */
+    class CpuMeter(private val runGapMs: Long = 120_000L) {
+        private val last = HashMap<Job, Pair<Long, Long>>()      // the CPU clock and the wall clock at the job's last ask
+        private var countedTo = Long.MIN_VALUE                   // the CPU clock up to which time is already counted
+        var spentMs = 0L; private set
+
+        private fun charge(from: Long, to: Long) {
+            val start = maxOf(from, countedTo)
+            if (to > start) spentMs += to - start
+            if (to > countedTo) countedTo = to
+        }
+
+        /** [job] asks at [cpuMs] (the process's CPU clock) and [wallMs]: what is spent so far. */
+        @Synchronized fun ask(job: Job, cpuMs: Long, wallMs: Long): Long {
+            val prev = last.put(job, cpuMs to wallMs)
+            if (prev != null && wallMs - prev.second in 0..runGapMs && cpuMs >= prev.first) charge(prev.first, cpuMs)
+            return spentMs
+        }
+
+        /** [job]'s run ended at [cpuMs]: the CPU since its last ask is counted however long that was. */
+        @Synchronized fun done(job: Job, cpuMs: Long) {
+            val prev = last.remove(job) ?: return
+            if (cpuMs >= prev.first) charge(prev.first, cpuMs)
+        }
+
+        /** A new budget (a new day or night). */
+        @Synchronized fun reset() { last.clear(); countedTo = Long.MIN_VALUE; spentMs = 0L }
+    }
 
     /** May [job] run now? [cpuUsedMs]: the background CPU spent so far this night. */
     fun decide(job: Job, phone: Phone, cpuUsedMs: Long, capMs: Long = NIGHT_CPU_MS): Decision {

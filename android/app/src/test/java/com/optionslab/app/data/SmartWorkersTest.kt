@@ -157,6 +157,115 @@ class SmartWorkersTest : RobolectricTest() {
         assertTrue(SmartWorkers.reviewAnswer().contains("No review yet") || SmartWorkers.reviewAnswer().contains("Against their backtests"))
     }
 
+    // ---- the line-by-line review's G8 fixes ------------------------------------------------------------------------------
+
+    private val ist = java.time.ZoneId.of("Asia/Kolkata")
+    private fun clockAt(t: java.time.LocalDateTime) { Market.testClock = java.time.Clock.fixed(t.atZone(ist).toInstant(), ist) }
+
+    /** G8-4: before the start's read, an arm's entry checks read nothing from the vault, and a park is never missed. */
+    @Test fun theEntryChecksNeverReadTheVaultEvenBeforeTheSettingsAreRead() {
+        SecurePrefs.put("brain.parked", "liquidity")
+        SmartWorkers.unloadForTest()
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        val parked = SmartWorkers.parkedToPaper("liquidity")
+        SmartWorkers.entry("liquidity:BANKNIFTY", "BANKNIFTY", 1)
+        SmartWorkers.doorRefusal("BANKNIFTY26OCT52000CE")
+        SecurePrefs.countedThread = null
+        assertEquals("settings reads on the entry path before the start's read", 0L, SecurePrefs.readsForTest.get())
+        assertTrue("not read yet: the entry goes to paper, never live on a guess", parked)
+        // The start reads them on an IO thread (as the app's onCreate does).
+        SmartWorkers.init(context)
+        val end = System.currentTimeMillis() + 10_000
+        while (!SmartWorkers.loadedForTest && System.currentTimeMillis() < end) Thread.sleep(5)
+        assertTrue("read at the start", SmartWorkers.loadedForTest)
+        assertTrue(SmartWorkers.parkedToPaper("liquidity"))
+        assertFalse(SmartWorkers.parkedToPaper("hero"))
+    }
+
+    /** G8-4 (related): Boss re-arming before the settings were read clears the SAVED park, not the defaults. */
+    @Test fun aRearmBeforeTheReadClearsTheSavedPark() {
+        SecurePrefs.put("brain.parked", "liquidity")
+        SmartWorkers.unloadForTest()
+        SmartWorkers.ownerRearmed("liquidity")
+        SmartWorkers.ensureLoaded()
+        assertFalse("re-armed by Boss: no longer parked", SmartWorkers.parkedToPaper("liquidity"))
+        assertFalse(SecurePrefs.getString("brain.parked").orEmpty().contains("liquidity"))
+    }
+
+    /** G8-2: changes from several threads at once (Autopilot's parks, Boss's sheet) never lose one another. */
+    @Test fun changesAtOnceAreNeverLost() {
+        SmartWorkers.ensureLoaded()
+        val start = java.util.concurrent.CountDownLatch(1)
+        val a = Thread { start.await(); repeat(200) { SmartWorkers.parkByAutopilot("k$it") } }
+        val b = Thread { start.await(); repeat(200) { SmartWorkers.pausePaperByAutopilot("p$it") } }
+        val c = Thread { start.await(); repeat(200) { SmartWorkers.setNetFlatSec(15 + it % 40) } }
+        listOf(a, b, c).forEach { it.start() }
+        start.countDown()
+        listOf(a, b, c).forEach { it.join(60_000) }
+        val s = SmartWorkers.settings.value
+        assertEquals("every park kept", 200, s.parked.size)
+        assertEquals("every pause kept", 200, s.paused.size)
+        assertEquals(200, SecurePrefs.getString("brain.parked").orEmpty().split(',').count { it.isNotBlank() })
+    }
+
+    /** G8-1: a review whose books could not be read (cut at its time limit) leaves the day to the next try. */
+    @Test fun aFailedReviewLeavesTheDayToTheNextTry() = runBlocking {
+        clockAt(java.time.LocalDateTime.of(2026, 10, 14, 15, 50))
+        try {
+            SmartWorkers.ensureLoaded()
+            SmartWorkers.testReadsFail = true
+            SmartWorkers.reviewIfDue(context)
+            assertTrue("not marked reviewed", SecurePrefs.getString("brain.reviewedOn") != "2026-10-14")
+            SmartWorkers.testReadsFail = false
+            SmartWorkers.reviewIfDue(context)
+            assertEquals("reviewed on the next try", "2026-10-14", SecurePrefs.getString("brain.reviewedOn"))
+        } finally { Market.testClock = null }
+    }
+
+    /** G8-3: the relay down, then switched off by Boss: live entries are no longer refused for it. G8-7: its breaker acts. */
+    @Test fun theRelaySwitchedOffNoLongerRefusesAndAnOpenBreakerSkipsThePing() {
+        com.optionslab.app.work.Tasks.resetRelayForTest()
+        var pings = 0
+        var t = 1_000_000_000L
+        repeat(2) { com.optionslab.app.work.Tasks.relayLook(true, t) { pings++; false }; t += 3_600_000L }
+        assertTrue(SmartWorkers.doorRefusal("NIFTY26OCT24500CE")!!.contains("relay"))
+        com.optionslab.app.work.Tasks.relayLook(false, t) { pings++; true }
+        assertNull("the relay is off: orders go direct", SmartWorkers.doorRefusal("NIFTY26OCT24500CE"))
+        assertEquals("no ping while switched off", 2, pings)
+        // On again and failing: once its breaker shuts, the warm-up waits for it (its pause), however long the gap.
+        com.optionslab.app.work.Tasks.resetRelayForTest()
+        repeat(5) { SmartWorkers.health.relay(false, true, t) }
+        val before = pings
+        com.optionslab.app.work.Tasks.relayLook(true, t + 1_000L) { pings++; false }
+        assertEquals("the breaker is shut: no ping", before, pings)
+        com.optionslab.app.work.Tasks.relayLook(true, t + 60 * 60_000L) { pings++; true }
+        assertEquals("its pause over: one trial", before + 1, pings)
+    }
+
+    /** G8-8: an incident over yesterday is not listed under "none today". */
+    @Test fun yesterdaysIncidentIsNotTodays() {
+        val yday = java.time.LocalDateTime.of(2026, 10, 13, 14, 2).atZone(ist).toInstant().toEpochMilli()
+        SmartWorkers.health.relay(false, true, yday); SmartWorkers.health.relay(false, true, yday)
+        SmartWorkers.health.evaluate(yday)
+        SmartWorkers.health.relay(true, true, yday)
+        SmartWorkers.health.evaluate(yday + 1_000L)
+        SmartWorkers.health.evaluate(yday + 90_000L)
+        assertEquals(1, SmartWorkers.health.past().size)
+        clockAt(java.time.LocalDateTime.of(2026, 10, 14, 11, 0))
+        try {
+            assertTrue(SmartWorkers.diagLines().joinToString("\n"), SmartWorkers.diagLines().any { it.trim() == "Health incidents: none today" })
+        } finally { Market.testClock = null }
+    }
+
+    /** G8-6: a big-move alarm is kept through the brain's refresh. */
+    @Test fun aBigMoveIsKeptThroughARefresh() = runBlocking {
+        val at = System.currentTimeMillis()
+        SmartWorkers.bigMove("BANKNIFTY", 1, at)
+        SmartWorkers.refresh(context)
+        assertEquals(at, SmartWorkers.brain.value.bigMove?.atMs)
+    }
+
     @Test fun theBrainsWorkerRunsWithoutTheMarketAndKeepsItsLog() = runBlocking {
         SmartWorkers.found("Liquidity 15+5", Findings.Kind.SWEEP, "BANKNIFTY", 1, 55_100.0, 70, "sweep taken at 55,100")
         SmartWorkers.found("Liquidity 15+5", Findings.Kind.SWEEP, "BANKNIFTY", 1, 55_100.0, 70, "sweep taken at 55,100")
