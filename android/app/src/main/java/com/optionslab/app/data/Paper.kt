@@ -368,7 +368,7 @@ object Paper {
         // G1-3: memory only, never [book] - that waits on this object's monitor, which [save] holds through a vault write
         // (and tick/snapshot through whole engine passes); the fast-path consumer calling this also dispatches the LIVE
         // exit lane, which must never wait behind a paper write. Not loaded yet: not covered (the watch pass loads it).
-        val b = cache ?: return StreamCover(emptySet(), covered = false, any = false)
+        val b = cache ?: run { loadSoon(); return StreamCover(emptySet(), covered = false, any = false) }
         val syms = watched(b.state)
         if (syms.isEmpty()) return StreamCover(emptySet(), covered = true, any = false)
         var covered = true
@@ -378,6 +378,20 @@ object Paper {
             if (tok == null) { covered = false } else { tokens += tok; if (KiteStream.tick(tok) == null) covered = false }
         }
         return StreamCover(tokens, covered, any = true)
+    }
+
+    private val loading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** True once the paper book is in memory ([streamCover] answers from memory only), or when there is no paper account to load. */
+    internal fun loaded(): Boolean = cache != null || !::file.isInitialized
+
+    /**
+     * G1-3 follow-up: the book read once on a background thread when [streamCover] finds it not in memory yet, so a fresh
+     * process's stream exits (the LIVE lane waits for the paper cover) are not held until the next watch pass loads it.
+     */
+    private fun loadSoon() {
+        if (!::file.isInitialized || !loading.compareAndSet(false, true)) return
+        Thread({ try { runCatching { book() } } finally { loading.set(false) } }, "paper-load").apply { isDaemon = true }.start()
     }
 
     /** The contract's latest price from the paper feed, or null when there is none today. */

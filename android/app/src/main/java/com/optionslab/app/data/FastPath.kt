@@ -160,7 +160,9 @@ object FastPath {
             minuteArms = minuteArms, liveFresh = liveFresh, localCandles = localCandles)
         val tokens = cover.tokens + KiteStream.followed() + KiteStream.INDEX_TOKENS + live
         val liveActive = live.isNotEmpty() || (OrbArms.armedHint && liveMode(now))
-        return Snap(now, st, tokens, cover.any, live, liveActive).also { snap = it }
+        // Built before the paper book was in memory (not covered for now): kept only briefly, so the cover is read again soon.
+        val at = if (runCatching { Paper.loaded() }.getOrDefault(true)) now else now - STATE_MS + 25
+        return Snap(at, st, tokens, cover.any, live, liveActive).also { snap = it }
     }
 
     // ---- the consumer ----------------------------------------------------------------------------------------------------
