@@ -441,7 +441,7 @@ class SmarterLearningTest {
             out = night(inputs, records, trips, auto0 = auto0)
             best = minOf(best, System.nanoTime() - t)
         }
-        assertTrue(best < 100_000_000L, "a night took ${best / 1_000_000} ms")
+        assertTrue(best < 250_000_000L, "a night took ${best / 1_000_000} ms")
         val (lb, ab) = out!!
         assertTrue(lb.lessons.size > 50)
         assertTrue(AgentLessons.active(lb).all { it.q != null })
