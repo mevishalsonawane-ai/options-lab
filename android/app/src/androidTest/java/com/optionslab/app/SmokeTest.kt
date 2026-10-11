@@ -129,7 +129,8 @@ class SmokeTest {
         compose.waitUntil(10_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("pick:index:NIFTY")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("pick:index:NIFTY").performClick()
         waitText("NIFTY")
-        assertTrue(compose.onAllNodesWithText("NIFTY").fetchSemanticsNodes().isNotEmpty())
+        // The symbol chip reads "NIFTY ▾" (and the picker closes): a substring, not an exact text.
+        assertTrue(compose.onAllNodesWithText("NIFTY", substring = true).fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test fun aPaperOrderIsPlacedAndClosedWithAFixedPrice() {

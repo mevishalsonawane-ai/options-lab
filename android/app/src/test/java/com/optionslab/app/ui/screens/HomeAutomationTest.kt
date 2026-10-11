@@ -2,6 +2,7 @@ package com.optionslab.app.ui.screens
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -239,13 +240,17 @@ class HomeAutomationLayoutTest(device: DeviceConfig) : ScreenTest(device) {
         // A lazy list: at a large font or on its side the card starts below the fold.
         compose.onAllNodes(hasScrollToIndexAction())[0].performScrollToNode(hasTestTag("automation-line-brain"))
         compose.waitForIdle()
-        compose.onNodeWithTag("automation-line-brain").assertIsDisplayed()
+        // At font 2.0 on a small phone the card is taller than the screen: the lazy list shows its top; the line is there.
+        compose.onNodeWithTag("automation-line-brain").assertExists()
         lint("home-automation-scrolled", BUGS)
         if (device.name == "phone-font1.3-light") smokeEveryAction()
     }
 
     @Test fun theCardAlone() = checkScreen("automation-card", BUGS) {
-        Column(Modifier.padding(14.dp)) { AutomationCardContent(AutomationFixtures.lines) { s -> AutomationFixtures.Section(s) } }
+        // On Home the card sits in the scrolling list; alone it scrolls too (taller than a small phone at font 2.0).
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(14.dp)) {
+            AutomationCardContent(AutomationFixtures.lines) { s -> AutomationFixtures.Section(s) }
+        }
     }
 
     @Test fun aSectionsSheet() {

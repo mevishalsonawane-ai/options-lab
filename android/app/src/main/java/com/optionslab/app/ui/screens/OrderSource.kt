@@ -41,7 +41,8 @@ fun OrderSourcePill(owners: Map<String, String>, venueId: String, tag: String? =
 fun SourcePill(source: Pair<String, Boolean>) {
     val p = LocalPalette.current
     val (text, strategy) = source
-    Text(text, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+    // Wraps rather than cuts: at font 2.0 on a small phone beside the amount, two lines were not enough (it was ellipsized).
+    Text(text, maxLines = 4, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         style = Type.label.copy(color = if (strategy) p.ink else p.inkSoft, fontSize = 11.sp, fontWeight = if (strategy) FontWeight.SemiBold else FontWeight.Medium),
         modifier = Modifier.padding(top = 3.dp).background(p.chip, RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp))
 }
