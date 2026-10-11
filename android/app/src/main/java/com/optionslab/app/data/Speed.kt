@@ -43,6 +43,12 @@ object Speed {
     @Volatile var startMs: Long = 0L
     @Volatile var startSlowest: String? = null
 
+    /** TEST ONLY: the main thread's queue and the clock as given (a blocked looper simulated); null in the app. */
+    @Volatile internal var testPost: ((Runnable) -> Boolean)? = null
+    @Volatile internal var testClock: (() -> Long)? = null
+    private fun now(): Long = testClock?.invoke() ?: SystemClock.uptimeMillis()
+    private fun post(r: Runnable): Boolean = testPost?.invoke(r) ?: main.post(r)
+
     /** The app came on screen. */
     @Synchronized fun start() {
         if (on) return
@@ -56,17 +62,17 @@ object Speed {
 
     private fun watch(me: Int) {
         while (run == me) {
-            val posted = SystemClock.uptimeMillis()
+            val posted = now()
             val ran = AtomicLong(0L)
-            if (!main.post { ran.set(SystemClock.uptimeMillis()) }) return
+            if (!post(Runnable { ran.set(now()) })) return
             var what: String? = null
             while (run == me && ran.get() == 0L) {
                 try { Thread.sleep(50) } catch (_: InterruptedException) { return }
-                val waited = SystemClock.uptimeMillis() - posted
+                val waited = now() - posted
                 if (what == null && waited >= SAMPLE_MS) what = runCatching { runningOnMain() }.getOrNull() ?: "?"
                 if (waited > 120_000) break
             }
-            val end = ran.get().takeIf { it != 0L } ?: SystemClock.uptimeMillis()
+            val end = ran.get().takeIf { it != 0L } ?: now()
             val lag = end - posted
             if (lag >= STALL_MS) note(lag, what)
             try { Thread.sleep(EVERY_MS) } catch (_: InterruptedException) { return }
@@ -93,6 +99,8 @@ object Speed {
             if (lag > longestMs) { longestMs = lag; longestAt = now; longestWhat = what }
             (lag >= LONG_MS && diaryToday < DIARY_MAX).also { if (it) diaryToday++ }
         }
+        // The app's own health (11 Oct): a stall of 0.7 s or more is kept with where it was stuck, for its tuner and Jarvis.
+        if (lag >= com.optionslab.ira.HealthBook.STALL_MS) runCatching { AppHealth.stall(lag, what) }
         if (diary) runCatching { Diag.record("speed", "the screen was stuck " + "%.1f".format(java.util.Locale.ENGLISH, lag / 1000.0) + " s in " + (what ?: "?")) }
     }
 

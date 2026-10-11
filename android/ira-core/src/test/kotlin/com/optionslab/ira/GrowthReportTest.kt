@@ -110,9 +110,10 @@ class GrowthReportTest {
         for (k in 0 until 30L) ws = GrowthReport.keep(ws, GrowthReport.Week(mon.plusWeeks(k)))
         assertEquals(GrowthReport.KEEP_WEEKS, ws.size)
         assertEquals(mon.plusWeeks(29), ws.last().monday)
-        for (q in listOf("how did you grow this week?", "Jarvis, how did you grow this week", "show me your weekly report", "how have you improved this week"))
+        for (q in listOf("how did you grow this week?", "Jarvis, how did you grow this week", "show me your weekly self report", "how have you improved this week"))
             assertTrue(GrowthReport.asked(q), q)
-        for (q in listOf("how did this week go", "weekly review", "how are you growing", "how did nifty do this week"))
+        // "Weekly review" and "your weekly report" stay the market's weekly review.
+        for (q in listOf("show me your weekly report", "how did this week go", "weekly review", "how are you growing", "how did nifty do this week"))
             assertFalse(GrowthReport.asked(q), q)
         assertNull(GrowthReport.decode("nonsense"))
     }

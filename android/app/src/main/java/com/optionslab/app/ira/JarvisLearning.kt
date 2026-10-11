@@ -247,6 +247,22 @@ internal object JarvisLearning {
             "last studied ${b.lastPass ?: "never"}" + (if (shownAt > 0) ", last asked ${Instant.ofEpochMilli(shownAt)}" else "")
     }
 
+    /**
+     * The weekly consolidation ([SelfGrowth]): [f] - the lessons' own merge and caps ([com.optionslab.ira.Consolidation.lessons]) -
+     * applied to what he has learned and written back. How many lessons fewer. A worker thread.
+     */
+    internal fun consolidate(f: (AgentLessons.Book) -> Pair<AgentLessons.Book, Int>): Int {
+        if (!enabled()) return 0
+        ensureLoaded()
+        val n = synchronized(lock) {
+            val (b, n) = f(_book.value)
+            _book.value = b
+            save(b)
+            n
+        }
+        return n
+    }
+
     /** TEST ONLY: nothing kept, nothing shown (in memory). */
     internal fun resetForTest() {
         synchronized(lock) { _book.value = AgentLessons.Book() }

@@ -64,7 +64,8 @@ internal fun BrainSection(divider: Boolean = true) {
     LaunchedEffect(Unit) {
         while (true) {
             consensus = withContext(Dispatchers.Default) { runCatching { SmartWorkers.consensusLines().take(2) }.getOrDefault(emptyList()) }
-            kotlinx.coroutines.delay(15_000L)
+            // 15 s, lengthened (at most 60 s) by the app's health tuner while stalls cluster here ([com.optionslab.app.data.AppHealth]).
+            kotlinx.coroutines.delay(com.optionslab.app.data.AppHealth.cadenceMs("brain.consensus"))
         }
     }
     if (divider) Rule()

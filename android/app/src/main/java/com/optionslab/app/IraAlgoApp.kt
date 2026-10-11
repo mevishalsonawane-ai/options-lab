@@ -104,6 +104,10 @@ class IraAlgoApp : Application() {
         com.optionslab.app.ira.JarvisLearning.init(this)
         // Autopilot learning (11 Oct): its change log, knobs and setting read on a background thread; it runs after his pass.
         com.optionslab.app.ira.Autopilot.init(this)
+        // The app's own health (11 Oct): its small file and the previous runs' ANRs and crashes read on a background thread.
+        com.optionslab.app.data.AppHealth.init(this)
+        // What Jarvis tries to learn next, the weekly consolidation and self-report: their small files read in the background.
+        com.optionslab.app.ira.SelfGrowth.init(this)
         // The trade manager (10 Oct): its modes and record read on its own thread; it only lowers risk.
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.OrderFlowLive.init(this)
@@ -130,6 +134,12 @@ class IraAlgoApp : Application() {
         Thread { runCatching { Jobs.scheduleAll(this) } }.start()
         com.optionslab.app.data.Speed.startMs = android.os.SystemClock.uptimeMillis() - startAt
         com.optionslab.app.data.Speed.startSlowest = slowest?.let { (n, ms) -> "$n $ms ms" }
+    }
+
+    /** Android asks for memory back: counted in the app's health, and the caches that are safe to drop are dropped. */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        runCatching { com.optionslab.app.data.AppHealth.trim(level) }
     }
 
     /**

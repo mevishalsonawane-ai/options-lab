@@ -86,6 +86,15 @@ class MainActivity : FragmentActivity() {
         if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.JarvisVoice.resume(this) }
         // Opening the app just after one of Jarvis's unasked alerts: Boss followed it up (kinds and minutes only).
         if (BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraTools.alertBoss(com.optionslab.ira.AlertSense.Boss.OPENED) }
+        // The app's own health and Jarvis's growth (11 Oct): the tuner and samples (every 10 minutes at most), the learning goals,
+        // the weekly consolidation and the weekly self-report when due - the first open after Friday's close - off the main thread.
+        run {
+            val ctx = applicationContext
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+                runCatching { com.optionslab.app.data.AppHealth.tick(ctx) }
+                runCatching { com.optionslab.app.ira.SelfGrowth.tick(ctx) }
+            }
+        }
         // Back on screen in market hours: a stop or lock the price went through while the app was away is sold now (08 Oct,
         // the missed-lock sweeper), off the main thread.
         if (com.optionslab.app.data.Market.isOpen() && !com.optionslab.app.data.Paper.testSkipFeedChecks) {

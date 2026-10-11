@@ -130,6 +130,8 @@ object Diag {
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
+        // The app's own health (11 Oct): stalls today, the last ANR and crash and where, what its tuner slowed now.
+        append(runCatching { AppHealth.diagLine() }.getOrElse { "Health: could not read" }).append('\n')
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')

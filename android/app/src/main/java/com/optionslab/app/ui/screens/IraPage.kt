@@ -198,7 +198,7 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     var learnedOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = learnedOpen) { learnedOpen = false }
     if (learnedOpen && learnedShown()) {
-        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false })
+        JarvisLearnedSheet(rememberLearnedBook(), onClose = { learnedOpen = false }, goals = rememberLearningGoals())
         return
     }
     // The phone's Back closes the chat (back to the globe) in Jarvis.

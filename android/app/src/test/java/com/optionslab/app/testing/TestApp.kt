@@ -77,6 +77,11 @@ class TestApp : Application() {
         // The smart workers (10 Oct): no finding, health sample, brain or setting left from an earlier test.
         com.optionslab.app.data.SmartWorkers.resetForTest()
         com.optionslab.app.data.FlowGate.resetForTest()
+        // The app's own health and Jarvis's growth (11 Oct): nothing kept from an earlier test, normal cadences.
+        com.optionslab.app.data.AppHealth.init(this)
+        com.optionslab.app.data.AppHealth.resetForTest()
+        com.optionslab.app.ira.SelfGrowth.init(this)
+        com.optionslab.app.ira.SelfGrowth.resetForTest()
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.TradeManagerHost.resetForTest()
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.

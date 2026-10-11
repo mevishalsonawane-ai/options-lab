@@ -73,7 +73,9 @@ internal fun JarvisLearnedCard(book: AgentLessons.Book, onOpen: () -> Unit) {
  * change a lesson suggests is put to Boss as a request). One scrolling column, so it fits a phone held either way.
  */
 @Composable
-internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?, modifier: Modifier = Modifier) {
+internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?, modifier: Modifier = Modifier,
+                                /** What he tries to learn next ([com.optionslab.ira.LearningGoals]); the section shows only when there are some. */
+                                goals: List<com.optionslab.ira.LearningGoals.Goal> = emptyList()) {
     val p = LocalPalette.current
     var picked by rememberSaveable { mutableStateOf("") }
     val topic = remember(picked) { AgentLessons.Topic.entries.firstOrNull { it.name == picked } }
@@ -119,6 +121,8 @@ internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?,
                 Note("No lessons yet. Jarvis needs the agents' records to hold some numbers first.", Modifier.padding(vertical = 8.dp))
             }
             items(shown, key = { "l:" + it.id }) { l -> LessonRow(l) }
+            // What he tries to learn next (11 Oct): where the evidence is thinnest but worth the most. Recording only.
+            if (goals.isNotEmpty()) item(key = "goals") { LearningGoalsSection(goals) }
             if (book.timeline.isNotEmpty()) {
                 item(key = "timeline-head") {
                     Text("Growth timeline", style = Type.label.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
@@ -133,6 +137,21 @@ internal fun JarvisLearnedSheet(book: AgentLessons.Book, onClose: (() -> Unit)?,
                 }
             }
         }
+    }
+}
+
+/** The section's title. */
+internal const val GOALS_TITLE = "What I'm trying to learn next"
+
+/** The learning goals, each with its numbers; one plain note that they only steer what is recorded. */
+@Composable
+private fun LearningGoalsSection(goals: List<com.optionslab.ira.LearningGoals.Goal>) {
+    val p = LocalPalette.current
+    Column(Modifier.fillMaxWidth().background(p.card, RoundedCornerShape(14.dp)).border(1.dp, p.rule, RoundedCornerShape(14.dp))
+        .padding(horizontal = 14.dp, vertical = 10.dp).testTag("learned-goals"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(GOALS_TITLE, style = Type.label.copy(color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+        goals.forEach { g -> Text("• " + com.optionslab.ira.LearningGoals.line(g), style = Type.label.copy(color = p.ink, fontSize = 13.sp)) }
+        Note("These only steer what is recorded (the order flow's shadow log and the move recorder, within their storage caps); never a trade.")
     }
 }
 

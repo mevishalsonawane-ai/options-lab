@@ -57,6 +57,9 @@ object AreaE {
         com.optionslab.app.ira.JarvisLearning.resetForTest()
         // Autopilot's change log, knobs and setting start fresh in each test (a singleton too).
         com.optionslab.app.ira.Autopilot.resetForTest()
+        // The app's own health, Jarvis's learning goals and weekly reports start fresh in each test (singletons too).
+        com.optionslab.app.data.AppHealth.resetForTest()
+        com.optionslab.app.ira.SelfGrowth.resetForTest()
         SessionLock.lock()
     }
 

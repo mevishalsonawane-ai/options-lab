@@ -1685,7 +1685,7 @@ object IraHub {
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
-                com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null ||
+                com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null || SelfGrowth.asked(q) != null ||
                 (com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text)) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
@@ -1912,6 +1912,16 @@ object IraHub {
                     "Done, Boss: I'll remind you every trading day at ${first.toLocalTime()}, starting ${com.optionslab.ira.Later.say(first, now)}: ${r.rest}."
                 }
                 else { IraLater.remind(c, r.rest, r.at); "Done, Boss: I'll remind you ${com.optionslab.ira.Later.say(r.at, now)}: ${r.rest}." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // The app's own health and Jarvis's growth (11 Oct): "is the app healthy?", "why was the app slow?" (its own records: stalls,
+        // ANRs and crashes, the order path's median, what its tuner slowed), "what are you trying to learn?" (his learning goals,
+        // which steer recording only) and "how did you grow this week?" (the weekly self-report). Memory only; nothing acts.
+        val growthAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { SelfGrowth.asked(q) }.getOrNull() else null
+        if (growthAsk != null) {
+            val said = runCatching { SelfGrowth.answer(growthAsk) }.getOrElse { "I could not read my own records just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return
         }

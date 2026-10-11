@@ -371,7 +371,8 @@ object SmartWorkers {
                 "${w.name} window", (w.endMs - now).coerceAtLeast(1_000L))
         }
         if (now - closedAt > 30_000L) { closedAt = now; runCatching { postExits(today) } }
-        if (now - flushedAt > 30_000L) { flushedAt = now; runCatching { flushFindings(context, today) } }
+        // The findings log every 30 s (the app's health tuner may lengthen it, at most to 120 s, while stalls cluster on it).
+        if (now - flushedAt > AppHealth.cadenceMs("findings.flush")) { flushedAt = now; runCatching { flushFindings(context, today) } }
         runCatching { reviewIfDue(context) }
         // The trade manager's specialists: their nightly report cards and slow self-tuning (paper and shadow only), once a day.
         runCatching { ManagerSpecialists.reviewIfDue() }
@@ -379,6 +380,10 @@ object SmartWorkers {
         runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
         // Autopilot learning: after Jarvis's pass (15:45+), and at 12:30 for risk-lowering only (memory checks until due).
         runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
+        // The app's own health (11 Oct): its tuner and samples every 10 minutes; then what Jarvis tries to learn next (after his
+        // pass), the weekly consolidation and the weekly self-report when due (memory checks until then).
+        runCatching { AppHealth.tick(context) }
+        runCatching { com.optionslab.app.ira.SelfGrowth.tick(context) }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */
@@ -468,6 +473,8 @@ object SmartWorkers {
         if (ctx != null) runCatching { com.optionslab.app.work.Notifier.post(ctx, 5101 + c.incident.dep.ordinal, com.optionslab.app.work.Notifier.HEALTH, title, c.words, "health") }
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraHub.note(c.words) }
         if (c.started) found("self-healing", Findings.Kind.DATA_HEALTH, Findings.ALL, 0, null, 70, c.words, 30 * 60_000L)
+        // A stale feed is one of the app's own health records (counted once per incident).
+        if (c.started && c.incident.dep == SelfHeal.Dep.STREAM) runCatching { AppHealth.stale() }
     }
 
     // ---- the findings log ----------------------------------------------------------------------------------------------------

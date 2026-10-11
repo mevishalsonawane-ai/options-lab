@@ -58,7 +58,11 @@ fun AutopilotHomeCard(model: AppModel) {
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { Autopilot.ensureLoaded() } } }
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { LocalDate.now() } }
-    LedgerCard { AutopilotCardContent(book, mode, today, onOpen = { open = true }) }
+    LedgerCard {
+        AutopilotCardContent(book, mode, today, onOpen = { open = true })
+        // Jarvis's weekly self-report (11 Oct): its sheet from here.
+        WeeklyReportButton()
+    }
     if (open) AutopilotLogDialog(model) { open = false }
 }
 

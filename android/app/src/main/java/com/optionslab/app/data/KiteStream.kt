@@ -297,6 +297,8 @@ object KiteStream {
                 if (opened) {
                     if (downSince == 0L) downSince = now
                     runCatching { OrderTiming.streamDropped() }
+                    // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
+                    runCatching { AppHealth.reconnect() }
                 }
                 runCatching { candles.broke() }
                 if (opened) fails = 0 else fails++

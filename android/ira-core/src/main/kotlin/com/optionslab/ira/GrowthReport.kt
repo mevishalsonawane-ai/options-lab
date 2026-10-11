@@ -147,8 +147,8 @@ object GrowthReport {
 
     private const val LEAD = "^ (hey |ok |okay )?(jarvis )?(so )?(please )?(tell me )?"
     private const val TAIL = "( please| boss| jarvis)* $"
-    private val ASK = Regex(LEAD + "(how (did|have) you (grow|grown|improve|improved|get better|got better|do|done) (this|over the|in the|last|the past) week|" +
-        "how much did you grow this week|your (weekly report|weekly self report|growth this week|week of growth)|(show me |give me )?(your|the) weekly (self )?report|" +
+    private val ASK = Regex(LEAD + "(how (did|have) you (grow|grown|improve|improved|get better|got better) (this|over the|in the|last|the past) week|" +
+        "how much did you grow this week|your (weekly self report|growth this week|week of growth)|(show me |give me )?your weekly self report|" +
         "what did you improve this week|how did you improve this week|did you grow this week)" + TAIL)
 
     /** "How did you grow this week?" */

@@ -314,7 +314,8 @@ object FlowGate {
         val f = file() ?: return
         synchronized(this) {
             f.parentFile?.mkdirs()
-            if (f.length() > MAX_BYTES) { oldFile()?.let { o -> o.delete(); f.renameTo(o) } }
+            // 4 MB, or up to 8 MB while one of Jarvis's learning goals needs more of this log (recording only, within its cap).
+            if (f.length() > maxOf(MAX_BYTES, com.optionslab.app.ira.SelfGrowth.shadowLogBytes())) { oldFile()?.let { o -> o.delete(); f.renameTo(o) } }
             java.io.FileOutputStream(f, true).use { it.write(text.toByteArray(Charsets.UTF_8)) }
         }
         recordsAt = -1

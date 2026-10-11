@@ -154,7 +154,8 @@ object MoveRecorder {
                 is MoveEvents.Signal.Drop -> drop(s.t)
             }
         }
-        // Close what is done (or everything when switched off); flush the rest every 30 s or 256 KB.
+        // Close what is done (or everything when switched off); flush the rest every 30 s or 256 KB (the app's health tuner may
+        // lengthen the 30 s, at most to 120 s, while stalls cluster on these writes: [AppHealth]).
         val iter = open.iterator()
         while (iter.hasNext()) {
             val o = iter.next()
@@ -163,7 +164,7 @@ object MoveRecorder {
                 o.buf.append(MoveEvents.eLine(o.t.endSec, o.rows, o.merged, complete = o.lastRowSec >= o.t.endSec - 5)).append('\n')
                 write(o.file, o.buf.toString(), first = false); o.buf.setLength(0)
                 iter.remove(); changed()
-            } else if (o.buf.length > 256_000 || nowMs - o.lastFlush >= 30_000) {
+            } else if (o.buf.length > 256_000 || nowMs - o.lastFlush >= AppHealth.cadenceMs("moves.flush")) {
                 write(o.file, o.buf.toString(), first = false); o.buf.setLength(0); o.lastFlush = nowMs
             }
         }
@@ -254,6 +255,9 @@ object MoveRecorder {
         synchronized(summaries) { summaries[key] = s }
         return s
     }
+
+    /** Memory is short ([AppHealth.trim]): the parsed summaries go (each is read again from its file when next asked). */
+    fun dropCaches() { synchronized(summaries) { summaries.clear() } }
 
     /** One saved big move for the list: from its file's name and first line only. */
     data class Item(val day: LocalDate, val name: String, val kind: MoveEvents.Kind, val startSec: Long, val retBp: Double, val x: Double, val file: File) {

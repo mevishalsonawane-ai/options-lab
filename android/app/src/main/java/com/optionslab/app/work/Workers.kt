@@ -72,7 +72,11 @@ object WatchWorkers {
     fun begin(scope: CoroutineScope): Run {
         val job = SupervisorJob(scope.coroutineContext[Job])
         val s = Supervisor(CoroutineScope(scope.coroutineContext + job + kotlinx.coroutines.Dispatchers.IO),
-            onTimed = { n, ms -> timed(n, ms) }, onError = { n, e -> Tasks.stepFailed(n, e) })
+            onTimed = { n, ms -> timed(n, ms) }, onError = { n, e ->
+                // A worker past its time limit is one of the app's own health records (its tuner reads them).
+                if (e is Supervisor.TimedOut) runCatching { com.optionslab.app.data.AppHealth.overrun(n) }
+                Tasks.stepFailed(n, e)
+            })
         return Run(s, job).also { current = it; last = it }
     }
 

@@ -160,6 +160,14 @@ object OrderTiming {
         Card(OrderSpeed.lines(b, fillsOnStream, fillsKnown), OrderSpeed.warnings(b), relay)
     }
 
+    /**
+     * Today's signal-to-order-sent median and how many orders it is over (the app's health record, [AppHealth]); null: none
+     * timed. Read by the health worker, never on the order path.
+     */
+    fun signalToSent(): Pair<Long, Int>? = synchronized(lock) {
+        bookLocked().all(OrderSpeed.Step.SIGNAL_SENT).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
+    }
+
     /** The diagnostics export's line. */
     fun diagLine(): String = synchronized(lock) { OrderSpeed.diagLine(bookLocked()) }
 

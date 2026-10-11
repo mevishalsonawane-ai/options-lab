@@ -53,6 +53,15 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-self-healing-app", OCT11, "The app heals itself and reports its growth",
+            "The app now watches its own health on this phone: screen stalls, freezes, crashes and order speed. " +
+                "When stalls pile up on something minor, it slows that refresh a little and restores it after three healthy days. " +
+                "It never slows orders, stops or live prices. " +
+                "Each evening Jarvis picks up to three things to learn next and records more for them, never trading. " +
+                "Every Sunday he tidies his memory. " +
+                "On Saturday morning he sends a weekly report of what he learned, what Autopilot changed and how the app ran.",
+            "Home → Autopilot card → Weekly report; Home → Ira → What Jarvis has learned; Copy diagnostics (the Health line)",
+            ask = "how did you grow this week", jarvisOnly = true),
         Entry("2026-10-11-autopilot-learning", OCT11, "Autopilot learning: the agents learn and heal by themselves",
             "Jarvis and the agents now make the changes their lessons point to, by themselves, within strict bounds. " +
                 "On shadow and paper they tune themselves: thresholds, weights, mutes and pausing a losing paper strategy. " +
