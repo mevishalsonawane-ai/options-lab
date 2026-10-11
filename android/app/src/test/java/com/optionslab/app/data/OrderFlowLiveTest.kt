@@ -95,6 +95,33 @@ class OrderFlowLiveTest : RobolectricTest() {
         assertEquals(1, FlowGate.signalsForTest().size)
     }
 
+    /**
+     * Line-by-line review G3 (L5): after a restart the log is read once; a check arriving while it is being read waits for the
+     * read instead of running with nothing seen - the same signal is never written to the log twice.
+     */
+    @Test fun aCheckDuringTheRestartReadWaitsForItAndNeverLogsASignalTwice() {
+        OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, 30, 1_000) }
+        FlowGate.testNowSec = 1_000
+        val prefix = "S|orb@2026-10-09T11:20@CE|"
+        FlowGate.check("orb", "BANKNIFTY", +1, live = false, at = "2026-10-09T11:20", what = "CE")
+        FlowGate.flush()
+        FlowGate.resetForTest()                              // a restart: the signal is on file, nothing in memory
+        FlowGate.testNowSec = 1_000
+        lateinit var reader: Thread
+        lateinit var checker: Thread
+        synchronized(FlowGate) {                             // the log file is busy: the restart read waits on it
+            reader = Thread { FlowGate.settle() }.apply { start() }
+            val until = System.currentTimeMillis() + 5_000
+            while (reader.state != Thread.State.BLOCKED && System.currentTimeMillis() < until) Thread.sleep(5)
+            assertEquals(Thread.State.BLOCKED, reader.state)
+            checker = Thread { FlowGate.check("orb", "BANKNIFTY", +1, live = false, at = "2026-10-09T11:20", what = "CE") }.apply { start() }
+            checker.join(500)
+        }
+        reader.join(5_000); checker.join(5_000)
+        FlowGate.flush()
+        assertEquals("logged once", 1, FlowGate.files().last().readLines().count { it.startsWith(prefix) })
+    }
+
     @Test fun theShadowLogCarriesTheAuctionAndGammaFieldsAtEachSignal() {
         val prior = com.optionslab.ira.Auction.Levels(27.5, 54_900.0, 54_950.0, 54_800.0, emptyList(), emptyList(), 1.0, 55_100.0, 54_700.0)
         val tpo = com.optionslab.ira.MarketProfile.Read(55_050.0, 54_850.0, true, com.optionslab.ira.MarketProfile.OpenType.OPEN_AUCTION, 0,

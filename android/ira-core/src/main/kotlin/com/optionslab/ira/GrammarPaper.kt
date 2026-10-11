@@ -111,8 +111,18 @@ object GrammarPaper {
 
     // ---- exits --------------------------------------------------------------------------------------------------------------
 
-    /** A held option: its fill [entry], the minute it was decided, +1 call / -1 put, the index then, and whether it expires today. */
-    data class Held(val entry: Double, val entryMin: Int, val dir: Int, val indexAtEntry: Double, val expiryToday: Boolean)
+    /**
+     * A held option: its fill [entry], the minute it was decided, +1 call / -1 put, the index then, and whether it expires today.
+     * [fromMin]: the first minute walked for its exits - the first that started at or after the fill ([firstAfterFill]), so a
+     * low printed before the order filled is never read as its stop (the resting stop in the paper book covers the rest of the
+     * fill's own minute).
+     */
+    data class Held(val entry: Double, val entryMin: Int, val dir: Int, val indexAtEntry: Double, val expiryToday: Boolean,
+                    val fromMin: Int = entryMin)
+
+    /** The first whole minute after a fill at [fill] (the fill's own minute when it filled on its first second). */
+    fun firstAfterFill(fill: java.time.LocalTime): Int =
+        fill.hour * 60 + fill.minute + if (fill.second > 0 || fill.nano > 0) 1 else 0
 
     /** One finished minute of the held option. */
     data class Minute(val minute: Int, val high: Double, val low: Double, val close: Double)
@@ -129,7 +139,7 @@ object GrammarPaper {
     }
 
     /**
-     * Why [h] is sold at [nowMin] (null: held): its option's finished minutes since the decision ([bars], oldest first) walked
+     * Why [h] is sold at [nowMin] (null: held): its option's finished minutes from [Held.fromMin] ([bars], oldest first) walked
      * as the forge walked them - the stop on a minute's low before the target on its high, the no-progress exit at its minute,
      * the time stop, the index [indexNow] back [ShadowSim.Rules.indexStopPct] from the entry - then the square-off.
      */
@@ -138,9 +148,10 @@ object GrammarPaper {
         if (nowMin >= sq) return if (h.expiryToday && sq == EXPIRY_EXIT) "expiry_1505" else "square_off_${ShadowSim.hhmm(sq).replace(":", "")}"
         val (stop, target) = levels(r, h.entry)
         var peak = h.entry
-        val first = bars.firstOrNull { it.minute >= h.entryMin }?.minute ?: return indexStop(r, h, indexNow)
+        val from = maxOf(h.entryMin, h.fromMin)
+        val first = bars.firstOrNull { it.minute >= from }?.minute ?: return indexStop(r, h, indexNow)
         for (b in bars) {
-            if (b.minute < h.entryMin) continue
+            if (b.minute < from) continue
             if (stop > 0 && b.low <= stop) return "stop"
             if (b.high >= target) return "target"
             peak = maxOf(peak, b.high)

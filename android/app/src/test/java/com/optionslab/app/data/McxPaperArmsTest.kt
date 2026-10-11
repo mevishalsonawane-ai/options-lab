@@ -259,6 +259,44 @@ class McxPaperArmsTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** Line-by-line review G3 (M3): a trend leg's close (a flip) that did not fill is tried again on the next pass, not the next day. */
+    @Test fun aTrendLegsCloseThatDidNotFillIsTriedAgainTheSameDay() {
+        val d1 = LocalDate.of(2026, 10, 30)                   // a Friday
+        val d2 = LocalDate.of(2026, 11, 2)                    // the Monday after
+        val novKey = "MCX_FO|900501"
+        fun crudeList(today: LocalDate) {
+            val a = JSONArray()
+            a.put(JSONArray().put(3).put(900501).put("CRUDEOILM26NOVFUT").put("CRUDEOILM").put("2026-11-19").put(0.0).put("").put(1.0).put(10))
+            a.put(JSONArray().put(6).put(900502).put("CRUDEOILM26DECFUT").put("CRUDEOILM").put("2026-12-18").put(0.0).put("").put(1.0).put(10))
+            File(context.filesDir, "mcx_contracts.json").writeText(JSONObject().put("day", today.toString()).put("c", a).toString())
+            McxMarket.wipe()
+        }
+        // Rising to 30 Sep (October's signal: long), then down through October (November's: short).
+        val days = generateSequence(d1) { it.minusDays(1) }.filter { it.dayOfWeek.value <= 5 }.take(300).toList().reversed()
+        val closes = days.mapIndexed { i, d -> d to if (d.isAfter(LocalDate.of(2026, 9, 30))) 1_000.0 else 5_000.0 + i }
+        McxPaperArms.testDaily = { leg -> if (leg == "CRUDEOILM") closes else emptyList() }
+        crudeList(d1)
+        upstox.minutes[novKey] = listOf(FakeUpstox.Candle(LocalTime.of(9, 59), 5_600.0, 5_600.0, 5_600.0, 5_600.0))
+        runBlocking { McxPaperArms.setArmed(McxTrendRules.SOURCE, true) }
+        tick(LocalTime.of(10, 0), on = d1)
+        val long = McxPaperArms.view.value.open.single()
+        assertEquals(1, long.side)
+        // Monday: November's signal is short - the flip closes the long first. No price yet: the close does not fill.
+        crudeList(d2)
+        upstox.minutes[novKey] = emptyList()
+        tick(LocalTime.of(10, 0), on = d2)
+        assertEquals("still long: the close did not fill", 1, McxPaperArms.view.value.open.single().side)
+        assertEquals(10, Paper.state.positions.filter { it.symbol == long.symbol }.sumOf { it.quantity })
+        // A price now: the next pass closes it (and the short is opened), the same day.
+        upstox.minutes[novKey] = listOf(FakeUpstox.Candle(LocalTime.of(10, 0), 5_500.0, 5_500.0, 5_500.0, 5_500.0))
+        tick(LocalTime.of(10, 1), on = d2)
+        val closed = McxPaperArms.view.value.closed.single { it.symbol == long.symbol }
+        assertEquals("trend_flip", closed.why)
+        assertEquals(-1, McxPaperArms.view.value.open.single().side)
+        assertEquals(-10, Paper.state.positions.filter { it.symbol == long.symbol }.sumOf { it.quantity })
+        assertNothingAtZerodha()
+    }
+
     // ---- US-night silver (9 Oct, research R2 rule 1; futures, paper only) -------------------------------------------------
 
     private val silverKey = "MCX_FO|900600"

@@ -98,6 +98,26 @@ class GrammarPaperTest {
         assertEquals(15 * 60 + 5, GrammarPaper.squareOffMin(orb, day, true))
     }
 
+    @Test fun theExitsWalkFromTheFirstMinuteAfterTheFillNotTheDecisionMinute() {
+        // Decided at 10:35, filled at 100 at 10:37:20 (a watch two minutes late); the stop is 20% (80).
+        val fill = java.time.LocalTime.of(10, 37, 20)
+        assertEquals(10 * 60 + 38, GrammarPaper.firstAfterFill(fill))
+        assertEquals(10 * 60 + 37, GrammarPaper.firstAfterFill(java.time.LocalTime.of(10, 37)))
+        val h = GrammarPaper.Held(100.0, 10 * 60 + 35, 1, 50_300.0, false, fromMin = GrammarPaper.firstAfterFill(fill))
+        // The option dipped to 79 at 10:35 and 10:37 - before the fill - then traded 99-104 after it.
+        val bars = listOf(GrammarPaper.Minute(10 * 60 + 35, 101.0, 79.0, 100.0), GrammarPaper.Minute(10 * 60 + 36, 101.0, 95.0, 100.0),
+            GrammarPaper.Minute(10 * 60 + 37, 101.0, 79.0, 100.0), GrammarPaper.Minute(10 * 60 + 38, 104.0, 99.0, 103.0))
+        assertNull(GrammarPaper.exit(orb, day, h, bars, 50_310.0, 10 * 60 + 39), "a dip before the fill is no stop")
+        // After the fill the stop still sells on a minute's low.
+        assertEquals("stop", GrammarPaper.exit(orb, day, h, bars + GrammarPaper.Minute(10 * 60 + 39, 101.0, 79.0, 90.0), 50_310.0, 10 * 60 + 40))
+        // The no-progress clock starts at the first minute walked: 20 flat minutes from 10:38 (not from 10:35).
+        val flat = (0 until 22).map { GrammarPaper.Minute(10 * 60 + 35 + it, 101.0, 99.0, 100.0) }
+        assertNull(GrammarPaper.exit(orb, day, h, flat, 50_300.0, 10 * 60 + 57))
+        assertEquals("no_progress_20", GrammarPaper.exit(orb, day, h, flat + GrammarPaper.Minute(10 * 60 + 57, 101.0, 99.0, 100.0), 50_300.0, 10 * 60 + 58))
+        // A Held without a fill time walks from the decision minute, as before.
+        assertEquals("stop", GrammarPaper.exit(orb, day, h.copy(fromMin = h.entryMin), bars, 50_310.0, 10 * 60 + 39))
+    }
+
     @Test fun aRecordWorseThanItsForwardTestIsStopped() {
         assertNull(GrammarPaper.judge(List(4) { -3_000.0 }, 400.0))
         // In line with its forward test: kept.

@@ -38,7 +38,12 @@ object FlowGate {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Any()
 
-    fun init(context: Context) { appContext = context.applicationContext }
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        // The log read once now, off the main thread: the first signal after a restart (a strategy's order path calls [check]
+        // directly) never parses it itself.
+        scope.launch { runCatching { loadOnce() } }
+    }
 
     private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, "orderflow") }
     private fun file(): File? = dir()?.let { File(it, "shadow.log") }
@@ -117,6 +122,8 @@ object FlowGate {
     private val buf = StringBuilder()
     @Volatile private var flushing = false
     @Volatile private var loaded = false
+    /** Held while the log is read after a restart ([loadOnce]): a check or settle meanwhile waits for it, never runs half-loaded. */
+    private val loadLock = Any()
 
     /**
      * Strategy [key] decided an entry of direction [side] (+1 a call or a future bought, −1 a put or a future sold) on
@@ -362,16 +369,18 @@ object FlowGate {
     /** After a restart: the signals already logged (never logged twice) and the paper entries still waiting for a result. */
     private fun loadOnce() {
         if (loaded) return
-        synchronized(lock) {
+        // Marked loaded only once read: a check or settle arriving meanwhile waits here instead of running with nothing seen
+        // (it would log a signal again, and miss the paper entries waiting for a result).
+        synchronized(loadLock) {
             if (loaded) return
-            loaded = true
-        }
-        val sigs = runCatching { FlowShadow.parse(lines()) }.getOrDefault(emptyList())
-        synchronized(lock) {
-            for (s in sigs) {
-                seen += s.id
-                val o = s.orderId
-                if (o != null && s.net == null && !s.live && System.currentTimeMillis() / 1000 - s.epochSec < 4 * 86_400) orders[s.id] = o to s.epochSec * 1000
+            val sigs = runCatching { FlowShadow.parse(lines()) }.getOrDefault(emptyList())
+            synchronized(lock) {
+                for (s in sigs) {
+                    seen += s.id
+                    val o = s.orderId
+                    if (o != null && s.net == null && !s.live && System.currentTimeMillis() / 1000 - s.epochSec < 4 * 86_400) orders[s.id] = o to s.epochSec * 1000
+                }
+                loaded = true
             }
         }
     }
@@ -421,7 +430,7 @@ object FlowGate {
     /** TEST ONLY: forget the modes, the log in memory and the pending results. Throws unless BuildConfig.DEBUG. */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        synchronized(lock) { cached = null; _modes.value = emptyMap(); seen.clear(); orders.clear(); moves.clear(); buf.setLength(0); loaded = false }
+        synchronized(loadLock) { synchronized(lock) { cached = null; _modes.value = emptyMap(); seen.clear(); orders.clear(); moves.clear(); buf.setLength(0); loaded = false } }
         recordsAt = -1; _records.value = emptyList(); testNowSec = null
     }
 }

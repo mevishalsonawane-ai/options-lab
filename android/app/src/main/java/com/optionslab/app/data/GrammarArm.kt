@@ -468,8 +468,9 @@ object GrammarArm {
                     val opt = runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty()
                         .map { GrammarPaper.Minute(it.istMinute, it.high, it.low, it.close) }
                     val ix = Upstox.INDEX_KEYS[p.index]?.let { key -> runCatching { minutes(key, now).lastOrNull()?.close }.getOrNull() }
+                    // Walked from the first minute after the fill (not the decision minute: a dip before the fill is no stop).
                     GrammarPaper.exit(r, now.toLocalDate(), GrammarPaper.Held(p.entry, p.decisionMin, if (p.right == "PE") -1 else 1, p.indexAtEntry,
-                        p.expiry == p.entryDay), opt, ix, minute)
+                        p.expiry == p.entryDay, fromMin = GrammarPaper.firstAfterFill(p.entryTime.toLocalTime())), opt, ix, minute)
                 }
             } ?: TradeManagerHost.exitDue(managerId(p))?.let { "trade_manager" } ?: continue   // ACT only; SHADOW here: never
             val next = sell(b, p, c, why)

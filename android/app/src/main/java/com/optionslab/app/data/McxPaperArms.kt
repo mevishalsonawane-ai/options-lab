@@ -659,7 +659,9 @@ object McxPaperArms {
                 val i = b.positions.indexOf(held)
                 val done = exit(b, held, c, step.why)
                 if (i >= 0) b.positions[i] = done
-                if (done.open) continue          // not closed (no fill): nothing new before it is
+                // Not closed (no fill): nothing new before it is, and the close is tried again on the next pass (the day's
+                // step is not marked done until it fills).
+                if (done.open) { b.decided -= dayKey; continue }
             }
             if (step.open == 0) { notes += "$leg: ${step.why.removePrefix("trend_")}"; continue }
             val fc = futures.firstOrNull { it.expiry == hold } ?: continue

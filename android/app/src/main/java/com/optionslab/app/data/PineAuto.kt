@@ -465,7 +465,7 @@ object PineAuto {
         // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
                 now - last.epochSecond > step * 3 + 120)) return
-        if (b.lastBar[id] == last.epochSecond) return
+        if (b.lastBar[id] == last.epochSecond) { owedExit(b, id, item, h); return }
         // Only a pause the owner made (stopped for the day, the kill switch, its daily loss limit) means a signal that changed
         // meanwhile is not chased. Missed candles (a slow pass, a failed fetch, the app away) are not a pause: every pass
         // reads the day's candles again and acts on the signal as it is now (29 Sep).
@@ -479,12 +479,8 @@ object PineAuto {
         val target = targetOf(item, script, r, prev ?: 0)
         b.lastTarget[id] = target
         if (prev == null) { note(b, id, "Watching: the signal now is ${describe(target)}; it trades on the next change"); return }
-        if (target == prev) return
-        val want: String? = when {
-            target > 0 -> "CE"
-            target < 0 -> if (item.auto.shortWith == "put") "PE" else null
-            else -> null
-        }
+        if (target == prev) { owedExit(b, id, item, h); return }
+        val want: String? = wantFor(item, target)
         if (resumed && !changedOnLastBar(item, script, r, bars, watchedBefore, prev, target)) {
             // What it holds is sold if the signal no longer backs it; nothing new is bought until the next change.
             note(b, id, "Back after a pause: the signal is now ${describe(target)}; it trades on the next change, not this one")
@@ -509,6 +505,35 @@ object PineAuto {
             return
         }
         enter(b, item, Right.valueOf(want), last.close, live)
+    }
+
+    /** The option a signal [target] backs ("CE" / "PE"), or null: none (flat, or short with no put). */
+    private fun wantFor(item: PineScripts.Item, target: Int): String? = when {
+        target > 0 -> "CE"
+        target < 0 -> if (item.auto.shortWith == "put") "PE" else null
+        else -> null
+    }
+
+    /**
+     * A signal exit that did not go through (refused, no answer, not filled in 15 s, no price) is owed: what [h] holds is
+     * sold on every pass while the signal as last read ([Book.lastTarget]) no longer backs it - not only on the candle the
+     * signal changed. Never in alerts-only mode; nothing is bought here.
+     */
+    private suspend fun owedExit(b: Book, id: Long, item: PineScripts.Item, h: Held?) {
+        if (h == null || item.auto.mode == "alert") return
+        val target = b.lastTarget[id] ?: return
+        if (h.right != wantFor(item, target)) exit(b, id, item, h, "signal changed (tried again)")
+    }
+
+    /**
+     * Labels an order for the Orders and Trades lists ([Strategies.tagOwner]). Only a label: a vault write that fails (a
+     * Keystore fault, a full disk) is noted and never aborts the order path - a buy already sent is still booked and its stop
+     * placed, a sale already filled is still booked.
+     */
+    private suspend fun ownerTag(key: String, label: String) {
+        try { Strategies.tagOwner(key, label) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { runCatching { Diag.record("pine", "order label $key not saved: ${e.javaClass.simpleName}") } }
     }
 
     /** Strike spacing used for the ATM option. */
@@ -729,11 +754,12 @@ object PineAuto {
      * Only for a live holding (the entry already passed the PIN, the guard, the kill switch and the order limits); the
      * holding unchanged when it could not be placed (the app then watches the stop itself, as before).
      */
-    private suspend fun placeLiveStop(item: PineScripts.Item, h: Held): Held {
+    private suspend fun placeLiveStop(item: PineScripts.Item, h: Held, at: Double? = null): Held {
         if (!h.live || h.unconfirmed) return h
         val sym = h.kite ?: return h
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return h
-        val trig = ProfitLock.pineBase(h.entry, item.auto.stopPts, spec.tickSize) ?: return h
+        // [at]: a stop put back where it rested (the profit lock may have moved it up: never lowered to the base).
+        val trig = at ?: ProfitLock.pineBase(h.entry, item.auto.stopPts, spec.tickSize) ?: return h
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, h.qty, spec.lotSize, "MIS", "SL",
             stopLimit(trig, spec.tickSize), spec.tickSize, "NFO", "irapine", triggerPrice = trig)
         val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
@@ -750,7 +776,7 @@ object PineAuto {
                 "placed at Zerodha; the app watches it instead.", "Pine live")
             return h
         }
-        Strategies.tagOwner("kite:$oid", "${label(item)} · stop")
+        ownerTag("kite:$oid", "${label(item)} · stop")
         return h.copy(stop = oid, stopAt = trig)
     }
 
@@ -758,7 +784,7 @@ object PineAuto {
     private suspend fun placePaperStop(item: PineScripts.Item, c: Paper.Contract, lots: Int, entry: Double): Pair<String, Double>? {
         val trig = ProfitLock.pineBase(entry, item.auto.stopPts) ?: return null
         val oid = placeStopAt(c, lots, trig) ?: return null
-        Strategies.tagOwner("paper:$oid", "${label(item)} · stop")
+        ownerTag("paper:$oid", "${label(item)} · stop")
         return oid to trig
     }
 
@@ -876,6 +902,17 @@ object PineAuto {
     // ---- orders ---------------------------------------------------------------------------
 
     private suspend fun enter(b: Book, item: PineScripts.Item, right: Right, spot: Double, live: Boolean) {
+        // [claimed]: the exposure check let this entry through and so claimed the index ("an entry being placed"). When
+        // nothing was booked after all (refused, no price, not filled), the claim is dropped at once: no other automatic
+        // trader is held back for 30 s by an entry that never happened.
+        val claimed = arrayOf<String?>(null)
+        try { enterNow(b, item, right, spot, live, claimed) }
+        finally {
+            claimed[0]?.let { u -> if (b.held[item.id] == null) runCatching { AutoExposure.release(AutoExposure.Source.PINE.name, u) } }
+        }
+    }
+
+    private suspend fun enterNow(b: Book, item: PineScripts.Item, right: Right, spot: Double, live: Boolean, claimed: Array<String?>) {
         val id = item.id
         val u = item.auto.symbol
         if (u == "SENSEX") { note(b, id, "SENSEX options trade on BSE, which the app does not place orders on: use Alerts only"); return }
@@ -890,6 +927,7 @@ object PineAuto {
         AutoExposure.check(AutoExposure.Source.PINE, c.underlying, com.optionslab.ira.AutoSide.direction(right.name, true), exposureOf(b.held),
             account = live)
             ?.let { note(b, id, "Not bought: $it"); return }
+        claimed[0] = c.underlying
         // An option that barely trades is not bought (08 Oct, research/PROFIT_LOCK_8OCT.md fix 2): its fills and its stop's
         // fills would be fiction (FINNIFTY's monthly options, a few lots a minute and minutes with no trade at all).
         thinRefusal(c)?.let {
@@ -910,7 +948,7 @@ object PineAuto {
             if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }
             val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
             val fill = filledOrCancelled(buy) ?: run { note(b, id, "Paper buy not filled: ${buy.message}"); return }
-            buy.orderId?.let { Strategies.tagOwner("paper:$it", "${label(item)} · entry") }
+            buy.orderId?.let { ownerTag("paper:$it", "${label(item)} · entry") }
             FlowGate.taken(flow, buy.orderId)
             Notifier.orderFilled(app, "BUY", fill.first, c.symbol, fill.second, "Paper", label(item), buy.orderId)
             // The stop-loss rests in the paper book from now on (fix 1): the book sells at it between two looks.
@@ -948,7 +986,7 @@ object PineAuto {
             try { Broker.findRecentRetrying(o, known) ?: run { note(b, id, "Zerodha did not answer the buy (${e.message}) and no such order is in its book: nothing bought"); return } }
             catch (_: Exception) { null }                                          // the order book could not be read either
         }
-        orderId?.let { Strategies.tagOwner("kite:$it", "${label(item)} · entry") }
+        orderId?.let { ownerTag("kite:$it", "${label(item)} · entry") }
         FlowGate.outcome(flow, "entered_live")
         var f = orderId?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
         if (orderId != null && f?.status !in DONE) {
@@ -1001,7 +1039,7 @@ object PineAuto {
             val since = java.time.Instant.ofEpochMilli(h.since).atZone(com.optionslab.engine.IST).toLocalDateTime().minusSeconds(30)
             val row = runCatching { Broker.latestTagged(sym, "BUY", "irapine", since, knownKite()) }.getOrElse { return h }
                 ?: run { note(b, id, "No buy of $sym reached Zerodha: nothing held"); return null }
-            Strategies.tagOwner("kite:${row.id}", "Pine · entry")
+            ownerTag("kite:${row.id}", "Pine · entry")
             row.id
         }
         var st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return h.copy(order = oid)
@@ -1040,7 +1078,7 @@ object PineAuto {
                 h.stopAt?.let { at -> placeStopAt(c, lots, at)?.let { sid -> b.held[id] = h.copy(stop = sid) } }
                 note(b, id, "Paper sell of ${h.symbol} not filled (${sell.message}); retrying next pass"); return
             }
-            sell.orderId?.let { Strategies.tagOwner("paper:$it", "${label(item)} · $why") }
+            sell.orderId?.let { ownerTag("paper:$it", "${label(item)} · $why") }
             Notifier.orderFilled(app, "SELL", fill.first, h.symbol, fill.second, "Paper", label(item), sell.orderId)
             addPnl(b, id, (fill.second - h.entry) * fill.first)
             b.held.remove(id)
@@ -1081,6 +1119,12 @@ object PineAuto {
             }
             if (st != null && st.status in setOf("CANCELLED", "REJECTED")) { h = h.copy(stop = null); b.held[id] = h }
         }
+        // The resting stop was taken out for this sale: if the sale then does not go (refused, failed, not filled) it goes
+        // back for what is still held, at the level it rested at (never lower), so the holding is never left without one.
+        val tookStop = h0.stop != null && h.stop == null
+        suspend fun restop(left: Held) {
+            if (tookStop && left.qty > 0) b.held[id] = placeLiveStop(item, left.copy(stop = null), left.stopAt)
+        }
         val working = runCatching { Broker.orders().filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" } }.getOrNull() ?: return
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
         val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
@@ -1094,28 +1138,34 @@ object PineAuto {
         val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
             com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "Pine live")
+            restop(h)
             return
         }
         val orderId = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
             found ?: run {
                 com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
+                restop(h)
                 return
             }
         }
-        Strategies.tagOwner("kite:$orderId", "${label(item)} · $why")
+        ownerTag("kite:$orderId", "${label(item)} · $why")
         var f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
         if (f?.status !in DONE) {
             // Not finished in 15 s: the rest is cancelled, so the next pass starts from what Zerodha says is held.
             runCatching { Broker.cancel(orderId) }
             f = runCatching { Broker.orderState(orderId) }.getOrNull() ?: f
         }
-        if (f == null || f.filled <= 0) return
+        if (f == null) return                // unknown: what is held is read from Zerodha on the next pass before anything is placed
+        if (f.filled <= 0) { if (f.status in DONE) restop(h); return }
         val px = f.avgPrice.takeIf { it > 0 } ?: h.entry
         Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", label(item), f.orderId)
         addPnl(b, id, (px - h.entry) * f.filled)
         if (f.filled >= h.qty && !h.unconfirmed) { b.held.remove(id); managerClosed(id, h, px, why) }
-        else b.held[id] = h.copy(qty = (h.qty - f.filled).coerceAtLeast(0))
+        else {
+            b.held[id] = h.copy(qty = (h.qty - f.filled).coerceAtLeast(0))
+            if (f.status in DONE) b.held[id]?.let { restop(it) }       // the unsold rest keeps its stop
+        }
         note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, LIVE)")
     }
 

@@ -127,6 +127,9 @@ object NightArm {
         runCatching { val today = Market.today(); TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.toLocalDate() == today }.map { managed(it) }) }
     }
 
+    /** When a position bought on [entryDay] is out by: 09:16 of the next trading session (a Friday's is Monday's), as the arm's own sale. */
+    internal fun outBy(entryDay: LocalDate): LocalDateTime = nextSession(entryDay).atTime(9, 16)
+
     /** [p]'s id for the trade manager. */
     private fun managerId(p: Pos): String = "night:${p.symbol}:${p.entryTime}"
 
@@ -134,7 +137,7 @@ object NightArm {
 
     /** [p] as the trade manager follows it: a bought option, no stop or target on its premium, out by the next session's 09:16. */
     private fun managed(p: Pos) = TradeManagerHost.ArmTrade("night", managerId(p), NightRules.LABEL, p.index, if (p.right == "PE") -1 else 1,
-        p.symbol, p.entry, p.qty, null, null, ms(p.entryDay.plusDays(1).atTime(9, 16)), live = false, entryMs = ms(p.entryTime),
+        p.symbol, p.entry, p.qty, null, null, ms(outBy(p.entryDay)), live = false, entryMs = ms(p.entryTime),
         exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.let { ms(it) })
 
     private fun note(b: Book, text: String) {

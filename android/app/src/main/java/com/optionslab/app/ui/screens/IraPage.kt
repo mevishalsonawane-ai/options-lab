@@ -1158,7 +1158,7 @@ private fun SoloCard() {
                 Text("Paper account only - never real money, never Zerodha. At 12:00 it buys the index (NIFTY, BANKNIFTY or FINNIFTY) that has moved half its daily ATR or more from the open and closed in the outer quarter of the morning's range - the strongest one, 1 lot, 4 strikes in the money, one trade a day, never on that index's expiry day. Out on a 1-minute close 0.3 ATR against it, at breakeven once 75% of the way to 2R, or at 14:30.",
                     style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
             }
-            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.on = v })
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { v -> com.optionslab.app.ira.IraSolo.switch(v) })
         }
         // The forward test at a glance (read off the main thread, again on each switch; never in GOLD).
         var glance by remember { mutableStateOf<SoloGlanceRead?>(null) }

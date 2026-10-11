@@ -272,6 +272,69 @@ class IraSoloTest : RobolectricTest() {
         assertNoKite()
     }
 
+    // ---- line-by-line review G3 (11 Oct) ------------------------------------------------------------------------------
+
+    /** C1: the Ira page's switch never waits on the settings vault (a background save holding it): it returns at once. */
+    @Test fun theSwitchReturnsAtOnceAndItsWriteRunsInTheBackground() {
+        IraSolo.on = false
+        val holding = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val holder = Thread { synchronized(SecurePrefs) { holding.countDown(); release.await() } }.apply { start() }
+        holding.await()
+        try {
+            val caller = Thread { IraSolo.switch(true) }.apply { start() }
+            caller.join(2_000)
+            assertFalse("the switch waited for the vault", caller.isAlive)
+            assertTrue("shown on at once", IraSolo.onState.value)
+        } finally {
+            release.countDown(); holder.join()
+        }
+        val until = System.currentTimeMillis() + 5_000
+        while (!IraSolo.on && System.currentTimeMillis() < until) Thread.sleep(10)
+        assertTrue("written in the background", IraSolo.on)
+    }
+
+    /** M4: a Solo trade is recorded (and so managed to its exit) even when its order label cannot be saved. */
+    @Test fun aSoloTradeIsRecordedEvenWhenItsOrderLabelCannotBeSaved() {
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        // The strategies vault cannot be written now: its temp file's name is a directory.
+        val blocker = java.io.File(context.filesDir, "strategies.vault.tmp").apply { mkdirs() }
+        try { pass(LocalTime.of(12, 1)) } finally { blocker.deleteRecursively() }
+        val t = IraSolo.all().single()
+        assertFalse(t.closed)
+        assertTrue(Paper.state.positions.any { it.symbol == t.symbol && it.quantity == 30 })
+        assertNoKite()
+    }
+
+    /** L2: Solo's exit sells its own lot only; a lot Boss bought by hand in the same contract stays his. */
+    @Test fun soloSellsOnlyItsOwnLotNeverBosssInTheSameContract() {
+        upstox.price(ceKey, 400.0)
+        IraSolo.on = true
+        pass(LocalTime.of(12, 1))
+        val t = IraSolo.all().single()
+        at(LocalTime.of(12, 5))
+        val c = Paper.contractOf(t.symbol)!!
+        val mine = runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, Paper.quote(c)) }
+        assertTrue(mine.message, mine.events.any { it is com.optionslab.engine.sandbox.SandboxEvent.Fill })
+        assertEquals(60, Paper.state.positions.filter { it.symbol == t.symbol }.sumOf { it.quantity })
+        upstox.price(ceKey, 380.0)
+        pass(LocalTime.of(12, 31), seconds = 5)
+        assertTrue("Solo's trade is out", IraSolo.all().single().closed)
+        assertEquals("Boss's lot is still held", 30, Paper.state.positions.filter { it.symbol == t.symbol }.sumOf { it.quantity })
+        assertNoKite()
+    }
+
+    /** L1: an index Solo claimed at the exposure check but did not buy (no price) leaves no claim holding the others back. */
+    @Test fun anEntrySoloDidNotMakeLeavesNoClaimStanding() {
+        com.optionslab.app.data.AutoExposure.resetForTest()
+        IraSolo.on = true                                     // no price for the strike: nothing can be bought
+        pass(LocalTime.of(12, 1))
+        assertTrue(IraSolo.all().isEmpty())
+        assertEquals(emptyList<String>(), com.optionslab.app.data.AutoExposure.claims())
+        assertNoKite()
+    }
+
     @Test fun offTakesNothing() {
         upstox.price(ceKey, 400.0)
         IraSolo.on = false

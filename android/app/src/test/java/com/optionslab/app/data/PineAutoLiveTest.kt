@@ -280,6 +280,56 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("nothing new while the kill switch is on", 1, side("BUY").size)
     }
 
+    // ---- line-by-line review G3 (11 Oct) ------------------------------------------------------------------------------
+
+    @Test fun aSignalExitZerodhaRefusedIsTriedAgainAndTheStopGoesBackMeanwhile() {
+        bought()                                                   // 30 at 300, its stop resting at 270
+        val stop = held()!!.stop!!
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION)              // the market sell is refused
+        pass(51_900.0)                                             // SELL signal; shortWith = exit
+        assertEquals("the stop was taken out for the sale", "CANCELLED", kite.order(stop).status)
+        val h = held()!!
+        assertEquals("still held: the sale did not go", 30, h.qty)
+        // M1: the stop is back at Zerodha where it rested, for what is still held.
+        val back = h.stop!!
+        assertTrue(back != stop)
+        assertEquals("TRIGGER PENDING", kite.order(back).status)
+        assertEquals(270.0, kite.order(back).trigger, 1e-9)
+        assertEquals(270.0, h.stopAt!!, 1e-9)
+        // H1: the next candle still says SELL (no new change of signal): the owed exit is sent again, and goes.
+        pass(51_900.0)
+        assertEquals("the refused sell, then the retry", 2, side("SELL").size)
+        assertNull("sold on the retry", held())
+        assertTrue(log(), log().contains("signal changed (tried again)"))
+        assertEquals("CANCELLED", kite.order(back).status)
+    }
+
+    @Test fun aLiveBuyIsBookedAndItsStopPlacedEvenWhenItsOrderLabelCannotBeSaved() {
+        switchOn()
+        pass(51_900.0)
+        // The strategies vault cannot be written now (a Keystore or disk fault): its temp file's name is a directory.
+        val blocker = java.io.File(context.filesDir, "strategies.vault.tmp").apply { mkdirs() }
+        try {
+            pass(52_010.0)
+        } finally { blocker.deleteRecursively() }
+        assertEquals(1, side("BUY").size)
+        val h = checkNotNull(held()) { "the live buy is booked: " + log() }
+        assertEquals(30, h.qty)
+        assertEquals("its stop rests at Zerodha", "TRIGGER PENDING", kite.order(h.stop!!).status)
+        assertFalse(log(), log().contains("Error:"))
+    }
+
+    @Test fun anEntryRefusedAfterTheExposureCheckDropsItsClaimAtOnce() {
+        AutoExposure.resetForTest()
+        switchOn()
+        pass(51_900.0)
+        kite.quote("NFO:$ce", 0.0)                                 // no Zerodha quote: nothing is sent
+        pass(52_010.0)
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(log(), log().contains("No Zerodha quote for $ce: nothing sent"))
+        assertEquals("no claim left standing for an entry that never happened", emptyList<String>(), AutoExposure.claims())
+    }
+
     @Test fun switchingOffSellsWhatItHolds() {
         bought()
         assertEquals("ok", runBlocking { PineAuto.arm(id, false) })

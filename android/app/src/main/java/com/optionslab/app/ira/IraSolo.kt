@@ -86,6 +86,18 @@ internal object IraSolo {
     /** Reads [on] into [onState]. */
     fun refreshOn() { _onState.value = on }
 
+    /** One write at a time, in the order Boss flipped the switch (the last flip is the one kept). */
+    private val switching by lazy { java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "solo-switch").apply { isDaemon = true } } }
+
+    /**
+     * The Ira page's switch: [onState] shows [v] at once and the write ([on]'s setter: a vault write, the record read for the
+     * baseline) runs on a background thread - never on the main thread (Boss's ANRs). Returns at once.
+     */
+    fun switch(v: Boolean) {
+        _onState.value = v
+        switching.execute { runCatching { on = v } }
+    }
+
     /** Where the forward test is judged from: the last switch-on after a switch-off, else the start. */
     fun baseline(): SoloMidday.Baseline = runCatching {
         com.optionslab.app.security.SecurePrefs.getString(KEY_BASE)?.split('|')?.let { SoloMidday.Baseline(it[0].toInt(), it[1].toDouble()) }
@@ -406,7 +418,11 @@ internal object IraSolo {
         // The strongest that may be taken; one that cannot be bought (no strike, no price, a thin strike, no fill) passes
         // the turn to the next strongest, as the research's portfolio did.
         val excluded = HashMap<String, String>()
-        while (true) {
+        // Each index the exposure check let through is claimed ("an entry being placed", [conflict]); every claim but the
+        // bought index's is dropped once the decision is done, so no other automatic trader is held back by an entry
+        // Solo did not make.
+        var bought: String? = null
+        try { while (true) {
             val c = SoloMidday.pick(signals) { s ->
                 excluded[s.underlying] ?: SoloMidday.gate(expiryToday(IraMarket.valueOf(s.underlying), today), conflict(s))
             }
@@ -419,7 +435,7 @@ internal object IraSolo {
                 c.skipped.forEach { (x, why) -> think(x, false, listOf(SoloMidday.passedOver(x, why, null))) }
                 return
             }
-            val why = enter(s, signals, c.skipped, list, t) ?: return
+            val why = enter(s, signals, c.skipped, list, t) ?: run { bought = s.underlying; return }
             if (why == LATE) {
                 val line = "No Solo trade today: the 12:00-12:03 entry window closed before the order could go in."
                 watch = t to line
@@ -428,6 +444,9 @@ internal object IraSolo {
             }
             excluded[s.underlying] = why
             noteDay { com.optionslab.ira.SoloDay.passed(it, t, s.underlying, why) }
+        } } finally {
+            for (u in SoloMidday.UNDERLYINGS) if (u != bought)
+                runCatching { com.optionslab.app.data.AutoExposure.release(com.optionslab.app.data.AutoExposure.Source.SOLO.name, u) }
         }
     }
 
@@ -488,7 +507,6 @@ internal object IraSolo {
                 r.orderId?.let { runCatching { Paper.cancel(it) } }
                 return "the paper order for ${c.symbol} did not fill"
             }
-            r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", "Jarvis solo · entry") }
             com.optionslab.app.data.FlowGate.taken(flow, r.orderId)
             val itm = kotlin.math.abs(SoloMidday.atm(s.underlying, s.index) - k) / SoloMidday.step(s.underlying)
             val n = signals.size
@@ -496,6 +514,8 @@ internal object IraSolo {
             val trade = T(today.toString(), s.underlying, c.symbol, s.call, fill.quantity, fill.price,
                 t.hour * 60 + t.minute - (9 * 60 + 15), s.index, s.stop, s.target, seen, orderId = r.orderId, tag = SoloMidday.TAG, atr = s.atr)
             save(list + trade)
+            // Labelled once the trade is recorded: a label that cannot be saved never leaves the position untracked.
+            r.orderId?.let { ownerTag("paper:$it", "Jarvis solo · entry") }
             val thinMoved = thinFirst != null
             noteDay { com.optionslab.ira.SoloDay.bought(it, com.optionslab.ira.SoloDay.Bought(t, s.underlying, c.symbol, k, itm, fill.price, thinMoved)) }
             // The ones passed over: blocked before it, and the weaker ones (one Solo position at a time).
@@ -559,7 +579,8 @@ internal object IraSolo {
             t.day != today.toString() -> SoloMidday.TIME
             else -> mid?.let { com.optionslab.app.data.TradeManagerHost.exitDue(it) } ?: return
         }
-        val r = Paper.close(t.symbol, "MIS")
+        // Solo's own quantity only: a position Boss added in the same contract is never sold with it.
+        val r = soloSell(t)
         val px = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.price
         if (px == null) {
             // Not filled (no fresh price): the exit order is cancelled and tried again next pass.
@@ -568,7 +589,7 @@ internal object IraSolo {
         }
         // Solo's exit is labelled as its own (who placed it, which order) and notified like any fill.
         r.orderId?.let { oid ->
-            com.optionslab.app.data.Strategies.tagOwner("paper:$oid", "Jarvis solo · exit")
+            ownerTag("paper:$oid", "Jarvis solo · exit")
             IraHub.appContext()?.let { com.optionslab.app.work.Notifier.orderFilled(it, "SELL", t.qty, t.symbol, px, "Paper", "Jarvis solo · exit", oid) }
         }
         val early = walked != null && walked.second.exit == null && t.day == today.toString()
@@ -578,6 +599,25 @@ internal object IraSolo {
         } else exit
         finish(t, list, px, words, exitOrderId = r.orderId)
         mid?.let { runCatching { com.optionslab.app.data.TradeManagerHost.closed(it, px, if (early) "trade manager" else exit) } }
+    }
+
+    /** Labels a paper order for the Orders and Trades lists; a label that cannot be saved never aborts the entry or the exit. */
+    private suspend fun ownerTag(key: String, label: String) {
+        try { com.optionslab.app.data.Strategies.tagOwner(key, label) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { }
+    }
+
+    /**
+     * Solo's exit order: a MARKET sell of [t]'s own lots (at most what the paper book holds in MIS), never the whole position -
+     * Boss may hold more of the same contract. With no MIS quantity to sell (or the contract unknown): the MIS close as before.
+     */
+    private suspend fun soloSell(t: T): Paper.Result {
+        val c = Paper.contractOf(t.symbol)
+        val net = runCatching { Paper.state.positions.filter { it.symbol == t.symbol && it.product == "MIS" }.sumOf { it.quantity } }.getOrDefault(0)
+        if (c == null || net <= 0) return Paper.close(t.symbol, "MIS")
+        val lots = (minOf(net, t.qty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
+        return Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null)
     }
 
     /** Solo's trade's id for the trade manager. */
