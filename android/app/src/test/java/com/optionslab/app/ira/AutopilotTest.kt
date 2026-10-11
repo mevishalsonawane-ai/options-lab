@@ -15,6 +15,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -166,6 +167,79 @@ class AutopilotTest : RobolectricTest() {
         assertEquals(AutoChange.Status.REVERTED, e.status)
         assertTrue(e.note, e.note.startsWith("reverted:"))
         assertFalse(ManagerSpecialists.book.value.tuned["pine"]?.muted?.containsKey("oi") == true)
+    }
+
+    // ---- smarter learning (11 Oct) ----
+
+    private fun nightWinners() = (0 until 10).map { k ->
+        val d = day.minusDays(12L - k)
+        com.optionslab.ira.Insights.Trip("X", d.atTime(21, 0), d.atTime(21, 30), 800.0, "Night (R3)")
+    }
+
+    @Test fun aChangeWhosePreflightIsWorseIsSkippedAndLogged() = runBlocking<Unit> {
+        // A strong lesson says pause Night, but replayed on its stored paper trades the pause would have given up winners.
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        Autopilot.testReplay = { com.optionslab.ira.Preflight.Data(paperTrips = nightWinners()) }
+        Autopilot.run(day, healthOnly = false)
+        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
+        val e = Autopilot.book.value.entries.single()
+        assertEquals(AutoChange.Status.SKIPPED, e.status)
+        assertTrue(e.note, e.note.startsWith("pre-flight failed: 10 cases replayed"))
+        assertFalse(e.applied); assertEquals(0, Autopilot.book.value.trials)
+        // Kept in the log file with its note.
+        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
+        assertEquals(AutoChange.Status.SKIPPED, AutoChange.decode(f.readText()).entries.single().status)
+    }
+
+    @Test fun aPassedPreflightIsKeptBesideTheChangeAndCountsATrial() = runBlocking<Unit> {
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        Autopilot.testReplay = { com.optionslab.ira.Preflight.Data(paperTrips = nightWinners().map { it.copy(net = -800.0) }) }
+        Autopilot.run(day, healthOnly = false)
+        assertTrue("night_r3" in SmartWorkers.settings.value.paused)
+        val e = Autopilot.book.value.entries.single()
+        assertEquals(AutoChange.Status.PROBATION, e.status)
+        assertTrue(e.preflight, e.preflight.startsWith("pre-flight passed: 10 cases replayed"))
+        assertNotNull(e.q)
+        assertEquals(1, Autopilot.book.value.trials)
+    }
+
+    @Test fun aBuildingLessonStartsAPaperExperimentNotAChange() = runBlocking<Unit> {
+        val building = lesson("strat:night (r3)", "Night (R3)", -1, 30).copy(confidence = AgentLessons.Confidence.BUILDING)
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(building)) }
+        Autopilot.run(day, healthOnly = false)
+        // Nothing changed for real: an experiment on alternate paper trades instead, counted as a trial.
+        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        val x = com.optionslab.ira.Experiments.running(Autopilot.book.value).single()
+        assertEquals("paper:night_r3", x.change.target); assertEquals(AutoChange.Scope.PAPER, x.change.scope)
+        assertEquals(1, Autopilot.book.value.trials)
+        assertTrue(Autopilot.answer(AutoChange.Ask(AutoChange.AskKind.EXPERIMENTS)).startsWith("1 paper experiment is running, Boss"))
+    }
+
+    @Test fun jarvisSaysHowSureHeIsAndWhatExperimentsRun() = runBlocking<Unit> {
+        IraHub.init(context); IraHub.awaitLoadedBlocking()
+        JarvisLearning.setForTest(AgentLessons.Book(listOf(lesson("spec:pine:oi", "The OI specialist on Pine", -1).copy(q = 0.002))))
+        val c = AutoChange.Change(AutoChange.Kind.SPECIALIST_MUTE, "spec:pine:oi", AutoChange.COUNTS, AutoChange.MUTED, "hurt",
+            AutoChange.Evidence(60, -6_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER, "spec:pine:oi", -1, -1,
+            what = "the OI specialist on Pine (paper)")
+        var b = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, ms(day), day, q = 0.002).first
+        b = AutoChange.review(b, day) { List(6) { i -> if (i % 2 == 0) -300.0 else 250.0 } }.first
+        val pause = AutoChange.Change(AutoChange.Kind.PAPER_ENTRIES, "paper:night_r3", AutoChange.ON, AutoChange.PAUSED, "loses",
+            AutoChange.Evidence(20, -2_000.0, AgentLessons.Confidence.BUILDING, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER, null, -1, -1,
+            what = "Night (R3)'s new paper entries")
+        Autopilot.setForTest(com.optionslab.ira.Experiments.start(b, pause, day, ms(day)))
+        IraHub.ask("how sure are you about the oi specialist")
+        val sure = IraHub.state.value.messages.last()
+        assertTrue(sure.fromIra)
+        assertTrue(sure.text, sure.text.startsWith("How sure I am about the oi specialist, Boss: "))
+        assertTrue(sure.text, "q 0.002" in sure.text && "strong" in sure.text && "its test: deciding: " in sure.text)
+        IraHub.ask("what experiments are running")
+        val exps = IraHub.state.value.messages.last().text
+        assertTrue(exps, exps.startsWith("1 paper experiment is running, Boss"))
+        assertTrue(exps, "Night (R3)'s new paper entries: on → paused on alternate paper trades" in exps && "Trials so far: 2" in exps)
+        // Questions only: nothing waits for a yes, nothing changed.
+        assertTrue(IraHub.state.value.pending.isEmpty())
+        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
     }
 
     @Test fun theSettingTakesThePinOnlyForSafeWhileLive() {

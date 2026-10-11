@@ -191,6 +191,17 @@ internal object JarvisLearning {
         scope.launch { synchronized(lock) { save(_book.value) } }
     }
 
+    /**
+     * A paper experiment's end ([com.optionslab.ira.Experiments]): kept as a lesson of its own (a loss: a negative one) and the
+     * lesson that started it moved ([AgentLessons.experimentResult]). A worker thread (the file is read first if it was not).
+     */
+    fun experimentResult(lessonId: String?, target: String, what: String, won: Boolean, pairs: List<Pair<LocalDate, Double>>) {
+        ensureLoaded()
+        val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
+        synchronized(lock) { _book.value = AgentLessons.experimentResult(_book.value, lessonId, target, what, won, pairs, today) }
+        scope.launch { synchronized(lock) { save(_book.value) } }
+    }
+
     /** Boss's yes or no to a lesson's proposal: kept, and it moves the lesson. */
     fun answered(lessonId: String, accepted: Boolean) {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }

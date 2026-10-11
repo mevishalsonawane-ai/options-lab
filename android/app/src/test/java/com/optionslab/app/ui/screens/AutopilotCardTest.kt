@@ -5,7 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -20,6 +22,7 @@ import com.optionslab.app.testing.frames
 import com.optionslab.app.ui.theme.IraAlgoTheme
 import com.optionslab.ira.AgentLessons
 import com.optionslab.ira.AutoChange
+import com.optionslab.ira.Experiments
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -54,6 +57,17 @@ class AutopilotCardTest {
         b = AutoChange.record(b, change(AutoChange.Scope.LIVE, "spec:pine:oi", "the OI specialist on Pine (live)"), AutoChange.Status.PROBATION, 2, day).first
         b = AutoChange.record(b, change(AutoChange.Scope.PAPER, "spec:night:oi", "the OI specialist on Night (paper)"), AutoChange.Status.PROBATION, 0, day.minusDays(9)).first
         AutoChange.review(b, day) { e -> if (e.change.target == "spec:night:oi") List(15) { 500.0 + it } else null }.first
+    }
+
+    /** Smarter learning: a probation with its q, its sequential test and its pre-flight; a skipped change; a paper experiment; 9 trials. */
+    private val smart: AutoChange.Book by lazy {
+        var b = AutoChange.Book(trials = 7)
+        b = AutoChange.record(b, change(AutoChange.Scope.PAPER, "spec:pine:vwap", "the VWAP specialist on Pine (paper)"), AutoChange.Status.PROBATION, 1, day,
+            q = 0.004, preflight = "pre-flight passed: 12 cases replayed, +Rs 900 with the change against -Rs 300 without").first
+        b = AutoChange.review(b, day) { List(6) { i -> if (i % 2 == 0) -300.0 else 250.0 } }.first
+        b = AutoChange.record(b, change(AutoChange.Scope.PAPER, "spec:solo:oi", "the OI specialist on Solo (paper)"), AutoChange.Status.SKIPPED, 2, day,
+            note = "pre-flight failed: 20 cases replayed, -Rs 2,000 with the change against +Rs 400 without").first
+        Experiments.start(b, change(AutoChange.Scope.PAPER, "spec:night:oi", "the OI specialist on Night (paper)"), day, 3)
     }
 
     @Before fun up() { AreaE.resetGlobals() }
@@ -104,6 +118,44 @@ class AutopilotCardTest {
         // Landscape is short: the list scrolls to the paper change (a lazy list composes only what is on screen).
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("the VWAP specialist on Pine (paper): counts → muted", substring = true))
         assertTrue(shows("the VWAP specialist on Pine (paper): counts → muted"))
+    }
+
+    /** The log scrolled to the row holding [t] (a lazy list composes only what is on screen), then [t] shown. */
+    private fun scrolledShows(t: String): Boolean {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(t, substring = true))
+        compose.frames()
+        return shows(t)
+    }
+
+    @Test fun theLogShowsTrialsQTheTestThePreflightAndExperiments() {
+        set { AutopilotLogSheet(smart, null, onAction = { _, _ -> }, onClose = {}) }
+        // The header: every configuration tried so far, tonight's bar, the experiments running.
+        assertTrue(shows("Trials so far: 9 · tonight's bar q ≤ 0.07 · 1 experiment running"))
+        // The experiment, marked as one, paper only, with its pairs and its test.
+        assertTrue(scrolledShows("the OI specialist on Night (paper): counts → muted"))
+        assertTrue(scrolledShows("experiment · paper only · running"))
+        assertTrue(scrolledShows("0 pairs on alternate paper trades"))
+        // The probation: its lesson's q, the sequential test's state, the pre-flight it passed.
+        assertTrue(scrolledShows("Lesson: q 0.004"))
+        assertTrue(scrolledShows("% of the way (leaning keep), 6 cases"))
+        assertTrue(scrolledShows("Pre-flight passed: 12 cases replayed"))
+        // The skipped one: why, and no Undo (nothing was changed).
+        assertTrue(scrolledShows("pre-flight failed: 20 cases replayed"))
+        val skipped = smart.entries.first { it.status == AutoChange.Status.SKIPPED }
+        assertTrue(compose.onAllNodesWithTag("undo-" + skipped.id).fetchSemanticsNodes().isEmpty())
+        val kept = smart.entries.first { it.status == AutoChange.Status.PROBATION }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasTestTag("undo-" + kept.id))
+        assertTrue(compose.onAllNodesWithTag("undo-" + kept.id).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    @Config(qualifiers = "w891dp-h411dp-land")
+    @Test fun onItsSideTheExperimentAndTheTestAreReachedByScrolling() {
+        set { AutopilotLogSheet(smart, null, onAction = { _, _ -> }, onClose = {}) }
+        titleAndCloseApart()
+        assertTrue(shows("Trials so far: 9"))
+        assertTrue(scrolledShows("experiment · paper only · running"))
+        assertTrue(scrolledShows("Pre-flight passed: 12 cases replayed"))
+        assertTrue(scrolledShows("pre-flight failed: 20 cases replayed"))
     }
 
     @Test fun atLargeFontTheTitleAndCloseKeepApart() {

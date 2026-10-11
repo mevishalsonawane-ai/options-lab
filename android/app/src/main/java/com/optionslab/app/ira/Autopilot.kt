@@ -10,8 +10,11 @@ import com.optionslab.app.data.SmartWorkers
 import com.optionslab.app.data.TradeManagerHost
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.ira.AutoChange
+import com.optionslab.ira.AutoGate
+import com.optionslab.ira.Experiments
 import com.optionslab.ira.Findings
 import com.optionslab.ira.OrderFlow
+import com.optionslab.ira.Preflight
 import com.optionslab.ira.SelfHeal
 import com.optionslab.ira.SpecialistBook
 import com.optionslab.ira.TradeManager
@@ -40,8 +43,15 @@ import java.util.Locale
  *  - NEVER ones are never touched. Nothing here places, changes or cancels an order, sizes anything, or reads the settings
  *    vault on an order path; the mode is read once on a worker thread.
  *
- * Every probation is checked again ([AutoChange.review]): worse beyond noise reverts by itself, or is asked when the revert
- * would raise live risk. The log lives in noBackupFilesDir/autopilot (never the vault, never a backup); its setting
+ * Smarter learning (11 Oct): before anything is applied the plan goes through [AutoGate] - a lesson must clear tonight's bar
+ * (Benjamini-Hochberg q, raised by the trials so far), a building one may instead start a paper EXPERIMENT ([Experiments],
+ * at most two, paper only, judged on alternate paper trades' shadow copies), a regime-only lesson on a target with no
+ * per-regime setting is recorded, and every paper or live change is first replayed on the stored history ([Preflight]:
+ * the trade manager's wick-settled records, the closed trades, the order flow's shadow log; off the main thread, 200 ms
+ * at most) - a worse replay is skipped and logged "pre-flight failed".
+ *
+ * Every probation is checked again ([AutoChange.review], a sequential test capped at the old 15 cases / 5 days): worse
+ * reverts by itself, or is asked when the revert would raise live risk. The log lives in noBackupFilesDir/autopilot (never the vault, never a backup); its setting
  * ([K_MODE]) is never taken from a backup ([com.optionslab.ira.Upkeep.PRIVATE]) and a voice may only lower it. Not in GOLD.
  */
 internal object Autopilot {
@@ -75,6 +85,8 @@ internal object Autopilot {
     /** TEST ONLY: the inputs instead of the agents' stores; and whether the live account is on. */
     @Volatile internal var testInputs: ((LocalDate) -> AutoChange.Inputs)? = null
     @Volatile internal var testLive: Boolean? = null
+    /** TEST ONLY: the stored history a pre-flight replays and experiments are judged on (default with [testInputs]: its records). */
+    @Volatile internal var testReplay: ((LocalDate) -> Preflight.Data)? = null
 
     fun enabled(): Boolean = com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD
 
@@ -180,20 +192,40 @@ internal object Autopilot {
         try {
             synchronized(lock) { _book.value = if (healthOnly) _book.value.copy(lastMidday = today) else _book.value.copy(lastRun = today) }
             val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(today) ?: gather(today) }.getOrNull() } ?: return null
+            // The stored history the pre-flight replays and the experiments are judged on (files and memory; no network).
+            val data = withContext(Dispatchers.IO) {
+                runCatching { testReplay?.invoke(today) ?: if (testInputs != null) Preflight.Data(records = inputs.records) else replayData() }.getOrNull()
+            } ?: Preflight.Data(records = inputs.records)
             val m = _mode.value
-            val plan = withContext(Dispatchers.Default) {
-                AutoChange.plan(_book.value, AutoChange.candidates(inputs), today, m, healthOnly)
+            val lessons = inputs.lessons.associateBy { it.id }
+            val (plan, routed) = withContext(Dispatchers.Default) {
+                val p = AutoChange.plan(_book.value, AutoChange.candidates(inputs), today, m, healthOnly)
+                p to AutoGate.route(_book.value, p, lessons, data, healthOnly)
+            }
+            // Not applied: a pre-flight that came out worse (or over its budget), a lesson that holds under one regime only.
+            for (s in routed.skipped) {
+                synchronized(lock) { _book.value = AutoChange.record(_book.value, s.change, AutoChange.Status.SKIPPED, nowMs, today, note = s.note, q = s.q).first }
+                runCatching { Diag.record("autopilot", "skipped ${s.change.what}: ${s.note}") }
+            }
+            // A building lesson on paper: an experiment on alternate paper trades instead of a change (paper only, at most two).
+            for (c in routed.experiments) {
+                synchronized(lock) { _book.value = Experiments.start(_book.value, c, today, nowMs) }
+                runCatching { IraActivity.add("Autopilot started a paper experiment: ${c.what} ${c.from} → ${c.to}") }
             }
             val made = ArrayList<AutoChange.Change>()
-            for (c in plan.auto) {
+            for (g in routed.apply) {
+                val c = g.change
                 val said = runCatching { apply(c, pinConfirmed = false) }.getOrNull() ?: continue
-                synchronized(lock) { _book.value = AutoChange.record(_book.value, c, AutoChange.Status.PROBATION, nowMs, today).first }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.PROBATION, nowMs, today, q = g.q, preflight = g.preflight?.words().orEmpty()).first
+                }
                 made += c
                 tellOne(c, said)
                 c.lessonId?.let { id -> runCatching { JarvisLearning.autoStatus(id, "applied") } }
             }
             for (c in plan.ask) runCatching { ask(c, today, nowMs) }
             if (!healthOnly) runCatching { reviewProbations(today) }
+            if (!healthOnly) runCatching { reviewExperiments(today, data, nowMs) }
             withContext(Dispatchers.IO) { synchronized(lock) { save() } }
             if (made.isNotEmpty()) runCatching { Diag.record("autopilot", "${made.size} change(s): " + made.joinToString("; ") { "${it.what}: ${it.from} → ${it.to}" }) }
             if (!healthOnly || made.isNotEmpty()) runCatching { notifyDay(today) }
@@ -409,6 +441,57 @@ internal object Autopilot {
         }
     }
 
+    /** The history a pre-flight replays: the trade manager's records, the closed paper and live trades, the order flow's shadow log. */
+    private suspend fun replayData(): Preflight.Data {
+        val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
+        return Preflight.Data(TradeManagerHost.records.value,
+            runCatching { IraAccount.trips(false, owners) }.getOrDefault(emptyList()),
+            runCatching { IraAccount.trips(true, owners) }.getOrDefault(emptyList()),
+            runCatching { FlowGate.signalsForLearning() }.getOrDefault(emptyList()))
+    }
+
+    // ---- paper experiments ---------------------------------------------------------------------------------------------------
+
+    /**
+     * Every running experiment judged ([Experiments.review]): a win graduates to a paper change (pre-flight and probation as
+     * ever; a live twin only asked), a loss ends it and Jarvis keeps a negative lesson; nothing ever touches live by itself.
+     */
+    private suspend fun reviewExperiments(today: LocalDate, data: Preflight.Data, nowMs: Long) {
+        val outs = withContext(Dispatchers.Default) { synchronized(lock) {
+            val (b, o) = Experiments.review(_book.value, today, data)
+            _book.value = b
+            o
+        } }
+        for (o in outs) {
+            val x = o.experiment
+            if (x.status == Experiments.Status.RUNNING) continue
+            runCatching { Diag.record("autopilot", "experiment ${x.status.words}: ${x.change.what}") }
+            if (x.status == Experiments.Status.WON || x.status == Experiments.Status.LOST) withContext(Dispatchers.IO) {
+                runCatching { JarvisLearning.experimentResult(x.change.lessonId, x.change.target, x.change.what, x.status == Experiments.Status.WON, o.pairs) }
+            }
+            val grad = o.graduate
+            if (grad != null) runCatching { graduate(grad, today, data, nowMs) }
+            val twin = o.ask
+            if (twin != null && !AutoChange.never(twin)) runCatching { ask(twin, today, nowMs) }
+        }
+    }
+
+    /** A won experiment's paper change made: pre-flight first, then through its agent's setter, on probation like any other. */
+    private suspend fun graduate(c: AutoChange.Change, today: LocalDate, data: Preflight.Data, nowMs: Long) {
+        if (c.scope != AutoChange.Scope.PAPER || AutoChange.never(c)) return
+        val pre = withContext(Dispatchers.Default) { Preflight.check(c, data) }
+        if (!pre.ok) {
+            synchronized(lock) { _book.value = AutoChange.record(_book.value, c, AutoChange.Status.SKIPPED, nowMs, today, by = Experiments.BY, note = pre.words()).first }
+            return
+        }
+        val said = runCatching { apply(c, pinConfirmed = false) }.getOrNull() ?: return
+        synchronized(lock) {
+            _book.value = AutoChange.record(_book.value, c, AutoChange.Status.PROBATION, nowMs, today, by = Experiments.BY,
+                note = "graduated from its paper experiment", preflight = pre.words()).first
+        }
+        tellOne(c, said)
+    }
+
     /** Boss's revert of a live probation with his PIN (the change log). */
     fun revertWithPin(id: String): String {
         val e = AutoChange.entry(_book.value, id) ?: return "That change is gone."
@@ -478,6 +561,11 @@ internal object Autopilot {
             AutoChange.AskKind.UNDO -> offerUndoLast()
             AutoChange.AskKind.OFF -> voiceSet(AutoChange.Mode.OFF)
             AutoChange.AskKind.RAISE -> AutoChange.VOICE_RAISE
+            AutoChange.AskKind.SURE -> {
+                runCatching { JarvisLearning.ensureLoaded() }
+                AutoGate.sayHowSure(JarvisLearning.book.value, _book.value, a.subject ?: "that")
+            }
+            AutoChange.AskKind.EXPERIMENTS -> Experiments.sayRunning(_book.value)
         }
     }
 
@@ -489,6 +577,7 @@ internal object Autopilot {
                 com.optionslab.ira.MarketBrain.stateWith(r, knob("brain.busy_z")).words }
         }.getOrNull() ?: ""
         return "Autopilot learning: ${_mode.value.words}; today ${s.today}, on probation ${s.probation}, kept ${s.kept}, reverted ${s.reverted}" +
+            "; trials ${_book.value.trials}, experiments running ${Experiments.running(_book.value).size}" +
             (if (_knobs.value.isNotEmpty()) "; knobs " + _knobs.value.toSortedMap().entries.joinToString(", ") { "${it.key}=${AutoChange.fmt(it.value)}" } else "") + brain
     }
 
@@ -496,7 +585,7 @@ internal object Autopilot {
     internal fun resetForTest() {
         synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
         _mode.value = AutoChange.Mode.SAFE
-        loaded = true; running = false; notifiedOn = null; testInputs = null; testLive = null
+        loaded = true; running = false; notifiedOn = null; testInputs = null; testLive = null; testReplay = null
     }
 
     /** TEST ONLY: [b] as the log. */

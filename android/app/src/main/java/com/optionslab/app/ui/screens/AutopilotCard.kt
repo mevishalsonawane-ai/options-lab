@@ -35,6 +35,8 @@ import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
 import com.optionslab.ira.AutoChange
+import com.optionslab.ira.AutoGate
+import com.optionslab.ira.Experiments
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -159,22 +161,44 @@ internal fun AutopilotLogDialog(model: AppModel, onClose: () -> Unit) {
 internal fun AutopilotLogSheet(book: AutoChange.Book, said: String?, onAction: (LogAction, String) -> Unit, onClose: (() -> Unit)?) {
     val p = LocalPalette.current
     val entries = remember(book) { book.entries.filter { it.status != AutoChange.Status.DECLINED }.reversed() }
+    val experiments = remember(book) { book.experiments.sortedWith(compareBy<Experiments.Experiment> { if (it.status == Experiments.Status.RUNNING) 0 else 1 }.thenByDescending { it.startedOn }) }
+    val header = remember(book) { AutoGate.header(book) }
     Column(Modifier.fillMaxWidth().padding(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(AUTOPILOT_LOG_TITLE, style = Type.title.copy(color = p.ink), maxLines = 2, modifier = Modifier.weight(1f).testTag("autopilot-log-title"))
             if (onClose != null) BrassButton("Close", modifier = Modifier.testTag("autopilot-log-close"), tone = p.inkSoft, onClick = onClose)
         }
+        Text(header, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp).testTag("autopilot-log-trials"))
         said?.let { Text(it, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(vertical = 4.dp)) }
         LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 6.dp, bottom = 24.dp)) {
             item(key = "intro") {
                 Note("Changes the agents made by themselves, and those asked. Shadow and paper change by themselves; live only ever to lower " +
-                    "risk. Each is checked again after ${AutoChange.PROBATION_N} trades or ${AutoChange.PROBATION_DAYS} trading days and reverts " +
-                    "itself if it made things worse. An undo that adds live risk asks for your PIN.")
+                    "risk. Each change is first replayed on stored trades (pre-flight) and then judged by a sequential test that keeps or " +
+                    "reverts it as soon as the evidence is clear - at the latest after ${AutoChange.PROBATION_N} trades or ${AutoChange.PROBATION_DAYS} " +
+                    "trading days. A lesson still building is tried as a paper experiment first. An undo that adds live risk asks for your PIN.")
             }
+            if (experiments.isNotEmpty()) items(experiments, key = { "x:" + it.id }) { x -> ExperimentRow(x) }
             if (entries.isEmpty()) item(key = "none") { Note("No changes yet.", Modifier.padding(vertical = 8.dp)) }
             items(entries, key = { "e:" + it.id }) { e -> LogRow(e, onAction) }
         }
+    }
+}
+
+/** One paper experiment: "experiment" with what it tries, its status, its pairs and the variant's lead, and its sequential test. */
+@Composable
+private fun ExperimentRow(x: Experiments.Experiment) {
+    val p = LocalPalette.current
+    val c = x.change
+    Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).background(p.card, RoundedCornerShape(14.dp))
+        .border(1.dp, p.rule, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("experiment-" + x.id)) {
+        Text("${c.what}: ${c.from} → ${c.to}", style = Type.body.copy(color = p.ink, fontSize = 14.sp))
+        Text("${com.optionslab.ira.AgentLessons.day(x.startedOn)} · experiment · paper only · ${x.status.words}",
+            style = Type.label.copy(color = if (x.status == Experiments.Status.LOST) p.oxblood else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp))
+        Text("${x.pairs} pair${if (x.pairs == 1) "" else "s"} on alternate paper trades, the variant ${com.optionslab.ira.AgentLessons.rs(x.lead)} " +
+            (if (x.lead >= 0) "ahead" else "behind"), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        if (x.test.isNotEmpty()) Text("Test: ${x.test}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        if (x.note.isNotEmpty()) Text(x.note, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
     }
 }
 
@@ -192,6 +216,10 @@ private fun LogRow(e: AutoChange.Entry, onAction: (LogAction, String) -> Unit) {
         if (e.note.isNotEmpty()) Text(e.note, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         if (e.afterN > 0) Text("Since: ${e.afterN} cases, ${com.optionslab.ira.AgentLessons.rs(e.effect)} against what would have happened",
             style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        e.q?.let { q -> Text("Lesson: ${com.optionslab.ira.AgentLessons.qWords(q)}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp)) }
+        if (e.test.isNotEmpty()) Text("Test: ${e.test}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        if (e.preflight.isNotEmpty()) Text(e.preflight.replaceFirstChar { it.uppercase() },
+            style = Type.label.copy(color = if (e.status == AutoChange.Status.SKIPPED) p.oxblood else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         val pin = c.scope == AutoChange.Scope.LIVE
         if (e.applied && e.status != AutoChange.Status.REVERT_ASKED)
             BrassButton(if (AutoChange.undoNeedsPin(c)) "Undo (PIN)" else "Undo", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("undo-" + e.id),
