@@ -232,7 +232,8 @@ class PortfolioGuard {
 
     data class Decision(val block: Boolean, val why: String? = null, val partners: List<String> = emptyList(), val combined: Double = 0.0)
 
-    private data class Opened(val arm: String, val direction: Int, val live: Boolean, val atMs: Long)
+    // [seq]: the order things happened in (two checks can share a millisecond; the door asks "let through since the block?").
+    private data class Opened(val arm: String, val direction: Int, val live: Boolean, val atMs: Long, val seq: Long = 0L)
 
     @Volatile var matrix: PortfolioRisk.Matrix = PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap())
         private set
@@ -244,11 +245,13 @@ class PortfolioGuard {
     private var day: LocalDate? = null
     private val opened = ArrayList<Opened>()
     private val blocks = ArrayList<Block>()
+    private val blockSeq = ArrayList<Long>()
+    private var seq = 0L
 
     fun update(m: PortfolioRisk.Matrix, s: Map<String, Double>, c: Config) { matrix = m; stops = s; config = c }
     fun setConfig(c: Config) { config = c }
 
-    private fun roll(d: LocalDate) { if (day != d) { day = d; opened.clear(); blocks.clear() } }
+    private fun roll(d: LocalDate) { if (day != d) { day = d; opened.clear(); blocks.clear(); blockSeq.clear() } }
 
     /**
      * [arm]'s new entry leaning [direction] (+1 / -1) on [today]: blocked when correlated arms already opened today the same
@@ -270,14 +273,14 @@ class PortfolioGuard {
             "portfolio guard: ${partners.joinToString(", ") { PortfolioRisk.label(it) }} already opened the same way today and move with it " +
             "(${partners.joinToString(", ") { "%.2f".format(Locale.ENGLISH, m.of(arm, it) ?: 0.0) }}); all at their stops together is about " +
             "${PortfolioRisk.rs(combined)}, over the cap of ${PortfolioRisk.rs(c.capRs)} (${trim(c.capPct)}% of capital)"
-        blocks += Block(arm, direction, live, nowMs, partners, combined, c.capRs, why)
-        if (blocks.size > 200) blocks.removeAt(0)
+        blocks += Block(arm, direction, live, nowMs, partners, combined, c.capRs, why); blockSeq += ++seq
+        if (blocks.size > 200) { blocks.removeAt(0); blockSeq.removeAt(0) }
         return Decision(true, why, partners, combined)
     }
 
     private fun note(arm: String, direction: Int, live: Boolean, nowMs: Long) {
         opened.removeAll { it.arm == arm && it.direction == direction && it.live == live }
-        opened += Opened(arm, direction, live, nowMs)
+        opened += Opened(arm, direction, live, nowMs, ++seq)
     }
 
     /**
@@ -288,14 +291,17 @@ class PortfolioGuard {
     @Synchronized
     fun doorRefusal(direction: Int, today: LocalDate, nowMs: Long, windowMs: Long = 60_000L): String? {
         if (day != today || direction == 0) return null
-        val b = blocks.lastOrNull { it.live && it.direction == direction && nowMs - it.atMs in 0..windowMs } ?: return null
-        if (opened.any { it.live && it.direction == direction && it.atMs >= b.atMs }) return null
+        val i = blocks.indexOfLast { it.live && it.direction == direction && nowMs - it.atMs in 0..windowMs }
+        if (i < 0) return null
+        val b = blocks[i]
+        val bSeq = blockSeq.getOrElse(i) { 0L }
+        if (opened.any { it.live && it.direction == direction && it.seq > bSeq }) return null
         return "refused: " + b.why
     }
 
     @Synchronized fun blocksToday(today: LocalDate): List<Block> = if (day == today) blocks.toList() else emptyList()
 
-    @Synchronized fun clear() { day = null; opened.clear(); blocks.clear() }
+    @Synchronized fun clear() { day = null; opened.clear(); blocks.clear(); blockSeq.clear() }
 
     private fun trim(x: Double) = if (x % 1.0 == 0.0) x.toInt().toString() else x.toString()
 }

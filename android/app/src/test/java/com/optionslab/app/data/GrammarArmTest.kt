@@ -93,6 +93,7 @@ class GrammarArmTest : RobolectricTest() {
 
     @After fun down() {
         Market.testClock = null
+        if (!::kite.isInitialized) return    // skipped (no Jarvis in this build): nothing was set up
         VariantRunner.resetForTest()
         GrammarArm.wipe()
         kite.close(); upstox.close()

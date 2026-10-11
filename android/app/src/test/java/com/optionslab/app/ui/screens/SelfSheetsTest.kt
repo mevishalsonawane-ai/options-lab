@@ -103,6 +103,9 @@ class SelfSheetsTest {
         for (w in listOf("breakout", "level", "news", "gut", "following Jarvis", "other")) assertTrue(w, shows(w))
         tapTag("why-GUT")
         assertEquals(BossTrades.Why.GUT, picked)
+    }
+
+    @Test fun theWhyCardOffersOneTapChipsForAnExit() {
         var out: BossTrades.ExitWhy? = null
         var gone = false
         set { ManualReasonContent("NIFTY26OCT25000CE", exit = true, onEntry = { _, _ -> }, onExit = { w, _ -> out = w }, onDismiss = { gone = true }) }
@@ -118,6 +121,9 @@ class SelfSheetsTest {
         assertTrue(shows("FROZEN: no automatic change is applied"))
         assertTrue(shows("−₹4,100"))
         tapTag("unfreeze"); assertTrue(unfrozen)
+    }
+
+    @Test fun anUnfrozenCardSaysSoWithoutAnUnfreeze() {
         set { LearningFreezeContent(FreezeRule.State(), emptyList(), "", null, {}, {}, {}) }
         assertTrue(shows("Not frozen"))
         assertTrue(compose.onAllNodesWithTag("unfreeze").fetchSemanticsNodes().isEmpty())
