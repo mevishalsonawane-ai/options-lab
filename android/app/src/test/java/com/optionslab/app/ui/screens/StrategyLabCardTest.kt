@@ -137,6 +137,24 @@ class StrategyLabCardTest {
         assertTrue(closed)
     }
 
+    @Test fun eachArmSaysWhatItRunsWithItsUndo() {
+        // S1: a paper variant in force since today; live on the defaults.
+        val s = VariantLab.strategy("orb_sweep")!!
+        val to = s.defaults + ("stopPts" to 30.0)
+        val c = VariantLab.Change("C8", "orb_sweep", "V3", VariantLab.ChangeKind.AUTO_PAPER, VariantLab.ChangeStatus.APPLIED, day.minusDays(1),
+            s.defaults, to, "it made more", effective = day)
+        val b = VariantLab.Book(runs = mapOf("orb_sweep" to VariantLab.Run.PAPER), changes = listOf(c),
+            tunes = listOf(VariantLab.Tune("orb_sweep", false, day, to, "C8")))
+        val asked = ArrayList<Pair<LabAction, String>>()
+        set { StrategyLabSheet(b, StrategyForge.Book(), null, null, onAction = { a, id -> asked += a to id }, onClose = {}, today = day) }
+        scrollToTag("lab-running-orb_sweep-paper")
+        assertTrue(shows("Paper · running: variant V3 since 12 Oct"))
+        assertTrue(shows("Live · running: default"))
+        scrollToTag("lab-undo-running-orb_sweep-paper")
+        compose.onNodeWithTag("lab-undo-running-orb_sweep-paper").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+        assertEquals(LabAction.UNDO to "C8", asked.last())
+    }
+
     @Test fun aSelectedIdeaComesFirst() {
         set { StrategyLabSheet(variants, forge, "F7", null, onAction = { _, _ -> }, onClose = {}) }
         scrollToTag("lab-idea-F7")

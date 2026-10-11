@@ -102,8 +102,8 @@ internal fun StrategyLabCardContent(variants: VariantLab.Book, forge: StrategyFo
     }
 }
 
-/** What a tap in the sheet asks for. */
-internal enum class LabAction { UNDO, APPLY_LIVE, DECLINE_LIVE, START_PAPER, DECLINE_PAPER }
+/** What a tap in the sheet asks for. [UNDO_LIVE]: undo a live change (the PIN unless it puts the defaults back). */
+internal enum class LabAction { UNDO, APPLY_LIVE, DECLINE_LIVE, START_PAPER, DECLINE_PAPER, UNDO_LIVE }
 
 /** The sheet with Boss's hand on it: Undo (paper), Apply with the PIN (live), start on paper or decline (forge). */
 @Composable
@@ -112,6 +112,8 @@ internal fun StrategyLabDialog(model: AppModel, selected: String?, onClose: () -
     val forge by VariantRunner.forge.collectAsState(Dispatchers.Main.immediate)
     var said by remember { mutableStateOf<String?>(null) }
     var pinFor by remember { mutableStateOf<String?>(null) }
+    var undoPinFor by remember { mutableStateOf<String?>(null) }
+    val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
     val scope = rememberCoroutineScope()
     fun doIt(f: () -> String) {
         scope.launch(Dispatchers.IO) {
@@ -122,9 +124,11 @@ internal fun StrategyLabDialog(model: AppModel, selected: String?, onClose: () -
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
         usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
         Column(Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.9f).background(LocalPalette.current.paper, RoundedCornerShape(16.dp))) {
-            StrategyLabSheet(variants, forge, selected, said, onAction = { a, id ->
+            StrategyLabSheet(variants, forge, selected, said, today = today, onAction = { a, id ->
                 when (a) {
                     LabAction.UNDO -> doIt { VariantRunner.undo(id) }
+                    // A live undo that puts the defaults back lowers risk: no PIN. Any other live undo asks for it.
+                    LabAction.UNDO_LIVE -> if (VariantRunner.undoLiveNeedsPin(id)) undoPinFor = id else doIt { VariantRunner.undoLive(id, pinConfirmed = false) }
                     LabAction.APPLY_LIVE -> pinFor = id
                     LabAction.DECLINE_LIVE -> doIt { VariantRunner.declineLive(id) }
                     LabAction.START_PAPER -> doIt { VariantRunner.approvePaper(id) }
@@ -137,6 +141,10 @@ internal fun StrategyLabDialog(model: AppModel, selected: String?, onClose: () -
         Reauth(model, pinOnly = false, why = "Enter your app PIN to change a live strategy's rules to the variant that beat them.",
             onOk = { pinFor = null; doIt { VariantRunner.acceptLive(id, pinConfirmed = true) } }, onCancel = { pinFor = null })
     }
+    undoPinFor?.let { id ->
+        Reauth(model, pinOnly = false, why = "Enter your app PIN to change a live strategy's rules back to the ones before this change.",
+            onOk = { undoPinFor = null; doIt { VariantRunner.undoLive(id, pinConfirmed = true) } }, onCancel = { undoPinFor = null })
+    }
 }
 
 /**
@@ -147,7 +155,8 @@ internal fun StrategyLabDialog(model: AppModel, selected: String?, onClose: () -
  */
 @Composable
 internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Book, selected: String?, said: String?,
-                              onAction: (LabAction, String) -> Unit, onClose: (() -> Unit)?) {
+                              onAction: (LabAction, String) -> Unit, onClose: (() -> Unit)?,
+                              today: java.time.LocalDate = java.time.LocalDate.now()) {
     val p = LocalPalette.current
     val changes = remember(variants) { variants.changes.filter { it.status != VariantLab.ChangeStatus.DECLINED }.reversed() }
     val ideas = remember(forge, selected) {
@@ -168,8 +177,10 @@ internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Bo
             contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp)) {
             item(key = "intro") {
                 Note("Variants and new ideas trade only virtually on the day's own data, after paper costs and half a spread more. A variant must beat " +
-                    "the current rules for ${VariantLab.MIN_N} days and pass the false-discovery check across all ${variants.tried} tried. Paper changes " +
-                    "apply by themselves with Undo; live ones need your PIN. New ideas face walk-forward, a random twin and a count of all " +
+                    "the current rules for ${VariantLab.MIN_N} days and pass the false-discovery check across all ${variants.tried} tried. Each variant is " +
+                    "the arm's own rules with other values. Paper changes reach the arm's paper trades by themselves from the next session, with Undo; " +
+                    "live ones need your PIN, also from the next session. A variant that loses too much goes back to the defaults by itself. " +
+                    "Liquidity 15+5 tunes its exits only. New ideas face walk-forward, a random twin and a count of all " +
                     "${c.tried} ever tried, then ${StrategyForge.FWD_MIN_DAYS} virtual days before you are asked - paper only.")
             }
             item(key = "graveyard") {
@@ -179,9 +190,9 @@ internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Bo
             }
             if (changes.isNotEmpty()) item(key = "changes-h") { Text("Changes", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold)) }
             items(changes, key = { "c:" + it.id }) { ch -> ChangeRow(ch, variants, onAction) }
-            val shown = VariantLab.STRATEGIES.filter { variants.variants.any { v -> v.strategy == it.key } }
+            val shown = VariantLab.STRATEGIES.filter { s -> variants.variants.any { v -> v.strategy == s.key } || variants.tunes.any { it.strategy == s.key } }
             if (shown.isNotEmpty()) item(key = "variants-h") { Text("Variants", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold)) }
-            items(shown, key = { "s:" + it.key }) { s -> StrategyRow(s, variants) }
+            items(shown, key = { "s:" + it.key }) { s -> StrategyRow(s, variants, today, onAction) }
             item(key = "ideas-h") { Text("New ideas", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold)) }
             if (ideas.isEmpty()) item(key = "ideas-none") { Note("No idea tried yet: the forge runs at night, while the phone charges or after 18:00.") }
             items(ideas, key = { "i:" + it.c.id }) { r -> IdeaRow(r, onAction) }
@@ -207,8 +218,12 @@ private fun ChangeRow(ch: VariantLab.Change, variants: VariantLab.Book, onAction
         Text("${DiscoveryStats.day(ch.day)} · ${ch.kind.words} · ${ch.status.words}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
             modifier = Modifier.padding(top = 4.dp))
         Text("Why: ${ch.why}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        ch.effective?.let { Text("Traded from ${DiscoveryStats.day(it)}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp)) }
         if (ch.kind == VariantLab.ChangeKind.AUTO_PAPER && ch.status == VariantLab.ChangeStatus.APPLIED)
             BrassButton("Undo", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("lab-undo-" + ch.id), tone = p.inkSoft) { onAction(LabAction.UNDO, ch.id) }
+        if (ch.kind == VariantLab.ChangeKind.LIVE_PROPOSAL && ch.status == VariantLab.ChangeStatus.ACCEPTED)
+            BrassButton(if (VariantLab.restoresDefault(variants, ch.id)) "Undo" else "Undo (PIN)", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("lab-undo-" + ch.id),
+                tone = p.inkSoft) { onAction(LabAction.UNDO_LIVE, ch.id) }
         if (ch.status == VariantLab.ChangeStatus.OFFERED) {
             BrassButton("Apply (PIN)", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("lab-apply-" + ch.id), tone = p.inkSoft) { onAction(LabAction.APPLY_LIVE, ch.id) }
             BrassButton("Decline", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { onAction(LabAction.DECLINE_LIVE, ch.id) }
@@ -217,11 +232,28 @@ private fun ChangeRow(ch: VariantLab.Change, variants: VariantLab.Book, onAction
 }
 
 @Composable
-private fun StrategyRow(s: VariantLab.Strategy, variants: VariantLab.Book) {
+private fun StrategyRow(s: VariantLab.Strategy, variants: VariantLab.Book, today: java.time.LocalDate, onAction: (LabAction, String) -> Unit) {
     val p = LocalPalette.current
     val mine = variants.variants.filter { it.strategy == s.key }.sortedWith(compareBy<VariantLab.Variant> { !it.alive }.thenByDescending { it.n })
     LabBox {
         Text("${s.label} (${variants.runOf(s.key).words})", style = Type.body.copy(color = p.ink, fontSize = 14.sp))
+        // What the arm trades (S1): per account, "running: default" or "running: variant V3 since 14 Oct", with its Undo.
+        for (live in listOf(false, true)) {
+            val acct = if (live) "live" else "paper"
+            val words = VariantLab.runningWords(variants, s.key, live, today)
+            Text("${if (live) "Live" else "Paper"} · $words", style = Type.label.copy(color = p.ink, fontSize = 12.sp),
+                modifier = Modifier.padding(top = 3.dp).testTag("lab-running-${s.key}-$acct"))
+            val r = VariantLab.running(variants, s.key, live, today)
+            val ch = r.change ?: r.next?.let { variants.change(it.change) }
+            val action = when {
+                ch == null -> null
+                !live && ch.kind == VariantLab.ChangeKind.AUTO_PAPER && ch.status == VariantLab.ChangeStatus.APPLIED -> LabAction.UNDO
+                live && ch.kind == VariantLab.ChangeKind.LIVE_PROPOSAL && ch.status == VariantLab.ChangeStatus.ACCEPTED -> LabAction.UNDO_LIVE
+                else -> null
+            }
+            if (ch != null && action != null) BrassButton(if (action == LabAction.UNDO_LIVE && !VariantLab.restoresDefault(variants, ch.id)) "Undo (PIN)" else "Undo",
+                Modifier.fillMaxWidth().padding(top = 4.dp).testTag("lab-undo-running-${s.key}-$acct"), tone = p.inkSoft) { onAction(action, ch.id) }
+        }
         Text("Current: " + s.params.joinToString(", ") { pr -> "${pr.words} ${pr.say(variants.currentOf(s.key).getValue(pr.key))}" },
             style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         mine.take(8).forEach { v ->

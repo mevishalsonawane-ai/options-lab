@@ -132,9 +132,15 @@ object VixDivArm {
 
     private fun ms(t: LocalDateTime): Long = t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
 
+    /**
+     * The arm's parameters on [day] (S1, the strategy lab: its constants, or a variant the lab promoted on paper from the session
+     * after it was decided - never mid-day). Memory only: no settings read, no I/O. A position keeps its entry day's.
+     */
+    private fun params(day: LocalDate): com.optionslab.engine.orb.VixDivParams = VariantRunner.vixParams(day)
+
     /** [p] as the trade manager follows it: a bought option, NIFTY's -15% stop on its premium, out by 15:10. */
     private fun managed(p: Pos) = TradeManagerHost.ArmTrade("vixdiv", managerId(p), VixDivRules.LABEL, p.index, if (p.right == "PE") -1 else 1,
-        p.symbol, p.entry, p.qty, if (VixDivRules.liquidityExit(p.index)) VixDivRules.stop(p.entry) else null, null,
+        p.symbol, p.entry, p.qty, if (VixDivRules.liquidityExit(p.index)) VixDivRules.stop(p.entry, params(p.entryDay).stopPct) else null, null,
         ms(p.entryDay.atTime(15, 10)), live = false, entryMs = ms(p.entryTime), exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.let { ms(it) })
 
     private fun note(b: Book, text: String) {
@@ -240,7 +246,8 @@ object VixDivArm {
         val vix = minutes(vixKey, now)
         // The check's own minute not printed yet (the feed a moment behind): wait for it rather than read the minute before.
         VixDivRules.awaiting(index, vix, minute)?.let { return Decision(false, "waiting for the ${hhmm(it - 1)} minute") }
-        val readings = VixDivRules.readings(index, vix, minute)
+        val vp = params(today)
+        val readings = VixDivRules.readings(index, vix, minute, vp.indexMove)
         val sig = readings.firstOrNull { it.side != 0 }
         if (sig == null) {
             val last = readings.lastOrNull()?.let { r -> "${hhmm(r.check)}: index ${VixDivRules.pct(r.indexMove)}, VIX ${VixDivRules.pct(r.vixMove)}" }
@@ -286,10 +293,11 @@ object VixDivArm {
         FlowGate.taken(flow, r.orderId)
         // NIFTY's -15% stop rests in the paper book, so it fills on a minute's low (the wick) between passes.
         val stopId = if (!VixDivRules.liquidityExit(u)) null else runCatching {
-            Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price))
+            Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price, vp.stopPct))
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · stop") } }
         b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
-        val exits = if (VixDivRules.liquidityExit(u)) "stop %.2f on the low, out after 20 min unless +5%%, else 15:10".format(Locale.ENGLISH, VixDivRules.stop(fill.price))
+        val exits = if (VixDivRules.liquidityExit(u)) "stop %.2f on the low, out after %d min unless +5%%, else 15:10".format(Locale.ENGLISH,
+                VixDivRules.stop(fill.price, vp.stopPct), vp.minutes)
             else "held to 15:10"
         runCatching { Notifier.post(app, 6990 + VixDivRules.UNDERLYINGS.indexOf(u), Notifier.BUY, "${VixDivRules.LABEL} bought ${c.symbol} · Paper",
             "Bought ${fill.quantity} @ %.2f (%s). %s. Paper only, not proven.".format(Locale.ENGLISH, fill.price, facts, exits), "almanac") }
@@ -308,7 +316,7 @@ object VixDivArm {
             // NIFTY's resting stop filled in the paper book (on a minute's low): that is the exit.
             val so = p.stopOrderId?.let { id -> Paper.state.orders.firstOrNull { it.orderId == id } }
             if (so != null && so.status == "complete") {
-                val done = p.copy(exit = so.averagePrice?.toDouble() ?: VixDivRules.stop(p.entry), exitTime = so.updateTimestamp, why = "stop_15",
+                val done = p.copy(exit = so.averagePrice?.toDouble() ?: VixDivRules.stop(p.entry, params(p.entryDay).stopPct), exitTime = so.updateTimestamp, why = "stop_15",
                     stopOrderId = null, charges = p.charges + chargesOf(so.orderId))
                 b.positions[i] = done; closed(b, done); changed = true; continue
             }
@@ -327,7 +335,7 @@ object VixDivArm {
                 else -> {
                     val bars = runCatching { minutes(c.feedKey, now) }.getOrNull().orEmpty()
                         .map { VixDivRules.Minute(it.istMinute, it.low, it.close) }
-                    VixDivRules.exit(VixDivRules.Held(p.index, p.entry, p.entryMinute), bars, minute)
+                    VixDivRules.exit(VixDivRules.Held(p.index, p.entry, p.entryMinute), bars, minute, params(p.entryDay))
                 }
             } ?: TradeManagerHost.exitDue(managerId(p))?.let { "trade_manager" } ?: continue   // ACT only (Boss's switch; SHADOW by default)
             val next = sell(b, p, c, why)
@@ -342,7 +350,7 @@ object VixDivArm {
             runCatching { Paper.cancel(id, "exit:$why") }
             val so = Paper.state.orders.firstOrNull { it.orderId == id }
             if (so?.status == "complete") {
-                val done = p.copy(exit = so.averagePrice?.toDouble() ?: VixDivRules.stop(p.entry), exitTime = so.updateTimestamp, why = "stop_15",
+                val done = p.copy(exit = so.averagePrice?.toDouble() ?: VixDivRules.stop(p.entry, params(p.entryDay).stopPct), exitTime = so.updateTimestamp, why = "stop_15",
                     stopOrderId = null, charges = p.charges + chargesOf(id))
                 closed(b, done); return done
             }

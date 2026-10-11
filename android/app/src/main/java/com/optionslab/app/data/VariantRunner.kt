@@ -1,6 +1,11 @@
 package com.optionslab.app.data
 
 import android.content.Context
+import com.optionslab.engine.orb.Arm
+import com.optionslab.engine.orb.LiquidityParams
+import com.optionslab.engine.orb.OrbParams
+import com.optionslab.engine.orb.VixDivParams
+import com.optionslab.ira.ArmParams
 import com.optionslab.ira.DiscoveryStats
 import com.optionslab.ira.Findings
 import com.optionslab.ira.LabLessons
@@ -28,10 +33,13 @@ import java.util.concurrent.ConcurrentHashMap
  *  - After F&O's close, once the day's minutes are stored (the harvest keeps the index and its options), [settleIfDue] follows
  *    every variant and every forward candidate over that day as VIRTUAL trades - no order, not even paper; never in market
  *    hours, so nothing is added per tick.
- *  - A paper strategy's winning variant is applied to the lab's paper rules by itself, logged with undo, and posted on the
- *    findings bus as "variant ready"; a live strategy's is put to Boss ([com.optionslab.app.ira.IraHub.offer]) and applied
- *    only with his PIN (Home → Strategy lab). A forge survivor that keeps passing is put to Boss as "start it on paper";
- *    the forge never proposes live.
+ *  - The arms TRADE what the lab promotes (S1), paper first and never mid-day: each arm reads its parameters from memory
+ *    ([orbParams], [liquidityParams], [vixParams]: the book loaded at start on IO; no settings read, no I/O, nothing new on
+ *    the order path). A paper strategy's winning variant is applied to the arm's PAPER entries by itself from the next
+ *    session, logged with undo, and posted on the findings bus as "variant ready"; a live strategy's is put to Boss
+ *    ([com.optionslab.app.ira.IraHub.offer]) and applied only with his PIN (Home → Strategy lab), from the next session.
+ *    The safety net puts an arm back to its defaults by itself when its variant loses too much ([VariantLab.safety]).
+ *    A forge survivor that keeps passing is put to Boss as "start it on paper"; the forge never proposes live.
  *  - The nightly forge ([forgeIfDue], from [com.optionslab.app.work.DiscoveryWorker]) runs only while charging and idle or
  *    after 18:00, within a minute of work, and stops when the worker is stopped.
  *
@@ -47,6 +55,8 @@ object VariantRunner {
     const val FORGE_DAYS = 100
     /** The indices the lab reads from the store (what the store keeps minutes of, with their options). */
     val UNDERLYINGS = listOf("BANKNIFTY", "NIFTY")
+    /** The variants' indices: the forge's and Liquidity 15+5's other two (read when the store keeps them). */
+    val VARIANT_UNDERLYINGS = UNDERLYINGS + listOf("FINNIFTY", "MIDCPNIFTY")
     /** F&O's close and the day's settle (after it): never in market hours. */
     const val SETTLE_FROM = 15 * 60 + 45
     const val WHO = "Strategy lab"
@@ -134,6 +144,86 @@ object VariantRunner {
     /** The running strategies the lab does not tune today, with why (the card). */
     fun notTuned(day: LocalDate): List<String> = VariantLab.NOT_TUNED.filterKeys { k -> seen[k]?.first == day.toEpochDay() }.values.toList()
 
+    // ---- what the arms trade (S1) -----------------------------------------------------------------------------------------
+
+    /** The parameters worked out from the book in memory, per (strategy, account, day); dropped whenever the book changes. */
+    private class Tuned(val book: VariantLab.Book, val params: ConcurrentHashMap<String, Any> = ConcurrentHashMap())
+    @Volatile private var tuned = Tuned(VariantLab.Book())
+
+    /**
+     * [key]'s parameter values on [day] for the [live] account (null: the arm's own constants). Memory only: the book was read
+     * at start on IO ([init]); until it is, and in a build without the lab, every arm trades its defaults.
+     */
+    private fun valuesFor(key: String, day: LocalDate, live: Boolean): Map<String, Double>? {
+        if (!loaded || !enabled()) return null
+        val b = _variants.value
+        if (b.tunes.isEmpty()) return null
+        return runCatching { VariantLab.valuesFor(b, key, live, day) }.getOrNull()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : Any> cached(key: String, day: LocalDate, live: Boolean, make: (Map<String, Double>?) -> T, default: T): T {
+        if (!loaded || !enabled() || _variants.value.tunes.isEmpty()) return default
+        val b = _variants.value
+        var t = tuned
+        if (t.book !== b) { t = Tuned(b); tuned = t }
+        return t.params.getOrPut("$key|$live|$day") { make(valuesFor(key, day, live)) } as T
+    }
+
+    /** The ORB family arm [arm]'s parameters on [day] for the [live] account (its constants unless a variant is in force). */
+    fun orbParams(arm: Arm, day: LocalDate, live: Boolean): OrbParams {
+        val d = OrbParams.of(arm)
+        if (arm.source !in ArmParams.ORB_ARMS) return d
+        return cached(arm.source, day, live, { v -> ArmParams.orb(arm.source, v) }, d)
+    }
+
+    /** Liquidity 15+5's EXIT parameters on [day] for the [live] account (its entries are frozen in code). */
+    fun liquidityParams(day: LocalDate, live: Boolean): LiquidityParams =
+        cached("liquidity", day, live, { v -> ArmParams.liquidity(v) }, LiquidityParams.DEFAULT)
+
+    /** VIX divergence's parameters on [day] (paper only). */
+    fun vixParams(day: LocalDate): VixDivParams =
+        cached(com.optionslab.engine.orb.VixDivRules.SOURCE, day, false, { v -> ArmParams.vixDiv(v) }, VixDivParams.DEFAULT)
+
+    /** The first trading day after [d]. */
+    private fun nextSession(d: LocalDate): LocalDate {
+        var n = d.plusDays(1); var guard = 0
+        while (!Market.isTradingDay(n) && guard++ < 15) n = n.plusDays(1)
+        return n
+    }
+
+    /**
+     * The session a change decided now is traded from: never the one running or about to run. After [d]'s close: the next
+     * trading day, unless that is today and the market day has begun (from 09:00), then the one after.
+     */
+    internal fun fromAfter(d: LocalDate, now: java.time.ZonedDateTime = Market.now()): LocalDate {
+        val n = nextSession(d)
+        val today = now.toLocalDate()
+        return if (!n.isAfter(today) && (n.isBefore(today) || now.hour * 60 + now.minute >= 9 * 60)) nextSession(today) else n
+    }
+
+    /** Each lab strategy's real result on [d] on the account it ran (rupees a lot, after charges), from the arms' own books. */
+    private suspend fun actualOn(d: LocalDate, runs: Map<String, VariantLab.Run>): Map<String, Double> {
+        val out = HashMap<String, Double>()
+        runCatching {
+            val closed = OrbArms.closedPaper() + OrbArms.closedLive()
+            for (p in closed) {
+                if (p.day != d || p.exit == null) continue
+                val key = lab(p.arm)
+                val run = runs[key] ?: continue
+                if (run == VariantLab.Run.OFF || p.live != (run == VariantLab.Run.LIVE)) continue
+                out[key] = (out[key] ?: 0.0) + ((p.grossPnl ?: 0.0) - p.charges) / p.lots
+            }
+        }
+        runCatching {
+            if (runs[com.optionslab.engine.orb.VixDivRules.SOURCE] == VariantLab.Run.PAPER) {
+                val nets = VixDivArm.view.value.closed.filter { it.entryDay == d }.mapNotNull { it.net }
+                if (nets.isNotEmpty()) out[com.optionslab.engine.orb.VixDivRules.SOURCE] = nets.sum()
+            }
+        }
+        return out
+    }
+
     // ---- the data ---------------------------------------------------------------------------------------------------------
 
     /** [u]'s last [n] stored days up to [last] (oldest first), with the busy read and India VIX where kept. Off the main thread. */
@@ -186,15 +276,19 @@ object VariantRunner {
         if ((vb.lastDay?.let { !d.isAfter(it) } == true) && (fb.lastForward?.let { !d.isAfter(it) } == true)) return Settled(null, "already settled")
         settling = true
         try {
-            val data = withContext(Dispatchers.IO) { UNDERLYINGS.associateWith { u -> runCatching { days(u, d, PRECHECK_DAYS + 1) }.getOrDefault(emptyList()) } }
+            val data = withContext(Dispatchers.IO) { VARIANT_UNDERLYINGS.associateWith { u -> runCatching { days(u, d, PRECHECK_DAYS + 1) }.getOrDefault(emptyList()) } }
             val todays = data.mapNotNull { (u, ds) -> ds.lastOrNull()?.takeIf { it.date == d }?.let { u to it } }.toMap()
             if (todays.isEmpty()) return Settled(null, "waiting for $d's stored minutes")
             val history = data.values.flatMap { ds -> ds.filter { it.date.isBefore(d) } }
             val runs = runsOn(d)
+            // A change decided tonight is traded from the next session, never the one running (S1); the safety net reads what
+            // each arm really made that day, where its book has it.
+            val from = fromAfter(d, now)
+            val actual = if (vb.tunes.isEmpty()) emptyMap() else actualOn(d, runs)
             val (vp, fp) = withContext(Dispatchers.Default) {
                 synchronized(lock) {
-                    val v = VariantLab.day(_variants.value, d, runs, todays, history, DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)))
-                    val f = StrategyForge.forwardDay(_forge.value, d, todays)
+                    val v = VariantLab.day(_variants.value, d, runs, todays, history, DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual)
+                    val f = StrategyForge.forwardDay(_forge.value, d, todays.filterKeys { it in UNDERLYINGS })
                     _variants.value = v.book; _forge.value = f.book
                     v to f
                 }
@@ -216,8 +310,14 @@ object VariantRunner {
             is VariantLab.Event.Applied -> {
                 val label = VariantLab.strategy(e.change.strategy)?.label ?: e.change.strategy
                 val v = _variants.value.variants.firstOrNull { it.id == e.change.variant }
-                post("$WHO · $label", "variant ready: ${v?.moved() ?: "new rules"} applied on paper by itself - ${e.change.why}")
-                runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab: $label's paper rules changed (${v?.moved()}); undo on Home → Strategy lab.") }
+                val from = e.change.effective?.let { " from ${DiscoveryStats.day(it)}" } ?: ""
+                post("$WHO · $label", "variant ready: ${v?.moved() ?: "new rules"} applied to its paper trades$from by itself - ${e.change.why}")
+                runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab: $label's paper rules change$from (${v?.moved()}); undo on Home → Strategy lab.") }
+            }
+            is VariantLab.Event.Reverted -> {
+                val label = VariantLab.strategy(e.change.strategy)?.label ?: e.change.strategy
+                post("$WHO · safety net", "$label back to its defaults: ${e.change.why}")
+                runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab safety net: $label back to its defaults - ${e.change.why}") }
             }
             is VariantLab.Event.Proposed -> offerLive(e.change)
             is VariantLab.Event.Retired -> {}
@@ -281,25 +381,49 @@ object VariantRunner {
 
     // ---- Boss's hand -------------------------------------------------------------------------------------------------------
 
-    /** Undo an applied paper change (no PIN: paper only). */
+    /** The next session from now: where Boss's changes take effect (never mid-day). */
+    private fun fromNow(): LocalDate = nextSession(Market.today())
+
+    /** Undo an applied paper change (no PIN: paper only), from the next session. */
     fun undo(changeId: String): String {
         ensureLoaded()
-        val b = synchronized(lock) { VariantLab.undo(_variants.value, changeId)?.also { _variants.value = it } } ?: return "That change can't be undone now."
+        val from = fromNow()
+        val b = synchronized(lock) { VariantLab.undo(_variants.value, changeId, from)?.also { _variants.value = it } } ?: return "That change can't be undone now."
         saveSoon()
         val c = b.changes.first { it.id == changeId }
-        return "Undone: ${VariantLab.strategy(c.strategy)?.label ?: c.strategy}'s lab rules are back to before."
+        return "Undone: ${VariantLab.strategy(c.strategy)?.label ?: c.strategy}'s paper rules are back to before from ${DiscoveryStats.day(from)}."
     }
 
     const val PIN_NEEDED = "It changes a live strategy: confirm with your PIN. Nothing changed."
 
-    /** Apply a live proposal: ONLY with [pinConfirmed] (the card asks for the PIN first). */
+    /** Whether undoing live change [changeId] only puts the arm's defaults back (no PIN needed: it lowers risk). */
+    fun undoLiveNeedsPin(changeId: String): Boolean = !VariantLab.restoresDefault(_variants.value, changeId)
+
+    /**
+     * Undo a live change applied with the PIN, from the next session: without [pinConfirmed] only when it puts the defaults
+     * back (lower or equal risk); any other live undo needs the PIN.
+     */
+    fun undoLive(changeId: String, pinConfirmed: Boolean): String {
+        ensureLoaded()
+        if (!pinConfirmed && undoLiveNeedsPin(changeId)) return PIN_NEEDED
+        val from = fromNow()
+        val b = synchronized(lock) { VariantLab.undoLive(_variants.value, changeId, pinConfirmed, from)?.also { _variants.value = it } }
+            ?: return "That change can't be undone now."
+        saveSoon()
+        runCatching { Diag.record("strategylab", "live change $changeId undone from $from" + if (pinConfirmed) " with the PIN" else " (defaults back)") }
+        val c = b.changes.first { it.id == changeId }
+        return "Undone: ${VariantLab.strategy(c.strategy)?.label ?: c.strategy} is back to before on both accounts from ${DiscoveryStats.day(from)}."
+    }
+
+    /** Apply a live proposal: ONLY with [pinConfirmed] (the card asks for the PIN first), from the next session. */
     fun acceptLive(changeId: String, pinConfirmed: Boolean): String {
         if (!pinConfirmed) return PIN_NEEDED
         ensureLoaded()
-        synchronized(lock) { VariantLab.accept(_variants.value, changeId, true)?.also { _variants.value = it } } ?: return "That proposal is no longer waiting."
+        val from = fromNow()
+        synchronized(lock) { VariantLab.accept(_variants.value, changeId, true, from)?.also { _variants.value = it } } ?: return "That proposal is no longer waiting."
         saveSoon()
-        runCatching { Diag.record("strategylab", "live proposal $changeId applied with the PIN") }
-        return "Applied with your PIN: the lab's live rules moved to the variant."
+        runCatching { Diag.record("strategylab", "live proposal $changeId applied with the PIN from $from") }
+        return "Applied with your PIN: the strategy trades the variant from ${DiscoveryStats.day(from)} (never mid-day)."
     }
 
     fun declineLive(changeId: String): String {
@@ -354,7 +478,7 @@ object VariantRunner {
     /** TEST ONLY. */
     internal fun resetForTest() {
         synchronized(lock) { _variants.value = VariantLab.Book(); _forge.value = StrategyForge.Book() }
-        seen.clear(); loaded = true; settling = false; testDays = null
+        seen.clear(); loaded = true; settling = false; testDays = null; tuned = Tuned(VariantLab.Book())
     }
 
     internal fun setForTest(v: VariantLab.Book, f: StrategyForge.Book) { synchronized(lock) { _variants.value = v; _forge.value = f }; loaded = true }

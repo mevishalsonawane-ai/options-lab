@@ -165,6 +165,51 @@ class VariantRunnerTest : RobolectricTest() {
         assertEquals(StrategyForge.Stage.PAPER, VariantRunner.forge.value.find("F3")!!.stage)
     }
 
+    @Test fun theArmsReadTheirParametersFromMemoryAndAPaperChangeStartsTheNextSession() {
+        // S1: a paper change decided after today's close is traded from the next session, never today; the arms' reads are memory only.
+        val s = VariantLab.strategy("orb_sweep")!!
+        val to = s.defaults + ("stopPts" to 30.0)
+        val next = VariantRunner.fromAfter(day, Market.now())
+        assertTrue(next.isAfter(day))
+        val c = VariantLab.Change("C1", "orb_sweep", "V1", VariantLab.ChangeKind.AUTO_PAPER, VariantLab.ChangeStatus.APPLIED, day, s.defaults, to,
+            "it made more", effective = next)
+        VariantRunner.setForTest(VariantLab.Book(changes = listOf(c), tunes = listOf(VariantLab.Tune("orb_sweep", false, next, to, "C1"))), StrategyForge.Book())
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        repeat(5_000) {
+            VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, false)
+            VariantRunner.liquidityParams(next, true); VariantRunner.vixParams(next)
+        }
+        SecurePrefs.countedThread = null
+        assertEquals("settings reads on the arms' parameter reads", 0L, SecurePrefs.readsForTest.get())
+        assertEquals(com.optionslab.engine.orb.OrbParams.SWEEP, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, day, false))
+        assertEquals(30.0, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, false).stopPoints, 1e-12)
+        assertEquals("a paper change never reaches the live account", com.optionslab.engine.orb.OrbParams.SWEEP,
+            VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, true))
+        assertEquals(com.optionslab.engine.orb.OrbParams.ORB, VariantRunner.orbParams(com.optionslab.engine.orb.OrbRules.ORB, next, false))
+        // Undo (paper, no PIN): from the next session too.
+        assertTrue(VariantRunner.undo("C1").startsWith("Undone"))
+        assertEquals(com.optionslab.engine.orb.OrbParams.SWEEP, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, false))
+    }
+
+    @Test fun aLiveChangeIsTradedFromTheNextSessionAndItsUndoToTheDefaultsNeedsNoPin() {
+        val s = VariantLab.strategy("liquidity")!!
+        val c = VariantLab.Change("C1", "liquidity", "V1", VariantLab.ChangeKind.LIVE_PROPOSAL, VariantLab.ChangeStatus.OFFERED, day, s.defaults,
+            s.defaults + ("stopPct" to 0.125), "it made more")
+        val v = VariantLab.Variant("V1", "liquidity", c.to, c.from, day, 1.0, VariantLab.Status.PROPOSED)
+        VariantRunner.setForTest(VariantLab.Book(variants = listOf(v), changes = listOf(c), tried = 1), StrategyForge.Book())
+        assertEquals(VariantRunner.PIN_NEEDED, VariantRunner.acceptLive("C1", pinConfirmed = false))
+        assertTrue(VariantRunner.acceptLive("C1", pinConfirmed = true).startsWith("Applied with your PIN"))
+        val next = VariantRunner.fromAfter(day, Market.now())
+        assertEquals("never mid-day", com.optionslab.engine.orb.LiquidityParams.DEFAULT, VariantRunner.liquidityParams(day, true))
+        assertEquals(0.125, VariantRunner.liquidityParams(next, true).stopPct, 1e-12)
+        assertEquals(0.125, VariantRunner.liquidityParams(next, false).stopPct, 1e-12)
+        // Back to the defaults lowers risk: no PIN.
+        assertTrue(!VariantRunner.undoLiveNeedsPin("C1"))
+        assertTrue(VariantRunner.undoLive("C1", pinConfirmed = false).startsWith("Undone"))
+        assertEquals(VariantLab.ChangeStatus.UNDONE, VariantRunner.variants.value.change("C1")!!.status)
+    }
+
     @Test fun jarvisAnswersTheLabsQuestions() {
         IraHub.init(context); IraHub.awaitLoadedBlocking()
         fun ask(q: String): String { IraHub.ask(q); return IraHub.state.value.messages.last().text }
