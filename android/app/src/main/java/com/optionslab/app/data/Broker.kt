@@ -1006,7 +1006,7 @@ object Broker {
                     it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
             }
             InstrumentsMemo(stamp, o.optString("day"), list).also { instrumentsMemo = it }
-        }.getOrNull() ?: instrumentsMemo   // G1-6: a file that does not parse never loses the list already in memory
+        }.getOrNull() ?: instrumentsMemo?.takeIf { f.exists() }   // G1-6: a file that does not parse keeps the list in memory; a file gone (cleared data) has none
     }
 
     /** G1-6: written whole to a temp file, then renamed over [f], so a reader on another lane never parses a half-written file. */
