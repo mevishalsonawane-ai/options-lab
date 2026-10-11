@@ -347,7 +347,7 @@ object VariantRunner {
 
     private fun offerPaper(r: StrategyForge.Record) {
         com.optionslab.app.ira.IraHub.offer("strategy lab: start ${r.c.id} on paper", "Boss, a new strategy kept passing",
-            "Boss, ${r.c.name} ${r.why}. Start it on paper? Paper only: it keeps a virtual paper record, never a live order.",
+            "Boss, ${r.c.name} ${r.why}. Start it on paper? Paper only: it trades on the paper account (at most 3 ideas at once), never a live order.",
             suspend { approvePaper(r.c.id) }, alwaysAsk = true, declined = { declinePaper(r.c.id) })
     }
 
@@ -438,7 +438,7 @@ object VariantRunner {
         val day = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         synchronized(lock) { _forge.value = StrategyForge.approve(_forge.value, id, day) }
         saveSoon()
-        return "$id is approved for paper: it keeps a virtual paper record from the next session. Live stays yours, with the PIN, after a long paper record."
+        return "$id is approved for paper: it trades on the paper account from its next signal (at most 3 ideas at once). Live stays yours, with the PIN, after a long paper record."
     }
 
     fun declinePaper(id: String): String {
