@@ -416,4 +416,16 @@ class ManagerTeamTest {
         for (q in listOf("which specialist made Solo exit?", "how are the manager's specialists doing?", "mute the OI specialist for Pine"))
             assertEquals("TradeManager", audit.feature(q), q)
     }
+
+    @Test fun theManagersRecordIsRefusedOnALockedPhone() {
+        // Review R5 #2: the trade manager's record, its open trades and its specialists are Boss's trades.
+        for (q in listOf("how is the trade manager doing", "why did Solo exit early", "how are the manager's specialists doing",
+            "which specialist made Solo exit?", "mute the OI specialist for Pine")) {
+            val a = M.asked(q)!!
+            assertEquals(TradeManager.LOCKED, TradeManager.refuseLocked(a, locked = true), q)
+            assertNull(TradeManager.refuseLocked(a, locked = false), q)
+        }
+        // The research's verdicts are not his trades.
+        assertNull(TradeManager.refuseLocked(M.asked("what did the research say about the trade manager")!!, locked = true))
+    }
 }

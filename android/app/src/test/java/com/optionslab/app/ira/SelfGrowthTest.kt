@@ -28,6 +28,14 @@ import java.time.LocalDate
  * you trying to learn?", "how did you grow this week?". Nothing acts.
  */
 class SelfGrowthTest : RobolectricTest() {
+
+    /** Asks Jarvis [q] and waits for his answer: these are answered off the main thread (review R5 #12). */
+    private fun askAndWait(q: String) {
+        val start = IraHub.state.value.messages.maxOfOrNull { it.id } ?: 0L
+        IraHub.ask(q)
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && IraHub.state.value.messages.none { it.fromIra && it.id > start }) Thread.sleep(10)
+    }
     private val mon = LocalDate.of(2026, 10, 12)
 
     private fun lesson(id: String, name: String, n: Int, rs: Double, end: LocalDate, topic: AgentLessons.Topic = AgentLessons.Topic.SPECIALIST) =
@@ -112,24 +120,24 @@ class SelfGrowthTest : RobolectricTest() {
 
     @Test fun jarvisAnswersFromTheRecords() {
         IraHub.init(context); IraHub.awaitLoadedBlocking()
-        IraHub.ask("is the app healthy?")
+        askAndWait("is the app healthy?")
         assertTrue(IraHub.state.value.messages.last().text, IraHub.state.value.messages.last().text.startsWith("Yes, Boss: the app is healthy."))
         val now = System.currentTimeMillis()
         var hb = HealthBook.Book()
         repeat(3) { hb = HealthBook.stall(hb, now - 60_000L * it, 1_300, "Choreographer.doFrame in BrainSection.invoke") }
         AppHealth.setForTest(hb)
-        IraHub.ask("why was the app slow?")
+        askAndWait("why was the app slow?")
         val slow = IraHub.state.value.messages.last().text
         assertTrue(slow, slow.startsWith("Today the screen stalled 3 times, longest 1.3 s: mostly in BrainSection.invoke (3)."))
-        IraHub.ask("is the app healthy?")
+        askAndWait("is the app healthy?")
         assertTrue(IraHub.state.value.messages.last().text.startsWith("Not quite, Boss. Today: 3 stalls"))
         val goal = LearningGoals.next(LearningGoals.Book(), listOf(lesson("spec:liquidity:oi", "The OI specialist on Liquidity 15+5", 12, -6_000.0, mon)),
             emptyMap(), mon)
         SelfGrowth.setForTest(goal, listOf(GrowthReport.Week(mon, learned = 2, made = 1, kept = 1)))
-        IraHub.ask("what are you trying to learn?")
+        askAndWait("what are you trying to learn?")
         val g = IraHub.state.value.messages.last().text
         assertTrue(g, g.startsWith("What I'm trying to learn next, Boss:\n• Need 18 more Liquidity 15+5 trades to judge the OI specialist"))
-        IraHub.ask("how did you grow this week?")
+        askAndWait("how did you grow this week?")
         val w = IraHub.state.value.messages.last().text
         assertTrue(w, w.startsWith("How I grew, week of 12–16 Oct, Boss:\n• Lessons: 2 lessons learned or confirmed, 0 retired."))
         assertTrue(w, "• Autopilot: 1 change made, 1 kept and 0 reverted this week." in w)

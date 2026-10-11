@@ -32,6 +32,14 @@ import java.time.LocalTime
  * learning" by voice, and a voice raise refused; a paper probation that got worse reverting itself; Jarvis's answers.
  */
 class AutopilotTest : RobolectricTest() {
+
+    /** Asks Jarvis [q] and waits for his answer: these are answered off the main thread (review R5 #12). */
+    private fun askAndWait(q: String) {
+        val start = IraHub.state.value.messages.maxOfOrNull { it.id } ?: 0L
+        IraHub.ask(q)
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && IraHub.state.value.messages.none { it.fromIra && it.id > start }) Thread.sleep(10)
+    }
     private lateinit var day: LocalDate
 
     private fun at(t: LocalTime) { Market.testClock = Clock.fixed(day.atTime(t).atZone(IST).toInstant(), IST) }
@@ -228,12 +236,12 @@ class AutopilotTest : RobolectricTest() {
             AutoChange.Evidence(20, -2_000.0, AgentLessons.Confidence.BUILDING, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER, null, -1, -1,
             what = "Night (R3)'s new paper entries")
         Autopilot.setForTest(com.optionslab.ira.Experiments.start(b, pause, day, ms(day)))
-        IraHub.ask("how sure are you about the oi specialist")
+        askAndWait("how sure are you about the oi specialist")
         val sure = IraHub.state.value.messages.last()
         assertTrue(sure.fromIra)
         assertTrue(sure.text, sure.text.startsWith("How sure I am about the oi specialist, Boss: "))
         assertTrue(sure.text, "q 0.002" in sure.text && "strong" in sure.text && "its test: deciding: " in sure.text)
-        IraHub.ask("what experiments are running")
+        askAndWait("what experiments are running")
         val exps = IraHub.state.value.messages.last().text
         assertTrue(exps, exps.startsWith("1 paper experiment is running, Boss"))
         assertTrue(exps, "Night (R3)'s new paper entries: on → paused on alternate paper trades" in exps && "Trials so far: 2" in exps)
@@ -289,14 +297,14 @@ class AutopilotTest : RobolectricTest() {
         IraHub.init(context); IraHub.awaitLoadedBlocking()
         Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
         Autopilot.run(day, healthOnly = false)
-        IraHub.ask("what did you change today")
+        askAndWait("what did you change today")
         assertTrue(IraHub.state.value.messages.last().text.startsWith("Today, Boss:"))
-        IraHub.ask("why did you pause night")
+        askAndWait("why did you pause night")
         assertTrue(IraHub.state.value.messages.last().text.contains("because Night (R3) loses money on paper"))
-        IraHub.ask("how is autopilot doing")
+        askAndWait("how is autopilot doing")
         assertTrue(IraHub.state.value.messages.last().text.startsWith("Autopilot learning is safe:"))
         // "Undo your last change": a request, not done until Boss says yes.
-        IraHub.ask("undo your last change")
+        askAndWait("undo your last change")
         assertEquals(1, IraHub.state.value.pending.size)
         assertTrue("night_r3" in SmartWorkers.settings.value.paused)
         IraHub.confirm(IraHub.state.value.pending.first())

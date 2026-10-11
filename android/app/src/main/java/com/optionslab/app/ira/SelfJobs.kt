@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    for its replay ([BotReplayStore]);
  *  - from the 1st of a month: the month before's automation scorecard ([MonthlyScorecard]), a sheet and one notification.
  *
- * Its small files live in noBackupFilesDir/self (never the vault, never a backup). Not in IraGoldAlgo.
+ * Its small files live in noBackupFilesDir/self (never a backup); today's lesson there is sealed with the vault. Not in IraGoldAlgo.
  */
 object SelfJobs {
     private const val DIR = "self"
@@ -56,7 +56,7 @@ object SelfJobs {
         BossTradeLog.init(context)
         MonthlyScorecard.init(context)
         com.optionslab.app.work.BackgroundBudget.init(context)
-        if (enabled()) scope.launch { runCatching { _lesson.value = DailyLesson.decode(dir()?.let { File(it, LESSON) }?.takeIf { it.isFile }?.readText()) } }
+        if (enabled()) scope.launch { runCatching { _lesson.value = readLesson() } }
     }
 
     internal fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }
@@ -69,6 +69,22 @@ object SelfJobs {
             tmp.writeText(text)
             if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
         }
+    }
+
+    /**
+     * Today's lesson is sealed with the [com.optionslab.app.security.Vault] (it can carry Boss's own habit and a bot's rupees;
+     * review R5 #4). A file that does not open (an older plain one) is dropped, never read as plain text.
+     */
+    private fun readLesson(): DailyLesson.Lesson? {
+        val f = dir()?.let { File(it, LESSON) }?.takeIf { it.isFile } ?: return null
+        val plain = runCatching { com.optionslab.app.security.Vault.readFile(f) }.getOrNull()
+        if (plain == null) { runCatching { f.delete() }; return null }
+        return DailyLesson.decode(String(plain, Charsets.UTF_8))
+    }
+
+    private fun writeLesson(text: String) {
+        val d = dir() ?: return
+        runCatching { com.optionslab.app.security.Vault.writeFile(File(d, LESSON), text.toByteArray(Charsets.UTF_8)) }
     }
 
     private fun marks(): Map<String, String> = marks ?: runCatching {
@@ -139,18 +155,18 @@ object SelfJobs {
         val l = DailyLesson.of(today, moves, bots, habit)
         if (l != null) {
             _lesson.value = l
-            write(LESSON, DailyLesson.encode(l))
+            writeLesson(DailyLesson.encode(l))
             runCatching { Diag.record("lesson", "today's lesson: ${l.kind.words}") }
         }
         return l
     }
 
     /** "What's today's lesson?" (a worker thread). */
-    fun answerLesson(): String {
+    fun answerLesson(locked: Boolean = false): String {
         val today = Market.today()
         val closed = !Market.isTradingDay(today) || Market.minuteNow() >= CLOSE
         val l = _lesson.value?.takeIf { it.day == today } ?: if (closed && Market.isTradingDay(today)) buildLesson(today) else null
-        return DailyLesson.say(l, closed)
+        return DailyLesson.say(l, closed, locked)
     }
 
     /** TEST ONLY: nothing kept. */

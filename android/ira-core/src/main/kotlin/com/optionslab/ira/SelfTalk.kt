@@ -66,6 +66,9 @@ object SelfTalk {
 
     private val REPLAY = Regex(LEAD + "(?:replay|walk me through|go over) (?:my |the )?(?:last|latest|most recent) (?<what>.{0,30}?)(?:bot )?trade" + TAIL)
 
+    private val BOT_WORD = Regex(" (bot|bots|bot s|algo|algos|arm|arms|strategy|strategys|strategies) ")
+    private val STRATEGY_WORDS = Regex(" (orb|fresh|sweep|range fade|fade|liquidity|hero|solo|pine|night|vix|vixdiv|mcx|silver) ")
+
     /** The words "explain X" must name to be a study request (so "explain todays move" never is). */
     private val STUDY_TOPICS = Regex("(vwap|value area|order flow|orderflow|open interest| oi |vix|orb|opening range|liquidity|hero|night|" +
         "divergence|mcx|solo|pine|costs?|charges|random|multiple testing|trade manager|autopilot|strategy lab|the lab|risk|position siz|sizing|" +
@@ -86,7 +89,9 @@ object SelfTalk {
         if (RULES.containsMatchIn(t)) return Ask(Kind.RULES)
         REPLAY.find(t)?.let { m ->
             val s = m.groups["what"]?.value.orEmpty().trim()
-            return Ask(Kind.REPLAY, s.ifEmpty { null })
+            // A bot's trade only when "bot" or a strategy is named: "go over my last trade" / "replay my last trade" is Boss's own
+            // trade ([TradeReplay]), never the newest bot trade (review R5 #5).
+            if (BOT_WORD.containsMatchIn(t) || STRATEGY_WORDS.containsMatchIn(" $s ")) return Ask(Kind.REPLAY, s.ifEmpty { null })
         }
         STUDY.find(t)?.let { m ->
             val verb = m.groups["verb"]?.value.orEmpty()

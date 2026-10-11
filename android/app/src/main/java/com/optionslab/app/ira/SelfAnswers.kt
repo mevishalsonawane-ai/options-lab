@@ -19,7 +19,7 @@ object SelfAnswers {
         SelfTalk.Kind.HABITS -> if (locked) LOCKED else BossTradeLog.sayHabits()
         SelfTalk.Kind.RULES -> if (locked) LOCKED else BossTradeLog.sayRules()
         SelfTalk.Kind.STUDY -> StudyLibrary.answer(context, a.subject.orEmpty())
-        SelfTalk.Kind.LESSON -> SelfJobs.answerLesson()
+        SelfTalk.Kind.LESSON -> SelfJobs.answerLesson(locked)
         SelfTalk.Kind.REPLAY -> if (locked) LOCKED else BotReplayStore.answer(a.subject)
     }
 }

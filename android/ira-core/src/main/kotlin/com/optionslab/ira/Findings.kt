@@ -258,6 +258,12 @@ object Findings {
     private val ASK_SAY = Regex(" (saying|say about|think about|thinking about|thinking on|seeing on|seeing in|finding on|findings|consensus|agree on|agree about) ")
 
     /** "what are the bots saying about banknifty?" - the index named, or "" when none is (all of them); null: not this question. */
+    /** The bots' findings name what the strategies saw and did: never said on a locked phone (review R5 #2). */
+    const val LOCKED = "Unlock the phone for the bots' findings, Boss."
+
+    /** [LOCKED] while [locked], else null (go on and answer). */
+    fun refuseLocked(locked: Boolean): String? = if (locked) LOCKED else null
+
     fun asked(text: String): String? {
         val t = " " + text.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "
         if (!ASK_BOTS.containsMatchIn(t) || !ASK_SAY.containsMatchIn(t)) return null

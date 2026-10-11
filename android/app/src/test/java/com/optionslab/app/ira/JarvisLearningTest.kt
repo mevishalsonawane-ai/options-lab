@@ -30,6 +30,14 @@ import java.time.LocalTime
  * OI specialist?" - with a strong lesson added to the trade manager's own answer. Nothing is changed by itself.
  */
 class JarvisLearningTest : RobolectricTest() {
+
+    /** Asks Jarvis [q] and waits for his answer: these are answered off the main thread (review R5 #12). */
+    private fun askAndWait(q: String) {
+        val start = IraHub.state.value.messages.maxOfOrNull { it.id } ?: 0L
+        IraHub.ask(q)
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && IraHub.state.value.messages.none { it.fromIra && it.id > start }) Thread.sleep(10)
+    }
     private lateinit var day: LocalDate
 
     private fun at(t: LocalTime) { Market.testClock = Clock.fixed(day.atTime(t).atZone(IST).toInstant(), IST) }
@@ -144,17 +152,17 @@ class JarvisLearningTest : RobolectricTest() {
     @Test fun hisAnswersCarryTheEvidence() {
         IraHub.init(context); IraHub.awaitLoadedBlocking()
         JarvisLearning.setForTest(AgentLessons.pass(AgentLessons.Book(), inputs(day)).book)
-        IraHub.ask("what have you learned")
+        askAndWait("what have you learned")
         val all = IraHub.state.value.messages.last()
         assertTrue(all.fromIra)
         assertTrue(all.text, all.text.startsWith("From the agents I've learned "))
         assertTrue(all.facts.isNotEmpty() && all.facts.all { Regex("\\d").containsMatchIn(it) })
-        IraHub.ask("why do you think that")
+        askAndWait("why do you think that")
         val why = IraHub.state.value.messages.last().text
         assertTrue(why, why.startsWith("The evidence, Boss: ") && "40 settled votes" in why)
-        IraHub.ask("how are you growing")
+        askAndWait("how are you growing")
         assertTrue(IraHub.state.value.messages.last().text.startsWith("How I'm growing, Boss: "))
-        IraHub.ask("what do you know about the OI specialist")
+        askAndWait("what do you know about the OI specialist")
         assertTrue(IraHub.state.value.messages.last().text.contains("The OI specialist on Pine hurts"))
         // The trade manager's own answer gets one strong lesson, said as his.
         IraHub.ask("how is the trade manager doing")

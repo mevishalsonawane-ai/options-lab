@@ -77,7 +77,11 @@ object DailyLesson {
     }
 
     /** "What's today's lesson?" */
-    fun say(l: Lesson?, closed: Boolean): String = when {
+    /** Said on a locked phone for a lesson from Boss's own trades or a bot's rupees (review R5 #4); a market move's is said. */
+    const val LOCKED = "Unlock the phone for today's lesson, Boss: it is from your own trades and the bots' rupees."
+
+    fun say(l: Lesson?, closed: Boolean, locked: Boolean = false): String = when {
+        l != null && locked && l.kind != Kind.MOVE -> LOCKED
         l != null -> "Today's lesson, from ${l.kind.words}: ${l.text}"
         !closed -> "Today's lesson comes after the close, Boss, from today's own records."
         else -> "No lesson today, Boss: nothing in today's records was clear enough to learn from - no big move saved, no bot trade with a clear lesson, none of your own trades touching a habit."

@@ -1740,7 +1740,8 @@ object IraHub {
         // old autopilot's command. Not in IraGoldAlgo.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) {
             val autoVoice = runCatching { com.optionslab.ira.AutoChange.asked(q) }.getOrNull()
-            if (autoVoice != null && (autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.OFF || autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.RAISE)) {
+            if (autoVoice != null && (autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.OFF || autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.RAISE ||
+                    autoVoice.kind == com.optionslab.ira.AutoChange.AskKind.SHADOW)) {
                 val said = runCatching { Autopilot.answer(autoVoice) }.getOrElse { "I could not change Autopilot learning just now, Boss." }
                 _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
                 return
@@ -1934,8 +1935,9 @@ object IraHub {
         val growthAsk = if (com.optionslab.app.BuildConfig.JARVIS && !bundled && parsed.order == null && parsed.command == null)
             runCatching { SelfGrowth.asked(q) }.getOrNull() else null
         if (growthAsk != null) {
-            val said = runCatching { SelfGrowth.answer(growthAsk) }.getOrElse { "I could not read my own records just now, Boss." }
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            // Off the main thread: its books may be read the first time (review R5 #12).
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) { reply(runCatching { SelfGrowth.answer(growthAsk) }.getOrElse { "I could not read my own records just now, Boss." }) }
             return
         }
         // "Run a self check": each part Jarvis needs, working or not, from what the app knows now (no account figures).
@@ -3819,8 +3821,11 @@ object IraHub {
         val labAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.LabTalk.asked(q) }.getOrNull() else null
         if (labAsk != null) {
-            val said = runCatching { com.optionslab.app.data.VariantRunner.answer(labAsk) }.getOrElse { "I could not read the strategy lab just now, Boss." }
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            // Off the main thread: the lab's files may be read the first time (review R5 #12).
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.VariantRunner.answer(labAsk) }.getOrElse { "I could not read the strategy lab just now, Boss." })
+            }
             return true
         }
         // Autopilot learning (11 Oct): "what did you change today?", "why did you mute the OI specialist?", "how is autopilot
@@ -3830,8 +3835,9 @@ object IraHub {
             runCatching { com.optionslab.ira.AutoChange.asked(q) }.getOrNull() else null
         if (autoAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
-            val said = runCatching { Autopilot.answer(autoAsk) }.getOrElse { "I could not read Autopilot's log just now, Boss." }
-            _state.update { it.copy(messages = (it.messages + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { Autopilot.answer(autoAsk) }.getOrElse { "I could not read Autopilot's log just now, Boss." })
+            }
             return true
         }
         // "Why do you think that?" / "what's the evidence?" right after a lessons answer (11 Oct): each lesson's evidence - how
@@ -3839,8 +3845,8 @@ object IraHub {
         // after anything else these words go on as before. Nothing acts. Not in IraGoldAlgo.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null &&
             runCatching { com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text) }.getOrDefault(false)) {
-            val why = runCatching { JarvisLearning.why() }.getOrElse { "I could not read my lessons just now, Boss." }
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, why)).takeLast(MAX_MESSAGES)) }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) { reply(runCatching { JarvisLearning.why() }.getOrElse { "I could not read my lessons just now, Boss." }) }
             return true
         }
         // "What have you learned?", "what did you learn today?", "how are you growing?", "what do you know about Liquidity / the
@@ -3851,8 +3857,11 @@ object IraHub {
         val lessonsAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
             runCatching { com.optionslab.ira.AgentLessons.asked(q) }.getOrNull() else null
         if (lessonsAsk != null) {
-            val (said, facts) = runCatching { JarvisLearning.answer(lessonsAsk) }.getOrElse { "I could not read my lessons just now, Boss." to emptyList() }
-            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said, facts = facts)).takeLast(MAX_MESSAGES)) }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            scope.launch(Dispatchers.IO) {
+                val (said, facts) = runCatching { JarvisLearning.answer(lessonsAsk) }.getOrElse { "I could not read my lessons just now, Boss." to emptyList() }
+                _state.update { it.copy(messages = (it.messages + Msg(true, said, facts = facts)).takeLast(MAX_MESSAGES)) }
+            }
             return true
         }
         // "What are the bots saying about BankNifty?" (10 Oct): the findings the strategies and checkers posted on the index -
@@ -3862,6 +3871,8 @@ object IraHub {
             runCatching { com.optionslab.ira.Findings.asked(q) }.getOrNull() else null
         if (findingsAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            // What the bots saw and did is Boss's own: never said on a locked phone (review R5 #2).
+            com.optionslab.ira.Findings.refuseLocked(phoneLocked())?.let { reply(it); return true }
             reply(runCatching { com.optionslab.app.data.SmartWorkers.answer(findingsAsk) }.getOrElse { "I could not read the bots' findings just now, Boss." })
             return true
         }
@@ -3875,6 +3886,18 @@ object IraHub {
             runCatching { com.optionslab.ira.TradeManager.asked(q) }.getOrNull() else null
         if (managerAsk != null) {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            // His trades' record and open trades: never said on a locked phone (review R5 #2).
+            com.optionslab.ira.TradeManager.refuseLocked(managerAsk, phoneLocked())?.let { reply(it); return true }
+            // "Mute the OI specialist for Pine" by voice: put to Boss first, always (a misheard question never mutes; R5 #1).
+            val team = managerAsk.team
+            val muteFam = managerAsk.family
+            val muteId = team?.specialist
+            if (team?.kind == com.optionslab.ira.TradeManager.TeamKind.MUTE && muteFam != null && muteId != null) {
+                val who = "the ${com.optionslab.ira.ManagerTeam.nameOf(muteId)} specialist for ${com.optionslab.ira.TradeManager.familyName(muteFam)}"
+                offer("mute $who", "Boss, mute a specialist?", "Shall I mute $who? The manager then goes back toward the original rules for it.",
+                    suspend { com.optionslab.app.data.ManagerSpecialists.mute(muteFam, muteId, "you (by voice)") }, alwaysAsk = true)
+                return true
+            }
             reply(runCatching { com.optionslab.app.data.TradeManagerHost.answer(managerAsk) +
                 // One strong lesson of Jarvis's about it, where he has one (11 Oct; memory only).
                 (JarvisLearning.appendFor(managerAsk.family, if (managerAsk.family == null) com.optionslab.ira.AgentLessons.Topic.MANAGER else null)?.let { " $it" } ?: "") }

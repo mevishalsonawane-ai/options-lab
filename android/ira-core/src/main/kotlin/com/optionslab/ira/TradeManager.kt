@@ -750,15 +750,28 @@ object TradeManager {
     private val FAMILY_WORDS = listOf("solo" to Regex(" solo "), "pine" to Regex(" (pine|script|scripts) "),
         "liquidity" to Regex(" liquidity "), "hero" to Regex(" hero "), "orb_fresh" to Regex(" orb fresh "),
         "orb_sweep" to Regex(" (orb )?sweep "), "range_fade" to Regex(" range fade "), "orb" to Regex(" orb "), "silver-night" to Regex(" silver "),
-        "night" to Regex(" night "), "vixdiv" to Regex(" vix "), "mcx-eve" to Regex(" evening "), "mcx-morning" to Regex(" morning "),
-        "mcx-trend" to Regex(" trend "))
+        // The MCX arms only with "MCX" beside the time word: "this morning" / "this evening" / "the trend" are time and market
+        // words, not a strategy (review R5 #11). Night last, and never "last night" / "at night": only when nothing else is named.
+        "vixdiv" to Regex(" vix "), "mcx-eve" to Regex(" (mcx eve|mcx evening|evening mcx) "),
+        "mcx-morning" to Regex(" (mcx morning|morning mcx) "), "mcx-trend" to Regex(" (mcx trend|trend mcx) "),
+        "night" to Regex("(?<!last|at|every|each|to|tomorrow|tonight|good) night "))
 
     private val SPECIALIST_WORD = Regex(" specialists? ")
-    private val UNMUTE_WORDS = Regex(" (un ?mute|unmuted|bring back|switch on|turn on|enable|restore) ")
-    private val MUTE_WORDS = Regex(" (mute|muted|silence|switch off|turn off|disable|ignore) ")
+    // A mute or un-mute only as a request said first ("mute the OI specialist for Pine", "please un-mute ..."): a question or a
+    // negation ("is the OI specialist muted for Pine?", "why was it muted", "don't mute ...", "should I ignore ...") is HOW
+    // and changes nothing (review R5 #1).
+    private const val CMD_LEAD = "^ (please |jarvis |ira |ok |okay |now |(can|could|would|will) you )*"
+    private val UNMUTE_WORDS = Regex("$CMD_LEAD(un ?mute|bring back|switch on|turn on|enable|restore) ")
+    private val MUTE_WORDS = Regex("$CMD_LEAD(mute|silence|switch off|turn off|disable|ignore) ")
     private val RESEARCH_WORDS = Regex(" (research|researched|study|studies|r12|backtest|backtests|backtested|tested|evidence) ")
     private val WHICH_WORDS = Regex(" (which|who|what) ")
     private val EXIT_WORDS = Regex(" (exit|exited|exits|exiting|out|sell|sold|close|closed|cut|extend|extended) ")
+
+    /** The manager's record, its open trades and its specialists' are Boss's trades: never said on a locked phone (R5 #2). */
+    const val LOCKED = "Unlock the phone for that, Boss: the trade manager's record is your trades."
+
+    /** [LOCKED] for [a] while [locked] (the research's verdicts are not his trades and are said), else null. */
+    fun refuseLocked(a: Ask, locked: Boolean): String? = if (locked && !a.research) LOCKED else null
 
     fun asked(text: String): Ask? {
         val t = " " + text.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim() + " "

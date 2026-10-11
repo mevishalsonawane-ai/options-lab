@@ -170,4 +170,11 @@ class FindingsTest {
         assertTrue("exits never wait" in a)
         assertTrue(Findings.answer("NIFTY", all, t0, hhmm).startsWith("Nothing from the bots on NIFTY"))
     }
+
+    @Test fun theBotsFindingsAreRefusedOnALockedPhone() {
+        // Review R5 #2: what the bots saw and did is never said on a locked phone.
+        assertEquals(Findings.LOCKED, Findings.refuseLocked(locked = true))
+        assertNull(Findings.refuseLocked(locked = false))
+        assertTrue(Findings.asked("what are the bots saying about banknifty") != null)
+    }
 }

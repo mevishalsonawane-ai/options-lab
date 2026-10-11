@@ -36,4 +36,17 @@ class DailyLessonTest {
         assertTrue(DailyLesson.say(null, closed = true).startsWith("No lesson today"))
         assertTrue(DailyLesson.say(null, closed = false).contains("after the close"))
     }
+
+    @Test fun aLessonFromHisTradesOrABotsRupeesIsNotSaidOnALockedPhone() {
+        // Review R5 #4: a habit or a bot trade's lesson carries Boss's own trades and rupees; a market move's is said.
+        val bot = DailyLesson.Lesson(d0, DailyLesson.Kind.BOT, "Pine lost ₹900", "Pine · EMA trailed the original rules by ₹650")
+        val habit = DailyLesson.Lesson(d0, DailyLesson.Kind.HABIT, "Your habit", "Today you made a trade your record says loses.")
+        val move = DailyLesson.Lesson(d0, DailyLesson.Kind.MOVE, "BankNifty jumped", "0.52% up in one minute at 10:32")
+        for (l in listOf(bot, habit)) {
+            assertEquals(DailyLesson.LOCKED, DailyLesson.say(l, closed = true, locked = true))
+            assertTrue("₹" !in DailyLesson.say(l, closed = true, locked = true))
+            assertTrue(DailyLesson.say(l, closed = true, locked = false).contains(l.text))
+        }
+        assertTrue(DailyLesson.say(move, closed = true, locked = true).contains("0.52% up"))
+    }
 }

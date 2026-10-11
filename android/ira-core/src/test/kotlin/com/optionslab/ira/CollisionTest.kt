@@ -3882,4 +3882,54 @@ class CollisionTest {
             "what happened today", "how was today", "what happened next monday", "recap my trades yesterday", "liquidity recap of yesterday"))
             assertTrue(DayRecap.asked(s) == null, "$s: ${audit.feature(s)}")
     }
+
+    /**
+     * Review R5 (11 Oct): questions about a specialist never mute or start anything; "go over my last trade" is Boss's own
+     * replay; time words ("this morning", "last night") are not the MCX or Night strategies.
+     */
+    @Test fun reviewR5VoiceRouting() {
+        val audit = CoverageTest()
+        val startStop = setOf(Command.Kind.START_ONE, Command.Kind.STOP_ONE, Command.Kind.START_ALL, Command.Kind.STOP_ALL)
+        // #1: a question or a negation about a mute is HOW, never MUTE (nor UNMUTE).
+        for (q in listOf("is the OI specialist muted for Pine?", "why was the OI specialist muted for pine", "don't mute the OI specialist for pine",
+            "should I ignore the OI specialist for pine", "was the vwap specialist for solo unmuted", "is the OI specialist turned off for pine")) {
+            val a = TradeManager.asked(q)
+            assertTrue(a?.team != null, "$q: $a")
+            assertEquals(TradeManager.TeamKind.HOW, a!!.team!!.kind, q)
+            assertTrue(Ask.parse(q).command?.kind !in startStop, q)
+        }
+        // A request said first still reads as one (the hub then puts it to Boss: yes or no, always).
+        assertEquals(TradeManager.TeamAsk(TradeManager.TeamKind.MUTE, "oi"), TradeManager.asked("mute the OI specialist for Pine")!!.team)
+        assertEquals(TradeManager.TeamAsk(TradeManager.TeamKind.MUTE, "oi"), TradeManager.asked("please mute the OI specialist for Pine")!!.team)
+        assertEquals(TradeManager.TeamAsk(TradeManager.TeamKind.UNMUTE, "oi"), TradeManager.asked("turn on the OI specialist for pine")!!.team)
+        // #3: "turn on the OI specialist for pine" never starts (or stops) the Pine strategy.
+        for (q in listOf("turn on the OI specialist for pine", "switch on the OI specialist for pine", "turn off the OI specialist for pine",
+            "start the vwap specialist for solo", "stop the flow specialist for pine", "disable the OI specialists for pine")) {
+            assertTrue(Ask.parse(q).command?.kind !in startStop, "$q: ${Ask.parse(q).command}")
+            assertEquals("TradeManager", audit.feature(q), q)
+        }
+        // ...while the strategy itself still starts and stops as before.
+        assertEquals(Command.Kind.START_ONE, Ask.parse("turn on pine").command?.kind)
+        assertEquals(Command.Kind.STOP_ONE, Ask.parse("stop orb").command?.kind)
+        // #5: "go over my last trade" is Boss's own replay, never the newest bot trade's.
+        for (q in listOf("go over my last trade", "replay my last trade", "walk me through my last trade")) {
+            assertEquals(null, SelfTalk.asked(q), q)
+            assertEquals(TradeReplay.Scope.LAST, TradeReplay.asked(q), q)
+            assertEquals("Account:REPLAY", audit.feature(q), q)
+        }
+        assertEquals(SelfTalk.Ask(SelfTalk.Kind.REPLAY, null), SelfTalk.asked("replay my last bot trade"))
+        assertEquals(SelfTalk.Ask(SelfTalk.Kind.REPLAY, "liquidity"), SelfTalk.asked("go over my last liquidity trade"))
+        // #11: "this morning" is a time, not MCX morning; "last night" not the Night strategy.
+        for (q in listOf("how are the specialists doing this morning", "how did the specialists do last night", "how are the manager's specialists doing this evening",
+            "how is the trade manager doing this morning", "what is the trend of the trade manager")) {
+            // Either the manager's own question with no strategy named, or not the manager's at all - never an MCX or Night arm.
+            assertEquals(null, TradeManager.asked(q)?.family, q)
+        }
+        assertEquals(TradeManager.TeamKind.HOW, TradeManager.asked("how are the manager's specialists doing this evening")!!.team!!.kind)
+        assertEquals("mcx-morning", TradeManager.asked("why did MCX morning exit early")!!.family)
+        assertEquals("mcx-eve", TradeManager.asked("how is the trade manager doing on mcx evening")!!.family)
+        assertEquals("mcx-trend", TradeManager.asked("which specialist made mcx trend exit")!!.family)
+        assertEquals("night", TradeManager.asked("why did night exit early")!!.family)
+        assertEquals("silver-night", TradeManager.asked("why did US night silver exit early")!!.family)
+    }
 }

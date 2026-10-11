@@ -221,7 +221,14 @@ class VariantRunnerTest : RobolectricTest() {
 
     @Test fun jarvisAnswersTheLabsQuestions() {
         IraHub.init(context); IraHub.awaitLoadedBlocking()
-        fun ask(q: String): String { IraHub.ask(q); return IraHub.state.value.messages.last().text }
+        fun ask(q: String): String {
+            // Answered off the main thread (review R5 #12): wait for Jarvis's answer.
+            val start = IraHub.state.value.messages.maxOfOrNull { it.id } ?: 0L
+            IraHub.ask(q)
+            val end = System.currentTimeMillis() + 10_000
+            while (System.currentTimeMillis() < end && IraHub.state.value.messages.none { it.fromIra && it.id > start }) Thread.sleep(10)
+            return IraHub.state.value.messages.last().text
+        }
         assertTrue(ask("how are my strategies improving?").startsWith("No strategy is running"))
         assertTrue(ask("did you find any new strategy?").startsWith("Not yet"))
         assertTrue(ask("how many ideas have you tried?").startsWith("0 new ideas tried"))

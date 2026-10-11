@@ -350,7 +350,10 @@ object Commands {
             "|^(apni |apna |tumhari |aapki )?(awaz|aawaz|awaaz|aavaz|avaaz)\\b" +
             // "Stop the follow up questions", "follow up band karo", "turn off follow ups": Jarvis's question offered at the end of
             // an answer ([NextAsk]'s undo, round 25), never a strategy called "follow up questions".
-            "|^(the |your |these |ye |yeh )?(follow ?ups?|follow ?up (questions?|offers?|suggestions?|sawal|sawaal)|next questions?|next question offers?)$")
+            "|^(the |your |these |ye |yeh )?(follow ?ups?|follow ?up (questions?|offers?|suggestions?|sawal|sawaal)|next questions?|next question offers?)$" +
+            // "Turn on the OI specialist for Pine" is the trade manager's specialist ([TradeManager.asked]), never the Pine strategy
+            // started or stopped (review R5 #3).
+            "|\\bspecialists?\\b")
         rx("^ (stop|disarm|switch off|turn off|pause|halt) $ARM_NOUN ?(.+)$").find(s)?.let { m ->
             val what = m.groupValues[2].trim()
             if (what.isNotEmpty() && !notArm.containsMatchIn(what) && !habitUndo(s)) return one(Command.Kind.STOP_ONE, what)

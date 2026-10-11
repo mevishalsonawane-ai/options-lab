@@ -32,7 +32,11 @@ class SelfTalkTest {
         // "Explain" alone is not a study request unless it names a study topic.
         assertNull(SelfTalk.asked("explain today's move"))
         assertEquals(SelfTalk.Ask(SelfTalk.Kind.REPLAY, "liquidity"), SelfTalk.asked("Replay my last Liquidity trade"))
-        assertEquals(SelfTalk.Ask(SelfTalk.Kind.REPLAY, null), SelfTalk.asked("replay my last trade"))
+        assertEquals(SelfTalk.Ask(SelfTalk.Kind.REPLAY, null), SelfTalk.asked("replay my last bot trade"))
+        // Boss's own last trade is his replay ([TradeReplay]), never the newest bot trade (review R5 #5).
+        for (s in listOf("replay my last trade", "go over my last trade", "walk me through my last trade", "go over my latest losing trade"))
+            assertNull(SelfTalk.asked(s), s)
+        assertEquals(SelfTalk.Ask(SelfTalk.Kind.REPLAY, "orb"), SelfTalk.asked("go over the last orb trade"))
     }
 
     @Test fun ordinaryQuestionsAndOrdersAreNotTaken() {
