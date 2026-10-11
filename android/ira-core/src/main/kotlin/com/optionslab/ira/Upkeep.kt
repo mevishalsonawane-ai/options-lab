@@ -55,7 +55,12 @@ object Upkeep {
         LiquidityInsight.KEY_PREFIX,
         // When the Ira page was last seen and the last "catch me up" (jarvis.catchup.): this phone's own moments - restored
         // from a file they would hide today's notes from the catch-up (07 Oct).
-        CatchUp.KEY_PREFIX)
+        CatchUp.KEY_PREFIX,
+        // The trade manager's policy (and per-arm policies): ACT may close or trail live positions - a file must never
+        // switch it on (review 2, 11 Oct).
+        "trademanager.",
+        // The regime book (its live approval) and the learning-freeze line: safety settings, never from a file (review 2).
+        "regime.", "learn.freeze")
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }
