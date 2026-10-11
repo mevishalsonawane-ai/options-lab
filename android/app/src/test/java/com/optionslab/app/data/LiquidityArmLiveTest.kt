@@ -64,7 +64,7 @@ class LiquidityArmLiveTest : RobolectricTest() {
      * The arms' saved state: both liquidity books armed in Live, the 5-minute book with a signal waiting for approval, at
      * [lots] a trade (null: no size saved, a book from before the setting).
      */
-    private fun state(expires: LocalDateTime = now.plusMinutes(9), lots: Int? = 1, held: JSONArray = JSONArray()) {
+    private fun state(expires: LocalDateTime = now.plusMinutes(9), lots: Int? = 1, held: JSONArray = JSONArray(), noticed: Boolean? = null) {
         val books = listOf("liquidity15", "liquidity5")
         fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
         val bar = maxOf(now.minusMinutes(1), now.toLocalDate().atStartOfDay())
@@ -74,7 +74,9 @@ class LiquidityArmLiveTest : RobolectricTest() {
             .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE))
             .put("positions", held)
             .put("pending", JSONObject().put("liquidity5", JSONObject().put("right", "CE").put("bar", bar.toString())
-                .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0)))
+                .put("expires", expires.toString()).put("strike", 52_000).put("level", 52_050.0)
+                // The account the approval notice named (review G2-1); absent: a signal saved before it was kept.
+                .apply { noticed?.let { put("live", it) } }))
             // A size saved by Boss's own choice (kept by the 08 Oct one-lot change).
             .apply { lots?.let { put("liqLots", it); put("liqLotsChosen", true) } })
     }
@@ -283,5 +285,79 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("30", kite.placed.first().form["quantity"])
         val s = FlowGate.signalsForTest().single()
         assertEquals(com.optionslab.ira.OrderFlow.Agreement.AGREES, s.agreement); assertFalse(s.skipped); assertTrue(s.live)
+    }
+
+    // ---- review G2-1 / G2-5 (11 Oct): the approval decides the account again; a park to paper never reaches Zerodha ----
+
+    /** The paper feed, served by a fake (no quote for the contract): a paper entry is refused without reaching the internet. */
+    private fun <T> withUpstox(body: () -> T): T { val u = com.optionslab.app.testing.FakeUpstox(); try { return body() } finally { u.close() } }
+
+    @Test fun parkedToPaperByItsReviewAnApprovalInLiveNeverReachesZerodha() = withUpstox {
+        state()
+        assertTrue(SmartWorkers.parkByAutopilot("liquidity") != null)
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertFalse(msg, msg == "Entered at Zerodha (live).")
+        assertTrue("nothing sent to Zerodha: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        assertFalse("no live position", row().open?.live == true)
+        assertNull("the approval is used up", row().pending)
+    }
+
+    @Test fun parkedToPaperItsApprovalAsksNoPinAndStillSendsNothing() = withUpstox {
+        state()
+        SmartWorkers.parkByAutopilot("liquidity")
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = false) }
+        assertFalse("a paper entry takes no PIN", msg == "The app is in Live: approve with your PIN on Home → Strategies.")
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    @Test fun aPaperNoticeIsNeverEnteredAtZerodha() {
+        // The notice said "Paper account" (the switch was in Paper, or it was parked then); now the app is in Live, unparked.
+        state(noticed = false)
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.startsWith("Not bought: the signal was for the paper account"))
+        assertTrue("nothing sent to Zerodha", kite.placed.isEmpty())
+        assertNull(row().open)
+        assertNull("the signal is used up: a new break asks again", row().pending)
+    }
+
+    @Test fun aLiveNoticeParkedSinceIsNotBoughtAnywhere() {
+        state(noticed = true)
+        SmartWorkers.parkByAutopilot("liquidity")
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.startsWith("Not bought: the signal was for Zerodha (live)"))
+        assertTrue(kite.placed.isEmpty())
+        assertNull(row().open)
+    }
+
+    @Test fun aLiveNoticeStillLiveIsEnteredWithThePinAsBefore() {
+        state(noticed = true)
+        assertEquals("The app is in Live: approve with your PIN on Home → Strategies.", runBlocking { OrbArms.approve("liquidity", pinConfirmed = false) })
+        assertTrue(kite.requests.isEmpty())
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertTrue(checkNotNull(row().open).live)
+    }
+
+    /** G2-5: under the arms' lock the park is read from memory only; not loaded yet counts as parked (fail closed). */
+    @Test fun theParkIsReadFromMemoryAndUnloadedCountsAsParked() = withUpstox {
+        val loaded = SmartWorkers::class.java.getDeclaredField("loaded").apply { isAccessible = true }
+        try {
+            loaded.setBoolean(null, false)
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            assertTrue("not loaded: parked", SmartWorkers.parkedToPaperNow("liquidity"))
+            SecurePrefs.countedThread = null
+            assertEquals("no settings read", 0L, SecurePrefs.readsForTest.get())
+            // The approval loads the parks off the lock first: a park the review saved is honoured after a restart.
+            SecurePrefs.put("brain.parked", "liquidity")
+            state()
+            val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+            assertFalse(msg, msg == "Entered at Zerodha (live).")
+            assertTrue(kite.placed.isEmpty())
+            assertTrue("loaded by then", loaded.getBoolean(null))
+            assertTrue(SmartWorkers.parkedToPaper("liquidity"))
+        } finally {
+            SecurePrefs.countedThread = null
+            SmartWorkers.resetForTest()
+        }
     }
 }

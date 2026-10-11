@@ -65,3 +65,36 @@ data class VixDivParams(
 ) {
     companion object { val DEFAULT = VixDivParams() }
 }
+
+/**
+ * Which account (paper or Zerodha) an arm's NEW entries go to (line-by-line review G2-1..G2-3, 11 Oct): decided once and
+ * shared by the signal's parameters, the approval notice, the approval itself and the strategy lab's record, so none of
+ * them can disagree. Exits are never decided here: an open position keeps its own account. Pure: no clock, no I/O.
+ */
+object ArmAccount {
+    /**
+     * A new entry of [arm]: live only when the app is in Live ([appLive]), the arm may trade on Zerodha (not paper-only), and -
+     * Liquidity 15+5 - its self-review has not parked it to paper ([parked]).
+     */
+    fun entry(arm: Arm, appLive: Boolean, parked: Boolean): Boolean = appLive && !arm.paperOnly && !(arm.liquidity && parked)
+
+    /**
+     * An approval of [arm]'s signal: the account [entry] decides now, or null when that is not the account the approval notice
+     * named ([noticed]; null for a signal saved before the notice kept it) - nothing is then entered, so the notice and the
+     * order never disagree (a paper notice never becomes a Zerodha order).
+     */
+    fun approval(arm: Arm, appLive: Boolean, parked: Boolean, noticed: Boolean?): Boolean? {
+        val live = entry(arm, appLive, parked)
+        return if (noticed != null && noticed != live) null else live
+    }
+
+    /**
+     * The strategy lab's account per lab key ([keyOf] an arm's source) for the [armed] arms: live when ANY armed arm of the key
+     * enters live ([live]) - one answer per key, whatever the arms' order.
+     */
+    fun byKey(armed: List<Arm>, keyOf: (String) -> String, live: (Arm) -> Boolean): Map<String, Boolean> {
+        val out = LinkedHashMap<String, Boolean>()
+        for (a in armed) { val k = keyOf(a.source); out[k] = out[k] == true || live(a) }
+        return out
+    }
+}

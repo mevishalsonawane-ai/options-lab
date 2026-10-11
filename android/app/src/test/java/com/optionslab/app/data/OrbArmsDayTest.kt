@@ -50,13 +50,16 @@ class OrbArmsDayTest : RobolectricTest() {
     /** A failed-break day for ORB Sweep: no break, but at 10:31 a wick to 54,060 that closes back at 53,950. */
     private var sweepDay = false
 
+    /** The 10:05 bar dips to 53,700 (after the 09:15-10:00 range): inside a longer opening range only (review G2-7). */
+    private var lateDip = false
+
     /** A failed-break day that then breaks above the range for good from this minute of day (null: never). */
     private var breakAt: Int? = null
 
     /** The index at the minute of day [m] (minutes since midnight). */
     private fun price(m: Int): Double = when {
         m < 10 * 60 + 5 -> swing[(m - (9 * 60 + 15)) % swing.size]
-        m < 10 * 60 + 30 -> 53_950.0
+        m < 10 * 60 + 30 -> if (lateDip && m >= 10 * 60 + 5 && m < 10 * 60 + 10) 53_700.0 else 53_950.0
         sweepDay && breakAt.let { it == null || m < it } -> 53_950.0
         else -> 54_150.0
     }
@@ -715,4 +718,58 @@ class OrbArmsDayTest : RobolectricTest() {
     }
 
     @Test fun inShadowTheOrbTradesExactlyAsBefore() = ManagerShadow.rerun("orb", { looks = it }) { aTradeThatGotAQuarterOfTheWayIsSoldAtThePricePaidNotTheFullStop() }
+
+    // ---- review G2-2 / G2-3 (11 Oct): one account for the signal's rules, the order and the lab's record ----
+
+    /**
+     * ORB armed for Live with the PIN (liveOk), the app since switched to Paper: its entries go to paper, so the PAPER account's
+     * parameters decide them - never a live variant's (here a 13:00 last entry, applied only to Zerodha's account) - and the
+     * strategy lab records the day as paper.
+     */
+    @Test fun armedForLiveWithTheAppInPaperItDecidesAndIsRecordedOnPaper() {
+        org.junit.Assume.assumeTrue("the strategy lab is in IraAlgo with Jarvis only", VariantRunner.enabled())
+        sweepDay = true; breakAt = 13 * 60 + 30                              // inside the range until the 13:30 bar breaks it
+        AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", org.json.JSONObject().put("orb", true)).put("auto", org.json.JSONObject().put("orb", true))
+            .put("liveOk", org.json.JSONObject().put("orb", true)).put("positions", org.json.JSONArray()))
+        VariantRunner.resetForTest()
+        VariantRunner.setForTest(com.optionslab.ira.VariantLab.Book(tunes = listOf(com.optionslab.ira.VariantLab.Tune("orb", true,
+            day.minusDays(1), mapOf(com.optionslab.ira.ArmParams.UNTIL to 13 * 60.0), "test"))), com.optionslab.ira.StrategyForge.Book())
+        try {
+            passes(LocalTime.of(12, 58), LocalTime.of(13, 36))
+            val p = arm().today.single()
+            assertTrue(p.open); assertFalse("the app is in Paper", p.live)
+            assertEquals(day.atTime(13, 30), p.signalBar)
+            assertEquals(com.optionslab.ira.VariantLab.Run.PAPER, VariantRunner.runsOn(day)["orb"])
+        } finally {
+            VariantRunner.resetForTest()
+        }
+    }
+
+    /**
+     * G2-6 / G2-7: under a variant (opening range to 10:15, last entry 13:00) ORB's words name its own range and entry times,
+     * and the range on screen stays the standard 09:15-10:00 one (the variant's range dips to 53,700 at 10:05).
+     */
+    @Test fun aVariantsRangeAndTimesAreItsOwnInWordsAndTheScreensRangeIsTheStandardOne() {
+        org.junit.Assume.assumeTrue("the strategy lab is in IraAlgo with Jarvis only", VariantRunner.enabled())
+        lateDip = true
+        VariantRunner.resetForTest()
+        VariantRunner.setForTest(com.optionslab.ira.VariantLab.Book(tunes = listOf(com.optionslab.ira.VariantLab.Tune("orb", false,
+            day.minusDays(1), mapOf(com.optionslab.ira.ArmParams.OR to 65.0, com.optionslab.ira.ArmParams.UNTIL to 13 * 60.0), "test"))),
+            com.optionslab.ira.StrategyForge.Book())
+        try {
+            at(LocalTime.of(10, 0))
+            val msg = runBlocking { OrbArms.setArmed("orb", true, automatic = true) }
+            assertTrue(msg, msg.endsWith("It decides on 5-minute BANKNIFTY bars from 10:20."))
+            passes(LocalTime.of(10, 20), LocalTime.of(10, 21))
+            assertTrue("inside its own range: nothing bought", arm().today.isEmpty())
+            assertEquals(54_000.0 to 53_800.0, runBlocking { OrbArms.view() }.range)
+            assertEquals("Waiting for the opening range (09:15-10:15).", OrbArms.describe("waiting_for_opening_range", OrbRules.ORB))
+            assertEquals("No decision bars now (entries 10:20-12:55).", OrbArms.describe("no_decision_bar", OrbRules.ORB))
+            // An arm on its constants: the words as before.
+            assertEquals(OrbArms.describe("no_decision_bar"), OrbArms.describe("no_decision_bar", com.optionslab.engine.orb.SweepRules.ARM))
+        } finally {
+            VariantRunner.resetForTest()
+        }
+    }
 }

@@ -160,7 +160,7 @@ internal fun OrbRowsContent(
                     !a.armed && a.arm.fade -> "BANKNIFTY touch of the range edge, faded to the middle · paper only · -40 / +40 · profit lock ${rungsOf(a.arm)}"
                     !a.armed && a.arm.sweep -> "BANKNIFTY failed break of the opening range, faded · paper only · -40 / +80 · profit lock ${rungsOf(a.arm)}"
                     !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock ${rungsOf(a.arm)}"
-                    else -> OrbArms.describe(a.status) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
+                    else -> OrbArms.describe(a.status, a.arm) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
                 Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
                 // Liquidity 15+5's size for new entries; an open position keeps its own quantity.
@@ -373,7 +373,7 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
                 v.stopped?.let { s -> Text(s, style = small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp)) }
                 for (a in v.arms) {
                     Text(a.arm.label, style = head, modifier = Modifier.padding(top = 12.dp))
-                    Text(OrbArms.describe(a.status), style = soft)
+                    Text(OrbArms.describe(a.status, a.arm), style = soft)
                     // ORB, ORB Fresh, ORB Sweep, Range Fade: their 2021–2026 record, as information (never a block).
                     a.record?.let { r -> Text(keepNumbersWhole(recordLine(r)), style = soft) }
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)

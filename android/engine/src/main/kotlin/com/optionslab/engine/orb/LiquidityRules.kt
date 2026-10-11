@@ -273,6 +273,19 @@ object LiquidityRules {
     }
 
     /**
+     * The app's own sale of a held position on its premium (paper and live; the index exits are [exitNow]): "stop" when its
+     * resting stop is not there ([stopResting] false) or the price ran through its limit ([runThrough]) and the price is at or
+     * under the stop ([atStop]); else "profit_lock" when a lock variant's lock is earned ([locked]) and is not resting as the
+     * stop ([lockResting]) or the price ran through it - as the ORB arms (review G2-4: a refused modify or a missing stop never
+     * skips an earned lock); else null. With no lock variant [locked] is false: exactly the stop rule alone, as before.
+     */
+    fun appSale(stopResting: Boolean, runThrough: Boolean, atStop: Boolean, locked: Boolean, lockResting: Boolean): String? = when {
+        (!stopResting || runThrough) && atStop -> "stop"
+        locked && (!lockResting || runThrough) -> "profit_lock"
+        else -> null
+    }
+
+    /**
      * Room filter (research liq2, 2026-10-06): skip a break whose next liquidity level ahead (the trade's target) is
      * closer to the deciding bar's close than [MIN_ROOM_STOPS] index-stop units (BANKNIFTY 30 points, FINNIFTY 15, MIDCPNIFTY 8).
      * No level ahead counts as room. Picked by a quarterly walk-forward over Aug 2021 - Oct 2026, together with

@@ -70,6 +70,9 @@ object OrbRules {
         else -> 0
     }
 
+    /** The first and last bars [p] decides on (labelled after its range's end, before its last entry): 10:05 and 13:55 for the ORB. */
+    fun decisionBars(p: OrbParams): Pair<LocalTime, LocalTime> = p.orEnd.plusMinutes(5) to p.lastEntry.minusMinutes(5)
+
     fun mayDecide(bar: Bar, until: LocalTime = LAST_ENTRY_BAR, orEnd: LocalTime = OR_END): Boolean {
         val t = bar.start.toLocalTime(); return t.isAfter(orEnd) && t.isBefore(until)
     }

@@ -186,6 +186,13 @@ object SmartWorkers {
      */
     fun parkedToPaper(key: String): Boolean = !loaded || key in _settings.value.parked
 
+    /**
+     * As [parkedToPaper], from memory only, for the arms' entry decision under their lock (review G2-5): never reads the
+     * settings vault. Until the settings are loaded (the brain's worker, [ensureLoaded]) it says parked - fail closed: a park
+     * is never missed, the entry goes to paper.
+     */
+    fun parkedToPaperNow(key: String): Boolean = !loaded || key in _settings.value.parked
+
     /** Boss re-armed [key] himself (in Live, with his PIN): it is no longer parked. Only ever called from Boss's own action. */
     fun ownerRearmed(key: String) {
         // Read first (Boss's action, off the entry path): clearing the defaults would let the saved park come back on the read.

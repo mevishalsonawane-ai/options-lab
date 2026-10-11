@@ -650,4 +650,47 @@ class LiquidityArmTest : RobolectricTest() {
     @Test fun inShadowLiquidityTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { buysTheCallWhenAPoolOnASwingHighIsTakenAndSellsWhenTheBreakFails() }
 
     @Test fun inShadowLiquidityStopTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { theOptionFalling15PercentIsSoldByItsStop() }
+
+    // ---- review G2-4 / G2-8 (11 Oct): Liquidity under a paper profit-lock variant ----
+
+    /** A paper profit-lock variant for Liquidity in force today ([lock] of the premium paid), as the lab promotes one (S9: exits only). */
+    private fun <T> withLockVariant(lock: Double, body: () -> T): T {
+        org.junit.Assume.assumeTrue("the strategy lab is in IraAlgo with Jarvis only", VariantRunner.enabled())
+        VariantRunner.setForTest(com.optionslab.ira.VariantLab.Book(tunes = listOf(com.optionslab.ira.VariantLab.Tune("liquidity", false,
+            day.minusDays(1), mapOf(com.optionslab.ira.ArmParams.LOCK to lock), "test"))), com.optionslab.ira.StrategyForge.Book())
+        try { return body() } finally { VariantRunner.resetForTest() }
+    }
+
+    /** G2-4: its resting stop gone, an earned lock is sold by the app (as the ORB arms'), not held down to the 15% stop. */
+    @Test fun anEarnedLockIsSoldWhenItsStopIsGone() = withLockVariant(0.3) {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.open); assertTrue("laddered under the lock variant", p.ladder)
+        // Its resting stop is gone (rejected or cancelled): the app watches the position itself.
+        runBlocking { Paper.cancel(checkNotNull(p.stopOrderId), "test") }
+        upstox.price(ceKey, p.entry * 1.6)                                   // +60%: the lock is earned (reference 30% of the price paid)
+        tick(LocalTime.of(13, 6))
+        assertTrue(row().today.single().open)
+        upstox.price(ceKey, p.entry * 1.02)                                  // back under the lock, far above the 15% stop
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse("sold at the lock, not held down to the stop", closed.open)
+        assertEquals("profit_lock", closed.why)
+    }
+
+    /** G2-8: under a lock variant the worst premium seen is still kept for Jarvis's trade lesson. */
+    @Test fun underALockVariantItsWorstPremiumIsStillKept() = withLockVariant(0.3) {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.ladder)
+        upstox.price(ceKey, p.entry * 0.95)                                  // 5% under the price paid, above the 15% stop
+        tick(LocalTime.of(13, 6))
+        val held = row().today.single()
+        assertTrue(held.open)
+        assertEquals(p.entry * 0.95, checkNotNull(held.low), 0.06)
+    }
 }
