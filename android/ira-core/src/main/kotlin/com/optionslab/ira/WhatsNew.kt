@@ -53,6 +53,16 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-strategy-lab-auto", OCT11, "Strategy lab: strategies improve and new ones are tried",
+            "Each running strategy now has a few nearby variants that trade virtually beside it: no orders, not even paper. " +
+                "A variant must beat the current rules for 20 days and pass strict luck checks. " +
+                "On paper it is then applied by itself, with undo; on live it is only proposed, with your PIN. " +
+                "Each night, while charging or after 18:00, the forge builds new option-buying ideas and backtests them after costs. " +
+                "Almost all fail: walk-forward, a random-twin check and a count of every idea ever tried. " +
+                "Survivors run a virtual forward test of 20 days before you are asked to start them on paper. " +
+                "Jarvis learns from every result, and the graveyard shows how many ideas were tried.",
+            "Home → Strategy lab card → tap a strategy or an idea for details",
+            ask = "how are my strategies improving", jarvisOnly = true),
         Entry("2026-10-11-smarter-learning", OCT11, "Smarter learning: tested, replayed and tried on paper first",
             "Each lesson now carries a q-value: it is strong only if it holds when all lessons are tested together. " +
                 "A lesson that holds only on busy days, or only on expiry days, says so. " +
