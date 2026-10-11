@@ -7,6 +7,7 @@ import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.engine.IST
 import com.optionslab.ira.AgentLessons
 import com.optionslab.ira.TradeManager
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -90,6 +91,35 @@ class JarvisLearningTest : RobolectricTest() {
         assertNotNull(line); assertTrue(line!!, line.startsWith("What I learned today:"))
         // Another day's report has no line of today's.
         assertNull(JarvisLearning.eveningLine(day.plusDays(1)))
+    }
+
+    @Test fun aPassWhoseRecordsCannotBeReadIsNotMarkedDoneAndIsTriedAgainLater() = runBlocking<Unit> {
+        at(LocalTime.of(16, 0))
+        JarvisLearning.testInputs = { throw IllegalStateException("records unreadable") }
+        assertFalse(JarvisLearning.learnIfDue(context))
+        assertTrue(JarvisLearning.book.value.lastPass != day)
+        JarvisLearning.testInputs = { d -> inputs(d) }
+        assertFalse("not retried on every look", JarvisLearning.learnIfDue(context))
+        at(LocalTime.of(16, 11))
+        assertTrue("the day's learning is not lost", JarvisLearning.learnIfDue(context))
+        assertEquals(day, JarvisLearning.book.value.lastPass)
+    }
+
+    @Test fun twoAsksAtOnceRunOnePass() = runBlocking<Unit> {
+        at(LocalTime.of(16, 0))
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        JarvisLearning.testInputs = { d ->
+            calls.incrementAndGet(); entered.countDown(); release.await(10, java.util.concurrent.TimeUnit.SECONDS); inputs(d)
+        }
+        val first = async(kotlinx.coroutines.Dispatchers.IO) { JarvisLearning.learnIfDue(context) }
+        assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        assertFalse("the second ask while a pass runs", JarvisLearning.learnIfDue(context))
+        release.countDown()
+        assertTrue(first.await())
+        assertFalse(JarvisLearning.learnIfDue(context))
+        assertEquals(1, calls.get())
     }
 
     @Test fun aStrongLessonIsPutToBossAndHisNoIsKept() = runBlocking<Unit> {

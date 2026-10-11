@@ -13,6 +13,7 @@ import com.optionslab.ira.WorkerWake
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.time.Instant
@@ -370,16 +371,16 @@ object SmartWorkers {
             found("calendar", Findings.Kind.NEWS_WINDOW, if (w.scope.isEmpty()) Findings.ALL else w.scope.first(), 0, null, 50,
                 "${w.name} window", (w.endMs - now).coerceAtLeast(1_000L))
         }
-        if (now - closedAt > 30_000L) { closedAt = now; runCatching { postExits(today) } }
+        if (now - closedAt > 30_000L) { closedAt = now; tried { postExits(today) } }
         // The findings log every 30 s (the app's health tuner may lengthen it, at most to 120 s, while stalls cluster on it).
         if (now - flushedAt > AppHealth.cadenceMs("findings.flush")) { flushedAt = now; runCatching { flushFindings(context, today) } }
-        runCatching { reviewIfDue(context) }
+        tried { reviewIfDue(context) }
         // The trade manager's specialists: their nightly report cards and slow self-tuning (paper and shadow only), once a day.
         runCatching { ManagerSpecialists.reviewIfDue() }
-        // Jarvis's learning from all of the above, once a day after the close (memory checks only until it is due).
-        runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
-        // Autopilot learning: after Jarvis's pass (15:45+), and at 12:30 for risk-lowering only (memory checks until due).
-        runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
+        // Jarvis's learning from all of the above, once a day after the close, then Autopilot (after his pass at 15:45+, and at
+        // 12:30 for risk-lowering only): on their own scope, so this worker's 30 s limit never cuts a slow pass in the middle
+        // (memory checks until due; one launch at a time).
+        runCatching { launchNightly(context) }
         // The app's own health (11 Oct): its tuner and samples every 10 minutes; then what Jarvis tries to learn next (after his
         // pass), the weekly consolidation and the weekly self-report when due (memory checks until then).
         runCatching { AppHealth.tick(context) }
@@ -392,6 +393,32 @@ object SmartWorkers {
         runCatching { HistoryKeeper.kick() }
         // The learning freeze, today's lesson, the replays' candles and the monthly scorecard when due (S14-S21; memory checks until then).
         runCatching { com.optionslab.app.ira.SelfJobs.tick(context) }
+    }
+
+    /** [runCatching] that lets a cancellation through (the worker cut at its time limit stops here, not later). */
+    private inline fun <T> tried(block: () -> T): T? = try {
+        block()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (_: Throwable) {
+        null
+    }
+
+    private val nightlyScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val nightlyRunning = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var nightlyJob: kotlinx.coroutines.Job? = null
+
+    /** Jarvis's pass then Autopilot's, in the background (never two at once; each has its own once-a-day check). */
+    private fun launchNightly(context: Context?) {
+        if (!nightlyRunning.compareAndSet(false, true)) return
+        nightlyJob = try {
+            nightlyScope.launch {
+                try {
+                    runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
+                    runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
+                } finally { nightlyRunning.set(false) }
+            }
+        } catch (t: Throwable) { nightlyRunning.set(false); throw t }
     }
 
     /** The cash indices' last 31 minute closes and each minute's normal move, into a regime each. */
@@ -693,6 +720,8 @@ object SmartWorkers {
 
     /** TEST ONLY. */
     internal fun resetForTest() {
+        // A nightly pass a test's look launched ends before the next test starts.
+        nightlyJob?.let { j -> kotlinx.coroutines.runBlocking { withTimeoutOrNull(20_000L) { j.join() } } }
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
         _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L

@@ -97,12 +97,27 @@ internal object JarvisLearning {
         if (passedOn == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
         if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.LEARNING)) return false   // S18: battery / heat budget
-        withContext(Dispatchers.IO) { ensureLoaded() }
-        if (_book.value.lastPass == today) { passedOn = today; return false }
-        passedOn = today
-        runPass(today)
-        return true
+        // One pass at a time (the brain's worker and the day report's worker both ask); the day is marked done only once its
+        // pass has run, so a pass cut short (cancelled, its records unreadable) is tried again on a later look.
+        if (!passing.compareAndSet(false, true)) return false
+        try {
+            if (passedOn == today) return false
+            withContext(Dispatchers.IO) { ensureLoaded() }
+            if (_book.value.lastPass == today) { passedOn = today; return false }
+            val nowMs = Market.now().toInstant().toEpochMilli()
+            if (nowMs < retryAtMs) return false
+            if (runPass(today) == null) { retryAtMs = nowMs + RETRY_MS; return false }
+            passedOn = today
+            return true
+        } finally {
+            passing.set(false)
+        }
     }
+
+    private val passing = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** A pass whose records could not be read waits this long before it is tried again (not every look). */
+    private const val RETRY_MS = 10 * 60_000L
+    @Volatile private var retryAtMs = 0L
 
     /** The pass itself (and by tests): read, digest, keep, tell, propose. */
     internal suspend fun runPass(today: LocalDate): AgentLessons.Pass? {
@@ -300,7 +315,7 @@ internal object JarvisLearning {
     /** TEST ONLY: nothing kept, nothing shown (in memory). */
     internal fun resetForTest() {
         synchronized(lock) { _book.value = AgentLessons.Book() }
-        loaded = true; passedOn = null; shown = emptyList(); shownText = null; shownAt = 0L; testInputs = null
+        loaded = true; passedOn = null; passing.set(false); retryAtMs = 0L; shown = emptyList(); shownText = null; shownAt = 0L; testInputs = null
     }
 
     /** TEST ONLY: [b] as what he has learned. */
