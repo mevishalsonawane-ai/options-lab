@@ -123,3 +123,22 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   stop, and the 15:10 square-off. Say who set each one (the arm or Jarvis solo, or Boss by hand) and whether it rests at
   Zerodha as an order (live) or is watched by the app (paper). Example from 8 Oct 13:01: NIFTY13OCT2622550PE, opened by
   Jarvis solo, avg 261.33, LTP 318.95, +Rs 3,745 - none of its exits were visible.
+
+## S. Self-improvement roadmap (owner go-ahead 2026-10-11: "implement all; what is not possible now goes here")
+
+Being built in round 2 (agents): S1 variants drive the real arms (paper first), S2 a paper arm for approved forge ideas,
+S3 the lab replays the real arm code, S4 one shared stats engine, S5 more history kept on the phone, S8 regime settings,
+S9 Liquidity exit-only tuning, S10 learning from manual trades, S11 event-day exclusion, S12 portfolio risk across arms,
+S13 daily change timeline + undo today, S14 learning freeze on drawdown, S15 monthly autopilot scorecard,
+S16 emulator smoke flows in CI, S17 exportable crash/stall report, S18 battery/heat budget, S19 study pages,
+S20 daily lesson card, S21 bot trade replay with commentary.
+
+Not possible yet:
+- [ ] S6. Restore a deep-history data source. Needs a fresh Dhan access token (the last one expired 2026-10-10) or another
+      provider. Then: refill years of index/option 1-min history, re-run the forge and the variants' pre-checks on it.
+- [ ] S7. Re-test order flow, delta, absorption and the trap guard on the phone's own recordings once there are
+      2-4 weeks of NSE sessions (about 150-200 recorded trades per strategy family); re-tune TrapGuard on week 1.
+- [ ] S16b. Smoke test on Boss's real phone (login, Home, Chart picker, a paper order): needs the device; CI covers the
+      emulator only.
+- [ ] S22. Merge the branch to main after Boss checks Monday's session (Order speed card, diagnostics incl. Workers,
+      Brain, Health, Autopilot).
