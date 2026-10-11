@@ -15,8 +15,23 @@ import com.optionslab.app.work.Notifier
 object LossBreaker {
     private const val K_DAY = "breaker.day"
 
-    /** Tripped today already. */
-    fun trippedToday(): Boolean = SecurePrefs.getString(K_DAY) == Market.today().toString()
+    /**
+     * The day it tripped, kept in memory (review R1, 11 Oct: the entry door asks [trippedToday] for every bot entry and reads
+     * nothing from the settings store on the order path): read again only when the vault or the loss limit's day changed
+     * ([SecurePrefs.generationHint], [SecurePrefs.guardHint]); written through when it trips.
+     */
+    private class Kept(val gen: Int, val guard: Int, val day: String?)
+    @Volatile private var kept: Kept? = null
+
+    private fun trippedDay(): String? {
+        val g = SecurePrefs.generationHint
+        val q = SecurePrefs.guardHint
+        kept?.let { if (it.gen == g && it.guard == q) return it.day }
+        return SecurePrefs.getString(K_DAY).also { kept = Kept(g, q, it) }
+    }
+
+    /** Tripped today already. Memory only once read. */
+    fun trippedToday(): Boolean = trippedDay() == Market.today().toString()
 
     suspend fun check(context: Context) {
         val today = Market.today().toString()
@@ -44,6 +59,7 @@ object LossBreaker {
         // Kept as the loss limit's stop (never "by you"): "start all" and Start bot do not lift it today.
         val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }.getOrElse { it.message ?: "" }
         SecurePrefs.put(K_DAY, today)
+        kept = Kept(SecurePrefs.generationHint, SecurePrefs.guardHint, today)
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
             .format(hit.first, hit.second, hit.third, msg)
         // Also the in-app banner (Notifier.post drops it in): one call, one banner.

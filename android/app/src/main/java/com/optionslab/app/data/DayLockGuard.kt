@@ -22,10 +22,26 @@ object DayLockGuard {
     private fun key(live: Boolean) = if (live) K_LIVE else K_PAPER
     private fun account(live: Boolean) = if (live) "Zerodha" else "paper"
 
-    /** The day [live]'s account reached its lock, when it did today and the lock is on; null otherwise. */
+    /**
+     * Both accounts' lock days and the lock's amount, kept in memory (review R1, 11 Oct: the entry door asks [refusal] for
+     * every bot entry and reads nothing from the settings store on the order path): read again only when the vault, the lock
+     * days or the amount changed ([SecurePrefs.generationHint], [SecurePrefs.guardHint]); refreshed by [update].
+     */
+    private class Kept(val gen: Int, val guard: Int, val paper: DayLock.Reached?, val live: DayLock.Reached?, val limit: Double)
+    @Volatile private var kept: Kept? = null
+
+    private fun kept(): Kept {
+        val g = SecurePrefs.generationHint
+        val q = SecurePrefs.guardHint
+        kept?.let { if (it.gen == g && it.guard == q) return it }
+        return Kept(g, q, DayLock.decode(SecurePrefs.getString(K_PAPER)), DayLock.decode(SecurePrefs.getString(K_LIVE)),
+            AppSettings.load().dayLock).also { kept = it }
+    }
+
+    /** The day [live]'s account reached its lock, when it did today and the lock is on; null otherwise. Memory only once read. */
     fun active(live: Boolean): DayLock.Reached? = runCatching {
-        val r = DayLock.decode(SecurePrefs.getString(key(live)))
-        r?.takeIf { DayLock.active(it, Market.today(), AppSettings.load().dayLock) }
+        val k = kept()
+        (if (live) k.live else k.paper)?.takeIf { DayLock.active(it, Market.today(), k.limit) }
     }.getOrNull()
 
     /**
@@ -54,6 +70,7 @@ object DayLockGuard {
             val next = DayLock.next(prev, now.toLocalDate(), now.toLocalTime(), limit, pnl) ?: continue
             if (next == prev) continue
             SecurePrefs.put(key(isLive), DayLock.encode(next))
+            kept = null      // read again now, off the order path (below), never by the door
             val line = DayLock.line(next, account(isLive))
             runCatching { Diag.record("risk", line + " (day P&L Rs %,.0f)".format(java.util.Locale.ENGLISH, next.pnl)) }
             runCatching {
@@ -62,5 +79,7 @@ object DayLockGuard {
                     "strategy", setting = "risk.guards")
             }
         }
+        // Warm the door's kept copy here (the loss limit's pass), so the next entry reads memory only.
+        runCatching { kept() }
     }
 }

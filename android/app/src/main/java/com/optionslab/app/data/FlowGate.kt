@@ -100,7 +100,12 @@ object FlowGate {
     /** One signal's gate: its id (for the later lines), whether to skip it, and the flow's agreement. */
     data class Ticket(val id: String, val skip: Boolean, val agreement: OrderFlow.Agreement, val key: String,
                       /** The smart workers' pause that skipped it (10 Oct: a news window, a reaction acting); null: none. */
-                      val pausedWhy: String? = null)
+                      val pausedWhy: String? = null,
+                      /**
+                       * The direction the portfolio guard let through (+1 / -1; 0: it was not asked or it blocked) and the account,
+                       * counted as opened once the entry is taken ([taken], an entered [outcome]) - review R1.
+                       */
+                      val opens: Int = 0, val opensLive: Boolean = false)
 
     /** The verdict a skipped entry returns and is logged with. */
     const val SKIPPED = FlowShadow.SKIPPED
@@ -127,24 +132,27 @@ object FlowGate {
         // exit never comes here. [decide] false (waiting for Boss's approval): logged only, decided at the approval.
         val brake = if (com.optionslab.app.BuildConfig.GOLD) null
             else runCatching { SmartWorkers.entry(key, underlying, side) }.getOrNull()
-        // The portfolio guard (TODO S12, 11 Oct): correlated arms already in the same way today past the cap - the later entry
-        // is skipped for the day. Memory only; it can only skip, and only a decided entry asks it.
-        val portfolio = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD)
-            runCatching { PortfolioHost.entry(key, side, live) }.getOrNull() else null
         // The day's regime (TODO S8, 11 Oct): a strategy whose proven regime lesson says it loses on today's kind of day sits it
         // out (size 0) - paper by itself after its shadow days, live only once Boss approved it with the PIN. Memory only; skip only.
-        val regime = if (decide && brake?.block != true && portfolio == null && !com.optionslab.app.BuildConfig.GOLD)
-            runCatching { com.optionslab.ira.RegimeParams.overrideToday(key, live)?.get(com.optionslab.ira.RegimeParams.SIZE_KEY)?.takeIf { it <= 0.0 }
+        // Asked BEFORE the portfolio guard (review R1): an entry sat out never reaches the guard.
+        val regime = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.RegimeParams.overrideToday(key, live, date = Market.today())?.get(com.optionslab.ira.RegimeParams.SIZE_KEY)?.takeIf { it <= 0.0 }
                 ?.let { "sits out today's kind of day (a proven regime lesson; it lowers risk only)" } }.getOrNull() else null
+        // The portfolio guard (TODO S12, 11 Oct): correlated arms already in the same way today past the cap - the later entry
+        // is skipped for the day. Memory only; it can only skip, and only a decided entry asks it. A let-through is counted as
+        // opened only once the entry is taken ([taken], an entered [outcome]), never here.
+        val asked = decide && brake?.block != true && regime == null && !com.optionslab.app.BuildConfig.GOLD
+        val portfolio = if (asked) runCatching { PortfolioHost.entry(key, side, live) }.getOrNull() else null
         val paused = decide && (brake?.block == true || portfolio != null || regime != null)
         val pauseWhy = if (brake?.block == true) brake?.why else portfolio ?: regime
+        val opens = if (asked && portfolio == null) side else 0
         if (paused) runCatching {
             val label = FlowShadow.strategy(key)?.label ?: key
             Diag.record("brain", "$label: ${if (live) "live" else "paper"} entry on $underlying not taken - $pauseWhy")
         }
         return runCatching {
             val s = setting(key)
-            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null)
+            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null, opens, live)
             val now = System.currentTimeMillis()
             val r = OrderFlowLive.readNow(underlying, now)
             val a = OrderFlow.agreement(r, side, s.threshold, (testNowSec ?: (now / 1000)))
@@ -183,8 +191,8 @@ object FlowGate {
                 Diag.record("flow", "$label: skipped by flow (${if (live) "live" else "paper"} ${if (side > 0) "bullish" else "bearish"} entry on $underlying; " +
                     "${OrderFlow.word(r)}, needs ${s.threshold}" + (r?.takeIf { it.flags.isNotEmpty() }?.let { "; trap guard: ${OrderFlow.trapWords(it)}" } ?: "") + ")")
             }
-            Ticket(id, skip, a, key, if (paused) pauseWhy else null)
-        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null) }
+            Ticket(id, skip, a, key, if (paused) pauseWhy else null, opens, live)
+        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null, opens, live) }
     }
 
     /** [check] off the caller's thread (it may read the log once after a restart): for the strategies' suspend paths. */
@@ -225,12 +233,14 @@ object FlowGate {
 
     /** What became of [t]'s signal ("entered", a refusal); logged once it is known. */
     fun outcome(t: Ticket?, verdict: String) {
+        if (t != null && verdict.startsWith("entered")) opened(t)
         if (t == null || verdict == SKIPPED || setting(t.key).mode == OrderFlow.Mode.OFF) return
         runCatching { synchronized(lock) { append(FlowShadow.verdict(t.id, verdict)) } }
     }
 
     /** [t]'s entry filled on paper as order [orderId]: its result is read from the paper book when it closes ([settle]). */
     fun taken(t: Ticket?, orderId: String?) {
+        if (t != null && orderId != null) opened(t)
         if (t == null || orderId == null || setting(t.key).mode == OrderFlow.Mode.OFF) return
         runCatching {
             synchronized(lock) {
@@ -239,6 +249,11 @@ object FlowGate {
                 orders[t.id] = orderId to System.currentTimeMillis()
             }
         }
+    }
+
+    /** [t]'s entry was taken: the portfolio guard counts it as opened (only an entry it let through; skipped ones never). */
+    private fun opened(t: Ticket) {
+        if (t.opens != 0 && !t.skip) runCatching { PortfolioHost.opened(t.key, t.opens, t.opensLive) }
     }
 
     // ---- results ----------------------------------------------------------------------------------------------------------

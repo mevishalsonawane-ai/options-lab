@@ -27,11 +27,20 @@ object SecurePrefs {
         private set
 
     /**
-     * [generation], readable without this object's lock (round 2): a caller that keeps vault values in memory for the order
-     * path (Broker's session, the relay switch, the pinned certificates) drops them when it changes. Bumped by [init],
-     * [wipe] and [reload].
+     * Readable without this object's lock (round 2): a caller that keeps vault values in memory for the order path (Broker's
+     * session, the relay switch, the pinned certificates) drops them when it changes. Bumped by [init], [wipe], [reload] and
+     * a write of a kept-elsewhere setting; strictly increasing (never set back, so a kept value can never match a stale
+     * generation again).
      */
     @Volatile var generationHint: Int = 0
+        private set
+
+    /**
+     * The entry door's guards' generation (review R1, 11 Oct): bumped by a write of the daily loss limit's day, the day lock's
+     * days or its amount ([GUARD]) - and never by anything else, so the door's kept guards ([com.optionslab.app.data.LossBreaker],
+     * [com.optionslab.app.data.DayLockGuard]) stay in memory on the order path. Kept values compare it with [generationHint].
+     */
+    @Volatile var guardHint: Int = 0
         private set
 
     /**
@@ -49,10 +58,14 @@ object SecurePrefs {
     /** Under this object's lock: [keys] include a kept-elsewhere setting (or a pinned certificate set): [generationHint] bumped. */
     private fun touched(keys: Collection<String>) {
         if (keys.any { it in HOT || it.startsWith("tls.") }) generationHint++
+        if (keys.any { it in GUARD }) guardHint++
     }
 
+    /** The settings the entry door keeps in memory for the bots' entries (the loss limit's day, the day lock). */
+    private val GUARD = setOf("breaker.day", "breaker.daylock.paper", "breaker.daylock.live", "g.dayLock")
+
     fun init(context: Context) {
-        synchronized(ioLock) { synchronized(this) { generation++; generationHint = generation; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }
+        synchronized(ioLock) { synchronized(this) { generation++; generationHint++; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }
         file = File(context.noBackupFilesDir, "prefs.vault")
     }
 
@@ -288,7 +301,7 @@ object SecurePrefs {
         // After any write in progress (a write finishing after the delete would bring the old vault back).
         synchronized(ioLock) {
             synchronized(this) {
-                generation++; generationHint = generation; pending = false; lazyDirty = false; lazyTask = 0L
+                generation++; generationHint++; pending = false; lazyDirty = false; lazyTask = 0L
                 cache = JSONObject()
                 unreadable = false
                 writtenSeq = seq

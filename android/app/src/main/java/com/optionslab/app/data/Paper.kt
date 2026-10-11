@@ -294,11 +294,20 @@ object Paper {
 
     /**
      * [symbol]'s price from memory only (the trade manager's look, 10 Oct): the stream's fresh tick, else a price read in the
-     * last [maxAgeMs]; null otherwise. No network read, no vault read (a book not loaded yet answers from the reads kept).
+     * last [maxAgeMs]; null otherwise. No network, vault or file read (review R1: the contract's Zerodha token only from the
+     * tokens kept - [resolveToken] looks a new one up off the look; a book not loaded yet answers from the reads kept).
      */
     fun memPrice(symbol: String, maxAgeMs: Long = 60_000L): Double? {
-        cache?.contracts?.get(symbol)?.let { c -> runCatching { streamQuote(c) }.getOrNull()?.ltp?.takeIf { it > 0 }?.let { return it } }
+        cache?.contracts?.get(symbol)?.let { c -> runCatching { streamQuote(c, kept = true) }.getOrNull()?.ltp?.takeIf { it > 0 }?.let { return it } }
         return lastQuotes[symbol]?.takeIf { System.currentTimeMillis() - it.first in 0..maxAgeMs }?.second?.ltp?.takeIf { it > 0 }
+    }
+
+    /**
+     * [symbol]'s Zerodha token looked up now (the instruments file, the session), off any hot path (the trade manager's
+     * attach): [memPrice] then reads it from memory. Never throws.
+     */
+    fun resolveToken(symbol: String) {
+        runCatching { cache?.contracts?.get(symbol)?.let { kiteToken(it) } }
     }
 
     /** The last price read for each symbol and when (the screen re-prices every few seconds). */
@@ -333,9 +342,12 @@ object Paper {
         return t.takeIf { it > 0 }
     }
 
-    /** The live tick from Zerodha's stream, if there is a fresh one; asking also keeps the contract subscribed. */
-    private fun streamQuote(c: Contract): Quote? {
-        val token = runCatching { kiteToken(c) }.getOrNull() ?: return null
+    /**
+     * The live tick from Zerodha's stream, if there is a fresh one; asking also keeps the contract subscribed. [kept]: the
+     * token only from those already looked up (memory only; never the instruments file or the session).
+     */
+    private fun streamQuote(c: Contract, kept: Boolean = false): Quote? {
+        val token = (if (kept) kiteTokens[c.symbol]?.takeIf { it > 0 } else runCatching { kiteToken(c) }.getOrNull()) ?: return null
         KiteStream.touch(listOf(token))
         val t = KiteStream.tick(token) ?: return null
         if (t.last <= 0) return null

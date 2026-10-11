@@ -99,7 +99,9 @@ object PortfolioHost {
      */
     fun entry(key: String, side: Int, live: Boolean, nowMs: Long = System.currentTimeMillis()): String? = runCatching {
         val today = Market.today()
-        val d = guard.check(PortfolioRisk.canon(key), side, live, today, nowMs)
+        // Not counted as opened here (review R1): the entry may still be skipped (the flow, the account guard) or not fill;
+        // [opened] counts it once taken.
+        val d = guard.check(PortfolioRisk.canon(key), side, live, today, nowMs, open = false)
         if (!d.block) return@runCatching null
         runCatching { Diag.record("portfolio", d.why!!) }
         runCatching {
@@ -110,13 +112,23 @@ object PortfolioHost {
     }.getOrNull()
 
     /**
-     * The entry door's part for a live order (Broker's entry gate; the door does not know the arm): refused only when the
-     * guard just blocked a live entry this way and nothing was let through since. Memory only.
+     * [key]'s entry leaning [side] was actually taken (a paper fill, an order sent to Zerodha; FlowGate's [FlowGate.taken] and
+     * entered outcomes): from now on it counts against a later correlated entry. Memory only; never throws.
      */
-    fun doorRefusal(symbol: String, buy: Boolean): String? = runCatching {
+    fun opened(key: String, side: Int, live: Boolean, nowMs: Long = System.currentTimeMillis()) {
+        runCatching { guard.opened(PortfolioRisk.canon(key), side, live, Market.today(), nowMs) }
+    }
+
+    /**
+     * The entry door's part for [arm]'s live order (Broker's entry gate; [arm]: the strategy key its entry check asked with):
+     * refused only when the guard's latest live decision for that arm this way was a block. An order with no arm (a saved
+     * strategy's basket leg, Boss's own) is never refused here. Memory only.
+     */
+    fun doorRefusal(arm: String?, symbol: String, buy: Boolean): String? = runCatching {
+        if (arm == null) return@runCatching null
         val s = symbol.uppercase()
         val dir = when { s.endsWith("CE") -> 1; s.endsWith("PE") -> -1; else -> 1 } * (if (buy) 1 else -1)
-        guard.doorRefusal(dir, Market.today(), System.currentTimeMillis())
+        guard.doorRefusal(PortfolioRisk.canon(arm), dir, Market.today(), System.currentTimeMillis())
     }.getOrNull()
 
     /** Jarvis: "how correlated are my strategies?" / "why was X blocked?". Reads memory (refreshes first when stale). */

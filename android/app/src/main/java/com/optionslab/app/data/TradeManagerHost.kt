@@ -266,7 +266,8 @@ object TradeManagerHost {
     )
 
     /**
-     * An arm's positions handed over in ONE call, from its book's publish (memory only; never on its order path): each open
+     * An arm's positions handed over in ONE call, from its book's publish (never on its order path; a contract's Zerodha token
+     * not yet in memory is resolved on this host's worker, so every later look reads memory only): each open
      * one is attached (SHADOW by default: the arm's own exits stay authoritative, the manager only records), each one closed
      * since is told its real exit. A short future is followed with its prices negated (a long on −price: the same
      * arithmetic; the words show the market's prices). Never throws.
@@ -287,10 +288,20 @@ object TradeManagerHost {
                 a.entryMs, if (a.shortFuture) 0.0 else com.optionslab.engine.orb.ProfitLock.roundTripPerUnit(a.entry, a.qty))
             val sym = a.symbol
             val kite = a.kite
+            // Review R1: the contract's Zerodha token resolved ONCE here, off the look (the instruments file is stat'ed and maybe
+            // read only on this worker), so the premium read at each look is memory only: no file, no vault, no network.
+            val token = java.util.concurrent.atomic.AtomicLong(0L)
+            if (a.live) {
+                if (kite != null) {
+                    val known = Broker.tokenKnown("NFO:$kite")
+                    if (known != null) token.set(known)
+                    else scope.launch { runCatching { Broker.tokenOf("NFO:$kite")?.let { token.set(it) } } }
+                }
+            } else scope.launch { runCatching { Paper.resolveToken(sym) } }
             attach(Registration(t,
                 premium = {
                     val px = if (!a.live) Paper.memPrice(sym)
-                        else kite?.let { s -> Broker.tokenOf("NFO:$s")?.let { tok -> KiteStream.tick(tok)?.last }?.takeIf { it > 0 } }
+                        else kite?.let { s -> (token.get().takeIf { it > 0 } ?: Broker.tokenKnown("NFO:$s"))?.let { tok -> KiteStream.tick(tok)?.last }?.takeIf { it > 0 } }
                     px?.let { it * k }
                 },
                 bars = {
@@ -652,6 +663,9 @@ object TradeManagerHost {
         synchronized(recs) { recs.clear(); for (r in rs) recs[r.trade.tradeId] = r }
         publish()
     }
+
+    /** TEST ONLY: [tradeId]'s premium as a look reads it (null: not followed). */
+    internal fun premiumForTest(tradeId: String): Double? = live[tradeId]?.reg?.premium?.invoke()
 
     /** TEST ONLY: nothing followed, recorded or set (in memory). */
     internal fun resetForTest() {

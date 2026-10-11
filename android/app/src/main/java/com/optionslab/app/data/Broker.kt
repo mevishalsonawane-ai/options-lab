@@ -105,8 +105,18 @@ object Broker {
         return (c[FastRead] ?: kotlin.coroutines.EmptyCoroutineContext) + (c[Lane] ?: kotlin.coroutines.EmptyCoroutineContext)
     }
 
-    /** The shared reads' key: the change count (an order from here, or one the stream reported) and the quick-read marker. */
-    private suspend fun shareKey(gen: Long): Pair<Long, Boolean> = gen to (kotlinx.coroutines.currentCoroutineContext()[FastRead] != null)
+    /**
+     * The shared reads' key: the change count (an order from here, or one the stream reported), the quick-read marker and the
+     * caller's lane (review R1: a read runs at its first caller's lane in the request budget, so an exit's SAFETY read never
+     * joins - and waits behind - an entry's or Jarvis's lower-lane read; only reads of the same lane are shared).
+     */
+    private suspend fun shareKey(gen: Long): Triple<Long, Boolean, com.optionslab.ira.RateGate.Priority> {
+        val c = kotlinx.coroutines.currentCoroutineContext()
+        return Triple(gen, c[FastRead] != null, c[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY)
+    }
+
+    /** TEST ONLY: the shared reads' key as the calling coroutine would make it. */
+    internal suspend fun shareKeyForTest(gen: Long): Any = shareKey(gen)
 
     /** The diagnostics' line: requests sent through the budget, how many waited, reads shared, entries at the door. */
     fun sharingLine(): String = "Zerodha requests: ${rate.taken} sent (8 a second at most), ${rate.waited} waited for the budget; " +
@@ -137,7 +147,7 @@ object Broker {
         return on
     }
 
-    internal fun entryRecheck(o: Kite.Order): String? {
+    internal fun entryRecheck(o: Kite.Order, arm: String? = null): String? {
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"
@@ -147,8 +157,10 @@ object Broker {
             DayLockGuard.refusal(true)?.let { return it }
             // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.
             runCatching { SmartWorkers.doorRefusal(o.tradingSymbol) }.getOrNull()?.let { return it }
-            // The portfolio guard (TODO S12): a live entry its arm was just blocked from by the guard - memory only, it only blocks.
-            runCatching { PortfolioHost.doorRefusal(o.tradingSymbol, o.side == Kite.Side.BUY) }.getOrNull()?.let { return it }
+            // The portfolio guard (TODO S12): a live entry ITS arm ([arm]) was just blocked from by the guard - memory only, it
+            // only blocks. Review R1: another arm's entry and a saved strategy's basket leg (no arm) are never refused here.
+            if (o.tag != "iraalgostrat")
+                runCatching { PortfolioHost.doorRefusal(arm, o.tradingSymbol, o.side == Kite.Side.BUY) }.getOrNull()?.let { return it }
         }
         return null
     }
@@ -622,7 +634,7 @@ object Broker {
     /** An order changed at Zerodha (the stream said so): the kept orders and positions are not used again. */
     fun reconStale() { writes.incrementAndGet() }
 
-    private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; writes.incrementAndGet() }
+    private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; killKept = null; writes.incrementAndGet() }
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null }
@@ -760,8 +772,11 @@ object Broker {
         return m[key]
     }
 
-    /** [tokenOf] only from what is already in memory (never builds the day's map or reads a file): for timing an order. */
-    private fun tokenKnown(key: String): Long? =
+    /**
+     * [tokenOf] only from what is already in memory (never builds the day's map or reads a file): for timing an order and the
+     * trade manager's looks.
+     */
+    internal fun tokenKnown(key: String): Long? =
         INDEX.values.firstOrNull { it.first == key }?.second ?: tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
 
     /**
@@ -1097,15 +1112,18 @@ object Broker {
 
     data class Fill(val orderId: String, val status: String, val avgPrice: Double, val filled: Int, val message: String)
 
-    /** Sends ONE order. Callers must have passed Kite.refusals and the owner's confirmation. */
-    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false): String {
+    /**
+     * Sends ONE order. Callers must have passed Kite.refusals and the owner's confirmation. [arm]: a bot's strategy key (the one
+     * its entry check asked the portfolio guard with), so the door refuses only that arm's entry; null for any other order.
+     */
+    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null): String {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
         if (exit) return com.optionslab.app.work.TradingBusy.during { send(o) }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
-        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o) }) { com.optionslab.app.work.TradingBusy.during { send(o) } }) {
+        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) { com.optionslab.app.work.TradingBusy.during { send(o) } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
                 runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): ${r.why}") }

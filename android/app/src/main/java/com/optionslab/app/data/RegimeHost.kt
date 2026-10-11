@@ -61,7 +61,7 @@ object RegimeHost {
             runCatching { Diag.record("brain", RegimeParams.line(b1)) }
             // Jarvis's note on an event day (TODO S11): "Event day: learning ignores today's results".
             if (event && com.optionslab.app.BuildConfig.JARVIS) runCatching { EventDays.todayNote()?.let { com.optionslab.app.ira.IraNotes.add(it) } }
-            for (l in RegimeParams.wouldUse(b1)) runCatching { Diag.record("brain", "Regime setting: $l") }
+            for (l in RegimeParams.wouldUse(b1, today)) runCatching { Diag.record("brain", "Regime setting: $l") }
             for (o in ready) runCatching {
                 SmartWorkers.found("regime settings", Findings.Kind.OTHER, Findings.ALL, 0, null, 60,
                     "${o.words}: shadow → paper after ${RegimeParams.SHADOW_DAYS} ${o.regime.words} days in shadow; " +
@@ -96,7 +96,7 @@ object RegimeHost {
 
     /** [cfg] with today's regime weights for its strategy (paper, or live once approved). Memory only. */
     fun managerConfig(cfg: ManagerConfig, live: Boolean): ManagerConfig =
-        if (!loaded) cfg else runCatching { RegimeParams.applyTo(cfg, live) }.getOrDefault(cfg)
+        if (!loaded) cfg else runCatching { RegimeParams.applyTo(cfg, live, date = Market.today()) }.getOrDefault(cfg)
 
     /** TEST ONLY. */
     internal fun resetForTest() { loaded = true; rebuiltOn = null; RegimeParams.resetForTest() }

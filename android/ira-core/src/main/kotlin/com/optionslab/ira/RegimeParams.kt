@@ -176,7 +176,16 @@ object RegimeParams {
         Stage.LIVE -> true
     }
 
-    private fun today(b: Book): Day? = b.day?.takeIf { !it.event && it.regime != null }
+    private val IST: java.time.ZoneId = java.time.ZoneId.of("Asia/Kolkata")
+
+    /** Today's date in IST (the default [date] of the readers below; the app passes its market clock's). */
+    fun todayIst(): LocalDate = LocalDate.now(IST)
+
+    /**
+     * The frozen day when it is [date]'s own (not an event day, regime known). Yesterday's frozen day never applies: before
+     * 09:45 (or when the brain's worker has not ticked today) nothing applies.
+     */
+    private fun today(b: Book, date: LocalDate): Day? = b.day?.takeIf { it.day == date && !it.event && it.regime != null }
 
     /**
      * [arm]'s parameters for [regime] (paper unless [live]): the map to lay over its own, or null when nothing applies
@@ -192,13 +201,13 @@ object RegimeParams {
         return out
     }
 
-    /** [arm]'s override for today's frozen regime (none before 09:45 or on an event day). Memory only. */
-    fun overrideToday(arm: String, live: Boolean = false, b: Book = book): Map<String, Double>? =
-        today(b)?.regime?.let { overrideFor(arm, it, live, b) }
+    /** [arm]'s override for [date]'s frozen regime (none before 09:45, on an event day, or from a stale day). Memory only. */
+    fun overrideToday(arm: String, live: Boolean = false, b: Book = book, date: LocalDate = todayIst()): Map<String, Double>? =
+        today(b, date)?.regime?.let { overrideFor(arm, it, live, b) }
 
     /** [cfg] with today's specialist weight overrides for its strategy laid over (multiplied, kept within the config's bounds). */
-    fun applyTo(cfg: ManagerConfig, live: Boolean, b: Book = book): ManagerConfig {
-        val r = today(b)?.regime ?: return cfg
+    fun applyTo(cfg: ManagerConfig, live: Boolean, b: Book = book, date: LocalDate = todayIst()): ManagerConfig {
+        val r = today(b, date)?.regime ?: return cfg
         val pre = "spec:${cfg.strategyId}:"
         val hits = b.overrides.filter { it.target.startsWith(pre) && it.regime == r && applies(it, live) }
         if (hits.isEmpty()) return cfg
@@ -213,8 +222,8 @@ object RegimeParams {
     }
 
     /** What would apply today if every shadow override were on: "would have used the busy-day setting" lines. */
-    fun wouldUse(b: Book = book): List<String> {
-        val d = today(b) ?: return emptyList()
+    fun wouldUse(b: Book = book, date: LocalDate = todayIst()): List<String> {
+        val d = today(b, date) ?: return emptyList()
         return b.overrides.filter { it.regime == d.regime }.map {
             "${it.words} - ${if (it.stage == Stage.SHADOW) "shadow, day ${it.shadowDays.size} of $SHADOW_DAYS (would have used the ${d.regime!!.words}-day setting)" else "applies on ${it.stage.words}"}"
         }

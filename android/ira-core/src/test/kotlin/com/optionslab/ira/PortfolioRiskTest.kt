@@ -120,18 +120,52 @@ class PortfolioRiskTest {
 
     @Test fun theDoorRefusesOnlyALiveOrderItsArmWasBlockedFrom() {
         val g = guard()
-        assertNull(g.doorRefusal(+1, today, 0))
+        assertNull(g.doorRefusal("orb_fresh", +1, today, 0))
         assertFalse(g.check("orb", +1, live = true, today, 1_000).block)
-        assertNull(g.doorRefusal(+1, today, 1_100))                        // let through: never refused at the door
+        assertNull(g.doorRefusal("orb", +1, today, 1_100))                 // let through: never refused at the door
         assertTrue(g.check("orb_fresh", +1, live = true, today, 2_000).block)
-        assertNotNull(g.doorRefusal(+1, today, 2_100))
-        assertNull(g.doorRefusal(-1, today, 2_100))                        // another direction
-        assertNull(g.doorRefusal(+1, today, 2_000 + 61_000))               // stale
-        assertNull(g.doorRefusal(+1, today.plusDays(1), 2_100))            // another day
-        assertFalse(g.check("hero", +1, live = true, today, 3_000).block)  // a later let-through clears it
-        assertNull(g.doorRefusal(+1, today, 3_100))
+        assertNotNull(g.doorRefusal("orb_fresh", +1, today, 2_100))
+        // Review R1: only the blocked arm - ORB itself, an uncorrelated arm, an order whose arm never asked - still goes.
+        assertNull(g.doorRefusal("orb", +1, today, 2_100))
+        assertNull(g.doorRefusal("hero", +1, today, 2_100))
+        assertNull(g.doorRefusal("saved", +1, today, 2_100))
+        assertNull(g.doorRefusal("orb_fresh", -1, today, 2_100))           // another direction
+        assertNull(g.doorRefusal("orb_fresh", +1, today, 2_000 + 61_000))  // stale
+        assertNull(g.doorRefusal("orb_fresh", +1, today.plusDays(1), 2_100)) // another day
+        assertNull(g.doorRefusal("orb_fresh", +1, today, 1_000))           // before the block
+        // Another arm let through does not clear it; the arm's own later let-through does.
+        assertFalse(g.check("hero", +1, live = true, today, 3_000).block)
+        assertNotNull(g.doorRefusal("orb_fresh", +1, today, 3_100))
+        g.setConfig(g.config.copy(on = false))
+        assertFalse(g.check("orb_fresh", +1, live = true, today, 4_000).block)
+        assertNull(g.doorRefusal("orb_fresh", +1, today, 4_100))
+        g.setConfig(g.config.copy(on = true))
+        assertTrue(g.check("orb_fresh", +1, live = true, today, 5_000).block)
         g.clear()
-        assertNull(g.doorRefusal(+1, today, 3_200))
+        assertNull(g.doorRefusal("orb_fresh", +1, today, 5_100))
+        // A paper block is never a door refusal (the door is for live orders).
+        val p = guard()
+        p.check("orb", +1, false, today, 1); assertTrue(p.check("orb_fresh", +1, false, today, 2).block)
+        assertNull(p.doorRefusal("orb_fresh", +1, today, 3))
+    }
+
+    @Test fun anEntryLetThroughButNotTakenIsNeverCountedAsOpened() {
+        // Review R1: the app asks with open = false and says [opened] only once the entry is taken (filled, or sent live).
+        val g = guard()
+        assertFalse(g.check("orb", +1, live = false, today, 1_000, open = false).block)
+        // ORB was then skipped (the flow, the regime, the account guard, no fill): ORB Fresh is not blocked by it.
+        assertFalse(g.check("orb_fresh", +1, live = false, today, 2_000, open = false).block)
+        assertTrue(g.blocksToday(today).isEmpty())
+        // ORB's entry taken: now the later correlated one is blocked.
+        g.opened("orb", +1, live = false, today, 3_000)
+        assertTrue(g.check("orb_fresh", +1, live = false, today, 4_000, open = false).block)
+        // Opened on paper says nothing about live, nor about the other way.
+        assertFalse(g.check("orb_fresh", +1, live = true, today, 5_000, open = false).block)
+        assertFalse(g.check("orb_fresh", -1, live = false, today, 6_000, open = false).block)
+        // No direction: nothing counted.
+        val h = guard()
+        h.opened("orb", 0, live = false, today, 1)
+        assertFalse(h.check("orb_fresh", +1, live = false, today, 2, open = false).block)
     }
 
     @Test fun armNamesReadAsOneKey() {

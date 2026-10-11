@@ -28,13 +28,24 @@ class VariantLabTest {
                 v["until"]?.let { assertTrue(it <= ShadowSim.LAST_ENTRY) }
                 assertTrue(s.params.none { it.key.contains("lot", ignoreCase = true) })
                 assertEquals(s.params.map { it.key }.toSet(), v.keys)
-                // The researched maxima themselves: ORB family -40 points, Liquidity 25%, VIX divergence 15%.
-                assertTrue((v["stopPts"] ?: 0.0) <= 40.0 && (v["stopPct"] ?: 0.0) <= (if (s.key == "liquidity") 0.25 else 0.15) + 1e-12)
+                // The maxima themselves: ORB family -40 points, Liquidity its own 15% (never wider), VIX divergence 15%.
+                assertTrue((v["stopPts"] ?: 0.0) <= 40.0 && (v["stopPct"] ?: 0.0) <= 0.15 + 1e-12)
+                // Liquidity's next-level target is never turned off by a variant (an automatic change never skips an exit).
+                if (s.key == "liquidity") assertEquals(1.0, v.getValue("tgt"), 1e-12)
             }
         }
         // A file can never carry a value outside the bounds back in.
         val bad = VariantLab.encode(VariantLab.Book(current = mapOf("liquidity" to mapOf("stopPct" to 0.9))))
-        assertEquals(0.25, VariantLab.decode(bad).currentOf("liquidity").getValue("stopPct"), 1e-12)
+        assertEquals(0.15, VariantLab.decode(bad).currentOf("liquidity").getValue("stopPct"), 1e-12)
+        val noTarget = VariantLab.encode(VariantLab.Book(current = mapOf("liquidity" to mapOf("tgt" to 0.0))))
+        assertEquals(1.0, VariantLab.decode(noTarget).currentOf("liquidity").getValue("tgt"), 1e-12)
+        // Review R1: Liquidity's bounds cap the stop at its default and keep the target on; a wider stop or no target is invalid.
+        val liq = VariantLab.strategy("liquidity")!!
+        assertEquals(com.optionslab.engine.orb.LiquidityRules.PREMIUM_STOP, liq.param("stopPct")!!.max, 1e-12)
+        assertEquals(VariantLab.LIQUIDITY_STOP_MAX, liq.defaults.getValue("stopPct"), 1e-12)
+        assertNotNull(liq.invalid(mapOf("stopPct" to 0.175)))
+        assertNotNull(liq.invalid(mapOf("tgt" to 0.0)))
+        assertNull(liq.invalid(mapOf("stopPct" to 0.125, "tgt" to 1.0)))
     }
 
     private fun variant(id: String, key: String, diffs: List<Double>, status: VariantLab.Status = VariantLab.Status.ALIVE): VariantLab.Variant {

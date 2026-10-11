@@ -247,35 +247,52 @@ class PortfolioGuard {
     private val blocks = ArrayList<Block>()
     private val blockSeq = ArrayList<Long>()
     private var seq = 0L
+    /** Each arm's latest live decision a direction ("arm|dir" -> blocked, when): the door refuses only an arm still blocked. */
+    private val liveDecided = HashMap<String, Pair<Boolean, Long>>()
 
     fun update(m: PortfolioRisk.Matrix, s: Map<String, Double>, c: Config) { matrix = m; stops = s; config = c }
     fun setConfig(c: Config) { config = c }
 
-    private fun roll(d: LocalDate) { if (day != d) { day = d; opened.clear(); blocks.clear(); blockSeq.clear() } }
+    private fun roll(d: LocalDate) { if (day != d) { day = d; opened.clear(); blocks.clear(); blockSeq.clear(); liveDecided.clear() } }
 
     /**
      * [arm]'s new entry leaning [direction] (+1 / -1) on [today]: blocked when correlated arms already opened today the same
-     * way on the same account ([live]) and the combined stop losses pass the cap; otherwise let through and counted.
+     * way on the same account ([live]) and the combined stop losses pass the cap; otherwise let through - and counted as
+     * opened when [open] (the app passes false and calls [opened] once the entry is actually taken: review R1, an entry
+     * skipped later by the flow, the regime or the account guard, or never filled, never blocks another arm).
      */
     @Synchronized
-    fun check(arm: String, direction: Int, live: Boolean, today: LocalDate, nowMs: Long): Decision {
+    fun check(arm: String, direction: Int, live: Boolean, today: LocalDate, nowMs: Long, open: Boolean = true): Decision {
         roll(today)
+        fun pass(d: Decision): Decision {
+            if (live && direction != 0) liveDecided["$arm|$direction"] = false to nowMs
+            if (open) note(arm, direction, live, nowMs)
+            return d
+        }
         val c = config
-        if (!c.on || direction == 0 || !(c.capital > 0)) { note(arm, direction, live, nowMs); return Decision(false) }
+        if (!c.on || direction == 0 || !(c.capital > 0)) return pass(Decision(false))
         val m = matrix
         val partners = opened.filter { it.live == live && it.direction == direction && it.arm != arm && (m.of(arm, it.arm) ?: 0.0) > c.rho }
             .map { it.arm }.distinct()
-        if (partners.isEmpty()) { note(arm, direction, live, nowMs); return Decision(false) }
+        if (partners.isEmpty()) return pass(Decision(false))
         val s = stops
         val combined = (s[arm] ?: 0.0) + partners.sumOf { s[it] ?: 0.0 }
-        if (combined <= c.capRs) { note(arm, direction, live, nowMs); return Decision(false, null, partners, combined) }
+        if (combined <= c.capRs) return pass(Decision(false, null, partners, combined))
         val why = "${PortfolioRisk.label(arm)}'s ${if (live) "live" else "paper"} ${if (direction > 0) "bullish" else "bearish"} entry was blocked by the " +
             "portfolio guard: ${partners.joinToString(", ") { PortfolioRisk.label(it) }} already opened the same way today and move with it " +
             "(${partners.joinToString(", ") { "%.2f".format(Locale.ENGLISH, m.of(arm, it) ?: 0.0) }}); all at their stops together is about " +
             "${PortfolioRisk.rs(combined)}, over the cap of ${PortfolioRisk.rs(c.capRs)} (${trim(c.capPct)}% of capital)"
         blocks += Block(arm, direction, live, nowMs, partners, combined, c.capRs, why); blockSeq += ++seq
         if (blocks.size > 200) { blocks.removeAt(0); blockSeq.removeAt(0) }
+        if (live) liveDecided["$arm|$direction"] = true to nowMs
         return Decision(true, why, partners, combined)
+    }
+
+    /** [arm]'s entry leaning [direction] was actually taken (a paper fill, an order sent to Zerodha): counted as opened. */
+    @Synchronized
+    fun opened(arm: String, direction: Int, live: Boolean, today: LocalDate, nowMs: Long) {
+        roll(today)
+        if (direction != 0) note(arm, direction, live, nowMs)
     }
 
     private fun note(arm: String, direction: Int, live: Boolean, nowMs: Long) {
@@ -284,24 +301,22 @@ class PortfolioGuard {
     }
 
     /**
-     * The entry door's part (a live order, whose arm the door does not know): refused only when the guard blocked a live
-     * entry leaning [direction] in the last [windowMs] and no live entry that way was let through since - an order sent
-     * despite its arm's block. Never refuses anything the guard did not block.
+     * The entry door's part for [arm]'s live order leaning [direction] (review R1: the door names the arm): refused only when
+     * the guard's latest live decision for THAT arm that way was a block, in the last [windowMs] - an order sent despite its
+     * arm's block. Another arm's entry, an arm let through since, or an order whose arm never asked is never refused here.
      */
     @Synchronized
-    fun doorRefusal(direction: Int, today: LocalDate, nowMs: Long, windowMs: Long = 60_000L): String? {
+    fun doorRefusal(arm: String, direction: Int, today: LocalDate, nowMs: Long, windowMs: Long = 60_000L): String? {
         if (day != today || direction == 0) return null
-        val i = blocks.indexOfLast { it.live && it.direction == direction && nowMs - it.atMs in 0..windowMs }
-        if (i < 0) return null
-        val b = blocks[i]
-        val bSeq = blockSeq.getOrElse(i) { 0L }
-        if (opened.any { it.live && it.direction == direction && it.seq > bSeq }) return null
+        val (blocked, at) = liveDecided["$arm|$direction"] ?: return null
+        if (!blocked || nowMs - at !in 0..windowMs) return null
+        val b = blocks.lastOrNull { it.live && it.arm == arm && it.direction == direction } ?: return null
         return "refused: " + b.why
     }
 
     @Synchronized fun blocksToday(today: LocalDate): List<Block> = if (day == today) blocks.toList() else emptyList()
 
-    @Synchronized fun clear() { day = null; opened.clear(); blocks.clear(); blockSeq.clear() }
+    @Synchronized fun clear() { day = null; opened.clear(); blocks.clear(); blockSeq.clear(); liveDecided.clear() }
 
     private fun trim(x: Double) = if (x % 1.0 == 0.0) x.toInt().toString() else x.toString()
 }

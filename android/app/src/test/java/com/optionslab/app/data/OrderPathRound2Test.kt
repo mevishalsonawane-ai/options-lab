@@ -147,6 +147,29 @@ class OrderPathRound2Test : RobolectricTest() {
         assertTrue(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Decided from the stream 1") })
     }
 
+    /**
+     * Review R1: a position is managed with the stop and target kept on it at its entry (a 25-point variant then), not with
+     * what the lab says now - after a restart the lab's book is read later, and until then the arm's defaults (-40) would
+     * have widened that stop.
+     */
+    @Test fun aLivePositionIsManagedWithTheStopKeptAtItsEntry() {
+        state(listOf(position(30, 200.0, stopId = null).put("stopPts", 25.0).put("targetPts", 40.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        KiteStream.liveForTest(true)
+        tick(180.0)
+        pass()
+        assertTrue("nothing sold above the kept 25-point stop", sells.isEmpty())
+        assertEquals(25.0, arm().today.single().stopPts!!, 1e-9)
+        tick(170.0)
+        pass()
+        awaitTrue("the sell at the kept stop (the default -40 would still hold at 170)") { sells.isNotEmpty() }
+        assertEquals("stop", arm().today.single().why)
+        // Liquidity's kept exits read back as written; a damaged line reads as none (the lab's, as before).
+        val l = com.optionslab.engine.orb.LiquidityParams(stopPct = 0.125, timeStopMinutes = 15, timeStopGain = 0.04, nextLevelTarget = true, lockPct = 0.3)
+        assertEquals(l, OrbArms.liqOf(OrbArms.liqText(l)))
+        assertNull(OrbArms.liqOf("junk"))
+    }
+
     // ---- (iii) the exchange stop ----------------------------------------------------------------------------------------
 
     @Test fun anAppExitTakesTheRestingExchangeStopOutBeforeItSells() {
@@ -254,6 +277,102 @@ class OrderPathRound2Test : RobolectricTest() {
         assertTrue("read again from the vault", Broker.loggedIn)
         SecurePrefs.putAll(mapOf("kite.accessToken" to null))
         assertTrue("a session ended in the vault is never answered from memory", !Broker.loggedIn)
+    }
+
+    /**
+     * Review R1: a BOT's entry (tag "iraorb") also asks the door's bot checks - the daily loss limit's day, the day stop, the
+     * day lock (and its amount), the smart workers and the portfolio guard - and still reads nothing from the settings vault.
+     * A trip written later is seen at once (kept in memory, refreshed on the write).
+     */
+    @Test fun aBotsEntryThroughTheDoorReadsNothingFromTheSettingsVault() = runBlocking {
+        val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        // Warm: the first entry after login reads the session and the guards once (then kept in memory).
+        Broker.awaitOrder(Broker.placeOrder(o, arm = "orb"), 2_000)
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        val id = Broker.placeOrder(o, arm = "orb")
+        assertNull(Broker.entryRecheck(o, "orb"))
+        SecurePrefs.countedThread = null
+        assertEquals("COMPLETE", Broker.awaitOrder(id, 2_000).status)
+        assertEquals("settings reads at the door for a bot's entry", 0L, SecurePrefs.readsForTest.get())
+        // The loss limit's day written (as LossBreaker does, or anything else): the next bot entry is refused at once.
+        SecurePrefs.put("breaker.day", Market.today().toString())
+        try {
+            assertEquals("refused: the daily loss limit was reached today", Broker.entryRecheck(o, "orb"))
+            // Boss's own entry is never refused by the bots' checks.
+            assertNull(Broker.entryRecheck(o.copy(tag = "iraalgo")))
+        } finally { SecurePrefs.put("breaker.day", null) }
+        assertNull(Broker.entryRecheck(o, "orb"))
+    }
+
+    /** Review R1: the vault's generation only ever grows (a kept kill switch can never match a stale one); dropKept forgets it. */
+    @Test fun theKeptKillSwitchFollowsAStrictlyGrowingGenerationAndIsDroppedWithTheSession() {
+        val o = Kite.Order(sym, Kite.Side.BUY, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        val g0 = SecurePrefs.generationHint
+        SecurePrefs.put(AppSettings.KILL_KEY, true)
+        val g1 = SecurePrefs.generationHint
+        assertTrue("a kept-elsewhere write bumps it", g1 > g0)
+        assertEquals("refused: the kill switch is on", Broker.entryRecheck(o))
+        SecurePrefs.put(AppSettings.KILL_KEY, false)
+        assertNull(Broker.entryRecheck(o))
+        SecurePrefs.put(AppSettings.KILL_KEY, true)
+        val g2 = SecurePrefs.generationHint
+        // A wipe (and a reload) moves it on, never back to a value already seen.
+        SecurePrefs.wipe()
+        val g3 = SecurePrefs.generationHint
+        assertTrue("$g3 after $g2", g3 > g2)
+        assertNull("the wiped vault's kill switch is off", Broker.entryRecheck(o))
+        SecurePrefs.reload()
+        assertTrue(SecurePrefs.generationHint > g3)
+        // The kept copy is dropped with the session's kept reads (logout, a session end, forget).
+        assertNull(Broker.entryRecheck(o))
+        val f = Broker::class.java.getDeclaredField("killKept").apply { isAccessible = true }
+        assertNotNull(f.get(null))
+        Broker.resetForTest()
+        assertNull(f.get(null))
+    }
+
+    /**
+     * Review R1: the trade manager's look prices a live trade from memory only once it is attached - its Zerodha token resolved
+     * at the attach - so with the instruments file gone and the day's token map forgotten it still reads the stream's tick,
+     * and reads nothing from the settings vault.
+     */
+    @Test fun theManagersLookReadsNoFileOnceTheTradeIsAttached() {
+        TradeManagerHost.resetForTest()
+        TradeManagerHost.testNoWake = true
+        val id = "orb:orb_fresh:R1:L"
+        val now = System.currentTimeMillis()
+        try {
+            TradeManagerHost.sync(listOf(TradeManagerHost.ArmTrade("orb_fresh", id, "ORB Fresh", "BANKNIFTY", 1, paperCe, 200.0, 30,
+                160.0, 240.0, now + 3 * 3_600_000L, live = true, entryMs = now, kite = sym)))
+            tick(201.0)
+            awaitTrue("the token resolved at the attach") { TradeManagerHost.premiumForTest(id) == 201.0 }
+            // No file to read and no map kept: a look that went to the file would find nothing.
+            java.io.File(context.filesDir, "kite_instruments.json").delete()
+            Broker::class.java.getDeclaredField("tokenMap").apply { isAccessible = true }.set(null, null)
+            assertNull(Broker.cachedInstruments())
+            tick(202.0)
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            val px = TradeManagerHost.premiumForTest(id)
+            SecurePrefs.countedThread = null
+            assertEquals(202.0, px!!, 1e-9)
+            assertEquals(0L, SecurePrefs.readsForTest.get())
+        } finally { TradeManagerHost.resetForTest() }
+    }
+
+    /** Review R1: a shared read is joined only within one lane - an exit's SAFETY read never waits on a lower lane's read. */
+    @Test fun aSharedReadIsJoinedOnlyWithinItsLane() = runBlocking {
+        fun lane(p: com.optionslab.ira.RateGate.Priority) = Broker.Lane(p)
+        val safety = kotlinx.coroutines.withContext(lane(com.optionslab.ira.RateGate.Priority.SAFETY)) { Broker.shareKeyForTest(7) }
+        val entry = kotlinx.coroutines.withContext(lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { Broker.shareKeyForTest(7) }
+        val analysis = kotlinx.coroutines.withContext(lane(com.optionslab.ira.RateGate.Priority.ANALYSIS)) { Broker.shareKeyForTest(7) }
+        val plain = Broker.shareKeyForTest(7)
+        assertTrue(safety != entry && safety != analysis && safety != plain)
+        assertTrue(entry != analysis)
+        assertEquals("no lane reads as the ordinary (entry) lane", entry, plain)
+        assertEquals(safety, kotlinx.coroutines.withContext(lane(com.optionslab.ira.RateGate.Priority.SAFETY)) { Broker.shareKeyForTest(7) })
+        assertTrue(safety != kotlinx.coroutines.withContext(lane(com.optionslab.ira.RateGate.Priority.SAFETY)) { Broker.shareKeyForTest(8) })
     }
 
     // ---- the price pick and the screens' pace -----------------------------------------------------------------------------

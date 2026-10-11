@@ -49,6 +49,8 @@ object VariantLab {
     /** Liquidity 15+5 (S9): its variants alive at most, and its promotion alpha (half the others'). */
     const val LIQUIDITY_MAX = 3
     const val LIQUIDITY_ALPHA = ALPHA / 2
+    /** Liquidity 15+5's widest stop a variant may try: its own default (15%), never wider (review R1). */
+    const val LIQUIDITY_STOP_MAX = com.optionslab.engine.orb.LiquidityRules.PREMIUM_STOP
     /** The safety net: a day's loss beyond this many times the backtest's average losing day reverts the arm to its defaults... */
     const val SAFETY_LOSS_X = 3.0
     /** ...as do this many losing days in a row below the variant's forward expectation. */
@@ -106,7 +108,8 @@ object VariantLab {
 
     /**
      * The strategies the lab tunes, with bounds from their research: the ORB family's stop never wider than its -40 points,
-     * entries never after 14:30; Liquidity's stop never wider than the 25% its research tried (15% now), its EXITS only;
+     * entries never after 14:30; Liquidity's stop never wider than its 15% default (review R1, Boss's rule: an automatic change
+     * never widens a stop; its research tried up to 25%) and its next-level target always on (never skips an exit), its EXITS only;
      * VIX divergence's stop never wider than its 15%. Night holds overnight, Hero and the MCX arms trade data the lab does not
      * keep: they are not tuned here ([NOT_TUNED]).
      */
@@ -126,10 +129,10 @@ object VariantLab {
                 Param(ArmParams.TARGET_PTS, "target", 20.0, 60.0, 5.0, Unit.PTS))),
         // S9: exits only (stop, time stop, target rule, lock); its entries are frozen in LiquidityRules. Fewer alive, a stricter bar.
         Strategy("liquidity", "Liquidity 15+5", listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"),
-            listOf(Param(ArmParams.STOP_PCT, "stop", 0.10, 0.25, 0.025, Unit.PCT),
+            listOf(Param(ArmParams.STOP_PCT, "stop", 0.10, LIQUIDITY_STOP_MAX, 0.025, Unit.PCT),
                 Param(ArmParams.TS, "time-stop minutes", 10.0, 30.0, 5.0, Unit.MIN, grid = 1.0),
                 Param(ArmParams.TSG, "time-stop gain", 0.03, 0.08, 0.01, Unit.PCT),
-                Param(ArmParams.TGT, "next-level target", 0.0, 1.0, 1.0, Unit.ONOFF, grid = 1.0),
+                Param(ArmParams.TGT, "next-level target", 1.0, 1.0, 1.0, Unit.ONOFF, grid = 1.0),
                 Param(ArmParams.LOCK, "profit lock", 0.0, 1.0, 0.15, Unit.LOCK)),
             maxAlive = LIQUIDITY_MAX, alpha = LIQUIDITY_ALPHA),
         Strategy("vix_div", "VIX divergence", listOf("NIFTY", "BANKNIFTY"),

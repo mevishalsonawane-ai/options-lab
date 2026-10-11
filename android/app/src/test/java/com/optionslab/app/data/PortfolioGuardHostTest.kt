@@ -70,6 +70,7 @@ class PortfolioGuardHostTest : RobolectricTest() {
         SecurePrefs.readsForTest.set(0)
         SecurePrefs.countedThread = Thread.currentThread()
         val first = FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE")
+        FlowGate.taken(first, "P1")      // ORB's entry filled: only now does it count as opened (review R1)
         val later = FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:05", what = "CE")
         val other = FlowGate.check("orb_fresh", "BANKNIFTY", -1, live = false, at = "2026-10-12T10:06", what = "PE")
         SecurePrefs.countedThread = null
@@ -86,25 +87,37 @@ class PortfolioGuardHostTest : RobolectricTest() {
 
     @Test fun aLiveEntryIsRefusedAtTheDoorButNeverAnExitOrBossesOwnOrder() = runBlocking {
         correlated()
-        assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = true, at = "2026-10-12T10:01", what = "CE").skip)
+        val orb = FlowGate.check("orb", "BANKNIFTY", 1, live = true, at = "2026-10-12T10:01", what = "CE")
+        assertFalse(orb.skip)
+        FlowGate.outcome(orb, "entered_live")      // sent to Zerodha: counted as opened
         assertTrue(FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = true, at = "2026-10-12T10:02", what = "CE").skip)
         // The door's own check reads memory only.
         SecurePrefs.readsForTest.set(0)
         SecurePrefs.countedThread = Thread.currentThread()
-        val why = PortfolioHost.doorRefusal("BANKNIFTY26OCT52000CE", buy = true)
+        val why = PortfolioHost.doorRefusal("orb_fresh", "BANKNIFTY26OCT52000CE", buy = true)
         SecurePrefs.countedThread = null
         assertEquals(0L, SecurePrefs.readsForTest.get())
         assertNotNull(why)
-        try { Broker.placeOrder(order()); fail("a bot's entry its arm was blocked from went through") } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(), arm = "orb_fresh"); fail("a bot's entry its arm was blocked from went through") } catch (e: Broker.KiteError) {
             assertEquals("entry_gate", e.type)
             assertTrue(e.message, e.message!!.contains("portfolio guard"))
         }
         assertTrue(kite.placed.isEmpty())
         // A put (the other direction), an exit and Boss's own order all go.
-        assertNull(PortfolioHost.doorRefusal("BANKNIFTY26OCT52000PE", buy = true))
+        assertNull(PortfolioHost.doorRefusal("orb_fresh", "BANKNIFTY26OCT52000PE", buy = true))
         Broker.placeOrder(order(side = Kite.Side.SELL), exit = true)
         Broker.placeOrder(order(tag = "iraalgo"))
         assertEquals(2, kite.placed.size)
+        // Review R1: only the blocked arm is refused - ORB's own entry, an uncorrelated arm's, an order with no arm, and every
+        // leg of a saved strategy's basket go through the door.
+        assertNull(PortfolioHost.doorRefusal("orb", "BANKNIFTY26OCT52000CE", buy = true))
+        assertNull(PortfolioHost.doorRefusal(null, "BANKNIFTY26OCT52000CE", buy = true))
+        Broker.placeOrder(order(), arm = "orb")
+        Broker.placeOrder(order(), arm = "hero")
+        Broker.placeOrder(order())
+        Broker.placeOrder(order(tag = "iraalgostrat"), arm = "orb_fresh")
+        Broker.placeOrder(order(tag = "iraalgostrat"))
+        assertEquals(7, kite.placed.size)
     }
 
     @Test fun offOrUncorrelatedTheGuardNeverBlocks() {
@@ -120,13 +133,35 @@ class PortfolioGuardHostTest : RobolectricTest() {
 
     @Test fun jarvisSaysHowAlikeTheArmsAreAndWhyOneWasBlocked() = runBlocking {
         correlated()
-        FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE")
+        FlowGate.taken(FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE"), "P1")
         FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:02", what = "CE")
         // A refresh from the (empty) records would replace the test's matrix: the answers read memory when fresh.
         val m = PortfolioHost.guard.matrix
         assertTrue(m.of("orb", "orb_fresh")!! > 0.6)
         val why = PortfolioRisk.answerBlocked("why was orb fresh blocked?", PortfolioHost.guard.blocksToday(today))
         assertTrue(why, why.contains("ORB Fresh's paper bullish entry was blocked"))
+    }
+
+    @Test fun aSkippedEntryIsNeverCountedAsOpenedAndTheRegimeSitOutComesFirst() {
+        correlated()
+        // ORB let through but never taken (the flow, the account guard, no fill): ORB Fresh is not blocked by it.
+        assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:01", what = "CE").skip)
+        assertFalse(FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:02", what = "CE").skip)
+        assertTrue(PortfolioHost.guard.blocksToday(today).isEmpty())
+        // A day ORB sits out by a proven regime lesson: skipped by the regime, never asked by the portfolio guard, never opened.
+        PortfolioHost.resetForTest(); correlated()
+        val sitOut = RegimeParams.Override("arm:orb", RegimeParams.Regime.BUSY, mapOf(RegimeParams.SIZE_KEY to 0.0), "strat:ORB", 0.02, "orb busy",
+            (0 until 10).map { today.minusDays(20L - it) })
+        RegimeParams.use(RegimeParams.Book(listOf(sitOut), RegimeParams.Day(today, RegimeParams.Regime.BUSY, false, false, 585)))
+        val t = FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:03", what = "CE")
+        assertTrue(t.skip)
+        assertTrue(t.pausedWhy!!, t.pausedWhy!!.contains("sits out"))
+        assertEquals(0, t.opens)
+        FlowGate.taken(t, "P2")       // even if a caller said so, a skipped ticket counts nothing
+        assertFalse(FlowGate.check("orb_fresh", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:04", what = "CE").skip)
+        // Yesterday's frozen day never applies today.
+        RegimeParams.use(RegimeParams.Book(listOf(sitOut), RegimeParams.Day(today.minusDays(1), RegimeParams.Regime.BUSY, false, false, 585)))
+        assertFalse(FlowGate.check("orb", "BANKNIFTY", 1, live = false, at = "2026-10-12T10:05", what = "CE").skip)
     }
 
     @Test fun regimeWeightsReachTheManagerOnlyOutOfShadowAndNeverOnAnEventDay() {

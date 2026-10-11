@@ -132,6 +132,14 @@ object OrbArms {
          * (null: it never did - every other position). A stop that fills there is the manager's lock exit.
          */
         val mgrStop: Double? = null,
+        /**
+         * Review R1: the exits' parameters in force at the entry, kept on the position so a restart before the strategy lab's
+         * book is read (or any later change) never manages it with other ones - the ORB family's stop and target points
+         * ([stopPts], [targetPts]) and Liquidity 15+5's exit parameters ([liq]). Null: an entry from before they were kept, or
+         * another arm (read from the lab, as before).
+         */
+        val stopPts: Double? = null, val targetPts: Double? = null,
+        val liq: com.optionslab.engine.orb.LiquidityParams? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -245,7 +253,10 @@ object OrbArms {
                         soldTime = p.optString("soldTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
                         seen = p.optJSONArray("seen")?.let { seenOf(it) }.orEmpty(),
                         lot = if (p.has("lot")) p.getInt("lot") else null, low = if (p.has("low")) p.getDouble("low") else null,
-                        mgrStop = if (p.has("mgrStop")) p.getDouble("mgrStop") else null)
+                        mgrStop = if (p.has("mgrStop")) p.getDouble("mgrStop") else null,
+                        stopPts = if (p.has("stopPts")) p.getDouble("stopPts") else null,
+                        targetPts = if (p.has("targetPts")) p.getDouble("targetPts") else null,
+                        liq = p.optString("liq").ifEmpty { null }?.let { liqOf(it) })
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -592,7 +603,8 @@ object OrbArms {
                     .apply { p.near?.let { put("near", it) }; p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) } }
                     .apply { if (p.sold > 0) put("sold", p.sold); p.soldAt?.let { put("soldAt", it) }; p.soldTime?.let { put("soldTime", it.toString()) }
                         if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) }; p.low?.let { put("low", it) }
-                        p.mgrStop?.let { put("mgrStop", it) } })
+                        p.mgrStop?.let { put("mgrStop", it) }
+                        p.stopPts?.let { put("stopPts", it) }; p.targetPts?.let { put("targetPts", it) }; p.liq?.let { put("liq", liqText(it)) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -730,10 +742,30 @@ object OrbArms {
      * ([VariantRunner.orbParams]: no settings read, no I/O). A position is always managed with its own day's and account's.
      */
     private fun paramsOf(arm: Arm, day: LocalDate, live: Boolean): com.optionslab.engine.orb.OrbParams = VariantRunner.orbParams(arm, day, live)
-    private fun paramsOf(p: Position): com.optionslab.engine.orb.OrbParams = paramsOf(armOf(p.arm), p.day, p.live)
+    private fun paramsOf(p: Position): com.optionslab.engine.orb.OrbParams = paramsOf(armOf(p.arm), p.day, p.live).let { d ->
+        if (p.stopPts == null && p.targetPts == null) d else d.copy(stopPoints = p.stopPts ?: d.stopPoints, targetPoints = p.targetPts ?: d.targetPoints)
+    }
     /** Liquidity 15+5's EXIT parameters on [day] for the [live] account (its entries are frozen in code), memory only. */
     private fun liqParams(day: LocalDate, live: Boolean): com.optionslab.engine.orb.LiquidityParams = VariantRunner.liquidityParams(day, live)
-    private fun liqParams(p: Position): com.optionslab.engine.orb.LiquidityParams = liqParams(p.day, p.live)
+    private fun liqParams(p: Position): com.optionslab.engine.orb.LiquidityParams = p.liq ?: liqParams(p.day, p.live)
+
+    /** [p] with the exits' parameters in force now kept on it (review R1; at the entry - see [Position.stopPts]). */
+    private fun stamped(p: Position): Position = runCatching {
+        val a = armOf(p.arm)
+        when {
+            a.liquidity -> p.copy(liq = liqParams(p.day, p.live))
+            a.source in com.optionslab.ira.ArmParams.ORB_ARMS -> paramsOf(a, p.day, p.live).let { p.copy(stopPts = it.stopPoints, targetPts = it.targetPoints) }
+            else -> p
+        }
+    }.getOrDefault(p)
+
+    /** Liquidity's kept exit parameters as one line: "stopPct,minutes,gain,target(1/0),lock". */
+    internal fun liqText(l: com.optionslab.engine.orb.LiquidityParams): String =
+        "${l.stopPct},${l.timeStopMinutes},${l.timeStopGain},${if (l.nextLevelTarget) 1 else 0},${l.lockPct}"
+    internal fun liqOf(s: String): com.optionslab.engine.orb.LiquidityParams? = runCatching {
+        val f = s.split(',')
+        com.optionslab.engine.orb.LiquidityParams(f[0].toDouble(), f[1].toLong(), f[2].toDouble(), f[3] == "1", f[4].toDouble())
+    }.getOrNull()
     /** Whether a new entry of [arm] on [day] for the [live] account rests under the profit-lock ladder (Liquidity: only with a lock variant). */
     private fun ladderOn(arm: Arm, day: LocalDate, live: Boolean): Boolean =
         if (arm.liquidity) liqParams(day, live).lockPct > 0 else ProfitLock.targetOf(arm) != null
@@ -1387,8 +1419,8 @@ object OrbArms {
             val stop = Paper.place(c, "SELL", 1, "SL-M", "MIS", null, trigger)
             if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${arm.label} · stop") } }
         }
-        b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
-            charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null)
+        b.positions += stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
+            charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null))
         marks[c.symbol] = fill.price
         return "entered"
     }
@@ -1948,7 +1980,8 @@ object OrbArms {
         if (why.isNotEmpty()) return "refused: " + why.joinToString("; ")
         val known = knownKite(b)
         val id: String? = try {
-            Broker.placeOrder(o)
+            // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
+            Broker.placeOrder(o, arm = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source)
         } catch (e: Broker.NotLoggedIn) {
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {
@@ -1966,9 +1999,9 @@ object OrbArms {
         }
         if (f == null || f.status !in DONE) {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
-            b.positions += Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
+            b.positions += stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
                 live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
-                near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 })
+                near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }))
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
                 "until the order book shows what filled.", "ORB live")
@@ -1979,10 +2012,10 @@ object OrbArms {
         Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId)
         val (stopId, trigger) = placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id), liquidity = liquidity != null,
             points = lp.stopPoints, pct = lq.stopPct)
-        b.positions += Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
+        b.positions += stamped(Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
-            lot = ins.lotSize.takeIf { liquidity != null && it > 0 })
+            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }))
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
         return "entered_live"
@@ -2415,9 +2448,9 @@ object OrbArms {
             val stop = Paper.place(c, "SELL", (fill.quantity / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "SL-M", "MIS", null, trigger)
             if (stop.ok) { stopId = stop.orderId; stopId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · stop") } }
         }
-        b.positions += Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
+        b.positions += stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
             charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip, strong = strong,
-            lot = c.lotSize.takeIf { it > 0 }, ladder = lq.lockPct > 0)
+            lot = c.lotSize.takeIf { it > 0 }, ladder = lq.lockPct > 0))
         marks[c.symbol] = fill.price
         return "entered"
     }

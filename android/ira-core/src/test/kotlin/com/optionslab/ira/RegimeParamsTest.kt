@@ -80,13 +80,19 @@ class RegimeParamsTest {
             RegimeParams.use(b)
             if (i < 9) {
                 assertNull(RegimeParams.overrideFor("liquidity", RegimeParams.Regime.BUSY), "still in shadow on day ${i + 1}")
-                assertTrue(RegimeParams.wouldUse().single().contains("would have used the busy-day setting"))
+                assertTrue(RegimeParams.wouldUse(date = day.day).single().contains("would have used the busy-day setting"))
             }
         }
         assertEquals(1, ready.size)
         assertEquals(RegimeParams.Stage.PAPER, b.overrides.single().stage)
         assertEquals(mapOf(RegimeParams.SIZE_KEY to 0.0), RegimeParams.overrideFor("Liquidity 15+5", RegimeParams.Regime.BUSY))
-        assertEquals(mapOf(RegimeParams.SIZE_KEY to 0.0), RegimeParams.overrideToday("liquidity:BANKNIFTY".substringBefore(':')))
+        val last = d0.plusDays(11)
+        assertEquals(last, b.day?.day)
+        assertEquals(mapOf(RegimeParams.SIZE_KEY to 0.0), RegimeParams.overrideToday("liquidity:BANKNIFTY".substringBefore(':'), date = last))
+        // Yesterday's frozen day never applies today (09:15-09:45, or a day the brain's worker never ticked).
+        assertNull(RegimeParams.overrideToday("liquidity", date = last.plusDays(1)), "a stale regime day never applies")
+        assertNull(RegimeParams.overrideToday("liquidity"), "the default date is the real today, not the test's")
+        assertTrue(RegimeParams.wouldUse(date = last.plusDays(1)).isEmpty())
         assertNull(RegimeParams.overrideFor("liquidity", RegimeParams.Regime.BUSY, live = true), "live waits for Boss's PIN")
         assertNull(RegimeParams.overrideFor("liquidity", RegimeParams.Regime.QUIET))
         b = RegimeParams.approveLive(b, "arm:liquidity|BUSY")
@@ -95,7 +101,7 @@ class RegimeParamsTest {
         assertEquals(mapOf(RegimeParams.SIZE_KEY to 0.0), RegimeParams.overrideFor("liquidity", RegimeParams.Regime.BUSY, live = true))
         // An event day: nothing applies today, whatever the regime.
         RegimeParams.use(b.copy(day = busyDay(d0.plusDays(30), event = true)))
-        assertNull(RegimeParams.overrideToday("liquidity"))
+        assertNull(RegimeParams.overrideToday("liquidity", date = d0.plusDays(30)))
         assertTrue(RegimeParams.line().contains("event day"))
         // Tonight the lesson is gone: so is the override; one that stays keeps its days and approval.
         assertTrue(RegimeParams.refresh(b, emptyList()).overrides.isEmpty())
@@ -131,10 +137,13 @@ class RegimeParamsTest {
         val shadow = RegimeParams.Book(listOf(o), busyDay(d0))
         assertEquals(cfg, RegimeParams.applyTo(cfg, live = false, b = shadow))
         val paper = RegimeParams.Book(listOf(o.copy(shadowDays = days)), busyDay(d0.plusDays(20)))
-        assertEquals(0.5, RegimeParams.applyTo(cfg, live = false, b = paper).spec("news").weight, 1e-9)
-        assertEquals(cfg, RegimeParams.applyTo(cfg, live = true, b = paper))
-        assertEquals(ManagerConfig("solo"), RegimeParams.applyTo(ManagerConfig("solo"), live = false, b = paper))
-        assertEquals(cfg, RegimeParams.applyTo(cfg, live = false, b = paper.copy(day = null)))
+        val on = d0.plusDays(20)
+        assertEquals(0.5, RegimeParams.applyTo(cfg, live = false, b = paper, date = on).spec("news").weight, 1e-9)
+        assertEquals(cfg, RegimeParams.applyTo(cfg, live = true, b = paper, date = on))
+        assertEquals(ManagerConfig("solo"), RegimeParams.applyTo(ManagerConfig("solo"), live = false, b = paper, date = on))
+        assertEquals(cfg, RegimeParams.applyTo(cfg, live = false, b = paper.copy(day = null), date = on))
+        // The next morning (before 09:45 freezes a new day): yesterday's weights never apply.
+        assertEquals(cfg, RegimeParams.applyTo(cfg, live = false, b = paper, date = on.plusDays(1)))
     }
 
     @Test fun candidatesFromTheLabMeetTheSameBarAndOnlyLowerRisk() {
