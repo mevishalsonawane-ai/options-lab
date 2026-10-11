@@ -91,7 +91,9 @@ class RegimeParamsTest {
         assertEquals(mapOf(RegimeParams.SIZE_KEY to 0.0), RegimeParams.overrideToday("liquidity:BANKNIFTY".substringBefore(':'), date = last))
         // Yesterday's frozen day never applies today (09:15-09:45, or a day the brain's worker never ticked).
         assertNull(RegimeParams.overrideToday("liquidity", date = last.plusDays(1)), "a stale regime day never applies")
-        assertNull(RegimeParams.overrideToday("liquidity"), "the default date is the real today, not the test's")
+        // (Skipped on the one real day equal to the test's last day - 12 Oct 2026 - when the default date IS the test's.)
+        if (java.time.LocalDate.now(com.optionslab.engine.IST) != last)
+            assertNull(RegimeParams.overrideToday("liquidity"), "the default date is the real today, not the test's")
         assertTrue(RegimeParams.wouldUse(date = last.plusDays(1)).isEmpty())
         assertNull(RegimeParams.overrideFor("liquidity", RegimeParams.Regime.BUSY, live = true), "live waits for Boss's PIN")
         assertNull(RegimeParams.overrideFor("liquidity", RegimeParams.Regime.QUIET))
