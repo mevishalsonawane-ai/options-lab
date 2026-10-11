@@ -201,7 +201,7 @@ class VariantRunnerTest : RobolectricTest() {
         assertEquals(com.optionslab.engine.orb.OrbParams.SWEEP, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, false))
     }
 
-    @Test fun aLiveChangeIsTradedFromTheNextSessionAndItsUndoToTheDefaultsNeedsNoPin() {
+    @Test fun aLiveChangeIsTradedFromTheNextSessionAndItsUndoToAWiderDefaultStopNeedsThePin() {
         val s = VariantLab.strategy("liquidity")!!
         val c = VariantLab.Change("C1", "liquidity", "V1", VariantLab.ChangeKind.LIVE_PROPOSAL, VariantLab.ChangeStatus.OFFERED, day, s.defaults,
             s.defaults + ("stopPct" to 0.125), "it made more")
@@ -213,9 +213,11 @@ class VariantRunnerTest : RobolectricTest() {
         assertEquals("never mid-day", com.optionslab.engine.orb.LiquidityParams.DEFAULT, VariantRunner.liquidityParams(day, true))
         assertEquals(0.125, VariantRunner.liquidityParams(next, true).stopPct, 1e-12)
         assertEquals(0.125, VariantRunner.liquidityParams(next, false).stopPct, 1e-12)
-        // Back to the defaults lowers risk: no PIN.
-        assertTrue(!VariantRunner.undoLiveNeedsPin("C1"))
-        assertTrue(VariantRunner.undoLive("C1", pinConfirmed = false).startsWith("Undone"))
+        // Back to the defaults would widen the live stop (12.5% -> 15%): that raises live risk - the PIN (review 2 #5).
+        assertTrue(VariantRunner.undoLiveNeedsPin("C1"))
+        assertEquals(VariantRunner.PIN_NEEDED, VariantRunner.undoLive("C1", pinConfirmed = false))
+        assertEquals(0.125, VariantRunner.liquidityParams(next, true).stopPct, 1e-12)
+        assertTrue(VariantRunner.undoLive("C1", pinConfirmed = true).startsWith("Undone"))
         assertEquals(VariantLab.ChangeStatus.UNDONE, VariantRunner.variants.value.change("C1")!!.status)
     }
 
