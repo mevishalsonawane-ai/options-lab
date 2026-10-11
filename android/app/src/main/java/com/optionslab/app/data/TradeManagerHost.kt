@@ -109,10 +109,10 @@ object TradeManagerHost {
         if (m == TradeManager.Mode.ACT && !f.canAct)
             return "${f.name}: its own exits do not take the trade manager's word yet, so it records only (SHADOW); nothing changed."
         if (m == TradeManager.Mode.ACT && f.paperOnly && account == TradeManager.Account.LIVE) return "${f.name} trades on paper only."
-        if (TradeManager.needsPin(m, account) && !pinConfirmed) return PIN_NEEDED
-        // ORB Fresh (R12): its paper exits take the manager's word; its live exits do not yet - live stays SHADOW.
+        // ORB Fresh (R12): its paper exits take the manager's word; its live exits do not yet - live stays SHADOW (said before any PIN is asked).
         if (m == TradeManager.Mode.ACT && account == TradeManager.Account.LIVE && !f.canActLive)
             return "${f.name} live: its live exits do not take the trade manager's word yet, so it records only (SHADOW); nothing changed."
+        if (TradeManager.needsPin(m, account) && !pinConfirmed) return PIN_NEEDED
         synchronized(this) {
             val next = _policy.value.with(family, account, m)
             _policy.value = next

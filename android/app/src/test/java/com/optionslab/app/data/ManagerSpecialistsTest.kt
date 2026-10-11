@@ -123,8 +123,9 @@ class ManagerSpecialistsTest : RobolectricTest() {
         assertFalse("recorded only", would.acted)
         assertEquals(null, TradeManagerHost.exitDue(r.trade.tradeId))
         assertEquals(null, TradeManagerHost.levels(r.trade.tradeId))
-        // LIVE to ACT: the PIN with its warning first; with the PIN, still records only (its live exits are not wired).
-        assertEquals(TradeManagerHost.PIN_NEEDED, TradeManagerHost.setMode("orb_fresh", TradeManager.Account.LIVE, TradeManager.Mode.ACT))
+        // LIVE to ACT: refused before any PIN is asked (its live exits are not wired); with or without the PIN, records only.
+        val first = TradeManagerHost.setMode("orb_fresh", TradeManager.Account.LIVE, TradeManager.Mode.ACT)
+        assertTrue(first, "records only" in first && "nothing changed" in first)
         val said = TradeManagerHost.setMode("orb_fresh", TradeManager.Account.LIVE, TradeManager.Mode.ACT, pinConfirmed = true)
         assertTrue(said, "records only" in said && "nothing changed" in said)
         assertEquals(TradeManager.Mode.SHADOW, TradeManagerHost.policy.value.mode("orb_fresh", TradeManager.Account.LIVE))
