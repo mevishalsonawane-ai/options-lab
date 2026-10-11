@@ -256,3 +256,16 @@ ATM straddle level and change, CE/PE skew, OI change and PCR over ATM +-200, CE/
   turns year A negative when it starts early and is mixed when it starts late; it halves the average winner. Not added.
 - EXPIRY DAY, SAME-DAY OPTION (EXPIRY_SAME_DAY.md): on 11 BANKNIFTY monthly expiry days, buying the expiring option
   instead of next month's gives +11.7k vs +0.8k (ORB family better, Liquidity 15+5 slightly worse). Small sample.
+
+## Majority Rule 14, NIFTY weekly (R13, 11 Oct 2026) - for every agent, human or app
+Full study: `HUNT_R13_MAJORITY_RULE.md`. MR(14) = % of the last 14 weekly closes above the previous close; 28.57 = 4 of 14 up.
+- Rare: 13 touches in 20 years (about 8 sell-off episodes). Too few to prove anything sharp.
+- Boss's rule (touch, then a green week, then "+1,000 points"): NOT special. "+1,000 before -500" 33-50% vs 36% for random
+  green weeks; with a +1,000 target / -500 stop on 1 futures lot: -Rs 69k to +Rs 39k over 20 years.
+- What is real: after a deep weekly sell-off NIFTY drifts up (4 weeks +6.2% vs +0.9%; 26 weeks +18.4% vs +6.2%). It is
+  the generic "buy after a deep sell-off" effect, not the number 28.57 (neighbouring thresholds, length 20, daily: nothing).
+- Option buying on it: break-even to losing (high VIX after sell-offs makes calls dear; the bounce is slow).
+- As an intraday direction filter: no usable tilt (57.5% vs 46.6% up-days the next week, p=0.17; nothing over 4 weeks).
+- Decision (Boss, 11 Oct): no strategy, no alert. Agents may use it only as slow context ("deep weekly sell-off zone:
+  slow upward drift likely over weeks, intraday direction unaffected, option premiums expensive") - never as an entry
+  trigger, never to raise size or risk. Live state on 11 Oct: touched in the week ending 1 Oct 2026 (NIFTY 22,422).
