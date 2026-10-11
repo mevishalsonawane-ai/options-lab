@@ -25,6 +25,7 @@ import com.optionslab.ira.AutoChange
 import com.optionslab.ira.Experiments
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -109,6 +110,49 @@ class AutopilotCardTest {
         titleAndCloseApart()
         tap("Close")
         assertTrue(closed)
+    }
+
+    @Test fun aRevertAlwaysAsksForThePinFirstWhateverItsScope() {
+        // Review G5-1: a paper mute's revert left to Boss (its agent refused it: the manager acts on live) - the PIN first.
+        val paper = change(AutoChange.Scope.PAPER, "spec:pine:oi", "the OI specialist on Pine (paper)")
+        assertTrue(asksPinFirst(LogAction.REVERT, paper))
+        assertTrue(asksPinFirst(LogAction.REVERT, change(AutoChange.Scope.SHADOW, "spec:pine:oi", "the OI specialist on Pine (shadow)")))
+        assertTrue(asksPinFirst(LogAction.REVERT, change(AutoChange.Scope.LIVE, "spec:pine:oi", "the OI specialist on Pine (live)")))
+        // A paper undo by its scope alone needs nothing (the agent's own hold is caught by Autopilot.undo's answer).
+        assertFalse(asksPinFirst(LogAction.UNDO, paper))
+        assertFalse(asksPinFirst(LogAction.APPLY, paper))
+    }
+
+    @Test fun anUndoTheAgentHoldsForThePinSaysPin() {
+        // Review G5-2: a paper mute on a strategy whose live trades the manager acts on: its undo raises live risk.
+        val (b, e) = AutoChange.record(AutoChange.Book(), change(AutoChange.Scope.PAPER, "spec:pine:oi", "the OI specialist on Pine (paper)"),
+            AutoChange.Status.PROBATION, 1, day)
+        assertFalse(AutoChange.undoNeedsPin(e.change))
+        val asked = ArrayList<Pair<LogAction, String>>()
+        set { AutopilotLogSheet(b, null, onAction = { a, id -> asked += a to id }, onClose = null, undoPin = setOf(e.id)) }
+        assertTrue(shows("Undo (PIN)"))
+        tap("Undo (PIN)")
+        assertEquals(listOf(LogAction.UNDO to e.id), asked)
+    }
+
+    @Test fun theCardsDayFollowsTheClockPastMidnight() {
+        // Review G5-10: Home left open over midnight - the card's "Today" moves to the new day.
+        val zone = com.optionslab.engine.IST
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(day.atTime(23, 59, 30).atZone(zone).toInstant(), zone)
+        try {
+            var seen: LocalDate? = null
+            set { val d = rememberMarketDay(); seen = d; androidx.compose.material3.Text(d.toString()) }
+            assertEquals(day, seen)
+            com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(day.plusDays(1).atTime(0, 1).atZone(zone).toInstant(), zone)
+            compose.waitUntil(10_000) {
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(61))
+                compose.mainClock.advanceTimeBy(61_000)
+                seen == day.plusDays(1)
+            }
+            assertTrue(shows(day.plusDays(1).toString()))
+        } finally {
+            com.optionslab.app.data.Market.testClock = null
+        }
     }
 
     @Config(qualifiers = "w891dp-h411dp-land")

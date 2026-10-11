@@ -32,7 +32,8 @@ class AutoScorecardTest {
 
     @Test fun eachSystemIsScoredAgainstNoChange() {
         val c = AutoScorecard.of(book(), sep, listOf(AutoScorecard.Promotion(LocalDate.of(2026, 9, 22), "ORB Fresh", "stop 15% → 12%", 850.0, "APPLIED", false)), 2)
-        assertEquals(4 + 1 + 2, c.changes)
+        // The health tuner's 2 are days it changed something, not changes (review G5-9).
+        assertEquals(4 + 1, c.changes)
         val ap = c.systems.single { it.name == "Autopilot · trade manager specialists" }
         assertEquals(2, ap.changes); assertEquals(1, ap.kept); assertEquals(1, ap.reverted)
         assertEquals(800.0, ap.effect!!, 1e-9)
@@ -42,7 +43,19 @@ class AutoScorecardTest {
         assertEquals(listOf("the oi specialist on Solo", "the vix specialist on Solo", "the flow specialist on Solo"), c.muted)
         assertTrue(AutoScorecard.lines(c).any { it.contains("ORB Fresh") && it.contains("+₹850") })
         assertTrue(AutoScorecard.say(c).contains("+₹800 against making no change"), AutoScorecard.say(c))
-        assertTrue(AutoScorecard.notice(c).startsWith("September 2026: 7 automatic changes"))
+        assertTrue(AutoScorecard.notice(c).startsWith("September 2026: 5 automatic changes"))
+        assertTrue(AutoScorecard.lines(c).contains("Health tuner (app speed): changed something on 2 days · no rupee effect (speed only)"), AutoScorecard.lines(c).toString())
+        assertTrue(AutoScorecard.say(c).contains("The health tuner changed app speed on 2 days."), AutoScorecard.say(c))
+    }
+
+    @Test fun aRevertOnlyAskedIsNotCountedAsReverted() {
+        // Review G5-9: a revert waiting for Boss's PIN has not happened (and becomes kept if he says no).
+        var b = AutoChange.Book()
+        val (nb, e) = AutoChange.record(b, mute("oi"), AutoChange.Status.PROBATION, 0L, LocalDate.of(2026, 9, 3))
+        b = nb.copy(entries = nb.entries.map { if (it.id == e.id) it.copy(status = AutoChange.Status.REVERT_ASKED) else it })
+        val s = AutoScorecard.of(b, sep, emptyList(), 0).systems.single()
+        assertEquals(0, s.reverted)
+        assertEquals(1, s.probation)
     }
 
     @Test fun itIsDueOnTheFirstOrTheFirstDayAfterAMissedOne() {

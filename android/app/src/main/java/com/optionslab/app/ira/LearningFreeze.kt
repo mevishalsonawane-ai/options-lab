@@ -90,6 +90,9 @@ object LearningFreeze {
      */
     fun holds(): Boolean {
         if (!enabled()) return false
+        // Not read from its file yet (a cold start by a worker): frozen until it is - a change the freeze would block never
+        // slips through the window (review G5-5). The read runs in the background, never on the caller's thread.
+        if (!loaded && appContext != null) { scope.launch { runCatching { ensureLoaded() } }; return true }
         if (appContext != null && System.currentTimeMillis() - refreshedAt > REFRESH_MS && refreshing.compareAndSet(false, true))
             scope.launch { try { runCatching { refresh() } } finally { refreshing.set(false) } }
         return _state.value.frozen
@@ -199,6 +202,12 @@ object LearningFreeze {
     internal fun resetForTest() {
         synchronized(lock) { _state.value = FreezeRule.State() }
         _verdicts.value = emptyList(); loaded = true; refreshedAt = System.currentTimeMillis(); testDaily = null; testLive = null
+    }
+
+    /** TEST ONLY: as on a cold start - [context] known, nothing read from the file yet. */
+    internal fun unloadForTest(context: Context) {
+        synchronized(lock) { _state.value = FreezeRule.State() }
+        appContext = context.applicationContext; loaded = false; refreshedAt = System.currentTimeMillis()
     }
 
     /** TEST ONLY: [s] as the state (fresh: no background refresh). */

@@ -8,6 +8,19 @@ import kotlin.test.assertTrue
 
 /** Today's changes across the app ([ChangeTimeline]): every source read, newest-first undo, live raises left for the PIN. */
 class ChangeTimelineTest {
+    @Test fun anUndoTheAgentHoldsForThePinIsListedAsNeedingIt() {
+        // Review G5-2: a paper mute whose undo the app holds for the PIN (the manager acts on live): "needs your PIN".
+        val day = LocalDate.of(2026, 10, 12)
+        val c = AutoChange.Change(AutoChange.Kind.SPECIALIST_MUTE, "spec:pine:oi", AutoChange.COUNTS, AutoChange.MUTED, "hurt",
+            AutoChange.Evidence(40, -4_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER, what = "the OI specialist on Pine (paper)")
+        val b = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, 1L, day).first
+        assertEquals(ChangeTimeline.UndoState.UNDOABLE, ChangeTimeline.fromAutopilot(b, day).single().undo)
+        val held = ChangeTimeline.fromAutopilot(b, day) { true }.single()
+        assertEquals(ChangeTimeline.UndoState.NEEDS_PIN, held.undo)
+        val p = ChangeTimeline.undoPlan(listOf(held))
+        assertTrue(p.now.isEmpty()); assertEquals(listOf(held), p.needPin)
+    }
+
     private val d0: LocalDate = LocalDate.of(2026, 10, 12)
     private val ist = ZoneId.of("Asia/Kolkata")
     private fun at(h: Int, m: Int = 0, d: LocalDate = d0) = d.atTime(h, m).atZone(ist).toInstant().toEpochMilli()

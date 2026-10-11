@@ -80,6 +80,13 @@ internal object Autopilot {
     val knobs: StateFlow<Map<String, Double>> = _knobs
 
     @Volatile private var loaded = false
+    /**
+     * Boss's setting really read from the vault (or set by him since). Until then the mode is OFF - nothing changes by itself
+     * on a storage failure - and it is read again on the next [ensureLoaded] (review G5-4).
+     */
+    @Volatile private var modeLoaded = false
+    /** TEST ONLY: the setting's read instead of the vault's (a throw: the vault could not be read). */
+    @Volatile internal var testModeRead: (() -> String?)? = null
     /** One pass at a time (compare-and-set: two workers waking together never both run it). */
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -100,20 +107,33 @@ internal object Autopilot {
 
     /** The log, the knobs and the setting read once (a worker thread). */
     fun ensureLoaded() {
-        if (loaded) return
+        if (loaded && modeLoaded) return
         synchronized(lock) {
-            if (loaded) return
-            val d = dir()
-            val text = runCatching { d?.let { File(it, LOG) }?.takeIf { it.isFile }?.readText() }.getOrNull()
-            if (_book.value == AutoChange.Book()) _book.value = AutoChange.decode(text)
-            val kn = runCatching { d?.let { File(it, KNOBS) }?.takeIf { it.isFile }?.readLines() }.getOrNull().orEmpty()
-                .mapNotNull { l -> l.split('=').takeIf { it.size == 2 }?.let { (k, v) -> v.toDoubleOrNull()?.let { x -> k to x } } }
-                .filter { (k, v) -> AutoChange.knob(k)?.let { v in it.min..it.max } == true }.toMap()
-            if (_knobs.value.isEmpty()) _knobs.value = kn
-            val m = runCatching { SecurePrefs.getString(K_MODE) }.getOrNull()
-            _mode.value = AutoChange.Mode.entries.firstOrNull { it.name == m } ?: AutoChange.Mode.SAFE
-            loaded = true
+            if (loaded && modeLoaded) return
+            if (!loaded) loadFiles()
+            readMode()
         }
+    }
+
+    /** The setting from the vault; an unreadable vault (or a failed read) leaves it OFF and not read, to be tried again. */
+    private fun readMode() {
+        if (modeLoaded) return
+        val r = runCatching { testModeRead?.let { it() } ?: SecurePrefs.getString(K_MODE) }
+        if (r.isFailure || (testModeRead == null && SecurePrefs.unreadable)) { _mode.value = AutoChange.Mode.OFF; return }
+        val m = r.getOrNull()
+        _mode.value = AutoChange.Mode.entries.firstOrNull { it.name == m } ?: AutoChange.Mode.SAFE
+        modeLoaded = true
+    }
+
+    private fun loadFiles() {
+        val d = dir()
+        val text = runCatching { d?.let { File(it, LOG) }?.takeIf { it.isFile }?.readText() }.getOrNull()
+        if (_book.value == AutoChange.Book()) _book.value = AutoChange.decode(text)
+        val kn = runCatching { d?.let { File(it, KNOBS) }?.takeIf { it.isFile }?.readLines() }.getOrNull().orEmpty()
+            .mapNotNull { l -> l.split('=').takeIf { it.size == 2 }?.let { (k, v) -> v.toDoubleOrNull()?.let { x -> k to x } } }
+            .filter { (k, v) -> AutoChange.knob(k)?.let { v in it.min..it.max } == true }.toMap()
+        if (_knobs.value.isEmpty()) _knobs.value = kn
+        loaded = true
     }
 
     private fun save() {
@@ -146,6 +166,8 @@ internal object Autopilot {
     fun setMode(m: AutoChange.Mode, pinConfirmed: Boolean = false): String {
         if (needsPin(m) && !pinConfirmed) return PIN_NEEDED
         _mode.value = m
+        // Boss's own choice: it stands over a vault read that had failed before (never overwritten by a later read).
+        modeLoaded = true
         runCatching { SecurePrefs.putAllSoon(mapOf(K_MODE to m.name)) }
         runCatching { Diag.record("autopilot", "learning: ${m.name}") }
         return when (m) {
@@ -178,6 +200,8 @@ internal object Autopilot {
         if (!Market.isTradingDay(today)) return false
         val minute = Market.minuteNow()
         withContext(Dispatchers.IO) { ensureLoaded() }
+        // Boss's setting not read (the vault could not be read): no pass until it is - tried again on the next look (G5-4).
+        if (!modeLoaded) return false
         val b = _book.value
         return when {
             minute >= NIGHT && b.lastRun != today && (JarvisLearning.book.value.lastPass == today || testInputs != null) -> { run(today, healthOnly = false); true }
@@ -536,12 +560,20 @@ internal object Autopilot {
         tellOne(c, said)
     }
 
-    /** Boss's revert of a live probation with his PIN (the change log). */
-    fun revertWithPin(id: String): String {
+    const val PIN_REVERT = "Putting that back needs your PIN: revert it with your PIN in $WHERE. Nothing changed."
+
+    /**
+     * Boss's revert of a probation left to him (the change log): only with his PIN ([pinConfirmed], from the PIN prompt itself).
+     * A revert is left to Boss only because its agent refused it without the PIN - un-muting where the manager acts on live,
+     * a live raise - so it is never done without it, whatever the change's own scope (review G5-1).
+     */
+    fun revertWithPin(id: String, pinConfirmed: Boolean): String {
+        if (!pinConfirmed) return PIN_REVERT
+        ensureLoaded()
         val e = AutoChange.entry(_book.value, id) ?: return "That change is gone."
         if (e.status != AutoChange.Status.REVERT_ASKED) return "That change is not waiting for a revert."
         val inv = AutoChange.inverse(e.change, "reverted on your PIN")
-        val said = runCatching { apply(inv, pinConfirmed = true) }.getOrNull() ?: return "Nothing changed: it could not be put back just now."
+        val said = runCatching { apply(inv, pinConfirmed = pinConfirmed) }.getOrNull() ?: return "Nothing changed: it could not be put back just now."
         synchronized(lock) { _book.value = AutoChange.revertAccepted(_book.value, id, Market.today()) }
         saveSoon()
         return "Reverted: ${e.change.what} is back to ${e.change.from}. $said"
@@ -593,14 +625,19 @@ internal object Autopilot {
         runCatching { IraActivity.add("Autopilot: ${c.what} ${c.from} → ${c.to}. $said") }
     }
 
-    @Volatile private var notifiedOn: LocalDate? = null
+    /** The day's notice as last posted (its day and words). */
+    @Volatile private var notified: Pair<LocalDate, String>? = null
 
-    /** One notification a day: "Autopilot made 3 changes (2 paper, 1 live risk-lowering). Tap to review." */
+    /**
+     * One notification a day: "Autopilot made 3 changes (2 paper, 1 live risk-lowering). Tap to review." Posted again (the
+     * same id: it replaces the earlier one) when the day's summary changed - the evening's changes after a midday notice
+     * are told too (review G5-7).
+     */
     private fun notifyDay(today: LocalDate) {
-        if (notifiedOn == today) return
         val text = AutoChange.notice(AutoChange.summary(_book.value, today)) ?: return
+        if (notified == today to text) return
         val ctx = appContext ?: return
-        notifiedOn = today
+        notified = today to text
         runCatching { com.optionslab.app.work.Notifier.post(ctx, 5180, com.optionslab.app.work.Notifier.IRA, "Autopilot learning", text, "almanac") }
     }
 
@@ -642,9 +679,16 @@ internal object Autopilot {
     internal fun resetForTest() {
         synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
         _mode.value = AutoChange.Mode.SAFE
-        loaded = true; running.set(false); notifiedOn = null; testInputs = null; testLive = null; testReplay = null
+        loaded = true; modeLoaded = true; running.set(false); notified = null; testInputs = null; testLive = null; testReplay = null; testModeRead = null
+    }
+
+    /** TEST ONLY: as at a cold start - nothing read yet (the log and knobs kept in memory are dropped). */
+    internal fun unloadForTest() {
+        synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
+        _mode.value = AutoChange.Mode.SAFE
+        loaded = false; modeLoaded = false
     }
 
     /** TEST ONLY: [b] as the log. */
-    internal fun setForTest(b: AutoChange.Book) { synchronized(lock) { _book.value = b }; loaded = true }
+    internal fun setForTest(b: AutoChange.Book) { synchronized(lock) { _book.value = b }; loaded = true; modeLoaded = true }
 }

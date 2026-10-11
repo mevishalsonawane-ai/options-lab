@@ -216,8 +216,9 @@ object AutoChange {
         val to = c.to.toDoubleOrNull() ?: return true
         val from = c.from.toDoubleOrNull() ?: return true
         if (to < k.min - 1e-9 || to > k.max + 1e-9) return true
-        // A stricter-only knob may never loosen by itself.
-        return k.stricterOnly && k.stricter * (to - from) < -1e-9
+        // A stricter-only knob may never loosen by itself - but putting back a value it had ([inverse]: Boss's undo or a revert,
+        // a live raise and so only with his PIN) is not loosening by itself: within its bounds it goes (review G5-3).
+        return !c.revert && k.stricterOnly && k.stricter * (to - from) < -1e-9
     }
 
     /** The risk a change really carries, whatever it claims (a LOWER claim is never trusted: what it does decides). */
@@ -573,7 +574,11 @@ object AutoChange {
         val last = book.entries.lastOrNull { it.change.key == key && it.status != Status.OFFERED && it.status != Status.DECLINED }
         if (last != null) {
             val since = listOfNotNull(last.day, last.closedOn).max()
-            if (day.isBefore(since.plusDays(FLIP_DAYS))) return "changed on ${AgentLessons.day(since)}: no flip-flop within $FLIP_DAYS days"
+            // A skipped change (pre-flight failed, learning frozen, regime-only) changed nothing: it waits the same days before
+            // it is tried again (SmarterLearningTest), said as what it is - never "changed on" (review G5-8).
+            if (day.isBefore(since.plusDays(FLIP_DAYS))) return if (last.status == Status.SKIPPED)
+                "tried on ${AgentLessons.day(since)} and skipped (nothing changed): tried again after $FLIP_DAYS days"
+                else "changed on ${AgentLessons.day(since)}: no flip-flop within $FLIP_DAYS days"
         }
         val asked = book.entries.lastOrNull { it.change.key == key && it.status == Status.OFFERED }
         if (asked != null && day.isBefore(asked.day.plusDays(REOFFER_DAYS))) return "asked on ${AgentLessons.day(asked.day)}"
@@ -624,9 +629,15 @@ object AutoChange {
         var k = 1
         while (book.entries.any { it.id == id }) id = nextId(book, day, k++)
         val e = Entry(id, atMs, day, c, status, by, note = note, q = q, preflight = preflight)
-        val tried = if (status == Status.PROBATION && by in TRIERS) 1 else 0
+        val tried = if (status == Status.PROBATION && by in TRIERS && c.kind !in UNTRIED) 1 else 0
         return capped(book.copy(entries = book.entries + e, trials = book.trials + tried)) to e
     }
+
+    /**
+     * Kinds whose change no agent acts on (the trap guard's learned thresholds are a shadow record only - the live guard keeps
+     * its researched constants): not a configuration tried, so they never raise tonight's bar for real changes (review G5-6).
+     */
+    private val UNTRIED = setOf(Kind.TRAP_THRESHOLD)
 
     private fun capped(b: Book): Book {
         if (b.entries.size <= MAX_ENTRIES) return b

@@ -55,8 +55,12 @@ object ChangeTimeline {
 
     // ---- from the books ----------------------------------------------------------------------------------------------------
 
-    /** [book]'s automatic changes on [day] (asked ones too, as "asked"), Autopilot's and the specialists' tuning. */
-    fun fromAutopilot(book: AutoChange.Book, day: LocalDate): List<Item> = book.entries
+    /**
+     * [book]'s automatic changes on [day] (asked ones too, as "asked"), Autopilot's and the specialists' tuning. [undoNeedsPin]:
+     * the app's own check of what an undo would raise now (an un-mute where the manager acts on live, the order flow's CONFIRM
+     * in Live), beside the change's scope (review G5-2).
+     */
+    fun fromAutopilot(book: AutoChange.Book, day: LocalDate, undoNeedsPin: (AutoChange.Entry) -> Boolean = { false }): List<Item> = book.entries
         .filter { it.day == day && it.status != AutoChange.Status.SKIPPED && it.status != AutoChange.Status.DECLINED }
         .map { e ->
             val c = e.change
@@ -66,7 +70,7 @@ object ChangeTimeline {
                 AutoChange.Status.REVERTED -> UndoState.REVERTED
                 AutoChange.Status.OFFERED -> UndoState.ASKED
                 AutoChange.Status.REVERT_ASKED -> UndoState.NEEDS_PIN
-                else -> if (AutoChange.undoNeedsPin(c)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
+                else -> if (AutoChange.undoNeedsPin(c) || undoNeedsPin(e)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
             }
             Item("ap:${e.id}", if (tuning) Source.SPECIALISTS else Source.AUTOPILOT, e.atMs,
                 if (tuning) Source.SPECIALISTS.agent else "Autopilot · ${c.kind.agent}",

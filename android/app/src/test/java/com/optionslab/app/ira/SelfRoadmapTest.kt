@@ -117,6 +117,28 @@ class SelfRoadmapTest : RobolectricTest() {
         assertFalse(LearningFreeze.state.value.frozen)
     }
 
+    @Test fun beforeItsFileIsReadTheFreezeHolds() {
+        assumeTrue("the learning freeze and Boss's trades are in IraAlgo with Jarvis only", Autopilot.enabled())
+        // Review G5-5: a cold start (a worker): freeze.txt says FROZEN, the file not read yet - holds() never says "not frozen".
+        val f = java.io.File(java.io.File(context.noBackupFilesDir, "self"), "freeze.txt")
+        f.parentFile?.mkdirs()
+        f.writeText(FreezeRule.encode(FreezeRule.State(true, setOf(FreezeRule.Account.PAPER), day, "paper fell")))
+        try {
+            LearningFreeze.unloadForTest(context)
+            assertTrue("not loaded yet: frozen", LearningFreeze.holds())
+            LearningFreeze.ensureLoaded()
+            assertTrue("read: frozen, as the file says", LearningFreeze.holds())
+            // Its file says not frozen: once read, nothing holds.
+            f.writeText(FreezeRule.encode(FreezeRule.State()))
+            LearningFreeze.unloadForTest(context)
+            assertTrue(LearningFreeze.holds())
+            LearningFreeze.ensureLoaded()
+            assertFalse(LearningFreeze.holds())
+        } finally {
+            f.delete(); LearningFreeze.resetForTest()
+        }
+    }
+
     // ---- S13: today's changes and undo everything ----------------------------------------------------------------------------
 
     @Test fun undoEverythingTodayUndoesEachThroughItsOwnPathAndLeavesLiveRaisesForThePin() {

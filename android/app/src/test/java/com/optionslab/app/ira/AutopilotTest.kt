@@ -356,10 +356,72 @@ class AutopilotTest : RobolectricTest() {
         val e = Autopilot.book.value.entries.single()
         assertEquals(AutoChange.Status.REVERT_ASKED, e.status)
         assertFalse(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
+        // Review G5-1: never without the PIN - its scope is paper, but un-muting where the manager acts on live raises live risk.
+        assertEquals(Autopilot.PIN_REVERT, Autopilot.revertWithPin(e.id, pinConfirmed = false))
+        assertEquals(AutoChange.Status.REVERT_ASKED, Autopilot.book.value.entries.single().status)
+        assertFalse(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
         // Boss's revert with his PIN.
-        assertTrue(Autopilot.revertWithPin(e.id).startsWith("Reverted"))
+        assertTrue(Autopilot.revertWithPin(e.id, pinConfirmed = true).startsWith("Reverted"))
         assertEquals(AutoChange.Status.REVERTED, Autopilot.book.value.entries.single().status)
         assertTrue(ManagerSpecialists.configFor("pine", frozen = true).counts("oi"))
+    }
+
+    @Test fun aStricterSelfReviewThresholdIsUndoneWithThePin() {
+        // Review G5-3: the drift threshold made stricter on live (3.3 -> 3.2) can be put back - a live raise, so with the PIN only.
+        val c = AutoChange.Change(AutoChange.Kind.DRIFT_THRESHOLD, "knob:drift.z_crit", "3.3", "3.2", "drift parks came late",
+            AutoChange.Evidence(40, -4_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.LIVE, null, -1, 0,
+            lo = 2.6, hi = 3.3, what = "the self-review's drift threshold (z)")
+        assertNotNull(Autopilot.apply(c, pinConfirmed = false))
+        assertEquals(3.2, Autopilot.knob("drift.z_crit"), 1e-9)
+        val (b, e) = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, ms(day), day)
+        Autopilot.setForTest(b)
+        assertTrue(Autopilot.undoNeedsPin(e.id))
+        assertEquals(Autopilot.PIN_UNDO, Autopilot.undo(e.id))
+        assertEquals(3.2, Autopilot.knob("drift.z_crit"), 1e-9)
+        val said = Autopilot.undo(e.id, pinConfirmed = true)
+        assertTrue(said, said.startsWith("Undone"))
+        assertEquals(3.3, Autopilot.knob("drift.z_crit"), 1e-9)
+        // Never loosened by itself: a plain step the looser way is still refused.
+        assertNull(Autopilot.apply(c.copy(from = "3.2", to = "3.3"), pinConfirmed = true))
+    }
+
+    @Test fun anUnreadableSettingLeavesAutopilotOffAndIsReadAgain() = runBlocking<Unit> {
+        // Review G5-4: the vault could not be read at start - Autopilot is OFF (not SAFE), no pass runs, and Boss's setting is
+        // read again once the vault can be read.
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        Autopilot.unloadForTest()
+        Autopilot.testModeRead = { error("the settings vault could not be read") }
+        Autopilot.ensureLoaded()
+        assertEquals(AutoChange.Mode.OFF, Autopilot.mode.value)
+        assertFalse(Autopilot.runIfDue(context))
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
+        // Readable again: Boss's own setting.
+        Autopilot.testModeRead = { AutoChange.Mode.SHADOW_ONLY.name }
+        Autopilot.ensureLoaded()
+        assertEquals(AutoChange.Mode.SHADOW_ONLY, Autopilot.mode.value)
+    }
+
+    @Test fun theEveningsChangesAreToldAfterAMiddayNotice() = runBlocking<Unit> {
+        // Review G5-7: the 12:30 pass made one change and told it; the evening's change is told too (the notice replaced).
+        com.optionslab.app.work.Alerts.forgetPosted()
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        Autopilot.run(day, healthOnly = true)
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }
+        Autopilot.run(day, healthOnly = false)
+        val said = com.optionslab.app.work.Alerts.posted.map { it.text }.filter { it.startsWith("Autopilot made") }
+        assertEquals(said.toString(), listOf("Autopilot made 1 change (1 paper). Tap to review.", "Autopilot made 2 changes (1 paper, 1 shadow). Tap to review."), said)
+    }
+
+    @Test fun todaysChangesListAnUndoTheAgentHoldsForThePin() {
+        // Review G5-2: a paper mute today, the manager acting on Pine's live trades: "needs your PIN", not "can be undone".
+        ManagerSpecialists.mute("pine", "oi", by = "Autopilot")
+        TradeManagerHost.setMode("pine", TradeManager.Account.LIVE, TradeManager.Mode.ACT, pinConfirmed = true)
+        Autopilot.setForTest(AutoChange.record(AutoChange.Book(), paperMute(), AutoChange.Status.PROBATION, ms(day), day).first)
+        val item = ChangeTimelineHost.items(day).single { it.source == com.optionslab.ira.ChangeTimeline.Source.AUTOPILOT }
+        assertEquals(com.optionslab.ira.ChangeTimeline.UndoState.NEEDS_PIN, item.undo)
+        val plan = ChangeTimelineHost.plan()
+        assertTrue(plan.now.none { it.id == item.id })
     }
 
     @Test fun aMuteBossSaidYesToIsHisHand() {

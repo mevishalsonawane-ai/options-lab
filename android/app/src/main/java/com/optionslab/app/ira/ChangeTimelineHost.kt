@@ -58,7 +58,9 @@ object ChangeTimelineHost {
         runCatching { AppHealth.ensureLoaded() }
         val now = System.currentTimeMillis()
         return ChangeTimeline.merge(
-            ChangeTimeline.fromAutopilot(Autopilot.book.value, day),
+            // An undo the agent itself holds for the PIN (un-muting where the manager acts on live, the order flow's CONFIRM in
+            // Live) is "needs your PIN", as Autopilot.undo will ask (review G5-2).
+            ChangeTimeline.fromAutopilot(Autopilot.book.value, day) { e -> runCatching { Autopilot.undoNeedsPin(e.id) }.getOrDefault(true) },
             runCatching { ChangeTimeline.fromLab(labChanges(VariantRunner.variants.value), day) }.getOrDefault(emptyList()),
             ChangeTimeline.fromHealth(healthChanges(day)),
             runCatching { ChangeTimeline.fromFindings(SmartWorkers.bus.recent(now), day) }.getOrDefault(emptyList()),
@@ -70,7 +72,7 @@ object ChangeTimelineHost {
         when (i.source) {
             ChangeTimeline.Source.AUTOPILOT, ChangeTimeline.Source.SPECIALISTS -> {
                 val e = AutoChange.entry(Autopilot.book.value, i.key) ?: return@runCatching null
-                val said = if (e.status == AutoChange.Status.REVERT_ASKED) { if (!pinConfirmed) return@runCatching null; Autopilot.revertWithPin(i.key) }
+                val said = if (e.status == AutoChange.Status.REVERT_ASKED) Autopilot.revertWithPin(i.key, pinConfirmed)
                     else Autopilot.undo(i.key, pinConfirmed)
                 said.takeIf { it.startsWith("Undone") || it.startsWith("Reverted") }
             }

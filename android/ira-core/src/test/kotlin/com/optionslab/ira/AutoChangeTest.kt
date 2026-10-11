@@ -14,6 +14,47 @@ import kotlin.test.assertTrue
  * safety settings never touched, the same plan from the same inputs, and a year of records in under 20 ms.
  */
 class AutoChangeTest {
+    @Test fun aStricterOnlyKnobIsPutBackByItsUndoNeverLoosenedByItself() {
+        // Review G5-3: drift.z_crit made stricter (3.3 -> 3.2) on live: its inverse (Boss's undo or a revert) is allowed - a live
+        // raise, so with the PIN - while a plain step the looser way stays NEVER.
+        val c = AutoChange.Change(AutoChange.Kind.DRIFT_THRESHOLD, "knob:drift.z_crit", "3.3", "3.2", "late parks",
+            AutoChange.Evidence(40, -4_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.LIVE, lo = 2.6, hi = 3.3)
+        assertFalse(AutoChange.never(c))
+        val inv = AutoChange.inverse(c, "undone by you")
+        assertFalse(AutoChange.never(inv))
+        assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(inv))
+        assertTrue(AutoChange.undoNeedsPin(c))
+        assertTrue(AutoChange.never(c.copy(from = "3.2", to = "3.3")))
+        // Bounds still hold for an inverse.
+        assertTrue(AutoChange.never(inv.copy(to = "3.5")))
+    }
+
+    @Test fun aSkippedChangeIsNeverSaidToHaveBeenChanged() {
+        // Review G5-8: pre-flight failed (or learning frozen) - nothing changed: it waits its days before it is tried again,
+        // and the reason says so, never "changed on".
+        val day = LocalDate.of(2026, 10, 12)
+        val c = AutoChange.Change(AutoChange.Kind.PAPER_ENTRIES, "paper:night_r3", AutoChange.ON, AutoChange.PAUSED, "loses",
+            AutoChange.Evidence(30, -3_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER)
+        val b = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.SKIPPED, 1L, day, note = "pre-flight failed").first
+        val why = AutoChange.blocked(b, c.key, day.plusDays(1))
+        assertTrue(why?.contains("skipped (nothing changed)") == true, why)
+        assertFalse(why?.contains("changed on") == true, why)
+        // A change that was made still holds it.
+        val made = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.PROBATION, 1L, day).first
+        assertTrue(AutoChange.blocked(made, c.key, day.plusDays(1))?.contains("no flip-flop") == true)
+    }
+
+    @Test fun theTrapGuardsShadowKnobsAreNotCountedAsTrials() {
+        // Review G5-6: no agent acts on the trap guard's learned thresholds (a shadow record): they never raise the bar.
+        val day = LocalDate.of(2026, 10, 12)
+        val k = AutoChange.Change(AutoChange.Kind.TRAP_THRESHOLD, "knob:trap.lockout_sec", "120", "150", "flag right",
+            AutoChange.Evidence(30, -3_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.Scope.SHADOW)
+        assertEquals(0, AutoChange.record(AutoChange.Book(), k, AutoChange.Status.PROBATION, 1L, day).first.trials)
+        val p = AutoChange.Change(AutoChange.Kind.PAPER_ENTRIES, "paper:night_r3", AutoChange.ON, AutoChange.PAUSED, "loses",
+            AutoChange.Evidence(30, -3_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER)
+        assertEquals(1, AutoChange.record(AutoChange.Book(), p, AutoChange.Status.PROBATION, 1L, day).first.trials)
+    }
+
     private val A = AutoChange
     private val d0: LocalDate = LocalDate.of(2026, 10, 12)     // a Monday
     private val STRONG = AgentLessons.Confidence.STRONG

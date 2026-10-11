@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -59,7 +60,7 @@ internal fun AutopilotSection(model: AppModel) {
     val mode by Autopilot.mode.collectAsState(Dispatchers.Main.immediate)
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { Autopilot.ensureLoaded() } } }
-    val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { LocalDate.now() } }
+    val today = rememberMarketDay()
     Column(Modifier.fillMaxWidth()) {
         AutopilotCardContent(book, mode, today, onOpen = { open = true })
         // Jarvis's weekly self-report (11 Oct): its sheet from here.
@@ -68,6 +69,18 @@ internal fun AutopilotSection(model: AppModel) {
         AutopilotSelfButtons()
     }
     if (open) AutopilotLogDialog(model) { open = false }
+}
+
+/**
+ * Today's market day, following the clock (a minute's poll while the app is in front): computed once, the card's "Today"
+ * stayed on the day before after midnight with Home left open (review G5-10). Memory only.
+ */
+@Composable
+internal fun rememberMarketDay(): LocalDate {
+    fun now(): LocalDate = runCatching { com.optionslab.app.data.Market.today() }.getOrElse { LocalDate.now() }
+    var today by remember { mutableStateOf(now()) }
+    com.optionslab.app.ui.PollWhileStarted { while (true) { today = now(); kotlinx.coroutines.delay(60_000) } }
+    return today
 }
 
 /** The card from plain state (tests drive it without an [AppModel]). */
@@ -97,6 +110,17 @@ internal fun AutopilotCardContent(book: AutoChange.Book, mode: AutoChange.Mode, 
 /** What a tap on the log asks for: Undo, Apply (an asked change) or Revert (a revert asked), each by its entry. */
 internal enum class LogAction { UNDO, APPLY, REVERT }
 
+/**
+ * Does a tap on [a] for [c] ask for the PIN before anything is done? A Revert always does: a revert is left to Boss only
+ * because its agent refused it without the PIN (un-muting where the manager acts on live, a live raise), whatever the change's
+ * own scope (review G5-1). An Undo the agent holds for the PIN by what it holds now is caught by [Autopilot.undo]'s answer.
+ */
+internal fun asksPinFirst(a: LogAction, c: AutoChange.Change): Boolean = when (a) {
+    LogAction.UNDO -> AutoChange.undoNeedsPin(c)
+    LogAction.APPLY -> c.scope == AutoChange.Scope.LIVE && AutoChange.riskOf(c) == AutoChange.Risk.RAISE
+    LogAction.REVERT -> true
+}
+
 /** The change log with Boss's hand on it: Undo, Apply and Revert, the PIN first when it raises live risk. */
 @Composable
 internal fun AutopilotLogDialog(model: AppModel, onClose: () -> Unit) {
@@ -104,32 +128,36 @@ internal fun AutopilotLogDialog(model: AppModel, onClose: () -> Unit) {
     var said by remember { mutableStateOf<String?>(null) }
     var pinFor by remember { mutableStateOf<Pair<LogAction, String>?>(null) }
     val scope = rememberCoroutineScope()
-    fun doIt(f: () -> String) {
+    // The undos the agents hold for the PIN by what they hold now (an un-mute where the manager acts on live, the order flow's
+    // CONFIRM in Live): worked out off the main thread, so the button says "PIN" as Autopilot.undo will ask (review G5-2).
+    val undoPin by produceState(emptySet<String>(), book) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { book.entries.filter { it.applied && it.status != AutoChange.Status.REVERT_ASKED && Autopilot.undoNeedsPin(it.id) }.map { it.id }.toSet() }
+                .getOrDefault(emptySet())
+        }
+    }
+    fun doIt(a: LogAction, id: String, f: () -> String) {
         scope.launch(Dispatchers.IO) {
             val msg = runCatching { f() }.getOrElse { "Could not do that just now." }
-            withContext(Dispatchers.Main) { said = msg }
+            // An agent that holds it for the PIN after all: the PIN prompt, never a dead end.
+            withContext(Dispatchers.Main) { if (msg == Autopilot.PIN_UNDO || msg == Autopilot.PIN_REVERT) pinFor = a to id else said = msg }
         }
     }
     fun tap(a: LogAction, id: String) {
         val e = AutoChange.entry(book, id) ?: return
-        val raisesLive = e.change.scope == AutoChange.Scope.LIVE && when (a) {
-            LogAction.UNDO -> AutoChange.undoNeedsPin(e.change)
-            LogAction.APPLY -> AutoChange.riskOf(e.change) == AutoChange.Risk.RAISE
-            LogAction.REVERT -> true
-        }
-        if (raisesLive) { pinFor = a to id; return }
-        doIt {
+        if (asksPinFirst(a, e.change) || (a == LogAction.UNDO && id in undoPin)) { pinFor = a to id; return }
+        doIt(a, id) {
             when (a) {
                 LogAction.UNDO -> Autopilot.undo(id)
                 LogAction.APPLY -> Autopilot.acceptAsked(id, pinConfirmed = false)
-                LogAction.REVERT -> Autopilot.revertWithPin(id)
+                LogAction.REVERT -> Autopilot.revertWithPin(id, pinConfirmed = false)
             }
         }
     }
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(
         usePlatformDefaultWidth = false, securePolicy = com.optionslab.app.security.Capture.policy)) {
         Column(Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.9f).background(LocalPalette.current.paper, RoundedCornerShape(16.dp))) {
-            AutopilotLogSheet(book, said, onAction = { a, id -> tap(a, id) }, onClose = onClose)
+            AutopilotLogSheet(book, said, onAction = { a, id -> tap(a, id) }, onClose = onClose, undoPin = undoPin)
         }
     }
     pinFor?.let { (a, id) ->
@@ -142,11 +170,11 @@ internal fun AutopilotLogDialog(model: AppModel, onClose: () -> Unit) {
             },
             onOk = {
                 pinFor = null
-                doIt {
+                doIt(a, id) {
                     when (a) {
                         LogAction.UNDO -> Autopilot.undo(id, pinConfirmed = true)
                         LogAction.APPLY -> Autopilot.acceptAsked(id, pinConfirmed = true)
-                        LogAction.REVERT -> Autopilot.revertWithPin(id)
+                        LogAction.REVERT -> Autopilot.revertWithPin(id, pinConfirmed = true)
                     }
                 }
             },
@@ -160,7 +188,8 @@ internal fun AutopilotLogDialog(model: AppModel, onClose: () -> Unit) {
  * way and at large font (the title wraps beside Close; each button has its own row).
  */
 @Composable
-internal fun AutopilotLogSheet(book: AutoChange.Book, said: String?, onAction: (LogAction, String) -> Unit, onClose: (() -> Unit)?) {
+internal fun AutopilotLogSheet(book: AutoChange.Book, said: String?, onAction: (LogAction, String) -> Unit, onClose: (() -> Unit)?,
+                               undoPin: Set<String> = emptySet()) {
     val p = LocalPalette.current
     val entries = remember(book) { book.entries.filter { it.status != AutoChange.Status.DECLINED }.reversed() }
     val experiments = remember(book) { book.experiments.sortedWith(compareBy<Experiments.Experiment> { if (it.status == Experiments.Status.RUNNING) 0 else 1 }.thenByDescending { it.startedOn }) }
@@ -182,7 +211,7 @@ internal fun AutopilotLogSheet(book: AutoChange.Book, said: String?, onAction: (
             }
             if (experiments.isNotEmpty()) items(experiments, key = { "x:" + it.id }) { x -> ExperimentRow(x) }
             if (entries.isEmpty()) item(key = "none") { Note("No changes yet.", Modifier.padding(vertical = 8.dp)) }
-            items(entries, key = { "e:" + it.id }) { e -> LogRow(e, onAction) }
+            items(entries, key = { "e:" + it.id }) { e -> LogRow(e, e.id in undoPin, onAction) }
         }
     }
 }
@@ -205,7 +234,7 @@ private fun ExperimentRow(x: Experiments.Experiment) {
 }
 
 @Composable
-private fun LogRow(e: AutoChange.Entry, onAction: (LogAction, String) -> Unit) {
+private fun LogRow(e: AutoChange.Entry, agentPin: Boolean, onAction: (LogAction, String) -> Unit) {
     val p = LocalPalette.current
     val c = e.change
     Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).background(p.card, RoundedCornerShape(14.dp))
@@ -224,7 +253,7 @@ private fun LogRow(e: AutoChange.Entry, onAction: (LogAction, String) -> Unit) {
             style = Type.label.copy(color = if (e.status == AutoChange.Status.SKIPPED) p.oxblood else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
         val pin = c.scope == AutoChange.Scope.LIVE
         if (e.applied && e.status != AutoChange.Status.REVERT_ASKED)
-            BrassButton(if (AutoChange.undoNeedsPin(c)) "Undo (PIN)" else "Undo", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("undo-" + e.id),
+            BrassButton(if (AutoChange.undoNeedsPin(c) || agentPin) "Undo (PIN)" else "Undo", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("undo-" + e.id),
                 tone = p.inkSoft) { onAction(LogAction.UNDO, e.id) }
         if (e.status == AutoChange.Status.OFFERED)
             BrassButton(if (pin && AutoChange.riskOf(c) == AutoChange.Risk.RAISE) "Apply (PIN)" else "Apply", Modifier.fillMaxWidth().padding(top = 6.dp),
