@@ -95,9 +95,9 @@ object LiquidityRules {
     /** The owner's stop: 15% of the premium paid (a resting SL-M sell at 85% of the fill). */
     const val PREMIUM_STOP = 0.15
 
-    /** The stop's trigger for a [fill]: 15% below, rounded down to the 0.05 tick; null for a price with no room. */
-    fun stopTrigger(fill: Double): Double? {
-        val t = kotlin.math.floor(fill * (1 - PREMIUM_STOP) / OrbRules.TICK + 1e-9) * OrbRules.TICK
+    /** The stop's trigger for a [fill]: 15% ([pct]) below, rounded down to the 0.05 tick; null for a price with no room. */
+    fun stopTrigger(fill: Double, pct: Double = PREMIUM_STOP): Double? {
+        val t = kotlin.math.floor(fill * (1 - pct) / OrbRules.TICK + 1e-9) * OrbRules.TICK
         val r = kotlin.math.round(t * 100) / 100.0
         return r.takeIf { it >= OrbRules.TICK && it < fill }
     }
@@ -240,10 +240,37 @@ object LiquidityRules {
     fun indexStopHit(side: Int, level: Double, points: Double, minutesSince: List<Bar>): Boolean =
         minutesSince.any { if (side > 0) it.low < level - points else it.high > level + points }
 
-    fun timeStopDue(entryTime: LocalDateTime, now: LocalDateTime): Boolean = !now.isBefore(entryTime.plusMinutes(TIME_STOP_MINUTES))
+    fun timeStopDue(entryTime: LocalDateTime, now: LocalDateTime, minutes: Long = TIME_STOP_MINUTES): Boolean =
+        !now.isBefore(entryTime.plusMinutes(minutes))
 
-    /** True when the option at [ltp] is short of the gain the time stop asks for. */
-    fun timeStopFails(entry: Double, ltp: Double): Boolean = ltp < entry * (1 + TIME_STOP_GAIN) - 1e-9
+    /** True when the option at [ltp] is short of the gain ([gain]) the time stop asks for. */
+    fun timeStopFails(entry: Double, ltp: Double, gain: Double = TIME_STOP_GAIN): Boolean = ltp < entry * (1 + gain) - 1e-9
+
+    /** One look's exit decision for an open position ([exitNow]): why it is sold now (null: held), and whether its time stop is decided. */
+    data class Look(val why: String?, val timed: Boolean)
+
+    /**
+     * The arm's exit decision on one look at an open position (the app's pass and the strategy lab's replay both ask this, so
+     * they decide alike), in the arm's order: the index stop ([indexStopHit]), then the time stop - decided ONCE, on the first
+     * look from [LiquidityParams.timeStopMinutes] after [entryTime] that has a fresh option price [fresh] (held: [Look.timed]
+     * becomes true and it is never asked again) - then the arm's own exits ([exitReason]: the next liquidity level when
+     * [LiquidityParams.nextLevelTarget], a failed break, new liquidity). [timed]: the time stop was decided on an earlier look.
+     * [levels]: the zones of [bars] (read only when the turn exits did not decide).
+     */
+    fun exitNow(side: Int, level: Double, target: Double?, signalBar: LocalDateTime, entry: Double, entryTime: LocalDateTime,
+                now: LocalDateTime, bars: List<Bar>, minutesSince: List<Bar>, underlying: String, fresh: Double?, timed: Boolean,
+                p: LiquidityParams = LiquidityParams.DEFAULT, levels: () -> List<Zone> = { zones(bars) }): Look {
+        var decided = timed
+        val timeStop = if (!timed && timeStopDue(entryTime, now, p.timeStopMinutes) && fresh != null) {
+            timeStopFails(entry, fresh, p.timeStopGain).also { fails -> if (!fails) decided = true }
+        } else false
+        val why = when {
+            indexStopHit(side, level, indexStopPoints(underlying), minutesSince) -> "index_stop"
+            timeStop -> "time_stop"
+            else -> exitReason(side, level, if (p.nextLevelTarget) target else null, signalBar, bars, levels(), minutesSince)
+        }
+        return Look(why, decided)
+    }
 
     /**
      * Room filter (research liq2, 2026-10-06): skip a break whose next liquidity level ahead (the trade's target) is

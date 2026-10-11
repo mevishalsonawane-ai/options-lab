@@ -57,33 +57,37 @@ object OrbRules {
     fun completed(bars: List<Bar>, now: LocalDateTime) = bars.filter { !it.start.plusMinutes(5).isAfter(now) }
 
     /** (high, low) of 09:15 .. 10:00, or null until the 10:00 bar is in. */
-    fun openingRange(bars: List<Bar>): Pair<Double, Double>? {
-        val window = bars.filter { val t = it.start.toLocalTime(); !t.isBefore(OR_START) && !t.isAfter(OR_END) }
-        if (window.isEmpty() || window.last().start.toLocalTime() != OR_END) return null
+    fun openingRange(bars: List<Bar>, orEnd: LocalTime = OR_END): Pair<Double, Double>? {
+        val window = bars.filter { val t = it.start.toLocalTime(); !t.isBefore(OR_START) && !t.isAfter(orEnd) }
+        if (window.isEmpty() || window.last().start.toLocalTime() != orEnd) return null
         return window.maxOf { it.high } to window.minOf { it.low }
     }
 
-    fun breakDirection(bar: Bar, orh: Double, orl: Double) = when {
-        bar.close > orh -> 1
-        bar.close < orl -> -1
+    /** [buffer]: a share of the range edge the close must clear (0, the arm's: x 1.0 is exact, so any close beyond). */
+    fun breakDirection(bar: Bar, orh: Double, orl: Double, buffer: Double = 0.0) = when {
+        bar.close > orh * (1 + buffer) -> 1
+        bar.close < orl * (1 - buffer) -> -1
         else -> 0
     }
 
-    fun mayDecide(bar: Bar, until: LocalTime = LAST_ENTRY_BAR): Boolean { val t = bar.start.toLocalTime(); return t.isAfter(OR_END) && t.isBefore(until) }
+    fun mayDecide(bar: Bar, until: LocalTime = LAST_ENTRY_BAR, orEnd: LocalTime = OR_END): Boolean {
+        val t = bar.start.toLocalTime(); return t.isAfter(orEnd) && t.isBefore(until)
+    }
 
     /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]. */
     /**
      * [requireFresh]: the arm was paused before this bar (stopped for the day, the kill switch, a refused entry, the
      * app not running, armed just now), so a break already under way does not count: only a fresh one, as ORB Fresh.
+     * [p]: the arm's parameters (its last entry bar, the range's end, the break's buffer); its defaults are the constants.
      */
     fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, arm: Arm, lastExit: LocalDateTime?,
-                    requireFresh: Boolean = false): Pair<Int, String> {
+                    requireFresh: Boolean = false, p: OrbParams = OrbParams.of(arm)): Pair<Int, String> {
         val last = bars.last()
-        if (!mayDecide(last)) return 0 to "no_decision_bar"
+        if (!mayDecide(last, p.lastEntry, p.orEnd)) return 0 to "no_decision_bar"
         if (lastExit != null && !last.start.isAfter(barOf(lastExit))) return 0 to "cooling_down_after_exit"
-        val direction = breakDirection(last, rng.first, rng.second)
+        val direction = breakDirection(last, rng.first, rng.second, p.buffer)
         if (direction == 0) return 0 to "inside_range"
-        if ((arm.freshOnly || requireFresh) && bars.size > 1 && breakDirection(bars[bars.size - 2], rng.first, rng.second) == direction) {
+        if ((arm.freshOnly || requireFresh) && bars.size > 1 && breakDirection(bars[bars.size - 2], rng.first, rng.second, p.buffer) == direction) {
             return 0 to "not_a_fresh_break"
         }
         return direction to "break"
@@ -113,11 +117,11 @@ object OrbRules {
         "%s%02d%s%02d%d%s".format(underlying, expiry.dayOfMonth, MONTHS[expiry.monthValue - 1], expiry.year % 100, strike, right)
 
     /** The risk core's verdict for a bought option with a fixed stop and target. */
-    fun exitReason(entry: Double, ltp: Double, now: LocalDateTime, points: Double = STOP_POINTS): String? {
+    fun exitReason(entry: Double, ltp: Double, now: LocalDateTime, points: Double = STOP_POINTS, target: Double = points): String? {
         if (!now.toLocalTime().isBefore(SQUARE_OFF)) return "session_end"
         val stop = entry - points
         if (stop > EPS && ltp <= stop + EPS) return "stop"          // no stop at or below zero, as the core
-        if (ltp >= entry + points - EPS) return "target"
+        if (ltp >= entry + target - EPS) return "target"
         return null
     }
 
@@ -128,12 +132,12 @@ object OrbRules {
      * Each arm's own fixed exits (07 Oct, research/HUNT_H20.md F5): ORB Sweep's -40 / +80 ([SweepRules.exitReason]),
      * every other arm's -40 / +40. The paper and the live paths both ask this, so a live Sweep never takes the ORB's +40.
      */
-    fun exitReasonFor(arm: Arm, entry: Double, ltp: Double, now: LocalDateTime): String? =
-        if (arm.sweep) SweepRules.exitReason(entry, ltp, now) else exitReason(entry, ltp, now)
+    fun exitReasonFor(arm: Arm, entry: Double, ltp: Double, now: LocalDateTime, p: OrbParams = OrbParams.of(arm)): String? =
+        if (arm.sweep) SweepRules.exitReason(entry, ltp, now, p.stopPoints, p.targetPoints) else exitReason(entry, ltp, now, p.stopPoints, p.targetPoints)
 
-    /** The resting SL-M trigger on the 0.05 tick, or null when a 40-point stop has no level (premium <= 40). */
-    fun stopTrigger(entry: Double): Double? {
-        val level = entry - STOP_POINTS
+    /** The resting SL-M trigger on the 0.05 tick, or null when a 40-point stop ([points]) has no level (premium <= 40). */
+    fun stopTrigger(entry: Double, points: Double = STOP_POINTS): Double? {
+        val level = entry - points
         if (level <= EPS) return null
         val ticks = BigDecimal(level / TICK).setScale(0, RoundingMode.HALF_EVEN).toDouble()   // Python round(): half to even
         return BigDecimal(ticks * TICK).setScale(2, RoundingMode.HALF_EVEN).toDouble()

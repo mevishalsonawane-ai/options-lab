@@ -1,0 +1,67 @@
+package com.optionslab.engine.orb
+
+import java.time.LocalTime
+
+/**
+ * The arms' tunable parameters (the strategy lab, S1 / S3, 11 Oct 2026): what a proven variant may change, and nothing else.
+ * Each default is the arm's own constant, so an arm given its defaults trades exactly as before. The lab replays the arms with
+ * these (a variant is the real rules with other values) and the app arms read them per session; the bounds a value may take
+ * are the lab's ([com.optionslab.ira.VariantLab]), never wider than the arm's researched maximum, and lots are not a parameter.
+ *
+ * Pure: no clock, no network, no orders.
+ */
+data class OrbParams(
+    /** The opening range: the bars labelled 09:15 .. [orEnd] (the ORB's 10:00). */
+    val orEnd: LocalTime,
+    /** Decisions on bars labelled before [lastEntry] (ORB 14:00, ORB Sweep 14:30, Range Fade 14:00). */
+    val lastEntry: LocalTime,
+    /** A break must close beyond the range by this share of it (0: any close beyond, as the arm). */
+    val buffer: Double,
+    /** The premium stop and target in points (-40 / +40; ORB Sweep -40 / +80). The ladder's rungs sit on the target. */
+    val stopPoints: Double,
+    val targetPoints: Double,
+    /** Range Fade's edge: the outer share of the range a bar must reach (10%). */
+    val edge: Double = RangeFadeRules.EDGE,
+) {
+    companion object {
+        val ORB = OrbParams(OrbRules.OR_END, OrbRules.LAST_ENTRY_BAR, 0.0, OrbRules.STOP_POINTS, OrbRules.TARGET_POINTS)
+        val SWEEP = OrbParams(OrbRules.OR_END, OrbRules.SWEEP_LAST_ENTRY_BAR, 0.0, SweepRules.STOP_POINTS, SweepRules.TARGET_POINTS)
+        val FADE = OrbParams(OrbRules.OR_END, RangeFadeRules.LAST_BAR, 0.0, OrbRules.STOP_POINTS, OrbRules.TARGET_POINTS, RangeFadeRules.EDGE)
+
+        /** [arm]'s defaults: its own constants. */
+        fun of(arm: Arm): OrbParams = when {
+            arm.sweep -> SWEEP
+            arm.fade -> FADE
+            else -> ORB
+        }
+    }
+}
+
+/**
+ * Liquidity 15+5's EXIT parameters (S9: the only proven edge may tune its exits only; its entries - the levels, the room
+ * filter, the strike, the hours - are constants in [LiquidityRules] and are not here at all). Defaults: the 15% premium stop,
+ * out after 20 minutes unless +5%, out at the next liquidity level, no profit lock.
+ */
+data class LiquidityParams(
+    val stopPct: Double = LiquidityRules.PREMIUM_STOP,
+    val timeStopMinutes: Long = LiquidityRules.TIME_STOP_MINUTES,
+    val timeStopGain: Double = LiquidityRules.TIME_STOP_GAIN,
+    /** Sell when the index touches the next liquidity level (the arm's target); false: no level target. */
+    val nextLevelTarget: Boolean = true,
+    /** The profit lock's reference as a share of the premium paid ([ProfitLock] rungs on it); 0: none (the arm today). */
+    val lockPct: Double = 0.0,
+) {
+    /** The profit-lock reference in premium points for a buy at [entry], or null with no lock. */
+    fun lockTarget(entry: Double): Double? = if (lockPct > 0) entry * lockPct else null
+
+    companion object { val DEFAULT = LiquidityParams() }
+}
+
+/** VIX divergence's tunables: the index move a check needs, and NIFTY's stop and time-stop minutes. */
+data class VixDivParams(
+    val indexMove: Double = VixDivRules.INDEX_MOVE,
+    val stopPct: Double = VixDivRules.LIQ_STOP,
+    val minutes: Int = VixDivRules.LIQ_MINUTES,
+) {
+    companion object { val DEFAULT = VixDivParams() }
+}

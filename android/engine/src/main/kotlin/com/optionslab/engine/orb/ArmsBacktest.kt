@@ -59,8 +59,23 @@ object ArmsBacktest {
         return Result(sorted.size, sorted.firstOrNull(), sorted.lastOrNull(), rows, trades)
     }
 
-    /** Every arm's trades on one recorded day, or null when the day lacks the index or its options. */
-    fun day(s: Session, slip: Double = 0.5, charges: Double = 40.0): List<Trade>? {
+    /**
+     * Every arm's trades on one recorded day, or null when the day lacks the index or its options. [params]: each arm's
+     * parameters ([OrbParams.of]: its constants; the strategy lab replays a variant with other values).
+     */
+    fun day(s: Session, slip: Double = 0.5, charges: Double = 40.0, params: (Arm) -> OrbParams = OrbParams::of): List<Trade>? {
+        val (bars, ce, pe) = legs(s) ?: return null
+        return ARMS.flatMap { arm -> armDay(s.day, arm, bars, ce, pe, slip, charges, params(arm)) }
+    }
+
+    /** One arm's trades on one recorded day with the parameters [p] (the strategy lab's replay), or null as [day]. */
+    fun arm(s: Session, arm: Arm, p: OrbParams = OrbParams.of(arm), slip: Double = 0.5, charges: Double = 40.0): List<Trade>? {
+        val (bars, ce, pe) = legs(s) ?: return null
+        return armDay(s.day, arm, bars, ce, pe, slip, charges, p)
+    }
+
+    /** The day's 5-minute bars and the day's call and put (ATM from the 09:20 bar, as the arms), or null without them. */
+    private fun legs(s: Session): Triple<List<Bar>, Series, Series>? {
         val ix = s.index ?: return null
         val bars = fiveMinute(s.day, ix)
         OrbRules.openingRange(bars) ?: return null
@@ -70,7 +85,7 @@ object ArmsBacktest {
         fun leg(r: Right) = s.options.filter { it.expiry == expiry && it.right == r && it.size > 0 }.minByOrNull { abs(it.strike - strike) }
         val ce = leg(Right.CE) ?: return null
         val pe = leg(Right.PE) ?: return null
-        return ARMS.flatMap { arm -> armDay(s.day, arm, bars, ce, pe, slip, charges) }
+        return Triple(bars, ce, pe)
     }
 
     /**
@@ -106,23 +121,25 @@ object ArmsBacktest {
         return out
     }
 
-    private fun armDay(day: LocalDate, arm: Arm, bars: List<Bar>, ce: Series, pe: Series, slip: Double, charges: Double): List<Trade> {
-        val rng = OrbRules.openingRange(bars)!!
+    private fun armDay(day: LocalDate, arm: Arm, bars: List<Bar>, ce: Series, pe: Series, slip: Double, charges: Double,
+                       p: OrbParams = OrbParams.of(arm)): List<Trade> {
+        val rng = OrbRules.openingRange(bars, p.orEnd) ?: return emptyList()
         val out = ArrayList<Trade>()
         var lastExit: LocalDateTime? = null
         var k = 0
         while (k < bars.size) {
             val seen = bars.subList(0, k + 1)
             val (dir, _) = when {
-                arm.fade -> RangeFadeRules.entrySignal(seen, rng, lastExit, out.size)
-                arm.sweep -> SweepRules.entrySignal(seen, rng, lastExit, out.size)
-                else -> OrbRules.entrySignal(seen, rng, arm, lastExit)
+                arm.fade -> RangeFadeRules.entrySignal(seen, rng, lastExit, out.size, p.edge, p.lastEntry)
+                arm.sweep -> SweepRules.entrySignal(seen, rng, lastExit, out.size, p.lastEntry, p.orEnd)
+                else -> OrbRules.entrySignal(seen, rng, arm, lastExit, p = p)
             }
             if (dir == 0) { k++; continue }
             val leg = if (dir > 0) ce else pe
             val signal = bars[k].start
             val from = signal.hour * 60 + signal.minute + 5
-            val t = fill(leg, from, stopOf(arm), targetOf(arm), slip, ProfitLock.targetOf(arm), charges / leg.lot.coerceAtLeast(1))
+            // The ladder's rungs sit on the arm's own target ([ProfitLock.targetOf]: every arm here has one).
+            val t = fill(leg, from, p.stopPoints, p.targetPoints, slip, ProfitLock.targetOf(arm)?.let { p.targetPoints }, charges / leg.lot.coerceAtLeast(1))
             if (t == null) { k++; continue }
             val (entry, exit, why, exitMinute) = t
             lastExit = day.atTime(exitMinute / 60, exitMinute % 60)
@@ -150,7 +167,7 @@ object ArmsBacktest {
         if (leg.minutes[i] >= squareOff) return null
         val e = (leg.open?.get(i) ?: leg.close[i]) + slip
         val bought = leg.minutes[i]
-        if (OrbRules.stopTrigger(e) == null) return null                    // at or under 40: the arms refuse the entry
+        if (OrbRules.stopTrigger(e, stop) == null) return null              // at or under 40: the arms refuse the entry
         val base = (e - stop).takeIf { it > 0 }
         var peak = e
         while (i < leg.size) {

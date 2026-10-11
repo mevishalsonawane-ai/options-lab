@@ -22,7 +22,8 @@ import kotlin.math.roundToInt
  * minutes is followed on the index alone ([Trade.approx]: a premium modelled as half the index move less a day's decay),
  * labelled "index-only approximation" and judged on a stricter bar by its callers.
  *
- * Nothing here places, changes or reads an order; no clock, no I/O. Shared by [VariantLab] and [StrategyForge].
+ * Nothing here places, changes or reads an order; no clock, no I/O. The forge's rule grammar ([StrategyForge]); the running
+ * arms are NOT modelled here: the strategy lab replays them with their own rule code ([ArmLab], S3), on this file's [Day].
  */
 object ShadowSim {
     /** 09:15, the first minute (minutes of the day, IST). */
@@ -70,6 +71,8 @@ object ShadowSim {
         val vix: Series? = null, val busy: Boolean? = null, val strikeStep: Int = stepOf(underlying),
     ) {
         val optionBars: Boolean get() = legs.isNotEmpty()
+        /** What the real-arm replays ([ArmLab]) work out once per day and share across a night's variants (memory only). */
+        val memo = java.util.concurrent.ConcurrentHashMap<String, Any>()
         private val folds = arrayOfNulls<Folded>(31)
         /** The index folded to [minutes]-minute bars (kept: a day is shared by every candidate of a night). */
         fun fold(minutes: Int): Folded {

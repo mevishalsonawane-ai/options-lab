@@ -27,20 +27,24 @@ object RangeFadeRules {
     val LAST_BAR: LocalTime = LocalTime.of(14, 0)
     private const val EPS = 1e-9
 
-    fun mayDecide(bar: Bar): Boolean { val t = bar.start.toLocalTime(); return !t.isBefore(FIRST_BAR) && t.isBefore(LAST_BAR) }
+    fun mayDecide(bar: Bar, lastBar: LocalTime = LAST_BAR): Boolean { val t = bar.start.toLocalTime(); return !t.isBefore(FIRST_BAR) && t.isBefore(lastBar) }
 
-    /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]; [entriesToday] = the arm's entries so far today. */
-    fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, lastExit: LocalDateTime?, entriesToday: Int): Pair<Int, String> {
+    /**
+     * (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]; [entriesToday] = the arm's entries so far today. [edge] and
+     * [lastBar]: the arm's parameters (10%, 14:00).
+     */
+    fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, lastExit: LocalDateTime?, entriesToday: Int,
+                    edge: Double = EDGE, lastBar: LocalTime = LAST_BAR): Pair<Int, String> {
         val last = bars.lastOrNull() ?: return 0 to "no_decision_bar"
-        if (!mayDecide(last)) return 0 to "no_decision_bar"
+        if (!mayDecide(last, lastBar)) return 0 to "no_decision_bar"
         if (entriesToday >= MAX_ENTRIES) return 0 to "day_limit_reached"
         if (lastExit != null && !last.start.isAfter(OrbRules.barOf(lastExit))) return 0 to "cooling_down_after_exit"
         val (orh, orl) = rng
         val w = orh - orl
         if (w <= EPS) return 0 to "no_range"
         return when {
-            last.high >= orh - EDGE * w - EPS && last.close < orh - EPS -> -1 to "fade_of_high"
-            last.low <= orl + EDGE * w + EPS && last.close > orl + EPS -> 1 to "fade_of_low"
+            last.high >= orh - edge * w - EPS && last.close < orh - EPS -> -1 to "fade_of_high"
+            last.low <= orl + edge * w + EPS && last.close > orl + EPS -> 1 to "fade_of_low"
             else -> 0 to "not_at_the_edge"
         }
     }

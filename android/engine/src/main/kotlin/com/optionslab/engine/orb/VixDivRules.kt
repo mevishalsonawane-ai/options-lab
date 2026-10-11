@@ -62,19 +62,21 @@ object VixDivRules {
     /** The strike step: NIFTY 50, BANKNIFTY 100. */
     fun step(underlying: String): Int = if (underlying == "BANKNIFTY") 100 else 50
 
-    /** +1 the call, -1 the put, 0 nothing, from the index's and VIX's moves since their opens (fractions). */
-    fun side(indexMove: Double, vixMove: Double): Int = when {
+    /** +1 the call, -1 the put, 0 nothing, from the index's and VIX's moves since their opens (fractions); [move]: the index's 0.2%. */
+    fun side(indexMove: Double, vixMove: Double, move: Double = INDEX_MOVE): Int = when {
         !indexMove.isFinite() || !vixMove.isFinite() -> 0
-        indexMove > INDEX_MOVE && vixMove > VIX_MOVE -> -1
-        indexMove < -INDEX_MOVE && vixMove < -VIX_MOVE -> 1
+        indexMove > move && vixMove > VIX_MOVE -> -1
+        indexMove < -move && vixMove < -VIX_MOVE -> 1
         else -> 0
     }
 
     /** A check's reading: the moves since the opens and the side (0 when it did not fire). */
-    data class Reading(val check: Int, val indexOpen: Double, val indexClose: Double, val vixOpen: Double, val vixNow: Double) {
+    data class Reading(val check: Int, val indexOpen: Double, val indexClose: Double, val vixOpen: Double, val vixNow: Double,
+                       /** The index move a check needs (the arm's parameter: 0.2%). */
+                       val move: Double = INDEX_MOVE) {
         val indexMove: Double get() = indexClose / indexOpen - 1
         val vixMove: Double get() = vixNow / vixOpen - 1
-        val side: Int get() = side(indexMove, vixMove)
+        val side: Int get() = side(indexMove, vixMove, move)
         /** The last minute it may still buy in (exclusive). */
         val entryUntil: Int get() = check + ENTRY_GRACE
     }
@@ -90,7 +92,7 @@ object VixDivRules {
         bars.filter { it.istMinute in OPEN..minute }.maxByOrNull { it.epochSecond }?.close?.takeIf { it > 0 }
 
     /** Each check that has closed by [nowMinute], read from today's [index] and [vix] minutes, in order; empty without the opens. */
-    fun readings(index: List<Upstox.Bar>, vix: List<Upstox.Bar>, nowMinute: Int): List<Reading> {
+    fun readings(index: List<Upstox.Bar>, vix: List<Upstox.Bar>, nowMinute: Int, move: Double = INDEX_MOVE): List<Reading> {
         val io = indexOpen(index) ?: return emptyList()
         val vo = vixOpen(vix) ?: return emptyList()
         val out = ArrayList<Reading>()
@@ -98,14 +100,14 @@ object VixDivRules {
             if (t > nowMinute) break
             val ic = closeAt(index, t - 1) ?: continue
             val vc = closeAt(vix, t - 1) ?: continue
-            out += Reading(t, io, ic, vo, vc)
+            out += Reading(t, io, ic, vo, vc, move)
         }
         return out
     }
 
     /** The day's first signal among the checks closed by [nowMinute]; null while none has fired. Later checks are never read once one has. */
-    fun firstSignal(index: List<Upstox.Bar>, vix: List<Upstox.Bar>, nowMinute: Int): Reading? =
-        readings(index, vix, nowMinute).firstOrNull { it.side != 0 }
+    fun firstSignal(index: List<Upstox.Bar>, vix: List<Upstox.Bar>, nowMinute: Int, move: Double = INDEX_MOVE): Reading? =
+        readings(index, vix, nowMinute, move).firstOrNull { it.side != 0 }
 
     /**
      * The check whose buying minutes run now ([nowMinute]) while its own minute (T-1) has not printed yet in [index] or
@@ -138,7 +140,7 @@ object VixDivRules {
     }
 
     /** NIFTY's stop: 15% under the fill, down to the tick (lib.py: floor(en x 0.85 / tick) x tick). */
-    fun stop(fill: Double): Double = floor(fill * (1 - LIQ_STOP) / TICK + 1e-9) * TICK
+    fun stop(fill: Double, pct: Double = LIQ_STOP): Double = floor(fill * (1 - pct) / TICK + 1e-9) * TICK
 
     /** Whether [underlying] takes the Liquidity exit (NIFTY) or holds to 15:10 (BANKNIFTY). */
     fun liquidityExit(underlying: String): Boolean = underlying == "NIFTY"
@@ -153,12 +155,12 @@ object VixDivRules {
      * The exit due at [nowMinute] from the option's finished minutes [bars] (any order; those before the entry minute are
      * ignored), or null to hold: "stop_15" (NIFTY: a minute's low at the stop; a stop and the 20-minute check in the same
      * minute: the stop first), "not_up_5_in_20" (NIFTY: the 20th minute from the entry closed under +5%, forward-filled; no
-     * print at all: no time exit, as lib.py), "eod_1510".
+     * print at all: no time exit, as lib.py), "eod_1510". [p]: NIFTY's stop and minutes (the arm's parameters: 15%, 20).
      */
-    fun exit(h: Held, bars: List<Minute>, nowMinute: Int): String? {
+    fun exit(h: Held, bars: List<Minute>, nowMinute: Int, p: VixDivParams = VixDivParams.DEFAULT): String? {
         if (liquidityExit(h.underlying)) {
-            val stop = stop(h.fill)
-            val check = h.entryMinute + LIQ_MINUTES - 1
+            val stop = stop(h.fill, p.stopPct)
+            val check = h.entryMinute + p.minutes - 1
             val seen = bars.filter { it.minute >= h.entryMinute && it.minute < nowMinute }.sortedBy { it.minute }
             var timeDone = false
             for (b in seen) {

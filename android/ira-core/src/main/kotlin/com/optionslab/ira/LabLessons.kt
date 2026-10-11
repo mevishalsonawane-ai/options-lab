@@ -64,7 +64,7 @@ object LabLessons {
                 val parts = listOfNotNull(if (up > 0) "$up variant${if (up == 1) "" else "s"} with $more lost" else null,
                     if (dn > 0) "$dn with $less lost" else null)
                 out += Lesson("param:${s.key}:${p.key}", Kind.PARAM,
-                    "${s.label}'s best ${p.words} so far is ${p.say(cur[p.key] ?: VariantLab.get(s.base, p.key))}; ${parts.joinToString(", ")}.",
+                    "${s.label}'s best ${p.words} so far is ${p.say(cur[p.key] ?: s.defaults[p.key] ?: p.min)}; ${parts.joinToString(", ")}.",
                     up + dn, lost.size)
             }
         }

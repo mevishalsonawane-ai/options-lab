@@ -22,13 +22,14 @@ class VariantLabTest {
                     val x = v.getValue(p.key)
                     assertTrue(x >= p.min - 1e-12 && x <= p.max + 1e-12, "${s.key} ${p.key} = $x")
                 }
-                val rules = s.rules(v)
-                assertNull(rules.invalid(), "${s.key}: ${rules.invalid()}")
+                assertNull(s.invalid(v), "${s.key}: ${s.invalid(v)}")
                 // Never a wider stop than the researched maximum, never outside the F&O hours, never more than 1 lot (no lot knob).
-                s.params.firstOrNull { it.key.startsWith("stop") }?.let { p -> assertTrue((rules.stopPct ?: rules.stopPts!!) <= p.max + 1e-12) }
-                assertTrue(rules.untilMin <= ShadowSim.LAST_ENTRY && rules.squareOff <= ShadowSim.SQUARE_OFF)
-                assertEquals(s.base.maxTrades, rules.maxTrades)
+                s.params.firstOrNull { it.key.startsWith("stop") }?.let { p -> assertTrue(v.getValue(p.key) <= p.max + 1e-12) }
+                v["until"]?.let { assertTrue(it <= ShadowSim.LAST_ENTRY) }
                 assertTrue(s.params.none { it.key.contains("lot", ignoreCase = true) })
+                assertEquals(s.params.map { it.key }.toSet(), v.keys)
+                // The researched maxima themselves: ORB family -40 points, Liquidity 25%, VIX divergence 15%.
+                assertTrue((v["stopPts"] ?: 0.0) <= 40.0 && (v["stopPct"] ?: 0.0) <= (if (s.key == "liquidity") 0.25 else 0.15) + 1e-12)
             }
         }
         // A file can never carry a value outside the bounds back in.
@@ -125,5 +126,137 @@ class VariantLabTest {
         val (v, c) = VariantLab.precheck(s, s.defaults, s.defaults, hist)
         assertEquals(v, c, 1e-9)
         assertNotNull(VariantLab.state(variant("V1", "orb", strong)))
+    }
+
+    // ---- S1: what the arms trade -----------------------------------------------------------------------------------------
+
+    @Test fun aPaperPromotionIsTradedFromTheNextSessionNeverMidDay() {
+        val b0 = VariantLab.Book(runs = mapOf("orb_sweep" to VariantLab.Run.PAPER), variants = listOf(variant("V1", "orb_sweep", strong)), tried = 1, nextId = 2)
+        val next = day.plusDays(3)                     // Friday's settle: Monday is the next session
+        val pass = VariantLab.judge(b0, day, next)
+        val c = pass.events.filterIsInstance<VariantLab.Event.Applied>().single().change
+        assertEquals(next, c.effective)
+        // The day it was decided and the days up to the next session: the arm's defaults; from then on, the variant (paper only).
+        for (d in listOf(day, day.plusDays(1), day.plusDays(2))) assertNull(VariantLab.valuesFor(pass.book, "orb_sweep", false, d), "$d")
+        assertEquals(c.to, VariantLab.valuesFor(pass.book, "orb_sweep", false, next))
+        assertEquals(c.to, VariantLab.valuesFor(pass.book, "orb_sweep", false, next.plusDays(30)))
+        assertNull(VariantLab.valuesFor(pass.book, "orb_sweep", true, next), "a paper promotion never reaches the live account")
+        assertEquals("running: default · from ${DiscoveryStats.day(next)}: variant V1", VariantLab.runningWords(pass.book, "orb_sweep", false, day))
+        assertEquals("running: variant V1 since ${DiscoveryStats.day(next)}", VariantLab.runningWords(pass.book, "orb_sweep", false, next))
+        assertEquals("V1", VariantLab.running(pass.book, "orb_sweep", false, next).variant)
+        // Undo (paper, no PIN) also from a next session; a live change cannot be undone through it.
+        val later = next.plusDays(7)
+        val undone = VariantLab.undo(pass.book, c.id, later)!!
+        assertEquals(c.to, VariantLab.valuesFor(undone, "orb_sweep", false, later.minusDays(1)))
+        assertNull(VariantLab.valuesFor(undone, "orb_sweep", false, later))
+        assertEquals(VariantLab.ChangeStatus.UNDONE, undone.change(c.id)!!.status)
+        assertNull(VariantLab.undo(undone, c.id, later))
+        // The whole day's pass: the change carries the safety net's yardsticks and is traded from the session given.
+        val hist = LabTestData.days(25, 8)
+        val dp = VariantLab.day(b0.copy(lastDay = null), day, b0.runs, emptyMap(), hist, DiscoveryStats.Rng(1), from = next)
+        val ap = dp.events.filterIsInstance<VariantLab.Event.Applied>().single().change
+        assertEquals(next, ap.effective)
+        assertTrue(ap.avgLoss >= VariantLab.MIN_AVG_LOSS && ap.expect > 0)
+        assertEquals(ap, dp.book.change(ap.id))
+        assertNull(VariantLab.valuesFor(dp.book, "orb_sweep", false, day))
+    }
+
+    private fun proposed(): Pair<VariantLab.Book, VariantLab.Change> {
+        val b = VariantLab.Book(runs = mapOf("orb" to VariantLab.Run.LIVE), variants = listOf(variant("V1", "orb", strong)), tried = 1, nextId = 2)
+        val p = VariantLab.judge(b, day)
+        return p.book to p.events.filterIsInstance<VariantLab.Event.Proposed>().single().change
+    }
+
+    @Test fun liveOnlyWithThePinFromTheNextSessionAndItsUndo() {
+        val (b, c) = proposed()
+        assertNull(VariantLab.valuesFor(b, "orb", true, day.plusDays(1)), "a proposal changes nothing")
+        assertNull(VariantLab.accept(b, c.id, pinConfirmed = false, from = day.plusDays(1)))
+        val from = day.plusDays(1)
+        val yes = VariantLab.accept(b, c.id, pinConfirmed = true, from = from)!!
+        assertNull(VariantLab.valuesFor(yes, "orb", true, day))
+        assertEquals(c.to, VariantLab.valuesFor(yes, "orb", true, from))
+        assertEquals(c.to, VariantLab.valuesFor(yes, "orb", false, from), "paper follows the accepted live rules")
+        assertEquals(from, yes.change(c.id)!!.effective)
+        // Its undo puts the defaults back (lower risk): no PIN needed.
+        assertTrue(VariantLab.restoresDefault(yes, c.id))
+        val back = VariantLab.undoLive(yes, c.id, pinConfirmed = false, from = from.plusDays(1))!!
+        assertNull(VariantLab.valuesFor(back, "orb", true, from.plusDays(1)))
+        assertNull(VariantLab.valuesFor(back, "orb", false, from.plusDays(1)))
+        assertEquals(c.to, VariantLab.valuesFor(back, "orb", true, from))
+        // A second live change on top of the first: undoing it goes back to the FIRST variant, not the defaults - the PIN.
+        val v2 = variant("V2", "orb", strong).copy(values = c.to + ("stopPts" to 30.0), base = c.to)
+        val b2 = VariantLab.judge(yes.copy(variants = yes.variants + v2, tried = 2), day.plusDays(2)).let { p ->
+            val c2 = p.events.filterIsInstance<VariantLab.Event.Proposed>().single().change
+            VariantLab.accept(p.book, c2.id, true, day.plusDays(3))!! to c2
+        }
+        assertTrue(!VariantLab.restoresDefault(b2.first, b2.second.id))
+        assertNull(VariantLab.undoLive(b2.first, b2.second.id, pinConfirmed = false, from = day.plusDays(4)))
+        val pinned = VariantLab.undoLive(b2.first, b2.second.id, pinConfirmed = true, from = day.plusDays(4))!!
+        assertEquals(c.to, VariantLab.valuesFor(pinned, "orb", true, day.plusDays(4)))
+        // Not accepted, or already undone: nothing.
+        assertNull(VariantLab.undoLive(b, c.id, true, from))
+        assertNull(VariantLab.undoLive(back, c.id, true, from))
+    }
+
+    @Test fun theSafetyNetRevertsToTheDefaults() {
+        val (b, c) = proposed()
+        val from = day.plusDays(1)
+        val yes = VariantLab.accept(b, c.id, true, from)!!.let { x -> x.copy(changes = x.changes.map { if (it.id == c.id) it.copy(avgLoss = 1_000.0, expect = 200.0) else it }) }
+        val live = mapOf("orb" to VariantLab.Run.LIVE)
+        // Before the variant is traded (the day of the decision): never judged.
+        assertTrue(VariantLab.safety(yes, day, live, from) { _, _ -> -1e9 }.events.isEmpty())
+        // A day's loss within 3 x the backtest's average losing day: kept (a streak of one).
+        val d1 = from
+        val s1 = VariantLab.safety(yes, d1, live, d1.plusDays(1)) { _, _ -> -2_900.0 }
+        assertTrue(s1.events.isEmpty()); assertEquals(1, s1.book.streaks["orb"])
+        // More than 3 x: back to the defaults on both accounts from the next session (lower risk: no PIN), said with the numbers.
+        val big = VariantLab.safety(yes, d1, live, d1.plusDays(1)) { _, _ -> -3_100.0 }
+        val r = big.events.filterIsInstance<VariantLab.Event.Reverted>().single().change
+        assertEquals(VariantLab.ChangeKind.SAFETY_REVERT, r.kind); assertEquals(VariantLab.strategy("orb")!!.defaults, r.to)
+        assertTrue("3 x its backtest's average losing day" in r.why, r.why)
+        assertEquals(c.to, VariantLab.valuesFor(big.book, "orb", true, d1), "the day itself is never changed")
+        assertNull(VariantLab.valuesFor(big.book, "orb", true, d1.plusDays(1)))
+        assertNull(VariantLab.valuesFor(big.book, "orb", false, d1.plusDays(1)))
+        assertEquals(VariantLab.strategy("orb")!!.defaults, big.book.currentOf("orb"))
+        // Three losing days in a row below the forward expectation; a good day in between resets the count.
+        var x = yes
+        val results = listOf(-100.0, -100.0, 500.0, -100.0, -100.0)
+        for ((i, net) in results.withIndex()) {
+            val p = VariantLab.safety(x, d1.plusDays(i.toLong()), live, d1.plusDays(i + 1L)) { _, _ -> net }
+            assertTrue(p.events.isEmpty(), "day $i")
+            x = p.book
+        }
+        assertEquals(2, x.streaks["orb"])
+        val third = VariantLab.safety(x, d1.plusDays(5), live, d1.plusDays(6)) { _, _ -> -50.0 }
+        assertTrue("3 losing days in a row" in third.events.filterIsInstance<VariantLab.Event.Reverted>().single().change.why)
+        assertNull(VariantLab.valuesFor(third.book, "orb", true, d1.plusDays(6)))
+        // Not running, or no result known: nothing; on the defaults: nothing.
+        assertTrue(VariantLab.safety(yes, d1, emptyMap(), d1.plusDays(1)) { _, _ -> -1e9 }.events.isEmpty())
+        assertTrue(VariantLab.safety(yes, d1, live, d1.plusDays(1)) { _, _ -> null }.events.isEmpty())
+        assertTrue(VariantLab.safety(big.book, d1.plusDays(1), live, d1.plusDays(2)) { _, _ -> -1e9 }.events.isEmpty())
+        // Kept on the phone: the tunes, the streaks, the changes' yardsticks.
+        assertEquals(x, VariantLab.decode(VariantLab.encode(x)))
+        assertEquals(third.book, VariantLab.decode(VariantLab.encode(third.book)))
+    }
+
+    @Test fun liquidityHasASmallerBudgetAndAStricterBar() {
+        val hist = LabTestData.days(12, 9)
+        val b = VariantLab.spawn(VariantLab.Book(runs = mapOf("liquidity" to VariantLab.Run.PAPER)), "liquidity", day, hist, DiscoveryStats.Rng(5))
+        assertTrue(b.tried in 1..VariantLab.LIQUIDITY_MAX)
+        assertTrue(b.variants.all { it.values.keys == ArmParams.LIQUIDITY_EXIT_KEYS })
+        // A record that passes the ORB's bar (p 0.04 with one variant tried) does not pass Liquidity's (alpha halved).
+        val orb = variant("V1", "orb", strong).copy(pBetter = 0.04)
+        val liq = variant("V2", "liquidity", strong).copy(pBetter = 0.04)
+        assertTrue(VariantLab.wins(orb, listOf(0.04), 1))
+        assertTrue(!VariantLab.wins(liq, listOf(0.04), 1))
+        assertTrue(VariantLab.wins(liq.copy(pBetter = 0.02), listOf(0.02), 1))
+    }
+
+    @Test fun anOldModelsVariantIsRetiredOnTheWayIn() {
+        val old = VariantLab.Variant("V7", "liquidity", mapOf("stopPct" to 0.15, "np" to 20.0, "is" to 0.00055), emptyMap(), day, 1.0, VariantLab.Status.ALIVE)
+        val back = VariantLab.decode(VariantLab.encode(VariantLab.Book(variants = listOf(old), current = mapOf("liquidity" to mapOf("np" to 25.0)))))
+        assertEquals(VariantLab.Status.RETIRED, back.variants.single().status)
+        assertEquals(VariantLab.OLD_RULES, back.variants.single().why)
+        assertEquals(VariantLab.strategy("liquidity")!!.defaults, back.currentOf("liquidity"))
     }
 }

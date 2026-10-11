@@ -25,9 +25,10 @@ object SweepRules {
     private const val EPS = 1e-9
 
     /** (+1 CE / -1 PE / 0, why) on the last completed bar of [bars]; [entriesToday] = the arm's entries so far today. */
-    fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, lastExit: LocalDateTime?, entriesToday: Int): Pair<Int, String> {
+    fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, lastExit: LocalDateTime?, entriesToday: Int,
+                    until: java.time.LocalTime = OrbRules.SWEEP_LAST_ENTRY_BAR, orEnd: java.time.LocalTime = OrbRules.OR_END): Pair<Int, String> {
         val last = bars.lastOrNull() ?: return 0 to "no_decision_bar"
-        if (!OrbRules.mayDecide(last, OrbRules.SWEEP_LAST_ENTRY_BAR)) return 0 to "no_decision_bar"
+        if (!OrbRules.mayDecide(last, until, orEnd)) return 0 to "no_decision_bar"
         if (entriesToday >= MAX_ENTRIES) return 0 to "day_limit_reached"
         if (lastExit != null && !last.start.isAfter(OrbRules.barOf(lastExit))) return 0 to "cooling_down_after_exit"
         val (orh, orl) = rng
@@ -38,12 +39,12 @@ object SweepRules {
         }
     }
 
-    /** Exit for a bought option: -40 stop, +80 target, the ORB's 15:10 square-off. */
-    fun exitReason(entry: Double, ltp: Double, now: LocalDateTime): String? {
+    /** Exit for a bought option: -40 stop, +80 target ([stopPoints], [targetPoints]), the ORB's 15:10 square-off. */
+    fun exitReason(entry: Double, ltp: Double, now: LocalDateTime, stopPoints: Double = STOP_POINTS, targetPoints: Double = TARGET_POINTS): String? {
         if (!now.toLocalTime().isBefore(OrbRules.SQUARE_OFF)) return "session_end"
-        val stop = entry - STOP_POINTS
+        val stop = entry - stopPoints
         if (stop > EPS && ltp <= stop + EPS) return "stop"
-        if (ltp >= entry + TARGET_POINTS - EPS) return "target"
+        if (ltp >= entry + targetPoints - EPS) return "target"
         return null
     }
 }
