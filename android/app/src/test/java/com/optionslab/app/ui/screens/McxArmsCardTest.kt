@@ -135,7 +135,7 @@ class McxArmsCardTest {
         }
         compose.waitForIdle()
         compose.onNodeWithText(MCX_ARMS_WHERE).assertExists()
-        assertTrue("Home → Strategies" in MCX_ARMS_WHERE)
+        assertTrue("Home → MCX card" in MCX_ARMS_WHERE)
         // No switch here: the bots' one place is Home → Strategies.
         assertEquals(0, compose.onAllNodes(hasContentDescription("Paper only: switch", substring = true)).fetchSemanticsNodes().size)
     }

@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
@@ -342,18 +345,21 @@ internal fun AutopilotSelfButtons() {
 // ---- S10: the "why?" card after a hand trade --------------------------------------------------------------------------------
 
 /**
- * After a hand order fills: why? One tap on a chip (and a note if Boss likes), or ✕. A small dialog that never holds the
- * order (it is already filled) and goes away by itself after a few minutes.
+ * After a hand order fills: why? One tap on a chip (and a note if Boss likes), or ✕. A small card over the bottom of the page
+ * that never holds the order (it is already filled) and goes away by itself after a few minutes. Not modal (review R5 #7):
+ * the page under it keeps every tap - a dialog here swallowed Boss's next tap after a fill.
  */
 @Composable
 internal fun ManualReasonCard(prompt: BossTradeLog.Prompt) {
     LaunchedEffect(prompt) { kotlinx.coroutines.delay(BossTradeLog.PROMPT_MS); if (BossTradeLog.prompt.value == prompt) BossTradeLog.dismiss() }
-    androidx.compose.ui.window.Dialog(onDismissRequest = { BossTradeLog.dismiss() }, properties = androidx.compose.ui.window.DialogProperties(
-        securePolicy = com.optionslab.app.security.Capture.policy)) {
+    // A plain box with no pointer input of its own: only the card takes touches; around it they reach the page.
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().imePadding().padding(start = 12.dp, end = 12.dp, bottom = 72.dp),
+        contentAlignment = Alignment.BottomCenter) {
         ManualReasonContent(prompt.symbol, prompt.exit,
             onEntry = { why, note -> BossTradeLog.answer(prompt, why = why, note = note) },
             onExit = { why, note -> BossTradeLog.answer(prompt, exitWhy = why, note = note) },
-            onDismiss = { BossTradeLog.dismiss() })
+            onDismiss = { BossTradeLog.dismiss() },
+            modifier = Modifier.shadow(8.dp, RoundedCornerShape(16.dp)))
     }
 }
 
@@ -361,14 +367,14 @@ internal fun ManualReasonCard(prompt: BossTradeLog.Prompt) {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun ManualReasonContent(symbol: String, exit: Boolean, onEntry: (BossTrades.Why, String) -> Unit, onExit: (BossTrades.ExitWhy, String) -> Unit,
-                                 onDismiss: () -> Unit) {
+                                 onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     var note by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxWidth().background(p.paper, RoundedCornerShape(16.dp)).padding(14.dp).testTag("manual-reason")) {
+    Column(modifier.fillMaxWidth().background(p.paper, RoundedCornerShape(16.dp)).padding(14.dp).testTag("manual-reason")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(if (exit) "Why did you close $symbol?" else "Why this trade?", style = Type.body.copy(color = p.ink, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.weight(1f))
-            com.optionslab.app.ui.components.TextButton(onDismiss, modifier = Modifier.testTag("manual-reason-dismiss")) { Text("✕", style = Type.label.copy(color = p.inkSoft)) }
+            com.optionslab.app.ui.components.TextButton(onDismiss, modifier = Modifier.testTag("manual-reason-dismiss").semantics { contentDescription = "Dismiss" }) { Text("✕", style = Type.label.copy(color = p.inkSoft)) }
         }
         Note("Optional - one tap. Jarvis learns your own rules from it; nothing is changed or held.", Modifier.padding(top = 2.dp))
         androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(top = 6.dp)) {

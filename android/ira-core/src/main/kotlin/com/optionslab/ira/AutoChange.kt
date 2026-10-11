@@ -817,8 +817,11 @@ object AutoChange {
 
     // ---- what Boss asks ------------------------------------------------------------------------------------------------------
 
-    /** SURE: "how sure are you about X?" ([subject]: X); EXPERIMENTS: "what experiments are running?". */
-    enum class AskKind { TODAY, WHY, UNDO, OFF, RAISE, HOW, SURE, EXPERIMENTS }
+    /**
+     * SURE: "how sure are you about X?" ([subject]: X); EXPERIMENTS: "what experiments are running?"; SHADOW: "set autopilot to
+     * shadow only" - a lowering from SAFE, a raise from OFF ([voiceSet] decides; review R5 #10).
+     */
+    enum class AskKind { TODAY, WHY, UNDO, OFF, RAISE, HOW, SURE, EXPERIMENTS, SHADOW }
 
     data class Ask(val kind: AskKind, val subject: String? = null)
 
@@ -836,7 +839,8 @@ object AutoChange {
         "revert (the|your) last (autopilot|auto pilot) change|undo what $AP (did|changed)|undo $AP s last change|undo $AP last change)" + TAIL)
     private val OFF = Regex(LEAD + "((turn|switch) off $AP learning|(stop|disable) $AP learning|$AP learning off|(turn|switch) $AP learning off)" + TAIL)
     private val RAISE = Regex(LEAD + "((turn|switch) on $AP learning|(start|enable) $AP learning|$AP learning on|(turn|switch) $AP learning on|" +
-        "set $AP to (safe|shadow only|shadow)|(put|set) $AP learning (back )?(to|on) (safe|shadow only))" + TAIL)
+        "set $AP to safe|(put|set) $AP learning (back )?(to|on) safe)" + TAIL)
+    private val SHADOW = Regex(LEAD + "(set $AP to (shadow only|shadow)|(put|set) $AP learning (back )?(to|on) (shadow only|shadow))" + TAIL)
     private val HOW = Regex(LEAD + "(how is $AP doing|how s $AP doing|hows $AP doing|how is $AP|is $AP (helping|working)|$AP report|" +
         "how is (your|the) autopilot learning (doing|going)|how are your (own )?changes doing)" + TAIL)
 
@@ -870,6 +874,7 @@ object AutoChange {
             !t.contains(" stop")) return null
         if (OFF.containsMatchIn(t)) return Ask(AskKind.OFF)
         if (RAISE.containsMatchIn(t)) return Ask(AskKind.RAISE)
+        if (SHADOW.containsMatchIn(t)) return Ask(AskKind.SHADOW)
         if (UNDO.containsMatchIn(t)) return Ask(AskKind.UNDO)
         if (TODAY.containsMatchIn(t)) return Ask(AskKind.TODAY)
         if (HOW.containsMatchIn(t)) return Ask(AskKind.HOW)
@@ -881,7 +886,7 @@ object AutoChange {
     fun voiceSet(now: Mode, want: Mode): Mode = if (want.level <= now.level) want else now
 
     /** The words for a raise asked by voice (refused). */
-    const val VOICE_RAISE = "I can't turn Autopilot learning up by voice, Boss: switch it in Settings → Jarvis → Autopilot learning " +
+    const val VOICE_RAISE = "I can't turn Autopilot learning up by voice, Boss: switch it in Settings → Bot settings → Autopilot learning " +
         "(SAFE asks for your PIN when the live account is on). Turning it off by voice always works."
 
     // ---- the file ------------------------------------------------------------------------------------------------------------

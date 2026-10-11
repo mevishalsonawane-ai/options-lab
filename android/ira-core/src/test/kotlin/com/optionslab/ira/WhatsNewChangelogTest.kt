@@ -330,7 +330,7 @@ class WhatsNewChangelogTest {
         val sentences = x.what.split(Regex("[.!?](\\s|$)")).filter { it.isNotBlank() }
         assertEquals(8, sentences.size, x.what)
         for (t in sentences) assertTrue(t.trim().split(' ').size <= 20, t)
-        assertTrue("Strategies card" in x.where && "VIX divergence row" in x.where && "MCX (commodities)" in x.where &&
+        assertTrue("Strategies card" in x.where && "VIX divergence row" in x.where && "Home → MCX card" in x.where &&
             "Switch FINNIFTY back on" in x.where && "Liquidity 15+5 row" in x.where, x.where)
         assertNull(x.ask)
         assertFalse(x.gold)
@@ -345,8 +345,9 @@ class WhatsNewChangelogTest {
             "11-20 days", "4 hours", "Rs 454 a trade over 51 trades", "failed 2 of its 4 checks", "12-month trend", "Rs 8-10 lakh",
             "often ruined at Rs 1 lakh", "1 lot", "never send an order to Zerodha", "5 trading days before expiry, not 2"))
             assertTrue(w in x.what, w)
-        assertTrue("Home → Dashboard → Strategies card → MCX (commodities)" in x.where && "Commodities →" !in x.where, x.where)
-        assertTrue("Home → Strategies has three paper-only MCX bots" in x.what && "Commodities page" !in x.what, x.what)
+        // Home's MCX card (review R5 #9): not the Strategies card any more.
+        assertTrue("Home → MCX card" in x.where && "Strategies card" !in x.where && "Commodities →" !in x.where, x.where)
+        assertTrue("Home's MCX card has three paper-only MCX bots" in x.what && "Commodities page" !in x.what, x.what)
         assertNull(x.ask)
         assertFalse(x.gold)
     }
@@ -507,7 +508,7 @@ class WhatsNewChangelogTest {
         assertEquals("What's new in the app (11 Oct), newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
         assertEquals("• Home puts trading first: Home → Automation card → tap a line.", lines[1])
-        assertEquals("• The learning closes its loops, with brakes: Home → Autopilot card → Today's changes; Research → Learn.", lines[2])
+        assertEquals("• The learning closes its loops, with brakes: Home → Automation card → Autopilot → Today's changes; Research → Learn.", lines[2])
         assertEquals("• Strategy lab: strategies improve and new ones are tried: try \"how are my strategies improving\".", lines[3])
         assertEquals("• Smarter learning: tested, replayed and tried on paper first: try \"what experiments are running\".", lines[4])
         assertEquals("• The app heals itself and reports its growth: try \"how did you grow this week\".", lines[5])

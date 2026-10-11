@@ -553,7 +553,7 @@ internal object Autopilot {
 
     // ---- answers -------------------------------------------------------------------------------------------------------------
 
-    /** Jarvis's answer to [a] (OFF and RAISE by voice: [voiceSet]; UNDO: [offerUndoLast]). */
+    /** Jarvis's answer to [a] (OFF, SHADOW and RAISE by voice: [voiceSet]; UNDO: [offerUndoLast]). */
     fun answer(a: AutoChange.Ask): String {
         ensureLoaded()
         return when (a.kind) {
@@ -563,6 +563,8 @@ internal object Autopilot {
             AutoChange.AskKind.UNDO -> offerUndoLast()
             AutoChange.AskKind.OFF -> voiceSet(AutoChange.Mode.OFF)
             AutoChange.AskKind.RAISE -> AutoChange.VOICE_RAISE
+            // "Set autopilot to shadow only": lowers from SAFE; from OFF it is a raise and refused ([voiceSet]).
+            AutoChange.AskKind.SHADOW -> voiceSet(AutoChange.Mode.SHADOW_ONLY)
             AutoChange.AskKind.SURE -> {
                 runCatching { JarvisLearning.ensureLoaded() }
                 AutoGate.sayHowSure(JarvisLearning.book.value, _book.value, a.subject ?: "that")

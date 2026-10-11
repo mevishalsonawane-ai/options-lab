@@ -381,6 +381,12 @@ class AutoChangeTest {
         assertEquals(AutoChange.AskKind.OFF, A.asked("turn off autopilot learning")?.kind)
         assertEquals(AutoChange.AskKind.RAISE, A.asked("turn on autopilot learning")?.kind)
         assertEquals(AutoChange.AskKind.RAISE, A.asked("set autopilot to safe")?.kind)
+        // "Shadow only" is its own ask (review R5 #10): it lowers from SAFE and is refused only from OFF.
+        assertEquals(AutoChange.AskKind.SHADOW, A.asked("set autopilot to shadow only")?.kind)
+        assertEquals(AutoChange.AskKind.SHADOW, A.asked("put autopilot learning back to shadow")?.kind)
+        assertEquals(AutoChange.Mode.SHADOW_ONLY, A.voiceSet(AutoChange.Mode.SAFE, AutoChange.Mode.SHADOW_ONLY))
+        assertEquals(AutoChange.Mode.OFF, A.voiceSet(AutoChange.Mode.OFF, AutoChange.Mode.SHADOW_ONLY))
+        assertTrue("Settings → Bot settings → Autopilot learning" in AutoChange.VOICE_RAISE && "Jarvis →" !in AutoChange.VOICE_RAISE)
         assertEquals(AutoChange.AskKind.HOW, A.asked("how is autopilot doing")?.kind)
         // Not these: the settings' own undo, the old autopilot's switch, a strategy stopped, the market.
         for (s in listOf("undo the last change", "turn off autopilot", "turn on autopilot", "why did you stop orb", "how is nifty", "what changed",

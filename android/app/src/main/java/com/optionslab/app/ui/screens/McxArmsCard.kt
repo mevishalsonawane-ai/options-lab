@@ -35,7 +35,7 @@ import java.util.Locale
 internal const val MCX_GROUP = "MCX (commodities)"
 
 /** Where the MCX paper bots live (9 Oct, Boss: "it should be on home screen"); the Commodities page says so in one line. */
-internal const val MCX_ARMS_WHERE = "MCX paper bots are on Home → Strategies (the MCX (commodities) group)."
+internal const val MCX_ARMS_WHERE = "MCX paper bots are on Home → MCX card."
 
 /**
  * The MCX paper bots on Home's Strategies card (9 Oct, research M3 / M4 / M2; [McxPaperArms]), in their own

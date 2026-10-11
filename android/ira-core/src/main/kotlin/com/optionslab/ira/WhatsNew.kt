@@ -70,7 +70,7 @@ object WhatsNew {
                 "Today's changes sit on one screen with Undo everything today; learning freezes itself after a drawdown. " +
                 "A monthly scorecard says what the automation earned or cost. " +
                 "Jarvis learns your own habits, and Research has Learn pages, today's lesson and bot trade replays.",
-            "Home → Autopilot card → Today's changes; Research → Learn",
+            "Home → Automation card → Autopilot → Today's changes; Research → Learn",
             jarvisOnly = true),
         Entry("2026-10-11-strategy-lab-auto", OCT11, "Strategy lab: strategies improve and new ones are tried",
             "Each running strategy now has a few nearby variants that trade virtually beside it: no orders, not even paper. " +
@@ -80,7 +80,7 @@ object WhatsNew {
                 "Almost all fail: walk-forward, a random-twin check and a count of every idea ever tried. " +
                 "Survivors run a virtual forward test of 20 days before you are asked to start them on paper. " +
                 "Jarvis learns from every result, and the graveyard shows how many ideas were tried.",
-            "Home → Strategy lab card → tap a strategy or an idea for details",
+            "Home → Automation card → Strategy lab → tap a strategy or an idea for details",
             ask = "how are my strategies improving", jarvisOnly = true),
         Entry("2026-10-11-smarter-learning", OCT11, "Smarter learning: tested, replayed and tried on paper first",
             "Each lesson now carries a q-value: it is strong only if it holds when all lessons are tested together. " +
@@ -90,7 +90,7 @@ object WhatsNew {
                 "A lesson still building is tried first as a paper experiment on alternate trades, never on live. " +
                 "Each change is kept or reverted as soon as the evidence is clear. " +
                 "And the bar rises with every setting it has tried.",
-            "Home → Autopilot card → Change log",
+            "Home → Automation card → Autopilot → Change log",
             ask = "what experiments are running", jarvisOnly = true),
         Entry("2026-10-11-self-healing-app", OCT11, "The app heals itself and reports its growth",
             "The app now watches its own health on this phone: screen stalls, freezes, crashes and order speed. " +
@@ -99,7 +99,7 @@ object WhatsNew {
                 "Each evening Jarvis picks up to three things to learn next and records more for them, never trading. " +
                 "Every Sunday he tidies his memory. " +
                 "On Saturday morning he sends a weekly report of what he learned, what Autopilot changed and how the app ran.",
-            "Home → Autopilot card → Weekly report; Home → Ira → What Jarvis has learned; Copy diagnostics (the Health line)",
+            "Home → Automation card → Autopilot → Weekly report; Home → Ira → What Jarvis has learned; Copy diagnostics (the Health line)",
             ask = "how did you grow this week", jarvisOnly = true),
         Entry("2026-10-11-autopilot-learning", OCT11, "Autopilot learning: the agents learn and heal by themselves",
             "Jarvis and the agents now make the changes their lessons point to, by themselves, within strict bounds. " +
@@ -109,7 +109,7 @@ object WhatsNew {
                 "After 15 trades or 5 days it is checked again, and reverts itself if it made things worse. " +
                 "It never touches the PIN, Live, AI-live, the guard, the app lock, the day lock, sizes or open orders. " +
                 "Switch it OFF, SAFE or SHADOW-ONLY in Settings; \"turn off autopilot\" by voice always works.",
-            "Home → Autopilot card → Change log; Settings → Jarvis → Autopilot learning",
+            "Home → Automation card → Autopilot → Change log; Settings → Bot settings → Autopilot learning",
             ask = "how is autopilot doing", jarvisOnly = true),
         Entry("2026-10-11-jarvis-learns", OCT11, "Jarvis learns from the bots",
             "Each evening after the close, Jarvis studies what every bot, the trade manager, its specialists and the order flow kept. " +
@@ -135,7 +135,7 @@ object WhatsNew {
                 "It now acts on ORB Fresh's paper trades only; the arm still loses overall. " +
                 "Live stays a record, and every other strategy keeps its own exits while the manager records. " +
                 "Each ORB arm has its own mode, and your own choices and mutes are kept.",
-            "Home → Dashboard → Strategies card → Trade manager record",
+            "Home → Automation card → Trade manager → Trade manager record",
             ask = "what did the research say about the trade manager"),
         Entry("2026-10-10-manager-specialists", OCT10, "The trade manager is now a team of specialists",
             "Sixteen specialists watch an open trade, each reading its own data: order flow, VWAP, volume, OI, traps, news. " +
@@ -145,7 +145,7 @@ object WhatsNew {
                 "Each specialist keeps a report card against the original rules. " +
                 "On paper and shadow their weights tune slowly; a specialist that hurts is muted, and you can mute one yourself. " +
                 "Live trades keep fixed weights until you accept a change with your PIN.",
-            "Home → Dashboard → Strategies card → Trade manager → Specialists",
+            "Home → Automation card → Trade manager → Specialists",
             ask = "how are the manager's specialists doing"),
         Entry("2026-10-10-trade-manager", OCT10, "Solo and Pine manage their open trades",
             "After a fill, a trade manager watches the trade with the live order flow, VWAP, value area and findings. " +
@@ -156,7 +156,7 @@ object WhatsNew {
                 "It acts on paper; on live it only records until you switch it on with your PIN. " +
                 "Its record compares every trade with what the original rules would have done. " +
                 "Every other strategy only records until its record proves it; the record then says ready, a hint, never a switch.",
-            "Home → Dashboard → Strategies card → Trade manager record, and the Solo and Pine trade cards",
+            "Home → Automation card → Trade manager → Trade manager record, and the Solo and Pine trade cards",
             ask = "how is the trade manager doing"),
         Entry("2026-10-10-findings-bus", OCT10, "The bots share what they find",
             "Each strategy and checker posts what it finds: a sweep, a break, a pull, a stop hit, a big move. " +
@@ -164,7 +164,7 @@ object WhatsNew {
                 "That view is logged beside every signal, to test later whether it helps. " +
                 "Reactions between bots can only skip an entry, and start as a record only. " +
                 "Unreliable data pauses every new entry at once; exits always go.",
-            "Home → Dashboard → Strategies card → Findings, and Copy diagnostics (Brain)",
+            "Home → Automation card → Brain (the bots' findings), and Copy diagnostics (Brain)",
             ask = "what are the bots saying about banknifty"),
         Entry("2026-10-10-smart-workers", OCT10, "Smarter bots: they wake, heal and check themselves",
             "Each bot now wakes when something it waits for happens, such as its candle closing, not on a fixed clock. " +
@@ -175,7 +175,7 @@ object WhatsNew {
                 "After 15:45 each strategy compares its recent trades with its backtest. " +
                 "A drifting live strategy moves itself to paper and asks you; it never goes back to live alone. " +
                 "Exits are never delayed.",
-            "Home → Dashboard → Strategies card (health chips), Settings → Zerodha → Order speed, and Copy diagnostics (Brain)",
+            "Home → Automation card → Brain (health chips), Settings → Zerodha → Order speed, and Copy diagnostics (Brain)",
             ask = "how are my strategies doing vs backtest"),
         Entry("2026-10-10-parallel-workers", OCT10, "The watch works on many things at once",
             "The order watch now runs the strategies side by side instead of one after another. " +
@@ -195,7 +195,7 @@ object WhatsNew {
                 "A switch in the same sheet turns it off. " +
                 "Files are kept 12 months and export with the market data. " +
                 "It only records; no strategy uses it.",
-            "Home → Dashboard → Strategies card → Order flow (tap an index) → Big moves",
+            "Home → Automation card → Order flow (tap an index) → Big moves",
             ask = "why did banknifty jump at 10:32", to = "chart"),
         Entry("2026-10-09-fno-to-1540", OCT9, "F&O trades to 15:40",
             "NSE F&O now trades to 15:40; the app's order window and watch follow it. " +
@@ -209,18 +209,18 @@ object WhatsNew {
                 "Home and the GEX tool show the gamma regime and its zero-gamma level, with both dealer-sign conventions. " +
                 "Optional chart lines for these levels and VWAP start off. " +
                 "All of it is shown and logged beside each signal for research; no strategy uses it.",
-            "Home → Dashboard → Strategies card → Order flow (tap an index), Options → GEX, and the Chart's POC/VA and VWAP toggles",
+            "Home → Automation card → Order flow (tap an index), Options → GEX, and the Chart's POC/VA and VWAP toggles",
             ask = "what's the volume profile on banknifty", to = "chart"),
         Entry("2026-10-09-order-flow", OCT9, "Live order flow, logged beside every strategy",
             "A live read of who is pushing, buyers or sellers, from Zerodha's full price stream. " +
-                "It shows on the chart, the option chain and the Strategies card, with a detail on tap. " +
+                "It shows on the chart, the option chain and Home's Automation card, with a detail on tap. " +
                 "Every strategy now logs the flow beside each signal, and the result later. " +
                 "Per strategy you can set it off, shadow (log only) or confirm. " +
                 "Confirm only skips an entry the flow disagrees with; it never places, adds or reverses a trade. " +
                 "Turning confirm on in Live asks for your PIN; it is unproven and may skip winners. " +
                 "A trap guard ignores pulled orders, fake walls, stop hunts and the open and close minutes. " +
                 "One-second flow bars are kept 30 days and export with the market data.",
-            "Home → Dashboard → Strategies card → Order flow (and the Flow chip on the Chart)",
+            "Home → Automation card → Order flow (and the Flow chip on the Chart)",
             ask = "what is the order flow on banknifty", to = "chart"),
         Entry("2026-10-09-live-prices-everywhere", OCT9, "Live exits from the price stream, local candles",
             "Live stops, targets and trails now decide on each streamed price; only the order itself goes to Zerodha. " +
@@ -250,10 +250,10 @@ object WhatsNew {
                 "Its holdout made Rs 1,189 a trade in silver's tripling year; it sells too and has a 3% disaster stop. " +
                 "Liquidity 15+5 FINNIFTY (−₹8,035 over 8 paper trades) and ORB Sweep (−₹4,498 over 6) were switched off on your OK. " +
                 "Switch them back on in Home → Strategies any time.",
-            "Home → Dashboard → Strategies card: the VIX divergence row, US-night silver under MCX (commodities), " +
-                "and Switch FINNIFTY back on under the Liquidity 15+5 row"),
+            "Home → Dashboard → Strategies card: the VIX divergence row, and Switch FINNIFTY back on under the Liquidity 15+5 row. " +
+                "US-night silver: Home → MCX card"),
         Entry("2026-10-09-mcx-paper-arms", OCT9, "Three MCX ideas to try on paper, all off at first",
-            "Home → Strategies has three paper-only MCX bots, each not proven and off until you switch it on. " +
+            "Home's MCX card has three paper-only MCX bots, each not proven and off until you switch it on. " +
                 "Natural gas evening breakout: buys a call or put when 17:00-19:00's range breaks before 22:00, flat by 23:15. " +
                 "Its research made about Rs 41 a day, then Rs 83, not significant, with a Rs 40,000 drawdown. " +
                 "Silver mini morning call: buys a call two strikes out, 11-20 days to expiry, sells 4 hours later. " +
@@ -261,7 +261,7 @@ object WhatsNew {
                 "12-month trend on mini futures: long or short monthly; needs Rs 8-10 lakh, often ruined at Rs 1 lakh. " +
                 "All three are 1 lot, paper only, and never send an order to Zerodha. " +
                 "Delivery futures are now closed 5 trading days before expiry, not 2.",
-            "Home → Dashboard → Strategies card → MCX (commodities). Settings → Bot settings → MCX expiry exit"),
+            "Home → MCX card. Settings → Bot settings → MCX expiry exit"),
         Entry("2026-10-09-mcx", OCT9, "MCX commodities: prices, charts, paper and expiry safety",
             "Crude oil, natural gas, gold, silver and the metals are now in the app. " +
                 "You see near and next month futures with live prices, charts and option chains. " +

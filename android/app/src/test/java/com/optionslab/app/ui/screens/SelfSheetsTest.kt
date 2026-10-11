@@ -3,17 +3,27 @@ package com.optionslab.app.ui.screens
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.testing.AreaE
 import com.optionslab.app.testing.AreaEWatchdog
@@ -112,6 +122,24 @@ class SelfSheetsTest {
         for (w in listOf("target", "stop", "fear", "news", "time", "other")) assertTrue(w, shows(w))
         tapTag("exit-FEAR"); assertEquals(BossTrades.ExitWhy.FEAR, out)
         tapTag("manual-reason-dismiss"); assertTrue(gone)
+    }
+
+    @Test fun theWhyCardIsNotModalAndItsCrossSaysDismiss() {
+        // Review R5 #7: a dialog after a fill swallowed Boss's next tap. The card is inline: no dialog, and the page under
+        // it keeps its taps (a real touch, not a semantics action).
+        var under = 0
+        set {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(80.dp).testTag("under").clickable { under++ })
+                ManualReasonCard(com.optionslab.app.ira.BossTradeLog.Prompt("t1", "NIFTY26OCT25000CE", exit = false, atMs = at(10, 0)))
+            }
+        }
+        compose.onAllNodes(isDialog()).assertCountEquals(0)
+        assertTrue(compose.onAllNodesWithTag("manual-reason").fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithContentDescription("Dismiss").assertExists()
+        compose.onNodeWithTag("under").performTouchInput { click() }
+        compose.frames(); compose.waitForIdle()
+        assertEquals(1, under)
     }
 
     @Test fun theFreezeCardSaysWhyAndOffersTheUnfreeze() {

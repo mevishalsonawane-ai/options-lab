@@ -719,7 +719,7 @@ class CoverageTest {
         val q = said
         // Autopilot learning turned off or up by voice (11 Oct): before the hub's `bundled` read, as said - off is done, up refused
         // (never the old autopilot's command when "learning" is said).
-        AutoChange.asked(q)?.takeIf { it.kind == AutoChange.AskKind.OFF || it.kind == AutoChange.AskKind.RAISE }?.let { return "AutoChange" }
+        AutoChange.asked(q)?.takeIf { it.kind == AutoChange.AskKind.OFF || it.kind == AutoChange.AskKind.RAISE || it.kind == AutoChange.AskKind.SHADOW }?.let { return "AutoChange" }
         // A question said with something to do: the question handlers leave it to the multi-step plan (IraHub's `bundled`).
         val free = !Bundle.acts(q)
         val p = Ask.parse(q)
