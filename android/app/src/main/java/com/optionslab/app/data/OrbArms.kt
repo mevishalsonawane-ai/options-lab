@@ -1177,6 +1177,8 @@ object OrbArms {
             val bars = runCatching { indexBars(t) }.getOrNull()
             for (arm in ALL_ARMS) {
                 if (b.armed[arm.source] != true) continue
+                // The strategy lab (11 Oct): this arm ran today, and on which account (one map write: no setting, no I/O).
+                VariantRunner.saw(arm.source, b.liveOk[arm.source] == true)
                 // The Hero arm reads its own NIFTY data: the BANKNIFTY bars are not its concern.
                 val s = if (bars == null && !arm.hero) "no_index_data" else runCatching { cycle(b, arm, t, bars.orEmpty()) }.getOrElse { "error: ${it.message}" }
                 // Liquidity's verdict between its decision bars, kept for Jarvis's words only (a bar's own was kept by its cycle).

@@ -335,6 +335,8 @@ object McxPaperArms {
             val cal = McxMarket.calendar()
             val window = cal.window(now.toLocalDate())
             var changed = runCatching { manage(b, now, cal, window) }.getOrElse { note(b, "mcx", "exit check failed: ${it.javaClass.simpleName}"); true }
+            // The strategy lab (11 Oct): the MCX paper arms ran today (one map write: no setting, no I/O; not tuned in the lab).
+            if (b.armed.values.any { it }) VariantRunner.saw("mcx", live = false)
             if (McxMarket.isOpen()) {
                 if (b.armed[McxEveRules.SOURCE] == true)
                     changed = runCatching { eve(b, now, window) }.getOrElse { b.status[McxEveRules.SOURCE] = "error: ${it.javaClass.simpleName}"; true } || changed

@@ -181,6 +181,8 @@ object NightArm {
             val b = book()
             val now = Market.now().toLocalDateTime()
             var changed = runCatching { exits(b, now) }.getOrDefault(false)
+            // The strategy lab (11 Oct): Night ran today, on paper (one map write: no setting, no I/O).
+            if (b.armed) VariantRunner.saw(NightRules.SOURCE, live = false)
             if (b.armed && NightRules.entryWindow(now.toLocalTime())) {
                 for (u in NightRules.UNDERLYINGS) {
                     val key = "${now.toLocalDate()}|$u"

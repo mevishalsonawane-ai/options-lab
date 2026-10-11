@@ -177,6 +177,8 @@ object VixDivArm {
             if (!b.armed && b.positions.none { it.open }) return@withLock
             val now = Market.now().toLocalDateTime().withNano(0)
             var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
+            // The strategy lab (11 Oct): VIX divergence ran today, on paper (one map write: no setting, no I/O).
+            if (b.armed) VariantRunner.saw(VixDivRules.SOURCE, live = false)
             if (b.armed) {
                 for (u in VixDivRules.UNDERLYINGS) {
                     val key = "${now.toLocalDate()}|$u"

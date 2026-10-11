@@ -1685,7 +1685,7 @@ object IraHub {
                 com.optionslab.ira.Corrections.wordsAsked(q) || com.optionslab.ira.Corrections.forgetWordAsked(q) != null ||
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
-                com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null || SelfGrowth.asked(q) != null ||
+                com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null || SelfGrowth.asked(q) != null || com.optionslab.ira.LabTalk.asked(q) != null ||
                 (com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text)) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
@@ -3783,6 +3783,18 @@ object IraHub {
             scope.launch(Dispatchers.IO) {
                 reply(runCatching { com.optionslab.app.data.FlowGate.helpAnswer() }.getOrElse { "I could not read the order flow's log just now, Boss." })
             }
+            return true
+        }
+        // The strategy lab (11 Oct): "how are my strategies improving?", "did you find any new strategy?", "what is candidate F12?",
+        // "how many ideas have you tried?", "what have you learned from the new strategies?", "which ideas keep failing?", "what
+        // are you exploring next?" ([com.optionslab.ira.LabTalk]) from the lab's own two small files (memory once loaded). Before
+        // Autopilot and the lessons, so "learned from the new strategies" is the lab's. Words only: a proposal is only ever put to
+        // Boss, and a live one needs his PIN on Home. Not in IraGoldAlgo.
+        val labAsk = if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD && !bundled && parsed.order == null && parsed.command == null)
+            runCatching { com.optionslab.ira.LabTalk.asked(q) }.getOrNull() else null
+        if (labAsk != null) {
+            val said = runCatching { com.optionslab.app.data.VariantRunner.answer(labAsk) }.getOrElse { "I could not read the strategy lab just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
             return true
         }
         // Autopilot learning (11 Oct): "what did you change today?", "why did you mute the OI specialist?", "how is autopilot

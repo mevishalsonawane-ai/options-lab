@@ -60,6 +60,8 @@ object AreaE {
         // The app's own health, Jarvis's learning goals and weekly reports start fresh in each test (singletons too).
         com.optionslab.app.data.AppHealth.resetForTest()
         com.optionslab.app.ira.SelfGrowth.resetForTest()
+        // The strategy lab's variants, ideas and the arms' "ran today" marks start fresh in each test (a singleton too).
+        com.optionslab.app.data.VariantRunner.resetForTest()
         SessionLock.lock()
     }
 

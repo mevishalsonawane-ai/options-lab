@@ -108,6 +108,9 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.AppHealth.init(this)
         // What Jarvis tries to learn next, the weekly consolidation and self-report: their small files read in the background.
         com.optionslab.app.ira.SelfGrowth.init(this)
+        // The strategy lab (11 Oct): its two small files read on a background thread; its worker settles after the close and
+        // runs the forge at night (charging and idle, or after 18:00). Virtual trades only.
+        com.optionslab.app.data.VariantRunner.init(this)
         // The trade manager (10 Oct): its modes and record read on its own thread; it only lowers risk.
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.OrderFlowLive.init(this)

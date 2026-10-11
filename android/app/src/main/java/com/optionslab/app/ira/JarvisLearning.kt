@@ -121,6 +121,8 @@ internal object JarvisLearning {
                 ttlMs = 24 * 3_600_000L)
         }
         for (p in pass.proposals) runCatching { propose(p) }
+        // The strategy lab (11 Oct): what the new strategies and the variants taught - each lesson with its counts, posted once.
+        runCatching { com.optionslab.app.data.VariantRunner.learnedForJarvis() }
         return pass
     }
 
@@ -245,7 +247,8 @@ internal object JarvisLearning {
 
     /** The model's notes for [question]: the relevant lessons, short with their numbers, at most 600 characters. */
     fun modelNotes(question: String): List<String> =
-        if (!enabled() || !loaded) emptyList() else runCatching { AgentLessons.forModel(_book.value, question) }.getOrDefault(emptyList())
+        if (!enabled() || !loaded) emptyList() else runCatching { AgentLessons.forModel(_book.value, question) }.getOrDefault(emptyList()) +
+            runCatching { com.optionslab.ira.LabTalk.asked(question)?.let { com.optionslab.app.data.VariantRunner.modelNotes() } }.getOrNull().orEmpty()
 
     /** The evening report's "What I learned today" line (null: no pass today, or nothing learned from the agents yet). */
     fun eveningLine(today: LocalDate = Market.today()): String? = _book.value.takeIf { it.lastPass == today && it.lessons.isNotEmpty() }?.line
