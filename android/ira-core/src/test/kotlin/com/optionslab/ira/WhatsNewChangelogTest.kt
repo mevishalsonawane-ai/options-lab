@@ -501,15 +501,15 @@ class WhatsNewChangelogTest {
     @Test fun jarvisSaysTheNewestSixWithTheirQuestions() {
         val t = WhatsNew.answer(WhatsNew.ENTRIES)
         val lines = t.lines()
-        // The newest six are all 11 Oct's.
-        assertEquals("What's new in the app, newest first:", lines.first())
+        // The newest six are all 11 Oct's: the head names the day once, the lines none.
+        assertEquals("What's new in the app (11 Oct), newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
-        assertEquals("• Strategy lab: strategies improve and new ones are tried (11 Oct): try \"how are my strategies improving\".", lines[1])
-        assertEquals("• Smarter learning: tested, replayed and tried on paper first (11 Oct): try \"what experiments are running\".", lines[2])
-        assertEquals("• The app heals itself and reports its growth (11 Oct): try \"how did you grow this week\".", lines[3])
-        assertEquals("• Autopilot learning: the agents learn and heal by themselves (11 Oct): try \"how is autopilot doing\".", lines[4])
-        assertEquals("• Jarvis learns from the bots (11 Oct): try \"what have you learned\".", lines[5])
-        assertEquals("• Chart any index, commodity or option (11 Oct): Chart tab → tap the symbol at the top (▾).", lines[6])
+        assertEquals("• Strategy lab: strategies improve and new ones are tried: try \"how are my strategies improving\".", lines[1])
+        assertEquals("• Smarter learning: tested, replayed and tried on paper first: try \"what experiments are running\".", lines[2])
+        assertEquals("• The app heals itself and reports its growth: try \"how did you grow this week\".", lines[3])
+        assertEquals("• Autopilot learning: the agents learn and heal by themselves: try \"how is autopilot doing\".", lines[4])
+        assertEquals("• Jarvis learns from the bots: try \"what have you learned\".", lines[5])
+        assertEquals("• Chart any index, commodity or option: Chart tab → tap the symbol at the top (▾).", lines[6])
         assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.
         assertFalse(Regex("(?i)\\b(placed|bought|sold|armed|switched on)\\b").containsMatchIn(lines.first() + lines.last()))
