@@ -380,7 +380,7 @@ object SmartWorkers {
         // Jarvis's learning from all of the above, once a day after the close, then Autopilot (after his pass at 15:45+, and at
         // 12:30 for risk-lowering only): on their own scope, so this worker's 30 s limit never cuts a slow pass in the middle
         // (memory checks until due; one launch at a time).
-        runCatching { launchNightly(context) }
+        runCatching { launchNightly(context?.applicationContext ?: context) }
         // The app's own health (11 Oct): its tuner and samples every 10 minutes; then what Jarvis tries to learn next (after his
         // pass), the weekly consolidation and the weekly self-report when due (memory checks until then).
         runCatching { AppHealth.tick(context) }

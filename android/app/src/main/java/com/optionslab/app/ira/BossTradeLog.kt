@@ -76,7 +76,9 @@ object BossTradeLog {
                 if (f != null && f.exists()) runCatching { com.optionslab.app.security.Vault.setAside(f) }
                 if (f != null && f.exists()) return
             }
-            if (trades.isEmpty()) trades = BossTrades.decode(read.getOrNull())
+            // Trades recorded in memory before the file could be read are kept with the file's (the file's first, oldest).
+            val kept = BossTrades.decode(read.getOrNull())
+            trades = if (trades.isEmpty()) kept else (kept.filter { k -> trades.none { it.id == k.id } } + trades).takeLast(BossTrades.KEEP)
             loaded = true
         }
     }
