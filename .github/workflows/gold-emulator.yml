@@ -37,6 +37,11 @@ jobs:
         working-directory: android
         # Without the arm64-only model runner (Jarvis's on-device model), so it installs on the x86_64 emulator.
         run: ./gradlew --no-daemon -PnoLlm=true :app:assembleGoldRelease
+      # The IraAlgo smoke flows (android/app/src/androidTest, S16): the debug APK and its test APK, built before the emulator
+      # starts so the run itself stays short (start, Home's cards, the Chart picker, a paper order, Bot settings: under 3 min).
+      - name: Build the IraAlgo smoke flows
+        working-directory: android
+        run: ./gradlew --no-daemon -PnoLlm=true :app:assembleIraDebug :app:assembleIraDebugAndroidTest
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -51,7 +56,10 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: python3 android/tools/gold_emulator_test.py "$(ls android/app/build/outputs/apk/gold/release/*.apk | head -1)" gold-emulator
+          # Then the IraAlgo smoke flows on the same emulator (instrumented; flavour-aware: IraGoldAlgo checks the start only).
+          script: |
+            python3 android/tools/gold_emulator_test.py "$(ls android/app/build/outputs/apk/gold/release/*.apk | head -1)" gold-emulator
+            cd android && timeout 600 ./gradlew --no-daemon -PnoLlm=true :app:connectedIraDebugAndroidTest
       - name: Publish the screenshots and report
         if: always()
         env:

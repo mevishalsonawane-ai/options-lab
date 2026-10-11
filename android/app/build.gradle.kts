@@ -20,6 +20,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        // The emulator smoke flows (src/androidTest, S16), run by the emulator job only.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The bundled 170-session record is hashed at build time; the app
         // re-hashes it at runtime, so a swapped or truncated chain file is
@@ -213,6 +215,13 @@ dependencies {
     testImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
     // WorkManager in tests (synchronous executor, TestListenableWorkerBuilder); same version as work-runtime.
     testImplementation("androidx.work:work-testing:2.10.0")
+    // ---- emulator smoke flows (src/androidTest: run on the emulator job only; nothing here reaches the APK) ----
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit-ktx:1.2.1")
 }
 
 
