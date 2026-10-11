@@ -3,6 +3,7 @@ package com.optionslab.ira
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -69,5 +70,37 @@ class HealthExportTest {
         assertFalse(text.contains("Old.place"))
         assertTrue(text.contains("New.place"))
         assertTrue(text.contains("f60(") && !text.contains("f61("))
+    }
+
+    @Test fun theReviewsPlantedSecretsAreAllRemoved() {
+        // Review R5 #6: JSON-quoted keys, a PIN said in words, an Indian phone written with a space or a dash, a lowercase
+        // client id and the Kite "Authorization: token key:secret" header (its key part too).
+        val kiteKey = "q7w8e9r0t1y2u3i4"
+        val kiteToken = "Zx81Lm4Pq7Rt0Vw3"
+        val planted = mapOf(
+            """{"password":"hunter2pass","pin":"4821"}""" to listOf("hunter2pass", "4821"),
+            """{"api_key": "$kiteKey", "access_token": "$kiteToken"}""" to listOf(kiteKey, kiteToken),
+            """{'api_secret': 'sEcReT99x'}""" to listOf("sEcReT99x"),
+            "Boss said his PIN is 4821 today" to listOf("4821"),
+            "my otp was 735190" to listOf("735190"),
+            "password is hunter2pass" to listOf("hunter2pass"),
+            "call +91 98765 43210 or 98765-43210 or +91-98765-43210" to listOf("98765 43210", "98765-43210", "43210"),
+            "client ab1234 and xyz98765 logged in" to listOf("ab1234", "xyz98765"),
+            "Authorization: token $kiteKey:$kiteToken" to listOf(kiteKey, kiteToken),
+            "header authorization=token $kiteKey:$kiteToken sent" to listOf(kiteKey, kiteToken),
+        )
+        for ((line, secrets) in planted) {
+            val out = HealthExport.redact(line)
+            for (sec in secrets) assertFalse(out.contains(sec), "leaked $sec from: $line -> $out")
+            assertTrue(out.contains(HealthExport.REDACTED), out)
+        }
+        // And through the whole report.
+        val text = HealthExport.build(HealthBook.Book(), listOf(HealthExport.Trace(at(d0, 11), HealthBook.ExitKind.CRASH,
+            "  at com.optionslab.X.f(X.kt:1)\n  body {\"pin\":\"4821\",\"password\":\"hunter2pass\"} phone 98765 43210 client ab1234")),
+            listOf("Authorization: token $kiteKey:$kiteToken"), d0, "b", "d", ::hhmm)
+        for (sec in listOf("4821", "hunter2pass", "98765 43210", "ab1234", kiteKey, kiteToken)) assertFalse(text.contains(sec), "leaked $sec\n$text")
+        // Ordinary words and numbers stay.
+        val plain = "Stall 1200 ms at 10:00 in BrainSection.invoke on 2026-10-12; 3 orders, median 180 ms; pin the chart; open 24500 CE"
+        assertEquals(plain, HealthExport.redact(plain))
     }
 }

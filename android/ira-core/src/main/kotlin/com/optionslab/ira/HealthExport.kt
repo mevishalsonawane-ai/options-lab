@@ -24,7 +24,12 @@ object HealthExport {
     private val PATTERNS: List<Regex> = listOf(
         // key=value / key: value pairs whose key names a secret
         Regex("(?i)\\b(access[_ -]?token|request[_ -]?token|refresh[_ -]?token|api[_ -]?key|api[_ -]?secret|secret|password|passwd|pwd|pin|otp|totp|" +
-            "authorization|auth|token|session|cookie|enctoken|user[_ -]?id|client[_ -]?id|account[_ -]?id|uid)\\b\\s*[:=]\\s*\"?([^\\s\",;&]+)"),
+            "authorization|auth|token|session|cookie|enctoken|user[_ -]?id|client[_ -]?id|account[_ -]?id|uid)\\b[\"']?\\s*[:=]\\s*[\"']?" +
+            // JSON-quoted keys ("pin":"4821") and an auth scheme before the value ("Authorization: token key:secret") too (R5 #6)
+            "((?:(?:bearer|token|basic)\\s+)?[^\\s\"',;&]+)"),
+        // "PIN is 4821", "my otp was 123456", "password is hunter2"
+        Regex("(?i)\\b(pin|otp|totp|passcode)\\b(?:\\s+(?:is|was|number|no|code))*\\s*[:=]?\\s*\\d{4,8}\\b"),
+        Regex("(?i)\\b(password|passwd|pwd|passcode)\\s+(?:is|was)\\s+\\S+"),
         // HTTP auth headers
         Regex("(?i)\\b(bearer|token|basic)\\s+[A-Za-z0-9._~+/=:-]{8,}"),
         // JSON web tokens
@@ -34,9 +39,10 @@ object HealthExport {
         // e-mail addresses
         Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"),
         // Zerodha client ids (two or three letters and four to six digits: AB1234)
-        Regex("\\b[A-Z]{2,3}\\d{4,6}\\b"),
-        // phone numbers (Indian mobiles, with or without +91)
+        Regex("(?i)\\b[A-Z]{2,3}\\d{4,6}\\b"),
+        // phone numbers (Indian mobiles, with or without +91, and written 98765 43210 / 98765-43210)
         Regex("(?<![\\d.])(?:\\+?91[ -]?)?[6-9]\\d{9}(?![\\d.])"),
+        Regex("(?<![\\d.])(?:\\+?91[ -]?)?[6-9]\\d{4}[ -]\\d{5}(?![\\d.])"),
         // long hex or base64-ish runs (keys, tokens, hashes)
         Regex("\\b[A-Fa-f0-9]{16,}\\b"),
         Regex("[A-Za-z0-9_\\-+/=]{24,}"),
@@ -52,8 +58,8 @@ object HealthExport {
         var out = text
         for (k in known.filter { it.length >= 3 }.sortedByDescending { it.length }) out = out.replace(k, REDACTED, ignoreCase = true)
         for ((i, r) in PATTERNS.withIndex()) out = when (i) {
-            0 -> r.replace(out) { m -> "${m.groupValues[1]}=$REDACTED" }
-            3 -> r.replace(out) { m -> "${m.groupValues[1]}?$REDACTED" }
+            0, 1, 2 -> r.replace(out) { m -> "${m.groupValues[1]}=$REDACTED" }
+            5 -> r.replace(out) { m -> "${m.groupValues[1]}?$REDACTED" }
             else -> r.replace(out, REDACTED)
         }
         return out
