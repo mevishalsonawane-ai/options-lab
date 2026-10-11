@@ -92,4 +92,28 @@ class ProtectionsLiveTest : RobolectricTest() {
             kite.requests.filter { it.method == "DELETE" }.map { it.path.substringAfterLast('/') }.toSet())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
     }
+
+    /** G1-4: an automatic move (AutoTrail) never loosens a stop, judged against the stop as it stands, not the caller's snapshot. */
+    @Test fun anAutomaticMoveOnlyTightensTheStop() {
+        kite.login()
+        protect()
+        val id = runBlocking { Protections.active() }.single().id
+        val puts = { kite.requests.count { it.method == "PUT" } }
+        // On the tick, rounded away from the price (down for a long), never up toward it.
+        assertNull(runBlocking { Protections.moveStop(id, 92.03) })
+        assertEquals(92.0, runBlocking { Protections.active() }.single().stop!!, 1e-9)
+        val sent = puts()
+        // Lower: refused, nothing sent to Zerodha.
+        val lower = runBlocking { Protections.moveStop(id, 85.0) }
+        assertTrue(lower ?: "moved", lower?.contains("only tightens") == true)
+        assertEquals(sent, puts())
+        assertEquals(92.0, runBlocking { Protections.active() }.single().stop!!, 1e-9)
+        // The resting stop was raised to 96 at Zerodha meanwhile: a trail worked out from the older 92 must not pull it to 94.
+        val stopId = runBlocking { Protections.active() }.single().stopOrderId!!
+        val so = runBlocking { Broker.orders() }.first { it.id == stopId }
+        runBlocking { Broker.modify(so, so.qty, "SL", 87.0, 96.0) }
+        val stale = runBlocking { Protections.moveStop(id, 94.0) }
+        assertTrue(stale ?: "moved", stale?.contains("only tightens") == true)
+        assertEquals(96.0, runBlocking { Broker.orders() }.first { it.id == stopId }.trigger, 1e-9)
+    }
 }

@@ -461,8 +461,12 @@ object Protections {
     /**
      * Moves an active protection's stop to [newStop] by modifying its resting stop order in place (never cancel and
      * re-place: if the broker refuses, the old stop stays where it was). Returns null when moved, else why not.
+     *
+     * [tightenOnly] (G1-4; the default, for the automatic callers such as Jarvis's AutoTrail): the stop only ever moves
+     * toward the price - up for a long, down for a short - judged here, under the lock, against the stop as it stands now
+     * (and the resting order's own trigger), never against the caller's older snapshot. A move that would loosen it is refused.
      */
-    suspend fun moveStop(id: Long, newStop: Double): String? = lock.withLock {
+    suspend fun moveStop(id: Long, newStop: Double, tightenOnly: Boolean = true): String? = lock.withLock {
         val list = load()
         val i = list.indexOfFirst { it.id == id && it.active }
         if (i < 0) return@withLock "That protection is no longer active."
@@ -470,12 +474,18 @@ object Protections {
         if (p.note == REMOVING) return@withLock "That protection is being removed."
         val orderId = p.stopOrderId ?: return@withLock "It has no resting stop order to move."
         val tick = if (p.tick > 0) p.tick else 0.05
-        val ns = Math.round(newStop / tick) * tick
+        // On the tick, rounded away from the price (down for a long's stop, up for a short's), never toward it.
+        val ns = Protection.onTick(newStop, tick, down = p.qty > 0)
+        fun looser(than: Double?) = than != null && than > 0 && (if (p.qty > 0) ns <= than + 1e-9 else ns >= than - 1e-9)
+        if (tightenOnly && looser(p.stop))
+            return@withLock "The stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, p.stop)}; an automatic move only tightens it."
         if (p.live) {
             if (!Broker.loggedIn) return@withLock "Not logged in to Zerodha."
             val so = runCatching { Broker.orders().firstOrNull { it.id == orderId } }.getOrNull()
                 ?: return@withLock "The stop order was not found at Zerodha."
             if (!so.working) return@withLock "The stop order is no longer working at Zerodha."
+            if (tightenOnly && looser(so.trigger))
+                return@withLock "The stop at Zerodha is already at ${"%.2f".format(java.util.Locale.ENGLISH, so.trigger)}; an automatic move only tightens it."
             val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
             val r = runCatching {
                 if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, ns)
@@ -483,6 +493,9 @@ object Protections {
             }
             if (r.isFailure) return@withLock "Zerodha did not move it: ${r.exceptionOrNull()?.message ?: "an error"}."
         } else {
+            val resting = Paper.stateIfLoaded()?.orders?.firstOrNull { it.orderId == orderId }?.triggerPrice?.toDouble()
+            if (tightenOnly && looser(resting))
+                return@withLock "The paper stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, resting)}; an automatic move only tightens it."
             val r = runCatching { Paper.modify(orderId, null, null, ns) }.getOrNull()
             if (r == null || !r.ok) return@withLock "The paper stop was not moved${r?.message?.let { ": $it" } ?: ""}."
         }
