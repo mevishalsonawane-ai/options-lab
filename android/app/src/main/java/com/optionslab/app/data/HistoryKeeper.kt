@@ -103,7 +103,11 @@ object HistoryKeeper {
         scope.launch {
             try { runOnce(now) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                 lastRun = "Stopped: ${e.javaClass.simpleName}"
-            } finally { running.set(false) }
+            } finally {
+                // The run's CPU counted against tonight's budget, however long it took.
+                runCatching { com.optionslab.app.work.BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.HISTORY) }
+                running.set(false)
+            }
         }
     }
 
@@ -128,6 +132,8 @@ object HistoryKeeper {
         var done = 0
         for (p in plan) {
             if (budget.spent(System.currentTimeMillis())) break
+            // The battery and heat budget asked again between pieces (a phone that heats up or runs low mid-run stops here).
+            if (!runCatching { com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.HISTORY) }.getOrDefault(true)) break
             // Already written by an earlier piece of this run (the options write their chain too).
             if (v.has(p.family, p.day)) continue
             val ok = runCatching { fetch(v, p, today) }.getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; null }

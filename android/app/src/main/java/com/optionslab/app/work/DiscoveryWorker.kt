@@ -28,7 +28,9 @@ class DiscoveryWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
         runCatching { VariantRunner.settleIfDue() }
         val now = Market.now()
         if (allowed(charging(applicationContext), idle(applicationContext), now.hour * 60 + now.minute, Market.isTradingDay(now.toLocalDate())))
-            runCatching { VariantRunner.forgeIfDue(now.toLocalDate()) { isStopped || !BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE) } }
+            try {
+                runCatching { VariantRunner.forgeIfDue(now.toLocalDate()) { isStopped || !BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.FORGE) } }
+            } finally { runCatching { BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.FORGE) } }
         return Result.success()
     }
 

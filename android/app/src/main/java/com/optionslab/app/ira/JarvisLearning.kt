@@ -110,6 +110,7 @@ internal object JarvisLearning {
             passedOn = today
             return true
         } finally {
+            runCatching { com.optionslab.app.work.BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.LEARNING) }
             passing.set(false)
         }
     }

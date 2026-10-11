@@ -28,6 +28,7 @@ object BackgroundBudget {
     @Volatile internal var testPhone: BudgetRule.Phone? = null
     @Volatile internal var testCpuMs: (() -> Long)? = null
     @Volatile internal var testNow: LocalDateTime? = null
+    @Volatile internal var testWallMs: (() -> Long)? = null
 
     fun init(context: Context) { appContext = context.applicationContext }
 
@@ -56,14 +57,32 @@ object BackgroundBudget {
      * time from one call to the next is counted; the gaps between runs are not (the rest of the app is not the jobs').
      */
     private fun spent(job: BudgetRule.Job): Long {
-        val now = testNow ?: runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
-        val n = BudgetRule.nightOf(now)
-        if (night != n) { night = n; spentMs.set(0); last.clear(); lastSaid = null }
+        roll()
         val cpu = cpuMs()
-        val wall = System.currentTimeMillis()
+        val wall = wallMs()
         val prev = last.put(job, cpu to wall)
         if (prev != null && wall - prev.second in 0..RUN_GAP_MS && cpu >= prev.first) spentMs.addAndGet(cpu - prev.first)
         return spentMs.get()
+    }
+
+    private fun wallMs(): Long = testWallMs?.invoke() ?: System.currentTimeMillis()
+
+    /** A new night starts afresh. */
+    private fun roll() {
+        val now = testNow ?: runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
+        val n = BudgetRule.nightOf(now)
+        if (night != n) { night = n; spentMs.set(0); last.clear(); lastSaid = null }
+    }
+
+    /**
+     * [job]'s run has ended (call it in a finally): the CPU since its last [allow] is counted however long that was, so a
+     * run longer than [RUN_GAP_MS] between two asks (or one that asks only at its start) is not free.
+     */
+    fun done(job: BudgetRule.Job) {
+        roll()
+        val prev = last.remove(job) ?: return
+        val cpu = cpuMs()
+        if (cpu >= prev.first) spentMs.addAndGet(cpu - prev.first)
     }
 
     /** May [job] run (or go on) now? Each call is cheap: one sticky-broadcast read and the CPU clock. */
@@ -77,5 +96,5 @@ object BackgroundBudget {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { night = null; spentMs.set(0); last.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null }
+    internal fun resetForTest() { night = null; spentMs.set(0); last.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
 }
