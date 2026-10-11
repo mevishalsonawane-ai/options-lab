@@ -54,7 +54,9 @@ object RegimeHost {
                 // The morning's read only: a phone that first looks after 10:15 keeps the day unknown (no override applies).
                 if (minute <= RegimeParams.DECIDE_MINUTE + 30) SmartWorkers.brain.value.regimes["NIFTY"] else null
             } ?: return
-            val (b1, ready) = RegimeParams.observe(b0, day)
+            // Moving an override to paper by itself is an automatic change: never while learning is frozen or Autopilot
+            // learning is not SAFE (review 2 #10).
+            val (b1, ready) = RegimeParams.observe(b0, day, hold = holdPromotions())
             save(b1)
             runCatching { Diag.record("brain", RegimeParams.line(b1)) }
             // Jarvis's note on an event day (TODO S11): "Event day: learning ignores today's results".
@@ -62,7 +64,7 @@ object RegimeHost {
             for (l in RegimeParams.wouldUse(b1)) runCatching { Diag.record("brain", "Regime setting: $l") }
             for (o in ready) runCatching {
                 SmartWorkers.found("regime settings", Findings.Kind.OTHER, Findings.ALL, 0, null, 60,
-                    "${o.words}: ${RegimeParams.SHADOW_DAYS} ${o.regime.words} days in shadow - now applies on paper; " +
+                    "${o.words}: shadow → paper after ${RegimeParams.SHADOW_DAYS} ${o.regime.words} days in shadow; " +
                         "for live it needs your PIN (Autopilot asks). [${o.key}]", 24 * 3_600_000L)
             }
         }
@@ -71,6 +73,14 @@ object RegimeHost {
             val lessons = runCatching { com.optionslab.app.ira.JarvisLearning.book.value.lessons }.getOrDefault(emptyList())
             save(RegimeParams.refresh(RegimeParams.book, lessons))
         }
+    }
+
+    /** No override moves from shadow to paper by itself now: learning frozen, or Autopilot learning off or shadow-only. */
+    private fun holdPromotions(): Boolean {
+        if (runCatching { com.optionslab.app.ira.LearningFreeze.holds() }.getOrDefault(true)) return true
+        if (!com.optionslab.app.ira.Autopilot.enabled()) return false
+        return runCatching { com.optionslab.app.ira.Autopilot.ensureLoaded(); com.optionslab.app.ira.Autopilot.mode.value != com.optionslab.ira.AutoChange.Mode.SAFE }
+            .getOrDefault(true)
     }
 
     /** Boss approved [key] for live (the PIN was asked by Autopilot's flow). Lowers risk only; returns what to say. */

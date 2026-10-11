@@ -148,13 +148,15 @@ object RegimeParams {
     /**
      * The frozen [day] seen: each override of its regime records the day as one it would have used (once a day; never on
      * an event day). Returns the new book and the overrides that just finished their shadow (ready for paper, Boss asked
-     * about live).
+     * about live). [hold] (learning frozen, or Autopilot learning not SAFE): an override whose next day would finish its shadow
+     * is left in shadow - nothing moves to paper by itself then.
      */
-    fun observe(b: Book, day: Day): Pair<Book, List<Override>> {
+    fun observe(b: Book, day: Day, hold: Boolean = false): Pair<Book, List<Override>> {
         val ready = ArrayList<Override>()
         if (day.regime == null || day.event) return b.copy(day = day) to ready
         val next = b.overrides.map { o ->
             if (o.regime != day.regime || day.day in o.shadowDays) o
+            else if (hold && o.shadowDays.size + 1 >= SHADOW_DAYS && o.shadowDays.size < SHADOW_DAYS) o
             else {
                 val n = o.copy(shadowDays = (o.shadowDays + day.day).takeLast(SHADOW_DAYS * 3))
                 if (o.shadowDays.size < SHADOW_DAYS && n.shadowDays.size >= SHADOW_DAYS) ready += n

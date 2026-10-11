@@ -102,6 +102,23 @@ class RegimeParamsTest {
         assertEquals(b.overrides, RegimeParams.refresh(b, listOf(lesson("strat:Liquidity 15+5", -1, "regime:busy", 0.03))).overrides.map { it.copy(q = 0.04) })
     }
 
+    @Test fun nothingMovesToPaperByItselfWhileHeld() {
+        // Review 2 #10: learning frozen (or Autopilot not SAFE): the 10th shadow day is not counted, nothing goes to paper.
+        var b = RegimeParams.refresh(RegimeParams.Book(), listOf(lesson("strat:Liquidity 15+5", -1, "regime:busy", 0.04)))
+        for (i in 0 until 9) b = RegimeParams.observe(b, busyDay(d0.plusDays(i.toLong()))).first
+        assertEquals(9, b.overrides.single().shadowDays.size)
+        val (held, none) = RegimeParams.observe(b, busyDay(d0.plusDays(9)), hold = true)
+        assertTrue(none.isEmpty())
+        assertEquals(RegimeParams.Stage.SHADOW, held.overrides.single().stage)
+        assertNull(RegimeParams.overrideFor("liquidity", RegimeParams.Regime.BUSY, b = held))
+        // Released: the next busy day finishes its shadow as before.
+        val (open, ready) = RegimeParams.observe(held, busyDay(d0.plusDays(10)))
+        assertEquals(1, ready.size)
+        assertEquals(RegimeParams.Stage.PAPER, open.overrides.single().stage)
+        // An override already on paper stays there while held.
+        assertEquals(RegimeParams.Stage.PAPER, RegimeParams.observe(open, busyDay(d0.plusDays(11)), hold = true).first.overrides.single().stage)
+    }
+
     @Test fun approvalBeforeTheShadowEndsDoesNothing() {
         val b = RegimeParams.refresh(RegimeParams.Book(), listOf(lesson("strat:ORB", -1, "regime:busy", 0.04)))
         assertFalse(RegimeParams.approveLive(b, "arm:orb|BUSY").overrides.single().liveApproved)
