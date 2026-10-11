@@ -37,6 +37,12 @@ object BossTradeLog {
     @Volatile private var appContext: Context? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Any()
+    /**
+     * One writer at a time: [drain] and [answer] both run on the IO pool and [com.optionslab.app.security.Vault.writeFile]
+     * goes through one fixed "boss.vault.tmp", so two saves at once could interleave into a corrupt file. Never taken on the
+     * order path ([filled] only queues).
+     */
+    private val io = Any()
     @Volatile private var loaded = false
     @Volatile private var trades: List<BossTrades.Trade> = emptyList()
     @Volatile private var rulesKept: Pair<Int, List<BossTrades.Rule>>? = null
@@ -62,13 +68,22 @@ object BossTradeLog {
         if (loaded) return
         synchronized(lock) {
             if (loaded) return
-            val text = runCatching { file()?.takeIf { it.isFile }?.let { com.optionslab.app.security.Vault.readFileSteady(it) }?.toString(Charsets.UTF_8) }.getOrNull()
-            if (trades.isEmpty()) trades = BossTrades.decode(text)
+            val f = file()
+            val read = runCatching { f?.takeIf { it.isFile }?.let { com.optionslab.app.security.Vault.readFileSteady(it) }?.toString(Charsets.UTF_8) }
+            if (read.isFailure) {
+                // Unreadable (a Keystore that stayed broken, a tampered file): moved aside, never overwritten. While it is still
+                // in place (the move failed) nothing is saved over it - [loaded] stays false and the next read tries again.
+                if (f != null && f.exists()) runCatching { com.optionslab.app.security.Vault.setAside(f) }
+                if (f != null && f.exists()) return
+            }
+            if (trades.isEmpty()) trades = BossTrades.decode(read.getOrNull())
             loaded = true
         }
     }
 
     private fun save() {
+        // Never over a file that was not read (a failed load): that would wipe Boss's record.
+        if (!loaded) return
         val f = file() ?: return
         val text = BossTrades.encode(trades.takeLast(BossTrades.KEEP))
         runCatching { f.parentFile?.mkdirs(); com.optionslab.app.security.Vault.writeFile(f, text.toByteArray(Charsets.UTF_8)) }
@@ -89,7 +104,7 @@ object BossTradeLog {
     }
 
     /** The queued fills recorded with their context (a worker thread). */
-    internal fun drain() {
+    internal fun drain(): Unit = synchronized(io) {
         ensureLoaded()
         while (true) {
             val f = fills.poll() ?: break
@@ -148,15 +163,17 @@ object BossTradeLog {
         _prompt.value = null
         scope.launch {
             runCatching {
-                drain()
-                synchronized(lock) {
-                    trades = trades.map { t ->
-                        if (t.id != p.tradeId) t else t.copy(why = why ?: t.why, exitWhy = exitWhy ?: t.exitWhy,
-                            note = note.trim().take(140).ifEmpty { t.note })
+                synchronized(io) {
+                    drain()
+                    synchronized(lock) {
+                        trades = trades.map { t ->
+                            if (t.id != p.tradeId) t else t.copy(why = why ?: t.why, exitWhy = exitWhy ?: t.exitWhy,
+                                note = note.trim().take(140).ifEmpty { t.note })
+                        }
                     }
+                    rulesKept = null
+                    save()
                 }
-                rulesKept = null
-                save()
             }
         }
     }
@@ -189,5 +206,8 @@ object BossTradeLog {
 
     /** TEST ONLY. */
     internal fun resetForTest() { synchronized(lock) { trades = emptyList() }; fills.clear(); _prompt.value = null; rulesKept = null; loaded = true }
+    /** TEST ONLY: forget what is in memory, so the next read loads the file again (a new process would). */
+    internal fun reloadForTest() { synchronized(lock) { trades = emptyList(); loaded = false }; rulesKept = null }
+    internal fun fileForTest(): File? = file()
     internal fun setForTest(ts: List<BossTrades.Trade>) { synchronized(lock) { trades = ts }; rulesKept = null; loaded = true }
 }
