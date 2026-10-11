@@ -127,7 +127,7 @@ internal object GoldChartSource : ChartSource {
 private fun GoldChartTab() {
     ChartPane(com.optionslab.app.data.GoldChart.SYMBOL, "COMEX", visible = true, ask = 0, live = false, source = GoldChartSource,
         orderSheet = { _, _, _, _ -> }, alertDialog = { _, _ -> }, chainDialog = { _, _, _ -> }, trading = false,
-        marketOpen = { GoldLiquidity.inSession(GoldPaper.now()) })
+        marketOpen = { GoldLiquidity.inSession(GoldPaper.now()) }, symbolPicker = false)
 }
 
 /** The saved paper books are still being read ([com.optionslab.app.data.GoldBooks]): a moment's note, no switches yet. */

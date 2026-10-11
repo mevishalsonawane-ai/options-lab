@@ -233,12 +233,20 @@ class ChartScreensTest {
     }
 
     @Test fun thePageReportsSymbolChangesAndTheChainFollows() {
-        pane()
+        val s = pane()
         loadCandles()
+        bridge().symbol("SENSEX", "BSE")
+        idle()
+        text("SENSEX").assertIsDisplayed()
+        assertFalse("SENSEX has no option chain here (BSE's)", shows("OPT", sub = false))
+        // FINNIFTY's chain is NSE's, as NIFTY's and BANKNIFTY's (11 Oct).
         bridge().symbol("FINNIFTY", "NSE")
         idle()
         text("FINNIFTY").assertIsDisplayed()
-        assertFalse("FINNIFTY has no option chain here", shows("OPT", sub = false))
+        text("OPT").performClick()
+        until { s.chains.isNotEmpty() }
+        assertEquals(listOf("FINNIFTY"), s.chains)
+        text("Close chain").performClick()
         bridge().symbol("NIFTY", "NSE")
         idle()
         text("OPT").performClick()
@@ -250,7 +258,7 @@ class ChartScreensTest {
         val s = pane()
         text("BUY").performClick()
         until { shows("Indices cannot be traded.") }
-        text("Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it.").assertIsDisplayed()
+        text("Indices cannot be traded. Tap the symbol above and pick an option (or search e.g. NIFTY 24800 CE) to buy or sell it.").assertIsDisplayed()
         assertTrue(s.sheets.isEmpty())
     }
 

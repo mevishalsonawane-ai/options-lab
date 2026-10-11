@@ -94,6 +94,12 @@ internal interface ChartSource {
     fun contracts(): List<com.optionslab.engine.Upstox.Contract>
     /** The Zerodha instrument token streamed for a chart symbol, or null. */
     suspend fun streamToken(symbol: String): Long?
+    /** The NSE option list already on the phone (any day; never the network), or null when there is none. Off the main thread. */
+    fun cachedContracts(): List<com.optionslab.engine.Upstox.Contract>? = contracts()
+    /** The MCX contracts already on the phone (never the network); empty before the first read. Off the main thread. */
+    fun mcx(): List<com.optionslab.engine.mcx.McxContract> = emptyList()
+    /** Today's MCX list: the phone's when read today, else read now (network: off the main thread). */
+    suspend fun loadMcx(): List<com.optionslab.engine.mcx.McxContract> = mcx()
 }
 
 internal object FeedChartSource : ChartSource {
@@ -102,6 +108,22 @@ internal object FeedChartSource : ChartSource {
     override fun search(text: String) = ChartFeed.search(text)
     override fun contracts() = com.optionslab.app.data.Market.contracts()
     override suspend fun streamToken(symbol: String) = streamTokenOf(symbol)
+    override fun cachedContracts() = com.optionslab.app.data.Market.cachedContracts()?.second
+    override fun mcx() = com.optionslab.app.data.McxMarket.cached()
+    override suspend fun loadMcx() = com.optionslab.app.data.McxMarket.contracts()
+}
+
+/** The NSE index whose option chain the chart's OPT button opens for [symbol] (the index, or an option's own index), or null. */
+internal fun nseChainOf(symbol: String): String? {
+    val u = symbol.uppercase()
+    return when {
+        u in ChartSymbols.NFO_ROOTS -> u
+        u.startsWith("BANKNIFTY") -> "BANKNIFTY"
+        u.startsWith("FINNIFTY") -> "FINNIFTY"
+        u.startsWith("MIDCPNIFTY") -> "MIDCPNIFTY"
+        u.startsWith("NIFTY") -> "NIFTY"
+        else -> null
+    }
 }
 
 /**
@@ -130,6 +152,8 @@ internal fun ChartPane(
     levelAlarms: LevelAlarms? = null,
     /** The order flow's chip for the charted index ([OrderFlowChip]); null: none (the gold build, most tests). */
     flowChip: (@Composable (String, Modifier) -> Unit)? = null,
+    /** The symbol is a button that opens [ChartSymbolSheet]; false: one fixed symbol (IraGoldAlgo's gold chart). */
+    symbolPicker: Boolean = true,
 ) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
@@ -141,6 +165,31 @@ internal fun ChartPane(
     // after an option was opened from it.
     var chainFor by remember { mutableStateOf<String?>(null) }
     var returnTo by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // The symbol picker over the chart (11 Oct), and the last symbols charted (kept in the settings, written off the main thread).
+    var picking by remember { mutableStateOf(false) }
+    var recents by remember { mutableStateOf(runCatching { ChartSymbols.decode(com.optionslab.app.security.SecurePrefs.getString(ChartSymbols.RECENT_KEY)) }.getOrDefault(emptyList())) }
+    LaunchedEffect(current, symbolPicker) {
+        if (!symbolPicker) return@LaunchedEffect
+        val now = current
+        recents = ChartSymbols.pushRecent(recents, now)
+        val kept = mapOf(ChartSymbols.RECENT_KEY to ChartSymbols.encode(recents), ChartSymbols.LAST_KEY to ChartSymbols.encode(listOf(now)))
+        withContext(Dispatchers.IO) { runCatching { com.optionslab.app.security.SecurePrefs.putAllSoon(kept) } }
+    }
+    // A hidden chart (another tab in front) never keeps its picker open over that tab.
+    LaunchedEffect(visible) { if (!visible) picking = false }
+    // The MCX commodity [current] belongs to, when it lists options (its chain under OPT); read off the main thread.
+    var mcxChain by remember { mutableStateOf<Pair<String, String>?>(null) }
+    LaunchedEffect(current.first) { withContext(Dispatchers.Main.immediate) {
+        val sym = current.first
+        val name = withContext(Dispatchers.IO) {
+            runCatching {
+                val all = source.mcx()
+                com.optionslab.engine.mcx.McxInstruments.find(all, sym)?.name
+                    ?.takeIf { it in com.optionslab.engine.mcx.McxInstruments.chainNames(all, com.optionslab.app.data.Market.today()) }
+            }.getOrNull()
+        }
+        mcxChain = name?.let { sym to it }
+    } }
     val holder = remember { arrayOfNulls<WebView>(1) }
     // [gen] rebuilds the WebView (after its renderer died, or a load that never finished);
     // [ready] turns true once the chart has received its first candles.
@@ -181,7 +230,13 @@ internal fun ChartPane(
         // thread (CalledFromWrongThreadException in ChartScreensLayoutTest.chartIndexBuyHint). Same as 05aa5cc's screens.
         scope.launch(Dispatchers.Main.immediate) {
             val c = withContext(Dispatchers.IO) { runCatching { source.contract(sym) }.getOrNull() }
-            if (c == null) { hint = "Indices cannot be traded. Search an option in the chart (e.g. NIFTY 24800 CE) to buy or sell it."; return@launch }
+            if (c == null) {
+                // An MCX future has its own order sheet (paper, or Zerodha's review with the PIN in Live) on the Commodities page.
+                val future = withContext(Dispatchers.IO) { runCatching { com.optionslab.engine.mcx.McxInstruments.find(source.mcx(), sym)?.isFuture == true }.getOrDefault(false) }
+                hint = if (future) "MCX futures are bought and sold from Options → Commodities (paper, or Zerodha's review in Live)."
+                    else "Indices cannot be traded. Tap the symbol above and pick an option (or search e.g. NIFTY 24800 CE) to buy or sell it."
+                return@launch
+            }
             // The sheet's LTP is the last traded price, not the level under the finger.
             val t = System.currentTimeMillis() / 1000
             val last = withContext(Dispatchers.IO) { runCatching { source.bars(sym, "1m", t - 3 * 86400, t).lastOrNull()?.close }.getOrNull() }
@@ -256,15 +311,9 @@ internal fun ChartPane(
     androidx.activity.compose.BackHandler(enabled = visible && returnTo != null) {
         returnTo?.let { (s0, e0) -> returnTo = null; showSymbol(s0, e0) }
     }
-    // The underlying whose chain the OPT button shows: the index charted, or the option's own index.
-    val chainUnderlying = current.first.uppercase().let { u ->
-        when {
-            u == "NIFTY" || u == "BANKNIFTY" -> u
-            u.startsWith("BANKNIFTY") -> "BANKNIFTY"
-            u.startsWith("NIFTY") -> "NIFTY"
-            else -> null
-        }
-    }
+    // The underlying whose chain the OPT button shows: the index charted, or the option's own index; an MCX future's or
+    // option's commodity when MCX lists options on it.
+    val chainUnderlying = nseChainOf(current.first) ?: mcxChain?.takeIf { it.first == current.first }?.second
 
     // A new symbol asked for from elsewhere (Home, the option chain) while the chart is open.
     DisposableEffect(symbol, exchange, ask) {
@@ -292,8 +341,16 @@ internal fun ChartPane(
                     modifier = chip.clickable { returnTo = null; showSymbol(s0, e0) }
                         .padding(horizontal = 10.dp, vertical = 8.dp))
             }
-            // The symbol takes what is left of its line, and shrinks rather than being cut.
-            com.optionslab.app.ui.components.FitText(current.first, Type.label.copy(color = p.ink, fontSize = 13.sp),
+            // The symbol takes what is left of its line, and shrinks rather than being cut. A tap opens the symbol picker
+            // (indices, MCX, options, search, recent): native, so it works whatever the web chart does.
+            if (symbolPicker) Row(Modifier.weight(1f).align(Alignment.CenterVertically).heightIn(min = 48.dp)
+                .background(p.chip, RoundedCornerShape(50))
+                .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Change symbol") { picking = true }
+                .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                com.optionslab.app.ui.components.FitText(current.first, Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                    Modifier.weight(1f, fill = false), minSize = 9.sp)
+                Text(" ▾", maxLines = 1, softWrap = false, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp))
+            } else com.optionslab.app.ui.components.FitText(current.first, Type.label.copy(color = p.ink, fontSize = 13.sp),
                 Modifier.weight(1f).align(Alignment.CenterVertically), minSize = 9.sp)
             // The option chain of the index: tap a price to chart that option (and buy or sell it there).
             if (trading && chainUnderlying != null) Text("OPT", textAlign = TextAlign.Center, style = Type.label.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold),
@@ -478,18 +535,31 @@ internal fun ChartPane(
         }
     }
     if (alerting) alertDialog(current.first) { alerting = false }
+    if (picking && visible && symbolPicker) ChartSymbolSheet(current.first, source, recents,
+        onPick = { s, e -> picking = false; returnTo = null; showSymbol(s, e) },
+        // An underlying's priced chain: the chart's own OPT popup (tap a price there to chart that option).
+        onChain = if (trading) ({ u: String -> picking = false; chainFor = u }) else null,
+        onClose = { picking = false })
     chainFor?.let { u ->
         chainDialog(u, { chainFor = null }) { pick ->
             chainFor = null
             scope.launch(Dispatchers.Main.immediate) {
-                val sym = withContext(Dispatchers.IO) {
-                    runCatching { source.contracts().firstOrNull { c ->
-                        c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.tradingSymbol }.getOrNull()
+                val mcx = com.optionslab.engine.mcx.Mcx.isMcxName(u)
+                // (option's trading symbol, the chart Back returns to): an index option's index, an MCX option's near future.
+                val found = withContext(Dispatchers.IO) {
+                    runCatching {
+                        if (mcx) {
+                            val all = source.mcx()
+                            val o = all.firstOrNull { c -> c.isOption && c.name == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }
+                            o?.let { it.tradingSymbol to com.optionslab.engine.mcx.McxInstruments.underlyingFuture(all, it)?.tradingSymbol }
+                        } else source.contracts().firstOrNull { c ->
+                            c.underlying == pick.underlying && c.expiry == pick.expiry && c.strike == pick.strike && c.right == pick.right }?.let { it.tradingSymbol to u }
+                    }.getOrNull()
                 }
-                if (sym == null) { hint = "That option is not in today's contract list; try again in a moment."; return@launch }
-                // Back (the ‹ chip or the phone's back) returns to the index chart.
-                if (returnTo == null) returnTo = u to "NSE"
-                showSymbol(sym, "NFO")
+                if (found == null) { hint = "That option is not in today's contract list; try again in a moment."; return@launch }
+                // Back (the ‹ chip or the phone's back) returns to the index chart (an MCX option: its future's).
+                if (returnTo == null) returnTo = found.second?.let { it to (if (mcx) com.optionslab.engine.mcx.Mcx.EXCHANGE else "NSE") }
+                showSymbol(found.first, if (mcx) com.optionslab.engine.mcx.Mcx.EXCHANGE else "NFO")
             }
         }
     }

@@ -374,10 +374,19 @@ private fun Main(model: AppModel) {
     var cabinetPage by rememberSaveable { mutableStateOf<String?>(null) }
     var labPage by rememberSaveable { mutableStateOf("trials") }
     var toolsView by rememberSaveable { mutableStateOf("chain") }
-    var chartAsk by remember { mutableStateOf("BANKNIFTY" to "NSE") }
+    // The chart reopens on the symbol charted last (kept by the chart's picker), BANKNIFTY the first time.
+    var chartAsk by remember { mutableStateOf(com.optionslab.app.ui.screens.ChartSymbols.lastAsk() ?: ("BANKNIFTY" to "NSE")) }
     // Bumped on every ask, so asking again for the same symbol after browsing another one still switches back.
     var chartNonce by remember { mutableStateOf(0) }
     var chartOpened by remember { mutableStateOf(false) }
+    // A remembered option or MCX contract that has since expired (or left the lists) falls back to BANKNIFTY instead of an
+    // error; checked once, off the main thread, before the chart is first opened.
+    LaunchedEffect(Unit) {
+        val kept = chartAsk.first
+        if (com.optionslab.app.data.ChartFeed.isIndex(kept)) return@LaunchedEffect
+        val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.ChartFeed.instrumentKey(kept) }.isSuccess }
+        if (!ok && !chartOpened && chartAsk.first == kept) chartAsk = "BANKNIFTY" to "NSE"
+    }
     LaunchedEffect(tab) { if (tab == Tab.CHART) chartOpened = true }
     val message by model.message.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     val kiteLogin by model.showKiteLogin.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)

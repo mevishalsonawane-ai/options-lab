@@ -124,16 +124,23 @@ fun testBars(n: Int, start: Double = 100.0, step: Double = 0.5, day: LocalDate =
 val TEST_OPTION = Upstox.Contract("NIFTY", LocalDate.of(2026, 10, 1), 24800.0, Right.CE, 75, "NSE_FO|TEST1", "NIFTY26O0124800CE")
 
 /**
- * A [ChartSource] with no network: candles from [bars] (or [failure]), contracts from [contracts].
- * Every candle request is recorded in [asked] as "symbol interval".
+ * A [ChartSource] with no network: candles from [bars] (or [failure]), contracts from [contracts], MCX contracts from
+ * [mcx] (an MCX option is the chart's contract as in [ChartFeed.contract]). Every candle request is recorded in [asked]
+ * as "symbol interval".
  */
 class FakeChartSource(
     var bars: (String, String) -> List<Upstox.Bar> = { _, _ -> testBars(60) },
     var contracts: List<Upstox.Contract> = listOf(TEST_OPTION),
+    var mcx: List<com.optionslab.engine.mcx.McxContract> = emptyList(),
 ) : ChartSource {
     var failure: String? = null
     val asked = CopyOnWriteArrayList<String>()
     override fun contract(symbol: String) = contracts.firstOrNull { it.tradingSymbol.equals(symbol, ignoreCase = true) }
+        ?: com.optionslab.engine.mcx.McxInstruments.find(mcx, symbol)?.let { m ->
+            m.right?.let { r -> Upstox.Contract(m.name, m.expiry, m.strike, r, m.multiplier, m.upstoxKey, m.tradingSymbol) }
+        }
+    override fun mcx() = mcx
+    override suspend fun loadMcx() = mcx
     override suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?): List<Upstox.Bar> {
         asked += "$symbol $interval"
         failure?.let { throw java.io.IOException(it) }

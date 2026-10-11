@@ -48,10 +48,18 @@ object WhatsNew {
     private val OCT8: LocalDate = LocalDate.of(2026, 10, 8)
     private val OCT9: LocalDate = LocalDate.of(2026, 10, 9)
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
+    private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-11-chart-any-symbol", OCT11, "Chart any index, commodity or option",
+            "Tap the symbol at the top of the Chart tab to chart something else. " +
+                "Pick an index, Sensex and India VIX included, or any MCX commodity's near-month future. " +
+                "Options go by underlying, expiry and strike, then CE or PE. " +
+                "Or search any index, MCX contract or option; your last six symbols are one tap away. " +
+                "The chart reopens on the symbol you charted last, and anything without prices is greyed with the reason.",
+            "Chart tab → tap the symbol at the top (▾)", to = "chart"),
         Entry("2026-10-10-manager-research", OCT10, "The trade manager follows the research",
             "Research round 12 tested 14 ways to manage an open trade against random early exits. " +
                 "One rule passed, on ORB Fresh: out after 20 minutes without 3% gain, or a close 12% under entry. " +

@@ -10,8 +10,9 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
 /**
- * Candles for the chart terminal, from Upstox's public v3 candles: the three
- * indices and every listed NIFTY/BANKNIFTY option, at any interval the chart
+ * Candles for the chart terminal, from Upstox's public v3 candles: the indices (NIFTY, BANKNIFTY, FINNIFTY,
+ * MIDCPNIFTY, SENSEX, INDIA VIX), every listed NSE index option and every MCX future and option (by its MCX_FO
+ * exchange token from the day's MCX list), at any interval the chart
  * asks for ("1m", "5m", "1h", "1d", "1w", "1M", ...). Upstox serves minutes
  * and hours directly, so nothing is re-aggregated here.
  */
@@ -55,7 +56,7 @@ object ChartFeed {
             if (m.expiry.isBefore(Market.today())) throw IOException("$symbol expired on ${m.expiry}; the free candle feed does not keep expired contracts")
             return m.upstoxKey
         }
-        val c = contract(symbol) ?: throw IOException("$symbol is not an index or a listed NIFTY/BANKNIFTY option")
+        val c = contract(symbol) ?: throw IOException("$symbol is not an index, an MCX contract or a listed NSE index option")
         if (c.isExpired(Market.today())) throw IOException("$symbol expired on ${c.expiry}; the free candle feed does not keep expired contracts")
         return c.instrumentKey
     }
@@ -86,6 +87,19 @@ object ChartFeed {
     }
 
     /**
+     * An MCX symbol the phone's MCX list does not have (never read, or read on an earlier day): today's list is read
+     * first, so a commodity picked or restored on the chart finds its candle key. Only names that start like an MCX
+     * commodity; anything else returns at once. Network: only from [bars] (a suspend read, off the main thread).
+     */
+    private suspend fun ensureMcx(symbol: String) {
+        if (isIndex(symbol)) return
+        val u = symbol.uppercase()
+        if (com.optionslab.engine.mcx.Mcx.NAMES.none { u.startsWith(it) }) return
+        if (runCatching { McxMarket.find(symbol) != null || McxMarket.cachedDay() == Market.today() }.getOrDefault(true)) return
+        runCatching { McxMarket.contracts() }
+    }
+
+    /**
      * Past sessions do not change, so their candles are kept in memory for the day: after the
      * first load a chart only asks for today's session, which is one small request.
      */
@@ -107,6 +121,7 @@ object ChartFeed {
      * timeouts, and its own gate instead of the one the chart and backtests share.
      */
     suspend fun bars(symbol: String, interval: String, fromSec: Long?, toSec: Long?, quick: Boolean = false): List<Upstox.Bar> {
+        if (!quick) ensureMcx(symbol)
         val gate = if (quick) quickGate else chunkGate
         suspend fun get(url: String, tries: Int) =
             if (quick) Net.getJson(url, tries = 1, timeoutMs = Net.QUICK_READ_MS, connectMs = Net.QUICK_CONNECT_MS) else Net.getJson(url, tries = tries)
