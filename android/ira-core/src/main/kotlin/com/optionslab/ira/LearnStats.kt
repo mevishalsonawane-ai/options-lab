@@ -7,7 +7,9 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
- * Honest statistics for the agents' learning (Boss, 11 Oct: "enhance the self improvement" - make it statistically sound).
+ * The ONE statistics engine (S4, 11 Oct): the agents' learning ([AgentLessons], [AutoChange], [Experiments], [AutoGate]) and
+ * the strategy lab ([VariantLab], [StrategyForge], [ShadowSim], through the thin delegates in [DiscoveryStats]) judge with
+ * the same single, tested implementation of each method. StatsGoldenTest pins the outputs from before the merge.
  * Small, pure and deterministic; every number documented where it is set.
  *
  *  - [signFlipP]: a lesson's rupee effect tested against zero by a sign-flip (randomisation) test on its per-day sums - the
@@ -20,6 +22,15 @@ import kotlin.math.sqrt
  *  - [bar]: the evidence bar raised as Autopilot's trials grow - a Bonferroni-style bump: q / (1 + trials / [TRIAL_BLOCK]),
  *    so every [TRIAL_BLOCK] configurations tried shares the bar once more (0.10 at 0 trials, 0.05 at 20, 0.025 at 60).
  *  - [Sprt]: Wald's sequential probability ratio test on rupees per case, for probations and paper experiments.
+ *
+ * The lab's side (formerly DiscoveryStats' own copies):
+ *  - [bhThreshold] / [bhPass]: the same Benjamini-Hochberg as [bh], given as the cut-off p over a family.
+ *  - [signTestP]: one-sided sign test = [binomUpper] at a half (ties dropped).
+ *  - [bootstrapP]: one-sided centred bootstrap that a mean is above zero (seeded).
+ *  - [alwaysValidP]: the mixture SPRT's always-valid p (a forward record judged every night without cheating); [Sprt] is
+ *    Wald's fixed-effect test for probations - two sequential tests answering different questions, both kept here.
+ *  - [penalizedAlpha]: the lab's trial-count penalty alpha / (1 + ln tried) (its own documented bar; [bar] is Autopilot's).
+ *  - [twinP], [maxDrawdown], [t] and the seeded generator [Rng] (splitmix64, with Gamma and Beta draws).
  */
 object LearnStats {
     /** Up to this many days a sign-flip test counts every pattern (2^10 = 1,024 sums); beyond, the normal approximation. */
@@ -161,6 +172,141 @@ object LearnStats {
             q[i] = run.coerceIn(0.0, 1.0)
         }
         return q
+    }
+
+    /**
+     * The same Benjamini-Hochberg as [bh], as a cut-off: the largest p(k) with p(k) <= k q / m over [ps] (NaN counted as 1),
+     * or null when none passes. A p at or under it is a discovery - the same calls as [bh]'s q-values at most [q] (up to a
+     * floating tie exactly at the level; StatsGoldenTest checks the two agree).
+     */
+    fun bhCut(ps: Collection<Double>, q: Double): Double? {
+        if (ps.isEmpty()) return null
+        val s = ps.map { if (it.isNaN()) 1.0 else it.coerceIn(0.0, 1.0) }.sorted()
+        val m = s.size
+        var cut: Double? = null
+        for (k in 1..m) if (s[k - 1] <= k * q / m) cut = s[k - 1]
+        return cut
+    }
+
+    /** The cut-off at false-discovery rate [q], or 0.0 when nothing passes (nothing is a discovery). */
+    fun bhThreshold(ps: Collection<Double>, q: Double): Double = bhCut(ps, q) ?: 0.0
+
+    /** Is [p] a discovery among [all] (which must include it) at rate [q]? */
+    fun bhPass(p: Double, all: Collection<Double>, q: Double): Boolean {
+        val t = bhCut(all, q) ?: return false
+        return p <= t
+    }
+
+    // ---- the lab's one-sample tests ------------------------------------------------------------------------------------------
+
+    /** One-sided sign test: P(at least this many positives | fair coin) = [binomUpper] at a half, zeros dropped; 1.0 for none. */
+    fun signTestP(xs: List<Double>): Double {
+        val pos = xs.count { it > 0 }
+        val n = pos + xs.count { it < 0 }
+        if (n == 0 || pos == 0) return 1.0
+        return binomUpper(pos, n, 0.5)
+    }
+
+    /**
+     * One-sided bootstrap p that the mean of [xs] is above zero: resample the centred values [b] times (seeded), the share of
+     * resampled means at or above the observed one. 1.0 for fewer than two values.
+     */
+    fun bootstrapP(xs: List<Double>, seed: Long, b: Int = 1_000): Double {
+        if (xs.size < 2) return 1.0
+        val m = xs.average()
+        val c = DoubleArray(xs.size) { xs[it] - m }
+        val r = Rng(seed)
+        var hits = 0
+        for (i in 0 until b) {
+            var s = 0.0
+            for (j in c.indices) s += c[r.nextInt(c.size)]
+            if (s / c.size >= m) hits++
+        }
+        return (hits + 1.0) / (b + 1.0)
+    }
+
+    /**
+     * The mSPRT's always-valid one-sided p after each value of [xs] (rupees per trade, or a variant's rupees minus the current
+     * rules' on the same day): normal mixture with scale tau = the running standard deviation (floored at [minSd]), H0 mean
+     * <= 0 (with [sign] -1: H0 mean >= 0, testing "worse"). The p only falls: p(n) = min(p(n-1), 1 / Lambda(n)), and only
+     * moves on a mean of the tested sign. 1.0 until [minN] values.
+     */
+    fun alwaysValidP(xs: List<Double>, sign: Int = 1, minSd: Double = 1.0, minN: Int = 5): Double {
+        var p = 1.0
+        var sum = 0.0; var sum2 = 0.0
+        for ((i, x0) in xs.withIndex()) {
+            val x = x0 * sign
+            sum += x; sum2 += x * x
+            val n = i + 1
+            if (n < minN) continue
+            val mean = sum / n
+            val v = ((sum2 - n * mean * mean) / (n - 1)).coerceAtLeast(minSd * minSd)
+            if (mean <= 0) continue
+            val tau2 = v
+            val lambda = sqrt(v / (v + n * tau2)) * exp(n.toDouble() * n * tau2 * mean * mean / (2 * v * (v + n * tau2)))
+            if (lambda.isFinite() && lambda > 0) p = minOf(p, 1.0 / lambda) else if (lambda.isInfinite()) p = 0.0
+        }
+        return p.coerceIn(0.0, 1.0)
+    }
+
+    /** The lab's trial-count penalty: [alpha] / (1 + ln(tried)), every idea or variant ever tried counted. */
+    fun penalizedAlpha(alpha: Double, tried: Int): Double = alpha / (1.0 + ln(maxOf(1, tried).toDouble()))
+
+    /** The random-twin p: the share of [twinMeans] at or above [observed] (with the observed itself counted once). */
+    fun twinP(observed: Double, twinMeans: List<Double>): Double =
+        (1.0 + twinMeans.count { it >= observed }) / (twinMeans.size + 1.0)
+
+    /** The deepest fall of the running sum of [pnls] (a positive number of rupees; 0 for none). */
+    fun maxDrawdown(pnls: List<Double>): Double {
+        var peak = 0.0; var run = 0.0; var dd = 0.0
+        for (x in pnls) { run += x; if (run > peak) peak = run; dd = maxOf(dd, peak - run) }
+        return dd
+    }
+
+    /** The plain t of a mean (0 for fewer than two or no spread). */
+    fun t(xs: List<Double>): Double {
+        if (xs.size < 2) return 0.0
+        val m = xs.average()
+        val sd = sqrt(xs.sumOf { (it - m) * (it - m) } / (xs.size - 1))
+        return if (sd == 0.0) 0.0 else m / (sd / sqrt(xs.size.toDouble()))
+    }
+
+    /** splitmix64: small, fast, the same numbers for the same seed on every JVM. Open: [DiscoveryStats.Rng] is this one. */
+    open class Rng(seed: Long) {
+        private var s = seed
+        fun nextLong(): Long {
+            s += -0x61c8864680b583ebL
+            var z = s
+            z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L
+            z = (z xor (z ushr 27)) * -0x6b2fb644ecceee15L
+            return z xor (z ushr 31)
+        }
+        /** Uniform in [0, 1). */
+        fun nextDouble(): Double = (nextLong() ushr 11) * (1.0 / (1L shl 53))
+        fun nextInt(n: Int): Int = if (n <= 1) 0 else ((nextLong() ushr 1) % n).toInt()
+        fun nextGaussian(): Double {
+            val u = nextDouble().coerceAtLeast(1e-300); val v = nextDouble()
+            return sqrt(-2.0 * ln(u)) * kotlin.math.cos(2 * Math.PI * v)
+        }
+        /** Gamma(shape, 1) by Marsaglia-Tsang (shape < 1 boosted). */
+        fun nextGamma(shape: Double): Double {
+            if (shape < 1.0) return nextGamma(shape + 1.0) * Math.pow(nextDouble().coerceAtLeast(1e-300), 1.0 / shape)
+            val d = shape - 1.0 / 3.0
+            val c = 1.0 / sqrt(9.0 * d)
+            while (true) {
+                var x: Double; var v: Double
+                do { x = nextGaussian(); v = 1.0 + c * x } while (v <= 0)
+                v = v * v * v
+                val u = nextDouble()
+                if (u < 1 - 0.0331 * x * x * x * x) return d * v
+                if (ln(u.coerceAtLeast(1e-300)) < 0.5 * x * x + d * (1 - v + ln(v))) return d * v
+            }
+        }
+        /** Beta(a, b). */
+        fun nextBeta(a: Double, b: Double): Double {
+            val x = nextGamma(a); val y = nextGamma(b)
+            return if (x + y == 0.0) 0.5 else x / (x + y)
+        }
     }
 
     // ---- sequential: Wald's SPRT ---------------------------------------------------------------------------------------------
