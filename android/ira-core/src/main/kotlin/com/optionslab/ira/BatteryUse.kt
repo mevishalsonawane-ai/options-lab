@@ -337,6 +337,23 @@ object StudyPace {
         return null
     }
 
+    /**
+     * The morning self-check's "Night study" (12 Oct, a Monday: "Night study: not working"): did the study run since the
+     * last session's close? It was "within 36 hours", but the study rests through a weekend once it ran twice after Friday's
+     * close ([studyDue]), so on a Monday 09:00 its last run (Saturday early morning) was always older than 36 hours. Since
+     * the last close is what counts; with no calendar to tell the close, the 36 hours as before.
+     */
+    fun studiedSinceClose(lastStudy: java.time.LocalDateTime?, now: java.time.LocalDateTime, tradingDay: (java.time.LocalDate) -> Boolean): Boolean {
+        if (lastStudy == null) return false
+        val close = runCatching { lastClose(now, tradingDay) }.getOrNull() ?: return lastStudy.isAfter(now.minusHours(36))
+        return lastStudy.isAfter(close)
+    }
+
+    /** What the morning check says when [studiedSinceClose] is false: when it last ran, and what makes it run. */
+    fun notStudiedLine(lastStudy: java.time.LocalDateTime?): String =
+        "Night study: " + (lastStudy?.let { "last ran ${it.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM HH:mm", java.util.Locale.ENGLISH))}" } ?: "has not run yet") +
+            ". It runs each night after the close from two years of index candles: keep the phone online overnight with IraAlgo's battery set to Unrestricted. Ask me \"what did you study\" to see it."
+
     /** Is the study to be made (its own hour and 12-hour gates still apply)? Not when it already ran twice since the last close. */
     fun studyDue(lastStudy: java.time.LocalDateTime?, lastClose: java.time.LocalDateTime?): Boolean =
         lastStudy == null || lastClose == null || lastStudy.isBefore(lastClose.plusHours(SECOND_AFTER_HOURS))

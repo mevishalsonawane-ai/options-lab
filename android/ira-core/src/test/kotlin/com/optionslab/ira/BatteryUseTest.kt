@@ -205,4 +205,25 @@ class StudyPaceTest {
     @Test fun unknownReadsAsBefore() {
         assertEquals(1L, pace(at(3, 12), at(3, 3, 45), card = true) { false })
     }
+
+    /** 12 Oct (a Monday): "Night study: not working" - its last run, early Saturday, was older than 36 hours by design. */
+    @Test fun theNightStudyIsJudgedSinceTheLastClose() {
+        val weekday = { d: java.time.LocalDate -> d.dayOfWeek != java.time.DayOfWeek.SATURDAY && d.dayOfWeek != java.time.DayOfWeek.SUNDAY }
+        val monday9 = java.time.LocalDateTime.of(2026, 10, 12, 9, 0)
+        // Studied Friday night and early Saturday (then resting through the weekend): fine on Monday morning.
+        assertTrue(StudyPace.studiedSinceClose(java.time.LocalDateTime.of(2026, 10, 10, 3, 45), monday9, weekday))
+        assertTrue(StudyPace.studiedSinceClose(java.time.LocalDateTime.of(2026, 10, 9, 18, 0), monday9, weekday))
+        // Last ran before Friday's close: not studied; never: not studied.
+        assertFalse(StudyPace.studiedSinceClose(java.time.LocalDateTime.of(2026, 10, 9, 3, 0), monday9, weekday))
+        assertFalse(StudyPace.studiedSinceClose(null, monday9, weekday))
+        // A Tuesday morning: Monday night's run counts, Saturday's does not.
+        val tuesday9 = java.time.LocalDateTime.of(2026, 10, 13, 9, 0)
+        assertTrue(StudyPace.studiedSinceClose(java.time.LocalDateTime.of(2026, 10, 12, 16, 10), tuesday9, weekday))
+        assertFalse(StudyPace.studiedSinceClose(java.time.LocalDateTime.of(2026, 10, 10, 3, 45), tuesday9, weekday))
+        // What it says: when it last ran and what makes it run.
+        val l = StudyPace.notStudiedLine(java.time.LocalDateTime.of(2026, 10, 9, 3, 0))
+        assertTrue(l.startsWith("Night study: last ran Fri 9 Oct 03:00. "), l)
+        assertTrue("Unrestricted" in l, l)
+        assertTrue(StudyPace.notStudiedLine(null).startsWith("Night study: has not run yet."))
+    }
 }

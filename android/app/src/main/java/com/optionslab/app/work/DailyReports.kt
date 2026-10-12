@@ -278,7 +278,10 @@ object DailyReports {
                 val mic = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
                     android.content.pm.PackageManager.PERMISSION_GRANTED
                 val model = com.optionslab.app.ira.IraModel.state.value.status
-                val studied = com.optionslab.app.ira.IraStudy.state.value.at?.isAfter(java.time.Instant.now().minusSeconds(36 * 3600)) == true
+                // 12 Oct: since the last close (a Monday morning's check read Saturday's run as "not working").
+                val studyNow = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"))
+                val studyAt = com.optionslab.app.ira.IraStudy.state.value.at?.atZone(java.time.ZoneId.of("Asia/Kolkata"))?.toLocalDateTime()
+                val studied = com.optionslab.ira.StudyPace.studiedSinceClose(studyAt, studyNow) { Market.isTradingDay(it) }
                 val (battery, charging) = Battery.state(context)
                 val parts = listOf(
                     "Voice" to (if (voiceOn) vs.problem == null else null),
@@ -289,7 +292,9 @@ object DailyReports {
                 )
                 val sc = com.optionslab.ira.SelfCheck.lines(parts)
                 ok(parts.none { it.second == false }, sc.first().removeSuffix("."))
-                sc.drop(1).filter { it.endsWith("not working.") }.forEach { lines += "• $it" }
+                sc.drop(1).filter { it.endsWith("not working.") && !it.startsWith("Night study") }.forEach { lines += "• $it" }
+                // What to do about it, not only "not working".
+                if (!studied) lines += "• " + com.optionslab.ira.StudyPace.notStudiedLine(studyAt)
                 if (com.optionslab.app.ira.JarvisVoice.muted) lines += "• Jarvis is muted (say \"Jarvis, unmute\" to hear me)"
                 // A low battery is not a fault: a note, and the battery saver slows Jarvis's own refreshes.
                 if (battery != null && battery <= com.optionslab.ira.BatterySaver.LOW && !charging) lines += "• Battery at $battery%: charge the phone for the trading day"
