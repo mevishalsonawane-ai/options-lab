@@ -8,6 +8,7 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -132,7 +133,8 @@ class SpecialistsSheetTest {
         RuntimeEnvironment.setFontScale(2f)
         sheet()
         for (key in listOf("spec-intro", "spec-trade:t1", "spec-roster:$family")) {
-            val b = compose.onNodeWithTag(expandTag(key)).getBoundsInRoot()
+            // Below the fold at font 2.0: scrolled into view first (a clipped node measures 0 high).
+            val b = compose.onNodeWithTag(expandTag(key)).performScrollTo().getBoundsInRoot()
             assertTrue("$key is ${b.bottom - b.top} high", b.bottom - b.top >= 47.5.dp)
             assertTrue("$key is cut on the right: $b", b.right <= 320.dp)
         }
