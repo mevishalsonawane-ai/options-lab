@@ -94,6 +94,27 @@ class IraHubTest : RobolectricTest() {
         assertEquals("That strategy is gone.", IraHub.approve(99))
     }
 
+    /**
+     * 12 Oct: Jarvis added "breakdown below the last 20 candles' low" on SENSEX 15m and switched it on to trade on paper; SENSEX
+     * options trade on BSE (and FINNIFTY's are too thin, research X1). Such a strategy is added as ALERTS ONLY, said why.
+     */
+    @Test fun aSensexOrFinniftyStrategyIsAddedAsAlertsOnly() = runBlocking {
+        IraHub.testLabBars = { _, _ -> twoYears }
+        com.optionslab.app.data.PineScripts.init(context)
+        com.optionslab.app.data.PineScripts.wipe()
+        IraHub.testHistories = { sixty }
+        IraHub.refresh()
+        IraHub.ask("Backtest the breakout on Sensex 15m")
+        waitFor("the backtest") { IraHub.state.value.proposals.isNotEmpty() }
+        val p = IraHub.state.value.proposals.single()
+        assertEquals(IraMarket.SENSEX, p.result.market)
+        val said = IraHub.approve(p.id)
+        assertTrue(said, said.startsWith("Added") && said.contains("ALERTS ONLY") && said.contains("BSE"))
+        val item = com.optionslab.app.data.PineScripts.items.value.single { it.name == p.result.name }
+        assertEquals("alert", item.auto.mode)
+        assertEquals("SENSEX", item.auto.symbol)
+    }
+
     @Test fun aStrategyAlreadySavedIsRefusedNotAddedTwice() = runBlocking {
         // Boss's 06 Oct diagnostics: the same "Jarvis: ..." strategy was added again at 09:50 and every trade doubled.
         IraHub.testLabBars = { _, _ -> twoYears }

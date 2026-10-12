@@ -648,16 +648,22 @@ object IraHub {
             strategyDone(p, com.optionslab.ira.Requests.Outcome.FAILED, text)
             return text
         }
+        // 12 Oct: a SENSEX strategy (BSE: the app places no orders there) or a FINNIFTY one (research X1: too thin for
+        // automatic stops, Boss's yes - no automatic trading) is added as ALERTS ONLY, never switched on to trade, said why.
+        val alertsOnly = com.optionslab.ira.PineVenue.alertsOnlyWhy(r.market.name)
         val item = com.optionslab.app.data.PineScripts.put(com.optionslab.app.data.PineScripts.Item(0, r.name, r.script))
         com.optionslab.app.data.PineScripts.setAuto(item.id, com.optionslab.app.data.PineScripts.Auto(
-            on = false, symbol = r.market.name, interval = interval, lots = 1, shortWith = "put",
+            on = false, symbol = r.market.name, interval = interval, lots = 1, shortWith = "put", mode = if (alertsOnly != null) "alert" else "trade",
             // Boss's 06 Oct rule: every Pine strategy, Jarvis's included, has a stop-loss, a target and the profit lock
             // (30 / 60 points to start; PineScripts.protect keeps them on whatever is written).
             stopPts = com.optionslab.ira.PineProtection.STOP, targetPts = com.optionslab.ira.PineProtection.TARGET,
             profitLock = true, byJarvis = true))
         val armed = com.optionslab.app.data.PineAuto.arm(item.id, on = true, pinConfirmed = false)
-        val text = if (armed == "ok") "Added ${r.name} as an arm and switched it on: on paper it trades 1 lot; in Live it waits for your PIN in Research → Pine. " +
-            "You can switch it off there any time." else "Saved ${r.name} in Research → Pine, but could not switch it on ($armed)."
+        val text = if (armed != "ok") "Saved ${r.name} in Research → Pine, but could not switch it on ($armed)."
+            else if (alertsOnly != null) "Added ${r.name} as ALERTS ONLY: it tells you each signal and never trades, not even on paper - $alertsOnly. " +
+                "You can switch it off in Research → Pine any time."
+            else "Added ${r.name} as an arm and switched it on: on paper it trades 1 lot; in Live it waits for your PIN in Research → Pine. " +
+                "You can switch it off there any time."
         _state.update { s -> s.copy(proposals = s.proposals.map { if (it.id == id) it.copy(status = Proposal.APPROVED, pineId = item.id) else it },
             messages = (s.messages + Msg(true, text)).takeLast(MAX_MESSAGES)) }
         saveState()
