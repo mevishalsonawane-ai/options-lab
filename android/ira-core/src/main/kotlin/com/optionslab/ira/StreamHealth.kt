@@ -184,8 +184,17 @@ object StreamHealth {
         cause == Cause.TOKEN || cause == Cause.TOO_MANY -> MAX_WAIT_MS
         upMs != null && upMs >= STABLE_MS -> FIRST_WAIT_MS
         lastWait <= 0 -> FIRST_WAIT_MS
+        // 12 Oct (stream gaps 17 s typical, 143 s worst, all the phone's own network): while the PHONE is offline (no DNS, the
+        // network lost or changed) a try costs Zerodha nothing - no socket reaches it - so the wait stops doubling at
+        // [NETWORK_WAIT_MS]: the stream is back within seconds of the network, not up to 30 s after it.
+        cause in PHONE_OFFLINE -> (lastWait * 2).coerceAtMost(NETWORK_WAIT_MS)
         else -> (lastWait * 2).coerceAtMost(MAX_WAIT_MS)
     }
+
+    /** The phone's own network down: no connection reached Zerodha. */
+    private val PHONE_OFFLINE = setOf(Cause.DNS, Cause.NETWORK_LOST, Cause.NETWORK_CHANGED)
+    /** The longest wait between tries while the phone's network is down ([wait]). */
+    const val NETWORK_WAIT_MS = 4_000L
 
     /** At most [max] of [want], those in [first] (the indices, open positions) kept before the rest. */
     fun cap(want: Set<Long>, first: Collection<Long>, max: Int = MAX_TOKENS): Set<Long> {

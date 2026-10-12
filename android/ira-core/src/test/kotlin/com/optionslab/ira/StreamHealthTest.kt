@@ -79,7 +79,11 @@ class StreamHealthTest {
     @Test fun waits() {
         assertEquals(500L, StreamHealth.wait(0, null, Cause.DNS))
         assertEquals(2_000L, StreamHealth.wait(1_000, null, Cause.DNS))
-        assertEquals(30_000L, StreamHealth.wait(20_000, null, Cause.DNS))
+        // 12 Oct: the phone offline (no DNS, network lost or changed) waits at most 4 s between tries, not 30.
+        assertEquals(4_000L, StreamHealth.wait(20_000, null, Cause.DNS))
+        assertEquals(4_000L, StreamHealth.wait(4_000, null, Cause.NETWORK_CHANGED))
+        assertEquals(4_000L, StreamHealth.wait(16_000, 2_000, Cause.NETWORK_LOST))
+        assertEquals(30_000L, StreamHealth.wait(20_000, null, Cause.TIMEOUT))
         // Up a minute or more: at once again. Dropped within seconds of opening: the wait keeps growing (was reset to 0.5 s).
         assertEquals(500L, StreamHealth.wait(16_000, 60_000, Cause.SILENT))
         assertEquals(8_000L, StreamHealth.wait(4_000, 3_000, Cause.CLOSED))

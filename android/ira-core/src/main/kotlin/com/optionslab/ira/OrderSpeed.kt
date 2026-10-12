@@ -193,9 +193,17 @@ object OrderSpeed {
     fun warnings(b: Book): List<String> {
         val out = ArrayList<String>()
         summary(b.all(Step.RELAY_PING))?.let { if (it.median > RELAY_WARN_MS) out += "Relay is slow: typical ${ms(it.median)} a round trip (over ${ms(RELAY_WARN_MS)})." }
-        summary(b.all(Step.PRICE_AGE))?.let { if (it.p95 > PRICE_AGE_WARN_MS) out += "Prices were up to ${ms(it.p95)} old when used (over ${ms(PRICE_AGE_WARN_MS)})." }
+        // 12 Oct: the order steps' warnings said for each mode apart - a paper (simulated) order's times are never read as
+        // Zerodha's ("Paper: ..." in front; live as before).
+        for (live in listOf(true, false)) {
+            val tag = if (live) "" else "Paper (simulated orders): "
+            summary(b.of(Step.PRICE_AGE, live))?.let { if (it.p95 > PRICE_AGE_WARN_MS) out += "${tag}Prices were up to ${ms(it.p95)} old when used (over ${ms(PRICE_AGE_WARN_MS)})." }
+        }
         summary(b.all(Step.CLOCK_OFFSET))?.let { if (kotlin.math.abs(it.median) > 1_000) out += "The phone's clock is off by ${ms(kotlin.math.abs(it.median))}: switch on automatic date and time." }
-        summary(b.all(Step.SIGNAL_SENT))?.let { if (it.p95 > SIGNAL_SENT_WARN_MS) out += "Signal to order took up to ${ms(it.p95)} (over ${ms(SIGNAL_SENT_WARN_MS)})." }
+        for (live in listOf(true, false)) {
+            val tag = if (live) "" else "Paper (simulated orders): "
+            summary(b.of(Step.SIGNAL_SENT, live))?.let { if (it.p95 > SIGNAL_SENT_WARN_MS) out += "${tag}Signal to order took up to ${ms(it.p95)} (over ${ms(SIGNAL_SENT_WARN_MS)})." }
+        }
         return out
     }
 
@@ -211,8 +219,12 @@ object OrderSpeed {
 
     /** One line for the diagnostics export: today's typical and worst per step, both modes together. */
     fun diagLine(b: Book): String {
-        val parts = Step.entries.mapNotNull { st ->
-            summary(b.all(st))?.let { s -> "${st.key} ${s.median}/${s.p95}/${s.max}ms n${s.n}" }
+        // 12 Oct: the order steps per mode ("live ds ..." / "paper ds ..."): paper's simulated orders were read as Zerodha's
+        // timings. The relay, the clock and the stream are the phone's own, both modes together as before.
+        val parts = Step.entries.flatMap { st ->
+            if (st in ORDER_STEPS) listOf(true, false).mapNotNull { live ->
+                summary(b.of(st, live))?.let { s -> "${if (live) "live" else "paper"} ${st.key} ${s.median}/${s.p95}/${s.max}ms n${s.n}" }
+            } else listOfNotNull(summary(b.all(st))?.let { s -> "${st.key} ${s.median}/${s.p95}/${s.max}ms n${s.n}" })
         }
         return "Order speed (${b.day}, typical/worst/slowest): " + (parts.joinToString(" · ").ifEmpty { "no timings yet" }) +
             warnings(b).joinToString("") { " · WARN $it" }

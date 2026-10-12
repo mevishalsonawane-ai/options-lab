@@ -87,6 +87,13 @@ class OrderSpeedTest {
         assertTrue(d.startsWith("Order speed (2026-10-09, typical/worst/slowest): "), d)
         assertTrue("rp 180/200/200ms n3" in d && "WARN Relay is slow" in d, d)
         assertEquals("Order speed (2026-10-09, typical/worst/slowest): no timings yet", OrderSpeed.diagLine(OrderSpeed.Book("2026-10-09")))
+        // 12 Oct: each mode's order steps apart, labelled; a paper warning says it is paper's.
+        assertTrue("live sa 50/60/60ms n3" in d && "paper sa 2/2/2ms n1" in d, d)
+        val paper = OrderSpeed.Book("2026-10-12").also { it.add(OrderSpeed.Step.SIGNAL_SENT, false, 9_863); it.add(OrderSpeed.Step.PRICE_AGE, false, 16_868) }
+        val pw = OrderSpeed.warnings(paper)
+        assertEquals(2, pw.size, pw.toString())
+        assertTrue(pw.all { it.startsWith("Paper (simulated orders): ") }, pw.toString())
+        assertTrue("paper ss 9863/9863/9863ms n1" in OrderSpeed.diagLine(paper))
         // The slowest is said only when it differs from the 95th percentile; long times in seconds.
         assertEquals("p50 12 s, p95 12 s, 1 time", OrderSpeed.said(OrderSpeed.Summary(1, 12_000, 12_000, 12_000)))
         assertEquals("p50 10 ms, p95 90 ms (slowest 120 ms), 30 times", OrderSpeed.said(OrderSpeed.Summary(30, 10, 90, 120)))
