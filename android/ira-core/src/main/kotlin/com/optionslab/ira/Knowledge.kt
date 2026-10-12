@@ -7,7 +7,7 @@ import kotlin.math.ln
 
 /**
  * Jarvis's knowledge base (research/data/ARCHITECTURE.md, L5 Level 4): the research's findings, strategy cards, study pages
- * and the h42 answers, built by research/knowledge/build_pack.py into one sourced pack (assets/knowledge/pack.json.gz), and
+ * and the h42 answers, built by research/knowledge/build_pack.py into one sourced pack (assets/knowledge/pack.bin, gzip JSON), and
  * a retrieval over it - BM25 on the words, a boost for the instruments and topics the question names, and a small
  * English/Hinglish synonym map. No network, no model: the answer is made of the retrieved facts' own sentences, so every
  * number said comes from a fact ([say], [lines]); the on-device model may only reword it under the usual number check.
@@ -42,8 +42,12 @@ object Knowledge {
         return Pack(schema, root["version"] as? String ?: "", root["built_from"] as? String ?: "", facts)
     }
 
-    /** The pack from its gzip bytes (the asset as shipped). */
-    fun read(gz: InputStream): Pack = parse(GZIPInputStream(gz).bufferedReader(Charsets.UTF_8).use { it.readText() })
+    /** The pack from its bytes: gzip (the asset as shipped) or, should a packer have unzipped it, the plain JSON. */
+    fun read(input: InputStream): Pack {
+        val b = input.readBytes()
+        val gz = b.size > 2 && b[0] == 0x1f.toByte() && b[1] == 0x8b.toByte()
+        return parse(if (gz) GZIPInputStream(b.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() } else String(b, Charsets.UTF_8))
+    }
 
     private fun fact(m: Map<*, *>): Fact? {
         val id = m["id"] as? String ?: return null

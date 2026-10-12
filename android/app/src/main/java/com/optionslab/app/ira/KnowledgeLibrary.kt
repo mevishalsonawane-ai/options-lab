@@ -4,11 +4,11 @@ import android.content.Context
 import com.optionslab.ira.Knowledge
 
 /**
- * Jarvis's knowledge pack (ira-core's [Knowledge]; assets/knowledge/pack.json.gz, built by research/knowledge/build_pack.py):
+ * Jarvis's knowledge pack (ira-core's [Knowledge]; assets/knowledge/pack.bin (gzip JSON), built by research/knowledge/build_pack.py):
  * read and indexed once, off the main thread, and kept in memory. Reads only; nothing here acts.
  */
 object KnowledgeLibrary {
-    const val ASSET = "knowledge/pack.json.gz"
+    const val ASSET = "knowledge/pack.bin"
     @Volatile private var index: Knowledge.Index? = null
     private val lock = Any()
 
