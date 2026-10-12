@@ -18,7 +18,10 @@ import com.optionslab.engine.orb.ArmPriority
  * entry is never refused because ORB, ORB Fresh, ORB Sweep or Range Fade holds the index - it runs beside it - while an
  * ORB-family entry is still refused when Liquidity holds it ("...; Liquidity has priority over ORB arms"). When both the
  * Liquidity entry and the old arm's holding are live, the rule holds as before (never two automatic live positions on one
- * index). Every other trader is unchanged either way.
+ * index). Every other trader is unchanged either way - except on BANKNIFTY since 12 Oct: Liquidity's BANKNIFTY books
+ * ([ArmPriority.liquidityBn], each named by its [Held.book]) are refused by no other automatic trader (a paper entry goes
+ * beside it; the other trader's later entry is refused "...; yielded to Liquidity BANKNIFTY"), and the 15- and 5-minute
+ * books never refuse each other: each holds its own position.
  *
  * A neutral entry (a straddle, an iron condor: no lean) is never refused, and a neutral holding never refuses one. Boss's
  * own orders are never refused: the order review only warns ([warn]). It only ever refuses an entry - never closes,
@@ -32,12 +35,14 @@ object AutoSide {
      * ([ArmPriority.Rank]: Liquidity, the ORB family, or anything else) and whether it is [live] at the broker.
      */
     data class Held(val who: String, val symbol: String, val underlying: String, val direction: Int, val what: String,
-                    val rank: ArmPriority.Rank = ArmPriority.Rank.OTHER, val live: Boolean = false) {
+                    val rank: ArmPriority.Rank = ArmPriority.Rank.OTHER, val live: Boolean = false,
+                    /** The arm's book ("liquidity15") when one trader runs several: Liquidity BANKNIFTY's books are each their own claim. */
+                    val book: String? = null) {
         companion object {
             /** A single option leg: [right] "CE" or "PE", [long] bought (true) or sold. */
             fun option(who: String, symbol: String, underlying: String, right: String, long: Boolean,
-                       rank: ArmPriority.Rank = ArmPriority.Rank.OTHER, live: Boolean = false): Held =
-                Held(who, symbol, underlying, direction(right, long), words(right, long), rank, live)
+                       rank: ArmPriority.Rank = ArmPriority.Rank.OTHER, live: Boolean = false, book: String? = null): Held =
+                Held(who, symbol, underlying, direction(right, long), words(right, long), rank, live, book)
         }
     }
 
@@ -73,6 +78,9 @@ object AutoSide {
     /** What a refusal by Liquidity's priority ends with ([check]), and what [describe] says of it. */
     const val PRIORITY = "; " + ArmPriority.WORDS
 
+    /** What a refusal ends with when the other trader yields to Liquidity BANKNIFTY ([ArmPriority.yielded]). */
+    const val YIELDED = "; " + ArmPriority.YIELD_WORDS
+
     /**
      * Whether a new automatic entry on [underlying] leaning [direction] may go, against [held] (every automatic position
      * open now, the asker's own included): null when it may, else the refusal for the row and the log. [rank]: the asker's
@@ -80,11 +88,17 @@ object AutoSide {
      * the entry goes to the broker - the holdings that do not count against it ([ArmPriority.counts]) are left out.
      */
     fun check(underlying: String, direction: Int, held: List<Held>, rank: ArmPriority.Rank = ArmPriority.Rank.OTHER,
-              live: Boolean = false): String? {
+              live: Boolean = false, book: String? = null): String? {
         if (direction == 0) return null
         val same = held.filter { it.underlying.equals(underlying, ignoreCase = true) && it.direction != 0 &&
-            ArmPriority.counts(it.rank, it.live, rank, live) }
-        fun tail(h: Held) = if (ArmPriority.byPriority(h.rank, rank)) PRIORITY else ""
+            ArmPriority.counts(it.rank, it.live, rank, live, underlying, it.book, book) }
+            // A holding the entry yields to (Liquidity BANKNIFTY) is named first: that is the reason the row should show.
+            .sortedBy { if (ArmPriority.yielded(it.rank, it.book, rank, book, underlying)) 0 else 1 }
+        fun tail(h: Held) = when {
+            ArmPriority.byPriority(h.rank, rank) -> PRIORITY
+            ArmPriority.yielded(h.rank, h.book, rank, book, underlying) -> YIELDED
+            else -> ""
+        }
         same.firstOrNull { it.direction == -direction }?.let { return "$OPPOSITE: ${it.who} holds ${it.symbol}${tail(it)}" }
         same.firstOrNull { it.direction == direction }?.let { return "$SAME_SIDE: ${it.who} holds ${it.symbol}${tail(it)}" }
         return null
@@ -95,12 +109,15 @@ object AutoSide {
      * holdings that would have refused it before 07 Oct: "Liquidity 15m is not held back by ORB's BANKNIFTY...CE: Liquidity has
      * priority over ORB arms." [who] names the entry. Null when nothing was set aside (or the entry is refused anyway).
      */
-    fun priorityNote(who: String, underlying: String, direction: Int, held: List<Held>, rank: ArmPriority.Rank, live: Boolean = false): String? {
-        if (direction == 0 || check(underlying, direction, held, rank, live) != null) return null
+    fun priorityNote(who: String, underlying: String, direction: Int, held: List<Held>, rank: ArmPriority.Rank, live: Boolean = false,
+                     book: String? = null): String? {
+        if (direction == 0 || check(underlying, direction, held, rank, live, book) != null) return null
         val beside = held.filter { it.underlying.equals(underlying, ignoreCase = true) && it.direction != 0 &&
-            !ArmPriority.counts(it.rank, it.live, rank, live) }
+            !ArmPriority.counts(it.rank, it.live, rank, live, underlying, it.book, book) }
         if (beside.isEmpty()) return null
-        return "$who is not held back by " + beside.joinToString(", ") { "${it.who}'s ${it.symbol}" } + ": ${ArmPriority.WORDS}."
+        val why = if (beside.all { it.rank == ArmPriority.Rank.OLD_ARM }) ArmPriority.WORDS
+            else "Liquidity BANKNIFTY has priority on BANKNIFTY, and its 15- and 5-minute books each hold their own"
+        return "$who is not held back by " + beside.joinToString(", ") { "${it.who}'s ${it.symbol}" } + ": $why."
     }
 
     /** Whether [status] is one of [check]'s refusals. */
@@ -109,8 +126,13 @@ object AutoSide {
     /** A refusal from [check] in plain words for a row or a log line; anything else as it is. */
     fun describe(status: String): String {
         val priority = status.endsWith(PRIORITY)
-        val s = status.removeSuffix(PRIORITY)
-        val tail = if (priority) " ${ArmPriority.WORDS}." else ""
+        val yielded = status.endsWith(YIELDED)
+        val s = status.removeSuffix(PRIORITY).removeSuffix(YIELDED)
+        val tail = when {
+            priority -> " ${ArmPriority.WORDS}."
+            yielded -> " Yielded to Liquidity BANKNIFTY (it has priority on BANKNIFTY)."
+            else -> ""
+        }
         return when {
             s.startsWith("$OPPOSITE: ") -> "Not entered: ${s.removePrefix("$OPPOSITE: ")} the other way on this index " +
                 "(no automatic trade against another).$tail"

@@ -290,6 +290,13 @@ internal object Autopilot {
      */
     internal fun apply(c: AutoChange.Change, pinConfirmed: Boolean, byBoss: Boolean = false): String? {
         if (AutoChange.never(c)) return null
+        // Liquidity BANKNIFTY frozen for its paper test (Boss, 12 Oct): no automatic change aimed at Liquidity applies - it is
+        // recorded only - except parking its LIVE entries to paper (that only takes risk off). Boss's own yes still applies.
+        if (!byBoss && com.optionslab.ira.LiquidityFreeze.touches(c.target) && runCatching { com.optionslab.app.data.LiquidityTest.frozenNow() }.getOrDefault(true) &&
+            !(c.kind == AutoChange.Kind.LIVE_ENTRIES && c.to == AutoChange.PARKED)) {
+            runCatching { com.optionslab.app.data.Diag.record("autopilot", "${c.what}: ${com.optionslab.ira.LiquidityFreeze.NOTE}") }
+            return null
+        }
         val raisesLive = c.scope == AutoChange.Scope.LIVE && AutoChange.riskOf(c) == AutoChange.Risk.RAISE
         if (raisesLive && !pinConfirmed) return null
         val parts = c.target.split(':')

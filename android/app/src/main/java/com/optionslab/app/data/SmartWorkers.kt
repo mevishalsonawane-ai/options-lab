@@ -215,7 +215,8 @@ object SmartWorkers {
         val s = _settings.value
         val d = EntryBrake.decide(_brain.value, s.pause, underlying?.let { bus.recent(nowMs, it) } ?: bus.recent(nowMs), s.reactions,
             key, underlying, side, nowMs)
-        if (!d.block && reviewKey(key) in s.paused)
+        // Liquidity BANKNIFTY frozen for its paper test (12 Oct): its self-review's automatic paper pause records only.
+        if (!d.block && reviewKey(key) in s.paused && !runCatching { LiquidityTest.frozenKey(key) }.getOrDefault(false))
             return d.copy(block = true, why = "paused: its self-review found it drifting from its backtest (switch it back on yourself)")
         return d
     }

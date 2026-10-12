@@ -153,4 +153,17 @@ class EntryGateTest {
         // A clock set back drops what it cannot age.
         assertEquals(emptyList(), holds.standing(-100_000))
     }
+
+    @Test fun liquidityBankniftysClaimsWinAndItsTwoBooksClaimApart() {
+        val holds = EntryHolds()
+        // Solo claims BANKNIFTY first; Liquidity 15m's claim still goes, then 5m's (each book its own claim).
+        assertNull(holds.checkAndHold("SOLO", "Jarvis solo", "BANKNIFTY", 1, emptyList(), emptyMap(), now = 0))
+        assertNull(holds.checkAndHold("ORB", "ORB arms", "BANKNIFTY", 1, emptyList(), emptyMap(), now = 1, rank = ArmPriority.Rank.LIQUIDITY, book = "liquidity15"))
+        val liq15 = AutoSide.Held.option("Liquidity 15m", "BANKNIFTY-CE", "BANKNIFTY", "CE", true, ArmPriority.Rank.LIQUIDITY, book = "liquidity15")
+        assertNull(holds.checkAndHold("ORB", "ORB arms", "BANKNIFTY", 1, listOf(liq15), emptyMap(), now = 2, rank = ArmPriority.Rank.LIQUIDITY, book = "liquidity5"))
+        assertEquals(2, holds.standing(3).count { it.book != null })
+        // Pine's entry on BANKNIFTY now yields.
+        val r = holds.checkAndHold("PINE", "a Pine script", "BANKNIFTY", -1, emptyList(), emptyMap(), now = 4)
+        assertTrue(r != null && r.endsWith(AutoSide.YIELDED), "$r")
+    }
 }

@@ -239,7 +239,8 @@ class PortfolioGuard {
     data class Decision(val block: Boolean, val why: String? = null, val partners: List<String> = emptyList(), val combined: Double = 0.0)
 
     // [seq]: the order things happened in (two checks can share a millisecond; the door asks "let through since the block?").
-    private data class Opened(val arm: String, val direction: Int, val live: Boolean, val atMs: Long, val seq: Long = 0L)
+    // [claim]: the book within the arm (12 Oct: Liquidity BANKNIFTY's 15- and 5-minute books each count as their own entry).
+    private data class Opened(val arm: String, val direction: Int, val live: Boolean, val atMs: Long, val seq: Long = 0L, val claim: String = "")
 
     @Volatile var matrix: PortfolioRisk.Matrix = PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap())
         private set
@@ -278,11 +279,14 @@ class PortfolioGuard {
         val c = config
         if (!c.on || direction == 0 || !(c.capital > 0)) return pass(Decision(false))
         val m = matrix
-        val partners = opened.filter { it.live == live && it.direction == direction && it.arm != arm && (m.of(arm, it.arm) ?: 0.0) > c.rho }
-            .map { it.arm }.distinct()
+        // An arm never counts against itself (its own books never block each other); another arm's books each count, with
+        // its stop once per book that opened (12 Oct: each Liquidity BANKNIFTY book is its own claim).
+        val claims = opened.filter { it.live == live && it.direction == direction && it.arm != arm && (m.of(arm, it.arm) ?: 0.0) > c.rho }
+            .map { it.arm to it.claim }.distinct()
+        val partners = claims.map { it.first }.distinct()
         if (partners.isEmpty()) return pass(Decision(false))
         val s = stops
-        val combined = (s[arm] ?: 0.0) + partners.sumOf { s[it] ?: 0.0 }
+        val combined = (s[arm] ?: 0.0) + claims.sumOf { s[it.first] ?: 0.0 }
         if (combined <= c.capRs) return pass(Decision(false, null, partners, combined))
         val why = "${PortfolioRisk.label(arm)}'s ${if (live) "live" else "paper"} ${if (direction > 0) "bullish" else "bearish"} entry was blocked by the " +
             "portfolio guard: ${partners.joinToString(", ") { PortfolioRisk.label(it) }} already opened the same way today and move with it " +
@@ -296,14 +300,14 @@ class PortfolioGuard {
 
     /** [arm]'s entry leaning [direction] was actually taken (a paper fill, an order sent to Zerodha): counted as opened. */
     @Synchronized
-    fun opened(arm: String, direction: Int, live: Boolean, today: LocalDate, nowMs: Long) {
+    fun opened(arm: String, direction: Int, live: Boolean, today: LocalDate, nowMs: Long, claim: String = "") {
         roll(today)
-        if (direction != 0) note(arm, direction, live, nowMs)
+        if (direction != 0) note(arm, direction, live, nowMs, claim)
     }
 
-    private fun note(arm: String, direction: Int, live: Boolean, nowMs: Long) {
-        opened.removeAll { it.arm == arm && it.direction == direction && it.live == live }
-        opened += Opened(arm, direction, live, nowMs, ++seq)
+    private fun note(arm: String, direction: Int, live: Boolean, nowMs: Long, claim: String = "") {
+        opened.removeAll { it.arm == arm && it.direction == direction && it.live == live && it.claim == claim }
+        opened += Opened(arm, direction, live, nowMs, ++seq, claim)
     }
 
     /**

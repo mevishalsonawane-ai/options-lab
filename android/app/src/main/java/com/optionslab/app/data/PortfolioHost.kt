@@ -125,8 +125,8 @@ object PortfolioHost {
      * [key]'s entry leaning [side] was actually taken (a paper fill, an order sent to Zerodha; FlowGate's [FlowGate.taken] and
      * entered outcomes): from now on it counts against a later correlated entry. Memory only; never throws.
      */
-    fun opened(key: String, side: Int, live: Boolean, nowMs: Long = System.currentTimeMillis()) {
-        runCatching { guard.opened(PortfolioRisk.canon(key), side, live, Market.today(), nowMs) }
+    fun opened(key: String, side: Int, live: Boolean, nowMs: Long = System.currentTimeMillis(), claim: String = "") {
+        runCatching { guard.opened(PortfolioRisk.canon(key), side, live, Market.today(), nowMs, claim) }
     }
 
     /**

@@ -1750,6 +1750,7 @@ object IraHub {
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityHold.asked(q) != null || com.optionslab.ira.LiquidityDrawdown.asked(q) || com.optionslab.ira.LiquidityWhen.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.CatchUp.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
                 com.optionslab.ira.OrderReview.asked(q) != null || com.optionslab.ira.Slippage.asked(q) != null || com.optionslab.ira.PositionSync.asked(q) ||
+                com.optionslab.ira.FillQuality.asked(q) || com.optionslab.ira.LiquidityGoLive.asked(q) ||
                 com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.MoveEvents.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
                 com.optionslab.ira.Findings.asked(q) != null || com.optionslab.ira.TradeManager.asked(q) != null ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
@@ -2372,6 +2373,27 @@ object IraHub {
             val said = if (phoneLocked()) "Unlock the phone for that, Boss."
                 else runCatching { com.optionslab.ira.SelfWhy.answer(q, IraActivity.entries(), LocalDateTime.now(IST)) }.getOrElse { "I could not read my activity just now, Boss." }
             _state.update { it.copy(messages = (it.messages + Msg(false, q) + Msg(true, said)).takeLast(MAX_MESSAGES)) }
+            return
+        }
+        // "How are Liquidity fills?" (12 Oct, [com.optionslab.ira.FillQuality]): the bid/ask, depth and timing recorded at every
+        // Liquidity signal and fill, against the go-live limits. Boss's fills, so never on a locked phone. Reads only.
+        if (com.optionslab.ira.FillQuality.asked(q) && Ask.parse(q).command == null && !com.optionslab.app.BuildConfig.GOLD) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) { reply(runCatching { com.optionslab.app.data.LiquidityTest.answer() }.getOrElse { "I could not read Liquidity's fills just now, Boss." }) }
+            return
+        }
+        // "Liquidity go-live checklist": its day-10 lines as the row shows them (information only; nothing switches to Live).
+        if (com.optionslab.ira.LiquidityGoLive.asked(q) && Ask.parse(q).command == null && !com.optionslab.app.BuildConfig.GOLD) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching {
+                    val t = com.optionslab.app.data.OrbArms.view().arms.firstOrNull { it.arm.liquidity }?.test
+                        ?: return@runCatching "Liquidity BANKNIFTY's checklist is not worked out yet, Boss."
+                    "Boss, " + t.checklistHead.replaceFirstChar { it.lowercase() } + ".\n" + t.checklist.joinToString("\n") + "\n" + com.optionslab.ira.LiquidityGoLive.NOTE
+                }.getOrElse { "I could not read Liquidity's checklist just now, Boss." })
+            }
             return
         }
         // "What passed?": every paper strategy's forward test against its own backtest (part 7, research X1).

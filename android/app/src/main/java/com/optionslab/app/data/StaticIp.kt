@@ -39,6 +39,17 @@ object StaticIp {
 
     fun valid(ip: String) = IPV4.matches(ip.trim())
 
+    /**
+     * The go-live checklist's line, from memory only (no vault, no network): true when the registered IP and the phone's last
+     * read public IP agree, false when none is registered or they differ, null when either is not known yet; with its words.
+     */
+    fun checkHint(): Pair<Boolean?, String> {
+        val reg = kept ?: return null to "not checked yet (open More → Zerodha → Static IP)"
+        val ip = reg.second ?: return false to "no static IP registered"
+        val now = cached?.second ?: return null to "registered $ip; the phone's IP not read yet"
+        return (now == ip) to (if (now == ip) "registered $ip, reached" else "registered $ip, but orders would go from $now")
+    }
+
     /** Is a VPN (the WireGuard tunnel) carrying the phone's traffic right now? */
     fun vpnOn(): Boolean = Relay.enabled && Relay.connected || runCatching {
         val cm = app.getSystemService(ConnectivityManager::class.java)

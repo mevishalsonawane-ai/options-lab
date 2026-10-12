@@ -146,7 +146,10 @@ internal fun rememberToday(): LocalDate {
  */
 @Composable
 fun AutomationHomeCard(model: AppModel) {
-    AutomationFeedCard(load = { AutomationFeed.load() }) { s -> AutomationSectionBody(model, s) }
+    // Liquidity BANKNIFTY's go-live checklist (12 Oct), from the arms' view the Home poll already keeps (memory only).
+    val orb by model.orb.collectAsState(Dispatchers.Main.immediate)
+    val goLive = orb?.arms?.firstOrNull { it.arm.liquidity }?.test
+    AutomationFeedCard(load = { AutomationFeed.load() }, goLive = goLive) { s -> AutomationSectionBody(model, s) }
 }
 
 /**
@@ -154,7 +157,8 @@ fun AutomationHomeCard(model: AppModel) {
  * [section] is what a line's sheet shows. None in GOLD.
  */
 @Composable
-internal fun AutomationFeedCard(load: suspend () -> Unit, section: @Composable (AutomationSummary.Section) -> Unit) {
+internal fun AutomationFeedCard(load: suspend () -> Unit, goLive: com.optionslab.app.data.OrbArms.LiquidityTestView? = null,
+                                section: @Composable (AutomationSummary.Section) -> Unit) {
     if (com.optionslab.app.BuildConfig.GOLD) return
     // Rolls over at midnight (a card left composed overnight counts the new day's activity, not yesterday's).
     val today = rememberToday()
@@ -163,7 +167,7 @@ internal fun AutomationFeedCard(load: suspend () -> Unit, section: @Composable (
     val lines = remember(scope, today) { AutomationFeed.lines(today).stateIn(scope, SharingStarted.Eagerly, AutomationFeed.now(today)) }
     val l by lines.collectAsState(Dispatchers.Main.immediate)
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { load() } } }
-    AutomationCardContent(l, section)
+    AutomationCardContent(l, goLive, section)
 }
 
 /** One section in full, as its own Home card showed it before 11 Oct (every button and sheet). */
@@ -184,7 +188,8 @@ internal fun AutomationSectionBody(model: AppModel, s: AutomationSummary.Section
  * a line's sheet shows ([AutomationSectionBody] in the app).
  */
 @Composable
-internal fun AutomationCardContent(lines: AutomationSummary.Lines, section: @Composable (AutomationSummary.Section) -> Unit) {
+internal fun AutomationCardContent(lines: AutomationSummary.Lines, goLive: com.optionslab.app.data.OrbArms.LiquidityTestView? = null,
+                                   section: @Composable (AutomationSummary.Section) -> Unit) {
     val p = LocalPalette.current
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     val rows = lines.rows()
@@ -201,6 +206,7 @@ internal fun AutomationCardContent(lines: AutomationSummary.Lines, section: @Com
                     .padding(vertical = 4.dp))
         }
         if (lines.problemsHead != null) ProblemsBlock(lines)
+        goLive?.let { GoLiveBlock(it) }
         rows.forEachIndexed { i, (s, line) ->
             if (i > 0) Rule()
             Row(Modifier.testTag("automation-line-${s.key}").fillMaxWidth().heightIn(min = 48.dp)
@@ -228,6 +234,23 @@ internal fun ProblemsBlock(lines: AutomationSummary.Lines) {
         lines.problems.firstOrNull()?.let { Text(it, style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(top = 2.dp)) }
         if (lines.problems.size > 1) com.optionslab.app.ui.components.Expandable("automation-problems", label = "Show all problems", hideLabel = "Hide problems") {
             lines.problems.drop(1).forEach { Text(it, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 2.dp)) }
+        }
+    }
+    Rule()
+}
+
+/**
+ * Liquidity BANKNIFTY's day-10 go-live checklist on the card (12 Oct): its count in sight, the lines folded. Information only:
+ * nothing switches to Live from here (the row has the same lines and Boss's tick).
+ */
+@Composable
+internal fun GoLiveBlock(t: com.optionslab.app.data.OrbArms.LiquidityTestView) {
+    val p = LocalPalette.current
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp).testTag("automation-golive")) {
+        Text(t.checklistHead, style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
+        com.optionslab.app.ui.components.Expandable("automation-golive", label = "Show the checklist", hideLabel = "Hide the checklist") {
+            t.checklist.forEach { Text(keepNumbersWhole(it.toString()), style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 2.dp)) }
+            Note(com.optionslab.ira.LiquidityGoLive.NOTE, Modifier.padding(top = 4.dp))
         }
     }
     Rule()

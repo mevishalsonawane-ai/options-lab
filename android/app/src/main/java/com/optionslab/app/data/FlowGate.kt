@@ -110,7 +110,9 @@ object FlowGate {
                        * The direction the portfolio guard let through (+1 / -1; 0: it was not asked or it blocked) and the account,
                        * counted as opened once the entry is taken ([taken], an entered [outcome]) - review R1.
                        */
-                      val opens: Int = 0, val opensLive: Boolean = false)
+                      val opens: Int = 0, val opensLive: Boolean = false,
+                      /** The book within the strategy ([check]'s what: "liquidity15"), its own claim in the portfolio guard (12 Oct). */
+                      val claim: String = "")
 
     /** The verdict a skipped entry returns and is logged with. */
     const val SKIPPED = FlowShadow.SKIPPED
@@ -142,7 +144,8 @@ object FlowGate {
         // The day's regime (TODO S8, 11 Oct): a strategy whose proven regime lesson says it loses on today's kind of day sits it
         // out (size 0) - paper by itself after its shadow days, live only once Boss approved it with the PIN. Memory only; skip only.
         // Asked BEFORE the portfolio guard (review R1): an entry sat out never reaches the guard.
-        val regime = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD)
+        // Liquidity BANKNIFTY frozen for its paper test (12 Oct): a regime lesson does not sit its entries out (recorded only).
+        val regime = if (decide && brake?.block != true && !com.optionslab.app.BuildConfig.GOLD && !runCatching { LiquidityTest.frozenKey(key) }.getOrDefault(false))
             runCatching { com.optionslab.ira.RegimeParams.overrideToday(key, live, date = Market.today())?.get(com.optionslab.ira.RegimeParams.SIZE_KEY)?.takeIf { it <= 0.0 }
                 ?.let { "sits out today's kind of day (a proven regime lesson; it lowers risk only)" } }.getOrNull() else null
         // The portfolio guard (TODO S12, 11 Oct): correlated arms already in the same way today past the cap - the later entry
@@ -159,7 +162,7 @@ object FlowGate {
         }
         return runCatching {
             val s = setting(key)
-            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null, opens, live)
+            if (s.mode == OrderFlow.Mode.OFF || com.optionslab.app.BuildConfig.GOLD) return Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null, opens, live, what)
             val now = System.currentTimeMillis()
             val r = OrderFlowLive.readNow(underlying, now)
             val a = OrderFlow.agreement(r, side, s.threshold, (testNowSec ?: (now / 1000)))
@@ -198,8 +201,8 @@ object FlowGate {
                 Diag.record("flow", "$label: skipped by flow (${if (live) "live" else "paper"} ${if (side > 0) "bullish" else "bearish"} entry on $underlying; " +
                     "${OrderFlow.word(r)}, needs ${s.threshold}" + (r?.takeIf { it.flags.isNotEmpty() }?.let { "; trap guard: ${OrderFlow.trapWords(it)}" } ?: "") + ")")
             }
-            Ticket(id, skip, a, key, if (paused) pauseWhy else null, opens, live)
-        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null, opens, live) }
+            Ticket(id, skip, a, key, if (paused) pauseWhy else null, opens, live, what)
+        }.getOrElse { Ticket(id, paused, OrderFlow.Agreement.UNKNOWN, key, if (paused) pauseWhy else null, opens, live, what) }
     }
 
     /** [check] off the caller's thread (it may read the log once after a restart): for the strategies' suspend paths. */
@@ -260,7 +263,8 @@ object FlowGate {
 
     /** [t]'s entry was taken: the portfolio guard counts it as opened (only an entry it let through; skipped ones never). */
     private fun opened(t: Ticket) {
-        if (t.opens != 0 && !t.skip) runCatching { PortfolioHost.opened(t.key, t.opens, t.opensLive) }
+        // Only Liquidity's books are separate claims (each its own position); every other strategy counts once, as before.
+        if (t.opens != 0 && !t.skip) runCatching { PortfolioHost.opened(t.key, t.opens, t.opensLive, claim = if (t.key.startsWith("liquidity")) t.claim else "") }
     }
 
     // ---- results ----------------------------------------------------------------------------------------------------------

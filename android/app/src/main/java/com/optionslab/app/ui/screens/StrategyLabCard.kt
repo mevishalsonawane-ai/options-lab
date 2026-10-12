@@ -60,7 +60,43 @@ internal fun StrategyLabSection(model: AppModel) {
     var open by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { VariantRunner.ensureLoaded() } } }
     StrategyLabCardContent(variants, forge, onOpen = { open = it ?: "" })
+    // Liquidity BANKNIFTY frozen for its paper test (12 Oct): said here, and Boss unfreezes it here.
+    val liq by com.optionslab.app.data.LiquidityTest.state.collectAsState(Dispatchers.Main.immediate)
+    val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
+    LiquidityFreezeRow(liq, today) { model.liquidityFreeze(it) }
     open?.let { sel -> StrategyLabDialog(model, sel.ifEmpty { null }) { open = null } }
+}
+
+internal const val UNFREEZE = "Unfreeze Liquidity BANKNIFTY"
+internal const val FREEZE_AGAIN = "Freeze it again for the paper test"
+
+/**
+ * Liquidity BANKNIFTY's freeze for its paper test ([com.optionslab.ira.LiquidityFreeze]): the note, and Boss's switch -
+ * unfreezing asks first (then the lab, Autopilot and the regime lessons may change it again, by themselves only ever
+ * lowering risk); freezing again applies at once. [onSet] true: unfreeze.
+ */
+@Composable
+internal fun LiquidityFreezeRow(state: com.optionslab.ira.LiquidityFreeze.State, today: java.time.LocalDate, onSet: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    var confirm by remember { mutableStateOf(false) }
+    val frozen = com.optionslab.ira.LiquidityFreeze.frozen(state, today)
+    Text("Liquidity BANKNIFTY: " + com.optionslab.ira.LiquidityFreeze.note(state, today),
+        style = Type.label.copy(color = if (frozen) p.amber else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-freeze"))
+    if (!today.isAfter(com.optionslab.ira.LiquidityFreeze.UNTIL))
+        BrassButton(if (frozen) UNFREEZE else FREEZE_AGAIN, Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) {
+            if (frozen) confirm = true else onSet(false)
+        }
+    if (confirm) com.optionslab.app.ui.components.AlertDialog(
+        onDismissRequest = { confirm = false },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+        title = { Text("$UNFREEZE?", style = Type.title) },
+        text = {
+            Text("Its paper test would no longer run on its own rules: the strategy lab's paper variants, Autopilot and the day's regime " +
+                "lessons may change its exits or skip its entries again (by themselves they only ever lower risk).", style = Type.bodySmall.copy(color = p.inkSoft))
+        },
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirm = false; onSet(true) }) { Text("Unfreeze") } },
+        dismissButton = { com.optionslab.app.ui.components.TextButton({ confirm = false }) { Text("Keep it frozen") } },
+    )
 }
 
 /** The card from plain state (tests drive it). [onOpen]: the sheet, at a candidate's id or at the top (null). */

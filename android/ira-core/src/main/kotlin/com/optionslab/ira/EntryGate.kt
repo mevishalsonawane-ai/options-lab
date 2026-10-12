@@ -96,14 +96,15 @@ class EntryHolds(private val ttlMs: Long = 30_000L) {
     @Synchronized
     fun checkAndHold(trader: String, who: String, underlying: String, direction: Int, held: List<AutoSide.Held>,
                      booked: Map<String, List<AutoSide.Held>>, now: Long, rank: ArmPriority.Rank = ArmPriority.Rank.OTHER,
-                     live: Boolean = false): String? {
+                     live: Boolean = false, book: String? = null): String? {
         prune(now, booked)
         val others = holds.filter { it.trader != trader }.map { it.held }
-        val why = AutoSide.check(underlying, direction, held + others, rank, live)
+        val why = AutoSide.check(underlying, direction, held + others, rank, live, book)
         if (why == null && direction != 0) {
-            holds.removeAll { it.trader == trader && it.held.underlying.equals(underlying, ignoreCase = true) && it.held.direction == direction }
+            holds.removeAll { it.trader == trader && it.held.underlying.equals(underlying, ignoreCase = true) && it.held.direction == direction &&
+                it.held.book == book }
             val claim = AutoSide.Held(who, "a ${underlying.uppercase()} entry being placed", underlying.uppercase(), direction,
-                "an entry being placed", rank, live)
+                "an entry being placed", rank, live, book)
             holds += Hold(trader, claim, now, count(booked[trader], underlying, direction))
         }
         return why

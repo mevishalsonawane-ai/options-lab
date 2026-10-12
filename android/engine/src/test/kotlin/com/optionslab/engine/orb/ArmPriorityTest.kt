@@ -58,6 +58,43 @@ class ArmPriorityTest {
         assertEquals(setOf("orb", "liquidity30_fin", "straddle", "pine"), live.taken.map { it.who }.toSet())
     }
 
+    @Test fun liquidityBankniftyIsBlockedByNoOtherTraderAndItsTwoBooksNeverBlockEachOther() {
+        val bn = "BANKNIFTY"
+        assertTrue(ArmPriority.liquidityBn(Rank.LIQUIDITY, "liquidity15", bn)); assertTrue(ArmPriority.liquidityBn(Rank.LIQUIDITY, "liquidity5", "banknifty"))
+        assertFalse(ArmPriority.liquidityBn(Rank.LIQUIDITY, "liquidity5_mid", bn)); assertFalse(ArmPriority.liquidityBn(Rank.LIQUIDITY, null, bn))
+        assertFalse(ArmPriority.liquidityBn(Rank.LIQUIDITY, "liquidity15", "MIDCPNIFTY")); assertFalse(ArmPriority.liquidityBn(Rank.OTHER, "liquidity15", bn))
+        // The two books: each its own claim (paper and live), the same book still counts.
+        assertFalse(ArmPriority.counts(Rank.LIQUIDITY, false, Rank.LIQUIDITY, false, bn, "liquidity15", "liquidity5"))
+        assertFalse(ArmPriority.counts(Rank.LIQUIDITY, true, Rank.LIQUIDITY, true, bn, "liquidity5", "liquidity15"))
+        assertTrue(ArmPriority.counts(Rank.LIQUIDITY, false, Rank.LIQUIDITY, false, bn, "liquidity15", "liquidity15"))
+        // An OTHER trader's holding never blocks it on paper; both live keep the guard.
+        assertFalse(ArmPriority.counts(Rank.OTHER, false, Rank.LIQUIDITY, false, bn, "Jarvis solo", "liquidity15"))
+        assertFalse(ArmPriority.counts(Rank.OTHER, true, Rank.LIQUIDITY, false, bn, "a Pine script", "liquidity5"))
+        assertTrue(ArmPriority.counts(Rank.OTHER, true, Rank.LIQUIDITY, true, bn, "a Pine script", "liquidity5"))
+        // The other trader is still refused while Liquidity BANKNIFTY holds - and that is a yield.
+        assertTrue(ArmPriority.counts(Rank.LIQUIDITY, false, Rank.OTHER, false, bn, "liquidity15", "SOLO"))
+        assertTrue(ArmPriority.yielded(Rank.LIQUIDITY, "liquidity15", Rank.OTHER, "SOLO", bn))
+        assertFalse(ArmPriority.yielded(Rank.LIQUIDITY, "liquidity15", Rank.OLD_ARM, "orb", bn), "the ORB family keeps its own words")
+        assertFalse(ArmPriority.yielded(Rank.LIQUIDITY, "liquidity15_mid", Rank.OTHER, "SOLO", "MIDCPNIFTY"))
+        // Other indices, other books: as before.
+        assertTrue(ArmPriority.counts(Rank.OTHER, false, Rank.LIQUIDITY, false, "MIDCPNIFTY", "SOLO", "liquidity15_mid"))
+        assertTrue(ArmPriority.counts(Rank.LIQUIDITY, false, Rank.LIQUIDITY, false, "MIDCPNIFTY", "liquidity15_mid", "liquidity5_mid"))
+        assertFalse(ArmPriority.counts(Rank.OLD_ARM, false, Rank.LIQUIDITY, false, bn, "orb", "liquidity15"))
+        // A re-armed Liquidity shadow (no book of its own) does not block it either, and yields to it.
+        assertFalse(ArmPriority.counts(Rank.LIQUIDITY, false, Rank.LIQUIDITY, false, bn, null, "liquidity5"))
+        assertTrue(ArmPriority.counts(Rank.LIQUIDITY, false, Rank.LIQUIDITY, false, bn, "liquidity5", null))
+        assertTrue(ArmPriority.yielded(Rank.LIQUIDITY, "liquidity5", Rank.LIQUIDITY, null, bn))
+
+        // Replayed: both books hold together, Solo's later entry yields.
+        val g = ArmPriority.guard(listOf(leg("liquidity15", Rank.LIQUIDITY, 1, 1000, 1100), leg("liquidity5", Rank.LIQUIDITY, 1, 1010, 1040),
+            leg("SOLO", Rank.OTHER, 1, 1020, 1200)))
+        assertEquals(listOf("liquidity15", "liquidity5"), g.taken.map { it.who })
+        assertEquals("SOLO refused: liquidity15 holds BANKNIFTY (yielded to Liquidity BANKNIFTY)", g.refused.single().words)
+        // Solo first: Liquidity still goes, beside it.
+        val s = ArmPriority.guard(listOf(leg("SOLO", Rank.OTHER, -1, 1000, 1200), leg("liquidity5", Rank.LIQUIDITY, 1, 1010, 1040)))
+        assertEquals(2, s.taken.size)
+    }
+
     @Test fun theEveningReplayMarksTheOrbTradesLiquidityWouldHaveRefused() {
         val trades = listOf(ReplayTrade("10:05", "10:40", "CE", 300.0, 340.0, "target"), ReplayTrade("11:00", "12:00", "PE", 250.0, 210.0, "stop"))
         val liq = listOf(leg("liquidity15", Rank.LIQUIDITY, 1, 1045, 1130))

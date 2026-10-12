@@ -145,6 +145,12 @@ object Diag {
         // Round 4: each fill's slippage against the price it meant (live and the paper book's modelled, apart), and the app's
         // books against Zerodha's as last checked (report only).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FillSlippage.diagLine() }.getOrElse { "Slippage: could not read" }).append('\n')
+        // Liquidity BANKNIFTY's paper test (12 Oct): its fill quality, its freeze, the live stop rule and the go-live checklist's count.
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            append(runCatching { LiquidityTest.diagLine() }.getOrElse { "Liquidity fill quality: could not read" }).append('\n')
+            append("Liquidity BANKNIFTY: ").append(runCatching { LiquidityTest.note() }.getOrElse { "freeze could not be read" }).append(' ')
+                .append(runCatching { com.optionslab.ira.LiquidityStopRule.line(OrbArms.liquidityStopHint, live = true) }.getOrElse { "" }).append('\n')
+        }
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { ZerodhaSync.line() }.getOrElse { "Zerodha sync: could not read" }).append('\n')
         // The order review (12 Oct): when it last ran and its counts (no rupees).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderReviewHost.diagLine() }.getOrElse { "Order review: could not read" }).append('\n')

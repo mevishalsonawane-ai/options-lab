@@ -40,8 +40,12 @@ object AutoExposure {
      */
     fun check(source: Source, underlying: String, direction: Int, own: List<AutoSide.Held>,
               rank: com.optionslab.engine.orb.ArmPriority.Rank = com.optionslab.engine.orb.ArmPriority.Rank.OTHER,
-              live: Boolean = false, account: Boolean? = live, trader: String = source.name): String? {
+              live: Boolean = false, account: Boolean? = live, trader: String = source.name, book: String? = null): String? {
         DayLockGuard.refusal(account)?.let { return it }
+        // Liquidity BANKNIFTY gets every signal it makes (Boss, 12 Oct): while its books are armed LIVE, no other automatic
+        // trader (the ORB family, Pine, the Strategies, Solo; Jarvis trades paper only) takes a live BANKNIFTY entry, so the
+        // live one-index guard never has to refuse Liquidity's. It only removes entries (risk-lowering); paper is unaffected.
+        liveYield(underlying, live, rank, book)?.let { return it }
         // 10 Oct: the traders now decide side by side (the watch's workers, the event-driven checks). The check and a claim on
         // the index are one step ([com.optionslab.ira.EntryHolds]): a trader let through holds "an entry being placed" there,
         // which every other trader counts as a position until its own published positions show it booked (or 30 s pass).
@@ -49,7 +53,18 @@ object AutoExposure {
         val pub = published()
         val others = pub.filterKeys { k -> k != source.name && !(source == Source.ORB && k == SHADOW) }.values.flatten()
         return holds.checkAndHold(trader, whoOf(trader), underlying, direction, own + others, pub,
-            System.currentTimeMillis(), rank, live)
+            System.currentTimeMillis(), rank, live, book)
+    }
+
+    /** What a live BANKNIFTY entry of another trader says while Liquidity BANKNIFTY is armed live ([check]). */
+    const val LIVE_YIELD = "${com.optionslab.engine.orb.ArmPriority.YIELD_WORDS}: it is armed live on BANKNIFTY, so no other automatic trader " +
+        "takes a live BANKNIFTY entry (paper entries are unaffected)"
+
+    /** [LIVE_YIELD] for a live entry on [underlying] by anything but Liquidity BANKNIFTY's own books, while they are armed live; else null. */
+    internal fun liveYield(underlying: String, live: Boolean, rank: com.optionslab.engine.orb.ArmPriority.Rank, book: String?): String? {
+        if (!live || !underlying.equals(com.optionslab.engine.orb.ArmPriority.BN, ignoreCase = true)) return null
+        if (com.optionslab.engine.orb.ArmPriority.liquidityBn(rank, book, underlying)) return null
+        return if (runCatching { OrbArms.liquidityBnLiveHint }.getOrDefault(false)) LIVE_YIELD else null
     }
 
     /** The claims of entries on their way ([check]); memory only. */
@@ -92,8 +107,8 @@ object AutoExposure {
 
     /** The activity log's word when a Liquidity entry goes beside an ORB arm's position ([AutoSide.priorityNote]); null when none. */
     fun priorityNote(source: Source, who: String, underlying: String, direction: Int, own: List<AutoSide.Held>,
-                     rank: com.optionslab.engine.orb.ArmPriority.Rank, live: Boolean = false): String? =
-        AutoSide.priorityNote(who, underlying, direction, own + others(source), rank, live)
+                     rank: com.optionslab.engine.orb.ArmPriority.Rank, live: Boolean = false, book: String? = null): String? =
+        AutoSide.priorityNote(who, underlying, direction, own + others(source), rank, live, book)
 
     /** All of them (Boss's own order review warns against these: [AutoSide.warn]). */
     fun all(): List<AutoSide.Held> = others(Source.ORB) + runCatching { OrbArms.exposureHint }.getOrDefault(emptyList()) +

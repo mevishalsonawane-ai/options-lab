@@ -194,6 +194,11 @@ object OrbArms {
          * until Boss switches the index back on from the row ([unparkLiquidity]).
          */
         val parked: MutableSet<String> = HashSet(),
+        /**
+         * Liquidity BANKNIFTY's evening replay (12 Oct, its go-live checklist): day -> the replayed signals of its 15- and
+         * 5-minute books ([com.optionslab.engine.orb.LiquidityDayReplay]), the last 60 days.
+         */
+        val liqReplays: MutableMap<String, JSONArray> = LinkedHashMap(),
     )
 
     private var cache: Book? = null
@@ -273,6 +278,7 @@ object OrbArms {
                     if (p.has("live")) p.getBoolean("live") else null) } }
             o.optJSONObject("status")?.let { m -> m.keys().forEach { b.status[key(it)] = m.getString(it) } }
             o.optJSONObject("replays")?.let { m -> m.keys().forEach { b.replays[it] = m.getJSONObject(it) } }
+            o.optJSONObject("liqReplays")?.let { m -> m.keys().forEach { k -> m.optJSONArray(k)?.let { b.liqReplays[k] = it } } }
             o.optJSONObject("upDays")?.let { m -> m.keys().forEach { b.upDays[it] = m.getBoolean(it) } }
             o.optJSONObject("since")?.let { m -> m.keys().forEach { b.since[it] = m.getString(it) } }
             o.optJSONArray("migrated")?.let { a -> for (i in 0 until a.length()) b.migrated += a.getString(i) }
@@ -367,7 +373,61 @@ object OrbArms {
     @Volatile var armedLabelsHint: List<String> = emptyList()
         private set
 
+    /**
+     * Whether a Liquidity BANKNIFTY book is armed and cleared for Zerodha (Live with Boss's PIN), as of the last load or save:
+     * read without the lock by [AutoExposure.liveYield] - the other traders then take no live BANKNIFTY entry.
+     */
+    @Volatile var liquidityBnLiveHint: Boolean = false
+        private set
+
+    private val NO_STOP = com.optionslab.ira.LiquidityStopRule.Status(false, null, null, 0.0, 0.0, 0.0, 0)
+
+    /**
+     * Liquidity BANKNIFTY's live stop rule ([com.optionslab.ira.LiquidityStopRule]) over its live record, as of the last load or
+     * save: its entries read it (memory only). [liquidityStopPaperHint]: the same walk over its paper record ("would have stopped").
+     */
+    @Volatile var liquidityStopHint: com.optionslab.ira.LiquidityStopRule.Status = NO_STOP
+        private set
+    @Volatile var liquidityStopPaperHint: com.optionslab.ira.LiquidityStopRule.Status = NO_STOP
+        private set
+
+    /** Liquidity BANKNIFTY's closed trades in [b] on one account, for the stop rule (rupees after charges, as booked). */
+    private fun bnClosed(b: Book, live: Boolean): List<com.optionslab.ira.LiquidityStopRule.Trade> =
+        b.positions.filter { it.arm in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && !it.open && it.live == live && it.exitTime != null }
+            .map { p -> com.optionslab.ira.LiquidityStopRule.Trade(epochMs(p.exitTime!!), p.exitTime.toLocalDate(), (p.grossPnl ?: 0.0) - p.charges) }
+
+    private fun stopHints(b: Book) {
+        val st = runCatching { LiquidityTest.state.value }.getOrDefault(com.optionslab.ira.LiquidityFreeze.State())
+        val day = today()
+        val live = com.optionslab.ira.LiquidityStopRule.check(bnClosed(b, true), day, st.stopResetAtMs)
+        liquidityStopHint = live
+        liquidityStopPaperHint = com.optionslab.ira.LiquidityStopRule.check(bnClosed(b, false), day)
+        // Reached: told once (a notification with no amount, a line in Jarvis's chat), in the background - never on this path.
+        if (live.stopped && LiquidityTest.markStopTold(live.key)) LiquidityTest.later {
+            runCatching { Diag.record("orb", "Liquidity BANKNIFTY: live stop rule reached on ${live.day} (${live.why}); new entries go to paper until Boss re-enables it with his PIN") }
+            runCatching { Notifier.post(app, LIQ_STOP_NOTICE, Notifier.APPROVAL, "Liquidity BANKNIFTY: live entries stopped", com.optionslab.ira.LiquidityStopRule.NOTICE, "almanac") }
+            runCatching { com.optionslab.app.ira.IraActivity.add("Liquidity BANKNIFTY's live stop rule was reached (${live.why}): it takes no new live entry " +
+                "until you re-enable it with your PIN on its row; exits continue.") }
+        }
+    }
+
+    /**
+     * Boss re-enables Liquidity BANKNIFTY's live entries after its stop rule, with his PIN ([pinConfirmed]; never by voice, a
+     * backup or an automation): the rule counts afresh from now. Raising live risk again is his alone.
+     */
+    suspend fun reenableLiquidityLive(pinConfirmed: Boolean): String {
+        if (!pinConfirmed) return "Re-enabling Liquidity BANKNIFTY's live entries takes your PIN."
+        if (!liquidityStopHint.stopped) return "Liquidity BANKNIFTY's live stop rule is not reached: nothing to re-enable."
+        LiquidityTest.resetStop(System.currentTimeMillis())
+        lock.withLock { stopHints(book()) }
+        runCatching { Diag.record("orb", "Liquidity BANKNIFTY: live entries re-enabled by Boss with his PIN; the stop rule counts from now") }
+        return "Liquidity BANKNIFTY may take live entries again; its stop rule counts from now (-Rs 40,000 from its best, -Rs 13,000 a month)."
+    }
+
     private fun hints(b: Book) {
+        runCatching { stopHints(b) }
+        liquidityBnLiveHint = LiquidityRules.BOOKS.filter { it.source in com.optionslab.engine.orb.ArmPriority.BN_BOOKS }
+            .any { b.armed[it.source] == true && b.liveOk[it.source] == true }
         armedHint = ALL_ARMS.any { b.armed[it.source] == true }
         armedLabelsHint = ALL_ARMS.filter { b.armed[it.source] == true }.map { it.label }
         holdingHint = b.positions.any { it.open }
@@ -388,7 +448,7 @@ object OrbArms {
         }
         com.optionslab.ira.AutoSide.Held.option(arm?.let { ownerOf(it) } ?: p.arm, p.symbol, und, p.right, long = true,
             rank = arm?.let { com.optionslab.engine.orb.ArmPriority.rankOf(it) } ?: com.optionslab.engine.orb.ArmPriority.Rank.OTHER,
-            live = p.live)
+            live = p.live, book = p.arm)
     }
 
     /**
@@ -406,10 +466,12 @@ object OrbArms {
         val dir = com.optionslab.ira.AutoSide.direction(c.right.name, true)
         val own = exposureOf(b) + runCatching { ShadowArms.exposureHint }.getOrDefault(emptyList())
         val rank = com.optionslab.engine.orb.ArmPriority.rankOf(arm)
-        val refusal = AutoExposure.check(AutoExposure.Source.ORB, c.underlying, dir, own, rank, live)
-        // The activity log: a Liquidity entry going beside an ORB arm's position says why it was not refused.
+        // Each Liquidity BANKNIFTY book is its own claim (12 Oct): its book's source goes with the check.
+        val refusal = AutoExposure.check(AutoExposure.Source.ORB, c.underlying, dir, own, rank, live, book = arm.source)
+        // The activity log: a Liquidity entry going beside another position (an ORB arm's, another trader's on BANKNIFTY, its
+        // other BANKNIFTY book's) says why it was not refused.
         if (refusal == null && rank == com.optionslab.engine.orb.ArmPriority.Rank.LIQUIDITY) runCatching {
-            AutoExposure.priorityNote(AutoExposure.Source.ORB, ownerOf(arm), c.underlying, dir, own, rank, live)?.let { Diag.record("orb", it) }
+            AutoExposure.priorityNote(AutoExposure.Source.ORB, ownerOf(arm), c.underlying, dir, own, rank, live, book = arm.source)?.let { Diag.record("orb", it) }
         }
         return refusal
     }
@@ -635,6 +697,7 @@ object OrbArms {
                 p.volSkip?.let { put("volSkip", it) }; p.strong?.let { put("strong", it) }; p.live?.let { put("live", it) } }) } })
         o.put("status", JSONObject(b.status as Map<*, *>))
         o.put("replays", JSONObject().apply { b.replays.entries.toList().takeLast(120).forEach { (k, v) -> put(k, v) } })
+        o.put("liqReplays", JSONObject().apply { b.liqReplays.entries.toList().takeLast(60).forEach { (k, v) -> put(k, v) } })
         o.put("upDays", JSONObject(b.upDays as Map<*, *>))
         o.put("since", JSONObject(b.since as Map<*, *>))
         o.put("migrated", JSONArray(b.migrated.sorted()))
@@ -770,13 +833,22 @@ object OrbArms {
     }
     /** Liquidity 15+5's EXIT parameters on [day] for the [live] account (its entries are frozen in code), memory only. */
     private fun liqParams(day: LocalDate, live: Boolean): com.optionslab.engine.orb.LiquidityParams = VariantRunner.liquidityParams(day, live)
-    private fun liqParams(p: Position): com.optionslab.engine.orb.LiquidityParams = p.liq ?: liqParams(p.day, p.live)
+    private fun liqParams(p: Position): com.optionslab.engine.orb.LiquidityParams = p.liq ?: liqParamsOf(p.arm, p.day, p.live)
+
+    /**
+     * [book]'s exit parameters: Liquidity's BANKNIFTY books trade their constants while frozen for the paper test ([LiquidityTest],
+     * Boss 12 Oct: the strategy lab's variants are not applied to them, by itself or otherwise, until he unfreezes it); every
+     * other book as [liqParams]. Memory only.
+     */
+    private fun liqParamsOf(book: String, day: LocalDate, live: Boolean): com.optionslab.engine.orb.LiquidityParams =
+        if (runCatching { LiquidityTest.frozen(book) }.getOrDefault(true) && book in com.optionslab.engine.orb.ArmPriority.BN_BOOKS)
+            com.optionslab.engine.orb.LiquidityParams.DEFAULT else liqParams(day, live)
 
     /** [p] with the exits' parameters in force now kept on it (review R1; at the entry - see [Position.stopPts]). */
     private fun stamped(p: Position): Position = runCatching {
         val a = armOf(p.arm)
         when {
-            a.liquidity -> p.copy(liq = liqParams(p.day, p.live))
+            a.liquidity -> p.copy(liq = liqParamsOf(p.arm, p.day, p.live))
             a.source in com.optionslab.ira.ArmParams.ORB_ARMS -> paramsOf(a, p.day, p.live).let { p.copy(stopPts = it.stopPoints, targetPts = it.targetPoints) }
             else -> p
         }
@@ -791,7 +863,7 @@ object OrbArms {
     }.getOrNull()
     /** Whether a new entry of [arm] on [day] for the [live] account rests under the profit-lock ladder (Liquidity: only with a lock variant). */
     private fun ladderOn(arm: Arm, day: LocalDate, live: Boolean): Boolean =
-        if (arm.liquidity) liqParams(day, live).lockPct > 0 else ProfitLock.targetOf(arm) != null
+        if (arm.liquidity) liqParamsOf(arm.source, day, live).lockPct > 0 else ProfitLock.targetOf(arm) != null
     /** "40" for a whole number of points, else "37.5". */
     private fun pts(x: Double): String = if (kotlin.math.abs(x - Math.rint(x)) < 1e-6) "%.0f".format(Locale.ENGLISH, x) else "%.1f".format(Locale.ENGLISH, x)
     /** "a 40-point", "an 80-point" (the arming words). */
@@ -841,10 +913,65 @@ object OrbArms {
          * and a sell once closed) - R14's charges line ([com.optionslab.engine.orb.ReentryCap.chargesWords]).
          */
         val chargesToday: Double = 0.0, val chargesMonth: Double = 0.0, val ordersMonth: Int = 0,
+        /** Liquidity 15+5 only: Liquidity BANKNIFTY's paper test (12 Oct) - its freeze, checklist, stop rule and fill quality. */
+        val test: LiquidityTestView? = null,
     ) {
         /** The charges line for the row's details, or null when nothing was paid this month. */
         val chargesLine: String? get() = com.optionslab.engine.orb.ReentryCap.chargesWords(chargesToday, chargesMonth, ordersMonth)
     }
+
+    /**
+     * Liquidity BANKNIFTY's paper test on its row (Boss, 12 Oct): the [freeze] note ([frozen] now), its [paperTest] verdict
+     * against its backtest ([com.optionslab.ira.Vetting]), the day-10 go-live [checklist] ([checklistHead] its count), the live
+     * stop rule's lines ([stop]; [stopped]: live entries stopped now) and the fill quality ([fillsSummary], the latest [fills]);
+     * [watched]: Boss's tick for the first live trade. Information only.
+     */
+    data class LiquidityTestView(
+        val freeze: String, val frozen: Boolean, val paperTest: String,
+        val checklist: List<com.optionslab.ira.LiquidityGoLive.Line>, val checklistHead: String,
+        val stop: List<String>, val stopped: Boolean, val fillsSummary: String, val fills: List<String>, val watched: Boolean,
+    )
+
+    /** What the paper test's lines read from outside the arms' book (read before the lock; memory or the small files). */
+    private class LiqExtra(val fills: List<com.optionslab.ira.FillQuality.Rec>, val flaws: Pair<Int, Int>?, val ip: Pair<Boolean?, String>,
+                           val state: com.optionslab.ira.LiquidityFreeze.State, val note: String, val frozen: Boolean)
+
+    private fun liqExtra(): LiqExtra = LiqExtra(
+        runCatching { LiquidityTest.fills() }.getOrDefault(emptyList()),
+        runCatching { OrderReviewHost.liquidityCounts(com.optionslab.ira.Vetting.START) }.getOrNull(),
+        runCatching { StaticIp.checkHint() }.getOrDefault(null to "not checked yet"),
+        LiquidityTest.state.value, runCatching { LiquidityTest.note() }.getOrDefault(""), runCatching { LiquidityTest.frozenNow() }.getOrDefault(true))
+
+    /** Liquidity BANKNIFTY's paper test from [b] (under the lock) and [x]. */
+    private fun liquidityTestView(b: Book, day: LocalDate, x: LiqExtra): LiquidityTestView {
+        val bn = com.optionslab.engine.orb.ArmPriority.BN_BOOKS
+        val start = com.optionslab.ira.Vetting.START
+        val paper = b.positions.filter { it.arm in bn && !it.live && !it.unconfirmed && !it.day.isBefore(start) }
+        // Rupees per lot (the backtest's unit): Liquidity trades 1 lot; a bigger size is divided back.
+        val trades = paper.filter { !it.open && it.exitTime != null }.map { p ->
+            com.optionslab.ira.Vetting.Trade(p.exitTime!!.toLocalDate(), ((p.grossPnl ?: 0.0) - p.charges) / p.lots.coerceAtLeast(1.0))
+        }
+        val entries = paper.map { p ->
+            com.optionslab.ira.LiquidityGoLive.PaperEntry(p.arm, p.signalBar, if (p.right == "CE") 1 else -1,
+                runCatching { Paper.contractOf(p.symbol)?.strike?.toInt() }.getOrNull(), p.entryTime, p.exitTime, LiquidityRules.minutesOf(armOf(p.arm)))
+        }
+        val lags = entries.map { e -> java.time.Duration.between(e.signalBar.plusMinutes(e.minutes.toLong()), e.entryTime).toMillis() / 1000.0 }
+        val fid = com.optionslab.ira.LiquidityGoLive.fidelity(entries, liquidityReplays(b).filterKeys { !it.isBefore(start) })
+        val stats = com.optionslab.ira.FillQuality.stats(x.fills)
+        val lines = com.optionslab.ira.LiquidityGoLive.lines(com.optionslab.ira.LiquidityGoLive.Inputs(trades, day, fid, lags, stats,
+            x.flaws?.first, x.flaws?.second, x.ip.first, x.ip.second, x.state.watched))
+        val liveArmed = LiquidityRules.BOOKS.any { it.source in bn && b.armed[it.source] == true && b.liveOk[it.source] == true }
+        val stop = listOfNotNull(
+            if (liveArmed || liquidityStopHint.trades > 0) com.optionslab.ira.LiquidityStopRule.line(liquidityStopHint, live = true) else null,
+            com.optionslab.ira.LiquidityStopRule.line(liquidityStopPaperHint, live = false))
+        val recent = x.fills.filter { it.bankNifty }.takeLast(8).reversed().map { com.optionslab.ira.FillQuality.line(it) }
+        return LiquidityTestView(x.note, x.frozen, com.optionslab.ira.Vetting.judge(com.optionslab.ira.LiquiditySplit.name("BANKNIFTY"), trades, day).text(),
+            lines, com.optionslab.ira.LiquidityGoLive.head(lines), stop, liquidityStopHint.stopped, com.optionslab.ira.FillQuality.summary(x.fills), recent,
+            x.state.watched)
+    }
+
+    /** Boss's tick on the checklist: he watched the first live trade with the app open (or took it back). */
+    fun setFirstLiveWatched(watched: Boolean) { LiquidityTest.setWatched(watched) }
 
     /** [arm]'s charges today and this month and its orders this month, from [positions] (the book keeps the last 2000). */
     internal fun chargesOf(positions: List<Position>, arm: String, day: LocalDate): Triple<Double, Double, Int> {
@@ -873,10 +1000,12 @@ object OrbArms {
         val why = runCatching { Strategies.stoppedWhy() }.getOrNull()
         // (The shadows' rows too: they never wait on a pass.)
         val shadows = runCatching { ShadowArms.rows() }.getOrDefault(emptyList())
-        return viewLocked().copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows)
+        // Liquidity BANKNIFTY's paper test reads its fill records and the order review before the lock (never under it).
+        val extra = if (com.optionslab.app.BuildConfig.GOLD) null else runCatching { liqExtra() }.getOrNull()
+        return viewLocked(extra).copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows)
     }
 
-    private suspend fun viewLocked(): View = lock.withLock {
+    private suspend fun viewLocked(extra: LiqExtra? = null): View = lock.withLock {
         val b = book()
         val day = today()
         val arms = ALL_ARMS.filter { it !in LiquidityRules.BOOKS }.map { a ->
@@ -885,7 +1014,7 @@ object OrbArms {
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
                 b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true,
                 record = RetiredArms.of(a.source), chargesToday = cToday, chargesMonth = cMonth, ordersMonth = orders)
-        } + liquidityView(b, day)
+        } + liquidityView(b, day, extra)
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
     }
@@ -903,7 +1032,7 @@ object OrbArms {
     }
 
     /** Liquidity 15+5 as one row: armed when its books are, both books' trades, each book's state. */
-    private fun liquidityView(b: Book, day: LocalDate): ArmView {
+    private fun liquidityView(b: Book, day: LocalDate, extra: LiqExtra? = null): ArmView {
         val books = LiquidityRules.BOOKS.map { it.source }
         val open = b.positions.lastOrNull { it.arm in books && it.open }
         val status = LiquidityRules.BOOKS.joinToString("  ") { a ->
@@ -915,7 +1044,8 @@ object OrbArms {
             lotSizes = lotSizes(), parked = b.parked.sorted()).let { v ->
                 // Its books' charges together (R14's charges line).
                 val c = books.map { chargesOf(b.positions, it, day) }
-                v.copy(chargesToday = c.sumOf { it.first }, chargesMonth = c.sumOf { it.second }, ordersMonth = c.sumOf { it.third })
+                v.copy(chargesToday = c.sumOf { it.first }, chargesMonth = c.sumOf { it.second }, ordersMonth = c.sumOf { it.third },
+                    test = extra?.let { x -> runCatching { liquidityTestView(b, day, x) }.getOrNull() })
             }
     }
 
@@ -1709,6 +1839,8 @@ object OrbArms {
     private const val HERO_STOOD_DOWN = "hero_stood_down"
     /** The Hero arm's own notices (fired, disarmed); the arms' approvals use 6960 and up. */
     private const val HERO_NOTICE = 6990
+    /** Liquidity BANKNIFTY's live stop rule reached (once). */
+    private const val LIQ_STOP_NOTICE = 6988
 
     /**
      * TEST ONLY: a feed key's 1-minute bars (the NIFTY index, NIFTY options) as the feed would return them at a given
@@ -2071,7 +2203,7 @@ object OrbArms {
         // The live account's parameters today (S1: a variant only after Boss's PIN, from the session after): its stop.
         val today0 = now().toLocalDate()
         val lp = paramsOf(arm, today0, live = true)
-        val lq = liqParams(today0, live = true)
+        val lq = liqParamsOf(arm.source, today0, live = true)
         if (liquidity == null && OrbRules.stopTrigger(last, lp.stopPoints) == null) return "refused: premium %.2f is at or below %s, a %s-point stop has no level"
             .format(Locale.ENGLISH, last, pts(lp.stopPoints), pts(lp.stopPoints))
         if (Strategies.stoppedToday()) return "stopped_for_today"
@@ -2522,36 +2654,60 @@ object OrbArms {
      * A MARKET BUY of Liquidity's lots ([LiquidityLots], 1-3 of the contract's own lot) of the option on the break (paper, or Zerodha when [live]), with its resting stop 15% below
      * the fill. [near], [volSkip]: candidates (a)'s and (c)'s shadow flags, kept with the position.
      */
-    private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, live: Boolean,
+    private suspend fun enterLiquidity(b: Book, arm: Arm, s: LiquidityRules.Signal, signalBar: LocalDateTime, strike: Int, liveAsked: Boolean,
                                        near: Boolean? = null, volSkip: Boolean? = null, strong: Boolean? = null): String {
         runCatching { OrderTiming.decided() }
+        val decidedMs = System.currentTimeMillis()
+        // Liquidity BANKNIFTY's live stop rule (12 Oct): once reached, a new entry goes to the paper account only until Boss
+        // re-enables it with his PIN. Exits never come here. It can only take an entry off Zerodha, never put one there.
+        val live = liveAsked && !liveStopped(arm)
+        if (liveAsked && !live) runCatching { Diag.record("orb", "${arm.label}: its live stop rule is reached - this entry goes to the paper account only") }
         val right = if (s.side > 0) Right.CE else Right.PE
         val day = signalBar.toLocalDate()
         val und = LiquidityRules.underlyingOf(arm)
         val listed = Market.contracts().filter { it.underlying == und }.map { it.expiry }.distinct()
         val expiry = OrbRules.expiryAfter(day, listed) ?: return "no_contract"
         val c = Paper.contractFor(und, expiry, strike.toDouble(), right) ?: return "no_contract"
+        // Fill quality (12 Oct): the signal's book and timing, from memory only (the stream's last tick), before anything else.
+        val barCloseMs = epochMs(signalBar.plusMinutes(LiquidityRules.minutesOf(arm).toLong()))
+        val atSignal = runCatching { Paper.bookNow(c, decidedMs) }.getOrNull()
+        runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.SIGNAL, decidedMs, arm, c.symbol, live, atSignal?.last, null,
+            atSignal, barCloseMs, null, 0)) }
         exposureRefusal(b, c, arm, live)?.let { return it }
         // The order flow at this decision (per index; logged, and only ever a skip under CONFIRM), as the ORB's.
         val flow = FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, signalBar.toString(), arm.source, contract = c)
         if (flow.skip) return flow.pausedWhy ?: FlowGate.SKIPPED
         // Boss's size (1, 2 or 3 lots of this contract's own lot): read at the entry, so a change applies to new entries only.
         val lots = lotsOf(b)
-        if (live) return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong, lots = lots)
-            .also { FlowGate.outcome(flow, it) }
+        if (live) {
+            val sentMs = System.currentTimeMillis()
+            return enterLive(b, arm, c, signalBar, liquidity = s, near = near, volSkip = volSkip, strong = strong, lots = lots)
+                .also { FlowGate.outcome(flow, it) }
+                .also { r ->
+                    if (r == "entered_live") runCatching {
+                        val p = b.positions.last { it.arm == arm.source && it.live && it.open }
+                        LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.ENTRY, System.currentTimeMillis(), arm, c.symbol, true, p.entry,
+                            atSignal?.last, Paper.bookNow(c), barCloseMs, sentMs, p.qty))
+                    }
+                }
+        }
         val ltp = Paper.lastPrice(c) ?: return "refused: no quote"
         if (Strategies.stoppedToday()) return "stopped_for_today"
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, ltp * 1.0005), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
+        val sentMs = System.currentTimeMillis()
         val buy = Paper.place(c, "BUY", lots, "MARKET", "MIS", null, null)
         val fill = filledOrCancelled(buy) ?: return "order_refused: ${if (buy.ok) "no price to fill at; the order was cancelled" else buy.message}"
+        // The fill against the signal's price (the stream's last at the signal, else the price read just before the order).
+        runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.ENTRY, System.currentTimeMillis(), arm, c.symbol, false, fill.price,
+            atSignal?.last ?: ltp, Paper.bookNow(c), barCloseMs, sentMs, fill.quantity)) }
         buy.orderId?.let { Strategies.tagOwner("paper:$it", "${LiquidityRules.ARM.label} · entry") }
         FlowGate.taken(flow, buy.orderId)
         Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${LiquidityRules.ARM.label} · entry", buy.orderId)
         // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40), for all that filled. Its
         // exits are the paper account's parameters today (S9: a variant moves its exits only, from the session after).
-        val lq = liqParams(now().toLocalDate(), live = false)
+        val lq = liqParamsOf(arm.source, now().toLocalDate(), live = false)
         val trigger = LiquidityRules.stopTrigger(fill.price, lq.stopPct)
         var stopId: String? = null
         if (trigger != null) {
@@ -2564,6 +2720,15 @@ object OrbArms {
         marks[c.symbol] = fill.price
         return "entered"
     }
+
+    /** One fill-quality record ([com.optionslab.ira.FillQuality]) from the book read then ([q]: null when the stream had none). */
+    private fun quality(kind: com.optionslab.ira.FillQuality.Kind, atMs: Long, arm: Arm, symbol: String, live: Boolean, price: Double?,
+                        signalPrice: Double?, q: Paper.BookNow?, barCloseMs: Long?, sentMs: Long?, qty: Int): com.optionslab.ira.FillQuality.Rec =
+        com.optionslab.ira.FillQuality.Rec(kind, atMs, arm.source, symbol, live, price, signalPrice, q?.bid, q?.ask, q?.bidQty, q?.askQty,
+            q?.bid5, q?.ask5, q?.ageMs, barCloseMs, sentMs, qty)
+
+    /** Whether [arm] (a Liquidity BANKNIFTY book) has reached its live stop rule ([liquidityStopHint]). Memory only. */
+    private fun liveStopped(arm: Arm): Boolean = arm.source in com.optionslab.engine.orb.ArmPriority.BN_BOOKS && liquidityStopHint.stopped
 
     /** Entries and exits told no later than this after they happened (an upgrade or a restart never tells an old trade). */
     private const val NOTICE_WINDOW_MIN = 15L
@@ -2653,13 +2818,21 @@ object OrbArms {
             if (p.live) {
                 // At Zerodha: the resting stop comes out first, then a MARKET sell (exitLive), in the account it entered.
                 if (!Broker.loggedIn) continue
+                val sentMs = System.currentTimeMillis()
                 val (done, rest) = exitLive(b, cur, cur.kite ?: continue, why)
                 b.positions[i] = done
                 rest?.let { b.positions += it }
+                // Fill quality (12 Oct): the exit's fill against the price it decided on (memory only).
+                if (done.exit != null) runCatching { Paper.contractOf(p.symbol)?.let { c -> LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.EXIT,
+                    System.currentTimeMillis(), armOf(p.arm), p.symbol, true, done.exit, fresh, Paper.bookNow(c), null, sentMs, done.qty)) } }
                 continue
             }
             val c = Paper.contractOf(p.symbol) ?: continue
-            b.positions[i] = exit(cur, c, why)
+            val sentMs = System.currentTimeMillis()
+            val done = exit(cur, c, why)
+            b.positions[i] = done
+            if (done.exit != null) runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.EXIT, System.currentTimeMillis(),
+                armOf(p.arm), p.symbol, false, done.exit, fresh, Paper.bookNow(c), null, sentMs, done.qty)) }
         }
     }
 
@@ -2807,6 +2980,8 @@ object OrbArms {
         val t = now()
         val day = t.toLocalDate()
         if (!Market.isTradingDay(day) || t.toLocalTime().isBefore(LocalTime.of(15, 35))) return false
+        // Liquidity BANKNIFTY's own evening replay (its go-live checklist), once a day, apart from the ORB arms'.
+        runCatching { liquidityReplay(day) }
         val legs = lock.withLock { book().let { b -> if (b.replays.containsKey(day.toString())) return false; b.legs?.takeIf { it.day == day } } }
         val index = fiveMinute(Net.intraday(Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)), day)
         if (index.isEmpty()) return false
@@ -2834,6 +3009,33 @@ object OrbArms {
         lock.withLock { val b = book(); b.replays[day.toString()] = out; b.upDays[day.toString()] = out.getBoolean("up"); save(b) }
         return true
     }
+
+    /**
+     * Liquidity BANKNIFTY's evening replay of [day]: its 15- and 5-minute books' decisions on the day's index minutes, as the app
+     * decides them live ([com.optionslab.engine.orb.LiquidityDayReplay]); kept for the go-live checklist's comparison. Reads the
+     * feed (a worker thread, after the close); places nothing. Once a day.
+     */
+    private suspend fun liquidityReplay(day: LocalDate) {
+        if (lock.withLock { book().liqReplays.containsKey(day.toString()) }) return
+        val ones = liquidityMinutes(day.atTime(15, 31), OrbRules.UNDERLYING, keep = false)
+        if (ones.none { it.start.toLocalDate() == day }) return
+        val out = JSONArray()
+        for (arm in LiquidityRules.BOOKS.filter { it.source in com.optionslab.engine.orb.ArmPriority.BN_BOOKS }) {
+            com.optionslab.engine.orb.LiquidityDayReplay.signals(arm, ones, day).forEach { s ->
+                out.put(JSONObject().put("book", arm.source).put("bar", s.bar.toString()).put("side", s.side).put("strike", s.strike).put("level", s.level))
+            }
+        }
+        lock.withLock { val b = book(); b.liqReplays[day.toString()] = out; save(b) }
+    }
+
+    /** The kept replays as the checklist reads them. */
+    private fun liquidityReplays(b: Book): Map<LocalDate, List<com.optionslab.ira.LiquidityGoLive.ReplaySignal>> =
+        b.liqReplays.mapNotNull { (k, a) ->
+            val d = runCatching { LocalDate.parse(k) }.getOrNull() ?: return@mapNotNull null
+            d to (0 until a.length()).mapNotNull { i -> runCatching { a.getJSONObject(i).let { o ->
+                com.optionslab.ira.LiquidityGoLive.ReplaySignal(o.getString("book"), LocalDateTime.parse(o.getString("bar")), o.getInt("side"), o.getInt("strike"))
+            } }.getOrNull() }
+        }.toMap()
 
     /** [b]'s Liquidity trades on BANKNIFTY on [day], as the guard's replay reads them ([com.optionslab.engine.orb.ArmPriority.Leg]). */
     private fun liquidityLegs(b: Book, day: LocalDate): List<com.optionslab.engine.orb.ArmPriority.Leg> =

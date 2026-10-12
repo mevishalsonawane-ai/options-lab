@@ -396,6 +396,23 @@ object Paper {
     }
 
     /**
+     * [c]'s book as the stream last had it, for the fill-quality record (Liquidity, 12 Oct): bid, ask, the quantities at the
+     * best bid and offer, the five levels' sums (full mode) and the quote's age in ms, with its last price. Memory only (the
+     * tokens already looked up and the stream's last tick: never the instruments file, the vault or the network) - safe on
+     * the order path. Null when the stream has never had the contract.
+     */
+    data class BookNow(val last: Double?, val bid: Double?, val ask: Double?, val bidQty: Long?, val askQty: Long?,
+                       val bid5: Long?, val ask5: Long?, val ageMs: Long)
+
+    fun bookNow(c: Contract, nowMs: Long = System.currentTimeMillis()): BookNow? = runCatching {
+        val token = kiteTokens[c.symbol]?.takeIf { it > 0 } ?: return null
+        val seen = KiteStream.seen(token) ?: return null
+        val t = seen.tick
+        BookNow(t.last.takeIf { it > 0 }, t.bid?.takeIf { it > 0 }, t.ask?.takeIf { it > 0 }, t.bidQty, t.askQty,
+            t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L))
+    }.getOrNull()
+
+    /**
      * The live tick from Zerodha's stream, if there is a fresh one; asking also keeps the contract subscribed. [kept]: the
      * token only from those already looked up (memory only; never the instruments file or the session).
      */

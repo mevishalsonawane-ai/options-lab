@@ -180,6 +180,8 @@ object OrderReview {
         val protections: List<Protect> = emptyList(),
         /** The diary's error lines today by kind ([DiagErrors]); [errorsLive] the account the app was in (Live, else Paper). */
         val errors: Map<String, Int> = emptyMap(), val errorsLive: Boolean = false,
+        /** Liquidity's fill quality that day (12 Oct, [FillQuality.reviewNotes]): facts added to the day's notes, never flaws. */
+        val fillNotes: List<String> = emptyList(),
     )
 
     // ---- what comes out --------------------------------------------------------------------------------------------------
@@ -329,6 +331,7 @@ object OrderReview {
         for ((kind, n) in i.errors.entries.sortedByDescending { it.value }) if (n > 0)
             out += Flaw("err:$kind", "App", if (i.errorsLive) Venue.LIVE else Venue.PAPER, Category.ERRORS, if (n >= ERRORS_HIGH_N) Severity.HIGH else Severity.WARN,
                 "\"${kind.take(100)}\" $n time${if (n == 1) "" else "s"} in the diary today", 0.0)
+        notes += i.fillNotes
         return Day(i.day, i.orders.size, i.trades.size, out, summaries(i, out), notes)
     }
 

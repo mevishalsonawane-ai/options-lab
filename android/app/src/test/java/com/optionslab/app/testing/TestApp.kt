@@ -73,6 +73,11 @@ class TestApp : Application() {
         TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
         com.optionslab.app.data.FillSlippage.resetForTest()
+        com.optionslab.app.data.LiquidityTest.init(this)
+        com.optionslab.app.data.LiquidityTest.resetForTest()
+        // Liquidity BANKNIFTY's paper-test freeze ends on a fixed date: unfrozen here so no test depends on the real date (the freeze
+        // has its own tests, which set it).
+        com.optionslab.app.data.LiquidityTest.setStateForTest(com.optionslab.ira.LiquidityFreeze.State(unfrozen = true))
         com.optionslab.app.data.ZerodhaSync.resetForTest()
         com.optionslab.app.data.OrderReviewHost.init(this)
         com.optionslab.app.data.OrderReviewHost.resetForTest()

@@ -17,7 +17,9 @@ import java.time.LocalTime
  *    guard applies as before - never two automatic live positions on one index. Every live gate (PIN, the account guard's
  *    limits, the kill switch) is untouched; this only decides which holdings the one-index rule counts.
  *
- * Every other trader (Hero, Pine, Strategies, Solo, Jarvis) is [Rank.OTHER]: nothing changes for it, either way.
+ * Every other trader (Hero, Pine, Strategies, Solo, Jarvis) is [Rank.OTHER]. Since 12 Oct (Boss: Liquidity BANKNIFTY, the
+ * go-live candidate, gets every signal it makes) Liquidity's BANKNIFTY books also rank above them on BANKNIFTY, and its 15-
+ * and 5-minute books no longer block each other (the 7-argument [counts], [yielded]); other indices are as before.
  * Pure: no clock, no network, no orders.
  */
 object ArmPriority {
@@ -54,6 +56,46 @@ object ArmPriority {
     /** Whether a refusal of an [entrant] by a [holder] is Liquidity's priority at work (said with [WORDS]). */
     fun byPriority(holder: Rank, entrant: Rank): Boolean = holder == Rank.LIQUIDITY && entrant == Rank.OLD_ARM
 
+    // ---- Liquidity BANKNIFTY gets every signal it makes (Boss, 12 Oct; research X1 and the strategy scorecard) ------------
+
+    /** The index whose Liquidity books have priority over every other automatic trader. */
+    const val BN = "BANKNIFTY"
+
+    /** Liquidity's BANKNIFTY books (15-minute and 5-minute; the one switch's own source too): each its own claim on the index. */
+    val BN_BOOKS: Set<String> = setOf(LiquidityRules.ARM15.source, LiquidityRules.ARM5.source, LiquidityRules.ARM.source)
+
+    /** What a trader refused for Liquidity BANKNIFTY's sake says. */
+    const val YIELD_WORDS = "yielded to Liquidity BANKNIFTY"
+
+    /** Whether a trader of [rank] acting for [book] on [underlying] is one of Liquidity's BANKNIFTY books. */
+    fun liquidityBn(rank: Rank, book: String?, underlying: String): Boolean =
+        rank == Rank.LIQUIDITY && book != null && book in BN_BOOKS && underlying.equals(BN, ignoreCase = true)
+
+    /**
+     * [counts] with the books and the index known (12 Oct): Liquidity BANKNIFTY's entry ([entrantBook] one of [BN_BOOKS]) is
+     *  - never refused by its OTHER BANKNIFTY book's position: the 15- and 5-minute books each hold their own (research X1:
+     *    about +16-18k a year; each book is 1 lot and every account-wide guard still applies);
+     *  - never refused by another automatic trader's position (Solo, VIX divergence, Pine, Jarvis's trades, the Strategies,
+     *    the forge's ideas, Hero: [Rank.OTHER]; the ORB family; a re-armed shadow) - it goes beside it, and that trader's later entry is the one refused
+     *    ([yielded]). When both the holding and the entry are live the old guard holds (never two live automatic positions of
+     *    different traders on one index); the app keeps that case from arising by refusing the other traders' live BANKNIFTY
+     *    entries while Liquidity BANKNIFTY is armed live - which only ever removes entries.
+     * Every other case is [counts] as before.
+     */
+    fun counts(holder: Rank, holderLive: Boolean, entrant: Rank, entrantLive: Boolean, underlying: String,
+               holderBook: String?, entrantBook: String?): Boolean {
+        if (liquidityBn(entrant, entrantBook, underlying)) {
+            if (liquidityBn(holder, holderBook, underlying)) return holderBook == entrantBook
+            // Any other holding (an ORB arm, Solo, Pine, a re-armed shadow, ...) counts only when both are live.
+            return holderLive && entrantLive
+        }
+        return counts(holder, holderLive, entrant, entrantLive)
+    }
+
+    /** Whether a refusal of an entry ([entrant], [entrantBook]) by a holding ([holder], [holderBook]) is the other trader yielding to Liquidity BANKNIFTY. */
+    fun yielded(holder: Rank, holderBook: String?, entrant: Rank, entrantBook: String?, underlying: String): Boolean =
+        liquidityBn(holder, holderBook, underlying) && !liquidityBn(entrant, entrantBook, underlying) && !byPriority(holder, entrant)
+
     /**
      * One automatic trade in a replay: its [who] (an arm's source or a label), [rank], index, lean ([side]: +1 call, -1 put),
      * entry and exit time ([exit] null: held to the day's end), and whether it was [live].
@@ -65,7 +107,11 @@ object ArmPriority {
     data class Refused(val leg: Leg, val by: Leg) {
         /** In words: "orb refused: liquidity15 holds BANKNIFTY (Liquidity has priority over ORB arms)". */
         val words: String get() = "${leg.who} refused: ${by.who} holds ${by.underlying}" +
-            if (byPriority(by.rank, leg.rank)) " ($WORDS)" else " (one automatic position an index a side)"
+            when {
+                byPriority(by.rank, leg.rank) -> " ($WORDS)"
+                yielded(by.rank, by.who, leg.rank, leg.who, by.underlying) -> " ($YIELD_WORDS)"
+                else -> " (one automatic position an index a side)"
+            }
     }
 
     data class Outcome(val taken: List<Leg>, val refused: List<Refused>)
@@ -82,7 +128,7 @@ object ArmPriority {
         for (l in order) {
             val by = if (l.side == 0) null else taken.firstOrNull { h ->
                 h.side != 0 && h.underlying.equals(l.underlying, ignoreCase = true) && (h.exit == null || h.exit.isAfter(l.entry)) &&
-                    counts(h.rank, h.live, l.rank, l.live)
+                    counts(h.rank, h.live, l.rank, l.live, l.underlying, h.who, l.who)
             }
             if (by == null) taken += l else refused += Refused(l, by)
         }

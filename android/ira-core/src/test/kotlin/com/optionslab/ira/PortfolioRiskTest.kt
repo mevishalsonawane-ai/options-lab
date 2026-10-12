@@ -209,4 +209,19 @@ class PortfolioRiskTest {
         val solo = PortfolioRisk.matrix(record().filter { it.arm == "orb" || it.arm == "hero" }, today)
         assertTrue(PortfolioRisk.line(solo, st, 8_000.0, 0).startsWith("Portfolio: no two arms move together"))
     }
+
+    @Test fun eachBookOfAnArmIsItsOwnClaimAndNeverBlocksItsOtherBook() {
+        // A cap of 12,000 (2% of 6 lakh): one ORB book open (5,000 + 5,000) lets ORB Fresh through; two books open (each its
+        // own claim, 15,000 together) block it. ORB's second book is never blocked by its first.
+        val g = guard(capital = 600_000.0)
+        g.opened("orb", +1, live = false, today, 1_000, claim = "liquidity15")
+        assertFalse(g.check("orb_fresh", +1, live = false, today, 2_000, open = false).block)
+        assertFalse(g.check("orb", +1, live = false, today, 2_500, open = false).block)
+        g.opened("orb", +1, live = false, today, 3_000, claim = "liquidity5")
+        assertTrue(g.check("orb_fresh", +1, live = false, today, 4_000, open = false).block)
+        // The same claim again replaces itself (counted once).
+        val h = guard(capital = 600_000.0)
+        h.opened("orb", +1, live = false, today, 1_000, claim = "x"); h.opened("orb", +1, live = false, today, 2_000, claim = "x")
+        assertFalse(h.check("orb_fresh", +1, live = false, today, 3_000, open = false).block)
+    }
 }

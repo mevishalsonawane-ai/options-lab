@@ -1449,6 +1449,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun liquidityLots(n: Int) = strategyDo { com.optionslab.app.data.OrbArms.setLiquidityLots(n, "Boss on the row") }
     /** A Liquidity 15+5 index parked on Boss's OK (9 Oct) switched back on from its row, on paper. */
     fun unparkLiquidity(index: String) = strategyDo { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
+    /** Liquidity BANKNIFTY's live entries re-enabled after its stop rule (12 Oct): only with Boss's PIN, asked on the row first. */
+    fun reenableLiquidityLive(pinConfirmed: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.reenableLiquidityLive(pinConfirmed) }
+    /** Boss's tick on the go-live checklist: he watched the first live trade. */
+    fun liquidityWatched(on: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.setFirstLiveWatched(on); null }
+    /** Liquidity BANKNIFTY unfrozen (or frozen again) for its paper test, from the Strategy lab card. */
+    fun liquidityFreeze(unfrozen: Boolean) = strategyDo { com.optionslab.app.data.LiquidityTest.setUnfrozen(unfrozen) }
 
     private fun strategyDo(block: suspend () -> String?) {
         viewModelScope.launch(Dispatchers.IO) {

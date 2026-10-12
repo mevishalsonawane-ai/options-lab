@@ -126,4 +126,27 @@ class AutoSideTest {
         assertEquals("Pine #2 holds a put on XYZ; this call works against it.",
             AutoSide.warn("XYZ", 1, "this call", listOf(AutoSide.Held.option("Pine #2", "XYZ1PE", "XYZ", "PE", true))))
     }
+
+    @Test fun liquidityBankniftyIsRefusedByNoOtherTraderAndItsBooksHoldTogether() {
+        val solo = AutoSide.Held.option("Jarvis solo", "BANKNIFTY26OCT52000PE", "BANKNIFTY", "PE", long = true)
+        val liq15 = AutoSide.Held.option("Liquidity 15m", "BANKNIFTY26OCT52100CE", "BANKNIFTY", "CE", long = true, rank = Rank.LIQUIDITY, book = "liquidity15")
+        // Solo's put does not refuse Liquidity 5m's call (paper), nor does the other book's call.
+        assertNull(AutoSide.check("BANKNIFTY", 1, listOf(solo, liq15), Rank.LIQUIDITY, book = "liquidity5"))
+        // The same book still holds one position at a time.
+        assertTrue(AutoSide.check("BANKNIFTY", 1, listOf(liq15), Rank.LIQUIDITY, book = "liquidity15")!!.startsWith(AutoSide.SAME_SIDE))
+        // Solo's later entry is the one refused, and says so.
+        val r = AutoSide.check("BANKNIFTY", -1, listOf(liq15))!!
+        assertEquals("opposite_position_open: Liquidity 15m holds BANKNIFTY26OCT52100CE; yielded to Liquidity BANKNIFTY", r)
+        assertTrue(AutoSide.refused(r))
+        assertTrue(AutoSide.describe(r).endsWith("Yielded to Liquidity BANKNIFTY (it has priority on BANKNIFTY)."), AutoSide.describe(r))
+        // Both live: the old guard (the app keeps it from arising by holding the other traders' live BANKNIFTY entries back).
+        val soloLive = solo.copy(live = true)
+        assertTrue(AutoSide.check("BANKNIFTY", 1, listOf(soloLive), Rank.LIQUIDITY, live = true, book = "liquidity5") != null)
+        // MIDCPNIFTY's books are as before: one at a time, and other traders count.
+        val mid = AutoSide.Held.option("Liquidity 15m MIDCPNIFTY", "MIDCPNIFTY26OCT13000CE", "MIDCPNIFTY", "CE", true, Rank.LIQUIDITY, book = "liquidity15_mid")
+        assertTrue(AutoSide.check("MIDCPNIFTY", 1, listOf(mid), Rank.LIQUIDITY, book = "liquidity5_mid") != null)
+        // The log's word when it goes beside them.
+        val note = AutoSide.priorityNote("Liquidity 5m", "BANKNIFTY", 1, listOf(solo, liq15), Rank.LIQUIDITY, book = "liquidity5")!!
+        assertTrue(note.startsWith("Liquidity 5m is not held back by Jarvis solo's BANKNIFTY26OCT52000PE, Liquidity 15m's BANKNIFTY26OCT52100CE: Liquidity BANKNIFTY has priority"), note)
+    }
 }

@@ -294,6 +294,25 @@ object OrderReviewHost {
 
     private fun nameOf(label: String?): String = com.optionslab.ira.Charges.owner(label)
 
+    /**
+     * Liquidity's go-live checklist lines from the kept day logs since [since] (memory only; null until the review is read and
+     * has run once): (serious flaws, protection or guard misfires). Serious: the bug-like classes ("needs a fix"); misfires:
+     * a protection's target on the wrong side, a stop replaced by nothing, a protection put on its own position. The logs keep
+     * the strategy, not the index: these count Liquidity 15+5's trades on every index.
+     */
+    fun liquidityCounts(since: LocalDate, b: OrderReview.Book = _book.value): Pair<Int, Int>? {
+        if (b.lastRun == null) return null
+        val misfire = setOf(OrderReview.Category.WRONG_SIDE, OrderReview.Category.EMPTY_PROTECT, OrderReview.Category.ARM_PROTECT)
+        var serious = 0; var misfires = 0
+        for (log in b.logs.filter { !it.day.isBefore(since) }) for ((k, t) in log.flaws) {
+            val parts = k.split('|')
+            if (parts.size < 3 || com.optionslab.ira.ArmOwners.arm(parts[0]) != com.optionslab.ira.ArmOwners.LIQUIDITY) continue
+            val cat = OrderReview.Category.of(parts[2]) ?: continue
+            if (cat in misfire) misfires += t.n else if (cat.fix == OrderReview.Fix.NEEDS_FIX) serious += t.n
+        }
+        return serious to misfires
+    }
+
     /** Every order and trade in [from]..[to] for [day], from memory and the app's own files (no network). A worker thread. */
     private suspend fun gather(day: LocalDate, from: Long, to: Long): OrderReview.Inputs {
         val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
@@ -376,7 +395,9 @@ object OrderReviewHost {
         }
         val errors = if (day == Market.today()) runCatching { Diag.errors.of(day).errors }.getOrDefault(emptyMap()) else emptyMap()
         val live = runCatching { AppSettings.load().live }.getOrDefault(false)
-        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live)
+        // Liquidity's fill quality that day (12 Oct): the bid/ask, depth and timing at its signals and fills, as notes (facts).
+        val quality = runCatching { LiquidityTest.reviewNotes(day) }.getOrDefault(emptyList())
+        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality)
     }
 
     /** The ORB family's entry window on [day] (after its opening range, to its last entry and two minutes for the order); else null. */

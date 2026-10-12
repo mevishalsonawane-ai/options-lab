@@ -70,6 +70,8 @@ fun OrbRows(model: AppModel) {
             override fun shadowOff(id: String) { model.shadowOff(id) }
             override fun lots(n: Int) { model.liquidityLots(n) }
             override fun unpark(index: String) { model.unparkLiquidity(index) }
+            override fun reenableLiquidityLive(pinConfirmed: Boolean) { model.reenableLiquidityLive(pinConfirmed) }
+            override fun firstLiveWatched(on: Boolean) { model.liquidityWatched(on) }
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) },
         paperRecord = { com.optionslab.app.data.ForwardRecords.liquidityEquity() },
@@ -87,6 +89,10 @@ internal interface OrbActions {
     fun lots(n: Int) {}
     /** A Liquidity 15+5 index parked on Boss's OK (9 Oct: FINNIFTY) switched back on ([OrbArms.unparkLiquidity]), on paper. */
     fun unpark(index: String) {}
+    /** Liquidity BANKNIFTY's live entries re-enabled after its stop rule ([OrbArms.reenableLiquidityLive]): only after the PIN. */
+    fun reenableLiquidityLive(pinConfirmed: Boolean) {}
+    /** Boss's "first live trade watched" tick on the go-live checklist. */
+    fun firstLiveWatched(on: Boolean) {}
 }
 
 /** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
@@ -117,6 +123,8 @@ internal fun OrbRowsContent(
     var heroConfirm by remember { mutableStateOf<String?>(null) }
     // Liquidity's size raised: (from, to), asked before it applies (more lots is more risk); lowering applies at once.
     var lotsConfirm by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    // Liquidity BANKNIFTY's live entries re-enabled after its stop rule: the PIN first, always.
+    var reenableAuth by remember { mutableStateOf(false) }
 
     view.arms.forEachIndexed { i, a ->
         if (i > 0) Rule()
@@ -195,6 +203,8 @@ internal fun OrbRowsContent(
                         OrbArms.capLine(a.arm)?.let { cap -> Text(keepNumbersWhole(cap), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
                     }
                 }
+                // Liquidity BANKNIFTY's paper test (12 Oct): its freeze, the live stop rule, the go-live checklist and its fill quality.
+                a.test?.let { t -> LiquidityTestLines(t, onWatched = { on -> actions.firstLiveWatched(on) }, onReenable = { reenableAuth = true }) }
             }
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
@@ -288,6 +298,8 @@ internal fun OrbRowsContent(
         else "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
+    if (reenableAuth) reauth("Enter your app PIN to let Liquidity BANKNIFTY take live entries again after its stop rule. Its stop rule then counts from now.",
+        { reenableAuth = false; actions.reenableLiquidityLive(true) }, { reenableAuth = false })
     heroConfirm?.let { src ->
         AlertDialog(
             onDismissRequest = { heroConfirm = null },
