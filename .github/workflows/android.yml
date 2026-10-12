@@ -183,6 +183,22 @@ jobs:
           gh release edit latest-apk --notes "$notes"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraAlgo.apk"
           echo "APK: https://github.com/${{ github.repository }}/releases/download/latest-apk/IraGoldAlgo.apk"
+      # A push notification to Boss's phone when the new APK is up (ntfy.sh, free; the app subscribes to the topic). The
+      # topic is a repository secret (NTFY_TOPIC, an unguessable name); no topic, no notification. Only the build's short
+      # hash and the release link are sent: never money, account or key details.
+      - name: Tell the phone the APK is ready
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/android-options-lab-kotlin-xgt1ym'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then echo "No NTFY_TOPIC secret: no notification sent."; exit 0; fi
+          curl -sS --max-time 20 \
+            -H "Title: IraAlgo APK ready" \
+            -H "Tags: package" \
+            -H "Click: https://github.com/${{ github.repository }}/releases/tag/latest-apk" \
+            -d "Build ${SHA::7} is ready to install. The app tests may still be running: check before trading on it." \
+            "https://ntfy.sh/$NTFY_TOPIC" >/dev/null && echo "Notification sent." || echo "Notification could not be sent (the build is fine)."
       # The Ira branch's build on its own link, so the owner's latest-apk links above only change from the main line:
       # https://github.com/<repo>/releases/download/jarvis-apk/IraAlgo.apk (and IraGoldAlgo.apk; the release's tag
       # keeps its old name: the workflow token may update a release but not create one)
