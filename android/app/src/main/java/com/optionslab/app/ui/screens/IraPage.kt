@@ -383,7 +383,7 @@ internal fun ProposalActions(id: Long) {
     Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when (p.status) {
             IraHub.Proposal.NEW -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BrassButton(if (p.result.recommended) "Approve as a paper arm" else "Add anyway (paper)") { scope.launch { IraHub.approve(id) } }
+                BrassButton(if (p.result.recommended) "Approve as a paper arm" else "Add anyway (paper)") { scope.launch(kotlinx.coroutines.Dispatchers.IO) { IraHub.approve(id) } }
                 BrassButton("Dismiss", tone = LocalPalette.current.inkSoft) { IraHub.dismiss(id) }
             }
             IraHub.Proposal.APPROVED -> Note("Approved: armed on paper in Research → Pine.")

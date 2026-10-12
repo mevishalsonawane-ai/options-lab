@@ -161,8 +161,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun addHoliday(d: LocalDate) { com.optionslab.app.data.Holidays.add(d); holidays.value = com.optionslab.app.data.Holidays.book(); Jobs.scheduleAll(ctx) }
-    fun removeHoliday(d: LocalDate) { com.optionslab.app.data.Holidays.remove(d); holidays.value = com.optionslab.app.data.Holidays.book(); Jobs.scheduleAll(ctx) }
+    // Off the screen's thread (12 Oct): the holiday file and the alarms' re-arming (AlarmManager binder calls) never block it.
+    fun addHoliday(d: LocalDate) { viewModelScope.launch(Dispatchers.IO) { com.optionslab.app.data.Holidays.add(d); holidays.value = com.optionslab.app.data.Holidays.book(); Jobs.scheduleAll(ctx) } }
+    fun removeHoliday(d: LocalDate) { viewModelScope.launch(Dispatchers.IO) { com.optionslab.app.data.Holidays.remove(d); holidays.value = com.optionslab.app.data.Holidays.book(); Jobs.scheduleAll(ctx) } }
 
     /** One settings write at a time, so an older snapshot can never land on disk after a newer one. */
     private val settingsWriter = kotlinx.coroutines.sync.Mutex()
@@ -766,7 +767,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         broker.value = brokerState()
                         // Linked now: the background jobs may run, the market watch at once if the market is open.
                         Jobs.scheduleAll(ctx)
-                        withContext(Dispatchers.Main) { Jobs.ensureWatch(ctx) }
+                        Jobs.ensureWatch(ctx)
                         // Warm the instrument list: the live expiry calendar reads it.
                         runCatching { com.optionslab.app.data.Broker.instruments() }
                         say("Logged in to Zerodha as $who until 06:00 tomorrow.")
@@ -1286,7 +1287,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // An MCX order filled (9 Oct): the watch keeps it in view through MCX's evening, and its expiry exit with it.
                 if (cur.legs.any { it.exchange == com.optionslab.engine.mcx.Mcx.EXCHANGE }) {
                     com.optionslab.app.data.McxMarket.markLive()
-                    withContext(Dispatchers.Main) { runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) } }
+                    runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) }
                 }
                 cur.session?.let { day ->
                     val short = fills.last().avgPrice
@@ -1427,9 +1428,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     val orb = MutableStateFlow<com.optionslab.app.data.OrbArms.View?>(null)
 
     /** Arming an ORB arm starts the market watch if it should be running, so the arm is actually checked. */
+    /**
+     * 12 Oct (the screen stuck 3.9 s in BinderProxy.transactNative while Boss switched arms at 16:24): the watch's start
+     * (a foreground-service start, a binder call into the system) is made here on the IO thread, never on the screen's -
+     * [Jobs.ensureWatch] decides off the main thread itself. Likewise every start of the watch from this model.
+     */
     fun armOrb(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false) = strategyDo {
         val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic, pinConfirmed)
-        if (on) withContext(Dispatchers.Main) { Jobs.ensureWatch(ctx) }
+        if (on) Jobs.ensureWatch(ctx)
         msg
     }
 
@@ -1462,7 +1468,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** Approve a scheduled start that is waiting (a live one is PIN- or fingerprint-confirmed by the screen). */
     fun approveStrategy(id: Long) = strategyDo {
         val msg = com.optionslab.app.data.Strategies.approve(id, compromisedFresh())
-        if (com.optionslab.app.data.Strategies.anyRunning()) withContext(Dispatchers.Main) { Jobs.start(ctx, Jobs.Kind.LIVE) }
+        if (com.optionslab.app.data.Strategies.anyRunning()) Jobs.start(ctx, Jobs.Kind.LIVE)
         msg
     }
 
@@ -1509,7 +1515,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val msg = com.optionslab.app.data.Strategies.start(id, if (live) com.optionslab.engine.strategy.RunMode.LIVE else com.optionslab.engine.strategy.RunMode.SANDBOX,
             "manual", confirmedByOwner = live, compromised = compromisedFresh())
         // A run's stops are only checked while something polls it: keep the watch running.
-        if (com.optionslab.app.data.Strategies.anyRunning()) withContext(Dispatchers.Main) { Jobs.start(ctx, Jobs.Kind.LIVE) }
+        if (com.optionslab.app.data.Strategies.anyRunning()) Jobs.start(ctx, Jobs.Kind.LIVE)
         msg
     }
 
@@ -1936,7 +1942,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             refreshProtections()
         } else if (protect?.any == true) say("The bracket is set once the order fills; set it from the position when it does.")
         // MCX trades into the evening: the watch is started for it (a no-op when it already runs).
-        if (c.isMcx && r.ok) withContext(Dispatchers.Main) { runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) } }
+        if (c.isMcx && r.ok) runCatching { com.optionslab.app.work.Jobs.ensureWatch(ctx) }
         return r
     }
 
