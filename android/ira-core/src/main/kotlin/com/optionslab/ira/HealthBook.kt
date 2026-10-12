@@ -81,6 +81,9 @@ object HealthBook {
         val w = where?.trim().orEmpty()
         if (w.isEmpty()) return "?"
         val ours = w.substringAfterLast(" in ", "").trim()
+        // A call into Android's system (a Binder transaction) keeps its top frame too: that is what tells a developer the
+        // screen's thread made a system call ("BinderProxy.transactNative in AppModel.switchArm"), the commonest stall here.
+        if (ours.isNotEmpty() && w.substringBefore(" in ").contains("Binder", ignoreCase = true)) return clean(w, 90)
         return clean(ours.ifEmpty { w })
     }
 

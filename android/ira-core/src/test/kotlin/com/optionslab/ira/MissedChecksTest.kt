@@ -221,4 +221,12 @@ class MissedChecksTest {
         assertEquals((0.05 + 0.05) * 30, Insights.unbookedSpread(LocalDate.of(2026, 10, 1), 20.0, 20.0, 30), 1e-9)
         assertEquals(0.0, Insights.unbookedSpread(LocalDate.of(2026, 10, 8), 300.0, 300.0, 30), 1e-9)
     }
+
+    @Test fun aBinderStallKeepsItsSystemFrameSoTheFixIsNamed() {
+        assertEquals("BinderProxy.transactNative in AppModel.switchArm", HealthBook.place("BinderProxy.transactNative in AppModel.switchArm"))
+        assertEquals("BrainSection.invoke", HealthBook.place("Choreographer.doFrame in BrainSection.invoke"))
+        val b = HealthBook.stall(HealthBook.Book(), 1_791_800_000_000L, 3_900, "BinderProxy.transactNative in AppModel.switchArm")
+        val f = assertNotNull(HealthChecks.stalls(b.day(HealthBook.dayOf(1_791_800_000_000L))))
+        assertTrue(f.text.contains("BinderProxy.transactNative") && f.text.contains("system"), f.text)
+    }
 }
