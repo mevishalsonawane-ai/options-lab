@@ -738,7 +738,7 @@ object Broker {
         }
         val list = r.value
         // A resting stop that filled between the stream's updates is measured from the book (memory only; most reads skip it).
-        if (FillSlippage.anyWaiting()) list.forEach { if (FillSlippage.waiting(it.id)) FillSlippage.ended(it.id, it.status, it.avg, it.filled) }
+        runCatching { if (FillSlippage.anyWaiting()) list.forEach { if (FillSlippage.waiting(it.id)) FillSlippage.ended(it.id, it.status, it.avg, it.filled) } }
         keptOrders = Kept(r.startedAt, gen, list)
         runCatching { AppState.publishOrders(list, r.startedAt) }
         // The "Open" widget's pending orders come from the reads already made here, handed to its own thread so this
@@ -1170,7 +1170,8 @@ object Broker {
         runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
         val id = data.getString("order_id")
-        FillSlippage.sent(id, o, exit, arm, intended)
+        // Measuring never costs the order: the order is placed, so nothing here may throw past the id.
+        runCatching { FillSlippage.sent(id, o, exit, arm, intended) }
         return id
     }
 
