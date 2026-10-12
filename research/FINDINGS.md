@@ -280,3 +280,15 @@ Full study: `HUNT_R14_REENTRY_CHURN.md` (code `hunt/r14/`, pre-registered, holdo
 - A damage limiter, not an edge: both arms still lose, and random thinning does about as well (the gain is the charges).
 - App: paper default 1 a side a day (strategy lab, undoable); live only with Boss's PIN. No other strategy churns (Sweep and
   Range Fade already stop at 2 a day; the rest are 1 a day or signal-change only).
+
+## Daily filters on Liquidity BANKNIFTY (R15, 12 Oct 2026) - none helps; add-ons go to a shadow test
+Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); shadow specs: `PREREG_LIQUIDITY_ADDONS.md`.
+- Data: the Dhan token expired on 10 Oct and its cache is not in the repo, so only 2 years could be used (release
+  parquet Feb 2024 - Feb 2026 + free NSE bhavcopy + Yahoo daily index/VIX). TODO for a full test: a new broker token.
+- Base (app exits, ATM, real spread and charges, 1 lot): design Feb 2024 - Sep 2025 +Rs 176/day (743 trades, t 1.27);
+  holdout part Oct 2025 - Feb 2026 -Rs 16/day (223 trades). Puts +Rs 228 a trade, calls -Rs 60 (design).
+- 0 of 5 pre-open filters passed (quiet yesterday, low VIX, extreme PCR, futures OI build-up, after a -1% day; best
+  BH q 0.50). Low-VIX days were GOOD for the arm (skipping them -Rs 73/day). Do not add a daily filter.
+- Pre-registered for SHADOW only (engine `LiquidityAddons`, default OFF): A1 OI veto (x2 R1), A2 calls need OI (x2 R5),
+  A3 Night R3 BANKNIFTY leg. Judged at 300 Liquidity trades (A1/A2) / 100 nights (A3) with Holm; the shadow alone is
+  too small to prove A1 (expected +Rs 30-40 a trade vs a Rs 55-60 standard error) - it mainly guards against harm.
