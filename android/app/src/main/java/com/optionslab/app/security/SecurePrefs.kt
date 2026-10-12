@@ -67,6 +67,80 @@ object SecurePrefs {
     fun init(context: Context) {
         synchronized(ioLock) { synchronized(this) { generation++; generationHint++; pending = false; lazyDirty = false; lazyTask = 0L; writtenSeq = seq } }
         file = File(context.noBackupFilesDir, "prefs.vault")
+        SecureBlobs.init(File(context.noBackupFilesDir, "prefs.blobs"))
+    }
+
+    // ---- the large values, in their own files ([SecureBlobs]) ---------------------------------------------------------
+
+    /**
+     * Values of [SecureBlobs.KEYS] found in the settings file (written by an older version, or restored): kept out of [map],
+     * but still written back with every settings write until each has its own file, read back and checked
+     * ([SecureBlobs.migrate]). Guarded by this object's lock.
+     */
+    private val legacy = HashMap<String, Any?>()
+    /** A move of [legacy] values to their own files is queued on the background writer (guarded by this object's lock). */
+    private var migrating = false
+
+    /** [k]'s value still in the settings file, if it has not been moved out yet. */
+    @Synchronized internal fun legacy(k: String): Any? { map(); return legacy[k] }
+
+    /** [k] has its own file now: the settings file's copy goes with the next settings write. */
+    @Synchronized internal fun dropLegacy(k: String) { legacy.remove(k) }
+
+    internal fun sameValue(old: Any?, new: Any?): Boolean = same(old, new)
+
+    /** Under this object's lock: the move of [legacy] values queued, off the caller's thread (once per load). */
+    private fun queueMigration() {
+        if (legacy.isEmpty() || migrating) return
+        migrating = true
+        val gen = generation
+        runCatching {
+            writer.execute {
+                val todo = synchronized(this) { if (gen == generation) HashMap(legacy) else HashMap() }
+                for ((k, v) in todo) runCatching { SecureBlobs.migrate(k, v) }
+                // The settings file written without those now in their own files (each on disk, read back and compared).
+                val snap = synchronized(this) {
+                    migrating = false
+                    if (gen == generation && todo.keys.any { it !in legacy }) copyOut(gen) else null
+                }
+                if (snap != null) runCatching { write(snap) }
+            }
+        }.onFailure { migrating = false }
+    }
+
+    /** [values] split: the settings file's own, and the large ones ([SecureBlobs]). */
+    private fun split(values: Map<String, Any?>): Pair<Map<String, Any?>, Map<String, Any?>> =
+        if (values.keys.none(SecureBlobs::isBlob)) values to emptyMap() else values.entries.partition { !SecureBlobs.isBlob(it.key) }
+            .let { (a, b) -> a.associate { it.key to it.value } to b.associate { it.key to it.value } }
+
+    /** One large value read (its own file, decrypted the first time it is asked for; never under this object's lock). */
+    private fun blob(k: String): Any? { counted(); return SecureBlobs.get(k) }
+
+    /** A JSON-typed read of a large value, the way the settings map reads its own. */
+    private fun blobJson(k: String): JSONObject? = blob(k)?.let { JSONObject().put("v", it) }
+
+    /**
+     * The settings' sizes, by key class (digits folded to "#", so per-day keys add up together), biggest first: names and
+     * byte counts only, never a value. The large values' are their files' sizes. For the diagnostics and tests.
+     */
+    fun sizes(): List<Pair<String, Long>> {
+        val main = synchronized(this) {
+            val m = map()
+            m.keys().asSequence().map { it to (m.opt(it)?.toString()?.length ?: 0).toLong() + it.length }.toList() +
+                legacy.map { (k, v) -> k to (v?.toString()?.length ?: 0).toLong() + k.length }
+        }
+        val all = main + SecureBlobs.sizes().map { (k, n) -> "$k (own file)" to n }
+        return all.groupBy({ it.first.replace(Regex("[0-9]+"), "#") }, { it.second }).mapValues { it.value.sum() }
+            .toList().sortedByDescending { it.second }
+    }
+
+    /** The diagnostics' line: the settings file's size, its five biggest key classes, and screen-thread reads of the large values. */
+    fun sizeLine(): String {
+        val all = sizes()
+        val own = all.filter { !it.first.endsWith("(own file)") }.sumOf { it.second }
+        val top = all.take(5).joinToString(", ") { (k, n) -> "$k ${n / 1024} KB" }
+        val main = SecureBlobs.loadsOnMain.get().let { n -> if (n == 0L) "none" else "$n (last: ${SecureBlobs.lastOnMain})" }
+        return "Settings size: ${own / 1024} KB in the settings file · biggest: $top · large values read on the screen's thread: $main"
     }
 
     /**
@@ -93,7 +167,18 @@ object SecurePrefs {
      * encryption and two disk syncs - done on the background writer instead of the caller's thread.
      * A later [put]/[putAll] writes them too; [flush] waits for them.
      */
-    @Synchronized fun putAllSoon(values: Map<String, Any?>) {
+    fun putAllSoon(all: Map<String, Any?>) {
+        val (values, blobs) = split(all)
+        blobsSoon(blobs)
+        if (values.isNotEmpty()) synchronized(this) { putAllSoonHere(values) }
+    }
+
+    /** Large values readable at once, each written to its own file by the background writer. */
+    private fun blobsSoon(blobs: Map<String, Any?>) {
+        for ((k, v) in blobs) if (SecureBlobs.putSoon(k, v)) runCatching { writer.execute { SecureBlobs.saveNow(k) } }
+    }
+
+    private fun putAllSoonHere(values: Map<String, Any?>) {
         if (unchanged(values)) return
         touched(values.keys)
         val m = map()
@@ -129,7 +214,13 @@ object SecurePrefs {
      * them sooner (the app leaving the screen, the watch ending). A process killed in between loses at most that last
      * minute of the figure, which the next pass records again. Never for anything an order, a limit or a lock reads.
      */
-    @Synchronized fun putAllLazy(values: Map<String, Any?>, delayMs: Long = LAZY_MS) {
+    fun putAllLazy(all: Map<String, Any?>, delayMs: Long = LAZY_MS) {
+        val (values, blobs) = split(all)
+        blobsSoon(blobs)
+        if (values.isNotEmpty()) synchronized(this) { putAllLazyHere(values, delayMs) }
+    }
+
+    private fun putAllLazyHere(values: Map<String, Any?>, delayMs: Long) {
         if (unchanged(values)) return
         touched(values.keys)
         val m = map()
@@ -196,7 +287,7 @@ object SecurePrefs {
     fun flush(): Boolean {
         // The lazily kept values too ([putAllLazy]): queued now, then waited for with the rest.
         saveSoon()
-        if (synchronized(this) { pending || lazyDirty }) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
+        if (synchronized(this) { pending || lazyDirty || migrating } || SecureBlobs.anyDirty()) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
         // A write another thread copied out and is still putting on disk counts as not yet written: wait for it.
         val want = synchronized(this) { seq }
         val written = synchronized(ioLock) { writtenSeq >= want }
@@ -214,7 +305,10 @@ object SecurePrefs {
             unreadable = true
             JSONObject()
         }
+        // The large values (written here by an older version, or restored) moved to their own files, off this thread.
+        for (k in loaded.keys().asSequence().filter(SecureBlobs::isBlob).toList()) legacy[k] = loaded.remove(k)
         cache = loaded
+        queueMigration()
         return loaded
     }
 
@@ -231,7 +325,8 @@ object SecurePrefs {
     /** Drop the cache and read the file again (the "try again" on the unreadable-vault screen). */
     fun reload(): Boolean {
         flush()
-        synchronized(this) { cache = null; unreadable = false; generationHint++; map(); return !unreadable }
+        SecureBlobs.reset()
+        synchronized(this) { cache = null; legacy.clear(); migrating = false; unreadable = false; generationHint++; map(); return !unreadable }
     }
 
     /** The map as it is now, copied out to be written; null when nothing may be written (an unreadable vault). */
@@ -244,7 +339,9 @@ object SecurePrefs {
         pending = false               // this write carries every value set so far
         lazyDirty = false             // ...the lazily kept ones too
         seq++
-        return Snap(seq, gen, map().toString().toByteArray(Charsets.UTF_8))
+        // The large values not yet in their own files are written back with the rest, so they are never off disk.
+        val m = if (legacy.isEmpty()) map() else JSONObject(map().toString()).also { c -> legacy.forEach { (k, v) -> c.put(k, v) } }
+        return Snap(seq, gen, m.toString().toByteArray(Charsets.UTF_8))
     }
 
     /** Writes [s] to disk, outside this object's lock (reads go on meanwhile); one write at a time, never an older map over a newer. */
@@ -261,13 +358,24 @@ object SecurePrefs {
     }
 
 
-    @Synchronized fun getString(k: String, d: String? = null): String? { counted(); return map().optString(k, "").ifEmpty { d } }
-    @Synchronized fun getBoolean(k: String, d: Boolean): Boolean { counted(); return if (map().has(k)) map().optBoolean(k, d) else d }
-    @Synchronized fun getInt(k: String, d: Int): Int { counted(); return if (map().has(k)) map().optInt(k, d) else d }
-    @Synchronized fun getLong(k: String, d: Long): Long { counted(); return if (map().has(k)) map().optLong(k, d) else d }
-    @Synchronized fun getDouble(k: String, d: Double): Double { counted(); return if (map().has(k)) map().optDouble(k, d) else d }
+    fun getString(k: String, d: String? = null): String? =
+        if (SecureBlobs.isBlob(k)) (blobJson(k)?.optString("v", "") ?: "").ifEmpty { d }
+        else synchronized(this) { counted(); map().optString(k, "").ifEmpty { d } }
+    fun getBoolean(k: String, d: Boolean): Boolean =
+        if (SecureBlobs.isBlob(k)) blobJson(k)?.optBoolean("v", d) ?: d
+        else synchronized(this) { counted(); if (map().has(k)) map().optBoolean(k, d) else d }
+    fun getInt(k: String, d: Int): Int =
+        if (SecureBlobs.isBlob(k)) blobJson(k)?.optInt("v", d) ?: d
+        else synchronized(this) { counted(); if (map().has(k)) map().optInt(k, d) else d }
+    fun getLong(k: String, d: Long): Long =
+        if (SecureBlobs.isBlob(k)) blobJson(k)?.optLong("v", d) ?: d
+        else synchronized(this) { counted(); if (map().has(k)) map().optLong(k, d) else d }
+    fun getDouble(k: String, d: Double): Double =
+        if (SecureBlobs.isBlob(k)) blobJson(k)?.optDouble("v", d) ?: d
+        else synchronized(this) { counted(); if (map().has(k)) map().optDouble(k, d) else d }
 
     fun put(k: String, v: Any?) {
+        if (SecureBlobs.isBlob(k)) { SecureBlobs.put(k, v); return }
         val snap = synchronized(this) {
             if (unchanged(mapOf(k to v))) return
             touched(listOf(k))
@@ -277,7 +385,10 @@ object SecurePrefs {
         write(snap)
     }
 
-    fun putAll(values: Map<String, Any?>) {
+    fun putAll(all: Map<String, Any?>) {
+        val (values, blobs) = split(all)
+        for ((k, v) in blobs) SecureBlobs.put(k, v)
+        if (values.isEmpty()) return
         val snap = synchronized(this) {
             if (unchanged(values)) return
             touched(values.keys)
@@ -288,25 +399,35 @@ object SecurePrefs {
         write(snap)
     }
 
-    /** Every key and value (the backup); callers filter out what must never leave the vault. */
-    @Synchronized fun snapshot(): Map<String, Any?> = map().let { m -> m.keys().asSequence().associateWith { m.opt(it) } }
+    /**
+     * Every key and value (the backup); callers filter out what must never leave the vault. The large values are read from
+     * their own files (so never on the screen's thread).
+     */
+    fun snapshot(): Map<String, Any?> {
+        val main = synchronized(this) { map().let { m -> m.keys().asSequence().associateWith { m.opt(it) } } }
+        val blobs = SecureBlobs.KEYS.associateWith { SecureBlobs.get(it) }.filterValues { it != null }
+        return main + blobs
+    }
 
-    /** The keys starting with [prefix] (to prune per-day keys); names only. */
-    @Synchronized fun keys(prefix: String): List<String> = map().keys().asSequence().filter { it.startsWith(prefix) }.toList()
+    /** The keys starting with [prefix] (to prune per-day keys); names only (a large value's file is not decrypted for it). */
+    fun keys(prefix: String): List<String> =
+        synchronized(this) { map().keys().asSequence().filter { it.startsWith(prefix) }.toList() } +
+            SecureBlobs.KEYS.filter { it.startsWith(prefix) && SecureBlobs.has(it) }
 
     /** Bumped by every [init] and [wipe]: a caller holding vault values in memory drops them when it changes. */
     @Synchronized fun generationNow(): Int = generation
 
-    fun wipe() {
+    fun wipe() { SecureBlobs.wipe {
         // After any write in progress (a write finishing after the delete would bring the old vault back).
         synchronized(ioLock) {
             synchronized(this) {
                 generation++; generationHint++; pending = false; lazyDirty = false; lazyTask = 0L
                 cache = JSONObject()
+                legacy.clear(); migrating = false
                 unreadable = false
                 writtenSeq = seq
                 file.delete()
             }
         }
-    }
+    } }
 }
