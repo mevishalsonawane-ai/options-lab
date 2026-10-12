@@ -35,14 +35,39 @@ internal object SecureBlobs {
      * Names are plain ([NAME]): each is its own file name.
      */
     val KEYS: Set<String> = setOf(
+        // Read early - by the watch's passes (Solo's holdings, the bots' exposure) or a screen - so read ahead ([PREFETCH]).
         "jarvis.solo.trades",       // Solo's paper trades (the last 500)
-        "jarvis.study",             // his study's results
-        "jarvis.newstrades",        // his news trades (the last 200)
-        "jarvis.suggestions",       // his suggestions (the last 300)
-        "jarvis.notes",             // his journal notes
-        "jarvis.activity",          // what he did, and when
-        "jarvis.daybook",           // his day journal
+        "jarvis.newstrades",        // his news / pattern trades (the last 200)
+        "jarvis.study",             // his study's findings, pattern edges and IV history
+        "jarvis.suggestions",       // every suggestion (the last 300)
+        "jarvis.activity",          // what he did, and when (the last 300)
+        // Read only by his ask lane, his own passes and the workers: decrypted when first asked for.
+        "jarvis.thinking",          // his decision steps (two days)
+        "jarvis.newsMoves",         // news-theme moves (180 days)
+        "jarvis.daybook",           // the day journal (90 days)
+        "jarvis.bots.switches",     // the arms' on/off habits (180 days)
+        "jarvis.bots.testedDays",   // the arms' backtest by day
+        "jarvis.mistakes",          // his answers Boss corrected
+        "jarvis.notes",             // Boss's notes
+        "jarvis.trendReads",        // his trend calls and how they went
+        "jarvis.wordfit",           // which words he heard right
+        "jarvis.patternCalls",      // his pattern calls and how they went
+        "jarvis.wrongThing",        // "that's not what I asked"
+        "jarvis.askedAgain",        // questions asked twice
+        "jarvis.outlookCheck",      // his outlooks checked against the day
+        "jarvis.moreAfter",         // where Boss asked for more
+        "jarvis.learned",           // his corrections
+        "jarvis.memory",            // what Boss asked him to remember (never in a backup, as before)
     )
+
+    /**
+     * Read ahead on a background thread right after the start's settings read ([SecurePrefs.warm]): the watch's passes and
+     * the Ira page read these early, and must find them in memory - never decrypting on the order path or the screen's thread.
+     */
+    val PREFETCH: List<String> = listOf("jarvis.solo.trades", "jarvis.newstrades", "jarvis.study", "jarvis.suggestions", "jarvis.activity")
+
+    /** Every [PREFETCH] value decrypted now (a background thread's; one at a time, order-path ones first). */
+    fun prefetch() { for (k in PREFETCH) runCatching { get(k) } }
 
     /** The keys that must never move here, whatever is added to [KEYS] (checked by a test). */
     internal val NEVER = listOf("pin.", "lock.", "kite.", "relay.", "tls.", "g.", "breaker.", "live", "ai.", "jarvis.trades.live",
