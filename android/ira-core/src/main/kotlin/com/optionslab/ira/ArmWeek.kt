@@ -9,9 +9,8 @@ import kotlin.math.abs
 /**
  * The paper arms' week, said once on Sunday evening (usefulness round 24, 2026-10-05): each arm's paper trades of the week
  * just ended - trades, wins and net - beside its two-year BankNifty test put as rupees a week ([TradeCheck.RECORD], one
- * lot), and where its paper test stands ([Vetting]: [Vetting.MIN_TRADES] trades, a net profit, a profit factor of
- * [Vetting.MIN_PF], a worst run within [Vetting.MAX_DD_SHARE] of its gains) - which arm is on track to pass it, which is
- * not, which already held up or failed. The numbers go in the chat; aloud only plain words (no amount), and a locked
+ * lot), and where its paper test stands ([Vetting]: against its own backtest's range, from [Vetting.START], with
+ * [Vetting.MIN_TRADES] trades and [Vetting.MIN_DAYS] trading days before anything passes). The numbers go in the chat; aloud only plain words (no amount), and a locked
  * phone hears only that it is in the chat. Facts, never advice: nothing here arms, stops, places or closes anything.
  * Not in IraGoldAlgo. Pure.
  */
@@ -25,8 +24,8 @@ object ArmWeek {
     /** [chat]: the full summary with the numbers; [aloud]: plain words, no amount. */
     data class Said(val chat: String, val aloud: String)
 
-    /** Where an arm's paper test stands. */
-    enum class Track { ON_TRACK, NOT_YET, BEHIND, HELD_UP, FAILED, NO_TRADES }
+    /** Where an arm's paper test stands ([Vetting]: against its own backtest, from [Vetting.START]). */
+    enum class Track { NO_TRADES, TOO_EARLY, WITHIN, BELOW, ABOVE, PASSED, NO_BACKTEST }
 
     const val NOTE = "Facts from the arms' own records, Boss, not advice: I switched nothing; what stays armed is your call."
 
@@ -43,37 +42,28 @@ object ArmWeek {
     /** The two-year test as rupees a week (a lot, after costs): the two years' sum over 104 weeks. */
     fun testedWeek(t: Pair<Double, Double>): Double = (t.first + t.second) / 104.0
 
-    /** Where [a]'s paper test stands on all its closed paper trades so far. */
-    fun track(a: Arm): Track {
-        val nets = a.paper.sortedBy { it.day }.map { it.net }
-        if (nets.isEmpty()) return Track.NO_TRADES
-        val v = Vetting.judge(a.name, nets)
+    private fun verdict(a: Arm, today: LocalDate): Vetting.Verdict =
+        Vetting.judge(a.name, a.paper.map { Vetting.Trade(it.day, it.net) }, today)
+
+    /** Where [a]'s paper test stands on [today] (its closed paper trades from [Vetting.START]). */
+    fun track(a: Arm, today: LocalDate): Track {
+        val v = verdict(a, today)
+        if (v.trades == 0) return Track.NO_TRADES
         return when (v.state) {
-            Vetting.State.HELD_UP -> Track.HELD_UP
-            Vetting.State.FAILED -> Track.FAILED
-            Vetting.State.TESTING -> {
-                val gain = nets.filter { it > 0 }.sum()
-                when {
-                    v.net <= 0 -> Track.BEHIND
-                    (v.pf == null || v.pf >= Vetting.MIN_PF) && v.maxDd <= gain * Vetting.MAX_DD_SHARE && v.trades < Vetting.MIN_TRADES -> Track.ON_TRACK
-                    else -> Track.NOT_YET
-                }
-            }
+            Vetting.State.TOO_EARLY -> Track.TOO_EARLY
+            Vetting.State.WITHIN -> Track.WITHIN
+            Vetting.State.BELOW -> Track.BELOW
+            Vetting.State.ABOVE -> Track.ABOVE
+            Vetting.State.PASSED -> Track.PASSED
+            Vetting.State.NO_BACKTEST -> Track.NO_BACKTEST
         }
     }
 
-    private fun testWords(a: Arm, n: Int): String {
-        val v = Vetting.judge(a.name, a.paper.sortedBy { it.day }.map { it.net })
-        val pf = v.pf?.let { "%.2f".format(Locale.ENGLISH, it) }
-        return when (track(a)) {
-            Track.NO_TRADES -> "its paper test has not started (0 of ${Vetting.MIN_TRADES} trades)"
-            Track.HELD_UP -> "it held up on its paper test (${trades(n)}, ${rs(v.net)})"
-            Track.FAILED -> "it failed its paper test (${trades(n)}, ${rs(v.net)})"
-            Track.ON_TRACK -> "paper test $n of ${Vetting.MIN_TRADES}, ${rs(v.net)} so far: on track to pass"
-            Track.BEHIND -> "paper test ${minOf(n, Vetting.MIN_TRADES)} of ${Vetting.MIN_TRADES}, ${rs(v.net)} so far: not on track, down overall"
-            Track.NOT_YET -> "paper test ${minOf(n, Vetting.MIN_TRADES)} of ${Vetting.MIN_TRADES}, ${rs(v.net)} so far: up, not convincingly yet" +
-                (pf?.let { " (profit factor $it, ${"%.1f".format(Locale.ENGLISH, Vetting.MIN_PF)} needed)" } ?: "")
-        }
+    private fun testWords(a: Arm, today: LocalDate): String {
+        val v = verdict(a, today)
+        if (v.trades == 0) return "its paper test has no trades since ${Vetting.START.dayOfMonth} Oct yet"
+        return "paper test: ${v.words()}, ${trades(v.trades)} since ${Vetting.START.dayOfMonth} Oct, ${rs(v.net)}" +
+            (if (v.band != null && v.state == Vetting.State.TOO_EARLY) (if (v.inBand == true) ", within its backtest's range so far" else ", outside its backtest's range") else "")
     }
 
     /**
@@ -97,16 +87,24 @@ object ArmWeek {
                 val per = testedWeek(t)
                 "; its two-year test averaged ${rs(per)} a week a lot" + if (w.isEmpty()) "" else if (net >= per) " (this week at or above it)" else " (this week below it)"
             } ?: "; no two-year test on the phone"
-            chat.append("- ${a.name} (${if (a.armed) "armed" else "off"}): $head$test; ${testWords(a, a.paper.size)}.\n")
+            chat.append("- ${a.name} (${if (a.armed) "armed" else "off"}): $head$test; ${testWords(a, today)}.\n")
             aloud += if (w.isEmpty()) "${a.name}, no trades" else "${a.name}, ${trades(w.size)}, $won won, " +
                 when { net > 0 -> "up for the week"; net < 0 -> "down for the week"; else -> "flat for the week" }
         }
-        val onTrack = order.filter { track(it) == Track.ON_TRACK }
-        val passLine = if (onTrack.isEmpty()) "No arm is on track to pass its ${Vetting.MIN_TRADES}-trade paper test now."
-            else "On track to pass its ${Vetting.MIN_TRADES}-trade paper test: " + onTrack.joinToString(", ") { "${it.name} (${it.paper.size} of ${Vetting.MIN_TRADES})" } + "."
+        val look = order.filter { track(it, today) == Track.BELOW || track(it, today) == Track.ABOVE }
+        val passed = order.filter { track(it, today) == Track.PASSED }
+        val rule = "Paper tests count from ${Vetting.START.dayOfMonth} Oct and need ${Vetting.MIN_TRADES} trades and ${Vetting.MIN_DAYS} trading days, judged against each arm's own backtest."
+        val passLine = when {
+            passed.isNotEmpty() -> "Passed (information only; nothing switched): " + passed.joinToString(", ") { it.name } + ". $rule"
+            look.isNotEmpty() -> "Outside its backtest's range, to investigate: " + look.joinToString(", ") { it.name } + ". $rule"
+            else -> "No arm has passed its paper test. $rule"
+        }
         chat.append(passLine).append(' ').append(NOTE)
-        val passAloud = if (onTrack.isEmpty()) "No arm is on track to pass its paper test now."
-            else "On track for its paper test: " + onTrack.joinToString(", ") { "${it.name}, ${it.paper.size} of ${Vetting.MIN_TRADES}" } + "."
+        val passAloud = when {
+            passed.isNotEmpty() -> "Passed its paper test: " + passed.joinToString(", ") { it.name } + "."
+            look.isNotEmpty() -> "Outside its backtest's range: " + look.joinToString(", ") { it.name } + "."
+            else -> "No arm has passed its paper test."
+        }
         return Said(chat.toString().trim(), "Boss, your arms' paper week. " + aloud.joinToString(". ") + ". " + passAloud + " The numbers are in the chat.")
     }
 }

@@ -754,7 +754,7 @@ object Tasks {
         // Jarvis: Boss's own words (a rule he asked me to remember, his trade goal) against today's trades - pointed out
         // once each, gently, on an unlocked phone only (words only).
         if (slow) word("Boss's rules") { com.optionslab.app.ira.IraCoach.wordsWatch() }
-        // Jarvis: the paper tests - what held up is brought to Boss, what failed is offered off (asked first).
+        // Jarvis: the paper tests against each arm's own backtest - a pass, or a record outside its range, is told once (nothing switched).
         if (slow) word("paper tests") { com.optionslab.app.ira.IraExpert.watch() }
         // Jarvis: the day's target reached; a trade of yours going nowhere is offered a close (asked first).
         if (slow) word("day target") { com.optionslab.app.ira.IraJournal.targetWatch() }

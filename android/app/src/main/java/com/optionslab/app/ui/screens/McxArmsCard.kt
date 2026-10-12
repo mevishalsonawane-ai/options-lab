@@ -80,8 +80,9 @@ private fun McxArmRow(arm: String, v: McxPaperArms.View, onArm: (String, Boolean
             Text(keepNumbersWhole(McxPaperArms.rules(arm)), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             Text(if (on) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (on) p.verdigris else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
-            // Where its paper test stands ("still on its paper test: 3 of 15 trades"), on every closed trade the book keeps.
-            Text(keepNumbersWhole(com.optionslab.ira.Vetting.judge(McxPaperArms.label(arm), v.nets[arm].orEmpty()).text()),
+            // Where its paper test stands ("too early (3/60, 2/40)", against its own backtest, from 13 Oct), on every closed trade the book keeps.
+            Text(keepNumbersWhole(com.optionslab.ira.Vetting.judge(McxPaperArms.label(arm), v.trades[arm].orEmpty(),
+                runCatching { com.optionslab.app.data.Market.today() }.getOrNull()).text()),
                 style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             open.forEach { o ->
                 Text(keepNumbersWhole("${if (o.side > 0) "Long" else "Short"} ${o.symbol} · ${o.qty} @ %.2f · paper".format(Locale.ENGLISH, o.entry)),

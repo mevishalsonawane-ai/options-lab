@@ -4,9 +4,11 @@ import com.optionslab.ira.Vetting
 
 /**
  * The local market expert (part 7): every strategy, arm and Pine script trading on paper is judged on its own forward
- * paper trades ([Vetting]). What held up is brought to Boss (going live stays his step, with his PIN); what failed is
- * told and switching it off is offered (asked first, unless Boss chose automatic stops in chat). Each verdict is told
- * once. Jarvis's own trades and Boss's hand trades have their own records and are left out.
+ * paper trades against ITS OWN BACKTEST's range ([Vetting], research X1: from 13 Oct 2026, 60 trades and 40 trading days
+ * before anything passes). A pass, or a record outside the backtest's range ("investigate" / "check the fills"), is told
+ * once. Nothing is switched: passing only informs Boss (going live stays his step, with his PIN), and an arm below its
+ * range is never offered off (Boss, 12 Oct: every arm keeps running on paper). Jarvis's own trades and Boss's hand trades
+ * have their own records and are left out.
  */
 internal object IraExpert {
     private const val TOLD = "jarvis.expert.told"
@@ -14,44 +16,41 @@ internal object IraExpert {
     /** Each paper strategy's verdict now. */
     suspend fun verdicts(): List<Vetting.Verdict> {
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        // Judged again only when the paper trips changed (the same list comes back while they have not): every pass read it.
-        return judged.of(IraAccount.trips(false, owners)) { trips ->
+        val today = runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() }
+        // Judged again only when the paper trips (or the day) changed: every pass read it.
+        return judged.of(IraAccount.trips(false, owners) to today) { (trips, day) ->
             trips.filter { it.owner.isNotBlank() && it.owner != "Manual" && !it.owner.startsWith("Jarvis") }
                 // Liquidity 15+5 per index (research X1): BANKNIFTY's paper test apart from FINNIFTY's and MIDCPNIFTY's.
                 .groupBy { com.optionslab.ira.LiquiditySplit.owner(it.owner, it.symbol) }
-                .map { (owner, l) -> Vetting.judge(owner, l.sortedBy { it.closedAt }.map { it.net }) }
+                .map { (owner, l) -> Vetting.judge(owner, l.map { Vetting.Trade(it.closedAt.toLocalDate(), it.net) }, day) }
         }
     }
 
-    private val judged = com.optionslab.ira.SameInput<List<com.optionslab.ira.Insights.Trip>, List<Vetting.Verdict>>()
+    private val judged = com.optionslab.ira.SameInput<Pair<List<com.optionslab.ira.Insights.Trip>, java.time.LocalDate>, List<Vetting.Verdict>>()
 
     suspend fun say(): String = Vetting.say(verdicts())
 
-    /** Every market-watch pass: a new held-up or failed verdict is told once (and a failed one offered off). */
+    /** Every market-watch pass: a pass, or a record outside its backtest's range, is told once. Nothing is switched or offered. */
     suspend fun watch() {
         if (!com.optionslab.app.BuildConfig.JARVIS || com.optionslab.app.BuildConfig.GOLD) return
         val told = runCatching { com.optionslab.app.security.SecurePrefs.getString(TOLD) }.getOrNull()?.split('|')?.filter { it.isNotBlank() }?.toMutableSet() ?: mutableSetOf()
         var changed = false
         for (v in verdicts()) {
-            if (v.state == Vetting.State.TESTING) continue
+            if (v.state != Vetting.State.PASSED && v.state != Vetting.State.BELOW && v.state != Vetting.State.ABOVE) continue
             val key = "${v.name}:${v.state}"
             if (key in told) continue
             val c = IraHub.appContext() ?: continue          // told when it can be shown, not before
             told += key; changed = true
             IraActivity.add(v.text())
-            if (v.state == Vetting.State.HELD_UP) {
-                val text = v.text() + " It may be worth trading live: arm it in Live yourself, with your PIN."
-                JarvisPopup.show(c, "Boss, ${v.name} held up", text); IraHub.noteAloud(text, com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
-            } else {
-                // Switching it off is offered (Boss, 4 Oct: anything Jarvis thinks should stop is asked first).
-                val (what, act) = runCatching { IraActions.prepare(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = v.name)) }.getOrNull() ?: (null to null)
-                // Only when the name found is exactly this strategy's (never a near match switched off by mistake), and only
-                // in Paper: in Live, stopping a run sells what it holds - that is Boss's to do.
-                val exact = what != null && what.equals(com.optionslab.ira.Commands.describe(com.optionslab.ira.Command(com.optionslab.ira.Command.Kind.STOP_ONE, target = v.name), v.name), ignoreCase = true)
-                val paper = runCatching { !com.optionslab.app.data.AppSettings.load().live }.getOrDefault(false)
-                if (act == null || what == null || !exact || !paper) { JarvisPopup.show(c, "Boss, ${v.name} failed its paper test", v.text()); IraHub.noteAloud(v.text(), com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH) }
-                else IraHub.offer(what, "Boss, ${v.name} failed its paper test", v.text() + " Shall I $what?", act)
+            val title = when (v.state) {
+                Vetting.State.PASSED -> "Boss, ${v.name} passed its paper test"
+                Vetting.State.BELOW -> "Boss, ${v.name} is below its backtest's range"
+                else -> "Boss, ${v.name} is above its backtest's range"
             }
+            // The words carry rupees: aloud only on an unlocked phone (the note itself says no amount when locked).
+            JarvisPopup.show(c, title, v.text())
+            if (!runCatching { IraHub.locked() }.getOrDefault(true))
+                IraHub.noteAloud(v.text(), com.optionslab.ira.SpeakChoice.Weight.MINOR, from = null, kind = com.optionslab.ira.TodayNotes.Category.COACH)
         }
         if (changed) runCatching { com.optionslab.app.security.SecurePrefs.put(TOLD, told.joinToString("|")) }
         runCatching { graduationWatch() }

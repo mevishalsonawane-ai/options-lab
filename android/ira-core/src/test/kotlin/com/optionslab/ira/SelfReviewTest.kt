@@ -16,7 +16,7 @@ class SelfReviewTest {
             heldUp = listOf("ORB 5")))!!
         assertTrue(s.startsWith("My own review: my lower-confidence trades lost, so I now act alone only at 4/5 or more; I leave 09:00-10:00 alone"), s)
         assertTrue(s.contains("For tomorrow: watch your goal: Loss limit this week"), s)
-        assertTrue(s.endsWith("ORB 5 held up on paper - yours to take live if you want."), s)
+        assertTrue(s.endsWith("ORB 5 passed its paper test against its backtest - information only; going live stays your step."), s)
         assertEquals("My own review: my record improved, so I act alone again from 3/5 or more.", SelfReview.say(none.copy(barYesterday = 4)))
         assertTrue(SelfReview.say(none.copy(bar = 6))!!.contains("no level (I only ask now)"))
     }

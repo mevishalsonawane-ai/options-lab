@@ -114,7 +114,9 @@ object McxPaperArms {
      * over every closed trade the book keeps, not only the last ones shown).
      */
     data class View(val armed: Map<String, Boolean>, val status: Map<String, String>, val open: List<Pos>, val closed: List<Pos>, val log: List<String>,
-                    val nets: Map<String, List<Double>> = emptyMap()) {
+                    val nets: Map<String, List<Double>> = emptyMap(),
+                    /** The same closed trades with the day each closed, per arm, for the paper test ([com.optionslab.ira.Vetting]). */
+                    val trades: Map<String, List<com.optionslab.ira.Vetting.Trade>> = emptyMap()) {
         fun isArmed(arm: String): Boolean = armed[arm] == true
     }
 
@@ -188,7 +190,9 @@ object McxPaperArms {
         // The plain hint the main thread reads instead of this vault ([McxMarket.watchDueQuick]); written only on a change.
         runCatching { McxMarket.noteArmsArmed(b.armed.values.any { it }) }
         _view.value = View(b.armed.toMap(), b.status.toMap(), b.positions.filter { it.open }, b.positions.filter { !it.open }.takeLast(30),
-            b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } })
+            b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } },
+            b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) ->
+                l.map { com.optionslab.ira.Vetting.Trade((it.exitTime ?: it.entryTime).toLocalDate(), it.net ?: 0.0) } })
         // The trade manager's one call (10 Oct), every leg: SHADOW by default - it records only; the arms' own exits stay authoritative.
         runCatching {
             val now = McxMarket.now()

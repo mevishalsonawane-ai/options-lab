@@ -74,7 +74,7 @@ internal object IraAgenda {
         val minutes = runCatching { IraNewsTrades.byMinute() }.getOrDefault(emptyList())
         val bad = (9..15).filter { h -> com.optionslab.ira.ActAlone.badHour(minutes, h * 60) != null }
         val tests = runCatching { IraExpert.verdicts() }.getOrDefault(emptyList())
-            .filter { it.state == com.optionslab.ira.Vetting.State.TESTING }.map { it.name }
+            .filter { it.state == com.optionslab.ira.Vetting.State.TOO_EARLY }.map { it.name }
         val open = if (trading) openPositions() else null
         // Overnight study: the words he could not place on the last day, and the answers marked wrong in the last 3 days.
         val wrong = runCatching { IraTools.mistakes() }.getOrDefault(emptyList())

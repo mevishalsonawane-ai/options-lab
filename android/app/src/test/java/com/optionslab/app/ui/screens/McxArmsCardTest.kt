@@ -103,7 +103,9 @@ class McxArmsCardTest {
 
     /** 9 Oct (research R2): the US-night silver futures rule in the same group, its research and its warnings first, and its paper test. */
     @Test fun usNightSilverIsInTheMcxGroupWithItsResearchAndItsPaperTest() {
-        val v = off.copy(nets = mapOf(McxUsSilverRules.SOURCE to listOf(1_200.0, -400.0, 900.0)))
+        val d = java.time.LocalDate.of(2026, 10, 14)
+        val dated = listOf(1_200.0, -400.0, 900.0).map { com.optionslab.ira.Vetting.Trade(d, it) }
+        val v = off.copy(nets = mapOf(McxUsSilverRules.SOURCE to listOf(1_200.0, -400.0, 900.0)), trades = mapOf(McxUsSilverRules.SOURCE to dated))
         home(v)
         compose.waitForIdle()
         val group = compose.onNodeWithText(MCX_GROUP).fetchSemanticsNode().boundsInRoot.top
@@ -114,8 +116,9 @@ class McxArmsCardTest {
             assertTrue(w, w in record)
         compose.onNodeWithText(keepNumbersWhole(record)).assertExists()
         assertTrue(McxPaperArms.rules(McxUsSilverRules.SOURCE).contains("not part of the research"))
-        val test = com.optionslab.ira.Vetting.judge(McxUsSilverRules.LABEL, listOf(1_200.0, -400.0, 900.0)).text()
-        assertTrue(test, test.startsWith("${McxUsSilverRules.LABEL} is still on its paper test: 3 of 15 trades"))
+        // The row counts the days to the real today (as the card does); only the trade count is asserted from it.
+        val test = com.optionslab.ira.Vetting.judge(McxUsSilverRules.LABEL, dated, runCatching { com.optionslab.app.data.Market.today() }.getOrNull()).text()
+        assertTrue(test, test.startsWith("${McxUsSilverRules.LABEL}'s paper test: too early (3/60, "))
         compose.onNodeWithText(keepNumbersWhole(test)).assertExists()
         compose.onNodeWithContentDescription("Paper only: switch ${McxUsSilverRules.LABEL}").assertIsOff()
     }

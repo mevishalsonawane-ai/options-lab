@@ -45,8 +45,9 @@ internal fun VixDivRow() {
 }
 
 /** Where a paper-only arm's paper test stands ([com.optionslab.ira.Vetting]), and how many trades its research asks for. */
-internal fun paperTestLine(name: String, nets: List<Double>, wanted: Int): String =
-    com.optionslab.ira.Vetting.judge(name, nets).text() + " The research asks for about $wanted paper trades before any money."
+internal fun paperTestLine(name: String, trades: List<com.optionslab.ira.Vetting.Trade>, wanted: Int,
+                            today: java.time.LocalDate? = runCatching { com.optionslab.app.data.Market.today() }.getOrNull()): String =
+    com.optionslab.ira.Vetting.judge(name, trades, today).text() + " The research asks for about $wanted paper trades before any money."
 
 /** The row from plain state ([v]) and the switch's callback. */
 @Composable
@@ -63,7 +64,7 @@ internal fun VixDivRowContent(v: VixDivArm.View, onArm: (Boolean) -> Unit) {
             Text(keepNumbersWhole(VixDivRules.RULES), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             Text(if (v.armed) "ON · PAPER ONLY" else "OFF", style = Type.label.copy(color = if (v.armed) p.verdigris else p.inkFaint, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
-            Text(keepNumbersWhole(paperTestLine(VixDivRules.LABEL, v.nets, VixDivRules.PAPER_TRADES_WANTED)),
+            Text(keepNumbersWhole(paperTestLine(VixDivRules.LABEL, v.trades, VixDivRules.PAPER_TRADES_WANTED)),
                 style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
             v.open.forEach { o ->
                 Text(keepNumbersWhole("${o.symbol} · ${o.qty} @ %.2f · paper".format(Locale.ENGLISH, o.entry)),

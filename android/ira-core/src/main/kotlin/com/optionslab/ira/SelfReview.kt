@@ -34,8 +34,8 @@ object SelfReview {
         val tomorrow = ArrayList<String>()
         f.goalsAtRisk.firstOrNull()?.let { tomorrow += "watch your goal: ${it.trimEnd('.')}" }
         f.lesson?.let { tomorrow += it.trimEnd('.').replaceFirstChar { c -> c.lowercase() } }
-        if (f.heldUp.isNotEmpty()) tomorrow += "${f.heldUp.joinToString(", ")} held up on paper - yours to take live if you want"
-        if (f.failed.isNotEmpty()) tomorrow += "${f.failed.joinToString(", ")} failed on paper"
+        if (f.heldUp.isNotEmpty()) tomorrow += "${f.heldUp.joinToString(", ")} passed its paper test against its backtest - information only; going live stays your step"
+        if (f.failed.isNotEmpty()) tomorrow += "${f.failed.joinToString(", ")} came in below its backtest's range on paper - worth investigating"
         if (now.isEmpty() && tomorrow.isEmpty()) return null
         return "My own review: " + (if (now.isEmpty()) "nothing in my record changed today" else now.joinToString("; ")) + "." +
             (if (tomorrow.isEmpty()) "" else " For tomorrow: " + tomorrow.joinToString("; ") + ".")

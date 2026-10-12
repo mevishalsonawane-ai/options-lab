@@ -4,8 +4,8 @@ package com.optionslab.ira
  * Liquidity 15+5 judged per index (08 Oct, research X1 change 3, Boss's yes): BANKNIFTY carries the arm's edge, while
  * FINNIFTY and MIDCPNIFTY add about zero after the real spread and double the drawdown (h24, h36, h44). One mixed record
  * hid both on 8 Oct, so the paper test, the bots' health and the weekly review count "Liquidity 15+5 BANKNIFTY" on its
- * own, apart from "Liquidity 15+5 FINNIFTY" and "Liquidity 15+5 MIDCPNIFTY". The switch stays one; the paper test's
- * thresholds are unchanged. Pure.
+ * own, apart from "Liquidity 15+5 FINNIFTY" and "Liquidity 15+5 MIDCPNIFTY". The switch stays one; each is judged by the
+ * paper test against its own backtest ([Vetting]: only BANKNIFTY has a band on the phone). Pure.
  */
 object LiquiditySplit {
     /** The indices Liquidity trades, BANKNIFTY first. */
