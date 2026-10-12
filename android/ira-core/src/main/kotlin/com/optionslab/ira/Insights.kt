@@ -11,7 +11,27 @@ import java.util.Locale
  * streaks, trades closed in minutes. Facts from the app's trade book; patterns need enough trades to be said. Pure.
  */
 object Insights {
-    data class Trip(val symbol: String, val openedAt: LocalDateTime, val closedAt: LocalDateTime, val net: Double, val owner: String)
+    /**
+     * One closed round trip: [net] after the charges the book booked; [unbooked] costs the book did not book and the lessons take off
+     * (12 Oct: the paper spread on paper trades from before the spread was charged, 08 Oct), 0 when none.
+     */
+    data class Trip(val symbol: String, val openedAt: LocalDateTime, val closedAt: LocalDateTime, val net: Double, val owner: String,
+                    val unbooked: Double = 0.0)
+
+    /** The day paper fills started paying the bid/ask spread (Honest paper, 08 Oct 2026). */
+    val PAPER_SPREAD_FROM: java.time.LocalDate = java.time.LocalDate.of(2026, 10, 8)
+    /** The half-spread a paper fill pays when the stream has no quote: 5 bps of the price, at least one 0.05 tick (the paper book's default). */
+    const val HALF_SPREAD_BPS = 5.0
+
+    /**
+     * The spread a paper trip closed on [closed] did not pay (before [PAPER_SPREAD_FROM]): a half-spread on each of its two fills,
+     * [HALF_SPREAD_BPS] of each price and at least a tick, times [qty]. 0 from that day on (the fills already paid it).
+     */
+    fun unbookedSpread(closed: java.time.LocalDate, entry: Double, exit: Double, qty: Int): Double {
+        if (!closed.isBefore(PAPER_SPREAD_FROM) || qty == 0) return 0.0
+        fun half(p: Double) = maxOf(kotlin.math.abs(p) * HALF_SPREAD_BPS / 10_000.0, 0.05)
+        return (half(entry) + half(exit)) * kotlin.math.abs(qty)
+    }
 
     /** At least this many trades in a group before a pattern about it is said. */
     const val MIN_GROUP = 5

@@ -360,8 +360,16 @@ object OrbArms {
         book().positions.filter { it.open && it.live }.map { p -> (runCatching { armOf(p.arm).label }.getOrNull() ?: p.arm) to p }
     }
 
+    /**
+     * The armed arms' names, as [armedHint] (12 Oct): the policy check ([ProblemsHost.policySweep]) reads them from memory,
+     * never taking the arms' lock.
+     */
+    @Volatile var armedLabelsHint: List<String> = emptyList()
+        private set
+
     private fun hints(b: Book) {
         armedHint = ALL_ARMS.any { b.armed[it.source] == true }
+        armedLabelsHint = ALL_ARMS.filter { b.armed[it.source] == true }.map { it.label }
         holdingHint = b.positions.any { it.open }
         liveHint = b.positions.any { it.open && it.live }
         liveSymbolsHint = b.positions.filter { it.open && it.live }.mapNotNull { it.kite }.distinct()
@@ -2930,7 +2938,7 @@ object OrbArms {
     }
 
     @Synchronized fun wipe() {
-        cache = null; holdingHint = false; liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
+        cache = null; holdingHint = false; armedLabelsHint = emptyList(); liveHint = false; liveSymbolsHint = emptyList(); restoppedAt.clear(); exposureHint = emptyList(); liquidityLotsHint = LiquidityLots.CHOICES.first(); writtenText = null; writtenStat = null
         shownParams.clear()
         if (::file.isInitialized) file.delete()
     }

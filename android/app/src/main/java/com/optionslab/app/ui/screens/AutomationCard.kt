@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.FlowGate
 import com.optionslab.app.data.Market
 import com.optionslab.app.data.OrderReviewHost
+import com.optionslab.app.data.ProblemsHost
 import com.optionslab.app.data.SmartWorkers
 import com.optionslab.app.data.TradeManagerHost
 import com.optionslab.app.data.VariantRunner
@@ -83,7 +84,7 @@ internal object AutomationFeed {
             orderFlow = AutomationSummary.orderFlowLine(FlowGate.modes.value),
             brain = AutomationSummary.brainLine(SmartWorkers.brain.value, SmartWorkers.reviews.value, s.paused, s.parked),
             frozen = if (LearningFreeze.enabled()) AutomationSummary.frozenLine(LearningFreeze.state.value) else null,
-        )
+        ).let { l -> if (ProblemsHost.enabled()) AutomationSummary.withProblems(l, ProblemsHost.board.value, System.currentTimeMillis()) else l }
     }
 
     /** The lines as their books change: each line apart, then the card's whole set, each only when its words change. */
@@ -101,9 +102,13 @@ internal object AutomationFeed {
             AutomationSummary.brainLine(c, r, s.paused, s.parked)
         }
         val frozen: Flow<String?> = if (!LearningFreeze.enabled()) none else LearningFreeze.state.map { AutomationSummary.frozenLine(it) }
-        return combine(listOf(manager, autopilot, lab, flow, brain, frozen, orders).map { it.distinctUntilChanged() }) { a ->
+        val lines = combine(listOf(manager, autopilot, lab, flow, brain, frozen, orders).map { it.distinctUntilChanged() }) { a ->
             AutomationSummary.Lines(manager = a[0], autopilot = a[1], lab = a[2], orderFlow = a[3], brain = a[4], frozen = a[5], orders = a[6])
-        }.distinctUntilChanged()
+        }
+        // 12 Oct: the open problems any agent found, in sight on the card (memory: the board as its agents report).
+        val problems: Flow<com.optionslab.ira.OpenProblems.Board> =
+            if (ProblemsHost.enabled()) ProblemsHost.board else flowOf(com.optionslab.ira.OpenProblems.Board())
+        return combine(lines, problems) { l, b -> AutomationSummary.withProblems(l, b, System.currentTimeMillis()) }.distinctUntilChanged()
     }
 
     /** The books read once, off the main thread (what each section's own card used to do on Home). */
@@ -117,6 +122,7 @@ internal object AutomationFeed {
         runCatching { SmartWorkers.refreshReviews() }
         if (LearningFreeze.enabled()) runCatching { LearningFreeze.ensureLoaded() }
         if (OrderReviewHost.enabled()) runCatching { OrderReviewHost.ensureLoaded() }
+        if (ProblemsHost.enabled()) runCatching { ProblemsHost.ensureLoaded() }
     }
 }
 
@@ -194,6 +200,7 @@ internal fun AutomationCardContent(lines: AutomationSummary.Lines, section: @Com
                         else Modifier)
                     .padding(vertical = 4.dp))
         }
+        if (lines.problemsHead != null) ProblemsBlock(lines)
         rows.forEachIndexed { i, (s, line) ->
             if (i > 0) Rule()
             Row(Modifier.testTag("automation-line-${s.key}").fillMaxWidth().heightIn(min = 48.dp)
@@ -206,6 +213,24 @@ internal fun AutomationCardContent(lines: AutomationSummary.Lines, section: @Com
     }
     val sel = open?.let { k -> AutomationSummary.Section.values().firstOrNull { it.key == k } }
     if (sel != null) AutomationSheet(sel, onClose = { open = null }) { section(sel) }
+}
+
+/**
+ * The open problems any agent found (12 Oct, Boss: "find out why all my agents were not able to find these issues"): the count
+ * by severity and the most serious problem always in sight; the others behind "Show all problems" ([Expandable]).
+ */
+@Composable
+internal fun ProblemsBlock(lines: AutomationSummary.Lines) {
+    val p = LocalPalette.current
+    val head = lines.problemsHead ?: return
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp).testTag("automation-problems")) {
+        Text(head, style = Type.label.copy(color = if (lines.problemsSerious) p.oxblood else p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
+        lines.problems.firstOrNull()?.let { Text(it, style = Type.bodySmall.copy(color = p.ink), modifier = Modifier.padding(top = 2.dp)) }
+        if (lines.problems.size > 1) com.optionslab.app.ui.components.Expandable("automation-problems", label = "Show all problems", hideLabel = "Hide problems") {
+            lines.problems.drop(1).forEach { Text(it, style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 2.dp)) }
+        }
+    }
+    Rule()
 }
 
 /**

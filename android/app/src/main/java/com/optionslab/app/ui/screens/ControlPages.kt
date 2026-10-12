@@ -666,6 +666,8 @@ fun RiskPage(model: AppModel) {
         }
         // The learning freeze (S14): its state, Boss's own line and the unfreeze (PIN when live). Never from a backup.
         if (com.optionslab.app.ira.LearningFreeze.enabled()) item { com.optionslab.app.ui.SettingSpot("learn.freeze") { LearningFreezeCard(model) } }
+        // Boss's paper-only period (12 Oct): until its end date, going Live asks the PIN and shows why. Never from a backup.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.paperonly") { PaperOnlyCard(model) } }
     }
 }
 

@@ -460,12 +460,24 @@ private fun Main(model: AppModel) {
 
     NavBack(navNow()) { go(it) }
 
+    // Boss's paper-only period (12 Oct), read off the main thread; the Live switch asks his PIN inside it.
+    val paperOnlyPeriod by com.optionslab.app.data.PaperOnly.period.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    var paperOnlyPin by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded() } } }
+
     Parchment(ruled = true) {
         Column(Modifier.fillMaxSize()) {
             // Turned sideways, the chart takes the whole screen.
             val fullChart = tab == Tab.CHART && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
             if (!fullChart) Masthead(settings.live, settings.reduceMotion, linked, onMode = { live -> model.update { it.copy(mode = if (live) "live" else "sandbox", allowRealOrders = live) } },
-                onLink = { tab = Tab.CABINET; cabinetPage = "broker" })
+                onLink = { tab = Tab.CABINET; cabinetPage = "broker" },
+                paperOnly = paperOnlyPeriod?.takeIf { com.optionslab.ira.PaperOnlyPeriod.active(it, Market.today()) },
+                onLiveWithPin = { paperOnlyPin = true })
+            // 12 Oct: going Live inside Boss's paper-only period asks his PIN, its reason and end date said first.
+            if (paperOnlyPin) paperOnlyPeriod?.let { po ->
+                com.optionslab.app.ui.screens.Reauth(model, pinOnly = false, why = com.optionslab.ira.PaperOnlyPeriod.liveAsk(po),
+                    onOk = { paperOnlyPin = false; model.update { it.copy(mode = "live", allowRealOrders = true) } }, onCancel = { paperOnlyPin = false })
+            }
             Box(Modifier.weight(1f)) {
                 AnimatedContent(
                     targetState = tab,
@@ -685,7 +697,11 @@ private fun ConnectGate(model: AppModel) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {}) {
+internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Boolean) -> Unit, onLink: () -> Unit = {},
+                      /** Boss's paper-only period in force (12 Oct): going Live then shows its reason and end date and asks the PIN. */
+                      paperOnly: com.optionslab.ira.PaperOnlyPeriod.Period? = null,
+                      /** Going Live inside [paperOnly]: the caller asks the PIN, then switches. */
+                      onLiveWithPin: () -> Unit = {}) {
     val p = LocalPalette.current
     var confirmLive by remember { mutableStateOf(false) }
     var needLink by remember { mutableStateOf(false) }
@@ -757,8 +773,10 @@ internal fun Masthead(live: Boolean, calm: Boolean, linked: Boolean, onMode: (Bo
         onDismissRequest = { confirmLive = false },
         properties = androidx.compose.ui.window.DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
         title = { Text("Switch to live trading?", style = Type.title) },
-        text = { Text("Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review and a swipe to send (plus your PIN or fingerprint unless you switch that off).", style = Type.bodySmall) },
-        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; onMode(true) }) { Text("Go live", color = p.oxblood) } },
+        text = { Text((paperOnly?.let { com.optionslab.ira.PaperOnlyPeriod.liveAsk(it) + "\n\n" } ?: "") +
+            "Prices, positions and orders will come from your Zerodha account. Orders you send will use real money. Each order still needs your review and a swipe to send (plus your PIN or fingerprint unless you switch that off).", style = Type.bodySmall) },
+        confirmButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false; if (paperOnly != null) onLiveWithPin() else onMode(true) }) {
+            Text(if (paperOnly != null) "Enter PIN to go live" else "Go live", color = p.oxblood) } },
         dismissButton = { com.optionslab.app.ui.components.TextButton({ confirmLive = false }) { Text("Stay on paper") } },
     )
     if (needLink) com.optionslab.app.ui.components.AlertDialog(

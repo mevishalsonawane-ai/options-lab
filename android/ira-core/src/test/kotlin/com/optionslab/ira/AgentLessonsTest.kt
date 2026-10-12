@@ -69,19 +69,19 @@ class AgentLessonsTest {
     // ---- strengthening, weakening, retiring, merging ----
 
     @Test fun newEvidenceStrengthensThenConfirms() {
-        val first = A.pass(AgentLessons.Book(), AgentLessons.Inputs(d0.plusDays(3), trips = trips("ORB Fresh", d0, 4, 3) { 500.0 }))
-        val l1 = lesson(first.book, "strat:ORB Fresh")
+        val first = A.pass(AgentLessons.Book(), AgentLessons.Inputs(d0.plusDays(3), trips = trips("Pine trend", d0, 4, 3) { 500.0 }))
+        val l1 = lesson(first.book, "strat:Pine trend")
         assertEquals(AgentLessons.Status.NEW, l1.status); assertEquals(AgentLessons.Confidence.BUILDING, l1.confidence)
         assertTrue(first.changes.any { it.id == l1.id && it.kind == AgentLessons.ChangeKind.NEW })
         // The same day again: nothing new, nothing judged twice.
-        val again = A.pass(first.book, AgentLessons.Inputs(d0.plusDays(3), trips = trips("ORB Fresh", d0, 4, 3) { 500.0 }))
-        assertTrue(again.changes.none { it.id == l1.id }); assertEquals(12, A.evidence(lesson(again.book, "strat:ORB Fresh")).n)
+        val again = A.pass(first.book, AgentLessons.Inputs(d0.plusDays(3), trips = trips("Pine trend", d0, 4, 3) { 500.0 }))
+        assertTrue(again.changes.none { it.id == l1.id }); assertEquals(12, A.evidence(lesson(again.book, "strat:Pine trend")).n)
         // Twenty more days of winners: strong and confirmed.
-        val more = A.pass(again.book, AgentLessons.Inputs(d0.plusDays(12), trips = trips("ORB Fresh", d0, 12, 3) { 500.0 }))
-        val l2 = lesson(more.book, "strat:ORB Fresh")
+        val more = A.pass(again.book, AgentLessons.Inputs(d0.plusDays(12), trips = trips("Pine trend", d0, 12, 3) { 500.0 }))
+        val l2 = lesson(more.book, "strat:Pine trend")
         assertEquals(AgentLessons.Confidence.STRONG, l2.confidence); assertEquals(AgentLessons.Status.CONFIRMED, l2.status)
         assertTrue(more.changes.any { it.id == l2.id && it.kind == AgentLessons.ChangeKind.CONFIRMED })
-        assertEquals("ORB Fresh makes money", A.statement(l2))
+        assertEquals("Pine trend makes money", A.statement(l2))
         assertTrue(A.evidenceLine(l2).startsWith("36 trades, +Rs 18,000, 100% won"), A.evidenceLine(l2))
     }
 

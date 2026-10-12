@@ -31,6 +31,13 @@ object AutomationSummary {
         val orderFlow: String? = null,
         val brain: String? = null,
         val frozen: String? = null,
+        /**
+         * The open problems any agent found (12 Oct, [OpenProblems]): [problemsHead] "Problems found: 1 serious, 2 warnings" (null:
+         * none), [problems] their lines, the most serious first; [problemsSerious] whether any is serious.
+         */
+        val problemsHead: String? = null,
+        val problems: List<String> = emptyList(),
+        val problemsSerious: Boolean = false,
     ) {
         /** The tappable lines in the card's order. */
         fun rows(): List<Pair<Section, String>> = listOfNotNull(
@@ -113,6 +120,13 @@ object AutomationSummary {
         if (paused.isNotEmpty()) parts += "${n(paused.size, "strategy", "strategies")} paused on paper"
         if (parked.isNotEmpty()) parts += "${parked.size} parked to paper"
         return "Brain: " + parts.joinToString(" · ")
+    }
+
+    /** [l] with the open problems of [board] at [nowMs] (at most [max] lines). */
+    fun withProblems(l: Lines, board: OpenProblems.Board, nowMs: Long, max: Int = 12): Lines {
+        val open = OpenProblems.open(board, nowMs)
+        return l.copy(problemsHead = OpenProblems.head(open), problems = OpenProblems.lines(open, max),
+            problemsSerious = open.any { it.severity == OpenProblems.Severity.SERIOUS })
     }
 
     /** The warning while every automatic change is frozen; null when it is not. */

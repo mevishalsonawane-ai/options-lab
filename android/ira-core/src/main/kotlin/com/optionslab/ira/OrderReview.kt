@@ -63,6 +63,19 @@ object OrderReview {
         EARLY_EXIT("early", Group.OUTCOME, "exited early: price went much further", Fix.LAB, evidenceOnly = true),
         LOSS_OVER_PLAN("risk", Group.OUTCOME, "loss bigger than its planned risk", Fix.NOTE),
         THETA_BLEED("theta", Group.OUTCOME, "time in the trade with no move", Fix.LAB),
+        // 12 Oct ("why did no agent find these?"): the classes the review had no detector for.
+        /** Many trades a day and about no edge before charges: the charges ate the day (ORB's ~9 re-entries a day, R14). */
+        CHARGES_EAT("chg", Group.OUTCOME, "charges ate the day's gross", Fix.NOTE),
+        /** The same side bought again and again in a day, often right after a target or a lock. */
+        REENTRY("reent", Group.RULE, "same side re-entered again and again", Fix.NOTE),
+        /** A protection's target on the losing side of the price paid (a long's under it): it fills at once, for a loss. */
+        WRONG_SIDE("wside", Group.EXECUTION, "protection target on the wrong side of the entry", Fix.NEEDS_FIX),
+        /** A protection request that set nothing (no stop, no target), the old stop cancelled for it. */
+        EMPTY_PROTECT("empty", Group.EXECUTION, "a stop replaced by nothing", Fix.NEEDS_FIX),
+        /** A protection (a guard, a hand stop) put on a position a bot opened and exits by its own rules. */
+        ARM_PROTECT("armp", Group.RULE, "a protection put on a bot's own position", Fix.NEEDS_FIX),
+        /** Error lines in the diagnostics diary today, by kind ("Missing required field: quantity" x3). */
+        ERRORS("err", Group.EXECUTION, "errors in the app's diary", Fix.NEEDS_FIX),
         ;
         companion object { fun of(k: String): Category? = entries.firstOrNull { it.key == k } }
     }
@@ -97,6 +110,19 @@ object OrderReview {
     const val KEEP_DAYS = 60
     /** Each side of a before / after comparison needs this many days. */
     const val MIN_COMPARE_DAYS = 10
+    /** A strategy's day with this many closed trades or more is checked for charges eating its gross ([Category.CHARGES_EAT]). */
+    const val CHURN_N = 4
+    /** ... flagged when its gross before charges is under this many times its charges (charges at least half the gross, or no edge). */
+    const val CHURN_X = 2.0
+    /** ... serious at this many trades. */
+    const val CHURN_HIGH_N = 8
+    /** The same side entered this many times a day or more ([Category.REENTRY]) ... */
+    const val REENTRY_N = 3
+    /** ... or re-entered this many times within [REENTRY_GAP_MS] of a target or lock on that side. */
+    const val AFTER_TARGET_N = 2
+    const val REENTRY_GAP_MS = 30 * 60_000L
+    /** Error lines of one kind in a day at which [Category.ERRORS] is serious. */
+    const val ERRORS_HIGH_N = 3
 
     // ---- what the app hands in ----------------------------------------------------------------------------------------
 
@@ -132,6 +158,16 @@ object OrderReview {
     }
 
     /**
+     * A protection set on a position (the protect sheet, Jarvis's "guard my positions", a rescue): at [atMs], on [symbol] held
+     * [long]; its [stop] and [target] (null: none); [replaced] an earlier stop or target was cancelled for it; [by] who set it;
+     * [entry] the position's price when known (else the open trade's), [owner] the bot that opened the position when known.
+     */
+    data class Protect(
+        val atMs: Long, val venue: Venue, val symbol: String, val long: Boolean, val stop: Double?, val target: Double?,
+        val replaced: Boolean = false, val by: String = "", val entry: Double? = null, val owner: String? = null,
+    )
+
+    /**
      * The day's records. [fills]: every kept fill (today's judged against the earlier ones), [sync] the confirmed mismatches
      * seen today, [speed] the order path's warnings today, [tracked] the strategies whose books follow every filled entry
      * (only their orders can be orphans), [nowMs] when the review runs (a trade still open past its square-off).
@@ -140,6 +176,10 @@ object OrderReview {
         val day: LocalDate, val orders: List<Order> = emptyList(), val trades: List<Trade> = emptyList(),
         val fills: List<Slippage.Fill> = emptyList(), val sync: List<PositionSync.Mismatch> = emptyList(),
         val speed: List<String> = emptyList(), val tracked: Set<String> = emptySet(), val nowMs: Long = Long.MAX_VALUE,
+        /** The protections set in the window (12 Oct). */
+        val protections: List<Protect> = emptyList(),
+        /** The diary's error lines today by kind ([DiagErrors]); [errorsLive] the account the app was in (Live, else Paper). */
+        val errors: Map<String, Int> = emptyMap(), val errorsLive: Boolean = false,
     )
 
     // ---- what comes out --------------------------------------------------------------------------------------------------
@@ -277,11 +317,130 @@ object OrderReview {
             val cat = if (m.kind == PositionSync.Kind.STOP_MISSING) Category.STOP_NOT_RESTING else Category.SYNC
             out += Flaw("sync:${m.key}", m.who ?: "Unknown", Venue.LIVE, cat, Severity.HIGH, "Zerodha sync: ${PositionSync.say(m)}", 0.0, symbol = m.symbol)
         }
-        for (w in i.speed) out += Flaw("speed:${w.hashCode()}", "Order path", Venue.LIVE, Category.SLOW, Severity.INFO, w.take(160), 0.0)
+        // A paper warning says so ("Paper (simulated orders): ..."): never counted against the live path (12 Oct).
+        for (w in i.speed) out += Flaw("speed:${w.hashCode()}", "Order path", if (w.startsWith("Paper")) Venue.PAPER else Venue.LIVE, Category.SLOW,
+            Severity.INFO, w.take(160), 0.0)
         // ---- the trades ----
         for (t in i.trades) out += tradeFlaws(t, i.nowMs)
+        // ---- 12 Oct: the day as a whole, the protections, the diary's errors ----
+        out += churn(i.trades, i.day)
+        out += reentries(i.trades, i.day)
+        out += protections(i.protections, i.trades)
+        for ((kind, n) in i.errors.entries.sortedByDescending { it.value }) if (n > 0)
+            out += Flaw("err:$kind", "App", if (i.errorsLive) Venue.LIVE else Venue.PAPER, Category.ERRORS, if (n >= ERRORS_HIGH_N) Severity.HIGH else Severity.WARN,
+                "\"${kind.take(100)}\" $n time${if (n == 1) "" else "s"} in the diary today", 0.0)
         return Day(i.day, i.orders.size, i.trades.size, out, summaries(i, out), notes)
     }
+
+    /** +1 for a trade that profits from a rise of the index (a CE bought, a PE sold), -1 the other way, 0 not an option. */
+    fun sideOf(t: Trade): Int {
+        val s = t.symbol.uppercase(Locale.ENGLISH)
+        val r = when { s.endsWith("CE") -> 1; s.endsWith("PE") -> -1; else -> 0 }
+        return r * t.d
+    }
+
+    private fun closedOn(t: Trade, day: LocalDate) = !t.manual && t.closed && t.exitMs != null && AgentLessons.dayOf(t.exitMs) == day
+
+    /**
+     * Charges eating the day ([Category.CHARGES_EAT]): a bot's [CHURN_N]+ closed trades on [day] whose gross before charges is
+     * under [CHURN_X] times their charges - the charges at least half the gross, or no edge at all before them (not a plain
+     * losing day: a gross loss bigger than the charges is the trades' own flaws). The rupees: the charges paid.
+     */
+    fun churn(trades: List<Trade>, day: LocalDate): List<Flaw> {
+        val out = ArrayList<Flaw>()
+        for ((k, ts) in trades.filter { closedOn(it, day) && it.net != null }.groupBy { keyOf(it.strategy, it.venue) }) {
+            if (ts.size < CHURN_N) continue
+            val charges = ts.sumOf { it.charges }
+            if (charges <= 0) continue
+            val gross = ts.sumOf { (it.net ?: 0.0) + it.charges }
+            val net = gross - charges
+            if (gross >= CHURN_X * charges || gross < -charges) continue
+            val t0 = ts.first()
+            val share = if (gross > 0) " (${pct(charges / gross)} of it)" else ""
+            out += Flaw("chg:$k:$day", t0.strategy, t0.venue, Category.CHARGES_EAT, if (ts.size >= CHURN_HIGH_N) Severity.HIGH else Severity.WARN,
+                "${ts.size} trades made ${rsSigned(gross)} before charges and paid ${rs(charges)} in charges$share: net ${rsSigned(net)}. " +
+                    "About no edge a trade, so each extra trade only adds charges (research R14: fewer entries cut the loss)", charges, symbol = t0.symbol)
+        }
+        return out
+    }
+
+    /**
+     * The same side again and again ([Category.REENTRY]): a bot's entries on [day] per side; flagged at [REENTRY_N]+ entries on one
+     * side, or [AFTER_TARGET_N]+ re-entries within [REENTRY_GAP_MS] of a target or lock on that side. The rupees: what the
+     * re-entries (every entry after the side's first) lost after charges, when they lost.
+     */
+    fun reentries(trades: List<Trade>, day: LocalDate): List<Flaw> {
+        val out = ArrayList<Flaw>()
+        val todays = trades.filter { !it.manual && AgentLessons.dayOf(it.entryMs) == day }
+        for ((k, ts) in todays.groupBy { "${keyOf(it.strategy, it.venue)}|${sideOf(it)}" }) {
+            val s = ts.sortedBy { it.entryMs }
+            if (s.size < 2) continue
+            // A re-entry: bought again after the side's previous trade was out (entries at the same moment are one entry's legs).
+            var afterTarget = 0
+            val again0 = ArrayList<Trade>()
+            for (j in 1 until s.size) {
+                val prev = s[j - 1]
+                val out0 = prev.exitMs ?: continue
+                if (s[j].entryMs < out0) continue
+                again0 += s[j]
+                val pk = exitKind(prev.exitWhy)
+                if ((pk == ExitKind.TARGET || pk == ExitKind.LOCK) && s[j].entryMs - out0 in 0..REENTRY_GAP_MS) afterTarget++
+            }
+            val entries = again0.size + 1
+            if (entries < REENTRY_N && afterTarget < AFTER_TARGET_N) continue
+            val again = again0.filter { it.net != null }
+            val againNet = again.sumOf { it.net ?: 0.0 }
+            val againGross = again.sumOf { (it.net ?: 0.0) + it.charges }
+            val t0 = s.first()
+            val side = when (sideOf(t0)) { 1 -> "the up side"; -1 -> "the down side"; else -> "the same side" }
+            out += Flaw("reent:$k:$day", t0.strategy, t0.venue, Category.REENTRY, Severity.WARN,
+                "entered $side $entries times today" + (if (afterTarget > 0) ", $afterTarget right after a target or lock" else "") +
+                    (if (again.isNotEmpty()) "; the ${again.size} re-entr${if (again.size == 1) "y" else "ies"} made ${rsSigned(againGross)} before charges, " +
+                        "${rsSigned(againNet)} after" else ""),
+                (-againNet).coerceAtLeast(0.0), symbol = t0.symbol)
+        }
+        return out
+    }
+
+    /**
+     * The protections ([Protect]): one that set nothing ([Category.EMPTY_PROTECT]), a target on the wrong side of the price paid
+     * ([Category.WRONG_SIDE]), one put on a position a bot opened ([Category.ARM_PROTECT]). The entry and the owner come from the
+     * protection itself when known, else from the trade open on that symbol at the time.
+     */
+    fun protections(ps: List<Protect>, trades: List<Trade>): List<Flaw> {
+        val out = ArrayList<Flaw>()
+        for (p in ps) {
+            val open = trades.filter { it.venue == p.venue && it.symbol.equals(p.symbol, true) && it.entryMs <= p.atMs && (it.exitMs == null || it.exitMs >= p.atMs) }
+                .maxByOrNull { it.entryMs }
+            val ref = "prot:${p.venue.key}:${p.symbol}:${p.atMs}"
+            val who = (if (p.by.isBlank()) "A protection" else "${p.by}'s protection") + " on ${p.symbol} at ${hhmmOf(p.atMs)}"
+            val name = p.by.ifBlank { "Protection" }
+            val byBoss = p.by.equals("Manual", true)
+            if (p.stop == null && p.target == null) {
+                out += Flaw(ref, name, p.venue, Category.EMPTY_PROTECT, if (p.replaced) Severity.HIGH else Severity.WARN,
+                    "$who set no stop and no target" + (if (p.replaced) ": the stop that was there was cancelled and nothing replaced it" else ""),
+                    0.0, symbol = p.symbol, manual = byBoss)
+                continue
+            }
+            val entry = p.entry ?: open?.entry
+            val tgt = p.target
+            if (tgt != null && entry != null && entry > 0 && (if (p.long) tgt < entry - 1e-9 else tgt > entry + 1e-9)) {
+                val qty = open?.qty ?: 0
+                out += Flaw(ref, name, p.venue, Category.WRONG_SIDE, Severity.HIGH,
+                    "$who: target ${r2(tgt)} is ${if (p.long) "under" else "over"} the ${r2(entry)} ${if (p.long) "paid" else "sold at"} - it fills at once, for a loss",
+                    abs(entry - tgt) * qty, symbol = p.symbol, manual = byBoss)
+            }
+            val owner = p.owner ?: open?.takeIf { !it.manual }?.strategy
+            if (owner != null && !owner.equals(p.by, true) && !owner.equals("Manual", true))
+                out += Flaw("$ref:arm", name, p.venue, Category.ARM_PROTECT, Severity.WARN,
+                    "$who: the position is $owner's, which exits by its own rules (a second stop can close it early)", 0.0, symbol = p.symbol)
+        }
+        return out
+    }
+
+    /** In sight on the Automation card (never behind "Show details"): the serious flaws and the classes no one saw on 12 Oct. */
+    fun inSight(f: Flaw): Boolean = f.severity == Severity.HIGH ||
+        f.category in setOf(Category.CHARGES_EAT, Category.REENTRY, Category.WRONG_SIDE, Category.EMPTY_PROTECT, Category.ARM_PROTECT, Category.ERRORS)
 
     private fun bestAfter(t: Trade): Pair<Double, Long>? {
         if (t.after.isEmpty()) return null
@@ -541,6 +700,9 @@ object OrderReview {
     fun improvement(p: Pattern): Improvement {
         val c = p.category
         return when {
+            c == Category.CHARGES_EAT || c == Category.REENTRY ->
+                Improvement(p, Route.PROPOSAL, "${p.words()}. A proposal: fewer entries (a cap on entries a side a day, as research R14 found for ORB) " +
+                    "or switching it off; nothing was changed.")
             c.fix == Fix.NEEDS_FIX || (c == Category.REJECTED) ->
                 Improvement(p, Route.NEEDS_FIX, "${p.words()}. Needs a fix (flagged for you and the developer); nothing was changed.")
             c.fix == Fix.LAB -> {

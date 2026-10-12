@@ -463,7 +463,24 @@ object AgentLessons {
     }
 
     /** "Statement (evidence; strong)". */
-    fun said(l: Lesson): String = "${statement(l)} (${evidenceLine(l)}; ${l.confidence.word})"
+    fun said(l: Lesson): String = "${statement(l)} (${evidenceLine(l)}; ${trustWord(l)})"
+
+    /**
+     * Whether a strategy lesson says the opposite of the research's tested verdict (12 Oct: "ORB makes money (36 trades,
+     * +Rs 3,428)" the same day the trade check said "Tested: ORB lost in both years" and research R14 found every ORB trade has
+     * about zero edge before charges). Only the optimistic way: a lesson that a strategy MAKES money while the research found
+     * it lost in both tested years (a few weeks of paper fills cannot overturn years of real-cost tests). A lesson that a
+     * researched winner loses is drift - the self-review's to judge - and stays as it is. The reason, or null.
+     */
+    fun contradiction(l: Lesson): String? {
+        if (prefix(l.id) != "strat" || l.sign <= 0) return null
+        val (y1, y2) = TradeCheck.RECORD[l.name.trim()] ?: return null
+        if (y1 >= 0 || y2 >= 0) return null
+        return "contradicts the research: ${l.name} lost in both tested years (${rs(y1)}, ${rs(y2)} a lot, real costs)"
+    }
+
+    /** The confidence as said: "contradicts research - not trusted" for a [contradiction], else its word. */
+    fun trustWord(l: Lesson): String = if (contradiction(l) != null) "contradicts research - not trusted" else l.confidence.word
 
     // ---- what the agents kept, as samples --------------------------------------------------------------------------------
 
@@ -553,18 +570,20 @@ object AgentLessons {
             } ?: continue
             val d = t.closedAt.toLocalDate()
             val ed = d.toEpochDay()
-            val win = if (t.net > 0) 1 else 0
-            oa.strat.add(ed, 1, t.net, win)
+            // After ALL costs (12 Oct): what the book did not book (the paper spread before 08 Oct) is taken off too.
+            val net = t.net - t.unbooked.coerceAtLeast(0.0)
+            val win = if (net > 0) 1 else 0
+            oa.strat.add(ed, 1, net, win)
             val si = slotIndex(t.openedAt.hour * 60 + t.openedAt.minute)
             val tod = oa.tod[si] ?: SLOTS[si].let { s ->
                 acc("tod:${oa.owner}:$s", Topic.TIME_OF_DAY, Kind.RUPEES, "${oa.owner} entered ${slotWords(s)}", oa.words + s, A_TRADES).also { oa.tod[si] = it }
             }
-            tod.add(ed, 1, t.net, win)
+            tod.add(ed, 1, net, win)
             val r = regimes[d]
             if (r != null) {
                 val ra = oa.regime[r] ?: acc("regime:${oa.owner}:$r", Topic.REGIME, Kind.RUPEES, "${oa.owner} on $r days", oa.words + r + "regime", A_TRADES)
                     .also { it.agents += A_BRAIN; oa.regime[r] = it }
-                ra.add(ed, 1, t.net, win)
+                ra.add(ed, 1, net, win)
             }
         }
         // The trade manager against the original rules, and each specialist's part in it.
@@ -887,6 +906,8 @@ object AgentLessons {
             val c = conds[id]
             if (c?.first != l.cond || c?.second != l.condQ) byId[id] = l.copy(cond = c?.first, condQ = c?.second)
         }
+        // 12 Oct: a lesson against the research's tested verdict is never more than weak (never proposed, never acted on).
+        for ((id, l) in byId.entries.toList()) if (l.confidence != Confidence.WEAK && contradiction(l) != null) byId[id] = l.copy(confidence = Confidence.WEAK)
         var next = capped(Book(byId.values.sortedBy { it.id }, keptRegimes, book.timeline, day, changes, book.line))
         val kept = next.lessons.map { it.id }.toSet()
         val todays = changes.filter { it.id in kept }
@@ -1281,7 +1302,7 @@ object AgentLessons {
                 Confidence.BUILDING -> "building: ${e.n} so far" + (if (e.splits.size == SPLITS) ", ${e.agreeing} of $SPLITS periods agree" else "") +
                     (if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
                     else "; strong needs $STRONG_N, agreement over time and q at most ${fmtQ(BH_Q)}")
-                Confidence.WEAK -> "weak: only ${e.n} so far"
+                Confidence.WEAK -> contradiction(l)?.let { "not trusted: it $it" } ?: "weak: only ${e.n} so far"
             }
             "• ${statement(l)}: ${evidenceLine(l)}. It is $why" + (if (l.status == Status.WEAKENED) "; recent evidence went against it, so it is weakened" else "") + "."
         }
@@ -1294,7 +1315,7 @@ object AgentLessons {
     }
 
     /** The evidence of [ls] as plain facts (the chat's "how do you know that" reads them). */
-    fun facts(ls: List<Lesson>): List<String> = ls.map { "${statement(it)}: ${evidenceLine(it)} (${it.confidence.word})" }
+    fun facts(ls: List<Lesson>): List<String> = ls.map { "${statement(it)}: ${evidenceLine(it)} (${trustWord(it)})" }
 
     /**
      * The model's notes: the lessons most relevant to [question] (its words among their tags or names; else the strongest),

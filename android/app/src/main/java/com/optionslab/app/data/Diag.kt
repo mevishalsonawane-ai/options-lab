@@ -63,13 +63,20 @@ object Diag {
     /** A write is scheduled (guarded by this object's lock). */
     private var scheduled = false
 
+    /** Today's error lines by kind and the failures named only by a shrunk class (12 Oct; [com.optionslab.ira.DiagErrors]): counts, memory only. */
+    val errors = com.optionslab.ira.DiagErrors.Tally()
+
     /** Keep one event: "[area] text", time-stamped (IST) now, written in the background. Never throws. */
     fun record(area: String, text: String) {
         if (!::file.isInitialized) return
         // Redacted on the diary's own thread (round 2): the caller - an order being sent - never waits on the vault read it
         // makes for the account holder's name.
         val head = "${TIME.format(Instant.now())} [$area] "
-        runCatching { writer.execute { keep(head + redact(text.replace('\n', ' '))) } }
+        runCatching { writer.execute {
+            keep(head + redact(text.replace('\n', ' ')))
+            // 12 Oct: the day's errors counted by kind on this thread (the order review and the app's health read them; no agent read the diary).
+            runCatching { errors.add(java.time.LocalDate.now(com.optionslab.engine.IST), area, redact(text)) }
+        } }
     }
 
     @Synchronized
@@ -141,6 +148,8 @@ object Diag {
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { ZerodhaSync.line() }.getOrElse { "Zerodha sync: could not read" }).append('\n')
         // The order review (12 Oct): when it last ran and its counts (no rupees).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderReviewHost.diagLine() }.getOrElse { "Order review: could not read" }).append('\n')
+        // 12 Oct: the open problems any agent found (the Automation card shows the same).
+        if (!com.optionslab.app.BuildConfig.GOLD) runCatching { ProblemsHost.diagLines() }.getOrDefault(emptyList()).forEach { append(it).append('\n') }
         // The watch's workers (10 Oct): each worker and step - its state, last run, time, errors - the slowest steps today,
         // Zerodha's shared request budget and reads, the entry door, the shared state and the one-index claims standing now.
         if (!com.optionslab.app.BuildConfig.GOLD) {

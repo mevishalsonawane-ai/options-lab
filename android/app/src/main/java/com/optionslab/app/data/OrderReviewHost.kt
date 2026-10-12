@@ -169,6 +169,9 @@ object OrderReviewHost {
         b = b.copy(proposals = (b.proposals + improvements.filter { it.route == OrderReview.Route.PROPOSAL }.map { it.words })
             .distinctBy { it.substringBefore(" - ") }.takeLast(OrderReview.MAX_PROPOSALS))
         b = tell(b, dayResult, improvements, day, morning)
+        // 12 Oct: what it found goes where Boss looks - the open problems on the Automation card, and Jarvis's coach line.
+        runCatching { toProblems(dayResult, improvements) }
+        b = coach(b, dayResult, day)
         val kept = b
         withContext(Dispatchers.IO) { synchronized(lock) { _book.value = kept; save(kept) } }
         runCatching { Diag.record("orders", "reviewed $day${if (morning) " (MCX catch-up)" else ""}: ${reviewed.orders} orders, ${reviewed.trades} trades, " +
@@ -233,6 +236,55 @@ object OrderReviewHost {
         val ctx = appContext
         if (!morning && notice != null && told.add("notice:$day") && ctx != null)
             runCatching { com.optionslab.app.work.Notifier.post(ctx, NOTICE_ID, com.optionslab.app.work.Notifier.IRA, "Order review", notice, "ira") }
+        return b.copy(told = told.toList().takeLast(100).toSet())
+    }
+
+    /** What Boss can do about [f] (the open problems' fix words). */
+    private fun fixWords(f: OrderReview.Flaw): String? = when {
+        f.category == OrderReview.Category.CHARGES_EAT || f.category == OrderReview.Category.REENTRY ->
+            "cap its entries a side a day (the strategy lab's re-entry cap), or switch it off"
+        f.category == OrderReview.Category.WRONG_SIDE -> "a long's target must be above the price paid: close it or place a limit exit instead"
+        f.category == OrderReview.Category.ARM_PROTECT -> "leave a bot's positions to its own exits"
+        f.fix == OrderReview.Fix.NEEDS_FIX -> "a developer fix (flagged; nothing was changed)"
+        else -> null
+    }
+
+    /**
+     * The day's flaws in sight ([OrderReview.inSight]: the serious ones and the classes no one saw on 12 Oct) and the recurring
+     * patterns that need a fix or are proposals, as open problems ([ProblemsHost]); the last review's others are over.
+     */
+    private fun toProblems(d: OrderReview.Day, imps: List<OrderReview.Improvement>) {
+        val keep = HashSet<String>()
+        for (f in d.flaws.filter { OrderReview.inSight(it) }.sortedByDescending { it.severity.ordinal }.take(12)) {
+            val key = "orders:${f.category.key}:${f.ref}".take(120)
+            keep += key
+            ProblemsHost.report(key, "Order review", if (f.severity == OrderReview.Severity.HIGH) com.optionslab.ira.OpenProblems.Severity.SERIOUS
+                else com.optionslab.ira.OpenProblems.Severity.WARN, OrderReview.flawLine(f), fixWords(f))
+        }
+        for (i in imps.filter { it.route == OrderReview.Route.NEEDS_FIX || it.route == OrderReview.Route.PROPOSAL }) {
+            val key = "orders:pattern:${i.pattern.key}".take(120)
+            keep += key
+            ProblemsHost.report(key, "Order review", if (i.route == OrderReview.Route.NEEDS_FIX) com.optionslab.ira.OpenProblems.Severity.SERIOUS
+                else com.optionslab.ira.OpenProblems.Severity.WARN, i.words)
+        }
+        ProblemsHost.clearOthers("orders:", keep)
+    }
+
+    /**
+     * Jarvis's coach line, once a day (12 Oct: ORB re-entered ~9 times a day for about nothing before charges, found only when Boss
+     * noticed): a strategy whose charges ate the day, or that bought the same side again and again. Words only - no rupees, no
+     * account figures - in the chat (never said aloud from here).
+     */
+    private fun coach(b: OrderReview.Book, d: OrderReview.Day, day: LocalDate): OrderReview.Book {
+        val hit = d.flaws.filter { it.category == OrderReview.Category.CHARGES_EAT || it.category == OrderReview.Category.REENTRY }
+        if (hit.isEmpty() || !com.optionslab.app.BuildConfig.JARVIS) return b
+        val told = LinkedHashSet(b.told)
+        if (!told.add("coach:$day")) return b
+        val names = hit.map { "${it.strategy} (${it.venue.word})" }.distinct()
+        val text = "Order review, Boss: " + names.joinToString(" and ") + " traded" +
+            " many times today for about no edge before charges, so the charges ate the day. Fewer entries (a cap a side a day) or " +
+            "switching it off is the fix; I changed nothing. It is on the Automation card under Problems found."
+        runCatching { com.optionslab.app.ira.IraHub.note(text) }
         return b.copy(told = told.toList().takeLast(100).toSet())
     }
 
@@ -315,7 +367,16 @@ object OrderReviewHost {
         val sync = runCatching { ZerodhaSync.seenOn(day.toString()) }.getOrDefault(emptyList())
         val speed = if (day == Market.today()) runCatching { OrderTiming.card().warnings }.getOrDefault(emptyList()) else emptyList()
         val tracked = records.filter { it.trade.account == TradeManager.Account.LIVE }.map { nameOf(it.trade.label) }.toSet()
-        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to)
+        // 12 Oct: the protections set in the window (a target under the price paid, a stop replaced by nothing, a guard on an
+        // arm's own position) and the diary's errors today by kind ("Missing required field: quantity" x3).
+        val prots = runCatching { Protections.since(from - 86_400_000L) }.getOrDefault(emptyList())
+        val protections = prots.filter { it.id in from..to }.map { p ->
+            OrderReview.Protect(p.id, if (p.live) OrderReview.Venue.LIVE else OrderReview.Venue.PAPER, p.symbol, p.qty > 0, p.stop, p.target,
+                replaced = prots.any { it !== p && it.live == p.live && it.symbol == p.symbol && it.id < p.id && it.note == "replaced" })
+        }
+        val errors = if (day == Market.today()) runCatching { Diag.errors.of(day).errors }.getOrDefault(emptyMap()) else emptyMap()
+        val live = runCatching { AppSettings.load().live }.getOrDefault(false)
+        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live)
     }
 
     /** The ORB family's entry window on [day] (after its opening range, to its last entry and two minutes for the order); else null. */
@@ -377,7 +438,8 @@ object OrderReviewHost {
     fun view(b: OrderReview.Book, lab: VariantLab.Book, today: LocalDate): View {
         val d = b.last
         val imps = improvements(b)
-        val warnings = (d?.flaws.orEmpty().filter { it.severity == OrderReview.Severity.HIGH }.map { OrderReview.flawLine(it) } +
+        // 12 Oct: charges eating the day, re-entries and the protection and diary flaws are in sight too, not only the serious ones.
+        val warnings = (d?.flaws.orEmpty().filter { OrderReview.inSight(it) }.sortedByDescending { it.severity.ordinal }.map { OrderReview.flawLine(it) } +
             imps.filter { it.route == OrderReview.Route.NEEDS_FIX }.map { "Needs a fix: " + it.pattern.words() }).take(6)
         val labLines = b.requests.reversed().take(8).map { r ->
             val strategy = r.key.substringBefore('|')

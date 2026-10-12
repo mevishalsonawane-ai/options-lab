@@ -199,6 +199,10 @@ object DailyReports {
         lines += "• ORB arms: " + if (armed.isEmpty()) "none armed" else armed.joinToString() + if (s.live && s.allowRealOrders) " (LIVE, automatic)" else " (paper)"
         val strat = runCatching { Strategies.all().count { it.def.scheduler?.enabled == true } }.getOrDefault(0)
         lines += "• Strategies armed: $strat" + (runCatching { Strategies.stoppedWhy() }.getOrNull()?.let { " · bot stopped for today ${com.optionslab.ira.DayStop.by(it)}" } ?: "")
+        // 12 Oct: anything armed against a standing decision (SENSEX on BSE, FINNIFTY by research X1, a strategy that lost in both
+        // tested years) is a failing line that counts, not a bullet among twenty; also on the Automation card's problems.
+        runCatching { com.optionslab.app.data.ProblemsHost.policySweep(s.live && s.allowRealOrders, force = true) }.getOrDefault(emptyList())
+            .forEach { ok(false, it.line()) }
         ok(!s.guardKill, if (s.guardKill) "Kill switch is ON: every Zerodha order is refused (paper still trades)" else "Kill switch off")
         // Battery-optimized, Android may stop the order watch (and its stops and targets) in the background: said plainly,
         // and the notification's tap opens the Battery row. Only read: the setting is Boss's to change.
@@ -208,6 +212,9 @@ object DailyReports {
         val carried = Paper.state.positions.count { it.quantity != 0 }
         if (carried > 0) lines += "• Paper positions carried overnight: $carried"
         lines += "• Mode: " + if (s.live) "LIVE (Zerodha)" else "Paper"
+        // Boss's paper-only period (12 Oct), when one is set: its end date and reason.
+        runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded(); com.optionslab.app.data.PaperOnly.activeNow() }.getOrNull()
+            ?.let { lines += "• " + com.optionslab.ira.PaperOnlyPeriod.status(it, Market.today()) }
         if (com.optionslab.app.BuildConfig.JARVIS) {
             // Jarvis's own checks: the Zerodha connection itself, the static IP, the live prices, the data, its model and voice.
             if (Broker.loggedIn) {

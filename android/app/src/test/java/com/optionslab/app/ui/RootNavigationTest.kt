@@ -236,6 +236,23 @@ class RootNavigationTest {
         assertEquals(0, linkAsked)
     }
 
+    /** 12 Oct: inside Boss's paper-only period the switch shows its reason and end date and hands over to the PIN; it never switches by itself. */
+    @Test fun goingLiveInsideThePaperOnlyPeriodShowsWhyAndAsksThePin() {
+        val calls = mutableListOf<Boolean>()
+        var pinAsked = 0
+        val period = com.optionslab.ira.PaperOnlyPeriod.Period(java.time.LocalDate.of(2026, 10, 21), "10 days on paper", java.time.LocalDate.of(2026, 10, 12))
+        compose.setContent { IraAlgoTheme("light") { Masthead(live = false, calm = true, linked = true, onMode = { calls += it },
+            paperOnly = period, onLiveWithPin = { pinAsked++ }) } }
+        compose.onNodeWithText("PAPER TRADING").performClick()
+        compose.waitForText("Switch to live trading?")
+        compose.onNodeWithText("paper-only period until Wed 21 Oct", substring = true).assertExists()
+        compose.onNodeWithText("\"10 days on paper\"", substring = true).assertExists()
+        compose.onNodeWithText("Enter PIN to go live").performClick()
+        compose.waitForNoText("Switch to live trading?")
+        assertEquals(1, pinAsked)
+        assertEquals("the switch waits for the PIN", emptyList<Boolean>(), calls)
+    }
+
     @Test fun theBadgeFollowsTheModeAndLeavingLiveNeedsNoConfirmation() {
         val live = mutableStateOf(true)
         val calls = mutableListOf<Boolean>()

@@ -59,6 +59,9 @@ object AppHealth {
     fun init(context: Context) {
         appContext = context.applicationContext
         scope.launch { runCatching { ensureLoaded(); readExits() } }
+        // 12 Oct: one look a minute and a half after the start (the app's start time, last night's budget), market watch or not.
+        // (Never in the unit tests' process: a tick a test did not ask for would change another test's state.)
+        if (android.os.Build.FINGERPRINT != "robolectric") scope.launch { delay(90_000L); runCatching { tick(null) } }
     }
 
     private fun file(): File? = appContext?.let { File(File(it.noBackupFilesDir, DIR), FILE) }
@@ -228,8 +231,28 @@ object AppHealth {
             runCatching { Diag.record("health", "self-tuning: " + a.words()) }
             runCatching { SmartWorkers.found("health tuner", Findings.Kind.OTHER, Findings.ALL, words = a.words(), strength = 40, ttlMs = 24 * 3_600_000L) }
         }
+        runCatching { healthProblems(today) }
         saveNow()
         return changes
+    }
+
+    /**
+     * 12 Oct: what was measured and never told - a screen freeze of 1 s or more with where it was stuck, a slow app start, the
+     * background budget spent early, slow paper orders, a failure named only by a shrunk class - as open problems ([ProblemsHost],
+     * the Automation card). Memory only (the health book, the speed watchdog, the budget's meters, the order timings, the diary's
+     * counts). Each problem stays open until it is no longer seen for a day and a half.
+     */
+    internal fun healthProblems(today: LocalDate, now: java.time.LocalDateTime = runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }) {
+        val b = book
+        val found = listOfNotNull(
+            com.optionslab.ira.HealthChecks.stalls(b.day(today)),
+            com.optionslab.ira.HealthChecks.appStart(Speed.startMs, Speed.startSlowest),
+            runCatching { com.optionslab.app.work.BackgroundBudget.spentNow() }.getOrNull()?.let { (k, ms) ->
+                com.optionslab.ira.HealthChecks.budget(k, ms, com.optionslab.ira.BudgetRule.NIGHT_CPU_MS, now) },
+            runCatching { OrderTiming.paperDecisionToSent() }.getOrNull().let { com.optionslab.ira.HealthChecks.paperOrders(it?.first, it?.second ?: 0) },
+            com.optionslab.ira.HealthChecks.unreadable(runCatching { Diag.errors.of(today).unreadable }.getOrDefault(emptyMap())),
+        )
+        for (f in found) ProblemsHost.report(f.key, "App health", f.severity, f.text, f.fix)
     }
 
     /**

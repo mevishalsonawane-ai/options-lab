@@ -153,6 +153,25 @@ object Heartbeat {
         }
     }
 
+    /**
+     * Session coverage ([com.optionslab.ira.SessionCoverage]) from plain facts, not the watch's own rule: MCX open (its calendar and
+     * hours) with an MCX arm armed or something held there, and the watch not alive in this process. A gap is an open problem
+     * (one notification a day, words only) and the watch is started again. The policy check runs here too (memory only).
+     */
+    private fun coverage(context: Context, alive: Boolean) {
+        val mcx = com.optionslab.app.data.McxMarket
+        val arms = com.optionslab.app.data.McxPaperArms
+        val open = runCatching { mcx.isOpen() }.getOrDefault(false)
+        val armed = if (!open) emptyList() else runCatching { arms.ARMS.filter { arms.armed(it) }.map { arms.label(it) } }.getOrDefault(emptyList())
+        val held = if (open && runCatching { mcx.exposure() }.getOrDefault(false)) 1 else 0
+        // The price stream may rest by design (Paper mode, nothing needing live prices): only the watch's own absence is a gap here.
+        val gaps = com.optionslab.ira.SessionCoverage.gaps(listOf(com.optionslab.ira.SessionCoverage.Market("MCX", open, held, armed)), alive, null)
+        for (g in gaps) com.optionslab.app.data.ProblemsHost.report(g.key, "Session coverage", com.optionslab.ira.OpenProblems.Severity.SERIOUS, g.text,
+            "the watch was started again; if this repeats, it needs a developer fix", notify = true)
+        if (gaps.any { it.watch }) runCatching { Jobs.ensureWatch(context) }
+        runCatching { com.optionslab.app.data.ProblemsHost.policySweep(com.optionslab.app.data.AppSettings.load().let { it.live && it.allowRealOrders }) }
+    }
+
     /** The alarm fired: re-arm, and if the watch is silent, restart it and say so once. */
     fun check(context: Context) {
         schedule(context)
@@ -161,6 +180,9 @@ object Heartbeat {
         // service start, run on the main thread with a binder call to Android and the notification posted again (ANR fix, 9 Oct).
         val alive = alivePulse > 0L && System.currentTimeMillis() - alivePulse in 0L until WatchHealth.ALIVE_MS
         if (!alive && watched() && runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)) runCatching { Jobs.ensureWatch(context) }
+        // 12 Oct, 16:30: an independent look at coverage - the watch's own "should I run?" rule was the wrong one that day, and
+        // this check and the health monitor (inside the watch) both leaned on it.
+        if (watched()) runCatching { coverage(context, alive) }
         if (!watched() || !stale()) return
         val now = System.currentTimeMillis()
         val state = WatchHealth.state(now, last(), alivePulse).let { if (it == WatchHealth.State.OK) WatchHealth.State.DEAD else it }

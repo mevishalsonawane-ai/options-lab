@@ -100,6 +100,12 @@ object BackgroundBudget {
         return d.allow
     }
 
+    /**
+     * The budget now ([BudgetRule.budgetOf]) and what it has spent so far (the health check, 12 Oct): memory only - nothing is
+     * asked or counted by this.
+     */
+    fun spentNow(): Pair<String, Long> { roll(); return (night ?: "") to meters.values.sumOf { it.spentMs } }
+
     /** TEST ONLY. */
     internal fun resetForTest() { night = null; meters.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
 }

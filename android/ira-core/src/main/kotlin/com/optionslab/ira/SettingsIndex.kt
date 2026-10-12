@@ -231,6 +231,8 @@ object SettingsIndex {
             listOf("Bot settings", "Autopilot learning"), listOf("autopilot", "learning", "auto heal", "self tuning"), guarded = true),
         Entry("risk", "learn.freeze", "Learning freeze", "Every automatic change stops when the P&L falls past a line after the agents' changes; your own line, and the unfreeze (PIN when live).",
             listOf("Bot settings", "Learning freeze"), listOf("freeze", "frozen", "unfreeze", "learning", "drawdown", "autopilot"), guarded = true),
+        Entry("risk", "risk.paperonly", "Paper-only period", "An end date and a reason: until then switching to Live asks your PIN and shows them; exits are never blocked.",
+            listOf("Bot settings", "Paper-only period"), listOf("paper only", "paper period", "no live", "practice", "break from live"), guarded = true),
 
         // ---- Settings → Data and harvest ----
         Entry("data", "data.record", "Include this phone's captures", "The days this phone collected extend the record forward.",

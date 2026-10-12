@@ -34,7 +34,10 @@ internal object IraAccount {
         val round = runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList())
         // Named again only when the round trips or the owners changed (the book gives the same list while its trades do).
         return (if (live) liveNamed else paperNamed).of(round to HashMap(owners)) { (r, o) ->
-            r.map { t -> com.optionslab.ira.Insights.Trip(t.symbol, t.openedAt, t.closedAt, t.net, com.optionslab.app.data.TradeBook.ownerOf(t, o)) }
+            r.map { t -> com.optionslab.ira.Insights.Trip(t.symbol, t.openedAt, t.closedAt, t.net, com.optionslab.app.data.TradeBook.ownerOf(t, o),
+                // 12 Oct: a paper trip closed before the paper fills paid the bid/ask spread (08 Oct) carries its estimate, so the
+                // lessons weigh it after all costs ("ORB makes money" stood on fills with no spread).
+                unbooked = if (live) 0.0 else com.optionslab.ira.Insights.unbookedSpread(t.closedAt.toLocalDate(), t.entry, t.exit, t.qty)) }
         }
     }
 
@@ -388,8 +391,8 @@ internal object IraAccount {
                 val a = runCatching { com.optionslab.app.data.Alarms.all() }.getOrDefault(emptyList())
                 out[Section.ALARMS] = (if (a.isEmpty()) listOf("No price alarms are set.") else a.map {
                     "Alarm: ${it.describe()}, ${if (!it.enabled) "off" else if (it.firedAtMillis > 0) "fired" else "waiting"}${it.note.takeIf { n -> n.isNotBlank() }?.let { n -> " ($n)" } ?: ""}." }) +
-                    listOfNotNull(s.pnlLossAlert.takeIf { it > 0 }?.let { "P&L alert when the day's loss reaches ${AppFacts.amt(it)}." },
-                        s.pnlProfitAlert.takeIf { it > 0 }?.let { "P&L alert when the day's profit reaches ${AppFacts.amt(it)}." })
+                    listOfNotNull(s.pnlLossAlert.takeIf { it > 0 }?.let { "P&L alert when the day's loss reaches ${AppFacts.amt(it)}." },   // money-label: an alert level, not a figure
+                        s.pnlProfitAlert.takeIf { it > 0 }?.let { "P&L alert when the day's profit reaches ${AppFacts.amt(it)}." })   // money-label: an alert level, not a figure
             }
 
             if (wants(Section.SETTINGS)) out[Section.SETTINGS] = listOf(

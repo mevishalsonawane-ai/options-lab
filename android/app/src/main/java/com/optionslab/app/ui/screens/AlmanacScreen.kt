@@ -275,7 +275,7 @@ private fun AlmanacBody(
             val cap = money.capital
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
-                Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
+                Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))   // money-label: whose follows on the next line
                 // 12 Oct: whose money this is, always said - Zerodha's real account or the paper (practice) one, never mixed.
                 Text(if (live) "Zerodha · LIVE (real money)" else "PAPER (practice money)",
                     style = Type.label.copy(color = if (live) p.oxblood else p.inkSoft, fontSize = 12.sp))

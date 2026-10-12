@@ -168,6 +168,14 @@ object OrderTiming {
         bookLocked().all(OrderSpeed.Step.SIGNAL_SENT).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
     }
 
+    /**
+     * Today's PAPER decision-to-order-sent median and how many orders it is over (12 Oct: paper orders took seconds and the card
+     * mixed them with live); null: none timed. Read by the health check, never on the order path.
+     */
+    fun paperDecisionToSent(): Pair<Long, Int>? = synchronized(lock) {
+        bookLocked().of(OrderSpeed.Step.DECISION_SENT, false).takeIf { it.isNotEmpty() }?.let { OrderSpeed.median(it) to it.size }
+    }
+
     /** The diagnostics export's line. */
     fun diagLine(): String = synchronized(lock) { OrderSpeed.diagLine(bookLocked()) }
 

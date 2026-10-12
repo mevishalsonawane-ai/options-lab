@@ -121,6 +121,9 @@ object Protections {
     }
 
     suspend fun active(): List<Item> = lock.withLock { load().filter { it.active } }
+
+    /** Every protection set at or after [fromMs], active or not (the order review's read after the close, 12 Oct). */
+    suspend fun since(fromMs: Long): List<Item> = lock.withLock { load().filter { it.id >= fromMs } }
     suspend fun forSymbol(live: Boolean, symbol: String): Item? = lock.withLock { load().lastOrNull { it.active && it.live == live && it.symbol == symbol } }
 
     // ---- setting one up -------------------------------------------------------------------

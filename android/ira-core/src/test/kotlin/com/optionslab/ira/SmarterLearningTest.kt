@@ -96,11 +96,11 @@ class SmarterLearningTest {
         assertEquals(BUILDING, AgentLessons.confidence(e, 0.2))
         assertEquals(BUILDING, AgentLessons.confidence(e, null))
         // One real lesson among many noisy ones: BH keeps it strong; the evidence line carries its q.
-        val trips = (0 until 40).map { k -> Insights.Trip("X", d0.plusDays(k.toLong()).atTime(11, 0), d0.plusDays(k.toLong()).atTime(11, 20), 400.0 + k, "ORB Fresh") } +
+        val trips = (0 until 40).map { k -> Insights.Trip("X", d0.plusDays(k.toLong()).atTime(11, 0), d0.plusDays(k.toLong()).atTime(11, 20), 400.0 + k, "Pine trend") } +
             (0 until 12).flatMap { o -> (0 until 40).map { k -> Insights.Trip("X", d0.plusDays(k.toLong()).atTime(11, 0), d0.plusDays(k.toLong()).atTime(11, 20),
                 if ((k * 7 + o * 3) % 5 < 2) 300.0 else -210.0, "Bot $o") } }
         val pass = AgentLessons.pass(AgentLessons.Book(), AgentLessons.Inputs(d0.plusDays(40), trips = trips))
-        val good = pass.book.lessons.first { it.id == AgentLessons.norm("strat:ORB Fresh") }
+        val good = pass.book.lessons.first { it.id == AgentLessons.norm("strat:Pine trend") }
         assertEquals(STRONG, good.confidence); assertTrue(good.q!! <= AgentLessons.BH_Q)
         assertTrue("q < 0.001" in AgentLessons.evidenceLine(good), AgentLessons.evidenceLine(good))
         // Every active lesson has its p and q; no strong lesson above the bar.
