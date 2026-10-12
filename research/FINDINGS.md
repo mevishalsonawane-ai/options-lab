@@ -292,3 +292,18 @@ Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); s
 - Pre-registered for SHADOW only (engine `LiquidityAddons`, default OFF): A1 OI veto (x2 R1), A2 calls need OI (x2 R5),
   A3 Night R3 BANKNIFTY leg. Judged at 300 Liquidity trades (A1/A2) / 100 nights (A3) with Holm; the shadow alone is
   too small to prove A1 (expected +Rs 30-40 a trade vs a Rs 55-60 standard error) - it mainly guards against harm.
+
+## What is predictable? (R16, 12 Oct 2026) - only the size of the next 30-60 min move, not its direction
+Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 24 holdout tests, one BH family).
+- Data: release 1-min BANKNIFTY (Feb 2024 - Feb 2026) and NIFTY (Apr 2024 - Apr 2026), Yahoo daily index/VIX
+  2010 - Oct 2026, NSE bhavcopy OI 2022 - Oct 2026. Locked holdout = last ~6 months of each, read once.
+- PREDICTABLE: range of the next 30/60 min (both indices, q 0.003). Holdout error 15-20% below the time-of-day
+  average, 10-15% below VIX-implied. A 4-input formula (usual range at this time, last 30/60-min range, VIX) keeps most
+  of it (13-14%). Forecast fifths separate quiet from busy half-hours ~2x (BANKNIFTY 80 vs 154 pts).
+- Not beyond VIX: next-day range and rest-of-day range from 09:30 (VIX alone is as good; use it for "expected range").
+- NOT predictable: direction 15/30/60 min (holdout AUC 0.509-0.536; every option-buying version loses Rs 12-142 a
+  trade after costs; an ATM round trip costs ~Rs 133 BANKNIFTY / ~Rs 98 NIFTY); trend vs range day from the first
+  30/45 min (AUC 0.46-0.52); expiry close vs max pain (max pain is WORSE than "no change": 0.74% vs 0.43% BANKNIFTY,
+  0.58% vs 0.52% NIFTY); "days like today" analogs (worse than all past days pooled, all 8 cases).
+- App: build an expected-range nowcast (stop/target sizing, quiet-market warning, Jarvis); show analogs only as
+  context, never as a forecast; no direction / regime / max-pain models.
