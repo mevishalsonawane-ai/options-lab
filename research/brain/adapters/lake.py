@@ -36,6 +36,18 @@ def _naive_ist(ts: pd.Series) -> pd.Series:
     return ts
 
 
+def pick_future(expiries, day: date) -> tuple[date | None, bool]:
+    """The futures contract whose volume stands for the index on `day`: the near month, except on its expiry day (the
+    roll day), when the next month is used. Expiry dates are scheduled, so this reads nothing after the day's start.
+    Returns (expiry, rolled)."""
+    ex = sorted({e for e in expiries if e is not None and e == e and e >= day})
+    if not ex:
+        return None, False
+    if ex[0] == day and len(ex) > 1:
+        return ex[1], True
+    return ex[0], False
+
+
 class LakeAdapter:
     name = "lake"
 
@@ -100,6 +112,7 @@ class LakeAdapter:
             fut["ts"] = _naive_ist(fut.ts)
             fut = fut[(fut.ts.dt.date >= frm) & (fut.ts.dt.date <= to)]
             if len(fut):
+                fut["expiry"] = pd.to_datetime(fut.expiry).dt.date
                 fut = fut.sort_values("expiry")
                 fut["d"] = fut.ts.dt.date
         sess = set(self.sessions(und))
@@ -122,13 +135,17 @@ class LakeAdapter:
                 options = options.drop_duplicates(["ts", "strike", "side"], keep="first")
             f = fb.get(d)
             fdf = empty(FUT_COLS)
+            f_exp, f_roll = None, False
             if f is not None and len(f):
-                near = f[f.expiry == f.expiry.min()]           # the nearest live contract on that day
-                fdf = near[["ts", "close", "volume", "oi"]].astype(float, errors="ignore")
+                f_exp, f_roll = pick_future(f.expiry, d)
+                if f_exp is not None:
+                    near = f[f.expiry == f_exp]
+                    fdf = near[FUT_COLS].astype({c: float for c in FUT_COLS if c != "ts"})
             v = vb.get(d)
             vdf = v[["ts", "close"]] if v is not None and len(v) else empty(VIX_COLS)
             yield DayData(day=d, und=und, index=index.reset_index(drop=True), options=options.reset_index(drop=True),
-                          fut=fdf.reset_index(drop=True), vix=vdf.reset_index(drop=True),
+                          fut=fdf.reset_index(drop=True), vix=vdf.reset_index(drop=True), fut_expiry=f_exp,
+                          fut_roll=f_roll,
                           sources=dict(index=f"lake:index_1m_{und}", options=f"lake:opt_{und}_WEEK expiry={src}",
-                                       fut="lake:fut_1m_live_index" if len(fdf) else "",
+                                       fut=f"lake:fut_1m_live_index expiry={f_exp}" if len(fdf) else "",
                                        vix="lake:index_1m_INDIAVIX" if len(vdf) else ""))

@@ -40,12 +40,16 @@ def _perturb_minutes(M: pd.DataFrame, t, rng) -> pd.DataFrame:
     if not k:
         return M
     f = rng.uniform(0.9, 1.1, k)
-    for c in ["open", "high", "low", "close", "fut_close"]:
+    for c in ["open", "high", "low", "close", "fut_open", "fut_high", "fut_low", "fut_close", "oi_max_call_strike",
+              "oi_max_put_strike"]:
         if c in M:
             M.loc[fut, c] = M.loc[fut, c].values * f
-    for c in ["vix", "basis", "basis_pct", "chain_ok_share", "volume"]:
+    for c in ["vix", "basis", "basis_pct", "chain_ok_share", "volume", "atm_iv"]:
         if c in M:
             M.loc[fut, c] = rng.normal(0, 5, k)
+    for c in ["fut_volume", "fut_oi"]:
+        if c in M:
+            M.loc[fut, c] = rng.uniform(0, 5e5, k)
     for c in ["flag", "fut_flag", "vix_flag"]:
         if c in M:
             M.loc[fut, c] = rng.choice(FLAGS, k)
@@ -104,7 +108,7 @@ def _cut_day(dd: DayData, t, rng=None) -> DayData:
                 df.loc[fut, c] = df.loc[fut, c].values * rng.uniform(0.8, 1.2, fut.sum())
         return df
     return DayData(day=dd.day, und=dd.und, index=cut(dd.index), options=cut(dd.options), fut=cut(dd.fut),
-                   vix=cut(dd.vix), sources=dd.sources)
+                   vix=cut(dd.vix), sources=dd.sources, fut_expiry=dd.fut_expiry, fut_roll=dd.fut_roll)
 
 
 def check_cube(dd: DayData, cuts, sessions=None, seed: int = 11) -> list[tuple]:

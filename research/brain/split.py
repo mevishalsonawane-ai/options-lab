@@ -3,6 +3,7 @@
 join_forward(features, labels)   features at t + labels describing t+1.. (same ts key), with name checks
 walk_forward(ts, ...)            expanding-window folds by session: train strictly before test, purged + embargoed
 purged_kfold(ts, ...)            k contiguous session blocks; train on both sides, purged before and embargoed after
+check_precision(frame, tr, te)   refuses a fold that trains on volume "estimate" rows and tests on "exact" (or back)
 
 Purge: drop every training sample whose label window [t, t + horizon] reaches into the test block.
 Embargo: also drop training samples in the `embargo` after the test block (serial correlation / delayed effects).
@@ -25,6 +26,20 @@ def join_forward(features: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
     if bad_f or bad_l or set(fcols) & set(lcols):
         raise ValueError(f"feature/label name clash: features with y_ {bad_f}, labels without y_ {bad_l}")
     return features.merge(labels, on="ts", how="inner", validate="one_to_one")
+
+
+def check_precision(frame: pd.DataFrame, train_idx, test_idx) -> None:
+    """ARCHITECTURE "Changes" item 4: volume-based values from 1-minute bars ("estimate") and from ticks ("exact") are
+    not interchangeable. A fold whose training rows use one precision and whose test rows use the other raises.
+    Rows without volume ("none") are ignored. Call it on the feature store frame (it has a `precision` column)."""
+    if "precision" not in frame:
+        return
+    p = frame["precision"].to_numpy()
+    tr = set(p[np.asarray(train_idx)]) - {"none"}
+    te = set(p[np.asarray(test_idx)]) - {"none"}
+    if tr and te and tr != te:
+        raise ValueError(f"precision mismatch: train {sorted(tr)} vs test {sorted(te)}; train and test on the same "
+                         f"precision, or validate the estimate against exact values first")
 
 
 def _blocks(ts: pd.DatetimeIndex, n_blocks: int) -> list[tuple[pd.Timestamp, pd.Timestamp]]:

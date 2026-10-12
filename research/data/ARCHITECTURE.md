@@ -46,7 +46,7 @@ encoder. It is not one giant model.
 | **Dhan API** (Boss's token, env var only) | index/futures 1-min & daily, expired options by ATM offset with OI/IV, constituents, MCX | full history once, then a nightly top-up |
 | **Zerodha (the app)** | live ticks, market depth, option chain, Boss's orders and fills | live, recorded on the phone |
 | **NSE public** | F&O bhavcopy (every contract's daily close/OI), participant OI, FII/DII, holidays | daily, free |
-| **News** | the RSS feeds the app already reads | live |
+| **News** | the RSS feeds the app already reads | live | Not built |
 | **The app's own records** | fills with bid/ask and depth, slippage, Order Review flaws, trade-manager votes, Jarvis lessons, paper/live P&L | every trade |
 
 The app's own records are the most valuable source we have. Nobody else has Boss's fills, latency and slippage, and they
@@ -181,27 +181,30 @@ the raw data (point-in-time, versioned), so it is available for all history. **L
 the app records it from Zerodha's stream, so its history starts on the day recording starts. That is why live recording
 began first.
 
-| Group | Field | Kind | Notes |
-|---|---|---|---|
-| **Price** | open, high, low, close per minute; day OHLC; previous close; gap | R / D | index, futures, options, stocks, MCX |
-| **Volume** | volume per minute; day volume; relative volume (vs same minute, 20 days) | R / D | futures and options carry volume (the index itself has none) |
-| **Volume profile ("vertical volume")** | volume at each price: POC, value area high/low (70%), high/low-volume nodes; day, week and developing profile | D | built from 1-min OHLCV (estimate); exact from ticks once recorded (L) |
-| **VWAP** | session VWAP, anchored VWAPs (from day open, gap, swing), ±1/2σ bands; distance from VWAP | D (L exact) | futures VWAP from 1-min data; Zerodha's "average traded price" recorded live is exact |
-| **Open interest** | OI per strike/minute, OI change, build-up type (long build-up, short build-up, short covering, long unwinding), futures OI | R / D | from the Dhan rolling options + bhavcopy |
-| **Option chain** | ATM ±10 LTP, OI, IV, Greeks (Δ Γ Θ Vega), PCR (OI and volume), max pain, IV skew, IV rank/percentile, ATM straddle price and decay | R / D | IV from Dhan when given, otherwise Black-Scholes |
-| **Order flow** | bid/ask, spread, depth (5 levels), total buy vs sell quantity, order-book imbalance, trade-side estimate (at bid/ask), **delta & cumulative delta (CVD)**, large prints, absorption, pulled orders | **L** | **No vendor history from Dhan.** It exists only from the app's live recording (started 12 Oct), so each day recorded adds to it |
-| **Support & resistance** | previous day/week/month high-low-close, pivots (classic and CPR), swing highs/lows, round numbers, opening range, the Liquidity arm's levels, volume-profile POC/VAH/VAL, max-OI call (resistance) and put (support) strikes, gap fill levels, VWAP bands | D | each level stored with how often it held/broke historically |
-| **Trend & indicators** | EMAs (9/20/50/200), Supertrend, RSI, MACD, ADX, ATR, Bollinger, Donchian; higher-timeframe trend (15m/1h/day) | D | computed per minute, point-in-time |
-| **Candle patterns** | inside/outside bars, engulfing, big candles, wicks, consecutive colours (the app already has a pattern library) | D | |
-| **Volatility** | India VIX and its change, realised volatility (5/30/day), ATR %, expected move from VIX/straddle | R / D | |
-| **Breadth** | advance/decline of NIFTY 50 / BANKNIFTY constituents, % above VWAP, heavyweight contribution (HDFC Bank, ICICI and others for BankNifty) | D | from the constituents' data |
-| **Futures** | basis (futures − spot), rollover %, cost of carry | R / D | |
-| **Participants** | FII/DII cash flows, participant-wise OI (FII, Pro, Client, DII long/short) | R | NSE daily |
-| **Global & macro** | GIFT Nifty, US futures, USD/INR, crude, US 10Y, Dow/Nasdaq previous close | R | daily/pre-open; free sources |
-| **Calendar & events** | expiry days (weekly/monthly), days to expiry, holidays, RBI policy, budget, results of heavyweights, US CPI/Fed, F&O ban list | R | |
+| Group | Field | Kind | Notes | Built in research/brain (12 Oct) |
+|---|---|---|---|---|
+| **Price** | open, high, low, close per minute; day OHLC; previous close; gap | R / D | index, futures, options, stocks, MCX | **Built**: index and futures OHLC per minute, day OHLC, previous close, gap (cube, `price`). Stocks and MCX: no source yet |
+| **Volume** | volume per minute; day volume; relative volume (vs same minute, 20 days) | R / D | futures and options carry volume (the index itself has none) | **Built** (`volume`): futures volume per minute and for the day so far, relative volume (same minute, 20 sessions). Precision `estimate`; NaN on release days (no futures volume) |
+| **Volume profile ("vertical volume")** | volume at each price: POC, value area high/low (70%), high/low-volume nodes; day, week and developing profile | D | built from 1-min OHLCV (estimate); exact from ticks once recorded (L) | **Built**: L3 `profiles` table (developing, day, week; POC, VAH/VAL 70%, HVN/LVN) and `profile` features. `estimate` |
+| **VWAP** | session VWAP, anchored VWAPs (from day open, gap, swing), ±1/2σ bands; distance from VWAP | D (L exact) | futures VWAP from 1-min data; Zerodha's "average traded price" recorded live is exact | **Built** (`volume`): session VWAP (= anchored at the open), ±1σ/±2σ bands, distance, VWAPs anchored at the previous day's high and low. Gap and swing anchors not yet |
+| **Open interest** | OI per strike/minute, OI change, build-up type (long build-up, short build-up, short covering, long unwinding), futures OI | R / D | from the Dhan rolling options + bhavcopy | **Built**: OI per strike/minute, OI change (cube chain), build-up % (`options`), futures OI where the lake has it. Build-up *type* labels not yet |
+| **Option chain** | ATM ±10 LTP, OI, IV, Greeks (Δ Γ Θ Vega), PCR (OI and volume), max pain, IV skew, IV rank/percentile, ATM straddle price and decay | R / D | IV from Dhan when given, otherwise Black-Scholes | **Built**: all listed, incl. PCR by volume, IV rank/percentile (252 sessions), Greeks at ATM and ATM±2 (`options`) |
+| **Order flow** | bid/ask, spread, depth (5 levels), total buy vs sell quantity, order-book imbalance, trade-side estimate (at bid/ask), **delta & cumulative delta (CVD)**, large prints, absorption, pulled orders | **L** | **No vendor history from Dhan.** It exists only from the app's live recording (started 12 Oct), so each day recorded adds to it | Not built: needs the live recording (L) |
+| **Support & resistance** | previous day/week/month high-low-close, pivots (classic and CPR), swing highs/lows, round numbers, opening range, the Liquidity arm's levels, volume-profile POC/VAH/VAL, max-OI call (resistance) and put (support) strikes, gap fill levels, VWAP bands | D | each level stored with how often it held/broke historically | **Built**: L3 `levels` table (all listed types except VWAP bands, which are `volume` features, and the Liquidity arm's levels, which are `structure` features) with held/broke counts from earlier sessions; `levels` features |
+| **Trend & indicators** | EMAs (9/20/50/200), Supertrend, RSI, MACD, ADX, ATR, Bollinger, Donchian; higher-timeframe trend (15m/1h/day) | D | computed per minute, point-in-time | **Built** (`indicators`): all listed, per minute |
+| **Candle patterns** | inside/outside bars, engulfing, big candles, wicks, consecutive colours (the app already has a pattern library) | D | | **Built** (`candles`): 5- and 15-minute inside/outside, engulfing, big bars, wick ratios, colour runs |
+| **Volatility** | India VIX and its change, realised volatility (5/30/day), ATR %, expected move from VIX/straddle | R / D | | **Built**: VIX and its change, realised vol 30 m, ATR %, expected move from VIX and the straddle. Realised vol 5 m / day not yet |
+| **Breadth** | advance/decline of NIFTY 50 / BANKNIFTY constituents, % above VWAP, heavyweight contribution (HDFC Bank, ICICI and others for BankNifty) | D | from the constituents' data | **Pending data**: registered in FEATURES.md, not computed (no adapter loads constituent bars) |
+| **Futures** | basis (futures − spot), rollover %, cost of carry | R / D | | **Built**: basis and its change; roll day marked. Rollover % and cost of carry not yet |
+| **Participants** | FII/DII cash flows, participant-wise OI (FII, Pro, Client, DII long/short) | R | NSE daily | Not built: no source yet |
+| **Global & macro** | GIFT Nifty, US futures, USD/INR, crude, US 10Y, Dow/Nasdaq previous close | R | daily/pre-open; free sources | Not built: no source yet |
+| **Calendar & events** | expiry days (weekly/monthly), days to expiry, holidays, RBI policy, budget, results of heavyweights, US CPI/Fed, F&O ban list | R | | **Built**: expiries, DTE, holidays (inferred), events.csv (budget, RBI). Results, US CPI, ban list: add rows / not yet |
 | **News** | headline, source, time, tone, instruments it concerns | R / L | the app's news feeds |
-| **Execution (Boss's own)** | signal time, order sent/ack/fill times, intended vs fill price, slippage, spread paid, charges | L (encrypted) | the most valuable data, from the app only |
-| **Outcomes / labels** | next 5/15/30/60-min move, MFE/MAE, the day's regime, whether each strategy's signal won after costs | D | used only as training targets, never as inputs |
+| **Execution (Boss's own)** | signal time, order sent/ack/fill times, intended vs fill price, slippage, spread paid, charges | L (encrypted) | the most valuable data, from the app only | Not built here (L8 recording) |
+| **Outcomes / labels** | next 5/15/30/60-min move, MFE/MAE, the day's regime, whether each strategy's signal won after costs | D | used only as training targets, never as inputs | **Built** (`labels.py`): 15/30/60-min move, range, MFE/MAE; kept apart from features |
+
+The last column says what `research/brain` builds today (catalogue: `research/brain/FEATURES.md`; the L3 `levels` and
+`profiles` tables: `research/brain/README.md`).
 
 **Rules for all of it:**
 
