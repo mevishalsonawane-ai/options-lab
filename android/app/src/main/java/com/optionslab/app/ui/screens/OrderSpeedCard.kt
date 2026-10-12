@@ -42,8 +42,11 @@ internal fun OrderSpeedCard() {
             flow = if (com.optionslab.app.BuildConfig.GOLD) null else withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.OrderFlowLive.coverageLine() }.getOrNull() }
             relayOn = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.Relay.enabled }.getOrDefault(false) }
             // The watch's own steps timed today (10 Oct): the pass, the stop check, the arms side by side, the slowest steps.
+            // Round 4: each fill's slippage today (live, and paper's modelled apart) and the Zerodha sync check (memory only).
             steps = if (com.optionslab.app.BuildConfig.GOLD) emptyList() else withContext(Dispatchers.IO) {
-                runCatching { com.optionslab.app.work.WatchWorkers.speedLines() }.getOrDefault(emptyList())
+                runCatching { com.optionslab.app.work.WatchWorkers.speedLines() }.getOrDefault(emptyList()) +
+                    runCatching { com.optionslab.app.data.FillSlippage.cardLines() }.getOrDefault(emptyList()) +
+                    listOfNotNull(runCatching { com.optionslab.app.data.ZerodhaSync.line() }.getOrNull())
             }
             delay(5_000)
         }

@@ -258,6 +258,21 @@ class SmartWorkersTest : RobolectricTest() {
         } finally { Market.testClock = null }
     }
 
+    /** G9-6 (round 4): the event-day calendar is built before a nightly pass starts (the learning's event-day filter reads it). */
+    @Test fun theEventCalendarIsBuiltBeforeTheNightlyPassStarts() {
+        EventDays.resetForTest()
+        val notYet = Any()
+        val seen = java.util.concurrent.atomic.AtomicReference<Any?>(notYet)
+        SmartWorkers.nightlyStartForTest = { seen.compareAndSet(notYet, EventDays.builtDayForTest) }
+        try {
+            runBlocking { SmartWorkers.refresh(context) }
+            val end = System.currentTimeMillis() + 10_000
+            while (seen.get() === notYet && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertTrue("a nightly pass started", seen.get() !== notYet)
+            assertEquals(Market.today(), seen.get())
+        } finally { SmartWorkers.nightlyStartForTest = null }
+    }
+
     /** G8-6: a big-move alarm is kept through the brain's refresh. */
     @Test fun aBigMoveIsKeptThroughARefresh() = runBlocking {
         val at = System.currentTimeMillis()

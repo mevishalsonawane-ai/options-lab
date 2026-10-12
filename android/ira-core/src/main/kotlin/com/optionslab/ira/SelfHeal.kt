@@ -175,7 +175,7 @@ object SelfHeal {
         @Synchronized fun breaker(dep: Dep): Breaker.State = breakers.getValue(dep).state
 
         /** The deps whose retry pause Autopilot may tune ([AutoChange]'s heal knobs): never Zerodha's requests (they carry orders). */
-        val TUNABLE: Set<Dep> get() = setOf(Dep.RELAY, Dep.CANDLES)
+        val TUNABLE: Set<Dep> get() = setOf(Dep.RELAY)
 
         /**
          * [dep]'s breaker pause set to [openMs] (5-60 s), taking effect at once only while it is closed (an open one keeps its

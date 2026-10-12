@@ -135,6 +135,10 @@ object Diag {
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')
+        // Round 4: each fill's slippage against the price it meant (live and the paper book's modelled, apart), and the app's
+        // books against Zerodha's as last checked (report only).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FillSlippage.diagLine() }.getOrElse { "Slippage: could not read" }).append('\n')
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { ZerodhaSync.line() }.getOrElse { "Zerodha sync: could not read" }).append('\n')
         // The watch's workers (10 Oct): each worker and step - its state, last run, time, errors - the slowest steps today,
         // Zerodha's shared request budget and reads, the entry door, the shared state and the one-index claims standing now.
         if (!com.optionslab.app.BuildConfig.GOLD) {

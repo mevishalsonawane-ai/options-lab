@@ -530,7 +530,11 @@ object KiteStream {
             // (An order changed at Zerodha - from Kite web too: Jarvis's kept account figures are read afresh.)
             // Its state is kept by order id first, so an order being waited on ([Broker.awaitOrder]) is answered from it at once.
             "order" -> {
-                com.optionslab.ira.OrderUpdate.parse(text)?.let { u -> keepUpdate(u) }
+                com.optionslab.ira.OrderUpdate.parse(text)?.let { u ->
+                    keepUpdate(u)
+                    // Its slippage, when it ended filled (a map remove; the measuring is done on its own thread).
+                    if (u.terminal) runCatching { FillSlippage.ended(u.orderId, u.status, u.avgPrice, u.filled) }
+                }
                 // The kept order book and positions (the event-driven exits' looks) are read afresh after any change.
                 runCatching { Broker.reconStale() }
                 _orderEvents.value = System.currentTimeMillis()

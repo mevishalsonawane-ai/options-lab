@@ -152,9 +152,10 @@ object AutoChange {
         // WorkerWake: the safety-net pass with nothing held, within its own 15-60 s ([WorkerWake.NET_MIN_SEC]..[WorkerWake.NET_MAX_SEC]).
         Knob("wake.net_flat_sec", Kind.WAKE_SCHEDULE, "the safety-net pass with nothing held (s)", WorkerWake.NET_FLAT_DEFAULT_SEC.toDouble(),
             WorkerWake.NET_MIN_SEC.toDouble(), WorkerWake.NET_MAX_SEC.toDouble(), 5.0, Scope.SHADOW),
-        // SelfHeal: the relay's and the candle feed's breaker pause, 5-60 s (default 10 s). Zerodha's own requests are never tuned.
+        // SelfHeal: the relay's breaker pause, 5-60 s (default 10 s). Zerodha's own requests are never tuned. (The candle feed's
+        // pause, "heal.candles_open_ms", was removed in round 4 (G8-7): nothing read that breaker. A stored value or a logged change
+        // for it is still read - as an unknown knob, never applied and never undone into anything.)
         Knob("heal.relay_open_ms", Kind.HEAL_BACKOFF, "the relay's retry pause (ms)", 10_000.0, 5_000.0, 60_000.0, 5_000.0, Scope.SHADOW),
-        Knob("heal.candles_open_ms", Kind.HEAL_BACKOFF, "the candle feed's retry pause (ms)", 10_000.0, 5_000.0, 60_000.0, 5_000.0, Scope.SHADOW),
         // MarketBrain (shadow only: what the learned thresholds would read, beside the real regime): busy at 1.5-3.0 z (2.0).
         Knob("brain.busy_z", Kind.REGIME_THRESHOLD, "the market brain's busy threshold (z, shadow)", MarketBrain.BUSY_Z, 1.5, 3.0, 0.25, Scope.SHADOW),
         // DriftReview: the park thresholds may only get stricter by themselves - z 3.3 down to 2.6, the drawdown multiple 2.5 down to 2.0.
@@ -472,7 +473,7 @@ object AutoChange {
             val dir = if (l.sign < 0) -1 else if (cur < k.default) 1 else 0
             knobStepL(k, dir, l, "the live price stream ${if (l.sign < 0) "has had trouble often" else "has been reliable"}")
         } }
-        for ((dep, kk) in listOf("relay" to "heal.relay_open_ms", "candles" to "heal.candles_open_ms")) {
+        for ((dep, kk) in listOf("relay" to "heal.relay_open_ms")) {
             val l = byId["health:$dep"] ?: continue
             val k = knob(kk) ?: continue
             val cur = i.knobs[k.key] ?: k.default

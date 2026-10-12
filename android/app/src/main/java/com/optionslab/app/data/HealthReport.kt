@@ -65,7 +65,10 @@ object HealthReport {
     fun text(ctx: Context): String {
         AppHealth.ensureLoaded()
         val traces = exitTraces(ctx) + listOfNotNull(crashFile(ctx))
-        val order = runCatching { OrderTiming.card().lines + OrderTiming.card().warnings }.getOrDefault(emptyList())
+        val order = runCatching { OrderTiming.card().lines + OrderTiming.card().warnings }.getOrDefault(emptyList()) +
+            // Round 4: slippage per fill and the Zerodha sync check (no rupee totals beyond a unit's median and p90).
+            listOf(runCatching { FillSlippage.diagLine() }.getOrElse { "Slippage: could not read" },
+                runCatching { ZerodhaSync.line() }.getOrElse { "Zerodha sync: could not read" })
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
         val device = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE}"
         return HealthExport.build(AppHealth.book(), traces, order, today, com.optionslab.app.BuildConfig.COMMIT, device, ::hhmm, known())

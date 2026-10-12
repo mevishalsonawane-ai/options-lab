@@ -352,6 +352,14 @@ object OrbArms {
     @Volatile var liveSymbolsHint: List<String> = emptyList()
         private set
 
+    /**
+     * The open live positions as the book holds them now, each with its arm's name (Zerodha reconciliation, [ZerodhaSync]:
+     * read only). Takes the arms' lock: callers bound the wait.
+     */
+    suspend fun liveOpen(): List<Pair<String, Position>> = lock.withLock {
+        book().positions.filter { it.open && it.live }.map { p -> (runCatching { armOf(p.arm).label }.getOrNull() ?: p.arm) to p }
+    }
+
     private fun hints(b: Book) {
         armedHint = ALL_ARMS.any { b.armed[it.source] == true }
         holdingHint = b.positions.any { it.open }
@@ -2046,7 +2054,8 @@ object OrbArms {
         val known = knownKite(b)
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
-            Broker.placeOrder(o, arm = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source)
+            // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
+            Broker.placeOrder(o, arm = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source, intended = last)
         } catch (e: Broker.NotLoggedIn) {
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {

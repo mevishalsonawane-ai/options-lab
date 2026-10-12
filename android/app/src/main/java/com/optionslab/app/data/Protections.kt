@@ -466,42 +466,53 @@ object Protections {
      * toward the price - up for a long, down for a short - judged here, under the lock, against the stop as it stands now
      * (and the resting order's own trigger), never against the caller's older snapshot. A move that would loosen it is refused.
      */
-    suspend fun moveStop(id: Long, newStop: Double, tightenOnly: Boolean = true): String? = lock.withLock {
+    suspend fun moveStop(id: Long, newStop: Double, tightenOnly: Boolean = true): String? = moveStopAt(id, newStop, tightenOnly).why
+
+    /**
+     * A stop move's outcome: [why] null when moved, else why not; [standing] the stop as it stands after the call - the new
+     * one when moved; when refused, the one that stands now (the tighter stop that refused an automatic move: the
+     * protection's own, Zerodha's resting trigger or the paper order's), never the caller's older snapshot (round 4).
+     */
+    data class StopMove(val why: String?, val standing: Double?)
+
+    /** [moveStop], saying the stop that stands afterwards ([StopMove.standing]). The same rules and the same moves. */
+    suspend fun moveStopAt(id: Long, newStop: Double, tightenOnly: Boolean = true): StopMove = lock.withLock {
         val list = load()
         val i = list.indexOfFirst { it.id == id && it.active }
-        if (i < 0) return@withLock "That protection is no longer active."
+        if (i < 0) return@withLock StopMove("That protection is no longer active.", null)
         val p = list[i]
-        if (p.note == REMOVING) return@withLock "That protection is being removed."
-        val orderId = p.stopOrderId ?: return@withLock "It has no resting stop order to move."
+        fun no(why: String, standing: Double? = p.stop) = StopMove(why, standing)
+        if (p.note == REMOVING) return@withLock no("That protection is being removed.")
+        val orderId = p.stopOrderId ?: return@withLock no("It has no resting stop order to move.")
         val tick = if (p.tick > 0) p.tick else 0.05
         // On the tick, rounded away from the price (down for a long's stop, up for a short's), never toward it.
         val ns = Protection.onTick(newStop, tick, down = p.qty > 0)
         fun looser(than: Double?) = than != null && than > 0 && (if (p.qty > 0) ns <= than + 1e-9 else ns >= than - 1e-9)
         if (tightenOnly && looser(p.stop))
-            return@withLock "The stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, p.stop)}; an automatic move only tightens it."
+            return@withLock no("The stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, p.stop)}; an automatic move only tightens it.")
         if (p.live) {
-            if (!Broker.loggedIn) return@withLock "Not logged in to Zerodha."
+            if (!Broker.loggedIn) return@withLock no("Not logged in to Zerodha.")
             val so = runCatching { Broker.orders().firstOrNull { it.id == orderId } }.getOrNull()
-                ?: return@withLock "The stop order was not found at Zerodha."
-            if (!so.working) return@withLock "The stop order is no longer working at Zerodha."
+                ?: return@withLock no("The stop order was not found at Zerodha.")
+            if (!so.working) return@withLock no("The stop order is no longer working at Zerodha.")
             if (tightenOnly && looser(so.trigger))
-                return@withLock "The stop at Zerodha is already at ${"%.2f".format(java.util.Locale.ENGLISH, so.trigger)}; an automatic move only tightens it."
+                return@withLock no("The stop at Zerodha is already at ${"%.2f".format(java.util.Locale.ENGLISH, so.trigger)}; an automatic move only tightens it.", so.trigger)
             val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
             val r = runCatching {
                 if (so.type == "SL-M") Broker.modify(so, so.qty, "SL-M", null, ns)
                 else Broker.modify(so, so.qty, "SL", stopLimit(ns, side, tick), ns)
             }
-            if (r.isFailure) return@withLock "Zerodha did not move it: ${r.exceptionOrNull()?.message ?: "an error"}."
+            if (r.isFailure) return@withLock no("Zerodha did not move it: ${r.exceptionOrNull()?.message ?: "an error"}.", so.trigger.takeIf { it > 0 } ?: p.stop)
         } else {
             val resting = Paper.stateIfLoaded()?.orders?.firstOrNull { it.orderId == orderId }?.triggerPrice?.toDouble()
             if (tightenOnly && looser(resting))
-                return@withLock "The paper stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, resting)}; an automatic move only tightens it."
+                return@withLock no("The paper stop is already at ${"%.2f".format(java.util.Locale.ENGLISH, resting)}; an automatic move only tightens it.", resting)
             val r = runCatching { Paper.modify(orderId, null, null, ns) }.getOrNull()
-            if (r == null || !r.ok) return@withLock "The paper stop was not moved${r?.message?.let { ": $it" } ?: ""}."
+            if (r == null || !r.ok) return@withLock no("The paper stop was not moved${r?.message?.let { ": $it" } ?: ""}.", resting ?: p.stop)
         }
         list[i] = p.copy(stop = ns)
         save(list)
-        null
+        StopMove(null, ns)
     }
 
     private fun Int.sign() = if (this > 0) 1 else if (this < 0) -1 else 0

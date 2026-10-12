@@ -142,6 +142,8 @@ class CollisionTest {
         "ForwardWatch" to { q -> ForwardWatch.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
+        "Slippage" to { q -> Slippage.asked(q) != null },
+        "PositionSync" to { q -> PositionSync.asked(q) },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
         "StreamHealth" to { q -> StreamHealth.asked(q) },
         "BatteryUse" to { q -> BatteryUse.asked(q) },
@@ -608,6 +610,11 @@ class CollisionTest {
         "why was my nifty buy order rejected" to "OrderWhy", "why did my orb order get cancelled" to "OrderWhy", "why was my exit order rejected" to "OrderWhy",
         "what happened to my last paper order" to "OrderWhy", "why did kite reject my order" to "OrderWhy",
         "why did my 24500 put order get rejected" to "OrderWhy",
+        // ---- Round 4 (12 Oct). Slippage per fill and the Zerodha sync check: questions only, never an order ----
+        "what's my slippage" to "Slippage", "slippage on orb" to "Slippage", "how much slippage on liquidity" to "Slippage",
+        "paper slippage" to "Slippage", "how good are my fills" to "Slippage",
+        "are my positions in sync" to "PositionSync", "do my positions match zerodha" to "PositionSync",
+        "reconcile the app with zerodha" to "PositionSync",
         // Its neighbours: the day's orders, and the cancel itself (a command, through its own confirm).
         "how many orders did i place today" to "Account:ORDERS", "show my orders" to "Account:ORDERS", "cancel my last order" to "Act",
         // ---- BotTrades: his bots' trades today, explained ----
@@ -1616,7 +1623,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 

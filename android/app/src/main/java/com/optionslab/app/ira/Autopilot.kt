@@ -354,12 +354,11 @@ internal object Autopilot {
         return "${k.words}: ${AutoChange.fmt(v)}"
     }
 
-    /** Where a knob acts at once: the safety-net schedule and self-healing's backoff (the others are read where they are used). */
+    /** Where a knob acts at once: the safety-net schedule and the relay's backoff (the others are read where they are used). */
     private fun handOver(key: String, v: Double) {
         when (key) {
             "wake.net_flat_sec" -> runCatching { SmartWorkers.setNetFlatSec(v.toInt()) }
             "heal.relay_open_ms" -> runCatching { SmartWorkers.health.tune(SelfHeal.Dep.RELAY, v.toLong()) }
-            "heal.candles_open_ms" -> runCatching { SmartWorkers.health.tune(SelfHeal.Dep.CANDLES, v.toLong()) }
         }
     }
 

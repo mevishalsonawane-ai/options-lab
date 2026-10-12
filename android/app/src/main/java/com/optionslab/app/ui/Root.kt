@@ -339,6 +339,7 @@ fun eraseEverything() {
     com.optionslab.app.data.PineAuto.wipe()
     com.optionslab.app.data.Protections.wipe()
     com.optionslab.app.data.TradeBook.wipe()
+    runCatching { com.optionslab.app.data.FillSlippage.wipe() }
     com.optionslab.app.data.Diag.wipe()
     com.optionslab.app.data.Journal.wipe()
     com.optionslab.app.data.Strategies.wipe()

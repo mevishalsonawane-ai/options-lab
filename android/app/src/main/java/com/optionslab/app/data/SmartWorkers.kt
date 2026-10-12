@@ -429,6 +429,10 @@ object SmartWorkers {
         tried { reviewIfDue(context) }
         // The trade manager's specialists: their nightly report cards and slow self-tuning (paper and shadow only), once a day.
         runCatching { ManagerSpecialists.reviewIfDue() }
+        // The event-day calendar first (G9-6, round 4): the nightly pass below reads it (the learning's event-day filter), so a new
+        // day's calendar is built before that pass can start. On this worker's thread (never the main one); a memory check
+        // once built.
+        runCatching { EventDays.refreshIfStale() }
         // Jarvis's learning from all of the above, once a day after the close, then Autopilot (after his pass at 15:45+, and at
         // 12:30 for risk-lowering only): on their own scope, so this worker's 30 s limit never cuts a slow pass in the middle
         // (memory checks until due; one launch at a time).
@@ -437,9 +441,8 @@ object SmartWorkers {
         // pass), the weekly consolidation and the weekly self-report when due (memory checks until then).
         runCatching { AppHealth.tick(context) }
         runCatching { com.optionslab.app.ira.SelfGrowth.tick(context) }
-        // TODO S5/S8/S11/S12 (11 Oct): the event-day calendar (once a day), the day's regime (frozen at 09:45), risk across the
-        // arms (every 10 minutes) and the history keeper (after 15:45, its own thread) - memory checks until due.
-        runCatching { EventDays.refreshIfStale() }
+        // TODO S5/S8/S11/S12 (11 Oct): the day's regime (frozen at 09:45), risk across the arms (every 10 minutes) and the history
+        // keeper (after 15:45, its own thread) - memory checks until due. (The event-day calendar is built above, before the nightly pass.)
         runCatching { RegimeHost.tick() }
         runCatching { PortfolioHost.refreshIfDue() }
         runCatching { HistoryKeeper.kick() }
@@ -460,12 +463,16 @@ object SmartWorkers {
     private val nightlyRunning = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var nightlyJob: kotlinx.coroutines.Job? = null
 
+    /** TEST ONLY: called as a nightly pass starts (what it can see then: the event-day calendar already built, G9-6). */
+    @Volatile internal var nightlyStartForTest: (() -> Unit)? = null
+
     /** Jarvis's pass then Autopilot's, in the background (never two at once; each has its own once-a-day check). */
     private fun launchNightly(context: Context?) {
         if (!nightlyRunning.compareAndSet(false, true)) return
         nightlyJob = try {
             nightlyScope.launch {
                 try {
+                    runCatching { nightlyStartForTest?.invoke() }
                     runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
                     runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
                 } finally { nightlyRunning.set(false) }

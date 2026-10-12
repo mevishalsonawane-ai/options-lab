@@ -464,11 +464,16 @@ class AutoChangeTest {
         // The brain's shadow read with other thresholds.
         val r = MarketBrain.Regime("NIFTY", MarketBrain.State.NORMAL, rangeZ = 1.8, rvZ = 1.0)
         assertEquals(MarketBrain.State.BUSY, MarketBrain.stateWith(r, 1.75)); assertEquals(MarketBrain.State.NORMAL, MarketBrain.stateWith(r, 2.0))
-        // Self-healing: only the relay's and the candle feed's pauses, 5-60 s; never Zerodha's requests.
+        // Self-healing: only the relay's pause, 5-60 s; never Zerodha's requests.
         val m = SelfHeal.Monitor { 0L }
         assertFalse(m.tune(SelfHeal.Dep.KITE_REST, 20_000))
-        assertTrue(m.tune(SelfHeal.Dep.RELAY, 20_000)); assertEquals(20_000L, m.openMs(SelfHeal.Dep.RELAY))
-        assertTrue(m.tune(SelfHeal.Dep.CANDLES, 999_000)); assertEquals(60_000L, m.openMs(SelfHeal.Dep.CANDLES))
+        assertTrue(m.tune(SelfHeal.Dep.RELAY, 999_000)); assertEquals(60_000L, m.openMs(SelfHeal.Dep.RELAY))
+        // G8-7 (round 4): the candle feed's pause was a knob nothing read - removed; its breaker keeps its own default.
+        assertFalse(m.tune(SelfHeal.Dep.CANDLES, 20_000)); assertEquals(10_000L, m.openMs(SelfHeal.Dep.CANDLES))
+        assertEquals(null, AutoChange.knob("heal.candles_open_ms"))
+        // A change to it logged before still reads, and is never applied or put back (an unknown knob is NEVER).
+        assertEquals(AutoChange.Decision.NEVER, A.classify(AutoChange.Change(AutoChange.Kind.HEAL_BACKOFF, "knob:heal.candles_open_ms", "10000", "15000", "x",
+            ev(STRONG), AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.Scope.SHADOW)))
         assertEquals(10_000L, m.openMs(SelfHeal.Dep.KITE_REST))
     }
 

@@ -63,7 +63,8 @@ internal object IraCoach {
             val failed = synchronized(failedTrail) { failedTrail[it.id] }
             if (failed != null && failed.second.plusMinutes(RETRY_MINUTES).isAfter(now)) continue
             // Moved in place: if the broker refuses, the old stop stays exactly where it was.
-            val why = com.optionslab.app.data.Protections.moveStop(it.id, stop)
+            val moved = com.optionslab.app.data.Protections.moveStopAt(it.id, stop)
+            val why = moved.why
             if (why == null) {
                 synchronized(failedTrail) { failedTrail.remove(it.id) }
                 val said = com.optionslab.ira.AutoTrail.say(it.symbol, stop, avg)
@@ -71,7 +72,9 @@ internal object IraCoach {
             } else {
                 synchronized(failedTrail) { failedTrail[it.id] = stop to now }
                 fun px(x: Double?) = x?.let { v -> "%.2f".format(java.util.Locale.ENGLISH, v) } ?: "?"
-                val said = "Could not trail the stop on ${it.symbol} up to ${px(stop)}: $why Your stop stays at ${px(it.stop)}."
+                // The stop as it stands now (the tighter one that refused the move, read under the protections' lock), never
+                // this pass's older snapshot of it (round 4).
+                val said = "Could not trail the stop on ${it.symbol} up to ${px(stop)}: $why Your stop stays at ${px(moved.standing ?: it.stop)}."
                 IraHub.noteAloud(said, com.optionslab.ira.SpeakChoice.Weight.IMPORTANT, from = Automations.Auto.TRAIL); IraActivity.add(said)
                 IraHub.appContext()?.let { c -> JarvisPopup.show(c, "Boss, check the stop on ${it.symbol}", said) }
             }

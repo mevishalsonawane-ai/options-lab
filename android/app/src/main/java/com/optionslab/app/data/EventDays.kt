@@ -67,5 +67,8 @@ object EventDays {
     }
 
     /** TEST ONLY. */
+    /** TEST ONLY: the day the calendar was last built (null: not yet). */
+    internal val builtDayForTest: LocalDate? get() = builtOn
+
     internal fun resetForTest() { builtOn = null; LearningFilter.resetForTest(); _calendar.value = LearningFilter.calendar }
 }

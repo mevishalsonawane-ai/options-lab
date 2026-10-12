@@ -116,4 +116,27 @@ class ProtectionsLiveTest : RobolectricTest() {
         assertTrue(stale ?: "moved", stale?.contains("only tightens") == true)
         assertEquals(96.0, runBlocking { Broker.orders() }.first { it.id == stopId }.trigger, 1e-9)
     }
+
+    /**
+     * Round 4: a refused automatic move says the stop that stands NOW (what Jarvis quotes: "Your stop stays at ..."), not the
+     * caller's snapshot - the protection's own tighter stop, or Zerodha's tighter resting trigger.
+     */
+    @Test fun aRefusedMoveSaysTheStopThatStandsNow() {
+        kite.login()
+        protect()
+        val id = runBlocking { Protections.active() }.single().id
+        val moved = runBlocking { Protections.moveStopAt(id, 93.0) }
+        assertNull(moved.why); assertEquals(93.0, moved.standing!!, 1e-9)
+        // A caller with an older snapshot (90) asks for 91: refused, and the standing stop is 93.
+        val own = runBlocking { Protections.moveStopAt(id, 91.0) }
+        assertTrue(own.why ?: "moved", own.why?.contains("only tightens") == true)
+        assertEquals(93.0, own.standing!!, 1e-9)
+        // Zerodha's resting stop raised to 97 meanwhile: a move to 95 is refused and says 97.
+        val stopId = runBlocking { Protections.active() }.single().stopOrderId!!
+        val so = runBlocking { Broker.orders() }.first { it.id == stopId }
+        runBlocking { Broker.modify(so, so.qty, "SL", 88.0, 97.0) }
+        val zerodha = runBlocking { Protections.moveStopAt(id, 95.0) }
+        assertTrue(zerodha.why ?: "moved", zerodha.why?.contains("at Zerodha is already at 97.00") == true)
+        assertEquals(97.0, zerodha.standing!!, 1e-9)
+    }
 }

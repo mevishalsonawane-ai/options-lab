@@ -737,6 +737,8 @@ object Broker {
             rows(call("GET", "/orders") as JSONArray).map(::orderRow).sortedByDescending { it.placedAt }
         }
         val list = r.value
+        // A resting stop that filled between the stream's updates is measured from the book (memory only; most reads skip it).
+        if (FillSlippage.anyWaiting()) list.forEach { if (FillSlippage.waiting(it.id)) FillSlippage.ended(it.id, it.status, it.avg, it.filled) }
         keptOrders = Kept(r.startedAt, gen, list)
         runCatching { AppState.publishOrders(list, r.startedAt) }
         // The "Open" widget's pending orders come from the reads already made here, handed to its own thread so this
@@ -1137,14 +1139,15 @@ object Broker {
      * Sends ONE order. Callers must have passed Kite.refusals and the owner's confirmation. [arm]: a bot's strategy key (the one
      * its entry check asked the portfolio guard with), so the door refuses only that arm's entry; null for any other order.
      */
-    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null): String {
+    suspend fun placeOrder(o: Kite.Order, exit: Boolean = false, arm: String? = null, intended: Double? = null): String {
         // SEBI static IP: a new position is not opened from an IP Zerodha would refuse (exits always go).
         if (!exit) StaticIp.entryBlock()?.let { throw KiteError("static_ip", it) }
         // An exit never waits behind an entry.
-        if (exit) return com.optionslab.app.work.TradingBusy.during { send(o) }
+        if (exit) return com.optionslab.app.work.TradingBusy.during { send(o, true, arm, intended) }
         // A new position (10 Oct): through the one door, one at a time from any worker, the kill switch (and, for the bots,
         // the loss limit, the day stop and the day lock) read again inside it. A refusal is definite: nothing was sent.
-        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) { com.optionslab.app.work.TradingBusy.during { send(o) } }) {
+        return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm) }) {
+            com.optionslab.app.work.TradingBusy.during { send(o, false, arm, intended) } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
             is com.optionslab.ira.EntryGate.Outcome.Refused -> {
                 runCatching { Diag.record("zerodha", "Entry not sent (${o.tradingSymbol}): ${r.why}") }
@@ -1153,8 +1156,11 @@ object Broker {
         }
     }
 
-    /** Sends [o] (the order itself, timed); [placeOrder] decides whether it may. */
-    private suspend fun send(o: Kite.Order): String {
+    /**
+     * Sends [o] (the order itself, timed); [placeOrder] decides whether it may. Its slippage is noted in memory after
+     * Zerodha's answer ([FillSlippage.sent]: a map put, measured once it fills; [intended]: the price the caller decided on).
+     */
+    private suspend fun send(o: Kite.Order, exit: Boolean, arm: String?, intended: Double?): String {
         // Order speed: the body is built before the clock starts (a string; nothing is fetched for it), then the request is
         // timed from its start to Zerodha's answer. The price's age is the stamp of this contract's last stream tick.
         val body = o.formBody()
@@ -1163,7 +1169,9 @@ object Broker {
         val data = call("POST", "/orders/regular", body) as JSONObject
         runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
-        return data.getString("order_id")
+        val id = data.getString("order_id")
+        FillSlippage.sent(id, o, exit, arm, intended)
+        return id
     }
 
     /**
@@ -1187,6 +1195,7 @@ object Broker {
         while (true) {
             streamed(orderId)?.let { f ->
                 runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = true) }
+                ended(f)
                 return f
             }
             val seen = KiteStream.orderEvents.value
@@ -1205,8 +1214,11 @@ object Broker {
         val o = last ?: return Fill(orderId, "UNKNOWN", 0.0, 0, "no order history yet")
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
             // Kite sends "status_message": null for an open order, which optString reads as the text "null".
-            o.optString("status_message", "").let { if (it == "null") "" else it })
+            o.optString("status_message", "").let { if (it == "null") "" else it }).also { ended(it) }
     }
+
+    /** A fill's end, for its slippage ([FillSlippage.ended]: memory only; nothing when it is not terminal or not noted). */
+    private fun ended(f: Fill) { runCatching { FillSlippage.ended(f.orderId, f.status, f.avgPrice, f.filled) } }
 
     /** Order [orderId]'s end as Zerodha pushed it on the stream (COMPLETE, REJECTED or CANCELLED), or null when not (yet). */
     private fun streamed(orderId: String): Fill? = KiteStream.orderUpdate(orderId)?.takeIf { it.terminal }?.let { u ->
@@ -1345,7 +1357,7 @@ object Broker {
         val o = hist.getJSONObject(hist.length() - 1)
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
             // Kite sends "status_message": null for an open order, which optString reads as the text "null".
-            o.optString("status_message", "").let { if (it == "null") "" else it })
+            o.optString("status_message", "").let { if (it == "null") "" else it }).also { ended(it) }
     }
 
     suspend fun cancel(orderId: String, variety: String = "regular") {

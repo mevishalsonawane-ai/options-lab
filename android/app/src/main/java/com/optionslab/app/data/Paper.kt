@@ -609,6 +609,7 @@ object Paper {
         }
         val q = x.quote
         x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
+        val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
         val r = synchronized(this) {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
@@ -619,7 +620,18 @@ object Paper {
             describe(out.result, out.events)
         }
         timed(r, t0)
+        // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
+        val limit = priceType.equals("LIMIT", true) && price != null
+        modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
         return r
+    }
+
+    /** Each paper fill in [r] measured against [intended] ([FillSlippage.paper]: kept in the background, never the book's). */
+    private fun modelled(r: Result, entry: Boolean, intended: Double?, limit: Boolean) {
+        if (!r.ok || intended == null) return
+        r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { FillSlippage.paper(f.symbol, f.action, entry, f.quantity, intended, f.price, limit) }
+        }
     }
 
     /** Order speed: the paper book answered [r] (placed at [t0]); a fill in the same answer is known at once. */
@@ -679,6 +691,7 @@ object Paper {
             describe(out.result, out.events)
         }
         timed(r, t0)
+        modelled(r, entry = false, intended = q?.ltp?.takeIf { it > 0 }, limit = false)
         return r
     }
 
