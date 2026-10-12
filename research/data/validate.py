@@ -44,13 +44,13 @@ def load_bhav():
             b = b[b.INSTRUMENT.isin(["FUTIDX", "OPTIDX"])]
             x = pd.DataFrame(dict(date=d, kind=np.where(b.INSTRUMENT == "FUTIDX", "FUT", "OPT"), symbol=b.SYMBOL,
                                   expiry=pd.to_datetime(b.EXPIRY_DT, format="%d-%b-%Y"), strike=b.STRIKE_PR.astype(float),
-                                  opt=b.OPTION_TYP.str[:1], close=b.CLOSE, last=b.CLOSE, settle=b.SETTLE_PR,
+                                  opt=b.OPTION_TYP.str[:1], open=b.OPEN, high=b.HIGH, low=b.LOW, close=b.CLOSE, last=b.CLOSE, settle=b.SETTLE_PR,
                                   oi=b.OPEN_INT, traded=b.CONTRACTS > 0))
         else:
             b = b[b.FinInstrmTp.isin(["IDF", "IDO"])]
             x = pd.DataFrame(dict(date=d, kind=np.where(b.FinInstrmTp == "IDF", "FUT", "OPT"), symbol=b.TckrSymb,
                                   expiry=pd.to_datetime(b.XpryDt), strike=b.StrkPric.fillna(0).astype(float),
-                                  opt=b.OptnTp.fillna("X").str[:1], close=b.ClsPric, last=b.LastPric,
+                                  opt=b.OptnTp.fillna("X").str[:1], open=b.OpnPric, high=b.HghPric, low=b.LwPric, close=b.ClsPric, last=b.LastPric,
                                   settle=b.SttlmPric, oi=b.OpnIntrst, traded=b.TtlTradgVol > 0))
         rows.append(x)
     return pd.concat(rows, ignore_index=True)
@@ -151,20 +151,6 @@ def check_index_1m():
               "differs slightly from the last traded minute; the high/low agreement is the stronger test.\n")
 
 
-def eod_options(und, flag):
-    fs = sorted(glob.glob(f"{LAKE}/opt_{und}_{flag}_*.parquet"))
-    if not fs:
-        return None, None
-    parts, stats = [], []
-    for f in fs:
-        x = pd.read_parquet(f, columns=["ts", "offset", "side", "close", "oi", "strike", "spot", "iv"])
-        x["date"] = x.ts.dt.tz_localize(None).dt.normalize()
-        g = x.groupby(["date", "offset", "side"], observed=True)
-        stats.append(g.size())
-        parts.append(g.last().reset_index())
-    return pd.concat(parts, ignore_index=True), pd.concat(stats)
-
-
 def pick_expiry(exps, d, monthly, strict):
     e = sorted(exps)
     if monthly:
@@ -176,101 +162,112 @@ def pick_expiry(exps, d, monthly, strict):
     return None
 
 
+def contract_days(und, flag, dates):
+    """Per (date, strike, side): the contract's whole-day OHLCV rebuilt from all ATM offsets, plus its last-bar OI.
+    Kept only when the contract was inside the ATM-10..+10 band all day (so the minutes are complete)."""
+    out, sizes = [], []
+    for f in sorted(glob.glob(f"{LAKE}/opt_{und}_{flag}_*.parquet")):
+        x = pd.read_parquet(f, columns=["ts", "offset", "side", "open", "high", "low", "close", "volume", "oi", "strike"])
+        x["date"] = x.ts.dt.tz_localize(None).dt.normalize()
+        sizes.append(x.groupby(["date", "offset", "side"], observed=True).size())
+        x = x[x.date.isin(dates)]
+        if not len(x):
+            continue
+        atm = x[x.offset == 0].groupby("date").strike.agg(["min", "max"])
+        step = (x[x.offset == 1].groupby("date").strike.median() - x[x.offset == 0].groupby("date").strike.median()).abs()
+        x = x.sort_values("ts")
+        g = x.groupby(["date", "strike", "side"], observed=True)
+        c = g.agg(open=("open", "first"), high=("high", "max"), low=("low", "min"), close=("close", "last"),
+                  volume=("volume", "sum"), oi=("oi", "last"), first_ts=("ts", "first"), last_ts=("ts", "last")).reset_index()
+        c = c.join(atm, on="date").join(step.rename("step"), on="date")
+        inband = (c.strike >= c["min"]) & (c.strike <= c["max"]) & ((c["max"] - c["min"]) <= 10 * c.step)
+        out.append(c[inband])
+    if not out:
+        return None, None
+    return pd.concat(out, ignore_index=True), (pd.concat(sizes) if sizes else None)
+
+
 def check_options(bh):
     H("3. Expired options (rolling ATM-10..ATM+10, 1-minute) vs NSE F&O bhavcopy")
-    md.append("For every sampled bhavcopy date, the last 1-minute bar of each Dhan series (offset, CE/PE) gives the strike "
-              "and that bar's close and OI. That contract is looked up in the NSE bhavcopy (expiry = nearest weekly "
-              "expiry for WEEK, nearest monthly expiry for MONTH). *Close match* compares Dhan's last-minute close with "
-              "NSE's last traded price (old format: CLOSE). Only contracts NSE reports as traded that day are scored for price.\n")
-    rows = []
+    md.append("Method: for every sampled bhavcopy date, each contract's whole-day candle is rebuilt from the Dhan minute "
+              "bars of all offsets carrying that strike, using only contracts that stayed inside the ATM±10 band all day, "
+              "so their minutes are complete. That candle is matched to NSE's bhavcopy row for the same strike and type at "
+              "the nearest weekly (WEEK) or monthly (MONTH) expiry on or after the date. Only contracts NSE shows as "
+              "traded are scored. *High/low/open match*: within 0.05 or 0.5%. *Last price*: Dhan's last minute close vs "
+              "NSE `LastPric`. That column only exists in the UDiFF bhavcopy, from 8 Jul 2024; the old format's `CLOSE` is "
+              "not a last-trade price. *OI*: Dhan's OI on the last minute bar vs NSE end-of-day OI.\n")
+    rows, comp = [], []
     opt = bh[bh.kind == "OPT"]
     for und in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"):
+        b = opt[opt.symbol == und]
+        if not len(b):
+            continue
+        dates = set(b.date)
         for flag in ("WEEK", "MONTH"):
-            eod, sizes = eod_options(und, flag)
-            if eod is None:
+            c, sizes = contract_days(und, flag, dates)
+            if c is None:
                 continue
-            b = opt[opt.symbol == und]
-            res = {False: [], True: []}
-            for d, bd in b.groupby("date"):
-                e_d = eod[eod.date == d]
-                if not len(e_d):
-                    continue
-                exps = list(bd.expiry.unique())
-                for strict in (False, True):
-                    ex = pick_expiry(exps, d, flag == "MONTH", strict)
-                    if ex is None:
-                        continue
-                    bb = bd[bd.expiry == ex].set_index(["strike", "opt"])
-                    for r in e_d.itertuples():
-                        k = (float(r.strike), r.side)
-                        if k not in bb.index:
-                            res[strict].append((d, ex, False, np.nan, np.nan, np.nan, np.nan, False))
-                            continue
-                        n = bb.loc[k]
-                        if isinstance(n, pd.DataFrame):
-                            n = n.iloc[0]
-                        res[strict].append((d, ex, True, r.close, n["last"] if n["last"] > 0 else n["close"],
-                                            r.oi, n["oi"], bool(n["traded"])))
-            for strict in (False, True):
-                df = pd.DataFrame(res[strict], columns=["date", "exp", "found", "dc", "nc", "doi", "noi", "traded"])
-                if not len(df):
-                    continue
-                df["expday"] = df.date == df.exp
-                if strict:  # only used to decide the expiry-day convention
-                    R[f"opt_{und}_{flag}_expday_strict"] = dict(rows=int(df.expday.sum()))
-                    continue
-                f = df[df.found & df.traded]
-                rel = (f.dc / f.nc - 1).abs()
-                ab = (f.dc - f.nc).abs()
-                ok = (ab <= 0.10) | (rel <= 0.005)
-                oi_ok = (f.doi == f.noi)
-                rr = {"underlying": und, "flag": flag, "sample days": df.date.nunique(), "series-days": len(df),
-                      "contract found": pct(df.found.sum(), len(df)), "scored (traded)": len(f),
-                      "close match (<=0.10 or 0.5%)": pct(ok.sum(), len(f)), "close within 5%": pct((rel <= 0.05).sum(), len(f)),
-                      "OI exact": pct(oi_ok.sum(), len(f)),
-                      "OI within 1%": pct(((f.doi / f.noi.replace(0, np.nan) - 1).abs() <= 0.01).sum(), len(f)),
-                      "expiry-day match": pct(ok[f.expday].sum(), f.expday.sum())}
-                rows.append(rr)
-                R[f"opt_{und}_{flag}"] = rr
-                bad = f[~ok].assign(rel=rel[~ok]).sort_values("rel", ascending=False)
-                if len(bad):
-                    R[f"opt_{und}_{flag}_worst"] = bad.head(5).astype(str).to_dict("records")
             if sizes is not None:
-                full = (sizes >= 375).mean()
-                R[f"opt_{und}_{flag}_bars"] = dict(series_days=int(len(sizes)), full_375=float(full),
-                                                   lt_300=int((sizes < 300).sum()))
-    table(rows, list(rows[0]) if rows else ["none"])
-    for (und, flag) in [(r["underlying"], r["flag"]) for r in rows]:
-        w = R.get(f"opt_{und}_{flag}_worst")
-        if w:
-            md.append(f"- {und} {flag} worst close mismatches (date, expiry, dhan close, NSE last): " + "; ".join(
-                f"{x['date'][:10]} {x['exp'][:10]} {float(x['dc']):.2f} vs {float(x['nc']):.2f}" for x in w[:3]))
-    md.append("")
-    rows = []
-    for k, v in R.items():
-        if k.endswith("_bars"):
-            rows.append({"series": k[4:-5], "series-days": v["series_days"], "days with 375 bars": f"{100 * v['full_375']:.1f}%",
-                         "days <300 bars": v["lt_300"]})
+                comp.append({"series": f"{und} {flag}", "series-days": len(sizes),
+                             "days with 375 bars": f"{100 * (sizes >= 375).mean():.1f}%",
+                             "days <300 bars": int((sizes < 300).sum())})
+            exp = {d: pick_expiry(list(g.expiry.unique()), d, flag == "MONTH", False) for d, g in b.groupby("date")}
+            c["expiry"] = c.date.map(exp)
+            m = c.merge(b.rename(columns={"opt": "side"}), on=["date", "expiry", "strike", "side"], how="left",
+                        suffixes=("", "_n"))
+            found = m.close_n.notna()
+            m = m[found & m.traded.fillna(False).astype(bool)]
+            tol = lambda a, n: ((a - n).abs() <= 0.05) | ((a / n - 1).abs() <= 0.005)
+            hi, lo, op = tol(m.high, m.high_n), tol(m.low, m.low_n), tol(m.open, m.open_n)
+            new = m[m.date >= "2024-07-08"]
+            lp = new[new["last"] > 0]
+            rl = (lp.close / lp["last"] - 1).abs()
+            oir = (m.oi / m.oi_n.replace(0, np.nan))
+            ed = m.date == m.expiry
+            rr = {"underlying": und, "flag": flag, "days": m.date.nunique(), "contract-days": len(m),
+                  "found in bhavcopy": pct(found.sum(), len(found)),
+                  "high match": pct(hi.sum(), len(m)), "low match": pct(lo.sum(), len(m)), "open match": pct(op.sum(), len(m)),
+                  "last price <=0.5% (2024-07+)": pct((rl <= 0.005).sum(), len(rl)),
+                  "last price <=2% (2024-07+)": pct((rl <= 0.02).sum(), len(rl)),
+                  "OI Dhan/NSE median": f"{oir.median():.3f}", "OI within 1%": pct(((oir - 1).abs() <= 0.01).sum(), len(m)),
+                  "high&low match on expiry days": pct((hi & lo)[ed].sum(), ed.sum())}
+            rows.append(rr)
+            R[f"opt_{und}_{flag}"] = rr
+            bad = m[~(hi & lo)].assign(err=lambda d: np.maximum((d.high / d.high_n - 1).abs(), (d.low / d.low_n - 1).abs()))
+            R[f"opt_{und}_{flag}_worst"] = bad.sort_values("err", ascending=False).head(5)[
+                ["date", "expiry", "strike", "side", "high", "high_n", "low", "low_n"]].astype(str).to_dict("records")
     if rows:
-        md.append("Minute completeness per (series, day) — options do not trade every minute, so missing minutes are "
-                  "real no-trade minutes, not filled:\n")
         table(rows, list(rows[0]))
+    for r in rows:
+        w = R.get(f"opt_{r['underlying']}_{r['flag']}_worst")
+        if w:
+            md.append(f"- {r['underlying']} {r['flag']} largest high/low mismatches (date expiry strike side: Dhan H/L vs NSE H/L): "
+                      + "; ".join(f"{x['date'][:10]} {x['expiry'][:10]} {x['strike']} {x['side']}: "
+                                  f"{x['high']}/{x['low']} vs {x['high_n']}/{x['low_n']}" for x in w[:3]))
+    md.append("")
+    if comp:
+        md.append("Minute completeness per (series, day). Options do not trade every minute, so missing minutes are real "
+                  "no-trade minutes and are not filled:\n")
+        table(comp, list(comp[0]))
 
 
 def check_futures(bh):
-    H("4. Continuous index futures daily (expiry code 0/1) vs NSE F&O bhavcopy")
+    H("4. Continuous index futures daily (near month) vs NSE F&O bhavcopy")
+    md.append("Dhan's `/charts/historical` returns the identical near-month series for expiryCode 0, 1 and 2 (checked: "
+              "100% equal), so only code 0 is published. The series rolls to the next contract on expiry day itself, so "
+              "expiry days compare against the next expiry here.\n")
     fd = pd.read_parquet(f"{LAKE}/fut_daily_continuous.parquet")
     fut = bh[bh.kind == "FUT"]
     rows = []
     for und in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"):
-        for code in (0, 1):
+        for code in (0,):
             a = fd[(fd.symbol == und) & (fd.expiry_code == code)].set_index("date")
             n = c = o = 0
             for d, g in fut[fut.symbol == und].groupby("date"):
                 if d not in a.index:
                     continue
                 ex = sorted(g.expiry)
-                ex = [x for x in ex if x >= d]
+                ex = [x for x in ex if x > d]  # Dhan rolls on expiry day
                 if len(ex) <= code:
                     continue
                 r = g[g.expiry == ex[code]].iloc[0]

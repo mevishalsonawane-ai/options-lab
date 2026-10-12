@@ -40,9 +40,14 @@ NSE/BSE minute, 15:29 the last). Daily files have a naive `date` column.
 | `index_daily.parquet` | daily OHLC: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX, INDIAVIX | symbol, date, open, high, low, close, volume |
 | `index_1m_<SYM>_<YEAR>.parquet` | 1-minute index OHLC, same 7 indices | ts, open, high, low, close, volume |
 | `opt_<UND>_<WEEK\|MONTH>_<YEAR>.parquet` | expired + live options, rolling by ATM offset, 1-minute, nearest expiry (expiry code 1) | ts, offset (-10..+10), side (C/P), open, high, low, close, iv, volume, strike, oi, spot |
-| `fut_daily_continuous.parquet` | continuous index & MCX futures daily, expiry code 0 (near), 1 (next), 2 (far) | symbol, expiry_code, date, OHLC, volume, oi |
+| `fut_daily_continuous.parquet` | continuous **near-month** index (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX) & MCX (CRUDEOIL, NATURALGAS, GOLD, GOLDM, SILVER, SILVERM) futures, daily | symbol, expiry_code (=0), date, OHLC, volume, oi |
 | `fut_1m_live_index.parquet`, `fut_1m_live_mcx.parquet` | 1-minute futures for contracts **live on the download date** only | symbol, expiry, security_id, ts, OHLC, volume, oi |
-| `equity_daily.parquet` | daily OHLCV for current NIFTY 50 + NIFTY BANK constituents | symbol, date, OHLC, volume |
+| `equity_daily.parquet` | daily OHLCV, current NIFTY 50 + NIFTY BANK constituents (59 stocks) | symbol, date, OHLC, volume |
+| `equity_1m_<YEAR>.parquet` | 1-minute OHLCV for the same 59 stocks, 2017 → | symbol, ts, OHLC, volume |
+| `stock_fut_daily_continuous.parquet` | continuous near-month stock futures, daily, same stocks | symbol, expiry_code (=0), date, OHLC, volume, oi |
+| `fut_1m_live_stock.parquet` | 1-minute stock futures, live contracts only | symbol, expiry, security_id, ts, OHLC, volume, oi |
+| `stkopt_<SYM>_MONTH.parquet` | stock options, rolling ATM-5..ATM+5, nearest monthly expiry, 1-minute, Aug 2021 → | as the index option files |
+| `opt_<MCXSYM>_MONTH_<YEAR>.parquet` | MCX options (CRUDEOIL, NATURALGAS, GOLD, GOLDM, SILVER, SILVERM), ATM-5..ATM+5, 1-minute, from mid-2025 | as the index option files |
 
 ### How the option series work
 
@@ -61,6 +66,7 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
 * Minute bars on dates that are not a trading day in the same exchange's Dhan daily series are dropped. This removes NSE
   weekend mock-trading sessions (2021–22) and the partial download day. Real special sessions such as Muhurat and
   Budget Saturdays are kept.
+* Rows with a zero, negative or missing price are dropped and counted (for example MIDCPNIFTY futures in early 2022).
 * Identical duplicate rows: one kept. Same key with different values: **all copies removed** and counted (for example
   SHRIRAMFIN 2005–2012, where Dhan interleaves two pre-merger price histories).
 * Missing minutes stay missing (options often do not trade every minute). Per-file counts of everything dropped are in
@@ -74,6 +80,8 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
   only go back to each live contract's listing. For history use `fut_daily_continuous`, or the option files' `spot`.
 * **Index minutes before 2017 / options before Aug–Oct 2021.** Intraday history is about 5 years for most indices
   (NIFTY back to Apr 2017). `rollingoption` starts in Aug–Oct 2021 for NSE and BSE, and in mid-2025 for MCX.
+* **Next/far-month continuous futures.** `/charts/historical` returns the identical near-month series for expiryCode
+  0, 1 and 2, so only code 0 is kept. That series rolls to the next contract **on** expiry day.
 * `rollingoption` covers ATM±10 only, nearest expiry (code 1) here; requests are limited to about 30 days each, and
   intraday to 90 days.
 * Equity history uses **current** index constituents, so it has survivorship bias. Prices appear
@@ -86,12 +94,16 @@ export DHAN_ACCESS_TOKEN=... DHAN_CLIENT_ID=...     # never commit these
 RAW=/path/raw OUT=/path/out
 LAKE_THREADS=40 python -I research/data/lake_fetch.py $RAW idx_daily idx_1m fut_daily fut_1m eq_daily \
    opt_NIFTY_WEEK opt_BANKNIFTY_WEEK opt_NIFTY_MONTH opt_BANKNIFTY_MONTH opt_FINNIFTY_WEEK opt_FINNIFTY_MONTH \
-   opt_MIDCPNIFTY_WEEK opt_MIDCPNIFTY_MONTH mcxopt opt_SENSEX_WEEK opt_SENSEX_MONTH
-python -I research/data/lake_build.py $RAW $OUT idx_daily idx_1m fut_daily fut_1m eq_daily opt
+   opt_MIDCPNIFTY_WEEK opt_MIDCPNIFTY_MONTH mcxopt opt_SENSEX_WEEK opt_SENSEX_MONTH \
+   eq_1m stkfut_daily stkfut_1m stkopt
+python -I research/data/lake_build.py $RAW $OUT idx_daily idx_1m fut_daily fut_1m eq_daily opt \
+   eq_1m stkfut_daily stkfut_1m stkopt
 python -I research/data/bhav_fetch.py /path/bhav 5
 python -I research/data/validate.py $OUT /path/bhav
 python -I research/data/make_catalog.py $OUT data-YYYYMMDD YYYY-MM-DD
 GH_TOKEN=... python research/data/publish_release.py $OUT
 ```
 
-About 34,000 Dhan requests; around 3 hours at 40 threads (Dhan answers about 3.5 requests per second).
+About 125,000 Dhan requests (83,000 of them stock options); roughly 10–12 hours at 40 threads. Dhan answers about
+3.5 requests per second and rate-limits above 5/s. Failed chunks (`.err`) are retried just by running the same
+command again.

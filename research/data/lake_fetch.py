@@ -7,6 +7,7 @@ dhan_client.py) and are never written anywhere.
 
 Usage:  python -I lake_fetch.py RAW_DIR GROUP [GROUP ...]
 Groups: idx_daily idx_1m fut_daily fut_1m eq_daily opt_<UNDERLYING>_<WEEK|MONTH> mcxopt
+        eq_1m stkfut_daily stkfut_1m stkopt   (constituents of NIFTY 50 + NIFTY BANK)
 """
 import os, sys, csv, io, json, time, datetime as dt, concurrent.futures as cf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -81,6 +82,25 @@ def master(raw):
     return list(csv.DictReader(open(fn)))
 
 
+def constituents(raw):
+    """Current NIFTY 50 + NIFTY BANK members (niftyindices.com lists) -> NSE EQ security id."""
+    rows = master(raw)
+    eq = {r["UNDERLYING_SYMBOL"]: r["SECURITY_ID"] for r in rows
+          if r["EXCH_ID"] == "NSE" and r["SEGMENT"] == "E" and r["SERIES"] == "EQ"}
+    syms = set()
+    for f in ("ind_nifty50list.csv", "ind_niftybanklist.csv"):
+        fn = f"{raw}/master/{f}"
+        if not os.path.exists(fn):
+            r = requests.get(f"https://www.niftyindices.com/IndexConstituent/{f}", timeout=60,
+                             headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            open(fn, "wb").write(r.content)
+        syms |= {r["Symbol"] for r in csv.DictReader(io.StringIO(open(fn).read()))}
+    for s in sorted(syms - set(eq)):
+        log("constituents: no NSE EQ id for", s)
+    return {s: eq[s] for s in sorted(syms) if s in eq}
+
+
 def jobs_for(group, raw):
     J = []
     if group == "idx_daily":
@@ -116,26 +136,50 @@ def jobs_for(group, raw):
                     J.append(Job(f"{raw}/fut_1m/{s}/{e}_{sid}/{a}", "/charts/intraday", dict(
                         securityId=sid, exchangeSegment=seg(ex, ins), instrument=ins, interval="1", oi=True,
                         fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
-    elif group == "eq_daily":
-        rows = master(raw)
-        eq = {r["UNDERLYING_SYMBOL"]: r["SECURITY_ID"] for r in rows
-              if r["EXCH_ID"] == "NSE" and r["SEGMENT"] == "E" and r["SERIES"] == "EQ"}
-        syms = set()
-        for f in ("ind_nifty50list.csv", "ind_niftybanklist.csv"):
-            fn = f"{raw}/master/{f}"
-            if not os.path.exists(fn):
-                r = requests.get(f"https://www.niftyindices.com/IndexConstituent/{f}", timeout=60,
-                                 headers={"User-Agent": "Mozilla/5.0"})
-                r.raise_for_status()
-                open(fn, "wb").write(r.content)
-            syms |= {r["Symbol"] for r in csv.DictReader(io.StringIO(open(fn).read()))}
-        for s in sorted(syms):
-            if s not in eq:
-                log("eq_daily: no NSE EQ id for", s)
+    elif group in ("eq_daily", "eq_1m"):
+        for s, sid in constituents(raw).items():
+            if group == "eq_daily":
+                J.append(Job(f"{raw}/eq_daily/{s}/all", "/charts/historical", dict(
+                    securityId=sid, exchangeSegment="NSE_EQ", instrument="EQUITY", expiryCode=0, oi=False,
+                    fromDate="1995-01-01", toDate=(TODAY + dt.timedelta(days=1)).isoformat())))
+            else:
+                for a, b in windows(dt.date(2015, 1, 1), TODAY, 85):
+                    J.append(Job(f"{raw}/eq_1m/{s}/{a}", "/charts/intraday", dict(
+                        securityId=sid, exchangeSegment="NSE_EQ", instrument="EQUITY", interval="1", oi=False,
+                        fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
+    elif group in ("stkfut_daily", "stkfut_1m"):
+        cons = constituents(raw)
+        live = sorted((r["UNDERLYING_SYMBOL"], r["SM_EXPIRY_DATE"], r["SECURITY_ID"]) for r in master(raw)
+                      if r["EXCH_ID"] == "NSE" and r["INSTRUMENT"] == "FUTSTK" and r["UNDERLYING_SYMBOL"] in cons)
+        if group == "stkfut_daily":
+            first = {}
+            for s, e, sid in live:
+                first.setdefault(s, sid)
+            for s, sid in first.items():
+                for code in (0, 1, 2):
+                    J.append(Job(f"{raw}/stkfut_daily/{s}/c{code}", "/charts/historical", dict(
+                        securityId=sid, exchangeSegment="NSE_FNO", instrument="FUTSTK", expiryCode=code, oi=True,
+                        fromDate="2000-01-01", toDate=(TODAY + dt.timedelta(days=1)).isoformat())))
+        else:
+            for s, e, sid in live:
+                for a, b in windows(TODAY - dt.timedelta(days=400), TODAY, 85):
+                    J.append(Job(f"{raw}/stkfut_1m/{s}/{e}_{sid}/{a}", "/charts/intraday", dict(
+                        securityId=sid, exchangeSegment="NSE_FNO", instrument="FUTSTK", interval="1", oi=True,
+                        fromDate=f"{a} 00:00:00", toDate=f"{b} 23:59:59")))
+    elif group == "stkopt":
+        fno = {r["UNDERLYING_SYMBOL"] for r in master(raw) if r["EXCH_ID"] == "NSE" and r["INSTRUMENT"] == "OPTSTK"}
+        for s, sid in constituents(raw).items():
+            if s not in fno:
+                log("stkopt: no listed stock options for", s)
                 continue
-            J.append(Job(f"{raw}/eq_daily/{s}/all", "/charts/historical", dict(
-                securityId=eq[s], exchangeSegment="NSE_EQ", instrument="EQUITY", expiryCode=0, oi=False,
-                fromDate="1995-01-01", toDate=(TODAY + dt.timedelta(days=1)).isoformat())))
+            for off in range(-5, 6):
+                strike = "ATM" if off == 0 else f"ATM{off:+d}"
+                for side, key in (("CALL", "ce"), ("PUT", "pe")):
+                    for a, b in windows(dt.date(2021, 8, 1), TODAY, 30):
+                        J.append(Job(f"{raw}/stkopt/{s}/MONTH/c1/{off:+03d}{side[0]}/{a}", "/charts/rollingoption",
+                            dict(securityId=int(sid), exchangeSegment="NSE_FNO", instrument="OPTSTK", expiryFlag="MONTH",
+                                 expiryCode=1, strike=strike, drvOptionType=side, requiredData=RD,
+                                 fromDate=a.isoformat(), toDate=b.isoformat(), interval="1"), key=key))
     elif group.startswith("opt_"):
         _, und, flag = group.split("_")
         sid, seg = OPT_UND[und]
@@ -152,7 +196,7 @@ def jobs_for(group, raw):
             for off in range(-5, 6):
                 strike = "ATM" if off == 0 else f"ATM{off:+d}"
                 for side, key in (("CALL", "ce"), ("PUT", "pe")):
-                    for a, b in windows(dt.date(2025, 6, 1), TODAY, 30):
+                    for a, b in windows(dt.date(2025, 6, 1), TODAY, 10):  # 30-day MCX windows often time out (504)
                         J.append(Job(f"{raw}/opt/{und}/MONTH/c1/{off:+03d}{side[0]}/{a}", "/charts/rollingoption",
                             dict(securityId=sid, exchangeSegment="MCX_COMM", instrument="OPTFUT", expiryFlag="MONTH",
                                  expiryCode=1, strike=strike, drvOptionType=side, requiredData=RD,
