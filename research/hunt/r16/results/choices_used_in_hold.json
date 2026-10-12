@@ -1,0 +1,73 @@
+{
+ "a1_BANKNIFTY": {
+  "model": "cnn",
+  "baseline": "btod30",
+  "was": "linear"
+ },
+ "a2_BANKNIFTY": {
+  "model": "linear",
+  "baseline": "btod60"
+ },
+ "a3b_BANKNIFTY": {
+  "model": "lgbm",
+  "baseline": "btod_rest"
+ },
+ "a3_BANKNIFTY": {
+  "model": "linear",
+  "baseline": "bvix"
+ },
+ "b15_BANKNIFTY": {
+  "model": "lgbm"
+ },
+ "b30_BANKNIFTY": {
+  "model": "lgbm"
+ },
+ "b60_BANKNIFTY": {
+  "model": "lgbm"
+ },
+ "c30_BANKNIFTY": {
+  "model": "lgbm"
+ },
+ "c45_BANKNIFTY": {
+  "model": "linear"
+ },
+ "d_BANKNIFTY": {
+  "model": "shrink"
+ },
+ "a1_NIFTY": {
+  "model": "cnn",
+  "baseline": "btod30",
+  "was": "linear"
+ },
+ "a2_NIFTY": {
+  "model": "cnn",
+  "baseline": "btod60",
+  "was": "linear"
+ },
+ "a3b_NIFTY": {
+  "model": "lgbm",
+  "baseline": "bvix"
+ },
+ "a3_NIFTY": {
+  "model": "linear",
+  "baseline": "bvix"
+ },
+ "b15_NIFTY": {
+  "model": "linear"
+ },
+ "b30_NIFTY": {
+  "model": "linear"
+ },
+ "b60_NIFTY": {
+  "model": "linear"
+ },
+ "c30_NIFTY": {
+  "model": "linear"
+ },
+ "c45_NIFTY": {
+  "model": "linear"
+ },
+ "d_NIFTY": {
+  "model": "shrink"
+ }
+}

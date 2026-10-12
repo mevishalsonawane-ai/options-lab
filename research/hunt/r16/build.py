@@ -182,7 +182,7 @@ def intraday(scr, sym):
 def daily(scr, sym):
     y = pd.read_csv(os.path.join(scr, f"daily_{sym}.csv"), parse_dates=["day"]).sort_values("day")
     y["rng"] = (y.high - y.low) / y.close.shift(1)
-    y = y[(y.rng > 0) & (y.rng < 0.15)].copy()          # Yahoo bad ticks (pre-registered: drop H<=L and >15% rows)
+    y = y[(y.rng > 0) & (y.rng < 0.15)].copy()          # Yahoo bad ticks: drop H<=L and >15% rows (3 rows; a listed deviation)
     y["lr"] = np.log(y.rng)
     v = pd.read_csv(os.path.join(scr, "daily_VIX.csv"), parse_dates=["day"])[["day", "close"]].rename(columns={"close": "vix"})
     y = y.merge(v, on="day", how="left")
