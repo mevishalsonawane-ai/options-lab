@@ -1036,6 +1036,22 @@ object IraHub {
         // Solo's paper trade keeps its own exits (the index stop, the breakeven lock, 14:30): never a premium stop set on it
         // (the solo2 study found a premium stop instead of the index stop cost money).
         runCatching { IraSolo.all().filter { !it.closed }.forEach { bots += it.symbol } }
+        // 12 Oct: every other arm with its own exits too (the MCX paper arms, Night, VIX divergence - their books in memory),
+        // and any paper position an arm or a strategy opened (the owner labels of the fills that opened it: Liquidity, Hero,
+        // Forge, shadows, ...). Only Boss's own positions (opened by hand, or by nobody the app knows) get a guard stop.
+        runCatching { com.optionslab.app.data.McxPaperArms.view.value.open.forEach { bots += it.symbol } }
+        runCatching { com.optionslab.app.data.NightArm.view.value.open.forEach { bots += it.symbol } }
+        runCatching { com.optionslab.app.data.VixDivArm.view.value.open.forEach { bots += it.symbol } }
+        runCatching {
+            val owners = com.optionslab.app.data.Strategies.owners()
+            val trades = com.optionslab.app.data.Paper.state.trades
+            for ((p, product) in open) {
+                if (p.live || p.symbol in bots) continue
+                val fills = trades.filter { it.symbol == p.symbol && it.product == product }.sortedBy { it.timestamp }
+                    .map { com.optionslab.app.data.Origins.Fill("paper:${it.orderId}", null, it.action.equals("BUY", ignoreCase = true), it.quantity) }
+                if (com.optionslab.ira.Rescue.ownedByStrategy(com.optionslab.app.data.Origins.position(owners, fills, p.qty))) bots += p.symbol
+            }
+        }
         val day = com.optionslab.app.data.Market.today().toString()
         val bare = open.filter { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol !in guarded && p.symbol !in bots }
         val bareKeys = bare.map { (p, _) -> (if (p.live) "L:" else "P:") + p.symbol }.toSet()

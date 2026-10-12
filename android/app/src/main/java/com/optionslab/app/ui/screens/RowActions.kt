@@ -140,7 +140,7 @@ fun RowActionPopup(model: AppModel) {
                 val pr = protections.lastOrNull { !it.live && it.symbol == r.symbol }
                 pr?.let { lines += "Protection" to it.describe() }
                 button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
-                    protectFor = ProtectTarget(false, r.symbol, r.exchange, r.product, r.quantity, r.ltp)
+                    protectFor = ProtectTarget(false, r.symbol, r.exchange, r.product, r.quantity, r.ltp, r.averagePrice)
                 }
                 pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
                 swipe("Slide to close position") { model.paperClose(r.symbol, r.product); close() }
@@ -211,7 +211,7 @@ fun RowActionPopup(model: AppModel) {
                 val pr = protections.lastOrNull { it.live && it.symbol == r.symbol }
                 pr?.let { lines += "Protection" to it.describe() }
                 button(if (pr == null) "Protect: stop · trail · target" else "Change protection") {
-                    protectFor = ProtectTarget(true, r.symbol, r.exchange, r.product, r.qty, r.last)
+                    protectFor = ProtectTarget(true, r.symbol, r.exchange, r.product, r.qty, r.last, r.avg)
                 }
                 pr?.let { button("Remove protection") { if (it.live) removeAuth = it.id else model.removeProtection(it.id) } }
                 swipe("Slide to close position") { model.planSquareOff(r); close() }
@@ -305,7 +305,9 @@ fun RowActionPopup(model: AppModel) {
 
 
 /** An open position to protect. [qty] is signed: + long, - short. */
-data class ProtectTarget(val live: Boolean, val symbol: String, val exchange: String, val product: String, val qty: Int, val price: Double)
+/** [entry]: the position's own price (what was paid, or sold at): a target is refused on the wrong side of it (12 Oct). */
+data class ProtectTarget(val live: Boolean, val symbol: String, val exchange: String, val product: String, val qty: Int, val price: Double,
+                         val entry: Double? = null)
 
 /**
  * Stop, trailing stop and target for one position. Paper: set at once. Zerodha: the
@@ -321,7 +323,7 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
     var auth by remember { mutableStateOf(false) }
     val long = t.qty > 0
     val spec = com.optionslab.app.ui.ProtectSpec(stop.toDoubleOrNull(), trail.toDoubleOrNull(), target.toDoubleOrNull())
-    val problem = com.optionslab.engine.risk.Protection.validate(if (long) 1 else -1, t.price, spec.stop, spec.trail, spec.target)
+    val problem = com.optionslab.engine.risk.Protection.validate(if (long) 1 else -1, t.price, spec.stop, spec.trail, spec.target, t.entry)
     fun go() = model.protect(t.live, t.symbol, t.exchange, t.product, t.qty, t.price, spec).also { onDone(true) }
     if (auth) { Reauth(model, onOk = { auth = false; go() }, onCancel = { auth = false }, orderAction = true); return }
     AlertDialog(
@@ -333,7 +335,7 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
                 Text("${if (long) "Long" else "Short"} ${abs(t.qty)} · last ${px(t.price)} · ${if (t.live) "Zerodha" else "paper"}", style = Type.bodySmall.copy(color = p.inkSoft))
                 PriceField(stop, { stop = it }, "Stop price (${if (long) "below" else "above"} ${px(t.price)})")
                 PriceField(trail, { trail = it }, "…or trail by (points)")
-                PriceField(target, { target = it }, "Target price (optional)")
+                PriceField(target, { target = it }, "Target price (optional; ${if (long) "above" else "below"} ${px(maxOrMin(long, t.price, t.entry))})")
                 Note(if (spec.trail != null) "Trailing: the stop follows the best price at ${spec.trail} points behind and never loosens." +
                     (if (spec.stop != null) " It starts at your stop price." else "")
                     else "The stop rests as a stop-loss exit (SL-M on paper; SL with a limit at Zerodha, which refuses SL-M on options) and the target as a LIMIT exit; when one fills the other is cancelled.", Modifier.padding(top = 8.dp))
@@ -349,6 +351,10 @@ fun ProtectDialog(model: AppModel, t: ProtectTarget, onDone: (Boolean) -> Unit) 
         dismissButton = { TextButton({ onDone(false) }) { Text("Cancel") } },
     )
 }
+
+/** The level a target must clear: above the higher of the price and the entry for a long, below the lower for a short. */
+private fun maxOrMin(long: Boolean, price: Double, entry: Double?): Double =
+    if (entry == null || !(entry > 0)) price else if (long) maxOf(price, entry) else minOf(price, entry)
 
 @Composable
 fun PriceField(v: String, set: (String) -> Unit, label: String) {

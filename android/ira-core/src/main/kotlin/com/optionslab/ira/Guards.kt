@@ -36,6 +36,18 @@ object Rescue {
 
     data class Open(val symbol: String, val live: Boolean, val qty: Int, val avg: Double, val ltp: Double?)
 
+    /** What a position opened by hand is named in an "opened by" label ([ownedByStrategy]). */
+    private val BOSS_OWN = setOf("Manual", "Outside IraAlgo (Kite)")
+
+    /**
+     * Whether a position is an arm's or a strategy's, which keeps its own exit rules (12 Oct: the guard set a 15% stop on the
+     * SILVERM morning call, an MCX arm's paper position): [openedBy] is the app's "opened by" label, names joined by " + "
+     * ("ORB", "SILVERM morning call", "Manual", "ORB + Manual"); any opener that is not Boss's own hand makes it the arm's.
+     * Null (no fill explains it) is Boss's.
+     */
+    fun ownedByStrategy(openedBy: String?): Boolean =
+        openedBy != null && openedBy.split(" + ").map { it.trim() }.any { it.isNotEmpty() && it !in BOSS_OWN }
+
     /** The stop to offer for [p], or null (a short, or the price is already at or under the stop: close it instead). */
     fun stopFor(p: Open): Double? {
         if (p.qty <= 0 || p.avg <= 0) return null

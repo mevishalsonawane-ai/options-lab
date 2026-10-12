@@ -39,6 +39,30 @@ class ProtectionsLiveTest : RobolectricTest() {
         assertTrue(kite.requests.isEmpty())
     }
 
+    /** 12 Oct (SILVERM at 4243.50 "protected" with a target of 3900): a target under the price paid is refused, nothing sent. */
+    @Test fun aTargetUnderThePricePaidIsRefusedAndNothingIsSent() {
+        kite.login()
+        // Bought at 100, now 80: 90 is above the price but under what was paid - a loss, not a target.
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 80.0, null, null, 90.0) }
+        assertTrue(msg, msg.startsWith("Not protected: The target must be above the 100.00 you paid"))
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    /** 12 Oct, 10:44 ("Protected SILVERM...: " with nothing after it): a request that sets nothing never replaces a stop. */
+    @Test fun aProtectionThatWouldSetNothingIsRefusedAndTheOldStopStays() {
+        kite.login()
+        protect(stop = 90.0, target = null)
+        val before = runBlocking { Protections.active() }.single()
+        // A trail longer than the price: the stop would be under zero.
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, null, 150.0, null) }
+        assertTrue(msg, msg.startsWith("Not protected:"))
+        val paper = runBlocking { Protections.protectPaper(sym, "NRML", 75, 100.0, 0.0, null, null) }
+        assertEquals("Not protected: The stop must be above zero.", paper)
+        assertEquals(before, runBlocking { Protections.active() }.single())
+        assertEquals("only the first stop was ever sent", 1, kite.placed.size)
+    }
+
     @Test fun placesAStopWithALimitAndATarget() {
         kite.login()
         val msg = protect()

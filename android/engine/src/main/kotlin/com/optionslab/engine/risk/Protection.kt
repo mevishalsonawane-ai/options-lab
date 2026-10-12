@@ -62,14 +62,26 @@ object Protection {
         return null
     }
 
-    /** What is wrong with a request, or null: the stop must be on the losing side, the target on the winning side. */
-    fun validate(direction: Int, price: Double, stop: Double?, trailPoints: Double?, target: Double?): String? {
+    /**
+     * What is wrong with a request, or null: the stop must be on the losing side of the current price and above zero (a
+     * trail must leave a stop above zero), the target on the winning side of the current price AND of [entry] (the
+     * position's own price, when known): a target is where the profit is taken, so a long's target under the price paid
+     * (12 Oct: SILVERM bought at 4243.50 "protected" with a target of 3900, sold at a loss as a "target filled") is
+     * refused - getting out lower is a close or a limit exit, said so. Never a protection that sets nothing.
+     */
+    fun validate(direction: Int, price: Double, stop: Double?, trailPoints: Double?, target: Double?, entry: Double? = null): String? {
         if (stop == null && trailPoints == null && target == null) return "Set a stop, a trailing distance or a target."
         if (trailPoints != null && !(trailPoints > 0)) return "The trailing distance must be above zero."
+        if (stop != null && !(stop > 0)) return "The stop must be above zero."
         if (stop != null && (if (direction > 0) stop >= price else stop <= price))
             return "The stop must be ${if (direction > 0) "below" else "above"} the current price (%.2f).".format(price)
+        if (stop == null && trailPoints != null && !(price - direction * trailPoints > 0))
+            return "A trail of %.2f points from %.2f puts the stop at or under zero: give a smaller trail or a stop price.".format(trailPoints, price)
         if (target != null && (if (direction > 0) target <= price else target >= price))
             return "The target must be ${if (direction > 0) "above" else "below"} the current price (%.2f).".format(price)
+        if (target != null && entry != null && entry > 0 && (if (direction > 0) target <= entry else target >= entry))
+            return ("The target must be ${if (direction > 0) "above the %.2f you paid" else "below the %.2f you sold at"}: a target takes a profit. " +
+                "To get out at %.2f, close the position or place a limit exit instead.").format(entry, target)
         return null
     }
 }

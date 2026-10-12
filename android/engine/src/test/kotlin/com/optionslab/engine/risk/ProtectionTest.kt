@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ProtectionTest {
     private fun long(stop: Double?, trail: Double?, best: Double, target: Double? = null) = Protection.Spec(1, stop, trail, target, best)
@@ -51,5 +52,26 @@ class ProtectionTest {
         assertNotNull(Protection.validate(1, 200.0, null, null, null))
         assertNull(Protection.validate(1, 200.0, 180.0, null, 240.0))
         assertNull(Protection.validate(-1, 200.0, null, 15.0, 150.0))
+    }
+
+    /** 12 Oct (SILVERM bought at 4243.50): a target under the price paid, a stop at zero and a trail past zero are refused. */
+    @Test fun aTargetOnTheWrongSideOfTheEntryOrAProtectionThatSetsNothingIsRefused() {
+        // Long at 4243.50, the price now 3850: a "target" of 3900 is above the price but below what was paid.
+        val t = Protection.validate(1, 3850.0, null, null, 3900.0, entry = 4243.5)
+        assertNotNull(t)
+        assertTrue(t!!.contains("above the 4243.50 you paid"), t)
+        // A short's target above what it was sold at.
+        assertNotNull(Protection.validate(-1, 120.0, null, null, 110.0, entry = 100.0))
+        assertNull(Protection.validate(-1, 120.0, null, null, 90.0, entry = 100.0))
+        // A target above both the price and the entry is fine; no entry known: the price alone, as before.
+        assertNull(Protection.validate(1, 3850.0, null, null, 4500.0, entry = 4243.5))
+        assertNull(Protection.validate(1, 3850.0, null, null, 3900.0))
+        // A stop at zero (it would set nothing and replace the old stop) and a trail longer than the price.
+        assertEquals("The stop must be above zero.", Protection.validate(1, 3850.0, 0.0, null, null))
+        val trail = Protection.validate(1, 3850.0, null, 3900.0, null)
+        assertNotNull(trail); assertTrue(trail!!.contains("at or under zero"), trail)
+        assertNull(Protection.validate(1, 3850.0, null, 500.0, null))
+        // A short's trail is never under zero.
+        assertNull(Protection.validate(-1, 100.0, null, 500.0, null))
     }
 }

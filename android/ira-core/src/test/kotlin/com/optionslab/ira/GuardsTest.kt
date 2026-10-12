@@ -173,4 +173,16 @@ class GuardsTest {
         assertEquals(listOf(Market.BANKNIFTY), q.markets)
         assertTrue(Topic.LEVELS in q.topics && Topic.PATTERNS in q.topics)
     }
+
+    /** 12 Oct: "Guard my positions" set a 15% stop on the SILVERM morning call (an MCX arm's): only Boss's own positions get one. */
+    @Test fun theGuardLeavesAnArmsPositionToItsOwnExits() {
+        assertTrue(Rescue.ownedByStrategy("SILVERM morning call"))
+        assertTrue(Rescue.ownedByStrategy("ORB"))
+        assertTrue(Rescue.ownedByStrategy("ORB + Manual"), "an arm in it: its exits manage it")
+        assertTrue(Rescue.ownedByStrategy("Jarvis news"))
+        assertFalse(Rescue.ownedByStrategy("Manual"))
+        assertFalse(Rescue.ownedByStrategy("Manual + Outside IraAlgo (Kite)"))
+        assertFalse(Rescue.ownedByStrategy(null), "no fill explains it: Boss's own")
+        assertFalse(Rescue.ownedByStrategy(""))
+    }
 }

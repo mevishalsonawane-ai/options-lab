@@ -130,7 +130,15 @@ object Protections {
      * Returns a message for the owner.
      */
     suspend fun protectPaper(symbol: String, product: String, qty: Int, price: Double, stop: Double?, trail: Double?, target: Double?): String {
-        Protection.validate(if (qty > 0) 1 else -1, price, stop, trail, target)?.let { return it }
+        // The position's own price (12 Oct): a long's target under what was paid is refused, said why ([Protection.validate]).
+        val entry = if (target == null) null else runCatching {
+            Paper.state.positions.firstOrNull { it.symbol == symbol && it.quantity != 0 }?.averagePrice?.toDouble()
+        }.getOrNull()
+        Protection.validate(if (qty > 0) 1 else -1, price, stop, trail, target, entry)?.let { return "Not protected: $it" }
+        // A request that would set no stop and no target (12 Oct, 10:44: "Protected SILVERM...: " with nothing after it,
+        // the old stop replaced by nothing) is refused before anything is cancelled.
+        if (target == null && Protection.initialStop(if (qty > 0) 1 else -1, price, stop, trail) == null)
+            return "Not protected: that stop would be at or under zero, so nothing was changed."
         val c = Paper.contractOf(symbol) ?: return "That paper contract is not known."
         return lock.withLock {
             val list = load()
@@ -168,7 +176,13 @@ object Protections {
                             stop: Double?, trail: Double?, target: Double?): String {
         val s = AppSettings.load()
         if (!s.live || !s.allowRealOrders) return "Switch to Live with the badge at the top first."
-        Protection.validate(if (qty > 0) 1 else -1, price, stop, trail, target)?.let { return it }
+        // The position's own price, read only when a target is asked (12 Oct): never a long's target under the price paid.
+        val entry = if (target == null) null else runCatching {
+            Broker.within(5_000) { Broker.positionBook() }?.net?.firstOrNull { it.symbol == symbol && it.exchange == exchange && it.qty != 0 }?.avg
+        }.getOrNull()
+        Protection.validate(if (qty > 0) 1 else -1, price, stop, trail, target, entry)?.let { return "Not protected: $it" }
+        if (target == null && Protection.initialStop(if (qty > 0) 1 else -1, price, stop, trail) == null)
+            return "Not protected: that stop would be at or under zero, so nothing was changed."
         val spec = runCatching { Broker.spec(exchange, symbol) }.getOrNull() ?: return "Could not read $symbol's lot and tick from Zerodha."
         return lock.withLock {
             val list = load()
