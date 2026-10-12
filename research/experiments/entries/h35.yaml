@@ -1,0 +1,26 @@
+id: h35
+title: The app's support and resistance levels
+family: patterns-indicators
+date: '2026-10-11'
+doc: research/HUNT_H35.md
+hypothesis: The app's S/R levels pay an option buyer.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- every S/R level the app computes
+model_or_rule: level triggers
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h35/PREREG.md
+variants_tried: null
+results:
+  summary: Only Liquidity and ORB levels trade by themselves; the others lose.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

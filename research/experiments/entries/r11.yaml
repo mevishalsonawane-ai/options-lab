@@ -1,0 +1,25 @@
+id: r11
+title: 'Move anatomy: before and during a big candle'
+family: diagnosis
+date: '2026-10-09'
+doc: research/HUNT_R11_MOVE_ANATOMY.md
+hypothesis: What shows up before a big move.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- option, futures and stock volume
+model_or_rule: descriptive study
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r11/PREREG.md
+variants_tried: null
+results:
+  summary: Everything lights up during the candle; little shows before it.
+  costs: n/a
+holdout_read: null
+verdict: not-a-test
+backfilled: true

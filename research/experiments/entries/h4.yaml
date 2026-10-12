@@ -1,0 +1,27 @@
+id: h4
+title: Combining and scaling the best rules
+family: sizing-execution
+date: '2026-10-11'
+doc: research/HUNT_H4.md
+hypothesis: Combining and scaling the best rules reaches Rs 5,000/day.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- earlier rules' trade streams
+model_or_rule: portfolio of rules, scaled
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Reachable on paper only with about 29 units and Rs 60 lakh to 1 crore of capital; not dependable.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

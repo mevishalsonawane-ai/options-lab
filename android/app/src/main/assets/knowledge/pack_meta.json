@@ -1,0 +1,15 @@
+{
+  "built_from": "2026-10-12",
+  "bytes": 639700,
+  "counts": {
+    "answer": 1296,
+    "doc": 7648,
+    "finding": 120,
+    "strategy": 39,
+    "study": 60
+  },
+  "facts": 9163,
+  "model_cards": 0,
+  "schema": 1,
+  "version": "b7a5f1741ded"
+}

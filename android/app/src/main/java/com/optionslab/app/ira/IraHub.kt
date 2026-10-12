@@ -4907,7 +4907,32 @@ object IraHub {
             scope.launch(Dispatchers.IO) { reply(runCatching { IraImprove.say() }.getOrElse { "I could not read my own goals just now, Boss." }) }
             return true
         }
+        // "What did the research say about ORB?", "is Liquidity profitable?", "how does BankNifty behave on expiry after a gap
+        // down?", "research kya kehta hai liquidity ke baare me" ([com.optionslab.ira.Knowledge], ARCHITECTURE L5 Level 4): the
+        // research's findings, strategy cards, study pages and h42 answers from the bundled knowledge pack, best first, each with
+        // its source and date. Market knowledge, so fine on a locked phone - but the few facts that quote Boss's own fills or paper
+        // days are left out there, and the model does not reword it there. Every number is a fact's own; nothing acts.
+        if (!bundled && parsed.order == null && parsed.command == null &&
+            runCatching { com.optionslab.ira.Knowledge.asked(q) }.getOrDefault(false)) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            val knowLocked = phoneLocked()
+            scope.launch(Dispatchers.IO) { knowledgeAnswer(q, knowLocked) }
+            return true
+        }
         return false
+    }
+
+    /** [askedToReason]'s research answer: shown at once, then reworded by the model (unlocked only) if it passes the checks. */
+    private suspend fun knowledgeAnswer(q: String, locked: Boolean) {
+        val (said, facts) = runCatching { KnowledgeLibrary.answer(app, q, locked) }.getOrElse { com.optionslab.ira.Knowledge.NOT_LOADED to emptyList() }
+        val write = !locked && facts.isNotEmpty() && IraModel.usable()
+        val msg = Msg(true, said, facts, writing = write)
+        _state.update { it.copy(messages = (it.messages + msg).takeLast(MAX_MESSAGES)) }
+        if (!write) return
+        val better = runCatching { IraModel.rewriteWhenFree(q, facts, said) }.getOrNull()
+        _state.update { s -> s.copy(messages = s.messages.map { m ->
+            if (m !== msg) m else if (better != null && better != said) m.copy(text = better, draft = said, writing = false) else m.copy(writing = false)
+        }) }
     }
 
     /** On a day with no session, why (a holiday's name, "weekend"), for a greeting; null on a trading day. */

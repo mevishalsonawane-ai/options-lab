@@ -1,0 +1,29 @@
+id: h7
+title: Pyramiding and room-based sizing on Liquidity
+family: sizing-execution
+date: '2026-10-11'
+doc: research/HUNT_H7.md
+hypothesis: Adding lots to winners and sizing by room raises Rs per Liquidity trade.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- room to the next level
+- open profit
+model_or_rule: add-on and room-based lot rules, entries and exits unchanged
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: 32
+results:
+  summary: Add-on rule beat flat lots (+Rs 486/day per base unit, SPA p = 0.045 over 32) but only modestly better than more
+    flat lots; not dependable.
+  costs: app costs
+holdout_read: true
+verdict: inconclusive
+backfilled: true
