@@ -715,10 +715,11 @@ class ControlPagesTest {
         field(label, day.toString())
         compose.onNodeWithText("Add").assertIsEnabled()
         tap("Add")
-        assertTrue(Holidays.isHoliday(day))
+        // Saved and the alarms re-armed off the main thread (12 Oct): waited for, not read at once.
+        compose.waitUntil(5_000) { Holidays.isHoliday(day) }
         compose.waitForText("added by you", substring = true)
         tap("✕")
-        assertFalse(Holidays.isHoliday(day))
+        compose.waitUntil(5_000) { !Holidays.isHoliday(day) }
         compose.waitUntil(5_000) { compose.onAllNodesWithText("added by you", substring = true).fetchSemanticsNodes().isEmpty() }
     }
 
