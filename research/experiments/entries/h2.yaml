@@ -1,0 +1,25 @@
+id: h2
+title: Long-only intraday trading in F&O stocks
+family: stocks
+date: '2026-10-11'
+doc: research/HUNT_H2.md
+hypothesis: Simple long rules on F&O stocks make Rs 5,000/day.
+data_version: see doc (backfilled at summary level)
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- F&O stocks
+features:
+- stock minute bars
+model_or_rule: best simple long rule
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Real edge before costs (beat random on the holdout, p = 0.003) but Rs/day stops rising at about Rs 330/day at Rs
+    20 lakh a trade (impact).
+  costs: cash charges and impact
+holdout_read: true
+verdict: rejected
+backfilled: true

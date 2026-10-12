@@ -1,0 +1,24 @@
+id: h22
+title: Which paper strategy made Boss's +5k days
+family: diagnosis
+date: '2026-10-05'
+doc: research/HUNT_H22.md
+hypothesis: Replay of 1 and 5 Oct.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: see doc
+instruments:
+- BANKNIFTY
+features:
+- app rules replayed
+model_or_rule: replay
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: '1 Oct: Liquidity under its first-day rules plus the ORB family brackets the day.'
+  costs: app paper fills and charges
+holdout_read: null
+verdict: not-a-test
+backfilled: true

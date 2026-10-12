@@ -1,0 +1,29 @@
+id: h23
+title: Liquidity 15+5 on BANKEX, NIFTYNXT50 and more indices
+family: liquidity
+date: '2026-10-11'
+doc: research/HUNT_H23.md
+hypothesis: More indices at 1 lot raise Rs/day.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKEX
+- NIFTYNXT50
+- FINNIFTY
+- NIFTY
+- SENSEX
+features:
+- liquidity levels
+model_or_rule: Liquidity 15+5
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h23/PREREG.md
+variants_tried: null
+results:
+  summary: BANKEX no edge, NIFTYNXT50 untradeable; adding indices does not help.
+  costs: app costs plus Roll spread
+holdout_read: true
+verdict: rejected
+backfilled: true

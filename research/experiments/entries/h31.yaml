@@ -1,0 +1,27 @@
+id: h31
+title: Overnight option buying from 15:20
+family: overnight
+date: '2026-10-08'
+doc: research/HUNT_H31.md
+hypothesis: Strong closes carry on overnight enough to pay.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- close strength
+- OI build-up
+model_or_rule: overnight CE/PE rules
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h31/PREREG.md
+variants_tried: 4080
+results:
+  summary: Direction signal real but no proven edge after costs; NIFTY 'all agree' a weak lead (paper only, became Night R3).
+  costs: app costs
+holdout_read: true
+verdict: paper-only
+backfilled: true

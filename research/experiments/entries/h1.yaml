@@ -1,0 +1,28 @@
+id: h1
+title: Machine learning for intraday index option buying
+family: ml
+date: '2026-10-07'
+doc: research/HUNT_H1.md
+hypothesis: A model of each option's 30-minute return finds trades worth Rs 5,000/day.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+features:
+- index and option minute features
+model_or_rule: random forest and other learners, top 1% of predictions, max 5 a day
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: 90
+results:
+  summary: Best pre-holdout model (random forest) made +Rs 35,603 a lot net on the holdout but nowhere near Rs 5,000/day;
+    not adopted.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

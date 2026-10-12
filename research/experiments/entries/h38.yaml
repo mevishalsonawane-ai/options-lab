@@ -1,0 +1,29 @@
+id: h38
+title: Index futures price, OI, volume, basis
+family: flow-oi
+date: '2026-10-11'
+doc: research/HUNT_H38.md
+hypothesis: Futures OI/volume/basis give an option-buying rule.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+- MIDCPNIFTY
+features:
+- futures OI build-up
+- basis
+- volume
+model_or_rule: futures-derived triggers
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h38/PREREG.md
+variants_tried: null
+results:
+  summary: No rule pays; minute futures OI history only exists for 43 days (inside the holdout).
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

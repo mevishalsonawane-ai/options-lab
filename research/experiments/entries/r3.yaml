@@ -1,0 +1,23 @@
+id: r3
+title: GOLDM 'morning only' filter
+family: mcx-crypto
+date: '2026-10-09'
+doc: research/HUNT_R3_GOLDM_MORNING.md
+hypothesis: Mornings are better for GOLDM.
+data_version: see doc (backfilled at summary level)
+period:
+  design: see doc
+instruments:
+- GOLD
+features:
+- session time
+model_or_rule: morning-only filter
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: Short-sample artifact; do not adopt.
+  costs: report's Rs 100 cost
+holdout_read: null
+verdict: rejected
+backfilled: true

@@ -1,0 +1,27 @@
+id: h10
+title: A capacity-limited plan for Liquidity 15+5
+family: sizing-execution
+date: '2026-10-11'
+doc: research/HUNT_H10.md
+hypothesis: Liquidity can carry Rs 5,000/day within real capacity.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- exit-minute volume
+model_or_rule: capacity-based lots and loss limits
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h10/PREREG.md
+variants_tried: null
+results:
+  summary: Only BANKNIFTY carries size; not dependable and sensitive to own price impact.
+  costs: app costs plus impact model
+holdout_read: true
+verdict: inconclusive
+backfilled: true

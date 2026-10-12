@@ -1,0 +1,27 @@
+id: h9
+title: More Liquidity trades from extra level timeframes
+family: liquidity
+date: '2025-10-01'
+doc: research/HUNT_H9.md
+hypothesis: Extra level timeframes add Liquidity trades with an edge.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 3/10/30/60-min liquidity levels
+model_or_rule: Liquidity rule on 12 extra books
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h9/PREREG.md
+variants_tried: 12
+results:
+  summary: Two books kept before the holdout added only about Rs 17/day at 1 lot in it; they mostly copy existing trades.
+  costs: app costs
+holdout_read: true
+verdict: rejected
+backfilled: true

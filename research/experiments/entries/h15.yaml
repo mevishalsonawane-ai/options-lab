@@ -1,0 +1,27 @@
+id: h15
+title: Liquidity from Rs 1 lakh with compounding
+family: sizing-execution
+date: '2026-10-11'
+doc: research/HUNT_H15.md
+hypothesis: Half-Kelly compounding grows Rs 1 lakh to Rs 5,000/day.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- trade edge estimates
+model_or_rule: half-Kelly sizing on 3 books
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/h15/PREREG.md
+variants_tried: null
+results:
+  summary: Possible on the backtest only with 30-50% drawdowns; replaced by fixed lots (h17).
+  costs: app costs
+holdout_read: true
+verdict: superseded
+backfilled: true

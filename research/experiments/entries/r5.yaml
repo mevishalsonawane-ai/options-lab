@@ -1,0 +1,26 @@
+id: r5
+title: Boss's uploaded Gann/Fib/Harmonic guide
+family: outside-strategies
+date: '2026-10-09'
+doc: research/HUNT_R5_GUIDE_PINE.md
+hypothesis: The guide's script pays as written.
+data_version: Dhan 1-minute index and option prices (hunt cache, 2020-2026); app fills and charges; real spread from h24 where
+  stated
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- Gann Sq9/Sq144, Fib, harmonics
+model_or_rule: script exactly as written
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r5/PREREG.md
+variants_tried: null
+results:
+  summary: Almost never trades; when it does it exits on the entry bar; no money after costs.
+  costs: real costs
+holdout_read: true
+verdict: rejected
+backfilled: true

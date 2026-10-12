@@ -1,0 +1,24 @@
+id: h8
+title: Liquidity 15+5 on 214 F&O stocks, long-only cash
+family: stocks
+date: '2026-10-11'
+doc: research/HUNT_H8.md
+hypothesis: The Liquidity rule works on stocks.
+data_version: see doc (backfilled at summary level)
+period:
+  design: 2020/2021 .. 2025-09-30
+  holdout: 2025-10-01 .. 2026-10-06 (locked year)
+instruments:
+- F&O stocks
+features:
+- liquidity levels
+model_or_rule: Liquidity 15+5, long only
+settings: see doc (backfilled at summary level)
+prereg: null
+variants_tried: null
+results:
+  summary: No long-side edge (about +1 bp gross a trade); loses after costs.
+  costs: cash charges
+holdout_read: true
+verdict: rejected
+backfilled: true

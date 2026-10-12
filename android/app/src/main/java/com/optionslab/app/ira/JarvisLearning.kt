@@ -318,8 +318,11 @@ internal object JarvisLearning {
     fun appendFor(tag: String?, topic: AgentLessons.Topic? = null): String? =
         if (!enabled() || !loaded) null else runCatching { AgentLessons.appendFor(_book.value, tag, topic) }.getOrNull()
 
-    /** The model's notes for [question]: the relevant lessons, short with their numbers, at most 600 characters. */
-    fun modelNotes(question: String): List<String> =
+    /**
+     * The model's notes for [question]: for a research question, the knowledge pack's best facts first ([KnowledgeLibrary]);
+     * then the relevant lessons, short with their numbers. [com.optionslab.ira.Writer.capLessons] keeps them to 600 characters.
+     */
+    fun modelNotes(question: String): List<String> = KnowledgeLibrary.modelNotes(question) +
         if (!enabled() || !loaded) emptyList() else runCatching { AgentLessons.forModel(_book.value, question) }.getOrDefault(emptyList()) +
             runCatching { com.optionslab.ira.LabTalk.asked(question)?.let { com.optionslab.app.data.VariantRunner.modelNotes() } }.getOrNull().orEmpty()
 
