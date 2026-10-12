@@ -174,6 +174,19 @@ The app downloads new models only after the gates pass. It keeps the previous ve
 The app's fills, slippage, Order Review flaws, trade-manager votes and paper/live results are uploaded each evening as
 new raw data (L1). So the brain learns from **real execution**, not just from history. This is how it keeps improving.
 
+## Additions before building (12 Oct)
+
+1. **Record more live data now.** At every signal and fill the app saves the option chain (ATM ±10: LTP, OI, IV), market
+   depth and the order's timing. No vendor sells Boss's execution history, so each unrecorded day is lost for good. It
+   has no trading effect.
+2. **A guard against seeing the future.** An automatic test fails any feature or model that reads information from after
+   the minute it describes.
+3. **An experiment log in git.** Every model tried is logged with its data version, settings and results, failures
+   included. This feeds the multiple-testing count.
+4. **Privacy.** Boss's own records (fills, P&L) are encrypted before they enter the data lake, even in the private repo.
+5. **A compute budget.** Nightly GitHub Actions jobs stay small (the free minutes on private repos are limited, and each
+   job is capped at 6 hours). Large trainings run occasionally.
+
 ---
 
 ## Roadmap (honest sizes)
