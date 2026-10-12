@@ -54,6 +54,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
+            "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
+                "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",
+            "Settings → Data and harvest → Recordings", to = "data"),
         Entry("2026-10-12-order-review", OCT12, "Order review: every order studied daily",
             "A new agent studies every order and trade each day after the close - live, paper, the bots, Pine and your own - and lists the flaws with their numbers. " +
                 "A flaw that keeps coming back is flagged for a fix or tested by the strategy lab on paper first; it never places, changes or cancels an order.",

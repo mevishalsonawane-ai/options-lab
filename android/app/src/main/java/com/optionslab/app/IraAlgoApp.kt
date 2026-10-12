@@ -97,6 +97,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
         com.optionslab.app.data.LiveRecorder.init(this)
+        // The tick zone (12 Oct): the watch-list's order flow every second, from the stream's memory, written in the background.
+        com.optionslab.app.data.TickZoneRecorder.init(this)
         com.optionslab.app.data.LiquidityTest.init(this)
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)

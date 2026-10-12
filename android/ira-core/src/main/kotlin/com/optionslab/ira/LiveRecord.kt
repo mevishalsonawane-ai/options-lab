@@ -199,10 +199,10 @@ object LiveRecord {
             "${it.ageMs ?: "null"},${str(it.src)}]"
     }
 
-    /** Already-JSON text, written as is. */
-    private class Json(val json: String)
+    /** Already-JSON text, written as is ([TickZone] writes its rows with it too). */
+    internal class Json(val json: String)
 
-    private fun obj(vararg kv: Pair<String, Any?>): String = kv.filter { it.second != null }.joinToString(",", "{", "}") { (k, v) ->
+    internal fun obj(vararg kv: Pair<String, Any?>): String = kv.filter { it.second != null }.joinToString(",", "{", "}") { (k, v) ->
         str(k) + ":" + when (v) {
             is Json -> v.json
             is String -> str(v)
@@ -315,6 +315,22 @@ object LiveRecord {
         trades.jsonl.gz.vault Boss's own records: each line base64(AES-256-GCM(gzip(JSON lines))) with a key that never
                               leaves the phone's Keystore; readable only by the app on that phone. S signal, O order sent,
                               F fill (paper or live), each with the market snapshot at that moment.
+        IV: Black-76 on the ATM put-call parity forward (else spot*e^(${RATE}T)), calendar time to expiry 15:30 IST.
+        OI change: from the first OI the app saw that day (oiFrom).
+    """.trimIndent()
+
+    /**
+     * The README of the PIN-confirmed export (12 Oct): as [README], but Boss's trade files are written decrypted, as plain
+     * JSON lines ("trades.jsonl"), into the file he picked.
+     */
+    val DECRYPTED_README: String = """
+        IraAlgo live recordings (schema $SCHEMA), exported after your PIN: your trades are DECRYPTED in this file.
+        Keep it private. One folder a day (YYYY-MM-DD). Times are epoch milliseconds ("at") or IST HH:mm ("m").
+        market.jsonl.gz       plain gzip, JSON lines: H header, M minute rows (index OHLC, futures, basis, VIX,
+                              nearest-expiry chain ATM +/-$EACH_SIDE as [strike,right,ltp,oi,oiChange,iv,ageMs,src]), G gaps.
+        trades.jsonl          Boss's own records, plain JSON lines (on the phone they stay encrypted): H header, S signal,
+                              O order sent, F fill (paper or live), each with the market snapshot at that moment. A line
+                              that could not be decrypted is a G gap line.
         IV: Black-76 on the ATM put-call parity forward (else spot*e^(${RATE}T)), calendar time to expiry 15:30 IST.
         OI change: from the first OI the app saw that day (oiFrom).
     """.trimIndent()
