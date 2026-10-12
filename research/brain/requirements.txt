@@ -1,0 +1,6 @@
+# research/brain (Python 3.11). Pinned so cube/feature values are reproducible across machines and CI.
+numpy==2.1.3
+pandas==2.2.3
+pyarrow==17.0.0
+scipy==1.14.1
+pytest==8.3.3
