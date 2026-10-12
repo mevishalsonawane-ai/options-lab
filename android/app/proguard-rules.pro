@@ -40,3 +40,7 @@
 
 # Jarvis: the llama.cpp bridge (src/jarvis/cpp) finds these by name.
 -keepclasseswithmembernames class com.optionslab.app.ira.LlmNative { native <methods>; }
+
+# Exception class NAMES only (12 Oct: the diagnostics said "a check failed in Jarvis words: ij1"): the diary names a failure
+# by its class, never its message, so the class must read as itself. Code is still shrunk and obfuscated.
+-keepnames class * extends java.lang.Throwable

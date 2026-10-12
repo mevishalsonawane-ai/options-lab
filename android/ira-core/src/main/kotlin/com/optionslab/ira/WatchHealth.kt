@@ -83,6 +83,15 @@ object WatchHealth {
     /** An exception's class name only (never its message, which can carry a URL or a token), at most 80 characters. */
     fun cleanClass(name: String?): String = name.orEmpty().substringAfterLast('.').replace(CLASS_OK, "").take(80).ifEmpty { "unknown" }
 
+    /**
+     * A worker's failure as the diary names it: the worker, the step it was on when known, and "timed out" for its time
+     * limit ("Jarvis words (at news, timed out)"). Words only.
+     */
+    fun workerStep(worker: String, step: String?, timedOut: Boolean): String {
+        val parts = listOfNotNull(step?.takeIf { it.isNotBlank() }?.let { "at $it" }, "timed out".takeIf { timedOut })
+        return if (parts.isEmpty()) worker else "$worker (${parts.joinToString(", ")})"
+    }
+
     /** The diary's line for a pass that threw: where (the app's own step name) and the class only. */
     fun failure(step: String?, errorClass: String?): String =
         "a check failed${step?.let { " in $it" }.orEmpty()}: ${cleanClass(errorClass)} (the watch goes on)"

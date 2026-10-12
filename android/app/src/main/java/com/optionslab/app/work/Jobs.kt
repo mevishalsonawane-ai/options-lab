@@ -585,6 +585,9 @@ object Tasks {
     @Volatile private var wordsSince = 0L
     @Volatile private var wordsStuckTold = 0L
     @Volatile private var wordsStep: String? = null
+    /** The words step that ran last (kept after the round ends, unlike [wordsStep]): named when the round fails as a whole. */
+    @Volatile internal var wordsLastStep: String? = null
+        private set
     /** When the slow group of words last ran ([com.optionslab.ira.WordsPace]). */
     @Volatile private var wordsSlowAt = 0L
     /** The words lane's pace at its last round (true = quiet) and when that was - for the diagnostics' "Battery:" line. */
@@ -633,6 +636,7 @@ object Tasks {
 
     private suspend inline fun word(name: String, block: () -> Unit) {
         wordsStep = name
+        wordsLastStep = name
         val t0 = System.currentTimeMillis()
         try {
             block()

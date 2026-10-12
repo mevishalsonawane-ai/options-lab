@@ -75,7 +75,10 @@ object WatchWorkers {
             onTimed = { n, ms -> timed(n, ms) }, onError = { n, e ->
                 // A worker past its time limit is one of the app's own health records (its tuner reads them).
                 if (e is Supervisor.TimedOut) runCatching { com.optionslab.app.data.AppHealth.overrun(n) }
-                Tasks.stepFailed(n, e)
+                // 12 Oct ("a check failed in Jarvis words: ij1" at 11:06 and 12:26): the words round as a whole failed - its
+                // 5-minute limit (Supervisor.TimedOut) or a cancellation from inside it - and the release build's class name
+                // was obfuscated. The step it was on is named now (and the class names are kept: proguard-rules.pro).
+                Tasks.stepFailed(com.optionslab.ira.WatchHealth.workerStep(n, if (n == WORDS) Tasks.wordsLastStep else null, e is Supervisor.TimedOut), e)
             })
         return Run(s, job).also { current = it; last = it }
     }

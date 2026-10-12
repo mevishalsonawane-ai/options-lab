@@ -77,4 +77,15 @@ class WatchHealthTest {
         assertFalse(WatchHealth.isBatteryFix("✓ " + WatchHealth.BATTERY_OK))
         assertTrue("Unrestricted" in WatchHealth.BATTERY_FIX)
     }
+
+    /** 12 Oct: "a check failed in Jarvis words: ij1" - the step and a time-out are named now. */
+    @Test fun aWorkersFailureNamesTheStepItWasOn() {
+        assertEquals("Jarvis words (at news, timed out)", WatchHealth.workerStep("Jarvis words", "news", timedOut = true))
+        assertEquals("Jarvis words (at pattern check)", WatchHealth.workerStep("Jarvis words", "pattern check", timedOut = false))
+        assertEquals("brain (timed out)", WatchHealth.workerStep("brain", null, timedOut = true))
+        assertEquals("brain", WatchHealth.workerStep("brain", " ", timedOut = false))
+        // With the class names kept in the release build, the time-out reads as itself.
+        assertEquals("a check failed in Jarvis words (at news, timed out): Supervisor\$TimedOut (the watch goes on)",
+            WatchHealth.failure(WatchHealth.workerStep("Jarvis words", "news", true), Supervisor.TimedOut::class.java.name))
+    }
 }
