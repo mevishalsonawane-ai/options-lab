@@ -101,7 +101,7 @@ class KnowledgeTest {
         "what did the research say about FII flows" to listOf("hunt-h40.verdict.2", "hunt-final.verdict.7"),
         "does VWAP work as a filter" to listOf("hunt-r10-orderflow-tools.2-test-results-history.26", "findings.green-candles-green-cand.13"),
         "research me mcx ke baare me kya hai" to listOf("strategy.mcx-bots.what", "strategy.mcx-bots.1"),
-        "is gold liquidity profitable" to listOf("findings.liquidity-15-5-on-xauusd.1", "findings.xauusd-1-hour.1"),
+        "is gold liquidity profitable" to listOf("findings.liquidity-15-5-on-xauusd.1", "findings.xauusd-1-hour.1", "liquidity-gold.liquidity-15-5-on-xauusd.6"),
         "what did research say about candlestick patterns" to listOf("hunt-h25.summary-by-family-pre-ho.2"),
         "does order flow work" to listOf("hunt-r8-order-flow-traps.4-limits-honestly.5", "hunt-r7-order-flow.the-answer-in-plain-engl.5"),
         "what does research say about costs and spread" to listOf("hunt-h30.verdict.11", "hunt-h42.verdict-read-this-first.12"),
