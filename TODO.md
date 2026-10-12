@@ -142,3 +142,22 @@ Not possible yet:
       emulator only.
 - [ ] S22. Merge the branch to main after Boss checks Monday's session (Order speed card, diagnostics incl. Workers,
       Brain, Health, Autopilot).
+
+## G. Live data to GitHub (owner go-ahead 2026-10-12: option A)
+
+- [ ] G1. The phone uploads each day's live recording to GitHub on its own (design: `research/data/ARCHITECTURE.md`,
+      tick zone and L8).
+      - When: after 15:45, only on Wi-Fi and while charging. If it misses a day it retries the next evening.
+      - Never on the order or tick path, and never on the main thread.
+      - What: the day's file (per-second snapshots, per-minute order-flow aggregates, Boss's fills), encrypted on the
+        phone before upload. It goes to a GitHub Release `live-YYYY-MM` as an asset, never as a git commit.
+      - Key: one fine-grained GitHub token, options-lab only, 90-day expiry.
+        - Boss pastes it into the app (Settings → Data & Harvest), never into chat. It is stored wrapped by the PIN, like
+          the Zerodha API secret, and never appears in diagnostics or backups.
+        - The app reminds Boss 7 days before the token expires.
+      - Card: "Last upload: date · size · ✓/✗", "N days waiting". A failure goes to Problems found.
+      - Nightly GitHub job: verifies each upload, adds it to `research/data/CATALOG.json` and feeds the Data Brain.
+      - Docs: MAINTENANCE.md gets the steps to create and renew the token; README tells Boss to turn on "protect main"
+        (changes only after CI passes).
+      - Until G1 ships: export the recorded data by hand every Friday (Data & Harvest → Export) and upload it to the
+        release.
