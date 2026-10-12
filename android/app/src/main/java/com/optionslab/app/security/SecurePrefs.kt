@@ -318,9 +318,14 @@ object SecurePrefs {
      * operation at a time, so a settings read made later on the screen's thread queued behind the pine scripts' and the
      * four gold books' decryptions - Boss's "app start 1308 ms, slowest: Jarvis's memory 1294 ms" was that wait
      * (Jarvis's model status is the start's first settings read). The settings are needed on that thread before the
-     * start ends anyway (the restore disarm, the lock); read first, they cost only their own decryption.
+     * start ends anyway (the restore disarm, the lock); read first, they cost only their own decryption. 12 Oct: the large
+     * values are no longer in that file ([SecureBlobs]); those read early are decrypted next, on their own thread.
      */
-    @Synchronized fun warm() { map() }
+    fun warm() {
+        synchronized(this) { map() }
+        // The large values the watch and the Ira page read early, decrypted now on their own thread (never this one).
+        runCatching { Thread({ SecureBlobs.prefetch() }, "prefs-prefetch").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1 }.start() }
+    }
 
     /** Drop the cache and read the file again (the "try again" on the unreadable-vault screen). */
     fun reload(): Boolean {

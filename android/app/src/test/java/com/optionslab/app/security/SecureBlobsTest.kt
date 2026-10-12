@@ -48,12 +48,15 @@ class SecureBlobsTest : RobolectricTest() {
         SecurePrefs.put(big, bulk(5000))
         assertTrue("the settings file stays small", settingsFile.length() < 4_096)
         assertTrue(blobFile.length() > 100_000)
-        val before = SecureBlobs.loads.get()
+        SecurePrefs.flush()
+        val before = SecureBlobs.loadsOnMain.get()
         val t0 = System.nanoTime()
+        SecureBlobs.reset()
         assertTrue(SecurePrefs.reload())     // the settings decrypted again, as at a start
+        SecurePrefs.warm()
         val ms = (System.nanoTime() - t0) / 1_000_000
         assertEquals(1, SecurePrefs.getInt("small", 0))
-        assertEquals("a large value decrypted at the start", before, SecureBlobs.loads.get())
+        assertEquals("a large value decrypted on the start's thread", before, SecureBlobs.loadsOnMain.get())
         assertTrue("settings load took $ms ms", ms < 2_000)   // generous: CI machines vary; the point is the file decrypted
     }
 
@@ -129,6 +132,20 @@ class SecureBlobsTest : RobolectricTest() {
     @Test fun noLockPinLiveOrGuardSettingEverMovesOut() {
         for (k in SecureBlobs.KEYS) for (p in SecureBlobs.NEVER) assertFalse("$k moved out", k.startsWith(p))
         for (k in SecureBlobs.KEYS) assertTrue("$k is not a plain name", Regex("[A-Za-z0-9._-]+").matches(k))
+    }
+
+    @Test fun theStartsCodeNeverReadsALargeValue() {
+        // The start (IraAlgoApp.onCreate) and the activity's own steps touch none of the stores whose records moved out:
+        // each is read by its own background job, or ahead by SecurePrefs.warm's prefetch thread.
+        fun src(path: String) = listOf(File("src/main/java/$path"), File("app/src/main/java/$path")).firstOrNull { it.isFile }?.readText()
+        val owners = listOf("IraSolo", "IraNewsTrades", "IraStudy", "IraActivity", "IraThinking", "IraDayJournal", "IraJournal",
+            "IraBots", "SecureBlobs")
+        for (f in listOf("com/optionslab/app/IraAlgoApp.kt", "com/optionslab/app/MainActivity.kt")) {
+            val text = checkNotNull(src(f)) { "$f not found" }
+            for (o in owners) assertFalse("$f reads $o at the start", Regex("\\b$o\\.").containsMatchIn(text))
+            for (k in SecureBlobs.KEYS) assertFalse("$f reads $k", text.contains("\"$k\""))
+        }
+        for (k in SecureBlobs.PREFETCH) assertTrue(k in SecureBlobs.KEYS)
     }
 
     @Test fun theSizesLineNamesKeysNeverValues() {
