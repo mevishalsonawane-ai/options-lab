@@ -284,7 +284,7 @@ internal object IraAccount {
                         AppFacts.Held(it.symbol, it.quantity, it.averagePrice, it.ltp, it.pnl) })
                     // Said before charges, as every P&L is shown (Boss, 5 Oct), with the day's charges and the figure after them.
                     pnl += AppFacts.pnl("Paper", snap.dayGross, snap.positions.totalTodayRealizedPnl, snap.positions.totalUnrealizedPnl, snap.dayCharges)
-                    funds += "Paper funds: ${AppFacts.amt(snap.funds.availableCash)} available, ${AppFacts.amt(snap.funds.utilisedDebits)} in use."
+                    funds += "Paper funds (practice, not your Zerodha money): ${AppFacts.amt(snap.funds.availableCash)} available, ${AppFacts.amt(snap.funds.utilisedDebits)} in use."
                 } else { orders += "The paper account did not open just now."; pos += orders.last(); pnl += orders.last() }
                 if (zerodha) {
                     // Today's trades too (when they can be read), for the charges estimate said beside Zerodha's P&L.
@@ -309,7 +309,10 @@ internal object IraAccount {
                         }, byWho = true)
                         pos += AppFacts.positions("Zerodha", zp.net.filter { it.open }.map { AppFacts.Held(it.symbol, it.qty, it.avg, it.last, it.pnl) })
                         pnl += AppFacts.pnl("Zerodha", zp.net.sumOf { it.pnl }, zp.net.sumOf { it.realised }, zp.net.sumOf { it.unrealised }, zCharges, estimate = zExact == null)
-                        zf?.let { funds += "Zerodha funds: ${AppFacts.amt(it.available)} available, ${AppFacts.amt(it.used)} used, net ${AppFacts.amt(it.net)}." }
+                        zf?.let { funds += "Zerodha funds (LIVE, real money): ${AppFacts.amt(it.available)} available, ${AppFacts.amt(it.used)} used, net ${AppFacts.amt(it.net)}." +
+                            // 12 Oct: below zero is explained from what was just read (positions' M2M, margin blocked, charges).
+                            (com.optionslab.ira.MoneyFacts.negativeWhy(com.optionslab.ira.MoneyFacts.Funds(it.available, it.used, it.m2m, it.realised, it.span,
+                                it.exposure, it.optionPremium), zp.net.count { p -> p.qty != 0 }, zCharges)?.let { w -> " $w" } ?: "") }
                     }
                 } else if (Broker.linked) orders += "Zerodha: not logged in today, so only the paper account is read."
                 out[Section.ORDERS] = orders; out[Section.POSITIONS] = pos; out[Section.PNL] = pnl; out[Section.FUNDS] = funds

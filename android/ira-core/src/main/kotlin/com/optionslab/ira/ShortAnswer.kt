@@ -245,9 +245,10 @@ object ShortAnswer {
     private val POS_NONE = Regex("^No open positions on (\\w+)\\.")
     private val ORD_LINE = Regex("^(\\w+): (\\d+) orders? today, (\\d+) filled, (\\d+) open, (\\d+) rejected or cancelled\\.")
     private val ORD_NONE = Regex("^No orders on (\\w+) today\\.")
-    private val FUNDS_LINE = Regex("^(\\w+) funds: (Rs -?[\\d,]+(?:\\.\\d+)?) available")
+    // 12 Oct: the account's own words may follow its name ("Paper funds (practice, not your Zerodha money): ...").
+    private val FUNDS_LINE = Regex("^(\\w+) funds(?: \\([^)]*\\))?: (Rs -?[\\d,]+(?:\\.\\d+)?) available")
     /** Any account's funds sentence: one that [FUNDS_LINE] cannot read sends the whole answer to the fallback. */
-    private val FUNDS_ANY = Regex("^(\\w+) funds:")
+    private val FUNDS_ANY = Regex("^(\\w+) funds(?: \\([^)]*\\))?:")
     private val MARKET_LINE = Regex("^(?:Boss, )?([A-Z][A-Za-z ]{1,20}?) (is at|last closed at) [\\d,]+")
     private val THETA_LINE = Regex("theta|time decay|decay", RegexOption.IGNORE_CASE)
     private val LEFT_LINE = Regex("trades? (left|remaining)|more trades?", RegexOption.IGNORE_CASE)
@@ -284,7 +285,11 @@ object ShortAnswer {
         }?.let { (l, u) -> "Orders: $l." to u }
         Kind.FUNDS -> if (parts.any { FUNDS_ANY.containsMatchIn(it) && !FUNDS_LINE.containsMatchIn(it) }) null
             else collect(parts) { s -> FUNDS_LINE.find(s)?.let { m -> "${acct(m.groupValues[1])} ${rupeesText(m.groupValues[2])}" } }
-                ?.let { (l, u) -> "Available: $l." to u }
+                ?.let { (l, u) ->
+                    // Zerodha's money below zero: why, said with it (12 Oct), never a bare negative figure.
+                    val neg = parts.withIndex().firstOrNull { it.value.startsWith(MoneyFacts.NEGATIVE_HEAD) }
+                    ("Available: $l." + (neg?.let { " " + it.value } ?: "")) to (u + listOfNotNull(neg?.index))
+                }
         Kind.MARKET, Kind.VIX -> {
             val hits = parts.withIndex().filter { (_, s) -> MARKET_LINE.containsMatchIn(s) &&
                 (kind == Kind.MARKET || s.contains("VIX", ignoreCase = true)) }.take(3)

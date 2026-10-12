@@ -202,7 +202,12 @@ private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.option
         moneyNote = when {
             !loggedIn -> "Log in to Zerodha for today to see your money and orders."
             account is Load.Failed -> (account as Load.Failed).why
-            else -> null
+            // 12 Oct: Zerodha's available money below zero is explained from what was read (open positions' M2M, margin
+            // blocked, today's charges), never left as a bare negative figure.
+            else -> a?.let { acc -> acc.funds?.let { f ->
+                com.optionslab.ira.MoneyFacts.negativeWhy(com.optionslab.ira.MoneyFacts.Funds(f.available, f.used, f.m2m, f.realised, f.span,
+                    f.exposure, f.optionPremium), acc.positions.count { it.qty != 0 }, acc.charges)
+            } }
         }
     } else {
         val v = (paper as? Load.Done)?.value
@@ -271,6 +276,9 @@ private fun AlmanacBody(
             val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
                 Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))
+                // 12 Oct: whose money this is, always said - Zerodha's real account or the paper (practice) one, never mixed.
+                Text(if (live) "Zerodha · LIVE (real money)" else "PAPER (practice money)",
+                    style = Type.label.copy(color = if (live) p.oxblood else p.inkSoft, fontSize = 12.sp))
                 com.optionslab.app.ui.components.FitText(cap?.let { inr(it) } ?: "—", style = Type.figureHuge.copy(color = p.ink, fontSize = 38.sp), minSize = 14.sp)
                 if (cap != null && cap > 0) {
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp).height(8.dp).background(p.chip, RoundedCornerShape(50))) {
@@ -286,6 +294,7 @@ private fun AlmanacBody(
                 }
                 if (moneyNote != null) Note(moneyNote, Modifier.padding(top = 8.dp))
                 else if (cap != null && cap > 0) Text("${Math.round(100 * usedShare)}% of capital in use", style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 8.dp))
+                Text(com.optionslab.ira.MoneyFacts.cardNote(live), style = Type.bodySmall.copy(color = p.inkSoft), modifier = Modifier.padding(top = 4.dp))
             }
         }
 

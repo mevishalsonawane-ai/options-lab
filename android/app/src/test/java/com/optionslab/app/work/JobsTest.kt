@@ -602,7 +602,8 @@ class JobsTest : RobolectricTest() {
         val (t2, l2) = DailyReports.evening(context)
         assertTrue(l2.contains("⚠ The market watch stopped at least once today"))
         assertTrue(l2.contains("⚠ The kill switch is on"))
-        assertTrue(t2.startsWith("Day report · Wed 15 Oct · "))
+        // 12 Oct: no account traded, so no money figure in the title (never a "+₹0" read as the account's money).
+        assertEquals("Day report · Wed 15 Oct", t2)
     } }
 
     @Test fun reportsAreArmedOnlyForALinkedAccountAndFireOnlyOnTradingDays() {

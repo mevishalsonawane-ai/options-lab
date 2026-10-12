@@ -212,7 +212,11 @@ object DailyReports {
             // Jarvis's own checks: the Zerodha connection itself, the static IP, the live prices, the data, its model and voice.
             if (Broker.loggedIn) {
                 val f = Broker.within(10_000) { Broker.funds() }
-                ok(f != null, if (f != null) "Zerodha connection tested: ${rs(f.available).removePrefix("+")} available to trade" else "Zerodha did not answer the connection test")
+                // 12 Oct: said as Zerodha's REAL money (Boss read this morning's figure against the evening's paper result).
+                ok(f != null, if (f != null) "Zerodha (LIVE, real money) connection tested: ${rs(f.available).removePrefix("+")} available to trade; paper trades never use it" +
+                    (com.optionslab.ira.MoneyFacts.negativeWhy(com.optionslab.ira.MoneyFacts.Funds(f.available, f.used, f.m2m, f.realised, f.span, f.exposure,
+                        f.optionPremium), 0, null)?.let { ". $it" } ?: "")
+                    else "Zerodha did not answer the connection test")
             } else if (!Broker.configured) lines += "• Zerodha not set up: Paper only"
             com.optionslab.app.data.StaticIp.registered?.let { reg ->
                 val st = runCatching { com.optionslab.app.data.StaticIp.status(force = true) }.getOrNull()
@@ -334,13 +338,15 @@ object DailyReports {
     /** 15:45: how the day went. */
     suspend fun evening(context: Context): Pair<String, List<String>> {
         val lines = ArrayList<String>()
-        var total = 0.0
+        // 12 Oct: each account's day apart, never one total of paper and Zerodha (the title said "−₹1,374" for a paper day).
+        var paperDay: Double? = null
+        var liveDay: Double? = null
         runCatching { Paper.snapshot() }.getOrNull()?.let { sn ->
             val pnl = sn.dayPnl
             if (sn.trades.isNotEmpty() || pnl != 0.0) {
                 // Shown before charges, as Zerodha shows its own (Boss, 5 Oct), the day's charges beside it; kept after them.
-                total += sn.dayGross
-                lines += "Paper: ${rs(sn.dayGross)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}" +
+                paperDay = sn.dayGross
+                lines += "Paper (practice, not your Zerodha money): ${rs(sn.dayGross)} · ${sn.trades.size} trade${if (sn.trades.size == 1) "" else "s"}" +
                     (com.optionslab.ira.PnlCharges.line(sn.dayCharges, estimate = false)?.let { " · ${it.lowercase()}" } ?: "")
                 // Honest paper (08 Oct): the figure above already paid the bid/ask spread; said so, with how much.
                 lines += "Paper now includes the bid/ask spread: Rs " + String.format(java.util.Locale.ENGLISH, "%,.2f", sn.daySpread) + " today"
@@ -355,12 +361,12 @@ object DailyReports {
             runCatching { com.optionslab.app.data.TradeBook.recordLive(all) }
             val trades = all.size
             if (book.net.isNotEmpty() || trades > 0) {
-                total += book.m2m
+                liveDay = book.m2m
                 // Zerodha's exact figure when the app kept it for every order of the day's trades (never asked from here;
                 // usefulness, round 35), else the estimate from them.
                 val zExact = runCatching { com.optionslab.app.data.TradeBook.exactChargesOn(Market.today()) }.getOrNull()
                 val zCharges = zExact ?: com.optionslab.app.data.TradeBook.liveCharges(all)
-                lines += "Zerodha: ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}" +
+                lines += "Zerodha (LIVE, real money): ${rs(book.m2m)} · $trades trade${if (trades == 1) "" else "s"}" +
                     (com.optionslab.ira.PnlCharges.line(zCharges, estimate = zExact == null)?.let { " · ${it.lowercase()}" } ?: "")
                 runCatching { com.optionslab.app.data.DailyPnl.record(true, book.m2m, trades, zCharges, exact = zExact != null) }
             }
@@ -391,7 +397,7 @@ object DailyReports {
             runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
             com.optionslab.app.ira.JarvisLearning.eveningLine()
         }.getOrNull()?.let { lines += it }
-        val title = "Day report · ${Market.today().format(DAY)}" + if (lines.first() != "No trades today.") " · ${rs(total)}" else ""
+        val title = com.optionslab.ira.MoneyFacts.dayTitle("Day report · ${Market.today().format(DAY)}", paperDay, liveDay)
         // Review: DailyPnl.record writes in the background (SecurePrefs.putAllSoon) and this worker is short-lived, so the
         // day's final figures are put on disk before it ends - off the main thread (flush waits on the vault's writer).
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.optionslab.app.security.SecurePrefs.flush() } }

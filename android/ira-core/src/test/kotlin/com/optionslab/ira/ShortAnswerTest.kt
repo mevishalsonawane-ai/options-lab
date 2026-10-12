@@ -239,4 +239,14 @@ class ShortAnswerTest {
             if (s.details != null) assertEquals(a, s.details)
         }
     }
+
+    /** 12 Oct: each account's funds sentence names whose money it is; a Zerodha balance below zero keeps its reason. */
+    @Test fun labelledFundsAreReadAndANegativeBalanceKeepsItsReason() {
+        val why = MoneyFacts.negativeWhy(MoneyFacts.Funds(-1200.0, 5000.0, m2m = -900.0), 1, null)!!
+        val f = "Paper funds (practice, not your Zerodha money): Rs 25,661.48 available, Rs 31,256.00 in use. " +
+            "Zerodha funds (LIVE, real money): Rs -1,200.00 available, Rs 5,000.00 used, net Rs 3,800.00. $why"
+        val l = line("what are my funds", f)
+        assertTrue(l.startsWith("Available: paper Rs 25,661, Zerodha Rs -1,200. Zerodha's available money is below zero"), l)
+        assertTrue(l.contains("your open positions are down"), l)
+    }
 }

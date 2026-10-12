@@ -297,6 +297,9 @@ class ResearchScreensTest {
     @Test fun homePaperShowsTheMoneyAndTheLiveOrders() {
         val c = home(live = false, paper = Load.Done(HomeFixtures.paper))
         text("Capital").assertIsDisplayed()
+        // 12 Oct: whose money it is, always said - never a paper figure read as the Zerodha account.
+        text("PAPER (practice money)").assertIsDisplayed()
+        assertTrue(shows("not your Zerodha money", sub = true))
         text("25% of capital in use").assertIsDisplayed()
         // 11 Oct: the live orders right under the money, then the strategies.
         scrollTo("Live orders").assertIsDisplayed()
@@ -345,6 +348,8 @@ class ResearchScreensTest {
         account = Load.Done(HomeFixtures.account)
         compose.waitForIdle()
         text("20% of capital in use").assertIsDisplayed()
+        text("Zerodha · LIVE (real money)").assertIsDisplayed()
+        assertTrue(!shows("PAPER (practice money)", sub = false))
         scrollTo("SELL 30 · avg 200.00 · LTP 180.00").performClick()
         scrollTo("BUY 30 · sl-m · trigger 260.00").performClick()
         assertEquals(listOf(RowTarget.LivePosition(HomeFixtures.livePosition), RowTarget.LiveOrder(HomeFixtures.liveOrder)), rows)

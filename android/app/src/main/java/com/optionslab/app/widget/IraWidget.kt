@@ -287,8 +287,8 @@ class IraWidget : AppWidgetProvider() {
             var pnlShown: String? = null
             if (showPnl && pnl != null) {
                 v.setViewVisibility(R.id.w_pnl, View.VISIBLE)
-                pnlShown = String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl) + (if (pnl >= 0) "+" else "-")
-                v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "P&L  Rs %+,.0f", pnl))
+                pnlShown = String.format(Locale.ENGLISH, "Zerodha P&L  Rs %+,.0f", pnl) + (if (pnl >= 0) "+" else "-")
+                v.setTextViewText(R.id.w_pnl, String.format(Locale.ENGLISH, "Zerodha P&L  Rs %+,.0f", pnl))
                 v.setTextColor(R.id.w_pnl, context.getColor(if (pnl >= 0) R.color.widget_gain else R.color.widget_loss))
             } else v.setViewVisibility(R.id.w_pnl, View.GONE)
             // Zerodha's P&L is before charges: today's charges in small type under it - Zerodha's exact figure when the app
