@@ -345,7 +345,7 @@ object LiveRecorder {
     }
 
     /**
-     * Every kept day in one zip written to [out] (the file Boss picked with the system picker, after his PIN; 12 Oct): the
+     * Every kept day in one zip written to [out] (the file Boss picked with the system picker, after Boss's PIN; 12 Oct): the
      * market files, the tick zone's files ([com.optionslab.ira.TickZone]) as stored, and Boss's trade files DECRYPTED here, on
      * this phone, into plain JSON lines ("YYYY-MM-DD/trades.jsonl"); nothing is sent anywhere by the app. A line that cannot
      * be opened is written as a gap line, never invented. Only the recordings folder is read: no setting, token or key.

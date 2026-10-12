@@ -321,7 +321,7 @@ object LiveRecord {
 
     /**
      * The README of the PIN-confirmed export (12 Oct): as [README], but Boss's trade files are written decrypted, as plain
-     * JSON lines ("trades.jsonl"), into the file he picked.
+     * JSON lines ("trades.jsonl"), into the file Boss picked.
      */
     val DECRYPTED_README: String = """
         IraAlgo live recordings (schema $SCHEMA), exported after your PIN: your trades are DECRYPTED in this file.
