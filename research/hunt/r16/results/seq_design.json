@@ -1,0 +1,34 @@
+{
+ "a1_BANKNIFTY": {
+  "n": 5523,
+  "mae_cnn": 0.3100883278565468,
+  "mae_frozen": 0.31188140183097157,
+  "mae_baseline": 0.37576595931953005,
+  "frozen": "linear",
+  "cnn_wins": true
+ },
+ "a2_BANKNIFTY": {
+  "n": 4997,
+  "mae_cnn": 0.33203489284244775,
+  "mae_frozen": 0.32803168629523866,
+  "mae_baseline": 0.3850696347197564,
+  "frozen": "linear",
+  "cnn_wins": false
+ },
+ "a1_NIFTY": {
+  "n": 5355,
+  "mae_cnn": 0.31945149103776577,
+  "mae_frozen": 0.3232278943033342,
+  "mae_baseline": 0.39867750822179454,
+  "frozen": "linear",
+  "cnn_wins": true
+ },
+ "a2_NIFTY": {
+  "n": 4845,
+  "mae_cnn": 0.3229278034961385,
+  "mae_frozen": 0.3306301582885077,
+  "mae_baseline": 0.4050692051236065,
+  "frozen": "linear",
+  "cnn_wins": true
+ }
+}
