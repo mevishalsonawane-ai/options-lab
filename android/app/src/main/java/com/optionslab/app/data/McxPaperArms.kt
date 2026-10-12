@@ -282,15 +282,17 @@ object McxPaperArms {
 
     // ---- when the watch must run for them ---------------------------------------------------------------------------------
 
-    /** The minutes of the day each armed arm needs the watch (IST): the evening break 17:00-23:16, the morning call 09:14-14:00, the trend 09:00-10:00. */
-    private fun windows(v: View): List<IntRange> = buildList {
-        if (v.isArmed(McxEveRules.SOURCE)) add(McxEveRules.RANGE_FROM..McxEveRules.FLAT_BY + 1)
-        if (v.isArmed(McxMorningRules.SOURCE)) add(McxMorningRules.GRID_FROM - 1..14 * 60)
-        if (v.isArmed(McxTrendRules.SOURCE)) add(9 * 60..10 * 60)
-        if (v.isArmed(McxUsSilverRules.SOURCE)) add(McxUsSilverRules.ENTRY - 1..McxUsSilverRules.ENTRY + McxUsSilverRules.ENTRY_GRACE)
-    }
+    /**
+     * The minutes of the day the arms need the watch (IST). 12 Oct: with ANY arm armed (or a position still open in an arm's
+     * book), the whole MCX session, to its close (23:30 / 23:55, [McxMarket.isOpen]) - not only the arm's entry minutes. On
+     * 12 Oct the SILVERM morning call's stop filled at 16:30:36, the paper book then held nothing on MCX and 16:30 was
+     * between the morning call's minutes (to 14:00) and the evening break's (from 17:00): the watch and the price stream
+     * ended at 16:30 with MCX open and three arms armed, and came back only at 17:01 (the arm booked its close then).
+     */
+    private fun windows(v: View): List<IntRange> =
+        if (ARMS.any { v.isArmed(it) } || v.open.isNotEmpty()) listOf(0..24 * 60) else emptyList()
 
-    /** Whether the MCX watch should run now for an armed arm (MCX open, inside that arm's minutes); held positions are the paper exposure's. */
+    /** Whether the MCX watch should run now for the arms: MCX open and an arm armed, or a position open in an arm's book. */
     fun wantsWatch(): Boolean = runCatching {
         val now = McxMarket.now()
         val minute = now.hour * 60 + now.minute

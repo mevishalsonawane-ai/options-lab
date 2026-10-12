@@ -450,18 +450,32 @@ class McxPaperArmsTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
-    @Test fun theWatchIsWantedOnlyInsideAnArmedArmsMinutes() {
+    /**
+     * 12 Oct: with an arm armed the watch runs through the whole MCX session, to its close - the SILVERM call's stop filled at
+     * 16:30, between the arms' entry minutes, and the watch and the stream ended with MCX open until 17:01.
+     */
+    @Test fun theWatchRunsTheWholeMcxSessionWhileAnArmIsArmed() {
         at(LocalTime.of(18, 0))
         assertFalse(McxPaperArms.wantsWatch())
         runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
         assertTrue(McxPaperArms.wantsWatch())
         assertTrue(McxMarket.watchDue())
-        at(LocalTime.of(16, 0))
-        assertFalse(McxPaperArms.wantsWatch())
-        // The next wake is 17:00 today.
-        assertEquals(day.atTime(17, 0).atZone(IST).toInstant().toEpochMilli(), McxPaperArms.nextWakeMillis())
-        runBlocking { McxPaperArms.setArmed(McxMorningRules.SOURCE, true) }
-        at(LocalTime.of(9, 30))
+        // Between the morning call's minutes and the evening break's: still watched (it was not, before).
+        at(LocalTime.of(16, 30))
         assertTrue(McxPaperArms.wantsWatch())
+        assertTrue(McxMarket.watchDue())
+        at(LocalTime.of(23, 20))
+        assertTrue(McxPaperArms.wantsWatch())
+        // MCX shut (after its close, before its open): not wanted; the next wake is the next session's open.
+        at(LocalTime.of(23, 45))
+        assertFalse(McxPaperArms.wantsWatch())
+        assertEquals(day.plusDays(1).atTime(9, 0).atZone(IST).toInstant().toEpochMilli(), McxPaperArms.nextWakeMillis())
+        at(LocalTime.of(8, 30))
+        assertFalse(McxPaperArms.wantsWatch())
+        assertEquals(day.atTime(9, 0).atZone(IST).toInstant().toEpochMilli(), McxPaperArms.nextWakeMillis())
+        // Every arm off and nothing held in their book: not wanted at any minute.
+        runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, false) }
+        at(LocalTime.of(16, 30))
+        assertFalse(McxPaperArms.wantsWatch())
     }
 }
