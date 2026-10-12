@@ -74,6 +74,8 @@ class TestApp : Application() {
         com.optionslab.app.data.FillSlippage.init(this)
         com.optionslab.app.data.FillSlippage.resetForTest()
         com.optionslab.app.data.ZerodhaSync.resetForTest()
+        com.optionslab.app.data.OrderReviewHost.init(this)
+        com.optionslab.app.data.OrderReviewHost.resetForTest()
         Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.FlowGate.init(this)

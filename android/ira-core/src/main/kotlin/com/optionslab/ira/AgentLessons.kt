@@ -46,6 +46,8 @@ object AgentLessons {
         TIME_OF_DAY("Time of day", "trades"),
         DATA_HEALTH("Data health", "days watched"),
         LAB("Strategy lab", "lab tests"),
+        /** The order review's recurring flaws (12 Oct): a rate of the orders and trades reviewed. */
+        ORDERS("Order review", "orders reviewed"),
     }
 
     enum class Confidence(val word: String) { WEAK("weak"), BUILDING("building"), STRONG("strong") }
@@ -77,6 +79,8 @@ object AgentLessons {
     const val HEALTH_RATE = 0.2
     /** This share of the big moves or more in one part of the day: "common". */
     const val MOVES_RATE = 0.4
+    /** A recurring order flaw on this share of a strategy's reviewed orders or more: "keeps happening" (the order review). */
+    const val ORDER_RATE = 0.2
 
     /** One day's evidence: [n] trades (or days, or events), their rupee effect [rs], and [hits] (won, or the event seen). */
     data class Bucket(val day: LocalDate, val n: Int, val rs: Double, val hits: Int,
@@ -158,7 +162,16 @@ object AgentLessons {
         val paperModes: Map<String, TradeManager.Mode> = emptyMap(),
         /** The strategy lab's results ([LabLessons.results]): forge ideas' blocks and filters, variants' parameter moves. */
         val lab: List<LabResult> = emptyList(),
+        /** The order review's RECURRING flaws only ([OrderReview.lessonInputs]): a one-off flaw is never a lesson. */
+        val orders: List<OrderFlawResult> = emptyList(),
     )
+
+    /**
+     * One recurring order flaw on one day (the order review, 12 Oct): [key] "orb_fresh:paper:gb", [n] the strategy's orders or
+     * trades reviewed that day, [hits] how many had the flaw, [rs] its rupees (a loss: negative).
+     */
+    data class OrderFlawResult(val day: LocalDate, val key: String, val name: String, val n: Int, val hits: Int, val rs: Double = 0.0,
+                               val tags: List<String> = emptyList())
 
     /**
      * One strategy-lab result (S, 11 Oct: lab lessons as Jarvis's own): on [day], [n] tests of [key] (a block "block:entry:X",
@@ -222,6 +235,7 @@ object AgentLessons {
         return when (prefix) {
             "health" -> if (r >= HEALTH_RATE) -1 else 1
             "moves" -> if (r >= MOVES_RATE) 1 else -1
+            "order" -> if (r >= ORDER_RATE) -1 else 1
             else -> if (r >= 0.5) 1 else -1
         }
     }
@@ -288,7 +302,7 @@ object AgentLessons {
             Kind.RATE -> {
                 var n = 0; var h = 0
                 for (b in buckets) { n += b.n; h += b.hits }
-                val p0 = when (prefix(id)) { "health" -> HEALTH_RATE; "moves" -> MOVES_RATE; else -> 0.5 }
+                val p0 = when (prefix(id)) { "health" -> HEALTH_RATE; "moves" -> MOVES_RATE; "order" -> ORDER_RATE; else -> 0.5 }
                 LearnStats.binomTwoSided(h, n, p0)
             }
             Kind.SNAPSHOT -> {
@@ -419,6 +433,7 @@ object AgentLessons {
             "moves" -> if (pos) "are common" else "are rare"
             "exp" -> if (pos) "did better than the current setting" else "did worse than the current setting"
             "lab" -> if (pos) "mostly passed in the strategy lab" else "mostly failed in the strategy lab"
+            "order" -> if (pos) "has become rare" else "keeps happening"
             else -> if (pos) "goes well" else "goes badly"
         }
         return "${l.name} $verb" + (condWords(l.cond)?.let { " $it" } ?: "")
@@ -438,6 +453,7 @@ object AgentLessons {
             Kind.RATE -> when (p) {
                 "moves" -> "${e.hits} of ${e.n} big moves"
                 "lab" -> "passed ${e.hits} of ${e.n} ${l.topic.unit}, ${rs(e.rs)}"
+                "order" -> "on ${e.hits} of ${e.n} ${l.topic.unit}, ${rs(e.rs)}"
                 else -> "trouble on ${e.hits} of ${e.n} days watched"
             }
             Kind.SNAPSHOT -> "${e.n} trades judged, drifting on ${e.hits} of ${e.of} daily reviews, latest ${rs(e.rs)} a trade"
@@ -489,6 +505,7 @@ object AgentLessons {
     private const val A_HEAL = "self-healing"
     private const val A_MOVES = "the move recorder"
     private const val A_LAB = "the strategy lab"
+    private const val A_ORDERS = "the order review"
 
     private val SKIP_OWNERS = setOf("", "manual", "protection")
     private val SLOTS = listOf("morning", "midday", "afternoon", "evening")
@@ -664,6 +681,12 @@ object AgentLessons {
             if (r.n <= 0 || r.key.isBlank()) continue
             acc("lab:${r.key}", Topic.LAB, Kind.RATE, r.name, (r.tags + listOf("lab", "forge")).distinct(), A_LAB)
                 .add(r.day.toEpochDay(), r.n, r.rs, if (r.passed) r.n else 0)
+        }
+        // The order review: each RECURRING flaw as a rate of the strategy's reviewed orders, per day (one-offs never come here).
+        for (r in i.orders) {
+            if (r.n <= 0 || r.key.isBlank()) continue
+            acc("order:${r.key}", Topic.ORDERS, Kind.RATE, r.name, (r.tags + listOf("orders", "flaws")).distinct(), A_ORDERS)
+                .add(r.day.toEpochDay(), r.n, r.rs, r.hits.coerceIn(0, r.n))
         }
         // The self-review: each strategy's health against its backtest, one reading a day.
         for (r in i.drift) {
@@ -913,7 +936,7 @@ object AgentLessons {
 
     /** The prefixes whose evidence counts toward each topic's skill without counting a trade twice. */
     private val SKILL_BASE = mapOf(Topic.STRATEGY to "strat", Topic.MANAGER to "mgr", Topic.SPECIALIST to "spec", Topic.ORDER_FLOW to "flow",
-        Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health", Topic.LAB to "lab")
+        Topic.REGIME to "regime", Topic.TIME_OF_DAY to "tod", Topic.DATA_HEALTH to "health", Topic.LAB to "lab", Topic.ORDERS to "order")
 
     /** Each topic's level (its best active lesson's confidence) and its evidence count. */
     fun skills(book: Book): List<Skill> = Topic.entries.map { t ->
@@ -1136,6 +1159,7 @@ object AgentLessons {
         if (Regex(" (time of day|times of day|timing) ").containsMatchIn(r)) return Topic.TIME_OF_DAY to null
         for ((w, key) in FAMILY_TAGS.drop(8)) if (r.contains(" $w ")) return null to key
         if (Regex(" (strategy lab|the lab|lab|forge|the forge) ").containsMatchIn(r)) return Topic.LAB to null
+        if (Regex("^ (order review|orders|order flaws|flaws|my fills|fills|execution|order execution) $").containsMatchIn(r)) return Topic.ORDERS to null
         if (Regex("^ (strategies|bots|agents|arms|my bots|the bots|the agents) $").containsMatchIn(r)) return Topic.STRATEGY to null
         return null
     }

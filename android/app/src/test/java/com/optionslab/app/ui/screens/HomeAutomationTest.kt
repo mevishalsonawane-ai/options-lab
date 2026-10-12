@@ -50,6 +50,7 @@ internal object AutomationFixtures {
         manager = "Trade manager: 2 trades managed today (1 open) · ORB Fresh acting on paper",
         autopilot = "Autopilot: 1 change today, 0 reverted",
         lab = "Lab: 3 variants · 1 idea on paper",
+        orders = "Order review · Today: 7 orders · 2 flaws (est. ₹340) · 1 improvement testing",
         orderFlow = "Order flow: shadow only, no entry skipped",
         brain = "Brain: busy day · 1 strategy paused on paper",
         frozen = "Learning frozen (paper): nothing is applied until you unfreeze it.",

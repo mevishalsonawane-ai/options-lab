@@ -1727,7 +1727,7 @@ object IraHub {
                 com.optionslab.ira.ReminderBook.listAsked(q) || com.optionslab.ira.ReminderBook.cancelOne(q) != null || com.optionslab.ira.Requests.listAsked(q) ||
                 com.optionslab.ira.SaidAbout.asked(q) != null || com.optionslab.ira.WeekAhead.asked(q) != null || com.optionslab.ira.WeeklyReview.asked(q) != null || com.optionslab.ira.LotsWhatIf.asked(q) != null || com.optionslab.ira.LiquidityInsight.asked(q) != null || com.optionslab.ira.LiquidityHold.asked(q) != null || com.optionslab.ira.LiquidityDrawdown.asked(q) || com.optionslab.ira.LiquidityWhen.asked(q) != null || com.optionslab.ira.LiquidityRecord.asked(q) != null || com.optionslab.ira.TomorrowPlan.asked(q) || com.optionslab.ira.OpeningRead.asked(q) || com.optionslab.ira.TodayNotes.asked(q) || com.optionslab.ira.CatchUp.asked(q) || com.optionslab.ira.ForwardWatch.asked(q) || com.optionslab.ira.ForwardWatch.armAsked(q) != null || com.optionslab.ira.DayRecap.asked(q) != null ||
                 com.optionslab.ira.ZerodhaSession.asked(q) != null || com.optionslab.ira.OrderWhy.asked(q) != null || com.optionslab.ira.Tour.asked(q) || com.optionslab.ira.WhatsNew.asked(q) ||
-                com.optionslab.ira.Slippage.asked(q) != null || com.optionslab.ira.PositionSync.asked(q) ||
+                com.optionslab.ira.OrderReview.asked(q) != null || com.optionslab.ira.Slippage.asked(q) != null || com.optionslab.ira.PositionSync.asked(q) ||
                 com.optionslab.ira.OrderFlow.asked(q) != null || com.optionslab.ira.MoveEvents.asked(q) != null || com.optionslab.ira.FlowShadow.helpAsked(q) ||
                 com.optionslab.ira.Findings.asked(q) != null || com.optionslab.ira.TradeManager.asked(q) != null ||
                 com.optionslab.ira.RelayHealth.asked(q) != null || com.optionslab.ira.StreamHealth.asked(q) || com.optionslab.ira.WatchAsk.asked(q) != null || com.optionslab.ira.SettingWhere.asked(q) != null ||
@@ -3651,6 +3651,19 @@ object IraHub {
             _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
             if (phoneLocked()) { reply("Unlock the phone for that, Boss."); return true }
             scope.launch(Dispatchers.IO) { reply(runCatching { IraOrderWhy.answer(whyOrder) }.getOrElse { "I could not read your orders just now, Boss." }) }
+            return true
+        }
+        // The order review (12 Oct): "review my orders", "what went wrong today", "flaws in ORB today", "how much did slippage cost
+        // me" ([com.optionslab.ira.OrderReview]): the latest reviewed day's flaws and each strategy's day, from the review's own
+        // small file. Boss's orders and rupees, so never on a locked phone. Reads only: nothing is placed, changed or cancelled.
+        val reviewAsk = if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD)
+            runCatching { com.optionslab.ira.OrderReview.asked(q) }.getOrNull() else null
+        if (reviewAsk != null) {
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            if (phoneLocked()) { reply(com.optionslab.ira.OrderReview.LOCKED); return true }
+            scope.launch(Dispatchers.IO) {
+                reply(runCatching { com.optionslab.app.data.OrderReviewHost.answer(reviewAsk) }.getOrElse { "I could not read the order review just now, Boss." })
+            }
             return true
         }
         // Round 4: "what's my slippage", "slippage on ORB", "paper slippage" ([com.optionslab.ira.Slippage]): each fill against

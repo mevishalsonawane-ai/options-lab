@@ -202,7 +202,9 @@ internal object JarvisLearning {
         val keptTrips = trips.filter { runCatching { f.include(it.closedAt.toLocalDate()) }.getOrDefault(true) }
         val keptManaged = managed.filter { r -> runCatching {
             f.include(java.time.Instant.ofEpochMilli(r.trade.entryMs).atZone(com.optionslab.engine.IST).toLocalDate()) }.getOrDefault(true) }
-        return AgentLessons.Inputs(today, keptTrips, regime, drift, keptManaged, flow, findingsKept(), incidents, moves, muted, paused, modes)
+        // The order review's recurring flaws only (a one-off never becomes a lesson): its own small file, read here.
+        val orders = runCatching { com.optionslab.app.data.OrderReviewHost.lessonInputs() }.getOrDefault(emptyList())
+        return AgentLessons.Inputs(today, keptTrips, regime, drift, keptManaged, flow, findingsKept(), incidents, moves, muted, paused, modes, orders = orders)
     }
 
     /**

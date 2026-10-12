@@ -48,7 +48,7 @@ class LabRiskWiringTest {
         assertTrue("LearningFilter.includeMs(it.trade.entryMs)" in ap)
         assertFalse("TradeManagerHost.records.value, policy" in ap)
         val vr = app("data/VariantRunner.kt")
-        assertTrue("LearningFilter.include(d)" in vr && "from, actual, evidence)" in vr)
+        assertTrue("LearningFilter.include(d)" in vr && "from, actual, evidence" in vr)
         val acts = app("ira/IraActions.kt")
         assertEquals(2, Regex("IraEvents\\.(add\\(d, n\\)|remove\\(e\\[i]\\)); eventDaysChanged\\(\\)").findAll(acts).count())
         assertTrue("EventDays.refresh()" in acts)

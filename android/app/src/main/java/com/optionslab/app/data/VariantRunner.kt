@@ -167,6 +167,28 @@ object VariantRunner {
 
     private fun saveSoon() { scope.launch { synchronized(lock) { save() } } }
 
+    // ---- directed variants (the order review, 12 Oct) ---------------------------------------------------------------------
+
+    /** Variants asked of the lab and not answered yet (memory; [OrderReviewHost] keeps them in its own file and asks again). */
+    private val seeds = ConcurrentHashMap<String, VariantLab.Seed>()
+    /** What became of each asked variant at a settle (memory; the review reads it, then the lab's own book). */
+    private val seededResults = ConcurrentHashMap<String, VariantLab.Seeded>()
+
+    /**
+     * The order review asks the lab to test ONE directed variant ([VariantLab.seed]): handed to the next day's settle, where it
+     * goes through the same pre-check, trial count, minimum days and tests as any other (paper first; live only with the PIN).
+     * Nothing is applied by asking. Memory only.
+     */
+    fun ask(seed: VariantLab.Seed) {
+        if (!enabled()) return
+        if (seededResults[seed.id]?.final == true) return
+        seeds[seed.id] = seed
+        while (seeds.size > 40) seeds.keys.firstOrNull()?.let { seeds.remove(it) }
+    }
+
+    /** The lab's answer to asked variant [id] (null: not settled yet). */
+    fun seededResult(id: String): VariantLab.Seeded? = seededResults[id]
+
     // ---- the arms' hook ---------------------------------------------------------------------------------------------------
 
     /**
@@ -369,13 +391,16 @@ object VariantRunner {
             val (vp, fp) = withContext(Dispatchers.IO) {
                 synchronized(lock) {
                     val v = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history,
-                        DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence))
+                        DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence, seeds.values.sortedBy { it.id }))
                     val f = StrategyForge.forwardDay(_forge.value, d, if (evidence) todays.filterKeys { it in UNDERLYINGS } else emptyMap())
                     _variants.value = v.book; _forge.value = f.book
                     save()
                     v to f
                 }
             }
+            // The asked variants' answers: kept for the review; a final one is not asked again.
+            for (r in vp.seeded) { seededResults[r.id] = r; if (r.final) seeds.remove(r.id) }
+            while (seededResults.size > 200) seededResults.keys.firstOrNull()?.let { seededResults.remove(it) }
             runCatching { tell(vp.events, fp.events) }
             val said = "settled $d: ${vp.book.alive().size} variants shadowing, ${fp.book.forward.size} ideas in forward test, " +
                 "${vp.events.size + fp.events.size} decisions"
@@ -573,6 +598,7 @@ object VariantRunner {
     internal fun resetForTest() {
         synchronized(lock) { _variants.value = VariantLab.Book(); _forge.value = StrategyForge.Book() }
         seen.clear(); loaded = true; settling = false; testDays = null; tuned = Tuned(VariantLab.Book()); armLoadTried = false
+        seeds.clear(); seededResults.clear()
     }
 
     /** TEST ONLY: as a fresh process - nothing in memory, the files not read yet. */

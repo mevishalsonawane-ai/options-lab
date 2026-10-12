@@ -22,6 +22,12 @@ object ZerodhaSync {
     @Volatile private var confirmed: List<PositionSync.Mismatch> = emptyList()
     @Volatile private var checkedAt: String? = null
     @Volatile private var why: String? = "not checked yet"
+    /** The confirmed mismatches seen each day (the order review reads the day's; memory only, the last few days). */
+    private val seenDays = java.util.concurrent.ConcurrentHashMap<String, List<PositionSync.Mismatch>>()
+
+    /** Every mismatch confirmed on [day] ("2026-10-12"), each once (the order review, after the close). */
+    fun seenOn(day: String): List<PositionSync.Mismatch> = seenDays[day].orEmpty()
+
     /** The positions read the last check stepped on: the same read again is not a second check. */
     @Volatile private var lastRead = 0L
 
@@ -48,6 +54,10 @@ object ZerodhaSync {
         val t = tracker
         val step = synchronized(t) { t.step(day, found) }
         confirmed = step.confirmed
+        if (step.confirmed.isNotEmpty() && day.isNotEmpty()) {
+            seenDays.merge(day, step.confirmed) { a, b -> (a + b).distinctBy { it.key } }
+            while (seenDays.size > 5) seenDays.keys.minOrNull()?.let { seenDays.remove(it) }
+        }
         checkedAt = runCatching { Market.now().toLocalTime().format(HHMM) }.getOrNull()
         why = null
         for (m in step.fresh) {
@@ -87,7 +97,7 @@ object ZerodhaSync {
 
     /** TEST ONLY: nothing checked. */
     internal fun resetForTest() {
-        confirmed = emptyList(); checkedAt = null; why = "not checked yet"; lastRead = 0L
+        confirmed = emptyList(); checkedAt = null; why = "not checked yet"; lastRead = 0L; seenDays.clear()
         tracker = PositionSync.Tracker()
     }
 }

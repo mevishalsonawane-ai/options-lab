@@ -142,6 +142,7 @@ class CollisionTest {
         "ForwardWatch" to { q -> ForwardWatch.asked(q) },
         "ZerodhaSession" to { q -> ZerodhaSession.asked(q) != null },
         "OrderWhy" to { q -> OrderWhy.asked(q) != null },
+        "OrderReview" to { q -> OrderReview.asked(q) != null },
         "Slippage" to { q -> Slippage.asked(q) != null },
         "PositionSync" to { q -> PositionSync.asked(q) },
         "RelayHealth" to { q -> RelayHealth.asked(q) != null },
@@ -615,6 +616,10 @@ class CollisionTest {
         "paper slippage" to "Slippage", "how good are my fills" to "Slippage",
         "are my positions in sync" to "PositionSync", "do my positions match zerodha" to "PositionSync",
         "reconcile the app with zerodha" to "PositionSync",
+        // ---- The order review (12 Oct): questions only, never an order ----
+        "review my orders" to "OrderReview", "what went wrong today" to "OrderReview", "flaws in orb today" to "OrderReview",
+        "how much did slippage cost me" to "OrderReview", "any flaws in my orders today" to "OrderReview", "order review" to "OrderReview",
+        "audit today's orders" to "OrderReview",
         // Its neighbours: the day's orders, and the cancel itself (a command, through its own confirm).
         "how many orders did i place today" to "Account:ORDERS", "show my orders" to "Account:ORDERS", "cancel my last order" to "Act",
         // ---- BotTrades: his bots' trades today, explained ----
@@ -1623,7 +1628,7 @@ class CollisionTest {
 
     /** The question branches of IraHub.ask between the `bundled` read and the Plan block, in [CoverageTest.feature]'s order. */
     private val HUB_ORDER = listOf("Conditional", "DayJournal", "SelfTalk", "AlertSense", "Airtime", "Hearing", "PatternCalls", "TrendReads", "OutsideApp", "Clarity", "WordFit", "AskedAgain", "FigureFirst", "WrongThing", "ArmHabits", "MorningSense", "HonestStars", "TalkHours", "MorningAsks", "TurnDowns", "TopicLength", "OutlookCheck", "UsualIndex", "Nicknames", "LeadIndex", "LeadPart", "NextAsk", "MoreAfter", "SmallTrades", "DayIndex", "CheckTimes", "CondNeeds", "NewsMoves",
-        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
+        "TaxRecords.exportAsked", "Learnings", "Learnings.undoAsked", "PreMarket", "Headroom", "ArmFit", "WeakLink", "ArmChange", "PnlGap", "ArmDay", "BookDecay", "WhereIWin", "TradesADay", "AfterLoss", "StopNoise", "DayScore", "RequestBook", "NetLean", "ExpiryEve", "BeforeTomorrow", "LiquidityWhyNot", "SoloDay", "HeroDay", "PortfolioRisk", "BotTrades", "SwitchOff", "SaidAbout", "WeekAhead", "WeeklyReview", "LotsWhatIf", "LiquidityInsight", "LiquidityHold", "LiquidityDrawdown", "LiquidityWhen", "LiquidityRecord", "TomorrowPlan", "OpeningRead", "TodayNotes", "CatchUp", "ForwardWatch", "ZerodhaSession", "OrderWhy", "OrderReview", "Slippage", "PositionSync", "RelayHealth", "StreamHealth", "BatteryUse", "WatchAsk", "DayRecap", "SettingWhere", "Tour", "WhatsNew", "DataAge", "MoveEvents", "LabTalk", "AutoChange", "AgentLessons", "Findings", "TradeManager", "OrderFlow", "MarketRecord", "MorningCues", "Honest", "Thinking",
         "SelfWhy", "MajorityRule", "BigMoveRisk", "LiquidityMap", "Consistency", "CoPilot", "SinceMorning", "ExpiryPin", "ExpiryHour", "StraddleDecay", "AtmBuy", "OtmReach", "ChainDrift", "ChainIntel", "DayClock", "GapRecord", "RangeBreaks", "PriorDay", "LastHour", "InsideDays", "FirstMove", "VixNext", "SplitDays", "RoundCloses", "MonthTurns", "LunchRange", "OpenHighLow", "BigCandles", "ExtremeCloses", "WeekRange", "RelativeMove", "Comebacks", "VixBand", "Overnight", "DayAfter", "OpenReach", "MultiDay", "MoveTime", "GiveBack", "Weekdays", "DayCompare", "LikeToday", "Structure", "MindChange", "Breadth",
         "TradeCase", "Scenarios", "Causes", "Agenda", "Improve")
 

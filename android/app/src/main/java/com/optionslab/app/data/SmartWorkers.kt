@@ -473,6 +473,8 @@ object SmartWorkers {
             nightlyScope.launch {
                 try {
                     runCatching { nightlyStartForTest?.invoke() }
+                    // The order review first (12 Oct): its recurring flaws are one of the agents' records Jarvis learns from tonight.
+                    runCatching { OrderReviewHost.runIfDue(context) }
                     runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
                     runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
                 } finally { nightlyRunning.set(false) }

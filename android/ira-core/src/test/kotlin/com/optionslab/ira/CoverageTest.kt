@@ -805,6 +805,7 @@ class CoverageTest {
         if (alone && (ForwardWatch.asked(q) || ForwardWatch.armAsked(q) != null)) return "ForwardWatch"
         if (alone && ZerodhaSession.asked(q) != null) return "ZerodhaSession"
         if (alone && OrderWhy.asked(q) != null) return "OrderWhy"
+        if (alone && OrderReview.asked(q) != null) return "OrderReview"
         if (alone && Slippage.asked(q) != null) return "Slippage"
         if (alone && PositionSync.asked(q)) return "PositionSync"
         if (alone && RelayHealth.asked(q) != null) return "RelayHealth"

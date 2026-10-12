@@ -26,6 +26,7 @@ object BudgetRule {
 
     enum class Job(val words: String) {
         FORGE("the strategy forge"), HISTORY("the history vault"), CONSOLIDATION("the weekly consolidation"), LEARNING("Jarvis's nightly learning"),
+        ORDER_REVIEW("the order review"),
     }
 
     /** The phone now: battery level (0-100; null unknown), charging, temperature (°C; null unknown), power save. */

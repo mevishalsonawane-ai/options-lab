@@ -16,6 +16,7 @@ object AutomationSummary {
         MANAGER("manager", "Trade manager"),
         AUTOPILOT("autopilot", "Autopilot"),
         LAB("lab", "Strategy lab"),
+        ORDERS("orders", "Order review"),
         ORDER_FLOW("orderflow", "Order flow"),
         BRAIN("brain", "Brain"),
     }
@@ -25,6 +26,8 @@ object AutomationSummary {
         val manager: String? = null,
         val autopilot: String? = null,
         val lab: String? = null,
+        /** The order review's line (12 Oct): today's orders, their flaws and what the lab is testing from them. */
+        val orders: String? = null,
         val orderFlow: String? = null,
         val brain: String? = null,
         val frozen: String? = null,
@@ -32,7 +35,7 @@ object AutomationSummary {
         /** The tappable lines in the card's order. */
         fun rows(): List<Pair<Section, String>> = listOfNotNull(
             manager?.let { Section.MANAGER to it }, autopilot?.let { Section.AUTOPILOT to it }, lab?.let { Section.LAB to it },
-            orderFlow?.let { Section.ORDER_FLOW to it }, brain?.let { Section.BRAIN to it },
+            orders?.let { Section.ORDERS to it }, orderFlow?.let { Section.ORDER_FLOW to it }, brain?.let { Section.BRAIN to it },
         )
     }
 

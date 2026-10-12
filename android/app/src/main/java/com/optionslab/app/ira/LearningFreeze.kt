@@ -186,7 +186,7 @@ object LearningFreeze {
         // Withheld, not merely marked undone: the promotion's tune goes too, so the arm never trades it.
         for (e in applied) b = com.optionslab.ira.VariantLab.withhold(b, e.change.id) ?: b
         runCatching { Diag.record("learning", "frozen: ${applied.size} lab promotion(s) recorded, not applied") }
-        return com.optionslab.ira.VariantLab.Pass(b, pass.events - applied.toSet())
+        return com.optionslab.ira.VariantLab.Pass(b, pass.events - applied.toSet(), pass.seeded)
     }
 
     fun diagLine(): String = FreezeRule.line(_state.value)

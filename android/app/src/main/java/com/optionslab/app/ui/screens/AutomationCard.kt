@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.FlowGate
 import com.optionslab.app.data.Market
+import com.optionslab.app.data.OrderReviewHost
 import com.optionslab.app.data.SmartWorkers
 import com.optionslab.app.data.TradeManagerHost
 import com.optionslab.app.data.VariantRunner
@@ -78,6 +79,7 @@ internal object AutomationFeed {
             manager = AutomationSummary.managerLine(TradeManagerHost.records.value, TradeManagerHost.policy.value, today, zone),
             autopilot = if (Autopilot.enabled()) AutomationSummary.autopilotLine(Autopilot.book.value, today) else null,
             lab = if (VariantRunner.enabled()) AutomationSummary.labLine(VariantRunner.variants.value, VariantRunner.forge.value) else null,
+            orders = if (OrderReviewHost.enabled()) OrderReviewHost.cardLine(OrderReviewHost.book.value, today) else null,
             orderFlow = AutomationSummary.orderFlowLine(FlowGate.modes.value),
             brain = AutomationSummary.brainLine(SmartWorkers.brain.value, SmartWorkers.reviews.value, s.paused, s.parked),
             frozen = if (LearningFreeze.enabled()) AutomationSummary.frozenLine(LearningFreeze.state.value) else null,
@@ -93,13 +95,14 @@ internal object AutomationFeed {
         val autopilot: Flow<String?> = if (!Autopilot.enabled()) none else Autopilot.book.map { AutomationSummary.autopilotLine(it, today) }
         val lab: Flow<String?> = if (!VariantRunner.enabled()) none
             else combine(VariantRunner.variants, VariantRunner.forge) { v, f -> AutomationSummary.labLine(v, f) }
+        val orders: Flow<String?> = if (!OrderReviewHost.enabled()) none else OrderReviewHost.book.map { OrderReviewHost.cardLine(it, today) }
         val flow: Flow<String?> = FlowGate.modes.map { AutomationSummary.orderFlowLine(it) }
         val brain: Flow<String?> = combine(SmartWorkers.brain, SmartWorkers.reviews, SmartWorkers.settings) { c, r, s ->
             AutomationSummary.brainLine(c, r, s.paused, s.parked)
         }
         val frozen: Flow<String?> = if (!LearningFreeze.enabled()) none else LearningFreeze.state.map { AutomationSummary.frozenLine(it) }
-        return combine(listOf(manager, autopilot, lab, flow, brain, frozen).map { it.distinctUntilChanged() }) { a ->
-            AutomationSummary.Lines(manager = a[0], autopilot = a[1], lab = a[2], orderFlow = a[3], brain = a[4], frozen = a[5])
+        return combine(listOf(manager, autopilot, lab, flow, brain, frozen, orders).map { it.distinctUntilChanged() }) { a ->
+            AutomationSummary.Lines(manager = a[0], autopilot = a[1], lab = a[2], orderFlow = a[3], brain = a[4], frozen = a[5], orders = a[6])
         }.distinctUntilChanged()
     }
 
@@ -113,6 +116,7 @@ internal object AutomationFeed {
         runCatching { SmartWorkers.ensureLoaded() }
         runCatching { SmartWorkers.refreshReviews() }
         if (LearningFreeze.enabled()) runCatching { LearningFreeze.ensureLoaded() }
+        if (OrderReviewHost.enabled()) runCatching { OrderReviewHost.ensureLoaded() }
     }
 }
 
@@ -131,7 +135,7 @@ internal fun rememberToday(): LocalDate {
 
 /**
  * Home's Automation card (11 Oct, Boss: trading first, less clutter): the trade manager, Autopilot, the strategy lab, the
- * order flow and the Brain in one line each, and a warning while learning is frozen. A tap on a line opens that section in
+ * order review (12 Oct), the order flow and the Brain in one line each, and a warning while learning is frozen. A tap on a line opens that section in
  * full, the same section as before with every button and sheet. None in GOLD.
  */
 @Composable
@@ -163,6 +167,7 @@ internal fun AutomationSectionBody(model: AppModel, s: AutomationSummary.Section
         AutomationSummary.Section.MANAGER -> TradeManagerSection(model, divider = false)
         AutomationSummary.Section.AUTOPILOT -> AutopilotSection(model)
         AutomationSummary.Section.LAB -> StrategyLabSection(model)
+        AutomationSummary.Section.ORDERS -> OrderReviewSection()
         AutomationSummary.Section.ORDER_FLOW -> OrderFlowSection(model, divider = false)
         AutomationSummary.Section.BRAIN -> BrainSection(divider = false, model = model)
     }

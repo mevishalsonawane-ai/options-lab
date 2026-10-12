@@ -104,6 +104,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.SmartWorkers.init(this)
         // Jarvis's lessons from the agents (11 Oct): his small file read on a background thread; learned once a day after the close.
         com.optionslab.app.ira.JarvisLearning.init(this)
+        com.optionslab.app.data.OrderReviewHost.init(this)
         // Autopilot learning (11 Oct): its change log, knobs and setting read on a background thread; it runs after his pass.
         com.optionslab.app.ira.Autopilot.init(this)
         // The app's own health (11 Oct): its small file and the previous runs' ANRs and crashes read on a background thread.

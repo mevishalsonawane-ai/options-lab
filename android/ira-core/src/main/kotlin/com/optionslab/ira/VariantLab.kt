@@ -366,7 +366,54 @@ object VariantLab {
         data class Reverted(val change: Change, val liveStopKept: Boolean = false) : Event()
     }
 
-    data class Pass(val book: Book, val events: List<Event>)
+    data class Pass(val book: Book, val events: List<Event>,
+                    /** What became of the directed variants asked for this day ([Seed], the order review's): one per seed. */
+                    val seeded: List<Seeded> = emptyList())
+
+    // ---- directed variants (the order review, 12 Oct) ---------------------------------------------------------------------
+
+    /**
+     * A directed variant asked of the lab (the order review's recurring flaw): [strategy]'s [param] moved ONE step in [dir]
+     * (+1 up, -1 down) from its current rules. It goes through everything a spawned neighbour does - the SAFE bounds, the
+     * pre-check on the stored days, counted as tried in the trial penalty and the Benjamini-Hochberg family, then the same
+     * minimum days and tests before any promotion (paper first; live only with Boss's PIN). Nothing is applied by asking.
+     */
+    data class Seed(val id: String, val strategy: String, val param: String, val dir: Int, val why: String)
+
+    /** What became of [Seed] [id]: [variant] made (shadowing or failed its pre-check), or [final] false while it waits for room. */
+    data class Seeded(val id: String, val variant: String?, val status: String, val final: Boolean)
+
+    /** [seed] in [book] on [day]: a new variant (pre-checked on [history]), or why not. Pure. */
+    fun seed(book: Book, seed: Seed, day: LocalDate, history: List<ShadowSim.Day>): Pair<Book, Seeded> {
+        val s = strategy(seed.strategy) ?: return book to Seeded(seed.id, null, "the lab does not tune ${seed.strategy}", true)
+        val p = s.param(seed.param) ?: return book to Seeded(seed.id, null, "${s.label} has no ${seed.param} the lab may move", true)
+        if (book.runOf(s.key) == Run.OFF && book.alive(s.key).isEmpty()) return book to Seeded(seed.id, null, "waiting: ${s.label} is not running", false)
+        if (book.alive(s.key).size >= s.maxAlive || book.alive().size >= MAX_TOTAL) return book to Seeded(seed.id, null, "waiting: the lab is full for ${s.label}", false)
+        val cur = book.currentOf(s.key)
+        val from = cur[p.key] ?: p.min
+        val v = HashMap(cur).apply { put(p.key, p.clamp(from + (if (seed.dir >= 0) 1 else -1) * p.step)) }
+        if (same(v, cur)) return book to Seeded(seed.id, null, "${p.words} is already at its safe bound (${p.say(from)}): a proposal only", true)
+        if (s.invalid(v) != null) return book to Seeded(seed.id, null, "outside the safe bounds: a proposal only", true)
+        book.variants.firstOrNull { it.strategy == s.key && same(it.values, v) }?.let {
+            return book to Seeded(seed.id, it.id, "already tried: ${it.status.words}", true)
+        }
+        val pre = precheck(s, v, cur, history)
+        val ok = pre.first >= pre.second
+        val id = "V${book.nextId}"
+        val varnt = Variant(id, s.key, v, cur, day, book.scales[s.key] ?: 1.0, if (ok) Status.ALIVE else Status.PRECHECK_FAILED, pre = pre,
+            why = if (ok) seed.why.take(160) else "worse than the current rules on ${history.count { it.underlying in s.underlyings }} stored days " +
+                "(${DiscoveryStats.rs(pre.first)} against ${DiscoveryStats.rs(pre.second)})")
+        val b = book.copy(variants = book.variants + varnt, tried = book.tried + 1, nextId = book.nextId + 1,
+            retiredCount = book.retiredCount + if (ok) 0 else 1)
+        return trim(b) to Seeded(seed.id, id, if (ok) "shadowing: ${p.words} ${p.say(from)} → ${p.say(v.getValue(p.key))}" else varnt.why, true)
+    }
+
+    private fun seedAll(book: Book, seeds: List<Seed>, day: LocalDate, history: List<ShadowSim.Day>): Pair<Book, List<Seeded>> {
+        var b = book
+        val out = ArrayList<Seeded>()
+        for (sd in seeds) { val (nb, r) = seed(b, sd, day, history); b = nb; out += r }
+        return b to out
+    }
 
     /**
      * One trading day: [runs] (how each strategy was armed that day), [days] the day's data per index, [history] the stored
@@ -378,7 +425,7 @@ object VariantLab {
      */
     fun day(book: Book, date: LocalDate, runs: Map<String, Run>, days: Map<String, ShadowSim.Day>, history: List<ShadowSim.Day>,
             rng: DiscoveryStats.Rng, from: LocalDate = date.plusDays(1), actual: Map<String, Double> = emptyMap(),
-            evidence: Boolean = true): Pass {
+            evidence: Boolean = true, seeds: List<Seed> = emptyList()): Pass {
         if (book.lastDay != null && !date.isAfter(book.lastDay)) return Pass(book, emptyList())
         var b = book.copy(runs = book.runs + runs, lastDay = date)
         val events = ArrayList<Event>()
@@ -402,8 +449,10 @@ object VariantLab {
         b = sn.book; events += sn.events
         // An event day is not evidence (G9-6): nothing compared, nothing judged; the refill still runs.
         if (!evidence) {
+            // Asked variants first (before the refill takes the room), born today and first compared on the next session.
+            val (sb, seeded) = seedAll(b, seeds, date, history); b = sb
             for (s in STRATEGIES) if (b.runOf(s.key) != Run.OFF || b.alive(s.key).isNotEmpty()) b = spawn(b, s.key, date, history, rng)
-            return Pass(trim(b), events)
+            return Pass(trim(b), events, seeded)
         }
         // 1. Compare.
         b = b.copy(variants = b.variants.map { v ->
@@ -425,9 +474,11 @@ object VariantLab {
             is Event.Proposed -> Event.Proposed(yardsticks(e.change, history).also { c -> b = b.copy(changes = b.changes.map { if (it.id == c.id) c else it }) })
             else -> e
         }
-        // 3. Refill every running strategy.
+        // 3. The asked variants (the order review's), then refill every running strategy. An asked one is born today and first
+        // compared on the next session, so the day that showed the flaw is never its own evidence.
+        val (sb, seeded) = seedAll(b, seeds, date, history); b = sb
         for (s in STRATEGIES) if (b.runOf(s.key) != Run.OFF || b.alive(s.key).isNotEmpty()) b = spawn(b, s.key, date, history, rng)
-        return Pass(trim(b), events)
+        return Pass(trim(b), events, seeded)
     }
 
     /** [c] with the safety net's yardsticks: the variant's backtest average losing day and its forward rupees a day. */

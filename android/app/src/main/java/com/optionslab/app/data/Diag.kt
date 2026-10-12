@@ -139,6 +139,8 @@ object Diag {
         // books against Zerodha's as last checked (report only).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FillSlippage.diagLine() }.getOrElse { "Slippage: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { ZerodhaSync.line() }.getOrElse { "Zerodha sync: could not read" }).append('\n')
+        // The order review (12 Oct): when it last ran and its counts (no rupees).
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderReviewHost.diagLine() }.getOrElse { "Order review: could not read" }).append('\n')
         // The watch's workers (10 Oct): each worker and step - its state, last run, time, errors - the slowest steps today,
         // Zerodha's shared request budget and reads, the entry door, the shared state and the one-index claims standing now.
         if (!com.optionslab.app.BuildConfig.GOLD) {

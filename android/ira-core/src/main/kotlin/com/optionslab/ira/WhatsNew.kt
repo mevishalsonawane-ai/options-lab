@@ -54,6 +54,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-12-order-review", OCT12, "Order review: every order studied daily",
+            "A new agent studies every order and trade each day after the close - live, paper, the bots, Pine and your own - and lists the flaws with their numbers. " +
+                "A flaw that keeps coming back is flagged for a fix or tested by the strategy lab on paper first; it never places, changes or cancels an order.",
+            "Home → Automation card → Order review", ask = "what went wrong today", jarvisOnly = true),
         Entry("2026-10-12-majority-rule-context", OCT12, "Majority Rule 14: every agent knows it",
             "Jarvis, the Brain and a new Learn page now know the weekly Majority Rule 14 research: after a deep weekly sell-off NIFTY " +
                 "tended to drift up over 1-3 months, but +1,000 points and the green candle added nothing, and buying options on it was break-even to losing. " +
