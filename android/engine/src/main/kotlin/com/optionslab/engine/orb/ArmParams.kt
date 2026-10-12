@@ -22,6 +22,12 @@ data class OrbParams(
     val targetPoints: Double,
     /** Range Fade's edge: the outer share of the range a bar must reach (10%). */
     val edge: Double = RangeFadeRules.EDGE,
+    /**
+     * ORB / ORB Fresh: at most this many entries a day on each side (CE, PE); 0 = no cap, the arms' rule until R14
+     * ([ReentryCap], research/HUNT_R14_REENTRY_CHURN.md: 1 a side cut ORB's 5-year loss from Rs 8.4 lakh to Rs 1.2 lakh,
+     * mostly charges). Fewer entries only: it never changes an exit.
+     */
+    val sideCap: Int = 0,
 ) {
     companion object {
         val ORB = OrbParams(OrbRules.OR_END, OrbRules.LAST_ENTRY_BAR, 0.0, OrbRules.STOP_POINTS, OrbRules.TARGET_POINTS)

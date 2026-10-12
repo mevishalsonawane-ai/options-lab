@@ -105,6 +105,11 @@ class VariantRunnerTest : RobolectricTest() {
         assertEquals(day, b.lastDay)
         assertTrue(b.alive("orb").isNotEmpty() || b.variants.any { it.strategy == "orb" })
         assertTrue(b.alive().size <= VariantLab.MAX_TOTAL)
+        // R14's re-entry cap went through the lab's own path once: on paper by itself from the next session, nothing live.
+        assertEquals(VariantLab.ChangeKind.RESEARCH, b.change("R14-orb")!!.kind)
+        assertEquals(1.0, b.currentOf("orb").getValue(com.optionslab.ira.ArmParams.SIDE_CAP), 1e-12)
+        assertNull(b.change("R14L-orb"))
+        assertTrue(b.tunes.none { it.live })
         // Virtual only: the paper book was never even loaded, and the lab's code names no order path at all.
         assertTrue(Paper.stateIfLoaded() === paperBefore)
         val src = listOf(File("src/main/java/com/optionslab/app/data/VariantRunner.kt"), File("app/src/main/java/com/optionslab/app/data/VariantRunner.kt"))
@@ -195,7 +200,10 @@ class VariantRunnerTest : RobolectricTest() {
         assertEquals(30.0, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, false).stopPoints, 1e-12)
         assertEquals("a paper change never reaches the live account", com.optionslab.engine.orb.OrbParams.SWEEP,
             VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, true))
-        assertEquals(com.optionslab.engine.orb.OrbParams.ORB, VariantRunner.orbParams(com.optionslab.engine.orb.OrbRules.ORB, next, false))
+        // ORB's paper entries: R14's re-entry cap by default (no tune of its own); its live ones: its constants.
+        assertEquals(com.optionslab.engine.orb.OrbParams.ORB.copy(sideCap = com.optionslab.engine.orb.ReentryCap.PAPER_CAP),
+            VariantRunner.orbParams(com.optionslab.engine.orb.OrbRules.ORB, next, false))
+        assertEquals(com.optionslab.engine.orb.OrbParams.ORB, VariantRunner.orbParams(com.optionslab.engine.orb.OrbRules.ORB, next, true))
         // Undo (paper, no PIN): from the next session too.
         assertTrue(VariantRunner.undo("C1").startsWith("Undone"))
         assertEquals(com.optionslab.engine.orb.OrbParams.SWEEP, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, next, false))

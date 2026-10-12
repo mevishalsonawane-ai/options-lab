@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import com.optionslab.app.data.OrbArms
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
+import com.optionslab.app.ui.components.Expandable
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.components.Rule
 import com.optionslab.app.ui.theme.LocalPalette
@@ -184,6 +186,15 @@ internal fun OrbRowsContent(
                 val closed = a.today.filter { !it.open }
                 if (closed.isNotEmpty()) Text("Today: ${closed.size} closed · ${rs(closed.sumOf { (it.grossPnl ?: 0.0) - it.charges })} after charges",
                     style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                // What the arm paid in charges today and this month (R14: re-entries cost charges and made about nothing),
+                // folded so the row stays short; the re-entry cap in force is said with it.
+                a.chargesLine?.let { line ->
+                    Expandable("charges:${a.arm.source}", label = "Show charges", hideLabel = "Hide charges") {
+                        Text(keepNumbersWhole(line), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp),
+                            modifier = Modifier.testTag("orb-charges:${a.arm.source}"))
+                        OrbArms.capLine(a.arm)?.let { cap -> Text(keepNumbersWhole(cap), style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp)) }
+                    }
+                }
             }
             Switch(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },

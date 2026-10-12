@@ -126,13 +126,15 @@ object ArmsBacktest {
         val rng = OrbRules.openingRange(bars, p.orEnd) ?: return emptyList()
         val out = ArrayList<Trade>()
         var lastExit: LocalDateTime? = null
+        // Today's entries per side, for the ORB's re-entry cap (R14, [ReentryCap]; 0 = no cap, the default).
+        val taken = HashMap<Int, Int>()
         var k = 0
         while (k < bars.size) {
             val seen = bars.subList(0, k + 1)
             val (dir, _) = when {
                 arm.fade -> RangeFadeRules.entrySignal(seen, rng, lastExit, out.size, p.edge, p.lastEntry)
                 arm.sweep -> SweepRules.entrySignal(seen, rng, lastExit, out.size, p.lastEntry, p.orEnd)
-                else -> OrbRules.entrySignal(seen, rng, arm, lastExit, p = p)
+                else -> OrbRules.entrySignal(seen, rng, arm, lastExit, p = p, taken = taken)
             }
             if (dir == 0) { k++; continue }
             val leg = if (dir > 0) ce else pe
@@ -143,6 +145,7 @@ object ArmsBacktest {
             if (t == null) { k++; continue }
             val (entry, exit, why, exitMinute) = t
             lastExit = day.atTime(exitMinute / 60, exitMinute % 60)
+            taken.merge(dir, 1, Int::plus)
             out += Trade(day, arm.source, if (dir > 0) "CE" else "PE", "%02d:%02d".format(signal.hour, signal.minute),
                 entry, exit, why, (exit - entry) * leg.lot - charges, day.atTime(t.from / 60, t.from % 60), lastExit)
             k++

@@ -42,6 +42,8 @@ object ArmParams {
     const val LOCK = "lock"
     /** VIX divergence's index move a check needs. */
     const val MOVE = "move"
+    /** ORB / ORB Fresh's re-entry cap: entries a side a day (0: none, the arms' rule before R14; [com.optionslab.engine.orb.ReentryCap]). */
+    const val SIDE_CAP = "sideCap"
 
     /** The ONLY keys a Liquidity 15+5 variant may carry: its exits. */
     val LIQUIDITY_EXIT_KEYS: Set<String> = setOf(STOP_PCT, TS, TSG, TGT, LOCK)
@@ -61,7 +63,7 @@ object ArmParams {
                 arm.sweep -> mapOf(UNTIL to minutes(p.lastEntry), STOP_PTS to p.stopPoints, TARGET_PTS to p.targetPoints)
                 arm.fade -> mapOf(UNTIL to minutes(p.lastEntry), EDGE to p.edge, STOP_PTS to p.stopPoints, TARGET_PTS to p.targetPoints)
                 else -> mapOf(UNTIL to minutes(p.lastEntry), OR to orMinutes(p.orEnd), BUFFER to p.buffer, STOP_PTS to p.stopPoints,
-                    TARGET_PTS to p.targetPoints)
+                    TARGET_PTS to p.targetPoints, SIDE_CAP to p.sideCap.toDouble())
             }
         }
         return when (key) {
@@ -86,6 +88,7 @@ object ArmParams {
             stopPoints = values[STOP_PTS] ?: d.stopPoints,
             targetPoints = values[TARGET_PTS] ?: d.targetPoints,
             edge = values[EDGE]?.takeIf { arm.fade } ?: d.edge,
+            sideCap = values[SIDE_CAP]?.takeIf { !arm.sweep && !arm.fade && it.isFinite() }?.roundToInt()?.coerceAtLeast(0) ?: d.sideCap,
         )
     }
 

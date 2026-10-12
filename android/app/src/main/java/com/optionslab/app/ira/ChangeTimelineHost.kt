@@ -29,8 +29,8 @@ object ChangeTimelineHost {
     /** The strategy lab's changes as the timeline reads them (its automatic paper promotions; a live one is Boss's). */
     internal fun labChanges(b: VariantLab.Book): List<ChangeTimeline.LabChange> = b.changes.map { c ->
         val v = b.variants.firstOrNull { it.id == c.variant }
-        ChangeTimeline.LabChange(c.id, VariantLab.strategy(c.strategy)?.label ?: c.strategy, v?.moved() ?: "new rules", c.why,
-            auto = c.kind == VariantLab.ChangeKind.AUTO_PAPER, live = c.kind == VariantLab.ChangeKind.LIVE_PROPOSAL, status = c.status.name, day = c.day,
+        ChangeTimeline.LabChange(c.id, VariantLab.strategy(c.strategy)?.label ?: c.strategy, v?.moved() ?: (if (c.variant == "R14") VariantLab.moved(c) else "new rules"), c.why,
+            auto = c.kind == VariantLab.ChangeKind.AUTO_PAPER || c.kind == VariantLab.ChangeKind.RESEARCH, live = c.kind == VariantLab.ChangeKind.LIVE_PROPOSAL, status = c.status.name, day = c.day,
             atMs = minOf(at(c.day, VariantRunner.SETTLE_FROM), System.currentTimeMillis()))
     }
 

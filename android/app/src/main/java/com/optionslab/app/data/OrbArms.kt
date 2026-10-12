@@ -828,7 +828,22 @@ object OrbArms {
         val lotSizes: Map<String, Int> = emptyMap(),
         /** Liquidity 15+5 only: its indices parked on Boss's OK ([ParkedArms]: FINNIFTY, 9 Oct), each switched back on from the row. */
         val parked: List<String> = emptyList(),
-    )
+        /**
+         * What the arm paid in charges (both accounts, rupees) today and this calendar month, and its orders this month (a buy,
+         * and a sell once closed) - R14's charges line ([com.optionslab.engine.orb.ReentryCap.chargesWords]).
+         */
+        val chargesToday: Double = 0.0, val chargesMonth: Double = 0.0, val ordersMonth: Int = 0,
+    ) {
+        /** The charges line for the row's details, or null when nothing was paid this month. */
+        val chargesLine: String? get() = com.optionslab.engine.orb.ReentryCap.chargesWords(chargesToday, chargesMonth, ordersMonth)
+    }
+
+    /** [arm]'s charges today and this month and its orders this month, from [positions] (the book keeps the last 2000). */
+    internal fun chargesOf(positions: List<Position>, arm: String, day: LocalDate): Triple<Double, Double, Int> {
+        val month = positions.filter { it.arm == arm && it.day.year == day.year && it.day.month == day.month }
+        return Triple(month.filter { it.day == day }.sumOf { it.charges }, month.sumOf { it.charges },
+            month.size + month.count { !it.open } + month.count { it.sold > 0 })
+    }
 
     data class View(
         val arms: List<ArmView>, val legs: Legs?, val range: Pair<Double, Double>?, val forward: PassRule.Verdict,
@@ -858,9 +873,10 @@ object OrbArms {
         val day = today()
         val arms = ALL_ARMS.filter { it !in LiquidityRules.BOOKS }.map { a ->
             val open = b.positions.lastOrNull { it.arm == a.source && it.open }
+            val (cToday, cMonth, orders) = chargesOf(b.positions, a.source, day)
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
                 b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true,
-                record = RetiredArms.of(a.source))
+                record = RetiredArms.of(a.source), chargesToday = cToday, chargesMonth = cMonth, ordersMonth = orders)
         } + liquidityView(b, day)
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
@@ -888,7 +904,11 @@ object OrbArms {
             open?.let { marks[it.symbol] }, books.firstNotNullOfOrNull { b.pending[it] }, b.positions.filter { it.arm in books && it.day == day },
             // A parked index's books are off and never cleared for Zerodha: they do not count against the switch's Live state.
             ParkedArms.armable(b.parked).all { b.liveOk[it.source] == true }, shadow = shadowOf(b), lots = lotsOf(b), lotsAsk = b.liqLotsAsk,
-            lotSizes = lotSizes(), parked = b.parked.sorted())
+            lotSizes = lotSizes(), parked = b.parked.sorted()).let { v ->
+                // Its books' charges together (R14's charges line).
+                val c = books.map { chargesOf(b.positions, it, day) }
+                v.copy(chargesToday = c.sumOf { it.first }, chargesMonth = c.sumOf { it.second }, ordersMonth = c.sumOf { it.third })
+            }
     }
 
     /** Each Liquidity index's lot size from the contract list already on the phone (never a download); empty when none is. */
@@ -1146,7 +1166,9 @@ object OrbArms {
             "${pointsWith(ap.targetPoints)} target and the 15:10 exit, at most ${SweepRules.MAX_ENTRIES} a day, from ${hhmm(firstBar)}."
         else if (on) "$label armed" + (if (live) " on ZERODHA (live), " else " on paper, ") +
             (if (automatic) "fully automatic: it buys and sells by itself every trading day until you switch it off." else "you approve each entry.") +
-            " It decides on 5-minute BANKNIFTY bars from ${hhmm(firstBar)}."
+            " It decides on 5-minute BANKNIFTY bars from ${hhmm(firstBar)}." +
+            // R14's re-entry cap, when it is in force on this account.
+            (if (ap.sideCap > 0) " At most ${ap.sideCap} ${if (ap.sideCap == 1) "entry" else "entries"} a side a day (research R14: re-entries cost charges and made about nothing)." else "")
         else "$label disarmed." + if (b.positions.any { it.arm == source && it.open }) " Its open position is still managed to its exit." else ""
     }
 
@@ -1408,7 +1430,9 @@ object OrbArms {
         // Missed bars are never a pause: every pass reads the whole day's bars again, so after a slow pass, a failed fetch or
         // the app being away the arm decides on where the market is now (a break still under way is taken).
         val resumed = prevBar != null && !b.watched.containsKey(watchKey)
-        val (direction, why) = OrbRules.entrySignal(bars, rng, arm, lastExit, requireFresh = resumed, p = ap)
+        // The re-entry cap (R14, [com.optionslab.engine.orb.ReentryCap]): today's entries per side of this arm, on either account.
+        val taken = com.optionslab.engine.orb.ReentryCap.taken(b.positions.filter { it.arm == arm.source && it.day == day }.map { it.right })
+        val (direction, why) = OrbRules.entrySignal(bars, rng, arm, lastExit, requireFresh = resumed, p = ap, taken = taken)
         if (direction == 0) {
             watching()
             return if (why == "not_a_fresh_break" && !arm.freshOnly) "waiting_for_fresh_break_after_pause" else why
@@ -2787,7 +2811,9 @@ object OrbArms {
             // the trades the app's guard would have refused while Liquidity held the index ([com.optionslab.engine.orb.ArmPriority]).
             val liq = lock.withLock { liquidityLegs(book(), day) }
             for (arm in OrbRules.ARMS) {
-                val trades = Replay.day(arm, aligned, aligned.map { ce.getValue(it.start) }, aligned.map { pe.getValue(it.start) })
+                // The paper account's re-entry cap (R14) as the arm traded it today; 0: none.
+                val cap = runCatching { paramsOf(arm, day, false).sideCap }.getOrDefault(0)
+                val trades = Replay.day(arm, aligned, aligned.map { ce.getValue(it.start) }, aligned.map { pe.getValue(it.start) }, sideCap = cap)
                 val refused = runCatching { com.optionslab.engine.orb.ArmPriority.refusedInReplay(arm, day, trades, liq) }.getOrDefault(emptyMap())
                 out.put(arm.source, JSONArray().apply {
                     trades.forEachIndexed { i, tr -> put(JSONObject().put("bar", tr.signalBar).put("exitBar", tr.exitBar).put("right", tr.right)
@@ -2835,7 +2861,8 @@ object OrbArms {
      */
     fun describe(s: String, arm: Arm?): String {
         val p = arm?.takeIf { it.source in com.optionslab.ira.ArmParams.ORB_ARMS }?.let { shownParams[it.source] }
-        if (arm == null || p == null || p == com.optionslab.engine.orb.OrbParams.of(arm)) return describe(s)
+        // (The re-entry cap (R14) changes no range or time: an arm whose only change is the cap keeps the usual words.)
+        if (arm == null || p == null || p.copy(sideCap = 0) == com.optionslab.engine.orb.OrbParams.of(arm)) return describe(s)
         val (first, lastBar) = OrbRules.decisionBars(p)
         return when (s) {
             "waiting_for_opening_range" -> "Waiting for the opening range (09:15-${hhmm(p.orEnd)})."
@@ -2844,6 +2871,20 @@ object OrbArms {
             "no_decision_bar" -> "No decision bars now (entries ${hhmm(if (arm.fade) RangeFadeRules.FIRST_BAR else first)}-${hhmm(lastBar)})."
             else -> describe(s)
         }
+    }
+
+    /**
+     * The re-entry cap in force for [arm] today (R14, [com.optionslab.engine.orb.ReentryCap]) on each account, for the row's
+     * details; null for an arm it does not apply to. Memory only (the lab's book as loaded): no I/O.
+     */
+    fun capLine(arm: Arm): String? {
+        if (arm.source !in com.optionslab.engine.orb.ReentryCap.ARMS) return null
+        val day = runCatching { today() }.getOrNull() ?: return null
+        val paper = runCatching { paramsOf(arm, day, false).sideCap }.getOrDefault(0)
+        val live = runCatching { paramsOf(arm, day, true).sideCap }.getOrDefault(0)
+        fun w(c: Int) = if (c > 0) "at most $c ${if (c == 1) "entry" else "entries"} a side a day" else "no cap"
+        return "Re-entries (research R14): paper ${w(paper)}, live ${w(live)}" +
+            if (live == 0 && paper > 0) " (live changes only with your PIN in the Strategy lab)." else "."
     }
 
     /** The arm's status in plain words. */
@@ -2862,6 +2903,7 @@ object OrbArms {
         s == "not_a_fresh_break" -> "Last bar continued an earlier break; ORB Fresh waits for a fresh one."
         s == "waiting_for_fresh_break_after_pause" -> "Armed or restarted while the price was already out of the range: this bar is not chased; the next bar out of the range is taken."
         s == "cooling_down_after_exit" -> "Just exited; may re-enter from the next bar."
+        com.optionslab.engine.orb.ReentryCap.isCap(s) -> com.optionslab.engine.orb.ReentryCap.words(s)
         s == MANAGER_DONE -> "Done for today: the trade manager took today's trade out early (research R12's rule); no re-entry today."
         s == "no_decision_bar" -> "No decision bars now (entries 10:05-13:55; ORB Sweep to 14:25)."
         s == "flat_after_square_off" -> "Done for the day (square-off 15:10)."

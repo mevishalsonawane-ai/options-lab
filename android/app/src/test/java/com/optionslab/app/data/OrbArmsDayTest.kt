@@ -772,4 +772,59 @@ class OrbArmsDayTest : RobolectricTest() {
             VariantRunner.resetForTest()
         }
     }
+
+    // ---- R14: the re-entry cap on paper ---------------------------------------------------------------
+
+    /**
+     * R14: after its CE trade closes the index stays above the range all day; without the cap the next bar would buy the CE
+     * again. On paper the ORB takes 1 entry a side a day, says why it does not re-enter, and shows what it paid in charges.
+     */
+    @Test fun onPaperTheOrbTakesOneEntryASideAndSaysWhyItDoesNotReEnter() {
+        VariantRunner.resetForTest()          // an empty lab book: the arm's paper default (R14's cap) is in force
+        try {
+            armOrb(LocalTime.of(9, 50))
+            passes(LocalTime.of(9, 50), LocalTime.of(10, 35))
+            val p = arm().open!!
+            upstox.price(ceKey, p.entry + 12)
+            passes(LocalTime.of(10, 36), LocalTime.of(10, 37))
+            upstox.price(ceKey, p.entry - 1)
+            tick(LocalTime.of(10, 38))
+            assertEquals("profit_lock", arm().today.single().why)
+            passes(LocalTime.of(10, 39), LocalTime.of(11, 30))
+            assertEquals("one CE a day on paper", 1, arm().today.size)
+            assertEquals(1, Paper.state.orders.count { it.action == "BUY" })
+            assertEquals("side_cap_reached:CE:1:1", arm().status)
+            assertTrue(OrbArms.describe(arm().status, OrbRules.ORB),
+                OrbArms.describe(arm().status, OrbRules.ORB).startsWith("Not re-entering CE: 1 of 1 entry on that side used today; saves charges"))
+            // The charges line: what the arm paid today and this month (a buy and a sell).
+            val a = arm()
+            assertEquals(a.today.single().charges, a.chargesToday, 1e-9)
+            assertEquals(a.chargesToday, a.chargesMonth, 1e-9)
+            assertEquals(2, a.ordersMonth)
+            assertTrue(a.chargesLine!!, a.chargesLine!!.startsWith("Charges ₹") && a.chargesLine!!.endsWith("this month (2 orders)"))
+            assertEquals("Re-entries (research R14): paper at most 1 entry a side a day, live no cap (live changes only with your PIN in the Strategy lab).",
+                OrbArms.capLine(OrbRules.ORB))
+            assertNull(OrbArms.capLine(com.optionslab.engine.orb.SweepRules.ARM))
+            // The usual words for the arm's range and times: the cap changes neither.
+            assertEquals(OrbArms.describe("no_decision_bar"), OrbArms.describe("no_decision_bar", OrbRules.ORB))
+        } finally {
+            VariantRunner.resetForTest()
+        }
+    }
+
+    /** R14 on paper only: a lab tune of the arm's own (Boss undid R14 on the card) rules over the paper default - no cap. */
+    @Test fun aPaperTuneOfItsOwnRulesOverTheCap() {
+        org.junit.Assume.assumeTrue("the strategy lab is in IraAlgo with Jarvis only", VariantRunner.enabled())
+        VariantRunner.resetForTest()
+        VariantRunner.setForTest(com.optionslab.ira.VariantLab.Book(tunes = listOf(com.optionslab.ira.VariantLab.Tune("orb", false,
+            day.minusDays(1), mapOf(com.optionslab.ira.ArmParams.SIDE_CAP to 0.0), "R14-orb"))), com.optionslab.ira.StrategyForge.Book())
+        try {
+            assertEquals(0, VariantRunner.orbParams(OrbRules.ORB, day, false).sideCap)
+            assertEquals("live: never by itself", 0, VariantRunner.orbParams(OrbRules.ORB, day, true).sideCap)
+            assertEquals(com.optionslab.engine.orb.ReentryCap.PAPER_CAP, VariantRunner.orbParams(OrbRules.ORB_FRESH, day, false).sideCap)
+            assertEquals(0, VariantRunner.orbParams(com.optionslab.engine.orb.SweepRules.ARM, day, false).sideCap)
+        } finally {
+            VariantRunner.resetForTest()
+        }
+    }
 }

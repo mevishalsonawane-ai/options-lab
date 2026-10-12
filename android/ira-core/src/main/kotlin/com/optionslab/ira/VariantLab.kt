@@ -80,10 +80,11 @@ object VariantLab {
             Unit.TIME -> ShadowSim.hhmm(x.roundToInt())
             Unit.ONOFF -> if (x >= 0.5) "on" else "off"
             Unit.LOCK -> if (x <= 0) "none" else "%.0f%% of the premium".format(Locale.ENGLISH, x * 100)
+            Unit.CAP -> if (x < 0.5) "no cap" else "${x.roundToInt()} a side a day"
         }
     }
 
-    enum class Unit { PCT, BPS, PTS, MIN, TIME, ONOFF, LOCK }
+    enum class Unit { PCT, BPS, PTS, MIN, TIME, ONOFF, LOCK, CAP }
 
     /**
      * A strategy the lab can tune: its key (the arm's source), name, indices, its tunables, how many variants may be alive
@@ -105,6 +106,8 @@ object VariantLab {
 
     private val orbUntil = Param(ArmParams.UNTIL, "last entry", 13 * 60.0, 14 * 60 + 30.0, 15.0, Unit.TIME, grid = 5.0)
     private val orbStop = Param(ArmParams.STOP_PTS, "stop", 20.0, 40.0, 5.0, Unit.PTS)
+    /** ORB / ORB Fresh's re-entry cap (R14): 0 = none (the default), 1-3 entries a side a day - any cap means fewer entries. */
+    private val orbCap = Param(ArmParams.SIDE_CAP, "entries a side a day", 0.0, 3.0, 1.0, Unit.CAP, grid = 1.0)
 
     /**
      * The strategies the lab tunes, with bounds from their research: the ORB family's stop never wider than its -40 points,
@@ -117,11 +120,11 @@ object VariantLab {
         Strategy("orb", "ORB", listOf("BANKNIFTY"),
             listOf(orbUntil, Param(ArmParams.OR, "opening range", 35.0, 65.0, 5.0, Unit.MIN, grid = 5.0),
                 Param(ArmParams.BUFFER, "breakout buffer", 0.0, 0.001, 0.00025, Unit.BPS), orbStop,
-                Param(ArmParams.TARGET_PTS, "target", 30.0, 80.0, 10.0, Unit.PTS))),
+                Param(ArmParams.TARGET_PTS, "target", 30.0, 80.0, 10.0, Unit.PTS), orbCap)),
         Strategy("orb_fresh", "ORB Fresh", listOf("BANKNIFTY"),
             listOf(orbUntil, Param(ArmParams.OR, "opening range", 35.0, 65.0, 5.0, Unit.MIN, grid = 5.0),
                 Param(ArmParams.BUFFER, "breakout buffer", 0.0, 0.001, 0.00025, Unit.BPS), orbStop,
-                Param(ArmParams.TARGET_PTS, "target", 30.0, 80.0, 10.0, Unit.PTS))),
+                Param(ArmParams.TARGET_PTS, "target", 30.0, 80.0, 10.0, Unit.PTS), orbCap)),
         Strategy("orb_sweep", "ORB Sweep", listOf("BANKNIFTY"),
             listOf(orbUntil, orbStop, Param(ArmParams.TARGET_PTS, "target", 40.0, 100.0, 10.0, Unit.PTS))),
         Strategy("range_fade", "Range Fade", listOf("BANKNIFTY"),
@@ -181,6 +184,8 @@ object VariantLab {
     enum class ChangeKind(val words: String) {
         AUTO_PAPER("applied on paper by itself"), LIVE_PROPOSAL("proposed for live (your PIN)"),
         SAFETY_REVERT("put back to the defaults by the safety net"),
+        /** A research finding applied on PAPER by itself (R14's re-entry cap): undoable like a paper promotion, never the safety net's. */
+        RESEARCH("applied on paper from the research"),
     }
     enum class ChangeStatus(val words: String) { APPLIED("applied"), OFFERED("waiting for you"), ACCEPTED("applied with your PIN"), DECLINED("declined"), UNDONE("undone") }
 
@@ -553,6 +558,60 @@ object VariantLab {
         return Pass(b, events)
     }
 
+    // ---- research findings (R14) -------------------------------------------------------------------------------------------
+
+    /** What change [c] moves, in words ("entries a side a day no cap → 1 a side a day"), from its own from / to. */
+    fun moved(c: Change): String {
+        val s = strategy(c.strategy) ?: return ""
+        return s.params.filter { p -> c.to[p.key]?.let { v -> c.from[p.key]?.let { abs(it - v) > 1e-12 } } == true }
+            .joinToString(", ") { p -> "${p.words} ${p.say(c.from.getValue(p.key))} → ${p.say(c.to.getValue(p.key))}" }.ifEmpty { "no change" }
+    }
+
+    /** The change ids of R14's re-entry cap: on paper ([researchPaperId]) and proposed for live ([researchLiveId]). */
+    fun researchPaperId(key: String) = "R14-$key"
+    fun researchLiveId(key: String) = "R14L-$key"
+
+    /**
+     * R14's re-entry cap (ORB / ORB Fresh at most [com.optionslab.engine.orb.ReentryCap.PAPER_CAP] entry a side a day: confirmed
+     * on train and holdout with real costs) put through the lab's own path, once per strategy:
+     *  - PAPER: applied by itself from session [from] ([ChangeKind.RESEARCH], undoable on the card; fewer paper entries only);
+     *    the current rules move to it and the living variants, measured against the old rules, are retired as superseded;
+     *  - LIVE: only while the strategy runs live ([Book.runs]) and its live arm has no cap, PROPOSED to Boss (applied only with
+     *    his PIN, [accept]) - never applied to live by itself.
+     * A strategy whose research change exists (any status: Boss's undo or no is kept) is never seeded again.
+     */
+    fun research(book: Book, date: LocalDate, from: LocalDate): Pass {
+        var b = book
+        val events = ArrayList<Event>()
+        val cap = com.optionslab.engine.orb.ReentryCap.PAPER_CAP.toDouble()
+        val why = com.optionslab.engine.orb.ReentryCap.EVIDENCE
+        for (key in com.optionslab.engine.orb.ReentryCap.ARMS.sorted()) {
+            val s = strategy(key) ?: continue
+            if (b.change(researchPaperId(key)) == null) {
+                val cur = b.currentOf(key)
+                if ((cur[ArmParams.SIDE_CAP] ?: 0.0) < 0.5) {
+                    val to = s.values(cur + (ArmParams.SIDE_CAP to cap))
+                    val c = Change(researchPaperId(key), key, "R14", ChangeKind.RESEARCH, ChangeStatus.APPLIED, date, cur, to, why, effective = from)
+                    var retired = 0
+                    val vs = b.variants.map { if (it.strategy == key && it.status == Status.ALIVE) { retired++; it.copy(status = Status.RETIRED, why = "superseded by R14's re-entry cap") } else it }
+                    b = b.copy(changes = b.changes + c, current = b.current + (key to to), variants = vs, retiredCount = b.retiredCount + retired,
+                        scales = b.scales + (key to 1.0))
+                    b = tune(b, key, false, from, to, c.id)
+                    events += Event.Applied(c)
+                }
+            }
+            val liveNow = newest(b, s, true)
+            if (b.runOf(key) == Run.LIVE && b.change(researchLiveId(key)) == null && (liveNow[ArmParams.SIDE_CAP] ?: 0.0) < 0.5 &&
+                b.changes.none { it.strategy == key && it.status == ChangeStatus.OFFERED }) {
+                val c = Change(researchLiveId(key), key, "R14", ChangeKind.LIVE_PROPOSAL, ChangeStatus.OFFERED, date, liveNow,
+                    s.values(liveNow + (ArmParams.SIDE_CAP to cap)), why)
+                b = b.copy(changes = b.changes + c)
+                events += Event.Proposed(c)
+            }
+        }
+        return Pass(b, events)
+    }
+
     /** [v] won: the change recorded; on paper the current rules move to it and its siblings are retired as superseded. */
     private fun promote(b: Book, v: Variant, c: Change, status: Status, applied: Boolean): Book {
         var vs = b.variants.map { if (it.id == v.id) it.copy(status = status, why = c.why) else it }
@@ -570,7 +629,7 @@ object VariantLab {
      */
     fun undo(b: Book, id: String, from: LocalDate? = null): Book? {
         val c = b.change(id) ?: return null
-        if (c.status != ChangeStatus.APPLIED || c.kind != ChangeKind.AUTO_PAPER) return null
+        if (c.status != ChangeStatus.APPLIED || (c.kind != ChangeKind.AUTO_PAPER && c.kind != ChangeKind.RESEARCH)) return null
         // Only the newest change in force: undoing one a later change replaced would bring back stale rules (G7-5).
         if (superseded(b, id)) return null
         var out = b.copy(current = b.current + (c.strategy to c.from), changes = b.changes.map { if (it.id == id) it.copy(status = ChangeStatus.UNDONE) else it })
@@ -610,7 +669,7 @@ object VariantLab {
 
     /** Whether the card may offer Undo for paper change [id]: applied, by itself, and still the newest in force. */
     fun undoable(b: Book, id: String): Boolean =
-        b.change(id)?.let { it.kind == ChangeKind.AUTO_PAPER && it.status == ChangeStatus.APPLIED && !superseded(b, id) } == true
+        b.change(id)?.let { (it.kind == ChangeKind.AUTO_PAPER || it.kind == ChangeKind.RESEARCH) && it.status == ChangeStatus.APPLIED && !superseded(b, id) } == true
 
     // ---- which way a parameter moves risk ------------------------------------------------------------------------------------
 
@@ -622,14 +681,16 @@ object VariantLab {
 
     /**
      * Every exit parameter whose move can delay or skip an exit (G7-4): the stops, the time stop (more minutes is later), its
-     * gain (less is laxer) and the profit lock (none, or a later rung, is less protective).
+     * gain (less is laxer) and the profit lock (none, or a later rung, is less protective); and the ORB's re-entry cap (R14:
+     * none, or a higher one, lets more trades - and their charges - in), so lifting it is a risk raise like a wider stop.
      */
-    val EXIT_KEYS: Set<String> = WIDER_IS_RISKIER + setOf(ArmParams.TS, ArmParams.TSG, ArmParams.LOCK)
+    val EXIT_KEYS: Set<String> = WIDER_IS_RISKIER + setOf(ArmParams.TS, ArmParams.TSG, ArmParams.LOCK, ArmParams.SIDE_CAP)
 
     /** How loose exit [k] is at [x]: higher is riskier (a later or laxer exit). */
     fun looseness(k: String, x: Double): Double = when (k) {
         ArmParams.TSG -> -x
         ArmParams.LOCK -> if (x <= 0) Double.POSITIVE_INFINITY else x
+        ArmParams.SIDE_CAP -> if (x < 0.5) Double.POSITIVE_INFINITY else x
         else -> x
     }
 
@@ -725,6 +786,9 @@ object VariantLab {
             val t = effective(b, s.key, live, date)!!
             // Already put back by the safety net (the live arm's defaults with its tighter stop kept): nothing lower to go to.
             if (b.change(t.change)?.kind == ChangeKind.SAFETY_REVERT) continue
+            // A research change (R14's re-entry cap) is judged on years of data, not a forward week, and its defaults would let
+            // more trades - and charges - in: the safety net leaves it; Boss's Undo takes it back.
+            if (b.change(t.change)?.kind == ChangeKind.RESEARCH) { if ((b.streaks[s.key] ?: 0) != 0) b = b.copy(streaks = b.streaks - s.key); continue }
             val made = net(s.key, values) ?: continue
             val c = b.change(t.change)
             val avg = (c?.avgLoss ?: 0.0).coerceAtLeast(MIN_AVG_LOSS)
@@ -807,6 +871,9 @@ object VariantLab {
         for ((k, n) in b.streaks.toSortedMap()) append("Z|$k|$n\n")
     }
 
+    /** Keys added to a strategy after its variants could be born: a variant without one takes its default (never retired for it). */
+    val LATER_KEYS: Set<String> = setOf(ArmParams.SIDE_CAP)
+
     /** What an alive variant from before the lab replayed the real arms (S3) is retired with: its parameters are not the arm's. */
     const val OLD_RULES = "the lab now replays the real arm (S3): this variant's parameters are not the arm's"
 
@@ -840,6 +907,10 @@ object VariantLab {
             val s = strategy(v.strategy)
             when {
                 s == null -> v
+                // A variant from before a key was added (R14's re-entry cap) shadows on with that key at its default.
+                v.alive && v.values.keys != s.params.map { it.key }.toSet() && s.params.map { it.key }.toSet().let { all ->
+                    all.containsAll(v.values.keys) && LATER_KEYS.containsAll(all - v.values.keys) } ->
+                    v.copy(values = (s.defaults.filterKeys { it in LATER_KEYS } + v.values).mapValues { (pk, x) -> s.param(pk)?.clamp(x) ?: x })
                 // A variant born before S3 carries the old model's keys: its record is not the real arm's, so it is retired.
                 v.alive && v.values.keys != s.params.map { it.key }.toSet() -> v.copy(status = Status.RETIRED, why = OLD_RULES)
                 else -> v.copy(values = v.values.mapValues { (pk, x) -> s.param(pk)?.clamp(x) ?: x })

@@ -22,15 +22,18 @@ object Replay {
     private fun r2(x: Double) = BigDecimal(x).setScale(2, RoundingMode.HALF_EVEN).toDouble()
     private fun hhmm(t: LocalDateTime) = "%02d:%02d".format(t.hour, t.minute)
 
+    /** [sideCap]: the re-entry cap (R14, [ReentryCap]: at most this many entries a side; 0, the default: none). */
     fun day(arm: Arm, index: List<Bar>, ce: List<Bar>, pe: List<Bar>, points: Double = OrbRules.STOP_POINTS,
-            ladder: Boolean = true): List<ReplayTrade> {
+            ladder: Boolean = true, sideCap: Int = 0): List<ReplayTrade> {
         val rng = OrbRules.openingRange(index) ?: return emptyList()
         val n = minOf(index.size, ce.size, pe.size)
         val trades = mutableListOf<ReplayTrade>()
         var k = 0
         var lastExit: LocalDateTime? = null
+        val p = OrbParams.of(arm).copy(sideCap = sideCap)
         while (k < n - 1) {
-            val (direction, _) = OrbRules.entrySignal(index.subList(0, k + 1), rng, arm, lastExit)
+            val (direction, _) = OrbRules.entrySignal(index.subList(0, k + 1), rng, arm, lastExit, p = p,
+                taken = ReentryCap.taken(trades.map { it.right }))
             if (direction == 0) { k++; continue }
             val right = if (direction > 0) "CE" else "PE"
             val leg = if (direction > 0) ce else pe

@@ -82,9 +82,11 @@ object OrbRules {
      * [requireFresh]: the arm was paused before this bar (stopped for the day, the kill switch, a refused entry, the
      * app not running, armed just now), so a break already under way does not count: only a fresh one, as ORB Fresh.
      * [p]: the arm's parameters (its last entry bar, the range's end, the break's buffer); its defaults are the constants.
+     * [taken]: today's entries per side (+1 CE / -1 PE) for the re-entry cap ([OrbParams.sideCap], [ReentryCap]): a break
+     * on a side whose entries are used up is [ReentryCap.REASON] ("side_cap_reached:CE:1:1"), never an entry.
      */
     fun entrySignal(bars: List<Bar>, rng: Pair<Double, Double>, arm: Arm, lastExit: LocalDateTime?,
-                    requireFresh: Boolean = false, p: OrbParams = OrbParams.of(arm)): Pair<Int, String> {
+                    requireFresh: Boolean = false, p: OrbParams = OrbParams.of(arm), taken: Map<Int, Int> = emptyMap()): Pair<Int, String> {
         val last = bars.last()
         if (!mayDecide(last, p.lastEntry, p.orEnd)) return 0 to "no_decision_bar"
         if (lastExit != null && !last.start.isAfter(barOf(lastExit))) return 0 to "cooling_down_after_exit"
@@ -93,6 +95,7 @@ object OrbRules {
         if ((arm.freshOnly || requireFresh) && bars.size > 1 && breakDirection(bars[bars.size - 2], rng.first, rng.second, p.buffer) == direction) {
             return 0 to "not_a_fresh_break"
         }
+        ReentryCap.refusal(direction, taken[direction] ?: 0, p.sideCap)?.let { return 0 to it }
         return direction to "break"
     }
 

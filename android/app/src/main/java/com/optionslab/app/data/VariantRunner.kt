@@ -263,8 +263,17 @@ object VariantRunner {
     fun orbParams(arm: Arm, day: LocalDate, live: Boolean): OrbParams {
         val d = OrbParams.of(arm)
         if (arm.source !in ArmParams.ORB_ARMS) return d
-        return cached(arm.source, day, live, { v -> ArmParams.orb(arm.source, v) }, d)
+        // R14: ORB / ORB Fresh's PAPER entries take at most 1 a side a day by default, until the lab's book has a paper tune of
+        // its own for the arm (R14's change itself, a later promotion, or Boss's Undo of it - which then rules). Live: unchanged
+        // unless Boss accepted the cap with his PIN.
+        val base = if (!live && arm.source in com.optionslab.engine.orb.ReentryCap.ARMS && !hasTune(arm.source, false, day))
+            d.copy(sideCap = com.optionslab.engine.orb.ReentryCap.PAPER_CAP) else d
+        return cached(arm.source, day, live, { v -> v?.let { ArmParams.orb(arm.source, it) } ?: base }, base)
     }
+
+    /** Whether the lab's book (in memory) has a tune for [key]'s [live] account in force on [day]: memory only, no I/O. */
+    private fun hasTune(key: String, live: Boolean, day: LocalDate): Boolean =
+        loaded && enabled() && runCatching { VariantLab.effective(_variants.value, key, live, day) != null }.getOrDefault(false)
 
     /** Liquidity 15+5's EXIT parameters on [day] for the [live] account (its entries are frozen in code). */
     fun liquidityParams(day: LocalDate, live: Boolean): LiquidityParams =
@@ -390,8 +399,11 @@ object VariantRunner {
             // disk not.
             val (vp, fp) = withContext(Dispatchers.IO) {
                 synchronized(lock) {
-                    val v = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history,
+                    val v0 = com.optionslab.app.ira.LearningFreeze.holdPromotions(VariantLab.day(_variants.value, d, runs, todays, history,
                         DiscoveryStats.Rng(DiscoveryStats.seedOf(d, 3)), from, actual, evidence, seeds.values.sortedBy { it.id }))
+                    // R14's re-entry cap through the lab's own path, once: on paper by itself (undoable), proposed for live (PIN).
+                    val r14 = VariantLab.research(v0.book, d, from)
+                    val v = v0.copy(book = r14.book, events = v0.events + r14.events)
                     val f = StrategyForge.forwardDay(_forge.value, d, if (evidence) todays.filterKeys { it in UNDERLYINGS } else emptyMap())
                     _variants.value = v.book; _forge.value = f.book
                     save()
@@ -416,6 +428,13 @@ object VariantRunner {
         for (e in vs) when (e) {
             is VariantLab.Event.Applied -> {
                 val label = VariantLab.strategy(e.change.strategy)?.label ?: e.change.strategy
+                if (e.change.kind == VariantLab.ChangeKind.RESEARCH) {
+                    val from = e.change.effective?.let { " from ${DiscoveryStats.day(it)}" } ?: ""
+                    post("$WHO · $label", "research R14: ${VariantLab.moved(e.change)} on its paper trades$from (fewer re-entries, fewer charges)")
+                    runCatching { com.optionslab.app.ira.IraActivity.add("Strategy lab: $label's paper trades take at most 1 entry a side a day$from " +
+                        "(research R14: re-entries made about nothing before charges); undo on $WHERE.") }
+                    continue
+                }
                 val v = _variants.value.variants.firstOrNull { it.id == e.change.variant }
                 val from = e.change.effective?.let { " from ${DiscoveryStats.day(it)}" } ?: ""
                 post("$WHO · $label", "variant ready: ${v?.moved() ?: "new rules"} applied to its paper trades$from by itself - ${e.change.why}")
@@ -454,8 +473,10 @@ object VariantRunner {
     private fun offerLive(c: VariantLab.Change) {
         val label = VariantLab.strategy(c.strategy)?.label ?: c.strategy
         val v = _variants.value.variants.firstOrNull { it.id == c.variant }
-        com.optionslab.app.ira.IraHub.offer("strategy lab: $label", "Boss, a better $label?",
-            "Boss, a variant of $label (${v?.moved() ?: "new rules"}) beat its current rules: ${c.why}. It trades live, so it changes only with your PIN in $WHERE.",
+        val what = if (c.variant == "R14") "Boss, research R14 says $label should take at most 1 entry a side a day (${VariantLab.moved(c)}): ${c.why}. " +
+            "It lowers live risk and charges; it trades live, so it changes only with your PIN in $WHERE."
+            else "Boss, a variant of $label (${v?.moved() ?: "new rules"}) beat its current rules: ${c.why}. It trades live, so it changes only with your PIN in $WHERE."
+        com.optionslab.app.ira.IraHub.offer("strategy lab: $label", "Boss, a better $label?", what,
             suspend { "Apply it with your PIN in $WHERE (it changes a live strategy)." }, addsRisk = true, alwaysAsk = true,
             declined = { synchronized(lock) { _variants.value = VariantLab.decline(_variants.value, c.id) }; saveSoon() })
     }

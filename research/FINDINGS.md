@@ -269,3 +269,14 @@ Full study: `HUNT_R13_MAJORITY_RULE.md`. MR(14) = % of the last 14 weekly closes
 - Decision (Boss, 11 Oct): no strategy, no alert. Agents may use it only as slow context ("deep weekly sell-off zone:
   slow upward drift likely over weeks, intraday direction unaffected, option premiums expensive") - never as an entry
   trigger, never to raise size or risk. Live state on 11 Oct: touched in the week ending 1 Oct 2026 (NIFTY 22,422).
+
+## ORB re-entry churn (R14, 12 Oct 2026) - cap the re-entries, do not "let it run"
+Full study: `HUNT_R14_REENTRY_CHURN.md` (code `hunt/r14/`, pre-registered, holdout 1 Oct 2025 - 5 Oct 2026 read once).
+- ORB re-entered on the next bar while BANKNIFTY stayed beyond the range: 9 entries a day (max 23 on one side). The
+  re-entries made about Rs 0 before charges (Rs 75-110 a trade); charges = 36% of the winners' gross.
+- At most 1 entry a side a day: ORB -Rs 6.50 lakh -> -0.97 lakh (design), -1.89 -> -0.18 lakh (holdout); orders 15,640 ->
+  1,924. ORB Fresh -2.00 -> -0.97 lakh, -38k -> -18k. Confirmed in the holdout (p < 0.001 / 0.054).
+- "Let it run" (no +40 target, trail 75% of the best gain from +40): no effect (+Rs 14k in 4 years, p 0.16; holdout -0.4k).
+- A damage limiter, not an edge: both arms still lose, and random thinning does about as well (the gain is the charges).
+- App: paper default 1 a side a day (strategy lab, undoable); live only with Boss's PIN. No other strategy churns (Sweep and
+  Range Fade already stop at 2 a day; the rest are 1 a day or signal-change only).

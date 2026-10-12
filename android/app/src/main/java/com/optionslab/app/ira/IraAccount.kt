@@ -353,7 +353,7 @@ internal object IraAccount {
                 runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
                     val closed = a.today.filter { !it.open }
                     // The day's stop said with who made it (never just "stopped_for_today"): Boss, the daily loss limit, the tile.
-                    arms += AppFacts.ArmLine(a.arm.label, "ORB", a.armed, if (a.status == "stopped_for_today") com.optionslab.app.data.OrbArms.describe(a.status)
+                    arms += AppFacts.ArmLine(a.arm.label, "ORB", a.armed, if (a.status == "stopped_for_today" || com.optionslab.engine.orb.ReentryCap.isCap(a.status)) com.optionslab.app.data.OrbArms.describe(a.status)
                         else a.status.ifBlank { if (a.armed) "armed" else "off" },
                         if (closed.isEmpty()) null else closed.sumOf { (it.grossPnl ?: 0.0) - it.charges }, a.open?.let { "${it.qty} ${it.symbol}" }, a.today.size)
                 }

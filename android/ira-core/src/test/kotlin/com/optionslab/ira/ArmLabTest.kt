@@ -33,7 +33,7 @@ class ArmLabTest {
             assertEquals(OrbParams.of(arm), ArmParams.orb(k, ArmParams.defaults(k)), k)
             assertEquals(OrbParams.of(arm), ArmParams.orb(k, null), k)
         }
-        assertEquals(mapOf("until" to 840.0, "or" to 50.0, "buffer" to 0.0, "stopPts" to 40.0, "targetPts" to 40.0), ArmParams.defaults("orb"))
+        assertEquals(mapOf("until" to 840.0, "or" to 50.0, "buffer" to 0.0, "stopPts" to 40.0, "targetPts" to 40.0, "sideCap" to 0.0), ArmParams.defaults("orb"))
         assertEquals(mapOf("until" to 870.0, "stopPts" to 40.0, "targetPts" to 80.0), ArmParams.defaults("orb_sweep"))
         assertEquals(mapOf("until" to 840.0, "edge" to 0.10, "stopPts" to 40.0, "targetPts" to 40.0), ArmParams.defaults("range_fade"))
         assertEquals(LiquidityParams.DEFAULT, ArmParams.liquidity(ArmParams.defaults("liquidity")))
