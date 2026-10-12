@@ -174,6 +174,43 @@ The app downloads new models only after the gates pass. It keeps the previous ve
 The app's fills, slippage, Order Review flaws, trade-manager votes and paper/live results are uploaded each evening as
 new raw data (L1). So the brain learns from **real execution**, not just from history. This is how it keeps improving.
 
+## Data dictionary: everything traders look at (12 Oct, Boss)
+
+The table has three kinds of row. **R** means stored raw from a source. **D** means derived, calculated in L3/L4 from
+the raw data (point-in-time, versioned), so it is available for all history. **L** means live-only: it exists only if
+the app records it from Zerodha's stream, so its history starts on the day recording starts. That is why live recording
+began first.
+
+| Group | Field | Kind | Notes |
+|---|---|---|---|
+| **Price** | open, high, low, close per minute; day OHLC; previous close; gap | R / D | index, futures, options, stocks, MCX |
+| **Volume** | volume per minute; day volume; relative volume (vs same minute, 20 days) | R / D | futures and options carry volume (the index itself has none) |
+| **Volume profile ("vertical volume")** | volume at each price: POC, value area high/low (70%), high/low-volume nodes; day, week and developing profile | D | built from 1-min OHLCV (estimate); exact from ticks once recorded (L) |
+| **VWAP** | session VWAP, anchored VWAPs (from day open, gap, swing), ±1/2σ bands; distance from VWAP | D (L exact) | futures VWAP from 1-min data; Zerodha's "average traded price" recorded live is exact |
+| **Open interest** | OI per strike/minute, OI change, build-up type (long build-up, short build-up, short covering, long unwinding), futures OI | R / D | from the Dhan rolling options + bhavcopy |
+| **Option chain** | ATM ±10 LTP, OI, IV, Greeks (Δ Γ Θ Vega), PCR (OI and volume), max pain, IV skew, IV rank/percentile, ATM straddle price and decay | R / D | IV from Dhan when given, otherwise Black-Scholes |
+| **Order flow** | bid/ask, spread, depth (5 levels), total buy vs sell quantity, order-book imbalance, trade-side estimate (at bid/ask), **delta & cumulative delta (CVD)**, large prints, absorption, pulled orders | **L** | **No vendor history from Dhan.** It exists only from the app's live recording (started 12 Oct), so each day recorded adds to it |
+| **Support & resistance** | previous day/week/month high-low-close, pivots (classic and CPR), swing highs/lows, round numbers, opening range, the Liquidity arm's levels, volume-profile POC/VAH/VAL, max-OI call (resistance) and put (support) strikes, gap fill levels, VWAP bands | D | each level stored with how often it held/broke historically |
+| **Trend & indicators** | EMAs (9/20/50/200), Supertrend, RSI, MACD, ADX, ATR, Bollinger, Donchian; higher-timeframe trend (15m/1h/day) | D | computed per minute, point-in-time |
+| **Candle patterns** | inside/outside bars, engulfing, big candles, wicks, consecutive colours (the app already has a pattern library) | D | |
+| **Volatility** | India VIX and its change, realised volatility (5/30/day), ATR %, expected move from VIX/straddle | R / D | |
+| **Breadth** | advance/decline of NIFTY 50 / BANKNIFTY constituents, % above VWAP, heavyweight contribution (HDFC Bank, ICICI and others for BankNifty) | D | from the constituents' data |
+| **Futures** | basis (futures − spot), rollover %, cost of carry | R / D | |
+| **Participants** | FII/DII cash flows, participant-wise OI (FII, Pro, Client, DII long/short) | R | NSE daily |
+| **Global & macro** | GIFT Nifty, US futures, USD/INR, crude, US 10Y, Dow/Nasdaq previous close | R | daily/pre-open; free sources |
+| **Calendar & events** | expiry days (weekly/monthly), days to expiry, holidays, RBI policy, budget, results of heavyweights, US CPI/Fed, F&O ban list | R | |
+| **News** | headline, source, time, tone, instruments it concerns | R / L | the app's news feeds |
+| **Execution (Boss's own)** | signal time, order sent/ack/fill times, intended vs fill price, slippage, spread paid, charges | L (encrypted) | the most valuable data, from the app only |
+| **Outcomes / labels** | next 5/15/30/60-min move, MFE/MAE, the day's regime, whether each strategy's signal won after costs | D | used only as training targets, never as inputs |
+
+**Rules for all of it:**
+
+- Every derived field records its formula version.
+- Every field is calculated only from data available at that minute (the look-ahead guard tests this).
+- Missing data is marked, never invented.
+- Order flow and exact VWAP/volume profile need tick data, so they **start from live recording**. History before 12 Oct
+  has only the 1-minute estimates.
+
 ## Additions before building (12 Oct)
 
 1. **Record more live data now.** At every signal and fill the app saves the option chain (ATM ±10: LTP, OI, IV), market
