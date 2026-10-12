@@ -137,6 +137,9 @@ object Diag {
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
+        // The settings vault's size (12 Oct): its biggest key classes and the large values kept in their own files - names and
+        // sizes only, never a value - and any of those files read on the screen's thread (should be none).
+        append(runCatching { com.optionslab.app.security.SecurePrefs.sizeLine() }.getOrElse { "Settings size: could not read" }).append('\n')
         // The app's own health (11 Oct): stalls today, the last ANR and crash and where, what its tuner slowed now.
         append(runCatching { AppHealth.diagLine() }.getOrElse { "Health: could not read" }).append('\n')
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
