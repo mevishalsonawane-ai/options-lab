@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "research/**"
+      - "!research/brain/**"            # the Data Brain package has its own light workflow (brain.yml)
       - ".github/workflows/research.yml"
   workflow_dispatch:
 
