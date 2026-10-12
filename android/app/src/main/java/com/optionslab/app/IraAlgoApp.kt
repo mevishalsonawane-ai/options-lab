@@ -96,6 +96,7 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Protections.init(this)
         com.optionslab.app.data.TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
+        com.optionslab.app.data.LiveRecorder.init(this)
         com.optionslab.app.data.LiquidityTest.init(this)
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)

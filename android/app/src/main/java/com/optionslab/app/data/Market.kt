@@ -229,6 +229,13 @@ object Market {
     private fun chainKey(underlying: String, near: Int) = "$underlying|$near"
 
     /**
+     * The newest chain of [underlying] this process read (any strike count), with when it was read (epoch ms). Memory only:
+     * no settings read, no file, no network ([LiveRecorder]'s snapshots). Null when none was read.
+     */
+    fun chainInMemory(underlying: String): Pair<Long, LiveChain>? =
+        chainReads.entries.filter { it.key.startsWith("$underlying|") }.maxByOrNull { it.value.first }?.value?.let { it.first to it.third }
+
+    /**
      * Battery (round 7): a chain of [underlying] with [near] strikes this process read under 5 minutes ago in the mode it
      * is in now ([com.optionslab.ira.StartChain]), else null. Only for the Options tab's background pricing at app start.
      */

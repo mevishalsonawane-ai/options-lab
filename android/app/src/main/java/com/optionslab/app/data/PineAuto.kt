@@ -940,6 +940,7 @@ object PineAuto {
         val flow = FlowGate.gate("pine", u, if (right == Right.CE) 1 else -1, live,
             Market.now().toLocalDateTime().withSecond(0).withNano(0).toString(), "$id:${right.name}", contract = c)
         if (flow.skip) { note(b, id, flow.pausedWhy?.let { "Not bought: $it" } ?: "Not bought: skipped by the order flow (CONFIRM; the flow did not agree)"); return }
+        runCatching { LiveRecorder.signal(label(item), c.symbol, c.underlying, right.name, null, paper = !live) }
         val lots = item.auto.lots.coerceIn(1, 50)
         if (!live) {
             val ltp = Paper.lastPrice(c) ?: run { note(b, id, "No price for ${c.symbol}: nothing bought"); return }

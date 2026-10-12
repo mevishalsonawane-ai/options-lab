@@ -169,6 +169,8 @@ object Heartbeat {
         for (g in gaps) com.optionslab.app.data.ProblemsHost.report(g.key, "Session coverage", com.optionslab.ira.OpenProblems.Severity.SERIOUS, g.text,
             "the watch was started again; if this repeats, it needs a developer fix", notify = true)
         if (gaps.any { it.watch }) runCatching { Jobs.ensureWatch(context) }
+        // The live recording (Data Brain L8): nothing written while NSE is open and the watch runs is an open problem.
+        runCatching { com.optionslab.app.data.LiveRecorder.healthCheck(alive) }
         runCatching { com.optionslab.app.data.ProblemsHost.policySweep(com.optionslab.app.data.AppSettings.load().let { it.live && it.allowRealOrders }) }
     }
 

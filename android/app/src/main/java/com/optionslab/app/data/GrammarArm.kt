@@ -412,6 +412,7 @@ object GrammarArm {
         // The account-wide guard (paper: it refuses nothing today, but every entry asks it).
         Guard.check(Guard.paperOrder(c, "BUY", 1, 0.0), null, exit = false, paper = true).takeIf { it.isNotEmpty() }
             ?.let { return refused("account guard: " + it.joinToString(" ")) }
+        runCatching { LiveRecorder.signal("Grammar ${x.id}", c.symbol, u, right.name, null, paper = true) }
         val placed = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null)
         val fill = placed.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {

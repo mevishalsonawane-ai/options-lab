@@ -222,6 +222,8 @@ fun DataPage(model: AppModel) {
         }
         // The market recorder (Boss's 06 Oct approval): its switch, what it keeps, and the export.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recorder") { MarketRecorderCard(model) } }
+        // The Data Brain's live recording (signals, fills, the minute grid): days kept, size, last written, export.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recordings") { RecordingsCard(model) } }
         for ((u, rows) in manifests) item {
             LedgerCard(title = "Manifest · $u") {
                 val same = rows.count { it.scope == Manifest.SAME_DAY }
