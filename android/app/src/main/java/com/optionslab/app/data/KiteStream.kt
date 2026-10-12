@@ -511,6 +511,7 @@ object KiteStream {
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
         ticks.clear(); paths.clear(); candles.clear()
+        synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF
     }
