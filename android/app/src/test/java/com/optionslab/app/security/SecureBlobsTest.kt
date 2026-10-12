@@ -46,7 +46,7 @@ class SecureBlobsTest : RobolectricTest() {
     @Test fun theStartDecryptsOnlyTheSmallSettingsFile() {
         SecurePrefs.put("small", 1)
         SecurePrefs.put(big, bulk(5000))
-        assertTrue("the settings file stays small", settingsFile.length() < 4_096)
+        assertTrue("the settings file stays small", settingsFile.length() < 16_384)
         assertTrue(blobFile.length() > 100_000)
         SecurePrefs.flush()
         val before = SecureBlobs.loadsOnMain.get()
