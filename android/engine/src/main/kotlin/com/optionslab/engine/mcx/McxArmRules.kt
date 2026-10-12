@@ -72,6 +72,25 @@ object McxArmRules {
         else -> null
     }
 
+    /**
+     * The minute of [day] (IST) an arm's position is out by at the latest under its own rules, as the trade manager counts
+     * down to it ("Time and theta"): the evening break's flat time ([flatBy] as it was bought, else [McxEveRules.flatBy]),
+     * the morning call's four hours ([McxMorningRules.exitMinute]), the silver future's 10 minutes before the close ([flatBy],
+     * else [McxUsSilverRules.exitMinute]); any other arm (the trend's legs, which close on their own signal) the session's
+     * close. Never after that day's close ([window]'s; MCX's ordinary [McxSession.close] when [window] is null). Not 20
+     * hours after the entry: a 10:21 morning call is out by 14:21, not 06:21 the next day.
+     */
+    fun squareOffMinute(source: String, entryMinute: Int, flatBy: Int?, window: McxSession.Window?, day: LocalDate): Int {
+        val close = (window?.close ?: McxSession.close(day)).let { it.hour * 60 + it.minute }
+        val own = when (source) {
+            McxEveRules.SOURCE -> flatBy ?: McxEveRules.flatBy(window)
+            McxMorningRules.SOURCE -> McxMorningRules.exitMinute(entryMinute, window)
+            McxUsSilverRules.SOURCE -> flatBy ?: McxUsSilverRules.exitMinute(day, window)
+            else -> close
+        }
+        return minOf(own, close)
+    }
+
     /** "+Rs 41", "-Rs 1,439". */
     fun rs(x: Int): String = (if (x < 0) "-Rs " else "+Rs ") + "%,d".format(java.util.Locale.ENGLISH, abs(x))
 }

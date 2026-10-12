@@ -648,14 +648,14 @@ object PineAuto {
     /**
      * [h] handed to the trade manager (one call; idempotent, memory only): a bought option, its stop and target on the premium
      * from the script's settings, its own profit lock ([ProfitLock.lockLevel]) for the counterfactual, out by 15:15 (or F&O's
-     * close). Its price: the stream's tick (live) or the paper book's price in memory. Its id ([managerId]).
+     * close; 15:05 on its option's expiry day, the expiry square-off). Its price: the stream's tick (live) or the paper book's price in memory. Its id ([managerId]).
      */
     private fun attachManager(id: Long, item: PineScripts.Item, h: Held, lockRef: Double?, trail: ProfitLock.Trail?, cost: Double, tick: Double): String {
         val mid = managerId(id, h)
         val a = item.auto
         val day = runCatching { java.time.LocalDate.parse(h.day) }.getOrDefault(todayIst())
-        val offMin = if (a.squareOff) minOf(15 * 60 + 15, Market.foClose(day)) else Market.foClose(day)
-        val off = day.atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli() + offMin * 60_000L
+        val ownMin = if (a.squareOff) minOf(15 * 60 + 15, Market.foClose(day)) else Market.foClose(day)
+        val off = TradeManagerHost.nseSquareOffMs(day, java.time.LocalTime.of(ownMin / 60, ownMin % 60), h.symbol)
         val trade = com.optionslab.ira.TradeManager.ManagedTrade("pine:$id", mid, label(item),
             com.optionslab.ira.AutoSide.underlyingOf(h.symbol) ?: a.symbol, if (h.right == "CE") 1 else -1, h.kite ?: h.symbol, h.entry, h.qty,
             if (a.stopPts > 0) h.entry - a.stopPts else null, if (a.targetPts > 0) h.entry + a.targetPts else null,

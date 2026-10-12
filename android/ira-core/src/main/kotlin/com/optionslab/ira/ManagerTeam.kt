@@ -764,6 +764,26 @@ object ManagerTeam {
             (if (top.isEmpty()) " - nothing stands out" else " - top reasons: " + top.joinToString("; ") { "${nameOf(it.specialist)}: ${it.reason}" })
     }
 
+    /**
+     * The Chair's line folded to one reason (the Specialists sheet's collapsed view): "Chair: EXIT (Bots) — top reason: Bots:
+     * ..." from [chair] ([chairLine]) and its reasons [top] in order; the whole line when it has no reasons.
+     */
+    fun chairShort(chair: String, top: List<String>): String {
+        val head = chair.substringBefore(" - top reasons: ")
+        if (head == chair) return chair
+        return top.firstOrNull()?.let { "$head — top reason: $it" } ?: head
+    }
+
+    /**
+     * The roster folded to one line, with what must stay in sight: "16 specialists · 2 muted (Traps, Bots) · 3 hard vetoes"
+     * ([muted]: the muted ones' ids; a hard veto stands even muted).
+     */
+    fun rosterLine(muted: Collection<String>): String {
+        val names = SPECIALISTS.filter { it.id in muted }.map { it.name }
+        return "${SPECIALISTS.size} specialists" + (if (names.isEmpty()) " · none muted" else " · ${names.size} muted (${names.joinToString(", ")})") +
+            " · ${VETOES.size} hard vetoes"
+    }
+
     private val WORDS: List<Pair<String, Regex>> = listOf(
         "flow" to Regex(" (order flow|flow) "), "delta" to Regex(" (cumulative delta|delta|divergence|cvd) "),
         "absorption" to Regex(" (absorption|absorb|absorbing) "), "traps" to Regex(" (traps?|spoof|spoofing|stop hunt|pulls?) "),

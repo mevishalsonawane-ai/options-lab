@@ -164,6 +164,14 @@ class AutopilotCardTest {
         assertTrue(shows("the VWAP specialist on Pine (paper): counts → muted"))
     }
 
+    /** The log scrolled to entry [id]'s "Show details" and that tapped (its evidence is folded by default, Boss 12 Oct). */
+    private fun openRow(id: String) {
+        val tag = com.optionslab.app.ui.components.expandTag(autoLogKey(id))
+        compose.onNode(hasScrollAction()).performScrollToNode(hasTestTag(tag))
+        compose.frames()
+        compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick); compose.frames(); compose.waitForIdle()
+    }
+
     /** The log scrolled to the row holding [t] (a lazy list composes only what is on screen), then [t] shown. */
     private fun scrolledShows(t: String): Boolean {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(t, substring = true))
@@ -179,7 +187,10 @@ class AutopilotCardTest {
         assertTrue(scrolledShows("the OI specialist on Night (paper): counts → muted"))
         assertTrue(scrolledShows("experiment · paper only · running"))
         assertTrue(scrolledShows("0 pairs on paper trades (each one both ways)"))
-        // The probation: its lesson's q, the sequential test's state, the pre-flight it passed.
+        // The probation: its lesson's q, the sequential test's state, the pre-flight it passed - folded until "Show details".
+        val probation = smart.entries.first { it.status == AutoChange.Status.PROBATION }
+        assertFalse(shows("Lesson: q 0.004"))
+        openRow(probation.id)
         assertTrue(scrolledShows("Lesson: q 0.004"))
         assertTrue(scrolledShows("% of the way (leaning keep), 6 cases"))
         assertTrue(scrolledShows("Pre-flight passed: 12 cases replayed"))
@@ -198,8 +209,10 @@ class AutopilotCardTest {
         titleAndCloseApart()
         assertTrue(shows("Trials so far: 9"))
         assertTrue(scrolledShows("experiment · paper only · running"))
-        assertTrue(scrolledShows("Pre-flight passed: 12 cases replayed"))
+        // A skipped change says why in sight; the probation's pre-flight is behind its "Show details".
         assertTrue(scrolledShows("pre-flight failed: 20 cases replayed"))
+        openRow(smart.entries.first { it.status == AutoChange.Status.PROBATION }.id)
+        assertTrue(scrolledShows("Pre-flight passed: 12 cases replayed"))
     }
 
     @Test fun atLargeFontTheTitleAndCloseKeepApart() {

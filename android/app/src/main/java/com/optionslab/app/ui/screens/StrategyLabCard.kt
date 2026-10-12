@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.VariantRunner
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
+import com.optionslab.app.ui.components.Expandable
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
@@ -176,12 +177,17 @@ internal fun StrategyLabSheet(variants: VariantLab.Book, forge: StrategyForge.Bo
         LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp)) {
             item(key = "intro") {
-                Note("Variants and new ideas trade only virtually on the day's own data, after paper costs and half a spread more. A variant must beat " +
-                    "the current rules for ${VariantLab.MIN_N} days and pass the false-discovery check across all ${variants.tried} tried. Each variant is " +
-                    "the arm's own rules with other values. Paper changes reach the arm's paper trades by themselves from the next session, with Undo; " +
-                    "live ones need your PIN, also from the next session. A variant that loses too much goes back to the defaults by itself. " +
-                    "Liquidity 15+5 tunes its exits only. New ideas face walk-forward, a random twin and a count of all " +
-                    "${c.tried} ever tried, then ${StrategyForge.FWD_MIN_DAYS} virtual days before you are asked - paper only.")
+                // Boss (12 Oct): one line in sight (with the PIN rule); the method behind "Show details".
+                Expandable("lab-intro", summary = {
+                    Note("Variants and ideas trade only virtually. Live changes need your PIN; new ideas go to paper only.")
+                }) {
+                    Note("Variants and new ideas trade only virtually on the day's own data, after paper costs and half a spread more. A variant must beat " +
+                        "the current rules for ${VariantLab.MIN_N} days and pass the false-discovery check across all ${variants.tried} tried. Each variant is " +
+                        "the arm's own rules with other values. Paper changes reach the arm's paper trades by themselves from the next session, with Undo; " +
+                        "live ones need your PIN, also from the next session. A variant that loses too much goes back to the defaults by itself. " +
+                        "Liquidity 15+5 tunes its exits only. New ideas face walk-forward, a random twin and a count of all " +
+                        "${c.tried} ever tried, then ${StrategyForge.FWD_MIN_DAYS} virtual days before you are asked - paper only.")
+                }
             }
             item(key = "graveyard") {
                 Text("Graveyard: ${c.tried} ideas tried · ${c.passed} passed the backtest · ${c.retired} retired after forward · ${c.rejected} rejected · " +
@@ -257,10 +263,14 @@ private fun StrategyRow(s: VariantLab.Strategy, variants: VariantLab.Book, today
         }
         Text("Current: " + s.params.joinToString(", ") { pr -> "${pr.words} ${pr.say(variants.currentOf(s.key).getValue(pr.key))}" },
             style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
-        mine.take(8).forEach { v ->
-            Text("${v.id} · ${v.moved()} · ${v.status.words}" + (if (v.n > 0) " · ${VariantLab.state(v)}" else "") + (if (v.why.isNotEmpty() && !v.alive) " · ${v.why}" else ""),
-                style = Type.label.copy(color = if (v.status == VariantLab.Status.RETIRED || v.status == VariantLab.Status.PRECHECK_FAILED) p.inkSoft else p.ink, fontSize = 12.sp),
-                modifier = Modifier.padding(top = 3.dp))
+        // Each variant's line: folded (Boss, 12 Oct); what the arm runs and its Undo stay in sight above.
+        if (mine.isNotEmpty()) Expandable("lab-variants:${s.key}", label = "Show ${minOf(mine.size, 8)} variant${if (mine.size == 1) "" else "s"}",
+            hideLabel = "Hide variants") {
+            mine.take(8).forEach { v ->
+                Text("${v.id} · ${v.moved()} · ${v.status.words}" + (if (v.n > 0) " · ${VariantLab.state(v)}" else "") + (if (v.why.isNotEmpty() && !v.alive) " · ${v.why}" else ""),
+                    style = Type.label.copy(color = if (v.status == VariantLab.Status.RETIRED || v.status == VariantLab.Status.PRECHECK_FAILED) p.inkSoft else p.ink, fontSize = 12.sp),
+                    modifier = Modifier.padding(top = 3.dp))
+            }
         }
     }
 }
@@ -272,15 +282,18 @@ private fun IdeaRow(r: StrategyForge.Record, onAction: (LabAction, String) -> Un
         Text("${r.c.name} · ${r.stage.words}", style = Type.body.copy(color = p.ink, fontSize = 14.sp), modifier = Modifier.testTag("lab-idea-" + r.c.id))
         Text("Rules: " + r.c.rules.words(r.c.underlying), style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 3.dp))
         r.bt?.let { bt ->
-            Text("Backtest" + (if (bt.approx) " (index-only approximation)" else "") + (bt.from?.let { " · $it to ${bt.to}" } ?: ""),
+            // The backtest's net in sight; its table folded (Boss, 12 Oct).
+            Text("Backtest" + (if (bt.approx) " (index-only approximation)" else "") + (bt.from?.let { " · $it to ${bt.to}" } ?: "") + ": ${DiscoveryStats.rs(bt.net)}",
                 style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp))
-            TableRow("Trades / days", "${bt.trades} / ${bt.days}")
-            TableRow("Net after costs", DiscoveryStats.rs(bt.net))
-            TableRow("Won", "${bt.winRate.toInt()}%")
-            TableRow("Folds", bt.folds.joinToString(" / ") { DiscoveryStats.rs(it) })
-            TableRow("Random twin p", VariantLab.fmtP(bt.twinP))
-            TableRow("Deepest fall", DiscoveryStats.rs(-bt.maxDD))
-            bt.gates.forEach { (g, ok) -> TableRow(g, if (ok) "passed" else "failed") }
+            Expandable("lab-bt:${r.c.id}", label = "Show backtest", hideLabel = "Hide backtest") {
+                TableRow("Trades / days", "${bt.trades} / ${bt.days}")
+                TableRow("Net after costs", DiscoveryStats.rs(bt.net))
+                TableRow("Won", "${bt.winRate.toInt()}%")
+                TableRow("Folds", bt.folds.joinToString(" / ") { DiscoveryStats.rs(it) })
+                TableRow("Random twin p", VariantLab.fmtP(bt.twinP))
+                TableRow("Deepest fall", DiscoveryStats.rs(-bt.maxDD))
+                bt.gates.forEach { (g, ok) -> TableRow(g, if (ok) "passed" else "failed") }
+            }
         }
         if (r.fwdDays > 0) Text("Forward: ${r.fwd.size} trades over ${r.fwdDays} days, ${DiscoveryStats.rs(r.fwdNet)}",
             style = Type.label.copy(color = p.ink, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp))

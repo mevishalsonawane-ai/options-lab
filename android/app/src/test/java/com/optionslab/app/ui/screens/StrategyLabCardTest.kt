@@ -24,6 +24,7 @@ import com.optionslab.ira.StrategyForge
 import com.optionslab.ira.VariantLab
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -86,6 +87,12 @@ class StrategyLabCardTest {
         compose.onNodeWithTag("lab-sheet-close").getBoundsInRoot()))
     private fun scrollTo(t: String) { compose.onNode(hasScrollAction()).performScrollToNode(hasText(t, substring = true)); compose.frames() }
     private fun scrollToTag(t: String) { compose.onNode(hasScrollAction()).performScrollToNode(hasTestTag(t)); compose.frames() }
+    /** Scroll to a fold's toggle ([com.optionslab.app.ui.components.Expandable], key [key]) and tap it (Boss, 12 Oct: folded by default). */
+    private fun expand(key: String) {
+        val tag = com.optionslab.app.ui.components.expandTag(key)
+        scrollToTag(tag)
+        compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick); compose.frames(); compose.waitForIdle()
+    }
 
     @Test fun theCardSaysVariantsIdeasTheGraveyardAndWhatWaits() {
         var opened: String? = "none"
@@ -122,6 +129,8 @@ class StrategyLabCardTest {
         tap("Apply (PIN)")
         assertEquals(LabAction.APPLY_LIVE to "C6", asked.last())
         scrollTo("ORB (paper)")
+        assertFalse(shows("V2 · target 40 pts → 60 pts · retired"))
+        expand("lab-variants:orb")
         assertTrue(shows("V2 · target 40 pts → 60 pts · retired"))
         // Each idea: plain rules, the backtest table, the forward record, why it was retired; a survivor's Start on paper.
         scrollToTag("lab-start-F15")
@@ -130,8 +139,9 @@ class StrategyLabCardTest {
         scrollTo("Why retired: retired: it lost on live days")
         assertTrue(shows("Why retired: retired: it lost on live days (p 0.030)"))
         assertTrue(shows("Rules: BANKNIFTY, 1 lot, buys the at-the-money call or put"))
-        assertTrue(shows("Random twin p"))
         assertTrue(shows("Forward: 12 trades over 9 days"))
+        expand("lab-bt:F7")
+        assertTrue(shows("Random twin p"))
         compose.onNode(hasScrollAction()).performScrollToNode(hasTestTag("lab-sheet-graveyard"))
         tap("Close")
         assertTrue(closed)

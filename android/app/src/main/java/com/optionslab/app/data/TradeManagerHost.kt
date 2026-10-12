@@ -270,6 +270,18 @@ object TradeManagerHost {
     // ---- the other arms' one call (10 Oct: every strategy hooked, SHADOW by default) ------------------------------------------
 
     /**
+     * When an NSE arm's position bought on [day] is out by at the latest, epoch ms, for [ArmTrade.squareOffMs]: its arm's own
+     * exit [own], 15:05 when [symbol]'s option expires that day (the app's expiry square-off; the paper book's contract as it is
+     * in memory - not known there: not capped), never after F&O's close ([com.optionslab.engine.NseHours.squareOffMinute]).
+     * Memory only: no file, no network.
+     */
+    fun nseSquareOffMs(day: java.time.LocalDate, own: java.time.LocalTime, symbol: String): Long {
+        val expires = runCatching { Paper.contractIfLoaded(symbol)?.expiry == day }.getOrDefault(false)
+        val m = com.optionslab.engine.NseHours.squareOffMinute(day, own.hour * 60 + own.minute, expires)
+        return day.atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli() + m * 60_000L
+    }
+
+    /**
      * One position of an arm as its book holds it: [family] ([TradeManager.FAMILIES]), a stable [tradeId], what it holds
      * ([symbol], the paper book's; [kite] Zerodha's for a live one), [side] +1 a long bet on the underlying (a call, a future
      * bought) and −1 a short one (a put bought, a future sold: [shortFuture] for the latter), its [entry] and [qty], its own

@@ -18,7 +18,7 @@ import kotlin.math.abs
  * not stop it: closing what expires today only lowers risk.
  */
 object ExpirySquareOff {
-    const val AT_MINUTE = 15 * 60 + 5
+    const val AT_MINUTE = com.optionslab.engine.NseHours.EXPIRY_SQUARE_OFF
     private const val K_DONE = "sq.expiry.done"
 
     /**

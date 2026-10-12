@@ -191,8 +191,10 @@ object McxPaperArms {
             b.log.takeLast(40), b.positions.filter { !it.open }.groupBy { it.arm }.mapValues { (_, l) -> l.map { it.net ?: 0.0 } })
         // The trade manager's one call (10 Oct), every leg: SHADOW by default - it records only; the arms' own exits stay authoritative.
         runCatching {
-            val since = McxMarket.now().minusDays(2)
-            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it) })
+            val now = McxMarket.now()
+            val since = now.minusDays(2)
+            val cal = runCatching { McxMarket.calendar() }.getOrDefault(McxSession.DEFAULT)
+            TradeManagerHost.sync(b.positions.filter { it.open || it.exitTime?.isAfter(since) == true }.mapNotNull { managed(it, cal, now.toLocalDate()) })
         }
     }
 
@@ -210,15 +212,20 @@ object McxPaperArms {
 
     /**
      * [p] as the trade manager follows it: a bought option (its bet: a call up, a put down) or a future (its own stop and target
-     * on the future's price; a short one followed negated). MCX's long sessions: followed up to 20 hours after the entry.
+     * on the future's price; a short one followed negated), out by its arm's own exit time on its entry day, never after that
+     * day's MCX close ([McxArmRules.squareOffMinute]); a trend leg (held for days, no time exit) by [today]'s close. Was 20 hours
+     * after the entry: a 10:21 SILVERM morning call showed "1195 minutes to the square-off" at 10:26 (06:21 the next day).
      */
-    private fun managed(p: Pos): TradeManagerHost.ArmTrade? {
+    private fun managed(p: Pos, cal: McxSession.Calendar, today: LocalDate): TradeManagerHost.ArmTrade? {
         val fam = familyOf(p.arm) ?: return null
         val put = p.option && p.symbol.endsWith("PE")
         val dir = if (p.option) (if (put) -1 else 1) * p.side else p.side
         val at = p.entryTime.atZone(IST).toInstant().toEpochMilli()
+        val day = if (p.arm == McxTrendRules.SOURCE && today.isAfter(p.entryDay)) today else p.entryDay
+        val offMin = McxArmRules.squareOffMinute(p.arm, p.entryMinute, p.flatBy, runCatching { cal.window(day) }.getOrNull(), day)
+        val off = day.atStartOfDay(IST).toInstant().toEpochMilli() + offMin * 60_000L
         return TradeManagerHost.ArmTrade(fam, managerId(p), label(p.arm), SmartWorkers.underlyingOf(p.symbol), dir, p.symbol, p.entry, p.qty,
-            if (p.option) null else p.stopF, if (p.option) null else p.targetF, at + 20 * 3_600_000L, live = false, entryMs = at,
+            if (p.option) null else p.stopF, if (p.option) null else p.targetF, off, live = false, entryMs = at,
             exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.atZone(IST)?.toInstant()?.toEpochMilli(), shortFuture = p.side < 0, tick = if (p.option) 0.05 else 1.0)
     }
 

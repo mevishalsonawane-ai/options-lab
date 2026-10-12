@@ -257,4 +257,42 @@ class McxArmRulesTest {
         // Every leg is an MCX mini the app lists.
         assertTrue(McxTrendRules.LEGS.all { Mcx.isMcxName(it) })
     }
+
+    // ---- the trade manager's square-off (Boss's screenshot, 12 Oct: "1195 minutes to the square-off" at 10:26) -------------
+
+    /** Minutes from [h]:[mm] on [on] to the square-off minute [sq] of [on], as the trade manager's Time and theta counts them (epoch ms). */
+    private fun minutesLeft(on: LocalDate, h: Int, mm: Int, sq: Int): Long {
+        val nowMs = on.atTime(h, mm).atZone(IST).toInstant().toEpochMilli()
+        val offMs = on.atStartOfDay(IST).toInstant().toEpochMilli() + sq * 60_000L
+        return (offMs - nowMs) / 60_000
+    }
+
+    @Test fun squareOffIsTheArmsOwnExitThatDayNotTwentyHoursLater() {
+        val mon = d("2026-10-12")                      // US summer time: MCX closes 23:30
+        val w = cal.window(mon)
+        assertEquals(LocalTime.of(23, 30), w?.close)
+        // The SILVERM morning call bought at 10:21: out after four hours (14:21), so at 10:26 it has 235 minutes - not 1195
+        // (10:21 + 20 h = 06:21 the next day, the old cap).
+        val am = McxArmRules.squareOffMinute(McxMorningRules.SOURCE, m(10, 21), null, w, mon)
+        assertEquals(m(14, 21), am)
+        assertEquals(235L, minutesLeft(mon, 10, 26, am))
+        // A leg with no time exit of its own (the trend) is followed to the session's close: 10:26 -> 23:30 is 784 minutes.
+        val trend = McxArmRules.squareOffMinute(McxTrendRules.SOURCE, m(10, 21), null, w, mon)
+        assertEquals(m(23, 30), trend)
+        assertEquals(784L, minutesLeft(mon, 10, 26, trend))
+        // The evening break: its flat time as bought, else 23:15; the silver future: its flat time, else 10 minutes before the close.
+        assertEquals(m(23, 15), McxArmRules.squareOffMinute(McxEveRules.SOURCE, m(19, 30), null, w, mon))
+        assertEquals(m(22, 0), McxArmRules.squareOffMinute(McxEveRules.SOURCE, m(19, 30), m(22, 0), w, mon))
+        assertEquals(m(23, 20), McxArmRules.squareOffMinute(McxUsSilverRules.SOURCE, m(9, 5), null, w, mon))
+        assertEquals(m(23, 0), McxArmRules.squareOffMinute(McxUsSilverRules.SOURCE, m(9, 5), m(23, 0), w, mon))
+        // US winter time: the close is 23:55.
+        val winter = d("2026-11-16")
+        assertEquals(m(23, 55), McxArmRules.squareOffMinute(McxTrendRules.SOURCE, m(10, 0), null, cal.window(winter), winter))
+        // A short session (Diwali Muhurat, 18:00-19:00): nothing is followed past its close.
+        val muhurat = d("2026-11-08")
+        assertEquals(m(19, 0), McxArmRules.squareOffMinute(McxEveRules.SOURCE, m(18, 10), m(23, 15), cal.window(muhurat), muhurat))
+        assertEquals(m(18, 50), McxArmRules.squareOffMinute(McxMorningRules.SOURCE, m(18, 10), null, cal.window(muhurat), muhurat))
+        // No window (a shut day): MCX's ordinary close.
+        assertEquals(m(23, 30), McxArmRules.squareOffMinute(McxTrendRules.SOURCE, m(10, 0), null, null, mon))
+    }
 }

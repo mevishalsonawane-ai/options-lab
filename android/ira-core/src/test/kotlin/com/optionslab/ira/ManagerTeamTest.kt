@@ -310,6 +310,21 @@ class ManagerTeamTest {
         assertTrue(out.second.voters.containsAll(listOf("vwap", "profile", "oi", "gamma")))
         assertEquals(3, out.second.top.size)
         assertTrue(T.chairLine(e, out.second.lead, out.second.top).startsWith("Chair: EXIT (VWAP) - top reasons: VWAP:"))
+        // Folded (the Specialists sheet's collapsed view): the head and the first reason only.
+        val tops = out.second.top.map { "${T.nameOf(it.specialist)}: ${it.reason}" }
+        val short = T.chairShort(T.chairLine(e, out.second.lead, out.second.top), tops)
+        assertEquals("Chair: EXIT (VWAP) — top reason: ${tops.first()}", short)
+    }
+
+    @Test fun theChairAndTheRosterFoldToOneLine() {
+        assertEquals("Chair: HOLD - nothing stands out", T.chairShort("Chair: HOLD - nothing stands out", emptyList()))
+        assertEquals("Chair: EXIT (Bots)", T.chairShort("Chair: EXIT (Bots) - top reasons: x", emptyList()))
+        assertEquals("Chair: EXIT (Bots) — top reason: Bots: a", T.chairShort("Chair: EXIT (Bots) - top reasons: Bots: a; Traps: b", listOf("Bots: a", "Traps: b")))
+        assertEquals("16 specialists · none muted · 3 hard vetoes", T.rosterLine(emptySet()))
+        assertEquals(16, T.SPECIALISTS.size)
+        val muted = T.rosterLine(setOf("traps", "bots", "nobody"))
+        assertTrue(muted.startsWith("16 specialists · 2 muted ("), muted)
+        assertTrue(muted.contains(T.nameOf("traps")) && muted.contains(T.nameOf("bots")), muted)
     }
 
     @Test fun aHardVetoStandsWhateverTheWeightsAndAMuteNeverRemovesIt() {

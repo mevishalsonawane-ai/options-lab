@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.optionslab.app.ira.Autopilot
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
+import com.optionslab.app.ui.components.Expandable
 import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.theme.LocalPalette
@@ -204,10 +205,15 @@ internal fun AutopilotLogSheet(book: AutoChange.Book, said: String?, onAction: (
         LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 6.dp, bottom = 24.dp)) {
             item(key = "intro") {
-                Note("Changes the agents made by themselves, and those asked. Shadow and paper change by themselves; live only ever to lower " +
-                    "risk. Each change is first replayed on stored trades (pre-flight) and then judged by a sequential test that keeps or " +
-                    "reverts it as soon as the evidence is clear - at the latest after ${AutoChange.PROBATION_N} trades or ${AutoChange.PROBATION_DAYS} " +
-                    "trading days. A lesson still building is tried as a paper experiment first. An undo that adds live risk asks for your PIN.")
+                // Boss (12 Oct): one line in sight (with the PIN rule); how a change is judged behind "Show details".
+                Expandable("auto-intro", summary = {
+                    Note("Live only ever to lower risk. An undo that adds live risk asks for your PIN.")
+                }) {
+                    Note("Changes the agents made by themselves, and those asked. Shadow and paper change by themselves. Each change is " +
+                        "first replayed on stored trades (pre-flight) and then judged by a sequential test that keeps or reverts it as soon " +
+                        "as the evidence is clear - at the latest after ${AutoChange.PROBATION_N} trades or ${AutoChange.PROBATION_DAYS} " +
+                        "trading days. A lesson still building is tried as a paper experiment first.")
+                }
             }
             if (experiments.isNotEmpty()) items(experiments, key = { "x:" + it.id }) { x -> ExperimentRow(x) }
             if (entries.isEmpty()) item(key = "none") { Note("No changes yet.", Modifier.padding(vertical = 8.dp)) }
@@ -233,6 +239,9 @@ private fun ExperimentRow(x: Experiments.Experiment) {
     }
 }
 
+/** A change log row's fold ([Expandable]'s key) for the entry [id]. */
+internal fun autoLogKey(id: String): String = "auto-log:$id"
+
 @Composable
 private fun LogRow(e: AutoChange.Entry, agentPin: Boolean, onAction: (LogAction, String) -> Unit) {
     val p = LocalPalette.current
@@ -244,13 +253,21 @@ private fun LogRow(e: AutoChange.Entry, agentPin: Boolean, onAction: (LogAction,
             (if (e.by != "autopilot") " · by ${e.by}" else ""),
             style = Type.label.copy(color = if (e.status == AutoChange.Status.REVERTED) p.oxblood else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 4.dp))
         Text("Why: ${c.reason}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
-        if (e.note.isNotEmpty()) Text(e.note, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
-        if (e.afterN > 0) Text("Since: ${e.afterN} cases, ${com.optionslab.ira.AgentLessons.rs(e.effect)} against what would have happened",
-            style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
-        e.q?.let { q -> Text("Lesson: ${com.optionslab.ira.AgentLessons.qWords(q)}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp)) }
-        if (e.test.isNotEmpty()) Text("Test: ${e.test}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
-        if (e.preflight.isNotEmpty()) Text(e.preflight.replaceFirstChar { it.uppercase() },
-            style = Type.label.copy(color = if (e.status == AutoChange.Status.SKIPPED) p.oxblood else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        // A skipped change says in sight why nothing changed; the rest of the evidence is folded (Boss, 12 Oct).
+        val skipped = e.status == AutoChange.Status.SKIPPED
+        if (skipped && e.note.isNotEmpty()) Text(e.note, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        if (skipped && e.preflight.isNotEmpty()) Text(e.preflight.replaceFirstChar { it.uppercase() },
+            style = Type.label.copy(color = p.oxblood, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        val more = (!skipped && (e.note.isNotEmpty() || e.preflight.isNotEmpty())) || e.afterN > 0 || e.q != null || e.test.isNotEmpty()
+        if (more) Expandable(autoLogKey(e.id)) {
+            if (!skipped && e.note.isNotEmpty()) Text(e.note, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+            if (e.afterN > 0) Text("Since: ${e.afterN} cases, ${com.optionslab.ira.AgentLessons.rs(e.effect)} against what would have happened",
+                style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+            e.q?.let { q -> Text("Lesson: ${com.optionslab.ira.AgentLessons.qWords(q)}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp)) }
+            if (e.test.isNotEmpty()) Text("Test: ${e.test}", style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+            if (!skipped && e.preflight.isNotEmpty()) Text(e.preflight.replaceFirstChar { it.uppercase() },
+                style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        }
         val pin = c.scope == AutoChange.Scope.LIVE
         if (e.applied && e.status != AutoChange.Status.REVERT_ASKED)
             BrassButton(if (AutoChange.undoNeedsPin(c) || agentPin) "Undo (PIN)" else "Undo", Modifier.fillMaxWidth().padding(top = 6.dp).testTag("undo-" + e.id),

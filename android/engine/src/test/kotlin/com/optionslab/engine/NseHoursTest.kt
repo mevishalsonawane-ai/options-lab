@@ -41,4 +41,15 @@ class NseHoursTest {
         assertFalse(NseHours.indexOpen(9 * 60 + 14))
         assertEquals(NseHours.INDEX_CLOSE, NseHours.FO_CLOSE_BEFORE)
     }
+
+    @Test fun squareOffMinuteIsTheArmsOwnCappedByExpiryAndClose() {
+        val oct12 = LocalDate.of(2026, 10, 12)
+        assertEquals(15 * 60 + 10, NseHours.squareOffMinute(oct12, 15 * 60 + 10, expiresToday = false))
+        // On its option's expiry day the app's square-off closes it at 15:05.
+        assertEquals(NseHours.EXPIRY_SQUARE_OFF, NseHours.squareOffMinute(oct12, 15 * 60 + 10, expiresToday = true))
+        assertEquals(14 * 60 + 30, NseHours.squareOffMinute(oct12, 14 * 60 + 30, expiresToday = true))
+        // Never after F&O's close (15:40 now, 15:30 before 3 Aug 2026).
+        assertEquals(15 * 60 + 40, NseHours.squareOffMinute(oct12, 16 * 60, expiresToday = false))
+        assertEquals(15 * 60 + 30, NseHours.squareOffMinute(LocalDate.of(2026, 7, 31), 16 * 60, expiresToday = false))
+    }
 }

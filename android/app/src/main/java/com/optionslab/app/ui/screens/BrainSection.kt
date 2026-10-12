@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.optionslab.app.data.SmartWorkers
 import com.optionslab.app.ui.components.BrassButton
+import com.optionslab.app.ui.components.Expandable
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.components.Rule
 import com.optionslab.app.ui.components.TextButton
@@ -120,7 +121,13 @@ internal fun BrainSheet(onClose: () -> Unit) {
             said?.let { Text(it, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(vertical = 4.dp)) }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 BrainHeading("What the bots found (newest first)")
-                if (feed.isEmpty()) Note("Nothing standing just now.") else feed.forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
+                // The newest three in sight; the rest behind "Show all" (Boss, 12 Oct: no wall of text).
+                if (feed.isEmpty()) Note("Nothing standing just now.") else {
+                    feed.take(3).forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
+                    if (feed.size > 3) Expandable("brain-feed", label = "Show all ${feed.size}", hideLabel = "Show fewer") {
+                        feed.drop(3).forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
+                    }
+                }
                 BrainHeading("Pause new entries during")
                 Note("Pauses only ever skip a NEW entry, paper and live alike; exits always go. SHADOW changes nothing and logs, beside " +
                     "each signal, what a pause would have done, to judge later.")
@@ -145,7 +152,7 @@ internal fun BrainSheet(onClose: () -> Unit) {
                 }
                 if (effects.isNotEmpty()) {
                     BrainHeading("What the shadow pauses would have done")
-                    effects.forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
+                    Expandable("brain-effects") { effects.forEach { Note(it, Modifier.padding(vertical = 2.dp)) } }
                 }
             }
         }

@@ -30,6 +30,7 @@ import com.optionslab.app.data.ManagerSpecialists
 import com.optionslab.app.data.TradeManagerHost
 import com.optionslab.app.ui.AppModel
 import com.optionslab.app.ui.components.BrassButton
+import com.optionslab.app.ui.components.Expandable
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.components.Rule
 import com.optionslab.app.ui.components.TextButton
@@ -59,8 +60,13 @@ internal fun TradeManagerSection(model: AppModel, divider: Boolean = true) {
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
         val p = LocalPalette.current
         Text("Trade manager", style = Type.body.copy(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-        TradeManager.recordLines(records, policy).forEach { Note(it, Modifier.padding(top = 2.dp)) }
+        // The open trades first, always in sight; the record per strategy: three lines, the rest folded (Boss, 12 Oct).
         records.filter { !it.closed }.forEach { r -> Note("${r.trade.label}: " + TradeManager.cardLine(r), Modifier.padding(top = 2.dp)) }
+        val lines = TradeManager.recordLines(records, policy)
+        lines.take(3).forEach { Note(it, Modifier.padding(top = 2.dp)) }
+        if (lines.size > 3) Expandable("tm-card-records", label = "Show all ${lines.size}", hideLabel = "Show fewer") {
+            lines.drop(3).forEach { Note(it, Modifier.padding(top = 2.dp)) }
+        }
         BrassButton("Trade manager record", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { sheet = true }
         BrassButton("Specialists", Modifier.fillMaxWidth().padding(top = 6.dp), tone = p.inkSoft) { team = true }
     }
@@ -136,10 +142,15 @@ internal fun SpecialistsContent(
                 Text("Specialists", style = Type.title.copy(color = p.ink), modifier = Modifier.weight(1f))
                 TextButton(onClose) { Text("Close") }
             }
-            Note("Sixteen specialists each read one family of data and vote; the chair weighs the votes. News, traps and bad data can " +
-                "still order an exit alone. Muting a specialist needs no PIN: its votes stop counting and the manager moves back toward " +
-                "the original rules (its record goes on, and a hard veto stays). Weights tune themselves slowly on paper and shadow; " +
-                "live trades keep frozen weights until you accept a change with your PIN.")
+            // Boss (12 Oct): the sheet was a wall of text. One line here; the rest behind "Show details".
+            Expandable("spec-intro", summary = {
+                Note("Sixteen specialists vote; the chair weighs them. Muting needs no PIN.")
+            }) {
+                Note("Sixteen specialists each read one family of data and vote; the chair weighs the votes. News, traps and bad data can " +
+                    "still order an exit alone. Muting a specialist needs no PIN: its votes stop counting and the manager moves back toward " +
+                    "the original rules (its record goes on, and a hard veto stays). Weights tune themselves slowly on paper and shadow; " +
+                    "live trades keep frozen weights until you accept a change with your PIN.")
+            }
             said?.let { Text(it, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(vertical = 4.dp)) }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 BrainChoice("Strategy", TradeManager.FAMILIES.map { it.name }, TradeManager.familyName(family)) { picked ->
@@ -152,36 +163,46 @@ internal fun SpecialistsContent(
                 val open = views.values.filter { it.family == family }.sortedBy { it.label }
                 if (open.isEmpty()) Note("No open trade of ${TradeManager.familyName(family)} is being managed now.")
                 open.forEach { v ->
-                    Text(v.label + if (v.frozen) " · live (frozen weights)" else "",
-                        style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp))
-                    Note(v.chair)
-                    v.top.forEachIndexed { i, r -> Note("${i + 1}. $r", Modifier.padding(start = 8.dp)) }
-                    val vcfg = ManagerSpecialists.configFor(family, v.frozen)
-                    v.votes.forEach { vote ->
-                        // Under a research committee (R12) the specialists outside it look and are recorded, but do not decide.
-                        val outside = vcfg.isResearch && vote.specialist !in vcfg.members && vote.specialist !in vcfg.extendMembers
-                        Note(ManagerTeam.voteLine(vote, vcfg.spec(vote.specialist).weight, !outside && !vcfg.counts(vote.specialist)) +
-                            (if (outside) " · records only (research committee)" else ""), Modifier.padding(start = 8.dp, top = 2.dp))
+                    // Folded: the trade and the Chair's call with its first reason; open: the top three and every vote.
+                    Expandable("spec-trade:${v.tradeId}", summary = {
+                        Text(v.label + if (v.frozen) " · live (frozen weights)" else "",
+                            style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 8.dp))
+                        Note(ManagerTeam.chairShort(v.chair, v.top))
+                    }) {
+                        v.top.forEachIndexed { i, r -> Note("${i + 1}. $r", Modifier.padding(start = 8.dp)) }
+                        val vcfg = ManagerSpecialists.configFor(family, v.frozen)
+                        v.votes.forEach { vote ->
+                            // Under a research committee (R12) the specialists outside it look and are recorded, but do not decide.
+                            val outside = vcfg.isResearch && vote.specialist !in vcfg.members && vote.specialist !in vcfg.extendMembers
+                            Note(ManagerTeam.voteLine(vote, vcfg.spec(vote.specialist).weight, !outside && !vcfg.counts(vote.specialist)) +
+                                (if (outside) " · records only (research committee)" else ""), Modifier.padding(start = 8.dp, top = 2.dp))
+                        }
                     }
                 }
                 Text("SPECIALISTS (WEIGHT, MUTE, REPORT CARD)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
-                book.lines.firstOrNull { it.startsWith(TradeManager.familyName(family) + ":") }?.let { Note("Last night: $it", Modifier.padding(bottom = 4.dp)) }
-                ManagerTeam.SPECIALISTS.forEach { sp ->
-                    val mutedWhy = tuning?.muted?.get(sp.id)
-                    val card = cards.firstOrNull { it.family == family && it.specialist == sp.id }
-                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(sp.name + if (sp.id in ManagerTeam.VETOES) " (hard veto)" else "",
-                                style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
-                            Note("Weight ${String.format(java.util.Locale.ENGLISH, "%.2f", cfg.spec(sp.id).weight)}" +
-                                (if (cfg.spec(sp.id).gate && !cfg.isResearch) " · extension gate" else "") +
-                                (if (cfg.isResearch) (if (sp.id in cfg.members) " · runs the research's rule" else if (sp.id in cfg.extendMembers)
-                                    " · the research's extension vote" else " · records only (research committee)") else "") +
-                                (mutedWhy?.let { " · muted: $it" } ?: ""))
-                            Note(card?.let { SpecialistBook.cardLine(it) } ?: "No decision voted yet.")
+                // Folded: one line with what must stay in sight (how many are muted, the hard vetoes); open: each one's
+                // weight, report card and its Mute / Un-mute button (un-muting where live trades are acted on still asks the PIN).
+                Expandable("spec-roster:$family", label = "Show all ${ManagerTeam.SPECIALISTS.size} specialists", hideLabel = "Hide specialists", summary = {
+                    Note(ManagerTeam.rosterLine(tuning?.muted?.keys.orEmpty()))
+                    book.lines.firstOrNull { it.startsWith(TradeManager.familyName(family) + ":") }?.let { Note("Last night: $it", Modifier.padding(top = 2.dp)) }
+                }) {
+                    ManagerTeam.SPECIALISTS.forEach { sp ->
+                        val mutedWhy = tuning?.muted?.get(sp.id)
+                        val card = cards.firstOrNull { it.family == family && it.specialist == sp.id }
+                        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(sp.name + if (sp.id in ManagerTeam.VETOES) " (hard veto)" else "",
+                                    style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold))
+                                Note("Weight ${String.format(java.util.Locale.ENGLISH, "%.2f", cfg.spec(sp.id).weight)}" +
+                                    (if (cfg.spec(sp.id).gate && !cfg.isResearch) " · extension gate" else "") +
+                                    (if (cfg.isResearch) (if (sp.id in cfg.members) " · runs the research's rule" else if (sp.id in cfg.extendMembers)
+                                        " · the research's extension vote" else " · records only (research committee)") else "") +
+                                    (mutedWhy?.let { " · muted: $it" } ?: ""))
+                                Note(card?.let { SpecialistBook.cardLine(it) } ?: "No decision voted yet.")
+                            }
+                            if (mutedWhy == null) TextButton({ onMute(family, sp.id) }) { Text("Mute") }
+                            else TextButton({ onUnmute(family, sp.id) }) { Text(if (liveActs) "Un-mute (PIN)" else "Un-mute") }
                         }
-                        if (mutedWhy == null) TextButton({ onMute(family, sp.id) }) { Text("Mute") }
-                        else TextButton({ onUnmute(family, sp.id) }) { Text(if (liveActs) "Un-mute (PIN)" else "Un-mute") }
                     }
                 }
                 if (liveActs) {
@@ -245,14 +266,19 @@ internal fun TradeManagerContent(
                 Text("Trade manager record", style = Type.title.copy(color = p.ink), modifier = Modifier.weight(1f))
                 TextButton(onClose) { Text("Close") }
             }
-            Note("After a fill it keeps watching the trade with the live readings. It may exit early when the picture turns against " +
-                "the trade, and may move the target out only together with a lock at breakeven plus charges or better, raised on each " +
-                "move and trailing new highs at half the open profit. It never adds lots, never widens a stop and never moves a " +
-                "square-off. SHADOW records what it would do beside what the original rules did; nothing changes. Live to ACT asks " +
-                "for your PIN. Solo, Pine and ORB Fresh act on paper by default (ORB Fresh on research R12's proven rule: no " +
-                "progress in 20 minutes, a close 12% under the entry, a lock 3 option ATRs under the best high); each ORB arm has " +
-                "its own mode; every other strategy records only until you switch it on, and Night and MCX trend are off. " +
-                "A strategy with 30 settled trades and the manager ahead says \"ready to turn on?\" - a hint only, nothing switches by itself.")
+            // Boss (12 Oct): one line in sight (with the PIN rule); the rest behind "Show details".
+            Expandable("tm-intro", summary = {
+                Note("Watches each trade after its fill; SHADOW only records. Live to ACT asks for your PIN.")
+            }) {
+                Note("After a fill it keeps watching the trade with the live readings. It may exit early when the picture turns against " +
+                    "the trade, and may move the target out only together with a lock at breakeven plus charges or better, raised on each " +
+                    "move and trailing new highs at half the open profit. It never adds lots, never widens a stop and never moves a " +
+                    "square-off. SHADOW records what it would do beside what the original rules did; nothing changes. Live to ACT asks " +
+                    "for your PIN. Solo, Pine and ORB Fresh act on paper by default (ORB Fresh on research R12's proven rule: no " +
+                    "progress in 20 minutes, a close 12% under the entry, a lock 3 option ATRs under the best high); each ORB arm has " +
+                    "its own mode; every other strategy records only until you switch it on, and Night and MCX trend are off. " +
+                    "A strategy with 30 settled trades and the manager ahead says \"ready to turn on?\" - a hint only, nothing switches by itself.")
+            }
             said?.let { Text(it, style = Type.bodySmall.copy(color = p.ink, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(vertical = 4.dp)) }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 for (f in TradeManager.FAMILIES) {
@@ -272,7 +298,7 @@ internal fun TradeManagerContent(
                 Text("MODES NOW (ONE PER ARM)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
                 TradeManager.FAMILIES.forEach { f -> Note(TradeManager.modeLine(f.key, policy), Modifier.padding(vertical = 1.dp)) }
                 Text("WHAT THE RESEARCH SAID (R12)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
-                TradeManager.researchLines().forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
+                Expandable("tm-research") { TradeManager.researchLines().forEach { Note(it, Modifier.padding(vertical = 2.dp)) } }
                 Text("RECORD (PER STRATEGY, PAPER AND LIVE APART)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
                 TradeManager.recordLines(records, policy).forEach { Note(it, Modifier.padding(vertical = 2.dp)) }
                 Text("TRADES (NEWEST FIRST)", style = Type.label.copy(color = p.inkSoft, fontSize = 10.sp), modifier = Modifier.padding(top = 12.dp))
@@ -285,11 +311,14 @@ internal fun TradeManagerContent(
                             .clickable(onClickLabel = "Replay this trade") { com.optionslab.app.ira.BotReplayStore.show(r.trade.tradeId) }
                             .testTag("replay-" + r.trade.tradeId) else Modifier))
                     Note(TradeManager.cardLine(r))
-                    r.notes.takeLast(6).forEach { n ->
-                        Note("${com.optionslab.app.data.SmartWorkers.hhmm(n.atMs)} ${if (n.acted) "" else "(shadow) "}${n.kind.lowercase(java.util.Locale.ENGLISH).replace('_', ' ')}: ${n.words}",
-                            Modifier.padding(start = 8.dp))
+                    // Its decisions and the original rules' exit: folded (Boss, 12 Oct), the line above says how it went.
+                    if (r.notes.isNotEmpty() || r.original != null) Expandable("tm-trade:${r.trade.tradeId}") {
+                        r.notes.takeLast(6).forEach { n ->
+                            Note("${com.optionslab.app.data.SmartWorkers.hhmm(n.atMs)} ${if (n.acted) "" else "(shadow) "}${n.kind.lowercase(java.util.Locale.ENGLISH).replace('_', ' ')}: ${n.words}",
+                                Modifier.padding(start = 8.dp))
+                        }
+                        r.original?.let { o -> Note("Original rules: ${o.why.lowercase(java.util.Locale.ENGLISH)} at ${TradeManager.num(o.price)}", Modifier.padding(start = 8.dp)) }
                     }
-                    r.original?.let { o -> Note("Original rules: ${o.why.lowercase(java.util.Locale.ENGLISH)} at ${TradeManager.num(o.price)}", Modifier.padding(start = 8.dp)) }
                 }
             }
         }

@@ -42,6 +42,17 @@ object NseHours {
     /** F&O trades on [day] at [minute] (the trading-day calendar is the caller's). */
     fun foOpen(day: LocalDate, minute: Int): Boolean = minute in OPEN until foClose(day)
 
+    /** The app's expiry-day square-off: options expiring that day are closed from 15:05 (the app's setting, on by default). */
+    const val EXPIRY_SQUARE_OFF = 15 * 60 + 5
+
+    /**
+     * The minute of [day] an intraday position is out by at the latest, as the trade manager counts down to it: the arm's
+     * own exit time [ownMinute], never after the app's expiry square-off ([EXPIRY_SQUARE_OFF]) when its option expires that
+     * day ([expiresToday]), nor after F&O's close ([foClose]).
+     */
+    fun squareOffMinute(day: LocalDate, ownMinute: Int, expiresToday: Boolean): Int =
+        minOf(ownMinute, foClose(day), if (expiresToday) EXPIRY_SQUARE_OFF else Int.MAX_VALUE)
+
     /** The index (cash) session is on at [minute]. */
     fun indexOpen(minute: Int): Boolean = minute in OPEN until INDEX_CLOSE
 

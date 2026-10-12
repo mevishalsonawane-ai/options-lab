@@ -141,7 +141,7 @@ object VixDivArm {
     /** [p] as the trade manager follows it: a bought option, NIFTY's -15% stop on its premium, out by 15:10. */
     private fun managed(p: Pos) = TradeManagerHost.ArmTrade("vixdiv", managerId(p), VixDivRules.LABEL, p.index, if (p.right == "PE") -1 else 1,
         p.symbol, p.entry, p.qty, if (VixDivRules.liquidityExit(p.index)) VixDivRules.stop(p.entry, params(p.entryDay).stopPct) else null, null,
-        ms(p.entryDay.atTime(15, 10)), live = false, entryMs = ms(p.entryTime), exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.let { ms(it) })
+        TradeManagerHost.nseSquareOffMs(p.entryDay, java.time.LocalTime.of(15, 10), p.symbol), live = false, entryMs = ms(p.entryTime), exit = p.exit, exitWhy = p.why, exitMs = p.exitTime?.let { ms(it) })
 
     private fun note(b: Book, text: String) {
         b.log += "${Market.now().toLocalDateTime().withNano(0)} $text"

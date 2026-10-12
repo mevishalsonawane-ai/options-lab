@@ -666,7 +666,7 @@ object OrbArms {
     /**
      * [p] as the trade manager follows it: a bought option; its resting stop on the premium as it was handed over (the ORB
      * arms', Liquidity's 15%), the ORB arms' fixed target on the premium (Liquidity's target is an index level and the Hero
-     * arm has none: none here), out by 15:10. A position not confirmed at Zerodha yet is not handed over.
+     * arm has none: none here), out by 15:10 (the Hero arm 15:05; on its option's expiry day the expiry square-off's 15:05). A position not confirmed at Zerodha yet is not handed over.
      */
     private fun managed(p: Position): TradeManagerHost.ArmTrade? {
         if (p.unconfirmed) return null
@@ -680,7 +680,7 @@ object OrbArms {
         val lockAt: ((Double) -> Double?)? = ladder?.let { tg -> { peak: Double -> ProfitLock.level(p.entry, tg, peak, cost)?.let { ProfitLock.onTick(it) } } }
         return TradeManagerHost.ArmTrade(fam, managerId(p), arm.label, com.optionslab.ira.AutoSide.underlyingOf(p.symbol) ?: OrbRules.UNDERLYING,
             if (p.right == "PE") -1 else 1, p.symbol, p.entry, p.qty, if (arm.hero) null else p.stopTrigger, target,
-            epochMs(p.day.atTime(OrbRules.SQUARE_OFF)), p.live, epochMs(p.entryTime), p.exit, p.why, p.exitTime?.let { epochMs(it) }, kite = p.kite,
+            TradeManagerHost.nseSquareOffMs(p.day, if (arm.hero) HeroRules.EXIT_AT else OrbRules.SQUARE_OFF, p.symbol), p.live, epochMs(p.entryTime), p.exit, p.why, p.exitTime?.let { epochMs(it) }, kite = p.kite,
             lockAt = lockAt)
     }
 
