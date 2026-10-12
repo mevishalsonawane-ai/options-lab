@@ -348,7 +348,7 @@ object Paper {
      */
     fun memPrice(symbol: String, maxAgeMs: Long = 60_000L): Double? {
         cache?.contracts?.get(symbol)?.let { c -> runCatching { streamQuote(c, kept = true) }.getOrNull()?.ltp?.takeIf { it > 0 }?.let { return it } }
-        return lastQuotes[symbol]?.takeIf { System.currentTimeMillis() - it.first in 0..maxAgeMs }?.second?.ltp?.takeIf { it > 0 }
+        return lastQuotes[symbol]?.takeIf { quoteClock() - it.first in 0..maxAgeMs }?.second?.ltp?.takeIf { it > 0 }
     }
 
     /**
@@ -361,7 +361,9 @@ object Paper {
 
     /** The last price read for each symbol and when (the screen re-prices every few seconds). */
     private val lastQuotes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Quote>>()
-    private fun remember(symbol: String, q: Quote) { lastQuotes[symbol] = System.currentTimeMillis() to q }
+    private fun remember(symbol: String, q: Quote) { lastQuotes[symbol] = quoteClock() to q }
+    /** The kept prices' ages run on the market clock ([Market.now]), so a price is never reused across a session or a day. */
+    private fun quoteClock(): Long = Market.now().toInstant().toEpochMilli()
 
     /**
      * A price for a close or a cancel the owner just slid: the stream's tick, else one read in the last
@@ -370,7 +372,7 @@ object Paper {
     private suspend fun quickQuote(symbol: String, maxAgeMs: Long = 5_000): Quote? {
         val c = book().contracts[symbol] ?: return null
         streamQuote(c)?.let { return it }
-        lastQuotes[symbol]?.let { (at, q) -> if (System.currentTimeMillis() - at <= maxAgeMs) return q }
+        lastQuotes[symbol]?.let { (at, q) -> if (quoteClock() - at <= maxAgeMs) return q }
         return runCatching { quote(c) }.getOrNull()
     }
 
@@ -465,7 +467,7 @@ object Paper {
      */
     internal suspend fun recentQuote(c: Contract, maxAgeMs: Long): Quote? {
         streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
-        lastQuotes[c.symbol]?.let { (at, q) -> if (System.currentTimeMillis() - at in 0..maxAgeMs) return q }
+        lastQuotes[c.symbol]?.let { (at, q) -> if (quoteClock() - at in 0..maxAgeMs) return q }
         return quote(c)
     }
 
