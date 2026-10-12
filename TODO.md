@@ -161,3 +161,18 @@ Not possible yet:
         (changes only after CI passes).
       - Until G1 ships: export the recorded data by hand every Friday (Data & Harvest → Export) and upload it to the
         release.
+- [ ] G2. Automatic phone backup to GitHub, so a new phone restores everything (owner, 2026-10-12).
+      - Upload: every evening, using the same uploader and token as G1, the phone uploads the existing encrypted backup
+        (`data/Backup.kt`). It is sealed with Boss's backup password and goes to a GitHub Release `phone-backup` as an
+        asset, never as a commit. The last 30 days are kept, plus one backup per month for older ones.
+      - What it holds: settings, strategies, Pine scripts, the ORB arms and forward test, the paper account, alarms,
+        protections, the journal, live trade records and what Jarvis has learned. It also uploads straight away when a
+        strategy or Pine script is added or changed.
+      - New phone:
+        1. Install the APK and enter the GitHub token.
+        2. Use "Restore from GitHub": pick a date, then enter the backup password.
+        3. Log in to Zerodha.
+      - Safety rules stay as today. Strategies and Pine scripts come back switched off, with their stop and profit lock.
+        The PIN, Live/AI-live, tokens and the paper-only period are never in a backup, so they are set again on the new
+        phone.
+      - Card: "Last backup to GitHub: date ✓". A failure, or no backup for 2 days, goes to Problems found.
