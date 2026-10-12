@@ -31,6 +31,8 @@ import kotlin.math.abs
  *    ([ProposalKind]); never the PIN, the lock, Live, AI-live, a guard, the Google speech choice, the day lock or real
  *    orders ([safe]). Boss's yes or no is kept ([answered]): a yes raises the lesson's weight, a no lowers it, and
  *    [REJECTS] noes stop it being proposed for [COOLDOWN_DAYS] days.
+ *  - The research's own findings travel with them as fixed notes ([RESEARCH]: Majority Rule 14, R13), said in the answers
+ *    and the model's notes beside the lessons - never a lesson, never a proposal, never a trade or more risk.
  *
  * Nothing here acts. Pure: the app reads the agents' stores and keeps the [Book] (noBackupFilesDir).
  */
@@ -1114,6 +1116,7 @@ object AgentLessons {
     /** What [rest] names: a topic or a tag (a strategy, a specialist, a part of the day, a regime), or null. */
     fun subject(rest: String): Pair<Topic?, String?>? {
         val r = " " + rest.trim().removePrefix("the ").removePrefix("my ").removePrefix("your ").trim() + " "
+        if (MajorityRule.asked(r)) return null to "majority_rule"
         if (Regex(" specialists? ").containsMatchIn(r)) {
             ManagerTeam.specialistIn(r)?.let { return null to it.first }
             return Topic.SPECIALIST to null
@@ -1153,6 +1156,30 @@ object AgentLessons {
 
     const val NEVER_ACTS = "I only propose; nothing I learn changes a setting or a trade without your yes."
 
+    // ---- the research's bundled notes ----------------------------------------------------------------------------------------
+
+    /**
+     * A finding of the app's own research, bundled with the app (not learned from the agents' records): fixed words with the
+     * research's numbers, found by [tags]. It is never a [Lesson] - no evidence buckets, no confidence, never a [Proposal] -
+     * so it can never change a setting, raise any risk or make a trade; the lessons' answers and the model's notes only say it.
+     * It carries no word of Boss's account.
+     */
+    data class ResearchNote(val id: String, val name: String, val tags: List<String>, val text: String)
+
+    /** The bundled notes. Majority Rule 14 (R13, Boss 11 Oct: "let all agents know your finding" - context only, no alert). */
+    val RESEARCH: List<ResearchNote> = listOf(
+        ResearchNote("research:majority_rule_14", "Majority Rule 14 (weekly NIFTY)",
+            listOf("majority_rule", "majority", "mr14", "oversold"), MajorityRule.LESSON),
+    )
+
+    /** The bundled notes [question] names (one of a note's tags among its words, "majority rule", "MR 14", "sell-off zone"). */
+    fun research(question: String): List<ResearchNote> {
+        val t = Spaced.joined(question)
+        val qw = t.trim().split(' ').toSet()
+        val mr = MajorityRule.asked(question)
+        return RESEARCH.filter { n -> (mr && n.id == "research:majority_rule_14") || n.tags.any { it in qw } }
+    }
+
     /** "What have you learned?": the counts, the strongest few with their numbers. */
     fun sayAll(book: Book, max: Int = 4): String {
         val act = active(book)
@@ -1162,8 +1189,11 @@ object AgentLessons {
         val head = "From the agents I've learned ${act.size} lesson${if (act.size == 1) "" else "s"}, Boss: ${c[Confidence.STRONG]} strong, ${c[Confidence.BUILDING]} building, ${c[Confidence.WEAK]} weak."
         val body = if (shown.isEmpty()) " None has enough evidence yet to be more than a hunch (I need $BUILDING_N to call one building, $STRONG_N and agreement over time to call it strong)."
             else " " + shown.joinToString(" ") { "• ${said(it)}." }
-        return head + body + " Ask \"why do you think that?\" for the evidence. $NEVER_ACTS"
+        return head + body + " Ask \"why do you think that?\" for the evidence. $NEVER_ACTS" + RESEARCH_LINE
     }
+
+    /** Said after the lessons: the research notes carried beside them (context only). */
+    private val RESEARCH_LINE: String get() = " From the research I also carry " + RESEARCH.joinToString("; ") { it.name } + " - context only, never a trade."
 
     /** "What did you learn today?". */
     fun sayToday(book: Book, today: LocalDate): String {
@@ -1192,6 +1222,8 @@ object AgentLessons {
     /** "What do you know about [a]?". */
     fun sayAbout(book: Book, a: Ask, max: Int = 4): String {
         val what = a.about ?: a.topic?.title ?: a.tag ?: "that"
+        val notes = RESEARCH.filter { n -> a.tag != null && a.tag in n.tags }
+        if (notes.isNotEmpty()) return "From the research, Boss: " + notes.joinToString(" ") { it.text }
         val ls = about(book, a)
         if (ls.isEmpty()) return "I haven't learned anything about $what from the agents yet, Boss. I say a lesson only once their records hold numbers behind it."
         return "What I've learned about $what, Boss: " + ls.take(max).joinToString(" ") { "• ${said(it)}." } +
@@ -1247,10 +1279,12 @@ object AgentLessons {
     fun forModel(book: Book, question: String, cap: Int = MODEL_CHARS): List<String> {
         val qw = words(question).filter { it.length > 2 }.toSet()
         val pool = active(book).filter { it.confidence != Confidence.WEAK }
-        if (pool.isEmpty()) return emptyList()
-        val rel = pool.filter { l -> l.tags.any { it in qw } || words(l.name).any { it in qw } }
         val out = ArrayList<String>()
         var used = 0
+        // The research's notes the question names (fixed, no account word): first, within the same cap.
+        for (n in research(question)) if (used + n.text.length + 2 <= cap) { out += n.text; used += n.text.length + 2 }
+        if (pool.isEmpty()) return out
+        val rel = pool.filter { l -> l.tags.any { it in qw } || words(l.name).any { it in qw } }
         for (l in ranked(rel.ifEmpty { pool })) {
             val e = evidence(l)
             val s = "${statement(l)}: ${e.n} ${if (l.kind == Kind.RATE) "days/events" else l.topic.unit}" +

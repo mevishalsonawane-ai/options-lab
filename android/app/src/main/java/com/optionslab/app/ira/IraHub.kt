@@ -154,6 +154,10 @@ object IraHub {
     private var app: Context? = null
     /** The last candles read (stored + live), for backtests. */
     @Volatile private var histories: Map<IraMarket, History> = emptyMap()
+    /** Each index's daily closes from every stored session, kept by [load] as it reads them (no extra read; memory). */
+    @Volatile private var storedCloses: Map<IraMarket, List<Pair<LocalDate, Double>>> = emptyMap()
+    /** NIFTY's Majority Rule 14 reading and the completed weeks it was read from ([majorityUpdate]); context only. */
+    @Volatile private var majority: Pair<com.optionslab.ira.MajorityRule.Reading?, Int> = null to 0
     /** The days in [histories] each index's saved option candles show were its expiry days (market memory). */
     @Volatile private var expiryDays: Map<IraMarket, Set<LocalDate>> = emptyMap()
     /** Pattern, market, chart and day already backtested automatically (each is tried once a day). */
@@ -399,6 +403,9 @@ object IraHub {
                 if (added > 0) save()
                 val snaps = hs.mapNotNull { (m, h) -> Brain.read(h)?.let { m to it } }.toMap()
                 histories = hs
+                // Majority Rule 14 on weekly NIFTY (research R13): the reading for the brain and Jarvis, from closes in memory -
+                // context only, nothing acts on it ([majorityUpdate]).
+                if (!GOLD_ONLY_TALK) runCatching { majorityUpdate(hs) }
                 // The patterns Jarvis told of: how each went, from the phone's own candles ([com.optionslab.ira.PatternCalls]).
                 runCatching { IraTools.patternsSettle(hs.mapValues { it.value.bars }) }
                 // His trend and range reads: scored after each close by the same measure ([com.optionslab.ira.TrendReads]).
@@ -558,6 +565,29 @@ object IraHub {
         val out = bars.map { b -> candle(Instant.ofEpochSecond(b.epochSecond).atZone(IST).toLocalDateTime(), b) }
         synchronized(longCache) { longCache[key] = today to out }
         return out
+    }
+
+    /**
+     * NIFTY's Majority Rule 14 ([com.optionslab.ira.MajorityRule], research R13) from the daily closes already in memory: the
+     * stored sessions' closes [load] kept, the two-year candles if the lab fetched them today (nothing is fetched here) and
+     * [hs]'s recent candles. Kept for Jarvis's answer and set into the market brain as its weekly context tag. Context only
+     * (Boss, 11 Oct: no alert, no strategy): nothing that sizes, gates or enters reads it. A worker thread ([refresh]).
+     */
+    private fun majorityUpdate(hs: Map<IraMarket, History>) {
+        val today = LocalDate.now(IST)
+        val byDay = java.util.TreeMap<LocalDate, Double>()
+        val niftyKey = IraMarket.NIFTY.toString() + "|"
+        val long = synchronized(longCache) {
+            longCache.entries.filter { it.key.startsWith(niftyKey) && it.value.first == today }.maxByOrNull { it.value.second.size }?.value?.second
+        }
+        // Candles oldest first: each day's last one is its close.
+        long?.forEach { c -> byDay[c.t.toLocalDate()] = c.c }
+        storedCloses[IraMarket.NIFTY]?.forEach { (d, c) -> byDay[d] = c }
+        hs[IraMarket.NIFTY]?.bars?.forEach { c -> byDay[c.t.toLocalDate()] = c.c }
+        val weeks = com.optionslab.ira.MajorityRule.consecutive(com.optionslab.ira.MajorityRule.weekly(byDay.entries.map { it.key to it.value }, today))
+        val r = com.optionslab.ira.MajorityRule.reading(weeks)
+        majority = r to weeks.size
+        com.optionslab.app.data.SmartWorkers.weekly(r)
     }
 
     private fun propose(r: StrategyLab.Result, lead: String): Proposal {
@@ -1686,7 +1716,7 @@ object IraHub {
                 com.optionslab.ira.Routine.asked(q) || com.optionslab.ira.Routine.forgetAsked(q) || com.optionslab.ira.PatternCalls.asked(q) || com.optionslab.ira.TrendReads.asked(q) ||
                 com.optionslab.ira.Learnings.asked(q) != null || com.optionslab.ira.Learnings.undoAsked(q) ||
                 com.optionslab.ira.AgentLessons.asked(q) != null || com.optionslab.ira.AutoChange.asked(q) != null || SelfGrowth.asked(q) != null || com.optionslab.ira.LabTalk.asked(q) != null ||
-                com.optionslab.ira.SelfTalk.asked(q) != null ||
+                com.optionslab.ira.SelfTalk.asked(q) != null || com.optionslab.ira.MajorityRule.asked(q) ||
                 (com.optionslab.ira.AgentLessons.whyAsked(q) && JarvisLearning.whyFresh(_state.value.messages.lastOrNull { it.fromIra }?.text)) ||
                 com.optionslab.ira.NewsMoves.asked(q) != null || com.optionslab.ira.PreMarket.asked(q) ||
                 com.optionslab.ira.ChainDrift.asked(q) != null || com.optionslab.ira.SinceMorning.asked(q) ||
@@ -4012,6 +4042,19 @@ object IraHub {
      * took [q], answered exactly as before; each branch keeps its own guard (not [bundled], no order, no command).
      */
     private fun askedOfChain(q: String, parsed: com.optionslab.ira.Question, bundled: Boolean, understood: Boolean): Boolean {
+        // "What about majority rule?", "majority rule 14", "MR 14", "is Nifty in the sell-off zone" ([com.optionslab.ira.MajorityRule],
+        // research R13): NIFTY's MR(14) and zone from the weekly closes already worked out in memory ([majorityUpdate]; none: how
+        // many weeks the phone holds and the research's last reading), then the research's verdict. Market data and research
+        // only - no word of Boss's account, so fine on a locked phone. Context only (Boss, 11 Oct): no alert, nothing acts, never
+        // a trade or more size. Not in IraGoldAlgo.
+        if (!bundled && parsed.order == null && parsed.command == null && !com.optionslab.app.BuildConfig.GOLD &&
+            runCatching { com.optionslab.ira.MajorityRule.asked(q) }.getOrDefault(false)) {
+            val (r, weeks) = majority
+            val said = runCatching { com.optionslab.ira.MajorityRule.say(r, weeks) }.getOrElse { "I could not read Majority Rule 14 just now, Boss." }
+            _state.update { it.copy(messages = (it.messages + Msg(false, q)).takeLast(MAX_MESSAGES)) }
+            reply(said)
+            return true
+        }
         // "Is a big move likely now?", "abhi kitna risk hai", "volatile hai kya" ([com.optionslab.ira.BigMoveRisk]): how likely a
         // big 5-minute candle is in the next minutes for the index asked (Nifty when none is), from the real-data study's
         // signals - the time of day, a big candle just now, volatility and today's range against recent days, a falling
@@ -6387,22 +6430,28 @@ object IraHub {
 
     private fun load(): Map<IraMarket, History> {
         val expiries = HashMap<IraMarket, Set<LocalDate>>()
+        val closes = HashMap<IraMarket, List<Pair<LocalDate, Double>>>()
         val out = SOURCES.mapNotNull { (m, u) ->
             val bars = ArrayList<Candle>()
             val ex = HashSet<LocalDate>()
+            val dayCloses = ArrayList<Pair<LocalDate, Double>>()
             val all = Store.barDays(u)
             val from = all.takeLast(KEEP_DAYS).firstOrNull()
             // The last KEEP_DAYS days: enough for the snapshots and for learning each new day (the book skips what it learned).
             Store.barSessions(u).forEach { s ->
+                // Every session's last close, older ones too (already read here; Majority Rule 14 needs 15 weeks).
+                s.index?.let { ix -> if (ix.size > 0) dayCloses += s.day to ix.close[ix.size - 1] }
                 if (from != null && s.day.isBefore(from)) return@forEach
                 s.index?.let { ix -> bars += candles(s.day, ix) }
                 // An expiry day: the day's saved option candles include a contract expiring that day (for Jarvis's market memory).
                 if (s.series.any { it.right != Right.IX && it.expiry == s.day }) ex += s.day
             }
             if (ex.isNotEmpty()) expiries[m] = ex
+            if (dayCloses.isNotEmpty()) closes[m] = dayCloses
             if (bars.isEmpty()) null else m to History(m, bars)
         }.toMap()
         expiryDays = expiries
+        storedCloses = closes
         return out
     }
 

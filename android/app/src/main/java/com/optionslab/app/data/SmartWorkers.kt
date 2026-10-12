@@ -270,6 +270,15 @@ object SmartWorkers {
         }
     }
 
+    /**
+     * NIFTY's weekly Majority Rule 14 reading into the brain ([MarketBrain.Context.weekly], research R13), from Jarvis's
+     * refresh (a worker thread, the closes already in memory). CONTEXT ONLY (Boss, 11 Oct): no entry, pause, size or guard
+     * reads it - the Brain section and the agents only say it. Memory only.
+     */
+    fun weekly(r: com.optionslab.ira.MajorityRule.Reading?) {
+        runCatching { _brain.update { it.copy(weekly = r) } }
+    }
+
     // ---- wakes -------------------------------------------------------------------------------------------------------------
 
     private val wake = Channel<Unit>(Channel.CONFLATED)

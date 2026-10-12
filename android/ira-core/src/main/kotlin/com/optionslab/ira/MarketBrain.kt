@@ -21,7 +21,8 @@ import kotlin.math.sqrt
  *    for MCX, and each index's expiry hour (the last hour of F&O on its expiry day; shown, never a pause);
  *  - the order flow's trap flags per index (TrapGuard: pulls, stop hunts, failed breaks, an unreliable feed);
  *  - the big-move alarm (the move recorder's trigger) and its first [BIG_MOVE_MS];
- *  - the data's health ([SelfHeal.Fallbacks]).
+ *  - the data's health ([SelfHeal.Fallbacks]);
+ *  - NIFTY's weekly context ([Context.weekly]: Majority Rule 14's "deep weekly sell-off zone", research R13) - said, never acted on.
  *
  * And the one global "pause new entries during ..." ([Policy], [decide]): news windows ON by default (paper and live),
  * trap alerts / an unreliable feed / a big move's first 60 s SHADOW by default - logged beside each signal in the order
@@ -187,7 +188,15 @@ object MarketBrain {
         val bigMove: BigMove? = null,
         val health: SelfHeal.Fallbacks = SelfHeal.Fallbacks(),
         val incidents: List<String> = emptyList(),
+        /**
+         * NIFTY's weekly Majority Rule 14 reading ([MajorityRule], research R13), set from the weekly closes the phone already
+         * holds; null: not known. CONTEXT ONLY (Boss, 11 Oct: no alert, no strategy): [decide] and [causes] never read it, nor
+         * does anything that sizes, gates or enters - a specialist, the lab or Jarvis may only say it ([weeklyTags]).
+         */
+        val weekly: MajorityRule.Reading? = null,
     ) {
+        /** The weekly context tags: "deep weekly sell-off zone" while NIFTY's MR(14) is at or under 28.57; else none. */
+        fun weeklyTags(): List<String> = if (weekly?.zone == true) listOf(MajorityRule.TAG) else emptyList()
         fun activeWindows(nowMs: Long, underlying: String? = null): List<Window> = windows.filter { it.active(nowMs) && it.concerns(underlying) }
         fun busy(underlying: String?): Boolean = regimeOf(underlying)?.state == State.BUSY
         fun quiet(underlying: String?): Boolean = regimeOf(underlying)?.state == State.QUIET
@@ -276,6 +285,7 @@ object MarketBrain {
         out += "Trap flags: " + ctx.traps.filterValues { it.isNotEmpty() }.entries.joinToString("; ") { "${it.key} ${it.value.joinToString(",")}" }.ifEmpty { "none" }
         out += "Big move: " + (ctx.bigMove?.let { "${it.name} ${if (it.dir > 0) "up" else "down"} at ${hhmm(it.atMs)}" + if (ctx.bigMoveFresh(nowMs)) " (first 60 s)" else "" } ?: "none today")
         out += "Data health: " + ctx.health.words().ifEmpty { listOf("all fine") }.joinToString("; ")
+        ctx.weekly?.let { out += MajorityRule.brainLine(it) }
         out += "Pause new entries during: " + Cause.entries.joinToString(", ") { "${it.words} ${policy.mode(it).name.lowercase(Locale.ENGLISH)}" }
         return out
     }

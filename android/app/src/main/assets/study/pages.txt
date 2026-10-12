@@ -126,3 +126,12 @@ With ₹1 lakh, one lot is the size the research could carry safely (h17, h36): 
 Reaching ₹5,000 a day at the same edge would need 30-77 BANKNIFTY lots, about ₹22-63 lakh of capital (h36). Pyramiding and room-based sizing did not change the per-trade edge (h7).
 
 Rules that keep you in the game: a daily loss limit, a cap on trades a day (over-trading is mostly charges), no averaging down, a stop you never widen, and the kill switch. A bad day costs more than a good day makes when size grows faster than the edge.
+
+@@ majority-rule | Majority Rule 14 (weekly NIFTY) | Reading the market | majority rule, majority rule 14, mr 14, mr14, weekly, sell-off zone, oversold, 28.57
+What it is: MR(14) is the share of the last 14 weekly NIFTY closes that were above the week before (100 × up-weeks / 14). It moves in steps of 7.14, so 28.57 means only 4 of the last 14 weeks closed up - a deep, drawn-out weekly sell-off. The app calls that the deep weekly sell-off zone.
+
+The research's numbers (R13, 2006 - Oct 2026): it touched 28.57 only 13 times in 20 years, about 8 separate sell-offs. After a touch NIFTY was usually higher 1-3 months later in % terms: +6.2% after 4 weeks and +7.4% after 8 weeks, against +0.9% and +1.8% for any week. 28.57 is not a magic number: it is the general "after a deep sell-off" drift, and nearby thresholds, a length of 20 or the daily chart show nothing.
+
+What did not hold: "touch, then a green week, then +1,000 points" is not special - +1,000 before -500 came 33-50% of the time against 36% for any green week, and waiting for the green candle made the trade worse. With a +1,000 target and a -500 stop on one futures lot it made between -₹69k and +₹39k over 20 years. Buying calls on it was break-even to losing: VIX is high after a sell-off, so calls are dear, and the bounce is slow. As an intraday direction filter it has no usable tilt (57.5% up-days against 46.6%, p = 0.17).
+
+How the app uses it: context only (your decision, 11 Oct). No alert, no strategy, never an entry and never more size or risk. The Brain section shows a weekly line while the phone holds enough weekly closes; Jarvis says it when asked ("what about majority rule?").

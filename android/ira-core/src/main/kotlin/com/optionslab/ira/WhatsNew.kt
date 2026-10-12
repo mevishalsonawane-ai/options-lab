@@ -49,10 +49,16 @@ object WhatsNew {
     private val OCT9: LocalDate = LocalDate.of(2026, 10, 9)
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
+    private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-12-majority-rule-context", OCT12, "Majority Rule 14: every agent knows it",
+            "Jarvis, the Brain and a new Learn page now know the weekly Majority Rule 14 research: after a deep weekly sell-off NIFTY " +
+                "tended to drift up over 1-3 months, but +1,000 points and the green candle added nothing, and buying options on it was break-even to losing. " +
+                "As you decided it is context only: no alert, no strategy, never an entry and never more risk.",
+            "Research → Learn → Majority Rule 14; Home → Automation card → Brain"),
         Entry("2026-10-11-home-automation-card", OCT11, "Home puts trading first",
             "Home now starts with your money and live orders, then Strategies, MCX and the BANKNIFTY chart. " +
                 "The trade manager, Autopilot, Strategy lab, Order flow and Brain now share one Automation card. " +
