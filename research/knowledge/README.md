@@ -1,7 +1,7 @@
 # Jarvis's knowledge pack (L5 Level 4)
 
 `build_pack.py` turns the repo's research into one sourced pack that ships in the app
-(`android/app/src/main/assets/knowledge/pack.json.gz`, about 0.6 MB). Jarvis answers research questions ("what did the
+(`android/app/src/main/assets/knowledge/pack.bin`, about 0.6 MB). Jarvis answers research questions ("what did the
 research say about ORB?", "is Liquidity profitable?", "how does BankNifty behave on expiry after a gap down?") from it,
 on the phone, with no network: ira-core's `Knowledge` retrieves the best facts (BM25 + instruments + topic tags + a small
 English/Hinglish synonym map) and the answer is made of their own sentences, so every number said is a fact's.

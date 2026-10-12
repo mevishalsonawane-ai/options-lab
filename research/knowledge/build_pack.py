@@ -18,7 +18,7 @@ Each fact: id, kind, title, text (plain English with its numbers), tags, instrum
 verdict (positive / weak / negative / context, a keyword heuristic except for strategy cards and h42), confidence
 (high / medium / low) and personal (mentions Boss's own fills, trades or capital: never said on a locked phone).
 
-Output: android/app/src/main/assets/knowledge/pack.json.gz (deterministic: same sources -> same bytes) and a small
+Output: android/app/src/main/assets/knowledge/pack.bin (deterministic: same sources -> same bytes) and a small
 pack_meta.json beside it. The app's retrieval (ira-core Knowledge) reads only this file.
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 RESEARCH = ROOT / "research"
 OUT_DIR = ROOT / "android/app/src/main/assets/knowledge"
-OUT = OUT_DIR / "pack.json.gz"
+OUT = OUT_DIR / "pack.bin"   # gzip JSON; a neutral name so the APK packer never treats it as a .gz
 META = OUT_DIR / "pack_meta.json"
 SCHEMA = 1
 MAX_CHARS = 420           # one fact's text; longer passages are split at sentences

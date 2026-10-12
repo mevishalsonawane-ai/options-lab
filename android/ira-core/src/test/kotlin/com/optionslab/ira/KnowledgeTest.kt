@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
  * phone never gets Boss's own figures, and which questions are the research's.
  */
 class KnowledgeTest {
-    private val packFile: File = listOf("../app/src/main/assets/knowledge/pack.json.gz", "android/app/src/main/assets/knowledge/pack.json.gz")
+    private val packFile: File = listOf("../app/src/main/assets/knowledge/pack.bin", "android/app/src/main/assets/knowledge/pack.bin")
         .map(::File).first { it.isFile }
     private val repo: File = packFile.canonicalFile.parentFile.parentFile.parentFile.parentFile.parentFile.parentFile.parentFile
 
@@ -62,6 +62,13 @@ class KnowledgeTest {
         for (f in cards - whats.toSet()) assertTrue(f.text.contains("(Period:") && f.text.contains("Costs:"), f.id)
         for (id in listOf("liquidity-15-5", "orb", "orb-fresh", "orb-sweep", "range-fade", "expiry-hero", "night-r3", "short-straddle"))
             assertTrue(whats.any { it.id == "strategy.$id.what" }, id)
+    }
+
+    @Test fun theShippedBytesAreGzipAndPlainJsonReadsToo() {
+        val raw = packFile.readBytes()
+        assertTrue(raw[0] == 0x1f.toByte() && raw[1] == 0x8b.toByte())
+        val plain = java.util.zip.GZIPInputStream(raw.inputStream()).readBytes()
+        assertEquals(index.pack.facts.size, Knowledge.read(plain.inputStream()).facts.size)
     }
 
     @Test fun parseRejectsAnotherSchemaAndSkipsBrokenFacts() {

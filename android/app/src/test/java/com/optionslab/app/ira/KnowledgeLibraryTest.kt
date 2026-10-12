@@ -12,6 +12,9 @@ import org.junit.Test
  */
 class KnowledgeLibraryTest : RobolectricTest() {
     @Test fun theBundledPackAnswersAResearchQuestionFromItsFacts() {
+        // Read directly first: a failure here shows its own exception (the library keeps going without the pack).
+        val pack = context.assets.open(KnowledgeLibrary.ASSET).use { Knowledge.read(it) }
+        assertTrue(pack.facts.size > 2_000)
         val ix = checkNotNull(KnowledgeLibrary.index(context))
         assertTrue(ix.size > 2_000)
         val (said, facts) = KnowledgeLibrary.answer(context, "what did research say about ORB", locked = false)
