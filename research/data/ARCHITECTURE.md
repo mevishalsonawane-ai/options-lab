@@ -211,6 +211,42 @@ began first.
 - Order flow and exact VWAP/volume profile need tick data, so they **start from live recording**. History before 12 Oct
   has only the 1-minute estimates.
 
+## Changes the data dictionary forces (12 Oct)
+
+The new fields don't all fit the original "one table per minute" design. Eight changes:
+
+1. **A tick zone (new L1b).** Order flow, exact VWAP and exact volume profile need ticks and depth snapshots, not
+   minutes. The phone records them for a fixed watch-list: BANKNIFTY and NIFTY near futures, ATM ±3 options of the
+   current expiry, and India VIX. Each is stored as a per-second snapshot (LTP, volume, average traded price, best 5
+   bid/ask with quantities, total buy/sell quantity, OI).
+   - Size: about 2–5 MB per instrument per day compressed. About 20 instruments is roughly 60–100 MB a day.
+   - Per-minute order-flow aggregates are computed on the phone and uploaded every evening, about 1 MB. The raw
+     per-second files stay on the phone for 10 days and upload weekly, on Wi-Fi only, to monthly release assets.
+2. **Recording must never slow trading.** Ticks are written by a background writer through a bounded queue. If it
+   falls behind, it drops snapshots and counts the drops; it never blocks. Nothing touches the order or tick path:
+   OrderPathRound2Test stays at 0. Each dropped second is marked `gap` in L2.
+3. **Three new L3 tables beside the per-minute cube:**
+   - `levels`: one row per support/resistance level per day, with its price, type, source, formula version, first
+     valid time, and its held/broke record so far.
+   - `profiles`: the volume-at-price histogram per day and per week (POC, value area, nodes).
+   - `orderflow_1m`: the per-minute order-flow aggregates from live recording.
+4. **"Estimate" vs "exact" kept apart.** VWAP and volume profile before 12 Oct are estimates from 1-min futures data.
+   From 12 Oct they are exact, from ticks. Each value carries a `precision` flag. A model may not be trained on estimates
+   and then tested on exact values (or the reverse) without that check passing. Index VWAP and profile use the near-month
+   future's volume (the index has none), and switch on the roll day.
+5. **Two model families.** The **history family** uses only R and D fields (2020 onward, enough data now). The **order-flow
+   family** may also use L fields, which exist only from 12 Oct. It is shadow-only until it has at least 60 recorded
+   trading days and a holdout of its own (about January). L6 refuses any order-flow model before that. The encoder takes
+   L channels with a "missing" mask, so older days still train it.
+6. **Stricter point-in-time rules.** A day's final profile and POC are known only at the close. During the day only the
+   *developing* profile may be used. A level's "held N times" counts only earlier days. Global data (US close, GIFT
+   Nifty) is joined "as of" IST time, never by calendar date. The look-ahead guard tests each of these.
+7. **More fields means a stricter multiple-testing count.** Feature families are pre-registered before a model is
+   tried, and BH counts every family tried. Adding indicators "to see what works" counts as tries.
+8. **Store raw, recompute derived.** L1 keeps only raw data. Derived fields (indicators, levels, profiles) are
+   recomputed from code plus a formula version, and cached by version. So adding a field never re-downloads data, and an
+   old result can always be rebuilt.
+
 ## Additions before building (12 Oct)
 
 1. **Record more live data now.** At every signal and fill the app saves the option chain (ATM ±10: LTP, OI, IV), market
@@ -230,7 +266,7 @@ began first.
 
 | Phase | What | When | Value |
 |---|---|---|---|
-| **P1** | L1–L3: data lake, validation, market cube (the session running now) | this week | every later step depends on it |
+| **P1** | L1–L3: data lake, validation, market cube (+ levels/profiles tables) and the tick zone recorder | this week | every later step depends on it |
 | **P2** | L5 Level 4: Jarvis knowledge base + "days like today" (statistics, no model yet) | next | immediate: Jarvis explains the market with real numbers |
 | **P3** | L4 features + Level 1 specialists (regime, fill quality, Liquidity signal quality), in shadow | 2–3 weeks | the first chance of a measurable edge or saving |
 | **P4** | Level 2 market encoder (self-supervised), better "days like today", anomaly alerts | after P3 | better state description; feeds the specialists |
