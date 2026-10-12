@@ -134,7 +134,10 @@ class SpecialistsSheetTest {
         sheet()
         for (key in listOf("spec-intro", "spec-trade:t1", "spec-roster:$family")) {
             // Below the fold at font 2.0: scrolled into view first (a clipped node measures 0 high).
-            val b = compose.onNodeWithTag(expandTag(key)).performScrollTo().getBoundsInRoot()
+            // (the intro's sits above the scrolling part, so only the others scroll)
+            val node = compose.onNodeWithTag(expandTag(key))
+            runCatching { node.performScrollTo() }
+            val b = node.getBoundsInRoot()
             assertTrue("$key is ${b.bottom - b.top} high", b.bottom - b.top >= 47.5.dp)
             assertTrue("$key is cut on the right: $b", b.right <= 320.dp)
         }
