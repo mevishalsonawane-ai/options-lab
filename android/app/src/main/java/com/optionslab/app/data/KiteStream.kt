@@ -115,8 +115,9 @@ object KiteStream {
         if (wants[owner] == set) return
         if (set.isEmpty()) wants.remove(owner) else wants[owner] = set
         resubscribe()
-        // The order flow's instruments ride along with the stream; they never wake it or keep it running by themselves.
-        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER) wake()
+        // The order flow's and the tick zone's instruments ride along with the stream; they never wake it or keep it running
+        // by themselves (12 Oct: the tick zone records only while something else has the stream on).
+        if (set.isNotEmpty() && owner != "index" && owner != OrderFlowLive.OWNER && owner != TickZoneRecorder.OWNER) wake()
     }
 
     private val touched = ConcurrentHashMap<Long, Long>()
@@ -226,7 +227,7 @@ object KiteStream {
     /** Something reads live prices: the app on screen (or unknown), a part following instruments, a quote asked in the last 3 min. */
     private fun needed(): Boolean {
         if (foreground() != false) return true
-        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER }) return true
+        if (wants.keys.any { it != "index" && it != OrderFlowLive.OWNER && it != TickZoneRecorder.OWNER }) return true
         // The big-move recorder (on by default): kept on 09:15 to F&O's close, never in battery saver ([OrderFlowLive.keepStreamOn]).
         if (runCatching { OrderFlowLive.keepStreamOn() }.getOrDefault(false)) return true
         wanted()                                          // drops touches older than 3 minutes

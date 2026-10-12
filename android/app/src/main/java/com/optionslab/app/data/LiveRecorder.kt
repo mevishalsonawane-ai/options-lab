@@ -38,7 +38,8 @@ import java.util.zip.GZIPOutputStream
  *  - While NSE is open, once a minute: NIFTY's and BANKNIFTY's minute OHLC, their futures and VIX, and the chain at ATM +/-10.
  *
  * Files: noBackupFilesDir/recordings/YYYY-MM-DD/ ([LiveRecord.MARKET_FILE] plain gzip; [LiveRecord.TRADES_FILE] Boss's own
- * records, encrypted with [Vault]). Kept [keepDays] days (60 by default), a day's minute rows stop at 20 MB. Recording never
+ * records, encrypted with [Vault]; the tick zone's per-second files beside them, [TickZoneRecorder]). Kept [keepDays] days (60 by
+ * default), a day's minute rows stop at 20 MB. Recording never
  * places, changes, delays or refuses an order: every step is caught, and a failure is at most a gap line.
  */
 object LiveRecorder {
@@ -267,7 +268,8 @@ object LiveRecorder {
     private suspend fun writeMarket(day: LocalDate, lines: List<String>) = writeLock.withLock {
         val d = dayDir(day) ?: return@withLock
         d.mkdirs()
-        if (LiveRecord.overDayBudget(dirBytes(d))) return@withLock
+        // The day's budget counts the market and trade files; the tick zone's raw seconds have their own ([TickZoneRecorder]).
+        if (LiveRecord.overDayBudget(dirBytes(d) - File(d, com.optionslab.ira.TickZone.TICKS_FILE).length())) return@withLock
         val f = File(d, LiveRecord.MARKET_FILE)
         val head = if (f.exists()) emptyList() else listOf(LiveRecord.header(LiveRecord.MARKET_FILE, day, app()))
         java.io.FileOutputStream(f, true).use { it.write(gz((head + lines).joinToString("") { l -> l + "\n" })) }
@@ -342,25 +344,54 @@ object LiveRecorder {
         return zip
     }
 
-    /** The zip handed to Android's share sheet (Boss's tap; the zip is written on a worker thread). */
-    suspend fun share(ctx: Context): String {
-        val zip = kotlinx.coroutines.withContext(Dispatchers.IO) { exportZip(ctx) }
-        val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".exports", zip)
-        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-            type = "application/zip"
-            putExtra(android.content.Intent.EXTRA_STREAM, uri)
-            putExtra(android.content.Intent.EXTRA_SUBJECT, "IraAlgo recordings")
-            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    /**
+     * Every kept day in one zip written to [out] (the file Boss picked with the system picker, after his PIN; 12 Oct): the
+     * market files, the tick zone's files ([com.optionslab.ira.TickZone]) as stored, and Boss's trade files DECRYPTED here, on
+     * this phone, into plain JSON lines ("YYYY-MM-DD/trades.jsonl"); nothing is sent anywhere by the app. A line that cannot
+     * be opened is written as a gap line, never invented. Only the recordings folder is read: no setting, token or key.
+     * Returns the days written. A worker thread.
+     */
+    fun exportDecrypted(out: java.io.OutputStream): Int {
+        val plain = setOf(LiveRecord.MARKET_FILE, com.optionslab.ira.TickZone.TICKS_FILE, com.optionslab.ira.TickZone.FLOW_FILE)
+        var n = 0
+        java.util.zip.ZipOutputStream(out.buffered()).use { z ->
+            z.putNextEntry(java.util.zip.ZipEntry("README.txt"))
+            z.write((LiveRecord.DECRYPTED_README + "\n" + com.optionslab.ira.TickZone.README + "\n").toByteArray(Charsets.UTF_8))
+            z.closeEntry()
+            for ((day, f) in days()) {
+                val files = f.listFiles().orEmpty().sortedBy { it.name }
+                for (file in files) when (file.name) {
+                    in plain -> {
+                        z.putNextEntry(java.util.zip.ZipEntry("$day/${file.name}"))
+                        file.inputStream().use { it.copyTo(z) }
+                        z.closeEntry()
+                    }
+                    LiveRecord.TRADES_FILE -> {
+                        z.putNextEntry(java.util.zip.ZipEntry("$day/trades.jsonl"))
+                        file.bufferedReader(Charsets.US_ASCII).useLines { lines ->
+                            for (line in lines) {
+                                if (line.isBlank()) continue
+                                val text = runCatching {
+                                    val blob = Vault.decrypt(android.util.Base64.decode(line, android.util.Base64.NO_WRAP))
+                                    java.util.zip.GZIPInputStream(blob.inputStream()).use { it.readBytes() }
+                                }.getOrNull()
+                                if (text != null) z.write(text)
+                                else z.write((LiveRecord.gap(0L, "trades line", "could not be decrypted") + "\n").toByteArray(Charsets.UTF_8))
+                            }
+                        }
+                        z.closeEntry()
+                    }
+                }
+                if (files.any { it.name in plain || it.name == LiveRecord.TRADES_FILE }) n++
+            }
         }
-        val chooser = android.content.Intent.createChooser(send, "Share the recordings")
-            .apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        kotlinx.coroutines.withContext(Dispatchers.Main) { ctx.startActivity(chooser) }
-        return "Recordings ready to share (${com.optionslab.ira.MarketRecord.size(zip.length())}); your trades stay encrypted."
+        return n
     }
 
     /** Erase everything recorded (Boss's erase-everything). */
     fun wipe() {
         queue.drain()
+        runCatching { TickZoneRecorder.wipe() }
         firstOi.clear()
         lastWriteMs = null
         runCatching { root?.deleteRecursively() }
