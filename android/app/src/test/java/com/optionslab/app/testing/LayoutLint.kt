@@ -96,7 +96,8 @@ object LayoutLint {
         fun full(n: SemanticsNode) = Rect(n.positionInWindow.x, n.positionInWindow.y,
             n.positionInWindow.x + n.size.width, n.positionInWindow.y + n.size.height)
         fun dp(v: Float) = "%.1f".format(v / px)
-        fun hidden(n: SemanticsNode) = n.config.getOrNull(SemanticsProperties.InvisibleToUser) != null
+        // A lazy list keeps some items composed but not placed (scrolled off, kept for reuse): their bounds are stale, not drawn.
+        fun hidden(n: SemanticsNode) = n.config.getOrNull(SemanticsProperties.InvisibleToUser) != null || !n.layoutInfo.isPlaced
 
         for (n in nodes) {
             if (n === root || hidden(n)) continue
