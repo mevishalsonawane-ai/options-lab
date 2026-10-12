@@ -126,9 +126,19 @@ object Paper {
         save(b)
     }
 
-    @Synchronized
+    /**
+     * The book. 12 Oct (order speed): read from memory WITHOUT this object's lock when it is loaded - every reader (an
+     * arm's [opens] check, [closingSide], [exitPrices], [state], [contractOf]) used to queue on the lock behind a pass that
+     * held it, and a write's Keystore encryption ran under it. The book is an immutable value replaced whole under the lock,
+     * so a lock-free read is always one whole book. Loading (once a process) is still under the lock.
+     */
     private fun book(): Book {
         cache?.let { return it }
+        return synchronized(this) { cache ?: load() }
+    }
+
+    /** Read the book from its vault file (or a fresh account); called under the lock by [book]. */
+    private fun load(): Book {
         val loaded = runCatching {
             val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching null, Charsets.UTF_8))
             val cs = o.optJSONArray("contracts") ?: JSONArray()
@@ -149,16 +159,53 @@ object Paper {
         return b
     }
 
-    private fun fresh(capital: BigDecimal, contracts: Map<String, Contract>) =
-        Book(engine(capital, contracts).newState(Market.now()), capital, contracts)
+    /** The newest book not yet on disk (guarded by this object's lock); [flush] writes it. */
+    private var pending: Book? = null
+    /** One vault write at a time, in order; taken BEFORE this object's lock, never inside it. */
+    private val writeLock = Any()
 
-    @Synchronized
-    private fun save(b: Book) {
+    /** [block] under this object's lock, then the book it saved written to disk outside the lock ([flush]). */
+    private inline fun <T> locked(block: () -> T): T {
+        try { return synchronized(this) { block() } } finally { flush() }
+    }
+
+    /**
+     * Writes the newest saved book to the vault, outside this object's lock (readers and other orders go on meanwhile); one
+     * write at a time, never an older book over a newer one (each takes the newest pending under the write lock). A failed
+     * write is noted and kept pending for the next save's write; the book in memory stays as saved.
+     */
+    private fun flush() {
+        synchronized(writeLock) {
+            val b = synchronized(this) { pending.also { pending = null } } ?: return
+            try {
+                write(b)
+            } catch (e: Exception) {
+                synchronized(this) { if (pending == null) pending = b }
+                runCatching { Diag.record("paper", "The paper book could not be written (${e.javaClass.simpleName}); it is written again with the next change") }
+            }
+        }
+    }
+
+    private fun write(b: Book) {
         val cs = JSONArray()
         b.contracts.values.forEach { cs.put(JSONArray().put(it.symbol).put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.feedKey).put(it.exchange)) }
         val why = JSONObject(); b.why.forEach { (k, v) -> why.put(k, v) }
         Vault.writeFile(file, JSONObject().put("state", SandboxJson.encode(b.state)).put("capital", b.capital.toPlainString())
             .put("contracts", cs).put("cancelWhy", why).toString().toByteArray(Charsets.UTF_8))
+    }
+
+    private fun fresh(capital: BigDecimal, contracts: Map<String, Contract>) =
+        Book(engine(capital, contracts).newState(Market.now()), capital, contracts)
+
+    /**
+     * The book saved: in memory at once (under this object's lock: every reader sees it), and on disk by [flush] right after
+     * the caller's critical section ([locked]) - 12 Oct: the vault write (a Keystore encryption of the whole book and two
+     * disk syncs, a second or more on a Pixel's StrongBox) ran UNDER the lock, so every other paper order, cancel, pass and
+     * reader waited behind it (paper "sent -> answer" up to 62 s). The caller still returns only once its book is on disk.
+     */
+    @Synchronized
+    private fun save(b: Book) {
+        pending = b
         // An order placed, changed, cancelled or filled (any caller, or the book's own tick): Jarvis's kept account
         // figures are read afresh. Marking positions to the price alone does not count (the kept copy says its time).
         val ordersMoved = cache.let { was -> was == null || was.state.orders != b.state.orders || was.state.trades != b.state.trades }
@@ -219,7 +266,9 @@ object Paper {
      */
     suspend fun quote(c: Contract): Quote? {
         streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
-        val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
+        // 12 Oct: the quick read (5 s connect, 10 s read, one retry): the full one's 3 tries x 45 s and its rate-limit waits
+        // held a paper pass for minutes ("fast check: paper orders" 4 min 15 s), and every stop check behind it.
+        val bars = Net.intradayQuick(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isEmpty()) return null
         candleBars[c.symbol] = System.currentTimeMillis() to bars
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
@@ -420,6 +469,9 @@ object Paper {
         return quote(c)
     }
 
+    /** How old a price [place] may use again (the arm usually read it just before deciding). */
+    internal const val PLACE_REUSE_MS = 10_000L
+
     /** How old a price the words-only checks and the position cards may share ([snapshot]); never the stops or limits. */
     const val SHARED_QUOTE_MS = 20_000L
 
@@ -466,7 +518,7 @@ object Paper {
 
     /** Today's 1-minute candles of [c] from the paper feed (kept, as [quote] keeps them, for the minutes' highs and lows). */
     suspend fun minutes(c: Contract): List<Upstox.Bar> {
-        val bars = Net.intraday(c.feedKey).filter { it.istDate == Market.today() }
+        val bars = Net.intradayQuick(c.feedKey).filter { it.istDate == Market.today() }
         if (bars.isNotEmpty()) candleBars[c.symbol] = System.currentTimeMillis() to bars
         return bars
     }
@@ -595,7 +647,9 @@ object Paper {
         // exchange stamp of this contract's last stream tick, when it streams.
         val stamp = runCatching { kiteToken(c)?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
-        val read = known ?: runCatching { quote(c) }.getOrNull()
+        // 12 Oct: the stream's tick, else a price read in the last [PLACE_REUSE_MS] (the candle feed moves once a minute and
+        // the honest-paper checks below still judge its age), else a fresh read - not a download of the day's candles per order.
+        val read = known ?: runCatching { recentQuote(c, PLACE_REUSE_MS) }.getOrNull()
         // A paper entry never fills on a stale candle close (fix 4): refused with the reason, nothing placed.
         staleEntry(c, action, priceType)?.let { return Result(false, it, emptyList()) }
         // Honest paper (08 Oct): no fill on a price over a minute old. An exit fills on Zerodha's quote or the stale minute's
@@ -610,7 +664,7 @@ object Paper {
         val q = x.quote
         x.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
         val entry = runCatching { opens(c.symbol, action) }.getOrDefault(true)
-        val r = synchronized(this) {
+        val r = locked {
             // Remember the contract and place in one step, so a concurrent place cannot overwrite either.
             val b0 = book()
             val b = if (b0.contracts[c.symbol] == c) b0 else b0.copy(contracts = b0.contracts + (c.symbol to c))
@@ -643,7 +697,7 @@ object Paper {
         }
     }
 
-    fun modify(orderId: String, quantity: Int?, price: Double?, trigger: Double?): Result = synchronized(this) {
+    fun modify(orderId: String, quantity: Int?, price: Double?, trigger: Double?): Result = locked {
         val b = book()
         val out = engine(b.capital, b.contracts).modify(b.state, orderId, OrderChange(quantity, price, trigger), Market.now())
         save(b.copy(state = out.state))
@@ -659,7 +713,7 @@ object Paper {
     suspend fun cancel(orderId: String, why: String? = null): Result {
         val sym = book().state.orders.firstOrNull { it.orderId == orderId }?.symbol
         val q = sym?.let { quickQuote(it) }
-        synchronized(this) {
+        locked {
             val b = book()
             val out = engine(b.capital, b.contracts).cancel(b.state, orderId, Market.now(), q)
             val ended = out.events.any { it is SandboxEvent.OrderUpdate && it.orderId == orderId && it.status == "cancelled" }
@@ -676,7 +730,30 @@ object Paper {
         return if (m.size <= WHY_KEPT) m else LinkedHashMap(m.entries.drop(m.size - WHY_KEPT).associate { it.key to it.value })
     }
 
+    /** The positions a close is being sent for now ("symbol|product"): a second close of the same one is refused. */
+    private val closing = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** The open quantity of [symbol] in [product] in [b]. */
+    private fun heldIn(b: Book, symbol: String, product: String): Int =
+        b.state.positions.filter { it.symbol == symbol && it.product.equals(product, ignoreCase = true) }.sumOf { it.quantity }
+
+    /** What a close of a position that is not open says (never the engine's "Missing required field: quantity"). */
+    private fun notOpen(symbol: String) = Result(false, "No open paper position in $symbol: it is already closed.", emptyList())
+
+    /**
+     * Close the paper position in [symbol] / [product] at market. 12 Oct: a close of a row already flat (a second tap on a
+     * position card's "Close position" or a stale list's Close, while the first close was still on its way) reached the
+     * engine as an order of quantity 0 - "[error] Missing required field: quantity" three times at 09:05-09:06. Now a flat
+     * position is said to be closed already, and a second close of the same position while one is on its way is refused.
+     */
     suspend fun close(symbol: String, product: String): Result {
+        if (heldIn(book(), symbol, product) == 0) return notOpen(symbol)
+        val key = "$symbol|${product.uppercase(Locale.ENGLISH)}"
+        if (!closing.add(key)) return Result(false, "$symbol: a close is already on its way.", emptyList())
+        try { return closeOnce(symbol, product) } finally { closing.remove(key) }
+    }
+
+    private suspend fun closeOnce(symbol: String, product: String): Result {
         val stamp = runCatching { book().contracts[symbol]?.let { kiteToken(it) }?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = false, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
         val read = quickQuote(symbol)
@@ -684,8 +761,9 @@ object Paper {
         val x = book().contracts[symbol]?.let { exitQuote(it, read, closingSide(symbol)) }
         val q = x?.quote ?: read
         x?.note?.let { runCatching { Diag.record("paper", "Stale price: $it") } }
-        val r = synchronized(this) {
+        val r = locked {
             val b = book()
+            if (heldIn(b, symbol, product) == 0) return notOpen(symbol)
             val out = engine(b.capital, b.contracts).closePosition(b.state, symbol, exchangeOf(symbol), product, q, Market.now())
             save(b.copy(state = out.state))
             describe(out.result, out.events)
@@ -719,7 +797,7 @@ object Paper {
         // Honest paper (08 Oct): the orders fill on fresh prices only ([exitPrices]); positions are still marked to [q].
         // From 15:14 on (NSE's 15:15 square-off, and every MCX evening position after it, MCX's 23:20 / 23:45 cut included).
         val fill = exitPrices(q, alsoHeld = !Market.now().toLocalTime().isBefore(java.time.LocalTime.of(15, 14)))
-        synchronized(this) {
+        locked {
             val b = book()
             val e = engine(b.capital, b.contracts)
             val now = Market.now()
@@ -780,7 +858,7 @@ object Paper {
         val fill = exitPrices(q)
         val out = ArrayList<Swept>()
         val events = ArrayList<SandboxEvent>()
-        synchronized(this) {
+        locked {
             val b = book()
             val e = engine(b.capital, b.contracts)
             val now = Market.now()
@@ -809,7 +887,7 @@ object Paper {
      */
     suspend fun snapshot(reuseQuotesMs: Long = 0L): Snapshot {
         val q = quotes(watched(book().state) + book().state.holdings.map { it.symbol }, reuseQuotesMs)
-        synchronized(this) {
+        locked {
             val b = book()
             val e = engine(b.capital, b.contracts)
             val now = Market.now()
@@ -881,13 +959,16 @@ object Paper {
     }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
-    @Synchronized
-    fun reset(capital: BigDecimal) { save(fresh(capital, book().contracts)) }
+    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) } }
 
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
-    @Synchronized
-    internal fun forgetForTest() { cache = null; savedAtMs = 0L }
+    internal fun forgetForTest() { flush(); synchronized(this) { cache = null; savedAtMs = 0L } }
 
-    @Synchronized
-    fun wipe() { cache = null; savedAtMs = 0L; file.delete(); lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear() }
+    fun wipe() {
+        // The write lock first (as [flush] takes it): a write on its way never puts the file back after the delete.
+        synchronized(writeLock) { synchronized(this) {
+            pending = null; cache = null; savedAtMs = 0L; file.delete()
+        } }
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear()
+    }
 }

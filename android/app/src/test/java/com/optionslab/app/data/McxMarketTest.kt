@@ -131,6 +131,50 @@ class McxMarketTest : RobolectricTest() {
         assertEquals(true, Paper.mcxExposureIfLoaded())
     }
 
+    /**
+     * 12 Oct, 09:05-09:06: three "[error] Missing required field: quantity" - a close of a paper row that was already flat
+     * (a second tap while the first close was on its way) reached the engine as an order of quantity 0. Now it is said to be
+     * closed already, and nothing is placed.
+     */
+    @Test fun closingAPositionAlreadyClosedSaysSoAndPlacesNothing() = runBlocking {
+        at("2026-10-08", "20:00")
+        val c = McxMarket.paperContract(option)
+        assertTrue(Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, Quote(242.0)).ok)
+        assertTrue(Paper.place(c, "SELL", 1, "MARKET", "NRML", null, null, Quote(240.0)).ok)
+        val orders = Paper.state.orders.size
+        val r = Paper.close(c.symbol, "NRML")
+        assertFalse(r.ok)
+        assertEquals("No open paper position in ${c.symbol}: it is already closed.", r.message)
+        assertEquals("nothing placed", orders, Paper.state.orders.size)
+        // Never held at all: the same words.
+        assertEquals("No open paper position in NOPE: it is already closed.", Paper.close("NOPE", "MIS").message)
+    }
+
+    /**
+     * 12 Oct (order speed: paper "sent -> answer" up to 62 s): the paper book is read without its lock, so a reader never
+     * waits behind a pass or a vault write that holds it; and a save is on disk when the call returns.
+     */
+    @Test fun thePaperBookIsReadWithoutWaitingOnItsLock() = runBlocking {
+        at("2026-10-08", "20:00")
+        val c = McxMarket.paperContract(option)
+        assertTrue(Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, Quote(242.0)).ok)
+        // Written by the time place returned: a new process reads the position back.
+        Paper.forgetForTest()
+        assertEquals(100, Paper.state.positions.single().quantity)
+        val held = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val holder = Thread { synchronized(Paper) { held.countDown(); release.await() } }.apply { start() }
+        assertTrue(held.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        val pool = java.util.concurrent.Executors.newSingleThreadExecutor()
+        try {
+            val qty = pool.submit<Int> { Paper.state.positions.sumOf { it.quantity } + (if (Paper.contractOf(c.symbol) != null) 0 else -1) }
+                .get(3, java.util.concurrent.TimeUnit.SECONDS)
+            assertEquals(100, qty)
+        } finally {
+            release.countDown(); holder.join(5_000); pool.shutdownNow()
+        }
+    }
+
     /** ANR fix (9 Oct): a pass that only re-marks positions is told apart from one that changed the book. */
     @Test fun aMarksOnlyChangeIsToldApartFromABookChange() = runBlocking {
         at("2026-10-08", "20:00")
