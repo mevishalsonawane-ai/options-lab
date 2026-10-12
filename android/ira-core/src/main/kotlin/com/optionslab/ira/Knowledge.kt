@@ -243,7 +243,7 @@ object Knowledge {
                 else -> 0.55
             }
             val title = index.titles[i]
-            if (title.isNotEmpty()) x *= 1.0 + 0.5 * title.count { it in qset } / title.size
+            if (title.isNotEmpty()) x *= 1.0 + 1.0 * title.count { it in qset } / title.size
             val tagHits = f.tags.count { it in tagsAsked }
             x *= 1.0 + 0.2 * tagHits
             if (verdictAsked) x *= when { f.kind == "strategy" -> 1.4; f.kind == "finding" -> 1.2; f.verdict == "context" -> 0.85; else -> 1.0 }
@@ -302,7 +302,7 @@ object Knowledge {
     /** One fact as said and as the model's fact: its own text, then where it is from (doc, section, date) and the verdict. */
     fun line(f: Fact): String {
         val w = verdictWord(f.verdict)
-        val sec = f.sec.substringBefore(" > ").take(60)
+        val sec = f.sec.substringAfterLast(" > ").substringBefore(" (").trim().ifEmpty { f.sec }.take(60)
         return "${f.text.trim().trimEnd('.')}. (${f.doc}, $sec${if (f.date.isNotEmpty()) ", ${f.date}" else ""}${if (w.isNotEmpty()) "; $w" else ""})"
     }
 
