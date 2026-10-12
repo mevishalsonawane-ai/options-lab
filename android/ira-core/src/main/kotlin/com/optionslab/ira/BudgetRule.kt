@@ -23,6 +23,12 @@ object BudgetRule {
     const val NIGHT_CPU_MS = 10 * 60_000L
     const val NIGHT_FROM_HOUR = 16
     const val NIGHT_TO_HOUR = 8
+    /**
+     * 12 Oct ("tonight's background time is spent: the history vault waits for tomorrow" at 16:24, "Kept 24 pieces of 62"):
+     * the last [HISTORY_RESERVE_MS] of each budget is the history vault's - the other jobs stop short of it, so the vault
+     * (the phone's only copy of the day's option prices, gone from the feed in days) always gets its share.
+     */
+    const val HISTORY_RESERVE_MS = 3 * 60_000L
 
     enum class Job(val words: String) {
         FORGE("the strategy forge"), HISTORY("the history vault"), CONSOLIDATION("the weekly consolidation"), LEARNING("Jarvis's nightly learning"),
@@ -52,7 +58,7 @@ object BudgetRule {
     class CpuMeter(private val runGapMs: Long = 120_000L) {
         private val last = HashMap<Job, Pair<Long, Long>>()      // the CPU clock and the wall clock at the job's last ask
         private var countedTo = Long.MIN_VALUE                   // the CPU clock up to which time is already counted
-        var spentMs = 0L; private set
+        @Volatile var spentMs = 0L; private set
 
         private fun charge(from: Long, to: Long) {
             val start = maxOf(from, countedTo)
@@ -77,7 +83,10 @@ object BudgetRule {
         @Synchronized fun reset() { last.clear(); countedTo = Long.MIN_VALUE; spentMs = 0L }
     }
 
-    /** May [job] run now? [cpuUsedMs]: the background CPU spent so far this night. */
+    /**
+     * May [job] run now? [cpuUsedMs]: the background CPU spent so far this budget. Every job but the history vault stops at
+     * [capMs] less [HISTORY_RESERVE_MS] (the vault's share); the vault may use the whole budget.
+     */
     fun decide(job: Job, phone: Phone, cpuUsedMs: Long, capMs: Long = NIGHT_CPU_MS): Decision {
         val pct = phone.batteryPct
         if (pct != null && pct < MIN_BATTERY_PCT && !phone.charging) return Decision(false, "battery at $pct% and not charging: ${job.words} waits")
@@ -85,6 +94,8 @@ object BudgetRule {
         if (t != null && t > MAX_TEMP_C) return Decision(false, "battery at ${"%.1f".format(java.util.Locale.ENGLISH, t)} °C: ${job.words} waits for it to cool")
         if (phone.powerSave) return Decision(false, "battery saver is on: ${job.words} waits")
         if (cpuUsedMs >= capMs) return Decision(false, "tonight's background time (${capMs / 60_000} min of CPU) is spent: ${job.words} waits for tomorrow")
+        if (job != Job.HISTORY && cpuUsedMs >= capMs - HISTORY_RESERVE_MS)
+            return Decision(false, "tonight's background time is down to the history vault's share: ${job.words} waits for tomorrow")
         return Decision(true, "ok")
     }
 

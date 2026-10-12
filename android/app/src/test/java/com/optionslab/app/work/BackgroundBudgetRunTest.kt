@@ -68,4 +68,14 @@ class BackgroundBudgetRunTest : RobolectricTest() {
         assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
         assertTrue("6 of the 10 minutes, counted once", BackgroundBudget.allow(BudgetRule.Job.LEARNING))
     }
+
+    /** 12 Oct ("the history vault waits for tomorrow" at 16:24): the other jobs stop short of the vault's share of the night. */
+    @Test fun theHistoryVaultKeepsItsShareOfTheNight() {
+        assertTrue(BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        cpu += BudgetRule.NIGHT_CPU_MS - BudgetRule.HISTORY_RESERVE_MS
+        wall += 60_000L
+        assertFalse("the forge stops at the vault's share", BackgroundBudget.allow(BudgetRule.Job.FORGE))
+        assertFalse(BackgroundBudget.allow(BudgetRule.Job.ORDER_REVIEW))
+        assertTrue("the vault still runs", BackgroundBudget.allow(BudgetRule.Job.HISTORY))
+    }
 }

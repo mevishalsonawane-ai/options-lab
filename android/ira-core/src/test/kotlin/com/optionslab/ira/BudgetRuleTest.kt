@@ -35,4 +35,17 @@ class BudgetRuleTest {
         assertEquals(45, BudgetRule.pctOf(45, 100))
         assertNull(BudgetRule.pctOf(-1, 100))
     }
+
+    /** 12 Oct: the history vault waited for tomorrow at 16:24 with 24 of 62 pieces kept; the end of each budget is its share. */
+    @Test fun theLastMinutesOfTheBudgetAreTheHistoryVaults() {
+        val share = BudgetRule.NIGHT_CPU_MS - BudgetRule.HISTORY_RESERVE_MS
+        for (other in BudgetRule.Job.entries.filter { it != BudgetRule.Job.HISTORY }) {
+            assertTrue(BudgetRule.decide(other, ok, share - 1).allow)
+            val held = BudgetRule.decide(other, ok, share)
+            assertFalse(held.allow, other.name); assertTrue(held.why.contains("history vault's share"), held.why)
+        }
+        assertTrue(BudgetRule.decide(BudgetRule.Job.HISTORY, ok, share).allow)
+        assertTrue(BudgetRule.decide(BudgetRule.Job.HISTORY, ok, BudgetRule.NIGHT_CPU_MS - 1).allow)
+        assertFalse(BudgetRule.decide(BudgetRule.Job.HISTORY, ok, BudgetRule.NIGHT_CPU_MS).allow)
+    }
 }

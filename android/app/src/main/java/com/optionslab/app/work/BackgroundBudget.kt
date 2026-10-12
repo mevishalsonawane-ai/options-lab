@@ -44,22 +44,32 @@ object BackgroundBudget {
         return BudgetRule.Phone(pct, charging, temp, saver)
     }
 
-    private fun cpuMs(): Long = testCpuMs?.invoke() ?: runCatching { android.os.Process.getElapsedCpuTime() }.getOrDefault(0L)
+    /**
+     * The CPU clock of the thread asking (12 Oct): the job's own thread's CPU time, never the whole process's. The process's
+     * clock counted the market watch, the price stream, the screen and Jarvis's model on every core as the job's: a history
+     * vault run beside the MCX evening watch "spent tonight's 10 minutes" by 16:24 ("Kept 24 pieces of 62"). [testCpuMs]
+     * stands in for it in tests (one clock).
+     */
+    private fun cpuMs(): Long = testCpuMs?.invoke() ?: runCatching { android.os.SystemClock.currentThreadTimeMillis() }.getOrDefault(0L)
 
     private const val RUN_GAP_MS = 120_000L
     /**
-     * Per job: the CPU clock at its last [allow] (a run is the calls less than [RUN_GAP_MS] apart); two jobs running at
-     * once count the process's CPU once, not once each (review G8-10).
+     * One meter per thread (each with its own CPU clock): per job, the clock at its last [allow] on that thread (a run is the
+     * calls less than [RUN_GAP_MS] apart); two jobs on one thread count its CPU once (review G8-10). Tests: one meter.
      */
-    private val meter = BudgetRule.CpuMeter(RUN_GAP_MS)
+    private val meters = java.util.concurrent.ConcurrentHashMap<Long, BudgetRule.CpuMeter>()
+
+    private fun meter(): BudgetRule.CpuMeter =
+        meters.getOrPut(if (testCpuMs != null) 0L else Thread.currentThread().id) { BudgetRule.CpuMeter(RUN_GAP_MS) }
 
     /**
-     * The background CPU spent in this budget so far: within a job's run (its [allow] calls between steps), the process's CPU
-     * time from one call to the next is counted; the gaps between runs are not (the rest of the app is not the jobs').
+     * The background CPU spent in this budget so far: within a job's run (its [allow] calls between steps), its thread's CPU
+     * time from one call to the next is counted; the gaps between runs are not, nor any other thread's work.
      */
     private fun spent(job: BudgetRule.Job): Long {
         roll()
-        return meter.ask(job, cpuMs(), wallMs())
+        meter().ask(job, cpuMs(), wallMs())
+        return meters.values.sumOf { it.spentMs }
     }
 
     private fun wallMs(): Long = testWallMs?.invoke() ?: System.currentTimeMillis()
@@ -68,7 +78,7 @@ object BackgroundBudget {
     private fun roll() {
         val now = testNow ?: runCatching { com.optionslab.app.data.Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now() }
         val n = BudgetRule.budgetOf(now)
-        if (night != n) { night = n; meter.reset(); lastSaid = null }
+        if (night != n) { night = n; meters.clear(); lastSaid = null }
     }
 
     /**
@@ -77,7 +87,7 @@ object BackgroundBudget {
      */
     fun done(job: BudgetRule.Job) {
         roll()
-        meter.done(job, cpuMs())
+        meter().done(job, cpuMs())
     }
 
     /** May [job] run (or go on) now? Each call is cheap: one sticky-broadcast read and the CPU clock. */
@@ -91,5 +101,5 @@ object BackgroundBudget {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { night = null; meter.reset(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
+    internal fun resetForTest() { night = null; meters.clear(); lastSaid = null; testPhone = null; testCpuMs = null; testNow = null; testWallMs = null }
 }
