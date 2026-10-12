@@ -701,7 +701,12 @@ object Paper {
 
     /** Each paper fill in [r] measured against [intended] ([FillSlippage.paper]: kept in the background, never the book's). */
     private fun modelled(r: Result, entry: Boolean, intended: Double?, limit: Boolean) {
-        if (!r.ok || intended == null) return
+        if (!r.ok) return
+        // The live recording's snapshot of each paper fill (a queue add; built and written in the background).
+        r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { LiveRecorder.fill(f.symbol, f.action, !entry, f.quantity, f.price, intended, paper = true, arm = null) }
+        }
+        if (intended == null) return
         r.events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
             runCatching { FillSlippage.paper(f.symbol, f.action, entry, f.quantity, intended, f.price, limit) }
         }
@@ -799,6 +804,10 @@ object Paper {
      */
     suspend fun tick(): List<SandboxEvent> {
         val events = tickLocked()
+        // Resting paper orders that filled on this pass (stops, limits): the live recording's snapshot of each.
+        events.filterIsInstance<SandboxEvent.Fill>().forEach { f ->
+            runCatching { LiveRecorder.fill(f.symbol, f.action, f.action.equals("SELL", true), f.quantity, f.price, null, paper = true, arm = null, note = "resting") }
+        }
         // The engine's own 15:15 MIS square-off is named on the order it placed.
         events.filterIsInstance<SandboxEvent.SquareOff>().mapNotNull { it.result.orderId }
             .forEach { runCatching { Strategies.tagOwner("paper:$it", Origins.AUTO_SQUARE_OFF) } }

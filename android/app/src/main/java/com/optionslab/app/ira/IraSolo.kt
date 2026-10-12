@@ -499,6 +499,7 @@ internal object IraSolo {
                 noteDay { com.optionslab.ira.SoloDay.late(it, if (clock.isAfter(t)) clock else t) }
                 return LATE
             }
+            runCatching { com.optionslab.app.data.LiveRecorder.signal("Solo", c.symbol, s.underlying, right.name, q.ltp, paper = true) }
             // PAPER ONLY: the paper account's MARKET buy, 1 lot - there is no Zerodha path here.
             val r = Paper.place(c, "BUY", SoloMidday.LOTS, "MARKET", "MIS", null, null, q)
             val fill = r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()

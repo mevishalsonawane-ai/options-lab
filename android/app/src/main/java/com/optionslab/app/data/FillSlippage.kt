@@ -64,6 +64,11 @@ object FillSlippage {
             }
         } catch (_: Throwable) {
         }
+        // The live recording's snapshot of the market as the order went (a queue add; built and written in the background).
+        try {
+            LiveRecorder.order(o, exit, arm, intended, System.currentTimeMillis())
+        } catch (_: Throwable) {
+        }
     }
 
     private fun streamLast(o: Kite.Order): Double? {
@@ -87,6 +92,7 @@ object FillSlippage {
         val p = synchronized(pending) { pending.remove(id) } ?: return
         if (filled <= 0 || !(avg > 0)) return
         val at = System.currentTimeMillis()
+        runCatching { LiveRecorder.fill(p.symbol, p.side, p.exit, filled, avg, p.intended, paper = false, arm = p.arm ?: p.tag) }
         scope.launch {
             delay(settleMs)
             val owner = runCatching { Strategies.owners()["kite:$id"] }.getOrNull()

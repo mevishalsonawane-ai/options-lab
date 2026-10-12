@@ -1620,6 +1620,8 @@ object OrbArms {
     private suspend fun enter(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, live: Boolean): String {
         // Order speed: the arm decided here (timing only; nothing about the decision changes).
         runCatching { OrderTiming.decided() }
+        // The live recording's market snapshot at the signal (a queue add; nothing about the decision changes).
+        runCatching { LiveRecorder.signal(arm.label, c.symbol, c.underlying, c.right.name, null, paper = !live) }
         // One index, one side, for every automatic trader (Boss's 06 Oct rule): paper and live alike; Liquidity first (07 Oct).
         exposureRefusal(b, c, arm, live)?.let { return it }
         // The order flow at this decision (9 Oct): logged beside the signal; under CONFIRM an entry it does not agree with is
@@ -1995,6 +1997,7 @@ object OrbArms {
         // The order flow at this minute (paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
         val flow = FlowGate.gate(HeroRules.ARM.source, HeroRules.UNDERLYING, scan.signal, false, day.atTime(at).toString(), c.right.name, contract = c)
         if (flow.skip) return kept(flow.pausedWhy ?: FlowGate.SKIPPED, pick, limit, lots)
+        runCatching { LiveRecorder.signal(HeroRules.ARM.label, c.symbol, c.underlying, c.right.name, limit, paper = true) }
         val snap = runCatching { Paper.snapshot() }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", lots, limit), snap?.let { Guard.paperAccount(it) }, paper = true)
         if (refusals.isNotEmpty()) return kept("guard_refused: " + refusals.joinToString(" "), pick, limit, lots)
@@ -2673,6 +2676,8 @@ object OrbArms {
         val atSignal = runCatching { Paper.bookNow(c, decidedMs) }.getOrNull()
         runCatching { LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.SIGNAL, decidedMs, arm, c.symbol, live, atSignal?.last, null,
             atSignal, barCloseMs, null, 0)) }
+        // The live recording's market snapshot at the signal (a queue add from memory; never changes the entry).
+        runCatching { LiveRecorder.signal(arm.label, c.symbol, und, right.name, atSignal?.last, paper = !live) }
         exposureRefusal(b, c, arm, live)?.let { return it }
         // The order flow at this decision (per index; logged, and only ever a skip under CONFIRM), as the ORB's.
         val flow = FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, signalBar.toString(), arm.source, contract = c)

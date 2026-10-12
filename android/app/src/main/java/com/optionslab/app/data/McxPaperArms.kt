@@ -512,6 +512,7 @@ object McxPaperArms {
 
     private fun opened(b: Book, p: Pos, facts: String) {
         b.positions += p
+        runCatching { LiveRecorder.signal(label(p.arm), p.symbol, null, if (p.side > 0) "BUY" else "SELL", p.entry, paper = true, exchange = "MCX") }
         val verb = if (p.side > 0) "bought" else "sold"
         decideLine(b, p.arm, "$verb ${p.symbol} @ %.2f ($facts) · paper".format(Locale.ENGLISH, p.entry))
         runCatching { Notifier.post(app, 6970 + ARMS.indexOf(p.arm).coerceAtLeast(0), Notifier.BUY, "${label(p.arm)} $verb ${p.symbol} · Paper",

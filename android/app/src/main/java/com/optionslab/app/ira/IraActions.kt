@@ -665,6 +665,7 @@ internal object IraActions {
     suspend fun trade(t: IraOrders.Ticket, live: Boolean): String {
         IraAccount.invalidate()
         log("trade ${t.title} ${if (live) "LIVE" else "paper"}")
+        runCatching { com.optionslab.app.data.LiveRecorder.signal("Jarvis", "${t.underlying}${com.optionslab.engine.fmtG(t.strike)}${t.right.name}", t.underlying, if (t.buy) "BUY" else "SELL", null, paper = !live) }
         if (!live) {
             val c = com.optionslab.app.data.Paper.contractFor(t.underlying, t.expiry, t.strike, t.right) ?: return "${t.title} is not listed."
             val q = runCatching { com.optionslab.app.data.Paper.quote(c) }.getOrNull()

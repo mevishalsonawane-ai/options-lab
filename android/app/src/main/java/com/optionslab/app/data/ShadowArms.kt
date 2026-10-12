@@ -562,6 +562,7 @@ object ShadowArms {
         val ltp = price(c) ?: return "no_quote"
         val fill = ShadowRules.entryFill(ltp)
         if (ShadowRules.refused(fill)) return "refused_premium_at_or_under_40"
+        runCatching { LiveRecorder.signal(v.name, c.symbol, c.underlying, right.name, ltp, paper = true) }
         val base = Trade(v.id, c.symbol, c.feedKey, c.underlying, c.expiry, e.strike, right.name, c.lotSize, fill, t, e.signalBar,
             e.extreme, e.mid, e.indexStop, fill, ltp)
         if (b.armed[v.id] == true) {
