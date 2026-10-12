@@ -28,8 +28,8 @@ import kotlinx.coroutines.withContext
 /**
  * Settings → Data → "Recordings" (the Data Brain's live recording, [LiveRecorder], and the tick zone, [TickZoneRecorder]):
  * its switch, days kept, size, the last write, how long days are kept, the tick zone's lines, and "Export recordings (zip)"
- * (12 Oct): Boss's PIN first ([Reauth], PIN only), then a file he picks with the system file picker; the market and tick files
- * go in as stored and his trade files DECRYPTED, on this phone, into that file (nothing is sent anywhere by the app; no
+ * (12 Oct): Boss's PIN first ([Reauth], PIN only), then a file Boss picks with the system file picker; the market and tick files
+ * go in as stored and Boss's trade files DECRYPTED, on this phone, into that file (nothing is sent anywhere by the app; no
  * token or key is ever in it). Everything is read and written off the main thread.
  */
 @Composable
