@@ -157,7 +157,7 @@ Not possible yet:
         - The app reminds Boss 7 days before the token expires.
       - Card: "Last upload: date · size · ✓/✗", "N days waiting". A failure goes to Problems found.
       - Nightly GitHub job: verifies each upload, adds it to `research/data/CATALOG.json` and feeds the Data Brain.
-      - Docs: MAINTENANCE.md gets the steps to create and renew the token; README tells Boss to turn on "protect main"
+      - Docs: MAINTENANCE.md gets the steps to create and renew the token, and tells Boss to turn on "protect main"
         (changes only after CI passes).
       - Until G1 ships: export the recorded data by hand every Friday (Data & Harvest → Export) and upload it to the
         release.
