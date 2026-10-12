@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Bump when the cube's columns or rules change: days built with an older version are rebuilt by `cube build`.
-CUBE_VERSION = 1
+CUBE_VERSION = 2              # 2: futures OHLC, roll, vol_precision, minute ATM IV and max-OI strikes
 
 # --- the grid -------------------------------------------------------------------------------------------------------
 # NSE cash/F&O session 09:15-15:30 IST. Bars are stamped at the START of the minute, so the grid is 09:15 .. 15:29

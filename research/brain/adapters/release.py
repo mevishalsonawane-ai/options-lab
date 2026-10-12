@@ -5,7 +5,8 @@ Files (written by research/dump_year.py, dump_extra.py, dump_expiry.py; naive IS
       day, right IX/CE/PE, expiry, strike, ts, open, high, low, close, volume, open_interest
       index rows (right IX) + the nearest expiry AFTER the day at strikes within 1,000 points of the 09:20 index
   expiry_days.parquet      same columns + underlying: the expiring contract ON expiry days (BANKNIFTY from Feb 2025)
-  extra_series.parquet     ts, OHLC, series NIFTY / INDIAVIX / BNFUT (near-month BANKNIFTY future, no volume/OI)
+  extra_series.parquet     ts, OHLC, series NIFTY / INDIAVIX / BNFUT (near-month BANKNIFTY future, no volume/OI, no
+                           contract expiry: a continuous series, so the roll day is unknown)
 
 Download once with `python -m research.brain.cube fetch` (uses `gh api` or GH_TOKEN; the token is never printed).
 """
@@ -121,7 +122,7 @@ class ReleaseAdapter:
             if L.get("fut"):
                 f = x[x.series == L["fut"]]
                 if len(f):
-                    fut = f[["ts", "close"]].assign(volume=float("nan"), oi=float("nan"))
+                    fut = f[["ts", "open", "high", "low", "close"]].assign(volume=float("nan"), oi=float("nan"))
             v = x[x.series == L["vix"]] if L.get("vix") else x.iloc[0:0]
             vix = v[["ts", "close"]] if len(v) else empty(VIX_COLS)
             yield DayData(day=d, und=und, index=index.reset_index(drop=True), options=options, fut=fut.reset_index(drop=True),

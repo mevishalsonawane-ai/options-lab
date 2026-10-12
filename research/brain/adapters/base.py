@@ -13,7 +13,7 @@ import pandas as pd
 
 INDEX_COLS = ["ts", "open", "high", "low", "close", "volume"]
 OPTION_COLS = ["ts", "expiry", "strike", "side", "open", "high", "low", "close", "volume", "oi", "iv_vendor"]
-FUT_COLS = ["ts", "close", "volume", "oi"]
+FUT_COLS = ["ts", "open", "high", "low", "close", "volume", "oi"]
 VIX_COLS = ["ts", "close"]
 
 
@@ -30,6 +30,9 @@ class DayData:
     fut: pd.DataFrame = field(default_factory=lambda: empty(FUT_COLS))
     vix: pd.DataFrame = field(default_factory=lambda: empty(VIX_COLS))
     sources: dict = field(default_factory=dict)         # what each part came from (provenance, goes to the manifest)
+    fut_expiry: date | None = None                      # the futures contract in `fut` (None: a continuous series)
+    fut_roll: bool = False                              # True on the roll day: the near month expires today, so `fut`
+                                                        # is already the next month (whose volume the market moved to)
 
 
 class Adapter(Protocol):

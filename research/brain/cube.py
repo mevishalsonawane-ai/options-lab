@@ -6,7 +6,8 @@
     python -m research.brain.cube expiries                    # refresh calendar_data/expiries.csv from the release
 
 Per session two Parquet tables and a manifest under <cache>/cube/<UND>/<YYYY>/:
-  <day>.minutes.parquet   375 rows: index OHLCV + flag, futures + basis, VIX, ATM strike, expiry/DTE, events
+  <day>.minutes.parquet   375 rows: index OHLCV + flag, futures OHLCV + basis + roll, VIX, ATM strike, expiry/DTE,
+                          events, ATM IV and max-OI strikes
   <day>.chain.parquet     375 x 21 offsets x 2 sides: strike, bar, LTP (+age), OI, OI change, IV, Greeks, flag
   <day>.json              cube version, source fingerprint, provenance, row/flag counts (drives incremental builds)
 Nothing is filled: a missing bar is NaN with flag "gap". See README.md for every rule.
@@ -80,10 +81,20 @@ def build_day(dd: DayData, sessions: set[date] | None = None) -> tuple[pd.DataFr
         m[c] = I[c].values
     m["flag"] = iflag
 
-    # futures and basis
-    F, fi = _on_grid(dd.fut, g, ["close", "volume", "oi"])
-    fflag = quality.series_flags(F.close, F.close, F.close, F.close)
+    # futures and basis (the index has no volume: the near-month future's volume stands for it, see adapters)
+    F, fi = _on_grid(dd.fut, g, ["open", "high", "low", "close", "volume", "oi"])
+    fo, fh, fl = (np.where(np.isfinite(F[c].values), F[c].values, F.close.values) for c in ("open", "high", "low"))
+    fflag = quality.series_flags(fo, fh, fl, F.close)
+    if F.attrs.get("conflict"):
+        fflag[np.isin(g, list(F.attrs["conflict"]))] = "suspect"
+    m["fut_open"], m["fut_high"], m["fut_low"] = np.where(np.isfinite(F.close.values), fo, np.nan), fh, fl
     m["fut_close"], m["fut_volume"], m["fut_oi"], m["fut_flag"] = F.close.values, F.volume.values, F.oi.values, fflag
+    m["fut_expiry"] = pd.Timestamp(dd.fut_expiry) if dd.fut_expiry else pd.NaT
+    m["fut_roll"] = bool(dd.fut_roll)
+    # precision of everything built from volume (VWAP, profiles): "estimate" from 1-minute bars; "exact" is reserved
+    # for values rebuilt from recorded ticks (ARCHITECTURE "Changes" item 4); "none" when this minute has no volume
+    has_vol = np.isfinite(F.volume.values) & np.isin(fflag, ["ok", "stale"])
+    m["vol_precision"] = np.where(has_vol, "estimate", "none")
     both = (iflag == "ok") & (fflag == "ok")
     m["basis"] = np.where(both, F.close.values - I.close.values, np.nan)
     m["basis_pct"] = m.basis / m.close * 100
@@ -112,13 +123,45 @@ def build_day(dd: DayData, sessions: set[date] | None = None) -> tuple[pd.DataFr
     chain, ci = _chain(dd, g, exp, atm, ok_close, step)
     cov = chain.groupby("ts").flag.apply(lambda s: (s == "ok").mean()).reindex(g).values if len(chain) else np.zeros(n)
     m["chain_ok_share"] = cov
+    m["atm_iv"], m["oi_max_call_strike"], m["oi_max_put_strike"] = _chain_summary(chain, g)
     m = m.reset_index()
 
     man = dict(cube_version=config.CUBE_VERSION, und=und, day=str(day), sources=dd.sources,
-               expiry=str(exp) if exp else None, expiry_source=exp_src, is_expiry_day=bool(m.is_expiry_day.iloc[0]),
+               expiry=str(exp) if exp else None, expiry_source=exp_src, fut_expiry=str(dd.fut_expiry or ""),
+               fut_roll=bool(dd.fut_roll), is_expiry_day=bool(m.is_expiry_day.iloc[0]),
                events=ev, index=dict(ii, flags=quality.counts(iflag)), fut=dict(fi, flags=quality.counts(fflag)),
                vix=dict(vi, flags=quality.counts(m.vix_flag)), chain=ci)
     return m, chain, man
+
+
+def _chain_summary(ch: pd.DataFrame, g) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Per minute, from that minute's chain rows only: ATM IV (mean of the ATM call and put IV that traded), and the
+    call / put strikes with the largest last-reported OI over ATM-10..ATM+10 (NaN with fewer than 10 strikes
+    reporting OI; ties go to the strike nearest ATM, then the lower one). Kept in the minutes table so that features
+    looking back many sessions (IV rank, levels) need not load the chain."""
+    n = len(g)
+    nan = np.full(n, np.nan)
+    if ch is None or ch.empty:
+        return nan, nan.copy(), nan.copy()
+    a0 = ch[ch.offset == 0]
+    with np.errstate(invalid="ignore"):
+        iv = pd.Series(a0.iv.values).groupby(g.get_indexer(pd.DatetimeIndex(a0.ts))).mean()
+    atm_iv = nan.copy()
+    atm_iv[iv.index.values] = iv.values
+    out = []
+    for side in ("C", "P"):
+        s = ch[(ch.side == side) & np.isfinite(ch.oi.values)]
+        if s.empty:
+            out.append(nan.copy())
+            continue
+        s = s.assign(t=g.get_indexer(pd.DatetimeIndex(s.ts)), ab=s.offset.abs())
+        cnt = s.groupby("t").size()
+        best = s.sort_values(["t", "oi", "ab", "strike"], ascending=[True, False, True, True]).groupby("t").first()
+        k = nan.copy()
+        okt = cnt[cnt >= 10].index.values
+        k[okt] = best.strike.reindex(okt).values
+        out.append(k)
+    return atm_iv, out[0], out[1]
 
 
 def _chain(dd: DayData, g, exp, atm, spot, step) -> tuple[pd.DataFrame, dict]:
@@ -249,14 +292,16 @@ def built_days(root: Path, und: str) -> list[date]:
     return sorted(date.fromisoformat(p.name[:10]) for p in base.glob("*/*.json"))
 
 
-def load(root: Path, und: str, frm: date | None = None, to: date | None = None, chain: bool = True):
-    """Read built days back: (minutes, chain) concatenated, sorted by time."""
+def load(root: Path, und: str, frm: date | None = None, to: date | None = None, chain: bool = True,
+         chain_from: date | None = None):
+    """Read built days back: (minutes, chain) concatenated, sorted by time. chain_from: load the chain only from this
+    day on (the minutes of earlier days are still loaded)."""
     days = [d for d in built_days(root, und) if (frm is None or d >= frm) and (to is None or d <= to)]
     ms, cs = [], []
     for d in days:
         pm, pc, _ = day_paths(root, und, d)
         ms.append(pd.read_parquet(pm))
-        if chain and pc.exists():
+        if chain and pc.exists() and (chain_from is None or d >= chain_from):
             cs.append(pd.read_parquet(pc))
     M = pd.concat(ms, ignore_index=True) if ms else pd.DataFrame()
     C = pd.concat(cs, ignore_index=True) if cs else pd.DataFrame()

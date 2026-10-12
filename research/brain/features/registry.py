@@ -18,7 +18,8 @@ import pandas as pd
 
 from .. import config
 
-FAMILIES = ("price", "structure", "options", "market", "calendar")
+FAMILIES = ("price", "structure", "volume", "profile", "levels", "indicators", "candles", "options", "market",
+            "calendar", "breadth")
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,16 @@ class Feature:
 
 
 REGISTRY: dict[str, Feature] = {}
+PENDING: dict[str, dict] = {}       # features defined in the dictionary but not computable from any source yet
+
+
+def pending(name: str, family: str, needs: str, description: str):
+    """Register a dictionary field that has no data source yet. It is listed in FEATURES.md as "pending data" and is
+    never computed: no column, no placeholder values."""
+    assert family in FAMILIES, family
+    if name in REGISTRY or name in PENDING:
+        raise ValueError(f"duplicate feature {name}")
+    PENDING[name] = dict(name=name, family=family, needs=needs, description=description)
 
 
 def feature(name: str, family: str, version: int, inputs: list[str], lookback: str, description: str):
@@ -56,13 +67,17 @@ def signature(names=None) -> str:
     return h
 
 
-def warmup_sessions(names=None) -> int:
-    """Sessions of history a feature set needs before the first day it is written for."""
+def warmup_sessions(names=None, chain_only: bool = False) -> int:
+    """Sessions of history a feature set needs before the first day it is written for. chain_only: the same, counting
+    only features that read the chain (the chain is ~30x the size of the minutes, so it is loaded for fewer days)."""
     from . import load_all
     load_all()
     w = 1
     for n in names or REGISTRY:
-        lb = REGISTRY[n].lookback
+        f = REGISTRY[n]
+        if chain_only and not any(i.startswith("chain.") for i in f.inputs):
+            continue
+        lb = f.lookback
         if lb.endswith("d") and lb[:-1].isdigit():
             w = max(w, int(lb[:-1]))
     return w
@@ -91,6 +106,18 @@ class Ctx:
         self.c = np.where(good, m.close.values, np.nan)
         self.chain = chain if chain is not None else pd.DataFrame()
         self._memo: dict = {}
+
+    # --- near-month future (the index's volume; see cube) ---
+    def fut(self) -> dict:
+        """Futures OHLCV on rows flagged ok/stale (NaN otherwise); volume NaN where the source has none."""
+        def make():
+            m = self.m
+            good = m.fut_flag.isin(["ok", "stale"]).values if "fut_flag" in m else np.zeros(self.n, bool)
+            out = {}
+            for k, c in (("o", "fut_open"), ("h", "fut_high"), ("l", "fut_low"), ("c", "fut_close"), ("v", "fut_volume")):
+                out[k] = np.where(good, m[c].values.astype(float), np.nan) if c in m else np.full(self.n, np.nan)
+            return out
+        return self.memo("fut", make)
 
     def memo(self, key, fn):
         if key not in self._memo:
@@ -188,5 +215,13 @@ def catalogue_md() -> str:
                   "|---|---|---|---|---|"]
         for f in fs:
             lines.append(f"| `{f.name}` | {f.version} | {f.lookback} | {', '.join(f.inputs)} | {f.description} |")
+        lines.append("")
+    if PENDING:
+        lines += [f"## Pending data ({len(PENDING)})", "",
+                  "Defined in the data dictionary but **not computed**: no source in the adapters has the data yet. "
+                  "They have no column and no values until an adapter provides the input.", "",
+                  "| name | family | needs | description |", "|---|---|---|---|"]
+        for p in sorted(PENDING.values(), key=lambda p: (p["family"], p["name"])):
+            lines.append(f"| `{p['name']}` | {p['family']} | {p['needs']} | {p['description']} |")
         lines.append("")
     return "\n".join(lines)
