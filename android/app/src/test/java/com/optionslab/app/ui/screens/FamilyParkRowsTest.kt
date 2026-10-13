@@ -52,7 +52,7 @@ class FamilyParkRowsTest {
             compose.onNodeWithTag("orb-line:${a.source}", useUnmergedTree = true).assertTextEquals(keepNumbersWhole(FamilyPark.rowLine(a.source)))
             compose.onNodeWithText("Switch ${a.label} back on").assertExists()
         }
-        assertTrue(keepNumbersWhole(FamilyPark.rowLine("orb")).contains("parked on your choice (13 Oct)"))
+        assertTrue(FamilyPark.rowLine("orb").startsWith("parked on your choice (13 Oct)"))
         // Liquidity and the Hero arm are untouched: no park line, no tap.
         compose.onNodeWithText("Switch Liquidity 15+5 back on").assertDoesNotExist()
         compose.onNodeWithText("Switch Hero (expiry) back on").assertDoesNotExist()
