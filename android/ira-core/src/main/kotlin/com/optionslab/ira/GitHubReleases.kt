@@ -136,8 +136,9 @@ class GitHubReleases(private val http: Http, private val token: String,
     private fun message(r: Response): String? =
         runCatching { (Json.parse(r.text) as? Map<*, *>)?.get("message")?.toString() }.getOrNull()
 
+    /** GitHub's words are redacted before they are cut, so a cut can never leave part of a token (review, 13 Oct). */
     private fun answer(step: String, r: Response): String =
-        CloudSync.redact("$step ${r.code}: ${message(r)?.take(120) ?: "(no message)"}")
+        CloudSync.redact("$step ${r.code}: ${message(r)?.let { CloudSync.redact(it).take(120) } ?: "(no message)"}")
 
     /**
      * Whether the token may write to the public code repository, found by a write GitHub can never carry out (13 Oct):
