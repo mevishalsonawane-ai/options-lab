@@ -8,6 +8,7 @@ import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Arm
 import com.optionslab.engine.orb.ArmAccount
 import com.optionslab.engine.orb.Bar
+import com.optionslab.engine.orb.FamilyPark
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.LiquidityLots
 import com.optionslab.engine.orb.LiquidityRules
@@ -195,6 +196,12 @@ object OrbArms {
          */
         val parked: MutableSet<String> = HashSet(),
         /**
+         * ORB, ORB Fresh, ORB Sweep and Range Fade parked on Boss's choice ([FamilyPark], 13 Oct): each source stays here until
+         * Boss switches that arm back on ([setArmed]). Its row says so; the warnings and Jarvis's switch-off question
+         * leave it alone (it is off).
+         */
+        val famParked: MutableSet<String> = HashSet(),
+        /**
          * Liquidity BANKNIFTY's evening replay (12 Oct, its go-live checklist): day -> the replayed signals of its 15- and
          * 5-minute books ([com.optionslab.engine.orb.LiquidityDayReplay]), the last 60 days.
          */
@@ -286,6 +293,7 @@ object OrbArms {
             b.liqLotsAsk = LiquidityLots.of(if (o.has("liqLotsAsk")) o.optInt("liqLotsAsk") else null)
             b.liqLotsChosen = o.optBoolean("liqLotsChosen", false)
             o.optJSONArray("liqParked")?.let { a -> for (i in 0 until a.length()) b.parked += a.getString(i) }
+            o.optJSONArray("famParked")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { FamilyPark.covers(it) }?.let { b.famParked += it } }
         }.isSuccess
         if (!ok) {
             // Never overwrite what could not be read: set it aside and start clean, and say so.
@@ -293,7 +301,7 @@ object OrbArms {
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
-                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION); cache = it; hints(it) }
+                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION); cache = it; hints(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -303,7 +311,7 @@ object OrbArms {
         hints(b)
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
         if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN, LiquidityLots.ONE_LOT_MIGRATION,
-            ParkedArms.MIGRATION)
+            ParkedArms.MIGRATION, FamilyPark.MIGRATION)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
         // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then the MIDCPNIFTY books
@@ -311,7 +319,9 @@ object OrbArms {
         // choice then, 1 lot since 08 Oct).
         // Then (08 Oct, research X1) a 2-lot size Boss never chose by hand goes back to 1 lot, told once.
         // Then (9 Oct, Boss's OK) Liquidity 15+5 FINNIFTY and ORB Sweep are parked: switched off once, on paper terms.
-        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b) or park(b)) save(b)
+        // Then (13 Oct, Boss's choice) ORB, ORB Fresh, ORB Sweep and Range Fade are parked: switched off once, paper and live.
+        if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b) or park(b) or
+            parkFamily(b)) save(b)
         return b
     }
 
@@ -635,6 +645,36 @@ object OrbArms {
     }
 
     /**
+     * Once, on this update (Boss's choice, 13 Oct 2026: "Switch off ORB, ORB Fresh, Sweep and Range Fade", [FamilyPark]): each
+     * of the four that is armed is switched off - on paper, and in Live too (its Zerodha clearance goes; switched back on in
+     * Live, it asks for the PIN again) - and all four are marked parked. Disarming only stops new entries: an open position is
+     * still managed to its own exit, nothing is sold here, nothing is armed, Liquidity and the Hero arm are not touched.
+     * Told once (the arm log, a notice, and the Autopilot change timeline, where one tap switches it back on, on paper) for
+     * each arm that was on. Never runs again: an arm Boss switches back on stays on. True when [b] changed (it is then saved).
+     */
+    private fun parkFamily(b: Book): Boolean {
+        val plan = FamilyPark.plan(b.armed, done = FamilyPark.MIGRATION in b.migrated) ?: return false
+        for (src in plan.off) {
+            val wasLive = b.liveOk[src] == true
+            val automatic = b.auto[src] != false
+            b.armed[src] = false; b.liveOk[src] = false; b.pending.remove(src)
+            b.status[src] = FamilyPark.PARKED
+            val label = ALL_ARMS.firstOrNull { it.source == src }?.label ?: src
+            val holding = b.positions.any { it.arm == src && it.open }
+            runCatching { Diag.record("orb", "$label: ${FamilyPark.PARKED}" + (if (wasLive) " (it was armed for Zerodha)" else "") +
+                (if (holding) "; its open position is still managed to its exit" else "")) }
+            if (!com.optionslab.app.BuildConfig.GOLD) runCatching { com.optionslab.app.ira.Autopilot.logBossPark(src, label, automatic, wasLive, holding) }
+        }
+        b.famParked += plan.parked
+        b.migrated += FamilyPark.MIGRATION
+        if (plan.off.isNotEmpty() && !com.optionslab.app.BuildConfig.GOLD) {
+            runCatching { Diag.record("orb", FamilyPark.NOTICE) }
+            runCatching { Notifier.post(app, 6957, Notifier.SCHEDULE, "ORB, ORB Fresh, Sweep and Range Fade parked", FamilyPark.NOTICE, "almanac") }
+        }
+        return true
+    }
+
+    /**
      * Boss switches a parked Liquidity index back on (its row; [ParkedArms]). With Liquidity's switch on, the index's books
      * come on with the switch's automatic / approve choice, ON PAPER (never cleared for Zerodha here: in Live their entries
      * wait for his approval until he arms Liquidity again with his PIN); with it off, they come on with the switch.
@@ -705,6 +745,7 @@ object OrbArms {
         b.liqLotsAsk?.let { o.put("liqLotsAsk", it) }
         if (b.liqLotsChosen) o.put("liqLotsChosen", true)
         if (b.parked.isNotEmpty()) o.put("liqParked", JSONArray(b.parked.sorted()))
+        if (b.famParked.isNotEmpty()) o.put("famParked", JSONArray(b.famParked.sorted()))
         val text = o.toString()
         // Battery: an idle book (nothing armed, open or waiting) whose bytes are already on disk, as this process last
         // wrote them, is not encrypted and synced again ([com.optionslab.ira.OrbIdleSave]); anything else is, as before.
@@ -915,6 +956,11 @@ object OrbArms {
         val chargesToday: Double = 0.0, val chargesMonth: Double = 0.0, val ordersMonth: Int = 0,
         /** Liquidity 15+5 only: Liquidity BANKNIFTY's paper test (12 Oct) - its freeze, checklist, stop rule and fill quality. */
         val test: LiquidityTestView? = null,
+        /**
+         * ORB, ORB Fresh, ORB Sweep and Range Fade: parked on Boss's choice (13 Oct, [FamilyPark]) and still off - the row says
+         * so with a tap to switch it back on; false once Boss switches it back on.
+         */
+        val bossParked: Boolean = false,
     ) {
         /** The charges line for the row's details, or null when nothing was paid this month. */
         val chargesLine: String? get() = com.optionslab.engine.orb.ReentryCap.chargesWords(chargesToday, chargesMonth, ordersMonth)
@@ -1013,7 +1059,8 @@ object OrbArms {
             val (cToday, cMonth, orders) = chargesOf(b.positions, a.source, day)
             ArmView(a, b.armed[a.source] == true, b.auto[a.source] != false, b.status[a.source] ?: "", open, open?.let { marks[it.symbol] },
                 b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true,
-                record = RetiredArms.of(a.source), chargesToday = cToday, chargesMonth = cMonth, ordersMonth = orders)
+                record = RetiredArms.of(a.source), chargesToday = cToday, chargesMonth = cMonth, ordersMonth = orders,
+                bossParked = a.source in b.famParked && b.armed[a.source] != true)
         } + liquidityView(b, day, extra)
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
@@ -1282,7 +1329,11 @@ object OrbArms {
         if (!on) b.pending.remove(source)
         // Armed again: the Hero arm's self-disarm counters start afresh (it needs a manual re-arm after tripping).
         if (on) b.since[source] = now().toString()
+        // Switched back on by Boss after the 13 Oct park ([FamilyPark]): no longer parked, and never parked again.
+        val unparked = on && b.famParked.remove(source)
+        if (unparked) b.status[source] = ""
         save(b)
+        if (unparked) runCatching { Diag.record("orb", "${armOf(source).label}: switched back on by you after the 13 Oct park" + if (live) " (Live, with your PIN)" else ", on paper") }
         val label = armOf(source).label
         // What it is told it trades: the parameters in force today for the account it was armed on (review G2-6; its
         // constants unless the lab promoted a variant - then the same words with the variant's numbers). Memory only.

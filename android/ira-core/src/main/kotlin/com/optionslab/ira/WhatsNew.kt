@@ -55,6 +55,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-orb-family-parked", OCT13, "ORB, ORB Fresh, Sweep and Range Fade parked",
+            "On your choice, these four arms are switched off once, because each lost money after costs in every tested year; an open position is still managed to its own exit. " +
+                "Each row says \"parked on your choice (13 Oct)\" with a tap to switch it back on, and the morning check and Jarvis no longer nag about them.",
+            "Home → Strategies (each arm's row); the change is also in Home → Automation card → Autopilot → Change log"),
         Entry("2026-10-13-market-context", OCT13, "Market context: events, expiry, days like today",
             "Home now warns you the evening before and the morning of an RBI, Budget, US CPI or Fed day, with how BankNifty and Nifty moved on such days and how many days that is; on expiry days it shows how fast option time value melts, and from 09:21 the past days most like today, as context, not a forecast. " +
                 "On the chart, add \"Ira: level map\" for support and resistance with how often each held, and long-press any candle and pick \"Explain this candle\" for what the app knows about those minutes; a new switch can pause paper arms on event days, and it is off.",
