@@ -14,6 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -65,6 +66,7 @@ class OrderPathRound2Test : RobolectricTest() {
     }
 
     @After fun down() {
+        Paper.loadInlineForTest = false
         FastPath.resetForTest()
         SecurePrefs.countedThread = null
         KiteStream.stop()
@@ -145,6 +147,38 @@ class OrderPathRound2Test : RobolectricTest() {
         assertEquals("30", sells.single().form["quantity"])
         assertEquals("stop", arm().today.single().why)
         assertTrue(OrderTiming.card().lines.toString(), OrderTiming.card().lines.any { it.startsWith("Decided from the stream 1") })
+    }
+
+    /**
+     * 13 Oct (CI shard 0): the fast path's first look finds the paper book not in memory and starts its load, which can finish
+     * before that look ends. The look's "not covered" was then kept the full 500 ms (the book counted as loaded only when
+     * asked afterwards), and a stop's tick inside that window planned no LIVE lane - no sell at all until another tick.
+     * Here the load is done at once (on the look's own thread), so the window is hit every time.
+     */
+    @Test fun aStopTickRightAfterTheFirstLookLoadedThePaperBookSellsWithin300ms() {
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        KiteStream.liveForTest(true)
+        tick(200.0)
+        pass()
+        assertTrue(sells.isEmpty())
+        // As a new process: the paper book not in memory; the first look's read of it loads it before the look ends.
+        Paper.forgetForTest()
+        assertFalse(Paper.loaded())
+        Paper.loadInlineForTest = true
+        FastPath.start(context)
+        tick(200.0)
+        awaitTrue("the first look loaded the paper book") { Paper.loaded() }
+        Thread.sleep(100)                                   // well inside the 500 ms a covered look is kept
+        assertTrue("nothing sold at 200", sells.isEmpty())
+        val t0 = System.nanoTime()
+        tick(150.0)
+        awaitTrue("the sell") { sells.isNotEmpty() }
+        val ms = (sells.first().atNanos - t0) / 1_000_000
+        assertTrue("sent $ms ms after the tick (at most 300 ms)", ms <= 300)
+        Thread.sleep(1_500)
+        assertEquals("exactly one sell", 1, sells.size)
+        assertEquals("stop", arm().today.single().why)
     }
 
     /**
