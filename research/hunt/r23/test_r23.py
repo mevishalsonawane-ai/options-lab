@@ -286,3 +286,11 @@ def test_lake_refuses_on_release():
     T = _trades_module()
     with pytest.raises(SystemExit):
         T.lake()
+
+
+def test_part_c_check_matches_frozen_file():
+    import subprocess
+    T = _trades_module()
+    if subprocess.run(["git", "cat-file", "-e", T.PART_C], cwd=CFG.HERE).returncode != 0:
+        pytest.skip("shallow clone: the Part C commit is not here")
+    assert T.committed(os.path.join(CFG.HERE, "results", "finalists.json"))

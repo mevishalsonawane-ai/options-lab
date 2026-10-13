@@ -347,10 +347,15 @@ def freeze():
     print(json.dumps(fz, indent=1))
 
 
+PART_C = "a9a21ed9"        # the commit that froze results/finalists.json (PREREG.md part C)
+
+
 def committed(path: str) -> bool:
-    r = subprocess.run(["git", "log", "-1", "--format=%H", "--", path], cwd=CFG.HERE, capture_output=True, text=True)
-    st = subprocess.run(["git", "status", "--porcelain", "--", path], cwd=CFG.HERE, capture_output=True, text=True)
-    return bool(r.stdout.strip()) and not st.stdout.strip()
+    """finalists.json exists in the Part C commit and is byte-identical to it in HEAD and the working tree."""
+    rel = os.path.relpath(path, CFG.HERE)
+    a = subprocess.run(["git", "diff", "--quiet", PART_C, "--", rel], cwd=CFG.HERE)
+    b = subprocess.run(["git", "cat-file", "-e", f"{PART_C}:research/hunt/r23/results/finalists.json"], cwd=CFG.HERE)
+    return a.returncode == 0 and b.returncode == 0
 
 
 def lake(n_twins=TWINS):

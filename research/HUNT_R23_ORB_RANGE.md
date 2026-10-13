@@ -38,14 +38,15 @@ Code: `research/hunt/r23/` (`r23ranges.py`, `r23features.py`, `r23data.py`, `r23
    - These held in both halves of the data, on BANKNIFTY and on NIFTY, and on a second (30-minute) range.
    - What made **no difference**: option volume in the first 15-45 minutes, the change in option OI, VIX and its
      change, the size of the gap, the shape and colour of the first 5-, 15- or 30-minute candle, inside or outside day,
-     and expiry day. All of these had AUC 0.48-0.53, which is a coin toss.
+     and expiry day. All of these had AUC 0.48-0.53, which is a coin toss. VIX change since 09:15 leaned towards good
+     breaks (AUC 0.55) but did not pass Benjamini-Hochberg (q 0.13; 185 RUN vs 295 FAKE).
 3. **Which range is best?** None of the 18 plain range definitions makes money after costs on the release. Every one
    of them loses: time windows of 15 to 75 minutes, the range's own 15- or 30-minute candles, volatility-sized ranges,
    the first hour's value area, the range stretched to yesterday's high and low, and the range stretched to include the
    gap.
    - The least bad plain range is R22's: the first three 15-minute candles, traded on a 15-minute close (Rs -17,455
      over 515 days).
-   - Today's ORB lost Rs -44,720 on the same days. Shorter ranges and 5-minute breaks lost more.
+   - Today's ORB lost Rs -44,720 on the same days. Shorter ranges on 5-minute breaks lost more.
 4. **The only positive results were in-sample.** They come from adding the Step 1 "momentum" filter to R22's range:
    - `r23-r22-f2`: Rs +16,158 on 390 trades;
    - `r23-r22-f1`: Rs +15,593 on 472 trades.
@@ -121,7 +122,7 @@ the feature says nothing.
 | break close vs the floor pivot (ATR) `piv_al` | 0.413 | 0.296 | 0.576 | 0.003 | 0.590 / 0.562 | 0.540 / 0.620 / 0.562 | 0.582 | yes |
 | yesterday's candle in the break direction (ATR) `pd_dir_al` | +0.046 | -0.069 | 0.554 | 0.048 | 0.525 / 0.586 | 0.537 / 0.578 / 0.545 | 0.573 | yes |
 | range width / yesterday's range `w_prev` | 0.576 | 0.545 | 0.553 | 0.048 | 0.559 / 0.549 | 0.553 / 0.590 / 0.520 | 0.565 | yes |
-| break close beyond yesterday's high / low (share) | 50% | 42% | 0.542 | 0.072 | 0.544 / 0.540 | 0.504 / 0.577 / 0.544 | 0.550 | no (BANKNIFTY ~0.5) |
+| break close beyond yesterday's high / low (share) | 50% | 42% | 0.542 | 0.072 | 0.544 / 0.540 | 0.504 / 0.577 / 0.544 | 0.550 | no (abs(AUC - 0.5) = 0.042 < 0.05) |
 | VIX change since 09:15 | +0.4% | -0.2% | 0.553 | 0.129 | 0.577 / 0.516 | 0.540 / 0.566 / n/a | 0.541 | no |
 | gap in the break direction (ATR) | -0.010 | -0.013 | 0.531 | 0.37 | | | 0.519 | no |
 | option volume, first 45 min / its 20-day median | 0.995 | 1.040 | 0.485 | 0.87 | 0.452 / 0.518 | 0.529 / 0.435 / n/a | 0.488 | no |
@@ -262,8 +263,8 @@ in-sample, so this can only confirm "nothing". The lake read adds the finalists'
 
 ## Step 3 summary: BANKNIFTY vs NIFTY, and other indices
 
-- NIFTY carried both positive configurations: +14,427 / +12,421, against BANKNIFTY +1,166 / +3,737. On every plain
-  range BANKNIFTY lost more than NIFTY. This matches R20c ("NIFTY +0.036 ATR, BANKNIFTY about 0").
+- NIFTY carried both positive configurations: +14,427 / +12,421, against BANKNIFTY +1,166 / +3,737. On 15 of the 18
+  plain ranges BANKNIFTY lost more than NIFTY (not on `t45-5m`, `vol50`, `pd-or45`). This matches R20c ("NIFTY +0.036 ATR, BANKNIFTY about 0").
 - FINNIFTY: anatomy only, and it agrees with the other two (A1, A2). MIDCPNIFTY: not in the release. Both have options
   in the lake.
 
@@ -297,6 +298,8 @@ How the read works:
   expiry after the day" rule then trades the monthly. The adapter must be checked on the lake before the read; that
   check is part of the lake session's own work.
 
+`lake()` writes BANKNIFTY and NIFTY only; FINNIFTY / MIDCPNIFTY rows and the 13 Oct forward example would need a short add-on after the read (descriptive only, no gate).
+
 **The 13 Oct 2026 session** cannot be replayed here. Its minutes are in the private data repository, not in this
 study's data. It is a forward example only and was not used to choose anything. R20 noted that on 13 Oct BANKNIFTY stayed
 inside today's ORB range until 14:00, so today's ORB would not have traded it.
@@ -319,7 +322,7 @@ For `r23-r22-f2` (the others differ only as noted):
 - **Trade**: the ORB arm's own contract, entry and exits:
   - ATM of the 09:20 close, held all day;
   - next minute's open;
-  - -40 / +40 premium points (NIFTY -20 / +20), the profit-lock ladder, out at 15:10 (15:05 when the contract expires that day).
+  - -40 / +40 premium points (NIFTY -20 / +20), the profit-lock ladder, out at 15:10. Every tested trade used the expiry AFTER the day; trading today's contract on expiry day (15:05 square-off) is untested.
 - `r23-r22-f1`: the first filter only. `r23-orb-f2`: today's ORB range (09:15-10:04) and a 5-minute close (10:05-13:55)
   with both filters.
 
@@ -344,4 +347,5 @@ For `r23-r22-f2` (the others differ only as noted):
   - lake refusals;
   - the look-ahead guards: 40 random days each, where every minute after the range end, or after the decision, is
     replaced by noise and nothing may change.
+- Experiment log: 23 new entries (22 configurations + the anatomy); the two baselines are already logged (R20's `r20` ORB entries and `r22-brk15`).
 - Engine checks: R22's numbers reproduce exactly; the generic engine equals `r22-brk15` trade for trade.

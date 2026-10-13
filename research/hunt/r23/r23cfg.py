@@ -5,7 +5,8 @@
                         2026-04-14 .. 2026-04-26, a FRESH holdout from 2026-04-27 (R18 PREREG amendment 1), read once
 
 The switch is passed on to R22 / R17 (R22_SOURCE, R17_SOURCE), so the day caches, fills and charges are theirs. Per-day
-rows stay in the cache (<cache>/r23 or r23_lake), never in git; tables go to results/ (release) or results/lake/.
+rows (anatomy, flow) stay in the cache (<cache>/r23 or r23_lake), never in git; tables and the baselines' / finalists'
+per-trade lists (no market data) go to results/ (release) or results/lake/.
 13 Oct 2026.
 """
 from __future__ import annotations
