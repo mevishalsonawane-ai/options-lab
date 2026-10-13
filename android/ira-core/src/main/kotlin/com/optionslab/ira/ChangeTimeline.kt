@@ -36,6 +36,8 @@ object ChangeTimeline {
     data class Item(
         val id: String, val source: Source, val atMs: Long, val agent: String, val what: String, val why: String,
         val undo: UndoState, val scope: String = "", val key: String = "",
+        /** Boss's own change, only logged here (13 Oct's park): undone by its own tap, never by "undo everything today". */
+        val own: Boolean = false,
     ) {
         val pending: Boolean get() = undo == UndoState.UNDOABLE || undo == UndoState.NEEDS_PIN
     }
@@ -75,7 +77,7 @@ object ChangeTimeline {
             Item("ap:${e.id}", if (tuning) Source.SPECIALISTS else Source.AUTOPILOT, e.atMs,
                 // Boss's own park (13 Oct), logged here so it can be undone in one tap: said as Boss's, not Autopilot's.
                 if (tuning) Source.SPECIALISTS.agent else if (c.kind == AutoChange.Kind.ARM_PARK) "You (logged by Autopilot)" else "Autopilot · ${c.kind.agent}",
-                "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id)
+                "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id, own = c.kind == AutoChange.Kind.ARM_PARK)
         }
 
     /** The lab's automatic paper promotions on [day] (a live rule moves back only through its own PIN flow). */
@@ -118,7 +120,8 @@ object ChangeTimeline {
     fun undoPlan(items: List<Item>, pinConfirmed: Boolean = false): Plan {
         val newest = items.sortedWith(compareByDescending<Item> { it.atMs }.thenByDescending { it.id })
         val now = ArrayList<Item>(); val pin = ArrayList<Item>(); val left = ArrayList<Item>()
-        for (i in newest) when (i.undo) {
+        // Boss's own changes (13 Oct's park) are not today's automatic changes: only their own Undo puts them back.
+        for (i in newest.filter { !it.own }) when (i.undo) {
             UndoState.UNDOABLE -> now += i
             UndoState.NEEDS_PIN -> if (pinConfirmed) now += i else pin += i
             UndoState.NO_UNDO -> left += i

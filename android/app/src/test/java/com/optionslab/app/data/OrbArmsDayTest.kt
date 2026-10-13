@@ -646,7 +646,7 @@ class OrbArmsDayTest : RobolectricTest() {
             .put("armed", org.json.JSONObject().put("orb", true)).put("auto", org.json.JSONObject().put("orb", true))
             // Saved after every one-time change (ORB armed on paper since Boss un-retired it).
             .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
-                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)).put("positions", closed))
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(com.optionslab.engine.orb.FamilyPark.MIGRATION)).put("positions", closed))
         at(LocalTime.of(9, 50))
         val arms = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }
         val (orb, act) = arms.first { it.first.name == "ORB" }

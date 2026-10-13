@@ -697,7 +697,7 @@ object AutoChange {
     }
 
     /** The newest change that can be undone ("undo the last change"). */
-    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied }
+    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && it.change.kind != Kind.ARM_PARK }
 
     /** [id] undone by Boss: its target rests [REST_DAYS] days (Autopilot does not redo what he undid). */
     fun undone(book: Book, id: String, day: LocalDate): Book {
@@ -830,6 +830,8 @@ object AutoChange {
                        val reverted: Int, val asked: Int, val effect: Double)
 
     fun summary(book: Book, day: LocalDate): Summary {
+        // Boss's own park (13 Oct, Kind.ARM_PARK) is logged here, but it is not Autopilot's change: never counted as one.
+        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { it.change.kind != Kind.ARM_PARK })
         val t = book.entries.filter { it.day == day && it.applied }
         return Summary(t.size, t.count { it.change.scope == Scope.PAPER }, t.count { it.change.scope == Scope.LIVE }, t.count { it.change.scope == Scope.SHADOW },
             book.entries.count { it.status == Status.PROBATION }, book.entries.count { it.status == Status.KEPT },
@@ -847,7 +849,7 @@ object AutoChange {
 
     /** "What did you change today?" */
     fun sayToday(book: Book, day: LocalDate): String {
-        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) }
+        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) && it.change.kind != Kind.ARM_PARK }
         val reverted = book.entries.filter { it.closedOn == day && it.status == Status.REVERTED }
         if (t.isEmpty() && reverted.isEmpty()) return "I changed nothing by myself today, Boss."
         val lines = t.map { "• " + it.change.what + ": " + it.change.from + " → " + it.change.to + " (" + it.change.scope.words + ", " +

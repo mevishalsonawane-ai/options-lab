@@ -669,7 +669,7 @@ object OrbArms {
         b.migrated += FamilyPark.MIGRATION
         if (plan.off.isNotEmpty() && !com.optionslab.app.BuildConfig.GOLD) {
             runCatching { Diag.record("orb", FamilyPark.NOTICE) }
-            runCatching { Notifier.post(app, 6957, Notifier.SCHEDULE, "ORB, ORB Fresh, Sweep and Range Fade parked", FamilyPark.NOTICE, "almanac") }
+            runCatching { Notifier.post(app, 6959, Notifier.SCHEDULE, "ORB, ORB Fresh, Sweep and Range Fade parked", FamilyPark.NOTICE, "almanac") }
         }
         return true
     }
