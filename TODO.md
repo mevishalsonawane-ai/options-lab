@@ -364,3 +364,20 @@ Learn from Boss's own trading:
 Later (when profitable):
 - [ ] I16. Stocks and MCX strategies, on the downloaded data, once the index arms are proven.
 - [ ] I17. Package the tested signals as a product. Far future; check SEBI research-analyst and algo rules first.
+
+## C. Crypto (owner, 13 Oct 2026: "import crypto data", "the same brain for crypto", "update all the agents and Jarvis
+##    with the knowledge of crypto"). Knowledge only: nothing here trades crypto.
+
+- [ ] C1. Crypto data lake on Google Drive from Binance's bulk archive (BTC/ETH full history, then SOL/BNB/XRP; spot and
+      USD-M futures 1m, funding, mark/index, OI, long/short; catalogue in research/data/crypto/). Branch claude/crypto-lake.
+- [ ] C2. Crypto Data Brain: the Indian brain's layers reused (cube, point-in-time features, labels/splits, studies,
+      knowledge pack with a crypto tag). Branch claude/crypto-brain.
+- [ ] C3. Every agent and Jarvis know crypto (after C2 has findings). App work, one session:
+      - the shared knowledge pack carries the crypto facts and findings (tagged), which every agent already reads;
+      - Jarvis answers crypto questions (what is known, what failed, latest BTC/ETH context), with numbers checked like
+        the Indian answers, and never mixes crypto with the Indian arms' records;
+      - each agent (trade manager, order review, study, strategy lab, autopilot) uses crypto only where it applies:
+        explain and rank, never trade, size or arm anything; no crypto broker or orders;
+      - a read-only crypto context card (BTC/ETH price, funding, basis, DVOL) only if a live source is reachable from
+        the phone (Binance's API is geo-blocked from the cloud; check from India);
+      - tests for each, one WhatsNew entry, the usual review, CI and one APK.
