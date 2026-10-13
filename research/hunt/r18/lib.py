@@ -1,9 +1,9 @@
-"""R17 shared code: the session grids, costs, the trade replay with the arm's own exits plus one variant, the index
+"""R18 shared code: the session grids, costs, the trade replay with the arm's own exits plus one variant, the index
 features the variants read (VWAP bands, levels, R16's expected range), and the statistics (PREREG.md).
 
 Minute k = the 1-minute bar starting 09:15 + k (0..374). A decision on minute k's CLOSE is filled at the OPEN of the next
-printed minute. Resting stops fill at the stop or the gap open. Within a minute: stop first, then target, then the
-close-based exits.
+printed minute, never after the square-off (nothing printed by then: the last printed price, at the square-off). Resting
+stops fill at the stop or the gap open. Within a minute: stop first, then target, then the close-based exits.
 """
 from __future__ import annotations
 
@@ -93,6 +93,12 @@ class Grid:
                 ks, arr = d["chains"][e]
                 return e, ks, arr
         return None
+
+    def sq_for(self, i, sq, today_ok=True):
+        """The arm's square-off minute: 15:05 when the contract it trades expires today (the app squares expiring
+        contracts off at 15:05), else sq."""
+        c = self.chain(i, today_ok)
+        return SQ_1505 if c is not None and c[0] == self.dates[i] else sq
 
     def opt(self, i, strike, side, today_ok=True):
         """[N, 6] O H L C V OI of one contract, or None."""
@@ -247,14 +253,16 @@ def be_level(t: Trade):
 
 
 def next_open(path, t, sq):
-    """(price, minute) of the first printed open after minute t (at most up to the last bar)."""
+    """(price, minute) of the first printed open after minute t, never later than the square-off minute sq. If nothing
+    prints in (t, sq], the position goes at the square-off (minute sq) at the last printed close up to sq (the LTP)."""
     o = path[:, 0]
-    for m in range(t + 1, N):
+    cap = min(sq, N - 1)
+    for m in range(t + 1, cap + 1):
         if np.isfinite(o[m]):
             return o[m], m
-    cl = path[:, 3]
+    cl = path[:cap + 1, 3]
     j = np.where(np.isfinite(cl))[0]
-    return (cl[j[-1]], int(j[-1])) if len(j) else (np.nan, t)
+    return (cl[j[-1]], max(cap, t)) if len(j) else (np.nan, t)
 
 
 def replay(t: Trade, extra: int | None = None, be: bool = False, hs_mult: float = 1.0):

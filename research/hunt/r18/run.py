@@ -1,6 +1,6 @@
-"""R17 design run (PREREG.md): every arm x exit variant on the DESIGN sessions only; BH over all 60 tests; candidates.
+"""R18 design run (PREREG.md): every arm x exit variant on the DESIGN sessions only; BH over all 60 tests; candidates.
 
-    R17_SCRATCH=<scratch> python3 research/hunt/r17/run.py      # -> results/design.json (small summary, committed)
+    R18_SCRATCH=<scratch> python3 research/hunt/r18/run.py      # -> results/design.json (small summary, committed)
 
 The holdout sessions are excluded before any trade is built (Grid.allowed), so nothing here reads them.
 """
@@ -20,7 +20,9 @@ from lib import VARIANTS, Grid
 
 def split_sessions(g: Grid, hold: bool):
     cut, _ = K.periods(g.und, g.dates)
-    return [d for d in g.dates if (d >= cut) == hold]
+    if hold:
+        return [d for d in g.dates if d >= cut]
+    return [d for d in g.dates if K.is_design(d, g.und)]
 
 
 def evaluate(g: Grid, trades, B=10000, twins=1000, folds=None):

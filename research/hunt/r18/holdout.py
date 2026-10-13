@@ -1,7 +1,7 @@
-"""R17 holdout (PREREG.md): read ONCE. Every arm x variant is computed in this one read; only the design candidates
+"""R18 holdout (PREREG.md): read ONCE. Every arm x variant is computed in this one read; only the design candidates
 (results/design_<source>.json) are tests, BH over the candidates read. A flag file refuses a second run.
 
-    R17_SCRATCH=<scratch> python3 research/hunt/r17/holdout.py     # -> results/hold_<source>.json
+    R18_SCRATCH=<scratch> python3 research/hunt/r18/holdout.py     # -> results/hold_<source>.json
 """
 from __future__ import annotations
 
@@ -25,6 +25,9 @@ def main():
     grids = {u: Grid(u) for u in K.UNDS}
     for g in grids.values():
         g.allowed = set(split_sessions(g, hold=True))
+        if len(g.allowed) < K.MIN_HOLD_SESSIONS[K.SOURCE]:
+            print(f"{g.und}: {len(g.allowed)} holdout sessions, fewer than {K.MIN_HOLD_SESSIONS[K.SOURCE]}; the read waits")
+            return 1
     out = {}
     for arm in A.ARMS:
         g = grids[A.UND[arm]]

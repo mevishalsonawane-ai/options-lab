@@ -1,6 +1,6 @@
-"""R17: the markdown tables of HUNT_R17_EXITS.md from results/design_<source>.json and hold_<source>.json.
+"""R18: the markdown tables of HUNT_R18_EXITS.md from results/design_<source>.json and hold_<source>.json.
 
-    python3 research/hunt/r17/report.py     # prints the tables (pasted into the doc; numbers are not edited by hand)
+    python3 research/hunt/r18/report.py     # prints the tables (pasted into the doc; numbers are not edited by hand)
 """
 from __future__ import annotations
 

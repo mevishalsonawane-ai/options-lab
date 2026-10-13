@@ -612,11 +612,11 @@
    "V0": {
     "trades": 19,
     "days": 19,
-    "net": 7304,
+    "net": 7332,
     "win": 47.4,
-    "charges": 1811,
-    "mfe_capture": 13.9,
-    "worst_day": -8572,
+    "charges": 1812,
+    "mfe_capture": 14.0,
+    "worst_day": -8544,
     "max_dd": -8630,
     "changed": 0,
     "whys": {
@@ -637,10 +637,10 @@
      "square_off": 7,
      "variant": 12
     },
-    "delta": -2897,
-    "p": 0.6114388561143885,
-    "delta_2x_spread": -2893,
-    "twin_p": 0.8805970149253731
+    "delta": -2925,
+    "p": 0.6134386561343865,
+    "delta_2x_spread": -2921,
+    "twin_p": 0.8855721393034826
    },
    "V2": {
     "trades": 19,
@@ -656,10 +656,10 @@
      "square_off": 5,
      "variant": 14
     },
-    "delta": 1316,
-    "p": 0.44265573442655737,
-    "delta_2x_spread": 1313,
-    "twin_p": 0.009950248756218905
+    "delta": 1288,
+    "p": 0.44355564443555645,
+    "delta_2x_spread": 1285,
+    "twin_p": 0.024875621890547265
    },
    "V3": {
     "trades": 19,
@@ -674,10 +674,10 @@
     "whys": {
      "variant": 19
     },
-    "delta": -12672,
-    "p": 0.8192180781921807,
-    "delta_2x_spread": -12652,
-    "twin_p": 0.8059701492537313
+    "delta": -12700,
+    "p": 0.8198180181981802,
+    "delta_2x_spread": -12680,
+    "twin_p": 0.8159203980099502
    },
    "V4": {
     "trades": 19,
@@ -693,9 +693,9 @@
      "square_off": 7,
      "variant": 12
     },
-    "delta": 2340,
-    "p": 0.42245775422457754,
-    "delta_2x_spread": 2336,
+    "delta": 2312,
+    "p": 0.4233576642335766,
+    "delta_2x_spread": 2308,
     "twin_p": 0.014925373134328358
    },
    "V5": {
@@ -712,9 +712,9 @@
      "square_off": 15,
      "stop": 4
     },
-    "delta": 13694,
+    "delta": 13666,
     "p": 0.0761923807619238,
-    "delta_2x_spread": 13672,
+    "delta_2x_spread": 13644,
     "twin_p": 0.06965174129353234
    }
   },
@@ -830,12 +830,12 @@
    "V0": {
     "trades": 313,
     "days": 106,
-    "net": -30066,
+    "net": -29917,
     "win": 39.0,
     "charges": 22194,
     "mfe_capture": -0.8,
     "worst_day": -5539,
-    "max_dd": -33161,
+    "max_dd": -33011,
     "changed": 0,
     "whys": {
      "arm_exit": 66,
@@ -847,12 +847,12 @@
    "V1": {
     "trades": 313,
     "days": 106,
-    "net": -31112,
+    "net": -30962,
     "win": 37.1,
     "charges": 22192,
-    "mfe_capture": -1.0,
+    "mfe_capture": -0.9,
     "worst_day": -4431,
-    "max_dd": -37329,
+    "max_dd": -37179,
     "changed": 32,
     "whys": {
      "arm_exit": 48,
@@ -883,20 +883,20 @@
      "target": 4,
      "variant": 67
     },
-    "delta": 2532,
-    "p": 0.2623737626237376,
-    "delta_2x_spread": 2532,
+    "delta": 2383,
+    "p": 0.27387261273872615,
+    "delta_2x_spread": 2383,
     "twin_p": 0.004975124378109453
    },
    "V3": {
     "trades": 313,
     "days": 106,
-    "net": -29419,
+    "net": -29270,
     "win": 38.7,
     "charges": 22195,
     "mfe_capture": -0.8,
     "worst_day": -5539,
-    "max_dd": -34016,
+    "max_dd": -33866,
     "changed": 16,
     "whys": {
      "arm_exit": 63,
@@ -913,12 +913,12 @@
    "V4": {
     "trades": 313,
     "days": 106,
-    "net": -27620,
+    "net": -27470,
     "win": 39.0,
-    "charges": 22198,
+    "charges": 22199,
     "mfe_capture": -0.6,
     "worst_day": -5539,
-    "max_dd": -29687,
+    "max_dd": -29538,
     "changed": 20,
     "whys": {
      "arm_exit": 66,
@@ -935,12 +935,12 @@
    "V5": {
     "trades": 313,
     "days": 106,
-    "net": -30066,
+    "net": -29917,
     "win": 39.0,
     "charges": 22194,
     "mfe_capture": -0.8,
     "worst_day": -5539,
-    "max_dd": -33161,
+    "max_dd": -33011,
     "changed": 0,
     "whys": {
      "arm_exit": 66,

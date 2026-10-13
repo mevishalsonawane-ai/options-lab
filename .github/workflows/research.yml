@@ -12,6 +12,19 @@ permissions:
   contents: read
 
 jobs:
+  hunt-tests:
+    name: R18 exits tests (synthetic, no data, no secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pytest
+      - name: Replay, square-off, look-ahead and exit-variant tests
+        run: python -m pytest research/hunt/r18/test_r18.py -q
+
   year:
     name: Year of BANKNIFTY - save the data, arms, learned model
     runs-on: ubuntu-latest

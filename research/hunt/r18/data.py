@@ -1,8 +1,8 @@
-"""R17 data: one grid per session (index, VIX, futures volume, the option chain by strike), from the source chosen in
+"""R18 data: one grid per session (index, VIX, futures volume, the option chain by strike), from the source chosen in
 config.py. Goes to config.GRIDS (scratch, never committed).
 
-    python3 research/hunt/r17/data.py                 # both indices
-    R17_SOURCE=lake python3 research/hunt/r17/data.py # the same from the Dhan lake when it is published
+    python3 research/hunt/r18/data.py                 # both indices
+    R18_SOURCE=lake python3 research/hunt/r18/data.py # the same from the Dhan lake when it is published
 
 Reads through research.brain.adapters, so the release and the lake give the same shape (DayData). Nothing is filled
 or invented: a minute without a trade stays NaN; the replay reads the last printed price only where the app would.

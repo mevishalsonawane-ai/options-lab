@@ -1,4 +1,4 @@
-"""R17: Liquidity BANKNIFTY 15+5 trades on the R17 grids, for STUDY ONLY (the arm is frozen until 26 Oct; nothing in the
+"""R18: Liquidity BANKNIFTY 15+5 trades on the R18 grids, for STUDY ONLY (the arm is frozen until 26 Oct; nothing in the
 app changes for it). The zone code is copied from research/liquidity_exits_3060.py (a line-by-line port of the Kotlin
 replay; that script reads argv at import, so it cannot be imported). Books: 15-min and 5-min, one position per book,
 pool-on-swing break, fills 09:20-14:00, room filter (1 x the index stop), 1-ITM, expiry days skipped, expiry strictly

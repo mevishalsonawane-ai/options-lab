@@ -1,4 +1,4 @@
-"""R17 arms: each arm's entries as the app trades them today, with the arm's own exits (V0), as Trade objects (PREREG.md).
+"""R18 arms: each arm's entries as the app trades them today, with the arm's own exits (V0), as Trade objects (PREREG.md).
 
 The trade SET is decided here with V0: one position at a time per arm, the arm's re-entry rule and caps. Variants then
 only change how each of these trades ends (lib.replay).
@@ -110,7 +110,7 @@ def orb_family(arm, g: Grid):
             c0 = first_fill(path, k)
             if c0 is None or path[c0, 0] * 1.0005 - 40 <= 0:
                 continue
-            t = make(arm, g, i, side, strike, k, lib.SQ_1510, ladder=ladder)
+            t = make(arm, g, i, side, strike, k, g.sq_for(i, lib.SQ_1510), ladder=ladder)
             if t is None:
                 continue
             t.stop0 = round(round((t.e - 40.0) / TICK) * TICK, 2)
@@ -148,7 +148,7 @@ def vixdiv(arm, g: Grid):
             kw = {}
             if arm == "vixdiv_ni":
                 kw["time_rule"] = (19, 0.05)
-            t = make(arm, g, i, side, strike, T, lib.SQ_1510, **kw)
+            t = make(arm, g, i, side, strike, T, g.sq_for(i, lib.SQ_1510), **kw)
             if t is not None and arm == "vixdiv_ni":
                 t.stop0 = floor_tick(t.e * 0.85)
             if t is not None:

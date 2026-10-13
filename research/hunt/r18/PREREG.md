@@ -1,4 +1,4 @@
-# R17 pre-registration: better exits for every arm (TODO I9)
+# R18 pre-registration: better exits for every arm (TODO I9)
 
 Written 13 Oct 2026 and committed BEFORE any exit variant below was simulated. The only code that had run was
 `data.py`, which builds the per-session grids (index, VIX, the option chain); no entry, exit or P&L had been computed.
@@ -10,18 +10,18 @@ Oct, a few days): they are NOT tested here (ARCHITECTURE.md change 5: the order-
 recorded days).
 
 ## Data (`config.py`, one switch)
-- `R17_SOURCE=release` (this run): repo release `research-data` through `research/brain/adapters/release.py`.
+- `R18_SOURCE=release` (this run): repo release `research-data` through `research/brain/adapters/release.py`.
   BANKNIFTY 13 Feb 2024 - 23 Feb 2026 (498 sessions), NIFTY 1 Apr 2024 - 13 Apr 2026; 1-minute index + nearest-expiry
   option chain with volume and OI; the expiring chain on expiry days from `expiry_days.parquet` (BANKNIFTY from Feb
   2025, NIFTY from Apr 2025); India VIX 1-minute from `extra_series.parquet`.
-- `R17_SOURCE=lake`: the Dhan lake (6 years) through `adapters/lake.py` when it is published. Same code; a NEW experiment
+- `R18_SOURCE=lake`: the Dhan lake (6 years) through `adapters/lake.py` when it is published. Same code; a NEW experiment
   with its own log entry and its own locked holdout (the lake's last 12 months).
-- No Dhan API call is made by anything in R17. Raw data stays in the scratch folder, never in git.
+- No Dhan API call is made by anything in R18. Raw data stays in the scratch folder, never in git.
 
 ## Periods
 - Locked holdout (R16's, last ~6 months of each set): BANKNIFTY from **2025-08-25**, NIFTY from **2025-10-13**. Read ONCE
   by `holdout.py` (a flag file refuses a second run).
-- Design = everything before. It is cut into **4 consecutive folds of equal sessions**. No setting is fitted in R17 (every
+- Design = everything before. It is cut into **4 consecutive folds of equal sessions**. No setting is fitted in R18 (every
   variant's numbers are fixed below), so "walk-forward" means: the improvement must hold fold after fold, and nothing
   about the holdout is known when the candidates are chosen.
 
@@ -89,3 +89,26 @@ carries its sample size.
 - At most one variant per arm can pass: if several candidates pass, the one with the larger design delta.
 - A PASS for a non-frozen arm becomes a SHADOW line in that arm's trade log ("variant X would exit at ..."), behind a
   switch that is OFF by default, and changes no exit. Liquidity: a proposal for after 26 Oct. No PASS: today's exits stay.
+
+## Amendment 1 (13 Oct 2026, after a code review; written alongside the re-run it describes)
+The text above is unchanged except for the renumbering R17 -> R18 (`research/hunt/r17` is the pre-trade checks study;
+this study's files, the switch `R18_SOURCE` and the scratch folder were renamed). Nothing about the variants, arms,
+measures or gates changes.
+
+1. **The release holdout is a REUSED holdout.** "Locked holdout (R16's ...)" above: R16 had already read these sessions
+   (BANKNIFTY from 2025-08-25, NIFTY from 2025-10-13) before R18 began, and R16's results (its expected-range formula,
+   used by V2 and V4) informed this study. So the release holdout is not a clean out-of-sample test; its numbers are
+   descriptive and cannot by themselves justify a change. With 0 design candidates no holdout test was run anyway. No
+   variant may be favoured for a later study because of how it did in this holdout (that includes V2).
+2. **Two replay bugs are fixed, and the design and holdout are re-run once with the same 60 rows:** (a) the ORB family
+   and VIX divergence square off at 15:05, not 15:10, when the contract they trade expires that day (as the app does);
+   (b) no fill lands after the square-off (`lib.next_open` caps at the arm's square-off; nothing printed by then: the
+   last printed price, at the square-off minute). This is a second read of the release holdout, made only to correct the
+   bugs; no variant, setting or gate is added or changed.
+3. **The lake run gets a FRESH holdout** (`config.py`): every release session up to **2026-04-13** (NIFTY's last;
+   BANKNIFTY's ends 2026-02-23) has been examined by R16 and R18, design and holdout alike. For `R18_SOURCE=lake`:
+   - design = lake sessions up to 2026-04-13 (4 consecutive folds, as above);
+   - embargo = 2026-04-14 .. 2026-04-26 (about 8 sessions), used by neither;
+   - holdout = **2026-04-27 onwards**, both indices, read once (its own flag file), and never examined by any study
+     before that read. It replaces "the lake's last 12 months" above, which would have overlapped the examined dates.
+   If the lake does not reach at least 100 holdout sessions per index when the run is made, the holdout read waits.
