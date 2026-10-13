@@ -3,7 +3,7 @@ title: R20b (a) range = nearest ALL level (pivots + liquidity zones + previous-d
 family: orb
 date: '2026-10-13'
 doc: research/HUNT_R20B_SR_RANGE.md
-hypothesis: The ORB arm with this level rule makes money after real costs on BANKNIFTY (holdout daily net > 0 and beats a
+hypothesis: The ORB arm with this level rule nets money on BANKNIFTY (app fills and fees, as the ORB studies) (holdout daily net > 0 and beats a
   random-level twin after BH over R20b's 14 + R20's 14 tests) and beats the plain 09:15-10:00 rule.
 data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
   NSE F&O bhavcopy (previous-day OI); Yahoo daily ^INDIAVIX for gaps
