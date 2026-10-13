@@ -60,7 +60,10 @@ object Upkeep {
         // switch it on (review 2, 11 Oct).
         "trademanager.",
         // The regime book (its live approval) and the learning-freeze line: safety settings, never from a file (review 2).
-        "regime.", "learn.freeze")
+        "regime.", "learn.freeze",
+        // GitHub sync (13 Oct, TODO G1/G2): the token (PIN-sealed, and the device copy the evening upload uses), the backup
+        // passphrase's keys and the upload record are this phone's alone - a backup never carries a token or a key.
+        "github.")
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }

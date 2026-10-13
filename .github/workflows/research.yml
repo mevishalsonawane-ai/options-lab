@@ -5,6 +5,7 @@ on:
     paths:
       - "research/**"
       - "!research/brain/**"            # the Data Brain package has its own light workflow (brain.yml)
+      - "!research/data/**"             # the data notes and decrypt_live.py: tested by android.yml's PC job
       - ".github/workflows/research.yml"
   workflow_dispatch:
 

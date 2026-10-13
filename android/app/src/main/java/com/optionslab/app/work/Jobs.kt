@@ -120,6 +120,8 @@ object Jobs {
         com.optionslab.app.ira.StudyWorker.schedule(context)
         // The market recorder's off-hours alarm: GIFT Nifty before the open and at night, NSE's participant files after 18:30.
         runCatching { com.optionslab.app.data.MarketRecorder.scheduleOffHours(context) }
+        // GitHub sync (13 Oct, TODO G1/G2): the evening upload (Wi-Fi and charging, after 15:45) and its twice-daily check.
+        runCatching { GitHubSyncWorker.schedule(context) }
     }
 
     fun schedule(context: Context, k: Kind, s: AppSettings = AppSettings.load()) {

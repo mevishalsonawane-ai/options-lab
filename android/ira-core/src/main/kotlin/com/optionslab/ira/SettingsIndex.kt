@@ -242,6 +242,8 @@ object SettingsIndex {
             listOf("Data and harvest", "Market recorder"), listOf("recorder", "record", "gift", "fii", "export")),
         Entry("data", "data.recordings", "Record live data", "Recordings: the market at every signal and fill, every minute, and every second's order flow (tick zone); days kept, size, export.",
             listOf("Data and harvest", "Recordings"), listOf("recordings", "recording", "snapshot", "chain", "export", "ticks", "tick zone")),
+        Entry("data", "data.github", "GitHub sync", "The recorded days and a sealed copy of the phone uploaded to GitHub each evening; the token, Upload now and Restore from GitHub.",
+            listOf("Data and harvest", "GitHub sync"), listOf("github", "upload", "token", "cloud", "sync")),
         Entry("data", "data.provenance", "Verify the record", "Re-reads every bundled chain against its provenance.", listOf("Data and harvest", "Provenance"),
             listOf("provenance", "check", "verify")),
         Entry("data", "data.delete", "Delete this phone's harvested data", "The data collected on this phone; asks you to confirm first.",

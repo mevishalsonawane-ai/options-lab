@@ -227,8 +227,9 @@ The new fields don't all fit the original "one table per minute" design. Eight c
      per-second files stay on the phone for 10 days and upload weekly, on Wi-Fi only, to monthly release assets.
    - Built 12 Oct (`TickZone` in ira-core, `TickZoneRecorder` in the app): `ticks.jsonl.gz` (per-second rows, gap runs)
      and `orderflow_1m.jsonl.gz` (tick-rule delta and CVD, book imbalance average and close, spread, large prints above
-     the day's earlier p99, absorption) in each day's recordings folder. The upload is not built yet; the files leave
-     the phone only through the PIN-confirmed "Export recordings (zip)".
+     the day's earlier p99, absorption) in each day's recordings folder. The upload was built 13 Oct (TODO G1, GitHub
+     sync): each day's folder goes up after 15:45, on Wi-Fi while charging, sealed with Boss's backup passphrase, to the
+     release `live-YYYY-MM`; `research/data/decrypt_live.py` opens it on a PC.
 2. **Recording must never slow trading.** Ticks are written by a background writer through a bounded queue. If it
    falls behind, it drops snapshots and counts the drops; it never blocks. Nothing touches the order or tick path:
    OrderPathRound2Test stays at 0. Each dropped second is marked `gap` in L2.

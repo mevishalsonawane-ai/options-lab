@@ -147,6 +147,12 @@ Not possible yet:
 
 - [ ] G1. The phone uploads each day's live recording to GitHub on its own (design: `research/data/ARCHITECTURE.md`,
       tick zone and L8).
+      - Built 13 Oct (phone side): `GitHubSync` + `GitHubSyncWorker` in the app, the rules in ira-core (`CloudSync`,
+        `CloudRun`, `GitHubReleases`, `LiveSeal`), the card in Settings → Data & Harvest → GitHub sync, and
+        `research/data/decrypt_live.py` for the PC. Each day's folder goes up whole (the trades file still encrypted
+        inside), sealed with the backup passphrase (PBKDF2-SHA256 600k, AES-256-GCM chunks), as `live-YYYY-MM-DD.irlive`.
+        A day whose folder grew (a late fill) goes again; a day only uploads after 15:45. Left: the nightly GitHub job
+        below, and Boss's token (MAINTENANCE.md, "GitHub token").
       - When: after 15:45, only on Wi-Fi and while charging. If it misses a day it retries the next evening.
       - Never on the order or tick path, and never on the main thread.
       - What: the day's file (per-second snapshots, per-minute order-flow aggregates, Boss's fills), encrypted on the
@@ -161,7 +167,9 @@ Not possible yet:
         (changes only after CI passes).
       - Until G1 ships: export the recorded data by hand every Friday (Data & Harvest → Export) and upload it to the
         release.
-- [ ] G2. Automatic phone backup to GitHub, so a new phone restores everything (owner, 2026-10-12).
+- [x] G2. Automatic phone backup to GitHub, so a new phone restores everything (owner, 2026-10-12). Built 13 Oct with
+      G1's uploader; restore: Data & Harvest → GitHub sync → Restore from GitHub (MAINTENANCE.md, "Restore on a new
+      phone": the app needs Zerodha linked before its settings open, so link first, then restore).
       - Upload: every evening, using the same uploader and token as G1, the phone uploads the existing encrypted backup
         (`data/Backup.kt`). It is sealed with Boss's backup password and goes to a GitHub Release `phone-backup` as an
         asset, never as a commit. The last 30 days are kept, plus one backup per month for older ones.

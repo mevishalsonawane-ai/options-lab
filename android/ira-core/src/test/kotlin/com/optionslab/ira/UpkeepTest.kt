@@ -25,6 +25,12 @@ class UpkeepTest {
             .forEach { assertFalse(Upkeep.carried(it), it) }
     }
 
+    @Test fun theGitHubTokenAndKeysNeverTravel() {
+        // 13 Oct (TODO G1/G2): the GitHub token, its device copy, the passphrase's keys and the upload record stay on the phone.
+        listOf("github.token.pin", "github.token.dev", "github.token.expiry", "github.key.live", "github.key.backup", "github.last",
+            "github.live.done").forEach { assertFalse(Upkeep.carried(it), it) }
+    }
+
     @Test fun theDayLockNeverTravels() {
         // 08 Oct: the day lock's amount (Bot settings, never by voice) and the day it was reached are this phone's alone, as
         // the guard: a restored backup can never switch it off or raise it.
