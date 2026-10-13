@@ -383,6 +383,26 @@ def tables():
                 row.append(round(float(np.nanmean(v)), 4))
             out[u][str(h)] = row
         out[u]["sessions"] = len(di)
+    # The danger meter's model for the app: every session with both indices (design + holdout), the same shrunk bucket
+    # means as the walk-forward model, and the trailing-120-session cut points as of the last session.
+    dd = pd.read_pickle(_p("danger_days.pkl")).sort_values("day").reset_index(drop=True)
+    idx = list(range(K.DANGER_WARMUP, len(dd)))
+    B = {i: buckets(dd, i) for i in idx}
+    overall = dd.net.iloc[idx].mean()
+    model = []
+    for f in FEATS:
+        vals = pd.Series([B[i][f] for i in idx])
+        nets = dd.net.iloc[idx].values
+        for b in sorted(vals.unique()):
+            s = nets[(vals == b).values]
+            model.append(dict(feature=f, bucket=b, n=int(len(s)), mean=round(float(s.mean()), 1),
+                              dev=round(float((s.mean() - overall) * len(s) / (len(s) + 20)), 1)))
+    sc = np.array([sum(next(m["dev"] for m in model if m["feature"] == f and m["bucket"] == B[i][f]) for f in FEATS) for i in idx])
+    tr = dd.iloc[-K.DANGER_WARMUP:]
+    out["danger"] = dict(sessions=len(idx), first=str(dd.day.iloc[idx[0]]), last=str(dd.day.iloc[-1]), overall=round(float(overall), 1),
+                         p20=round(float(np.quantile(sc, 0.2)), 1), p05=round(float(np.quantile(sc, 0.05)), 1),
+                         gap_cuts=[round(float(x), 3) for x in np.nanquantile(tr.gap, [1 / 3, 2 / 3])],
+                         vix_cuts=[round(float(x), 2) for x in np.nanquantile(tr.vix, [1 / 3, 2 / 3])], model=model)
     (K.RESULTS / "app_constants.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out)[:400])
 
