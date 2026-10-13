@@ -160,11 +160,11 @@ def main(force: bool = False):
     v0 = res["V0"]["holdout"]["net"]
     for p, q in zip(VARIANTS, qs):
         r = res[p.name]
-        g = dict(g1_design_net=r["design"]["net"] > 0,
-                 g2_holdout=r["holdout"]["trades"] >= 5 and r["holdout"]["net"] > 0,
-                 g3_twin_bh=q < 0.05,
-                 g4_stress=r["holdout_2x_spread"]["net"] > 0,
-                 g5_beats_v0=r["holdout"]["net"] > v0 if p.name != "V0" else False)
+        g = dict(g1_design_net=bool(r["design"]["net"] > 0),
+                 g2_holdout=bool(r["holdout"]["trades"] >= 5 and r["holdout"]["net"] > 0),
+                 g3_twin_bh=bool(q < 0.05),
+                 g4_stress=bool(r["holdout_2x_spread"]["net"] > 0),
+                 g5_beats_v0=bool(r["holdout"]["net"] > v0) if p.name != "V0" else False)
         r["twin"]["bh_q"] = round(float(q), 4)
         r["gates"] = g
         r["passes"] = all(g.values())

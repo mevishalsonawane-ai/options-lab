@@ -23,8 +23,9 @@ settings: research/hunt/r21/PREREG.md
 prereg: research/hunt/r21/PREREG.md
 variants_tried: 1
 results:
-  summary: 'pending: pre-registered, not yet run'
+  summary: Design 10 trades, 5 wins, net Rs +45,227 (33 expiries). Holdout 15 trades, 0 wins, net Rs -46,268 (31 expiries;
+    worst Rs -3,267; big days caught 0 of 23). Twin p 1.000, BH q 1.000. FAILED the gates.
   costs: 'app charges (current rates), liq fills: ask = open + 5 bps + 1-4 tick half-spread; stress x2 spread'
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected
 notes: One of 9 R21 variants; BH across all 9. 13 Oct 2026 is a forward example only (not in the data).

@@ -26,7 +26,9 @@ settings: research/hunt/r21/anatomy.py
 prereg: null
 variants_tried: null
 results:
-  summary: see research/hunt/r21/results/anatomy.md
+  summary: 'Design 33 expiry days (27 NIFTY + 6 BANKNIFTY): some Rs 1-10 option (13:00-14:30) reached 5x before 15:05 on 24,
+    10x on 11, 20x on 7 (hindsight); 11 of the 24 were back under 2x by 15:05 (median give-back 68%). The straddle condition
+    held on 32 of 33 days; 15-minute 0.25% momentum on only 9. Nothing at 13:00 separated big days.'
   costs: none (descriptive); the k-scan uses app charges and liq fills
 holdout_read: null
 verdict: not-a-test

@@ -307,3 +307,19 @@ Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 2
   0.58% vs 0.52% NIFTY); "days like today" analogs (worse than all past days pooled, all 8 cases).
 - App: build an expected-range nowcast (stop/target sizing, quiet-market warning, Jarvis); show analogs only as
   context, never as a forecast; no direction / regime / max-pain models.
+
+## Catching expiry zero-to-hero moves (R21, 13 Oct 2026) - nothing passes; the Hero arm keeps its rules
+Full study: `HUNT_R21_HERO.md` (pre-registered `hunt/r21/PREREG.md`, commit 78e9761; 9 variants, one BH family).
+- Why Hero missed 13 Oct: straddle peaked +13.7% (needs 15%) and the 0.25% momentum minutes (14:40, 14:43-44) never
+  met it. In the data that is rare: the straddle condition held on 32 of 33 design expiries; momentum (9 of 33) binds.
+- Hindsight anatomy (33 design expiries, NIFTY + BANKNIFTY, Apr-Oct 2025): some Rs 1-10 option at 13:00-14:30 ran 5x
+  before 15:05 on 24 days, 10x on 11, 20x on 7; median give-back from the peak by 15:05 68%; 11 of 24 back under 2x.
+  Nothing at 13:00 (trend, gap, max pain, OI walls, VIX, call-vs-put change) separated those days; the winning side
+  went with the trend since 12:00 on 12 of 24.
+- Holdout (31 expiries, read once): one-sided trigger (option 2.5x its low since 12:00 + momentum) 11 trades, 0 wins,
+  -Rs 35,188; with window to 15:00 and Rs 1-15 band 15 trades, 0 wins, -Rs 46,268 (design had been +Rs 44,527 on 10);
+  straddle 10% in the last 15 min 13 trades, 1 win, -Rs 18,837; plain Hero 2 trades, -Rs 6,259; blind 13:30 buy
+  30 trades, -Rs 66,764. Random-time twins did better than every trigger (best BH q 0.054, the blind control).
+- Exits did not help: no holdout trade reached the 3-4x that arms a lock or trail; the plain 15:05 exit lost more
+  (-Rs 61,863) than the app's -60% stop.
+- Deciding it needs the 6-year Dhan lake (~300 NIFTY weeklies): `R21_SOURCE=lake python3 research/hunt/r21/run.py all`.
