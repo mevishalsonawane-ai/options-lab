@@ -27,8 +27,10 @@ results:
   summary: 'Design (BANKNIFTY 361, NIFTY 364, FINNIFTY 396 sessions): touches of OH / OL rejected 29% (347 of 1,211), mirror
     twin 29% (358 of 1,256); a 5-min break held 63% (688 of 1,099; twin 57%); a held retest went on to the close 45% (-0.020
     ATR14, 442 events); moves after every event kind -0.06 to +0.02 ATR14 to the close, twins alike. Wide-range days (W >=
-    0.563) breaks +0.06 ATR to the close (329), narrow (W < 0.407) -0.02 (391). 1x extension reached after 31% of breaks.'
+    0.563) breaks +0.06 ATR to the close (329), narrow (W < 0.407) -0.02 (391). 1x extension reached after 31% of breaks.
+    Holdout (122 / 120 / 92 sessions): rejected 22% (83 of 371; twin 30%), held 59% (202 of 342; twin 63%), every event
+    kind -0.06 to +0.05 ATR to the close; the width split reversed (wide -0.05, narrow +0.045 for breaks).'
   costs: none (index moves only)
-holdout_read: false
+holdout_read: true
 verdict: not-a-test
 notes: Descriptive; no event-study number enters the gates. The holdout tables are printed after the one holdout read.

@@ -155,10 +155,11 @@ def run_events(period="design"):
             continue
         if und != "FINNIFTY":
             vix_by_day.update({d.day: d.vix_prev for d in days})
-        cs = split(und, contexts(und, days, vix_by_day), period)
+        allc = contexts(und, days, vix_by_day)
+        cs = split(und, allc, period)
         if not cs:
             continue
-        base = baseline(cs)
+        base = baseline(split(und, allc, "design"))          # part A3: the same-minute baseline of the DESIGN sessions
         for c in cs:
             rows += ctx_events(c, base)
         nsess[und] = dict(sessions=len(cs), first=str(cs[0].day), last=str(cs[-1].day),

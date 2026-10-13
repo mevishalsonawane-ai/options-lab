@@ -25,8 +25,10 @@ prereg: research/hunt/r22/PREREG.md
 variants_tried: 1
 results:
   summary: 'Design (395 sessions, BANKNIFTY + NIFTY): 295 trades, net Rs -20,547 (Rs -52 a session), blocks [-2925, -6501,
-    -7669, -3453], G1 fail, G2 fail; today''s ORB on the same sessions Rs -15,603. Holdout not read yet.'
+    -7669, -3453], G1 fail, G2 fail; today''s ORB on the same sessions Rs -15,603. Holdout (153 sessions): 100 trades, net
+    Rs -6,095 (Rs -40 a session), t-test p 0.79 (q 1.00), random-level twin p 0.26 (q 1.00), random-time twin p 0.52 (q 1.00),
+    2x ticks Rs -6,814; today''s ORB Rs -29,117. FAILED.'
   costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected
 notes: One of 6 R22 rules picked from the design event study (BH family of 58 with R20 / R20b / R20c).
