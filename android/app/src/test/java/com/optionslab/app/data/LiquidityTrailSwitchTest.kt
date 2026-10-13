@@ -41,7 +41,8 @@ class LiquidityTrailSwitchTest : RobolectricTest() {
         assertEquals(LiquidityFreeze.trailSaid(true), LiquidityTest.setTrail(true))
         assertTrue(LiquidityTest.trailOn())
         waitFor("the state file") { LiquidityTest.stateWrittenForTest()?.contains("trail=true") == true }
-        waitFor("the diary line") { Diag.lines().any { it.contains("₹500 give-back trail ON for new Liquidity PAPER trades") && it.contains("(by you)") } }
+        // The diary says the switch's own words (13 Oct: R19c changed them, so the test reads them, not a copy).
+        waitFor("the diary line") { Diag.lines().any { it.contains(LiquidityFreeze.trailSaid(true)) && it.contains("(by you)") } }
         // As after a restart: read back from its file.
         LiquidityTest.forgetMemoryForTest()
         assertFalse(LiquidityTest.trailOn())
