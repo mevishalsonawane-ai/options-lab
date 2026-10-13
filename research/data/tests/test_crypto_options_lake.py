@@ -461,3 +461,11 @@ def test_slim_product_drops_bulky_asset_records_but_keeps_symbols():
     assert q["settling_asset"] == dict(symbol="USD", id=14) and "ui_config" not in q
     assert q["underlying_asset"] == dict(symbol="BTC") and q["strike_price"] == "85400"
     assert L.products_frame([q])["settling_asset"].iloc[0] == "USD"
+
+
+def test_build_candles_day_with_no_candles_writes_an_empty_file(tmp_path):
+    p = L.products_frame([product(1, "C-BTC-43000-281223", settle="2023-12-28T12:00:00Z",
+                                  launch="2023-12-20T12:00:00Z")]).to_dict("records")
+    out, qa = L.build_candles_day(lambda u, q: dict(result=[]), p, str(tmp_path), "x/2023-12-28.parquet")
+    assert qa["rows"] == 0 and qa["products_with_candles"] == 0 and qa["first_ts"] is None and qa["ok"]
+    assert pq.read_table(out).schema.equals(L.CANDLE_SCHEMA)

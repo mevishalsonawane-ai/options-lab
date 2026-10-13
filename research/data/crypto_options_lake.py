@@ -539,16 +539,20 @@ def fetch_candles(get, symbol, start_ms, end_ms, resolution="1m", limit=4000, st
         for c in data:
             t = int(c["time"]) * 1000
             if start_ms <= t < end_ms:
-                rows[t] = c
+                rows[t] = tuple(None if c.get(k) is None else float(c[k])
+                                for k in ("open", "high", "low", "close", "volume"))
         hi = lo
-    return [dict(timestamp=t, **{k: rows[t].get(k) for k in ("open", "high", "low", "close", "volume")})
-            for t in sorted(rows)]
+    return [dict(timestamp=t, open=v[0], high=v[1], low=v[2], close=v[3], volume=v[4])
+            for t, v in sorted(rows.items())]
 
 
 def build_candles_day(get, products, work, rel, max_days=120):
     """1m candles for every product in `products` (one underlying, one expiry day) → one Parquet. Candles after the
-    settlement time are dropped (the API keeps printing a flat post-expiry price). Returns (path, qa)."""
-    cols = {f.name: [] for f in CANDLE_SCHEMA}
+    settlement time are dropped (the API keeps printing a flat post-expiry price). Each product becomes a small Arrow
+    table straight away (a day can hold ~1M candles; as Python objects 16 such days took 14 GB, 13 Oct).
+    Returns (path, qa)."""
+    import pyarrow.compute as pc
+    tables = []
     qa = dict(products=len(products), products_with_candles=0, dropped_after_expiry=0, rows=0)
     for p in products:
         exp = int(p["expiry_ts"])
@@ -557,25 +561,26 @@ def build_candles_day(get, products, work, rel, max_days=120):
         got = fetch_candles(get, p["symbol"], start, exp + 2 * 3_600_000)
         keep = [c for c in got if c["timestamp"] < exp]
         qa["dropped_after_expiry"] += len(got) - len(keep)
-        if keep:
-            qa["products_with_candles"] += 1
+        del got
+        if not keep:
+            continue
+        qa["products_with_candles"] += 1
         s = parse_delta_symbol(p["symbol"]) or {}
-        for c in keep:
-            for k in ("timestamp", "open", "high", "low", "close", "volume"):
-                cols[k].append(None if c[k] is None else (int(c[k]) if k == "timestamp" else float(c[k])))
-            cols["symbol"].append(p["symbol"])
-            cols["product_id"].append(int(p["id"]))
-            cols["underlying"].append(p.get("underlying") or s.get("underlying"))
-            cols["option_type"].append(s.get("option_type"))
-            cols["strike"].append(float(p["strike_price"]) if pd.notna(p.get("strike_price")) else s.get("strike"))
-            cols["expiry_ts"].append(exp)
-    t = pa.table({f.name: pa.array(cols[f.name], f.type) for f in CANDLE_SCHEMA}, schema=CANDLE_SCHEMA)
+        n = len(keep)
+        strike = float(p["strike_price"]) if pd.notna(p.get("strike_price")) else s.get("strike")
+        cols = {k: [c[k] for c in keep] for k in ("timestamp", "open", "high", "low", "close", "volume")}
+        cols |= dict(symbol=[p["symbol"]] * n, product_id=[int(p["id"])] * n,
+                     underlying=[p.get("underlying") or s.get("underlying")] * n,
+                     option_type=[s.get("option_type")] * n, strike=[strike] * n, expiry_ts=[exp] * n)
+        tables.append(pa.table({f.name: pa.array(cols[f.name], f.type) for f in CANDLE_SCHEMA}, schema=CANDLE_SCHEMA))
+        del keep, cols
+    t = pa.concat_tables(tables) if tables else CANDLE_SCHEMA.empty_table()
+    del tables
     t = t.sort_by([("timestamp", "ascending"), ("symbol", "ascending")])
     qa["rows"] = t.num_rows
-    ts = t.column("timestamp").to_pylist()
-    qa["first_ts"], qa["last_ts"] = (ts[0], ts[-1]) if ts else (None, None)
-    closes = [x for x in t.column("close").to_pylist() if x is not None]
-    qa["price_nonpositive"] = sum(1 for x in closes if x <= 0)
+    qa["first_ts"] = pc.min(t.column("timestamp")).as_py()
+    qa["last_ts"] = pc.max(t.column("timestamp")).as_py()
+    qa["price_nonpositive"] = int(pc.sum(pc.less_equal(t.column("close"), 0)).as_py() or 0)
     qa["ok"] = qa["price_nonpositive"] == 0
     out = os.path.join(work, rel)
     write_parquet(t, out)
