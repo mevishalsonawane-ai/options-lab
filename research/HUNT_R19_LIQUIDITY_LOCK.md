@@ -77,18 +77,18 @@ plain rules over the same trades.
 |---|---|---|---|---|---|---|
 | d plain rules | +35,759 | | +39,548 | | 27% / 19% | |
 | a1 | +37,498 | +1,739 (p 0.07) | +42,316 | +2,768 (p 0.33) | 28% / 19% | 4 / 19 |
-| a2 | +38,703 | +2,945 (p 0.02) | +38,548 | -1,000 | 29% / 18% | 2 / 27 |
+| a2 | +38,703 | +2,945 (p 0.025) | +38,548 | -1,000 | 29% / 18% | 2 / 27 |
 | b1 | +32,796 | -2,962 | +42,979 | +3,432 (p 0.29) | 24% / 20% | 4 / 12 |
 | b2 | +30,860 | -4,898 | +40,992 | +1,444 (p 0.24) | 22% / 20% | 2 / 3 |
 | c1 | +766 | -34,992 | +17,039 | -22,509 | 5% / 11% | 9 / 22 |
 | c2 | +17,527 | -18,231 | +37,562 | -1,986 | 12% / 19% | 4 / 11 |
 
-The best design result (a2 on 15m: +Rs 2,945 over 91 trades, p 0.02 before correction) was a few trades, and the
+The best design result (a2 on 15m: +Rs 2,945 over 91 trades, p 0.025 before correction) was a few trades, and the
 holdout reversed it (-Rs 4,937). Walk-forward, fold by fold, choosing the best lock so far lost on both books:
 - 15m: -Rs 15,125 over 7 folds. The first choice, c2, lost Rs 17,390 in 2024 Q2; after that, a2 made +Rs 2,265 in 6 folds.
 - 5m: -Rs 6,083.
-The worst day was not changed by any lock on the 15m book. The full-loss days are stop and index-stop days, which a
-lock never reaches.
+No lock changed the 15m book's worst day in either period (design -Rs 5,294, holdout -Rs 1,763): a lock
+only acts on trades that first went up.
 
 ## Today's trade under each lock (illustration only, NOT evidence)
 
