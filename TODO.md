@@ -380,6 +380,10 @@ Later (when profitable):
       sell): BTC/ETH options on Delta Exchange India (INR-settled, daily/weekly/monthly expiries) with Deribit's history
       for depth; option-buying arms like the Indian ones, always with a stop-loss and a profit lock. Branch
       claude/crypto-options.
+      CoinSwitch (Boss's exchange) also lists BTC/ETH options in its app (INR and USDT, option chain, Greeks); its
+      options API is private beta, on request. Once Boss's read-only CoinSwitch key is in the environment (and options
+      API access is granted), compare CoinSwitch's option contracts, fees and spreads with Delta India's and re-run any
+      passing RC2 rule on CoinSwitch's costs.
 - [ ] C3. Every agent and Jarvis know crypto (after C2 has findings). App work, one session:
       - the shared knowledge pack carries the crypto facts and findings (tagged), which every agent already reads;
       - Jarvis answers crypto questions (what is known, what failed, latest BTC/ETH context), with numbers checked like
