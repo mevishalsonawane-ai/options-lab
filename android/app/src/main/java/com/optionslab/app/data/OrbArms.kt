@@ -143,10 +143,16 @@ object OrbArms {
         val stopPts: Double? = null, val targetPts: Double? = null,
         val liq: com.optionslab.engine.orb.LiquidityParams? = null,
         /**
-         * Liquidity 15+5 on PAPER under Boss's own Rs 500 give-back trail ([LiquidityTrail], research R19b: failed, his choice,
-         * off by default): the give-back in rupees per lot it entered with. Null: plain rules (every live trade, every other arm).
+         * Liquidity 15+5 on PAPER under Boss's own Rs 500 give-back trail ([LiquidityTrail], research R19b / R19c: failed, their
+         * choice, off by default; from +Rs 1,000 a lot since R19c, see [trailFrom]): the give-back in rupees per lot it entered
+         * with. Null: plain rules (every live trade, every other arm).
          */
         val trail: Double? = null,
+        /**
+         * Where that trail starts, rupees per lot: Boss's rule of 13 Oct (R19c), +Rs 1,000 ([LiquidityTrail.ACTIVATE_RS]). Null with a
+         * trail: a trade entered before it, which keeps R19b's first rule (from +Rs 500).
+         */
+        val trailFrom: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -274,7 +280,8 @@ object OrbArms {
                         stopPts = if (p.has("stopPts")) p.getDouble("stopPts") else null,
                         targetPts = if (p.has("targetPts")) p.getDouble("targetPts") else null,
                         liq = p.optString("liq").ifEmpty { null }?.let { liqOf(it) },
-                        trail = if (p.has("trail")) p.getDouble("trail") else null)
+                        trail = if (p.has("trail")) p.getDouble("trail") else null,
+                        trailFrom = if (p.has("trailFrom")) p.getDouble("trailFrom") else null)
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -700,7 +707,7 @@ object OrbArms {
                         if (p.seen.isNotEmpty()) put("seen", seenJson(p.seen)); p.lot?.let { put("lot", it) }; p.low?.let { put("low", it) }
                         p.mgrStop?.let { put("mgrStop", it) }
                         p.stopPts?.let { put("stopPts", it) }; p.targetPts?.let { put("targetPts", it) }; p.liq?.let { put("liq", liqText(it)) }
-                        p.trail?.let { put("trail", it) } })
+                        p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -1721,7 +1728,7 @@ object OrbArms {
             val high = if (ladderTarget(cur) != null || cur.trail != null) runCatching { Paper.highSince(c, cur.entryTime) }.getOrNull() else null
             val (laddered, locked) = ladder(cur, ltp, high)
             // The trail's give-back from the best price BEFORE this look (a new best counts from the next look, as the ladder).
-            val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail)
+            val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail, cur.trailFrom)
             val seen = heldRange(trailPeak(laddered, ltp, high), ltp)
             if (seen !== cur) b.positions[i] = seen
             // The Hero arm's own exits (HeroRules.exitStep: half at 5x, the rest at 20x or 15:05, the -60% stop on a minute's
@@ -1794,7 +1801,7 @@ object OrbArms {
     /** Where a laddered position's stop belongs now: the higher of its trigger and the lock its best price earned (F3). */
     private fun lockOrStop(p: Position, tick: Double = OrbRules.TICK): Double? = LiquidityTrail.restingStop(p.entry,
         ProfitLock.restingStop(p.entry, p.stopTrigger, ladderTarget(p), p.peak ?: p.entry, ProfitLock.roundTripPerUnit(p.entry, p.qty), tick),
-        p.peak, p.lot, p.trail, tick)
+        p.peak, p.lot, p.trail, tick, p.trailFrom)
 
     /** The profit-lock ladder's target for a laddered position ([ProfitLock.targetOf] its arm), or null for none. */
     private fun ladderTarget(p: Position): Double? = if (!p.ladder) null else runCatching {
@@ -1826,7 +1833,7 @@ object OrbArms {
         // The higher of the ladder's lock and Boss's paper give-back trail ([LiquidityTrail.raise]: up only, below the price).
         val to = listOfNotNull(
             target?.let { ProfitLock.raise(p.entry, it, p.peak ?: p.entry, p.stopTrigger, ltp, ProfitLock.roundTripPerUnit(p.entry, p.qty)) },
-            LiquidityTrail.raise(p.entry, p.peak, p.lot, p.trail, p.stopTrigger, ltp),
+            LiquidityTrail.raise(p.entry, p.peak, p.lot, p.trail, p.stopTrigger, ltp, activateRs = p.trailFrom),
         ).maxOrNull() ?: return p
         val r = runCatching { Paper.modify(id, null, null, to) }
         if (r.getOrNull()?.ok == true) return p.copy(stopTrigger = to)
@@ -2762,6 +2769,8 @@ object OrbArms {
         // exits are the paper account's parameters today (S9: a variant moves its exits only, from the session after).
         val lq = liqParamsOf(arm.source, now().toLocalDate(), live = false)
         val trigger = LiquidityRules.stopTrigger(fill.price, lq.stopPct)
+        // Boss's own give-back trail (R19b / R19c failed: their opt-in switch, off by default): paper entries only, from +Rs 1,000 a lot.
+        val trail = LiquidityTrail.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.trailOn() }.getOrDefault(false))
         var stopId: String? = null
         if (trigger != null) {
             val stop = Paper.place(c, "SELL", (fill.quantity / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "SL-M", "MIS", null, trigger)
@@ -2770,8 +2779,7 @@ object OrbArms {
         b.positions += stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
             charges = chargesOf(buy.orderId), level = s.level, target = s.target, near = near, volSkip = volSkip, strong = strong,
             lot = c.lotSize.takeIf { it > 0 }, ladder = lq.lockPct > 0,
-            // Boss's own Rs 500 give-back trail (R19b failed: his opt-in switch, off by default): paper entries only.
-            trail = LiquidityTrail.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.trailOn() }.getOrDefault(false))))
+            trail = trail, trailFrom = LiquidityTrail.forEntryFrom(trail)))
         marks[c.symbol] = fill.price
         return "entered"
     }

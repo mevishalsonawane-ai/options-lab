@@ -97,8 +97,9 @@ object LiquidityTest {
     }
 
     /**
-     * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail]; research R19b
-     * failed, so it is his choice and off by default). Memory only: the order path reads it at a paper entry.
+     * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail]; from +Rs 1,000
+     * a lot since R19c; research R19b and R19c failed, so it is their choice and off by default). Memory only: the order path
+     * reads it at a paper entry.
      */
     fun trailOn(): Boolean = _state.value.trail
 

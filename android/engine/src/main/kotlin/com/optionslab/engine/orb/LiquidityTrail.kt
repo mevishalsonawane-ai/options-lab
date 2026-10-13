@@ -14,10 +14,18 @@ package com.optionslab.engine.orb
  * Like [ProfitLock.raise] for the ORB arms it MOVES THE RESTING STOP, up only, so it works with the app closed; the best
  * price is every stream tick or the 1-minute candles' highs ([ProfitLock.nextPeak]). It only ever adds an earlier exit:
  * the -15% stop and every other exit of the arm stay as they are. Pure: no clock, no network, no orders.
+ *
+ * 13 Oct, later (research R19c, HUNT_R19C_CONSISTENCY.md): Boss's rule became "once the open P&L reaches +Rs 1,000 a lot,
+ * sell when it falls Rs 500 below its highest point" ([ACTIVATE_RS]), so a trailed trade never keeps less than +Rs 500 a
+ * lot. R19c FAILED too (Liquidity 15m -Rs 6.9k against +Rs 23.4k on plain rules, 5m +Rs 6.7k against +Rs 27.3k, in the
+ * locked holdout Apr 2025 - Feb 2026, worse than random early exits), so the switch stays their own choice, off by default.
+ * A trade carries the activation it entered with ([forEntryFrom]); one entered before this (none stored) keeps +Rs 500.
  */
 object LiquidityTrail {
     /** The give-back, rupees per lot (Boss's number). */
     const val GIVE_BACK_RS = 500.0
+    /** Where the trail starts, rupees per lot (Boss's rule of 13 Oct, R19c): +Rs 1,000, so the stop is never under +Rs 500. */
+    const val ACTIVATE_RS = 1000.0
     /** The exit's reason when the trail sells or its stop fills. */
     const val WHY = "give_back_trail"
     /** The two labels a Liquidity paper trade carries, so the 26 Oct decision can compare the plain-rules record with this one. */
@@ -36,17 +44,19 @@ object LiquidityTrail {
     /**
      * The trail's stop for a buy at [entry] whose best price so far is [peak] ([lot]: the contract's lot; [rupeesPerLot]: the
      * give-back, null: no trail), on the [tick] rounded up, or null: no trail, a missing input, or the best not yet
-     * [rupeesPerLot] per lot above the entry. Never above the best price.
+     * [activateRs] per lot above the entry ([activateRs] null or broken: the give-back itself, R19b's first rule). Never above
+     * the best price.
      */
-    fun level(entry: Double, peak: Double?, lot: Int?, rupeesPerLot: Double?, tick: Double = OrbRules.TICK): Double? {
+    fun level(entry: Double, peak: Double?, lot: Int?, rupeesPerLot: Double?, tick: Double = OrbRules.TICK, activateRs: Double? = null): Double? {
         val pts = points(rupeesPerLot, lot) ?: return null
-        if (!(entry > 0) || peak == null || !peak.isFinite() || peak - entry < pts - EPS) return null
+        val from = points(activateRs, lot) ?: pts
+        if (!(entry > 0) || peak == null || !peak.isFinite() || peak - entry < from - EPS) return null
         return minOf(ProfitLock.onTick(peak - pts, tick), peak)
     }
 
     /** True when [ltp] is at or below the level the best price BEFORE it ([peakBefore]) earned: a new best counts from the next look. */
-    fun exits(entry: Double, peakBefore: Double?, ltp: Double, lot: Int?, rupeesPerLot: Double?): Boolean =
-        level(entry, peakBefore, lot, rupeesPerLot)?.let { ltp <= it + EPS } == true
+    fun exits(entry: Double, peakBefore: Double?, ltp: Double, lot: Int?, rupeesPerLot: Double?, activateRs: Double? = null): Boolean =
+        level(entry, peakBefore, lot, rupeesPerLot, activateRs = activateRs)?.let { ltp <= it + EPS } == true
 
     /**
      * The trigger the resting sell stop moves UP to, as [ProfitLock.raise]: null when it must not move - no level yet, not
@@ -54,15 +64,16 @@ object LiquidityTrail {
      * check sells that instead).
      */
     fun raise(entry: Double, peak: Double?, lot: Int?, rupeesPerLot: Double?, current: Double?, ltp: Double,
-              tick: Double = OrbRules.TICK): Double? {
-        val l = level(entry, peak, lot, rupeesPerLot, tick) ?: return null
+              tick: Double = OrbRules.TICK, activateRs: Double? = null): Double? {
+        val l = level(entry, peak, lot, rupeesPerLot, tick, activateRs) ?: return null
         if (current != null && l <= current + EPS) return null
         return l.takeIf { it < ltp - EPS }
     }
 
     /** Where the stop belongs: the higher of its own ([base]; null: none) and the trail's level; null with neither. */
-    fun restingStop(entry: Double, base: Double?, peak: Double?, lot: Int?, rupeesPerLot: Double?, tick: Double = OrbRules.TICK): Double? =
-        listOfNotNull(base, level(entry, peak, lot, rupeesPerLot, tick)).maxOrNull()
+    fun restingStop(entry: Double, base: Double?, peak: Double?, lot: Int?, rupeesPerLot: Double?, tick: Double = OrbRules.TICK,
+                    activateRs: Double? = null): Double? =
+        listOfNotNull(base, level(entry, peak, lot, rupeesPerLot, tick, activateRs)).maxOrNull()
 
     /** A paper Liquidity trade's label: [TRAILED] when it was entered under the trail ([rupeesPerLot] not null), else [PLAIN]. */
     fun label(rupeesPerLot: Double?): String = if (rupeesPerLot != null) TRAILED else PLAIN
@@ -72,4 +83,7 @@ object LiquidityTrail {
      * switch on ([switchOn]); null otherwise. A live entry never carries it, whatever the switch says.
      */
     fun forEntry(arm: Arm, live: Boolean, switchOn: Boolean): Double? = if (switchOn && !live && arm.liquidity) GIVE_BACK_RS else null
+
+    /** Where a NEW entry's trail starts: [ACTIVATE_RS] when it carries one ([giveBack] from [forEntry]), else null (no trail). */
+    fun forEntryFrom(giveBack: Double?): Double? = if (giveBack != null) ACTIVATE_RS else null
 }

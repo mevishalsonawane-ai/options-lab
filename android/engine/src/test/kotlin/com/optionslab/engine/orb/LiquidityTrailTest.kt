@@ -120,4 +120,62 @@ class LiquidityTrailTest {
         assertEquals(LiquidityTrail.TRAILED, LiquidityTrail.label(rs))
         assertEquals(LiquidityTrail.PLAIN, LiquidityTrail.label(null))
     }
+
+    // ---- Boss's rule from 13 Oct, later (R19c): from +Rs 1,000 a lot, Rs 500 below the best; never under +Rs 500 ----
+
+    private val from = LiquidityTrail.ACTIVATE_RS
+
+    @Test fun bossesRuleWaitsForPlus1000ALot() {
+        // BANKNIFTY lot 30: Rs 1,000 = 33.33 points, Rs 500 = 16.67
+        assertNull(LiquidityTrail.level(100.0, 130.0, bn, rs, activateRs = from))                       // +Rs 900: not yet
+        assertNull(LiquidityTrail.level(100.0, 133.30, bn, rs, activateRs = from))                      // +Rs 999
+        assertEquals(116.70, LiquidityTrail.level(100.0, 133.35, bn, rs, activateRs = from)!!, 1e-9)    // 133.35 - 16.67 -> 116.70
+        // R19b's first rule (no activation stored) still starts at +Rs 500: trades entered before keep their rule
+        assertEquals(113.35, LiquidityTrail.level(100.0, 130.0, bn, rs)!!, 1e-9)
+    }
+
+    @Test fun bossesRuleNeverKeepsLessThanPlus500AndOnlyRises() {
+        var last = Double.NEGATIVE_INFINITY
+        for (i in 0..400) {
+            val peak = 100.0 + 1000.0 / bn + i * 0.1
+            val l = LiquidityTrail.level(100.0, peak, bn, rs, activateRs = from)!!
+            assertTrue((l - 100.0) * bn >= 500.0 - 1e-6, "keeps at least +Rs 500 a lot")
+            assertTrue(l <= peak + 1e-9 && l >= last - 1e-9, "never above the best, never lower")
+            assertEquals(0.0, Math.round(l / 0.05) * 0.05 - l, 1e-9)
+            last = l
+        }
+    }
+
+    @Test fun bossesRuleOnTodaysMidcpTradeAndPointsPerLot() {
+        // MIDCPNIFTY lot 120: +Rs 1,000 = 8.33 points (activates at 203.78), best 216.3 -> rests at 212.15 (+Rs 2,004 a lot)
+        assertNull(LiquidityTrail.level(195.45, 203.75, mid, rs, activateRs = from))
+        assertEquals(212.15, LiquidityTrail.level(195.45, 216.3, mid, rs, activateRs = from)!!, 1e-9)
+        assertTrue(LiquidityTrail.exits(195.45, 216.3, 212.0, mid, rs, activateRs = from))
+        assertFalse(LiquidityTrail.exits(195.45, 216.3, 212.5, mid, rs, activateRs = from))
+        assertEquals(1000.0 / 30, LiquidityTrail.points(from, 30)!!, 1e-9)
+        assertEquals(1000.0 / 35, LiquidityTrail.points(from, 35)!!, 1e-9)
+        assertEquals(1000.0 / 65, LiquidityTrail.points(from, 65)!!, 1e-9)
+    }
+
+    @Test fun bossesRuleAsTheRestingStopAndMissingInputs() {
+        // up only: a stop already above it is never moved; a level not under the price is the app's own sale
+        assertNull(LiquidityTrail.raise(100.0, 130.0, bn, rs, current = 85.0, ltp = 129.0, activateRs = from), "not active")
+        assertEquals(123.35, LiquidityTrail.raise(100.0, 140.0, bn, rs, current = 85.0, ltp = 139.0, activateRs = from)!!, 1e-9)
+        assertNull(LiquidityTrail.raise(100.0, 140.0, bn, rs, current = 124.0, ltp = 139.0, activateRs = from), "never down")
+        assertNull(LiquidityTrail.raise(100.0, 140.0, bn, rs, current = 85.0, ltp = 123.0, activateRs = from), "gapped through it")
+        assertEquals(123.35, LiquidityTrail.restingStop(100.0, 85.0, 140.0, bn, rs, activateRs = from)!!, 1e-9)
+        assertEquals(85.0, LiquidityTrail.restingStop(100.0, 85.0, 130.0, bn, rs, activateRs = from)!!, 1e-9)
+        // a missing peak or lot: no trail; a broken activation falls back to the give-back
+        assertNull(LiquidityTrail.level(100.0, null, bn, rs, activateRs = from))
+        assertNull(LiquidityTrail.level(100.0, 140.0, null, rs, activateRs = from))
+        assertNull(LiquidityTrail.level(100.0, Double.NaN, bn, rs, activateRs = from))
+        assertEquals(113.35, LiquidityTrail.level(100.0, 130.0, bn, rs, activateRs = Double.NaN)!!, 1e-9)
+    }
+
+    @Test fun aNewPaperEntryCarriesBossesActivation() {
+        val liq = LiquidityRules.MID5
+        assertEquals(from, LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = false, switchOn = true)))
+        assertNull(LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = true, switchOn = true)), "never live")
+        assertNull(LiquidityTrail.forEntryFrom(null))
+    }
 }

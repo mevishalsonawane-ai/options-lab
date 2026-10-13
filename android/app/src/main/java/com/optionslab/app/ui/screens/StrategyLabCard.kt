@@ -101,8 +101,9 @@ internal fun LiquidityFreezeRow(state: com.optionslab.ira.LiquidityFreeze.State,
 }
 
 /**
- * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail]): research R19b
- * failed, so it is off by default and said as "failed research, your choice" with its numbers. One tap switches it on
+ * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail], from +Rs 1,000 a
+ * lot since R19c): research R19b and R19c failed, so it is off by default and said as "failed research, your choice" with its
+ * numbers. One tap switches it on
  * (new paper trades carry it, each labelled), one tap back to plain rules. [onSet] true: on. Live trades never use it.
  */
 @Composable

@@ -55,24 +55,28 @@ object LiquidityFreeze {
     }
 
     // ---- Boss's Rs 500 give-back trail (R19b, 13 Oct): his own choice, on paper only -----------------------------------------
+    // 13 Oct, later (R19c): Boss's rule is now "from +Rs 1,000 a lot, sell Rs 500 below the best" (never under +Rs 500).
 
     /** The switch's name on the Strategy lab card. */
-    const val TRAIL_ON = "Try the ₹500 trail on paper"
+    const val TRAIL_ON = "Try your ₹1,000 / ₹500 trail on paper"
     const val TRAIL_OFF = "Back to plain rules"
 
     /**
      * The switch's line: what the trail is, that it FAILED the research (with its numbers) and is Boss's choice, that it is
      * paper only and labels each trade, and whether it is on.
      */
-    fun trailNote(s: State): String = "₹500 give-back trail (failed research, your choice): " +
+    fun trailNote(s: State): String = "Your trail: from +₹1,000 a lot, sell ₹500 below the best, so never under +₹500 " +
+        "(failed research, your choice): " +
         (if (s.trail) "ON for new Liquidity PAPER trades - each one is labelled \"with ₹500 trail\"; live trades never use it."
         else "off. Liquidity trades on plain rules.") +
-        " R19b: on both BANKNIFTY books it cut 12 of 13 big winners and lost ₹10.0k (15m) and ₹19.2k (5m) against plain rules in the " +
-        "locked holdout (Mar-Aug 2025), worse than random early exits. MIDCPNIFTY was not tested (no option data)."
+        " R19c (locked holdout Apr 2025 - Feb 2026): more green days (15m 37% to 47%, 5m 40% to 50%) but the net fell from +₹23.4k " +
+        "to -₹6.9k (15m, 51 trades) and from +₹27.3k to +₹6.7k (5m, 170 trades), worse than random early exits. R19b's ₹500 from " +
+        "+₹500 cut 12 of 13 big winners. MIDCPNIFTY was not tested (no option data)."
 
-    /** What Boss's switch does, said back to him (and to the diagnostics) when he flips it. */
+    /** What Boss's switch does, said back to Boss (and to the diagnostics) when they flip it. */
     fun trailSaid(on: Boolean): String = if (on)
-        "₹500 give-back trail ON for new Liquidity PAPER trades (failed research, your choice): each trade is labelled \"with ₹500 trail\". " +
+        "Your trail (from +₹1,000 a lot, ₹500 below the best) ON for new Liquidity PAPER trades (failed research, your choice): each trade " +
+            "is labelled \"with ₹500 trail\". " +
             "Live trades never use it. Switch it off on the Strategy lab card at any time."
-    else "₹500 give-back trail off: new Liquidity paper trades run on plain rules again (open trades keep the rule they entered with)."
+    else "Your trail off: new Liquidity paper trades run on plain rules again (open trades keep the rule they entered with)."
 }
