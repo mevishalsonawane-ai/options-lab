@@ -373,6 +373,58 @@ class LiquidityArmTest : RobolectricTest() {
         assertTrue(row().status, row().status.contains("MIDCPNIFTY 15-min:") && row().status.contains("MIDCPNIFTY 5-min:"))
     }
 
+    // ---- 13 Oct audit fix: a failed index read stops only the books on that index --------------------------------
+
+    /** The index's feed down: every read of it throws. */
+    private fun down(index: String): Nothing = throw java.io.IOException("$index feed down")
+
+    @Test fun aBankniftyFeedFailureLeavesTheMidcpniftyBooksTrading() {
+        midcpniftyDay()
+        OrbArms.testIndexBars = { down("BANKNIFTY") }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("liquidity5_mid", p.arm)
+        assertTrue(p.symbol, p.symbol.startsWith("MIDCPNIFTY") && p.symbol.endsWith("12850CE"))
+        val status = row().status
+        assertTrue(status, status.contains("BANKNIFTY 5-min: No BANKNIFTY bars yet."))
+        assertTrue(status, status.contains("BANKNIFTY 15-min: No BANKNIFTY bars yet."))
+        assertFalse(status, status.contains("No MIDCPNIFTY bars") || status.contains("No FINNIFTY bars"))
+    }
+
+    @Test fun aBankniftyFeedFailureLeavesTheFinniftyBooksTrading() {
+        finniftyDay()
+        OrbArms.testIndexBars = { down("BANKNIFTY") }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertEquals("liquidity5_fin", row().today.single().arm)
+        assertTrue(row().status, row().status.contains("BANKNIFTY 5-min: No BANKNIFTY bars yet."))
+    }
+
+    @Test fun aMidcpniftyFeedFailureStopsOnlyTheMidcpniftyBooks() {
+        finniftyDay()
+        val fin = OrbArms.testOtherIndexBars!!
+        OrbArms.testOtherIndexBars = { u, t -> if (u == "MIDCPNIFTY") down(u) else fin(u, t) }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertEquals("FINNIFTY still trades on its own chart", "liquidity5_fin", row().today.single().arm)
+        val status = row().status
+        assertTrue(status, status.contains("MIDCPNIFTY 15-min: No MIDCPNIFTY bars yet.") && status.contains("MIDCPNIFTY 5-min: No MIDCPNIFTY bars yet."))
+        assertFalse(status, status.contains("No BANKNIFTY bars") || status.contains("No FINNIFTY bars"))
+    }
+
+    @Test fun everyIndexFailingStopsEveryBookEachNamingItsIndex() {
+        finniftyDay()
+        OrbArms.testIndexBars = { down("BANKNIFTY") }
+        OrbArms.testOtherIndexBars = { u, _ -> down(u) }
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        assertTrue(row().today.isEmpty())
+        assertTrue(Paper.state.orders.isEmpty())
+        val status = row().status
+        for (u in listOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) assertTrue(status, status.contains("$u 5-min: No $u bars yet."))
+    }
+
     /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
     @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
         val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")
