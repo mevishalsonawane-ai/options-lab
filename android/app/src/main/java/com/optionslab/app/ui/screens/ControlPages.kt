@@ -224,6 +224,8 @@ fun DataPage(model: AppModel) {
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recorder") { MarketRecorderCard(model) } }
         // The Data Brain's live recording (signals, fills, the minute grid): days kept, size, last written, export.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.recordings") { RecordingsCard(model) } }
+        // GitHub sync (13 Oct, TODO G1/G2): the recorded days and the phone backup to GitHub, sealed; and restore from it.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("data.github") { GitHubSyncCard(model) } }
         for ((u, rows) in manifests) item {
             LedgerCard(title = "Manifest · $u") {
                 val same = rows.count { it.scope == Manifest.SAME_DAY }

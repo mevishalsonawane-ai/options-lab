@@ -168,6 +168,8 @@ object Diag {
             append(runCatching { AppState.line() }.getOrElse { "Shared state: could not read" }).append('\n')
             append("One-index claims standing: ").append(runCatching { AutoExposure.claims().ifEmpty { listOf("none") }.joinToString("; ") }.getOrElse { "could not read" }).append('\n')
         }
+        // GitHub sync (13 Oct): states and dates only - never the token or a key.
+        if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { GitHubSync.diagLine() }.getOrElse { "GitHub sync: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderFlowLive.coverageLine() }.getOrElse { "Order flow: could not read" }).append('\n')
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { FlowGate.diagLine() }.getOrElse { "Order flow modes: could not read" }).append('\n')
         // Honest paper (08 Oct): the bid/ask spread paper fills paid today (the "[paper] Stale price" lines below: fills on old prices).

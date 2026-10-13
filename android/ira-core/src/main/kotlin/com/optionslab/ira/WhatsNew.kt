@@ -83,6 +83,10 @@ object WhatsNew {
             "Five new ways to exit were tested against today's exits on every arm, over two years of data: VWAP bands, the next support or resistance, a 45-minute time stop, the expected range, and breakeven after +15%. " +
                 "None beat today's exits after charges once chance was allowed for, so nothing in the app changes (Liquidity BANKNIFTY was only studied, as it is frozen to 26 Oct, and none helped it either).",
             "Not in the app: the research write-up HUNT_R18_EXITS.md"),
+        Entry("2026-10-13-github-sync", LocalDate.of(2026, 10, 13), "Recordings and backups go to GitHub by themselves",
+            "Each evening after 15:45, on Wi-Fi while charging, the phone uploads each recorded day and a backup to GitHub (a private data-only repository, never the app's code), sealed with your backup passphrase so GitHub sees only noise. " +
+                "A new phone gets everything back with Restore from GitHub: strategies and Pine scripts return switched off, and your PIN, Live switches and tokens are never in it.",
+            "Settings → Data and harvest → GitHub sync", to = "data"),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
             "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
                 "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",

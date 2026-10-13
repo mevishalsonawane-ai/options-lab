@@ -102,6 +102,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.LiveRecorder.init(this)
         // The tick zone (12 Oct): the watch-list's order flow every second, from the stream's memory, written in the background.
         com.optionslab.app.data.TickZoneRecorder.init(this)
+        // GitHub sync (13 Oct, TODO G1/G2): the context only; its worker uploads after 15:45 on Wi-Fi while charging.
+        com.optionslab.app.data.GitHubSync.init(this)
         com.optionslab.app.data.LiquidityTest.init(this)
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)

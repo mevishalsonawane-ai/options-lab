@@ -62,7 +62,8 @@ class VaultTest : RobolectricTest() {
         assertEquals("fallback", SecurePrefs.getString("missing", "fallback"))
         SecurePrefs.put("s", null)
         assertNull(SecurePrefs.getString("s"))
-        assertEquals(setOf("b", "i", "l", "d"), SecurePrefs.snapshot().keys)
+        // Only this test's keys: another store's first load (TradeManagerHost's one-time "perarm" mark) may land meanwhile.
+        assertEquals(setOf("b", "i", "l", "d"), SecurePrefs.snapshot().keys.intersect(setOf("s", "b", "i", "l", "d")))
     }
 
     @Test fun anUnreadableSettingsVaultFailsClosedAndIsNeverOverwritten() {

@@ -32,7 +32,7 @@ class WhatsNewChangelogTest {
             assertTrue(sentences in 1..2 || (sentences <= 8 && short), "${x.id}: $sentences sentences")
             // No internal names (camelCase words) and no developer jargon.
             for (t in listOf(x.title, x.what, x.where, x.ask.orEmpty()))
-                assertFalse(Regex("\\b[a-z]+[A-Z][A-Za-z]*\\b|\\b[A-Z][a-z]+[A-Z][A-Za-z]*\\b").containsMatchIn(t.replace("BankNifty", "").replace("FinNifty", "")), "${x.id}: $t")
+                assertFalse(Regex("\\b[a-z]+[A-Z][A-Za-z]*\\b|\\b[A-Z][a-z]+[A-Z][A-Za-z]*\\b").containsMatchIn(t.replace("BankNifty", "").replace("FinNifty", "").replace("GitHub", "")), "${x.id}: $t")
             for (w in listOf("ATR", "CUSUM", "OrbArms", "IraHub", "ira-core", "Compose", "vault", "regex", "detector"))
                 assertFalse(w in x.what || w in x.where, "${x.id}: $w")
             x.to?.let { assertTrue(it in setOf("chart", "pnl", "ira", "jarvis", "data", "pine", "strategy"), "${x.id}: $it") }
@@ -100,6 +100,16 @@ class WhatsNewChangelogTest {
         for (w in listOf("499 trades for the charges", "15 for the stop", "122 days for the rating", "Hero had only 8 test trades and 2 held-back ones"))
             assertTrue(w in x.what, w)
         assertTrue("${ChargesCheck.HOLDOUT_TRADES}" in x.what && "${SmartStop.HOLDOUT_TRADES}" in x.what && "${DangerMeter.HOLDOUT_DAYS}" in x.what)
+    }
+
+    @Test fun theGitHubSyncIsSaidWithItsSafety() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-13-github-sync" }
+        for (w in listOf("after 15:45", "Wi-Fi while charging", "sealed with your backup passphrase", "Restore from GitHub",
+            "switched off", "never in it", "never the app's code"))
+            assertTrue(w in x.what, w)
+        assertTrue("GitHub sync" in x.where, x.where)
+        assertEquals("data", x.to)
+        assertNull(x.ask)
     }
 
     @Test fun theOrderReviewIsSaidWithItsSafety() {
