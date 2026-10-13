@@ -73,6 +73,40 @@ and then `python -m research.brain.cube build` (`--source auto`). No code change
 `tests/test_lake_adapter.py` converts the release fixture into the lake's schema. It checks that the lake path gives
 the same index, VIX, expiry and ATM-chain prices as the release path.
 
+## India Data Brain v1 (14 Oct 2026): every index, first models, one refresh command
+
+```bash
+python -m research.brain.refresh --source lake --upload --pack   # Drive lake + release -> cube -> features -> labels
+                                                                  # -> coverage -> models (to Drive) -> knowledge pack
+python -m research.brain.refresh --no-sync --no-models            # rebuild from the cache only
+python -m research.brain.models.train --und NIFTY BANKNIFTY       # the L5 models alone
+```
+
+`refresh` needs rclone with the remote `gdrive` (env `RCLONE_CONFIG_GDRIVE_*`) and `gh` for the release. It copies
+only what the brain reads from `gdrive:IraAlgo-data-lake` (`index_1m/`, the `*_WEEK_*` files of `options_rolling_1m/`,
+`fut_1m_live_index/`, `CATALOG.json`) into `$IRAALGO_LAKE`; every step after that is incremental. **When the Dhan
+download finishes (BANKNIFTY options and the rest), run the first command again: no code change.** Days whose source
+fingerprint changed are rebuilt, the release keeps a day only until the lake has that day with options, and the
+models are refitted.
+
+- Indices: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX. What each covers (days, span, source, days with a
+  chain / VIX / futures, design / embargo / holdout days) is in [`COVERAGE.md`](COVERAGE.md), written by `refresh`.
+- The lake adapter finds files anywhere under the lake folder (flat release layout or the Drive's sub-folders), reads
+  the catalog from `research/data/CATALOG.json` or the lake folder, and reads **one month at a time** (Parquet row
+  filters). Indices with no option files build index-only cubes; option features are NaN there.
+- **Locked holdout** (`holdout.py`): design = up to 13 Apr 2026, embargo 14-26 Apr, holdout from **27 Apr 2026**
+  (R18 amendment 1). Labels are written for design days only, and every training frame passes
+  `holdout.assert_design`. The holdout is read once, later, in its own step.
+- New labels: `y_range_rest`, `y_er_rest` (rest of the session). New features: `range_30m_pct`, `range_60m_pct`,
+  `tod_logrange_30m/60m` (R16's time-of-day baseline: the usual size of the next 30/60 minutes at this clock time,
+  previous 20 sessions), `er_day` (efficiency of the session so far).
+- **L5 models** (`models/`, pre-registered in [`models/PREREG.md`](models/PREREG.md)): per index, the size of the next
+  30 and 60 minutes, the day type (trend vs range) and the rest-of-day regime (busy vs quiet), decided at 09:45.
+  Walk-forward on design data only, against naive baselines, with calibration tables. Metrics:
+  [`models/metrics_v1.json`](models/metrics_v1.json); results in `research/BRAIN_V1.md`. Model files (pickles of
+  scikit-learn models with their feature lists) are in `<cache>/models/brain_v1/` and on Drive
+  `gdrive:IraAlgo-data-lake/brain_models/v1/`, never in git. They only inform and rank; nothing trades.
+
 ## The cube
 
 ### `<day>.minutes.parquet`: 375 rows (09:15 … 15:29, bar starts; row t is known at t + 1 min)

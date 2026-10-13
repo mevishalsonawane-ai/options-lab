@@ -129,3 +129,43 @@ def mins_high(ctx):
 @feature("mins_since_day_low", "price", 1, OHLC, "day", "Minutes since the session's low so far was made (ties: the latest).")
 def mins_low(ctx):
     return _mins_since_extreme(ctx, ctx.l, lambda v, b: v <= b)
+
+
+# --- range nowcast inputs (14 Oct 2026, Data Brain v1 L5; R16 found the size of the next 30-60 min predictable) -----
+for _k in (30, 60):
+    feature(f"range_{_k}m_pct", "price", 1, OHLC, f"{_k}m",
+            f"High-low range of the last {_k} minutes as % of the close (NaN before {_k} minutes have passed).")(
+        lambda ctx, k=_k: (_roll(ctx, ctx.h, k, "max") - _roll(ctx, ctx.l, k, "min")) / ctx.c * 100)
+
+
+def _tod_range(ctx, k: int, n_sess: int = 20, min_sess: int = 10) -> np.ndarray:
+    """At minute t: the mean, over the previous `n_sess` sessions, of log(high-low of minutes t+1..t+k of that session /
+    its close at t). Only earlier sessions are read, so today's own later minutes never count."""
+    D = len(ctx.days)
+    H, L, Cm = (np.full((D, 375), np.nan) for _ in range(3))
+    for M, a in ((H, ctx.h), (L, ctx.l), (Cm, ctx.c)):
+        M[ctx.dayid, ctx.minute] = a
+    hi = pd.DataFrame(H[:, ::-1]).T.rolling(k, min_periods=k).max().T.values[:, ::-1]   # hi[d, m] = max H[d, m..m+k-1]
+    lo = pd.DataFrame(L[:, ::-1]).T.rolling(k, min_periods=k).min().T.values[:, ::-1]
+    fwd = np.full((D, 375), np.nan)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        fwd[:, :-1] = np.log((hi[:, 1:] - lo[:, 1:]) / Cm[:, :-1])
+    fwd[~np.isfinite(fwd)] = np.nan
+    past = pd.DataFrame(fwd).rolling(n_sess, min_periods=min_sess).mean().shift(1).values   # sessions d-n .. d-1
+    return past[ctx.dayid, ctx.minute]
+
+
+for _k in (30, 60):
+    feature(f"tod_logrange_{_k}m", "price", 1, OHLC, "21d",
+            f"The usual size of the next {_k} minutes at this clock time: mean log(high-low of minutes t+1..t+{_k} / "
+            f"close at t) over the previous 20 sessions (needs 10). R16's time-of-day baseline.")(
+        lambda ctx, k=_k: _tod_range(ctx, k))
+
+
+@feature("er_day", "price", 1, OHLC, "day",
+         "Efficiency of the session so far: |close - first open| / (session high - low so far); 1 = one-way, 0 = "
+         "back to the open.")
+def er_day(ctx):
+    hi, lo = ctx.groupby_day(ctx.h).cummax().values, ctx.groupby_day(ctx.l).cummin().values
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(hi > lo, np.abs(ctx.c - ctx.day_first(ctx.o)) / (hi - lo), np.nan)

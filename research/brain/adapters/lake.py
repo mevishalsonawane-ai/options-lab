@@ -8,19 +8,27 @@ Planned files (Parquet, ts tz-aware IST, bar starts 09:15..15:29):
                                       nearest expiry. No expiry column: the expiry comes from research.brain.calendar.
   fut_1m_live_index.parquet           symbol, expiry, security_id, ts, OHLC, volume, oi (contracts live on download day)
 
-Get the files with `python research/data/fetch_release.py --dest $IRAALGO_LAKE` (default ~/.cache/iraalgo/lake).
-If CATALOG.json or the files are absent, available() is False and the cube builder skips this source cleanly.
+Get the files with `python research/data/fetch_release.py --dest $IRAALGO_LAKE` (default ~/.cache/iraalgo/lake), or
+from Google Drive with `python -m research.brain.refresh --source lake` (rclone; the Drive keeps one sub-folder per
+dataset, `index_1m/`, `options_rolling_1m/`, ...). Files are found by name anywhere under the lake folder, so the flat
+release layout and the Drive layout both work. The catalog is research/data/CATALOG.json, or CATALOG.json in the lake
+folder (the Drive copy). If no catalog or no files are present, available() is False and the build skips this source.
+
+14 Oct 2026: reads are month by month (Parquet row filters on ts), so a full NIFTY options year is never in memory at
+once. `full_sessions()` are the days the lake has WITH options; in `--source auto` the release keeps the days it has
+when the lake has only the index for them (BANKNIFTY options were not on Drive yet), so no chain is lost.
 """
 from __future__ import annotations
 
 import json
 import os
 import re
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterator
 
 import pandas as pd
+import pyarrow.parquet as pq
 
 from .. import calendar, config
 from .base import FUT_COLS, OPTION_COLS, VIX_COLS, DayData, empty
@@ -53,14 +61,31 @@ class LakeAdapter:
 
     def __init__(self, lake_dir: str | os.PathLike, catalog: str | os.PathLike | None = None):
         self.dir = Path(lake_dir)
-        self.catalog = Path(catalog) if catalog else CATALOG
+        if catalog:
+            self.catalog = Path(catalog)
+        elif CATALOG.exists():
+            self.catalog = CATALOG
+        else:
+            self.catalog = self.dir / "CATALOG.json"         # the Drive copy, next to the data
         self._sessions: dict[str, list[date]] = {}
+        self._full: dict[str, list[date]] = {}
+        self._index: dict[str, Path] | None = None
+
+    def _all(self) -> dict[str, Path]:
+        """file name -> path, anywhere under the lake folder (flat release layout or the Drive's sub-folders)."""
+        if self._index is None:
+            self._index = {}
+            if self.dir.exists():
+                for p in sorted(self.dir.rglob("*.parquet")):
+                    self._index.setdefault(p.name, p)
+        return self._index
 
     def _files(self, pattern: str) -> list[Path]:
-        if not self.dir.exists():
-            return []
         rx = re.compile(pattern)
-        return sorted(p for p in self.dir.iterdir() if rx.fullmatch(p.name))
+        return [p for n, p in sorted(self._all().items()) if rx.fullmatch(n)]
+
+    def _path(self, name: str) -> Path | None:
+        return self._all().get(name)
 
     def available(self, und: str) -> bool:
         return self.catalog.exists() and bool(self._files(rf"index_1m_{und}_\d{{4}}\.parquet"))
@@ -81,12 +106,31 @@ class LakeAdapter:
             self._sessions[und] = sorted(s)
         return self._sessions[und]
 
+    def full_sessions(self, und: str) -> list[date]:
+        """Sessions inside the span of the lake's option files (first to last option minute of each year's file).
+        Only these outrank another source in `--source auto`."""
+        if und not in self._full:
+            spans = []
+            for p in self._files(rf"opt_{und}_WEEK_\d{{4}}\.parquet"):
+                ts = _naive_ist(pd.read_parquet(p, columns=["ts"]).ts)
+                if len(ts):
+                    spans.append((ts.min().date(), ts.max().date()))
+            self._full[und] = [d for d in self.sessions(und) if any(a <= d <= b for a, b in spans)]
+        return self._full[und]
+
+    def _read(self, name: str, frm: date, to: date) -> pd.DataFrame:
+        """Rows of one file with frm <= ts.date <= to, filtered inside Parquet (only those rows are loaded)."""
+        p = self._path(name)
+        if p is None:
+            return pd.DataFrame()
+        tz = pq.read_schema(p).field("ts").type
+        lo, hi = pd.Timestamp(frm), pd.Timestamp(to) + pd.Timedelta(days=1)
+        if getattr(tz, "tz", None):
+            lo, hi = lo.tz_localize(config.TZ), hi.tz_localize(config.TZ)
+        return pd.read_parquet(p, filters=[("ts", ">=", lo), ("ts", "<", hi)])
+
     def _year_frame(self, stem: str, years: range, frm: date, to: date) -> pd.DataFrame:
-        parts = []
-        for y in years:
-            p = self.dir / f"{stem}_{y}.parquet"
-            if p.exists():
-                parts.append(pd.read_parquet(p))
+        parts = [f for y in years if len(f := self._read(f"{stem}_{y}.parquet", frm, to))]
         if not parts:
             return pd.DataFrame()
         df = pd.concat(parts, ignore_index=True)
@@ -96,8 +140,16 @@ class LakeAdapter:
         return df
 
     def load(self, und: str, frm: date, to: date) -> Iterator[DayData]:
+        """One DayData per session, read one calendar month at a time."""
         if not self.available(und):
             return
+        m = date(frm.year, frm.month, 1)
+        while m <= to:
+            nxt = date(m.year + (m.month == 12), m.month % 12 + 1, 1)
+            yield from self._load(und, max(frm, m), min(to, nxt - timedelta(days=1)))
+            m = nxt
+
+    def _load(self, und: str, frm: date, to: date) -> Iterator[DayData]:
         years = range(frm.year, to.year + 1)
         ix = self._year_frame(f"index_1m_{und}", years, frm, to)
         if ix.empty:
@@ -105,9 +157,8 @@ class LakeAdapter:
         opt = self._year_frame(f"opt_{und}_WEEK", years, frm, to)
         vix = self._year_frame("index_1m_INDIAVIX", years, frm, to)
         fut = pd.DataFrame()
-        fp = self.dir / "fut_1m_live_index.parquet"
-        if fp.exists():
-            fut = pd.read_parquet(fp)
+        if self._path("fut_1m_live_index.parquet") is not None:
+            fut = self._read("fut_1m_live_index.parquet", frm, to)
             fut = fut[fut.symbol.astype(str).str.upper().str.startswith(und)]
             fut["ts"] = _naive_ist(fut.ts)
             fut = fut[(fut.ts.dt.date >= frm) & (fut.ts.dt.date <= to)]

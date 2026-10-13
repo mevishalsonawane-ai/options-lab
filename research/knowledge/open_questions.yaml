@@ -31,3 +31,13 @@
   text: "The forge and the variants' pre-checks need years of index and option 1-minute history again (the Dhan token expired on 2026-10-10)."
   src: TODO.md
   sec: "S6"
+- id: brain-v1-holdout
+  topics: [ml, holdout, volatility]
+  text: "The India Data Brain v1 range models (next 30/60 minutes, six indices) passed only the design walk-forward; the locked holdout from 27 Apr 2026 is still to be read once, for the 12 range tests."
+  src: research/BRAIN_V1.md
+  sec: "Using it and refreshing it"
+- id: brain-v1-regime-linear
+  topics: [ml, regime, volatility]
+  text: "Whether the busy-or-quiet rest of day can be called at 09:45 is open: the linear regime model's log-loss was below the base rate on 5 of 6 indices (AUC 0.575-0.666), but it was not the pre-registered test; it needs a new pre-registration."
+  src: research/BRAIN_V1.md
+  sec: "b) Day type and regime at 09:45: not predictable"

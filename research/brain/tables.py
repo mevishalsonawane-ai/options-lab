@@ -65,10 +65,12 @@ def build(root: Path, und: str, frm: date, to: date, what=tuple(TABLES), force: 
             first = items[0][0]
             M, _ = cube.load(root, und, days[max(0, pos[first] - W)], items[-1][0], chain=False)
             T = spec["fn"](Ctx(M, None, und), days_from=first)
+            # a month with nothing to write (no futures volume -> no profile rows) gives an empty, untyped frame
+            tday = pd.to_datetime(T["day"]).dt.date if len(T) else pd.Series([], dtype=object)
             for d, dh in items:
                 pp, pj = _paths(root, w, und, d)
                 pp.parent.mkdir(parents=True, exist_ok=True)
-                t = T[T.day.dt.date == d].reset_index(drop=True)
+                t = T[(tday == d).to_numpy()].reset_index(drop=True) if len(T) else T
                 t.to_parquet(pp, compression="zstd", index=False)
                 pj.write_text(json.dumps(dict(signature=sig, deps=dh, rows=len(t))))
                 n += 1

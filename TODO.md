@@ -300,6 +300,12 @@ Not possible yet:
 
 ## I. Using the Data Brain (owner go-ahead 2026-10-13: "add all"). Priority: I3, I5, I14 first.
 
+- [x] I0. **India Data Brain v1** (14 Oct, research/BRAIN_V1.md): cube + features + labels for NIFTY, BANKNIFTY,
+      FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX from the Drive lake + release; first models. The size of the next 30/60 min
+      is predictable on all six (design); day type and regime at 09:45 are not.
+      - [ ] Read the locked holdout (from 27 Apr 2026) once, for the 12 range tests, in its own step.
+      - [ ] When the lake is complete: `python -m research.brain.refresh --source lake --upload --pack`.
+
 Rules for all of these:
 - New behaviour runs in shadow or paper first.
 - Anything that changes live orders needs Boss's PIN.
