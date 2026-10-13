@@ -307,3 +307,15 @@ Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 2
   0.58% vs 0.52% NIFTY); "days like today" analogs (worse than all past days pooled, all 8 cases).
 - App: build an expected-range nowcast (stop/target sizing, quiet-market warning, Jarvis); show analogs only as
   context, never as a forecast; no direction / regime / max-pain models.
+
+## Support and resistance levels as the ORB range (R20b, 13 Oct 2026) - no variant passes; levels are no better than random lines
+Full study: `HUNT_R20B_SR_RANGE.md` (pre-registered `hunt/r20b/PREREG.md`; 7 variants, 14 holdout tests, one BH family of
+28 with R20).
+- Levels tried: yesterday's high / low / close and floor pivots, the Liquidity arm's swing and pool zones (15-minute),
+  the biggest put / call OI strikes (previous-day NSE bhavcopy, and the minute OI at 10:04); used as the range, to clip a
+  wide range, to confirm a break, or for bounce trades inside a wide range.
+- BANKNIFTY: every variant lost in design (361 sessions) except the OI walls as the range (+Rs 1,745 over 98 trades,
+  only 2 of 4 blocks positive), which lost Rs 3,972 over 57 trades in the 122-session holdout. Best holdout p-values: 0.31
+  (twin), 0.50 (t-test); nothing survives BH. Levels mirrored at random to the other side of the price made more on
+  average than the real ones in 6 of 7 variants (random-level twins, 1,000 each), so the level positions add nothing.
+- App: no change; the ORB family stays paused on paper with the plain 09:15-10:00 range. Levels stay as context only.

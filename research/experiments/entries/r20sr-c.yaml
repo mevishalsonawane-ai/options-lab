@@ -3,7 +3,7 @@ title: R20b (c) an opening-range break is taken only when the close also clears 
   the edge
 family: orb
 date: '2026-10-13'
-doc: research/hunt/r20b/PREREG.md
+doc: research/HUNT_R20B_SR_RANGE.md
 hypothesis: The ORB arm with this level rule makes money after real costs on BANKNIFTY (holdout daily net > 0 and beats a
   random-level twin after BH over R20b's 14 + R20's 14 tests) and beats the plain 09:15-10:00 rule.
 data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
@@ -25,8 +25,10 @@ settings: research/hunt/r20b/PREREG.md
 prereg: research/hunt/r20b/PREREG.md
 variants_tried: 1
 results:
-  summary: Pre-registered 13 Oct 2026; not run yet.
+  summary: 'BANKNIFTY design (361 sessions): 250 trades, net Rs -13,266 (V0 Rs -14,772), blocks [-380, -10385, -4263, 1763],
+    G1 fail, G2 fail. Holdout (122 sessions): 85 trades, net Rs -22,075 (V0 Rs -10,965), t-test p 1.00, random-level twin
+    p 0.96; nothing survives BH over 28 tests (R20 + R20b). NIFTY (replication): design Rs -17,674, holdout Rs -642. FAILED.'
   costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected
 notes: One of 7 R20b variants (BH family of 28 holdout tests with R20's 14, random-level twins).
