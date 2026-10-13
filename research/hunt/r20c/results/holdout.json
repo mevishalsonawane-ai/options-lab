@@ -1,0 +1,445 @@
+{
+ "r20brk-piv5n2": {
+  "all": {
+   "trades": 183,
+   "sessions": 153,
+   "trade_days": 121,
+   "net": 25602.55,
+   "per_session": 167.33693,
+   "per_trade": 139.90464,
+   "green_trade_days": 0.52893,
+   "worst_day": -2892.79,
+   "best_day": 2747.01,
+   "max_dd": -6213.16,
+   "t": 2.04388,
+   "p": 0.02135
+  },
+  "BANKNIFTY": {
+   "trades": 85,
+   "sessions": 122,
+   "trade_days": 81,
+   "net": 12124.18,
+   "per_session": 99.37852,
+   "per_trade": 142.63741,
+   "green_trade_days": 0.48148,
+   "worst_day": -1546.39,
+   "best_day": 2528.81,
+   "max_dd": -5249.48,
+   "t": 1.29254,
+   "p": 0.09932
+  },
+  "NIFTY": {
+   "trades": 98,
+   "sessions": 120,
+   "trade_days": 95,
+   "net": 13478.37,
+   "per_session": 112.31975,
+   "per_trade": 137.53439,
+   "green_trade_days": 0.47368,
+   "worst_day": -1601.59,
+   "best_day": 1959.35,
+   "max_dd": -3180.14,
+   "t": 1.86744,
+   "p": 0.03215
+  },
+  "exits": {
+   "lock": 117,
+   "square_off": 2,
+   "stop": 28,
+   "target": 36
+  },
+  "sides": {
+   "1": 14101.58,
+   "-1": 11500.97
+  },
+  "p_t": 0.02135,
+  "p_level": 0.19481,
+  "p_time": 0.004,
+  "twin_level_mean": 19733.76106,
+  "twin_time_mean": -4212.18016,
+  "net_2x_ticks": 23546.48,
+  "G1": false,
+  "G2": false,
+  "G6": true,
+  "q": {
+   "G3": 0.333,
+   "G4": 0.99525,
+   "G5": 0.15984
+  },
+  "PASS": false
+ },
+ "r20brk-piv5n1": {
+  "all": {
+   "trades": 195,
+   "sessions": 153,
+   "trade_days": 127,
+   "net": 5225.24,
+   "per_session": 34.1519,
+   "per_trade": 26.7961,
+   "green_trade_days": 0.48819,
+   "worst_day": -2964.87,
+   "best_day": 4738.41,
+   "max_dd": -6600.45,
+   "t": 0.40713,
+   "p": 0.34224
+  },
+  "BANKNIFTY": {
+   "trades": 94,
+   "sessions": 122,
+   "trade_days": 88,
+   "net": 1519.32,
+   "per_session": 12.45344,
+   "per_trade": 16.16298,
+   "green_trade_days": 0.44318,
+   "worst_day": -1553.14,
+   "best_day": 2707.52,
+   "max_dd": -5678.49,
+   "t": 0.17431,
+   "p": 0.43096
+  },
+  "NIFTY": {
+   "trades": 101,
+   "sessions": 120,
+   "trade_days": 97,
+   "net": 3705.92,
+   "per_session": 30.88267,
+   "per_trade": 36.69228,
+   "green_trade_days": 0.45361,
+   "worst_day": -3187.73,
+   "best_day": 2030.89,
+   "max_dd": -5046.84,
+   "t": 0.42856,
+   "p": 0.33451
+  },
+  "exits": {
+   "lock": 127,
+   "square_off": 1,
+   "stop": 34,
+   "target": 33
+  },
+  "sides": {
+   "1": 9057.65,
+   "-1": -3832.41
+  },
+  "p_t": 0.34224,
+  "p_level": 0.95504,
+  "p_time": 0.18881,
+  "twin_level_mean": 17127.20289,
+  "twin_time_mean": -5299.97755,
+  "net_2x_ticks": 3860.26,
+  "G1": true,
+  "G2": true,
+  "G6": true,
+  "q": {
+   "G3": 0.99525,
+   "G4": 0.99525,
+   "G5": 0.99525
+  },
+  "PASS": false
+ },
+ "r20brk-early15": {
+  "all": {
+   "trades": 127,
+   "sessions": 153,
+   "trade_days": 95,
+   "net": -7117.14,
+   "per_session": -46.51725,
+   "per_trade": -56.04047,
+   "green_trade_days": 0.30526,
+   "worst_day": -4814.02,
+   "best_day": 12981.35,
+   "max_dd": -34094.62,
+   "t": -0.23116,
+   "p": 0.59125
+  },
+  "BANKNIFTY": {
+   "trades": 56,
+   "sessions": 122,
+   "trade_days": 56,
+   "net": -17907.7,
+   "per_session": -146.78443,
+   "per_trade": -319.78036,
+   "green_trade_days": 0.35714,
+   "worst_day": -3178.14,
+   "best_day": 9960.35,
+   "max_dd": -28112.55,
+   "t": -1.2335,
+   "p": 0.89011
+  },
+  "NIFTY": {
+   "trades": 71,
+   "sessions": 120,
+   "trade_days": 71,
+   "net": 10790.56,
+   "per_session": 89.92133,
+   "per_trade": 151.97972,
+   "green_trade_days": 0.30986,
+   "worst_day": -3551.48,
+   "best_day": 12981.35,
+   "max_dd": -14994.49,
+   "t": 0.41722,
+   "p": 0.33864
+  },
+  "exits": {
+   "failed_break": 13,
+   "square_off": 19,
+   "stop": 28,
+   "time": 67
+  },
+  "sides": {
+   "1": -10560.14,
+   "-1": 3443.0
+  },
+  "p_t": 0.59125,
+  "p_level": 0.13187,
+  "p_time": 0.50749,
+  "twin_level_mean": -23078.86727,
+  "twin_time_mean": -7061.5543,
+  "net_2x_ticks": -7813.78,
+  "G1": true,
+  "G2": true,
+  "G6": false,
+  "q": {
+   "G3": 0.99525,
+   "G4": 0.99525,
+   "G5": 0.99525
+  },
+  "PASS": false
+ },
+ "r20brk-lowvix15": {
+  "all": {
+   "trades": 127,
+   "sessions": 153,
+   "trade_days": 83,
+   "net": -33153.1,
+   "per_session": -216.68693,
+   "per_trade": -261.04803,
+   "green_trade_days": 0.3012,
+   "worst_day": -4814.02,
+   "best_day": 12103.07,
+   "max_dd": -43492.59,
+   "t": -1.42516,
+   "p": 0.92192
+  },
+  "BANKNIFTY": {
+   "trades": 67,
+   "sessions": 122,
+   "trade_days": 66,
+   "net": -38628.52,
+   "per_session": -316.62721,
+   "per_trade": -576.54507,
+   "green_trade_days": 0.28788,
+   "worst_day": -3323.28,
+   "best_day": 3907.53,
+   "max_dd": -38628.52,
+   "t": -3.57682,
+   "p": 0.99975
+  },
+  "NIFTY": {
+   "trades": 60,
+   "sessions": 120,
+   "trade_days": 60,
+   "net": 5475.42,
+   "per_session": 45.6285,
+   "per_trade": 91.257,
+   "green_trade_days": 0.3,
+   "worst_day": -1869.11,
+   "best_day": 9435.05,
+   "max_dd": -17731.71,
+   "t": 0.30152,
+   "p": 0.38177
+  },
+  "exits": {
+   "failed_break": 19,
+   "square_off": 15,
+   "stop": 22,
+   "time": 71
+  },
+  "sides": {
+   "1": -306.01,
+   "-1": -32847.09
+  },
+  "p_t": 0.92192,
+  "p_level": 0.78422,
+  "p_time": 0.96803,
+  "twin_level_mean": -25241.32686,
+  "twin_time_mean": -4828.55716,
+  "net_2x_ticks": -33825.6,
+  "G1": true,
+  "G2": true,
+  "G6": false,
+  "q": {
+   "G3": 0.99525,
+   "G4": 0.99525,
+   "G5": 0.99525
+  },
+  "PASS": false
+ },
+ "_bh": {
+  "m": 40,
+  "q": 0.05,
+  "rejected": [],
+  "table": {
+   "R20c r20brk-piv5n2 G5": {
+    "p": 0.004,
+    "q": 0.15984
+   },
+   "R20c r20brk-piv5n2 G3": {
+    "p": 0.02135,
+    "q": 0.333
+   },
+   "R20 B0.5 G4": {
+    "p": 0.02498,
+    "q": 0.333
+   },
+   "R20c r20brk-early15 G4": {
+    "p": 0.13187,
+    "q": 0.99525
+   },
+   "R20 B0.75 G4": {
+    "p": 0.14585,
+    "q": 0.99525
+   },
+   "R20c r20brk-piv5n1 G5": {
+    "p": 0.18881,
+    "q": 0.99525
+   },
+   "R20c r20brk-piv5n2 G4": {
+    "p": 0.19481,
+    "q": 0.99525
+   },
+   "R20 C1430 G4": {
+    "p": 0.29371,
+    "q": 0.99525
+   },
+   "R20b B G4": {
+    "p": 0.31469,
+    "q": 0.99525
+   },
+   "R20c r20brk-piv5n1 G3": {
+    "p": 0.34224,
+    "q": 0.99525
+   },
+   "R20 B0.5 G3": {
+    "p": 0.3498,
+    "q": 0.99525
+   },
+   "R20 B1.0 G4": {
+    "p": 0.3976,
+    "q": 0.99525
+   },
+   "R20 A30 G4": {
+    "p": 0.41059,
+    "q": 0.99525
+   },
+   "R20 A15 G4": {
+    "p": 0.45455,
+    "q": 0.99525
+   },
+   "R20b A-OIi G3": {
+    "p": 0.50298,
+    "q": 0.99525
+   },
+   "R20c r20brk-early15 G5": {
+    "p": 0.50749,
+    "q": 0.99525
+   },
+   "R20c r20brk-early15 G3": {
+    "p": 0.59125,
+    "q": 0.99525
+   },
+   "R20 D G4": {
+    "p": 0.64535,
+    "q": 0.99525
+   },
+   "R20 B0.75 G3": {
+    "p": 0.71595,
+    "q": 0.99525
+   },
+   "R20b A-OI G3": {
+    "p": 0.76535,
+    "q": 0.99525
+   },
+   "R20b B G3": {
+    "p": 0.77547,
+    "q": 0.99525
+   },
+   "R20c r20brk-lowvix15 G4": {
+    "p": 0.78422,
+    "q": 0.99525
+   },
+   "R20b A-ALL G3": {
+    "p": 0.79539,
+    "q": 0.99525
+   },
+   "R20b A-ALL G4": {
+    "p": 0.83716,
+    "q": 0.99525
+   },
+   "R20b D G4": {
+    "p": 0.86813,
+    "q": 0.99525
+   },
+   "R20 C1430 G3": {
+    "p": 0.8905,
+    "q": 0.99525
+   },
+   "R20b A-PIV G4": {
+    "p": 0.9001,
+    "q": 0.99525
+   },
+   "R20b A-PIV G3": {
+    "p": 0.90327,
+    "q": 0.99525
+   },
+   "R20b A-OIi G4": {
+    "p": 0.91009,
+    "q": 0.99525
+   },
+   "R20c r20brk-lowvix15 G3": {
+    "p": 0.92192,
+    "q": 0.99525
+   },
+   "R20 A30 G3": {
+    "p": 0.92387,
+    "q": 0.99525
+   },
+   "R20b A-OI G4": {
+    "p": 0.92507,
+    "q": 0.99525
+   },
+   "R20 B1.0 G3": {
+    "p": 0.93424,
+    "q": 0.99525
+   },
+   "R20 A15 G3": {
+    "p": 0.94303,
+    "q": 0.99525
+   },
+   "R20c r20brk-piv5n1 G4": {
+    "p": 0.95504,
+    "q": 0.99525
+   },
+   "R20b C G4": {
+    "p": 0.96104,
+    "q": 0.99525
+   },
+   "R20c r20brk-lowvix15 G5": {
+    "p": 0.96803,
+    "q": 0.99525
+   },
+   "R20 D G3": {
+    "p": 0.96911,
+    "q": 0.99525
+   },
+   "R20b D G3": {
+    "p": 0.97761,
+    "q": 0.99525
+   },
+   "R20b C G3": {
+    "p": 0.99525,
+    "q": 0.99525
+   }
+  }
+ }
+}

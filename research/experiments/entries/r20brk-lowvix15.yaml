@@ -24,8 +24,9 @@ prereg: research/hunt/r20c/PREREG.md
 variants_tried: 1
 results:
   summary: 'Design (395 sessions, BANKNIFTY + NIFTY): 115 trades, net Rs 66,057 (Rs 167 a session), blocks [-5366, 13794,
-    31236, 26393], G1 pass, G2 pass. Holdout not read yet.'
+    31236, 26393], G1 pass, G2 pass. Holdout (153 sessions): 127 trades, net Rs -33,153 (Rs -217 a session), t-test p 0.92
+    (q 1.00), random-level twin p 0.78 (q 1.00), random-time twin p 0.97 (q 1.00), 2x ticks Rs -33,826. FAILED.'
   costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
-holdout_read: false
-verdict: inconclusive
+holdout_read: true
+verdict: rejected
 notes: One of 4 R20c rules picked from the design event study (BH family of 40 with R20 / R20b).

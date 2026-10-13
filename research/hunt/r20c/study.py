@@ -2,7 +2,8 @@
 """R20c: what happens after a support / resistance break is confirmed by N candle closes (PREREG.md). Research only.
 
     python3 research/hunt/r20c/study.py events             # part A2 event study, DESIGN sessions -> results/events_design.json
-    python3 research/hunt/r20c/study.py tables             # the design tables as markdown (results/events_design.md)
+    python3 research/hunt/r20c/study.py events holdout     # the same on the holdout, only after the one holdout read
+    python3 research/hunt/r20c/study.py tables [period]    # the tables as markdown (results/events_<period>.md)
     (trading test commands: trades.py, after part B is committed)
 
 Data: R17's day cache (research/hunt/r17/data.py) for BANKNIFTY / NIFTY; FINNIFTY index minutes straight from the release
@@ -311,8 +312,9 @@ def write_tables(period="design"):
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "events"
     if cmd == "events":
-        run_events("design")
-        write_tables("design")
+        per = sys.argv[2] if len(sys.argv) > 2 else "design"
+        run_events(per)
+        write_tables(per)
     elif cmd == "tables":
         write_tables(sys.argv[2] if len(sys.argv) > 2 else "design")
     else:

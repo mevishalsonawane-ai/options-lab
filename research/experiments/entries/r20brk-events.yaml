@@ -25,10 +25,11 @@ settings: research/hunt/r20c/PREREG.md part A2
 prereg: research/hunt/r20c/PREREG.md
 variants_tried: null
 results:
-  summary: 'Design (BANKNIFTY 361, NIFTY 364, FINNIFTY 396 sessions): after a 2-close break price moves about +0.02 ATR14
-    to the close, wins about 50%, fakes out within 30 min in 32-49% of events; random-level twins move almost as much. Holdout
-    not read yet.'
+  summary: 'Design (BANKNIFTY 361, NIFTY 364, FINNIFTY 396 sessions; 7,548 two-close breaks): to the close +0.02 ATR14 on
+    average, 51% further in the break''s direction, fake-out within 30 min 32% (15-min) to 49% (5-min); random-level twins
+    about the same. 2nd-candle wait costs 14 / 18 points (5 / 15-min) and leaves about +4 points. Holdout (334 sessions, 2,495
+    breaks): to the close -0.004 / -0.020 ATR. No level type is reliable.'
   costs: none (index points; descriptive)
-holdout_read: false
+holdout_read: true
 verdict: not-a-test
 notes: 5 level types x 2 timeframes x 3 N, plus random-level rows; the rules picked from it are r20brk-piv5n2/-piv5n1/-early15/-lowvix15.
