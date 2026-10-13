@@ -458,7 +458,9 @@ object Paper {
      * process's stream exits (the LIVE lane waits for the paper cover) are not held until the next watch pass loads it.
      */
     private fun loadSoon() {
-        if (!::file.isInitialized || !loading.compareAndSet(false, true)) return
+        if (!::file.isInitialized) return
+        if (loadInlineForTest) { runCatching { book() }; return }
+        if (!loading.compareAndSet(false, true)) return
         Thread({ try { runCatching { book() } } finally { loading.set(false) } }, "paper-load").apply { isDaemon = true }.start()
     }
 
@@ -988,6 +990,13 @@ object Paper {
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
     fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) } }
+
+    /**
+     * TEST ONLY: [loadSoon] reads the book on the caller's thread - the background load as fast as it can be, done before
+     * [streamCover] even returns (the race [FastPath]'s snapshot must survive). False in the app. Throws unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var loadInlineForTest = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
 
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
     internal fun forgetForTest() { flush(); synchronized(this) { cache = null; savedAtMs = 0L } }
