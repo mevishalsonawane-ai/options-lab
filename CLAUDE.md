@@ -50,6 +50,9 @@ notes; match the surrounding code.
 - Crypto (Boss, 13 Oct): every crypto trade, in research, paper or any future live use, ALWAYS has a stop-loss and a
   profit lock (a trailing or step lock that protects open profit). No crypto strategy is tested, proposed or run without
   both; studies compare lock and stop variants, never "no stop". Nothing in the app trades crypto yet.
+  Boss trades crypto like the Indian market (13 Oct): enter, take profit or stop out, exit. No long-term holding; buy-and-hold
+  and DCA appear only as baselines to beat. Crypto options (BTC/ETH, e.g. Delta Exchange India INR-settled daily expiries)
+  are in scope for research.
 
 ## Repository hygiene
 

@@ -376,6 +376,10 @@ Later (when profitable):
       small-account study (branch claude/crypto-small-account): every active idea must be judged WITH a stop and a
       profit lock (pre-registered variants: fixed % / ATR stop; step lock and trailing lock), never without; if RC1
       finished without them, run that as RC1b before any verdict reaches Boss.
+- [ ] C5. Crypto options study (Boss, 13 Oct: "is there anything like options in crypto"; no holding, take profit and
+      sell): BTC/ETH options on Delta Exchange India (INR-settled, daily/weekly/monthly expiries) with Deribit's history
+      for depth; option-buying arms like the Indian ones, always with a stop-loss and a profit lock. Branch
+      claude/crypto-options.
 - [ ] C3. Every agent and Jarvis know crypto (after C2 has findings). App work, one session:
       - the shared knowledge pack carries the crypto facts and findings (tagged), which every agent already reads;
       - Jarvis answers crypto questions (what is known, what failed, latest BTC/ETH context), with numbers checked like
