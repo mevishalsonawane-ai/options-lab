@@ -176,3 +176,28 @@ Not possible yet:
         The PIN, Live/AI-live, tokens and the paper-only period are never in a backup, so they are set again on the new
         phone.
       - Card: "Last backup to GitHub: date ✓". A failure, or no backup for 2 days, goes to Problems found.
+
+## F. Strategy Factory (owner go-ahead 2026-10-13)
+
+- [ ] F1. Automatic strategy discovery from the Data Brain. Nothing goes live without Boss's PIN.
+      - Ideas (nightly): candidate rules built from the Data Brain features (`research/brain`: VWAP, profile, levels,
+        OI, IV, indicators, regime, expected range) and from research findings (FINDINGS.md, the HUNT docs). Every idea is
+        logged in the experiment log, failures included.
+      - Gates (`research/data/ARCHITECTURE.md` L6), all required:
+        - walk-forward, purged;
+        - the locked final-year holdout, read once per idea;
+        - real charges and slippage;
+        - Benjamini–Hochberg over every idea tried;
+        - beats a random twin;
+        - a model card.
+        Expected pass rate: under 1%.
+      - Paper: each idea that passes is armed automatically on PAPER only.
+        - At most 5 factory strategies at a time.
+        - Normal lot size, with every existing guard and the account stop rule (−₹40k drawdown / −₹13k a month).
+        - Nightly GitHub job, with the result shipped to the phone in the knowledge or model pack (G1/P6).
+      - Scorecard: after at least 20 paper trading days, a card per strategy: trades, P&L after charges, worst day, and
+        live vs backtest. "Make it live?" needs Boss's PIN, every time. Bigger size also needs the PIN.
+      - Retirement: a factory strategy is switched off automatically (this only lowers risk) when its paper or live
+        results fall outside what its tests predicted, or on drift. Boss is notified.
+      - Order: after the data lake merges and the first specialists exist (Data Brain roadmap P3). Liquidity BANKNIFTY
+        stays frozen until 26 Oct and is not touched by the factory.
