@@ -198,6 +198,19 @@ Trades a day: 0.16–1.16 per session (both indices together).
   - Design figures divide by all 1,305 index sessions of the design period. That includes Jan–Jul 2021, before the
     option data starts (1,161 sessions have options); multiply by 1.12 for "per session with options".
   - Design block 1 likewise starts on 1 Jan 2021.
+- **Found in the independent review (none changes a verdict).**
+  - The design days and blocks come from the feature store, which starts 1 Jan 2021, before the option data (2 Aug 2021).
+    So about 144 sessions without options sit in block 1 and in the tercile fits. This differs from the PREREG wording
+    "from the first session with an option chain". p8's block 1 is Rs 0 (no trades), which is part of why it fails gate
+    1; it fails gate 3 too.
+  - The BH family uses, for the four R20 break rules, their random-LEVEL twin p. Using their random-TIME p (piv5n2 0.00)
+    instead leaves every R24 q above 0.05: the smallest R24 p is 0.073 across 41 tests.
+  - The ORB stop is rounded down to the tick; the app rounds half-even, at most Rs 0.05 apart.
+  - Options filled at Rs 40 or less keep their `orb` / `sweep` rows with no stop. That matches the PREREG and the app's
+    `stopTrigger`, but the app's arms refuse such entries. So the `orb` column for cheap options (NIFTY OTM3) and the
+    `y_wi_*_orb_rs` labels describe a trade the app would not take. All 8 rules chose `liq`, so they are unaffected.
+  - The brain's `y_wi_*` labels are written for every day, including R24's holdout window. A later study must not use
+    27 Apr – 12 Oct 2026 as a fresh holdout.
 - **The spread model.**
   - It is anchored on one real snapshot (h24, 6 Oct 2026; 0.05–0.24% half-spread from ITM2 to OTM2). OTM3's 0.35% is an
     extrapolation.
@@ -228,7 +241,7 @@ This one command:
 - rebuilds the what-if table (WEEK and MONTH) and the brain's `y_wi_*` labels;
 - re-runs Steps 1–2 and the report, and uploads the table and catalog to Drive.
 
-Step 3 is not re-run: its holdout has been read, so new rules need a new pre-registration and a fresh holdout.
+Step 3 is not re-run: its holdout has been read, so new rules need a new pre-registration and a fresh holdout. The script rewrites Steps 1–2 only, so after a refresh `results/report.md` mixes the new Steps 1–2 with the old Step 3: add a dated note when committing it.
 
 ## Checks run
 

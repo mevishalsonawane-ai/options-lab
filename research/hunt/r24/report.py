@@ -141,6 +141,8 @@ def step3_md(s3, hold, fam):
     q = MN.bh(allp)[:len(ps)] if allp else []
     L += ["", f"### Holdout (read once; sessions per index {hold['sessions']})", ""]
     rows = []
+    if [r["id"] for r in hold["rules"]] != [r["id"] for r in s3["final"]]:
+        raise SystemExit("step3_design.json no longer matches the rules read on the holdout; do not re-run step3")
     for r, rd, qq in zip(hold["rules"], s3["final"], q):
         h = r["holdout"]
         g = gates(rd, r, qq)
