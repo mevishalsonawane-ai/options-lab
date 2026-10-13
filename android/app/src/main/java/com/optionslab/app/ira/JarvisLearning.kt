@@ -97,6 +97,16 @@ internal object JarvisLearning {
     // ---- the nightly pass -------------------------------------------------------------------------------------------------
 
     /**
+     * Memory only: today's pass is due and not done yet (review, 14 Oct: the brain's worker keeps looking after the close
+     * until it is, so a pass the battery budget refused at 15:45 runs once the phone allows it).
+     */
+    fun pendingToday(): Boolean {
+        if (!enabled()) return false
+        val today = Market.today()
+        return passedOn != today && Market.isTradingDay(today) && Market.minuteNow() >= 15 * 60 + 45
+    }
+
+    /**
      * Once a trading day after 15:45: the day's learning pass. Cheap when not due (memory only). True when it ran.
      */
     suspend fun learnIfDue(context: Context? = null): Boolean {

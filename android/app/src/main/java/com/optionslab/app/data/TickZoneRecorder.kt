@@ -30,12 +30,13 @@ import java.util.zip.GZIPOutputStream
  *    Kite's 3000-instrument cap ([com.optionslab.ira.StreamHealth.cap]). No trading subscription is changed.
  *  - The sampler (Default, each second while the F&O market is open and recording is on): reads each instrument's last
  *    tick from memory, copies it into a [TickZone.Snap] and adds the second to a bounded queue ([TickZone.SecondQueue]:
- *    a short lock, never a wait, never the settings vault, a file or the network; past ten minutes waiting the oldest
- *    second is dropped and counted).
+ *    a short lock, never a wait, never the settings vault, a file or the network; past 90 seconds waiting (ten minutes
+ *    before 14 Oct) the oldest second is dropped and counted).
  *  - The writer (IO, once a minute; every 5 s before 14 Oct): turns the seconds into rows ([TickZone.TICKS_FILE]), feeds
  *    each instrument's [TickZone.Flow] and writes the closed minutes ([TickZone.FLOW_FILE]); every second not recorded
- *    becomes a gap run. The rows are the same as with the 5 s writer (the queue holds ten minutes of seconds); a process
- *    killed between two writes loses at most the last minute's seconds, which is accepted.
+ *    becomes a gap run. The rows are the same as with the 5 s writer while each write ends within about 30 s (the queue holds
+ *    90 seconds; a slower write drops the oldest seconds as gaps); a process killed between two writes loses at most the
+ *    last minute's seconds, which is accepted.
  *
  * Battery (14 Oct, Boss: "my phone's battery drains in 3-4 hours"; [TickRest]): the three loops ran every second, 5 s and
  * 30 s all night and all weekend. Outside NSE's hours (nights, weekends, holidays, from the Market calendar) each now rests

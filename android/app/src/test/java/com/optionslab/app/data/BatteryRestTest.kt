@@ -82,6 +82,20 @@ class BatteryRestTest : RobolectricTest() {
         assertEquals(McxRest.IDLE_MS, McxMarket.watchCadenceMs())
     }
 
+    @Test fun theNightlyPassesAreRetriedAfterTheCloseUntilDoneAndNotPastMcxsClose() {
+        // Review, 14 Oct: a nightly pass the battery budget refused at 15:45 is looked for again every 5 minutes to 23:30.
+        assertFalse("nothing due: asleep", SmartWorkers.nightlyRetry(false, 18 * 60))
+        assertFalse("before 15:45 it is not due yet", SmartWorkers.nightlyRetry(true, 15 * 60 + 44))
+        assertTrue(SmartWorkers.nightlyRetry(true, 15 * 60 + 45))
+        assertTrue("the charger at 18:00", SmartWorkers.nightlyRetry(true, 18 * 60))
+        assertTrue(SmartWorkers.nightlyRetry(true, 23 * 60 + 29))
+        assertFalse("past 23:30 it waits for tomorrow", SmartWorkers.nightlyRetry(true, 23 * 60 + 30))
+        assertFalse(SmartWorkers.nightlyRetry(true, 2 * 60))
+        assertEquals(300_000L, SmartWorkers.NIGHTLY_RETRY_MS)
+        // This app has no Jarvis in the tests: nothing pending, so nothing looks at night for it.
+        if (!com.optionslab.app.BuildConfig.JARVIS) assertFalse(com.optionslab.app.ira.JarvisLearning.pendingToday())
+    }
+
     @Test fun nothingHeldIsOnceAMinuteOutsideTheArmsMinutesAnd15SecondsInside() {
         at(day, "22:30")
         armEvening()

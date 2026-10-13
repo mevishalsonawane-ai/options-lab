@@ -383,9 +383,21 @@ object SmartWorkers {
     fun refreshDelay(lastRunMs: Long): Long? {
         val open = runCatching { Market.isTradingDay() && Market.minuteNow() in Market.OPEN - 15..Market.foClose() + 15 }.getOrDefault(false) ||
             runCatching { com.optionslab.ira.McxRest.brainCounts(McxMarket.isOpen(), McxMarket.heldQuick(), McxPaperArms.inEntryMinutesQuick()) }.getOrDefault(false)
-        if (!open) return null
-        return (REFRESH_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, REFRESH_MS)
+        if (open) return (REFRESH_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, REFRESH_MS)
+        val pending = runCatching { com.optionslab.app.ira.JarvisLearning.pendingToday() }.getOrDefault(false)
+        if (!nightlyRetry(pending, runCatching { Market.minuteNow() }.getOrDefault(0))) return null
+        return (NIGHTLY_RETRY_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, NIGHTLY_RETRY_MS)
     }
+
+    /**
+     * Review, 14 Oct: after the close, while Jarvis's nightly pass is still due ([pending]), the brain looks every
+     * [NIGHTLY_RETRY_MS] until 23:30, so the nightly passes (his learning, the shared knowledge's bundle, Autopilot) run once
+     * the battery budget allows them (before the battery fix, MCX's evening kept it looking every 10 s).
+     */
+    internal fun nightlyRetry(pending: Boolean, minute: Int): Boolean = pending && minute in 15 * 60 + 45 until 23 * 60 + 30
+
+    /** How often the brain looks for the nightly passes after the close while they are still due. */
+    const val NIGHTLY_RETRY_MS = 5 * 60_000L
 
     /**
      * One look (the brain's worker, a worker thread): the regimes from the cash indices' last 30 minutes (the move recorder's

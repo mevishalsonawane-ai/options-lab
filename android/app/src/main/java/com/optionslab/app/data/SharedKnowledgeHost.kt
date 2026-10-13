@@ -126,7 +126,12 @@ object SharedKnowledgeHost {
     // ---- the build -----------------------------------------------------------------------------------------------------------
 
     /** The snapshot built again from the pack, Jarvis's lessons and the findings logs. A worker thread; one at a time. */
-    fun refresh(day: LocalDate? = runCatching { Market.today() }.getOrNull(), writeSnapshot: Boolean = false): SharedKnowledge.Snapshot? {
+    fun refresh(day: LocalDate? = runCatching { Market.today() }.getOrNull(), writeSnapshot: Boolean = false): SharedKnowledge.Snapshot? =
+        build(day, writeSnapshot)?.first
+
+    /** [refresh] with this build's findings counts (review, 14 Oct: the nightly bundle takes them from here, not [lastCounts],
+     * which a memory trim may empty between the build and the bundle). */
+    private fun build(day: LocalDate?, writeSnapshot: Boolean): Pair<SharedKnowledge.Snapshot, List<LessonsBundle.FindingCount>>? {
         if (!building.compareAndSet(false, true)) return null
         try {
             val ctx = appContext
@@ -136,11 +141,12 @@ object SharedKnowledgeHost {
             val tally = runCatching { findingsRecent(day) }.getOrDefault(FindingsTally())
             val s = SharedKnowledge.build(shared?.first, book, tally, day, shared?.second.orEmpty())
             current = s
-            lastCounts = LessonsBundle.counts(tally)
+            val counts = LessonsBundle.counts(tally)
+            lastCounts = counts
             if (writeSnapshot && day != null) runCatching { writeSnapshot(tally, day) }
             runCatching { Diag.record("knowledge", "shared knowledge built: ${s.summary()}" + if (s.conflicts.isNotEmpty()) "; ${s.conflicts.size} conflict(s) kept" else "") }
             publish()
-            return s
+            return s to counts
         } finally { building.set(false) }
     }
 
@@ -256,9 +262,8 @@ object SharedKnowledgeHost {
         val today = runCatching { Market.today() }.getOrNull() ?: return false
         if (nightOf == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
-        val s = refresh(today, writeSnapshot = true) ?: return false
-        // The counts of this build, held for the bundle below (a memory trim meanwhile empties [lastCounts]).
-        val counts = lastCounts
+        // The counts of this very build, for the bundle below (a memory trim meanwhile empties [lastCounts]).
+        val (s, counts) = build(today, writeSnapshot = true) ?: return false
         nightOf = today
         val trips = runCatching {
             val owners = Strategies.owners()
