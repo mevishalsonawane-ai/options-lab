@@ -258,3 +258,48 @@ One experiment entry per test family:
 - `of1-r0`, and one per R1–R3 run.
 
 Each entry is filed whatever its result.
+
+## Amendment 1 (13 Oct 2026, before any recording or result was seen)
+
+§7's large print is "**above**" the 99th percentile, not "≥". That is the app's own rule (TickZone.Flow: sizes `> t`).
+With "≥", a run of equal-sized seconds would flag every second. No recording exists yet (step 4: the IraAlgo data
+repository has no uploads), so no result is affected. This is a descriptive detector, outside any test family.
+
+## Amendment 2 (13 Oct 2026, after the first design run, before any holdout read)
+
+§8 takes R1–R3 from the §5 survivors "strongest q first". Six survivors share q = 0.0198. The first design run broke the
+tie with an unstable sort, so R3 became S1_FII → BANKNIFTY. The tie is now broken by the smaller p-value, which makes
+R3 S3_FII → NIFTY (p 0.0035). This is the pre-registered order applied correctly, not a choice made from the rules'
+results.
+
+The superseded R3's design numbers are kept in the write-up and counted in the experiment log:
+
+- 511 trades, net Rs +22,549;
+- twin p 0.36.
+
+The BH step across R0–R3 (§8) uses each rule's twin p.
+
+## Amendment 3 (13 Oct 2026, data-handling fixes found in review, before any holdout read)
+
+Checking the first full design run against reality showed index-option P&L of lakhs of crore a year in 2012–2020.
+That is impossible, and it came from two errors in how NSE's option "settle" column was read. Neither fix touches a
+test, a signal or a rule; both change only prices.
+
+1. **On expiry day**, NSE printed **0** as the expiring options' settle until about 2020, and the underlying's final
+   settlement price after that.
+   - The 0 was being taken as the underlying, which valued every expiring put at its strike.
+   - Now, when the printed value is not a price, the underlying's final level is NSE's official closing value of the
+     index that day. An index option's final settlement price is the index close; on all 623 later-era NIFTY and
+     BANKNIFTY expiries, NSE's printed value equals it exactly.
+   - Only for an index with no close here does it come from the chain's own closes, by put-call parity at the 5
+     strikes nearest the money (`build.parity_final`).
+2. **On ordinary days**, an option's settle is NSE's *theoretical* price when the contract did not trade (about 45% of
+   rows with OI), and it is sometimes 0.00. So §3's options MTM, and §6's build-up prices, now use the option's
+   **close** (its last traded price). Futures keep the official daily settlement price.
+
+What this affects:
+
+- §3 options P&L, §6 build-up and §6 walls/magnets (the final level of pre-2020 expiries).
+- §5 (signals) and §8 (rules) read neither and are unchanged.
+- The wall/magnet design tests are re-run with the fix. Their earlier design numbers (no survivor) used wrong final
+  levels for pre-2020 expiries and are void.

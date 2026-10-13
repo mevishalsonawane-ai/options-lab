@@ -84,6 +84,17 @@ def _ok(kind: str, content: bytes) -> bool:
     return b"<html" not in head and b"<!doctype" not in head and len(content) > 50
 
 
+def _old_expiry(s: pd.Series) -> pd.Series:
+    """Old-layout EXPIRY_DT: '31-May-2012', and in some 2012 files '31-May-12'. Anything else raises."""
+    s = s.astype(str).str.strip()
+    a = pd.to_datetime(s, format="%d-%b-%Y", errors="coerce")
+    b = pd.to_datetime(s, format="%d-%b-%y", errors="coerce")
+    out = a.fillna(b)
+    if out.isna().any():
+        raise ValueError(f"unparsed expiry {s[out.isna()].iloc[0]!r}")
+    return out.dt.date
+
+
 def index_rows(raw_zip: bytes, d: date) -> pd.DataFrame:
     """The bhavcopy cut to index futures/options, in one layout for both NSE formats.
 
@@ -100,7 +111,7 @@ def index_rows(raw_zip: bytes, d: date) -> pd.DataFrame:
         out = pd.DataFrame({
             "und": df.SYMBOL.str.strip(),
             "kind": [("FUT" if i.strip() == "FUTIDX" else o.strip()) for i, o in zip(df.INSTRUMENT, df.OPTION_TYP)],
-            "expiry": pd.to_datetime(df.EXPIRY_DT.str.strip(), format="%d-%b-%Y").dt.date,
+            "expiry": _old_expiry(df.EXPIRY_DT),
             "strike": df.STRIKE_PR.astype(float), "open": df.OPEN, "high": df.HIGH, "low": df.LOW, "close": df.CLOSE,
             "settle": df.SETTLE_PR, "contracts": df.CONTRACTS.astype(float), "oi_qty": df.OPEN_INT.astype(float),
             "chg_oi_qty": df.CHG_IN_OI.astype(float), "und_px": float("nan"),
