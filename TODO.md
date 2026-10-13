@@ -374,7 +374,8 @@ nothing trades crypto.
       `research/CRYPTO_C2_WINDOW.md` (range predictable; no direction edge after costs).
 - [ ] C2. When the Drive crypto lake is complete: `fetch drive` month by month, `cube build`, features, labels; add
       SOL/BNB/XRP; if the lake's layout differs from the archive's file names, one rule in `crypto/adapters.py`.
-- [ ] C3. One pre-registered holdout read (from 1 Apr 2026) for the expected-range forecast (C1 A1/A2, C2 W1/W3) and the
-      weekend size effect; nothing else from C1 earns a holdout read.
+- [ ] C3. One pre-registered holdout read (from 1 Apr 2026) for the expected-range forecast (C1 A1/A2, C2 W1/W3), the
+      weekend size effect and C2 W4 on ETH (the whole-window reversal, margin inside the cost uncertainty); nothing
+      else from C1 or C2 earns a holdout read.
 - [ ] C4. Wire in what exists but is not in the cube: ETH DVOL (no file yet), Deribit option surfaces, on-chain and
       ETF flows (`crypto/data_more`), liquidation prints if a source appears.

@@ -316,7 +316,7 @@
       costs: "n/a (a forecast of size)"
       src: research/CRYPTO_C2_WINDOW.md
       sec: "Verdict (read this first)"
-    - text: "Crypto direction inside the 00:00-09:00 IST window does not pay: window hours lose 10.45 (BTC) / 10.73 bps (ETH) a trade after costs; the whole-window ETH reversal cleared costs by only 0.37 bps on 351 trades and fell to -11.97 bps with the entry one minute later."
+    - text: "Crypto direction inside the 00:00-09:00 IST window: window hours lose 10.45 (BTC) / 10.73 bps (ETH) a trade after costs. The whole-window ETH reversal passed its pre-registered bar by only 0.37 bps a trade (351 trades), is negative at 2x slippage and lost in 2024; it is a candidate for one holdout read, not an edge."
       period: "design 2 Nov 2023 - 31 Mar 2026"
       costs: "perp taker 0.05% + 1 bp slippage a side, plus funding"
       src: research/CRYPTO_C2_WINDOW.md

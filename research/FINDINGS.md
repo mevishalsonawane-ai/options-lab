@@ -447,8 +447,9 @@ family). Boss: crypto only runs 00:00-09:00 IST (18:30-03:30 UTC), flat by 09:00
 Mar 2026: 7,928 window hours and 880 windows per coin); the holdout from 1 Apr 2026 was not read.
 - PREDICTABLE: the crypto range of the next window hour (error 27.8% BTC / 23.4% ETH below the window-hour average,
   6,308 hours) and of the whole window (17.2% / 15.2% below the last 20 windows, 670 windows). Median BTC window range
-  1.83% (10-90%: 0.9-3.87%); the window is the quieter part of the crypto day (the US open is outside it).
-- NOT tradeable: crypto direction in the window. Window hours reverse slightly (AUC 0.547 / 0.550) but lose -10.45 /
-  -10.73 bps a trade after costs. The whole-window direction on ETH passed its bar by +0.37 bps a trade (351 trades),
-  is negative at 2x slippage, falls to -11.97 bps with the entry one minute later, and showed in 2025 only: not an edge.
-  BTC whole-window: -3.82 bps. No IST hour's mean return beats the 12 bps round trip (best ETH 03:00 IST +7.88 bps).
+  1.83% (10-90%: 0.9-3.87%); a window hour is about as busy as the average crypto hour (the US open is outside it).
+- Crypto direction in the window: window hours reverse slightly (AUC 0.547 / 0.550) but lose -10.45 / -10.73 bps a
+  trade after costs. Whole-window direction: BTC -3.82 bps (fails); ETH passed its bar (AUC 0.558, +0.37 bps a trade,
+  351 trades; a reversal of the last day's move) and is a CANDIDATE for one holdout read, not an edge: -1.63 bps at 2x
+  slippage, and it lost in 2024 (-27.3 bps, 119 trades) while winning in 2025 (+10.56, 179). No IST hour's mean
+  return beats the 12 bps round trip (best ETH 03:00 IST +7.88 bps).

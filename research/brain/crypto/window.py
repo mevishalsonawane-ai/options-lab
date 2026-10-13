@@ -117,9 +117,7 @@ def test_w2(H, sym, rng):
 
 
 def test_w4(W, sym, rng):
-    def cols(d):
-        return np.c_[d.ret_240m, d.ret_1440m, d.funding_z_30d, d.basis_z_7d, d.oi_chg_24h_pct, d.vwap24_z, d.weekend]
-    return study._direction(W, sym, "W4", WIN_MIN, "y_ret_w", cols, rng)
+    return study._direction(W, sym, "W4", WIN_MIN, "y_ret_w", _w4_cols, rng)
 
 
 def test_w5(H, sym):
@@ -145,42 +143,69 @@ def describe(H, W, Hall=None) -> dict:
                 window_mean_ret_bps=round(100 * float(W.y_ret_w.mean()), 1))
 
 
-def posthoc(root: Path, W, sym, rng) -> dict:
-    """Post-hoc checks of W4 (written after the tests ran, 13 Oct 2026; descriptions, not tests): which single input
-    carries it, whether it survives an entry one minute later, and whether it holds in each year."""
-    y = (W.y_ret_w > 0).astype(float).to_numpy()
-    single = {}
-    for f in ["ret_240m", "ret_1440m", "funding_z_30d", "basis_z_7d", "oi_chg_24h_pct", "vwap24_z"]:
-        v = W[f].to_numpy()
-        m = np.isfinite(v) & (W.y_ret_w != 0).to_numpy()
-        single[f] = round(study.auc(y[m], v[m]), 4)
+def _w4_cols(d):
+    return np.c_[d.ret_240m, d.ret_1440m, d.funding_z_30d, d.basis_z_7d, d.oi_chg_24h_pct, d.vwap24_z, d.weekend]
+
+
+def w4_trades(W, sym):
+    """W4's own out-of-sample probabilities and trades (the same fixed fits as test_w4)."""
+    keep = (W.y_ret_w != 0).to_numpy()
+    df = W[keep].reset_index(drop=True)
+    y = (df.y_ret_w > 0).astype(float).to_numpy()
+    df = df.assign(_y=y)
+    prob = study.walk(df, WIN_MIN, lambda tr, te: study.logistic(_w4_cols(tr), tr._y.to_numpy(), _w4_cols(te)))
+    side = np.where(prob >= study.P_LONG, 1, np.where(prob <= study.P_SHORT, -1, 0))
+    return df, prob, side
+
+
+def _net(df, side, ret, entry_ts, sym, stress=1.0):
+    t = (side != 0) & np.isfinite(ret)
+    net = costs.net_returns(ret[t], sym, side[t], WIN_MIN, df.funding_bps.to_numpy()[t] / 1e4, entry_ts=entry_ts[t],
+                            stress=stress)
+    g = side[t] * ret[t]
+    return dict(trades=int(t.sum()), gross_bps=round(100 * float(g.mean()), 2), net_bps=round(100 * float(net.mean()), 2))
+
+
+def posthoc(root: Path, W, sym, rng=None) -> dict:
+    """Post-hoc checks of W4 (written after the tests ran, 13 Oct 2026; descriptions, not tests), all on W4's OWN
+    signals (the same fitted probabilities and sides as the test, never a refit):
+      1. the same trades entered one minute later (00:01 IST, the close of the 18:30 UTC bar) and held to 09:00 IST;
+      2. the same trades split by year (n, gross, net), and the AUC of the model's probabilities by year;
+      3. single-input AUCs (which inputs carry it)."""
+    df, prob, side = w4_trades(W, sym)
     files = [p for p in sorted(config.paths(root).cube(sym).glob("*/*.parquet"))
              if pd.Timestamp(p.stem).date() <= config.DESIGN_END.date()]
     c = pd.concat([pd.read_parquet(p, columns=["ts", "close", "flag"]) for p in files], ignore_index=True)
     holdout.assert_design(c)
     c = c[c.flag.isin(["ok", "stale"])].set_index("ts").close
-    t1 = W.ts + pd.Timedelta(minutes=1)
+    t1 = df.ts + pd.Timedelta(minutes=1)                         # the decision bar's successor: entry one minute later
     with np.errstate(invalid="ignore", divide="ignore"):
-        late = np.log(c.reindex(t1 + pd.Timedelta(minutes=WIN_MIN - 1)).to_numpy() / c.reindex(t1).to_numpy()) * 100
-    Wl = W.assign(y_late=late)
-    Wl = Wl[np.isfinite(Wl.y_late) & (Wl.y_late != 0)].reset_index(drop=True)
-
-    def cols(d):
-        return np.c_[d.ret_240m, d.ret_1440m, d.funding_z_30d, d.basis_z_7d, d.oi_chg_24h_pct, d.vwap24_z, d.weekend]
-    r_late = study._direction(Wl.assign(y_ret_w=Wl.y_late), sym, "W4late", WIN_MIN, "y_ret_w", cols, rng)
-    r = study._direction(W, sym, "W4", WIN_MIN, "y_ret_w", cols, rng)       # same predictions as the test (fixed fits)
-    by_year = {}
-    yr = W.ts.dt.year.to_numpy()
+        late = np.log(c.reindex(df.ts + pd.Timedelta(minutes=WIN_MIN)).to_numpy() / c.reindex(t1).to_numpy()) * 100
+    ret = df.y_ret_w.to_numpy()
+    ent = (df.ts + pd.Timedelta(minutes=1)).to_numpy()
+    out = dict(w4_as_tested=_net(df, side, ret, pd.DatetimeIndex(ent), sym),
+               w4_as_tested_2x_slip=_net(df, side, ret, pd.DatetimeIndex(ent), sym, 2.0),
+               w4_entry_1min_later=_net(df, side, late, pd.DatetimeIndex(ent) + pd.Timedelta(minutes=1), sym),
+               w4_entry_1min_later_2x_slip=_net(df, side, late, pd.DatetimeIndex(ent) + pd.Timedelta(minutes=1), sym, 2.0))
+    yr = df.ts.dt.year.to_numpy()
+    y = (df.y_ret_w > 0).astype(float).to_numpy()
+    by = {}
     for yv in sorted(set(yr)):
-        sub = W[yr == yv].reset_index(drop=True)
-        if len(sub) < 100:
+        m = (yr == yv) & np.isfinite(prob)
+        if m.sum() < 30:
             continue
-        rr = -sub.ret_240m.to_numpy()                     # the single input that carries it (see single_input_auc)
-        yy = (sub.y_ret_w > 0).astype(float).to_numpy()
-        m = np.isfinite(rr) & (sub.y_ret_w != 0).to_numpy()
-        by_year[int(yv)] = dict(n=int(m.sum()), auc_minus_ret240=round(study.auc(yy[m], rr[m]), 4))
-    return dict(w4_single_input_auc=single, w4_entry_1min_later_auc=r_late["auc"], w4_entry_1min_later_costs=r_late["costs"],
-                w4_auc_recheck=r["auc"], w4_by_year=by_year)
+        r = _net(df[m].reset_index(drop=True), side[m], ret[m], pd.DatetimeIndex(ent[m]), sym)
+        r["auc"] = round(study.auc(y[m], prob[m]), 4)
+        r["windows"] = int(m.sum())
+        by[int(yv)] = r
+    out["w4_by_year"] = by
+    single = {}
+    for f in ["ret_240m", "ret_1440m", "funding_z_30d", "basis_z_7d", "oi_chg_24h_pct", "vwap24_z"]:
+        v = df[f].to_numpy()
+        m = np.isfinite(v)
+        single[f] = round(study.auc(y[m], v[m]), 4)
+    out["w4_single_input_auc"] = single
+    return out
 
 
 def _passes(t) -> bool:
@@ -201,7 +226,7 @@ def run(root: Path, symbols, out: Path = OUT) -> dict:
         H, W, meta[s] = load(root, s)
         tests += [test_w1(H, s), test_w2(H, s, rng), test_w3(W, s), test_w4(W, s, rng)] + test_w5(H, s)
         desc[s] = describe(H, W)
-        desc[s]["posthoc"] = posthoc(root, W, s, np.random.default_rng(study.SEED + 3))
+        desc[s]["posthoc"] = posthoc(root, W, s)
         print(f"{s}: {len(H)} window hours, {len(W)} windows (design)", flush=True)
     q = study.bh(np.array([t["p"] for t in tests]))
     for t, qq in zip(tests, q):

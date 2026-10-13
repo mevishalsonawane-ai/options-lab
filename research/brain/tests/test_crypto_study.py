@@ -68,8 +68,38 @@ def test_end_to_end_design_rows_stop_before_the_holdout(tmp_path):
 
     # Boss's window: 9 IST hours a day, every target inside 00:00-09:00 IST and before the holdout
     assert set(WH.win_hour) == set(range(9)) and (WH.groupby(WH.ts.dt.date.map(str)).size() <= 9).all()
+    starts = WH.ts + pd.Timedelta(minutes=1) + pd.Timedelta(minutes=330)        # IST clock of the target's start
+    assert (starts.dt.hour <= 8).all() and (starts.dt.minute == 0).all()
+    assert (WH.win_hour == starts.dt.hour).all()                               # window hour = IST hour 0..8
+    wd = (WH.ts + pd.Timedelta(minutes=331)).dt.weekday >= 5
+    assert (WH.weekend == wd.astype(float)).all()                              # weekend of the IST date
     ends = WH.ts + pd.Timedelta(minutes=61)
     ist_end = ends + pd.Timedelta(minutes=330)
     assert ((ist_end.dt.hour < 9) | ((ist_end.dt.hour == 9) & (ist_end.dt.minute == 0))).all()
     assert (WW.ts.dt.hour == 18).all() and (WW.ts.dt.minute == 29).all()
     assert (WW.ts + pd.Timedelta(minutes=window.WIN_MIN) < config.HOLDOUT_START).all()
+
+
+def test_window_pass_rules_follow_the_prereg():
+    base = dict(q=0.01, skill_pct=6.0, auc=0.53, costs={"net_bps": 0.1}, beats_costs=True)
+    assert window._passes({**base, "id": "W1-BTCUSDT"}) and not window._passes({**base, "id": "W1-X", "skill_pct": 4.9})
+    assert window._passes({**base, "id": "W4-ETHUSDT"})
+    assert not window._passes({**base, "id": "W4-X", "costs": {"net_bps": -0.1}})
+    assert not window._passes({**base, "id": "W2-X", "auc": 0.519})
+    assert not window._passes({**base, "id": "W5-03IST-X", "beats_costs": False})
+    assert not window._passes({**base, "id": "W3-X", "q": 0.05})
+
+
+def test_window_tests_run_on_synthetic_window_hours():
+    rng = np.random.default_rng(4)
+    n = 9 * 400
+    days = pd.date_range("2024-01-01 18:29", periods=400, freq="D")
+    ts = pd.DatetimeIndex(np.repeat(days.values, 9)) + pd.to_timedelta(np.tile(np.arange(9) * 60, 400), unit="min")
+    r = rng.normal(0, 0.5, n)
+    H = pd.DataFrame(dict(ts=ts, win_hour=np.tile(np.arange(9), 400), weekend=(ts.weekday >= 5).astype(float),
+                          y_ret_60m=r, y_range_60m=np.abs(r) + 0.3, range_60m_pct=np.abs(np.roll(r, 1)) + 0.3,
+                          range_240m_pct=0.8, rv_1440m_pct=2.0, dvol=np.nan))
+    t1 = window.test_w1(H, "BTCUSDT")
+    assert t1["n"] > 1000 and 0 <= t1["p"] <= 1 and np.isfinite(t1["skill_pct"])
+    t5 = window.test_w5(H, "BTCUSDT")
+    assert len(t5) == 9 and all(t["n"] == 400 for t in t5) and not any(t["beats_costs"] for t in t5)

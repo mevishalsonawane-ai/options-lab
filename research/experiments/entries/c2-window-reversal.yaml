@@ -1,0 +1,36 @@
+id: c2-window-reversal
+title: "Crypto C2 W4: direction of the whole 00:00-09:00 IST window (BTC, ETH)"
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/CRYPTO_C2_WINDOW.md
+hypothesis: At 00:00 IST an L2 logistic model on the last 4-hour and 24-hour returns, funding z, basis z, 24-hour OI
+  change, VWAP-24h z and the weekend predicts the sign of the move to 09:00 IST with AUC >= 0.52 and a positive net
+  after perp costs.
+data_version: Binance bulk archive BTCUSDT/ETHUSDT; crypto cube v2, feature signature afe36b892dd9
+period:
+  design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks; 670 windows tested)
+  holdout: 2026-04-01 onward, locked, not read
+instruments:
+- BTCUSDT
+- ETHUSDT
+features:
+- ret_240m
+- ret_1440m
+- funding_z_30d
+- basis_z_7d
+- oi_chg_24h_pct
+- vwap24_z
+- weekend (IST date)
+model_or_rule: L2 logistic regression (C 1.0), long at p >= 0.55, short at p <= 0.45, held 00:00-09:00 IST
+settings: research/brain/crypto/PREREG_C2_WINDOW.md test W4
+prereg: research/brain/crypto/PREREG_C2_WINDOW.md
+variants_tried: 2
+results:
+  summary: 'BTC AUC 0.580, net -3.82 bps a trade (464 trades): fails. ETH AUC 0.558, net +0.37 bps (351 trades, q 0.017):
+    passes the bar, but -1.63 bps at 2x slippage, and by year 2024 -27.3 bps (119 trades), 2025 +10.56 (179), Jan-Mar
+    2026 +28.08 (53); entering one minute later on the same trades +0.08 bps. A reversal of the last day''s move.'
+  costs: perp taker 0.05% + 1 bp slippage a side (0.12% round trip) + funding at the last settled rate; 2x slippage stress
+holdout_read: false
+verdict: inconclusive
+notes: ETH passed its pre-registered bar, so it earns one holdout read; its margin is inside the cost uncertainty and it
+  lost in 2024. Not a trade.

@@ -37,6 +37,12 @@
   text: "The crypto expected-range forecast (BTC and ETH, next hour and next day) passed on design data only: its error was 24.7% (BTC) and 19.9% (ETH) smaller than the hour-of-day average. It is read once on the locked crypto holdout (from 1 Apr 2026) when the crypto lake is complete."
   src: research/CRYPTO_C1_PREDICTABILITY.md
   sec: "A) Size: PREDICTABLE, next hour and next day"
+- id: crypto-window-reversal
+  topics: [crypto, reversal, holdout]
+  inst: CRYPTO
+  text: "Inside Boss's 00:00-09:00 IST window, the ETH whole-window reversal passed its design bar by only 0.37 bps a trade after costs (351 trades) and lost in 2024; it gets one read on the locked holdout from 1 Apr 2026. Until then it is not an edge."
+  src: research/CRYPTO_C2_WINDOW.md
+  sec: "Verdict (read this first)"
 - id: crypto-other-coins
   topics: [crypto]
   inst: CRYPTO

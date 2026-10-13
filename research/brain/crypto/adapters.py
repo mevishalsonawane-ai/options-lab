@@ -116,8 +116,8 @@ class DvolAdapter:
     def fingerprint(self, sym: str) -> str:
         if not self.available(sym):
             return "none"
-        st = Path(self.files[sym]).stat()
-        return f"{Path(self.files[sym]).name}:{st.st_size}"
+        import hashlib
+        return hashlib.sha256(Path(self.files[sym]).read_bytes()).hexdigest()[:16]   # content, not size (an edit counts)
 
     def load(self, sym: str, frm: pd.Timestamp, to: pd.Timestamp) -> pd.DataFrame | None:
         """Hourly DVOL bars; `avail` = bar start + 1 hour (the close is known when the hour ends)."""

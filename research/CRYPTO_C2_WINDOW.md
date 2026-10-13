@@ -16,18 +16,23 @@ Code: `research/brain/crypto/window.py`. Numbers: `research/brain/crypto/results
 | W1 range of the next window hour | **PREDICTABLE** (BTC, ETH) | error 27.8% (BTC) / 23.4% (ETH) smaller than the window-hour average |
 | W3 range of the whole window (00:00-09:00 IST) | **PREDICTABLE** (BTC, ETH) | error 17.2% (BTC) / 15.2% (ETH) smaller than the last 20 windows' average |
 | W2 direction of the next window hour | real reversal, **loses after costs** | AUC 0.547 (BTC) / 0.550 (ETH); net -10.45 / -10.73 bps a trade |
-| W4 direction of the whole window | BTC fails costs; **ETH passes the bar by a hair and is not robust** | AUC 0.580 (BTC) / 0.558 (ETH); net -3.82 (BTC) / **+0.37 bps** (ETH) a trade |
+| W4 direction of the whole window | BTC fails costs; **ETH passes its bar, with a margin inside the cost uncertainty** | AUC 0.580 (BTC) / 0.558 (ETH); net -3.82 (BTC) / **+0.37 bps** (ETH) a trade |
 | W5 mean return of each IST hour (18 tests) | nothing beats costs | best: ETH 03:00-04:00 IST +7.88 bps (q 0.008), below the 12 bps round trip |
 
 26 tests in one BH family; 5 pass every pre-registered bar: W1 and W3 on both coins, and W4 on ETH.
 
-**W4 on ETH is not a usable edge** (post-hoc checks, descriptions only):
-- its margin is +0.37 bps a trade on 351 trades, and -1.63 bps at 2x slippage;
-- with the entry one minute later (00:01 IST) its gross falls from 12.49 to 0.25 bps and the net to -11.97 bps: the
-  whole margin sits in the first minute, which a real order cannot be sure to catch;
-- it is a reversal of the last day's move (the 24-hour return alone has AUC 0.418, i.e. 0.582 reversed) that shows in
-  2025 (AUC 0.595 for the reversed 4-hour return, 365 windows) but not in 2024 (0.495, 366 windows).
-So it gets no holdout read as it stands. A version with a delayed entry would be a new pre-registered idea.
+**W4 on ETH: a candidate, not an edge.** By the pre-registration a pass earns one holdout read, and that is its status
+(inconclusive). What it is (post-hoc checks on its own signals, descriptions only, `describe.posthoc` in the json):
+- a reversal of the last day's move: the 24-hour return alone has AUC 0.418 and the VWAP-24h z 0.420 (both reversed
+  ~0.58); funding, basis and OI change add nothing (0.49);
+- +0.37 bps a trade net on 351 trades: gross 12.49 bps against a 12 bps round trip. At 2x slippage it is -1.63 bps;
+- the same trades entered one minute later (00:01 IST) keep it (gross 12.20, net +0.08 bps), so it is not a first-minute
+  artefact;
+- it is not stable across years: 2024 lost (119 trades, -27.3 bps net, AUC 0.491), 2025 won (179 trades, +10.56 bps,
+  AUC 0.585), Jan-Mar 2026 won (53 trades, +28.08 bps, AUC 0.618). BTC's W4 shows the same pattern but fails costs
+  overall (-3.82 bps; 2024 -14.65, 2025 -1.6, 2026 +10.67).
+So even if the holdout (Apr-Sep 2026) confirms it, the margin over costs is thin: a fee or slippage only slightly worse
+than assumed removes it. It does not trade, on paper or live, without its holdout read and a separate decision.
 
 All of this is design data. The locked holdout (from 1 Apr 2026) was not read. Nothing here trades.
 
@@ -38,8 +43,9 @@ coin: 7,928 window hours and 880 windows (2 Nov 2023 - 31 Mar 2026); out of samp
 
 Typical sizes inside the window (medians): BTC moves 0.554% in a window hour and 1.83% over the whole window (10-90%:
 0.9-3.87%); ETH 0.777% and 2.64% (1.34-5.47%). The busiest IST hours are 00:00-02:00 and 06:00-07:00 (BTC 0.631% at
-00:00, 0.588% at 06:00), the quietest 08:00-09:00 (0.498%). For comparison, the whole UTC day's busiest hour (14:00 UTC,
-19:30 IST, the US open) is outside the window: the window is the quieter part of the crypto day. The whole window
+00:00, 0.588% at 06:00), the quietest 08:00-09:00 (0.498%). A window hour is about as busy as the average crypto hour
+(BTC median 0.554% vs 0.546% over all 24 hours; ETH 0.777% vs 0.786%): the US open (14:00 UTC, 19:30 IST, the busiest
+hour) is outside the window, and so are the quietest hours (about 03:00-12:00 UTC, 08:30-17:30 IST). The whole window
 closed up on 52.2% (BTC) / 52.5% (ETH) of days, mean +2.8 / +5.9 bps: no tradeable drift.
 
 ## Tests
@@ -62,8 +68,9 @@ Costs: perpetual taker 0.05% + 1 bp slippage a side (0.12% a round trip), plus f
 
 - **Expected range inside the window**: "BTC is likely to move about 0.55% this hour and about 1.8% before 09:00 IST".
   Same caveats as C1: a size, never a direction; any trading use is a new pre-registered test.
-- **Honest "no"** on direction inside the window: the hour-to-hour reversal is real but smaller than costs, and the
-  whole-window reversal lives in the first minute and in 2025 only.
+- **Honest "no"** on direction inside the window for now: the hour-to-hour reversal is real but smaller than costs;
+  the whole-window ETH reversal is an unproven candidate whose margin is inside the cost uncertainty and which lost
+  in 2024.
 
 ## Deviations and caveats
 
@@ -71,5 +78,11 @@ Costs: perpetual taker 0.05% + 1 bp slippage a side (0.12% a round trip), plus f
 2. Walk-forward as C1: a block is tested only with at least 200 training rows, so the whole-window tests (W3, W4)
    trained on the first 7 of 30 blocks (880 windows, 670 tested).
 3. The post-hoc checks of W4 (single inputs, one-minute-later entry, by year) were added after the results, and are
-   descriptions, not tests.
+   descriptions, not tests. A first draft of this doc rejected W4-ETH on a wrong check (it refitted the model on
+   shifted labels instead of delaying the same trades); a review caught it, the check was redone on W4's own signals,
+   and W4-ETH keeps its pre-registered status: a candidate for one holdout read.
+5. W2 used the IST-date weekend flag in place of C1 B1's UTC `is_weekend` (the window's own weekend), which the
+   pre-registration did not say.
+6. `in_boss_window` describes a bar's start, so the 18:29 UTC decision row (known at 00:00 IST, the window's first
+   decision) reads 0; every TARGET is inside the window.
 4. Slippage is an assumption (no bid/ask). SOL / BNB / XRP: not run yet (same commands).

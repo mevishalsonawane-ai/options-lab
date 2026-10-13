@@ -1,10 +1,10 @@
 id: c2-window-direction
-title: "Crypto C2: direction inside Boss's 00:00-09:00 IST window, after costs (BTC, ETH)"
+title: "Crypto C2: direction of window hours and IST-hour returns in Boss's 00:00-09:00 IST window (BTC, ETH)"
 family: mcx-crypto
 date: '2026-10-13'
 doc: research/CRYPTO_C2_WINDOW.md
-hypothesis: Inside 00:00-09:00 IST, an L2 logistic model predicts the sign of the next window hour (W2) / the whole
-  window (W4) with AUC >= 0.52 and a positive net after perp costs; no IST hour has a mean return above costs (W5).
+hypothesis: Inside 00:00-09:00 IST, an L2 logistic model predicts the sign of the next window hour (W2) with AUC >=
+  0.52 and a positive net after perp costs, or some IST hour has a mean return above costs (W5).
 data_version: Binance bulk archive BTCUSDT/ETHUSDT; crypto cube v2, feature signature afe36b892dd9
 period:
   design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks)
@@ -18,20 +18,18 @@ features:
 - ret_1440m
 - funding_z_30d
 - basis_z_7d
-- oi_chg_24h_pct
+- oi_chg_60m_pct
+- perp_taker_imb_60m
 - vwap24_z
-- weekend
+- hour (sin/cos, UTC)
+- weekend (IST date)
 model_or_rule: L2 logistic regression (C 1.0), long at p >= 0.55, short at p <= 0.45; t tests by IST hour
-settings: research/brain/crypto/PREREG_C2_WINDOW.md tests W2, W4, W5
+settings: research/brain/crypto/PREREG_C2_WINDOW.md tests W2, W5
 prereg: research/brain/crypto/PREREG_C2_WINDOW.md
-variants_tried: 22
+variants_tried: 20
 results:
-  summary: 'W2 AUC 0.547 / 0.550 but net -10.45 / -10.73 bps a trade (2,287 / 2,236 trades). W4 BTC AUC 0.580, net
-    -3.82 bps (464 trades); W4 ETH AUC 0.558, net +0.37 bps (351 trades, q 0.017) passed the bar, but -1.63 bps at 2x
-    slippage, -11.97 bps with the entry one minute later, and only in 2025 (post hoc): judged not robust. W5: no IST
-    hour beats costs (best ETH 03:00 IST +7.88 bps). 1 of 22 passes, not usable.'
+  summary: 'W2 AUC 0.547 / 0.550, a real reversal, but net -10.45 / -10.73 bps a trade (2,287 / 2,236 trades). W5: no IST
+    hour beats the 12 bps round trip (best ETH 03:00 IST +7.88 bps, q 0.008). 0 of 20 pass.'
   costs: perp taker 0.05% + 1 bp slippage a side (0.12% round trip) + funding; 2x slippage stress
 holdout_read: false
 verdict: rejected
-notes: W4 ETH passed the pre-registered bar; rejected on the post-hoc robustness checks in the doc. A delayed-entry
-  version would be a new pre-registered idea.
