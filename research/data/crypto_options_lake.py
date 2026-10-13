@@ -964,6 +964,7 @@ class Lake:
                 products = self.delta_products()
             else:
                 products = pd.read_parquet(local)
+                os.remove(local)
         if products is None or products.empty:
             return []
         done = products[products["expiry_ts"] < self.now_ms]
@@ -993,7 +994,7 @@ class Lake:
                 e = entry(rel, out, "delta_india", "candles_1m", und, day, True, qa, self.today)
                 if self.publish(out, rel, e):
                     print(f"  {rel}: {qa['rows']:,} candles, {qa['products_with_candles']}/{qa['products']} "
-                          f"products traded", flush=True)
+                          f"products with candles", flush=True)
             except Exception as ex:  # noqa: BLE001
                 self.fail(rel, ex)
 

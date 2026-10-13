@@ -10,7 +10,6 @@ import sys
 import urllib.error
 from pathlib import Path
 
-import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
@@ -427,3 +426,28 @@ def test_http_retries_a_cut_off_response():
 def test_inr_per_usd_reads_delta_settings():
     assert L.inr_per_usd(lambda u, p=None: dict(result=dict(fiat_to_usd=dict(asset_to_fiat_value=85)))) == 85.0
     assert L.inr_per_usd(lambda u, p=None: dict(result={})) is None
+
+
+def test_crosscheck_matches_strike_and_expiry_and_compares_iv(tmp_path):
+    day0 = L.iso_ms("2026-10-12T00:00:00Z")
+    exp = L.iso_ms("2026-10-13T12:00:00Z")
+    spot, k = 83_000.0, 84_000.0
+    minute = day0 + 10 * 3_600_000
+    t_years = (exp - minute) / (365 * L.DAY_MS)
+    delta_px = L.bs_price(spot, k, t_years, 0.40, "C")
+    der = trade(0, minute + 60_000, name="BTC-13OCT26-84000-C", price=0.004, iv=41.0)
+    der["index_price"] = spot
+
+    def delta(url, p):
+        if url.endswith("/products"):
+            return dict(result=[product(1, "C-BTC-84000-131026", strike="84000")] if p["states"] == "expired" else [],
+                        meta={})
+        return dict(result=[dict(time=minute // 1000, open=delta_px, high=delta_px, low=delta_px, close=delta_px,
+                                 volume=5)])
+    a = argparse.Namespace(work=str(tmp_path), remote="gdrive:IraAlgo-data-crypto", dry_run=True,
+                           catalog=str(tmp_path / "c.json"))
+    lake = L.Lake(a, run=FakeRclone(), deribit=FakeDeribit([der]), delta=delta, now_ms=exp + L.DAY_MS)
+    res = L.crosscheck(lake, "2026-10-12", "BTC")
+    assert res["matched_strike_expiry"] == 1 and res["comparisons"] == 1
+    assert res["sample"][0]["delta_iv"] == pytest.approx(40.0, abs=0.01)
+    assert res["median_iv_diff_pts"] == pytest.approx(-1.0, abs=0.01)
