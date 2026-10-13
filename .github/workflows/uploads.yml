@@ -1,0 +1,69 @@
+name: Phone uploads (nightly check)
+
+# TODO G1 (13 Oct): each night, check what the phone uploaded (the live-YYYY-MM releases and phone-backup) and add every
+# verified recorded day to research/data/CATALOG.json. research/data/verify_uploads.py does the work: no passphrase is
+# needed for its checks, and nothing decrypted is ever kept or printed. A failed file fails this job (a red X, and a
+# notification when the NTFY_TOPIC secret is set); gaps and an old backup are warnings in the job's summary.
+#
+# Scheduled jobs run from the default branch (main) only.
+on:
+  schedule:
+    - cron: "52 21 * * *"          # 03:22 IST: after the phone's evening uploads (15:45 onwards, on charge, on Wi-Fi)
+  workflow_dispatch:
+
+permissions:
+  contents: write                  # read the releases; commit CATALOG.json
+
+concurrency:
+  group: phone-uploads
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify the phone's uploads
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography
+      - name: Check the uploads and update the catalogue
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional, Boss's choice (MAINTENANCE.md): with it each new day is also opened and its manifest checked.
+          IRAALGO_BACKUP_PASSPHRASE: ${{ secrets.IRAALGO_BACKUP_PASSPHRASE }}
+        run: |
+          set +e
+          python research/data/verify_uploads.py --catalog research/data/CATALOG.json --summary "$RUNNER_TEMP/uploads.md"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/uploads.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - name: Commit the catalogue
+        run: |
+          if git diff --quiet -- research/data/CATALOG.json && git ls-files --error-unmatch research/data/CATALOG.json >/dev/null 2>&1; then
+            echo "The catalogue is unchanged."; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/data/CATALOG.json
+          git commit -m "Data catalogue: the phone's verified recorded days ($(date -u +%F))"
+          # "Protect main" may refuse a direct push (MAINTENANCE.md, section 8): then the catalogue waits on its own branch.
+          if git push origin "HEAD:${GITHUB_REF_NAME}"; then echo "Pushed to ${GITHUB_REF_NAME}."
+          else
+            git push --force origin "HEAD:refs/heads/data-catalog"
+            echo "::warning::main refused the catalogue commit (protect main); it is on the data-catalog branch. Merge it, or let GitHub Actions bypass the rule." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Tell the phone a check failed
+        if: steps.check.outputs.status != '0'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -sS --max-time 20 -H "Title: IraAlgo upload check failed" -H "Tags: warning" \
+              -H "Click: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              -d "A file the phone uploaded to GitHub did not pass tonight's check. Tap for the details." \
+              "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
+          fi
+          exit 1

@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "about": "Every raw data file the Data Brain may read (research/data/ARCHITECTURE.md, L1). Live files: the phone's recorded days, sealed with Boss's backup passphrase, as GitHub release assets; checked nightly by research/data/verify_uploads.py.",
+  "files": []
+}

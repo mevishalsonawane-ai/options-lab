@@ -145,14 +145,19 @@ Not possible yet:
 
 ## G. Live data to GitHub (owner go-ahead 2026-10-12: option A)
 
-- [ ] G1. The phone uploads each day's live recording to GitHub on its own (design: `research/data/ARCHITECTURE.md`,
+- [x] G1. The phone uploads each day's live recording to GitHub on its own (design: `research/data/ARCHITECTURE.md`,
       tick zone and L8).
       - Built 13 Oct (phone side): `GitHubSync` + `GitHubSyncWorker` in the app, the rules in ira-core (`CloudSync`,
         `CloudRun`, `GitHubReleases`, `LiveSeal`), the card in Settings → Data & Harvest → GitHub sync, and
         `research/data/decrypt_live.py` for the PC. Each day's folder goes up whole (the trades file still encrypted
         inside), sealed with the backup passphrase (PBKDF2-SHA256 600k, AES-256-GCM chunks), as `live-YYYY-MM-DD.irlive`.
-        A day whose folder grew (a late fill) goes again; a day only uploads after 15:45. Left: the nightly GitHub job
-        below, and Boss's token (MAINTENANCE.md, "GitHub token").
+        A day whose folder grew (a late fill) goes again; a day only uploads after 15:45. Left: Boss's token
+        (MAINTENANCE.md, "GitHub token").
+      - Nightly job built 13 Oct: `.github/workflows/uploads.yml` runs `research/data/verify_uploads.py` at 03:22 IST (from
+        main): each new day checked whole without the passphrase (header, chunk layout, size, sha256, name and month),
+        backups' headers and age, weekday gaps; good days go to `research/data/CATALOG.json`; a bad file fails the run
+        (ntfy). Optional secret `IRAALGO_BACKUP_PASSPHRASE` adds a full open-and-manifest check. Feeding the Data Brain
+        from the catalogue is the brain's own step (P1/P6).
       - When: after 15:45, only on Wi-Fi and while charging. If it misses a day it retries the next evening.
       - Never on the order or tick path, and never on the main thread.
       - What: the day's file (per-second snapshots, per-minute order-flow aggregates, Boss's fills), encrypted on the

@@ -83,6 +83,14 @@ It needs one token that can do only that.
 **If it leaks:** delete it on GitHub at once (same page → Delete), then make a new one. A leaked token can only touch
 options-lab's files and releases; the uploads themselves stay sealed by your passphrase.
 
+**The nightly check** (GitHub → Actions → "Phone uploads (nightly check)", 03:22 IST): it checks every new recorded day
+the phone uploaded (whole, not cut, the right month), checks each backup's header, and lists every good day in
+`research/data/CATALOG.json`. A bad file turns the run red and, with `NTFY_TOPIC` set, sends your phone a notification.
+Days with no upload and an old backup show as warnings in the run's summary. It needs no passphrase. Optional: add the
+repository secret `IRAALGO_BACKUP_PASSPHRASE` (GitHub → Settings → Secrets and variables → Actions) and it also opens each
+day and checks every file in it; that puts your passphrase in GitHub's secret store, so it is your choice. It starts
+running once this work is merged into `main` (scheduled jobs run from `main` only); "Run workflow" on that page runs it now.
+
 **What the card says:** "Last upload: date · size · ✓/✗", "Days waiting", "Last backup to GitHub". A failed upload, or
 none for 2 days, also shows in Problems found. Most often the fix is: leave the phone on charge, on Wi-Fi, after 15:45.
 
@@ -173,7 +181,10 @@ inside (only the phone opens them: Data & Harvest → Recordings → Export, wit
   4. Tick **Require status checks to pass** → **Add checks**: `Engine parity with the PC`, `Build APK`,
      `PC harness tests`, and the four `App tests (JVM, Robolectric, Compose UI)` shards. (A check appears in the list
      after it has run once.)
-  5. **Create**. (Older screens call this Settings → Branches → Add branch protection rule → `main` → "Require status
+  5. Under **Bypass list**, add **GitHub Actions** if GitHub offers it, so the nightly check can save
+     `research/data/CATALOG.json` straight to `main`. If it is not offered, the check puts the catalogue on the
+     `data-catalog` branch instead and says so in its summary; merge that branch now and then.
+  6. **Create**. (Older screens call this Settings → Branches → Add branch protection rule → `main` → "Require status
      checks to pass before merging".) If GitHub says rules on a private repository need a paid plan (GitHub Pro), that
      is GitHub's limit: either upgrade, or keep merging only after the Actions tab shows green.
 - Free GitHub Actions minutes on private repos are limited each month. If builds stop with a "minutes" message, wait for
