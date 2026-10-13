@@ -22,7 +22,7 @@ class WhatsNewChangelogTest {
         assertEquals(all.size, all.map { it.id }.distinct().size, "ids are unique")
         for (x in all) {
             // Each id starts with its own day (06 Oct, 07 Oct for the un-retired arms, 08 Oct for the locks).
-            assertTrue(Regex("^2026-10-(0[6789]|1[0-3])-[a-z0-9-]+$").matches(x.id), x.id)
+            assertTrue(Regex("^2026-10-(0[6789]|1[0-9])-[a-z0-9-]+$").matches(x.id), x.id)
             assertEquals(LocalDate.parse(x.id.take(10)), x.date, x.id)
             assertTrue(x.title.isNotBlank() && x.title.length <= 60, x.id)
             assertTrue(x.what.isNotBlank() && x.where.isNotBlank(), x.id)
@@ -49,43 +49,44 @@ class WhatsNewChangelogTest {
             assertTrue(want in ids, want)
         // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
         // the day; the first one closes.
-        // Entries from 13 Oct on sit above these (newest first).
-        val e = WhatsNew.ENTRIES.dropWhile { it.date.isAfter(LocalDate.of(2026, 10, 12)) }
-        assertEquals("2026-10-12-tick-zone", e.first().id)
-        assertEquals("2026-10-12-order-review", e[1].id)
-        assertEquals("2026-10-12-majority-rule-context", e[2].id)
-        assertEquals("2026-10-11-home-automation-card", e[3].id)
-        assertEquals("2026-10-11-self-improvement-round-2", e[4].id)
-        assertEquals("2026-10-11-strategy-lab-auto", e[5].id)
-        assertEquals("2026-10-11-smarter-learning", e[6].id)
-        assertEquals("2026-10-11-self-healing-app", e[7].id)
-        assertEquals("2026-10-11-autopilot-learning", e[8].id)
-        assertEquals("2026-10-11-jarvis-learns", e[9].id)
-        assertEquals("2026-10-11-chart-any-symbol", e[10].id)
-        assertEquals("2026-10-10-manager-research", e[11].id)
-        assertEquals("2026-10-10-manager-specialists", e[12].id)
-        assertEquals("2026-10-10-trade-manager", e[13].id)
-        assertEquals("2026-10-10-findings-bus", e[14].id)
-        assertEquals("2026-10-10-smart-workers", e[15].id)
-        assertEquals("2026-10-10-parallel-workers", e[16].id)
-        assertEquals("2026-10-09-big-move-recorder", e[17].id)
-        assertEquals("2026-10-09-fno-to-1540", e[18].id)
-        assertEquals("2026-10-09-order-flow-auction", e[19].id)
-        assertEquals("2026-10-09-order-flow", e[20].id)
-        assertEquals("2026-10-09-live-prices-everywhere", e[21].id)
-        assertEquals("2026-10-09-strategies-to-research", e[22].id)
-        assertEquals("2026-10-09-order-speed", e[23].id)
-        assertEquals("2026-10-09-two-paper-bots-and-parking", e[24].id)
-        assertEquals("2026-10-09-mcx-paper-arms", e[25].id)
-        assertEquals("2026-10-09-mcx", e[26].id)
-        assertEquals("2026-10-08-x1-x2", e[27].id)
-        assertEquals("2026-10-08-honest-paper", e[28].id)
-        assertEquals("2026-10-08-locks-and-day-lock", e[29].id)
-        assertEquals("2026-10-07-liquidity-priority", e[30].id)
-        assertEquals("2026-10-07-profit-lock-stop", e[31].id)
-        assertEquals("2026-10-07-liquidity-midcpnifty", e[32].id)
-        assertEquals("2026-10-07-orb-arms-back", e[33].id)
-        assertEquals("2026-10-06-solo-day", e[34].id)
+        // Entries newer than 12 Oct sit above these (13 Oct onwards); from 12 Oct's first entry down the order is fixed.
+        val o = WhatsNew.ENTRIES.indexOfFirst { it.id == "2026-10-12-tick-zone" }
+        assertTrue(o >= 0 && WhatsNew.ENTRIES.take(o).all { it.date > LocalDate.of(2026, 10, 12) }, "$o")
+        assertTrue(WhatsNew.ENTRIES.take(o).any { it.id == "2026-10-13-exit-research" })
+        assertEquals("2026-10-12-order-review", WhatsNew.ENTRIES[o + 1].id)
+        assertEquals("2026-10-12-majority-rule-context", WhatsNew.ENTRIES[o + 2].id)
+        assertEquals("2026-10-11-home-automation-card", WhatsNew.ENTRIES[o + 3].id)
+        assertEquals("2026-10-11-self-improvement-round-2", WhatsNew.ENTRIES[o + 4].id)
+        assertEquals("2026-10-11-strategy-lab-auto", WhatsNew.ENTRIES[o + 5].id)
+        assertEquals("2026-10-11-smarter-learning", WhatsNew.ENTRIES[o + 6].id)
+        assertEquals("2026-10-11-self-healing-app", WhatsNew.ENTRIES[o + 7].id)
+        assertEquals("2026-10-11-autopilot-learning", WhatsNew.ENTRIES[o + 8].id)
+        assertEquals("2026-10-11-jarvis-learns", WhatsNew.ENTRIES[o + 9].id)
+        assertEquals("2026-10-11-chart-any-symbol", WhatsNew.ENTRIES[o + 10].id)
+        assertEquals("2026-10-10-manager-research", WhatsNew.ENTRIES[o + 11].id)
+        assertEquals("2026-10-10-manager-specialists", WhatsNew.ENTRIES[o + 12].id)
+        assertEquals("2026-10-10-trade-manager", WhatsNew.ENTRIES[o + 13].id)
+        assertEquals("2026-10-10-findings-bus", WhatsNew.ENTRIES[o + 14].id)
+        assertEquals("2026-10-10-smart-workers", WhatsNew.ENTRIES[o + 15].id)
+        assertEquals("2026-10-10-parallel-workers", WhatsNew.ENTRIES[o + 16].id)
+        assertEquals("2026-10-09-big-move-recorder", WhatsNew.ENTRIES[o + 17].id)
+        assertEquals("2026-10-09-fno-to-1540", WhatsNew.ENTRIES[o + 18].id)
+        assertEquals("2026-10-09-order-flow-auction", WhatsNew.ENTRIES[o + 19].id)
+        assertEquals("2026-10-09-order-flow", WhatsNew.ENTRIES[o + 20].id)
+        assertEquals("2026-10-09-live-prices-everywhere", WhatsNew.ENTRIES[o + 21].id)
+        assertEquals("2026-10-09-strategies-to-research", WhatsNew.ENTRIES[o + 22].id)
+        assertEquals("2026-10-09-order-speed", WhatsNew.ENTRIES[o + 23].id)
+        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES[o + 24].id)
+        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[o + 25].id)
+        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[o + 26].id)
+        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[o + 27].id)
+        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[o + 28].id)
+        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[o + 29].id)
+        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[o + 30].id)
+        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[o + 31].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[o + 32].id)
+        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[o + 33].id)
+        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[o + 34].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
     }
@@ -541,9 +542,9 @@ class WhatsNewChangelogTest {
     }
 
     @Test fun jarvisSaysTheNewestSixWithTheirQuestions() {
-        // Read as on 12 Oct (later entries sit above these, newest first).
-        val upTo12 = WhatsNew.ENTRIES.dropWhile { it.date.isAfter(LocalDate.of(2026, 10, 12)) }
-        val t = WhatsNew.answer(upTo12)
+        // From 12 Oct's first entry (newer entries are checked on their own).
+        val from = WhatsNew.ENTRIES.dropWhile { it.id != "2026-10-12-tick-zone" }
+        val t = WhatsNew.answer(from)
         val lines = t.lines()
         // The newest six span 12 and 11 Oct: each line names its day, the head none.
         assertEquals("What's new in the app, newest first:", lines.first())
@@ -554,7 +555,7 @@ class WhatsNewChangelogTest {
         assertEquals("• Home puts trading first (11 Oct): Home → Automation card → tap a line.", lines[4])
         assertEquals("• The learning closes its loops, with brakes (11 Oct): Home → Automation card → Autopilot → Today's changes; Research → Learn.", lines[5])
         assertEquals("• Strategy lab: strategies improve and new ones are tried (11 Oct): try \"how are my strategies improving\".", lines[6])
-        assertEquals("And ${upTo12.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
+        assertEquals("And ${from.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.
         assertFalse(Regex("(?i)\\b(placed|bought|sold|armed|switched on)\\b").containsMatchIn(lines.first() + lines.last()))
     }

@@ -295,6 +295,11 @@ Find and improve edges:
       gated. Liquidity BANKNIFTY only after its freeze ends on 26 Oct.
 - [ ] I9. Better exits: test exits by VWAP band, the next support/resistance level, an order-flow turn, and the
       expected range. Measure how much of the profit each one keeps.
+      (13 Oct, R18 `research/HUNT_R18_EXITS.md`: on the release data none of 5 exit overlays beat today's exits on any
+      arm, 0 of 60 tests, best BH q 0.48; no shadow line added; Liquidity: keep its exits after 26 Oct. Still open:
+      re-run on the 6-year lake with `R18_SOURCE=lake` (a new pre-registration, "next S/R" pooled, judged on the fresh
+      lake holdout from 27 Apr 2026: the release holdout was R16's, reused), and order-flow
+      exits once 60 days are recorded.)
 - [x] I10. (done 13 Oct on the release's ~1 year of expiries: research/EXPIRY_PLAYBOOK.md, in the knowledge pack; expiry-day card on Home. Re-run on the 6-year lake: IRAALGO_CONTEXT_SOURCE=lake) Expiry-day playbook: 6 years of expiry days (theta, straddle decay, max-pain behaviour, pin risk), giving a
       separate rulebook and checks for the Hero arm and expiry exits.
 
