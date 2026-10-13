@@ -123,6 +123,12 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   Follow the research gates: pre-register, walk-forward, locked holdout read once, real costs, BH across every variant
   tried, and log every idea in research/experiments/entries/, failures included. A version that passes the gates can
   come back on paper at once, logged and undoable in one tap, and labelled. A version that fails stays a note only.
+- [ ] R20. ORB opening range that adapts (owner, 13 Oct: "if the price stays in range it never trades, resolve it").
+  On 13 Oct BANKNIFTY's 09:15-10:00 range was 630 points wide and price stayed inside it until 14:35, after the 14:00
+  last entry, so the ORB family took no trade. Research first, on branch claude/r20-adaptive-range: how often this
+  happens; then pre-registered variants (15/30/45-minute range, an adaptive range by width vs ATR, last entry 14:30,
+  the inside-range rule on wide days) with walk-forward, holdout once and BH. A variant that passes goes to paper only,
+  logged and undoable; none goes to live by itself.
 - [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
