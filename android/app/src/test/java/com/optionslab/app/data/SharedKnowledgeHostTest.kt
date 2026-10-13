@@ -45,8 +45,9 @@ class SharedKnowledgeHostTest : RobolectricTest() {
         assertTrue(SharedKnowledgeHost.snapshot === s)
         assertTrue(SharedKnowledgeHost.diagLine(), SharedKnowledgeHost.diagLine().startsWith("Shared knowledge:"))
         // Order flow says the research verdict beside its log.
-        val v = assertNotNull(FlowGate.researchVerdict())
-        assertTrue(v, "still unproven" in v)
+        val v = FlowGate.researchVerdict()
+        assertNotNull(v)
+        assertTrue(v!!, "still unproven" in v)
     }
 
     @Test fun theShadowSwitchIsOffByDefault() {
