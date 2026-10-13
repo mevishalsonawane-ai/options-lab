@@ -163,16 +163,21 @@ class NotifierTest : RobolectricTest() {
         Notifier.orderFilled(context, "SELL", 30, "BANKNIFTYLIQPE", 280.0, "Paper", "Liquidity 5m FINNIFTY · stop", "PAPER-00000002")
         assertTrue(silent(card("Paper", "BANKNIFTYLIQPE")))
         assertTrue(Notifier.quietFill("Paper", "Liquidity 5m · exit"))
-        // Everything else sounds as before.
-        Notifier.orderFilled(context, "BUY", 75, "NIFTYMANUALCE", 101.5, "Paper", null)
-        Notifier.orderFilled(context, "BUY", 75, "NIFTYORBCE", 101.5, "Paper", "ORB")
-        Notifier.orderFilled(context, "BUY", 30, "BANKNIFTYLIVECE", 300.0, "Live", "Liquidity 15+5 · entry", "250101000000001")
-        Notifier.orderFilled(context, "SELL", 75, "NIFTYZERODHAPE", 80.0, "Zerodha", null)
-        for ((venue, symbol) in listOf("Paper" to "NIFTYMANUALCE", "Paper" to "NIFTYORBCE", "Live" to "BANKNIFTYLIVECE", "Live" to "NIFTYZERODHAPE")) {
+        // Everything else sounds as before. Each card is read as soon as it is posted: a live fill's card is re-checked against
+        // Zerodha's book 2 s later (and taken down when the book does not hold it), which a slow test runner could reach first.
+        fun sounds(venue: String, symbol: String) {
             val n = card(venue, symbol)
             assertFalse("$venue $symbol sounds", silent(n))
             assertEquals("$venue $symbol", NotificationCompat.PRIORITY_HIGH, n.priority)
         }
+        Notifier.orderFilled(context, "BUY", 75, "NIFTYMANUALCE", 101.5, "Paper", null)
+        sounds("Paper", "NIFTYMANUALCE")
+        Notifier.orderFilled(context, "BUY", 75, "NIFTYORBCE", 101.5, "Paper", "ORB")
+        sounds("Paper", "NIFTYORBCE")
+        Notifier.orderFilled(context, "BUY", 30, "BANKNIFTYLIVECE", 300.0, "Live", "Liquidity 15+5 · entry", "250101000000001")
+        sounds("Live", "BANKNIFTYLIVECE")
+        Notifier.orderFilled(context, "SELL", 75, "NIFTYZERODHAPE", 80.0, "Zerodha", null)
+        sounds("Live", "NIFTYZERODHAPE")
         assertFalse(Notifier.quietFill("Live", "Liquidity 15+5 · entry"))
         assertFalse(Notifier.quietFill("Paper", "Manual"))
         assertFalse(Notifier.quietFill("Paper", "Pine · Liquidity sweep"))
