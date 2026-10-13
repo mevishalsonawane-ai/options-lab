@@ -196,9 +196,11 @@ class PerpBook:
 
     def open(self, coin, side: int, notional, px) -> int:
         n = int(notional / (K.CONTRACT[coin] * px) + 1e-9)
+        fill = px * (1 + side * self.cost.half_spread)
+        per = K.CONTRACT[coin] * fill * (1 / self.lev + self.cost.fee * (1 + K.GST))   # margin + fee per contract
+        n = min(n, int(max(self.cash, 0.0) / per + 1e-9))
         if n <= 0:
             return 0
-        fill = px * (1 + side * self.cost.half_spread)
         size = n * K.CONTRACT[coin]
         margin = size * fill / self.lev
         fee = size * fill * self.cost.fee * (1 + K.GST)
@@ -209,9 +211,12 @@ class PerpBook:
         return n
 
     def liq_price(self, coin) -> float:
+        """Where the position's margin (after funding) falls to the maintenance margin: at entry, entry x (1 - 1/L + MM)
+        for a long and entry x (1 + 1/L - MM) for a short."""
         p = self.pos[coin]
         s = np.sign(p["n"])
-        return p["entry"] * (1 - s * (1 / self.lev - K.MM))
+        size = abs(p["n"]) * K.CONTRACT[coin]
+        return p["entry"] - s * (p["margin"] - K.MM * size * p["entry"]) / size
 
     def _settle(self, coin, pnl, day, fee):
         p = self.pos.pop(coin)
@@ -242,19 +247,20 @@ class PerpBook:
             return False
         p = self.pos[coin]
         lp = self.liq_price(coin)
-        hit = lo <= lp if p["n"] > 0 else hi >= lp
+        hit = p["margin"] <= 0 or (lo <= lp if p["n"] > 0 else hi >= lp)
         if hit:
             self.liquidations += 1
-            self._settle(coin, -p["margin"], day, 0.0)
+            self._settle(coin, -max(p["margin"], 0.0), day, 0.0)
         return hit
 
     def apply_funding(self, coin, rate_sum, px):
-        """Positive funding: longs pay, shorts receive."""
+        """Positive funding: longs pay, shorts receive. Isolated margin: funding settles against the position's margin
+        (so paying it moves the liquidation price closer), never against free cash."""
         if coin not in self.pos or rate_sum == 0:
             return
         p = self.pos[coin]
         pay = -np.sign(p["n"]) * rate_sum * abs(p["n"]) * K.CONTRACT[coin] * px
-        self.cash += pay
+        p["margin"] += pay
         p["funding"] += pay
 
     def accrued_tax(self) -> float:

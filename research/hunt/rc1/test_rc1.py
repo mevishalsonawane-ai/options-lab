@@ -124,14 +124,32 @@ def test_funding_sign_longs_pay_shorts_receive_when_positive():
     for side, sign in ((+1, -1), (-1, +1)):
         p = E.PerpBook(10_000, ZERO, tax=False)
         p.open("BTC", side, 5_000, 1_000.0)         # 5,000 notional = 5000 contracts of 0.001 at 1,000
-        cash0 = p.cash
+        m0, cash0 = p.pos["BTC"]["margin"], p.cash
         p.apply_funding("BTC", 0.001, 1_000.0)
-        assert p.cash - cash0 == pytest.approx(sign * 0.001 * 5_000)
+        assert p.pos["BTC"]["margin"] - m0 == pytest.approx(sign * 0.001 * 5_000)
+        assert p.cash == cash0                        # isolated margin: free cash is untouched
     p = E.PerpBook(10_000, ZERO, tax=False)
     p.open("BTC", +1, 5_000, 1_000.0)
-    cash0 = p.cash
+    m0 = p.pos["BTC"]["margin"]
     p.apply_funding("BTC", -0.001, 1_000.0)          # negative funding: longs receive
-    assert p.cash - cash0 == pytest.approx(+5.0)
+    assert p.pos["BTC"]["margin"] - m0 == pytest.approx(+5.0)
+
+
+def test_funding_can_never_take_an_isolated_account_below_zero():
+    p = E.PerpBook(10_000, ZERO, tax=False, lev=3)
+    p.open("BTC", +1, 30_000, 1_000.0)              # all cash is margin
+    assert p.cash == pytest.approx(0.0)
+    lp0 = p.liq_price("BTC")
+    p.apply_funding("BTC", 0.05, 1_000.0)            # pays 1,500 out of the 10,000 margin
+    assert p.liq_price("BTC") > lp0                  # the liquidation price moves closer
+    assert p.check_liq("BTC", lp0 + 1, 1_000.0, D0)
+    assert p.cash == pytest.approx(0.0) and p.value({"BTC": 1.0}) == pytest.approx(0.0)
+
+
+def test_open_never_spends_more_than_the_cash():
+    p = E.PerpBook(1_000, K.PERP_COST["base"], tax=False, lev=3)
+    p.open("BTC", +1, 1_000_000, 1_000.0)
+    assert p.cash >= 0
 
 
 def test_liquidation_at_3x_loses_the_margin_and_1x_survives_a_halving():
