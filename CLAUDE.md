@@ -47,6 +47,9 @@ notes; match the surrounding code.
   plain-rules record can still be separated from the record after changes for the 26 Oct live decision. Boss is on paper
   only 13–26 Oct. Account stop rule:
   −₹40k drawdown or −₹13k a month.
+- Crypto (Boss, 13 Oct): every crypto trade, in research, paper or any future live use, ALWAYS has a stop-loss and a
+  profit lock (a trailing or step lock that protects open profit). No crypto strategy is tested, proposed or run without
+  both; studies compare lock and stop variants, never "no stop". Nothing in the app trades crypto yet.
 
 ## Repository hygiene
 

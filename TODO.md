@@ -372,6 +372,10 @@ Later (when profitable):
       USD-M futures 1m, funding, mark/index, OI, long/short; catalogue in research/data/crypto/). Branch claude/crypto-lake.
 - [ ] C2. Crypto Data Brain: the Indian brain's layers reused (cube, point-in-time features, labels/splits, studies,
       knowledge pack with a crypto tag). Branch claude/crypto-brain.
+- [ ] C4. Boss's crypto rule (13 Oct): ALWAYS a stop-loss and a profit lock on every crypto trade. Re-check the RC1
+      small-account study (branch claude/crypto-small-account): every active idea must be judged WITH a stop and a
+      profit lock (pre-registered variants: fixed % / ATR stop; step lock and trailing lock), never without; if RC1
+      finished without them, run that as RC1b before any verdict reaches Boss.
 - [ ] C3. Every agent and Jarvis know crypto (after C2 has findings). App work, one session:
       - the shared knowledge pack carries the crypto facts and findings (tagged), which every agent already reads;
       - Jarvis answers crypto questions (what is known, what failed, latest BTC/ETH context), with numbers checked like
