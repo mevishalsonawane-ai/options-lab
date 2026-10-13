@@ -417,7 +417,9 @@ object OrderReviewHost {
         val live = runCatching { AppSettings.load().live }.getOrDefault(false)
         // Liquidity's fill quality that day (12 Oct): the bid/ask, depth and timing at its signals and fills, as notes (facts).
         val quality = runCatching { LiquidityTest.reviewNotes(day) }.getOrDefault(emptyList())
-        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality)
+        // The pre-trade checks in shadow (13 Oct, R17): the charges check and smart stop at each paper entry, as notes (facts).
+        val pretrade = runCatching { PreTradeShadow.reviewNotes(day) }.getOrDefault(emptyList())
+        return OrderReview.Inputs(day, orders, trades, fills, sync, speed, tracked, to, protections, errors, live, fillNotes = quality + pretrade)
     }
 
     /** The ORB family's entry window on [day] (after its opening range, to its last entry and two minutes for the order); else null. */

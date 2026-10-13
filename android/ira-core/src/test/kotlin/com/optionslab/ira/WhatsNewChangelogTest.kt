@@ -22,7 +22,7 @@ class WhatsNewChangelogTest {
         assertEquals(all.size, all.map { it.id }.distinct().size, "ids are unique")
         for (x in all) {
             // Each id starts with its own day (06 Oct, 07 Oct for the un-retired arms, 08 Oct for the locks).
-            assertTrue(Regex("^2026-10-(0[6789]|1[0123])-[a-z0-9-]+$").matches(x.id), x.id)
+            assertTrue(Regex("^2026-10-(0[6789]|1[0-3])-[a-z0-9-]+$").matches(x.id), x.id)
             assertEquals(LocalDate.parse(x.id.take(10)), x.date, x.id)
             assertTrue(x.title.isNotBlank() && x.title.length <= 60, x.id)
             assertTrue(x.what.isNotBlank() && x.where.isNotBlank(), x.id)
@@ -49,44 +49,52 @@ class WhatsNewChangelogTest {
             assertTrue(want in ids, want)
         // Written newest first: 07 Oct's lead (Liquidity on MIDCPNIFTY, then the four arms back), then 06 Oct's last change of
         // the day; the first one closes.
-        assertEquals("2026-10-13-shared-knowledge", WhatsNew.ENTRIES.first().id)
-        assertEquals("2026-10-12-tick-zone", WhatsNew.ENTRIES[1].id)
-        assertEquals("2026-10-12-order-review", WhatsNew.ENTRIES[2].id)
-        assertEquals("2026-10-12-majority-rule-context", WhatsNew.ENTRIES[3].id)
-        assertEquals("2026-10-11-home-automation-card", WhatsNew.ENTRIES[4].id)
-        assertEquals("2026-10-11-self-improvement-round-2", WhatsNew.ENTRIES[5].id)
-        assertEquals("2026-10-11-strategy-lab-auto", WhatsNew.ENTRIES[6].id)
-        assertEquals("2026-10-11-smarter-learning", WhatsNew.ENTRIES[7].id)
-        assertEquals("2026-10-11-self-healing-app", WhatsNew.ENTRIES[8].id)
-        assertEquals("2026-10-11-autopilot-learning", WhatsNew.ENTRIES[9].id)
-        assertEquals("2026-10-11-jarvis-learns", WhatsNew.ENTRIES[10].id)
-        assertEquals("2026-10-11-chart-any-symbol", WhatsNew.ENTRIES[11].id)
-        assertEquals("2026-10-10-manager-research", WhatsNew.ENTRIES[12].id)
-        assertEquals("2026-10-10-manager-specialists", WhatsNew.ENTRIES[13].id)
-        assertEquals("2026-10-10-trade-manager", WhatsNew.ENTRIES[14].id)
-        assertEquals("2026-10-10-findings-bus", WhatsNew.ENTRIES[15].id)
-        assertEquals("2026-10-10-smart-workers", WhatsNew.ENTRIES[16].id)
-        assertEquals("2026-10-10-parallel-workers", WhatsNew.ENTRIES[17].id)
-        assertEquals("2026-10-09-big-move-recorder", WhatsNew.ENTRIES[18].id)
-        assertEquals("2026-10-09-fno-to-1540", WhatsNew.ENTRIES[19].id)
-        assertEquals("2026-10-09-order-flow-auction", WhatsNew.ENTRIES[20].id)
-        assertEquals("2026-10-09-order-flow", WhatsNew.ENTRIES[21].id)
-        assertEquals("2026-10-09-live-prices-everywhere", WhatsNew.ENTRIES[22].id)
-        assertEquals("2026-10-09-strategies-to-research", WhatsNew.ENTRIES[23].id)
-        assertEquals("2026-10-09-order-speed", WhatsNew.ENTRIES[24].id)
-        assertEquals("2026-10-09-two-paper-bots-and-parking", WhatsNew.ENTRIES[25].id)
-        assertEquals("2026-10-09-mcx-paper-arms", WhatsNew.ENTRIES[26].id)
-        assertEquals("2026-10-09-mcx", WhatsNew.ENTRIES[27].id)
-        assertEquals("2026-10-08-x1-x2", WhatsNew.ENTRIES[28].id)
-        assertEquals("2026-10-08-honest-paper", WhatsNew.ENTRIES[29].id)
-        assertEquals("2026-10-08-locks-and-day-lock", WhatsNew.ENTRIES[30].id)
-        assertEquals("2026-10-07-liquidity-priority", WhatsNew.ENTRIES[31].id)
-        assertEquals("2026-10-07-profit-lock-stop", WhatsNew.ENTRIES[32].id)
-        assertEquals("2026-10-07-liquidity-midcpnifty", WhatsNew.ENTRIES[33].id)
-        assertEquals("2026-10-07-orb-arms-back", WhatsNew.ENTRIES[34].id)
-        assertEquals("2026-10-06-solo-day", WhatsNew.ENTRIES[35].id)
+        // Entries from 13 Oct on sit above these (newest first).
+        val e = WhatsNew.ENTRIES.dropWhile { it.date.isAfter(LocalDate.of(2026, 10, 12)) }
+        assertEquals("2026-10-12-tick-zone", e.first().id)
+        assertEquals("2026-10-12-order-review", e[1].id)
+        assertEquals("2026-10-12-majority-rule-context", e[2].id)
+        assertEquals("2026-10-11-home-automation-card", e[3].id)
+        assertEquals("2026-10-11-self-improvement-round-2", e[4].id)
+        assertEquals("2026-10-11-strategy-lab-auto", e[5].id)
+        assertEquals("2026-10-11-smarter-learning", e[6].id)
+        assertEquals("2026-10-11-self-healing-app", e[7].id)
+        assertEquals("2026-10-11-autopilot-learning", e[8].id)
+        assertEquals("2026-10-11-jarvis-learns", e[9].id)
+        assertEquals("2026-10-11-chart-any-symbol", e[10].id)
+        assertEquals("2026-10-10-manager-research", e[11].id)
+        assertEquals("2026-10-10-manager-specialists", e[12].id)
+        assertEquals("2026-10-10-trade-manager", e[13].id)
+        assertEquals("2026-10-10-findings-bus", e[14].id)
+        assertEquals("2026-10-10-smart-workers", e[15].id)
+        assertEquals("2026-10-10-parallel-workers", e[16].id)
+        assertEquals("2026-10-09-big-move-recorder", e[17].id)
+        assertEquals("2026-10-09-fno-to-1540", e[18].id)
+        assertEquals("2026-10-09-order-flow-auction", e[19].id)
+        assertEquals("2026-10-09-order-flow", e[20].id)
+        assertEquals("2026-10-09-live-prices-everywhere", e[21].id)
+        assertEquals("2026-10-09-strategies-to-research", e[22].id)
+        assertEquals("2026-10-09-order-speed", e[23].id)
+        assertEquals("2026-10-09-two-paper-bots-and-parking", e[24].id)
+        assertEquals("2026-10-09-mcx-paper-arms", e[25].id)
+        assertEquals("2026-10-09-mcx", e[26].id)
+        assertEquals("2026-10-08-x1-x2", e[27].id)
+        assertEquals("2026-10-08-honest-paper", e[28].id)
+        assertEquals("2026-10-08-locks-and-day-lock", e[29].id)
+        assertEquals("2026-10-07-liquidity-priority", e[30].id)
+        assertEquals("2026-10-07-profit-lock-stop", e[31].id)
+        assertEquals("2026-10-07-liquidity-midcpnifty", e[32].id)
+        assertEquals("2026-10-07-orb-arms-back", e[33].id)
+        assertEquals("2026-10-06-solo-day", e[34].id)
         assertEquals("2026-10-06-liquidity-only", WhatsNew.ENTRIES.last().id)
         assertEquals(WhatsNew.ENTRIES, WhatsNew.newestFirst(WhatsNew.ENTRIES))
+    }
+
+    @Test fun thePreTradeChecksAreSaidWithTheirTestResult() {
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-13-pretrade-checks" }
+        assertEquals(LocalDate.of(2026, 10, 13), x.date)
+        for (w in listOf("Liquidity aside", "none beat chance", "never skip, resize or move a trade", "half size for paper arms on careful days, is off"))
+            assertTrue(w in x.what, w)
     }
 
     @Test fun theOrderReviewIsSaidWithItsSafety() {
@@ -529,18 +537,20 @@ class WhatsNewChangelogTest {
     }
 
     @Test fun jarvisSaysTheNewestSixWithTheirQuestions() {
-        val t = WhatsNew.answer(WhatsNew.ENTRIES)
+        // Read as on 12 Oct (later entries sit above these, newest first).
+        val upTo12 = WhatsNew.ENTRIES.dropWhile { it.date.isAfter(LocalDate.of(2026, 10, 12)) }
+        val t = WhatsNew.answer(upTo12)
         val lines = t.lines()
-        // The newest six span 13, 12 and 11 Oct: each line names its day, the head none.
+        // The newest six span 12 and 11 Oct: each line names its day, the head none.
         assertEquals("What's new in the app, newest first:", lines.first())
         assertEquals(1 + WhatsNew.SPOKEN + 1, lines.size, t)
-        assertEquals("• All the agents now learn from one shared knowledge (13 Oct): try \"what have you learned\".", lines[1])
-        assertEquals("• Every second of order flow recorded (12 Oct): Settings → Data and harvest → Recordings.", lines[2])
-        assertEquals("• Order review: every order studied daily (12 Oct): try \"what went wrong today\".", lines[3])
-        assertEquals("• Majority Rule 14: every agent knows it (12 Oct): Research → Learn → Majority Rule 14; Home → Automation card → Brain.", lines[4])
-        assertEquals("• Home puts trading first (11 Oct): Home → Automation card → tap a line.", lines[5])
-        assertEquals("• The learning closes its loops, with brakes (11 Oct): Home → Automation card → Autopilot → Today's changes; Research → Learn.", lines[6])
-        assertEquals("And ${WhatsNew.ENTRIES.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
+        assertEquals("• Every second of order flow recorded (12 Oct): Settings → Data and harvest → Recordings.", lines[1])
+        assertEquals("• Order review: every order studied daily (12 Oct): try \"what went wrong today\".", lines[2])
+        assertEquals("• Majority Rule 14: every agent knows it (12 Oct): Research → Learn → Majority Rule 14; Home → Automation card → Brain.", lines[3])
+        assertEquals("• Home puts trading first (11 Oct): Home → Automation card → tap a line.", lines[4])
+        assertEquals("• The learning closes its loops, with brakes (11 Oct): Home → Automation card → Autopilot → Today's changes; Research → Learn.", lines[5])
+        assertEquals("• Strategy lab: strategies improve and new ones are tried (11 Oct): try \"how are my strategies improving\".", lines[6])
+        assertEquals("And ${upTo12.size - 6} more, each with where to find it, in Settings → What's new.", lines.last())
         // Never a word of acting.
         assertFalse(Regex("(?i)\\b(placed|bought|sold|armed|switched on)\\b").containsMatchIn(lines.first() + lines.last()))
     }

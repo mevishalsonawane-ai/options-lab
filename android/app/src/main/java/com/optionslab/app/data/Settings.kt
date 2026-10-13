@@ -61,6 +61,11 @@ data class AppSettings(
      * it placed again at the arm's own level, so Zerodha triggers it with no phone in the loop. Only lowers risk; live only.
      */
     val exchangeStops: Boolean = false,
+    /**
+     * The danger meter's one action (TODO I4, research/HUNT_R17_PRETRADE.md; off unless Boss chooses it): on a careful or
+     * paper-only day, PAPER arms buy half their lots (rounded down, at least 1). Only lowers size; never live, never Liquidity.
+     */
+    val dangerHalfSize: Boolean = false,
     val maxOrdersPerDay: Int = 4,
     val maxLotsPerOrder: Int = 2,
     val maxOrderValue: Double = 500_000.0,
@@ -176,6 +181,7 @@ data class AppSettings(
                 orderProduct = p.getString("k.product", d.orderProduct)!!,
                 oneTapOrders = p.getBoolean("k.oneTap", d.oneTapOrders),
                 exchangeStops = p.getBoolean("k.exStop", d.exchangeStops),
+                dangerHalfSize = p.getBoolean("r.dangerHalf", d.dangerHalfSize),
                 maxOrdersPerDay = p.getInt("k.maxOrders", d.maxOrdersPerDay),
                 maxLotsPerOrder = p.getInt("k.maxLots", d.maxLotsPerOrder),
                 maxOrderValue = p.getDouble("k.maxValue", d.maxOrderValue),
@@ -213,7 +219,7 @@ data class AppSettings(
                 "sec.wipe" to s.wipeOnExhaustion, "sec.hideAmounts" to s.hideAmountsOnLockScreen,
                 "ui.theme" to s.theme, "ui.calm" to s.reduceMotion, "ui.widgetPnl" to s.widgetPnl,
                 "n.pnlLoss" to s.pnlLossAlert, "n.pnlProfit" to s.pnlProfitAlert,
-                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.exStop" to s.exchangeStops, "k.maxOrders" to s.maxOrdersPerDay,
+                "k.mode" to s.mode, "k.allow" to s.allowRealOrders, "k.product" to s.orderProduct, "k.oneTap" to s.oneTapOrders, "k.exStop" to s.exchangeStops, "r.dangerHalf" to s.dangerHalfSize, "k.maxOrders" to s.maxOrdersPerDay,
                 "k.maxLots" to s.maxLotsPerOrder, "k.maxValue" to s.maxOrderValue,
                 "g.kill" to s.guardKill, "g.loss" to s.guardDailyLoss, "g.dd" to s.guardDrawdownPct, "g.open" to s.guardMaxOpen,
                 "g.trades" to s.guardMaxTrades, "g.value" to s.guardMaxValue, "g.lots" to s.guardMaxLots, "g.cutoff" to s.guardCutoff,

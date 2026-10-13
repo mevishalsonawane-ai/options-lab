@@ -233,6 +233,8 @@ object SettingsIndex {
             listOf("Bot settings", "Learning freeze"), listOf("freeze", "frozen", "unfreeze", "learning", "drawdown", "autopilot"), guarded = true),
         Entry("risk", "risk.paperonly", "Paper-only period", "An end date and a reason: until then switching to Live asks your PIN and shows them; exits are never blocked.",
             listOf("Bot settings", "Paper-only period"), listOf("paper only", "paper period", "no live", "practice", "break from live"), guarded = true),
+        Entry("risk", "risk.pretrade", "Pre-trade checks", "Charges check, smart stop and today's danger meter (shadow and advice); half size for paper arms on careful days, off by default.",
+            listOf("Bot settings", "Pre-trade checks"), listOf("danger meter", "careful day", "charges check", "smart stop", "half size", "expected move")),
 
         // ---- Settings → Data and harvest ----
         Entry("data", "data.record", "Include this phone's captures", "The days this phone collected extend the record forward.",

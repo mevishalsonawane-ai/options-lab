@@ -402,6 +402,8 @@ object IraHub {
                 }
                 if (added > 0) save()
                 val snaps = hs.mapNotNull { (m, h) -> Brain.read(h)?.let { m to it } }.toMap()
+                // India VIX's previous close for the pre-trade shadow checks (R17), handed over here, off the order path.
+                snaps[IraMarket.VIX]?.let { v -> runCatching { com.optionslab.app.data.PreTradeShadow.vixFrom(v.price, v.prevClose, v.at, com.optionslab.app.data.Market.today()) } }
                 histories = hs
                 // Majority Rule 14 on weekly NIFTY (research R13): the reading for the brain and Jarvis, from closes in memory -
                 // context only, nothing acts on it ([majorityUpdate]).

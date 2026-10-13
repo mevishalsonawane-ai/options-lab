@@ -55,6 +55,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-pretrade-checks", OCT13, "Three checks before each paper trade",
+            "Before each paper trade (Liquidity aside) the app notes how much of the expected 30-minute move the charges eat. " +
+                "It also notes where a stop sized to that move would sit, beside the fixed stop. " +
+                "Each morning it rates the day normal, careful or paper-only, with how many past days back the rating. " +
+                "We tested all three on two years of data and none beat chance. " +
+                "So they are notes and advice only: they never skip, resize or move a trade. " +
+                "The one switch, half size for paper arms on careful days, is off.",
+            "Settings → Bot settings → Pre-trade checks; Order review; Arms · today; the Good morning check"),
         Entry("2026-10-13-shared-knowledge", OCT13, "All the agents now learn from one shared knowledge",
             "Every agent now reads one shared knowledge: the research, Jarvis's lessons and the latest findings. " +
                 "The trade manager, order review, order flow, strategy lab and study now say what the research found. " +

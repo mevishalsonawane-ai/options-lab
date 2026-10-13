@@ -400,6 +400,9 @@ private fun OrbDetail(v: OrbArms.View, onShadowOff: (String) -> Unit = {},
                     // ORB, ORB Fresh, ORB Sweep, Range Fade: their 2021–2026 record, as information (never a block).
                     a.record?.let { r -> Text(keepNumbersWhole(recordLine(r)), style = soft) }
                     if (a.today.isEmpty()) Text("No trades today.", style = soft)
+                    // The pre-trade checks in shadow (R17): what the costs took of the expected move, and the smart stop (memory only).
+                    com.optionslab.app.data.PreTradeShadow.lines(a.arm.source, java.time.LocalDate.now(com.optionslab.engine.IST))
+                        .forEach { Text(keepNumbersWhole("  Shadow · $it"), style = soft) }
                     // Liquidity 15+5: a closed paper trade opens its replay (the chart around it, the result and its lesson).
                     if (a.today.any { replayable(a, it) }) Text("Tap a closed trade to replay it.", style = soft)
                     a.today.forEach { t ->
