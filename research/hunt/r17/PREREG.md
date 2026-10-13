@@ -98,3 +98,12 @@ mean, shrunk by n / (n + 20); score = the sum over features. "Careful" = score i
 
 One Benjamini-Hochberg family over every R17 holdout test actually run (1 for I3, up to 6 for I5, 1 for I4), q = 0.05.
 Every variant tried is logged in `research/experiments/entries/r17*.yaml`, failures included.
+
+## Amendment 1 (13 Oct 2026, after the baseline arm simulation and BEFORE any I3 / I5 / I4 test was computed)
+
+The baseline run showed that a delta from VIX is about 0 for Hero's Rs 1-5 options an hour before expiry (VIX prices
+the far wings far too cheaply), which would make Hero's smart stop the 2-tick floor and its cost ratio infinite. So the
+premium sensitivity is changed for every arm: delta = Black-Scholes delta at the IV implied by the option's own last
+price at the decision minute (r 6.5%, T to 15:30 on the expiry); VIX / 100 only when no IV solves. ATM deltas barely
+change. Nothing else changes. The only numbers looked at before this amendment: each arm's design trade count, net,
+charges, win rate and exit mix (fixed stops), and the expected-range model's design error.
