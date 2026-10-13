@@ -25,9 +25,17 @@ MAX_HORIZON_MIN = max(HORIZONS)
 
 
 def compute(minutes: pd.DataFrame, horizons=HORIZONS) -> pd.DataFrame:
-    m = minutes[["ts", "open", "high", "low", "close", "flag"]].copy()
+    m = minutes[["ts", "open", "high", "low", "close", "flag"]].sort_values("ts").drop_duplicates("ts")
+    out_ts = m.ts.values
+    if len(m):
+        # labels.compute works by row position, so a missing day (cube.build skips days with no source) would shift
+        # every window next to it: put the rows back on the full minute grid first, the hole as gaps
+        g = pd.date_range(m.ts.iloc[0], m.ts.iloc[-1], freq="min")
+        m = m.set_index("ts").reindex(g).rename_axis("ts").reset_index()
+        m["flag"] = m.flag.fillna("gap")
     m["day"] = 0                                       # 24x7: one continuous "session"
-    return india.compute(m, horizons)
+    L = india.compute(m, horizons)
+    return L[L.ts.isin(out_ts)].reset_index(drop=True)
 
 
 def _path(root: Path, sym: str, d: date) -> Path:

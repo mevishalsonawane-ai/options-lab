@@ -41,6 +41,8 @@ def _row_of(kind: str, d: pd.DataFrame) -> pd.DatetimeIndex:
     """The grid row each raw item lands on (cube.build_frame's placement)."""
     if kind == "dvol":
         return pd.DatetimeIndex(d.avail).floor("min")
+    if kind == "metrics":
+        return cube.metrics_avail(d.ts).floor("min")
     return pd.DatetimeIndex(d.ts).floor("min")
 
 

@@ -55,3 +55,6 @@ stressed at 2x slippage. Direction trades are taken when the model's probability
 - 2.5 years of data and one regime of venue rules. Overlapping hourly windows are handled by weekly blocks.
 - Slippage is assumed (no bid/ask in the archive). Sizes in bps of notional.
 - Post-hoc descriptions (hour-of-day size shape, funding quintiles) are descriptions, not tests.
+
+*Deviations found after the run are listed in `research/CRYPTO_C1_PREDICTABILITY.md`, "Deviations and caveats"; this
+file is otherwise as committed before the results (5adf2a6).*

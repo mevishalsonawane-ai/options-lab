@@ -53,8 +53,9 @@ def read_klines(path_or_buf) -> pd.DataFrame:
 def read_funding(path_or_buf) -> pd.DataFrame:
     """fundingRate CSV (calc_time, funding_interval_hours, last_funding_rate) -> ts (settlement time), rate, interval_h."""
     d = pd.read_csv(path_or_buf)
+    iv = d["funding_interval_hours"] if "funding_interval_hours" in d else pd.Series(config.FUNDING_INTERVAL_H, index=d.index)
     return pd.DataFrame({"ts": to_utc(d.calc_time).values, "rate": d.last_funding_rate.astype(float).values,
-                         "interval_h": pd.to_numeric(d.get("funding_interval_hours", config.FUNDING_INTERVAL_H)).values})
+                         "interval_h": pd.to_numeric(iv).values})
 
 
 METRIC_MAP = {"sum_open_interest": "oi", "sum_open_interest_value": "oi_value",

@@ -79,7 +79,9 @@ horizons argument); the Indian output is byte-identical (FEATURES.md check, the 
 - **Slow series** (funding, OI metrics, DVOL) go on the row that contains the instant they become available, so the row
   closes after the value exists, and are carried forward with an age column up to a limit (funding 9 h, metrics 15 min,
   DVOL 2 h); older is NaN. Funding at 08:00:00.015 is on the 08:00 row (known 08:01). An hourly DVOL bar from 07:00 is
-  on the 08:00 row. A 5-minute metrics snapshot stamped T is on row T (the archive gives no publication time).
+  on the 08:00 row. A 5-minute metrics row stamped T describes [T, T+5) (its OI value matches the mark price at
+  T+5), so it is on row T+5 (cube v2; v1 put it on row T, up to 4 minutes early). The archive gives no publication
+  time, so any extra delay is unknown.
 
 ## The cube (`cube.py`)
 
@@ -122,7 +124,8 @@ summaries), ETH DVOL (no file), on-chain and ETF flows (daily files exist in `cr
 row after a cut deleted, and with those rows perturbed (prices scaled, funding / OI / ratios / DVOL replaced, flags
 shuffled); values at rows <= the cut must not change. `check_cube` does the same on the builder (raw items that land
 after the cut removed or perturbed). Canaries (the next minute's close, the day's final high, a backwards fill) must be
-caught. Tests: `research/brain/tests/test_crypto_brain.py`, `test_crypto_features.py`, `test_crypto_study.py`, on
+caught. The guard checks the builder against its own placement rules, so a wrong rule (when a value is really known)
+needs a data check like the metrics one above. Tests: `research/brain/tests/test_crypto_brain.py`, `test_crypto_features.py`, `test_crypto_study.py`, on
 seeded synthetic data (`tests/crypto_synth.py`): the 24x7 grid, funding alignment, the microsecond switch, gaps not
 filled, duplicates, costs, the holdout, labels across midnight, warm-up independence, and the guard for all features.
 

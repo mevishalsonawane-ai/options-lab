@@ -156,8 +156,13 @@ def test_metrics_and_dvol_alignment():
     r, d, g, M = _frame(2, "2025-01-03")
     at = M.set_index("ts")
     me = r["metrics"].set_index("ts")
-    assert at.oi["2025-01-03 00:05"] == me.oi["2025-01-03 00:05"]
-    assert at.oi["2025-01-03 00:04"] == me.oi["2025-01-03 00:00"] and at.metrics_age_min["2025-01-03 00:04"] == 4
+    # a metrics row stamped T describes [T, T+5): it goes on row T+5, never earlier (the 13 Oct review found the
+    # stamp is the period's START: OI value / OI = the mark price at T+5)
+    assert at.oi["2025-01-03 00:05"] == me.oi["2025-01-03 00:00"] and at.metrics_age_min["2025-01-03 00:05"] == 0
+    assert at.oi["2025-01-03 00:04"] == me.oi["2025-01-02 23:55"] and at.metrics_age_min["2025-01-03 00:04"] == 4
+    for t, v in me.oi.items():
+        rows = at.index[(at.oi == v).values & (at.metrics_age_min == 0).values]
+        assert all(r >= t + pd.Timedelta(minutes=5) for r in rows)
     dv = d.set_index("ts").dvol
     assert at.dvol["2025-01-03 08:00"] == dv["2025-01-03 07:00"]   # the 07:00 hourly bar closes at 08:00
     assert at.dvol["2025-01-03 07:59"] == dv["2025-01-03 06:00"]
@@ -242,3 +247,15 @@ def test_labels_run_across_midnight_and_stop_at_the_data_end():
     assert np.isfinite(L.y_ret_1440m[pd.Timestamp("2025-01-03 23:59")])
     assert all(col.startswith("y_") for col in L.columns)
     assert india_labels.HORIZONS == (15, 30, 60)                           # the Indian labels are untouched
+
+
+def test_labels_next_to_a_missing_day_are_nan_not_shifted():
+    r, d, g, M = _frame(3, "2025-01-03")
+    hole = M.ts.dt.date == date(2025, 1, 4)
+    L = labels.compute(M[~hole]).set_index("ts")               # cube.build skips a day no source covers
+    assert len(L) == 2 * 1440
+    assert np.isnan(L.y_ret_60m[pd.Timestamp("2025-01-03 23:30")])           # its window falls in the missing day
+    assert np.isnan(L.y_ret_1440m[pd.Timestamp("2025-01-03 12:00")])
+    c = M.set_index("ts").close
+    t = pd.Timestamp("2025-01-05 10:00")
+    assert L.y_ret_60m[t] == pytest.approx(np.log(c[t + pd.Timedelta(minutes=60)] / c[t]) * 100)

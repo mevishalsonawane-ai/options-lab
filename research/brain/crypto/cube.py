@@ -19,7 +19,7 @@ Columns (row t = the bar that starts at t and closes at t + 1 minute; known once
   funding_interval_h                     the interval the archive gives with that rate (8 for these symbols)
   min_to_next_funding                    minutes from the bar's end to the next 00/08/16 UTC settlement (clock only)
   oi oi_value top_ls_accounts top_ls_positions ls_accounts taker_ls_vol metrics_age_min
-                                         5-minute OI and long/short metrics, on the snapshot's minute (known 1 min on)
+                                         5-minute OI and long/short metrics, from the END of their 5-minute period
   dvol, dvol_age_min                     Deribit DVOL (hourly close, from the row holding the hour's end; BTC only)
   vol_precision                          "estimate" (1-minute bars) where spot volume exists, else "none"
 """
@@ -43,6 +43,10 @@ from .adapters import ArchiveAdapter, DvolAdapter
 PERP = ["perp_" + c for c in clean.BAR]
 METRICS = list(clean.METRIC_MAP.values())
 GOOD = ("ok", "stale")
+
+
+def metrics_avail(ts) -> pd.DatetimeIndex:
+    return pd.DatetimeIndex(ts) + pd.Timedelta(minutes=config.METRICS_PERIOD_MIN)
 
 
 def build_frame(raw: dict, dvol: pd.DataFrame | None, g: pd.DatetimeIndex) -> tuple[pd.DataFrame, dict]:
@@ -86,9 +90,12 @@ def build_frame(raw: dict, dvol: pd.DataFrame | None, g: pd.DatetimeIndex) -> tu
 
     me = raw.get("metrics")
     if me is not None and len(me):
-        # a 5-minute snapshot stamped T goes on row T, known at T + 1 minute (the archive gives no publication time)
+        # A row stamped T describes the 5 minutes [T, T+5): its OI value matches the mark price at T+5 and its taker ratio
+        # the flow over [T, T+5) (checked on the real archive, 13 Oct 2026 review). So it is known at T+5 at the
+        # earliest: it goes on row T+5 (known at T+6). The archive gives no publication time, so any extra delay is unknown.
+        avail = metrics_avail(me.ts)
         for c in METRICS:
-            v, age = clean.ffill_age(clean.place_asof(me.ts, me[c].values, g), config.MAX_AGE["metrics_5m"])
+            v, age = clean.ffill_age(clean.place_asof(avail, me[c].values, g), config.MAX_AGE["metrics_5m"])
             m[c] = v
         m["metrics_age_min"] = age
     else:
@@ -150,7 +157,7 @@ def build(root: Path, sym: str, frm: date, to: date, adapter: ArchiveAdapter | N
         if lo > hi:
             continue
         days = [d.date() for d in pd.date_range(lo, hi, freq="D")]
-        fp = adapter.fingerprint(sym, [str(p - 1), mo]) + f"|dvol:{dvol.available(sym)}"
+        fp = adapter.fingerprint(sym, [str(p - 1), mo]) + f"|dvol:{dvol.fingerprint(sym)}"
         fph = hashlib.sha256(fp.encode()).hexdigest()[:16]
         if not force and all((man := manifest(root, sym, d)) and man.get("cube_version") == config.CUBE_VERSION
                              and man.get("fingerprint") == fph for d in days):

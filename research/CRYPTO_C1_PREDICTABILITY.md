@@ -89,7 +89,7 @@ Error = mean absolute error of the log range (0.35 means typically off by a fact
 
 ## C) Funding, basis and OI: no next-day signal
 
-Spearman correlation with the next 24-hour return, at 23:59 UTC each day (880 days per symbol):
+Spearman correlation with the next 24-hour return, at 23:59 UTC each day (880 days per symbol; 876 / 878 for OI change):
 
 | | funding z (30 d) | basis z (7 d) | OI change 24 h |
 |---|---|---|---|
@@ -130,3 +130,13 @@ funding does not foretell a fall the next day in this sample.
 5. ETH has no DVOL input (no file); its A1/A2 models ran without it.
 6. SOL, BNB and XRP are not in this run: the archive sample covered BTC and ETH only. The same commands run them
    when the lake has them.
+7. Walk-forward deviation (found in review, not in the pre-registration): a block is tested only when its training set
+   has at least 200 rows. For the daily tests (A2, B2) the first test block had 179, so in effect the first 7 of 30
+   blocks trained only, not 6 (880 daily rows, 670 tested). The hourly tests used 6 as stated.
+8. Wording deviations from PREREG.md: rows whose spot bar is `stale` (zero volume) are kept, only gap / suspect rows
+   are dropped (there were none); D1d's cost bar is coded as |weekend - weekday| > the round trip. Neither changes a
+   verdict. C3 has 876 (BTC) / 878 (ETH) days, where the OI change needs both ends.
+9. Review fix before publishing (13 Oct): Binance's 5-minute metrics are stamped at the START of their period (their
+   OI value matches the mark price 5 minutes later), so cube v1 had OI and long/short values up to 4 minutes early.
+   Cube v2 places them at the period's end and every number here is from the rebuilt v2 cube. C1 samples HH:59 and
+   23:59 only, so the effect on it was at most one snapshot.

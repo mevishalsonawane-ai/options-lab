@@ -127,8 +127,10 @@ def _week(ts) -> np.ndarray:
 
 # --- data --------------------------------------------------------------------------------------------------------------
 def load(root: Path, sym: str) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
-    F = store.load(root, sym, columns=["ts", "precision", *HOURLY])
-    L = labels.load(root, sym)
+    last = config.DESIGN_END.date()
+    _check_store(root, sym, last)
+    F = store.load(root, sym, to=last, columns=["ts", "precision", *HOURLY])
+    L = labels.load(root, sym, to=last)
     if F.empty or L.empty:
         raise SystemExit(f"{sym}: build the cube, features and labels first (README.md)")
     D = split.join_forward(F, L[["ts", "y_ret_60m", "y_range_60m", "y_ret_1440m", "y_range_1440m"]])
@@ -151,6 +153,17 @@ def load(root: Path, sym: str) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     meta = dict(hourly_rows=len(H), daily_rows=len(Dd), first=str(H.ts.min()), last=str(H.ts.max()),
                 last_daily=str(Dd.ts.max()), signature=store.signature() if hasattr(store, "signature") else None)
     return H, Dd, meta
+
+
+def _check_store(root: Path, sym: str, last) -> None:
+    """The stored features must be the default (UTC-day) build of the current code: an IST build writes to the same
+    folder, and its day features at 23:59 UTC would describe the middle of an IST day."""
+    want = store.signature()
+    bad = [p.stem for p in sorted(config.paths(root).features(sym).glob("*/*.json"))
+           if date.fromisoformat(p.stem) <= last and json.loads(p.read_text()).get("signature") != want]
+    if bad:
+        raise SystemExit(f"{sym}: {len(bad)} feature days not built with signature {want} (UTC day), e.g. {bad[0]}; "
+                         f"run python -m research.brain.crypto.features build --symbols {sym}")
 
 
 def _log(a):
@@ -321,9 +334,13 @@ def posthoc(root: Path, H, Dd, sym, rng) -> dict:
     2. Single-input AUCs for B1 (sign chosen in the train period is not needed: AUC < 0.5 means the reverse sign).
     3. A1/A2 against simpler baselines: the last 60-minute range alone, and (BTC) DVOL alone, both fitted in train."""
     out = {}
-    closes = pd.concat([pd.read_parquet(p, columns=["ts", "close"]) for p in
-                        sorted((config.paths(root).cube(sym)).glob("*/*.parquet"))], ignore_index=True)
+    files = [p for p in sorted(config.paths(root).cube(sym).glob("*/*.parquet"))
+             if date.fromisoformat(p.stem) <= config.DESIGN_END.date()]
+    closes = pd.concat([pd.read_parquet(p, columns=["ts", "close", "flag"]) for p in files], ignore_index=True)
+    holdout.assert_design(closes)
+    closes = closes[closes.flag.isin(["ok", "stale"])]               # as the labels: gap / suspect bars are missing
     c = closes.set_index("ts").close
+    H = holdout.design(H, 61).reset_index(drop=True)                 # the late label ends at t + 61
     t1 = H.ts + pd.Timedelta(minutes=1)
     with np.errstate(invalid="ignore", divide="ignore"):
         y_late = np.log(c.reindex(t1 + pd.Timedelta(minutes=60)).to_numpy() / c.reindex(t1).to_numpy()) * 100

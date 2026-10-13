@@ -14,7 +14,9 @@ import pandas as pd
 
 from .. import config as india
 
-CUBE_VERSION = 1            # 1: spot + perp OHLCV, mark/index/premium, basis, funding (+ time to next), OI, L/S, DVOL
+CUBE_VERSION = 2            # 1: spot + perp OHLCV, mark/index/premium, basis, funding (+ time to next), OI, L/S, DVOL
+                            # 2: 5-minute metrics placed at the END of their period (stamp + 5 min), 13 Oct 2026 review
+METRICS_PERIOD_MIN = 5      # a metrics row stamped T describes [T, T + 5 min): its OI value uses the mark price at T + 5
 
 # --- the grid ---------------------------------------------------------------------------------------------------------
 # One row per UTC minute, 00:00 .. 23:59 (1440 rows a day). Bars are stamped at the START of the minute (Binance
