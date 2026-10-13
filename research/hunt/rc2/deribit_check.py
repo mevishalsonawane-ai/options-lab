@@ -68,7 +68,7 @@ def iv_check():
             continue
         i = P.bar(H)
         s = IDX[coin].get(H - C.BAR, np.nan)
-        ks = [k for k in P.strikes["C"] if k in P.strikes["P"]]
+        ks = [k for k in P.strikes["C"] if k in P.strikes["P"] and P.tradable(("C", k), i) and P.tradable(("P", k), i)]
         if not ks or not np.isfinite(s):
             continue
         k = min(ks, key=lambda x: abs(x - s))

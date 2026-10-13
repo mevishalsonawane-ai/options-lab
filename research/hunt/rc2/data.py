@@ -36,6 +36,9 @@ def funding1h(coin):
     return d.interest_8h
 
 
+LISTING_BARS = 3   # 15 minutes
+
+
 class Panel:
     """One coin's daily Delta expiry: dense 5-minute MARK arrays per (type, strike) on the 30 hours before settlement.
     times[i] is the START of bar i. A bar with no candle is carried forward from the last one (none before listing)."""
@@ -46,22 +49,34 @@ class Panel:
         self.t0 = self.times[0]
         self.n = len(self.times)
         self.arr = {}
+        self.first = {}
         m = df[df.kind == "mark"]
         for (typ, K), g in m.groupby(["typ", "K"]):
             idx = ((pd.to_datetime(g.time, unit="s", utc=True) - self.t0) // C.BAR).to_numpy()
             ok = (idx >= 0) & (idx < self.n)
             a = np.full((self.n, 4), np.nan)
             a[idx[ok]] = g[["open", "high", "low", "close"]].to_numpy(float)[ok]
-            a = pd.DataFrame(a).ffill().to_numpy()   # carry forward missing bars (no backfill: no look-ahead)
+            self.first[(typ, int(K))] = int(idx[ok].min()) if ok.any() else self.n
+            a = pd.DataFrame(a).ffill().to_numpy(copy=True)   # carry forward missing bars (no backfill: no look-ahead)
             self.arr[(typ, int(K))] = a
         self.strikes = {t: sorted(k for (tt, k) in self.arr if tt == t) for t in ("C", "P")}
+
+    def tradable(self, key, i):
+        """May an entry use this strike's mark at bar i? Not in the first LISTING_BARS bars after the strike's first
+        candle (5.7% of first candles open more than 3x away from their own close: a listing glitch; PREREG amendment
+        4), and not when the bar opens more than 2x away from the previous close (a jump in the mark series)."""
+        if key not in self.arr or i is None or i < self.first[key] + LISTING_BARS:
+            return False
+        a = self.arr[key]
+        prev, op = a[i - 1, 3], a[i, 0]
+        return bool(np.isfinite(prev) and np.isfinite(op) and prev > 0 and 0.5 <= op / prev <= 2.0)
 
     def bar(self, ts):
         i = int((ts - self.t0) // C.BAR)
         return i if 0 <= i < self.n else None
 
 
-@functools.lru_cache(maxsize=96)
+@functools.lru_cache(maxsize=2000)   # every chain fits in memory (~1 GB)
 def panel(coin, expiry):
     fn = os.path.join(C.RAW, "delta_opt", f"{coin}_{expiry:%Y%m%d}.parquet")
     if not os.path.exists(fn):

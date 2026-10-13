@@ -94,7 +94,11 @@ def section_spreads():
         say(f"spread model {coin}: full spread / spot = {a:.6f} + {b:.4f} x mid / spot (n = {len(g)} quotes, "
             f"{g.t.nunique()} snapshots)")
     os.makedirs(C.OUT, exist_ok=True)
-    json.dump(model, open(os.path.join(C.OUT, "spread_fit_live.json"), "w"), indent=1)
+    # the simulator's fit is frozen at the pre-registration commit; later polls only go to a "latest" file
+    fn = os.path.join(C.OUT, "spread_fit_live.json")
+    if os.path.exists(fn):
+        fn = os.path.join(C.OUT, "spread_fit_live_latest.json")
+    json.dump(model, open(fn, "w"), indent=1)
     say("")
     return out
 
@@ -121,7 +125,7 @@ def section_decay_and_hero(idx):
                 s = sc.get(T - C.BAR, np.nan)
                 if i is None or not np.isfinite(s):
                     continue
-                ks = [k for k in P.strikes["C"] if k in P.strikes["P"] and np.isfinite(P.arr[("C", k)][i, 0]) and np.isfinite(P.arr[("P", k)][i, 0])]
+                ks = [k for k in P.strikes["C"] if k in P.strikes["P"] and P.tradable(("C", k), i) and P.tradable(("P", k), i)]
                 if not ks:
                     continue
                 k = min(ks, key=lambda x: abs(x - s))
@@ -146,11 +150,13 @@ def section_decay_and_hero(idx):
                 dl = P.bar(E - C.LAST_EXIT_BEFORE_EXPIRY)
                 best = 0
                 for (typ, k), a in P.arr.items():
+                    if not P.tradable((typ, k), i):
+                        continue
                     px = a[i, 0]
                     otm = k > s if typ == "C" else k < s
                     if not otm or not np.isfinite(px) or not (0.0002 * s <= px <= 0.0010 * s):
                         continue
-                    mx = np.nanmax(a[i:dl, 1]) / px
+                    mx = np.nanmax(a[i:dl, 3]) / px      # 5-minute CLOSES: 0.08% of mark bars have a high > 2x open and close
                     end = a[dl, 0] / px
                     hero_rows.append(dict(coin=coin, E=E, start_h=start_h, typ=typ, otm=abs(k / s - 1), px_bp=px / s * 1e4,
                                           mult_max=mx, mult_end=end))
@@ -175,7 +181,7 @@ def section_decay_and_hero(idx):
     say("")
     he = pd.DataFrame(hero_rows)
     say("## 3. Zero to hero: how often does a cheap OTM option (0.02-0.10% of spot) multiply before 11:50 UTC?")
-    say("Every such option on every design day counted (per option), and per day (did ANY such option get there).")
+    say("Every such option on every design day counted (per option), and per day (did ANY such option get there). No strike in its first 15 minutes.")
     res = {}
     for coin in C.COINS:
         g = he[he.coin == coin]
@@ -194,7 +200,7 @@ def section_decay_and_hero(idx):
         say(f"### {coin}")
         table(t, "{:.2f}")
         res[coin] = t.reset_index().to_dict("records")
-    say("- opt_Nx: share of cheap options whose mark high reached N x the entry mark before 11:50 UTC (marks, before costs).")
+    say("- opt_Nx: share of cheap options whose 5-minute mark CLOSE reached N x the entry mark before 11:50 UTC (before costs).")
     say("- end_value_mean: the mark at 11:50 / entry (mean); end_zero: share worth < 5% of entry at 11:50.")
     say("")
     return dec, mv, he

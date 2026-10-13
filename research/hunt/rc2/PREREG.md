@@ -104,7 +104,7 @@ No variant without a stop or without a lock exists in the code (`Exit` refuses t
   - The after-tax figures (both readings) are reported, and Boss is told plainly if a pass does not survive VDA tax.
 - Every number is reported with its trade count.
 
-## Amendments (before the design run)
+## Amendments
 
 1. R5's DVOL rise 5% -> 3% (13 Oct, before any P&L). Reason: signal count only. At 5% the design span had 57 signals
    (BTC 33, ETH 24), below the 60-trade gate; at 3% it has 200 (BTC 116, ETH 84). No P&L was looked at.
@@ -115,4 +115,13 @@ No variant without a stop or without a lock exists in the code (`Exit` refuses t
 3. Nothing else changed after the anatomy. Its findings (options dearest per hour in 03:00-12:00 UTC, cheapest in
    13:00-16:00 UTC; cheap OTM options reach 3x on about 20% of tries but are worth 0.6-0.9x on average by 11:50) are
    reported, not used to retune any rule.
+4. **Data bug fix AFTER the first design run (13 Oct; the holdout still unread).** The first design run showed R5's
+   whole design profit coming from one trade: a BTC 93000 put of 3 Feb 2025 bought at a mark of 25.6 that was really
+   about 1,650 (+4,889%). Delta's FIRST mark candle of a newly listed strike often opens at a stale value: 4,605 of
+   81,452 listings (5.7%) have a first candle whose close is more than 3x away from its open. Fix, for every rule and
+   the anatomy alike: no entry on a strike in its first 15 minutes after its first candle, nor on a bar that opens more
+   than 2x away from the previous close (111 such jumps in 28.3 million bars). No rule, exit, threshold or gate changed.
+   The first run's design table is kept (`scratchpad` copy, summarised in the write-up) and the design was re-run once.
+   The anatomy's zero-to-hero multiples now use 5-minute mark closes (0.08% of bars have a high above 2x their open and
+   close).
 

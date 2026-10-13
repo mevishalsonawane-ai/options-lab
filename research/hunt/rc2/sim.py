@@ -31,6 +31,8 @@ def pick_expiry(coin, T, min_left_h):
 def pick_strike(P, side, spot, i0, mode):
     best, bestv = None, None
     for K in P.strikes[side]:
+        if not P.tradable((side, K), i0):
+            continue
         px = P.arr[(side, K)][i0, 0]
         if not np.isfinite(px) or px <= 0:
             continue
@@ -88,7 +90,7 @@ def simulate(coin, rule_name, ent, ex, spot_close, smodel, spread_mult=1.0, fee_
         pnl_lot = (sell - buy) * C.LOT[coin] - fee_in - fee_out
         cost_lot = buy * C.LOT[coin] + fee_in
         # what the option did after a lock exit, until the forced exit (big winners cut short?)
-        after = a[i0 + j + 1:dl_abs, 1] if why == "lock" else a[0:0, 1]
+        after = a[i0 + j + 1:dl_abs, 3] if why == "lock" else a[0:0, 3]   # closes (highs can spike)
         post_max = float(np.nanmax(after)) / mid if len(after) else np.nan
         rows.append(dict(coin=coin, rule=rule_name, exit=ex.name, T=T, side=side, expiry=P.expiry, K=K, spot=spot,
                          hours_left=(P.expiry - T).total_seconds() / 3600, mid=mid, buy=buy, sell=sell, level=lvl,

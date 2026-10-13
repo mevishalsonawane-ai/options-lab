@@ -262,3 +262,26 @@ def test_spread_model_takes_the_wider_fit(tmp_path):
     assert m["BTC"] == [costs.DEFAULT_SPREAD["BTC"][0], 0.03]
     assert m["ETH"] == [0.001, costs.DEFAULT_SPREAD["ETH"][1]]
     assert costs.spread_model(str(tmp_path / "missing.json")) == costs.DEFAULT_SPREAD
+
+
+def test_no_entry_on_a_listing_glitch(monkeypatch):
+    """A strike's first candle can open far from its real price (Delta listing glitch, 2 Feb 2025: open 25.6, close
+    1,664). No entry in the first 15 minutes of a strike, nor on a bar that opens > 2x away from the last close."""
+    E = pd.Timestamp("2026-05-05 12:00", tz="UTC")
+    T = pd.Timestamp("2026-05-05 02:00", tz="UTC")
+    times = pd.date_range(E - pd.Timedelta(hours=30), E - C.BAR, freq="5min")
+    rows = []
+    for t in times:
+        if t >= T:
+            o = 25.6 if t == T else 1650.0
+            rows.append(dict(kind="mark", typ="P", K=80_000, time=int(t.timestamp()), open=o, high=1700.0, low=min(o, 1600.0), close=1650.0))
+    P = data.Panel("BTC", E, pd.DataFrame(rows))
+    i = P.bar(T)
+    assert not P.tradable(("P", 80_000), i)
+    assert not P.tradable(("P", 80_000), i + 2)
+    assert P.tradable(("P", 80_000), i + 3)
+    monkeypatch.setattr(data, "panel", lambda coin, e: P if e == E else None)
+    assert sim.pick_strike(P, "P", 80_100.0, i, "atm") is None
+    assert sim.pick_strike(P, "P", 80_100.0, i + 3, "atm") == 80_000
+    P.arr[("P", 80_000)][i + 5, 0] = 5000.0          # a jump in the series
+    assert not P.tradable(("P", 80_000), i + 5)

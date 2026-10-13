@@ -49,6 +49,9 @@ def all_entries(idx, dvol, fund):
     return out
 
 
+SKIPS = {}
+
+
 def run_variants(ents, idx, a, b, smodel, spread_mult=1.0, fee_rate=C.FEE_RATE):
     res = {}
     for r in signals.RULES:
@@ -57,6 +60,10 @@ def run_variants(ents, idx, a, b, smodel, spread_mult=1.0, fee_rate=C.FEE_RATE):
             for c in C.COINS:
                 e = in_span(ents[(r, c)], a, b)
                 t = simulate(c, r, e, ex, idx[c].c, smodel, spread_mult, fee_rate)
+                sk = SKIPS.setdefault((r, ex.name), {})
+                for k, v in t.attrs.get("skips", {}).items():
+                    sk[k] = sk.get(k, 0) + v
+                sk["signals"] = sk.get("signals", 0) + len(e)
                 if not t.empty:
                     parts.append(t)
             res[(r, ex.name)] = pd.concat(parts).sort_values("T").reset_index(drop=True) if parts else pd.DataFrame()
@@ -151,6 +158,7 @@ def design():
     print("design span", a, b, "spread model", smodel, flush=True)
     ents = all_entries(idx, dvol, fund)
     res = run_variants(ents, idx, a, b, smodel)
+    skips = {k: dict(v) for k, v in SKIPS.items()}
     print("variants done", round(time.time() - t0), flush=True)
     pool = pools(idx, a, b, smodel)
     print("pools done", round(time.time() - t0), flush=True)
@@ -173,7 +181,7 @@ def design():
         st = stress[(r, xn)]
         row["stress_mean_ret"] = st.ret.mean() if not st.empty else np.nan
         row["stress_net_inr@100k"] = stats.money(st, 100_000).inr.sum() if not st.empty else np.nan
-        row["skips"] = json.dumps(t.attrs.get("skips", {})) if hasattr(t, "attrs") else ""
+        row["skips"] = json.dumps(skips.get((r, xn), {}))
         rows.append(row)
         if not t.empty:
             t.to_csv(os.path.join(C.TRADES, f"design_{r}_{xn}.csv"), index=False)
