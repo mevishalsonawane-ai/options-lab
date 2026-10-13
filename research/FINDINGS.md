@@ -307,3 +307,17 @@ Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 2
   0.58% vs 0.52% NIFTY); "days like today" analogs (worse than all past days pooled, all 8 cases).
 - App: build an expected-range nowcast (stop/target sizing, quiet-market warning, Jarvis); show analogs only as
   context, never as a forecast; no direction / regime / max-pain models.
+
+## Boss's Rs 500 give-back trail on Liquidity (R19b, 13 Oct 2026) - fails; keep the plain rules
+Full study: `HUNT_R19B_LIQUIDITY_TRAIL.md` (pre-registered `hunt/r19b/PREREG.md`; design Feb 2024 - Feb 2025, holdout
+3 Mar - 22 Aug 2025 read once; 14 hypotheses, one BH family; release data, Liquidity BANKNIFTY 15m and 5m books).
+- Boss's rule ("down Rs 500 a lot from its best, sell", from +Rs 500) made both books earn LESS. Holdout: 15m +Rs 4,584
+  vs +Rs 14,633 on plain rules (27 trades), 5m +Rs 2,968 vs +Rs 22,124 (83 trades).
+- It cut 12 of the 13 big winners (Rs 62,175 given up). It did worse than random early exits (beat 3% / 0.2% of twins).
+  BH q >= 0.92 for every variant (Rs 300 / 750 / 1,000 give-backs, from the entry, 3% of premium).
+- Why: a BANKNIFTY option moves Rs 500 a lot (about 17 points) in a minute or two, so the trail fires on half the trades
+  and cuts the runners that pay for the arm. The same lesson as LIQUIDITY_TRAIL.md and R12.
+- Today's MIDCPNIFTY trade (-Rs 864) would have been about +Rs 2,000 under it. One trade; the history says the opposite.
+  MIDCPNIFTY itself was not tested (no option minutes without the Dhan API).
+- App: not added to the arm. Boss's opt-in paper switch only ("Try the ₹500 trail on paper", off by default, "failed
+  research, your choice"); never live; its trades are labelled and kept out of the plain-rules paper record.

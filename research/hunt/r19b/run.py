@@ -216,6 +216,8 @@ def _fmt(x):
         return "yes" if x else "no"
     if isinstance(x, float):
         return f"{x:.3f}"
+    if isinstance(x, list):
+        return " / ".join(f"{v:+,.0f}" for v in x)
     return str(x)
 
 

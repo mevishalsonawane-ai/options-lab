@@ -1,0 +1,25 @@
+id: r19b
+title: "Boss's Rs 500 give-back trail for Liquidity: sell when the open P&L per lot is Rs 500 below its best"
+family: trade-management
+date: '2026-10-13'
+doc: research/HUNT_R19B_LIQUIDITY_TRAIL.md
+hypothesis: A trail that sells a Liquidity trade once it gives back Rs 500 a lot from its best (after reaching +Rs 500) raises net P&L against today's exits on the Liquidity BANKNIFTY 15m and 5m books.
+data_version: 'research-data release (BANKNIFTY 2024-02-13..2026-02-23, nearest expiry after the day, strikes within 1,000 points); app fills + half-spread (1 tick market, 2 ticks stops); app charges at current rates; no Dhan API'
+period:
+  design: 2024-02-13..2025-02-28 (258 sessions)
+  holdout: 2025-03-03..2025-08-22 (118 sessions); 2025-08-25 onward not used (already read by R12, R14, R16, R17, h4)
+instruments:
+- BANKNIFTY
+features:
+- option 1-minute highs (peak since entry)
+- lot size of the day
+model_or_rule: 'A1 Boss: from +Rs 500/lot, stop at best - Rs 500/lot; A2 the same from the entry; B300/B750/B1000 other give-backs; P3 3% of premium; each x 2 books (Liquidity BANKNIFTY 15m, 5m); engine LiquidityRules exits unchanged; trail as a resting stop filled at min(trigger, open) - 10 bps - 2 ticks'
+settings: research/hunt/r19b/PREREG.md
+prereg: research/hunt/r19b/PREREG.md
+variants_tried: 14
+results:
+  summary: 'FAILED, every variant x book. Holdout A1: 15m +Rs 4,584 vs plain +Rs 14,633 (n 27; Delta -Rs 10,048), 5m +Rs 2,968 vs +Rs 22,124 (n 83; Delta -Rs 19,156); cut 12 of 13 big winners (Rs 62,175); beat only 3% / 0.2% of random early-exit twins; BH q >= 0.92 for all 14. Design: every variant -Rs 13k to -Rs 52k vs plain rules on each book; no variant positive in 2 of 3 folds. MIDCPNIFTY not tested (no option minutes without the Dhan API).'
+  costs: app charges, app fills plus a 1-tick (market) / 2-tick (stops) half-spread
+holdout_read: true
+verdict: rejected
+notes: "Not added to the arm. Built as Boss's opt-in paper switch only (off by default, labelled 'failed research, your choice'; engine LiquidityTrail): paper entries only, never live; trail trades kept out of Liquidity BANKNIFTY's plain-rules paper record."
