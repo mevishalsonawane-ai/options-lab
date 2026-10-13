@@ -1,0 +1,536 @@
+{
+ "BANKNIFTY": {
+  "holdout_from": "2025-02-23",
+  "sessions": 497,
+  "normal": 359,
+  "events": 72,
+  "unverified_event_sessions": 15,
+  "kinds": {
+   "rbi": {
+    "n": 12,
+    "n_design": 6,
+    "n_holdout": 6,
+    "range_pct": {
+     "event_median": 1.349,
+     "normal_median": 0.975,
+     "ratio": 1.38
+    },
+    "abs_gap_pct": {
+     "event_median": 0.131,
+     "normal_median": 0.232,
+     "ratio": 0.56
+    },
+    "abs_oc_pct": {
+     "event_median": 0.479,
+     "normal_median": 0.436,
+     "ratio": 1.1
+    },
+    "fh_range_pct": {
+     "event_median": 0.708,
+     "normal_median": 0.626,
+     "ratio": 1.13
+    },
+    "p_design": 0.06742715583710729,
+    "ratio_design": 1.32,
+    "p_holdout": 0.06908417098838264,
+    "ratio_holdout": 1.34
+   },
+   "budget": {
+    "n": 3,
+    "n_design": 2,
+    "n_holdout": 1,
+    "range_pct": {
+     "event_median": 2.185,
+     "normal_median": 0.975,
+     "ratio": 2.24
+    },
+    "abs_gap_pct": {
+     "event_median": 0.349,
+     "normal_median": 0.232,
+     "ratio": 1.5
+    },
+    "abs_oc_pct": {
+     "event_median": 0.624,
+     "normal_median": 0.436,
+     "ratio": 1.43
+    },
+    "fh_range_pct": {
+     "event_median": 0.874,
+     "normal_median": 0.626,
+     "ratio": 1.4
+    }
+   },
+   "india_policy": {
+    "n": 15,
+    "n_design": 8,
+    "n_holdout": 7,
+    "range_pct": {
+     "event_median": 1.439,
+     "normal_median": 0.975,
+     "ratio": 1.48
+    },
+    "abs_gap_pct": {
+     "event_median": 0.147,
+     "normal_median": 0.232,
+     "ratio": 0.63
+    },
+    "abs_oc_pct": {
+     "event_median": 0.555,
+     "normal_median": 0.436,
+     "ratio": 1.27
+    },
+    "fh_range_pct": {
+     "event_median": 0.711,
+     "normal_median": 0.626,
+     "ratio": 1.14
+    },
+    "p_design": 0.00822128309484817,
+    "ratio_design": 1.41,
+    "p_holdout": 0.029473065427827114,
+    "ratio_holdout": 1.35
+   },
+   "us_macro": {
+    "n": 39,
+    "n_design": 20,
+    "n_holdout": 19,
+    "range_pct": {
+     "event_median": 0.989,
+     "normal_median": 0.975,
+     "ratio": 1.01
+    },
+    "abs_gap_pct": {
+     "event_median": 0.345,
+     "normal_median": 0.232,
+     "ratio": 1.49
+    },
+    "abs_oc_pct": {
+     "event_median": 0.398,
+     "normal_median": 0.436,
+     "ratio": 0.91
+    },
+    "fh_range_pct": {
+     "event_median": 0.558,
+     "normal_median": 0.626,
+     "ratio": 0.89
+    },
+    "p_design": 0.7188063091229413,
+    "ratio_design": 0.91,
+    "p_holdout": 0.49914648886407653,
+    "ratio_holdout": 0.96
+   },
+   "fomc": {
+    "n": 16,
+    "n_design": 8,
+    "n_holdout": 8,
+    "range_pct": {
+     "event_median": 0.871,
+     "normal_median": 0.975,
+     "ratio": 0.89
+    },
+    "abs_gap_pct": {
+     "event_median": 0.366,
+     "normal_median": 0.232,
+     "ratio": 1.58
+    },
+    "abs_oc_pct": {
+     "event_median": 0.375,
+     "normal_median": 0.436,
+     "ratio": 0.86
+    },
+    "fh_range_pct": {
+     "event_median": 0.535,
+     "normal_median": 0.626,
+     "ratio": 0.85
+    }
+   },
+   "us_cpi": {
+    "n": 24,
+    "n_design": 13,
+    "n_holdout": 11,
+    "range_pct": {
+     "event_median": 1.103,
+     "normal_median": 0.975,
+     "ratio": 1.13
+    },
+    "abs_gap_pct": {
+     "event_median": 0.351,
+     "normal_median": 0.232,
+     "ratio": 1.51
+    },
+    "abs_oc_pct": {
+     "event_median": 0.409,
+     "normal_median": 0.436,
+     "ratio": 0.94
+    },
+    "fh_range_pct": {
+     "event_median": 0.568,
+     "normal_median": 0.626,
+     "ratio": 0.91
+    }
+   },
+   "results": {
+    "n": 12,
+    "n_design": 8,
+    "n_holdout": 4,
+    "range_pct": {
+     "event_median": 1.111,
+     "normal_median": 0.975,
+     "ratio": 1.14
+    },
+    "abs_gap_pct": {
+     "event_median": 0.392,
+     "normal_median": 0.232,
+     "ratio": 1.69
+    },
+    "abs_oc_pct": {
+     "event_median": 0.398,
+     "normal_median": 0.436,
+     "ratio": 0.91
+    },
+    "fh_range_pct": {
+     "event_median": 0.88,
+     "normal_median": 0.626,
+     "ratio": 1.41
+    },
+    "p_design": 0.21716925395885042,
+    "ratio_design": 1.01,
+    "p_holdout": 0.23337270982997413,
+    "ratio_holdout": 1.23
+   }
+  },
+  "eve": {
+   "n": 65,
+   "range_pct": {
+    "eve_median": 1.031,
+    "normal_median": 0.975
+   },
+   "abs_gap_pct": {
+    "eve_median": 0.21,
+    "normal_median": 0.232
+   },
+   "abs_oc_pct": {
+    "eve_median": 0.403,
+    "normal_median": 0.436
+   },
+   "fh_range_pct": {
+    "eve_median": 0.627,
+    "normal_median": 0.626
+   }
+  }
+ },
+ "NIFTY": {
+  "holdout_from": "2025-04-13",
+  "sessions": 498,
+  "normal": 321,
+  "events": 78,
+  "unverified_event_sessions": 23,
+  "kinds": {
+   "rbi": {
+    "n": 12,
+    "n_design": 7,
+    "n_holdout": 5,
+    "range_pct": {
+     "event_median": 0.949,
+     "normal_median": 0.832,
+     "ratio": 1.14
+    },
+    "abs_gap_pct": {
+     "event_median": 0.109,
+     "normal_median": 0.233,
+     "ratio": 0.47
+    },
+    "abs_oc_pct": {
+     "event_median": 0.328,
+     "normal_median": 0.415,
+     "ratio": 0.79
+    },
+    "fh_range_pct": {
+     "event_median": 0.497,
+     "normal_median": 0.495,
+     "ratio": 1.0
+    },
+    "p_design": 0.5795286411105787,
+    "ratio_design": 1.22,
+    "p_holdout": 0.2642716409207064,
+    "ratio_holdout": 1.09
+   },
+   "budget": {
+    "n": 3,
+    "n_design": 2,
+    "n_holdout": 1,
+    "range_pct": {
+     "event_median": 1.693,
+     "normal_median": 0.832,
+     "ratio": 2.04
+    },
+    "abs_gap_pct": {
+     "event_median": 0.216,
+     "normal_median": 0.233,
+     "ratio": 0.93
+    },
+    "abs_oc_pct": {
+     "event_median": 0.376,
+     "normal_median": 0.415,
+     "ratio": 0.91
+    },
+    "fh_range_pct": {
+     "event_median": 0.557,
+     "normal_median": 0.495,
+     "ratio": 1.13
+    }
+   },
+   "india_policy": {
+    "n": 15,
+    "n_design": 9,
+    "n_holdout": 6,
+    "range_pct": {
+     "event_median": 1.064,
+     "normal_median": 0.832,
+     "ratio": 1.28
+    },
+    "abs_gap_pct": {
+     "event_median": 0.113,
+     "normal_median": 0.233,
+     "ratio": 0.48
+    },
+    "abs_oc_pct": {
+     "event_median": 0.365,
+     "normal_median": 0.415,
+     "ratio": 0.88
+    },
+    "fh_range_pct": {
+     "event_median": 0.499,
+     "normal_median": 0.495,
+     "ratio": 1.01
+    },
+    "p_design": 0.26086275644415813,
+    "ratio_design": 1.23,
+    "p_holdout": 0.11408039788359178,
+    "ratio_holdout": 1.23
+   },
+   "us_macro": {
+    "n": 38,
+    "n_design": 20,
+    "n_holdout": 18,
+    "range_pct": {
+     "event_median": 0.839,
+     "normal_median": 0.832,
+     "ratio": 1.01
+    },
+    "abs_gap_pct": {
+     "event_median": 0.256,
+     "normal_median": 0.233,
+     "ratio": 1.1
+    },
+    "abs_oc_pct": {
+     "event_median": 0.351,
+     "normal_median": 0.415,
+     "ratio": 0.85
+    },
+    "fh_range_pct": {
+     "event_median": 0.498,
+     "normal_median": 0.495,
+     "ratio": 1.01
+    },
+    "p_design": 0.742906329242856,
+    "ratio_design": 0.96,
+    "p_holdout": 0.42028338629857576,
+    "ratio_holdout": 1.05
+   },
+   "fomc": {
+    "n": 16,
+    "n_design": 8,
+    "n_holdout": 8,
+    "range_pct": {
+     "event_median": 0.827,
+     "normal_median": 0.832,
+     "ratio": 0.99
+    },
+    "abs_gap_pct": {
+     "event_median": 0.264,
+     "normal_median": 0.233,
+     "ratio": 1.13
+    },
+    "abs_oc_pct": {
+     "event_median": 0.376,
+     "normal_median": 0.415,
+     "ratio": 0.91
+    },
+    "fh_range_pct": {
+     "event_median": 0.501,
+     "normal_median": 0.495,
+     "ratio": 1.01
+    }
+   },
+   "us_cpi": {
+    "n": 23,
+    "n_design": 13,
+    "n_holdout": 10,
+    "range_pct": {
+     "event_median": 0.812,
+     "normal_median": 0.832,
+     "ratio": 0.98
+    },
+    "abs_gap_pct": {
+     "event_median": 0.257,
+     "normal_median": 0.233,
+     "ratio": 1.1
+    },
+    "abs_oc_pct": {
+     "event_median": 0.292,
+     "normal_median": 0.415,
+     "ratio": 0.7
+    },
+    "fh_range_pct": {
+     "event_median": 0.48,
+     "normal_median": 0.495,
+     "ratio": 0.97
+    }
+   },
+   "results": {
+    "n": 16,
+    "n_design": 11,
+    "n_holdout": 5,
+    "range_pct": {
+     "event_median": 0.912,
+     "normal_median": 0.832,
+     "ratio": 1.1
+    },
+    "abs_gap_pct": {
+     "event_median": 0.327,
+     "normal_median": 0.233,
+     "ratio": 1.4
+    },
+    "abs_oc_pct": {
+     "event_median": 0.397,
+     "normal_median": 0.415,
+     "ratio": 0.96
+    },
+    "fh_range_pct": {
+     "event_median": 0.624,
+     "normal_median": 0.495,
+     "ratio": 1.26
+    },
+    "p_design": 0.5124597581143536,
+    "ratio_design": 1.04,
+    "p_holdout": 0.3515233394442519,
+    "ratio_holdout": 1.19
+   }
+  },
+  "eve": {
+   "n": 69,
+   "range_pct": {
+    "eve_median": 0.873,
+    "normal_median": 0.832
+   },
+   "abs_gap_pct": {
+    "eve_median": 0.188,
+    "normal_median": 0.233
+   },
+   "abs_oc_pct": {
+    "eve_median": 0.332,
+    "normal_median": 0.415
+   },
+   "fh_range_pct": {
+    "eve_median": 0.557,
+    "normal_median": 0.495
+   }
+  }
+ },
+ "arms": {
+  "ORB": {
+   "design": {
+    "event_days": 36,
+    "event_net": -46812,
+    "event_mean": -1300,
+    "normal_days": 183,
+    "normal_mean": -761,
+    "all_net": -225362,
+    "paused_net": -178550,
+    "saved": 46812,
+    "p": 0.11716256724583067
+   },
+   "holdout": {
+    "event_days": 30,
+    "event_net": -14712,
+    "event_mean": -490,
+    "normal_days": 176,
+    "normal_mean": -882,
+    "all_net": -214075,
+    "paused_net": -199362,
+    "saved": 14712,
+    "p": 0.7517007855048434
+   }
+  },
+  "ORB Fresh": {
+   "design": {
+    "event_days": 36,
+    "event_net": -22657,
+    "event_mean": -629,
+    "normal_days": 183,
+    "normal_mean": -74,
+    "all_net": -49149,
+    "paused_net": -26492,
+    "saved": 22657,
+    "p": 0.01918983315047017
+   },
+   "holdout": {
+    "event_days": 30,
+    "event_net": -10203,
+    "event_mean": -340,
+    "normal_days": 176,
+    "normal_mean": -131,
+    "all_net": -36039,
+    "paused_net": -25835,
+    "saved": 10203,
+    "p": 0.21229421577245117
+   }
+  }
+ },
+ "bh": {
+  "BANKNIFTY:rbi": {
+   "p": 0.06742715583710729,
+   "q": 0.22475718612369097
+  },
+  "BANKNIFTY:india_policy": {
+   "p": 0.00822128309484817,
+   "q": 0.0822128309484817
+  },
+  "BANKNIFTY:us_macro": {
+   "p": 0.7188063091229413,
+   "q": 0.742906329242856
+  },
+  "BANKNIFTY:results": {
+   "p": 0.21716925395885042,
+   "q": 0.43433850791770084
+  },
+  "NIFTY:rbi": {
+   "p": 0.5795286411105787,
+   "q": 0.7244108013882233
+  },
+  "NIFTY:india_policy": {
+   "p": 0.26086275644415813,
+   "q": 0.43477126074026357
+  },
+  "NIFTY:us_macro": {
+   "p": 0.742906329242856,
+   "q": 0.742906329242856
+  },
+  "NIFTY:results": {
+   "p": 0.5124597581143536,
+   "q": 0.7244108013882233
+  },
+  "arm:ORB": {
+   "p": 0.11716256724583067,
+   "q": 0.2929064181145767
+  },
+  "arm:ORB Fresh": {
+   "p": 0.01918983315047017,
+   "q": 0.09594916575235085
+  }
+ },
+ "confirmed": {
+  "BANKNIFTY:india_policy": true,
+  "arm:ORB Fresh": false
+ }
+}

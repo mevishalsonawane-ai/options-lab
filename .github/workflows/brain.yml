@@ -5,11 +5,13 @@ on:
   push:
     paths:
       - "research/brain/**"
+      - "research/context/**"
       - "indicator/liquidity.py"
       - ".github/workflows/brain.yml"
   pull_request:
     paths:
       - "research/brain/**"
+      - "research/context/**"
       - "indicator/liquidity.py"
   workflow_dispatch:
 
@@ -31,5 +33,7 @@ jobs:
       - run: pip install -r research/brain/requirements.txt
       - name: Tests (cube point-in-time, every feature point-in-time, labels separate, purged splits)
         run: python -m pytest research/brain/tests -q
+      - name: Market-context study tests (event mapping, level rules, max pain, BH)
+        run: python -m pytest research/context/tests -q
       - name: FEATURES.md matches the feature definitions
         run: python -m research.brain.features catalog --check

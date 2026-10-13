@@ -1,0 +1,89 @@
+date,kind,name,ist_time,source,verified
+2024-02-01,budget,Interim Union Budget 2024-25,11:00,indiabudget.gov.in,yes
+2024-07-23,budget,Union Budget 2024-25,11:00,indiabudget.gov.in,yes
+2025-02-01,budget,Union Budget 2025-26 (Saturday session),11:00,indiabudget.gov.in,yes
+2026-02-01,budget,Union Budget 2026-27 (Sunday session),11:00,indiabudget.gov.in,yes
+2024-02-08,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2024-04-05,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2024-06-07,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2024-08-08,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2024-10-09,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2024-12-06,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2025-02-07,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2025-04-09,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2025-06-06,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2025-08-06,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2025-10-01,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2025-12-05,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2026-02-06,rbi,RBI MPC decision,10:00,rbi.org.in MPC schedule,yes
+2024-01-31,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-03-20,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-05-01,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-06-12,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-07-31,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-09-18,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-11-07,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-12-18,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-01-29,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-03-19,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-05-07,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-06-18,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-07-30,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-09-17,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-10-29,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2025-12-10,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2026-01-28,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2026-03-18,fomc,US Fed decision (FOMC),after_close,federalreserve.gov FOMC calendar,yes
+2024-01-11,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-02-13,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-03-12,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-04-10,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-05-15,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-06-12,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-07-11,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-08-14,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-09-11,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-10-10,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-11-13,us_cpi,US CPI,after_close,BLS release schedule,yes
+2024-12-11,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-01-15,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-02-12,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-03-12,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-04-10,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-05-13,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-06-11,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-07-15,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-08-12,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-09-11,us_cpi,US CPI,after_close,BLS release schedule,yes
+2025-10-24,us_cpi,US CPI (September data; delayed by the US shutdown),after_close,BLS (delayed release),no
+2025-12-18,us_cpi,US CPI (November data),after_close,BLS release schedule (checked 13 Oct 2026),yes
+2026-01-13,us_cpi,US CPI (December data),after_close,BLS release schedule (checked 13 Oct 2026),yes
+2026-02-13,us_cpi,US CPI (January data),after_close,BLS release schedule (checked 13 Oct 2026),yes
+2026-03-11,us_cpi,US CPI (February data),after_close,BLS release schedule (checked 13 Oct 2026),yes
+2024-01-16,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2024-04-20,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2024-07-20,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2024-10-19,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2025-01-22,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2025-04-19,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2025-07-19,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2025-10-18,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2026-01-17,results,HDFC Bank results,after_close,company filing (entered from memory; verify),no
+2024-01-20,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2024-04-27,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2024-07-27,results,ICICI Bank results,after_close,company board-meeting notice (checked 13 Oct 2026),yes
+2024-10-26,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2025-01-25,results,ICICI Bank results,after_close,company board-meeting notice (checked 13 Oct 2026),yes
+2025-04-19,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2025-07-19,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2025-10-18,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2026-01-17,results,ICICI Bank results,after_close,company filing (entered from memory; verify),no
+2024-01-19,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2024-04-22,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2024-07-19,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2024-10-14,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2025-01-16,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2025-04-25,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2025-07-18,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2025-10-17,results,Reliance results,after_close,company filing (entered from memory; verify),no
+2026-01-16,results,Reliance results,after_close,company filing (entered from memory; verify),no

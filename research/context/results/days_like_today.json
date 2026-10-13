@@ -1,0 +1,89 @@
+{
+ "BANKNIFTY": {
+  "rest_range_pct": {
+   "design": {
+    "n": 213,
+    "mae_analog": 0.5101,
+    "mae_pooled": 0.5047,
+    "skill_pct": -1.1,
+    "p": 0.6684974348710844
+   },
+   "holdout": {
+    "n": 244,
+    "mae_analog": 0.2994,
+    "mae_pooled": 0.3766,
+    "skill_pct": 20.5,
+    "p": 2.631236414847504e-07
+   }
+  },
+  "rest_ret_pct": {
+   "design": {
+    "n": 213,
+    "mae_analog": 0.6831,
+    "mae_pooled": 0.6162,
+    "skill_pct": -10.8,
+    "p": 0.9999993948531547
+   },
+   "holdout": {
+    "n": 244,
+    "mae_analog": 0.4554,
+    "mae_pooled": 0.4272,
+    "skill_pct": -6.6,
+    "p": 0.9917166645041096
+   }
+  }
+ },
+ "NIFTY": {
+  "rest_range_pct": {
+   "design": {
+    "n": 214,
+    "mae_analog": 0.3916,
+    "mae_pooled": 0.4141,
+    "skill_pct": 5.4,
+    "p": 0.030115094041640054
+   },
+   "holdout": {
+    "n": 218,
+    "mae_analog": 0.2658,
+    "mae_pooled": 0.3147,
+    "skill_pct": 15.5,
+    "p": 0.00021201000074860617
+   }
+  },
+  "rest_ret_pct": {
+   "design": {
+    "n": 214,
+    "mae_analog": 0.5479,
+    "mae_pooled": 0.5193,
+    "skill_pct": -5.5,
+    "p": 0.9883165189449129
+   },
+   "holdout": {
+    "n": 218,
+    "mae_analog": 0.4171,
+    "mae_pooled": 0.3987,
+    "skill_pct": -4.6,
+    "p": 0.9580392295405349
+   }
+  }
+ },
+ "bh": {
+  "BANKNIFTY:rest_range_pct": {
+   "p": 0.6684974348710844,
+   "q": 0.9999993948531547
+  },
+  "BANKNIFTY:rest_ret_pct": {
+   "p": 0.9999993948531547,
+   "q": 0.9999993948531547
+  },
+  "NIFTY:rest_range_pct": {
+   "p": 0.030115094041640054,
+   "q": 0.12046037616656022
+  },
+  "NIFTY:rest_ret_pct": {
+   "p": 0.9883165189449129,
+   "q": 0.9999993948531547
+  }
+ },
+ "confirmed": {}
+}
