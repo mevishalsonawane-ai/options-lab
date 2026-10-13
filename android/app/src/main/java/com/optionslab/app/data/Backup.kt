@@ -202,6 +202,8 @@ object Backup {
         prefs.keys().forEach { k -> if (carried(k)) values[k] = prefs.get(k) }
         values[DISARM] = true
         SecurePrefs.putAll(values)
+        // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
+        runCatching { AppSettings.syncDangerHalf() }
         return Restored(changePin = c.pinSealed)
     }
 

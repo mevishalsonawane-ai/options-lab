@@ -569,6 +569,32 @@ class ControlPagesTest {
         waitSettings { it.guardNakedShort != naked }
     }
 
+    /**
+     * The pre-trade checks card (review, 13 Oct): the note gives each test's sample, and the danger reading and its switch
+     * show only where the meter is read (Jarvis); there the switch saves and its memory copy follows the save.
+     */
+    @Test fun thePreTradeCardSaysItsSamplesAndTheSwitchFollowsTheSettings() {
+        val today = Market.today()
+        com.optionslab.app.data.DangerToday.read(com.optionslab.ira.DangerMeter.Inputs(null, 11.0, 0.0, event = false, expiry = true,
+            day = today.dayOfWeek), today)
+        show { PreTradeCard(model) }
+        for (t in listOf("charges check: 499 trades", "smart stop: 15 trades", "danger meter: 122 days", "8 design and 2 held-back trades"))
+            assertTrue(t, compose.has(t, substring = true))
+        if (com.optionslab.app.BuildConfig.JARVIS) {
+            assertTrue(compose.has("provisional, gap not known yet", substring = true))
+            val was = model.settings.value.dangerHalfSize
+            try {
+                toggle("Half size on careful days (paper arms only)")
+                waitSettings { it.dangerHalfSize != was }
+                compose.until(10_000, "the saved switch in memory") { com.optionslab.app.data.DangerToday.halfSize == !was && AppSettings.load().dangerHalfSize == !was }
+            } finally { com.optionslab.app.data.DangerToday.halfSize = false }
+        } else {
+            // No morning check in this build: no reading, no switch, and the card says why.
+            assertFalse(compose.has("Half size on careful days (paper arms only)"))
+            assertTrue(compose.has("which this build does not run", substring = true))
+        }
+    }
+
     @Test fun theDrawdownPeakCanBeRestarted() {
         SecurePrefs.put("guard.peak.paper", 999_999.0)
         show { RiskPage(model) }

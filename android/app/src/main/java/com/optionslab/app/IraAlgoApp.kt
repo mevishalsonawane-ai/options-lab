@@ -72,6 +72,9 @@ class IraAlgoApp : Application() {
         // Speed, round 6: the settings decrypted first, before the pine scripts' and gold books' background reads queue
         // in the Keystore ahead of them (see SecurePrefs.warm). An unreadable vault is marked exactly as on a later read.
         timed("settings") { runCatching { SecurePrefs.warm() } }
+        // The danger meter's half-size switch (paper arms, off by default) into the entry path's memory copy before any
+        // arm can run: read from the settings just decrypted above (13 Oct; it no longer waits for the morning check or the card).
+        runCatching { com.optionslab.app.data.AppSettings.syncDangerHalf() }
         Ledger.init(this)
         Alarms.init(this)
         Store.init(this)

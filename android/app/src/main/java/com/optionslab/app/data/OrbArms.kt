@@ -1936,7 +1936,9 @@ object OrbArms {
         if (at.isAfter(HeroRules.LAST)) return "hero_window_closed"
         if ("hero@$at" in spent) return "no_decision_bar"
         val today = master.filter { it.expiry == day }
-        val spot = heroMinutes(Upstox.INDEX_KEYS.getValue(HeroRules.UNDERLYING), t).mapValues { it.value.close }
+        // NIFTY's minutes as read: the closes decide (as before); the R17 shadow note reads their highs and lows.
+        val spotBars = heroMinutes(Upstox.INDEX_KEYS.getValue(HeroRules.UNDERLYING), t)
+        val spot = spotBars.mapValues { it.value.close }
         val legs = HashMap<Pair<Double, Right>, Map<LocalTime, HeroRules.Leg>>()
         suspend fun legsOf(strike: Double, right: Right): Map<LocalTime, HeroRules.Leg> {
             legs[strike to right]?.let { return it }
@@ -2024,7 +2026,7 @@ object OrbArms {
         b.positions += Position(src, c.symbol, c.right.name, fill.quantity, fill.price, now(), day.atTime(at), buy.orderId, null, null,
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         marks[c.symbol] = fill.price
-        runCatching { PreTradeShadow.hero(HeroRules.ARM, spot, c, fill.price, fill.quantity, day, at) }     // R17 shadow (memory only)
+        runCatching { PreTradeShadow.hero(HeroRules.ARM, spotBars, c, fill.price, fill.quantity, day, at) }  // R17 shadow (memory only)
         return kept("entered", pick, limit, lots)
     }
 

@@ -95,6 +95,10 @@ class WhatsNewChangelogTest {
         assertEquals(LocalDate.of(2026, 10, 13), x.date)
         for (w in listOf("Liquidity aside", "none beat chance", "never skip, resize or move a trade", "half size for paper arms on careful days, is off"))
             assertTrue(w in x.what, w)
+        // With the samples behind "none beat chance" (review, 13 Oct): the holdouts' sizes, and Hero's tiny one flagged.
+        for (w in listOf("499 trades for the charges", "15 for the stop", "122 days for the rating", "Hero had only 8 test trades and 2 held-back ones"))
+            assertTrue(w in x.what, w)
+        assertTrue("${ChargesCheck.HOLDOUT_TRADES}" in x.what && "${SmartStop.HOLDOUT_TRADES}" in x.what && "${DangerMeter.HOLDOUT_DAYS}" in x.what)
     }
 
     @Test fun theOrderReviewIsSaidWithItsSafety() {

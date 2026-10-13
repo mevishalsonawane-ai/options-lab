@@ -67,7 +67,9 @@ there (the app trades today's).
 ## I3: charges check
 
 X = (round-trip charges at the entry price + 2 x (5 bps + 1 tick)) per unit / (expected 30-minute range x |delta|).
-This is the same formula the app uses (`PreTradeChecks.ChargesCheck`).
+The app's `PreTradeChecks.ChargesCheck` computes X the same way, but its expected range is a simpler model than the one
+tested here (fixed coefficients, not the monthly refit; see "In the app"). So the app's X is close to this X, not
+identical to it.
 
 The pre-registered thresholds were X* = 10-50%. The design pick was 10%: it skipped 47 of 1,276 trades and gained
 Rs 4,182, but beat only 32% of random twins even in design. 15% and above skip at most 3 trades.
@@ -155,16 +157,30 @@ bucket sample sizes and says plainly that it failed its test.
 
 ## In the app (all shadow / advice, all switches off)
 
+**The app does not use the exact models tested above.** It uses simpler, fixed versions of them (corrected 13 Oct after
+review; an earlier version of this page said "the same formula"):
+
+| part | tested in R17 | what the app uses |
+|---|---|---|
+| expected range | R16's 4-input linear model, refit every month on earlier sessions; time-of-day term = the mean log range of the next 30 / 60 minutes at that minute over the previous 20 sessions | R16's fixed coefficients (fitted once on R16's design rows); time-of-day term = R17's design-period mean by 15-minute slot (`results/app_constants.json`; BANKNIFTY 376, NIFTY 379 sessions), clamped to 09:30-15:00 |
+| range inputs | 1-minute high and low of the last 30 / 60 minutes | ORB family: 5-minute bars' high and low; VIX divergence and Hero: 1-minute high and low (a minute without a usable high / low counts its close) |
+| VIX | previous session's close | VIX snapshot's close, used only when the snapshot is from today or the previous trading session; otherwise unknown |
+| danger meter | buckets refit walk-forward by month (120-session warm-up) | one fixed model fitted on 347 sessions (26 Sep 2024 - 23 Feb 2026), never refit |
+| danger meter inputs | all known by 09:16 | read at 09:00 without the gap ("provisional, gap not known yet"), read again at 09:16 once BANKNIFTY's open is in |
+
+So the numbers the app shows are close to the research's, not identical, and none of the holdout results above
+applies to the app's versions exactly.
+
 - `ira-core/PreTradeChecks.kt` (pure):
-  - `RangeModel`: R16's published coefficients; the time-of-day term is the design-period average by 15-minute slot
-    (`results/app_constants.json`), because the app holds no 20 sessions of minutes at entry.
-  - `ChargesCheck`, `SmartStop`, `DangerMeter` (the model fitted on 347 sessions, 26 Sep 2024 - 23 Feb 2026).
+  - `RangeModel`, `OptionDelta`, `ChargesCheck`, `SmartStop`, `DangerMeter` as in the table.
 - ORB, ORB Fresh, Sweep, Range Fade, Hero and VIX divergence log, at each paper entry: "costs take X% of the expected
   move", a would-skip flag at 10%, and "smart stop would be N points; fixed stop is M".
   - This is memory only and never on the order path. It never changes the order.
-  - It is shown in Order Review's day notes and in the arm's day detail.
+  - It is shown in Order Review's day notes and in the arm's day detail, with the holdout samples (499 trades for the
+    charges check, 15 for the smart stop) and, for Hero, its tiny sample (8 design, 2 holdout trades).
 - Good morning check: "Today: normal / careful / paper-only day", with the sample size and "advice only; it failed its
-  holdout test".
+  holdout test (122 days)". Before the open it says "provisional, gap not known yet"; at 09:16 the meter is read again
+  and the new reading is noted in Jarvis's chat and shown on the Pre-trade checks card.
 - Switch "Danger meter: half size on careful days (paper arms only)" is OFF by default.
   - It only ever lowers size, and never touches live orders or any Liquidity arm.
   - Halving a 1-lot arm is impossible, so in practice it changes only Hero's budget-based lots.

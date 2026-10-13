@@ -65,6 +65,8 @@ object WhatsNew {
                 "It also notes where a stop sized to that move would sit, beside the fixed stop. " +
                 "Each morning it rates the day normal, careful or paper-only, with how many past days back the rating. " +
                 "We tested all three on two years of data and none beat chance. " +
+                "The held-back tests had 499 trades for the charges, 15 for the stop and 122 days for the rating. " +
+                "Hero had only 8 test trades and 2 held-back ones, far too few to judge. " +
                 "So they are notes and advice only: they never skip, resize or move a trade. " +
                 "The one switch, half size for paper arms on careful days, is off.",
             "Settings → Bot settings → Pre-trade checks; Order review; Arms · today; the Good morning check"),

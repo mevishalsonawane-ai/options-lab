@@ -124,7 +124,9 @@ class PreTradeChecksTest {
         assertEquals(DangerMeter.Level.CAREFUL, careful.level, "score ${careful.score}")
         val early = DangerMeter.read(DangerMeter.Inputs(null, null, null, event = false, expiry = false, day = DayOfWeek.WEDNESDAY))
         assertEquals(listOf("the gap", "VIX", "VIX change"), early.unknown)
-        assertTrue(early.line().contains("Not known yet: the gap, VIX, VIX change (counted as neutral)."), early.line())
+        assertTrue(early.provisional)
+        assertTrue(early.line().startsWith("Today: normal day (provisional, gap not known yet, read again after the open; danger meter"), early.line())
+        assertTrue(early.line().contains("Not known yet: VIX, VIX change (counted as neutral)."), early.line())
         // Every bucket name the morning can produce is in the model, with its sample size.
         for (d in DayOfWeek.values().filter { it != DayOfWeek.SUNDAY }) assertEquals(6, DangerMeter.read(DangerMeter.Inputs(-0.2, 15.0, 0.08, false, false, d)).used.size)
         assertEquals("large", DangerMeter.buckets(DangerMeter.Inputs(-1.0, 15.0, -0.08, false, false, DayOfWeek.MONDAY)).first["gap"])

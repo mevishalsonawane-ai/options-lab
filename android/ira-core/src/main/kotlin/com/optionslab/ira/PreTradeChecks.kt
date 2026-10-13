@@ -1,7 +1,11 @@
 package com.optionslab.ira
 
+import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.ProfitLock
 import java.time.DayOfWeek
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.exp
@@ -22,6 +26,10 @@ import kotlin.math.sqrt
  *  - [DangerMeter]  "Today: normal / careful / paper-only day" from gap, VIX, VIX change, event, expiry, weekday (I4)
  *
  * Pure: no clock, no I/O, so it may run beside an arm's entry.
+ *
+ * Not exactly the research's model (review, 13 Oct): R17 refit the range model every month on earlier sessions, with a
+ * trailing 20-session time-of-day term, and refit the danger meter monthly. The app uses R16's fixed coefficients, R17's
+ * design-period time-of-day means and one fixed danger model (research/HUNT_R17_PRETRADE.md, "In the app").
  */
 object RangeModel {
     /** R16's portable formula (fitted on R16's DESIGN rows): log range = c + a tod + b log r30 + d log r60 + e log VIX. */
@@ -55,7 +63,10 @@ object RangeModel {
 
     fun supports(underlying: String): Boolean = COEF.containsKey(underlying to 30)
 
-    /** The time-of-day term at [minuteOfDay] (the minute a decision is made, IST), the nearest 15-minute slot. */
+    /**
+     * The time-of-day term at [minuteOfDay] (the minute a decision is made, IST), the nearest 15-minute slot. Before 09:30
+     * it is 09:30's slot and after 15:00 it is 15:00's (the research made no decision outside 09:30-15:00).
+     */
     fun tod(underlying: String, minuteOfDay: Int, horizon: Int = 30): Double? {
         val t = TOD[underlying to horizon] ?: return null
         return t[((minuteOfDay - FIRST_SLOT) / 15.0).roundToInt().coerceIn(0, t.size - 1)]
@@ -64,24 +75,40 @@ object RangeModel {
     /** The index's recent window: high / low of the last 30 and 60 minutes (or since 09:15 if fewer) and its price now. */
     data class Window(val high30: Double, val low30: Double, val high60: Double, val low60: Double, val price: Double, val minuteOfDay: Int)
 
-    /** Expected high-low of the next [horizon] minutes in index points (a median-type forecast), or null without the inputs. */
+    /**
+     * Expected high-low of the next [horizon] minutes in index points (a median-type forecast), or null without the inputs.
+     * A NaN or infinite input (a broken feed) gives null, never a number.
+     */
     fun points(underlying: String, w: Window, vixPrev: Double?, horizon: Int = 30): Double? {
         val c = COEF[underlying to horizon] ?: return null
         val tod = tod(underlying, w.minuteOfDay, horizon) ?: return null
-        if (vixPrev == null || !(vixPrev > 0) || !(w.price > 0)) return null
+        if (vixPrev == null || !(vixPrev > 0) || !vixPrev.isFinite() || !(w.price > 0) || !w.price.isFinite()) return null
+        if (!(w.high30.isFinite() && w.low30.isFinite() && w.high60.isFinite() && w.low60.isFinite())) return null
         if (!(w.high30 >= w.low30) || !(w.high60 >= w.low60)) return null
         fun lr(h: Double, l: Double) = ln(max(h - l, FLOOR * w.price) / w.price)
         val z = c.c + c.tod * tod + c.r30 * lr(w.high30, w.low30) + c.r60 * lr(w.high60, w.low60) + c.vix * ln(vixPrev)
-        return exp(z) * w.price
+        return (exp(z) * w.price).takeIf { it.isFinite() && it > 0 }
     }
 
-    /** The [Window] from 1-minute (or 5-minute) bars as (high, low), oldest first: the last 30 / 60 minutes of them. */
+    /**
+     * The [Window] from 1-minute (or 5-minute) bars as (high, low), oldest first: the last 30 / 60 minutes of them. A bar
+     * with a NaN or infinite side, or a high below its low, is left out; none left, or no usable [price]: null.
+     */
     fun window(bars: List<Pair<Double, Double>>, barMinutes: Int, price: Double, minuteOfDay: Int): Window? {
-        if (bars.isEmpty() || barMinutes <= 0) return null
+        if (bars.isEmpty() || barMinutes <= 0 || !(price > 0) || !price.isFinite()) return null
+        val ok = bars.filter { it.first.isFinite() && it.second.isFinite() && it.first >= it.second }
+        if (ok.isEmpty()) return null
         val n30 = max(1, 30 / barMinutes); val n60 = max(1, 60 / barMinutes)
-        val a = bars.takeLast(n30); val b = bars.takeLast(n60)
+        val a = ok.takeLast(n30); val b = ok.takeLast(n60)
         return Window(a.maxOf { it.first }, a.minOf { it.second }, b.maxOf { it.first }, b.minOf { it.second }, price, minuteOfDay)
     }
+
+    /**
+     * One 1-minute bar as (high, low) for [window], as the research reads it (R17 uses 1-minute highs and lows). A bar with
+     * no usable high / low (0, NaN, infinite, high below low) falls back to its close alone.
+     */
+    fun highLow(high: Double, low: Double, close: Double): Pair<Double, Double> =
+        if (high.isFinite() && low.isFinite() && low > 0 && high >= low) max(high, close) to minOf(low, close) else close to close
 }
 
 /** Black-Scholes (r 6.5%, no dividend) delta at the option's own implied vol, VIX / 100 when none solves (R17 amendment 1). */
@@ -98,7 +125,13 @@ object OptionDelta {
         return if (x >= 0) 1 - p else p
     }
 
-    private fun years(minutes: Double) = max(minutes, 1.0) / (365.0 * 1440.0)
+    private fun years(minutes: Double) = (if (minutes.isFinite()) max(minutes, 1.0) else 1.0) / (365.0 * 1440.0)
+
+    /**
+     * Minutes from [at] to [expiry]'s 15:30 (the index's close, when the option settles). On expiry day near or after
+     * 15:30 it is 1 or less; the pricing then counts one minute (never a division by zero).
+     */
+    fun minutesTo(expiry: LocalDate, at: LocalDateTime): Double = Duration.between(at, expiry.atTime(15, 30)).toMinutes().toDouble()
 
     fun price(spot: Double, strike: Double, minutes: Double, vol: Double, call: Boolean): Double {
         val t = years(minutes)
@@ -110,7 +143,7 @@ object OptionDelta {
 
     /** The vol at which [premium] is the Black-Scholes price (1% .. 300% a year), or null when none gives it. */
     fun impliedVol(premium: Double, spot: Double, strike: Double, minutes: Double, call: Boolean): Double? {
-        if (!(premium > 0 && spot > 0 && strike > 0)) return null
+        if (!(premium > 0 && spot > 0 && strike > 0) || !premium.isFinite() || !spot.isFinite() || !strike.isFinite()) return null
         if (premium < price(spot, strike, minutes, MIN_VOL, call) || premium > price(spot, strike, minutes, MAX_VOL, call)) return null
         var lo = MIN_VOL; var hi = MAX_VOL
         repeat(60) { val mid = (lo + hi) / 2; if (price(spot, strike, minutes, mid, call) < premium) lo = mid else hi = mid }
@@ -118,7 +151,7 @@ object OptionDelta {
     }
 
     fun delta(spot: Double, strike: Double, minutes: Double, vol: Double, call: Boolean): Double {
-        if (!(spot > 0 && strike > 0 && vol > 0)) return if (call) 0.5 else -0.5
+        if (!(spot > 0 && strike > 0 && vol > 0) || !spot.isFinite() || !strike.isFinite() || !vol.isFinite()) return if (call) 0.5 else -0.5
         val t = years(minutes)
         val d1 = (ln(spot / strike) + (RATE + vol * vol / 2) * t) / (vol * sqrt(t))
         return if (call) ncdf(d1) else ncdf(d1) - 1
@@ -127,7 +160,7 @@ object OptionDelta {
     /** The delta to use: at the option's implied vol, else at [vixPrev] / 100, else null (nothing to price it with). */
     fun of(spot: Double, strike: Double, minutesToExpiry: Double, premium: Double, vixPrev: Double?, call: Boolean): Double? {
         val iv = impliedVol(premium, spot, strike, minutesToExpiry, call)
-        val vol = iv ?: vixPrev?.takeIf { it > 0 }?.let { it / 100 } ?: return null
+        val vol = iv ?: vixPrev?.takeIf { it > 0 && it.isFinite() }?.let { it / 100 } ?: return null
         return delta(spot, strike, minutesToExpiry, vol, call)
     }
 }
@@ -139,18 +172,20 @@ object OptionDelta {
 object ChargesCheck {
     /** The would-skip line (R17's design pick; it failed the holdout, so nothing is skipped). */
     const val SKIP_AT = 0.10
+    /** R17's holdout for the charges check: 499 trades across the arms (3 would-skips, p 0.31). */
+    const val HOLDOUT_TRADES = 499
     /** Two fills' slippage: 5 bps and one tick each (the research's formula). */
     const val SLIP_BPS = 0.0005
     const val TICK = 0.05
 
-    /** Charges for the round trip at [premium] ([ProfitLock.roundTripPerUnit]) plus two fills' slippage, per unit. */
+    /** Charges for the round trip at [premium] ([ProfitLock.roundTripPerUnit]) plus two fills' slippage, per unit (0: no usable premium). */
     fun costPerUnit(premium: Double, qty: Int): Double =
-        if (!(premium > 0)) 0.0 else ProfitLock.roundTripPerUnit(premium, qty) + 2 * (SLIP_BPS * premium + TICK)
+        if (!(premium > 0) || !premium.isFinite()) 0.0 else ProfitLock.roundTripPerUnit(premium, qty) + 2 * (SLIP_BPS * premium + TICK)
 
     data class Reading(val costPerUnit: Double, val expectedPoints: Double?, val delta: Double?) {
         /** The option's expected move in premium points: index points x |delta|. */
-        val premiumMove: Double? get() = if (expectedPoints != null && delta != null) expectedPoints * abs(delta) else null
-        val ratio: Double? get() = premiumMove?.takeIf { it > 0 }?.let { costPerUnit / it }
+        val premiumMove: Double? get() = if (expectedPoints != null && delta != null) (expectedPoints * abs(delta)).takeIf { it.isFinite() } else null
+        val ratio: Double? get() = premiumMove?.takeIf { it > 0 }?.let { costPerUnit / it }?.takeIf { it.isFinite() }
         val wouldSkip: Boolean get() = (ratio ?: 0.0) > SKIP_AT
 
         fun line(): String {
@@ -170,11 +205,14 @@ object ChargesCheck {
 object SmartStop {
     /** k: the pre-registered default shown when no pick survives the holdout (none did). */
     const val K = 1.0
+    /** R17's one holdout test of a smart stop (VIX divergence NIFTY, tight k 1): 15 trades, p 0.17. */
+    const val HOLDOUT_TRADES = 15
     private const val FLOOR = 2 * ChargesCheck.TICK
 
-    /** k x expected 30-minute index range x |delta|, in premium points; null without the inputs. */
+    /** k x expected 30-minute index range x |delta|, in premium points; null without the inputs (or with a NaN / infinite one). */
     fun points(expectedPoints: Double?, delta: Double?, k: Double = K): Double? =
-        if (expectedPoints == null || delta == null || !(expectedPoints > 0)) null else max(k * expectedPoints * abs(delta), FLOOR)
+        if (expectedPoints == null || delta == null || !(expectedPoints > 0) || !expectedPoints.isFinite() || !delta.isFinite()) null
+        else max(k * expectedPoints * abs(delta), FLOOR)
 
     /** "Smart stop would be N points; fixed stop is M" ([fixed] null: the arm has no stop in points). */
     fun line(smart: Double?, fixed: Double?): String = when {
@@ -188,9 +226,21 @@ object SmartStop {
 data class PreTradeNote(val arm: String, val label: String, val minuteOfDay: Int, val charges: ChargesCheck.Reading,
                         val smartStop: Double?, val fixedStop: Double?) {
     fun line(): String = "%02d:%02d %s: %s; %s".format(Locale.ENGLISH, minuteOfDay / 60, minuteOfDay % 60, label, charges.line(),
-        SmartStop.line(smartStop, fixedStop).replaceFirstChar { it.lowercase() })
+        SmartStop.line(smartStop, fixedStop).replaceFirstChar { it.lowercase() }) + if (arm == HeroRules.ARM.source) HERO_SAMPLE else ""
 
     companion object {
+        /** Hero's R17 sample: 8 design and 2 holdout trades, far too few to judge either check on Hero. */
+        const val HERO_DESIGN_TRADES = 8
+        const val HERO_HOLDOUT_TRADES = 2
+        internal const val HERO_SAMPLE = " (Hero's R17 sample is tiny: $HERO_DESIGN_TRADES design, $HERO_HOLDOUT_TRADES holdout trades)"
+        /** The notes kept in memory: at most [MAX], from the [KEEP_DAYS] days before today and today. */
+        const val MAX = 300
+        const val KEEP_DAYS = 7L
+
+        /** [notes] (oldest first) without those older than [keepDays] before [today], then the newest [max] of them. */
+        fun <T> prune(notes: List<Pair<LocalDate, T>>, today: LocalDate, max: Int = MAX, keepDays: Long = KEEP_DAYS): List<Pair<LocalDate, T>> =
+            notes.filter { !it.first.isBefore(today.minusDays(keepDays)) }.takeLast(max.coerceAtLeast(0))
+
         /** Order Review's day summary: how many entries, the range of the cost share, the would-skips. Empty with none. */
         fun summary(notes: List<PreTradeNote>): List<String> {
             if (notes.isEmpty()) return emptyList()
@@ -201,17 +251,21 @@ data class PreTradeNote(val arm: String, val label: String, val minuteOfDay: Int
                     (r.last() * 100).roundToInt(), (r[r.size / 2] * 100).roundToInt())
             val wider = notes.count { it.smartStop != null && it.fixedStop != null && it.smartStop > it.fixedStop }
             val stops = notes.count { it.smartStop != null && it.fixedStop != null }
-            return listOf("Charges check (shadow, R17 — failed its test, nothing skipped): ${notes.size} paper ${if (notes.size == 1) "entry" else "entries"}; " +
+            val hero = notes.any { it.arm == HeroRules.ARM.source }
+            return listOf("Charges check (shadow, R17 — failed its holdout test on ${ChargesCheck.HOLDOUT_TRADES} trades, nothing skipped): " +
+                "${notes.size} paper ${if (notes.size == 1) "entry" else "entries"}; " +
                 "$share; $skip would have been skipped at ${(ChargesCheck.SKIP_AT * 100).roundToInt()}%." +
-                (if (stops > 0) " Smart stop (k ${ChargesCheck.f1(SmartStop.K)}): wider than the fixed stop on $wider of $stops." else ""))
+                (if (stops > 0) " Smart stop (k ${ChargesCheck.f1(SmartStop.K)}; failed its holdout test on ${SmartStop.HOLDOUT_TRADES} trades): " +
+                    "wider than the fixed stop on $wider of $stops." else "") +
+                (if (hero) " Hero's R17 sample is tiny ($HERO_DESIGN_TRADES design, $HERO_HOLDOUT_TRADES holdout trades): too few to judge." else ""))
         }
     }
 }
 
 /**
- * I4 (advice): today's day type against the days the paper arms lost most. Walk-forward in R17 it FAILED: on 122
- * holdout days the "careful" days lost less than the normal ones. So it is said with its sample sizes and its result,
- * and acts only through [lots] when Boss switches that on (paper arms, halving only).
+ * I4 (advice): today's day type against the days the simulated arms (R17's backtest of the paper rules) lost most.
+ * Walk-forward in R17 it FAILED: on 122 holdout days the "careful" days lost less than the normal ones. So it is said
+ * with its sample sizes and its result, and acts only through [lots] when Boss switches that on (paper arms, halving only).
  */
 object DangerMeter {
     enum class Level(val word: String) { NORMAL("normal"), CAREFUL("careful"), PAPER_ONLY("paper-only") }
@@ -247,20 +301,27 @@ object DangerMeter {
     data class Reading(val level: Level, val score: Double, val used: List<Bucket>, val unknown: List<String>) {
         /** The bucket that pulls the score down most (its sample size is said with it), or null. */
         val worst: Bucket? get() = used.filter { it.dev < 0 }.minByOrNull { it.dev }
+        /** Read before BANKNIFTY's open is in: the gap, the meter's strongest sign, is not known yet. */
+        val provisional: Boolean get() = GAP in unknown
 
         fun line(): String {
-            val why = worst?.let { " Worst sign: ${describe(it)} (the paper arms made %s a day on those %d sessions).".format(Locale.ENGLISH, rs(it.mean), it.n) } ?: ""
-            val miss = if (unknown.isEmpty()) "" else " Not known yet: ${unknown.joinToString()} (counted as neutral)."
-            return "Today: ${level.word} day (danger meter, $SESSIONS sessions).$why$miss Advice only: this meter failed its " +
+            val why = worst?.let { " Worst sign: ${describe(it)} (the simulated arms made %s a day on those %d sessions).".format(Locale.ENGLISH, rs(it.mean), it.n) } ?: ""
+            val rest = unknown.filter { it != GAP }
+            val miss = if (rest.isEmpty()) "" else " Not known yet: ${rest.joinToString()} (counted as neutral)."
+            val first = if (provisional) "provisional, gap not known yet, read again after the open; " else ""
+            return "Today: ${level.word} day (${first}danger meter, $SESSIONS sessions).$why$miss Advice only: this meter failed its " +
                 "holdout test ($HOLDOUT_DAYS days), so it changes nothing unless you switch on half size for paper arms."
         }
     }
 
+    /** The name the gap goes by in [Reading.unknown]. */
+    const val GAP = "the gap"
+
     fun buckets(i: Inputs): Pair<Map<String, String>, List<String>> {
         val b = LinkedHashMap<String, String>(); val unknown = ArrayList<String>()
-        i.gapPct?.let { g -> val a = abs(g); b["gap"] = if (a <= GAP_CUTS.first) "small" else if (a <= GAP_CUTS.second) "mid" else "large" } ?: unknown.add("the gap")
-        i.vixPrev?.takeIf { it > 0 }?.let { v -> b["vix"] = if (v <= VIX_CUTS.first) "low" else if (v <= VIX_CUTS.second) "mid" else "high" } ?: unknown.add("VIX")
-        i.vixChange?.let { c -> b["vix_chg"] = if (c > VIX_MOVE) "up" else if (c < -VIX_MOVE) "down" else "flat" } ?: unknown.add("VIX change")
+        i.gapPct?.takeIf { it.isFinite() }?.let { g -> val a = abs(g); b["gap"] = if (a <= GAP_CUTS.first) "small" else if (a <= GAP_CUTS.second) "mid" else "large" } ?: unknown.add(GAP)
+        i.vixPrev?.takeIf { it > 0 && it.isFinite() }?.let { v -> b["vix"] = if (v <= VIX_CUTS.first) "low" else if (v <= VIX_CUTS.second) "mid" else "high" } ?: unknown.add("VIX")
+        i.vixChange?.takeIf { it.isFinite() }?.let { c -> b["vix_chg"] = if (c > VIX_MOVE) "up" else if (c < -VIX_MOVE) "down" else "flat" } ?: unknown.add("VIX change")
         b["event"] = if (i.event) "yes" else "no"
         b["expiry"] = if (i.expiry) "yes" else "no"
         b["dow"] = i.day.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
@@ -281,6 +342,52 @@ object DangerMeter {
      */
     fun lots(planned: Int, level: Level?, halfOn: Boolean): Int =
         if (!halfOn || level == null || level == Level.NORMAL || planned <= 1) planned else max(1, planned / 2)
+
+    /** One index's last 1-minute snapshot as the meter reads it: that bar's minute, its price, the previous close, today's open. */
+    data class Quote(val at: LocalDateTime, val price: Double, val prevClose: Double?, val open: Double)
+
+    /** The trading session before [today] by [isTradingDay] (null: none in the 30 days before). */
+    fun previousSession(today: LocalDate, isTradingDay: (LocalDate) -> Boolean): LocalDate? =
+        generateSequence(today.minusDays(1)) { it.minusDays(1) }.take(30).firstOrNull(isTradingDay)
+
+    /** India VIX's previous close and its last session's change (a fraction); null where not known. */
+    data class Vix(val prev: Double?, val change: Double?)
+
+    /**
+     * VIX from its snapshot [q], only when the snapshot is fresh (review, 13 Oct): its last bar today (then its previous
+     * close is yesterday's close; today's change is not the meter's) or on [prevSession] (then its price is that session's
+     * close and its change that session's). A snapshot of any older day - a phone that did not read for days, a holiday
+     * gap - is not used: VIX is unknown.
+     */
+    fun vix(q: Quote?, today: LocalDate, prevSession: LocalDate?): Vix {
+        if (q == null) return Vix(null, null)
+        val pc = q.prevClose?.takeIf { it > 0 && it.isFinite() }
+        return when (q.at.toLocalDate()) {
+            today -> Vix(pc, null)
+            prevSession -> {
+                val p = q.price.takeIf { it > 0 && it.isFinite() }
+                Vix(p, if (p != null && pc != null) (p - pc) / pc else null)
+            }
+            else -> Vix(null, null)
+        }
+    }
+
+    /** BANKNIFTY's |gap| input in %: today's open against the previous close, once today's first bar is in; else null. */
+    fun gap(q: Quote?, today: LocalDate): Double? {
+        if (q == null || q.at.toLocalDate() != today || !(q.open > 0) || !q.open.isFinite()) return null
+        val pc = q.prevClose?.takeIf { it > 0 && it.isFinite() } ?: return null
+        return (q.open - pc) / pc * 100
+    }
+
+    /**
+     * The meter's [Inputs] for [today] from the snapshots in hand. [earlier]: today's inputs from an earlier read (the
+     * 09:00 check); what this read cannot see any more (VIX's change once VIX trades today) is kept from it.
+     */
+    fun inputs(today: LocalDate, prevSession: LocalDate?, bankNifty: Quote?, vixQuote: Quote?, event: Boolean, expiry: Boolean,
+               earlier: Inputs? = null): Inputs {
+        val v = vix(vixQuote, today, prevSession)
+        return Inputs(gap(bankNifty, today) ?: earlier?.gapPct, v.prev ?: earlier?.vixPrev, v.change ?: earlier?.vixChange, event, expiry, today.dayOfWeek)
+    }
 
     private val DAYS = mapOf("Mon" to "Mondays", "Tue" to "Tuesdays", "Wed" to "Wednesdays", "Thu" to "Thursdays", "Fri" to "Fridays", "Sat" to "Saturdays")
 
