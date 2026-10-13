@@ -1,0 +1,30 @@
+id: r21-v1
+title: 'Hero (a) one-sided trigger: the option''s own close >= 2.5x its low since 12:00 + momentum agreeing'
+family: calendar-events
+date: '2026-10-13'
+doc: research/HUNT_R21_HERO.md
+hypothesis: A one-sided premium trigger catches one-way afternoons the straddle trigger misses, after costs.
+data_version: 'research-data release: expiry-day chains from expiry_days.parquet (NIFTY 53 weeklies 2025-04-09..2026-04-13,
+  BANKNIFTY 11 monthlies 2025-02-27..2026-01-27), index from nifty_prev/nifty_year and banknifty_*_wide, VIX from extra_series;
+  the Dhan lake is not published yet'
+period:
+  design: NIFTY expiries < 2025-10-13 (27), BANKNIFTY < 2025-08-25 (6)
+  holdout: NIFTY expiries 2025-10-13..2026-04-13 (26), BANKNIFTY 2025-08-25..2026-01-27 (5)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- ATM straddle vs its low since 12:00
+- 15-minute index move
+- the option's own low since 12:00
+- option price band
+model_or_rule: 'Hero (a) one-sided trigger: the option''s own close >= 2.5x its low since 12:00 + momentum agreeing'
+settings: research/hunt/r21/PREREG.md
+prereg: research/hunt/r21/PREREG.md
+variants_tried: 1
+results:
+  summary: 'pending: pre-registered, not yet run'
+  costs: 'app charges (current rates), liq fills: ask = open + 5 bps + 1-4 tick half-spread; stress x2 spread'
+holdout_read: false
+verdict: inconclusive
+notes: One of 9 R21 variants; BH across all 9. 13 Oct 2026 is a forward example only (not in the data).

@@ -1,0 +1,32 @@
+id: r21-anatomy
+title: 'Hero R21 step 1: anatomy of expiry-day zero-to-hero moves (design days only)'
+family: market-facts
+date: '2026-10-13'
+doc: research/HUNT_R21_HERO.md
+hypothesis: Describe when cheap expiry options run 5x/10x/20x and what precedes it; choose k for variant (a).
+data_version: 'research-data release: expiry-day chains from expiry_days.parquet (NIFTY 53 weeklies 2025-04-09..2026-04-13,
+  BANKNIFTY 11 monthlies 2025-02-27..2026-01-27), index from nifty_prev/nifty_year and banknifty_*_wide, VIX from extra_series;
+  the Dhan lake is not published yet'
+period:
+  design: NIFTY expiries < 2025-10-13 (27), BANKNIFTY < 2025-08-25 (6)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- best multiple of any Rs 1-10 option
+- trend
+- gap
+- max pain
+- OI walls
+- VIX
+- ATM call vs put change
+- cheap-strike volume surge
+model_or_rule: descriptive
+settings: research/hunt/r21/anatomy.py
+prereg: null
+variants_tried: null
+results:
+  summary: see research/hunt/r21/results/anatomy.md
+  costs: none (descriptive); the k-scan uses app charges and liq fills
+holdout_read: null
+verdict: not-a-test
