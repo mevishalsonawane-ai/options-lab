@@ -54,6 +54,14 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-pretrade-checks", LocalDate.of(2026, 10, 13), "Three checks before each paper trade",
+            "Before each paper trade (Liquidity aside) the app notes how much of the expected 30-minute move the charges eat. " +
+                "It also notes where a stop sized to that move would sit, beside the fixed stop. " +
+                "Each morning it rates the day normal, careful or paper-only, with how many past days back the rating. " +
+                "We tested all three on two years of data and none beat chance. " +
+                "So they are notes and advice only: they never skip, resize or move a trade. " +
+                "The one switch, half size for paper arms on careful days, is off.",
+            "Settings → Bot settings → Pre-trade checks; Order review; Arms · today; the Good morning check"),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
             "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
                 "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",

@@ -670,6 +670,8 @@ fun RiskPage(model: AppModel) {
         if (com.optionslab.app.ira.LearningFreeze.enabled()) item { com.optionslab.app.ui.SettingSpot("learn.freeze") { LearningFreezeCard(model) } }
         // Boss's paper-only period (12 Oct): until its end date, going Live asks the PIN and shows why. Never from a backup.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.paperonly") { PaperOnlyCard(model) } }
+        // The pre-trade checks (13 Oct, R17): shadow lines and the danger meter's half-size switch (off; paper arms only).
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.pretrade") { PreTradeCard(model) } }
     }
 }
 

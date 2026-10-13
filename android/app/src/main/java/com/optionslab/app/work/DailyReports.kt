@@ -251,6 +251,19 @@ object DailyReports {
                 }
             }
             ok(ira.liveMissing.size < 3, if (ira.liveMissing.isEmpty()) "Live prices reaching the app" else "No live prices yet from ${ira.liveMissing.joinToString { it.label }}")
+            // The danger meter (TODO I4, research R17): today's day type with its sample size. Advice only: it failed its holdout
+            // test; it acts only through Boss's half-size switch (paper arms, off by default).
+            runCatching {
+                val today = Market.today()
+                val bn = ira.snaps[com.optionslab.ira.Market.BANKNIFTY]; val vx = ira.snaps[com.optionslab.ira.Market.VIX]
+                val gap = bn?.takeIf { it.at.toLocalDate() == today }?.prevClose?.takeIf { it > 0 }?.let { pc -> (bn.open - pc) / pc * 100 }
+                val vixPrev = vx?.let { if (it.at.toLocalDate() == today) it.prevClose else it.price }
+                val vixChange = vx?.takeIf { it.at.toLocalDate() != today }?.changePct?.div(100)
+                val event = runCatching { com.optionslab.app.data.EventDays.isEventDay(today) }.getOrDefault(false)
+                val expiry = listOf("NIFTY", "BANKNIFTY").any { u -> runCatching { Market.isExpiryDay(u, today) }.getOrDefault(false) }
+                com.optionslab.app.data.DangerToday.halfSize = s.dangerHalfSize
+                lines += "• " + com.optionslab.app.data.DangerToday.read(com.optionslab.ira.DangerMeter.Inputs(gap, vixPrev, vixChange, event, expiry, today.dayOfWeek), today).line()
+            }
             // The day's expected move, from India VIX.
             runCatching {
                 val n = ira.snaps[com.optionslab.ira.Market.NIFTY]; val v = ira.snaps[com.optionslab.ira.Market.VIX]?.price

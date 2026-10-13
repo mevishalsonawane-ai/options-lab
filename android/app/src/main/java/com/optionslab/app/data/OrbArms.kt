@@ -1535,6 +1535,7 @@ object OrbArms {
         OrbRules.openingRange(bars)?.let { b.range = it; b.rangeDay = day }
         val rng = OrbRules.openingRange(bars, ap.orEnd) ?: return "waiting_for_opening_range"
         val legs = contracts(b, day, bars) ?: return "no_contract"
+        PreTradeShadow.orbBars(bars)                    // R17 shadow: the bars its entry note reads (memory only)
         val last = bars.last()
         val spent = b.decided.getOrPut("${arm.source}|$day") { HashSet() }
         if (!spent.add(last.start.toString())) return "no_decision_bar"
@@ -1654,6 +1655,8 @@ object OrbArms {
         b.positions += stamped(Position(arm.source, c.symbol, c.right.name, fill.quantity, fill.price, now(), signalBar, buy.orderId, stopId, trigger,
             charges = chargesOf(buy.orderId), ladder = ProfitLock.targetOf(arm) != null))
         marks[c.symbol] = fill.price
+        // R17 shadow (I3 / I5): the charges check and smart stop noted beside the trade (memory only; nothing changes).
+        runCatching { PreTradeShadow.orb(arm, c, expected, fill.quantity, signalBar, pp.stopPoints) }
         return "entered"
     }
 
@@ -1991,7 +1994,8 @@ object OrbArms {
         val q = runCatching { Paper.quote(c) }.getOrNull()
         val ask = q?.ask?.takeIf { it > 0 } ?: q?.ltp?.takeIf { it > 0 } ?: pick.ltp
         val limit = HeroRules.limitPrice(ask, pick.ltp)
-        val lots = HeroRules.lots(limit, c.lotSize)
+        // The danger meter's half size (TODO I4): only when Boss switched it on, on a careful day; paper only, never more lots.
+        val lots = DangerToday.paperLots(HeroRules.lots(limit, c.lotSize), day)
         if (lots <= 0) return kept("hero_zero_lots", pick, limit, lots)
         exposureRefusal(b, c, HeroRules.ARM)?.let { return kept(it, pick, limit, lots) }
         // The order flow at this minute (paper only, as the arm): logged; under CONFIRM skipped unless the flow agrees.
@@ -2020,6 +2024,7 @@ object OrbArms {
         b.positions += Position(src, c.symbol, c.right.name, fill.quantity, fill.price, now(), day.atTime(at), buy.orderId, null, null,
             charges = chargesOf(buy.orderId), seen = listOf(heroSeen("signal", q, pick.ltp)))
         marks[c.symbol] = fill.price
+        runCatching { PreTradeShadow.hero(HeroRules.ARM, spot, c, fill.price, fill.quantity, day, at) }     // R17 shadow (memory only)
         return kept("entered", pick, limit, lots)
     }
 

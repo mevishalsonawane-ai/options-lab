@@ -299,6 +299,9 @@ object VixDivArm {
             Paper.place(c, "SELL", VixDivRules.LOTS, "SL-M", "MIS", null, VixDivRules.stop(fill.price, vp.stopPct))
         }.getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${VixDivRules.LABEL} · stop") } }
         b.positions += Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, minute, r.orderId, stopId, charges = chargesOf(r.orderId))
+        // R17 shadow (I3 / I5): the charges check and smart stop noted beside the trade (memory only; nothing changes).
+        runCatching { PreTradeShadow.vixDiv("${VixDivRules.SOURCE}_${u.lowercase()}", "${VixDivRules.LABEL} $u", index, c, fill.price, fill.quantity, now,
+            if (VixDivRules.liquidityExit(u)) fill.price - VixDivRules.stop(fill.price, vp.stopPct) else null) }
         val exits = if (VixDivRules.liquidityExit(u)) "stop %.2f on the low, out after %d min unless +5%%, else 15:10".format(Locale.ENGLISH,
                 VixDivRules.stop(fill.price, vp.stopPct), vp.minutes)
             else "held to 15:10"
