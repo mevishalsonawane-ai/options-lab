@@ -182,7 +182,7 @@ object SharedKnowledgeHost {
      * turned it on, and the day's lessons bundle written under the recordings folder. Never the main thread; never the network.
      * True when it ran.
      */
-    fun nightly(context: Context? = null): Boolean {
+    suspend fun nightly(context: Context? = null): Boolean {
         if (!enabled()) return false
         if (context != null && appContext == null) appContext = context.applicationContext
         val today = runCatching { Market.today() }.getOrNull() ?: return false
