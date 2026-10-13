@@ -50,7 +50,7 @@ SKIP_OUTCOME = "skipped"
 _LEAKS = [
     re.compile(r"github_pat_|gh[pousr]_[A-Za-z0-9]{8,}"),
     re.compile(r"eyJ[A-Za-z0-9_\-]{8,}"),
-    re.compile(r"\d{9,}"),
+    re.compile(r"(?<![A-Za-z0-9])\d{9,}(?![A-Za-z0-9])"),   # as the phone: a symbol's digits are kept
     re.compile(r"(₹|\bRs\.?)\s*[-+]?\d"),
     re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"),
 ]

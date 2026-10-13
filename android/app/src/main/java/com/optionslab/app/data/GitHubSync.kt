@@ -307,6 +307,9 @@ object GitHubSync {
         val phone = Phone(liveKey, dir, made) { goOn() && sendNow(true) }
         val sync = CloudRun(gh, phone)
         val outcomes = ArrayList<CloudSync.Last>()
+        // G3 review: the diagnostics' outcome is shown like any other, but only a refused token makes it fail the run (a
+        // failed run is tried again, and the evening run would send the backup again every hour until 08:00).
+        var diagLast: CloudSync.Last? = null
         try {
             // A token that can reach options-lab (its access widened on GitHub after it was pasted) is refused before anything
             // is sent: recorded as refused (403), so the automatic runs pause and Problems found says "GitHub token invalid".
@@ -338,7 +341,8 @@ object GitHubSync {
                         val kept = SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                         SecurePrefs.put(K_DIAG, CloudSync.diagKept(kept, diagDay).toString())
                     }
-                    outcomes += lastOf(o, gh)
+                    diagLast = lastOf(o, gh)
+                    outcomes += diagLast!!
                 }
             }
             // The same refused token is not tried again in the same run.
@@ -354,7 +358,7 @@ object GitHubSync {
             outcomes.firstOrNull { !it.ok }?.let { SecurePrefs.put(K_LAST, it.encode()) }
         }
         runCatching { check() }
-        return outcomes.all { it.ok }
+        return outcomes.all { it.ok || (it === diagLast && !CloudSync.authRefused(it)) }
     }
 
     /**

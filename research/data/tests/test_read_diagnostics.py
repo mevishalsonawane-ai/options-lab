@@ -84,6 +84,13 @@ def test_refuses_a_file_with_a_secret_or_rupees(data, leak):
         rd.check(data)
 
 
+def test_a_numeric_month_weekly_symbol_is_not_a_secret(data):
+    # NIFTY2510725000PE (a January-September weekly) has a 10-digit run inside the symbol: kept on the phone, read here.
+    data["orders"][0]["symbol"] = "NIFTY2510725000PE"
+    data["decisions"][0]["verdict"] = "entered NIFTY2510725000PE"
+    rd.check(data)
+
+
 def test_refuses_other_files_and_schemas(data):
     with pytest.raises(rd.DiagError):
         rd.check({"kind": "something else"})

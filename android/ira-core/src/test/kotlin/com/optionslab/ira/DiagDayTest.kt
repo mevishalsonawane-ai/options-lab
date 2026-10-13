@@ -169,6 +169,8 @@ class DiagDayTest {
         "10-12 10:05:00 [orb] ORB: entered · range 51200.0-51000.0 · bar 10:00 close 51250.5",       // yesterday: not read
         "10-13 10:05:01 [orb] ORB: guard_refused: kill switch is on · range 51200.0-51000.0 · bar 10:00 close 51250.5",
         "10-13 10:10:01 [orb] ORB Sweep: no_sweep",
+        "10-13 10:11:00 [orb] ORB Fresh: the trade manager's lock raised the paper stop to 210.50",   // a notice, not a decision
+        "10-13 10:11:30 [orb] Liquidity 15+5: size 1 lot -> 2 lots (you)",                          // a notice too
         "10-13 10:12:00 [orb] Liquidity 15m: entered",                       // kept in memory too: not counted twice
         "10-13 10:20:00 [error] Missing required field: quantity",
         "10-13 10:21:00 [error] Missing required field: quantity",
@@ -198,7 +200,7 @@ class DiagDayTest {
         val sync = h["sync"] as Map<String, Any?>
         assertEquals(1L, sync["failed"].num()); assertEquals(1L, sync["skipped"].num())
         assertEquals(3, (sync["lines"] as List<*>).size)
-        assertEquals(11L, h["diary_lines"].num())
+        assertEquals(13L, h["diary_lines"].num())
     }
 
     @Test fun afterARestartTheDiaryKeepsTheDecisionsMemoryLost() {
@@ -351,6 +353,8 @@ class DiagDayTest {
         val kept = "ORB: guard_refused: day lock · range 51200.0-51000.0 · bar 10:00 close 51250.5 · BANKNIFTY25OCT51200CE 2 lots, " +
             "NIFTY2510725000PE, CRUDEOIL25NOVFUT, 2026-10-13 23:30, waiting_for_fresh_break_after_pause, R14, G3"
         assertEquals(kept, DiagDay.scrub(kept))
+        val codes = "refused_premium_at_or_under_40, park_orb_family_2026_10_13, cash 15:30, 3 required, 2 available"
+        assertEquals(codes, DiagDay.scrub(codes))
         assertEquals(Secrets.HIDDEN, DiagDay.scrub(kiteToken))
         assertEquals("key ${Secrets.HIDDEN}", DiagDay.scrub("key $apiKey"))
         assertTrue(DiagDay.scrub("x".repeat(1000)).length <= DiagDay.MAX_TEXT)

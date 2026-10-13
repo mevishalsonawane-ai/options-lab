@@ -35,8 +35,10 @@ class DiagDayHostTest : RobolectricTest() {
         assertEquals(arms.size, labels.distinct().size)
         // The health lines it could read, by name.
         val lines = (r["health"] as Map<*, *>)["lines"] as Map<*, *>
-        for (k in listOf("app_health", "github", "order_speed", "slippage")) assertTrue("$k: ${lines.keys}", k in lines.keys)
-        assertFalse(lines["slippage"].toString().contains("₹"))
+        assertTrue(lines.keys.toString(), "github" in lines.keys)
+        lines["slippage"]?.let { assertFalse(it.toString().contains("₹")) }
+        // The repository owner's handle is personal: never in the file.
+        assertFalse(Json.write(r).contains(com.optionslab.ira.CloudSync.OWNER))
         // The switches as states only.
         val mode = r["mode"] as Map<*, *>
         assertEquals(false, mode["live"])

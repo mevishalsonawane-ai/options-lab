@@ -106,9 +106,11 @@ object DiagDayHost {
             { NightArm.diagLine() }, { VixDivArm.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
         ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }
 
-        val personal = listOf(
-            runCatching { Broker.userName }.getOrNull(), runCatching { Broker.userId }.getOrNull(), runCatching { GitHubSync.login }.getOrNull(),
-        )
+        // The holder's name whole and word by word (4 letters or more), the Zerodha user id, the GitHub login and the
+        // repository owner (a personal handle).
+        val name = runCatching { Broker.userName }.getOrNull()
+        val personal = listOf(name, runCatching { Broker.userId }.getOrNull(), runCatching { GitHubSync.login }.getOrNull(),
+            com.optionslab.ira.CloudSync.OWNER) + name.orEmpty().split(' ').filter { it.length >= 4 }
         return DiagDay.Input(
             day = day, generatedAt = Market.now().toLocalDateTime().withNano(0),
             app = "${com.optionslab.app.BuildConfig.VERSION_NAME} (build ${com.optionslab.app.BuildConfig.COMMIT})",

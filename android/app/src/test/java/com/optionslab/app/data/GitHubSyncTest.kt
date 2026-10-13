@@ -185,12 +185,17 @@ class GitHubSyncTest : RobolectricTest() {
         ready()
         Background.at(Background.WED, 23, 40)
         gh.uploadCode = 500
-        assertFalse(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED) })
+        // Shown, but not a failed run: a failed run is tried again and would send the backup again every hour (G3 review).
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED) })
         assertNull(GitHubSync.status().lastDiagDay)
         val last = GitHubSync.status().lastTry!!
         assertFalse(last.ok)
         assertTrue(last.what, last.what.startsWith("diagnostics"))
         assertFalse("a server error is not a refused token", GitHubSync.authBlocked())
+        // A refused token still fails the run, and pauses the automatic ones.
+        gh.uploadCode = 401
+        assertFalse(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED) })
+        assertTrue(GitHubSync.authBlocked())
     }
 
     @Test fun noDiagnosticsDayNoDiagnosticsUpload() {

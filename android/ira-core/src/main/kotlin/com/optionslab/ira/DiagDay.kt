@@ -183,7 +183,9 @@ object DiagDay {
     private val CLIENT_ID = Regex("\\b[A-Z]{2,3}\\d{3,6}\\b")
     private val RUPEES_BEFORE = Regex("(?i)(₹|\\brs\\.?(?=\\s*[-+−]?\\d)|\\binr\\b)\\s*[-+−]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*(?:k|lakhs?|cr|crores?)\\b)?")
     private val RUPEES_AFTER = Regex("(?i)[-+−]?\\d[\\d,]*(?:\\.\\d+)?\\s*(?:k\\s+|lakhs?\\s+|crores?\\s+)?(?:rupees?|₹|\\brs\\b\\.?)")
-    private val MONEY_WORD = Regex("(?i)\\b(margins?|funds?|balance|cash|available|required|utili[sz]ed|p&l|pnl|net worth|collateral|payout|equity)\\b([^0-9\\n]{0,24}?)([-+−]?\\d[\\d,]*(?:\\.\\d+)?)")
+    private val MONEY_WORD = Regex("(?i)\\b(margins?|funds?|balance|utili[sz]ed|p&l|pnl|net worth|collateral|payout)\\b([^0-9\\n]{0,24}?)([-+−]?\\d[\\d,]*(?:\\.\\d+)?)")
+    /** The app's own codes (refused_premium_at_or_under_40, park_orb_family_2026_10_13): lower case and underscores, kept. */
+    private val CODE = Regex("^[a-z0-9]+(?:_[a-z0-9]+)+$")
 
     /**
      * Every text in the report goes through this, last: GitHub tokens, the owner's secret rules, JWTs, keys, client ids,
@@ -201,11 +203,11 @@ object DiagDay {
         t = LONG_RUN.replace(t) { m ->
             val s = m.value
             val mixed = s.any { it.isDigit() } && s.any { it.isLetter() }
-            if (mixed && !SYMBOL.matches(s)) Secrets.HIDDEN else s
+            if (mixed && !SYMBOL.matches(s) && !CODE.matches(s)) Secrets.HIDDEN else s
         }
         t = RUPEES_BEFORE.replace(t, "₹${Secrets.HIDDEN}")
         t = RUPEES_AFTER.replace(t, "${Secrets.HIDDEN} rupees")
-        repeat(4) { t = MONEY_WORD.replace(t) { m -> m.groupValues[1] + m.groupValues[2] + Secrets.HIDDEN } }
+        t = MONEY_WORD.replace(t) { m -> m.groupValues[1] + m.groupValues[2] + Secrets.HIDDEN }
         t = CLIENT_ID.replace(t, Secrets.HIDDEN)
         t = Secrets.redact(t)
         return if (t.length > MAX_TEXT) t.take(MAX_TEXT - 1) + "…" else t
@@ -238,11 +240,16 @@ object DiagDay {
     val ARM_AREAS = setOf("orb", "night", "vix-div", "mcx-arms", "forge-paper", "flow")
 
     private val BAR = Regex("· bar (\\d{2}):(\\d{2})")
+    /** A verdict as the arms write it: a code first ("guard_refused: ...", "entered", "no_sweep · range ..."). */
+    private val VERDICT = Regex("^[a-z][a-z0-9_]*(?=$|:| ·)")
 
     /** The diary's arm lines of [day] as decisions ("ORB: guard_refused: ... · range ... · bar 10:05 close ..."). */
     fun diaryDecisions(lines: List<Line>): List<Decision> = lines.filter { it.area in ARM_AREAS }.mapNotNull { l ->
         val i = l.text.indexOf(": ")
         if (i !in 1..40) return@mapNotNull null
+        // Only verdicts: the arms' notices in the same area ("the trade manager's lock raised the paper stop", "parked ...")
+        // are not decisions.
+        if (!VERDICT.containsMatchIn(l.text.substring(i + 2))) return@mapNotNull null
         val bar = BAR.find(l.text)?.let { runCatching { LocalTime.of(it.groupValues[1].toInt(), it.groupValues[2].toInt()) }.getOrNull() }
         Decision(l.at, l.text.substring(0, i).trim(), l.text.substring(i + 2).substringBefore(" · range").substringBefore(" · bar").trim(), bar)
     }
