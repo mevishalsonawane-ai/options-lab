@@ -422,3 +422,22 @@ Full study: `HUNT_R21_HERO.md` (pre-registered `hunt/r21/PREREG.md`, commit 78e9
 - Exits did not help: no holdout trade reached the 3-4x that arms a lock or trail; the plain 15:05 exit lost more
   (-Rs 61,863) than the app's -60% stop.
 - Deciding it needs the 6-year Dhan lake (~300 NIFTY weeklies): `R21_SOURCE=lake python3 research/hunt/r21/run.py all`.
+## What every option buy would have done, and patterns before big winners / losers (R24, 13 Oct 2026) - no rule passes
+Full study: `HUNT_R24_WHATIF_PATTERNS.md` (pre-registered `hunt/r24/PREREG.md`, commit 11cfa984; 8 rules, BH with R20-R22).
+- What-if table: 11,662,056 option-minutes (NIFTY + BANKNIFTY, CE/PE ATM-3..+3, entries 09:20-14:45, 2 x 1,282 sessions
+  Aug 2021 - 12 Oct 2026, Dhan lake), each bought at the ask, net of app charges and a spread by moneyness, with fixed
+  exits, MFE/MAE and the ORB / Sweep / Liquidity exits. On Drive (`IraAlgo-data-lake/derived/r24_whatif`); in the brain
+  as y_wi_* labels only.
+- Blind buying loses at every exit: design mean per lot NIFTY Rs -97 (+15 min) to Rs -170 (15:05), BANKNIFTY Rs -131
+  to Rs -231 (10.5 million option-minutes, 1,161 sessions), though the median option rises +17% to +26% after entry.
+- Before big winners (net >= +50% at 15:05; 8.8% of 2.13 million grid rows): expiry day with the ATM straddle grown since
+  09:20 and the option on the move's side, 32-34% big wins (lift 3.6-3.8x) - but 45-47% big losses (lift 2.7-2.8x)
+  and about Rs 0 under ORB exits. The most common states before winners (levels near, NIFTY, high IV) are as common
+  before losers.
+- Before big losers: OTM2-3 bought on expiry day lose half or more 90-95% of the time (18,000-38,000 rows each); 7+ days
+  to expiry almost never wins big (0.8%).
+- 8 pattern rules (design only, Liquidity exits chosen): walk-forward Rs -332k over 3 test blocks; holdout (27 Apr - 12 Oct
+  2026, 116 sessions per index, read once) 0 of 8 pass. Best p3 (ATM IV high, gap against the option) +Rs 14,066 on 47
+  trades, but random entry times did as well (p 0.073, BH q 0.86). Patterns beat random patterns, not random timing.
+- Re-run on the full lake (incl. monthly series): `bash research/hunt/r24/refresh_lake.sh` (Steps 1-2; Step 3 needs a new
+  pre-registration).

@@ -263,6 +263,14 @@ named `y_*`, or any shared name. `split.walk_forward` and `split.purged_kfold` b
 **purges** training rows whose label window `[t, t+horizon]` reaches the test block (default horizon 60 minutes) and
 **embargoes** training rows in the day after the test block (k-fold).
 
+**What-if labels (R24, 13 Oct 2026).** `whatif_labels.py` turns R24's what-if table into 32 `y_wi_*` labels per decision
+minute: what buying a call or put would have done, net of the app's charges and the spread (ITM1 / ATM / OTM1, CE / PE:
+net % at +30 min and 15:05, best and worst price, ORB-exit rupees; the best of the 14 options and the share that won).
+The table is `research/hunt/r24/whatif.py` (`<cache>/whatif`, on Drive under `IraAlgo-data-lake/derived/r24_whatif`).
+`python -m research.brain.whatif_labels build` writes `<cache>/labels_whatif/<UND>/<YYYY>/<day>.parquet`, keyed by `ts`
+= the decision minute, so `split.join_forward` puts the features known at t next to what happened after t. No feature
+reads them (`tests/test_whatif_labels.py`).
+
 ## The look-ahead guard (item 2)
 
 `guard.py`, run by `tests/test_lookahead.py` and `tests/test_cube.py` in CI (`.github/workflows/brain.yml`):

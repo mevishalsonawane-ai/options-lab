@@ -1,0 +1,4035 @@
+{
+ "rows": 2129886,
+ "days": 1161,
+ "base_w": 0.08782864434997929,
+ "base_l": 0.16824280736152075,
+ "base_net1505": -198.32118225097656,
+ "base_orb": -134.7720489501953,
+ "itemsets": 66944,
+ "cuts": {
+  "trend|NIFTY": [
+   -0.16979695856571198,
+   0.16979695856571198
+  ],
+  "trend|BANKNIFTY": [
+   -0.21355979144573212,
+   0.21355979144573212
+  ],
+  "mom15|NIFTY": [
+   -0.03787505626678467,
+   0.03787505626678467
+  ],
+  "mom15|BANKNIFTY": [
+   -0.04692048331101736,
+   0.04692048331101734
+  ],
+  "vwapx|NIFTY": [
+   -0.07186996936798096,
+   0.07186996936798096
+  ],
+  "vwapx|BANKNIFTY": [
+   -0.08556769788265228,
+   0.08556769788265228
+  ],
+  "pos|NIFTY": [
+   0.2967420816421509,
+   0.7032579183578491
+  ],
+  "pos|BANKNIFTY": [
+   0.3058501680692037,
+   0.6941498319307963
+  ],
+  "room|NIFTY": [
+   0.01882581536968549,
+   0.053578556825717286
+  ],
+  "room|BANKNIFTY": [
+   0.020004000514745712,
+   0.057278880228598894
+  ],
+  "behind|NIFTY": [
+   0.01882581536968549,
+   0.053578556825717286
+  ],
+  "behind|BANKNIFTY": [
+   0.020004000514745712,
+   0.057278880228598894
+  ],
+  "iv|NIFTY": [
+   13.239471435546875,
+   18.343093872070312
+  ],
+  "iv|BANKNIFTY": [
+   15.463311195373535,
+   22.604900360107422
+  ],
+  "ivchg|NIFTY": [
+   -0.17386265099048615,
+   0.05177129805088043
+  ],
+  "ivchg|BANKNIFTY": [
+   -0.151970441142718,
+   0.04560276741782823
+  ],
+  "ivrank|NIFTY": [
+   3.3554892539978027,
+   5.15329647064209
+  ],
+  "ivrank|BANKNIFTY": [
+   3.7181735038757324,
+   5.559321403503418
+  ],
+  "oi_own|NIFTY": [
+   42.99814351399739,
+   93.80740610758463
+  ],
+  "oi_own|BANKNIFTY": [
+   42.3132578531901,
+   108.52404276529947
+  ],
+  "oi_other|NIFTY": [
+   42.99814351399739,
+   93.80740610758463
+  ],
+  "oi_other|BANKNIFTY": [
+   42.3132578531901,
+   108.52404276529947
+  ],
+  "pcr|NIFTY": [
+   0.7733843922615051,
+   0.9022149046262106
+  ],
+  "pcr|BANKNIFTY": [
+   0.8251026272773743,
+   0.9650768637657166
+  ],
+  "vix|NIFTY": [
+   13.069999694824219,
+   16.040000915527344
+  ],
+  "vix|BANKNIFTY": [
+   13.069999694824219,
+   16.040000915527344
+  ],
+  "vixchg|NIFTY": [
+   -0.8941878080368042,
+   1.8387552499771118
+  ],
+  "vixchg|BANKNIFTY": [
+   -0.8910212516784668,
+   1.8436578512191772
+  ],
+  "gap|NIFTY": [
+   -0.16404713690280914,
+   0.16404713690280914
+  ],
+  "gap|BANKNIFTY": [
+   -0.19008634984493256,
+   0.19008634984493256
+  ],
+  "rv|NIFTY": [
+   0.3885977566242218,
+   0.5863097310066223
+  ],
+  "rv|BANKNIFTY": [
+   0.5191214084625244,
+   0.7706041932106018
+  ],
+  "adx|NIFTY": [
+   19.038211822509766,
+   27.545061111450188
+  ],
+  "adx|BANKNIFTY": [
+   18.426598866780598,
+   26.752717971801754
+  ],
+  "used|NIFTY": [
+   0.6648493409156799,
+   0.9637244939804077
+  ],
+  "used|BANKNIFTY": [
+   0.8588694930076599,
+   1.2540061473846436
+  ],
+  "strad|NIFTY": [
+   -0.11777698248624802,
+   -0.03942486271262169
+  ],
+  "strad|BANKNIFTY": [
+   -0.08799002319574356,
+   -0.02404107215503852
+  ]
+ },
+ "orb_deciles": {
+  "BANKNIFTY": {
+   "0.1": -1090.9,
+   "0.9": 507.9
+  },
+  "NIFTY": {
+   "0.1": -2063.0,
+   "0.9": 988.7
+  }
+ },
+ "orb_top_share": 0.10000065731217539,
+ "orb_bottom_share": 0.10000159632956881,
+ "top_lift_w": [
+  {
+   "items": [
+    [
+     "oi_other",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 13279,
+   "days": 158,
+   "support": 0.0062,
+   "win": 0.3376,
+   "lift_w": 3.8439,
+   "lose": 0.4705,
+   "lift_l": 2.7967,
+   "cover_w": 0.024,
+   "cover_l": 0.0174,
+   "mean_net1505": 897.0836,
+   "mean_orb": -34.8994,
+   "text": "other-side OI build-up today = high AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 11676,
+   "days": 167,
+   "support": 0.0055,
+   "win": 0.3307,
+   "lift_w": 3.765,
+   "lose": 0.4477,
+   "lift_l": 2.6609,
+   "cover_w": 0.0206,
+   "cover_l": 0.0146,
+   "mean_net1505": 833.9474,
+   "mean_orb": 40.6858,
+   "text": "15-min opening range, with the option = broken with AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 13097,
+   "days": 192,
+   "support": 0.0061,
+   "win": 0.3182,
+   "lift_w": 3.6226,
+   "lose": 0.4639,
+   "lift_l": 2.7575,
+   "cover_w": 0.0223,
+   "cover_l": 0.017,
+   "mean_net1505": 617.7337,
+   "mean_orb": 19.0595,
+   "text": "trend since the open, with the option = with AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 13769,
+   "days": 204,
+   "support": 0.0065,
+   "win": 0.3143,
+   "lift_w": 3.5789,
+   "lose": 0.4601,
+   "lift_l": 2.7347,
+   "cover_w": 0.0231,
+   "cover_l": 0.0177,
+   "mean_net1505": 842.8443,
+   "mean_orb": 28.9252,
+   "text": "distance from the day's average price, with the option = ahead AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 14560,
+   "days": 226,
+   "support": 0.0068,
+   "win": 0.3092,
+   "lift_w": 3.5205,
+   "lose": 0.4604,
+   "lift_l": 2.7368,
+   "cover_w": 0.0241,
+   "cover_l": 0.0187,
+   "mean_net1505": 779.0835,
+   "mean_orb": 0.2947,
+   "text": "place in the day's range, with the option = top AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "mom15",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 12327,
+   "days": 186,
+   "support": 0.0058,
+   "win": 0.2871,
+   "lift_w": 3.2688,
+   "lose": 0.5176,
+   "lift_l": 3.0763,
+   "cover_w": 0.0189,
+   "cover_l": 0.0178,
+   "mean_net1505": 530.0473,
+   "mean_orb": -58.6844,
+   "text": "last 15 minutes, with the option = with AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 3,
+   "n": 18851,
+   "days": 243,
+   "support": 0.0089,
+   "win": 0.2688,
+   "lift_w": 3.061,
+   "lose": 0.5489,
+   "lift_l": 3.2624,
+   "cover_w": 0.0271,
+   "cover_l": 0.0289,
+   "mean_net1505": 313.7376,
+   "mean_orb": -129.7257,
+   "text": "ATM straddle since 09:20 = grown AND days to expiry = expiry day AND option = CE"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 10772,
+   "days": 243,
+   "support": 0.0051,
+   "win": 0.2682,
+   "lift_w": 3.0536,
+   "lose": 0.3618,
+   "lift_l": 2.1503,
+   "cover_w": 0.0154,
+   "cover_l": 0.0109,
+   "mean_net1505": -106.5908,
+   "mean_orb": -97.8839,
+   "text": "ATM straddle since 09:20 = grown AND days to expiry = expiry day AND moneyness = ITM3-2"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     1
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 14434,
+   "days": 216,
+   "support": 0.0068,
+   "win": 0.2649,
+   "lift_w": 3.0157,
+   "lose": 0.5303,
+   "lift_l": 3.1523,
+   "cover_w": 0.0204,
+   "cover_l": 0.0214,
+   "mean_net1505": 485.2261,
+   "mean_orb": -100.7113,
+   "text": "own-side OI build-up today = mid AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "rv",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 15862,
+   "days": 111,
+   "support": 0.0074,
+   "win": 0.2648,
+   "lift_w": 3.0148,
+   "lose": 0.5634,
+   "lift_l": 3.3489,
+   "cover_w": 0.0225,
+   "cover_l": 0.0249,
+   "mean_net1505": 142.5914,
+   "mean_orb": -95.5989,
+   "text": "realised vol, 30 min = high AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "room",
+     1
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 12229,
+   "days": 216,
+   "support": 0.0057,
+   "win": 0.2646,
+   "lift_w": 3.0129,
+   "lose": 0.5537,
+   "lift_l": 3.291,
+   "cover_w": 0.0173,
+   "cover_l": 0.0189,
+   "mean_net1505": 322.3655,
+   "mean_orb": -109.5634,
+   "text": "room to the next level ahead = some AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "ivchg",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 20762,
+   "days": 178,
+   "support": 0.0097,
+   "win": 0.2602,
+   "lift_w": 2.963,
+   "lose": 0.5603,
+   "lift_l": 3.33,
+   "cover_w": 0.0289,
+   "cover_l": 0.0325,
+   "mean_net1505": 110.3887,
+   "mean_orb": -119.2777,
+   "text": "ATM IV change, 15 min = rising AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "vixchg",
+     1
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 16184,
+   "days": 156,
+   "support": 0.0076,
+   "win": 0.2593,
+   "lift_w": 2.9527,
+   "lose": 0.5626,
+   "lift_l": 3.3439,
+   "cover_w": 0.0224,
+   "cover_l": 0.0254,
+   "mean_net1505": 372.6496,
+   "mean_orb": -145.4037,
+   "text": "VIX vs yesterday = flat AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "behind",
+     0
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 11942,
+   "days": 208,
+   "support": 0.0056,
+   "win": 0.2591,
+   "lift_w": 2.9499,
+   "lose": 0.5591,
+   "lift_l": 3.3233,
+   "cover_w": 0.0165,
+   "cover_l": 0.0186,
+   "mean_net1505": 215.8715,
+   "mean_orb": -122.2148,
+   "text": "distance to the level behind = close AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "ivrank",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 26362,
+   "days": 188,
+   "support": 0.0124,
+   "win": 0.2573,
+   "lift_w": 2.9292,
+   "lose": 0.5589,
+   "lift_l": 3.322,
+   "cover_w": 0.0363,
+   "cover_l": 0.0411,
+   "mean_net1505": 140.441,
+   "mean_orb": -118.6827,
+   "text": "IV rank (252 sessions) = high AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     1
+    ]
+   ],
+   "size": 3,
+   "n": 19188,
+   "days": 307,
+   "support": 0.009,
+   "win": 0.2522,
+   "lift_w": 2.872,
+   "lose": 0.3538,
+   "lift_l": 2.1027,
+   "cover_w": 0.0259,
+   "cover_l": 0.0189,
+   "mean_net1505": 31.6719,
+   "mean_orb": -35.8751,
+   "text": "place in the day's range, with the option = top AND days to expiry = expiry day AND moneyness = ITM1"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     0
+    ],
+    [
+     "pcr",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 15470,
+   "days": 170,
+   "support": 0.0073,
+   "win": 0.2522,
+   "lift_w": 2.8718,
+   "lose": 0.4746,
+   "lift_l": 2.8209,
+   "cover_w": 0.0209,
+   "cover_l": 0.0205,
+   "mean_net1505": 396.5416,
+   "mean_orb": -55.2979,
+   "text": "own-side OI build-up today = low AND put-call OI ratio = high AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     0
+    ],
+    [
+     "tod",
+     1
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 11011,
+   "days": 135,
+   "support": 0.0052,
+   "win": 0.252,
+   "lift_w": 2.8695,
+   "lose": 0.5269,
+   "lift_l": 3.1319,
+   "cover_w": 0.0148,
+   "cover_l": 0.0162,
+   "mean_net1505": 284.7381,
+   "mean_orb": -89.0706,
+   "text": "own-side OI build-up today = low AND time of day (entry) = 10:00-11:29 AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "used",
+     0
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 17122,
+   "days": 217,
+   "support": 0.008,
+   "win": 0.252,
+   "lift_w": 2.8694,
+   "lose": 0.5692,
+   "lift_l": 3.3829,
+   "cover_w": 0.0231,
+   "cover_l": 0.0272,
+   "mean_net1505": 33.4778,
+   "mean_orb": -161.2839,
+   "text": "day's range so far / VIX day move = low AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 24024,
+   "days": 204,
+   "support": 0.0113,
+   "win": 0.2505,
+   "lift_w": 2.8521,
+   "lose": 0.5673,
+   "lift_l": 3.3717,
+   "cover_w": 0.0322,
+   "cover_l": 0.038,
+   "mean_net1505": 174.2664,
+   "mean_orb": -134.5755,
+   "text": "ATM straddle since 09:20 = grown AND days to expiry = expiry day AND index = NIFTY"
+  }
+ ],
+ "top_lift_l": [
+  {
+   "items": [
+    [
+     "ivrank",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 18564,
+   "days": 158,
+   "support": 0.0087,
+   "win": 0.0352,
+   "lift_w": 0.4005,
+   "lose": 0.9522,
+   "lift_l": 5.6595,
+   "cover_w": 0.0035,
+   "cover_l": 0.0493,
+   "mean_net1505": -184.9098,
+   "mean_orb": -141.4037,
+   "text": "IV rank (252 sessions) = mid AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 21568,
+   "days": 188,
+   "support": 0.0101,
+   "win": 0.0488,
+   "lift_w": 0.5554,
+   "lose": 0.9375,
+   "lift_l": 5.5726,
+   "cover_w": 0.0056,
+   "cover_l": 0.0564,
+   "mean_net1505": -192.6545,
+   "mean_orb": -136.0465,
+   "text": "ATM IV = mid AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "rv",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 32360,
+   "days": 251,
+   "support": 0.0152,
+   "win": 0.0536,
+   "lift_w": 0.6105,
+   "lose": 0.9303,
+   "lift_l": 5.5298,
+   "cover_w": 0.0093,
+   "cover_l": 0.084,
+   "mean_net1505": -159.2263,
+   "mean_orb": -135.5869,
+   "text": "realised vol, 30 min = low AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "tod",
+     3
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 37888,
+   "days": 307,
+   "support": 0.0178,
+   "win": 0.0493,
+   "lift_w": 0.5611,
+   "lose": 0.9235,
+   "lift_l": 5.489,
+   "cover_w": 0.01,
+   "cover_l": 0.0976,
+   "mean_net1505": -151.4207,
+   "mean_orb": -117.6154,
+   "text": "time of day (entry) = 13:00-14:45 AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "mom15",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 36420,
+   "days": 307,
+   "support": 0.0171,
+   "win": 0.0694,
+   "lift_w": 0.7903,
+   "lose": 0.9092,
+   "lift_l": 5.4041,
+   "cover_w": 0.0135,
+   "cover_l": 0.0924,
+   "mean_net1505": -178.9705,
+   "mean_orb": -141.3413,
+   "text": "last 15 minutes, with the option = flat AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 89048,
+   "days": 306,
+   "support": 0.0418,
+   "win": 0.0674,
+   "lift_w": 0.7674,
+   "lose": 0.9078,
+   "lift_l": 5.396,
+   "cover_w": 0.0321,
+   "cover_l": 0.2256,
+   "mean_net1505": -205.844,
+   "mean_orb": -143.5114,
+   "text": "ATM straddle since 09:20 = shrunk AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "dte",
+     0
+    ],
+    [
+     "und",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 64412,
+   "days": 244,
+   "support": 0.0302,
+   "win": 0.0722,
+   "lift_w": 0.8218,
+   "lose": 0.9068,
+   "lift_l": 5.39,
+   "cover_w": 0.0249,
+   "cover_l": 0.163,
+   "mean_net1505": -174.7585,
+   "mean_orb": -151.8,
+   "text": "days to expiry = expiry day AND index = NIFTY AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "adx",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 36396,
+   "days": 307,
+   "support": 0.0171,
+   "win": 0.0753,
+   "lift_w": 0.8572,
+   "lose": 0.9013,
+   "lift_l": 5.3573,
+   "cover_w": 0.0146,
+   "cover_l": 0.0915,
+   "mean_net1505": -178.9563,
+   "mean_orb": -138.3887,
+   "text": "trend strength (ADX 14) = low AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 37412,
+   "days": 307,
+   "support": 0.0176,
+   "win": 0.0783,
+   "lift_w": 0.892,
+   "lose": 0.9003,
+   "lift_l": 5.3512,
+   "cover_w": 0.0157,
+   "cover_l": 0.094,
+   "mean_net1505": -187.4223,
+   "mean_orb": -144.3948,
+   "text": "distance from the day's average price, with the option = near AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "vix",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 36920,
+   "days": 137,
+   "support": 0.0173,
+   "win": 0.0754,
+   "lift_w": 0.8586,
+   "lose": 0.9003,
+   "lift_l": 5.3512,
+   "cover_w": 0.0149,
+   "cover_l": 0.0928,
+   "mean_net1505": -178.9888,
+   "mean_orb": -143.5552,
+   "text": "VIX = mid AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "gap",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 37696,
+   "days": 118,
+   "support": 0.0177,
+   "win": 0.0757,
+   "lift_w": 0.8614,
+   "lose": 0.9,
+   "lift_l": 5.3495,
+   "cover_w": 0.0152,
+   "cover_l": 0.0947,
+   "mean_net1505": -168.5989,
+   "mean_orb": -133.2331,
+   "text": "opening gap, with the option = small AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 34754,
+   "days": 303,
+   "support": 0.0163,
+   "win": 0.0722,
+   "lift_w": 0.822,
+   "lose": 0.8997,
+   "lift_l": 5.3478,
+   "cover_w": 0.0134,
+   "cover_l": 0.0873,
+   "mean_net1505": -259.2989,
+   "mean_orb": -167.5562,
+   "text": "15-min opening range, with the option = broken against AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "used",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 36012,
+   "days": 272,
+   "support": 0.0169,
+   "win": 0.0813,
+   "lift_w": 0.9251,
+   "lose": 0.899,
+   "lift_l": 5.3437,
+   "cover_w": 0.0156,
+   "cover_l": 0.0904,
+   "mean_net1505": -177.1126,
+   "mean_orb": -146.9585,
+   "text": "day's range so far / VIX day move = mid AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "rv",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 35328,
+   "days": 297,
+   "support": 0.0166,
+   "win": 0.0741,
+   "lift_w": 0.8441,
+   "lose": 0.8987,
+   "lift_l": 5.342,
+   "cover_w": 0.014,
+   "cover_l": 0.0886,
+   "mean_net1505": -229.3922,
+   "mean_orb": -147.3161,
+   "text": "realised vol, 30 min = mid AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "ivchg",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 51872,
+   "days": 307,
+   "support": 0.0244,
+   "win": 0.0752,
+   "lift_w": 0.8563,
+   "lose": 0.8984,
+   "lift_l": 5.3402,
+   "cover_w": 0.0209,
+   "cover_l": 0.1301,
+   "mean_net1505": -201.7526,
+   "mean_orb": -144.4478,
+   "text": "ATM IV change, 15 min = falling AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "room",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 38176,
+   "days": 307,
+   "support": 0.0179,
+   "win": 0.0749,
+   "lift_w": 0.8524,
+   "lose": 0.8983,
+   "lift_l": 5.3391,
+   "cover_w": 0.0153,
+   "cover_l": 0.0957,
+   "mean_net1505": -204.2628,
+   "mean_orb": -150.3213,
+   "text": "room to the next level ahead = little AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "vixchg",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 43768,
+   "days": 210,
+   "support": 0.0205,
+   "win": 0.075,
+   "lift_w": 0.8543,
+   "lose": 0.897,
+   "lift_l": 5.3315,
+   "cover_w": 0.0176,
+   "cover_l": 0.1096,
+   "mean_net1505": -197.7028,
+   "mean_orb": -125.6335,
+   "text": "VIX vs yesterday = down AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "behind",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 38176,
+   "days": 307,
+   "support": 0.0179,
+   "win": 0.0761,
+   "lift_w": 0.867,
+   "lose": 0.8958,
+   "lift_l": 5.3244,
+   "cover_w": 0.0155,
+   "cover_l": 0.0954,
+   "mean_net1505": -195.5807,
+   "mean_orb": -143.8539,
+   "text": "distance to the level behind = close AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 36760,
+   "days": 303,
+   "support": 0.0173,
+   "win": 0.0786,
+   "lift_w": 0.8951,
+   "lose": 0.8951,
+   "lift_l": 5.3203,
+   "cover_w": 0.0154,
+   "cover_l": 0.0918,
+   "mean_net1505": -181.9623,
+   "mean_orb": -138.1609,
+   "text": "place in the day's range, with the option = middle AND days to expiry = expiry day AND moneyness = OTM2-3"
+  },
+  {
+   "items": [
+    [
+     "room",
+     1
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "mnyb",
+     4
+    ]
+   ],
+   "size": 3,
+   "n": 37468,
+   "days": 307,
+   "support": 0.0176,
+   "win": 0.0784,
+   "lift_w": 0.8922,
+   "lose": 0.8944,
+   "lift_l": 5.3164,
+   "cover_w": 0.0157,
+   "cover_l": 0.0935,
+   "mean_net1505": -198.0918,
+   "mean_orb": -146.5091,
+   "text": "room to the next level ahead = some AND days to expiry = expiry day AND moneyness = OTM2-3"
+  }
+ ],
+ "top_orb": [
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 11676,
+   "days": 167,
+   "support": 0.0055,
+   "win": 0.3307,
+   "lift_w": 3.765,
+   "lose": 0.4477,
+   "lift_l": 2.6609,
+   "cover_w": 0.0206,
+   "cover_l": 0.0146,
+   "mean_net1505": 833.9474,
+   "mean_orb": 40.6858,
+   "text": "15-min opening range, with the option = broken with AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 13769,
+   "days": 204,
+   "support": 0.0065,
+   "win": 0.3143,
+   "lift_w": 3.5789,
+   "lose": 0.4601,
+   "lift_l": 2.7347,
+   "cover_w": 0.0231,
+   "cover_l": 0.0177,
+   "mean_net1505": 842.8443,
+   "mean_orb": 28.9252,
+   "text": "distance from the day's average price, with the option = ahead AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     0
+    ],
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "pcr",
+     1
+    ]
+   ],
+   "size": 3,
+   "n": 14231,
+   "days": 331,
+   "support": 0.0067,
+   "win": 0.1111,
+   "lift_w": 1.2649,
+   "lose": 0.1482,
+   "lift_l": 0.8809,
+   "cover_w": 0.0085,
+   "cover_l": 0.0059,
+   "mean_net1505": 48.7298,
+   "mean_orb": 21.3295,
+   "text": "trend since the open, with the option = against AND distance from the day's average price, with the option = ahead AND put-call OI ratio = mid"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 13097,
+   "days": 192,
+   "support": 0.0061,
+   "win": 0.3182,
+   "lift_w": 3.6226,
+   "lose": 0.4639,
+   "lift_l": 2.7575,
+   "cover_w": 0.0223,
+   "cover_l": 0.017,
+   "mean_net1505": 617.7337,
+   "mean_orb": 19.0595,
+   "text": "trend since the open, with the option = with AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ],
+    [
+     "rv",
+     0
+    ],
+    [
+     "dte",
+     2
+    ]
+   ],
+   "size": 3,
+   "n": 69376,
+   "days": 409,
+   "support": 0.0326,
+   "win": 0.0636,
+   "lift_w": 0.7246,
+   "lose": 0.0235,
+   "lift_l": 0.1398,
+   "cover_w": 0.0236,
+   "cover_l": 0.0046,
+   "mean_net1505": 105.2483,
+   "mean_orb": 8.0116,
+   "text": "place in the day's range, with the option = top AND realised vol, 30 min = low AND days to expiry = 3-6"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     0
+    ],
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 21917,
+   "days": 380,
+   "support": 0.0103,
+   "win": 0.1279,
+   "lift_w": 1.4561,
+   "lose": 0.1518,
+   "lift_l": 0.902,
+   "cover_w": 0.015,
+   "cover_l": 0.0093,
+   "mean_net1505": 66.5669,
+   "mean_orb": 5.6476,
+   "text": "trend since the open, with the option = against AND distance from the day's average price, with the option = ahead AND index = NIFTY"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     0
+    ],
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "oi_other",
+     1
+    ]
+   ],
+   "size": 3,
+   "n": 15834,
+   "days": 333,
+   "support": 0.0074,
+   "win": 0.0827,
+   "lift_w": 0.9413,
+   "lose": 0.1184,
+   "lift_l": 0.7035,
+   "cover_w": 0.007,
+   "cover_l": 0.0052,
+   "mean_net1505": 59.2462,
+   "mean_orb": 3.0111,
+   "text": "trend since the open, with the option = against AND distance from the day's average price, with the option = ahead AND other-side OI build-up today = mid"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ],
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 14560,
+   "days": 226,
+   "support": 0.0068,
+   "win": 0.3092,
+   "lift_w": 3.5205,
+   "lose": 0.4604,
+   "lift_l": 2.7368,
+   "cover_w": 0.0241,
+   "cover_l": 0.0187,
+   "mean_net1505": 779.0835,
+   "mean_orb": 0.2947,
+   "text": "place in the day's range, with the option = top AND ATM straddle since 09:20 = grown AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     0
+    ],
+    [
+     "rv",
+     0
+    ],
+    [
+     "dte",
+     2
+    ]
+   ],
+   "size": 3,
+   "n": 43063,
+   "days": 227,
+   "support": 0.0202,
+   "win": 0.0556,
+   "lift_w": 0.6332,
+   "lose": 0.0242,
+   "lift_l": 0.144,
+   "cover_w": 0.0128,
+   "cover_l": 0.0029,
+   "mean_net1505": 117.37,
+   "mean_orb": -0.3391,
+   "text": "own-side OI build-up today = low AND realised vol, 30 min = low AND days to expiry = 3-6"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     0
+    ],
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "strad",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 16380,
+   "days": 277,
+   "support": 0.0077,
+   "win": 0.0986,
+   "lift_w": 1.1226,
+   "lose": 0.267,
+   "lift_l": 1.5872,
+   "cover_w": 0.0086,
+   "cover_l": 0.0122,
+   "mean_net1505": -337.7975,
+   "mean_orb": -4.4073,
+   "text": "trend since the open, with the option = against AND distance from the day's average price, with the option = ahead AND ATM straddle since 09:20 = shrunk"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "rv",
+     0
+    ],
+    [
+     "dte",
+     2
+    ]
+   ],
+   "size": 3,
+   "n": 61852,
+   "days": 422,
+   "support": 0.029,
+   "win": 0.0611,
+   "lift_w": 0.6962,
+   "lose": 0.0195,
+   "lift_l": 0.1162,
+   "cover_w": 0.0202,
+   "cover_l": 0.0034,
+   "mean_net1505": 97.1425,
+   "mean_orb": -7.2916,
+   "text": "distance from the day's average price, with the option = ahead AND realised vol, 30 min = low AND days to expiry = 3-6"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "pcr",
+     0
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 49833,
+   "days": 223,
+   "support": 0.0234,
+   "win": 0.1797,
+   "lift_w": 2.0463,
+   "lose": 0.5205,
+   "lift_l": 3.0935,
+   "cover_w": 0.0479,
+   "cover_l": 0.0724,
+   "mean_net1505": 78.8422,
+   "mean_orb": -7.4173,
+   "text": "15-min opening range, with the option = broken with AND put-call OI ratio = low AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "pcr",
+     0
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "side",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 73164,
+   "days": 257,
+   "support": 0.0344,
+   "win": 0.194,
+   "lift_w": 2.2089,
+   "lose": 0.5031,
+   "lift_l": 2.9904,
+   "cover_w": 0.0759,
+   "cover_l": 0.1027,
+   "mean_net1505": 162.0268,
+   "mean_orb": -8.2243,
+   "text": "put-call OI ratio = low AND days to expiry = expiry day AND option = PE"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     0
+    ],
+    [
+     "oi_other",
+     2
+    ],
+    [
+     "rv",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 57757,
+   "days": 435,
+   "support": 0.0271,
+   "win": 0.0954,
+   "lift_w": 1.0866,
+   "lose": 0.1112,
+   "lift_l": 0.661,
+   "cover_w": 0.0295,
+   "cover_l": 0.0179,
+   "mean_net1505": 32.9789,
+   "mean_orb": -8.407,
+   "text": "own-side OI build-up today = low AND other-side OI build-up today = high AND realised vol, 30 min = low"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     2
+    ],
+    [
+     "vix",
+     2
+    ],
+    [
+     "rv",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 27471,
+   "days": 209,
+   "support": 0.0129,
+   "win": 0.0764,
+   "lift_w": 0.87,
+   "lose": 0.1459,
+   "lift_l": 0.8674,
+   "cover_w": 0.0112,
+   "cover_l": 0.0112,
+   "mean_net1505": 178.1031,
+   "mean_orb": -8.76,
+   "text": "trend since the open, with the option = with AND VIX = high AND realised vol, 30 min = low"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     0
+    ],
+    [
+     "vixchg",
+     0
+    ],
+    [
+     "dte",
+     2
+    ]
+   ],
+   "size": 3,
+   "n": 33633,
+   "days": 213,
+   "support": 0.0158,
+   "win": 0.089,
+   "lift_w": 1.0132,
+   "lose": 0.0521,
+   "lift_l": 0.3096,
+   "cover_w": 0.016,
+   "cover_l": 0.0049,
+   "mean_net1505": 172.7579,
+   "mean_orb": -9.3878,
+   "text": "own-side OI build-up today = low AND VIX vs yesterday = down AND days to expiry = 3-6"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     0
+    ],
+    [
+     "oi_other",
+     2
+    ],
+    [
+     "gap",
+     1
+    ]
+   ],
+   "size": 3,
+   "n": 52059,
+   "days": 270,
+   "support": 0.0244,
+   "win": 0.117,
+   "lift_w": 1.3326,
+   "lose": 0.1302,
+   "lift_l": 0.774,
+   "cover_w": 0.0326,
+   "cover_l": 0.0189,
+   "mean_net1505": 152.0956,
+   "mean_orb": -13.2965,
+   "text": "own-side OI build-up today = low AND other-side OI build-up today = high AND opening gap, with the option = small"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "vwapx",
+     1
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 23212,
+   "days": 240,
+   "support": 0.0109,
+   "win": 0.1606,
+   "lift_w": 1.8291,
+   "lose": 0.527,
+   "lift_l": 3.1324,
+   "cover_w": 0.0199,
+   "cover_l": 0.0341,
+   "mean_net1505": 20.6166,
+   "mean_orb": -14.5577,
+   "text": "15-min opening range, with the option = broken with AND distance from the day's average price, with the option = near AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "pcr",
+     0
+    ],
+    [
+     "rv",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 57813,
+   "days": 513,
+   "support": 0.0271,
+   "win": 0.0866,
+   "lift_w": 0.9861,
+   "lose": 0.1722,
+   "lift_l": 1.0233,
+   "cover_w": 0.0268,
+   "cover_l": 0.0278,
+   "mean_net1505": -69.5891,
+   "mean_orb": -14.7842,
+   "text": "15-min opening range, with the option = broken with AND put-call OI ratio = low AND realised vol, 30 min = low"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "ivrank",
+     1
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 17737,
+   "days": 136,
+   "support": 0.0083,
+   "win": 0.1308,
+   "lift_w": 1.4893,
+   "lose": 0.5222,
+   "lift_l": 3.1038,
+   "cover_w": 0.0124,
+   "cover_l": 0.0258,
+   "mean_net1505": -46.2917,
+   "mean_orb": -14.8925,
+   "text": "15-min opening range, with the option = broken with AND IV rank (252 sessions) = mid AND days to expiry = expiry day"
+  }
+ ],
+ "common_w": [
+  {
+   "items": [
+    [
+     "near",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 2085792,
+   "days": 1161,
+   "support": 0.9793,
+   "win": 0.0874,
+   "lift_w": 0.9949,
+   "lose": 0.1686,
+   "lift_l": 1.0019,
+   "cover_w": 0.9743,
+   "cover_l": 0.9812,
+   "mean_net1505": -203.1106,
+   "mean_orb": -133.8988,
+   "text": "levels within 0.2% = two+"
+  },
+  {
+   "items": [
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 1070568,
+   "days": 1161,
+   "support": 0.5026,
+   "win": 0.0982,
+   "lift_w": 1.1184,
+   "lose": 0.1918,
+   "lift_l": 1.14,
+   "cover_w": 0.5621,
+   "cover_l": 0.573,
+   "mean_net1505": -167.8087,
+   "mean_orb": -130.784,
+   "text": "index = NIFTY"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 1054664,
+   "days": 1161,
+   "support": 0.4952,
+   "win": 0.0981,
+   "lift_w": 1.1175,
+   "lose": 0.1923,
+   "lift_l": 1.1428,
+   "cover_w": 0.5534,
+   "cover_l": 0.5659,
+   "mean_net1505": -170.2873,
+   "mean_orb": -130.2974,
+   "text": "levels within 0.2% = two+ AND index = NIFTY"
+  },
+  {
+   "items": [
+    [
+     "side",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 1064989,
+   "days": 1161,
+   "support": 0.5,
+   "win": 0.0914,
+   "lift_w": 1.0409,
+   "lose": 0.1664,
+   "lift_l": 0.9893,
+   "cover_w": 0.5205,
+   "cover_l": 0.4947,
+   "mean_net1505": -197.479,
+   "mean_orb": -136.9368,
+   "text": "option = PE"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "side",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 1042939,
+   "days": 1161,
+   "support": 0.4897,
+   "win": 0.0906,
+   "lift_w": 1.0313,
+   "lose": 0.1677,
+   "lift_l": 0.9966,
+   "cover_w": 0.505,
+   "cover_l": 0.488,
+   "mean_net1505": -208.4653,
+   "mean_orb": -135.2779,
+   "text": "levels within 0.2% = two+ AND option = PE"
+  },
+  {
+   "items": [
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 1064897,
+   "days": 1161,
+   "support": 0.5,
+   "win": 0.0842,
+   "lift_w": 0.9591,
+   "lose": 0.17,
+   "lift_l": 1.0107,
+   "cover_w": 0.4795,
+   "cover_l": 0.5053,
+   "mean_net1505": -199.1635,
+   "mean_orb": -132.6071,
+   "text": "option = CE"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 2,
+   "n": 1042853,
+   "days": 1161,
+   "support": 0.4896,
+   "win": 0.0842,
+   "lift_w": 0.9584,
+   "lose": 0.1695,
+   "lift_l": 1.0072,
+   "cover_w": 0.4693,
+   "cover_l": 0.4932,
+   "mean_net1505": -197.7554,
+   "mean_orb": -132.5196,
+   "text": "levels within 0.2% = two+ AND option = CE"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710495,
+   "days": 626,
+   "support": 0.3336,
+   "win": 0.1202,
+   "lift_w": 1.3686,
+   "lose": 0.2908,
+   "lift_l": 1.7287,
+   "cover_w": 0.4565,
+   "cover_l": 0.5767,
+   "mean_net1505": -249.6598,
+   "mean_orb": -137.4508,
+   "text": "ATM IV = high"
+  },
+  {
+   "items": [
+    [
+     "und",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 1059318,
+   "days": 1158,
+   "support": 0.4974,
+   "win": 0.0773,
+   "lift_w": 0.8804,
+   "lose": 0.1444,
+   "lift_l": 0.8585,
+   "cover_w": 0.4379,
+   "cover_l": 0.427,
+   "mean_net1505": -229.1578,
+   "mean_orb": -138.8024,
+   "text": "index = BANKNIFTY"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "iv",
+     2
+    ]
+   ],
+   "size": 2,
+   "n": 674885,
+   "days": 625,
+   "support": 0.3169,
+   "win": 0.1204,
+   "lift_w": 1.3706,
+   "lose": 0.2969,
+   "lift_l": 1.7645,
+   "cover_w": 0.4343,
+   "cover_l": 0.5591,
+   "mean_net1505": -263.7862,
+   "mean_orb": -135.4,
+   "text": "levels within 0.2% = two+ AND ATM IV = high"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "und",
+     1
+    ]
+   ],
+   "size": 2,
+   "n": 1031128,
+   "days": 1158,
+   "support": 0.4841,
+   "win": 0.0764,
+   "lift_w": 0.8694,
+   "lose": 0.1443,
+   "lift_l": 0.8578,
+   "cover_w": 0.4209,
+   "cover_l": 0.4153,
+   "mean_net1505": -236.6831,
+   "mean_orb": -137.5824,
+   "text": "levels within 0.2% = two+ AND index = BANKNIFTY"
+  },
+  {
+   "items": [
+    [
+     "oi_other",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710387,
+   "days": 1083,
+   "support": 0.3335,
+   "win": 0.1031,
+   "lift_w": 1.1733,
+   "lose": 0.2307,
+   "lift_l": 1.3712,
+   "cover_w": 0.3914,
+   "cover_l": 0.4573,
+   "mean_net1505": -95.8268,
+   "mean_orb": -97.0621,
+   "text": "other-side OI build-up today = high"
+  },
+  {
+   "items": [
+    [
+     "pcr",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 709811,
+   "days": 1025,
+   "support": 0.3333,
+   "win": 0.1019,
+   "lift_w": 1.1605,
+   "lose": 0.1969,
+   "lift_l": 1.1704,
+   "cover_w": 0.3867,
+   "cover_l": 0.39,
+   "mean_net1505": -181.0016,
+   "mean_orb": -123.6079,
+   "text": "put-call OI ratio = low"
+  },
+  {
+   "items": [
+    [
+     "dte",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 709686,
+   "days": 488,
+   "support": 0.3332,
+   "win": 0.1004,
+   "lift_w": 1.1428,
+   "lose": 0.1322,
+   "lift_l": 0.7859,
+   "cover_w": 0.3808,
+   "cover_l": 0.2619,
+   "mean_net1505": -180.8719,
+   "mean_orb": -108.1121,
+   "text": "days to expiry = 1-2"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "pcr",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 697141,
+   "days": 1023,
+   "support": 0.3273,
+   "win": 0.1018,
+   "lift_w": 1.1595,
+   "lose": 0.1971,
+   "lift_l": 1.1714,
+   "cover_w": 0.3795,
+   "cover_l": 0.3834,
+   "mean_net1505": -184.4279,
+   "mean_orb": -122.1342,
+   "text": "levels within 0.2% = two+ AND put-call OI ratio = low"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 808069,
+   "days": 1160,
+   "support": 0.3794,
+   "win": 0.087,
+   "lift_w": 0.9901,
+   "lose": 0.1602,
+   "lift_l": 0.9523,
+   "cover_w": 0.3756,
+   "cover_l": 0.3613,
+   "mean_net1505": -189.4897,
+   "mean_orb": -132.008,
+   "text": "15-min opening range, with the option = inside"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "oi_other",
+     2
+    ]
+   ],
+   "size": 2,
+   "n": 687189,
+   "days": 1082,
+   "support": 0.3226,
+   "win": 0.1021,
+   "lift_w": 1.162,
+   "lose": 0.2335,
+   "lift_l": 1.388,
+   "cover_w": 0.3749,
+   "cover_l": 0.4478,
+   "mean_net1505": -112.0888,
+   "mean_orb": -96.0176,
+   "text": "levels within 0.2% = two+ AND other-side OI build-up today = high"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 711455,
+   "days": 1161,
+   "support": 0.334,
+   "win": 0.0983,
+   "lift_w": 1.1188,
+   "lose": 0.1705,
+   "lift_l": 1.0136,
+   "cover_w": 0.3737,
+   "cover_l": 0.3386,
+   "mean_net1505": -159.5986,
+   "mean_orb": -108.5328,
+   "text": "place in the day's range, with the option = top"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 692703,
+   "days": 923,
+   "support": 0.3252,
+   "win": 0.1009,
+   "lift_w": 1.1484,
+   "lose": 0.3004,
+   "lift_l": 1.7855,
+   "cover_w": 0.3735,
+   "cover_l": 0.5807,
+   "mean_net1505": -197.7065,
+   "mean_orb": -116.0405,
+   "text": "ATM straddle since 09:20 = shrunk"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "dte",
+     1
+    ]
+   ],
+   "size": 2,
+   "n": 697535,
+   "days": 488,
+   "support": 0.3275,
+   "win": 0.0995,
+   "lift_w": 1.1334,
+   "lose": 0.1316,
+   "lift_l": 0.782,
+   "cover_w": 0.3712,
+   "cover_l": 0.2561,
+   "mean_net1505": -183.869,
+   "mean_orb": -107.4316,
+   "text": "levels within 0.2% = two+ AND days to expiry = 1-2"
+  }
+ ],
+ "common_l": [
+  {
+   "items": [
+    [
+     "near",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 2085792,
+   "days": 1161,
+   "support": 0.9793,
+   "win": 0.0874,
+   "lift_w": 0.9949,
+   "lose": 0.1686,
+   "lift_l": 1.0019,
+   "cover_w": 0.9743,
+   "cover_l": 0.9812,
+   "mean_net1505": -203.1106,
+   "mean_orb": -133.8988,
+   "text": "levels within 0.2% = two+"
+  },
+  {
+   "items": [
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 397291,
+   "days": 307,
+   "support": 0.1865,
+   "win": 0.1553,
+   "lift_w": 1.7686,
+   "lose": 0.5698,
+   "lift_l": 3.387,
+   "cover_w": 0.3299,
+   "cover_l": 0.6318,
+   "mean_net1505": -229.4038,
+   "mean_orb": -121.3317,
+   "text": "days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 389717,
+   "days": 307,
+   "support": 0.183,
+   "win": 0.153,
+   "lift_w": 1.7425,
+   "lose": 0.5702,
+   "lift_l": 3.3893,
+   "cover_w": 0.3188,
+   "cover_l": 0.6202,
+   "mean_net1505": -248.7183,
+   "mean_orb": -120.8978,
+   "text": "levels within 0.2% = two+ AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 692703,
+   "days": 923,
+   "support": 0.3252,
+   "win": 0.1009,
+   "lift_w": 1.1484,
+   "lose": 0.3004,
+   "lift_l": 1.7855,
+   "cover_w": 0.3735,
+   "cover_l": 0.5807,
+   "mean_net1505": -197.7065,
+   "mean_orb": -116.0405,
+   "text": "ATM straddle since 09:20 = shrunk"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710495,
+   "days": 626,
+   "support": 0.3336,
+   "win": 0.1202,
+   "lift_w": 1.3686,
+   "lose": 0.2908,
+   "lift_l": 1.7287,
+   "cover_w": 0.4565,
+   "cover_l": 0.5767,
+   "mean_net1505": -249.6598,
+   "mean_orb": -137.4508,
+   "text": "ATM IV = high"
+  },
+  {
+   "items": [
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 1070568,
+   "days": 1161,
+   "support": 0.5026,
+   "win": 0.0982,
+   "lift_w": 1.1184,
+   "lose": 0.1918,
+   "lift_l": 1.14,
+   "cover_w": 0.5621,
+   "cover_l": 0.573,
+   "mean_net1505": -167.8087,
+   "mean_orb": -130.784,
+   "text": "index = NIFTY"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "strad",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 681069,
+   "days": 919,
+   "support": 0.3198,
+   "win": 0.0992,
+   "lift_w": 1.1292,
+   "lose": 0.2996,
+   "lift_l": 1.7806,
+   "cover_w": 0.3611,
+   "cover_l": 0.5694,
+   "mean_net1505": -212.1232,
+   "mean_orb": -115.5912,
+   "text": "levels within 0.2% = two+ AND ATM straddle since 09:20 = shrunk"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 1054664,
+   "days": 1161,
+   "support": 0.4952,
+   "win": 0.0981,
+   "lift_w": 1.1175,
+   "lose": 0.1923,
+   "lift_l": 1.1428,
+   "cover_w": 0.5534,
+   "cover_l": 0.5659,
+   "mean_net1505": -170.2873,
+   "mean_orb": -130.2974,
+   "text": "levels within 0.2% = two+ AND index = NIFTY"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "iv",
+     2
+    ]
+   ],
+   "size": 2,
+   "n": 674885,
+   "days": 625,
+   "support": 0.3169,
+   "win": 0.1204,
+   "lift_w": 1.3706,
+   "lose": 0.2969,
+   "lift_l": 1.7645,
+   "cover_w": 0.4343,
+   "cover_l": 0.5591,
+   "mean_net1505": -263.7862,
+   "mean_orb": -135.4,
+   "text": "levels within 0.2% = two+ AND ATM IV = high"
+  },
+  {
+   "items": [
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 1064897,
+   "days": 1161,
+   "support": 0.5,
+   "win": 0.0842,
+   "lift_w": 0.9591,
+   "lose": 0.17,
+   "lift_l": 1.0107,
+   "cover_w": 0.4795,
+   "cover_l": 0.5053,
+   "mean_net1505": -199.1635,
+   "mean_orb": -132.6071,
+   "text": "option = CE"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     0
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 311667,
+   "days": 306,
+   "support": 0.1463,
+   "win": 0.1368,
+   "lift_w": 1.5581,
+   "lose": 0.5696,
+   "lift_l": 3.3856,
+   "cover_w": 0.228,
+   "cover_l": 0.4954,
+   "mean_net1505": -250.83,
+   "mean_orb": -120.668,
+   "text": "ATM straddle since 09:20 = shrunk AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "side",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 1064989,
+   "days": 1161,
+   "support": 0.5,
+   "win": 0.0914,
+   "lift_w": 1.0409,
+   "lose": 0.1664,
+   "lift_l": 0.9893,
+   "cover_w": 0.5205,
+   "cover_l": 0.4947,
+   "mean_net1505": -197.479,
+   "mean_orb": -136.9368,
+   "text": "option = PE"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 2,
+   "n": 1042853,
+   "days": 1161,
+   "support": 0.4896,
+   "win": 0.0842,
+   "lift_w": 0.9584,
+   "lose": 0.1695,
+   "lift_l": 1.0072,
+   "cover_w": 0.4693,
+   "cover_l": 0.4932,
+   "mean_net1505": -197.7554,
+   "mean_orb": -132.5196,
+   "text": "levels within 0.2% = two+ AND option = CE"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "side",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 1042939,
+   "days": 1161,
+   "support": 0.4897,
+   "win": 0.0906,
+   "lift_w": 1.0313,
+   "lose": 0.1677,
+   "lift_l": 0.9966,
+   "cover_w": 0.505,
+   "cover_l": 0.488,
+   "mean_net1505": -208.4653,
+   "mean_orb": -135.2779,
+   "text": "levels within 0.2% = two+ AND option = PE"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "strad",
+     0
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 305325,
+   "days": 306,
+   "support": 0.1434,
+   "win": 0.134,
+   "lift_w": 1.526,
+   "lose": 0.5701,
+   "lift_l": 3.3883,
+   "cover_w": 0.2188,
+   "cover_l": 0.4857,
+   "mean_net1505": -273.4684,
+   "mean_orb": -120.3735,
+   "text": "levels within 0.2% = two+ AND ATM straddle since 09:20 = shrunk AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 290276,
+   "days": 285,
+   "support": 0.1363,
+   "win": 0.1748,
+   "lift_w": 1.9902,
+   "lose": 0.5711,
+   "lift_l": 3.3943,
+   "cover_w": 0.2712,
+   "cover_l": 0.4626,
+   "mean_net1505": -234.1173,
+   "mean_orb": -120.9072,
+   "text": "ATM IV = high AND days to expiry = expiry day"
+  },
+  {
+   "items": [
+    [
+     "ivrank",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 573947,
+   "days": 574,
+   "support": 0.2695,
+   "win": 0.1197,
+   "lift_w": 1.3628,
+   "lose": 0.2857,
+   "lift_l": 1.6984,
+   "cover_w": 0.3672,
+   "cover_l": 0.4577,
+   "mean_net1505": -220.8671,
+   "mean_orb": -129.6865,
+   "text": "IV rank (252 sessions) = high"
+  },
+  {
+   "items": [
+    [
+     "oi_other",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710387,
+   "days": 1083,
+   "support": 0.3335,
+   "win": 0.1031,
+   "lift_w": 1.1733,
+   "lose": 0.2307,
+   "lift_l": 1.3712,
+   "cover_w": 0.3914,
+   "cover_l": 0.4573,
+   "mean_net1505": -95.8268,
+   "mean_orb": -97.0621,
+   "text": "other-side OI build-up today = high"
+  },
+  {
+   "items": [
+    [
+     "oi_own",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710362,
+   "days": 1083,
+   "support": 0.3335,
+   "win": 0.092,
+   "lift_w": 1.0477,
+   "lose": 0.229,
+   "lift_l": 1.3611,
+   "cover_w": 0.3494,
+   "cover_l": 0.4539,
+   "mean_net1505": -215.5723,
+   "mean_orb": -154.5726,
+   "text": "own-side OI build-up today = high"
+  },
+  {
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "iv",
+     2
+    ],
+    [
+     "dte",
+     0
+    ]
+   ],
+   "size": 3,
+   "n": 282814,
+   "days": 285,
+   "support": 0.1328,
+   "win": 0.1721,
+   "lift_w": 1.9596,
+   "lose": 0.5716,
+   "lift_l": 3.3977,
+   "cover_w": 0.2602,
+   "cover_l": 0.4512,
+   "mean_net1505": -260.9279,
+   "mean_orb": -120.2927,
+   "text": "levels within 0.2% = two+ AND ATM IV = high AND days to expiry = expiry day"
+  }
+ ],
+ "common_w_size1": [
+  {
+   "items": [
+    [
+     "near",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 2085792,
+   "days": 1161,
+   "support": 0.9793,
+   "win": 0.0874,
+   "lift_w": 0.9949,
+   "lose": 0.1686,
+   "lift_l": 1.0019,
+   "cover_w": 0.9743,
+   "cover_l": 0.9812,
+   "mean_net1505": -203.1106,
+   "mean_orb": -133.8988,
+   "text": "levels within 0.2% = two+"
+  },
+  {
+   "items": [
+    [
+     "und",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 1070568,
+   "days": 1161,
+   "support": 0.5026,
+   "win": 0.0982,
+   "lift_w": 1.1184,
+   "lose": 0.1918,
+   "lift_l": 1.14,
+   "cover_w": 0.5621,
+   "cover_l": 0.573,
+   "mean_net1505": -167.8087,
+   "mean_orb": -130.784,
+   "text": "index = NIFTY"
+  },
+  {
+   "items": [
+    [
+     "side",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 1064989,
+   "days": 1161,
+   "support": 0.5,
+   "win": 0.0914,
+   "lift_w": 1.0409,
+   "lose": 0.1664,
+   "lift_l": 0.9893,
+   "cover_w": 0.5205,
+   "cover_l": 0.4947,
+   "mean_net1505": -197.479,
+   "mean_orb": -136.9368,
+   "text": "option = PE"
+  },
+  {
+   "items": [
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 1064897,
+   "days": 1161,
+   "support": 0.5,
+   "win": 0.0842,
+   "lift_w": 0.9591,
+   "lose": 0.17,
+   "lift_l": 1.0107,
+   "cover_w": 0.4795,
+   "cover_l": 0.5053,
+   "mean_net1505": -199.1635,
+   "mean_orb": -132.6071,
+   "text": "option = CE"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710495,
+   "days": 626,
+   "support": 0.3336,
+   "win": 0.1202,
+   "lift_w": 1.3686,
+   "lose": 0.2908,
+   "lift_l": 1.7287,
+   "cover_w": 0.4565,
+   "cover_l": 0.5767,
+   "mean_net1505": -249.6598,
+   "mean_orb": -137.4508,
+   "text": "ATM IV = high"
+  },
+  {
+   "items": [
+    [
+     "und",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 1059318,
+   "days": 1158,
+   "support": 0.4974,
+   "win": 0.0773,
+   "lift_w": 0.8804,
+   "lose": 0.1444,
+   "lift_l": 0.8585,
+   "cover_w": 0.4379,
+   "cover_l": 0.427,
+   "mean_net1505": -229.1578,
+   "mean_orb": -138.8024,
+   "text": "index = BANKNIFTY"
+  },
+  {
+   "items": [
+    [
+     "oi_other",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 710387,
+   "days": 1083,
+   "support": 0.3335,
+   "win": 0.1031,
+   "lift_w": 1.1733,
+   "lose": 0.2307,
+   "lift_l": 1.3712,
+   "cover_w": 0.3914,
+   "cover_l": 0.4573,
+   "mean_net1505": -95.8268,
+   "mean_orb": -97.0621,
+   "text": "other-side OI build-up today = high"
+  },
+  {
+   "items": [
+    [
+     "pcr",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 709811,
+   "days": 1025,
+   "support": 0.3333,
+   "win": 0.1019,
+   "lift_w": 1.1605,
+   "lose": 0.1969,
+   "lift_l": 1.1704,
+   "cover_w": 0.3867,
+   "cover_l": 0.39,
+   "mean_net1505": -181.0016,
+   "mean_orb": -123.6079,
+   "text": "put-call OI ratio = low"
+  },
+  {
+   "items": [
+    [
+     "dte",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 709686,
+   "days": 488,
+   "support": 0.3332,
+   "win": 0.1004,
+   "lift_w": 1.1428,
+   "lose": 0.1322,
+   "lift_l": 0.7859,
+   "cover_w": 0.3808,
+   "cover_l": 0.2619,
+   "mean_net1505": -180.8719,
+   "mean_orb": -108.1121,
+   "text": "days to expiry = 1-2"
+  },
+  {
+   "items": [
+    [
+     "orb15",
+     1
+    ]
+   ],
+   "size": 1,
+   "n": 808069,
+   "days": 1160,
+   "support": 0.3794,
+   "win": 0.087,
+   "lift_w": 0.9901,
+   "lose": 0.1602,
+   "lift_l": 0.9523,
+   "cover_w": 0.3756,
+   "cover_l": 0.3613,
+   "mean_net1505": -189.4897,
+   "mean_orb": -132.008,
+   "text": "15-min opening range, with the option = inside"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 711455,
+   "days": 1161,
+   "support": 0.334,
+   "win": 0.0983,
+   "lift_w": 1.1188,
+   "lose": 0.1705,
+   "lift_l": 1.0136,
+   "cover_w": 0.3737,
+   "cover_l": 0.3386,
+   "mean_net1505": -159.5986,
+   "mean_orb": -108.5328,
+   "text": "place in the day's range, with the option = top"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     0
+    ]
+   ],
+   "size": 1,
+   "n": 692703,
+   "days": 923,
+   "support": 0.3252,
+   "win": 0.1009,
+   "lift_w": 1.1484,
+   "lose": 0.3004,
+   "lift_l": 1.7855,
+   "cover_w": 0.3735,
+   "cover_l": 0.5807,
+   "mean_net1505": -197.7065,
+   "mean_orb": -116.0405,
+   "text": "ATM straddle since 09:20 = shrunk"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 708908,
+   "days": 1161,
+   "support": 0.3328,
+   "win": 0.0976,
+   "lift_w": 1.1112,
+   "lose": 0.1678,
+   "lift_l": 0.9971,
+   "cover_w": 0.3698,
+   "cover_l": 0.3319,
+   "mean_net1505": -154.2853,
+   "mean_orb": -108.4952,
+   "text": "distance from the day's average price, with the option = ahead"
+  },
+  {
+   "items": [
+    [
+     "adx",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 709112,
+   "days": 1161,
+   "support": 0.3329,
+   "win": 0.097,
+   "lift_w": 1.1046,
+   "lose": 0.1817,
+   "lift_l": 1.0801,
+   "cover_w": 0.3677,
+   "cover_l": 0.3596,
+   "mean_net1505": -214.1118,
+   "mean_orb": -136.6293,
+   "text": "trend strength (ADX 14) = high"
+  },
+  {
+   "items": [
+    [
+     "ivrank",
+     2
+    ]
+   ],
+   "size": 1,
+   "n": 573947,
+   "days": 574,
+   "support": 0.2695,
+   "win": 0.1197,
+   "lift_w": 1.3628,
+   "lose": 0.2857,
+   "lift_l": 1.6984,
+   "cover_w": 0.3672,
+   "cover_l": 0.4577,
+   "mean_net1505": -220.8671,
+   "mean_orb": -129.6865,
+   "text": "IV rank (252 sessions) = high"
+  }
+ ],
+ "orb_view_top_lift": [
+  {
+   "items": [
+    [
+     "tod",
+     0
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 30688,
+   "days": 274,
+   "support": 0.0144,
+   "win": 0.1578,
+   "lift_w": 1.5785,
+   "lose": 0.2488,
+   "lift_l": 2.4876,
+   "cover_w": 0.0227,
+   "cover_l": 0.0358,
+   "mean_net1505": -439.8709,
+   "mean_orb": -205.5683,
+   "text": "time of day (entry) = 09:20-09:59 AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "vix",
+     0
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 118743,
+   "days": 132,
+   "support": 0.0558,
+   "win": 0.1523,
+   "lift_w": 1.5226,
+   "lose": 0.2316,
+   "lift_l": 2.3161,
+   "cover_w": 0.0849,
+   "cover_l": 0.1291,
+   "mean_net1505": -339.4425,
+   "mean_orb": -219.5223,
+   "text": "VIX = low AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "ivrank",
+     0
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 135847,
+   "days": 153,
+   "support": 0.0638,
+   "win": 0.1482,
+   "lift_w": 1.482,
+   "lose": 0.2349,
+   "lift_l": 2.3492,
+   "cover_w": 0.0945,
+   "cover_l": 0.1498,
+   "mean_net1505": -345.5523,
+   "mean_orb": -223.1227,
+   "text": "IV rank (252 sessions) = low AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     0
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 153266,
+   "days": 178,
+   "support": 0.072,
+   "win": 0.1417,
+   "lift_w": 1.4171,
+   "lose": 0.2334,
+   "lift_l": 2.3339,
+   "cover_w": 0.102,
+   "cover_l": 0.1679,
+   "mean_net1505": -340.6495,
+   "mean_orb": -219.9615,
+   "text": "ATM IV = low AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "ivrank",
+     0
+    ],
+    [
+     "tod",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 64078,
+   "days": 389,
+   "support": 0.0301,
+   "win": 0.1412,
+   "lift_w": 1.4117,
+   "lose": 0.138,
+   "lift_l": 1.3795,
+   "cover_w": 0.0425,
+   "cover_l": 0.0415,
+   "mean_net1505": -165.9068,
+   "mean_orb": -113.3636,
+   "text": "IV rank (252 sessions) = low AND time of day (entry) = 09:20-09:59"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 85594,
+   "days": 275,
+   "support": 0.0402,
+   "win": 0.1401,
+   "lift_w": 1.4013,
+   "lose": 0.2583,
+   "lift_l": 2.5833,
+   "cover_w": 0.0563,
+   "cover_l": 0.1038,
+   "mean_net1505": -598.7784,
+   "mean_orb": -247.081,
+   "text": "place in the day's range, with the option = top AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "used",
+     2
+    ],
+    [
+     "tod",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 12432,
+   "days": 155,
+   "support": 0.0058,
+   "win": 0.1388,
+   "lift_w": 1.3883,
+   "lose": 0.1404,
+   "lift_l": 1.4036,
+   "cover_w": 0.0081,
+   "cover_l": 0.0082,
+   "mean_net1505": -138.5555,
+   "mean_orb": -119.6827,
+   "text": "day's range so far / VIX day move = high AND time of day (entry) = 09:20-09:59"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     1
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 89650,
+   "days": 275,
+   "support": 0.0421,
+   "win": 0.1386,
+   "lift_w": 1.3864,
+   "lose": 0.2438,
+   "lift_l": 2.4378,
+   "cover_w": 0.0584,
+   "cover_l": 0.1026,
+   "mean_net1505": -349.5289,
+   "mean_orb": -228.7163,
+   "text": "distance from the day's average price, with the option = near AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "dte",
+     3
+    ],
+    [
+     "mnyb",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 72330,
+   "days": 275,
+   "support": 0.034,
+   "win": 0.1372,
+   "lift_w": 1.3725,
+   "lose": 0.2461,
+   "lift_l": 2.4606,
+   "cover_w": 0.0466,
+   "cover_l": 0.0836,
+   "mean_net1505": -391.2372,
+   "mean_orb": -232.4415,
+   "text": "days to expiry = 7+ AND moneyness = ITM3-2"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     0
+    ],
+    [
+     "tod",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 75362,
+   "days": 464,
+   "support": 0.0354,
+   "win": 0.1371,
+   "lift_w": 1.3706,
+   "lose": 0.1284,
+   "lift_l": 1.2842,
+   "cover_w": 0.0485,
+   "cover_l": 0.0454,
+   "mean_net1505": -165.0583,
+   "mean_orb": -104.2206,
+   "text": "ATM IV = low AND time of day (entry) = 09:20-09:59"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 83558,
+   "days": 268,
+   "support": 0.0392,
+   "win": 0.1365,
+   "lift_w": 1.3647,
+   "lose": 0.255,
+   "lift_l": 2.5497,
+   "cover_w": 0.0535,
+   "cover_l": 0.1,
+   "mean_net1505": -700.0557,
+   "mean_orb": -246.5251,
+   "text": "trend since the open, with the option = with AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "used",
+     0
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 79222,
+   "days": 255,
+   "support": 0.0372,
+   "win": 0.1357,
+   "lift_w": 1.3573,
+   "lose": 0.2461,
+   "lift_l": 2.4611,
+   "cover_w": 0.0505,
+   "cover_l": 0.0915,
+   "mean_net1505": -385.6407,
+   "mean_orb": -230.2911,
+   "text": "day's range so far / VIX day move = low AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 81898,
+   "days": 275,
+   "support": 0.0385,
+   "win": 0.1352,
+   "lift_w": 1.352,
+   "lose": 0.2567,
+   "lift_l": 2.5671,
+   "cover_w": 0.052,
+   "cover_l": 0.0987,
+   "mean_net1505": -480.7219,
+   "mean_orb": -247.4535,
+   "text": "distance from the day's average price, with the option = ahead AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "vixchg",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 76512,
+   "days": 159,
+   "support": 0.0359,
+   "win": 0.1351,
+   "lift_w": 1.3513,
+   "lose": 0.252,
+   "lift_l": 2.52,
+   "cover_w": 0.0485,
+   "cover_l": 0.0905,
+   "mean_net1505": -273.7521,
+   "mean_orb": -242.322,
+   "text": "VIX vs yesterday = up AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "vix",
+     0
+    ],
+    [
+     "tod",
+     0
+    ]
+   ],
+   "size": 2,
+   "n": 83916,
+   "days": 388,
+   "support": 0.0394,
+   "win": 0.1348,
+   "lift_w": 1.3485,
+   "lose": 0.1095,
+   "lift_l": 1.0948,
+   "cover_w": 0.0531,
+   "cover_l": 0.0431,
+   "mean_net1505": -216.2889,
+   "mean_orb": -99.6673,
+   "text": "VIX = low AND time of day (entry) = 09:20-09:59"
+  }
+ ],
+ "orb_view_bottom_lift": [
+  {
+   "items": [
+    [
+     "orb15",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 69333,
+   "days": 264,
+   "support": 0.0326,
+   "win": 0.1326,
+   "lift_w": 1.3259,
+   "lose": 0.2633,
+   "lift_l": 2.6333,
+   "cover_w": 0.0432,
+   "cover_l": 0.0857,
+   "mean_net1505": -489.7978,
+   "mean_orb": -263.0823,
+   "text": "15-min opening range, with the option = broken with AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "rv",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 48271,
+   "days": 194,
+   "support": 0.0227,
+   "win": 0.1229,
+   "lift_w": 1.2293,
+   "lose": 0.2586,
+   "lift_l": 2.5862,
+   "cover_w": 0.0279,
+   "cover_l": 0.0586,
+   "mean_net1505": -393.4743,
+   "mean_orb": -263.9043,
+   "text": "realised vol, 30 min = high AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "pos",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 85594,
+   "days": 275,
+   "support": 0.0402,
+   "win": 0.1401,
+   "lift_w": 1.4013,
+   "lose": 0.2583,
+   "lift_l": 2.5833,
+   "cover_w": 0.0563,
+   "cover_l": 0.1038,
+   "mean_net1505": -598.7784,
+   "mean_orb": -247.081,
+   "text": "place in the day's range, with the option = top AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "vwapx",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 81898,
+   "days": 275,
+   "support": 0.0385,
+   "win": 0.1352,
+   "lift_w": 1.352,
+   "lose": 0.2567,
+   "lift_l": 2.5671,
+   "cover_w": 0.052,
+   "cover_l": 0.0987,
+   "mean_net1505": -480.7219,
+   "mean_orb": -247.4535,
+   "text": "distance from the day's average price, with the option = ahead AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "room",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 72425,
+   "days": 270,
+   "support": 0.034,
+   "win": 0.131,
+   "lift_w": 1.3098,
+   "lose": 0.2559,
+   "lift_l": 2.5587,
+   "cover_w": 0.0445,
+   "cover_l": 0.087,
+   "mean_net1505": -294.6271,
+   "mean_orb": -246.9142,
+   "text": "room to the next level ahead = lots AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "trend",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 83558,
+   "days": 268,
+   "support": 0.0392,
+   "win": 0.1365,
+   "lift_w": 1.3647,
+   "lose": 0.255,
+   "lift_l": 2.5497,
+   "cover_w": 0.0535,
+   "cover_l": 0.1,
+   "mean_net1505": -700.0557,
+   "mean_orb": -246.5251,
+   "text": "trend since the open, with the option = with AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "tod",
+     1
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 69025,
+   "days": 274,
+   "support": 0.0324,
+   "win": 0.1324,
+   "lift_w": 1.3239,
+   "lose": 0.2536,
+   "lift_l": 2.5361,
+   "cover_w": 0.0429,
+   "cover_l": 0.0822,
+   "mean_net1505": -394.6258,
+   "mean_orb": -243.7855,
+   "text": "time of day (entry) = 10:00-11:29 AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "vixchg",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 76512,
+   "days": 159,
+   "support": 0.0359,
+   "win": 0.1351,
+   "lift_w": 1.3513,
+   "lose": 0.252,
+   "lift_l": 2.52,
+   "cover_w": 0.0485,
+   "cover_l": 0.0905,
+   "mean_net1505": -273.7521,
+   "mean_orb": -242.322,
+   "text": "VIX vs yesterday = up AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "mom15",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 76102,
+   "days": 275,
+   "support": 0.0357,
+   "win": 0.1313,
+   "lift_w": 1.3128,
+   "lose": 0.2516,
+   "lift_l": 2.5157,
+   "cover_w": 0.0469,
+   "cover_l": 0.0899,
+   "mean_net1505": -405.7118,
+   "mean_orb": -244.8269,
+   "text": "last 15 minutes, with the option = with AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "dte",
+     3
+    ],
+    [
+     "side",
+     1
+    ]
+   ],
+   "size": 2,
+   "n": 126649,
+   "days": 275,
+   "support": 0.0595,
+   "win": 0.1265,
+   "lift_w": 1.2651,
+   "lose": 0.2511,
+   "lift_l": 2.5108,
+   "cover_w": 0.0752,
+   "cover_l": 0.1493,
+   "mean_net1505": -88.3371,
+   "mean_orb": -260.8638,
+   "text": "days to expiry = 7+ AND option = CE"
+  },
+  {
+   "items": [
+    [
+     "iv",
+     1
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 84504,
+   "days": 107,
+   "support": 0.0397,
+   "win": 0.1052,
+   "lift_w": 1.0521,
+   "lose": 0.2503,
+   "lift_l": 2.5028,
+   "cover_w": 0.0417,
+   "cover_l": 0.0993,
+   "mean_net1505": -401.0571,
+   "mean_orb": -236.7862,
+   "text": "ATM IV = mid AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "strad",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 159797,
+   "days": 272,
+   "support": 0.075,
+   "win": 0.1312,
+   "lift_w": 1.3116,
+   "lose": 0.2502,
+   "lift_l": 2.5023,
+   "cover_w": 0.0984,
+   "cover_l": 0.1877,
+   "mean_net1505": -376.064,
+   "mean_orb": -241.3289,
+   "text": "ATM straddle since 09:20 = grown AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "pcr",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 149084,
+   "days": 229,
+   "support": 0.07,
+   "win": 0.1291,
+   "lift_w": 1.291,
+   "lose": 0.2497,
+   "lift_l": 2.4969,
+   "cover_w": 0.0904,
+   "cover_l": 0.1748,
+   "mean_net1505": -328.6239,
+   "mean_orb": -247.4482,
+   "text": "put-call OI ratio = high AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "behind",
+     2
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 72452,
+   "days": 270,
+   "support": 0.034,
+   "win": 0.1344,
+   "lift_w": 1.3443,
+   "lose": 0.2493,
+   "lift_l": 2.4926,
+   "cover_w": 0.0457,
+   "cover_l": 0.0848,
+   "mean_net1505": -284.623,
+   "mean_orb": -235.1843,
+   "text": "distance to the level behind = far AND days to expiry = 7+"
+  },
+  {
+   "items": [
+    [
+     "tod",
+     0
+    ],
+    [
+     "dte",
+     3
+    ]
+   ],
+   "size": 2,
+   "n": 30688,
+   "days": 274,
+   "support": 0.0144,
+   "win": 0.1578,
+   "lift_w": 1.5785,
+   "lose": 0.2488,
+   "lift_l": 2.4876,
+   "cover_w": 0.0227,
+   "cover_l": 0.0358,
+   "mean_net1505": -439.8709,
+   "mean_orb": -205.5683,
+   "text": "time of day (entry) = 09:20-09:59 AND days to expiry = 7+"
+  }
+ ],
+ "tree": [
+  {
+   "path": "dte <= 2.5 & tod <= 2.5 & dte <= 0.5 & mnyb <= 3.5",
+   "n": 189060,
+   "rate": 0.2009,
+   "lift": 2.2878,
+   "mean_net1505": -265.6847,
+   "mean_orb": -117.6044,
+   "mean_lose": 0.4644
+  },
+  {
+   "path": "dte <= 2.5 & tod > 2.5 & dte <= 1.5 & dte <= 0.5",
+   "n": 132607,
+   "rate": 0.12,
+   "lift": 1.3661,
+   "mean_net1505": -188.9386,
+   "mean_orb": -106.6695,
+   "mean_lose": 0.5517
+  },
+  {
+   "path": "dte <= 2.5 & tod <= 2.5 & dte > 0.5 & tod <= 1.5",
+   "n": 581058,
+   "rate": 0.1189,
+   "lift": 1.3541,
+   "mean_net1505": -181.0671,
+   "mean_orb": -124.8662,
+   "mean_lose": 0.1384
+  },
+  {
+   "path": "dte <= 2.5 & tod <= 2.5 & dte <= 0.5 & mnyb > 3.5",
+   "n": 75624,
+   "rate": 0.1033,
+   "lift": 1.1766,
+   "mean_net1505": -209.6579,
+   "mean_orb": -156.3599,
+   "mean_lose": 0.8651
+  },
+  {
+   "path": "dte <= 2.5 & tod <= 2.5 & dte > 0.5 & tod > 1.5",
+   "n": 404634,
+   "rate": 0.0834,
+   "lift": 0.9497,
+   "mean_net1505": -168.736,
+   "mean_orb": -126.9356,
+   "mean_lose": 0.0816
+  },
+  {
+   "path": "dte <= 2.5 & tod > 2.5 & dte <= 1.5 & dte > 0.5",
+   "n": 236977,
+   "rate": 0.0604,
+   "lift": 0.6881,
+   "mean_net1505": -127.5881,
+   "mean_orb": -100.1949,
+   "mean_lose": 0.0608
+  },
+  {
+   "path": "dte <= 2.5 & tod > 2.5 & dte > 1.5 & mnyb > 1.5",
+   "n": 146592,
+   "rate": 0.0293,
+   "lift": 0.3333,
+   "mean_net1505": -139.3722,
+   "mean_orb": -116.9853,
+   "mean_lose": 0.0159
+  },
+  {
+   "path": "dte > 2.5 & tod <= 1.5 & vix > 0.5",
+   "n": 53141,
+   "rate": 0.0238,
+   "lift": 0.2712,
+   "mean_net1505": -400.7732,
+   "mean_orb": -240.7267,
+   "mean_lose": 0.0052
+  },
+  {
+   "path": "dte <= 2.5 & tod > 2.5 & dte > 1.5 & mnyb <= 1.5",
+   "n": 109944,
+   "rate": 0.0145,
+   "lift": 0.1654,
+   "mean_net1505": -166.709,
+   "mean_orb": -135.3591,
+   "mean_lose": 0.0055
+  },
+  {
+   "path": "dte > 2.5 & tod <= 1.5 & vix <= 0.5",
+   "n": 46572,
+   "rate": 0.0083,
+   "lift": 0.0944,
+   "mean_net1505": -417.4249,
+   "mean_orb": -222.0931,
+   "mean_lose": 0.0093
+  },
+  {
+   "path": "dte > 2.5 & tod > 1.5 & pcr <= 1.5",
+   "n": 62211,
+   "rate": 0.0081,
+   "lift": 0.0917,
+   "mean_net1505": -346.3622,
+   "mean_orb": -213.9012,
+   "mean_lose": 0.0043
+  },
+  {
+   "path": "dte > 2.5 & tod > 1.5 & pcr > 1.5 & rv > 0.5",
+   "n": 44503,
+   "rate": 0.0029,
+   "lift": 0.0325,
+   "mean_net1505": -330.2562,
+   "mean_orb": -266.8502,
+   "mean_lose": 0.002
+  },
+  {
+   "path": "dte > 2.5 & tod > 1.5 & pcr > 1.5 & rv <= 0.5",
+   "n": 46963,
+   "rate": 0.0002,
+   "lift": 0.0022,
+   "mean_net1505": -251.1976,
+   "mean_orb": -230.709,
+   "mean_lose": 0.0013
+  }
+ ]
+}

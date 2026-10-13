@@ -1,0 +1,60 @@
+id: r24-whatif
+title: R24 what-if table for every CE/PE ATM-3..+3 and entry minute, and back-tracking big winners / losers
+family: patterns-indicators
+date: '2026-10-13'
+doc: research/HUNT_R24_WHATIF_PATTERNS.md
+hypothesis: 'Measurement (Boss, 14 Oct): what buying each call / put would have done after costs, and what the market looked
+  like before the big winners and big losers; patterns ranked by lift and net expectancy, not raw frequency.'
+data_version: 'Dhan lake on Google Drive (gdrive:IraAlgo-data-lake, uploaded 13 Oct 2026): opt_{NIFTY,BANKNIFTY}_WEEK_2021-2026,
+  index_1m NIFTY/BANKNIFTY/INDIAVIX, via research/brain cube v2 + feature store (signature c2c76a808596); what-if table gdrive:IraAlgo-data-lake/derived/r24_whatif
+  (CATALOG.json)'
+period:
+  design: lake sessions 2021-08-02..2026-04-13 with option chains (1,161; 4 blocks from 2021-01-01, block 1 partly without
+    options)
+  holdout: not used (Step 1-2 read design rows only)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- ret_day
+- ret_15m
+- or15_state
+- dist_tpavg_pct
+- pos_in_day_range
+- lvl_above_dist_pct
+- lvl_below_dist_pct
+- lvl_near_count
+- atm_iv
+- atm_iv_chg_15m
+- iv_rank_252
+- oi_build_ce_pct
+- oi_build_pe_pct
+- pcr_oi
+- vix
+- vix_chg_day_pct
+- gap_pct
+- rv_30m
+- adx14
+- day_range_pct
+- em_vix_1d_pct
+- straddle_vs_0920
+- dte_days
+- minute_of_day
+model_or_rule: 'frequent itemsets (1-3 binned items, support >= 0.5%, >= 100 sessions) + a depth-4 tree; labels: net % at
+  the 15:05 exit >= +50 / <= -50'
+settings: research/hunt/r24/PREREG.md (Steps 1-2); results/step1.json, step2.json
+prereg: research/hunt/r24/PREREG.md
+variants_tried: null
+results:
+  summary: '11,662,056 what-if rows (99.9% filled), 2 x 1,282 sessions Aug 2021 - 12 Oct 2026. Design: every option loses
+    on average at every exit (NIFTY Rs -97 at +15 min to Rs -170 at 15:05 per lot; BANKNIFTY Rs -131 to Rs -231); big winners
+    8.8% and big losers 16.8% of 2,129,886 grid rows (1,161 sessions). 66,944 itemsets. Highest winner lifts (3.6-3.8x) are
+    expiry-day ''straddle has grown since 09:20'' states, whose big-loss lift is 2.7-2.8x too; the most common pre-winner
+    states (two+ levels near, NIFTY, high IV) are just as common before losers. Big losers: OTM2-3 on expiry day (90-95% big-loss
+    rate).'
+  costs: app charges at today's rates (STT 0.15%); buy at open + 5 bps + half-spread max(h(moneyness) x price, 1/2/4 ticks
+    by 5-min volume), h = 0.16% ITM/ATM, 0.20% OTM1, 0.25% OTM2, 0.35% OTM3; sells -5 bps (stops -10 bps, 2x ticks) - half-spread;
+    stress 2x half-spread
+holdout_read: false
+verdict: not-a-test
+notes: The table and the brain labels (y_wi_*) are research data for later studies; no rule is adopted from them.

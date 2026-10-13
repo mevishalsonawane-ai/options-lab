@@ -1,0 +1,1076 @@
+{
+ "blocks": [
+  [
+   "2021-01-01",
+   "2022-04-28"
+  ],
+  [
+   "2022-04-29",
+   "2023-08-22"
+  ],
+  [
+   "2023-08-23",
+   "2024-12-17"
+  ],
+  [
+   "2024-12-18",
+   "2026-04-13"
+  ]
+ ],
+ "wf": [
+  {
+   "test_block": 2,
+   "rules": [
+    {
+     "rule": "put-call OI ratio = low AND option = PE -> exit liq",
+     "train_net": 27999.251953125,
+     "test": {
+      "trades": 474,
+      "sessions": 326,
+      "trades_per_day": 1.4539877300613497,
+      "net": 71094.74033495784,
+      "per_day": 218.08202556735534,
+      "win_rate": 0.22784810126582278,
+      "avg_win": 3065.7986203429323,
+      "avg_loss": -710.4139635575925,
+      "green_days": 0.21481481481481482,
+      "traded_days": 270,
+      "worst_day": -3491.3699951171875,
+      "max_dd": -40898.580077171326,
+      "big_reached": 192,
+      "big_cut_short": 163
+     }
+    },
+    {
+     "rule": "own-side OI build-up today = mid AND time of day (entry) = 10:00-11:29 -> exit sweep",
+     "train_net": 5151.1298828125,
+     "test": {
+      "trades": 518,
+      "sessions": 326,
+      "trades_per_day": 1.5889570552147239,
+      "net": -75099.38010549545,
+      "per_day": -230.3661966426241,
+      "win_rate": 0.31467181467181465,
+      "avg_win": 1323.8739868351288,
+      "avg_loss": -819.410816787666,
+      "green_days": 0.33993399339933994,
+      "traded_days": 303,
+      "worst_day": -3193.610107421875,
+      "max_dd": -85545.47996664047,
+      "big_reached": 184,
+      "big_cut_short": 152
+     }
+    },
+    {
+     "rule": "own-side OI build-up today = low AND put-call OI ratio = high -> exit sweep",
+     "train_net": 12786.6171875,
+     "test": {
+      "trades": 450,
+      "sessions": 326,
+      "trades_per_day": 1.3803680981595092,
+      "net": -34936.48992371559,
+      "per_day": -107.16714700526255,
+      "win_rate": 0.3377777777777778,
+      "avg_win": 1200.4494083806087,
+      "avg_loss": -729.5463087166715,
+      "green_days": 0.4022140221402214,
+      "traded_days": 271,
+      "worst_day": -3232.800048828125,
+      "max_dd": -51336.419634103775,
+      "big_reached": 134,
+      "big_cut_short": 110
+     }
+    },
+    {
+     "rule": "distance to the level behind = far AND time of day (entry) = 10:00-11:29 -> exit sweep",
+     "train_net": 25315.552734375,
+     "test": {
+      "trades": 593,
+      "sessions": 326,
+      "trades_per_day": 1.8190184049079754,
+      "net": -91942.97093057632,
+      "per_day": -282.0336531612771,
+      "win_rate": 0.31534569983136596,
+      "avg_win": 1292.7372768626494,
+      "avg_loss": -821.8838465613097,
+      "green_days": 0.35,
+      "traded_days": 320,
+      "worst_day": -3180.0198974609375,
+      "max_dd": -92108.38094043732,
+      "big_reached": 201,
+      "big_cut_short": 169
+     }
+    },
+    {
+     "rule": "distance to the level behind = far AND day's range so far / VIX day move = mid -> exit liq",
+     "train_net": 1008.802734375,
+     "test": {
+      "trades": 506,
+      "sessions": 326,
+      "trades_per_day": 1.5521472392638036,
+      "net": -3825.7115235328674,
+      "per_day": -11.735311421879961,
+      "win_rate": 0.24110671936758893,
+      "avg_win": 1780.2115453305792,
+      "avg_loss": -575.5508334736029,
+      "green_days": 0.2465753424657534,
+      "traded_days": 292,
+      "worst_day": -4122.5098876953125,
+      "max_dd": -56531.36035108566,
+      "big_reached": 164,
+      "big_cut_short": 134
+     }
+    },
+    {
+     "rule": "other-side OI build-up today = high AND time of day (entry) = 10:00-11:29 -> exit sweep",
+     "train_net": 27007.05078125,
+     "test": {
+      "trades": 456,
+      "sessions": 326,
+      "trades_per_day": 1.3987730061349692,
+      "net": -64299.97895669937,
+      "per_day": -197.23919925367906,
+      "win_rate": 0.3092105263157895,
+      "avg_win": 1347.275255893139,
+      "avg_loss": -807.1929842464508,
+      "green_days": 0.36162361623616235,
+      "traded_days": 271,
+      "worst_day": -3215.60009765625,
+      "max_dd": -72932.28899240494,
+      "big_reached": 159,
+      "big_cut_short": 130
+     }
+    },
+    {
+     "rule": "distance from the day's average price, with the option = ahead AND time of day (entry) = 10:00-11:29 -> exit sweep",
+     "train_net": 21415.388671875,
+     "test": {
+      "trades": 639,
+      "sessions": 326,
+      "trades_per_day": 1.960122699386503,
+      "net": -31073.00057077408,
+      "per_day": -95.31595267108612,
+      "win_rate": 0.3411580594679186,
+      "avg_win": 1326.5442188857892,
+      "avg_loss": -760.7117346505371,
+      "green_days": 0.38650306748466257,
+      "traded_days": 326,
+      "worst_day": -3223.1700439453125,
+      "max_dd": -57552.54070472717,
+      "big_reached": 226,
+      "big_cut_short": 187
+     }
+    },
+    {
+     "rule": "place in the day's range, with the option = top AND put-call OI ratio = high AND option = CE -> exit liq",
+     "train_net": 59335.7421875,
+     "test": {
+      "trades": 423,
+      "sessions": 326,
+      "trades_per_day": 1.2975460122699387,
+      "net": 15822.840279817581,
+      "per_day": 48.53631987674105,
+      "win_rate": 0.25295508274231676,
+      "avg_win": 1955.0989767546967,
+      "avg_loss": -611.9390830156169,
+      "green_days": 0.24806201550387597,
+      "traded_days": 258,
+      "worst_day": -4697.409912109375,
+      "max_dd": -34875.70977687836,
+      "big_reached": 139,
+      "big_cut_short": 107
+     }
+    }
+   ],
+   "test_total": -214259.95139601827
+  },
+  {
+   "test_block": 3,
+   "rules": [
+    {
+     "rule": "put-call OI ratio = low AND option = PE -> exit liq",
+     "train_net": 92528.4453125,
+     "test": {
+      "trades": 494,
+      "sessions": 326,
+      "trades_per_day": 1.5153374233128833,
+      "net": 59434.16912508011,
+      "per_day": 182.3134022241721,
+      "win_rate": 0.1902834008097166,
+      "avg_win": 2941.1440339595715,
+      "avg_loss": -542.583425167799,
+      "green_days": 0.2089041095890411,
+      "traded_days": 292,
+      "worst_day": -5149.39013671875,
+      "max_dd": -34492.559452056885,
+      "big_reached": 204,
+      "big_cut_short": 165
+     }
+    },
+    {
+     "rule": "ATM IV = high AND opening gap, with the option = against -> exit liq",
+     "train_net": 56180.46484375,
+     "test": {
+      "trades": 93,
+      "sessions": 326,
+      "trades_per_day": 0.2852760736196319,
+      "net": 19814.11936187744,
+      "per_day": 60.77950724502283,
+      "win_rate": 0.16129032258064516,
+      "avg_win": 4248.378630574544,
+      "avg_loss": -562.9687191889836,
+      "green_days": 0.14285714285714285,
+      "traded_days": 77,
+      "worst_day": -3123.1300048828125,
+      "max_dd": -18625.390228271484,
+      "big_reached": 46,
+      "big_cut_short": 39
+     }
+    },
+    {
+     "rule": "levels within 0.2% = two+ AND ATM IV = high AND own-side OI build-up today = high -> exit liq",
+     "train_net": 2935.9970703125,
+     "test": {
+      "trades": 113,
+      "sessions": 326,
+      "trades_per_day": 0.34662576687116564,
+      "net": -1609.1710033416748,
+      "per_day": -4.936107372213726,
+      "win_rate": 0.061946902654867256,
+      "avg_win": 6884.218426976885,
+      "avg_loss": -469.7990565299988,
+      "green_days": 0.06060606060606061,
+      "traded_days": 99,
+      "worst_day": -2019.0599975585938,
+      "max_dd": -28742.259881973267,
+      "big_reached": 55,
+      "big_cut_short": 51
+     }
+    },
+    {
+     "rule": "other-side OI build-up today = high AND days to expiry = expiry day -> exit liq",
+     "train_net": 33543.12109375,
+     "test": {
+      "trades": 135,
+      "sessions": 326,
+      "trades_per_day": 0.41411042944785276,
+      "net": -29569.840025901794,
+      "per_day": -90.70503075429998,
+      "win_rate": 0.05925925925925926,
+      "avg_win": 2687.2050095796585,
+      "avg_loss": -402.10614253967765,
+      "green_days": 0.06153846153846154,
+      "traded_days": 130,
+      "worst_day": -1648.8499755859375,
+      "max_dd": -29569.840025901794,
+      "big_reached": 77,
+      "big_cut_short": 73
+     }
+    },
+    {
+     "rule": "levels within 0.2% = two+ AND days to expiry = expiry day AND option = CE -> exit liq",
+     "train_net": 5276.6806640625,
+     "test": {
+      "trades": 135,
+      "sessions": 326,
+      "trades_per_day": 0.41411042944785276,
+      "net": 25896.939586639404,
+      "per_day": 79.43846498969143,
+      "win_rate": 0.0962962962962963,
+      "avg_win": 5516.069194646982,
+      "avg_loss": -375.50786839156854,
+      "green_days": 0.1,
+      "traded_days": 130,
+      "worst_day": -1201.2099609375,
+      "max_dd": -9781.819900512695,
+      "big_reached": 66,
+      "big_cut_short": 55
+     }
+    },
+    {
+     "rule": "place in the day's range, with the option = top AND days to expiry = expiry day -> exit liq",
+     "train_net": 62554.2265625,
+     "test": {
+      "trades": 135,
+      "sessions": 326,
+      "trades_per_day": 0.41411042944785276,
+      "net": -3528.6898012161255,
+      "per_day": -10.824201844221244,
+      "win_rate": 0.0962962962962963,
+      "avg_win": 3576.0823102364175,
+      "avg_loss": -409.98163798597994,
+      "green_days": 0.1,
+      "traded_days": 130,
+      "worst_day": -1565.4000244140625,
+      "max_dd": -13777.749834060669,
+      "big_reached": 63,
+      "big_cut_short": 55
+     }
+    },
+    {
+     "rule": "own-side OI build-up today = mid AND days to expiry = expiry day -> exit liq",
+     "train_net": 27557.2109375,
+     "test": {
+      "trades": 135,
+      "sessions": 326,
+      "trades_per_day": 0.41411042944785276,
+      "net": 8029.789451599121,
+      "per_day": 24.63125598650037,
+      "win_rate": 0.08888888888888889,
+      "avg_win": 4703.948289871216,
+      "avg_loss": -393.63894330776805,
+      "green_days": 0.09230769230769231,
+      "traded_days": 130,
+      "worst_day": -1079.5599975585938,
+      "max_dd": -12829.639896392822,
+      "big_reached": 79,
+      "big_cut_short": 71
+     }
+    },
+    {
+     "rule": "room to the next level ahead = lots AND days to expiry = expiry day -> exit liq",
+     "train_net": 67865.1640625,
+     "test": {
+      "trades": 133,
+      "sessions": 326,
+      "trades_per_day": 0.40797546012269936,
+      "net": 6107.40034198761,
+      "per_day": 18.734356877262606,
+      "win_rate": 0.09022556390977443,
+      "avg_win": 4647.3908584912615,
+      "avg_loss": -410.4238839661779,
+      "green_days": 0.09375,
+      "traded_days": 128,
+      "worst_day": -1439.1800537109375,
+      "max_dd": -14108.470016479492,
+      "big_reached": 72,
+      "big_cut_short": 63
+     }
+    }
+   ],
+   "test_total": 84574.71703672409
+  },
+  {
+   "test_block": 4,
+   "rules": [
+    {
+     "rule": "put-call OI ratio = low AND option = PE -> exit liq",
+     "train_net": 143984.53125,
+     "test": {
+      "trades": 361,
+      "sessions": 326,
+      "trades_per_day": 1.107361963190184,
+      "net": -26898.53879547119,
+      "per_day": -82.51085520083187,
+      "win_rate": 0.21052631578947367,
+      "avg_win": 3689.5418625128896,
+      "avg_loss": -1078.2586678822836,
+      "green_days": 0.21755725190839695,
+      "traded_days": 262,
+      "worst_day": -5083.630126953125,
+      "max_dd": -94067.60953712463,
+      "big_reached": 110,
+      "big_cut_short": 89
+     }
+    },
+    {
+     "rule": "distance to the level behind = far AND ATM IV = high -> exit liq",
+     "train_net": 32589.08984375,
+     "test": {
+      "trades": 147,
+      "sessions": 326,
+      "trades_per_day": 0.450920245398773,
+      "net": -19951.1090593338,
+      "per_day": -61.19972104090123,
+      "win_rate": 0.1292517006802721,
+      "avg_win": 8212.504823785079,
+      "avg_loss": -1374.911724306643,
+      "green_days": 0.1415929203539823,
+      "traded_days": 113,
+      "worst_day": -8015.3701171875,
+      "max_dd": -91600.27974414825,
+      "big_reached": 54,
+      "big_cut_short": 44
+     }
+    },
+    {
+     "rule": "ATM IV = high AND opening gap, with the option = against -> exit liq",
+     "train_net": 101983.2109375,
+     "test": {
+      "trades": 104,
+      "sessions": 326,
+      "trades_per_day": 0.31901840490797545,
+      "net": -68320.24024105072,
+      "per_day": -209.57128908297767,
+      "win_rate": 0.16346153846153846,
+      "avg_win": 3597.083551575156,
+      "avg_loss": -1488.168512848602,
+      "green_days": 0.14634146341463414,
+      "traded_days": 82,
+      "worst_day": -8326.829833984375,
+      "max_dd": -93482.29074764252,
+      "big_reached": 40,
+      "big_cut_short": 36
+     }
+    },
+    {
+     "rule": "opening gap, with the option = against AND days to expiry = 1-2 -> exit liq",
+     "train_net": 64384.71875,
+     "test": {
+      "trades": 65,
+      "sessions": 326,
+      "trades_per_day": 0.19938650306748465,
+      "net": -17888.449699401855,
+      "per_day": -54.87254509018974,
+      "win_rate": 0.15384615384615385,
+      "avg_win": 5545.681038665772,
+      "avg_loss": -1333.5501833829012,
+      "green_days": 0.17857142857142858,
+      "traded_days": 56,
+      "worst_day": -4134.9599609375,
+      "max_dd": -25339.559684753418,
+      "big_reached": 31,
+      "big_cut_short": 25
+     }
+    },
+    {
+     "rule": "other-side OI build-up today = high AND days to expiry = expiry day -> exit liq",
+     "train_net": 2085.94140625,
+     "test": {
+      "trades": 80,
+      "sessions": 326,
+      "trades_per_day": 0.24539877300613497,
+      "net": -46132.1199388504,
+      "per_day": -141.5095703645718,
+      "win_rate": 0.0375,
+      "avg_win": 2219.8566691080728,
+      "avg_loss": -685.6063629373327,
+      "green_days": 0.04411764705882353,
+      "traded_days": 68,
+      "worst_day": -2310.1700439453125,
+      "max_dd": -46132.1199388504,
+      "big_reached": 48,
+      "big_cut_short": 47
+     }
+    },
+    {
+     "rule": "days to expiry = expiry day AND option = CE -> exit liq",
+     "train_net": 15809.796875,
+     "test": {
+      "trades": 85,
+      "sessions": 326,
+      "trades_per_day": 0.2607361963190184,
+      "net": -17226.97930908203,
+      "per_day": -52.84349481313507,
+      "win_rate": 0.07058823529411765,
+      "avg_win": 7757.623423258464,
+      "avg_loss": -807.2496183371242,
+      "green_days": 0.08450704225352113,
+      "traded_days": 71,
+      "worst_day": -2968.8299560546875,
+      "max_dd": -34091.6594543457,
+      "big_reached": 52,
+      "big_cut_short": 49
+     }
+    },
+    {
+     "rule": "own-side OI build-up today = high AND days to expiry = expiry day -> exit liq",
+     "train_net": 31864.11328125,
+     "test": {
+      "trades": 80,
+      "sessions": 326,
+      "trades_per_day": 0.24539877300613497,
+      "net": 10491.458522081375,
+      "per_day": 32.182388104544096,
+      "win_rate": 0.0625,
+      "avg_win": 12383.105742263793,
+      "avg_loss": -685.6542691898346,
+      "green_days": 0.07352941176470588,
+      "traded_days": 68,
+      "worst_day": -1920.6500244140625,
+      "max_dd": -22220.330907821655,
+      "big_reached": 48,
+      "big_cut_short": 44
+     }
+    },
+    {
+     "rule": "place in the day's range, with the option = top AND days to expiry = expiry day -> exit liq",
+     "train_net": 65219.8125,
+     "test": {
+      "trades": 85,
+      "sessions": 326,
+      "trades_per_day": 0.2607361963190184,
+      "net": -16387.349727630615,
+      "per_day": -50.26794394978716,
+      "win_rate": 0.08235294117647059,
+      "avg_win": 6791.741473061697,
+      "avg_loss": -819.6094876802885,
+      "green_days": 0.08450704225352113,
+      "traded_days": 71,
+      "worst_day": -2908.030029296875,
+      "max_dd": -21138.790157318115,
+      "big_reached": 50,
+      "big_cut_short": 44
+     }
+    }
+   ],
+   "test_total": -202313.32824873924
+  }
+ ],
+ "final": [
+  {
+   "id": "r24-p1",
+   "items": [
+    [
+     "pcr",
+     0
+    ],
+    [
+     "side",
+     0
+    ]
+   ],
+   "rule": "put-call OI ratio = low AND option = PE -> exit liq",
+   "family": "liq",
+   "lift_w": 1.4266224896885387,
+   "support": 0.16663098400571674,
+   "days": 1025,
+   "size": 2,
+   "design": {
+    "trades": 1775,
+    "sessions": 1305,
+    "trades_per_day": 1.3601532567049808,
+    "net": 143778.9674411118,
+    "per_day": 110.17545397786346,
+    "win_rate": 0.21014084507042252,
+    "avg_win": 3247.381284210781,
+    "avg_loss": -761.4081680239012,
+    "green_days": 0.21067683508102955,
+    "traded_days": 1049,
+    "worst_day": -5083.630126953125,
+    "max_dd": -92382.29015684128,
+    "big_reached": 699,
+    "big_cut_short": 573
+   },
+   "design_x2_net": 77751.9806548655,
+   "families_design": {
+    "orb": -36856.77734375,
+    "sweep": -65511.546875,
+    "liq": 143778.984375
+   },
+   "blocks": [
+    8368.617440402508,
+    63498.0797842443,
+    84993.3498134613,
+    -13081.079596996307
+   ],
+   "design_twin_p": 0.000999000999000999,
+   "design_twin_mean": -164115.140625
+  },
+  {
+   "id": "r24-p2",
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "iv",
+     2
+    ],
+    [
+     "oi_own",
+     2
+    ]
+   ],
+   "rule": "levels within 0.2% = two+ AND ATM IV = high AND own-side OI build-up today = high -> exit liq",
+   "family": "liq",
+   "lift_w": 1.5466945465877462,
+   "support": 0.1243794268801241,
+   "days": 558,
+   "size": 3,
+   "design": {
+    "trades": 817,
+    "sessions": 1305,
+    "trades_per_day": 0.6260536398467433,
+    "net": 7116.856463611126,
+    "per_day": 5.453529857173277,
+    "win_rate": 0.18727050183598531,
+    "avg_win": 3301.941745739357,
+    "avg_loss": -750.1208292688411,
+    "green_days": 0.18149466192170818,
+    "traded_days": 562,
+    "worst_day": -4658.829833984375,
+    "max_dd": -67525.62203598022,
+    "big_reached": 343,
+    "big_cut_short": 290
+   },
+   "design_x2_net": -8531.28111422062,
+   "families_design": {
+    "orb": -168181.171875,
+    "sweep": -204196.3125,
+    "liq": 7116.86328125
+   },
+   "blocks": [
+    1588.5486326217651,
+    33388.90035647154,
+    -3586.6905670166016,
+    -24273.901958465576
+   ],
+   "design_twin_p": 0.001998001998001998,
+   "design_twin_mean": -135255.625
+  },
+  {
+   "id": "r24-p3",
+   "items": [
+    [
+     "iv",
+     2
+    ],
+    [
+     "gap",
+     0
+    ]
+   ],
+   "rule": "ATM IV = high AND opening gap, with the option = against -> exit liq",
+   "family": "liq",
+   "lift_w": 1.4934521845589885,
+   "support": 0.12639033262813126,
+   "days": 470,
+   "size": 2,
+   "design": {
+    "trades": 749,
+    "sessions": 1305,
+    "trades_per_day": 0.5739463601532567,
+    "net": 24947.078851222992,
+    "per_day": 19.116535518178537,
+    "win_rate": 0.18691588785046728,
+    "avg_win": 4254.947217461041,
+    "avg_loss": -937.1847809414166,
+    "green_days": 0.18633540372670807,
+    "traded_days": 483,
+    "worst_day": -9356.64990234375,
+    "max_dd": -118513.47149515152,
+    "big_reached": 335,
+    "big_cut_short": 278
+   },
+   "design_x2_net": -22019.498293727636,
+   "families_design": {
+    "orb": -24468.630859375,
+    "sweep": -43956.3984375,
+    "liq": 24947.06640625
+   },
+   "blocks": [
+    15348.71780204773,
+    52570.96278953552,
+    40936.509408950806,
+    -83909.11114931107
+   ],
+   "design_twin_p": 0.03796203796203796,
+   "design_twin_mean": -70178.2421875
+  },
+  {
+   "id": "r24-p4",
+   "items": [
+    [
+     "near",
+     2
+    ],
+    [
+     "dte",
+     0
+    ],
+    [
+     "side",
+     1
+    ]
+   ],
+   "rule": "levels within 0.2% = two+ AND days to expiry = expiry day AND option = CE -> exit liq",
+   "family": "liq",
+   "lift_w": 1.7422372560568868,
+   "support": 0.09148799513213383,
+   "days": 307,
+   "size": 3,
+   "design": {
+    "trades": 430,
+    "sessions": 1305,
+    "trades_per_day": 0.32950191570881227,
+    "net": 25814.550844192505,
+    "per_day": 19.7812650147069,
+    "win_rate": 0.08837209302325581,
+    "avg_win": 6067.941335276553,
+    "avg_loss": -522.3653568783585,
+    "green_days": 0.11074918566775244,
+    "traded_days": 307,
+    "worst_day": -3060.4599609375,
+    "max_dd": -43633.71992492676,
+    "big_reached": 233,
+    "big_cut_short": 205
+   },
+   "design_x2_net": 6526.489807605743,
+   "families_design": {
+    "orb": -66425.2890625,
+    "sweep": -87336.5703125,
+    "liq": 25814.552734375
+   },
+   "blocks": [
+    -9162.099740982056,
+    14438.78012084961,
+    25896.939586639404,
+    -5359.069122314453
+   ],
+   "design_twin_p": 0.04195804195804196,
+   "design_twin_mean": -30666.28515625
+  },
+  {
+   "id": "r24-p5",
+   "items": [
+    [
+     "gap",
+     0
+    ],
+    [
+     "dte",
+     1
+    ]
+   ],
+   "rule": "opening gap, with the option = against AND days to expiry = 1-2 -> exit liq",
+   "family": "liq",
+   "lift_w": 1.4373680813282848,
+   "support": 0.11084818624095374,
+   "days": 341,
+   "size": 2,
+   "design": {
+    "trades": 513,
+    "sessions": 1305,
+    "trades_per_day": 0.3931034482758621,
+    "net": 33124.870285987854,
+    "per_day": 25.38304236474165,
+    "win_rate": 0.18128654970760233,
+    "avg_win": 3959.4931319657194,
+    "avg_loss": -797.8761690162477,
+    "green_days": 0.18181818181818182,
+    "traded_days": 341,
+    "worst_day": -4134.9599609375,
+    "max_dd": -48875.439953804016,
+    "big_reached": 228,
+    "big_cut_short": 189
+   },
+   "design_x2_net": -1668.7111515700817,
+   "families_design": {
+    "orb": 12090.509765625,
+    "sweep": -3371.8984375,
+    "liq": 33124.859375
+   },
+   "blocks": [
+    -25142.960313796997,
+    56964.850536346436,
+    25517.38990688324,
+    -24214.409843444824
+   ],
+   "design_twin_p": 0.056943056943056944,
+   "design_twin_mean": -24826.60546875
+  },
+  {
+   "id": "r24-p6",
+   "items": [
+    [
+     "oi_other",
+     2
+    ],
+    [
+     "rv",
+     2
+    ]
+   ],
+   "rule": "other-side OI build-up today = high AND realised vol, 30 min = high -> exit liq",
+   "family": "liq",
+   "lift_w": 1.418460761448398,
+   "support": 0.10980071233859465,
+   "days": 865,
+   "size": 2,
+   "design": {
+    "trades": 1247,
+    "sessions": 1305,
+    "trades_per_day": 0.9555555555555556,
+    "net": 9765.859055260196,
+    "per_day": 7.483416900582526,
+    "win_rate": 0.20529270248596632,
+    "avg_win": 2885.604216805812,
+    "avg_loss": -735.5689409152651,
+    "green_days": 0.20949074074074073,
+    "traded_days": 864,
+    "worst_day": -5121.68994140625,
+    "max_dd": -89126.82946207188,
+    "big_reached": 462,
+    "big_cut_short": 370
+   },
+   "design_x2_net": -37324.44792192429,
+   "families_design": {
+    "orb": -89014.203125,
+    "sweep": -70229.9453125,
+    "liq": 9765.853515625
+   },
+   "blocks": [
+    -239.33078694343567,
+    15708.610090315342,
+    -17506.88013847731,
+    11803.4598903656
+   ],
+   "design_twin_p": 0.7592407592407593,
+   "design_twin_mean": 58145.2890625
+  },
+  {
+   "id": "r24-p7",
+   "items": [
+    [
+     "room",
+     1
+    ],
+    [
+     "iv",
+     2
+    ]
+   ],
+   "rule": "room to the next level ahead = some AND ATM IV = high -> exit liq",
+   "family": "liq",
+   "lift_w": 1.3631275809547756,
+   "support": 0.10302617135377198,
+   "days": 615,
+   "size": 2,
+   "design": {
+    "trades": 1015,
+    "sessions": 1305,
+    "trades_per_day": 0.7777777777777778,
+    "net": 51328.628826379776,
+    "per_day": 39.33228262557837,
+    "win_rate": 0.15960591133004925,
+    "avg_win": 4639.152832009174,
+    "avg_loss": -820.8840913940287,
+    "green_days": 0.17777777777777778,
+    "traded_days": 630,
+    "worst_day": -7600.7000732421875,
+    "max_dd": -95247.6608953476,
+    "big_reached": 439,
+    "big_cut_short": 363
+   },
+   "design_x2_net": 10074.36863937974,
+   "families_design": {
+    "orb": -57432.3515625,
+    "sweep": -131330.09375,
+    "liq": 51328.62890625
+   },
+   "blocks": [
+    3228.0893778800964,
+    38139.179794073105,
+    23721.2794342041,
+    -13759.919779777527
+   ],
+   "design_twin_p": 0.008991008991008992,
+   "design_twin_mean": -95291.6953125
+  },
+  {
+   "id": "r24-p8",
+   "items": [
+    [
+     "behind",
+     2
+    ],
+    [
+     "ivrank",
+     2
+    ]
+   ],
+   "rule": "distance to the level behind = far AND IV rank (252 sessions) = high -> exit liq",
+   "family": "liq",
+   "lift_w": 1.3897441448907588,
+   "support": 0.09944898459354162,
+   "days": 558,
+   "size": 2,
+   "design": {
+    "trades": 826,
+    "sessions": 1305,
+    "trades_per_day": 0.6329501915708812,
+    "net": 49439.40414983034,
+    "per_day": 37.88460088109605,
+    "win_rate": 0.15375302663438256,
+    "avg_win": 4859.623421066859,
+    "avg_loss": -812.2071106232628,
+    "green_days": 0.16145833333333334,
+    "traded_days": 576,
+    "worst_day": -8015.3701171875,
+    "max_dd": -99001.79989171028,
+    "big_reached": 330,
+    "big_cut_short": 272
+   },
+   "design_x2_net": 23609.761104404926,
+   "families_design": {
+    "orb": -86827.1875,
+    "sweep": -108284.9375,
+    "liq": 49439.390625
+   },
+   "blocks": [
+    0.0,
+    12217.22106462717,
+    43739.09103965759,
+    -6516.907954454422
+   ],
+   "design_twin_p": 0.00999000999000999,
+   "design_twin_mean": -62454.90234375
+  }
+ ],
+ "cuts": {
+  "trend|NIFTY": [
+   -0.16979695856571198,
+   0.16979695856571198
+  ],
+  "trend|BANKNIFTY": [
+   -0.21355979144573212,
+   0.21355979144573212
+  ],
+  "mom15|NIFTY": [
+   -0.03787505626678467,
+   0.03787505626678467
+  ],
+  "mom15|BANKNIFTY": [
+   -0.04692048331101736,
+   0.04692048331101734
+  ],
+  "vwapx|NIFTY": [
+   -0.07186996936798096,
+   0.07186996936798096
+  ],
+  "vwapx|BANKNIFTY": [
+   -0.08556769788265228,
+   0.08556769788265228
+  ],
+  "pos|NIFTY": [
+   0.2967420816421509,
+   0.7032579183578491
+  ],
+  "pos|BANKNIFTY": [
+   0.3058501680692037,
+   0.6941498319307963
+  ],
+  "room|NIFTY": [
+   0.01882581536968549,
+   0.053578556825717286
+  ],
+  "room|BANKNIFTY": [
+   0.020004000514745712,
+   0.057278880228598894
+  ],
+  "behind|NIFTY": [
+   0.01882581536968549,
+   0.053578556825717286
+  ],
+  "behind|BANKNIFTY": [
+   0.020004000514745712,
+   0.057278880228598894
+  ],
+  "iv|NIFTY": [
+   13.239471435546875,
+   18.343093872070312
+  ],
+  "iv|BANKNIFTY": [
+   15.463311195373535,
+   22.604900360107422
+  ],
+  "ivchg|NIFTY": [
+   -0.17386265099048615,
+   0.05177129805088043
+  ],
+  "ivchg|BANKNIFTY": [
+   -0.151970441142718,
+   0.04560276741782823
+  ],
+  "ivrank|NIFTY": [
+   3.3554892539978027,
+   5.15329647064209
+  ],
+  "ivrank|BANKNIFTY": [
+   3.7181735038757324,
+   5.559321403503418
+  ],
+  "oi_own|NIFTY": [
+   42.99814351399739,
+   93.80740610758463
+  ],
+  "oi_own|BANKNIFTY": [
+   42.3132578531901,
+   108.52404276529947
+  ],
+  "oi_other|NIFTY": [
+   42.99814351399739,
+   93.80740610758463
+  ],
+  "oi_other|BANKNIFTY": [
+   42.3132578531901,
+   108.52404276529947
+  ],
+  "pcr|NIFTY": [
+   0.7733843922615051,
+   0.9022149046262106
+  ],
+  "pcr|BANKNIFTY": [
+   0.8251026272773743,
+   0.9650768637657166
+  ],
+  "vix|NIFTY": [
+   13.069999694824219,
+   16.040000915527344
+  ],
+  "vix|BANKNIFTY": [
+   13.069999694824219,
+   16.040000915527344
+  ],
+  "vixchg|NIFTY": [
+   -0.8941878080368042,
+   1.8387552499771118
+  ],
+  "vixchg|BANKNIFTY": [
+   -0.8910212516784668,
+   1.8436578512191772
+  ],
+  "gap|NIFTY": [
+   -0.16404713690280914,
+   0.16404713690280914
+  ],
+  "gap|BANKNIFTY": [
+   -0.19008634984493256,
+   0.19008634984493256
+  ],
+  "rv|NIFTY": [
+   0.3885977566242218,
+   0.5863097310066223
+  ],
+  "rv|BANKNIFTY": [
+   0.5191214084625244,
+   0.7706041932106018
+  ],
+  "adx|NIFTY": [
+   19.038211822509766,
+   27.545061111450188
+  ],
+  "adx|BANKNIFTY": [
+   18.426598866780598,
+   26.752717971801754
+  ],
+  "used|NIFTY": [
+   0.6648493409156799,
+   0.9637244939804077
+  ],
+  "used|BANKNIFTY": [
+   0.8588694930076599,
+   1.2540061473846436
+  ],
+  "strad|NIFTY": [
+   -0.11777698248624802,
+   -0.03942486271262169
+  ],
+  "strad|BANKNIFTY": [
+   -0.08799002319574356,
+   -0.02404107215503852
+  ]
+ }
+}
