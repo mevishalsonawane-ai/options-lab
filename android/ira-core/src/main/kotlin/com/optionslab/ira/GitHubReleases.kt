@@ -115,21 +115,39 @@ class GitHubReleases(private val http: Http, private val token: String,
      * Fails closed: an answer not understood counts as "reaches". A rate limit is an error, not an answer.
      */
     fun reachesCode(): Boolean {
+        lastProbe = null
         val r = http.send(Request("GET", codeBase, headers()))
-        if (r.code == 404) return false
+        if (r.code == 404) { lastProbe = answer("GET", r); return false }
         // Any other refusal is ambiguous (SSO, a policy): taken as "reaches", so it fails closed. A rate limit is an error.
-        if (r.code == 403 || r.code == 401) { val f = failure(r); if (f.code == 429) throw f; return true }
+        if (r.code == 403 || r.code == 401) { val f = failure(r); if (f.code == 429) throw f; lastProbe = answer("GET", r); return true }
         if (r.code != 200) throw failure(r)
-        if (obj(r)["private"] != false) return true
+        if (obj(r)["private"] != false) { lastProbe = "GET 200: options-lab is private or did not say"; return true }
         return probeWrite()
     }
+
+    /**
+     * GitHub's answer that decided the last [reachesCode] ("probe 403: Resource not accessible by personal access token"),
+     * or null before one / when it threw. The status and GitHub's own words, cut to 120 characters and redacted: never the
+     * token. Shown with a refusal so Boss can tell why (13 Oct review).
+     */
+    @Volatile var lastProbe: String? = null
+        private set
+
+    private fun message(r: Response): String? =
+        runCatching { (Json.parse(r.text) as? Map<*, *>)?.get("message")?.toString() }.getOrNull()
+
+    private fun answer(step: String, r: Response): String =
+        CloudSync.redact("$step ${r.code}: ${message(r)?.take(120) ?: "(no message)"}")
 
     /**
      * Whether the token may write to the public code repository, found by a write GitHub can never carry out (13 Oct):
      * POST /repos/{owner}/options-lab/git/refs making branch [PROBE_REF] at the all-zero sha [ZERO_SHA]. No object has that
      * sha, so no branch is ever made, whatever the token may do. GitHub checks the token's access before the request
-     * itself (REST docs, "Create a reference", and the fine-grained token docs):
-     *  - 403 ("Resource not accessible by personal access token") or 404: no write access → false;
+     * itself (REST docs, "Create a reference", and the fine-grained token docs). Only GitHub's own words for "no access"
+     * count as no access (13 Oct review); every other refusal fails closed:
+     *  - 403 whose message is, or starts with, "Resource not accessible by personal access token" → false;
+     *  - 404 whose message is "Not Found" → false;
+     *  - any other 403/404 (SAML enforcement, an archived repository, no body, …) → true;
      *  - 422 ("Object does not exist", or a ruleset refusing the name) or 409 (Conflict, the docs' other error): it got past
      *    the access check → true;
      *  - 200/201 (a ref made: should be impossible) → true;
@@ -139,13 +157,16 @@ class GitHubReleases(private val http: Http, private val token: String,
     private fun probeWrite(): Boolean {
         val body = Json.write(mapOf("ref" to PROBE_REF, "sha" to ZERO_SHA)).toByteArray(Charsets.UTF_8)
         val r = http.send(Request("POST", "$codeBase/git/refs", headers(), Body.of(body, "application/json")))
-        return when (r.code) {
-            403 -> { val f = failure(r); if (f.code == 429) throw f; false }
-            404 -> false
+        val said = message(r)
+        val reaches = when (r.code) {
+            403 -> { val f = failure(r); if (f.code == 429) throw f; said?.startsWith(NO_ACCESS_403) != true }
+            404 -> said != "Not Found"
             401, 429 -> throw failure(r)
             409, 422 -> true
             else -> true                    // not understood: fails closed
         }
+        lastProbe = answer("probe", r)
+        return reaches
     }
 
     private val codeBase get() = "$api/repos/${CloudSync.OWNER}/${CloudSync.CODE_REPO}"
@@ -249,5 +270,7 @@ class GitHubReleases(private val http: Http, private val token: String,
         const val PROBE_REF = "refs/heads/__iraalgo_token_probe__"
         /** The all-zero sha: no commit has it, so a ref to it can never be created. */
         const val ZERO_SHA = "0000000000000000000000000000000000000000"
+        /** GitHub's words when a fine-grained token has no write access to a repository (the probe's only accepted 403). */
+        const val NO_ACCESS_403 = "Resource not accessible by personal access token"
     }
 }

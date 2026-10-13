@@ -153,7 +153,10 @@ object GitHubSync {
             val gh = GitHubReleases(http, t, owner, name)
             val user = gh.user()
             if (!gh.canSeeRepo()) throw IOException("This token cannot see $owner/$name. Make it for that repository only, with Contents: read and write.")
-            if (gh.reachesCode()) throw IOException("This token can also reach ${CloudSync.CODE_REPO} (the app's code). Delete it on GitHub and make one for $owner/$name ONLY.")
+            // GitHub's answer that decided is added (13 Oct review), so a refusal Boss did not expect can be diagnosed. It is
+            // GitHub's status and words only, cut and redacted ([GitHubReleases.lastProbe]): never the token.
+            if (gh.reachesCode()) throw IOException("This token can also reach ${CloudSync.CODE_REPO} (the app's code). Delete it on GitHub and make one for $owner/$name ONLY." +
+                (gh.lastProbe?.let { " (GitHub said: $it)" } ?: ""))
             val kept = CloudSync.expiryKept(expiry, user.expires)
             val m = HashMap<String, Any?>()
             m[K_TOKEN_PIN] = SecretBox.seal(t, pin)
@@ -300,7 +303,13 @@ object GitHubSync {
         try {
             // A token that can reach options-lab (its access widened on GitHub after it was pasted) is refused before anything
             // is sent: recorded as refused (403), so the automatic runs pause and Problems found says "GitHub token invalid".
-            if (runCatching { gh.reachesCode() }.getOrDefault(false)) {
+            // When the check itself fails (a rate limit, no network), nothing is sent this run (13 Oct review: it used to
+            // go on as if the answer were "no"). That is not a refused token: noted in diagnostics only, the runs not paused.
+            val reaches = try { gh.reachesCode() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                runCatching { Diag.record("github", CloudSync.redact("upload skipped this time: the ${CloudSync.CODE_REPO} check failed (${e.message?.take(120) ?: e.javaClass.simpleName})")) }
+                return false
+            }
+            if (reaches) {
                 note(CloudSync.Last(System.currentTimeMillis(), false, 0, "upload",
                     "the token can reach ${CloudSync.CODE_REPO}: make one for ${owner}/${name} only", 403))
                 runCatching { check() }

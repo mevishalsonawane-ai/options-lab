@@ -57,7 +57,10 @@ class GitHubSyncTest : RobolectricTest() {
                     if (seesRepo) json(200, mapOf("id" to 1, "private" to true)) else json(404, mapOf("message" to "Not Found"))
                 u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab" -> codeRepo?.let { json(200, it) } ?: json(404, mapOf("message" to "Not Found"))
                 r.method == "POST" && u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab/git/refs" ->
-                    json(probeCode, mapOf("message" to if (probeCode == 422) "Object does not exist" else "Resource not accessible by personal access token"))
+                    json(probeCode, mapOf("message" to when (probeCode) {
+                        422 -> "Object does not exist"; 404 -> "Not Found"; 429 -> "Too many requests"
+                        else -> "Resource not accessible by personal access token"
+                    }))
                 u.endsWith("/releases/tags/phone-backup") -> if (releaseMade) json(200, mapOf("id" to 7)) else json(404, mapOf("message" to "Not Found"))
                 r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/IraAlgo/releases") -> { releaseMade = true; json(201, mapOf("id" to 7)) }
                 u.contains("/releases/7/assets?per_page") -> json(200, assets)
@@ -196,7 +199,50 @@ class GitHubSyncTest : RobolectricTest() {
         // A token that can write there (the probe gets past GitHub's access check) is refused.
         gh.probeCode = 422
         try { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray()); fail() }
-        catch (e: IOException) { assertTrue(e.message, e.message!!.contains("can also reach options-lab")) }
+        catch (e: IOException) {
+            assertTrue(e.message, e.message!!.contains("can also reach options-lab"))
+            // GitHub's answer that decided is shown, so an unexpected refusal can be diagnosed; never the token.
+            assertTrue(e.message, e.message!!.contains("(GitHub said: probe 422: Object does not exist)"))
+            assertFalse(e.message!!.contains(token))
+        }
+    }
+
+    // ---- the options-lab check at each run (13 Oct review) --------------------------------------------------------------
+
+    @Test fun bossesTokenUploadsNormallyAtARun() = runBlocking {
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("admin" to true, "push" to true, "pull" to true))
+        gh.probeCode = 403
+        ready()
+        assertTrue(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue(gh.seen.any { it.url.startsWith("https://uploads.github.com/") })
+        assertFalse(GitHubSync.authBlocked())
+    }
+
+    @Test fun aProbeThatGetsPastTheAccessCheckPausesTheRunsAsRefused() = runBlocking {
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("admin" to true))
+        gh.probeCode = 403
+        ready()
+        gh.probeCode = 422                                   // its access was widened on GitHub after it was pasted
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue(gh.seen.none { it.url.startsWith("https://uploads.github.com/") })
+        assertTrue(GitHubSync.authBlocked())
+        assertNull(SecurePrefs.getString("backup.last"))
+    }
+
+    @Test fun aCheckThatFailsSkipsTheRunWithoutRefusingTheToken() = runBlocking {
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("admin" to true))
+        gh.probeCode = 403
+        ready()
+        gh.probeCode = 429                                   // rate limited: no answer
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue("nothing is sent without an answer", gh.seen.none { it.url.startsWith("https://uploads.github.com/") })
+        assertFalse("not a refused token: the automatic runs go on", GitHubSync.authBlocked())
+        assertNull(SecurePrefs.getString("backup.last"))
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("upload skipped this time") && !it.contains(token) })
+        // The next run, with GitHub answering again, uploads.
+        gh.probeCode = 403
+        assertTrue(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue(gh.seen.any { it.url.startsWith("https://uploads.github.com/") })
     }
 
     @Test fun theWorkersCopyOpensOnlyForItsRepository() {

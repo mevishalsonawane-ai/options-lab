@@ -31,6 +31,8 @@ class CloudRunTest {
         var probeCode = 403
         var probeHeaders: Map<String, String> = emptyMap()
         var probeMessage = "Resource not accessible by personal access token"
+        /** When set, the probe's whole body (an empty body, or text that is not JSON). */
+        var probeRaw: ByteArray? = null
         /** Answers a request whose method and URL match with a code, then forgets it. */
         var failOnce: Triple<String, String, Int>? = null
 
@@ -79,6 +81,7 @@ class CloudRunTest {
             }
             if (u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab/git/refs") {
                 assertEquals("POST", r.method)
+                probeRaw?.let { return GitHubReleases.Response(probeCode, probeHeaders, it) }
                 return json(probeCode, mapOf("message" to probeMessage), probeHeaders)
             }
             Regex("/releases/assets/(\\d+)$").find(u)?.let { m ->
@@ -296,7 +299,7 @@ class CloudRunTest {
         assertFalse(client.reachesCode())
         // Also when the GET says read only: the probe alone decides.
         gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("pull" to true, "push" to false))
-        gh.probeCode = 403
+        gh.probeCode = 403; gh.probeMessage = GitHubReleases.NO_ACCESS_403
         assertFalse(client.reachesCode())
     }
 
@@ -328,6 +331,59 @@ class CloudRunTest {
         // Nothing else was asked of options-lab, and nothing at all of any other repository.
         assertTrue(gh.seen.all { it.url.startsWith("https://api.github.com/repos/mevishalsonawane-ai/options-lab") })
         assertEquals(2, gh.seen.size)
+    }
+
+    @Test fun onlyGitHubsNoAccessWordsCountAsNoAccess() {
+        gh.codeRepo = publicOwned
+        gh.probeCode = 403; gh.probeMessage = "Resource not accessible by personal access token"
+        assertFalse(client.reachesCode())
+        assertEquals("probe 403: Resource not accessible by personal access token", client.lastProbe)
+        gh.probeMessage = "Resource not accessible by personal access token (more words GitHub may add)"
+        assertFalse(client.reachesCode(), "starts with GitHub's words")
+        // Every other 403 fails closed: SAML, an archived repository, other words, no message, no body, not JSON.
+        for (m in listOf("Resource protected by organization SAML enforcement. You must grant your Personal Access token access to this organization.",
+                         "Repository was archived so is read-only.", "Must have admin rights to Repository.", "",
+                         "resource not accessible by personal access token")) {
+            gh.probeMessage = m
+            assertTrue(client.reachesCode(), "403: $m")
+        }
+        gh.probeRaw = ByteArray(0)
+        assertTrue(client.reachesCode(), "403 with an empty body")
+        assertEquals("probe 403: (no message)", client.lastProbe)
+        gh.probeRaw = "<html>Forbidden</html>".toByteArray()
+        assertTrue(client.reachesCode(), "403 that is not JSON")
+        gh.probeRaw = Json.write(mapOf("documentation_url" to "x")).toByteArray()
+        assertTrue(client.reachesCode(), "403 with no message field")
+        gh.probeRaw = null
+        // A 404 counts as no access only with GitHub's "Not Found".
+        gh.probeCode = 404; gh.probeMessage = "Not Found"
+        assertFalse(client.reachesCode())
+        for (m in listOf("Repository access blocked", "", "not found")) { gh.probeMessage = m; assertTrue(client.reachesCode(), "404: $m") }
+        gh.probeRaw = ByteArray(0)
+        assertTrue(client.reachesCode(), "404 with an empty body")
+    }
+
+    @Test fun theAnswerThatDecidedIsKeptWithoutTheToken() {
+        assertFalse(client.reachesCode())
+        assertEquals("GET 404: Not Found", client.lastProbe)
+        gh.codeRepo = mapOf("private" to true)
+        assertTrue(client.reachesCode())
+        assertTrue(client.lastProbe!!.startsWith("GET 200"))
+        gh.codeRepo = publicOwned
+        gh.probeCode = 422; gh.probeMessage = "Object does not exist"
+        assertTrue(client.reachesCode())
+        assertEquals("probe 422: Object does not exist", client.lastProbe)
+        // GitHub's words are cut to 120 characters and redacted: a token echoed back never shows.
+        gh.probeMessage = "Bad: $token " + "z".repeat(300)
+        assertTrue(client.reachesCode())
+        val kept = client.lastProbe!!
+        assertFalse(kept.contains(token), kept)
+        assertFalse(kept.contains("github_pat_"), kept)
+        assertTrue(kept.length <= "probe 422: ".length + 120, kept)
+        // A throw leaves no stale answer behind.
+        gh.probeCode = 429; gh.probeMessage = "Too many requests"
+        assertFailsWith<GitHubReleases.Failure> { client.reachesCode() }
+        assertNull(client.lastProbe)
     }
 
     @Test fun theProbeThrowsOnARefusedTokenOrARateLimit() {
