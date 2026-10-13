@@ -446,3 +446,202 @@ Any test passes BH at q = 0.05: **False**
 | 2023-10-13..2024-10-12 | +68% (DD -37%) | +66% (DD -37%) | +68% (DD -37%) | +46% (DD -39%) | +47% (DD -33%) | -19% (DD -40%) | +37% (DD -40%) | -14% (DD -17%) | -6% (DD -35%) |
 | 2024-10-13..2025-10-12 | +57% (DD -44%) | +60% (DD -48%) | +62% (DD -47%) | +26% (DD -32%) | +24% (DD -23%) | -15% (DD -43%) | +26% (DD -31%) | -6% (DD -8%) | -3% (DD -37%) |
 
+## HOLDOUT (read once): 2025-10-13 .. 2026-10-12 (perp / carry ideas to 2026-09-30)
+
+| idea | after-tax final (Rs 1L) | twin median | twin p | gate 3 | hold 50/50 final | entries |
+|---|---|---|---|---|---|---|
+| b-monthly | Rs 69,630 | Rs 69,702 | 0.743 | FAIL | Rs 69,646 | 0 |
+| b-band | Rs 69,646 | Rs 69,646 | 1.000 | FAIL | Rs 69,646 | 0 |
+| c | Rs 69,457 | Rs 62,284 | 0.178 | pass | Rs 69,646 | 7 |
+| c-perp | Rs 76,565 | Rs 73,691 | 0.380 | pass | Rs 73,589 | 7 |
+| d | Rs 73,178 | Rs 66,617 | 0.227 | pass | Rs 69,646 | 7 |
+| f | Rs 98,904 | Rs 98,180 | 0.269 | pass | Rs 73,589 | 3 |
+| g | Rs 54,320 | Rs 64,168 | 0.961 | FAIL | Rs 69,646 | 76 |
+| g-perp | Rs 66,817 | Rs 82,140 | 0.976 | FAIL | Rs 73,589 | 74 |
+
+## holdout, Rs 100,000, 50/50
+
+| idea | gross CAGR | pre-tax CAGR | after tax+TDS CAGR | final (after) | max DD (after) | worst month | worst 12m | green months | orders/yr | recover from worst DD | tax paid | no-tax final | TDS drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| a1 buy and hold | -29.7% | -30.4% | **-30.4%** | Rs 69,646 | -53% | -21% | -30% | 38% of 13 | 4.0 | not yet (104 d) | Rs 0 | Rs 69,646 | +0.00% |
+| a2 DCA 12 monthly buys | +8.0% | +7.1% | **+4.7%** | Rs 104,669 | -24% | -15% | +5% | 38% of 13 | 26.0 | 52 d | Rs 2,394 | Rs 107,064 | +0.00% |
+| a2 DCA 52 weekly buys | +8.7% | +7.7% | **+5.1%** | Rs 105,122 | -21% | -14% | +5% | 38% of 13 | 106.1 | 51 d | Rs 2,601 | Rs 107,722 | +0.00% |
+| a2 SIP pot/12 a month (IRR) | +13.4% | +11.5% | **+7.5%** | Rs 112,593 | -54% | -21% | -32% | 38% of 13 | 28.0 | not yet (104 d) | Rs 2,230 | Rs 114,824 | +0.00% |
+| b 50/50 rebalanced monthly | -29.7% | -30.4% | **-30.4%** | Rs 69,630 | -54% | -21% | -30% | 38% of 13 | 28.0 | not yet (104 d) | Rs 0 | Rs 69,638 | -0.01% |
+| b 50/50 rebalanced at 40/60 | -29.7% | -30.4% | **-30.4%** | Rs 69,646 | -53% | -21% | -30% | 38% of 13 | 4.0 | not yet (104 d) | Rs 0 | Rs 69,646 | +0.00% |
+| c spot trend (walk-forward rule) | -25.8% | -28.0% | **-30.6%** | Rs 69,457 | -36% | -11% | -31% | 15% of 13 | 14.0 | not yet (132 d) | Rs 2,565 | Rs 72,005 | +0.06% |
+| d vol-targeted trend | -22.9% | -25.0% | **-26.8%** | Rs 73,178 | -31% | -8% | -27% | 15% of 13 | 18.0 | not yet (132 d) | Rs 2,043 | Rs 75,063 | +0.15% |
+| g 4h breakout, spot | -22.0% | -44.3% | **-45.7%** | Rs 54,320 | -47% | -15% | -46% | 8% of 13 | 152.1 | not yet (63 d) | Rs 5,386 | Rs 55,691 | +4.58% |
+| c-perp trend on perps, 1x, tax A | -20.1% | -20.1% | **-24.1%** | Rs 76,565 | -33% | -10% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 3,926 | Rs 80,491 | +0.00% |
+| f funding carry, 1x, tax A | +0.2% | -0.5% | **-1.1%** | Rs 98,904 | -1% | -1% | n/a | 0% of 12 | 12.4 | not yet (0 d) | Rs 636 | Rs 99,516 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax A | -22.5% | -26.7% | **-34.1%** | Rs 66,817 | -39% | -12% | n/a | 8% of 12 | 153.1 | not yet (55 d) | Rs 8,185 | Rs 74,083 | +0.00% |
+| f funding carry monthly reset (post-hoc), 1x, tax A | +0.2% | -1.0% | **-1.8%** | Rs 98,284 | -2% | -1% | n/a | 0% of 12 | 20.7 | not yet (0 d) | Rs 776 | Rs 99,036 | +0.00% |
+| c-perp trend on perps, 1x, tax B | -20.1% | -20.1% | **-20.1%** | Rs 80,491 | -33% | -10% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 0 | Rs 80,491 | +0.00% |
+| f funding carry, 1x, tax B | +0.2% | -0.5% | **-1.1%** | Rs 98,911 | -1% | -1% | n/a | 0% of 12 | 12.4 | not yet (0 d) | Rs 629 | Rs 99,516 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax B | -22.5% | -26.7% | **-26.7%** | Rs 74,083 | -36% | -12% | n/a | 17% of 12 | 153.1 | not yet (55 d) | Rs 0 | Rs 74,083 | +0.00% |
+| f funding carry monthly reset (post-hoc), 1x, tax B | +0.2% | -1.0% | **-1.7%** | Rs 98,372 | -2% | -1% | n/a | 0% of 12 | 20.7 | not yet (0 d) | Rs 689 | Rs 99,036 | +0.00% |
+| c-perp trend on perps, 3x, tax A | -68.0% | -66.5% | **-70.4%** | Rs 30,819 | -79% | -37% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 3,926 | Rs 34,745 | +0.00% |
+| f funding carry, 3x, tax A | +0.3% | -0.7% | **-1.6%** | Rs 98,431 | -2% | -1% | n/a | 0% of 12 | 12.4 | not yet (0 d) | Rs 884 | Rs 99,291 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax A | -61.9% | -67.8% | **-75.8%** | Rs 25,398 | -79% | -35% | n/a | 8% of 12 | 153.1 | not yet (55 d) | Rs 10,756 | Rs 33,421 | +0.00% |
+| f funding carry monthly reset (post-hoc), 3x, tax A | +0.3% | -1.4% | **-2.5%** | Rs 97,566 | -2% | -2% | n/a | 0% of 12 | 20.7 | not yet (0 d) | Rs 1,068 | Rs 98,610 | +0.00% |
+| c-perp trend on perps, 3x, tax B | -68.0% | -66.5% | **-66.5%** | Rs 34,745 | -79% | -37% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 0 | Rs 34,745 | +0.00% |
+| f funding carry, 3x, tax B | +0.3% | -0.7% | **-1.6%** | Rs 98,442 | -2% | -1% | n/a | 0% of 12 | 12.4 | not yet (0 d) | Rs 873 | Rs 99,291 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax B | -61.9% | -67.8% | **-67.8%** | Rs 33,421 | -76% | -35% | n/a | 17% of 12 | 153.1 | not yet (55 d) | Rs 0 | Rs 33,421 | +0.00% |
+| f funding carry monthly reset (post-hoc), 3x, tax B | +0.3% | -1.4% | **-2.4%** | Rs 97,684 | -2% | -2% | n/a | 0% of 12 | 20.7 | not yet (0 d) | Rs 951 | Rs 98,610 | +0.00% |
+
+## holdout, Rs 100,000, BTC
+
+| idea | gross CAGR | pre-tax CAGR | after tax+TDS CAGR | final (after) | max DD (after) | worst month | worst 12m | green months | orders/yr | recover from worst DD | tax paid | no-tax final | TDS drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| a1 buy and hold | -23.1% | -23.8% | **-23.8%** | Rs 76,210 | -46% | -21% | -24% | 38% of 13 | 2.0 | not yet (104 d) | Rs 0 | Rs 76,210 | +0.00% |
+| a2 DCA 12 monthly buys | +9.2% | +8.2% | **+5.5%** | Rs 105,448 | -21% | -15% | +5% | 38% of 13 | 13.0 | 52 d | Rs 2,749 | Rs 108,197 | +0.00% |
+| a2 DCA 52 weekly buys | +9.6% | +8.7% | **+5.8%** | Rs 105,757 | -19% | -14% | +6% | 38% of 13 | 53.0 | 52 d | Rs 2,890 | Rs 108,647 | +0.00% |
+| a2 SIP pot/12 a month (IRR) | +16.0% | +14.1% | **+9.3%** | Rs 113,563 | -46% | -21% | -26% | 38% of 13 | 14.0 | not yet (104 d) | Rs 2,672 | Rs 116,235 | +0.00% |
+| c spot trend (walk-forward rule) | -21.8% | -24.5% | **-28.0%** | Rs 72,023 | -35% | -16% | -28% | 23% of 13 | 8.0 | not yet (132 d) | Rs 3,461 | Rs 75,498 | +0.09% |
+| d vol-targeted trend | -20.8% | -23.5% | **-27.2%** | Rs 72,791 | -35% | -16% | -27% | 23% of 13 | 8.0 | not yet (132 d) | Rs 3,501 | Rs 76,522 | -0.12% |
+| g 4h breakout, spot | -20.8% | -43.5% | **-43.2%** | Rs 56,791 | -44% | -14% | -43% | 8% of 13 | 76.1 | not yet (63 d) | Rs 3,961 | Rs 56,509 | +4.85% |
+| c-perp trend on perps, 1x, tax A | -20.1% | -20.6% | **-24.8%** | Rs 75,960 | -33% | -16% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 4,103 | Rs 80,063 | +0.00% |
+| f funding carry, 1x, tax A | +0.3% | -0.7% | **-1.4%** | Rs 98,669 | -1% | -1% | n/a | 0% of 12 | 8.3 | not yet (0 d) | Rs 1,140 | Rs 99,368 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax A | -19.3% | -24.3% | **-30.6%** | Rs 70,236 | -35% | -11% | n/a | 8% of 12 | 74.5 | not yet (51 d) | Rs 6,341 | Rs 76,410 | +0.00% |
+| c-perp trend on perps, 1x, tax B | -20.1% | -20.6% | **-20.6%** | Rs 80,063 | -33% | -16% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 0 | Rs 80,063 | +0.00% |
+| f funding carry, 1x, tax B | +0.3% | -0.7% | **-1.4%** | Rs 98,683 | -1% | -1% | n/a | 0% of 12 | 8.3 | not yet (0 d) | Rs 1,125 | Rs 99,368 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax B | -19.3% | -24.3% | **-24.3%** | Rs 76,410 | -33% | -11% | n/a | 33% of 12 | 74.5 | not yet (51 d) | Rs 0 | Rs 76,410 | +0.00% |
+| c-perp trend on perps, 3x, tax A | -64.9% | -65.1% | **-69.2%** | Rs 32,090 | -77% | -48% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 4,103 | Rs 36,193 | +0.00% |
+| f funding carry, 3x, tax A | +0.4% | -1.1% | **-2.5%** | Rs 97,602 | -2% | -1% | n/a | 0% of 12 | 8.3 | not yet (0 d) | Rs 1,784 | Rs 98,946 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax A | -55.2% | -62.3% | **-70.1%** | Rs 31,107 | -75% | -32% | n/a | 8% of 12 | 74.5 | not yet (51 d) | Rs 8,869 | Rs 38,956 | +0.00% |
+| c-perp trend on perps, 3x, tax B | -64.9% | -65.1% | **-65.1%** | Rs 36,193 | -77% | -48% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 0 | Rs 36,193 | +0.00% |
+| f funding carry, 3x, tax B | +0.4% | -1.1% | **-2.5%** | Rs 97,628 | -2% | -1% | n/a | 0% of 12 | 8.3 | not yet (0 d) | Rs 1,758 | Rs 98,946 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax B | -55.2% | -62.3% | **-62.3%** | Rs 38,956 | -72% | -32% | n/a | 33% of 12 | 74.5 | not yet (51 d) | Rs 0 | Rs 38,956 | +0.00% |
+
+## holdout, Rs 100,000, ETH
+
+| idea | gross CAGR | pre-tax CAGR | after tax+TDS CAGR | final (after) | max DD (after) | worst month | worst 12m | green months | orders/yr | recover from worst DD | tax paid | no-tax final | TDS drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| a1 buy and hold | -36.4% | -36.9% | **-36.9%** | Rs 63,083 | -61% | -22% | -37% | 38% of 13 | 2.0 | not yet (109 d) | Rs 0 | Rs 63,083 | +0.00% |
+| a2 DCA 12 monthly buys | +6.9% | +5.9% | **+3.9%** | Rs 103,891 | -28% | -16% | +4% | 38% of 13 | 13.0 | 56 d | Rs 2,040 | Rs 105,931 | +0.00% |
+| a2 DCA 52 weekly buys | +7.8% | +6.8% | **+4.5%** | Rs 104,487 | -25% | -14% | +4% | 38% of 13 | 53.0 | 56 d | Rs 2,311 | Rs 106,798 | +0.00% |
+| a2 SIP pot/12 a month (IRR) | +10.8% | +9.0% | **+5.8%** | Rs 111,624 | -61% | -22% | -39% | 38% of 13 | 14.0 | not yet (109 d) | Rs 1,789 | Rs 113,413 | +0.00% |
+| c spot trend (walk-forward rule) | -30.6% | -32.4% | **-34.0%** | Rs 66,037 | -38% | -15% | -34% | 15% of 13 | 6.0 | not yet (132 d) | Rs 1,603 | Rs 67,580 | +0.09% |
+| d vol-targeted trend | -23.0% | -24.6% | **-25.3%** | Rs 74,713 | -27% | -9% | -25% | 15% of 13 | 9.0 | not yet (132 d) | Rs 703 | Rs 75,385 | +0.03% |
+| g 4h breakout, spot | -23.8% | -45.7% | **-47.1%** | Rs 52,883 | -49% | -16% | -47% | 8% of 13 | 76.1 | not yet (63 d) | Rs 6,498 | Rs 54,323 | +5.35% |
+| c-perp trend on perps, 1x, tax A | -25.1% | -25.5% | **-29.2%** | Rs 71,633 | -38% | -15% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 3,624 | Rs 75,256 | +0.00% |
+| f funding carry, 1x, tax A | +0.2% | -0.4% | **-0.5%** | Rs 99,507 | -0% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 139 | Rs 99,646 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax A | -26.5% | -30.9% | **-40.0%** | Rs 61,035 | -44% | -14% | n/a | 17% of 12 | 78.6 | not yet (55 d) | Rs 9,715 | Rs 69,968 | +0.00% |
+| c-perp trend on perps, 1x, tax B | -25.1% | -25.5% | **-25.5%** | Rs 75,256 | -38% | -15% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 0 | Rs 75,256 | +0.00% |
+| f funding carry, 1x, tax B | +0.2% | -0.4% | **-0.5%** | Rs 99,507 | -0% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 139 | Rs 99,646 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax B | -26.5% | -30.9% | **-30.9%** | Rs 69,968 | -41% | -14% | n/a | 25% of 12 | 78.6 | not yet (55 d) | Rs 0 | Rs 69,968 | +0.00% |
+| c-perp trend on perps, 3x, tax A | -77.2% | -77.4% | **-80.0%** | Rs 21,138 | -86% | -53% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 2,624 | Rs 23,762 | +0.00% |
+| f funding carry, 3x, tax A | +0.3% | -0.6% | **-0.8%** | Rs 99,249 | -1% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 212 | Rs 99,461 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax A | -69.1% | -74.2% | **-81.9%** | Rs 19,142 | -84% | -39% | n/a | 8% of 12 | 78.6 | not yet (55 d) | Rs 12,129 | Rs 27,031 | +0.00% |
+| c-perp trend on perps, 3x, tax B | -77.2% | -77.4% | **-77.4%** | Rs 23,762 | -86% | -53% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 0 | Rs 23,762 | +0.00% |
+| f funding carry, 3x, tax B | +0.3% | -0.6% | **-0.8%** | Rs 99,249 | -1% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 212 | Rs 99,461 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax B | -69.1% | -74.2% | **-74.2%** | Rs 27,031 | -81% | -38% | n/a | 17% of 12 | 78.6 | not yet (55 d) | Rs 0 | Rs 27,031 | +0.00% |
+
+## holdout, Rs 25,000, 50/50
+
+| idea | gross CAGR | pre-tax CAGR | after tax+TDS CAGR | final (after) | max DD (after) | worst month | worst 12m | green months | orders/yr | recover from worst DD | tax paid | no-tax final | TDS drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| a1 buy and hold | -29.7% | -30.4% | **-30.4%** | Rs 17,412 | -53% | -21% | -30% | 38% of 13 | 4.0 | not yet (104 d) | Rs 0 | Rs 17,412 | +0.00% |
+| a2 DCA 12 monthly buys | +8.0% | +7.1% | **+4.7%** | Rs 26,167 | -24% | -15% | +5% | 38% of 13 | 26.0 | 52 d | Rs 599 | Rs 26,766 | +0.00% |
+| a2 DCA 52 weekly buys | +8.7% | +7.7% | **+5.1%** | Rs 26,280 | -21% | -14% | +5% | 38% of 13 | 106.1 | 51 d | Rs 650 | Rs 26,931 | +0.00% |
+| a2 SIP pot/12 a month (IRR) | +13.4% | +11.5% | **+7.5%** | Rs 28,148 | -54% | -21% | -32% | 38% of 13 | 28.0 | not yet (104 d) | Rs 558 | Rs 28,706 | +0.00% |
+| b 50/50 rebalanced monthly | -29.7% | -30.4% | **-30.4%** | Rs 17,407 | -54% | -21% | -30% | 38% of 13 | 28.0 | not yet (104 d) | Rs 0 | Rs 17,410 | -0.01% |
+| b 50/50 rebalanced at 40/60 | -29.7% | -30.4% | **-30.4%** | Rs 17,412 | -53% | -21% | -30% | 38% of 13 | 4.0 | not yet (104 d) | Rs 0 | Rs 17,412 | +0.00% |
+| c spot trend (walk-forward rule) | -25.8% | -28.0% | **-30.6%** | Rs 17,364 | -36% | -11% | -31% | 15% of 13 | 14.0 | not yet (132 d) | Rs 641 | Rs 18,001 | +0.06% |
+| d vol-targeted trend | -22.9% | -25.0% | **-26.8%** | Rs 18,295 | -31% | -8% | -27% | 15% of 13 | 18.0 | not yet (132 d) | Rs 511 | Rs 18,766 | +0.15% |
+| g 4h breakout, spot | -22.0% | -44.3% | **-45.7%** | Rs 13,580 | -47% | -15% | -46% | 8% of 13 | 152.1 | not yet (63 d) | Rs 1,346 | Rs 13,923 | +4.58% |
+| c-perp trend on perps, 1x, tax A | -18.6% | -19.0% | **-22.7%** | Rs 19,485 | -31% | -10% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 910 | Rs 20,395 | +0.00% |
+| f funding carry, 1x, tax A | +0.1% | -0.1% | **-0.2%** | Rs 24,953 | -0% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 13 | Rs 24,966 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax A | -19.8% | -23.1% | **-29.9%** | Rs 17,744 | -34% | -10% | n/a | 8% of 12 | 153.1 | not yet (55 d) | Rs 1,880 | Rs 19,389 | +0.00% |
+| f funding carry monthly reset (post-hoc), 1x, tax A | +0.1% | -0.3% | **-0.4%** | Rs 24,906 | -0% | -0% | n/a | 0% of 12 | 8.3 | not yet (12 d) | Rs 11 | Rs 24,917 | +0.00% |
+| c-perp trend on perps, 1x, tax B | -18.6% | -19.0% | **-19.0%** | Rs 20,395 | -31% | -10% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 0 | Rs 20,395 | +0.00% |
+| f funding carry, 1x, tax B | +0.1% | -0.1% | **-0.2%** | Rs 24,953 | -0% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 13 | Rs 24,966 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax B | -19.8% | -23.1% | **-23.1%** | Rs 19,389 | -32% | -10% | n/a | 17% of 12 | 153.1 | not yet (55 d) | Rs 0 | Rs 19,389 | +0.00% |
+| f funding carry monthly reset (post-hoc), 1x, tax B | +0.1% | -0.3% | **-0.4%** | Rs 24,906 | -0% | -0% | n/a | 0% of 12 | 8.3 | not yet (12 d) | Rs 11 | Rs 24,917 | +0.00% |
+| c-perp trend on perps, 3x, tax A | -64.6% | -65.4% | **-69.0%** | Rs 8,056 | -77% | -35% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 910 | Rs 8,966 | +0.00% |
+| f funding carry, 3x, tax A | +0.3% | -0.4% | **-1.1%** | Rs 24,731 | -1% | -1% | n/a | 0% of 12 | 8.3 | not yet (0 d) | Rs 168 | Rs 24,898 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax A | -61.0% | -64.7% | **-73.2%** | Rs 6,993 | -76% | -33% | n/a | 8% of 12 | 153.1 | not yet (55 d) | Rs 2,515 | Rs 9,144 | +0.00% |
+| f funding carry monthly reset (post-hoc), 3x, tax A | +0.3% | -1.1% | **-1.9%** | Rs 24,530 | -2% | -2% | n/a | 0% of 12 | 16.6 | not yet (0 d) | Rs 213 | Rs 24,743 | +0.00% |
+| c-perp trend on perps, 3x, tax B | -64.6% | -65.4% | **-65.4%** | Rs 8,966 | -77% | -35% | n/a | 17% of 12 | 14.5 | not yet (120 d) | Rs 0 | Rs 8,966 | +0.00% |
+| f funding carry, 3x, tax B | +0.3% | -0.4% | **-1.1%** | Rs 24,731 | -1% | -1% | n/a | 0% of 12 | 8.3 | not yet (0 d) | Rs 168 | Rs 24,898 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax B | -61.0% | -64.7% | **-64.7%** | Rs 9,144 | -73% | -33% | n/a | 17% of 12 | 153.1 | not yet (55 d) | Rs 0 | Rs 9,144 | +0.00% |
+| f funding carry monthly reset (post-hoc), 3x, tax B | +0.3% | -1.1% | **-1.8%** | Rs 24,556 | -2% | -2% | n/a | 0% of 12 | 16.6 | not yet (0 d) | Rs 187 | Rs 24,743 | +0.00% |
+
+## holdout, Rs 25,000, BTC
+
+| idea | gross CAGR | pre-tax CAGR | after tax+TDS CAGR | final (after) | max DD (after) | worst month | worst 12m | green months | orders/yr | recover from worst DD | tax paid | no-tax final | TDS drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| a1 buy and hold | -23.1% | -23.8% | **-23.8%** | Rs 19,052 | -46% | -21% | -24% | 38% of 13 | 2.0 | not yet (104 d) | Rs 0 | Rs 19,052 | +0.00% |
+| a2 DCA 12 monthly buys | +9.2% | +8.2% | **+5.5%** | Rs 26,362 | -21% | -15% | +5% | 38% of 13 | 13.0 | 52 d | Rs 687 | Rs 27,049 | +0.00% |
+| a2 DCA 52 weekly buys | +9.6% | +8.7% | **+5.8%** | Rs 26,439 | -19% | -14% | +6% | 38% of 13 | 53.0 | 52 d | Rs 722 | Rs 27,162 | +0.00% |
+| a2 SIP pot/12 a month (IRR) | +16.0% | +14.1% | **+9.3%** | Rs 28,391 | -46% | -21% | -26% | 38% of 13 | 14.0 | not yet (104 d) | Rs 668 | Rs 29,059 | +0.00% |
+| c spot trend (walk-forward rule) | -21.8% | -24.5% | **-28.0%** | Rs 18,006 | -35% | -16% | -28% | 23% of 13 | 8.0 | not yet (132 d) | Rs 865 | Rs 18,875 | +0.09% |
+| d vol-targeted trend | -20.8% | -23.5% | **-27.2%** | Rs 18,198 | -35% | -16% | -27% | 23% of 13 | 8.0 | not yet (132 d) | Rs 875 | Rs 19,131 | -0.12% |
+| g 4h breakout, spot | -20.8% | -43.5% | **-43.2%** | Rs 14,198 | -44% | -14% | -43% | 8% of 13 | 76.1 | not yet (63 d) | Rs 990 | Rs 14,127 | +4.85% |
+| c-perp trend on perps, 1x, tax A | -17.1% | -17.5% | **-20.8%** | Rs 19,946 | -28% | -12% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 821 | Rs 20,767 | +0.00% |
+| f funding carry, 1x, tax A | +0.2% | -0.6% | **+0.4%** | Rs 25,085 | -2% | -1% | n/a | 8% of 12 | 6.2 | 3 d | Rs 215 | Rs 24,859 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax A | -19.3% | -21.5% | **-26.7%** | Rs 18,511 | -30% | -9% | n/a | 8% of 12 | 74.5 | not yet (51 d) | Rs 1,370 | Rs 19,774 | +0.00% |
+| c-perp trend on perps, 1x, tax B | -17.1% | -17.5% | **-17.5%** | Rs 20,767 | -28% | -12% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 0 | Rs 20,767 | +0.00% |
+| f funding carry, 1x, tax B | +0.2% | -0.6% | **+0.4%** | Rs 25,089 | -2% | -1% | n/a | 8% of 12 | 6.2 | 3 d | Rs 211 | Rs 24,859 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax B | -19.3% | -21.5% | **-21.5%** | Rs 19,774 | -29% | -9% | n/a | 33% of 12 | 74.5 | not yet (51 d) | Rs 0 | Rs 19,774 | +0.00% |
+| c-perp trend on perps, 3x, tax A | -56.7% | -57.6% | **-62.5%** | Rs 9,679 | -72% | -43% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 1,231 | Rs 10,910 | +0.00% |
+| f funding carry, 3x, tax A | +0.4% | -0.7% | **-0.4%** | Rs 24,910 | -3% | -1% | n/a | 8% of 12 | 8.3 | not yet (0 d) | Rs 356 | Rs 24,825 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax A | -51.6% | -60.5% | **-67.1%** | Rs 8,546 | -72% | -30% | n/a | 8% of 12 | 74.5 | not yet (51 d) | Rs 2,196 | Rs 10,193 | +0.00% |
+| c-perp trend on perps, 3x, tax B | -56.7% | -57.6% | **-57.6%** | Rs 10,910 | -72% | -43% | n/a | 25% of 12 | 8.3 | not yet (120 d) | Rs 0 | Rs 10,910 | +0.00% |
+| f funding carry, 3x, tax B | +0.4% | -0.7% | **-0.4%** | Rs 24,914 | -3% | -1% | n/a | 8% of 12 | 8.3 | not yet (0 d) | Rs 352 | Rs 24,825 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax B | -51.6% | -60.5% | **-60.5%** | Rs 10,193 | -70% | -30% | n/a | 33% of 12 | 74.5 | not yet (51 d) | Rs 0 | Rs 10,193 | +0.00% |
+
+## holdout, Rs 25,000, ETH
+
+| idea | gross CAGR | pre-tax CAGR | after tax+TDS CAGR | final (after) | max DD (after) | worst month | worst 12m | green months | orders/yr | recover from worst DD | tax paid | no-tax final | TDS drag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| a1 buy and hold | -36.4% | -36.9% | **-36.9%** | Rs 15,771 | -61% | -22% | -37% | 38% of 13 | 2.0 | not yet (109 d) | Rs 0 | Rs 15,771 | +0.00% |
+| a2 DCA 12 monthly buys | +6.9% | +5.9% | **+3.9%** | Rs 25,973 | -28% | -16% | +4% | 38% of 13 | 13.0 | 56 d | Rs 510 | Rs 26,483 | +0.00% |
+| a2 DCA 52 weekly buys | +7.8% | +6.8% | **+4.5%** | Rs 26,122 | -25% | -14% | +4% | 38% of 13 | 53.0 | 56 d | Rs 578 | Rs 26,700 | +0.00% |
+| a2 SIP pot/12 a month (IRR) | +10.8% | +9.0% | **+5.8%** | Rs 27,906 | -61% | -22% | -39% | 38% of 13 | 14.0 | not yet (109 d) | Rs 447 | Rs 28,353 | +0.00% |
+| c spot trend (walk-forward rule) | -30.6% | -32.4% | **-34.0%** | Rs 16,509 | -38% | -15% | -34% | 15% of 13 | 6.0 | not yet (132 d) | Rs 401 | Rs 16,895 | +0.09% |
+| d vol-targeted trend | -23.0% | -24.6% | **-25.3%** | Rs 18,678 | -27% | -9% | -25% | 15% of 13 | 9.0 | not yet (132 d) | Rs 176 | Rs 18,846 | +0.03% |
+| g 4h breakout, spot | -23.8% | -45.7% | **-47.1%** | Rs 13,221 | -49% | -16% | -47% | 8% of 13 | 76.1 | not yet (63 d) | Rs 1,624 | Rs 13,581 | +5.35% |
+| c-perp trend on perps, 1x, tax A | -23.6% | -23.9% | **-27.5%** | Rs 18,319 | -36% | -13% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 875 | Rs 19,193 | +0.00% |
+| f funding carry, 1x, tax A | +0.2% | -0.3% | **-0.5%** | Rs 24,883 | -0% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 33 | Rs 24,916 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax A | -26.2% | -29.6% | **-39.1%** | Rs 15,476 | -43% | -14% | n/a | 17% of 12 | 78.6 | not yet (55 d) | Rs 2,295 | Rs 17,796 | +0.00% |
+| c-perp trend on perps, 1x, tax B | -23.6% | -23.9% | **-23.9%** | Rs 19,193 | -36% | -13% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 0 | Rs 19,193 | +0.00% |
+| f funding carry, 1x, tax B | +0.2% | -0.3% | **-0.5%** | Rs 24,883 | -0% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 33 | Rs 24,916 | +0.00% |
+| g-perp 4h breakout on perps, 1x, tax B | -26.2% | -29.6% | **-29.6%** | Rs 17,796 | -40% | -14% | n/a | 25% of 12 | 78.6 | not yet (55 d) | Rs 0 | Rs 17,796 | +0.00% |
+| c-perp trend on perps, 3x, tax A | -76.0% | -76.6% | **-79.0%** | Rs 5,520 | -85% | -52% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 625 | Rs 6,145 | +0.00% |
+| f funding carry, 3x, tax A | +0.3% | -0.6% | **-0.8%** | Rs 24,812 | -1% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 53 | Rs 24,865 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax A | -68.0% | -72.4% | **-81.3%** | Rs 4,933 | -83% | -38% | n/a | 8% of 12 | 78.6 | not yet (55 d) | Rs 2,915 | Rs 7,208 | +0.00% |
+| c-perp trend on perps, 3x, tax B | -76.0% | -76.6% | **-76.6%** | Rs 6,145 | -85% | -52% | n/a | 17% of 12 | 6.2 | not yet (120 d) | Rs 0 | Rs 6,145 | +0.00% |
+| f funding carry, 3x, tax B | +0.3% | -0.6% | **-0.8%** | Rs 24,812 | -1% | -0% | n/a | 0% of 12 | 4.1 | not yet (12 d) | Rs 53 | Rs 24,865 | +0.00% |
+| g-perp 4h breakout on perps, 3x, tax B | -68.0% | -72.4% | **-72.4%** | Rs 7,208 | -80% | -38% | n/a | 17% of 12 | 78.6 | not yet (55 d) | Rs 0 | Rs 7,208 | +0.00% |
+
+## Cost sensitivity, holdout, Rs 1,00,000
+
+| idea (50/50) | low costs | base | high costs |
+|---|---|---|---|
+| a1 buy and hold | -30.0% | -30.4% | -31.0% |
+| a2 DCA 12 monthly buys | +5.2% | +4.7% | +3.8% |
+| a2 DCA 52 weekly buys | +5.7% | +5.1% | +4.3% |
+| a2 SIP pot/12 a month (IRR) | +8.5% | +7.5% | +5.9% |
+| b 50/50 rebalanced monthly | -29.9% | -30.4% | -31.1% |
+| b 50/50 rebalanced at 40/60 | -30.0% | -30.4% | -31.0% |
+| c spot trend (walk-forward rule) | -29.3% | -30.6% | -32.6% |
+| d vol-targeted trend | -25.6% | -26.8% | -28.4% |
+| g 4h breakout, spot | -35.6% | -45.7% | -58.4% |
+| c-perp trend on perps, 1x, tax A | -23.9% | -24.1% | -24.3% |
+| f funding carry, 1x, tax A | -0.7% | -1.1% | -1.7% |
+| g-perp 4h breakout on perps, 1x, tax A | -31.9% | -34.1% | -36.0% |
+| f funding carry monthly reset (post-hoc), 1x, tax A | -1.1% | -1.8% | -2.8% |
+| c-perp trend on perps, 1x, tax B | -19.9% | -20.1% | -20.3% |
+| f funding carry, 1x, tax B | -0.7% | -1.1% | -1.7% |
+| g-perp 4h breakout on perps, 1x, tax B | -23.9% | -26.7% | -27.5% |
+| f funding carry monthly reset (post-hoc), 1x, tax B | -1.0% | -1.7% | -2.7% |
+| c-perp trend on perps, 3x, tax A | -71.8% | -70.4% | -71.6% |
+| f funding carry, 3x, tax A | -1.0% | -1.6% | -2.5% |
+| g-perp 4h breakout on perps, 3x, tax A | -73.9% | -75.8% | -77.9% |
+| f funding carry monthly reset (post-hoc), 3x, tax A | -1.5% | -2.5% | -4.0% |
+| c-perp trend on perps, 3x, tax B | -68.3% | -66.5% | -68.1% |
+| f funding carry, 3x, tax B | -1.0% | -1.6% | -2.5% |
+| g-perp 4h breakout on perps, 3x, tax B | -64.1% | -67.8% | -69.6% |
+| f funding carry monthly reset (post-hoc), 3x, tax B | -1.4% | -2.4% | -3.9% |
+
