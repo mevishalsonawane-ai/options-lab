@@ -9,6 +9,7 @@ import java.util.Locale
  * four are marked parked. Disarming only stops NEW entries: an open position is still managed to its own exit, nothing is
  * sold here. Nothing is armed here, ever.
  *
+ * Paused for research (Boss, 13 Oct: "research this more deeply when all the Dhan data is downloaded"): TODO R3.
  * Parked means: its row says so with a tap to switch it back on (the usual arming flow - the PIN in Live), the morning check
  * and Problems found do not warn about it, and Jarvis does not ask to switch it off. Boss switching one back on
  * ends its park ([unpark]); the change never runs again, so it is never switched off a second time. A new book (a new
@@ -49,11 +50,12 @@ object FamilyPark {
 
     /** The one-time notice (the arm log, and a notification when something was switched off). */
     const val NOTICE = "ORB, ORB Fresh, ORB Sweep and Range Fade are parked on your choice (13 Oct): each lost money after costs in " +
-        "every tested year. Open positions are still managed to their exits; switch any back on in Home → Strategies."
+        "every tested year. Paused for research: they will be studied again on the full Dhan data (Boss, 13 Oct). Open positions " +
+        "are still managed to their exits; switch any back on in Home → Strategies."
 
     /** What Jarvis says first when asked about a parked arm. */
     fun history(label: String): String = "$label is parked on your choice (13 Oct), Boss: it lost money after costs in every tested year. " +
-        "Switch it back on in Home → Strategies whenever you choose."
+        "It is paused for research: it will be studied again on the full Dhan data. Switch it back on in Home → Strategies whenever you choose."
 
     /** What the change does: the sources to switch off (each armed one), and the four marked parked. */
     data class Plan(val off: List<String>, val parked: Set<String>)

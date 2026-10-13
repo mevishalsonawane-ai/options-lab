@@ -45,6 +45,9 @@ class FamilyParkTest {
         assertEquals("", FamilyPark.record("liquidity"))
         assertTrue(FamilyPark.PARKED.startsWith(FamilyPark.ROW))
         assertTrue("still managed to their exits" in FamilyPark.NOTICE)
+        // Paused for research (Boss, 13 Oct).
+        assertTrue("Paused for research" in FamilyPark.NOTICE)
+        assertTrue("paused for research" in FamilyPark.history("ORB"))
         assertTrue(FamilyPark.history("ORB").startsWith("ORB is parked on your choice (13 Oct), Boss"))
     }
 }
