@@ -128,6 +128,7 @@ TAGS = {
     "pine": r"\bpine\b",
     "pattern": r"pattern|inside day|nr4|nr7|\bcpr\b",
     "mcx": r"\bmcx\b|commodit",
+    "crypto": r"\bcrypto\b|\bbitcoin\b|\bbtc\b|\beth(ereum)?\b|\bvda\b|funding (rate|carry)",
     "random-baseline": r"random|coin.flip|luck",
     "multiple-testing": r"benjamini|\bbh\b|\bq ?[<=]|multiple.testing|bonferroni|holm",
 }
