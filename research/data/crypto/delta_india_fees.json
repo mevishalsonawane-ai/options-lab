@@ -1,0 +1,72 @@
+{
+ "fetched": "2026-10-13",
+ "source": "https://api.india.delta.exchange/v2/products (maker_commission_rate, taker_commission_rate, product_specs.premium_commission_rate)",
+ "note": "fee = rate \u00d7 notional (contract_value \u00d7 underlying price \u00d7 contracts), capped at premium_commission_cap \u00d7 premium; GST 18% on top (not in the API). Rates as fractions.",
+ "inr_per_usd": null,
+ "schedules": [
+  {
+   "underlying": "BTC",
+   "maker_rate": "0.0001",
+   "taker_rate": "0.0001",
+   "premium_commission_cap": 0.035,
+   "contract_value": "0.001",
+   "products": 25753
+  },
+  {
+   "underlying": "BTC",
+   "maker_rate": "0.00015",
+   "taker_rate": "0.00015",
+   "premium_commission_cap": 0.05,
+   "contract_value": "0.001",
+   "products": 10261
+  },
+  {
+   "underlying": "BTC",
+   "maker_rate": "0.00015",
+   "taker_rate": "0.00015",
+   "premium_commission_cap": 0.1,
+   "contract_value": "0.001",
+   "products": 4711
+  },
+  {
+   "underlying": "BTC",
+   "maker_rate": "0.0003",
+   "taker_rate": "0.0003",
+   "premium_commission_cap": 0.1,
+   "contract_value": "0.001",
+   "products": 54047
+  },
+  {
+   "underlying": "ETH",
+   "maker_rate": "0.0001",
+   "taker_rate": "0.0001",
+   "premium_commission_cap": 0.035,
+   "contract_value": "0.01",
+   "products": 15111
+  },
+  {
+   "underlying": "ETH",
+   "maker_rate": "0.00015",
+   "taker_rate": "0.00015",
+   "premium_commission_cap": 0.05,
+   "contract_value": "0.01",
+   "products": 6267
+  },
+  {
+   "underlying": "ETH",
+   "maker_rate": "0.00015",
+   "taker_rate": "0.00015",
+   "premium_commission_cap": 0.1,
+   "contract_value": "0.01",
+   "products": 3714
+  },
+  {
+   "underlying": "ETH",
+   "maker_rate": "0.0003",
+   "taker_rate": "0.0003",
+   "premium_commission_cap": 0.1,
+   "contract_value": "0.01",
+   "products": 30898
+  }
+ ]
+}

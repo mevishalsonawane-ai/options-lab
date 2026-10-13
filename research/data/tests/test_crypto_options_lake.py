@@ -253,6 +253,7 @@ def test_products_frame_merge_and_fees():
     assert sorted(merged["id"].tolist()) == [1, 2, 9]                                     # delisted rows kept
     fees = L.fee_schedule(raw, "2026-10-13", 88.0)
     assert fees["fetched"] == "2026-10-13" and fees["schedules"][0]["products"] == 3
+    assert fees["schedules"][0]["first_expiry"] == "2026-10-13" and fees["current"] == []
     assert fees["schedules"][0]["premium_commission_cap"] == 0.035
 
 
@@ -370,15 +371,18 @@ def test_failed_check_is_recorded_and_retried(tmp_path):
     assert cat["files"] == [] and "rclone check" in cat["failures"][0]["error"]
 
 
-def test_catalog_merge_keeps_another_process_rows(tmp_path):
+def test_catalog_merge_keeps_another_process_rows_and_never_writes_back_stale_ones(tmp_path):
     path = str(tmp_path / "options_catalog.json")
-    a = dict(path="a", bytes=1, rows=1, source="s", dataset="d", key="k", period="p")
-    b = dict(path="b", bytes=2, rows=2, source="s", dataset="d", key="k", period="p")
-    L.save_catalog({"a": a}, {"x": dict(path="x", error="e")}, path)
-    files, fails = {"b": b}, {}
-    L.save_catalog(files, fails, path, resolved={"x"})
+    row = lambda p, n: dict(path=p, bytes=n, rows=n, source="s", dataset="d", key="k", period="p")  # noqa: E731
+    # process A loaded {a: 1, d: 1} at start; meanwhile process B rebuilt a (2), added c, and fixed failure x
+    L.save_catalog({"a": row("a", 2), "c": row("c", 3), "d": row("d", 1)}, {}, path)
+    files = {"a": row("a", 1), "d": row("d", 1), "b": row("b", 5)}
+    fails = {"x": dict(path="x", error="old"), "y": dict(path="y", error="mine")}
+    L.save_catalog(files, fails, path, mine={"b", "y"})
     got, gf = L.load_catalog(path)
-    assert set(got) == {"a", "b"} and gf == {}                                            # x resolved here
+    assert set(got) == {"a", "b", "c", "d"}
+    assert got["a"]["rows"] == 2                                                          # B's newer row wins
+    assert set(gf) == {"y"}                                                               # stale x not resurrected
 
 
 def test_priority_plan_newest_two_years_first():
@@ -418,3 +422,8 @@ def test_http_retries_a_cut_off_response():
             raise x
         return x
     assert L.Http(min_interval=0, opener=opener, sleep=lambda s: None)("https://x") == dict(result=2)
+
+
+def test_inr_per_usd_reads_delta_settings():
+    assert L.inr_per_usd(lambda u, p=None: dict(result=dict(fiat_to_usd=dict(asset_to_fiat_value=85)))) == 85.0
+    assert L.inr_per_usd(lambda u, p=None: dict(result={})) is None
