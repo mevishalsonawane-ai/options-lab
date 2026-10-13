@@ -70,7 +70,7 @@ internal object IraTomorrow {
         val view = runCatching { kotlinx.coroutines.withTimeoutOrNull(10_000) { com.optionslab.app.data.OrbArms.view() } }.getOrNull()
         val liq = view?.arms?.firstOrNull { it.arm.liquidity }
         val hero = view?.arms?.firstOrNull { it.arm.hero }
-        val day = liq?.let { a -> runCatching { TomorrowPlan.dayOf(com.optionslab.ira.LiquidityRecord.rows(a.today.map { IraBots.tradeOf(it) }), today) }.getOrNull() }
+        val day = liq?.let { a -> runCatching { TomorrowPlan.dayOf(com.optionslab.ira.LiquidityRecord.rows(a.today.map { IraBots.tradeOf(it) }, withTrail = true), today) }.getOrNull() }
         val levels = runCatching { TomorrowPlan.levels(reads(now)) }.getOrDefault(emptyList())
         // Solo (midday): its switch and its forward test's count.
         val soloOn = runCatching { IraSolo.on }.getOrNull()

@@ -824,7 +824,11 @@ class LiquidityArmTest : RobolectricTest() {
         val closed = row().today.single()
         assertFalse(closed.open); assertEquals(500.0, closed.trail!!, 0.0)
         assertEquals("the paper stop rule counts plain-rules trades only", 0, OrbArms.liquidityStopPaperHint.trades)
-        row().test?.let { t ->
+        // The paper test's view is in every build but IraGoldAlgo (where it is never read).
+        val view = row().test
+        if (com.optionslab.app.BuildConfig.GOLD) assertNull(view) else {
+            org.junit.Assert.assertNotNull("the paper test's view is read", view)
+            val t = view!!
             assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
             assertTrue(t.paperTest, t.paperTest.contains("Kept apart, with ₹500 trail (failed research, your choice): 1 trade,"))
         }

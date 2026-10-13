@@ -73,6 +73,8 @@ object GrowthReport {
 
     /** The week of [monday] from the records: Jarvis's lessons, Autopilot's log, the app's health, the learning goals. */
     fun summarize(monday: LocalDate, lessons: AgentLessons.Book, auto: AutoChange.Book, health: HealthBook.Book, goals: LearningGoals.Book): Week {
+        // Boss's own changes logged in Autopilot's book ([AutoChange.bossOwn]: the park, the Liquidity paper trail) are not its.
+        @Suppress("NAME_SHADOWING") val auto = auto.copy(entries = auto.entries.filter { !AutoChange.bossOwn(it.change.kind) })
         val active = AgentLessons.active(lessons)
         val learnedLs = active.filter { it.confidence != AgentLessons.Confidence.WEAK && inWeek(it.statusOn, monday) &&
             (it.status == AgentLessons.Status.NEW || it.status == AgentLessons.Status.CONFIRMED) }

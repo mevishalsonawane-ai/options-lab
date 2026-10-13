@@ -50,6 +50,8 @@ class LiquidityTrailSwitchTest : RobolectricTest() {
         // Off again: kept too.
         assertEquals(LiquidityFreeze.trailSaid(false), LiquidityTest.setTrail(false))
         waitFor("the state file") { LiquidityTest.stateWrittenForTest()?.contains("trail=false") == true }
+        // Both flips reached the timeline before the test ends (none can arrive late in the next test).
+        if (Autopilot.enabled()) waitFor("both flips in the timeline") { trails().size == 2 }
     }
 
     @Test fun eachRealChangeIsLoggedOnceAsBosssAndItsUndoFlipsItBackWithoutLoggingAgain() {
@@ -65,14 +67,17 @@ class LiquidityTrailSwitchTest : RobolectricTest() {
         LiquidityTest.setTrail(false)
         waitFor("the switch off in the timeline") { trails().size == 2 }
         assertEquals(listOf(AutoChange.ON, AutoChange.SWITCHED_OFF), trails().map { it.change.to })
-        // Shown to Boss as his own, undoable in one tap, and never counted as Autopilot's change.
+        // Shown to Boss as his own; only the newest flip undoes; never counted as Autopilot's change.
         val day = on.day
         val items = ChangeTimeline.fromAutopilot(Autopilot.book.value, day).filter { it.key in trails().map { e -> e.id } }
         assertEquals(2, items.size)
-        assertTrue(items.all { it.own && it.agent == "You (logged by Autopilot)" && it.undo == ChangeTimeline.UndoState.UNDOABLE })
+        assertTrue(items.all { it.own && it.agent == "You (logged by Autopilot)" })
+        assertEquals(ChangeTimeline.UndoState.NO_UNDO, items.single { it.key == on.id }.undo)
+        assertEquals(ChangeTimeline.UndoState.UNDOABLE, items.single { it.key == trails().last().id }.undo)
         assertEquals(0, AutoChange.summary(Autopilot.book.value, day).today)
         assertEquals(null, AutoChange.lastUndoable(Autopilot.book.value))
-        // Undo the switch-off: the trail is on again, the entry undone, and nothing new is logged (no loop).
+        // Undo the switch-off: the trail is on again, the entry undone, and nothing new is logged (no loop: the Undo never
+        // calls the log, and every earlier flip was already waited for above).
         val off = trails().last()
         val said = Autopilot.undo(off.id)
         assertTrue(said, said.startsWith("Undone"))
@@ -80,14 +85,34 @@ class LiquidityTrailSwitchTest : RobolectricTest() {
         Thread.sleep(300)
         assertEquals(2, trails().size)
         assertEquals(AutoChange.Status.UNDONE, trails().last().status)
-        // Undo the switch-on: off again, still nothing new logged; and an undone entry cannot be undone twice.
-        assertTrue(Autopilot.undo(on.id).startsWith("Undone"))
-        assertFalse(LiquidityTest.trailOn())
-        assertTrue(Autopilot.undo(on.id).startsWith("That change can't be undone now"))
-        Thread.sleep(300)
-        assertEquals(2, trails().size)
-        // Switched on again by Boss after the undo: a real change, logged again.
-        LiquidityTest.setTrail(true)
+        // The older flip stays as it was: its Undo is refused and says why.
+        assertEquals(AutoChange.SUPERSEDED_UNDO, Autopilot.undo(on.id))
+        assertTrue(LiquidityTest.trailOn())
+        assertTrue(Autopilot.undo(off.id).startsWith("That change can't be undone now"))
+        // Switched off again by Boss after the undo: a real change, logged again.
+        LiquidityTest.setTrail(false)
         waitFor("the new switch in the timeline") { trails().size == 3 }
+    }
+
+    /**
+     * 13 Oct review: on, off, on; an Undo of the FIRST flip must not leave the switch off while the newest entry says on (the next
+     * "on" from the card would then go unlogged). Only the newest flip undoes, and every real flip is logged.
+     */
+    @Test fun anOlderFlipIsNeverUndoneSoTheTimelineAlwaysMatchesTheSwitch() {
+        org.junit.Assume.assumeTrue("the change timeline is in IraAlgo with Jarvis only", Autopilot.enabled())
+        LiquidityTest.setTrail(true); LiquidityTest.setTrail(false); LiquidityTest.setTrail(true)
+        waitFor("three flips in the timeline") { trails().size == 3 }
+        val (e1, e2, e3) = trails()
+        assertEquals(listOf(AutoChange.ON, AutoChange.SWITCHED_OFF, AutoChange.ON), listOf(e1, e2, e3).map { it.change.to })
+        assertEquals(AutoChange.SUPERSEDED_UNDO, Autopilot.undo(e1.id))
+        assertEquals(AutoChange.SUPERSEDED_UNDO, Autopilot.undo(e2.id))
+        assertTrue("the switch is as the newest entry says", LiquidityTest.trailOn())
+        // The newest undoes: off, and the next "on" from the card is a real change, logged.
+        assertTrue(Autopilot.undo(e3.id).startsWith("Undone"))
+        assertFalse(LiquidityTest.trailOn())
+        LiquidityTest.setTrail(true)
+        waitFor("the next on in the timeline") { trails().size == 4 }
+        assertEquals(AutoChange.ON, trails().last().change.to)
+        assertEquals(AutoChange.Status.KEPT, trails().last().status)
     }
 }

@@ -721,10 +721,23 @@ object AutoChange {
 
     fun undo(book: Book, id: String): Undo? {
         val e = entry(book, id) ?: return null
-        if (!e.applied) return null
+        if (!e.applied || superseded(book, e)) return null
         val inv = inverse(e.change, "undone by you")
         return Undo(e, inv, undoNeedsPin(e.change))
     }
+
+    /**
+     * Boss's Liquidity paper trail switch ([Kind.LIQ_TRAIL]) logged again since [e]: only the newest flip may be undone (13 Oct
+     * review: undoing an older one would set the switch against what the newest entry shows). Every other change: false.
+     */
+    fun superseded(book: Book, e: Entry): Boolean {
+        if (e.change.kind != Kind.LIQ_TRAIL) return false
+        val i = book.entries.indexOfFirst { it.id == e.id }
+        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == Kind.LIQ_TRAIL && it.change.target == e.change.target }
+    }
+
+    /** What Boss is told when he taps Undo on a [superseded] flip of his trail switch. */
+    const val SUPERSEDED_UNDO = "That switch was changed again since: undo the newest change of it instead (or use the switch on the Strategy lab card). Nothing changed."
 
     /** The newest change that can be undone ("undo the last change"). */
     fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && !bossOwn(it.change.kind) }
@@ -900,6 +913,8 @@ object AutoChange {
 
     /** "How is autopilot doing?": kept against reverted, and the rupees against the counterfactual. */
     fun sayHow(book: Book, mode: Mode): String {
+        // Boss's own changes ([bossOwn]: the park, the Liquidity paper trail) are logged here but are not Autopilot's.
+        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { !bossOwn(it.change.kind) })
         if (book.entries.none { it.by == "autopilot" || it.applied }) return "Autopilot learning is ${mode.words} and has made no change yet, Boss."
         val kept = book.entries.count { it.status == Status.KEPT }
         val rev = book.entries.count { it.status == Status.REVERTED }

@@ -80,6 +80,58 @@ class LiqTrailChangeTest {
         assertEquals("I changed nothing by myself today, Boss.", AutoChange.sayToday(only, day))
     }
 
+    /** 13 Oct review: a lone entry of Boss's own (the trail switch, the park) is not counted anywhere as Autopilot's change. */
+    @Test fun aLoneBossEntryIsNotCountedAsAutopilotsInAnyCount() {
+        for (c in listOf(AutoChange.liqTrail(true), AutoChange.armPark("orb", "ORB", "x", 0.0))) {
+            val only = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.KEPT, 1L, day, by = "your choice").first
+            assertEquals("Autopilot: 0 changes today, 0 reverted", AutomationSummary.autopilotLine(only, day))
+            assertTrue(AutoChange.sayHow(only, AutoChange.Mode.SAFE).startsWith("Autopilot learning is safe and has made no change yet"),
+                AutoChange.sayHow(only, AutoChange.Mode.SAFE))
+            val kept = only.copy(entries = only.entries.map { it.copy(closedOn = day) })
+            val w = GrowthReport.summarize(day.with(java.time.DayOfWeek.MONDAY), AgentLessons.Book(), kept, HealthBook.Book(), LearningGoals.Book())
+            assertEquals(0, w.made); assertEquals(0, w.kept)
+        }
+        // Beside an Autopilot change, only that one counts.
+        val (b, _) = book()
+        assertEquals("Autopilot: 1 change today, 0 reverted", AutomationSummary.autopilotLine(b, day))
+        assertTrue(AutoChange.sayHow(b, AutoChange.Mode.SAFE).startsWith("Autopilot learning is safe: 0 kept, 0 reverted by its own check, 1 on probation"))
+    }
+
+    /** 13 Oct review: on, off, on - only the newest flip undoes, so an Undo never sets the switch against the newest entry. */
+    @Test fun onlyTheNewestFlipOfTheSwitchUndoes() {
+        var b = AutoChange.Book()
+        val ids = ArrayList<String>()
+        for ((i, on) in listOf(true, false, true).withIndex()) {
+            val (nb, e) = AutoChange.record(b, AutoChange.liqTrail(on), AutoChange.Status.KEPT, 1_000L + i, day, by = "your choice")
+            b = nb; ids += e.id
+        }
+        assertNull(AutoChange.undo(b, ids[0])); assertNull(AutoChange.undo(b, ids[1]))
+        assertTrue(AutoChange.superseded(b, AutoChange.entry(b, ids[0])!!))
+        assertFalse(AutoChange.superseded(b, AutoChange.entry(b, ids[2])!!))
+        assertEquals(AutoChange.SWITCHED_OFF, AutoChange.undo(b, ids[2])!!.inverse.to)
+        val items = ChangeTimeline.fromAutopilot(b, day)
+        assertEquals(listOf(ChangeTimeline.UndoState.NO_UNDO, ChangeTimeline.UndoState.NO_UNDO, ChangeTimeline.UndoState.UNDOABLE),
+            ids.map { id -> items.single { it.key == id }.undo })
+        // Another kind is never superseded this way (the park's entries each undo on their own).
+        val park = AutoChange.record(b, AutoChange.armPark("orb", "ORB", "x", 0.0), AutoChange.Status.KEPT, 2_000L, day).second
+        assertFalse(AutoChange.superseded(b, park))
+    }
+
+    /** 13 Oct review: the evening's note of the day counts trailed trades too, labelled - never "no paper trade" on such a day. */
+    @Test fun theTomorrowNoteCountsTheDaysTrailedTradesLabelled() {
+        val tue = LocalDate.of(2026, 10, 15)
+        val rows = LiquidityRecord.rows(book, withTrail = true)
+        val d = TomorrowPlan.dayOf(rows.filter { it.trailed }, tue)
+        assertEquals(TomorrowPlan.Day(1, 1, 240.0, trailed = 1), d)
+        val f = TomorrowPlan.Facts(today = tue, next = tue.plusDays(1), liquidity = d)
+        assertTrue(TomorrowPlan.lines(f).contains("Liquidity 15+5 today on paper: 1 trade, 1 won, net Rs 240 after charges (all with ₹500 trail, not the plain rules)."),
+            TomorrowPlan.lines(f).joinToString("\n"))
+        val mixed = TomorrowPlan.dayOf(rows, tue)
+        assertEquals(TomorrowPlan.Day(2, 1, -120.0, trailed = 1), mixed)
+        assertTrue(TomorrowPlan.lines(f.copy(liquidity = mixed)).any { it.endsWith("(1 with ₹500 trail, not the plain rules).") })
+        assertTrue(TomorrowPlan.lines(f.copy(liquidity = TomorrowPlan.Day(1, 1, 240.0))).any { it == "Liquidity 15+5 today on paper: 1 trade, 1 won, net Rs 240 after charges." })
+    }
+
     // ---- the plain-rules record Jarvis reads -----------------------------------------------------------------------------
 
     private val today = LocalDate.of(2026, 10, 15)

@@ -72,7 +72,9 @@ object ChangeTimeline {
                 AutoChange.Status.REVERTED -> UndoState.REVERTED
                 AutoChange.Status.OFFERED -> UndoState.ASKED
                 AutoChange.Status.REVERT_ASKED -> UndoState.NEEDS_PIN
-                else -> if (AutoChange.undoNeedsPin(c) || undoNeedsPin(e)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
+                // An older flip of Boss's Liquidity paper trail switch: only the newest one undoes (13 Oct review).
+                else -> if (AutoChange.superseded(book, e)) UndoState.NO_UNDO
+                    else if (AutoChange.undoNeedsPin(c) || undoNeedsPin(e)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
             }
             Item("ap:${e.id}", if (tuning) Source.SPECIALISTS else Source.AUTOPILOT, e.atMs,
                 // Boss's own changes (13 Oct: the park, the Liquidity paper trail), logged here so each can be undone in one tap:

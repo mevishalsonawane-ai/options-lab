@@ -75,9 +75,10 @@ object AutomationSummary {
 
     /** "Autopilot: 1 change today, 0 reverted" (and how many it asked for today, when any). */
     fun autopilotLine(book: AutoChange.Book, today: LocalDate): String {
-        // Made today counts a change reverted or undone since (else "0 changes today, 1 reverted" on the same day).
+        // Made today counts a change reverted or undone since (else "0 changes today, 1 reverted" on the same day). Boss's own
+        // changes logged there (13 Oct: the park, the Liquidity paper trail; [AutoChange.bossOwn]) are not Autopilot's.
         val made = book.entries.count {
-            it.day == today && (it.applied || it.status == AutoChange.Status.REVERTED || it.status == AutoChange.Status.UNDONE)
+            !AutoChange.bossOwn(it.change.kind) && it.day == today && (it.applied || it.status == AutoChange.Status.REVERTED || it.status == AutoChange.Status.UNDONE)
         }
         val reverted = book.entries.count { it.status == AutoChange.Status.REVERTED && (it.closedOn ?: it.day) == today }
         val asked = book.entries.count { it.status == AutoChange.Status.OFFERED && it.day == today }

@@ -448,6 +448,8 @@ internal object Autopilot {
     /** Boss's Undo on [id] (the change log): the inverse through the same setter; a live raise only with [pinConfirmed]. */
     fun undo(id: String, pinConfirmed: Boolean = false): String {
         ensureLoaded()
+        // An older flip of Boss's Liquidity paper trail switch: only the newest one undoes (13 Oct review). Said, nothing changed.
+        AutoChange.entry(_book.value, id)?.let { e -> if (e.applied && AutoChange.superseded(_book.value, e)) return AutoChange.SUPERSEDED_UNDO }
         val u = AutoChange.undo(_book.value, id) ?: return "That change can't be undone now (it was already undone or reverted)."
         if (needsPin(u.inverse, u.needsPin) && !pinConfirmed) return PIN_UNDO
         val said = runCatching { apply(u.inverse, pinConfirmed) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
@@ -673,9 +675,8 @@ internal object Autopilot {
     /**
      * Boss switched their own Rs 500 give-back trail on the Liquidity PAPER books [on] or off ([com.optionslab.app.data.LiquidityTest.setTrail],
      * the Strategy lab card): logged as Boss's (kept, not on probation, never counted as Autopilot's change) so "Today's
-     * changes" shows it and one tap undoes it (the switch flipped back, on paper). A switch already logged at the same value
-     * (the newest such entry, still applied) is not logged twice. In the background, on Autopilot's own worker: the switch
-     * never waits for the log's disk.
+     * changes" shows it and one tap undoes it (the switch flipped back, on paper; only the newest flip undoes). Called only on a
+     * real change. In the background, on Autopilot's own worker: the switch never waits for the log's disk.
      */
     fun logBossTrail(on: Boolean) {
         if (!enabled()) return
@@ -686,10 +687,10 @@ internal object Autopilot {
             runCatching {
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                // Every call is a real change ([com.optionslab.app.data.LiquidityTest.setTrail] logs only those): each is kept, and the
+                // older flips are no longer undoable ([AutoChange.superseded]), so the newest entry always matches the switch.
                 synchronized(lock) {
-                    val last = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.LIQ_TRAIL && it.change.target == c.target }
-                    if (last == null || !last.applied || last.change.to != c.to)
-                        _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }
             }
