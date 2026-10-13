@@ -43,6 +43,11 @@
       costs: "app exits, ATM, real spread and charges, 1 lot"
       src: research/FINDINGS.md
       sec: Daily filters on Liquidity BANKNIFTY
+    - text: "Why no profit lock on Liquidity: R19 tested 6 locks on BANKNIFTY 15m and 5m and 0 of 12 passed; on the holdout 11 of 12 lost against the plain rules, because Liquidity's profit comes from a few trades that run to the next level and a lock sells them early. MIDCPNIFTY could not be tested (no data)."
+      period: "design 2024-02-13 .. 2024-07-31 and 2025-02-17 .. 2026-02-23; holdout 1 Aug 2024 - 14 Feb 2025"
+      costs: "app fills plus modelled spread, app charges, 1 lot"
+      src: research/FINDINGS.md
+      sec: Profit lock for Liquidity 15+5
 
 - id: orb
   name: ORB (opening range breakout)

@@ -1,0 +1,26 @@
+id: r19
+title: 'Liquidity 15+5 profit lock: index-distance ladder, breakeven at +X%, give-back trail (Boss, 13 Oct)'
+family: trade-management
+date: '2026-10-13'
+doc: research/HUNT_R19_LIQUIDITY_LOCK.md
+hypothesis: A lock that only adds an earlier exit (a resting stop that only rises) raises Liquidity 15+5's net by keeping part of the gains that the plain rules give back.
+data_version: 'research-data release (BANKNIFTY index + nearest-expiry option minutes 2024-02-13..2026-02-23, 498 sessions); app fills (liq) and charges (app, current rates); no MIDCPNIFTY data exists in the release'
+period:
+  design: 2024-02-13..2024-07-31 and 2025-02-17..2026-02-23 (362 sessions; 8 walk-forward folds)
+  holdout: 2024-08-01..2025-02-14 (136 sessions; the only release span never read as a holdout)
+instruments:
+- BANKNIFTY
+features:
+- best option high since the entry
+- best index move toward the next liquidity level since the entry
+- breakeven after charges
+model_or_rule: 'a1/a2 index ladder (50% of the way to the target -> breakeven, 75% -> keep 25% / 50% of the premium gained); b1/b2 breakeven once +10% / +20%; c1/c2 give back 50% of the best gain after +10% / +20%; d control. Books BANKNIFTY 15m and 5m'
+settings: research/hunt/r19/PREREG.md
+prereg: research/hunt/r19/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Walk-forward failed on both books before the holdout (15m -Rs 15,125, 5m -Rs 6,083). Holdout (136 sessions, 36 + 103 trades): 11 of 12 deltas negative (5m a1 -Rs 10,524, c1 -Rs 24,637; 15m c1 -Rs 22,262); the only positive one, 15m b1, +Rs 452, p 0.40; every BH q 0.97; best twin p 0.20 (needs < 0.05). 0 of 12 passed. FAILED. MIDCPNIFTY not testable (no data).'
+  costs: app charges at current rates, liq fills, lock fills as resting stops (stop slippage), 1 lot of the lot in force
+holdout_read: true
+verdict: rejected
+notes: 'The app keeps no lock on Liquidity (paper and live). Earlier, in-sample, the same family failed in LIQUIDITY_LOCK.md (5 premium-target ladders) and LIQUIDITY_TRAIL.md (10 trails), so the family has 27 versions tried in all. MIDCPNIFTY needs its own test once its minute data is published; until then it stays on the plain rules.'

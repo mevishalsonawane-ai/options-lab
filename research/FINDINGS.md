@@ -307,3 +307,18 @@ Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 2
   0.58% vs 0.52% NIFTY); "days like today" analogs (worse than all past days pooled, all 8 cases).
 - App: build an expected-range nowcast (stop/target sizing, quiet-market warning, Jarvis); show analogs only as
   context, never as a forecast; no direction / regime / max-pain models.
+
+## Profit lock for Liquidity 15+5 (R19, 13 Oct 2026) - none helps; Liquidity keeps no lock
+Full study: `HUNT_R19_LIQUIDITY_LOCK.md` (pre-registered `hunt/r19/PREREG.md`; 12 tests, one BH family).
+- Asked after a Liquidity 5m MIDCPNIFTY trade went about +Rs 2.5k and then left at -Rs 864 on the index stop.
+- Tested 6 locks that only add an earlier exit (a resting stop that only rises) on BANKNIFTY 15m and 5m, the app's
+  rules and real option prices: an index-distance ladder (breakeven at 50% of the way to the next level, keep 25% / 50%
+  of the premium gained at 75%), breakeven once +10% / +20%, give back 50% of the best gain after +10% / +20%.
+- 0 of 12 passed. Walk-forward lost on both books (15m -Rs 15,125, 5m -Rs 6,083). On the holdout (1 Aug 2024 - 14 Feb
+  2025, 136 sessions, 36 + 103 trades) 11 of 12 lost against the plain rules; the only gain was +Rs 452 (p 0.40); every
+  BH q 0.97.
+- Why: Liquidity's profit comes from a few trades that run to the next level, and a lock sells them early. The give-back
+  that would have saved Boss's trade (keep half after +10%) was the worst lock: -Rs 22,262 (15m) and -Rs 24,637 (5m) on
+  the holdout.
+- MIDCPNIFTY could not be tested: the release has no MIDCPNIFTY data and the Dhan lake is not published. It stays on the
+  plain rules until it is tested on its own data. App: no change, paper or live.

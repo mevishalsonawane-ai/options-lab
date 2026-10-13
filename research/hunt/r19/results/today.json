@@ -1,0 +1,39 @@
+{
+ "breakeven_after_charges": 196.31,
+ "variants": {
+  "d": {
+   "exit": 188.25,
+   "gross": -864
+  },
+  "a1": {
+   "exit": null,
+   "gross": null,
+   "note": "needs the index path and the target level (not in the release)"
+  },
+  "a2": {
+   "exit": null,
+   "gross": null,
+   "note": "needs the index path and the target level (not in the release)"
+  },
+  "b1": {
+   "exit": 196.35,
+   "gross": 108,
+   "lock": 196.31
+  },
+  "b2": {
+   "exit": 188.25,
+   "gross": -864,
+   "lock": null
+  },
+  "c1": {
+   "exit": 205.95,
+   "gross": 1260,
+   "lock": 205.95
+  },
+  "c2": {
+   "exit": 188.25,
+   "gross": -864,
+   "lock": null
+  }
+ }
+}
