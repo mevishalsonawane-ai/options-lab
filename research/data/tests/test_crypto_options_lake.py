@@ -451,3 +451,13 @@ def test_crosscheck_matches_strike_and_expiry_and_compares_iv(tmp_path):
     assert res["matched_strike_expiry"] == 1 and res["comparisons"] == 1
     assert res["sample"][0]["delta_iv"] == pytest.approx(40.0, abs=0.01)
     assert res["median_iv_diff_pts"] == pytest.approx(-1.0, abs=0.01)
+
+
+def test_slim_product_drops_bulky_asset_records_but_keeps_symbols():
+    p = product(1, "C-BTC-85400-131026")
+    p["settling_asset"] = dict(symbol="USD", id=14, networks=[dict(network="INR_BANKING")] * 50)
+    p["ui_config"] = dict(leverage_slider_values=[1, 2, 5])
+    q = L.slim_product(p)
+    assert q["settling_asset"] == dict(symbol="USD", id=14) and "ui_config" not in q
+    assert q["underlying_asset"] == dict(symbol="BTC") and q["strike_price"] == "85400"
+    assert L.products_frame([q])["settling_asset"].iloc[0] == "USD"

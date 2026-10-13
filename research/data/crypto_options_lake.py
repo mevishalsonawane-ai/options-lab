@@ -429,11 +429,24 @@ def page_products(get, states, coins=COINS, page_size=500):
             if after:
                 p["after"] = after
             r = get(f"{DELTA}/products", p)
-            out += r.get("result") or []
+            out += [slim_product(x) for x in r.get("result") or []]
             after = (r.get("meta") or {}).get("after")
             if not after or not r.get("result"):
                 break
     return out
+
+
+_ASSET_KEYS = ("underlying_asset", "quoting_asset", "settling_asset", "spot_index")
+
+
+def slim_product(p):
+    """A product without the bulky nested asset records (deposit networks, withdrawal limits, UI config): those
+    repeat on every one of ~150k products and took >4 GB of memory (13 Oct). Each asset keeps its symbol and id."""
+    q = {k: v for k, v in p.items() if k not in _ASSET_KEYS and k != "ui_config"}
+    for k in _ASSET_KEYS:
+        if isinstance(p.get(k), dict):
+            q[k] = {kk: p[k].get(kk) for kk in ("symbol", "id") if kk in p[k]}
+    return q
 
 
 def products_frame(raw, inr_per_usd=None, fetched_ms=None):
@@ -930,7 +943,9 @@ class Lake:
             local = os.path.join(self.a.work, rel)
             old = None
             if not self.a.dry_run and self.files.get(rel) and fetch_remote(self.a.remote, rel, local, self.run):
-                old = pd.read_parquet(local)
+                gone = pq.read_table(local, filters=[("id", "not in", [int(x) for x in df["id"]])])
+                old = gone.to_pandas() if gone.num_rows else None      # only delisted rows, not all 150k raw rows
+                os.remove(local)
             df = merge_products(old, df)
             print(f"delta_india/products: {len(df):,} BTC/ETH options ({(df['state'] == 'live').sum()} live), expiries "
                   f"{utc(df['expiry_ts'].min(), '%Y-%m-%d')}..{utc(df['expiry_ts'].max(), '%Y-%m-%d')}", flush=True)
@@ -955,6 +970,8 @@ class Lake:
             self.fail(rel, ex)
             return None
 
+    CANDLE_PRODUCT_COLS = ["id", "symbol", "underlying", "strike_price", "expiry_ts", "launch_ts"]
+
     def delta_candles(self, products=None):
         """One file per underlying per expiry day, newest expiries first; only expiries already settled."""
         if products is None:
@@ -963,10 +980,11 @@ class Lake:
             if not fetch_remote(self.a.remote, rel, local, self.run):
                 products = self.delta_products()
             else:
-                products = pd.read_parquet(local)
+                products = pd.read_parquet(local, columns=self.CANDLE_PRODUCT_COLS)
                 os.remove(local)
         if products is None or products.empty:
             return []
+        products = products[self.CANDLE_PRODUCT_COLS]
         done = products[products["expiry_ts"] < self.now_ms]
         groups = []
         for (und, exp_day), g in done.groupby([done["underlying"], done["expiry_ts"] // DAY_MS]):
