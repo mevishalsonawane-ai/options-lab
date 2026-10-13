@@ -49,7 +49,7 @@ class FamilyParkRowsTest {
     @Test fun eachParkedArmSaysSoWithItsRecord() {
         rows(parked())
         for (a in FamilyPark.ARMS) {
-            compose.onNodeWithTag("orb-line:${a.source}").assertTextEquals(keepNumbersWhole(FamilyPark.rowLine(a.source)))
+            compose.onNodeWithTag("orb-line:${a.source}", useUnmergedTree = true).assertTextEquals(keepNumbersWhole(FamilyPark.rowLine(a.source)))
             compose.onNodeWithText("Switch ${a.label} back on").assertExists()
         }
         assertTrue(keepNumbersWhole(FamilyPark.rowLine("orb")).contains("parked on your choice (13 Oct)"))
