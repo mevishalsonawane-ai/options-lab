@@ -1,0 +1,34 @@
+id: r20brk-events
+title: 'Event study: what price does after N consecutive candle closes beyond a support / resistance level'
+family: market-facts
+date: '2026-10-13'
+doc: research/HUNT_R20C_SR_BREAK.md
+hypothesis: 'Descriptive: after 2 closes beyond a level, price keeps going more often than it comes back, more than after
+  random levels.'
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, FINNIFTY index 2024-02-12..2026-02-24)
+  via research/hunt/r17/data.py; NSE F&O bhavcopy (previous-day OI); Yahoo daily ^INDIAVIX for gaps
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY / FINNIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+- FINNIFTY
+features:
+- 5- / 15-minute index candles
+- PDH/PDL, R1/S1, liquidity zones, bhavcopy OI walls, opening range
+- ATR14
+- India VIX
+model_or_rule: first N-close break (N = 1, 2, 3) per level type, side, timeframe and day; moves, fake-outs, MFE/MAE, wait
+  cost
+settings: research/hunt/r20c/PREREG.md part A2
+prereg: research/hunt/r20c/PREREG.md
+variants_tried: null
+results:
+  summary: 'Design (BANKNIFTY 361, NIFTY 364, FINNIFTY 396 sessions): after a 2-close break price moves about +0.02 ATR14
+    to the close, wins about 50%, fakes out within 30 min in 32-49% of events; random-level twins move almost as much. Holdout
+    not read yet.'
+  costs: none (index points; descriptive)
+holdout_read: false
+verdict: not-a-test
+notes: 5 level types x 2 timeframes x 3 N, plus random-level rows; the rules picked from it are r20brk-piv5n2/-piv5n1/-early15/-lowvix15.

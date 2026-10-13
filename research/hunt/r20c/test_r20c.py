@@ -285,3 +285,87 @@ def test_twin_levels_keep_distance_from_open():
     tw = S.level_fn(ctx, "PDHL", 5, twin_signs={"pdh": -1, "pdl": 1})(0)
     assert tw[0][0] == pytest.approx(2 * o - 50100.0) and tw[1][0] == pytest.approx(49900.0)
     assert [x[1] for x in tw] == [1, -1]
+
+
+# ------------------------------------------------------------------------------------------------ the trade engine
+import trades as TR  # noqa: E402
+
+
+def opt(prices, start=0):
+    """An option minute array (375, 5) flat at the given closes from `start` (volume 100 lots of 30)."""
+    a = np.full((375, 5), np.nan)
+    p = np.array(prices, float)
+    a[start:start + len(p), 0] = a[start:start + len(p), 1] = a[start:start + len(p), 2] = a[start:start + len(p), 3] = p
+    a[start:start + len(p), 4] = 3000
+    return a
+
+
+def test_strike_families():
+    assert TR.strike_for({"exit": "orb"}, "BANKNIFTY", 50049.0, 1) == 50000.0
+    assert TR.strike_for({"exit": "liq"}, "BANKNIFTY", 50049.0, 1) == 49900.0      # 1-ITM call
+    assert TR.strike_for({"exit": "liq"}, "NIFTY", 22010.0, -1) == 22050.0         # 1-ITM put
+
+
+def test_sim_liq_exits():
+    ix = np.full((375, 4), 100.0)
+    a = opt([100.0] * 375)
+    a[40, 2] = 80.0                                                                # a low through the 15% stop, later
+    x, r, why = TR.sim_liq(a, ix, 11, 100.0, 1, 99.0, 5, 30)
+    assert why == "time" and r == 31                                                # flat: the 20-min time stop first
+    a = opt(list(100.0 + np.arange(375.0)))                                        # +1 a minute: passes the time stop
+    a[40, 2] = 80.0
+    x, r, why = TR.sim_liq(a, ix, 11, 100.0, 1, 99.0, 5, 30)
+    assert why == "stop" and r == 40 and x <= 85.0
+    ix2 = ix.copy()
+    ix2[24, 3] = 98.0                                                               # candle close (row 24) back below
+    a = opt(list(100.0 + np.arange(375.0)))
+    x, r, why = TR.sim_liq(a, ix2, 11, 100.0, 1, 99.0, 5, 30)
+    assert why == "failed_break" and r == 25
+    ix3 = ix.copy()
+    ix3[22, 3] = 98.0                                                               # not a candle close: ignored
+    x, r, why = TR.sim_liq(a, ix3, 11, 100.0, 1, 99.0, 5, 30)
+    assert why == "square_off" and r == TR.A.SQ_ROW
+
+
+def test_signals_window_and_vix_filter():
+    ix = flat_day([95, 101, 104, 106], tf=5)
+    ctx = S.Ctx("BANKNIFTY", date(2025, 3, 3), 20, ix, 95.0, 10.0, 14.0, False,
+                {"PDHL": [], "PIV": [(100.0, 1, "r1", 0), (50.0, -1, "s1", 0)], "OI": []}, {5: np.empty((0, 4))})
+    rule = dict(types=["PIV"], tf=5, n=2, last_entry=(14, 0), sides=(1, -1), exit="orb")
+    lv = TR.DayLv(ctx, 5, ["PIV"])
+    assert TR.signals(rule, ctx, lv) == [(1, 14, 100.0)]
+    assert TR.signals(dict(rule, last_entry=(9, 29)), ctx, lv) == []               # candle closes 09:30 > 09:29
+    assert TR.signals(dict(rule, last_entry=(9, 30)), ctx, lv) == [(1, 14, 100.0)]
+    assert TR.signals(dict(rule, filters={"vix": ["<13"]}), ctx, lv) == []
+    ctx.vix = 12.0
+    assert TR.signals(dict(rule, filters={"vix": ["<13"]}), ctx, lv) == [(1, 14, 100.0)]
+
+
+def test_daylv_twin_signs_mirror_around_open():
+    ix = walk(9)
+    ctx = S.Ctx("BANKNIFTY", date(2025, 3, 3), 20, ix, 50000.0, 100.0, 14.0, False,
+                {"PDHL": [], "PIV": [(50200.0, 1, "r1", 0)], "OI": []}, {})
+    lv = TR.DayLv(ctx, 5, ["PIV"], signs={("PIV", "r1"): -1})
+    assert lv(0)[0][0] == pytest.approx(2 * ix[0, 0] - 50200.0) and lv(0)[0][1] == 1
+
+
+def test_score_and_blocks():
+    d = [date(2025, 1, k) for k in range(1, 9)]
+    tr = [dict(day=d[0], net=100.0, und="X", why="t", side=1), dict(day=d[0], net=-50.0, und="X", why="t", side=1),
+          dict(day=d[3], net=-200.0, und="X", why="t", side=1)]
+    s = TR.score(tr, d)
+    assert s["net"] == -150.0 and s["sessions"] == 8 and s["trade_days"] == 2 and s["worst_day"] == -200.0
+    assert s["green_trade_days"] == 0.5 and s["max_dd"] == -200.0
+    b = TR.blocks(tr, d)
+    assert [x["net"] for x in b] == [50.0, -200.0, 0.0, 0.0]
+
+
+def test_bh():
+    r = TR.bh({"a": 0.001, "b": 0.02, "c": 0.04, "d": 0.5})
+    assert r["a"][2] and r["b"][2] and not r["c"][2] and not r["d"][2]
+    assert r["d"][1] == pytest.approx(0.5)
+
+
+def test_prior_pvalues_are_r20_and_r20b_28():
+    p = TR.prior_pvalues()
+    assert len(p) == 28 and sum(k.startswith("R20b ") for k in p) == 14

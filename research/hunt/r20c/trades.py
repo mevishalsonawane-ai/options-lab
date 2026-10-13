@@ -223,3 +223,166 @@ def bh(pvals: dict, q=BH_Q):
     qv = np.minimum.accumulate((ps * m / np.arange(1, m + 1))[::-1])[::-1]
     kmax = max([i + 1 for i in range(m) if ps[i] <= (i + 1) / m * q], default=0)
     return {k: (float(ps[i]), float(min(qv[i], 1.0)), i < kmax) for i, k in enumerate(names)}
+
+
+# ------------------------------------------------------------------------------------------------ runs
+class Fills2x(Fills):
+    """G6: the liq half-spread ticks doubled."""
+
+    def _ticks(self, vol5_lots, p):
+        return 2.0 * super()._ticks(vol5_lots, p)
+
+
+_PREP: dict = {}
+
+
+def prep(und):
+    """[(R17 Day, Ctx)] for every session from the 16th (cached in memory)."""
+    if und not in _PREP:
+        days = S.load_days(und)
+        _PREP[und] = [(days[c.i], c) for c in S.contexts(und, days)]
+    return _PREP[und]
+
+
+def in_period(und, day, period):
+    return (day < S.HOLDOUT[und]) == (period == "design")
+
+
+def period_items(rule, period):
+    return [(d, c) for u in rule["unds"] for d, c in prep(u) if in_period(u, c.day, period)]
+
+
+def sessions_of(rule, period):
+    return sorted({c.day for _, c in period_items(rule, period)})
+
+
+def run_rule(rule, period, signs_for=None):
+    out = []
+    for d, c in period_items(rule, period):
+        out += rule_day(rule, d, c, signs=signs_for(c) if signs_for else None)
+    return out
+
+
+def level_signs(rule, ctx, rng):
+    sg = {}
+    for t in rule["types"]:
+        lv = LV.or_edges(ctx.ix, rule["tf"]) if t == "OR" else ctx.levels.get(t, []) if t != "LIQ" else []
+        for x in lv:
+            sg[(t, x[2])] = int(rng.choice([-1, 1]))
+        if t == "LIQ":
+            for k in LV.LiqMap(ctx.hist[rule["tf"]], ctx.ix, rule["tf"]).keys():
+                sg[("LIQ", k)] = int(rng.choice([-1, 1]))
+    return sg
+
+
+def twin_level(rule, actual_net, n=TWINS, seed=S.SEED):
+    rng = np.random.default_rng([seed, 1])
+    nets = []
+    for _ in range(n):
+        tr = run_rule(rule, "holdout", signs_for=lambda c: level_signs(rule, c, rng))
+        nets.append(sum(t["net"] for t in tr))
+    nets = np.array(nets)
+    return float((1 + (nets >= actual_net - 1e-9).sum()) / (n + 1)), nets
+
+
+def twin_time(rule, trades, n=TWINS, seed=S.SEED):
+    """Each actual trade re-entered at a random candle close of the rule's window (same side / level / day)."""
+    rng = np.random.default_rng([seed, 2])
+    byday = {(c.und, c.day): (d, c) for d, c in period_items(rule, "holdout")}
+    tf, last = rule["tf"], last_row(rule)
+    tables = []
+    for t in trades:
+        d, c = byday[(t["und"], t["day"])]
+        lv = DayLv(c, tf, rule["types"])
+        first = lv.known_bar() + rule["n"] - 1
+        rows = [(k + 1) * tf - 1 for k in range(first, 375 // tf) if (k + 1) * tf - 1 <= last]
+        nets = []
+        for r in rows:
+            x = trade(rule, d, c, t["side"], r, t["level"])
+            nets.append(x["net"] if x else 0.0)
+        tables.append(np.array(nets) if nets else np.zeros(1))
+    actual = sum(t["net"] for t in trades)
+    tot = np.zeros(n)
+    for tb in tables:
+        tot += tb[rng.integers(0, len(tb), n)]
+    return float((1 + (tot >= actual - 1e-9).sum()) / (n + 1)), tot
+
+
+def report(rule, trades, period):
+    ss = sessions_of(rule, period)
+    out = dict(all=score(trades, ss))
+    for u in rule["unds"]:
+        su = sorted({c.day for _, c in prep(u) if in_period(u, c.day, period)})
+        out[u] = score([t for t in trades if t["und"] == u], su)
+    if period == "design":
+        out["blocks"] = blocks(trades, ss)
+    out["exits"] = {w: int(sum(1 for t in trades if t["why"] == w)) for w in sorted({t["why"] for t in trades})}
+    out["sides"] = {str(s): score([t for t in trades if t["side"] == s], ss)["net"] for s in (1, -1)}
+    return out
+
+
+def design():
+    res = {}
+    for rid, rule in RULES.items():
+        tr = run_rule(rule, "design")
+        r = report(rule, tr, "design")
+        r["G1"] = r["all"]["net"] > 0
+        r["G2"] = sum(b["net"] > 0 for b in r["blocks"]) >= 3
+        res[rid] = r
+        print(rid, {k: round(v, 1) if isinstance(v, float) else v for k, v in r["all"].items()},
+              [round(b["net"]) for b in r["blocks"]], flush=True)
+    os.makedirs(S.RESULTS, exist_ok=True)
+    json.dump(S.jsonable(res), open(os.path.join(S.RESULTS, "design.json"), "w"), indent=1)
+    return res
+
+
+def prior_pvalues():
+    """R20 / R20b's 28 holdout p-values (R20b results/combined_bh.json, branch claude/r20b-sr-range commit 52532ce)."""
+    return json.load(open(os.path.join(HERE, "prior_pvalues.json")))["pvalues"]
+
+
+def holdout(n_twins=TWINS):
+    if os.path.exists(S.FLAG):
+        sys.exit("the R20c holdout has already been read once (flag exists)")
+    if not os.path.exists(os.path.join(S.RESULTS, "design.json")):
+        sys.exit("freeze results/design.json first")
+    os.makedirs(S.OUT, exist_ok=True)
+    open(S.FLAG, "w").write(str(date.today()))
+    des = json.load(open(os.path.join(S.RESULTS, "design.json")))
+    res, pv = {}, {}
+    for rid, rule in RULES.items():
+        tr = run_rule(rule, "holdout")
+        r = report(rule, tr, "holdout")
+        net = r["all"]["net"]
+        r["p_t"] = r["all"]["p"]
+        r["p_level"], lv = twin_level(rule, net, n_twins)
+        r["p_time"], tm = twin_time(rule, tr, n_twins)
+        r["twin_level_mean"], r["twin_time_mean"] = float(lv.mean()), float(tm.mean())
+        A.FILLS = Fills2x(mode="liq")
+        r["net_2x_ticks"] = sum(t["net"] for t in run_rule(rule, "holdout"))
+        A.FILLS = Fills(mode="liq")
+        r["G1"], r["G2"] = des[rid]["G1"], des[rid]["G2"]
+        r["G6"] = r["net_2x_ticks"] > 0
+        pv[f"R20c {rid} G3"], pv[f"R20c {rid} G4"], pv[f"R20c {rid} G5"] = r["p_t"], r["p_level"], r["p_time"]
+        res[rid] = r
+        print(rid, round(net), r["all"]["trades"], "p", round(r["p_t"], 3), round(r["p_level"], 3), round(r["p_time"], 3), flush=True)
+    fam = dict(prior_pvalues(), **pv)
+    B = bh(fam)
+    for rid in RULES:
+        ok = [B[f"R20c {rid} G{g}"][2] for g in (3, 4, 5)]
+        res[rid]["q"] = {f"G{g}": B[f"R20c {rid} G{g}"][1] for g in (3, 4, 5)}
+        res[rid]["PASS"] = bool(res[rid]["G1"] and res[rid]["G2"] and all(ok) and res[rid]["G6"])
+    res["_bh"] = dict(m=len(fam), q=BH_Q, rejected=[k for k, v in B.items() if v[2]],
+                      table={k: dict(p=v[0], q=v[1]) for k, v in B.items()})
+    json.dump(S.jsonable(res), open(os.path.join(S.RESULTS, "holdout.json"), "w"), indent=1)
+    return res
+
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd == "design":
+        design()
+    elif cmd == "holdout":
+        holdout()
+    else:
+        sys.exit(__doc__)
