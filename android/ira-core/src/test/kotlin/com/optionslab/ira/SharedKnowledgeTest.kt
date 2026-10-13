@@ -254,6 +254,140 @@ class SharedKnowledgeTest {
         assertTrue(SharedKnowledge.answer(s, "what is the weather", locked = false).isEmpty())
     }
 
+    // 13 Oct review: a research item marked with a conflict carries the lesson's verdict and n in its conflict note. A locked phone
+    // asked a topic-only question ("what about vix?") must say the research only - no lesson text, no lesson n, no lesson result.
+    @Test fun aLockedPhoneAskedATopicOnlyQuestionSaysNoLessonEvenWhenAConflictExists() {
+        val r = item("strategy.vixdiv.what", listOf("vix", "expiry"), SharedKnowledge.Verdict.WORKS, SharedKnowledge.Gate.PASS, arm = "vixdiv",
+            n = 312, text = "VIX divergence held up in both tested years")
+        val jarvis = item("jarvis:strat:vixdiv", listOf("profit", "vix", "expiry"), SharedKnowledge.Verdict.FAILS, SharedKnowledge.Gate.FAIL,
+            arm = "vixdiv", source = SharedKnowledge.Source.JARVIS, n = 47, text = "VIX divergence loses on paper (47 trades, strong)")
+        val phone = item("app:strat:vixdiv", listOf("profit", "vix", "expiry"), SharedKnowledge.Verdict.FAILS, SharedKnowledge.Gate.FAIL,
+            arm = "vixdiv", source = SharedKnowledge.Source.APP, n = 41, text = "The phone: VIX divergence lost on paper")
+        val s = SharedKnowledge.Snapshot(SharedKnowledge.marked(listOf(r, jarvis, phone)), SharedKnowledge.Baselines(), "", null)
+        assertNotNull(s.items.first { it.id == r.id }.conflict, "the research item is marked")
+        for (q in listOf("what about vix?", "expiry", "tell me about VIX on expiry")) {
+            val open = SharedKnowledge.answer(s, q, locked = false)
+            assertTrue(open.any { "conflict" in it.lowercase() && "n 47" in it }, "$q: $open")
+            val locked = SharedKnowledge.answer(s, q, locked = true)
+            assertTrue(locked.isNotEmpty() && locked.any { "VIX divergence held up" in it }, "$q: the research is still said: $locked")
+            for (line in locked) {
+                val l = line.lowercase()
+                assertFalse("conflict" in l || "lesson" in l || "phone" in l || "jarvis" in l, "$q: $line")
+                assertFalse("n 47" in line || "n 41" in line || "47 trades" in line, "$q: a lesson's n on a locked phone: $line")
+                assertFalse("did not pay" in l || "loses" in l || "lost on paper" in l, "$q: a lesson's result on a locked phone: $line")
+            }
+        }
+        // A strategy question on a locked phone: the research's verdict only, too.
+        val arm = SharedKnowledge.answer(s, "is vix divergence working", locked = true)
+        assertTrue(arm.isNotEmpty() && arm.none { "conflict" in it.lowercase() || "n 47" in it || "did not pay" in it }, arm.toString())
+    }
+
+    @Test fun aLockedPhoneSaysNoLessonOnAnyTopicOfTheRealPack() {
+        val book = stratLesson("ORB", 400.0)
+        val s = SharedKnowledge.build(real, book, emptyList(), day)
+        val c = assertNotNull(s.items.first { it.id == "jarvis:strat:orb" }.conflict)
+        for (q in listOf("order flow", "traps", "slippage", "spread", "charges", "re-entry", "vix", "expiry", "gap", "vwap", "oi", "trade manager",
+                "direction", "is ORB profitable", "orb")) {
+            for (line in SharedKnowledge.answer(s, q, locked = true)) {
+                assertFalse("conflict" in line.lowercase() || "Jarvis's lessons" in line || "phone's lessons" in line, "$q: $line")
+                assertFalse("(n ${c.appN})" in line || "n ${c.appN};" in line, "$q: $line")
+            }
+        }
+    }
+
+    // ---- an empty or old pack through every reader (13 Oct review) --------------------------------------------------------------
+
+    @Test fun anEmptyOrOldPackGivesEveryReaderNothingAndNeverThrows() {
+        val old = Knowledge.Pack(1, "old", "test", emptyList(), shared = null)
+        val withLessons = SharedKnowledge.build(old, stratLesson("ORB", 400.0), emptyList(), day)
+        for (s in listOf(SharedKnowledge.EMPTY, SharedKnowledge.build(old, null), SharedKnowledge.build(null as Knowledge.Pack?, null), withLessons)) {
+            assertTrue(s.items.none { !it.source.app && it.source != SharedKnowledge.Source.FINDINGS }, "no research in an old pack")
+            assertNull(SharedKnowledge.flawCite(s, "chg", "ORB"))
+            assertNull(SharedKnowledge.flawCite(s, "slp"))
+            assertNull(SharedKnowledge.flawCite(s, "late"))
+            for (sp in SharedKnowledge.SPEC_TOPICS.keys) assertNull(SharedKnowledge.specialistNote(s, sp, "orb"), sp)
+            val plan = SharedKnowledge.studyPlan(s, Study.KEYS)
+            assertEquals(Study.KEYS, plan.order, "every setup counted, in its own order")
+            assertTrue(plan.skipped.isEmpty() && plan.open.isEmpty())
+            assertEquals(emptyList(), SharedKnowledge.studyPlan(s, emptyList()).order)
+            for (e in listOf("ORB_BREAK", "RANGE_FADE", "OI_BUILDUP", "LEVEL_SWEEP", "NOPE")) for (f in 0..1) assertNull(SharedKnowledge.forgeAvoid(s, e, f), e)
+            assertTrue(SharedKnowledge.forgePrior(s).isEmpty())
+            assertNull(SharedKnowledge.variantRejected(s, "orb", ArmParams.SIDE_CAP, +1))
+            assertNull(SharedKnowledge.variantRejected(s, "orb_fresh", ArmParams.TARGET_PTS, +1))
+            assertNull(SharedKnowledge.flowVerdict(s))
+            assertNull(SharedKnowledge.executionBaseline(s, "BANKNIFTY26OCT52000CE", 11 * 60))
+            assertTrue(SharedKnowledge.execResults(s, listOf(SharedKnowledge.FillCheck(day, "ORB", "BANKNIFTY26OCT52000CE", 600, 1.0)), "fills").isEmpty())
+            assertNull(SharedKnowledge.verdict(s, "orb").research)
+            assertTrue(SharedKnowledge.shadowSkips(s, listOf(Insights.Trip("X", day.atTime(10, 0), day.atTime(10, 30), -1.0, "ORB")), day).isEmpty())
+            for (q in listOf("what about vix?", "expiry", "is ORB profitable", "", "what is the weather"))
+                assertTrue(SharedKnowledge.answer(s, q, locked = true).isEmpty(), "$q on a locked phone: ${SharedKnowledge.answer(s, q, locked = true)}")
+            assertTrue(SharedKnowledge.answer(s, "what about vix?", locked = false).isEmpty())
+        }
+        // Unlocked, the lessons alone still answer about ORB (no research beside them), each with its source.
+        val orb = SharedKnowledge.answer(withLessons, "is ORB profitable", locked = false)
+        assertTrue(orb.isNotEmpty() && orb.first().startsWith("ORB: no research verdict yet"), orb.toString())
+        assertTrue(SharedKnowledge.EMPTY.summary().startsWith("0 research items"), SharedKnowledge.EMPTY.summary())
+    }
+
+    // ---- the market study: never stronger than building, never counted twice (13 Oct review) ------------------------------------
+
+    @Test fun aStudyLessonNeverBecomesStrongOrAPassedTest() {
+        val f = Study.Finding(Market.NIFTY, "gapup", "a gap up of 0.5% or more", "the gap filled", 300, 0.75, 0.74, 0.76)
+        var b = AgentLessons.Book()
+        for (k in 60 downTo 0) {
+            val d = day.minusDays(k.toLong())
+            b = AgentLessons.pass(b, AgentLessons.Inputs(d, study = Study.results(listOf(f), d))).book
+        }
+        val l = b.lessons.first { it.id == "study:nifty:gapup" }
+        assertEquals(AgentLessons.Confidence.BUILDING, l.confidence, "61 nightly recounts of the same two years are not independent agreement")
+        assertTrue(l.status != AgentLessons.Status.CONFIRMED)
+        assertTrue(AgentLessons.proposals(AgentLessons.active(b), AgentLessons.Inputs(day)).isEmpty())
+        assertTrue("stays at building" in AgentLessons.sayWhy(listOf(l)), AgentLessons.sayWhy(listOf(l)))
+        val item = SharedKnowledge.item(l)
+        assertEquals(SharedKnowledge.Gate.NONE, item.gate)
+        // An older book that still holds a strong study lesson: never a passed test, and the next pass brings it down.
+        val old = l.copy(confidence = AgentLessons.Confidence.STRONG, status = AgentLessons.Status.CONFIRMED)
+        assertEquals(SharedKnowledge.Gate.NONE, SharedKnowledge.item(old).gate)
+        val next = AgentLessons.pass(b.copy(lessons = b.lessons.map { if (it.id == l.id) old else it }), AgentLessons.Inputs(day.plusDays(1))).book
+        assertEquals(AgentLessons.Confidence.BUILDING, next.lessons.first { it.id == l.id }.confidence)
+        // The cap is the study's only: other topics still reach strong.
+        assertEquals(AgentLessons.Confidence.STRONG, AgentLessons.ceiling(AgentLessons.Topic.STRATEGY, AgentLessons.Confidence.STRONG))
+        assertEquals(AgentLessons.Confidence.BUILDING, AgentLessons.ceiling(AgentLessons.Topic.STUDY, AgentLessons.Confidence.STRONG))
+        assertEquals(AgentLessons.Confidence.WEAK, AgentLessons.ceiling(AgentLessons.Topic.STUDY, AgentLessons.Confidence.WEAK))
+        // Bundled for the research as building, never strong (so never imported as a confirmed "app" positive).
+        val bundle = LessonsBundle.build(LessonsBundle.Inputs(day, "test", "v1", b, emptyList()))
+        val lessons = Json.parse(LessonsBundle.text(bundle, null)).let { (it as Map<*, *>)["lessons"] as List<*> }
+        val sent = lessons.map { it as Map<*, *> }.first { it["id"] == l.id }
+        assertEquals("building", sent["confidence"])
+    }
+
+    @Test fun aStaleStudyIsNeverSentAgain() {
+        val f = Study.Finding(Market.NIFTY, "gapup", "a gap up of 0.5% or more", "the gap filled", 80, 0.7, 0.68, 0.72)
+        val ist = java.time.ZoneId.of("Asia/Kolkata")
+        fun at(d: LocalDate, h: Int, m: Int = 0) = d.atTime(h, m).atZone(ist).toInstant()
+        // Today's: made this morning (yesterday's session) or after today's close - dated today.
+        assertEquals(listOf(day), Study.freshResults(listOf(f), at(day, 3, 50), day).map { it.day })
+        assertEquals(listOf(day), Study.freshResults(listOf(f), at(day, 15, 46), day).map { it.day })
+        // 00:30 IST is the previous evening in UTC: still today's study (the IST date counts).
+        assertEquals(1, Study.freshResults(listOf(f), at(day, 0, 30), day).size)
+        // Stale: last night's, a week old, or none / nothing found.
+        assertTrue(Study.freshResults(listOf(f), at(day.minusDays(1), 20), day).isEmpty())
+        assertTrue(Study.freshResults(listOf(f), at(day.minusDays(1), 23, 59), day).isEmpty())
+        assertTrue(Study.freshResults(listOf(f), at(day.minusDays(7), 16), day).isEmpty())
+        assertTrue(Study.freshResults(listOf(f), null, day).isEmpty())
+        assertTrue(Study.freshResults(emptyList(), at(day, 16), day).isEmpty())
+        // A study made once and left (the study did not run again - no candles, a holiday) is counted on its night only.
+        val madeAt = at(day.minusDays(5), 16)
+        var b = AgentLessons.Book()
+        for (k in 5 downTo 0) {
+            val d = day.minusDays(k.toLong())
+            b = AgentLessons.pass(b, AgentLessons.Inputs(d, study = Study.freshResults(listOf(f), madeAt, d))).book
+        }
+        val l = b.lessons.first { it.id == "study:nifty:gapup" }
+        assertEquals(1, l.buckets.size, "one night counted, not six")
+        assertTrue(AgentLessons.evidenceLine(l).contains("1 of 1 nightly count"), AgentLessons.evidenceLine(l))
+    }
+
     @Test fun theShadowSkipCountsNeverLiquidityAndOnlyWhatTheResearchFailed() {
         val s = SharedKnowledge.build(real, null)
         val t = { owner: String, net: Double -> Insights.Trip("BANKNIFTY26OCT52000CE", day.atTime(10, 0), day.atTime(10, 30), net, owner) }
@@ -286,5 +420,28 @@ class SharedKnowledgeTest {
         assertTrue((opened["money"] as Map<*, *>).containsKey("lessons"))
         val gap = Json.parse(LessonsBundle.decrypted(text, null)) as Map<*, *>
         assertEquals("could not be decrypted", (gap["money"] as Map<*, *>)["gap"])
+    }
+
+    // 13 Oct review: when the Vault cannot encrypt (the host passes null), the bundle is written without the money at all - no
+    // money_enc and never the money in plain - and the export says nothing of money rather than inventing a figure.
+    @Test fun whenEncryptionFailsTheBundleCarriesNoMoneyAtAll() {
+        val book = stratLesson("ORB", 400.0)
+        val b = LessonsBundle.build(LessonsBundle.Inputs(day, "test", "v1", book, emptyList(),
+            shadow = listOf(SharedKnowledge.ShadowSkip("r", "orb", 2, 2, -321.0, "why"))))
+        val text = LessonsBundle.text(b, null)
+        val plain = Json.parse(text) as Map<*, *>
+        assertFalse(plain.containsKey("money_enc"))
+        assertFalse(plain.containsKey("money"))
+        assertFalse(Regex("\"(rs|net|money|money_enc|pnl|rupees)\"").containsMatchIn(text), text)
+        assertFalse("321" in text, "a shadow skip's rupees stay out")
+        // The ORB lesson's rupees (the money part's) appear nowhere in the plain text.
+        val money = (Json.parse(LessonsBundle.moneyJson(b)) as Map<*, *>)["lessons"] as Map<*, *>
+        val rs = (money["strat:orb"] as Number).toDouble()
+        assertTrue(kotlin.math.abs(rs) > 1_000.0, "$rs")
+        assertFalse(kotlin.math.abs(rs).toLong().toString() in text, text)
+        // Rates, counts and effects are still there for the research.
+        assertTrue((plain["lessons"] as List<*>).isNotEmpty())
+        val opened = Json.parse(LessonsBundle.decrypted(text, null)) as Map<*, *>
+        assertFalse(opened.containsKey("money") || opened.containsKey("money_enc"), opened.keys.toString())
     }
 }

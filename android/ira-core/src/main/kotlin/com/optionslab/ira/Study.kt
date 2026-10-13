@@ -145,6 +145,18 @@ object Study {
             f.days, f.held, listOf(f.market.name.lowercase(Locale.ENGLISH), f.key))
     }
 
+    private val IST: java.time.ZoneId = java.time.ZoneId.of("Asia/Kolkata")
+
+    /**
+     * [results] for the learning pass of [today] only when the kept study is today's ([at]: when it last ran, its IST date is
+     * [today]); otherwise nothing (13 Oct review). A study left from an earlier day was already counted (or missed) on its own
+     * day - sent again dated today it would count the same two years once more, as if it were a new night's agreement. Pure.
+     */
+    fun freshResults(findings: List<Finding>, at: java.time.Instant?, today: LocalDate): List<AgentLessons.StudyResult> {
+        if (at == null || findings.isEmpty() || at.atZone(IST).toLocalDate() != today) return emptyList()
+        return results(findings, today)
+    }
+
     /** The findings in short: the ones that held first, then how many were coin tosses. */
     fun summary(findings: List<Finding>): List<String> {
         val held = findings.filter { it.held }.sortedByDescending { kotlin.math.abs(it.rate - 0.5) }

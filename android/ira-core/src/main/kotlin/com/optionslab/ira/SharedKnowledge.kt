@@ -184,7 +184,9 @@ object SharedKnowledge {
             else -> armOf(l.name) ?: armOf(l.id.substringAfter(':'))
         }
         val verdict = when { l.sign > 0 -> Verdict.WORKS; l.sign < 0 -> Verdict.FAILS; else -> Verdict.CONTEXT }
-        val gate = if (l.confidence == AgentLessons.Confidence.STRONG) (if (l.sign > 0) Gate.PASS else Gate.FAIL) else Gate.NONE
+        // A market-study lesson is never a passed or failed test (13 Oct review): its nightly counts re-read the same two years,
+        // so they are not independent agreement ([AgentLessons.ceiling] keeps it at building; this holds for an older book too).
+        val gate = if (l.confidence == AgentLessons.Confidence.STRONG && l.topic != AgentLessons.Topic.STUDY) (if (l.sign > 0) Gate.PASS else Gate.FAIL) else Gate.NONE
         val effect = e.hitRate?.let { it - 0.5 }
         return Item("jarvis:${l.id}", lessonTopics(l), arm, null, l.cond?.takeIf { it.startsWith("tod:") }?.substringAfter(':'),
             l.cond?.takeIf { it.startsWith("regime:") }?.substringAfter(':'), p == "exec" || p == "order" || l.topic == AgentLessons.Topic.EXECUTION,
@@ -523,7 +525,8 @@ object SharedKnowledge {
 
     /**
      * Jarvis's merged answer for [question] (its strategy, else its topic): the research's lines and the app's lessons, each with
-     * its source, and a conflict said plainly. [locked]: the lessons' words are left out (they carry the bots' results).
+     * its source, and a conflict said plainly. [locked]: the lessons' words are left out (they carry the bots' results) - and so
+     * is a research item's conflict note (13 Oct review: it quotes the lesson's verdict and n), so a locked phone says the research only.
      */
     fun answer(s: Snapshot, question: String, locked: Boolean, max: Int = 4): List<String> {
         val arm = armOf(question)
@@ -538,7 +541,7 @@ object SharedKnowledge {
             if (out.size >= max) break
             if (arm != null && (i.id == verdict(s, arm).research?.id)) continue
             if (i.source == Source.FINDINGS) continue
-            out += "${i.source.word.replaceFirstChar { it.uppercase() }}: ${i.line(160)}"
+            out += "${i.source.word.replaceFirstChar { it.uppercase() }}: ${(if (locked) i.copy(conflict = null) else i).line(160)}"
         }
         return out
     }

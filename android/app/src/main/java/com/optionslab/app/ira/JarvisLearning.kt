@@ -243,12 +243,16 @@ internal object JarvisLearning {
         return a + b
     }
 
-    /** The market study's latest count as lesson evidence ([com.optionslab.ira.Study.results]): one snapshot a setup, today. */
+    /**
+     * The market study's latest count as lesson evidence ([com.optionslab.ira.Study.freshResults]): one snapshot a setup, and only
+     * when the kept study was made today (13 Oct review: a stale study sent again would be counted again).
+     */
     private fun studyResults(today: LocalDate): List<AgentLessons.StudyResult> {
         val k = IraStudy.state.value
-        if (k.at == null || k.findings.isEmpty()) return emptyList()
+        val out = com.optionslab.ira.Study.freshResults(k.findings, k.at, today)
+        if (out.isEmpty()) return emptyList()
         com.optionslab.app.data.SharedKnowledgeHost.added("Market study", "${k.findings.size} setups (${k.findings.count { it.held }} held in both years) to my lessons")
-        return com.optionslab.ira.Study.results(k.findings, today)
+        return out
     }
 
     /**

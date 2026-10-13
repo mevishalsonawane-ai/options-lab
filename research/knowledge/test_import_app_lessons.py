@@ -95,6 +95,41 @@ class ImportRuleTest(unittest.TestCase):
             p.write_text(yaml.safe_dump(e, sort_keys=False), encoding="utf-8")
             self.assertEqual([], validate.check(p, set()))
 
+    def test_bare_rupee_amounts_without_rs_are_never_written(self):
+        # 13 Oct review: an amount written without "Rs" or "₹" in a name or a "why" is money too.
+        b = bundle()
+        b["lessons"] += [
+            {"id": "x:2", "topic": "STRATEGY", "kind": "RATE", "name": "ORB lost 48,213 this month", "n": 40, "hits": 20, "sign": -1,
+             "confidence": "strong"},
+            {"id": "x:3", "topic": "STRATEGY", "kind": "RATE", "name": "Night made 12000 on expiry", "n": 40, "hits": 20, "sign": 1,
+             "confidence": "strong"},
+            {"id": "x:4", "topic": "STRATEGY", "kind": "RATE", "name": "Solo down 7,391", "n": 40, "hits": 20, "sign": 1,
+             "confidence": "building"},
+            {"id": "x:5", "topic": "STRATEGY", "kind": "RATE", "name": "Hero: a 48k loss", "n": 40, "hits": 20, "sign": 1,
+             "confidence": "building"},
+            {"id": "x:6", "topic": "STRATEGY", "kind": "RATE", "name": "Pine lost 98765.4", "n": 40, "hits": 20, "sign": 1,
+             "confidence": "building"},
+            {"id": "x:7", "topic": "STRATEGY", "kind": "RATE", "name": "Range fade, 1,23,456 rupees", "n": 40, "hits": 20, "sign": 1,
+             "confidence": "building"},
+        ]
+        b["lab"]["skipped"] += [{"idea": "plain ORB break", "why": "it lost 48213 in the forge"},
+                                {"idea": "VWAP reclaim", "why": "the variant lost 7,391 net"}]
+        s = imp.summarize(b)
+        self.assertEqual([], imp.money_free(s))
+        names = [l["name"] for l in s["lessons"]]
+        self.assertFalse(any(n.startswith(("ORB lost", "Night made", "Solo down", "Hero:", "Pine lost", "Range fade")) for n in names), names)
+        with tempfile.TemporaryDirectory() as d:
+            for p in imp.write(s, out=Path(d) / "a", entries=Path(d) / "e"):
+                text = p.read_text(encoding="utf-8")
+                for f in SECRET_FIGURES + ["12000", "1,23,456", "48k"]:
+                    self.assertNotIn(f, text, f"{p.name} leaked {f}")
+        # Never too eager: percentages, counts and dates in plain words survive.
+        for ok in ("a gap down of 0.5% or more", "the gap filled", "Ideas using VWAP reclaim", "Big moves 09:15-10:00", "2026-10-13",
+                   "won more often than not", "orb_fresh", "f15up"):
+            self.assertEqual(ok, imp.clean_text(ok), ok)
+        for bad in ("lost 48,213", "made 12000", "down 5,000", "a 48k day", "net -7391", "₹500", "Rs. 12", "500 rupees"):
+            self.assertEqual("", imp.clean_text(bad), bad)
+
     def test_refuses_a_summary_with_money(self):
         s = imp.summarize(bundle())
         s["lessons"][0]["rs"] = 1.0

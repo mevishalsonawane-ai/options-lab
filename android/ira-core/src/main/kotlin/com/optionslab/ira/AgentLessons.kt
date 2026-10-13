@@ -309,6 +309,13 @@ object AgentLessons {
 
     fun evidence(l: Lesson): Evidence = l.ev
 
+    /**
+     * The most a lesson of [topic] may be (13 Oct review): a market-study lesson ([Topic.STUDY]) is at most building. Its nightly
+     * counts re-read the same two years of candles, so night after night agreeing is not independent evidence - it never becomes
+     * strong, so never a passed test in the shared knowledge, never a proposal, never sent to research as a confirmed finding.
+     */
+    fun ceiling(topic: Topic, c: Confidence): Confidence = if (topic == Topic.STUDY && c == Confidence.STRONG) Confidence.BUILDING else c
+
     /** [confidence], with strong also needing the night's q-value [q] at or under [BH_Q] (null: not tested yet - not strong). */
     fun confidence(e: Evidence, q: Double?): Confidence {
         val c = confidence(e)
@@ -812,7 +819,7 @@ object AgentLessons {
                         merged: List<Bucket>? = null): Pair<Lesson, List<ChangeKind>> {
         val buckets = merged ?: mergeBuckets(old?.buckets.orEmpty(), fresh)
         val e = evidence(kind, id, buckets)
-        val conf = confidence(e, q)
+        val conf = ceiling(topic, confidence(e, q))
         val first = buckets.first().from; val last = buckets.last().day
         if (old == null) {
             val st = if (conf == Confidence.STRONG) Status.CONFIRMED else Status.NEW
@@ -854,7 +861,7 @@ object AgentLessons {
             val e = evidence(o.kind, o.id, bs)
             out[l.id] = o.copy(buckets = bs, agents = o.agents + l.agents, tags = (o.tags + l.tags).distinct().take(16),
                 firstSeen = minOf(o.firstSeen, l.firstSeen), lastSeen = maxOf(o.lastSeen, l.lastSeen),
-                confidence = confidence(e, o.q ?: l.q), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
+                confidence = ceiling(o.topic, confidence(e, o.q ?: l.q)), sign = if (e.sign != 0) e.sign else o.sign, weight = maxOf(o.weight, l.weight),
                 rejections = o.rejections + l.rejections, cooldownUntil = listOfNotNull(o.cooldownUntil, l.cooldownUntil).maxOrNull(),
                 proposedOn = listOfNotNull(o.proposedOn, l.proposedOn).maxOrNull(), accepted = o.accepted || l.accepted, auto = o.auto ?: l.auto,
                 status = if (o.status.ordinal >= l.status.ordinal) o.status else l.status)
@@ -944,7 +951,7 @@ object AgentLessons {
             if (id in merged) continue
             if (l.status == Status.RETIRED) { if (l.q != null) byId[id] = l.copy(q = null); continue }
             val q = qOf[id]
-            val conf = confidence(evidence(l), q)
+            val conf = ceiling(l.topic, confidence(evidence(l), q))
             if (q != l.q || conf != l.confidence || pOf[id] != l.p) byId[id] = l.copy(p = pOf[id], q = q, confidence = conf)
         }
         // Regime-aware: a lesson whose effect holds only under one condition says so ([conditions]).
@@ -1350,7 +1357,8 @@ object AgentLessons {
                 Confidence.STRONG -> "strong: $STRONG_N or more and ${e.agreeing} of $SPLITS periods point the same way" +
                     (l.q?.let { ", and ${qWords(it)} across all my lessons (the bar is ${fmtQ(BH_Q)})" } ?: "")
                 Confidence.BUILDING -> "building: ${e.n} so far" + (if (e.splits.size == SPLITS) ", ${e.agreeing} of $SPLITS periods agree" else "") +
-                    (if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
+                    (if (l.topic == Topic.STUDY) "; a market-study lesson stays at building: each night counts the same two years again, so the nights are not independent"
+                    else if (confidence(e) == Confidence.STRONG) "; ${l.q?.let { qWords(it) } ?: "q not worked out yet"} is above the bar of ${fmtQ(BH_Q)}, so with this many lessons it could be luck"
                     else "; strong needs $STRONG_N, agreement over time and q at most ${fmtQ(BH_Q)}")
                 Confidence.WEAK -> contradiction(l)?.let { "not trusted: it $it" } ?: "weak: only ${e.n} so far"
             }

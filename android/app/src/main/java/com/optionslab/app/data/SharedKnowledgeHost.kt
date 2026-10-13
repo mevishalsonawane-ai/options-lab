@@ -17,6 +17,7 @@ import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The shared knowledge on the phone (Boss, 13 Oct: "all the agents ... learn from whatever findings we have, and vice versa").
@@ -125,9 +126,11 @@ object SharedKnowledgeHost {
 
     // ---- what each agent read and added ---------------------------------------------------------------------------------------
 
+    // 13 Oct (review): the counters are atomic and a day's tally is made once (compute), so two agents counting at the same
+    // moment from different threads never lose a count.
     private class Tally(val day: LocalDate) {
-        @Volatile var reads = 0
-        @Volatile var adds = 0
+        val reads = AtomicInteger()
+        val adds = AtomicInteger()
         @Volatile var readWhat: String = ""
         @Volatile var addWhat: String = ""
     }
@@ -136,19 +139,17 @@ object SharedKnowledgeHost {
 
     private fun tally(agent: String): Tally {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
-        val t = tallies[agent]
-        if (t != null && t.day == today) return t
-        return Tally(today).also { tallies[agent] = it }
+        return tallies.compute(agent) { _, t -> if (t != null && t.day == today) t else Tally(today) }!!
     }
 
     /** [agent] read [what] from the shared knowledge (memory only: a map update; never throws). */
     fun read(agent: String, what: String) {
-        runCatching { val t = tally(agent); t.reads++; t.readWhat = what.take(140) }
+        runCatching { val t = tally(agent); t.reads.incrementAndGet(); t.readWhat = what.take(140) }
     }
 
     /** [agent] added [what] to Jarvis's lessons or the research bundle today (memory only). */
     fun added(agent: String, what: String) {
-        runCatching { val t = tally(agent); t.adds++; t.addWhat = what.take(140) }
+        runCatching { val t = tally(agent); t.adds.incrementAndGet(); t.addWhat = what.take(140) }
         publish()
     }
 
@@ -157,8 +158,9 @@ object SharedKnowledgeHost {
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         return AGENTS.map { a ->
             val t = tallies[a]?.takeIf { it.day == today }
-            val read = if (t == null || t.reads == 0) "read nothing yet today" else "read ${t.readWhat}" + if (t.reads > 1) " (${t.reads} times)" else ""
-            val add = if (t == null || t.adds == 0) "added nothing yet" else "added ${t.addWhat}"
+            val reads = t?.reads?.get() ?: 0
+            val read = if (t == null || reads == 0) "read nothing yet today" else "read ${t.readWhat}" + if (reads > 1) " ($reads times)" else ""
+            val add = if (t == null || t.adds.get() == 0) "added nothing yet" else "added ${t.addWhat}"
             "$a: $read; $add."
         }
     }

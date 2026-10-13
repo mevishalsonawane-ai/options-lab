@@ -14,8 +14,8 @@ export.
 The rule this script keeps, checked by test_import_app_lessons.py: NOTHING of Boss's money is written to the repo. Only
 these survive - counts (n, hits, tried, passed, days), rates (hits / n) and unitless effects (the rate minus a half, the
 sign) - plus names, tags and dates. The "money" / "money_enc" sections, every rupee field (rs, net, pnl, rupees, charges,
-slippage, money), and any text that quotes rupees ("Rs 1,234", "₹") are dropped. A bundle is matched by its day: importing
-the same day again replaces that day's summary.
+slippage, money), and any text that quotes rupees ("Rs 1,234", "₹", or a bare amount such as "lost 48,213") are dropped.
+A bundle is matched by its day: importing the same day again replaces that day's summary.
 
 Output (one pair a bundle day):
   research/app_lessons/YYYY-MM-DD.json  the summary build_pack.py reads (kind "app_lesson" facts and shared-knowledge items)
@@ -46,8 +46,15 @@ BUNDLE_NAME = "lessons_bundle.json"
 # Keys that hold Boss's money, anywhere in the bundle: never copied.
 MONEY_KEYS = {"money", "money_enc", "rs", "net", "pnl", "p&l", "rupees", "charges", "slippage", "gross", "capital", "equity",
               "balance"}
-# Text that quotes rupees: never copied.
-MONEY_TEXT = re.compile(r"(?i)(\brs\.?\s*[-+]?\d|₹|\binr\b|\blakh\b|\bcrore\b)")
+# Text that quotes rupees: never copied. 13 Oct review: an amount written without "Rs" or "₹" counts too - a comma-grouped
+# number ("48,213", "1,23,456"), a "k" amount ("48k"), the word rupee(s), or a money word followed by a number ("lost 48213",
+# "made 12000", "down 5,000"; a percentage after it, "a gap down of 0.5%", is not money). Erring on the side of dropping.
+MONEY_TEXT = re.compile(
+    r"(?i)(\brs\.?\s*[-+]?\d|₹|\binr\b|\blakhs?\b|\bcrores?\b|\brupees?\b"
+    r"|\b\d{1,3}(?:,\d{2,3})+\b"
+    r"|\b\d+(?:\.\d+)?\s?k\b"
+    r"|\b(?:lost|lose|loses|losing|loss|losses|made|make|makes|earned|earns?|won|profits?|gained|gains?|saved|paid|drawdown|net|down)"
+    r"\s+(?:of\s+|by\s+|about\s+|around\s+|nearly\s+|over\s+)?[-+]?\d(?![\d.]*\s*%))")
 
 # The strategy lab's block or filter -> the experiment log's family (research/experiments/validate.py FAMILIES).
 LAB_FAMILY = {
