@@ -261,14 +261,20 @@ object McxMarket {
     private const val K_LIVE_HELD = "mcx.liveHeld"
 
     /** The paper account holds an MCX position or has a working MCX order (no price read). */
-    fun paperExposure(): Boolean = runCatching {
+    fun paperExposure(): Boolean = runCatching { paperExposureOrThrow() }.getOrDefault(false)
+
+    /** [paperExposure] with a failed read let through, so the battery's cadence can count it as held (review, 14 Oct). */
+    private fun paperExposureOrThrow(): Boolean {
         val st = Paper.state
-        st.positions.any { it.quantity != 0 && it.exchange == Mcx.EXCHANGE } ||
+        return st.positions.any { it.quantity != 0 && it.exchange == Mcx.EXCHANGE } ||
             st.orders.any { (it.status == "open" || it.status == "trigger pending") && it.exchange == Mcx.EXCHANGE }
-    }.getOrDefault(false)
+    }
 
     /** Zerodha showed an open MCX position at the last look (kept for the day, so a restart keeps watching). */
-    fun liveExposure(): Boolean = runCatching { SecurePrefs.getString(K_LIVE_HELD) == Market.today().toString() }.getOrDefault(false)
+    fun liveExposure(): Boolean = runCatching { liveExposureOrThrow() }.getOrDefault(false)
+
+    /** [liveExposure] with a failed read let through (the start-up's restore and the cadence count it as held; review, 14 Oct). */
+    internal fun liveExposureOrThrow(): Boolean = (SecurePrefs.getString(K_LIVE_HELD) == Market.today().toString())
         .also { liveSeen = Market.today() to it }
 
     /** [liveExposure] as last read or written in this process (memory; null: not today, or not read yet). */
@@ -295,7 +301,11 @@ object McxMarket {
     // ---- Battery (14 Oct): how often the MCX pass runs, and what it keeps awake ([com.optionslab.ira.McxRest]) ------------
 
     /** Something is held or working on MCX: a paper position or order, a live one, or a position in an MCX arm's book. */
-    fun heldNow(): Boolean = com.optionslab.ira.McxRest.held(paperExposure(), liveExposure(), runCatching { McxPaperArms.holdsNow() }.getOrDefault(true))
+    fun heldNow(): Boolean = com.optionslab.ira.McxRest.held(
+        // A book that cannot be read counts as held (review, 14 Oct): the pass stays at its full 15 s.
+        runCatching { paperExposureOrThrow() }.getOrDefault(true),
+        runCatching { liveExposureOrThrow() }.getOrDefault(true),
+        runCatching { McxPaperArms.holdsNow() }.getOrDefault(true))
 
     /**
      * [heldNow] from memory only (no vault read, no file, no lock): for the price reads and the brain's scheduling. Anything

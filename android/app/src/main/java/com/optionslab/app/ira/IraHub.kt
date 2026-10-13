@@ -218,6 +218,9 @@ object IraHub {
         scope.launch(Dispatchers.IO) {
             try {
                 testLoadHold?.await()
+                // Positions first (review, 14 Oct): these two vault decryptions queue on the same Keystore as the position books,
+                // so they wait until the start-up has read those (milliseconds normally; never more than 20 s).
+                com.optionslab.app.data.PositionsFirst.awaitPositions()
                 val bookRead = runCatching { Vault.readFileSteady(f)?.let { PatternBook.load(String(it, Charsets.UTF_8)) } }
                 val savedRead = runCatching { Vault.readFileSteady(sf)?.let { IraSaved.read(String(it, Charsets.UTF_8)) } }
                 val readBook = bookRead.getOrNull() ?: PatternBook()

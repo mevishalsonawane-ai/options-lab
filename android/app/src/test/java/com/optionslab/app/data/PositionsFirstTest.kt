@@ -217,6 +217,26 @@ class PositionsFirstTest : RobolectricTest() {
         assertEquals(true, PositionsFirst.foundOpen)
     }
 
+    @Test fun jarvissUnreadablePaperTradesCountAsOpenAtTheRestore() {
+        // Review, 14 Oct: IraSolo.holding() reads a failed vault as "nothing", so the restore uses the strict read.
+        val key = "jarvis.solo.trades"
+        SecurePrefs.put(key, "{not json")
+        assertFalse("the everyday read still says nothing", com.optionslab.app.ira.IraSolo.holding())
+        assertTrue(runCatching { com.optionslab.app.ira.IraSolo.holdingOrThrow() }.isFailure)
+        if (com.optionslab.app.BuildConfig.JARVIS) assertTrue("an unreadable book counts as open", runBlocking { PositionsFirst.restore() })
+        // A trade without its closed flag cannot be told closed: open.
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("d", "2026-10-14")).toString())
+        assertTrue(runCatching { com.optionslab.app.ira.IraSolo.holdingOrThrow() }.isFailure)
+        // Open and closed trades read normally.
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", true)).toString())
+        assertFalse(com.optionslab.app.ira.IraSolo.holdingOrThrow())
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", true)).put(JSONObject().put("c", false)).toString())
+        assertTrue(com.optionslab.app.ira.IraSolo.holdingOrThrow())
+        // Empty book: nothing open.
+        SecurePrefs.put(key, null)
+        assertFalse(com.optionslab.app.ira.IraSolo.holdingOrThrow())
+    }
+
     @Test fun theUnitTestsAppNeverWaits() {
         // Not started in this process: the parts that never trade read at once.
         PositionsFirst.resetForTest(started = false)

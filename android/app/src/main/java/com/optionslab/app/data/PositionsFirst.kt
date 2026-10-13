@@ -9,7 +9,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct; the memory audit's item 10). Android ended the app for memory about
  * 20 times in three days; each time it starts again, the open positions and their stops are restored and watched before
- * any other start-up work:
+ * the start's other reads of the encrypted books (Jarvis's memory and the shared knowledge wait for it):
  *
  *  1. [StartOrder.Step.POSITIONS] - on a thread of its own at the top priority, started first thing in the app's start: every
  *     position book (paper NSE and MCX, the ORB family with its live positions, the protections with Zerodha's stops, the Pine
@@ -99,9 +99,9 @@ object PositionsFirst {
         one { VixDivArm.refresh().open.isNotEmpty() }
         one { GrammarArm.refresh(); false }
         one { Ledger.openTicket() != null }
-        one { McxMarket.liveExposure() }
+        one { McxMarket.liveExposureOrThrow() }
         // Jarvis's own paper trades (review, 14 Oct; the fast exits' minute lane counts them).
-        if (com.optionslab.app.BuildConfig.JARVIS) one { com.optionslab.app.ira.IraSolo.holding() }
+        if (com.optionslab.app.BuildConfig.JARVIS) one { com.optionslab.app.ira.IraSolo.holdingOrThrow() }
         return open || failed
     }
 
