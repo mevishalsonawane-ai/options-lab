@@ -31,3 +31,15 @@
   text: "The forge and the variants' pre-checks need years of index and option 1-minute history again (the Dhan token expired on 2026-10-10)."
   src: TODO.md
   sec: "S6"
+- id: crypto-range-holdout
+  topics: [crypto, holdout]
+  inst: CRYPTO
+  text: "The crypto expected-range forecast (BTC and ETH, next hour and next day) passed on design data only: its error was 24.7% (BTC) and 19.9% (ETH) smaller than the hour-of-day average. It is read once on the locked crypto holdout (from 1 Apr 2026) when the crypto lake is complete."
+  src: research/CRYPTO_C1_PREDICTABILITY.md
+  sec: "A) Size: PREDICTABLE, next hour and next day"
+- id: crypto-other-coins
+  topics: [crypto]
+  inst: CRYPTO
+  text: "SOL, BNB and XRP are not studied yet: the crypto study ran on BTC and ETH only. The same commands run them when the lake has them."
+  src: research/CRYPTO_C1_PREDICTABILITY.md
+  sec: "Deviations and caveats (all of them)"

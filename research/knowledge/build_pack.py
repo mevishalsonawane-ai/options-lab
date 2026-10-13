@@ -128,6 +128,7 @@ TAGS = {
     "pine": r"\bpine\b",
     "pattern": r"pattern|inside day|nr4|nr7|\bcpr\b",
     "mcx": r"\bmcx\b|commodit",
+    "crypto": r"\bcrypto\b|\bbitcoin\b|\bbtc(usdt)?\b|\beth(usdt|ereum)?\b|\bfunding rate|\bperp(etual)?s?\b",
     "random-baseline": r"random|coin.flip|luck",
     "multiple-testing": r"benjamini|\bbh\b|\bq ?[<=]|multiple.testing|bonferroni|holm",
 }
@@ -765,7 +766,9 @@ def baselines() -> tuple[dict, list[str]]:
     spreads = b.get("spreads", [])
     trips = b.get("round_trips", [])
     mult = b.get("signal_multiplier") or {}
+    crypto = b.get("crypto_round_trips", [])
     errors = checked(spreads, path, cache, "baseline") + checked(trips, path, cache, "round trip") + checked([mult], path, cache, "multiplier")
+    errors += checked(crypto, path, cache, "crypto round trip")
     for x in spreads:
         if str(x["half_spread_pct"]) not in source_numbers(x["src"], cache):
             errors.append(f"baseline {x['inst']}: {x['half_spread_pct']} not in {x['src']}")
@@ -775,6 +778,9 @@ def baselines() -> tuple[dict, list[str]]:
                     for x in spreads],
         "signal_x": mult.get("value", 1), "signal_text": clean_md(mult.get("text", "")), "signal_src": mult.get("src", ""),
         "round_trips": [{"i": x["inst"], "rs": x["rs"], "s": x["src"], "x": clean_md(x["text"])} for x in trips],
+        # crypto costs are in bps of notional, so they get their own key (round_trips is read as rupees) - 13 Oct 2026
+        "crypto_round_trips": [{"i": x["inst"], "venue": x["venue"], "bps": x["bps"], "s": x["src"], "x": clean_md(x["text"])}
+                               for x in crypto],
     }
     return out, errors
 

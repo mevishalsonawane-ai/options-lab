@@ -49,3 +49,13 @@ round_trips:
     src: research/FINDINGS.md
     sec: "What is predictable? (R16, 12 Oct 2026)"
     text: "An ATM NIFTY option round trip costs about Rs 98 (charges and spread)."
+
+# Crypto (13 Oct 2026, the crypto Data Brain): a Binance perpetual taker round trip, in bps of notional, as C1 counted
+# it. Fees are Binance's VIP 0 schedule; the slippage per leg is an assumption (the archive has no bid/ask).
+crypto_round_trips:
+  - inst: CRYPTO
+    venue: perp
+    bps: 12
+    src: research/CRYPTO_C1_PREDICTABILITY.md
+    sec: Data
+    text: "A crypto perpetual taker round trip (BTC, ETH) costs about 0.12% of notional: 0.05% fee plus 1 bp assumed slippage a side, plus funding for each settlement held."

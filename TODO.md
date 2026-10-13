@@ -364,3 +364,15 @@ Learn from Boss's own trading:
 Later (when profitable):
 - [ ] I16. Stocks and MCX strategies, on the downloaded data, once the index arms are proven.
 - [ ] I17. Package the tested signals as a product. Far future; check SEBI research-analyst and algo rules first.
+
+## C. Crypto Data Brain (owner, 2026-10-13: "the same model ... for crypto")
+Built 13 Oct: `research/brain/crypto` (README there), study `research/CRYPTO_C1_PREDICTABILITY.md`. Research only;
+nothing trades crypto.
+- [x] C1. Market-aware core, L2 clean, L3 24x7 cube, 62 point-in-time features, labels, locked holdout (1 Apr 2026),
+      costs, guard; the C1 predictability study on BTC/ETH design data (size predictable, direction not).
+- [ ] C2. When the Drive crypto lake is complete: `fetch drive` month by month, `cube build`, features, labels; add
+      SOL/BNB/XRP; if the lake's layout differs from the archive's file names, one rule in `crypto/adapters.py`.
+- [ ] C3. One pre-registered holdout read (from 1 Apr 2026) for the expected-range forecast (C1 A1/A2) and the weekend
+      size effect; nothing else from C1 earns a holdout read.
+- [ ] C4. Wire in what exists but is not in the cube: ETH DVOL (no file yet), Deribit option surfaces, on-chain and
+      ETF flows (`crypto/data_more`), liquidation prints if a source appears.

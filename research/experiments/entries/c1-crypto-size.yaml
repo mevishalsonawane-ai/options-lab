@@ -1,0 +1,34 @@
+id: c1-crypto-size
+title: 'Crypto C1: is the size of the next hour / day predictable (BTC, ETH)?'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/CRYPTO_C1_PREDICTABILITY.md
+hypothesis: A ridge model on recent realised ranges, hour of day, weekend and DVOL forecasts the log range of the next
+  hour (A1) and next day (A2) better than the hour-of-day average / 20-day average, by at least 5%.
+data_version: Binance bulk archive (data.binance.vision, sha256-checked) BTCUSDT/ETHUSDT spot+perp 1m, funding, metrics;
+  repo crypto/data_extra/dvol_1h.csv; crypto cube v1, feature signature 9ab2268f33e7
+period:
+  design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks, first 6 train only)
+  holdout: 2026-04-01 onward, locked, not read
+instruments:
+- BTCUSDT
+- ETHUSDT
+features:
+- range_60m_pct
+- range_240m_pct
+- rv_1440m_pct
+- dvol
+- hour-of-day x weekend mean
+- is_weekend
+model_or_rule: ridge regression (alpha 1.0), fixed in the pre-registration
+settings: research/brain/crypto/PREREG.md tests A1, A2
+prereg: research/brain/crypto/PREREG.md
+variants_tried: 4
+results:
+  summary: 'All 4 pass in design (q < 0.001): next-hour error 24.7% (BTC) / 19.9% (ETH) below the hour-of-day average
+    on 16,823 hours; next-day 19.9% / 15.1% below the 20-day average on 670 days. Beats the last range alone and DVOL
+    alone. Holdout not read: a candidate, not proven.'
+  costs: n/a (a forecast of size, not a trade)
+holdout_read: false
+verdict: inconclusive
+notes: Passed every design bar; awaits one pre-registered holdout read (from 1 Apr 2026) when the crypto lake is complete.

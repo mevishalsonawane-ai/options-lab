@@ -251,3 +251,53 @@
       costs: "real charges"
       src: android/app/src/main/assets/study/pages.txt
       sec: MCX bots
+
+- id: crypto-expected-range
+  name: Crypto expected range (BTC, ETH)
+  instruments: [CRYPTO]
+  tags: [crypto, ml]
+  what: >-
+    A forecast of how far BTC or ETH will move in the next hour or the next day, from the recent realised ranges and the
+    hour of day. It says how big the move is likely to be, never which way. Research only: crypto is not traded.
+  verdict: context
+  facts:
+    - text: "Crypto next-hour range forecast: error 24.7% smaller than the hour-of-day average for BTC and 19.9% for ETH (16,823 hours each); next-day range 19.9% / 15.1% smaller than the 20-day average (670 days)."
+      period: "design 2 Nov 2023 - 31 Mar 2026; holdout from 1 Apr 2026 not read"
+      costs: "n/a (a forecast of size)"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "A) Size: PREDICTABLE, next hour and next day"
+    - text: "BTC's median next-hour range is 0.546% (10-90%: 0.244-1.307%) and next-day range 3.34%; ETH 0.786% and 4.64%."
+      period: "design 2 Nov 2023 - 31 Mar 2026"
+      costs: "n/a"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "A) Size: PREDICTABLE, next hour and next day"
+    - text: "Crypto weekends are quieter: weekend hours move 0.595x (BTC) and 0.672x (ETH) of weekday hours; the busiest hour is 14:00-15:00 UTC (the US open), 2.29x the quietest for BTC."
+      period: "design, 126 weeks"
+      costs: "n/a"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "D) Calendar"
+
+- id: crypto-direction
+  name: Crypto direction (BTC, ETH)
+  instruments: [CRYPTO]
+  tags: [crypto, direction, ml]
+  what: >-
+    Predicting whether BTC or ETH goes up or down over the next hour or day, from returns, funding, basis, open interest,
+    taker flow and the clock, traded as a perpetual.
+  verdict: negative
+  facts:
+    - text: "Crypto next-hour direction has a real short-term reversal (AUC 0.535 BTC, 0.543 ETH) but it is worth about 0 bps gross a trade, so after a 12 bps perp round trip it loses 11.51 (BTC, 4,340 trades) and 13.29 bps (ETH, 5,217 trades) a trade."
+      period: "design 2 Nov 2023 - 31 Mar 2026; holdout not read"
+      costs: "perp taker 0.05% + 1 bp slippage a side, plus funding; 2x slippage stress"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "B) Direction: real reversal next hour, but it cannot pay"
+    - text: "Crypto next-day direction is a coin: AUC 0.500 (BTC) and 0.513 (ETH) over 670 days."
+      period: "design 2 Nov 2023 - 31 Mar 2026"
+      costs: "perp taker round trip 0.12% plus funding"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "B) Direction: real reversal next hour, but it cannot pay"
+    - text: "Funding, basis and OI change do not predict the next crypto day: rank correlations -0.063 to +0.026 over 880 days per coin, best q 0.26."
+      period: "design 2 Nov 2023 - 30 Mar 2026"
+      costs: "n/a (a correlation test)"
+      src: research/CRYPTO_C1_PREDICTABILITY.md
+      sec: "C) Funding, basis and OI: no next-day signal"
