@@ -119,6 +119,17 @@ log-loss below every baseline, BH q <= 0.05.
    their 15:29 bar is often missing (SENSEX: 72 of 300 sessions checked, 2023-2025); rest-of-day labels then stay
    NaN, never filled.
 
+4. **Where the code differs from the pre-registration** (found by an independent review after the run; disclosed
+   here and NOT re-tuned, since changing the tests after seeing results is not allowed):
+   - range60 decisions start at **10:15, not 09:45**: the "last 60 minutes" baseline does not exist before 60 minutes
+     have passed, and those rows were dropped (about 2 of 19 decision times a session; NIFTY 30,044 rows, not about
+     33,700).
+   - the linear day-type / regime model used yesterday's 0/1 state, not yesterday's efficiency value.
+   - a rest-of-day label is NaN when the session's 15:29 bar is missing or the bar right after 09:45 is missing, so
+     those sessions drop out of the day-type and regime tests (SENSEX about 9% of design sessions since 2023, NIFTY
+     about 1%). Nothing is filled.
+   v2 fixes all three under a new pre-registration (TODO.md I0). The range30 tests are not affected by any of them.
+
 ## Using it and refreshing it
 
 - Model files (one per index x target, fitted on all design rows, with their feature lists) are on Google Drive

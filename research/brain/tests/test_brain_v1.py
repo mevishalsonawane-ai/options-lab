@@ -94,6 +94,11 @@ def test_index_only_lake_does_not_take_days_from_the_release(tmp_path, adapter, 
     (no_opt / "opt_BANKNIFTY_WEEK_2025.parquet").unlink()
     lk = LakeAdapter(no_opt, catalog=no_opt / "CATALOG.json")
     assert lk.sessions("BANKNIFTY") == DAYS and lk.full_sessions("BANKNIFTY") == []
+    gap = tmp_path / "gap"                                # options on the first and last day only: the middle days
+    shutil.copytree(flat, gap)                            # are not "full", even inside the span
+    o = pd.read_parquet(gap / "opt_BANKNIFTY_WEEK_2025.parquet")
+    o[o.ts.dt.date.isin([DAYS[0], DAYS[-1]])].to_parquet(gap / "opt_BANKNIFTY_WEEK_2025.parquet")
+    assert LakeAdapter(gap, catalog=gap / "CATALOG.json").full_sessions("BANKNIFTY") == [DAYS[0], DAYS[-1]]
     root = tmp_path / "c1"
     cube.build(root, "BANKNIFTY", DAYS[0], DAYS[-1], adapter_list=[lk, adapter], verbose=False)
     assert {cube.manifest(root, "BANKNIFTY", d)["sources"]["index"].split(":")[0] for d in DAYS} == {"release"}

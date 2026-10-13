@@ -305,6 +305,8 @@ Not possible yet:
       is predictable on all six (design); day type and regime at 09:45 are not.
       - [ ] Read the locked holdout (from 27 Apr 2026) once, for the 12 range tests, in its own step.
       - [ ] When the lake is complete: `python -m research.brain.refresh --source lake --upload --pack`.
+      - [ ] v2 (new pre-registration): range60 from 09:45 (B-last fallback), previous-session ER in the linear model,
+        rest-of-day labels that skip a missing 15:29 / t+1 bar (BRAIN_V1.md, honest note 4).
 
 Rules for all of these:
 - New behaviour runs in shadow or paper first.

@@ -107,15 +107,13 @@ class LakeAdapter:
         return self._sessions[und]
 
     def full_sessions(self, und: str) -> list[date]:
-        """Sessions inside the span of the lake's option files (first to last option minute of each year's file).
-        Only these outrank another source in `--source auto`."""
+        """Sessions with at least one option minute in the lake's option files. Only these outrank another source in
+        `--source auto`."""
         if und not in self._full:
-            spans = []
+            have: set[date] = set()
             for p in self._files(rf"opt_{und}_WEEK_\d{{4}}\.parquet"):
-                ts = _naive_ist(pd.read_parquet(p, columns=["ts"]).ts)
-                if len(ts):
-                    spans.append((ts.min().date(), ts.max().date()))
-            self._full[und] = [d for d in self.sessions(und) if any(a <= d <= b for a, b in spans)]
+                have |= set(_naive_ist(pd.read_parquet(p, columns=["ts"]).ts).dt.date.unique())
+            self._full[und] = [d for d in self.sessions(und) if d in have]
         return self._full[und]
 
     def _read(self, name: str, frm: date, to: date) -> pd.DataFrame:
