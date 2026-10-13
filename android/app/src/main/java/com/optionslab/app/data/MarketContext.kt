@@ -205,14 +205,14 @@ object MarketContext {
     }
 
     /** The 09:00 morning check's lines ([MarketContextCore.morningLines]). */
-    fun morningLines(now: LocalDateTime = LocalDateTime.now(IST)): List<String> {
+    fun morningLines(now: LocalDateTime = nowIst()): List<String> {
         if (!enabled()) return emptyList()
         val d = now.toLocalDate()
         return MarketContextCore.morningLines(now, ::eventsOn, ::trading, if (trading(d)) expiringToday(d) else emptyList(), _mode.value)
     }
 
     /** The 15:45 report's line: the next session's event warning, if any. */
-    fun eveningLines(now: LocalDateTime = LocalDateTime.now(IST)): List<String> {
+    fun eveningLines(now: LocalDateTime = nowIst()): List<String> {
         if (!enabled()) return emptyList()
         val next = nextSession(now.toLocalDate())
         return listOfNotNull(EventShield.warning(eventsOn(next), next, now.toLocalDate()))
