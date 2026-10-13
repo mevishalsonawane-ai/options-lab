@@ -401,7 +401,7 @@ object Tasks {
         }
         val d = checkNotNull(drafted)
         Ledger.record(d.ticket, d.shortKey, d.wingKey)
-        if (attempt > 1) Heartbeat.diary(com.optionslab.ira.TicketRetry.recordedLine(attempt, Market.now().toLocalTime(), entry))
+        if (attempt > 1) Heartbeat.diary(com.optionslab.ira.TicketRetry.recordedLine(attempt, Market.now().toLocalTime()))
         val t = d.ticket
         Notifier.post(context, 2002, Notifier.SCHEDULE, "Paper ticket: SELL ${t.underlying} ${fmtG(t.strike)} PE",
             "Credit Rs %.2f/unit (Rs %,.0f), breakeven %,.1f. Recorded as paper - nothing was sent."
