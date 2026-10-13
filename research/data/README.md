@@ -11,13 +11,37 @@ only code and metadata:
 | `VALIDATION.md` / `VALIDATION.json` | checks against NSE bhavcopy, NSE index closes and Yahoo; gaps, duplicates, bad prices |
 | `fetch_release.py` | download assets of the release and verify sha256 (`--list`, `--match opt_NIFTY_WEEK`) |
 | `publish_release.py` | create the release and upload the files (run where release creation is allowed) |
+| `publish_gdrive.py` | upload the built files to Google Drive with rclone, per dataset, then `rclone check` |
 | `dhan_client.py` | tiny Dhan v2 client: token from env, sent only as headers, redacted from logs, backoff on 429/5xx |
 | `lake_fetch.py` | resumable raw download (one small Parquet per request chunk, `.empty`/`.err` markers) |
 | `lake_build.py` | raw chunks → release files, with cleaning rules below and per-file QA |
 | `bhav_fetch.py` | sample of NSE F&O bhavcopies, NSE all-index closes and Yahoo index history for validation |
 | `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` |
 
-## Getting the data
+## Where the data lives: Google Drive `gdrive:IraAlgo-data-lake`
+
+The lake is kept in the Google Drive folder **IraAlgo-data-lake**, one sub-folder per dataset
+(`index_1m/`, `options_rolling_1m/`, …, `nse_bhavcopy/`). The folder root holds `MANIFEST.txt` (path, rows, sha256,
+bytes of every file), `STATUS.txt` (what is there and what is missing), `CATALOG.json` and `VALIDATION.*`.
+**As of 2026-10-13 only `nse_bhavcopy/` is uploaded**: the Dhan rebuild failed (every `/v2/charts` call returned
+DH-905), so the Parquet files in `CATALOG.json` are not on Drive yet.
+
+Download with [rclone](https://rclone.org) (remote `gdrive` = Google Drive, set up with `rclone config`):
+
+```bash
+rclone copy gdrive:IraAlgo-data-lake ~/lake --checksum --transfers 4 -P     # everything
+rclone copy gdrive:IraAlgo-data-lake/index_1m ~/lake/index_1m -P            # one dataset
+rclone check gdrive:IraAlgo-data-lake ~/lake --one-way                      # verify a download
+```
+
+Upload after a build (each dataset is copied with `--checksum`, then checked, so finished datasets stay safe):
+
+```bash
+python -I research/data/publish_gdrive.py $OUT --extra nse_bhavcopy=/path/bhav \
+   --meta research/data/CATALOG.json research/data/VALIDATION.md research/data/VALIDATION.json
+```
+
+## Getting the data from a GitHub Release (if one is published)
 
 ```bash
 python research/data/fetch_release.py --list                      # what exists
