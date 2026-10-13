@@ -149,6 +149,8 @@ def own_low(a: np.ndarray, t: int) -> float:
 def candidates(day: Day, side: int, t: int) -> list[tuple[float, float]]:
     """(strike, ltp) of OTM options on `side`, within 3% of spot, nearest the money first, traded in the last 5 bars."""
     s = spot(day, t)
+    if math.isnan(s):
+        return []                  # no index price this minute: nothing is OTM or near (never compare with NaN)
     r = "C" if side > 0 else "P"
     out = []
     for (k, sd), a in day.opts.items():
