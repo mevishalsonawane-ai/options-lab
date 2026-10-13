@@ -11,8 +11,7 @@ period:
   design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks, first 6 train only)
   holdout: 2026-04-01 onward, locked, not read
 instruments:
-- BTCUSDT
-- ETHUSDT
+- CRYPTO
 features:
 - range_60m_pct
 - range_240m_pct

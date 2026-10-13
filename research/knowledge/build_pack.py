@@ -649,6 +649,12 @@ def shared_item(*, id_: str, topics: list[str], text: str, src: str, source: str
                 gate: str | None = None, arm: str | None = None, inst: str | None = None, n: int | None = None,
                 effect: float | None = None, exec_: bool | None = None, sec: str = "") -> dict:
     """One item of the shared section (short keys: the phone keeps a few hundred in memory)."""
+    if "crypto" in topics and set(instruments(text)) <= {"CRYPTO"}:
+        # Crypto research must not steer the phone's NSE/MCX agents: an open crypto question tagged "direction" made the
+        # study agent treat Indian direction as unsettled (13 Oct 2026). Crypto-only items carry only the crypto topic
+        # here; the fact index keeps their full tags, so Jarvis still finds them.
+        topics, inst = ["crypto"], "CRYPTO"
+        arm = arm or ""
     it = {"id": id_, "t": sorted(set(topics))[:8], "x": text[:MAX_CHARS], "s": src, "k": source, "d": date_ or "",
           "v": verdict, "g": gate or VERDICT_GATE.get(verdict, "none")}
     a = arm if arm is not None else arm_of(text)

@@ -10,8 +10,7 @@ period:
   design: 2023-11-02 .. 2026-03-30 (880 days per symbol)
   holdout: 2026-04-01 onward, locked, not read
 instruments:
-- BTCUSDT
-- ETHUSDT
+- CRYPTO
 features:
 - funding_z_30d
 - basis_z_7d

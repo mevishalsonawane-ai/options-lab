@@ -10,8 +10,7 @@ period:
   design: 2023-10-01 .. 2026-03-31
   holdout: 2026-04-01 onward, locked (config.HOLDOUT_START), not downloaded
 instruments:
-- BTCUSDT
-- ETHUSDT
+- CRYPTO
 features:
 - 64 point-in-time features (research/brain/crypto/FEATURES.md)
 model_or_rule: none
