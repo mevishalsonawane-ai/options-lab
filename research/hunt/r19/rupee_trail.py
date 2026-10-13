@@ -1,6 +1,6 @@
 """Boss's follow-up idea (13 Oct, after R19): once the open profit is >= Rs 1,000, a stop Rs 500 under the best
 profit, rising with it. EXPLORATORY: design sessions only, no pre-registration, no holdout (none is left unread in
-the release). Not evidence; logged as research/experiments/entries/r19b.yaml.
+the release). Not evidence; logged as research/experiments/entries/r19-rupee-trail.yaml.
 
     python3 -I research/hunt/r19/rupee_trail.py <release dir> <out dir>
 """
