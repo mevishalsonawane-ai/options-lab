@@ -10,8 +10,8 @@ period:
   design: 2012-01-04 .. 2025-10-12 (3,385 participant days)
   holdout: 2025-10-13 .. 2026-10-13 (247 days; descriptive)
 instruments:
-- index futures (all NSE indices, pooled)
-- index options (all NSE indices, pooled)
+- NIFTY
+- BANKNIFTY
 features:
 - participant net index futures / calls / puts (contracts)
 - bhavcopy OI (units) and settle (futures) / close (options) changes
@@ -28,5 +28,5 @@ results:
   costs: 'gross: participants'' charges unknown; end-of-day positions only (intraday invisible)'
 holdout_read: null
 verdict: not-a-test
-notes: Strike/expiry mix of each group unknown; options signs claimed only where all 3 mixes agree. Understates retail
+notes: Pooled over every NSE index future and option (NIFTY and BANKNIFTY dominate). Strike/expiry mix of each group unknown; options signs claimed only where all 3 mixes agree. Understates retail
   losses vs SEBI's study (intraday trades and costs).
