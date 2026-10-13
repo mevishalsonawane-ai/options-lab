@@ -1,7 +1,7 @@
 # RC2 Deribit depth and cross-check (design span only)
 
 ## (a) Delta India mark vs Deribit trade IV (near the money)
-- BTC: 229 hours; Delta mark IV / Deribit trade IV: median 0.878, 25-75% 0.785-0.951; median IV Delta 34.9, Deribit 41.3; |difference| median 4.8 vol points
+- BTC: 230 hours; Delta mark IV / Deribit trade IV: median 0.880, 25-75% 0.788-0.951; median IV Delta 35.2, Deribit 41.4; |difference| median 4.7 vol points
 - ETH: 227 hours; Delta mark IV / Deribit trade IV: median 0.920, 25-75% 0.853-0.988; median IV Delta 55.2, Deribit 59.8; |difference| median 5.2 vol points
 
 ## (b) Zero to hero on Deribit's traded prices (daily 08:00 UTC expiries, design span, every 3rd day)

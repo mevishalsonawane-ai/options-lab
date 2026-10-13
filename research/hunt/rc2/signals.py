@@ -171,7 +171,7 @@ def pdl_break(bars, rule=None):
     x["day"] = x.index.floor("D")
     x["ph"] = x.day.map(ph)
     x["pl"] = x.day.map(pl)
-    x["ok"] = x.day.map(prev_full).fillna(False).astype(bool)
+    x["ok"] = x.day.map(prev_full).eq(True)          # a day with no full previous day: False
     x = x[x.ok]
     up = x[x.c > x.ph].groupby("day").head(1).assign(side="C")
     dn = x[x.c < x.pl].groupby("day").head(1).assign(side="P")

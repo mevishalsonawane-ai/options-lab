@@ -422,3 +422,32 @@ Full study: `HUNT_R21_HERO.md` (pre-registered `hunt/r21/PREREG.md`, commit 78e9
 - Exits did not help: no holdout trade reached the 3-4x that arms a lock or trail; the plain 15:05 exit lost more
   (-Rs 61,863) than the app's -60% stop.
 - Deciding it needs the 6-year Dhan lake (~300 NIFTY weeklies): `R21_SOURCE=lake python3 research/hunt/r21/run.py all`.
+
+## Crypto options on Delta Exchange India (RC2, 13 Oct 2026) [crypto] - nothing passes; no crypto arm
+Tag: crypto. Full study: `HUNT_RC2_CRYPTO_OPTIONS.md` (pre-registered `hunt/rc2/PREREG.md`, commit f32ef32; 8 option-buying
+rules x 4 stop/lock exits = 32 variants, one BH family). Every trade had a stop-loss and a profit lock (Boss's crypto
+rule). Research, not financial advice.
+- What exists: Delta India BTC/ETH calls and puts, a new daily expiry every day (weekends too) settling 17:30 IST,
+  plus weeklies and monthlies; cash-settled; rupee wallet; 24x7.
+  - Lots: 0.001 BTC (about Rs 8,050 notional) and 0.01 ETH (about Rs 2,430).
+  - An at-the-money daily lot costs about Rs 66 (BTC) / Rs 30 (ETH) with 24 h left.
+  - Fee: 0.01% of notional per side, capped at 3.5% of premium, + 18% GST.
+- Costs decide it: a round trip in an at-the-money daily option costs 7-14% of the premium (spread 3-6.5 points, fees
+  2.7-6.8, slippage about 1); a cheap far strike about 36%.
+- Design (Mar 2024 - Apr 2026, 772 expiries per coin): no rule cleared all gates.
+  - R4 (15-min move >= 2.5x implied: +0.9%/trade, 2,218 trades), R8 (previous-day high/low break: +0.4%, 1,184) and the
+    expiry hero (cheap OTM, 14:30-16:30 IST: +7.9%, 211) were positive at base costs.
+  - All three were negative under the cost stress and in the walk-forward.
+- Holdout (Apr-Oct 2026, read once): 7 of 8 picks lost (-3.1% to -18.7% a trade).
+  - R8 made +1.5% a trade on 290 trades (t 0.3): +Rs 8,910 on Rs 1 lakh at 2% a trade, -Rs 34,173 after the strict VDA
+    tax reading.
+  - The hero lost -18.7% a trade (56 trades).
+- The rules beat random same-clock times (they buy after moves, when vol persists). Mostly they do NOT pick calls vs
+  puts better than a coin flip.
+- Options are dear in 08:30-17:30 IST (moves 0.67-0.90x implied) and cheap hour-for-hour at the US open, 18:30-21:30 IST
+  (1.12-1.46x). A daily option prices the whole day, so the US hours cannot be bought alone.
+- Zero to hero (hindsight, design): a cheap OTM daily option bought 3 h before settlement closed at >= 3x on 17% of tries
+  (BTC, 3,554 options), but was worth 0.68x on average at 17:20 IST. On Deribit's traded prices, 3x happened 7.7% of
+  the time (897 options).
+- Data trap: Delta's first mark candle of a new strike is often stale (5.7% of 81,452 listings). One such trade (+4,889%)
+  made a rule look like a winner until fixed. Never back-test an entry in a strike's first 15 minutes.
