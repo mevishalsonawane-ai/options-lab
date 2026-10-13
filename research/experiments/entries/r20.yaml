@@ -2,7 +2,7 @@ id: r20
 title: 'R20 facts: how often the 09:15-10:00 range gives no ORB-family trade, and what the after-14:00 break was worth'
 family: orb
 date: '2026-10-13'
-doc: research/hunt/r20/PREREG.md
+doc: research/HUNT_R20_RANGE.md
 hypothesis: 'Descriptive: count the no-trade days by W45/ATR14, VIX and expiry, and the late (14:00-15:00) breaks on them.'
 data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
   Yahoo daily ^INDIAVIX for gaps
@@ -22,7 +22,10 @@ settings: research/hunt/r20/PREREG.md
 prereg: research/hunt/r20/PREREG.md
 variants_tried: null
 results:
-  summary: Pre-registered 13 Oct 2026; not run yet.
+  summary: 'BANKNIFTY plain 09:15-10:00 range: no ORB trade on 55 of 361 design days (15.2%) and 15 of 122 holdout days (12.3%);
+    no ORB/Sweep/Fade signal on 21 and 5. No-ORB share 11.8% below 0.5 ATR14 vs 18-21% above (design); expiry days 23.9% (46
+    days). Late (14:00-15:00) break on a no-ORB day: 13 design days (-36 index points mean to 15:10, option trade -Rs 567
+    in all, 5 of 13 green), 4 holdout days (+Rs 925, 2 of 4). NIFTY: no-ORB 13.2% (48 of 364) design, 10.8% (13 of 120) holdout.'
   costs: app charges at today's rates; liq fills
-holdout_read: false
+holdout_read: true
 verdict: not-a-test

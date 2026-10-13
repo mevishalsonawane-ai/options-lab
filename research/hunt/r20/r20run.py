@@ -208,17 +208,14 @@ def holdout(und: str, des_json: dict) -> dict:
     rng = np.random.default_rng(SEED)
     out = dict(und=und, cut=cut.isoformat(), holdout_sessions=len(hol), holdout_from=ctxs[hol[0]].d.day.isoformat(),
                holdout_to=ctxs[hol[-1]].d.day.isoformat(), facts=facts(ctxs, hol), variants={})
-    allres = {}
     for v in L.VARIANTS:
         res = run_variant(v, ctxs)
-        allres[v.name] = res
         sc = score(res, hol)
         dn = daily([res[i] for i in hol])
         sc["t_p"] = float(stats.ttest_1samp(dn, 0.0, alternative="greater").pvalue) if dn.std() > 0 else 1.0
         tw = twins(ctxs, res, hol, rng)
         sc["twin_mean"] = float(tw.mean())
         sc["twin_p"] = float((1 + (tw >= sc["net"]).sum()) / (TWINS + 1))
-        sc["trades_list"] = [t for i in hol for t in res[i][0]]
         out["variants"][v.name] = sc
     tested = [n for n in out["variants"] if n != "V0"]
     q = L.bh_adjust([out["variants"][n]["t_p"] for n in tested] + [out["variants"][n]["twin_p"] for n in tested])

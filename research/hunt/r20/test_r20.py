@@ -147,10 +147,8 @@ def test_signal_rules():
 
 def test_take_applies_caps_cooldown_and_refusals():
     p = L.Plan("break", 110, 90, 10, 56, 99, 1)
-    calls = []
 
     def trade(k, s):
-        calls.append((k, s))
         if k == 11:
             return None                                            # refused (e.g. premium too low): no cap used
         return dict(k=k, s=s, net=1.0), 5 * k + 20                 # exits in the fourth bar after
