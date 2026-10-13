@@ -325,14 +325,21 @@ object GitHubSync {
             if (withDays && CloudSync.liveAllowed(minute, Market.isTradingDay(now.toLocalDate())))
                 sync.live(now.toLocalDate(), minute)?.let { o -> outcomes += lastOf(o, gh) }
             // G3: the day's diagnostics, small and redacted, made here on the worker's thread (never the order or tick path).
+            // A report that cannot be made is a diary line only, never a failed run: the evening run would otherwise try
+            // again (and send the backup again) every hour until 08:00. A failed upload counts like any other.
             if (diagDay != null && goOn() && sendNow(false) && outcomes.none { CloudSync.authRefused(it) }) {
-                val report = runCatching { DiagDayHost.report(diagDay) }
-                val o = sync.diag(diagDay) { report.getOrThrow() }
-                if (o.ok) runCatching {
-                    val kept = SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-                    SecurePrefs.put(K_DIAG, CloudSync.diagKept(kept, diagDay).toString())
+                val report = try { DiagDayHost.report(diagDay) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                    runCatching { Diag.record("github", CloudSync.redact("diagnostics $diagDay: could not be made (${e.javaClass.simpleName})")) }
+                    null
                 }
-                outcomes += lastOf(o, gh)
+                if (report != null) {
+                    val o = sync.diag(diagDay) { report }
+                    if (o.ok) runCatching {
+                        val kept = SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                        SecurePrefs.put(K_DIAG, CloudSync.diagKept(kept, diagDay).toString())
+                    }
+                    outcomes += lastOf(o, gh)
+                }
             }
             // The same refused token is not tried again in the same run.
             if (withBackup && goOn() && sendNow(false) && outcomes.none { CloudSync.authRefused(it) })

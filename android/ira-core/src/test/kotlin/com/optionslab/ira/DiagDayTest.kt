@@ -201,6 +201,15 @@ class DiagDayTest {
         assertEquals(11L, h["diary_lines"].num())
     }
 
+    @Test fun afterARestartTheDiaryKeepsTheDecisionsMemoryLost() {
+        // The app restarted at 11:00: Liquidity's memory holds only what came after; its morning is in the diary.
+        val lines = listOf("10-13 10:12:00 [orb] Liquidity 15m: entered", "10-13 11:30:00 [orb] Liquidity 15m: liquidity_no_room")
+        val i = input(decisions = listOf(DiagDay.Decision(t(11, 30), "Liquidity 15m", "liquidity_no_room")), diary = lines)
+            .copy(decisionsSince = t(11, 0))
+        val ds = json(i)["decisions"] as List<Map<String, Any?>>
+        assertEquals(listOf("10:12:00" to "entered", "11:30:00" to "liquidity_no_room"), ds.map { it["at"] to it["verdict"] })
+    }
+
     @Test fun theDiarysOwnTallyIsPreferredWhenItHoldsTheDay() {
         val tally = DiagErrors.Day(day, mapOf("socket closed" to 7), mapOf("Jarvis words: ij1" to 2))
         val h = json(input(diary = diary, tally = tally))["health"] as Map<String, Any?>

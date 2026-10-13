@@ -266,10 +266,13 @@ object DiagDay {
             return xs.takeLast(max)
         }
 
-        // An arm whose decisions the app keeps in memory (Liquidity's books, Hero) is read from there only: its diary lines
-        // would count the same decisions twice.
+        // An arm whose decisions the app keeps in memory (Liquidity's books, Hero) is read from there from when that record
+        // began ([Input.decisionsSince], the app's start): its diary lines then would count the same decisions twice. Its
+        // diary lines from before (the app restarted during the day) are kept.
         val kept = i.decisions.map { it.arm }.toSet()
-        val decisions = (i.decisions + diaryDecisions(lines).filter { it.arm !in kept }).filter { it.at.toLocalDate() == i.day }
+        val since = i.decisionsSince
+        val fromDiary = diaryDecisions(lines).filter { it.arm !in kept || (since != null && it.at.isBefore(since)) }
+        val decisions = (i.decisions + fromDiary).filter { it.at.toLocalDate() == i.day }
             .distinctBy { Triple(it.at.withNano(0), it.arm, it.verdict) }.sortedBy { it.at }
         val byArm = decisions.groupBy { it.arm }
 
