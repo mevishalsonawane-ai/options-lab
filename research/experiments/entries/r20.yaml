@@ -1,0 +1,28 @@
+id: r20
+title: 'R20 facts: how often the 09:15-10:00 range gives no ORB-family trade, and what the after-14:00 break was worth'
+family: orb
+date: '2026-10-13'
+doc: research/hunt/r20/PREREG.md
+hypothesis: 'Descriptive: count the no-trade days by W45/ATR14, VIX and expiry, and the late (14:00-15:00) breaks on them.'
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
+  Yahoo daily ^INDIAVIX for gaps
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- 5-minute index bars
+- ATR14
+- India VIX previous close
+- expiry calendar
+model_or_rule: 'No rule tested: counts and the value of the late break (index points and the ORB option trade)'
+settings: research/hunt/r20/PREREG.md
+prereg: research/hunt/r20/PREREG.md
+variants_tried: null
+results:
+  summary: Pre-registered 13 Oct 2026; not run yet.
+  costs: app charges at today's rates; liq fills
+holdout_read: false
+verdict: not-a-test
