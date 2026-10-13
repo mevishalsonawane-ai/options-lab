@@ -176,15 +176,19 @@ def index_closes(raw: Path = RAW, drive: Path = DRIVE) -> pd.DataFrame:
         x = x[x.symbol.isin(["NIFTY", "BANKNIFTY", "INDIAVIX"])]
         for d, g in x.groupby("date"):
             d = pd.Timestamp(d).date()
-            if d in rows:
-                continue
-            r = {"src": "dhan"}
+            r = {}
             for _, row in g.iterrows():
                 k = "VIX" if row.symbol == "INDIAVIX" else row.symbol
                 for f in ("open", "high", "low", "close"):
                     r[f"{k}_{f}"] = float(row[f])
+            if d in rows:
+                # NSE's file wins; Dhan only fills a field it lacks (India VIX is absent from NSE's files in 2012-2014)
+                for k, v in r.items():
+                    if pd.isna(rows[d].get(k, np.nan)):
+                        rows[d][k] = v
+                continue
             if "NIFTY_close" in r:
-                rows[d] = r
+                rows[d] = {**r, "src": "dhan"}
     df = pd.DataFrame.from_dict(rows, orient="index").sort_index()
     df.index = pd.to_datetime(df.index)
     return df

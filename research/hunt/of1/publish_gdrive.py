@@ -4,10 +4,10 @@
     python3 -I research/hunt/of1/publish_gdrive.py [--dest gdrive:IraAlgo-data-lake/participants] [--dry-run]
 
 Layout on Drive (research/data/README.md on branch claude/data-lake-gdrive: the lake is gdrive:IraAlgo-data-lake):
-  participants/oi/fao_participant_oi_DDMMYYYY.csv      NSE originals, unchanged
-  participants/vol/fao_participant_vol_DDMMYYYY.csv
-  participants/indices/ind_close_all_DDMMYYYY.csv      NSE all-index closing files
-  participants/fii_stats/fii_stats_DD-Mon-YYYY.xls     NSE FII derivatives statistics (only the years fetched)
+  participants/oi/oi_YYYY.zip                          NSE fao_participant_oi_DDMMYYYY.csv originals, one zip a year
+  participants/vol/vol_YYYY.zip                        NSE fao_participant_vol_DDMMYYYY.csv originals
+  participants/indices/indices_YYYY.zip                NSE ind_close_all_DDMMYYYY.csv (all-index closing files)
+  participants/fii_stats/fii_stats_YYYY.zip            NSE FII derivatives statistics (only the years fetched)
   participants/fpi/fpi_daily.csv                       NSDL daily FPI flows (parsed; the monthly pages are not kept)
   participants/bhav_index/bhav_index_YYYY.parquet      the F&O bhavcopy cut to index futures/options, one file a year
   participants/derived/*.parquet                       build.py's tables (pools, nearest-expiry chains, finals)
@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 import pandas as pd
@@ -40,13 +41,15 @@ Public NSE and NSDL daily files, fetched by research/hunt/of1/fetch.py and fetch
 github.com/mevishalsonawane-ai/options-lab (branch claude/orderflow-forensics-india). NSE data is anonymous: it
 reports participant TYPES (Client, DII, FII, Pro) only, never a person or firm.
 
-oi/, vol/      NSE participant-wise open interest / volume (contracts), 2 Jan 2012 onward, unchanged
-indices/       NSE all-index closing files (NIFTY 50, NIFTY BANK, India VIX, ...)
-fii_stats/     NSE FII derivatives statistics (partial: only the years fetched)
+oi/, vol/      NSE participant-wise open interest / volume (contracts), 2 Jan 2012 onward: the original CSVs,
+               unchanged, one zip a year (oi_2012.zip ...)
+indices/       NSE all-index closing files (NIFTY 50, NIFTY BANK, India VIX, ...), one zip a year
+fii_stats/     NSE FII derivatives statistics (partial: late 2020 onward), one zip a year
 fpi/           NSDL daily FPI equity flows by REPORTING date (trades of the previous session)
 bhav_index/    F&O bhavcopy rows for index futures and options only, one parquet a year (OI in units, volume in
                contracts; settle on an option's expiry day = the underlying's final settlement, as NSE prints it)
-derived/       build.py outputs: pools.parquet, chain_near.parquet, finals.parquet, fut_expiries.json
+derived/       build.py / analyze.py outputs: pools.parquet, chain_near.parquet, finals.parquet, fut_expiries.json,
+               group_pnl_daily_design.csv.gz and group_pnl_daily_holdout.csv.gz (each group's daily MTM estimate)
 MANIFEST.txt   path, bytes, sha256
 
 DII cash flows are not here: NSE publishes them only on its www API, which refused the fetching machine.
@@ -65,12 +68,20 @@ def stage(tmp: Path) -> Path:
     """Builds the upload tree in `tmp` (hard links or copies of the raw files, yearly bhav parquet)."""
     raw = LD.RAW
     root = tmp / "participants"
+    # thousands of 1-20 kB files upload slowly to Drive (about one a second), so the originals go in one zip per kind
+    # per year, unchanged inside
     for sub, dst in (("participants/oi", "oi"), ("participants/vol", "vol"), ("indices", "indices"), ("fii_stats", "fii_stats")):
         d = root / dst
         d.mkdir(parents=True, exist_ok=True)
+        by_year: dict[str, list[Path]] = {}
         for f in sorted((raw / sub).glob("*")):
-            if f.suffix in (".csv", ".xls", ".xlsx") and not f.name.endswith(".missing"):
-                shutil.copy2(f, d / f.name)
+            if f.suffix in (".csv", ".xls", ".xlsx"):
+                y = f.stem[-4:]                     # every name ends in its year (..._DDMMYYYY, ..._DD-Mon-YYYY)
+                by_year.setdefault(y if y.isdigit() else "other", []).append(f)
+        for y, files in sorted(by_year.items()):
+            with zipfile.ZipFile(d / f"{dst}_{y}.zip", "w", zipfile.ZIP_DEFLATED) as z:
+                for f in files:
+                    z.write(f, arcname=f.name)
     (root / "fpi").mkdir(parents=True, exist_ok=True)
     if (raw / "fpi" / "fpi_daily.csv").exists():
         shutil.copy2(raw / "fpi" / "fpi_daily.csv", root / "fpi" / "fpi_daily.csv")

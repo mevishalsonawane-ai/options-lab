@@ -303,3 +303,14 @@ What this affects:
 - §5 (signals) and §8 (rules) read neither and are unchanged.
 - The wall/magnet design tests are re-run with the fix. Their earlier design numbers (no survivor) used wrong final
   levels for pre-2020 expiries and are void.
+
+## Amendment 4 (14 Oct 2026, after the holdout read; disclosed, descriptive only)
+
+After the one holdout read (02:18 IST), India VIX was found missing from NSE's all-index files for most of 2012–2014
+(664 sessions had no VIX-regime label). `load.index_closes` now fills a field NSE's file lacks from the Dhan lake's
+`index_daily` (NSE's value always wins). `analyze.py design` and `summary` were then re-run:
+
+- every signal table, survivor, wall/magnet result and R0–R3 trade file came out byte-identical (checked file by file);
+- only the descriptive VIX-regime tables of §3 changed.
+
+No test, rule or holdout result depends on this change.

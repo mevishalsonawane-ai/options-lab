@@ -1,0 +1,32 @@
+id: of1-participants-pnl
+title: 'Who profited in index F&O by participant type (Client, DII, FII, Pro), 2012-2026: end-of-day MTM estimate'
+family: market-facts
+date: '2026-10-14'
+doc: research/HUNT_OF1_ORDERFLOW_INDIA.md
+hypothesis: Describe, by participant type, the gross mark-to-market of index futures and options positions from NSE's
+  participant OI and the bhavcopy pool prices (PREREG section 3); a measurement, not a test.
+data_version: 'NSE public archives (nsearchives.nseindia.com) fetched 13 Oct 2026: participant OI/volume 3,644 days 2 Jan 2012 - 13 Oct 2026 (3,632 usable), F&O bhavcopy index rows 3,644 days, all-index closes (Dhan lake index_daily for gaps), NSDL FPI 3,560 reporting days; copies on gdrive:IraAlgo-data-lake/participants'
+period:
+  design: 2012-01-04 .. 2025-10-12 (3,385 participant days)
+  holdout: 2025-10-13 .. 2026-10-13 (247 days; descriptive)
+instruments:
+- index futures (all NSE indices, pooled)
+- index options (all NSE indices, pooled)
+features:
+- participant net index futures / calls / puts (contracts)
+- bhavcopy OI (units) and settle (futures) / close (options) changes
+model_or_rule: 'group P&L(t+1) = net contracts(t) x pool MTM per contract(t+1); options under 3 strike mixes'
+settings: research/hunt/of1/PREREG.md section 3 (with Amendment 3)
+prereg: research/hunt/of1/PREREG.md
+variants_tried: null
+results:
+  summary: '3,642 sessions, Rs crore gross. Index futures: Client -2,009 (-4,973 with day change), DII +1,571 (+1,147),
+    FII +3,235 (+7,062), Pro -2,797 (-3,236). Index options mixes a/b/c: Client -10,453/-11,647/-7,617, DII +254/-558/+682,
+    FII +1,279/-720/+990, Pro +8,921/+12,925/+5,946. Robust signs: Client - futures and options; Pro + options, - futures;
+    FII + futures (trend days +7,591 on 1,363 days, range -4,356 on 2,279); DII + futures. Years in profit (fut + opt a):
+    Pro 13/15, DII 9/15, Client 7/15, FII 6/15. Holdout year: FII fut +3,298, opt +2,827; Client fut -2,327, opt -3,342.'
+  costs: 'gross: participants'' charges unknown; end-of-day positions only (intraday invisible)'
+holdout_read: null
+verdict: not-a-test
+notes: Strike/expiry mix of each group unknown; options signs claimed only where all 3 mixes agree. Understates retail
+  losses vs SEBI's study (intraday trades and costs).

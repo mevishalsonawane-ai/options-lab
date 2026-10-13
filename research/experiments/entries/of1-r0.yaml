@@ -1,0 +1,25 @@
+id: of1-r0
+title: 'Rule R0: follow FII index-futures change (S1) -> buy the NIFTY ATM option next day (app arm, stop -30%, lock +40%/+15%)'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_OF1_ORDERFLOW_INDIA.md
+hypothesis: Trading the S1_FII signal (|z| >= 1, walk-forward side) with the app's option-buying arm makes money after
+  charges and beats random-side twins.
+data_version: 'NSE public archives (nsearchives.nseindia.com) fetched 13 Oct 2026: participant OI/volume 3,644 days 2 Jan 2012 - 13 Oct 2026 (3,632 usable), F&O bhavcopy index rows 3,644 days, all-index closes (Dhan lake index_daily for gaps), NSDL FPI 3,560 reporting days; copies on gdrive:IraAlgo-data-lake/participants'
+period:
+  design: signal days 2014 .. 2025-10-12 (walk-forward sign by year)
+  holdout: 2025-10-13 .. 2026-10-13
+instruments:
+- NIFTY
+features:
+- S1_FII
+model_or_rule: ATM nearest-expiry option at the next open (+5 bps + 2 ticks), stop -30%, step lock +40% -> +15%, else the
+  close; expiry days skipped; daily bars, pessimistic order
+settings: research/hunt/of1/PREREG.md section 8
+prereg: research/hunt/of1/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 526 trades, 201 wins, net Rs -94,447 (charges Rs 32,035), 5 of 12 years positive, twin p 0.73, BH q 0.73. Holdout: 39 trades, 11 wins, net Rs -32,212. FAILED the gates.'
+  costs: 'app charges at the rates in force (research/obuy/costs.py Costs dated), fills 5 bps + 2 ticks, stops 10 bps + 4 ticks'
+holdout_read: true
+verdict: rejected

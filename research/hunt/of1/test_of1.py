@@ -469,3 +469,31 @@ def test_expiry_settle_prefers_official_index_close():
     out = BD.expiry_settle(df, d, {"BANKNIFTY": 24783.95})
     assert (out.final_src == "index_close").all() and out.und_final.iloc[0] == pytest.approx(24783.95)
     assert out[(out.kind == "CE") & (out.strike == 24700)].settle.iloc[0] == pytest.approx(83.95)
+
+
+def test_index_closes_nse_wins_dhan_fills_missing_fields(tmp_path):
+    raw, drive = tmp_path / "raw", tmp_path / "drive"
+    (raw / "indices").mkdir(parents=True)
+    drive.mkdir()
+    head = "Index Name,Index Date,Open Index Value,High Index Value,Low Index Value,Closing Index Value,x\n"
+    (raw / "indices" / "ind_close_all_02012012.csv").write_text(head + "CNX Nifty,02-01-2012,100,110,90,105,1\nBank Nifty,02-01-2012,200,220,190,210,1\n")
+    rows = [dict(symbol=s, date=pd.Timestamp(d), open=o, high=o, low=o, close=o) for s, d, o in [
+        ("NIFTY", "2012-01-02", 999.0), ("INDIAVIX", "2012-01-02", 25.0), ("NIFTY", "2012-01-03", 106.0),
+        ("BANKNIFTY", "2012-01-03", 211.0), ("INDIAVIX", "2012-01-03", 24.0)]]
+    pd.DataFrame(rows).to_parquet(drive / "index_daily.parquet")
+    ix = LD.index_closes(raw, drive)
+    assert ix.loc["2012-01-02", "NIFTY_close"] == 105 and ix.loc["2012-01-02", "src"] == "nse"     # NSE wins
+    assert ix.loc["2012-01-02", "VIX_close"] == 25.0                                            # gap filled
+    assert ix.loc["2012-01-03", "src"] == "dhan" and ix.loc["2012-01-03", "NIFTY_close"] == 106.0
+
+
+def test_fut2_adds_position_change_at_settle_minus_typical():
+    w = _wide_from({D0: OLD, D1: OLD.replace("FII ,6,1", "FII ,8,1").replace("Pro,1,9", "Pro,1,11").replace("Total,17,17", "Total,19,19")})
+    prev = _rows(D0, [("NIFTY", "FUT", E1, 0, 100.0, 1700)])
+    cur = _rows(D1, [("NIFTY", "FUT", E1, 0, 110.0, 1700, 10.0, 112.0, 102.0, 107.0)])   # typical (112+102+107)/3 = 107
+    po = pd.DataFrame([{**P.pool_step(prev, cur, D0), "date": D1, "prev": D0}])
+    po.index = pd.to_datetime(po.date)
+    pc = P.per_contract(po, w)
+    assert pc.fut_typ.iloc[0] == pytest.approx(1700 * (110 - 107) / 19)                      # TOTAL long 19 on D1
+    g = P.group_pnl(w, pc, pd.to_datetime(po.prev))
+    assert g["FII.fut2"].iloc[0] - g["FII.fut"].iloc[0] == pytest.approx(2 * pc.fut_typ.iloc[0])  # FII net +5 -> +7

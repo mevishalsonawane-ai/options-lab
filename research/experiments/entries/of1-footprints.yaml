@@ -1,0 +1,24 @@
+id: of1-footprints
+title: 'Order-flow footprints in the app''s tick-zone recordings (large prints, absorption, sweeps, iceberg refills)'
+family: flow-oi
+date: '2026-10-14'
+doc: research/HUNT_OF1_ORDERFLOW_INDIA.md
+hypothesis: Describe what followed each footprint (1, 5, 15 minutes, futures points), descriptive only.
+data_version: 'none: the IraAlgo data repository had 0 releases and an empty catalogue on 13-14 Oct 2026 (uploads are
+  also sealed with Boss''s passphrase)'
+period:
+  design: none (no recorded day available)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- tick zone per-second LTP, cumulative volume, 5-level book
+model_or_rule: research/hunt/of1/footprints.py (tested on synthetic ticks)
+settings: research/hunt/of1/PREREG.md section 7 (Amendment 1)
+prereg: research/hunt/of1/PREREG.md
+variants_tried: null
+results:
+  summary: No recording readable; nothing measured. The detector is ready and unit-tested on synthetic ticks.
+  costs: n/a
+holdout_read: null
+verdict: not-a-test
