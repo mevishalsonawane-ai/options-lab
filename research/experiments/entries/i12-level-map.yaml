@@ -1,0 +1,32 @@
+id: i12-level-map
+title: >-
+  Level map - do PDH/PDL/PDC, pivots, swings and max-OI strikes hold more often than random levels
+family: patterns-indicators
+date: '2026-10-13'
+doc: research/LEVEL_MAP.md
+hypothesis: >-
+  Each level type holds (no 5-minute close beyond it after the first touch) more often than placebo levels.
+data_version: research-data release via research/context (SOURCE=release)
+period:
+  design: before the last 12 months
+  holdout: last 12 months (read once)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- previous day high/low/close
+- classic pivots P R1 S1 R2 S2
+- 5-session swing high/low
+- 09:20 max-OI call/put strikes
+model_or_rule: two-proportion z, real vs 5 placebo levels a day (shifted 0.3-0.7%)
+settings: research/context/PREREG.md I12
+prereg: research/context/PREREG.md
+variants_tried: 24
+results:
+  summary: >-
+    0 of 24 pass (lowest BH q 0.76). Real levels held 18-37% of tests, placebos 24-32%.
+  costs: none (no trading rule)
+holdout_read: true
+verdict: rejected
+notes: >-
+  The chart still shows "held N of M" per level with the placebo rate, as context.

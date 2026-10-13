@@ -1,0 +1,801 @@
+{
+ "BANKNIFTY": {
+  "PDH": {
+   "design": {
+    "days": 249,
+    "tested": 127,
+    "held": 23,
+    "held_pct": 18.1,
+    "placebo_tested": 534,
+    "placebo_held_pct": 24.9,
+    "p": 0.9475087681985773
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 129,
+    "held": 37,
+    "held_pct": 28.7,
+    "placebo_tested": 526,
+    "placebo_held_pct": 30.2,
+    "p": 0.6344326495817285
+   },
+   "all": {
+    "days": 493,
+    "tested": 256,
+    "held": 60,
+    "held_pct": 23.4,
+    "placebo_tested": 1060,
+    "placebo_held_pct": 27.5,
+    "p": 0.9087682379385784
+   }
+  },
+  "PDL": {
+   "design": {
+    "days": 249,
+    "tested": 123,
+    "held": 28,
+    "held_pct": 22.8,
+    "placebo_tested": 545,
+    "placebo_held_pct": 25.9,
+    "p": 0.7630145295105919
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 116,
+    "held": 31,
+    "held_pct": 26.7,
+    "placebo_tested": 475,
+    "placebo_held_pct": 24.4,
+    "p": 0.3034744016038653
+   },
+   "all": {
+    "days": 493,
+    "tested": 239,
+    "held": 59,
+    "held_pct": 24.7,
+    "placebo_tested": 1020,
+    "placebo_held_pct": 25.2,
+    "p": 0.5649921445371233
+   }
+  },
+  "PDC": {
+   "design": {
+    "days": 249,
+    "tested": 189,
+    "held": 35,
+    "held_pct": 18.5,
+    "placebo_tested": 686,
+    "placebo_held_pct": 22.3,
+    "p": 0.8690012080789045
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 192,
+    "held": 35,
+    "held_pct": 18.2,
+    "placebo_tested": 562,
+    "placebo_held_pct": 32.6,
+    "p": 0.9999222479907917
+   },
+   "all": {
+    "days": 493,
+    "tested": 381,
+    "held": 70,
+    "held_pct": 18.4,
+    "placebo_tested": 1248,
+    "placebo_held_pct": 26.9,
+    "p": 0.9996336786775346
+   }
+  },
+  "P": {
+   "design": {
+    "days": 249,
+    "tested": 176,
+    "held": 49,
+    "held_pct": 27.8,
+    "placebo_tested": 625,
+    "placebo_held_pct": 23.8,
+    "p": 0.1385457883707445
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 178,
+    "held": 50,
+    "held_pct": 28.1,
+    "placebo_tested": 523,
+    "placebo_held_pct": 27.7,
+    "p": 0.4625840826944789
+   },
+   "all": {
+    "days": 493,
+    "tested": 354,
+    "held": 99,
+    "held_pct": 28.0,
+    "placebo_tested": 1148,
+    "placebo_held_pct": 25.6,
+    "p": 0.1889345865391518
+   }
+  },
+  "R1": {
+   "design": {
+    "days": 249,
+    "tested": 112,
+    "held": 26,
+    "held_pct": 23.2,
+    "placebo_tested": 554,
+    "placebo_held_pct": 22.4,
+    "p": 0.4238102664718102
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 130,
+    "held": 42,
+    "held_pct": 32.3,
+    "placebo_tested": 559,
+    "placebo_held_pct": 27.0,
+    "p": 0.11294585442348831
+   },
+   "all": {
+    "days": 493,
+    "tested": 242,
+    "held": 68,
+    "held_pct": 28.1,
+    "placebo_tested": 1113,
+    "placebo_held_pct": 24.7,
+    "p": 0.13575137663133086
+   }
+  },
+  "S1": {
+   "design": {
+    "days": 249,
+    "tested": 110,
+    "held": 17,
+    "held_pct": 15.5,
+    "placebo_tested": 582,
+    "placebo_held_pct": 23.7,
+    "p": 0.971602665242372
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 110,
+    "held": 38,
+    "held_pct": 34.5,
+    "placebo_tested": 525,
+    "placebo_held_pct": 25.9,
+    "p": 0.0323367750245448
+   },
+   "all": {
+    "days": 493,
+    "tested": 220,
+    "held": 55,
+    "held_pct": 25.0,
+    "placebo_tested": 1107,
+    "placebo_held_pct": 24.8,
+    "p": 0.46893917059143997
+   }
+  },
+  "R2": {
+   "design": {
+    "days": 249,
+    "tested": 62,
+    "held": 20,
+    "held_pct": 32.3,
+    "placebo_tested": 321,
+    "placebo_held_pct": 22.4,
+    "p": 0.048622160559770124
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 58,
+    "held": 20,
+    "held_pct": 34.5,
+    "placebo_tested": 382,
+    "placebo_held_pct": 26.4,
+    "p": 0.10058866968996838
+   },
+   "all": {
+    "days": 493,
+    "tested": 120,
+    "held": 40,
+    "held_pct": 33.3,
+    "placebo_tested": 703,
+    "placebo_held_pct": 24.6,
+    "p": 0.021860159366005213
+   }
+  },
+  "S2": {
+   "design": {
+    "days": 249,
+    "tested": 61,
+    "held": 16,
+    "held_pct": 26.2,
+    "placebo_tested": 367,
+    "placebo_held_pct": 24.3,
+    "p": 0.36971537374999774
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 49,
+    "held": 15,
+    "held_pct": 30.6,
+    "placebo_tested": 327,
+    "placebo_held_pct": 28.1,
+    "p": 0.3599983801933426
+   },
+   "all": {
+    "days": 493,
+    "tested": 110,
+    "held": 31,
+    "held_pct": 28.2,
+    "placebo_tested": 694,
+    "placebo_held_pct": 26.1,
+    "p": 0.32109045258080315
+   }
+  },
+  "SWING_HIGH": {
+   "design": {
+    "days": 224,
+    "tested": 204,
+    "held": 40,
+    "held_pct": 19.6,
+    "placebo_tested": 614,
+    "placebo_held_pct": 26.5,
+    "p": 0.9765929256117071
+   },
+   "holdout": {
+    "days": 207,
+    "tested": 192,
+    "held": 38,
+    "held_pct": 19.8,
+    "placebo_tested": 478,
+    "placebo_held_pct": 27.2,
+    "p": 0.9772224363089947
+   },
+   "all": {
+    "days": 431,
+    "tested": 396,
+    "held": 78,
+    "held_pct": 19.7,
+    "placebo_tested": 1092,
+    "placebo_held_pct": 26.8,
+    "p": 0.9975331674527413
+   }
+  },
+  "SWING_LOW": {
+   "design": {
+    "days": 228,
+    "tested": 205,
+    "held": 43,
+    "held_pct": 21.0,
+    "placebo_tested": 626,
+    "placebo_held_pct": 25.2,
+    "p": 0.8920328518001027
+   },
+   "holdout": {
+    "days": 224,
+    "tested": 193,
+    "held": 50,
+    "held_pct": 25.9,
+    "placebo_tested": 519,
+    "placebo_held_pct": 30.8,
+    "p": 0.8997549551332722
+   },
+   "all": {
+    "days": 452,
+    "tested": 398,
+    "held": 93,
+    "held_pct": 23.4,
+    "placebo_tested": 1145,
+    "placebo_held_pct": 27.8,
+    "p": 0.956636210762677
+   }
+  },
+  "MAX_OI_CALL": {
+   "design": {
+    "days": 249,
+    "tested": 91,
+    "held": 19,
+    "held_pct": 20.9,
+    "placebo_tested": 425,
+    "placebo_held_pct": 26.8,
+    "p": 0.8803194851637954
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 73,
+    "held": 21,
+    "held_pct": 28.8,
+    "placebo_tested": 316,
+    "placebo_held_pct": 29.7,
+    "p": 0.5656582361421394
+   },
+   "all": {
+    "days": 493,
+    "tested": 164,
+    "held": 40,
+    "held_pct": 24.4,
+    "placebo_tested": 741,
+    "placebo_held_pct": 28.1,
+    "p": 0.8304798079240236
+   }
+  },
+  "MAX_OI_PUT": {
+   "design": {
+    "days": 249,
+    "tested": 115,
+    "held": 26,
+    "held_pct": 22.6,
+    "placebo_tested": 510,
+    "placebo_held_pct": 27.5,
+    "p": 0.8559040472618267
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 92,
+    "held": 25,
+    "held_pct": 27.2,
+    "placebo_tested": 438,
+    "placebo_held_pct": 28.1,
+    "p": 0.5700623250503145
+   },
+   "all": {
+    "days": 493,
+    "tested": 207,
+    "held": 51,
+    "held_pct": 24.6,
+    "placebo_tested": 948,
+    "placebo_held_pct": 27.7,
+    "p": 0.8184940545603181
+   }
+  }
+ },
+ "NIFTY": {
+  "PDH": {
+   "design": {
+    "days": 250,
+    "tested": 130,
+    "held": 36,
+    "held_pct": 27.7,
+    "placebo_tested": 469,
+    "placebo_held_pct": 31.6,
+    "p": 0.8009668131670536
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 117,
+    "held": 38,
+    "held_pct": 32.5,
+    "placebo_tested": 445,
+    "placebo_held_pct": 24.0,
+    "p": 0.031778990017885304
+   },
+   "all": {
+    "days": 494,
+    "tested": 247,
+    "held": 74,
+    "held_pct": 30.0,
+    "placebo_tested": 914,
+    "placebo_held_pct": 27.9,
+    "p": 0.261899091853192
+   }
+  },
+  "PDL": {
+   "design": {
+    "days": 250,
+    "tested": 107,
+    "held": 23,
+    "held_pct": 21.5,
+    "placebo_tested": 513,
+    "placebo_held_pct": 23.4,
+    "p": 0.6640757910636377
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 118,
+    "held": 29,
+    "held_pct": 24.6,
+    "placebo_tested": 454,
+    "placebo_held_pct": 31.7,
+    "p": 0.9338059070144472
+   },
+   "all": {
+    "days": 494,
+    "tested": 225,
+    "held": 52,
+    "held_pct": 23.1,
+    "placebo_tested": 967,
+    "placebo_held_pct": 27.3,
+    "p": 0.9001585726280437
+   }
+  },
+  "PDC": {
+   "design": {
+    "days": 250,
+    "tested": 193,
+    "held": 39,
+    "held_pct": 20.2,
+    "placebo_tested": 561,
+    "placebo_held_pct": 21.0,
+    "p": 0.5963675790482383
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 171,
+    "held": 53,
+    "held_pct": 31.0,
+    "placebo_tested": 500,
+    "placebo_held_pct": 26.6,
+    "p": 0.1339020978989009
+   },
+   "all": {
+    "days": 494,
+    "tested": 364,
+    "held": 92,
+    "held_pct": 25.3,
+    "placebo_tested": 1061,
+    "placebo_held_pct": 23.7,
+    "p": 0.2666463463602976
+   }
+  },
+  "P": {
+   "design": {
+    "days": 250,
+    "tested": 167,
+    "held": 48,
+    "held_pct": 28.7,
+    "placebo_tested": 551,
+    "placebo_held_pct": 26.1,
+    "p": 0.25235167646928824
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 161,
+    "held": 47,
+    "held_pct": 29.2,
+    "placebo_tested": 472,
+    "placebo_held_pct": 27.1,
+    "p": 0.3057026124796781
+   },
+   "all": {
+    "days": 494,
+    "tested": 328,
+    "held": 95,
+    "held_pct": 29.0,
+    "placebo_tested": 1023,
+    "placebo_held_pct": 26.6,
+    "p": 0.20004909976198565
+   }
+  },
+  "R1": {
+   "design": {
+    "days": 250,
+    "tested": 127,
+    "held": 36,
+    "held_pct": 28.3,
+    "placebo_tested": 495,
+    "placebo_held_pct": 28.3,
+    "p": 0.49433470631002585
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 121,
+    "held": 36,
+    "held_pct": 29.8,
+    "placebo_tested": 463,
+    "placebo_held_pct": 26.8,
+    "p": 0.2571104819778192
+   },
+   "all": {
+    "days": 494,
+    "tested": 248,
+    "held": 72,
+    "held_pct": 29.0,
+    "placebo_tested": 958,
+    "placebo_held_pct": 27.6,
+    "p": 0.32213297899954496
+   }
+  },
+  "S1": {
+   "design": {
+    "days": 250,
+    "tested": 104,
+    "held": 27,
+    "held_pct": 26.0,
+    "placebo_tested": 557,
+    "placebo_held_pct": 25.3,
+    "p": 0.4446498032560226
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 114,
+    "held": 27,
+    "held_pct": 23.7,
+    "placebo_tested": 464,
+    "placebo_held_pct": 30.8,
+    "p": 0.9329280171755043
+   },
+   "all": {
+    "days": 494,
+    "tested": 218,
+    "held": 54,
+    "held_pct": 24.8,
+    "placebo_tested": 1021,
+    "placebo_held_pct": 27.8,
+    "p": 0.8202660521134149
+   }
+  },
+  "R2": {
+   "design": {
+    "days": 250,
+    "tested": 61,
+    "held": 19,
+    "held_pct": 31.1,
+    "placebo_tested": 343,
+    "placebo_held_pct": 22.2,
+    "p": 0.06356098094028581
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 54,
+    "held": 23,
+    "held_pct": 42.6,
+    "placebo_tested": 361,
+    "placebo_held_pct": 31.6,
+    "p": 0.054227427928117994
+   },
+   "all": {
+    "days": 494,
+    "tested": 115,
+    "held": 42,
+    "held_pct": 36.5,
+    "placebo_tested": 704,
+    "placebo_held_pct": 27.0,
+    "p": 0.017709791613443892
+   }
+  },
+  "S2": {
+   "design": {
+    "days": 250,
+    "tested": 60,
+    "held": 11,
+    "held_pct": 18.3,
+    "placebo_tested": 339,
+    "placebo_held_pct": 22.1,
+    "p": 0.7447884101097514
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 64,
+    "held": 20,
+    "held_pct": 31.2,
+    "placebo_tested": 383,
+    "placebo_held_pct": 29.0,
+    "p": 0.3560532148920317
+   },
+   "all": {
+    "days": 494,
+    "tested": 124,
+    "held": 31,
+    "held_pct": 25.0,
+    "placebo_tested": 722,
+    "placebo_held_pct": 25.8,
+    "p": 0.5712064280566985
+   }
+  },
+  "SWING_HIGH": {
+   "design": {
+    "days": 213,
+    "tested": 194,
+    "held": 47,
+    "held_pct": 24.2,
+    "placebo_tested": 481,
+    "placebo_held_pct": 27.4,
+    "p": 0.8041664918497757
+   },
+   "holdout": {
+    "days": 211,
+    "tested": 190,
+    "held": 51,
+    "held_pct": 26.8,
+    "placebo_tested": 468,
+    "placebo_held_pct": 25.9,
+    "p": 0.39695703250645487
+   },
+   "all": {
+    "days": 424,
+    "tested": 384,
+    "held": 98,
+    "held_pct": 25.5,
+    "placebo_tested": 949,
+    "placebo_held_pct": 26.7,
+    "p": 0.6654992287057118
+   }
+  },
+  "SWING_LOW": {
+   "design": {
+    "days": 228,
+    "tested": 196,
+    "held": 50,
+    "held_pct": 25.5,
+    "placebo_tested": 512,
+    "placebo_held_pct": 24.4,
+    "p": 0.38112530228635794
+   },
+   "holdout": {
+    "days": 219,
+    "tested": 187,
+    "held": 41,
+    "held_pct": 21.9,
+    "placebo_tested": 453,
+    "placebo_held_pct": 27.6,
+    "p": 0.9316227877596135
+   },
+   "all": {
+    "days": 447,
+    "tested": 383,
+    "held": 91,
+    "held_pct": 23.8,
+    "placebo_tested": 965,
+    "placebo_held_pct": 25.9,
+    "p": 0.7932588177456359
+   }
+  },
+  "MAX_OI_CALL": {
+   "design": {
+    "days": 250,
+    "tested": 58,
+    "held": 14,
+    "held_pct": 24.1,
+    "placebo_tested": 272,
+    "placebo_held_pct": 28.7,
+    "p": 0.7579815482314906
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 81,
+    "held": 26,
+    "held_pct": 32.1,
+    "placebo_tested": 313,
+    "placebo_held_pct": 31.3,
+    "p": 0.4458075845382081
+   },
+   "all": {
+    "days": 494,
+    "tested": 139,
+    "held": 40,
+    "held_pct": 28.8,
+    "placebo_tested": 585,
+    "placebo_held_pct": 30.1,
+    "p": 0.6190880964270012
+   }
+  },
+  "MAX_OI_PUT": {
+   "design": {
+    "days": 250,
+    "tested": 86,
+    "held": 23,
+    "held_pct": 26.7,
+    "placebo_tested": 374,
+    "placebo_held_pct": 29.1,
+    "p": 0.6713694667123681
+   },
+   "holdout": {
+    "days": 244,
+    "tested": 107,
+    "held": 27,
+    "held_pct": 25.2,
+    "placebo_tested": 368,
+    "placebo_held_pct": 35.1,
+    "p": 0.9715393674001808
+   },
+   "all": {
+    "days": 494,
+    "tested": 193,
+    "held": 50,
+    "held_pct": 25.9,
+    "placebo_tested": 742,
+    "placebo_held_pct": 32.1,
+    "p": 0.9508970433652006
+   }
+  }
+ },
+ "bh": {
+  "BANKNIFTY:PDH": {
+   "p": 0.9475087681985773,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:PDL": {
+   "p": 0.7630145295105919,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:PDC": {
+   "p": 0.8690012080789045,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:P": {
+   "p": 0.1385457883707445,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:R1": {
+   "p": 0.4238102664718102,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:S1": {
+   "p": 0.971602665242372,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:R2": {
+   "p": 0.048622160559770124,
+   "q": 0.7627317712834297
+  },
+  "BANKNIFTY:S2": {
+   "p": 0.36971537374999774,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:SWING_HIGH": {
+   "p": 0.9765929256117071,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:SWING_LOW": {
+   "p": 0.8920328518001027,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:MAX_OI_CALL": {
+   "p": 0.8803194851637954,
+   "q": 0.9765929256117071
+  },
+  "BANKNIFTY:MAX_OI_PUT": {
+   "p": 0.8559040472618267,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:PDH": {
+   "p": 0.8009668131670536,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:PDL": {
+   "p": 0.6640757910636377,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:PDC": {
+   "p": 0.5963675790482383,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:P": {
+   "p": 0.25235167646928824,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:R1": {
+   "p": 0.49433470631002585,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:S1": {
+   "p": 0.4446498032560226,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:R2": {
+   "p": 0.06356098094028581,
+   "q": 0.7627317712834297
+  },
+  "NIFTY:S2": {
+   "p": 0.7447884101097514,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:SWING_HIGH": {
+   "p": 0.8041664918497757,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:SWING_LOW": {
+   "p": 0.38112530228635794,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:MAX_OI_CALL": {
+   "p": 0.7579815482314906,
+   "q": 0.9765929256117071
+  },
+  "NIFTY:MAX_OI_PUT": {
+   "p": 0.6713694667123681,
+   "q": 0.9765929256117071
+  }
+ },
+ "confirmed": {}
+}

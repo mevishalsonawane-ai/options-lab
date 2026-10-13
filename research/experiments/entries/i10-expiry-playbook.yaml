@@ -1,0 +1,34 @@
+id: i10-expiry-playbook
+title: >-
+  Expiry-day playbook - time value decay, max pain re-check, pin, last hour, short straddle into the close
+family: option-structure
+date: '2026-10-13'
+doc: research/EXPIRY_PLAYBOOK.md
+hypothesis: >-
+  A short ATM straddle sold at 10:00 / 12:00 / 13:30 / 14:30 on expiry day and bought back at 15:20 makes money
+  after costs (X1-X4 per index); the rest is description.
+data_version: research-data release, expiring contract on 53 NIFTY and 11 BANKNIFTY expiry days
+period:
+  design: before the last 12 months (0 NIFTY, 0-1 BANKNIFTY expiries with the expiring contract)
+  holdout: last 12 months (52 NIFTY, 11 BANKNIFTY expiries; read once, for information)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- ATM straddle and time value by time of day
+- 09:20 OI (max pain, max-OI strikes)
+model_or_rule: short ATM straddle, entry at a fixed time, exit 15:20, no stop
+settings: research/context/PREREG.md I10
+prereg: research/context/PREREG.md
+variants_tried: 8
+results:
+  summary: >-
+    Untestable on design (no expiring contract before 2025 in the release). Holdout - no straddle sale significant
+    (best BANKNIFTY 10:00 p 0.07 on 11 days; NIFTY p 0.26-0.66), worst days Rs -11k to -31k. Described - time value left
+    61% at 10:00, 35% at 12:00, 11% at 14:00, 2% at 15:00 (NIFTY 53); last hour bigger on expiry days (0.15% vs 0.10%,
+    p 0.004); max pain worse than the open (0.58% vs 0.50%), as R16.
+  costs: app paper fills + modelled half-spread both legs both ways, SandboxCosts charges, 1 lot
+holdout_read: true
+verdict: inconclusive
+notes: >-
+  Re-run on the Dhan lake with a fresh holdout. Expiry-day card in the app is information only.
