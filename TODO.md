@@ -184,6 +184,9 @@ Not possible yet:
         `diagnostics/YYYY/MM/YYYY-MM-DD.json`. It is the same content as Settings → Diagnostics → Copy diagnostics:
         Problems found, health, stalls/ANRs, crashes, worker runs, stream gaps, Order Review flaws, self-healing
         incidents, app version.
+      - Add each arm's decisions today to Copy diagnostics too (Boss, 13 Oct: "why no other trades?"): per arm, the last N
+        decisions with their reason (waiting_for_opening_range, no break, guard_refused, stale price, sits out...), and
+        counts per reason. Today's trade-manager lines must say "today" vs "all days" plainly.
       - Redaction before upload: no keys or tokens (as Copy diagnostics today), and no account id, order ids, names or
         rupee amounts. Money appears only as signs and percentages. The file is plain JSON so Claude can read it; the
         repo stays private.
