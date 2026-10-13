@@ -1,0 +1,34 @@
+id: r22-events
+title: 'Event study: do the high / low of the first three 15-minute candles act as support and resistance later in the day'
+family: market-facts
+date: '2026-10-13'
+doc: research/HUNT_R22_ORB_15M_LEVELS.md
+hypothesis: 'Descriptive: touches of the 09:15-09:59 range edges are rejected, and breaks hold or retest-and-hold, more
+  often than at lines at the same distance from the 10:00 price, and the moves after them are bigger.'
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, FINNIFTY index 2024-02-12..2026-02-24)
+  via research/hunt/r17/data.py
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY / FINNIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY / FINNIFTY 2025-10-13..
+instruments:
+- BANKNIFTY
+- NIFTY
+- FINNIFTY
+features:
+- three 15-minute candles 09:15-09:59 (OH, OL, mid, candle highs / lows, 0.5x / 1x extensions)
+- 5- / 15-minute index candles 10:00-15:00
+- ATR14, India VIX, gap, expiry day
+model_or_rule: first touch-reject, break, hold, fail, break-and-retest, extension reach per edge per day; moves after 15 / 30
+  / 60 min and to the close; mirror twin around the 10:00 price
+settings: research/hunt/r22/PREREG.md part A3
+prereg: research/hunt/r22/PREREG.md
+variants_tried: null
+results:
+  summary: 'Design (BANKNIFTY 361, NIFTY 364, FINNIFTY 396 sessions): touches of OH / OL rejected 29% (347 of 1,211), mirror
+    twin 29% (358 of 1,256); a 5-min break held 63% (688 of 1,099; twin 57%); a held retest went on to the close 45% (-0.020
+    ATR14, 442 events); moves after every event kind -0.06 to +0.02 ATR14 to the close, twins alike. Wide-range days (W >=
+    0.563) breaks +0.06 ATR to the close (329), narrow (W < 0.407) -0.02 (391). 1x extension reached after 31% of breaks.'
+  costs: none (index moves only)
+holdout_read: false
+verdict: not-a-test
+notes: Descriptive; no event-study number enters the gates. The holdout tables are printed after the one holdout read.
