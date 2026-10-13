@@ -96,7 +96,8 @@ class LiquidityWhyNotTest {
             LiquidityWhyNot.LAPSED to Kind.LAPSED, "skipped_by_you" to Kind.SKIPPED_BY_YOU, "liquidity_no_room" to Kind.NO_ROOM,
             "no_liquidity_break" to Kind.NO_BREAK, "liquidity_outside_entry_hours" to Kind.OUTSIDE_HOURS, "holding" to Kind.HOLDING,
             "stopped_for_today" to Kind.STOPPED, "flat_after_square_off" to Kind.SQUARED_OFF, "liquidity_history_loading" to Kind.LOADING,
-            "no_index_data" to Kind.NO_DATA, "no_contract" to Kind.NO_CONTRACT, "refused: no quote" to Kind.NO_QUOTE,
+            "no_index_data" to Kind.NO_DATA, "no_index_data: MIDCPNIFTY" to Kind.NO_DATA, "no_index_data: FINNIFTY" to Kind.NO_DATA,
+            "no_index_datax" to Kind.OTHER, "no_contract" to Kind.NO_CONTRACT, "refused: no quote" to Kind.NO_QUOTE,
             "guard_refused: daily loss limit reached" to Kind.GUARD, "${AutoSide.OPPOSITE}: ORB holds a put" to Kind.EXPOSURE,
             "${AutoSide.SAME_SIDE}: Solo holds a call" to Kind.EXPOSURE, "order_refused: no price to fill at" to Kind.ORDER_REFUSED,
             "refused: something" to Kind.REFUSED, "error" to Kind.ERROR, "error: timeout" to Kind.ERROR, "whatever" to Kind.OTHER)
@@ -292,6 +293,7 @@ class LiquidityWhyNotTest {
         assertTrue("Done for the day (15:10)" in now("flat_after_square_off"))
         assertTrue("Now its candles are still loading" in now("liquidity_history_loading"))
         assertTrue("Now the index candles cannot be read" in now("no_index_data"))
+        assertTrue("Now the index candles cannot be read" in now("no_index_data: BANKNIFTY"))     // named by index since 13 Oct
         assertTrue("Its last pass could not check the chart" in now("error"))
         assertFalse("Now" in now("no_liquidity_break").substringBefore("Next"))
     }

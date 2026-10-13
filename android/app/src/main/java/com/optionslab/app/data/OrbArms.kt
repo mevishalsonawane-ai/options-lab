@@ -9,6 +9,7 @@ import com.optionslab.engine.orb.Arm
 import com.optionslab.engine.orb.ArmAccount
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.HeroRules
+import com.optionslab.engine.orb.IndexData
 import com.optionslab.engine.orb.LiquidityLots
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.LiquidityShadow
@@ -1439,7 +1440,10 @@ object OrbArms {
             // The armed arms' indices on Zerodha's stream when it runs: a bar's last minute is then known at its close.
             followIndices(b)
             if (!anyArmed || !OrbRules.inWindow(t.toLocalTime())) { save(b); return@withLock }
-            val bars = runCatching { indexBars(t) }.getOrNull()
+            // Each index is read at most once on this pass, shared by the books on it (13 Oct audit fix): BANKNIFTY's candles here
+            // for the ORB family (and Liquidity's BANKNIFTY books), FINNIFTY's and MIDCPNIFTY's when their books decide.
+            val reads = IndexData.Reads<List<Upstox.Bar>>()
+            val bars = runCatching { indexBars(t, reads) }.getOrNull()
             // The strategy lab (11 Oct): each strategy ran today, and on the account its new entries go to - one record per lab
             // key (Liquidity's books are one strategy), live when any of its armed arms enters live (review G2-2). Memory only.
             runCatching {
@@ -1449,8 +1453,11 @@ object OrbArms {
             }
             for (arm in ALL_ARMS) {
                 if (b.armed[arm.source] != true) continue
-                // The Hero arm reads its own NIFTY data: the BANKNIFTY bars are not its concern.
-                val s = if (bars == null && !arm.hero) "no_index_data" else runCatching { cycle(b, arm, t, bars.orEmpty(), appLive) }.getOrElse { "error: ${it.message}" }
+                // A book stops only when ITS index has no candles (13 Oct audit fix: one BANKNIFTY failure used to stop every book,
+                // the FINNIFTY and MIDCPNIFTY ones too). The Hero arm reads its own NIFTY data; a Liquidity book reads its own
+                // index when it decides ([liquidityCycle], from [reads]); the ORB family decides on the BANKNIFTY bars above.
+                val none = if (arm.liquidity || bars != null) null else IndexData.bookIndex(arm.hero, null)?.let(IndexData::none)
+                val s = none ?: runCatching { cycle(b, arm, t, bars.orEmpty(), appLive, reads) }.getOrElse { "error: ${it.message}" }
                 // Liquidity's verdict between its decision bars, kept for Jarvis's words only (a bar's own was kept by its cycle).
                 if (arm.liquidity && s != "no_decision_bar") runCatching { noteLiquidity(t, arm.source, s) }
                 // Hero's verdict between its decision minutes, kept for Jarvis's words only (a minute's own was kept by its cycle).
@@ -1511,8 +1518,12 @@ object OrbArms {
         runCatching { Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${if (arm.liquidity) arm.label else "ORB"} signal lapsed: not approved in $mins minutes", text, "almanac") }
     }
 
-    /** [appLive]: the app's Live switch as the pass read it (null: unread, [liveNow] is read here as before). */
-    private suspend fun cycle(b: Book, arm: Arm, t: LocalDateTime, bars: List<Bar>, appLive: Boolean? = null): String {
+    /**
+     * [appLive]: the app's Live switch as the pass read it (null: unread, [liveNow] is read here as before). [reads]: the pass's
+     * index reads, shared by the books on each index.
+     */
+    private suspend fun cycle(b: Book, arm: Arm, t: LocalDateTime, bars: List<Bar>, appLive: Boolean? = null,
+                              reads: IndexData.Reads<List<Upstox.Bar>>? = null): String {
         val day = t.toLocalDate()
         val watchKey = "${arm.source}|$day"
         // Holding a position or waiting for the owner's approval is running, not paused: re-entries keep their rules.
@@ -1522,7 +1533,7 @@ object OrbArms {
         if (Strategies.stoppedToday()) { b.watched.remove(watchKey); return "stopped_for_today" }
         if (arm.hero) return heroCycle(b, t)
         b.pending[arm.source]?.let { pd -> if (t.isAfter(pd.expires)) { b.pending.remove(arm.source); lapsed(arm, pd) } else { watching(); return "awaiting_approval" } }
-        if (arm.liquidity) return liquidityCycle(b, arm, t, appLive)
+        if (arm.liquidity) return liquidityCycle(b, arm, t, appLive, reads)
         // The account this arm's new entries go to (review G2-3): the app's Live switch (the paper-only arms: paper). The
         // signal's parameters, the order and the position's stamped exits all use it - never one account's entry rule with
         // another's exits. The parameters are the arm's constants unless the lab promoted a variant for that account from a
@@ -2572,11 +2583,22 @@ object OrbArms {
 
     // ---- Liquidity 15+5 ----------------------------------------------------------
 
-    /** One book's decision on its chart's last completed bar: a pool taken on a swing zone buys the option, paper only. */
-    private suspend fun liquidityCycle(b: Book, arm: Arm, t: LocalDateTime, appLive: Boolean? = null): String {
+    /**
+     * One book's decision on its chart's last completed bar: a pool taken on a swing zone buys the option, paper only.
+     * [reads]: the pass's index reads; when this book's index could not be read, "no_index_data" naming it (13 Oct audit fix).
+     */
+    private suspend fun liquidityCycle(b: Book, arm: Arm, t: LocalDateTime, appLive: Boolean? = null,
+                                       reads: IndexData.Reads<List<Upstox.Bar>>? = null): String {
         val tf = LiquidityRules.minutesOf(arm)
         val und = LiquidityRules.underlyingOf(arm)
-        val ones = liquidityMinutes(t, und)
+        val ones = try {
+            liquidityMinutes(t, und, reads = reads)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Its own index's candles could not be read on this pass: only the books on that index stop (any other error as before).
+            return reads?.let { IndexData.gate(und, it) } ?: throw e
+        }
         val bars = liquidityBars(ones, tf, t)
         if (bars.size < 2 * LiquidityRules.SWING_LOOKBACK + 2) return "liquidity_history_loading"
         val last = bars.last()
@@ -2896,7 +2918,8 @@ object OrbArms {
      * An index's 1-minute bars (BANKNIFTY, FINNIFTY or MIDCPNIFTY): the last ten calendar days' sessions plus today's. [keep] false: a
      * read for Jarvis, not kept as this minute's pass (the arm's own read stays its own).
      */
-    private suspend fun liquidityMinutes(t: LocalDateTime, underlying: String = OrbRules.UNDERLYING, keep: Boolean = true): List<Bar> {
+    private suspend fun liquidityMinutes(t: LocalDateTime, underlying: String = OrbRules.UNDERLYING, keep: Boolean = true,
+                                         reads: IndexData.Reads<List<Upstox.Bar>>? = null): List<Bar> {
         val minute = t.withSecond(0).withNano(0)
         // The test feeds are read fresh every time (a cached pass must never carry one test's bars into another).
         val testing = testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null
@@ -2909,11 +2932,8 @@ object OrbArms {
                 else runCatching { Net.history(key, day.minusDays(10), day.minusDays(1)) }.getOrDefault(emptyList())
             toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also { if (!testing && it.isNotEmpty()) liquidityHistory[underlying] = day to it }
         }
-        val raw = when {
-            !testing -> streamed(underlying, Net.intraday(key), t)
-            bank -> testIndexBars?.invoke(t).orEmpty()
-            else -> testOtherIndexBars?.invoke(underlying, t).orEmpty()
-        }
+        // [reads] (the arms pass): today's candles shared with the pass's other books on this index, read once (13 Oct).
+        val raw = reads?.readOrThrow(underlying) { todayMinutes(underlying, t) } ?: todayMinutes(underlying, t)
         val today = toBars(raw).filter { it.start.toLocalDate() == day }
         // Kept as this minute's read only once it has the minute just closed (round 2: a look at the close itself, before the
         // feed or the stream has that minute, is read again by the next look rather than kept for the rest of the minute).
@@ -2931,10 +2951,27 @@ object OrbArms {
     @Volatile internal var testIndexBars: ((LocalDateTime) -> List<Upstox.Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test index feed exists only in debug builds" }; field = v }
 
-    /** Today's completed 5-minute BANKNIFTY bars, built from the 1-minute feed. */
-    private suspend fun indexBars(t: LocalDateTime): List<Bar> {
-        val ones = testIndexBars?.invoke(t) ?: streamed(OrbRules.UNDERLYING, Net.intraday(Upstox.INDEX_KEYS.getValue(OrbRules.UNDERLYING)), t)
+    /**
+     * Today's completed 5-minute BANKNIFTY bars, built from the 1-minute feed - read through the pass's [reads], so the
+     * Liquidity BANKNIFTY books share the same read (13 Oct). Throws when BANKNIFTY's candles could not be read.
+     */
+    private suspend fun indexBars(t: LocalDateTime, reads: IndexData.Reads<List<Upstox.Bar>>): List<Bar> {
+        val ones = reads.readOrThrow(OrbRules.UNDERLYING) { todayMinutes(OrbRules.UNDERLYING, t) }
         return OrbRules.completed(fiveMinute(ones, t.toLocalDate(), t), t)
+    }
+
+    /**
+     * Today's 1-minute candles of [underlying]'s index as the arms read them: the feed with the stream's newer minutes
+     * ([streamed]); in a test, the test feeds (BANKNIFTY's [testIndexBars], the others' [testOtherIndexBars]; an index
+     * without a feed has none - a test never reaches the network). Throws when the feed cannot be read.
+     */
+    private suspend fun todayMinutes(underlying: String, t: LocalDateTime): List<Upstox.Bar> {
+        val bank = underlying == OrbRules.UNDERLYING
+        if (bank) testIndexBars?.let { return it(t) }
+        if (testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null)
+            return if (bank) emptyList() else testOtherIndexBars?.invoke(underlying, t).orEmpty()
+        val key = LiquidityRules.INDEX_KEYS[underlying] ?: Upstox.INDEX_KEYS.getValue(underlying)
+        return streamed(underlying, Net.intraday(key), t)
     }
 
     /**
@@ -3133,7 +3170,7 @@ object OrbArms {
         s == "awaiting_approval" -> if (liveNow()) "Breakout: waiting for your approval with PIN (live)." else "Breakout: waiting for your approval."
         s == "skipped_by_you" -> "You skipped the last signal."
         s == "no_contract" -> "The day's BANKNIFTY contracts could not be loaded."
-        s == "no_index_data" -> "No BANKNIFTY bars yet."
+        IndexData.isNone(s) -> "No ${IndexData.indexOf(s) ?: OrbRules.UNDERLYING} bars yet."
         s == "no_liquidity_break" -> "Waiting for a close through a liquidity pool that sits on a swing zone."
         s == "liquidity_history_loading" -> "Loading the last days' index candles for the liquidity levels."
         s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
