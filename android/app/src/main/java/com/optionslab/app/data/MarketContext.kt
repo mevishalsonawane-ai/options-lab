@@ -65,6 +65,8 @@ object MarketContext {
         started = true
         app = context.applicationContext
         scope.launch(Dispatchers.IO) {
+            // 14 Oct: after the open positions are restored and watched ([com.optionslab.app.data.PositionsFirst]).
+            com.optionslab.app.data.PositionsFirst.awaitPositions()
             runCatching {
                 _mode.value = EventShield.mode(SecurePrefs.getString(K_PAUSE))
                 // Shadow first: this process watches from now (a restart mid-session does not count as watched from 09:15).

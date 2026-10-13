@@ -227,13 +227,16 @@ object IraModel {
      * Ira's [draft] for [question], rewritten by the model, or null (not ready, too slow, or the result failed the
      * checks - then the draft stands). One at a time; at most [TIMEOUT_MS].
      */
-    suspend fun rewrite(question: String, facts: List<String>, draft: String): String? = withContext(Dispatchers.Default) {
+    suspend fun rewrite(question: String, facts: List<String>, draft: String, coldLoad: Boolean = true): String? = withContext(Dispatchers.Default) {
         val c = app ?: return@withContext null
         if (!usable()) return@withContext null
         lock.withLock {
             // Checked again under the lock: the model may have been switched while this waited.
             if (!usable()) return@withLock null
             yieldedForVoice = false
+            // Memory (14 Oct): not loaded and not to be loaded for this ([com.optionslab.ira.ModelMemory.coldLoadForRewrite]):
+            // the draft stands.
+            if (handle == 0L && !coldLoad) return@withLock null
             idle?.cancel()
             _state.update { it.copy(writing = true) }
             try {
@@ -328,9 +331,25 @@ object IraModel {
      * listening was on, it starved the phone's on-device recognizer, and Jarvis stopped hearing his name).
      */
     private fun idleUnload(): Job = scope.launch {
-        // While Jarvis listens, it leaves after a minute (the recognizer needs the memory); otherwise after 10 minutes.
-        delay(if (JarvisVoice.listenOn) 60_000L else IDLE_MS)
+        // While Jarvis listens or NSE / MCX trade, it leaves after a minute (the recognizer and trading need the memory);
+        // otherwise after 3 minutes (memory audit, 14 Oct: was 10). Asked to leave for memory while it wrote: at once.
+        delay(if (releaseSoon) 0L else com.optionslab.ira.ModelMemory.idleMs(marketHours(), runCatching { JarvisVoice.listenOn }.getOrDefault(false)))
         lock.withLock { unloadLocked() }
+    }
+
+    /** Android asked for memory while the model wrote: it leaves right after the reply. */
+    @Volatile private var releaseSoon = false
+
+    /**
+     * Android asked for memory back ([com.optionslab.app.data.MemoryTrim]): the model leaves now - or, while it writes, right
+     * after its reply (the answer shown stands either way). The next question loads it again. Returns at once.
+     */
+    fun releaseForMemory() {
+        if (handle == 0L) return
+        scope.launch {
+            if (_state.value.writing) { releaseSoon = true; return@launch }
+            lock.withLock { if (_state.value.writing) releaseSoon = true else { idle?.cancel(); unloadLocked() } }
+        }
     }
 
     /**
@@ -344,6 +363,8 @@ object IraModel {
             // Never loaded ahead in market hours while trading may need the phone (10 Oct): a Live arm armed, a live position
             // held, or an order or exit running. A question still loads it when asked. (Off the main thread: it reads settings.)
             if (tradingNeedsThePhone()) return@launch
+            // Memory audit (14 Oct): never loaded ahead in NSE's or MCX's hours at all; the question loads it when asked.
+            if (!com.optionslab.ira.ModelMemory.preload(marketHours())) return@launch
             lock.withLock {
                 if (handle != 0L || !usable() || JarvisVoice.listenOn) return@withLock
                 idle?.cancel()
@@ -398,6 +419,7 @@ object IraModel {
     }
 
     private fun unloadLocked() {
+        releaseSoon = false
         if (handle != 0L) { runCatching { LlmNative.free(handle) }; handle = 0L; slots.clear(); _state.update { it.copy(loaded = false) } }
     }
 
@@ -463,7 +485,9 @@ object IraModel {
     suspend fun rewriteWhenFree(question: String, facts: List<String>, draft: String): String? {
         repeat(2) {
             if (!runCatching { JarvisVoice.freeForModel() }.getOrDefault(true)) return null
-            val r = runCatching { rewrite(question, facts, draft) }.getOrNull()
+            // Memory (14 Oct): in NSE's or MCX's hours a rewrite uses the model only when it is loaded already (the draft is
+            // Jarvis's whole answer; the rewrite only rewords it).
+            val r = runCatching { rewrite(question, facts, draft, coldLoad = com.optionslab.ira.ModelMemory.coldLoadForRewrite(marketHours())) }.getOrNull()
             if (r != null || !yieldedForVoice) return r
         }
         return null
@@ -490,8 +514,8 @@ object IraModel {
     const val MAX_TOKENS = 160
     /** A rewrite not done by then is dropped (the answer already shown stands). */
     const val TIMEOUT_MS = 30_000L
-    /** The model leaves memory after this long unused. */
-    const val IDLE_MS = 10 * 60_000L
+    /** The model leaves memory after this long unused (outside market hours; [com.optionslab.ira.ModelMemory.idleMs]). */
+    const val IDLE_MS = com.optionslab.ira.ModelMemory.IDLE_MS
 }
 
 /** The JNI bridge to llama.cpp (src/jarvis/cpp), present in Jarvis only. */

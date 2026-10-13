@@ -67,7 +67,7 @@ internal object SelfGrowth {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { runCatching { ensureLoaded() } }
+        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
     }
 
     private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }

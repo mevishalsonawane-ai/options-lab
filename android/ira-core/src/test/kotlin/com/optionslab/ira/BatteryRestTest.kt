@@ -163,6 +163,9 @@ class BatteryRestTest {
         assertNull(TickRest.atm(emptyList(), 51_000.0), "no strikes")
         assertEquals(60_000L, TickRest.DRAIN_MS)
         assertTrue(TickRest.DRAIN_MS / 1000 < TickZone.QUEUE_CAP, "the queue holds well over one drain's seconds: the rows are the same")
+        // Memory (14 Oct): 90 seconds (was 600) - one drain and half a minute to spare.
+        assertEquals(90, TickZone.QUEUE_CAP)
+        assertTrue(TickZone.QUEUE_CAP - TickRest.DRAIN_MS / 1000 >= 30)
     }
 
     // ---- the market context --------------------------------------------------------------------------------------------------
@@ -214,7 +217,9 @@ class BatteryRestTest {
     // ---- What's new --------------------------------------------------------------------------------------------------------
 
     @Test fun whatsNewSaysItInPlainEnglishFirst() {
-        val x = WhatsNew.ENTRIES.first()
+        // 14 Oct: the memory fix's entry sits above it (the same day, after it); the battery's is the one right below.
+        assertEquals("2026-10-14-memory-positions-first", WhatsNew.ENTRIES[0].id)
+        val x = WhatsNew.ENTRIES[1]
         assertEquals("2026-10-14-battery-rest", x.id)
         assertTrue(x.what.startsWith("Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them"), x.what)
         assertTrue("paper or live" in x.what && "Always stays the default" in x.what, x.what)

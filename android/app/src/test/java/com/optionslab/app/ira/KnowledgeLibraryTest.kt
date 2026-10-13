@@ -33,4 +33,46 @@ class KnowledgeLibraryTest : RobolectricTest() {
             assertTrue(q, facts.none { it in own })
         }
     }
+
+    // ---- memory audit (14 Oct): the prebuilt index, opened lazily, dropped on a trim ----
+
+    @Test fun theApksPrebuiltIndexIsOpenedAndGivesTheSameAnswersAsTheOneBuiltFromThePack() {
+        KnowledgeLibrary.drop()
+        val ix = checkNotNull(KnowledgeLibrary.index(context))
+        // The build put the index file beside the pack: it is what was opened (no unzip, no JSON parse at start).
+        org.junit.Assert.assertEquals("the APK's prebuilt index", KnowledgeLibrary.madeFrom)
+        val built = context.assets.open(KnowledgeLibrary.ASSET).use { Knowledge.Index(Knowledge.read(it)) }
+        org.junit.Assert.assertEquals(built.size, ix.size)
+        for (q in listOf("what did research say about ORB", "is liquidity profitable", "how does banknifty behave on expiry after a gap down", "research kya kehta hai liquidity ke baare me"))
+            for (locked in listOf(false, true))
+                org.junit.Assert.assertEquals(q, Knowledge.search(built, q, 3, locked).map { it.fact.id to it.score }, Knowledge.search(ix, q, 3, locked).map { it.fact.id to it.score })
+    }
+
+    @Test fun theSharedSectionIsReadWithoutOpeningTheIndexAndATrimDropsTheIndex() {
+        KnowledgeLibrary.drop()
+        org.junit.Assert.assertNull(KnowledgeLibrary.cached())
+        val (research, version) = checkNotNull(KnowledgeLibrary.shared(context))
+        assertTrue(checkNotNull(research).items.size > 100)
+        assertTrue(version.isNotEmpty())
+        org.junit.Assert.assertNull("the shared section never opens the index", KnowledgeLibrary.cached())
+        // Before it is open: the model's notes are none and nothing waits for it.
+        assertTrue(KnowledgeLibrary.modelNotes("is liquidity profitable").isEmpty())
+        val ix = checkNotNull(KnowledgeLibrary.index(context))
+        org.junit.Assert.assertSame(ix, KnowledgeLibrary.cached())
+        org.junit.Assert.assertEquals(research.items, checkNotNull(KnowledgeLibrary.shared(context)).first!!.items)
+        com.optionslab.app.data.MemoryTrim.release(listOf(com.optionslab.ira.MemoryPlan.Item.KNOWLEDGE_INDEX), com.optionslab.ira.MemoryPlan.BACKGROUND)
+        org.junit.Assert.assertNull(KnowledgeLibrary.cached())
+        org.junit.Assert.assertNull(KnowledgeLibrary.madeFrom)
+        // The next question opens it again.
+        val (said, _) = KnowledgeLibrary.answer(context, "what did research say about ORB", locked = false)
+        assertTrue(said, said.startsWith("From the research, Boss:"))
+        org.junit.Assert.assertNotNull(KnowledgeLibrary.cached())
+    }
+
+    @Test fun noContextNoPack() {
+        KnowledgeLibrary.drop()
+        org.junit.Assert.assertNull(KnowledgeLibrary.index(null))
+        org.junit.Assert.assertNull(KnowledgeLibrary.shared(null))
+        org.junit.Assert.assertEquals(Knowledge.NOT_LOADED, KnowledgeLibrary.answer(null, "is liquidity profitable", locked = false).first)
+    }
 }

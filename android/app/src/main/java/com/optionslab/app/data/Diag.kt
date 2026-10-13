@@ -95,15 +95,28 @@ object Diag {
 
     /** Writes the lines kept since the last write (on the writer thread, or the caller's in [flush]). */
     @Synchronized
-    private fun save() {
+    private fun save(): Boolean {
         scheduled = false
-        if (!dirty) return
+        if (!dirty) return true
         dirty = false
-        runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }
+        // 14 Oct: a failed write leaves the lines marked unwritten (the next line tries again; a trim never lets them go).
+        return runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }.isSuccess.also { if (!it) dirty = true }
     }
 
     /** Waits for the lines recorded so far and writes them (tests, and the report, read what was just recorded). */
     fun flush() { runCatching { writer.submit(Runnable { save() }).get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+
+    /**
+     * Memory trim (audit, 14 Oct, item 8): the diary's lines in memory (up to [MAX]) written if any are new, then let go; the
+     * next line or report reads the file again. On the diary's own thread (never the caller's, never the main thread).
+     */
+    fun trimMemory() {
+        if (!::file.isInitialized) return
+        runCatching { writer.execute { synchronized(this) { if (runCatching { save() }.getOrDefault(false) && !dirty) cache = null } } }
+    }
+
+    /** Lines held in memory now (0 when let go; the trim's figure). */
+    @Synchronized fun linesInMemory(): Int = cache?.size ?: 0
 
     /** The app is crashing: the lines kept so far written now, on the crashing thread (never throws). */
     fun saveNow() { if (::file.isInitialized) runCatching { save() } }
@@ -144,6 +157,13 @@ object Diag {
         append(runCatching { com.optionslab.app.security.SecurePrefs.sizeLine() }.getOrElse { "Settings size: could not read" }).append('\n')
         // The app's own health (11 Oct): stalls today, the last ANR and crash and where, what its tuner slowed now.
         append(runCatching { AppHealth.diagLine() }.getOrElse { "Health: could not read" }).append('\n')
+        // Memory audit (14 Oct): the start-up's order (positions first) and what the last memory trim let go.
+        append(runCatching { PositionsFirst.diagLine() }.getOrElse { "Start-up: could not read" }).append('\n')
+        append("Memory: ").append(runCatching { MemoryTrim.lastLine ?: "no trim in this run" }.getOrDefault("could not read"))
+            .append(runCatching { KiteStream.keptCounts().let { (p, c) -> " · stream memory: $p paths, $c instruments' candles" } }.getOrDefault(""))
+            .append(runCatching { " · research index ${com.optionslab.app.ira.KnowledgeLibrary.madeFrom?.let { "open ($it)" } ?: "not open"}" }.getOrDefault(""))
+            .append(runCatching { OrderFlowLive.droppedTicks().takeIf { it > 0 }?.let { " · order flow dropped $it tick batches" } ?: "" }.getOrDefault(""))
+            .append('\n')
         // Order speed (9 Oct): today's typical and worst per step, signal to fill, the relay's and the direct round trip, the
         // phone clock's offset, and the warnings - durations only (Settings → Zerodha → Order speed shows the same).
         if (!com.optionslab.app.BuildConfig.GOLD) append(runCatching { OrderTiming.diagLine() }.getOrElse { "Order speed: could not read" }).append('\n')

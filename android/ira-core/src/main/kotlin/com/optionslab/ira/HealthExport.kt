@@ -118,7 +118,7 @@ object HealthExport {
         for (l in orderLines) sb.append(l).append('\n')
         sb.append("\n== Other\n")
         for (d in days) if (d.reconnects + d.stale + d.trims + d.saverOn > 0)
-            sb.append(d.day).append(": stream reconnects ").append(d.reconnects).append(", stale ").append(d.stale).append(", memory trims ").append(d.trims)
+            sb.append(d.day).append(": stream reconnects ").append(d.reconnects).append(", stale ").append(d.stale).append(", background trims ").append(d.trims)
                 .append(", battery saver seen ").append(d.saverOn).append("/").append(d.saverLooks).append('\n')
         return redact(sb.toString(), known)
     }

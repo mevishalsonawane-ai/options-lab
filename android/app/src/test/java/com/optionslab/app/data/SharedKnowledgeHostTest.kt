@@ -127,4 +127,53 @@ class SharedKnowledgeHostTest : RobolectricTest() {
         assertTrue(names.toString(), "$day/${LessonsBundle.FILE}" in names)
         com.optionslab.app.ira.JarvisLearning.resetForTest()
     }
+
+    // ---- memory audit (14 Oct): the findings counted, the nightly snapshot, the index never opened for it ----
+
+    private fun log(day: LocalDate, n: Int, who: String = "Order flow") {
+        val dir = File(context.noBackupFilesDir, "findings").apply { mkdirs() }
+        val at = day.atTime(10, 0).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        File(dir, "$day.log").appendText((1..n).joinToString("") {
+            com.optionslab.ira.Findings.line(com.optionslab.ira.Findings.Finding(who, com.optionslab.ira.Findings.Kind.ABSORPTION, "NIFTY", atMs = at + it)) + "\n"
+        })
+    }
+
+    @Test fun theFindingsAreCountedAndTheIndexIsNotOpenedForIt() {
+        val day = LocalDate.of(2026, 10, 13)
+        log(day, 3); log(day.minusDays(1), 2, "Trade manager"); log(day.minusDays(40), 9)
+        com.optionslab.app.ira.KnowledgeLibrary.drop()
+        val s = built()
+        val item = s.items.single { it.id == "findings:absorption" }
+        assertEquals(5, item.n)
+        assertTrue(item.text, "on 2 days" in item.text)
+        assertNull("the shared knowledge reads the index file's head only", com.optionslab.app.ira.KnowledgeLibrary.cached())
+        // A memory trim lets the counts kept for the bundle go; the build counts again.
+        SharedKnowledgeHost.dropCounts()
+        assertEquals(5, built().items.single { it.id == "findings:absorption" }.n)
+    }
+
+    @Test fun theNightlySnapshotPlusTheNewLogsCountTheSameAsEveryLog() {
+        val day = LocalDate.of(2026, 10, 13)
+        for (k in 0L..5L) log(day.minusDays(k), (k + 1).toInt(), if (k % 2 == 0L) "Order flow" else "Liquidity")
+        val all = checkNotNull(SharedKnowledgeHost.refresh(day, writeSnapshot = true)).items.filter { it.id.startsWith("findings:") }
+        val snap = File(context.noBackupFilesDir, SharedKnowledgeHost.SNAPSHOT)
+        assertTrue("written encrypted", snap.isFile && "ABSORPTION" !in snap.readText(Charsets.ISO_8859_1))
+        // The next morning: today's new log too; the snapshot's days are not read again.
+        log(day.plusDays(1), 4)
+        val dir = File(context.noBackupFilesDir, "findings")
+        val read = checkNotNull(com.optionslab.app.security.Vault.readFile(snap)).toString(Charsets.UTF_8).let { checkNotNull(com.optionslab.ira.FindingsTally.read(it)) }
+        assertEquals(day.minusDays(1), read.first)
+        val from = day.plusDays(1).minusDays(30)
+        val viaSnap = SharedKnowledgeHost.countLogs(dir, from, read)
+        val viaAll = SharedKnowledgeHost.countLogs(dir, from, null)
+        assertEquals(viaAll.total, viaSnap.total)
+        assertEquals(com.optionslab.ira.SharedKnowledge.findingItems(viaAll, day.plusDays(1)), com.optionslab.ira.SharedKnowledge.findingItems(viaSnap, day.plusDays(1)))
+        assertEquals(1 + 2 + 3 + 4 + 5 + 6, all.sumOf { it.n ?: 0 })
+        // A damaged snapshot: every log is counted again, as before.
+        snap.writeText("not a snapshot")
+        assertEquals(viaAll.total, checkNotNull(SharedKnowledgeHost.refresh(day.plusDays(1))).items.filter { it.id.startsWith("findings:") }.sumOf { it.n ?: 0 })
+        // No logs at all: no findings items.
+        dir.deleteRecursively(); snap.delete()
+        assertTrue(checkNotNull(SharedKnowledgeHost.refresh(day)).items.none { it.id.startsWith("findings:") })
+    }
 }

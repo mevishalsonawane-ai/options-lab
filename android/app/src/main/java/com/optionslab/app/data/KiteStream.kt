@@ -483,6 +483,34 @@ object KiteStream {
         if (s != null) runCatching { OrderTiming.clock(now, s) }
     }
 
+    /**
+     * Memory trim (audit, 14 Oct, item 7): the paths and the candles grew with every instrument streamed today and were never
+     * let go. Dropped now: the tick paths of instruments nothing follows any more, and the candles of those quiet for two
+     * hours ([com.optionslab.ira.LiveCandles.IDLE_SEC]). What anything follows now - the open positions, the live exits, the
+     * armed arms' indices, every subscribed or recently quoted instrument - is never touched, however quiet. Memory only (a
+     * background thread; the socket thread's next tick simply starts a new path). Returns (paths, candles) dropped.
+     */
+    fun pruneIdle(nowMs: Long = System.currentTimeMillis()): Pair<Int, Int> {
+        val keep = followedNow()
+        var paths = 0
+        val it = this.paths.keys.iterator()
+        while (it.hasNext()) { if (it.next() !in keep) { it.remove(); paths++ } }
+        val candles = runCatching { candles.prune(keep, nowMs / 1000) }.getOrDefault(0)
+        return paths to candles
+    }
+
+    /** Everything followed now: every part's instruments, the ones just quoted, and every subscribed one (memory only). */
+    fun followedNow(): Set<Long> {
+        val keep = HashSet<Long>()
+        for (v in wants.values) keep.addAll(v)
+        keep.addAll(touched.keys)
+        synchronized(subscribed) { keep.addAll(subscribed) }
+        return keep
+    }
+
+    /** The instruments with a tick path and with candles kept (the trim's figures; memory only). */
+    fun keptCounts(): Pair<Int, Int> = paths.size to candles.instruments()
+
     /** The last tick for [token] as it arrived (the exchange's stamp and the phone's arrival time), however old. */
     fun seen(token: Long): Seen? = ticks[token]
 

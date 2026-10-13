@@ -56,6 +56,10 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-14-memory-positions-first", OCT14, "Memory: open positions first, the rest gives way",
+            "Memory: the app now gives back the memory it does not need (Jarvis's model, the research notes, old prices), so Android should stop closing it. " +
+                "Open positions and orders always come first: their prices and stop checks never slow down, and after any restart they are restored and watched before anything else.",
+            "Lab → Health → background trims (also in the diagnostics: Start-up)"),
         Entry("2026-10-14-battery-rest", OCT14, "Battery: background work rests when nothing needs it",
             "Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them, so the phone should last the day again. " +
                 "With an MCX position open, paper or live, every stop and exit is checked as often as before, and a new setting chooses when Jarvis listens for his name (Always stays the default).",

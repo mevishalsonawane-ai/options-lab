@@ -47,8 +47,12 @@ object TickZone {
     const val TICK_DAY_BUDGET_BYTES = 150_000_000L
     /** All the kept tick files at most (the oldest go first, never today's). */
     const val TICK_TOTAL_CAP_BYTES = 1_000_000_000L
-    /** Seconds waiting for the writer at most (ten minutes; past it the oldest second is dropped and recorded as a gap). */
-    const val QUEUE_CAP = 600
+    /**
+     * Seconds waiting for the writer at most (past it the oldest second is dropped and recorded as a gap). Memory (audit, 14 Oct
+     * 2026, item 6): 90 - the writer drains every minute ([TickRest.DRAIN_MS]), so this is one drain and half a minute to
+     * spare; it was 600 (ten minutes of every instrument's depth held in memory: about 12,000 snapshots, now about 1,800).
+     */
+    const val QUEUE_CAP = 90
     /** A tick older than this is not a snapshot of now: that second is a gap ("stale") for the instrument. */
     const val STALE_MS = 60_000L
 

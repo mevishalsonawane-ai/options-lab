@@ -44,3 +44,8 @@
 # Exception class NAMES only (12 Oct: the diagnostics said "a check failed in Jarvis words: ij1"): the diary names a failure
 # by its class, never its message, so the class must read as itself. Code is still shrunk and obfuscated.
 -keepnames class * extends java.lang.Throwable
+
+# The app's own class and method NAMES (memory audit, 14 Oct: the main-thread stalls said only "o.a" - the screen watchdog,
+# Speed.runningOnMain, looks for the app's first "com.optionslab." frame, which -repackageclasses had renamed away). Names only:
+# the code is still shrunk and optimised, and nothing secret is in a name (the repository is public).
+-keepnames class com.optionslab.** { <methods>; }

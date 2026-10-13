@@ -56,7 +56,7 @@ object SelfJobs {
         BossTradeLog.init(context)
         MonthlyScorecard.init(context)
         com.optionslab.app.work.BackgroundBudget.init(context)
-        if (enabled()) scope.launch { runCatching { _lesson.value = readLesson() } }
+        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { _lesson.value = readLesson() } }
     }
 
     internal fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }

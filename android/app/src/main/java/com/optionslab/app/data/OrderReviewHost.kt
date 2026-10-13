@@ -74,7 +74,7 @@ object OrderReviewHost {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { runCatching { ensureLoaded() } }
+        if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
     }
 
     private fun file(): File? = appContext?.let { File(File(it.noBackupFilesDir, DIR), FILE) }

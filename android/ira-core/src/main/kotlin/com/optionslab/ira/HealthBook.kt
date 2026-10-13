@@ -143,7 +143,7 @@ object HealthBook {
             "${HealthTuner.words(it.key)} every ${msWords(it.ms)} (normally ${msWords(HealthTuner.defaultMs(it.key))}, since ${AgentLessons.day(it.since)})"
         }
         val more = if (d == null) "" else " · stream reconnects ${d.reconnects}, stale ${d.stale}, worker overruns ${d.overruns.values.sum()}, " +
-            "battery saver ${if (d.saverOn > 0) "on" else "off"}, memory trims ${d.trims}"
+            "battery saver ${if (d.saverOn > 0) "on" else "off"}, background trims ${d.trims}"
         return "Health: $stalls · $anr · $crash · $tuner$more"
     }
 
@@ -188,7 +188,7 @@ object HealthBook {
             if (d.overruns.isNotEmpty()) parts += "Workers past their time limit: " + d.overruns.entries.sortedBy { it.key }.joinToString(", ") { "${it.key} ${it.value}×" } + "."
             val also = ArrayList<String>()
             if (d.saverOn > 0) also += "Android's battery saver was on"
-            if (d.trims > 0) also += "Android asked for memory back ${plural(d.trims, "time")}"
+            if (d.trims > 0) also += "Android asked for memory back ${plural(d.trims, "time")} (mostly with the app in the background)"
             if (d.reconnects > 0) also += "the price stream reconnected ${plural(d.reconnects, "time")}"
             if (d.stale > 0) also += "prices went stale ${plural(d.stale, "time")}"
             if (also.isNotEmpty()) parts += "Also then: " + also.joinToString("; ") + "."

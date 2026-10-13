@@ -113,7 +113,7 @@ object RestClock {
 object TickRest {
     /**
      * The writer's interval (was 5 s). The rows are the same (the sampler still takes every second into the bounded queue,
-     * [TickZone.QUEUE_CAP] = ten minutes of seconds); a process killed between two writes loses at most this much.
+     * [TickZone.QUEUE_CAP] = a minute and a half of seconds since 14 Oct); a process killed between two writes loses at most this much.
      */
     const val DRAIN_MS = 60_000L
     /** The layout's interval in market hours (as before). */

@@ -38,8 +38,10 @@ object Knowledge {
     // ---- the pack --------------------------------------------------------------------------------------------------------
 
     /** The pack from its JSON text; throws on a malformed pack or a schema this build does not read. */
-    fun parse(json: String): Pack {
-        val root = Json.parse(json) as? Map<*, *> ?: throw IllegalArgumentException("pack: not an object")
+    fun parse(json: String): Pack = parse(Json.parse(json) as? Map<*, *> ?: throw IllegalArgumentException("pack: not an object"))
+
+    /** The pack from its parsed JSON root (the index file's builder reads the shared section from the same root). */
+    internal fun parse(root: Map<*, *>): Pack {
         val schema = (root["schema"] as? Number)?.toInt() ?: throw IllegalArgumentException("pack: no schema")
         require(schema == SCHEMA) { "pack: schema $schema, this build reads $SCHEMA" }
         val facts = (root["facts"] as? List<*>).orEmpty().mapNotNull { f -> (f as? Map<*, *>)?.let(::fact) }
@@ -48,10 +50,12 @@ object Knowledge {
     }
 
     /** The pack from its bytes: gzip (the asset as shipped) or, should a packer have unzipped it, the plain JSON. */
-    fun read(input: InputStream): Pack {
-        val b = input.readBytes()
+    fun read(input: InputStream): Pack = parse(text(input.readBytes()))
+
+    /** The pack's JSON text from its bytes (gzip or plain). */
+    internal fun text(b: ByteArray): String {
         val gz = b.size > 2 && b[0] == 0x1f.toByte() && b[1] == 0x8b.toByte()
-        return parse(if (gz) GZIPInputStream(b.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() } else String(b, Charsets.UTF_8))
+        return if (gz) GZIPInputStream(b.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() } else String(b, Charsets.UTF_8)
     }
 
     private fun fact(m: Map<*, *>): Fact? {
@@ -170,14 +174,36 @@ object Knowledge {
 
     // ---- the index -------------------------------------------------------------------------------------------------------
 
-    /** A BM25 index over a pack's facts (text, title and section; built once, then read only - safe across threads). */
-    class Index(val pack: Pack) {
+    /**
+     * A BM25 index over a pack's facts (text, title and section; built once, then read only - safe across threads). Built from
+     * the pack ([Index] (pack)), or read ready-made from the file CI builds into the APK ([IndexFile], memory audit 14 Oct:
+     * no unzip and parse of the pack's JSON, no tokenising at start).
+     */
+    class Index internal constructor(
+        val pack: Pack,
         /** Word -> (fact index << 16 | count), one primitive array per word (no boxing: about 400k postings). */
-        internal val postings: Map<String, LongArray>
-        internal val length = IntArray(pack.facts.size)
+        internal val postings: Map<String, LongArray>,
+        internal val length: IntArray,
         /** Each fact's title words (a question naming the strategy or study gets it first). */
-        internal val titles: List<Set<String>> = pack.facts.map { tokens(it.title).toSet() }
-        internal val avg: Double
+        internal val titles: List<Set<String>>,
+        internal val avg: Double,
+    ) {
+        constructor(pack: Pack) : this(pack, Built(pack))
+        private constructor(pack: Pack, b: Built) : this(pack, b.postings, b.length, b.titles, b.avg)
+
+        val size: Int get() = pack.facts.size
+        internal fun idf(w: String): Double {
+            val n = postings[w]?.size ?: 0
+            return ln(1.0 + (size - n + 0.5) / (n + 0.5))
+        }
+    }
+
+    /** The index's parts built from a pack's words. */
+    internal class Built(pack: Pack) {
+        val postings: Map<String, LongArray>
+        val length = IntArray(pack.facts.size)
+        val titles: List<Set<String>> = pack.facts.map { tokens(it.title).toSet() }
+        val avg: Double
 
         init {
             var total = 0L
@@ -197,12 +223,6 @@ object Knowledge {
             }
             postings = grow.mapValues { it.value.done() }
             avg = if (pack.facts.isEmpty()) 1.0 else total.toDouble() / pack.facts.size
-        }
-
-        val size: Int get() = pack.facts.size
-        internal fun idf(w: String): Double {
-            val n = postings[w]?.size ?: 0
-            return ln(1.0 + (size - n + 0.5) / (n + 0.5))
         }
     }
 

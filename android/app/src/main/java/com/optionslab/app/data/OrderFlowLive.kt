@@ -19,7 +19,6 @@ import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -42,7 +41,15 @@ object OrderFlowLive {
 
     private val board = OrderFlow.Board()
     @Volatile private var watched: Set<Long> = emptySet()
-    private val queue = ConcurrentLinkedQueue<Pair<List<KiteTicks.Tick>, Long>>()
+    /**
+     * The socket thread's ticks waiting for the flow's thread. Memory audit (14 Oct, item 4): bounded - past
+     * [OrderFlow.LIVE_QUEUE_CAP] batches the oldest is dropped and counted ([droppedTicks]); it was unbounded, so a stalled
+     * thread could hold every tick. The flow is display, the log and CONFIRM only: never the position watch's exits.
+     */
+    private val queue = com.optionslab.ira.LiveRecord.Queue<Pair<List<KiteTicks.Tick>, Long>>(OrderFlow.LIVE_QUEUE_CAP)
+
+    /** Tick batches dropped from the full queue in this process (the diagnostics). */
+    fun droppedTicks(): Long = queue.dropped
     private val pumping = AtomicBoolean(false)
     private val thread = Executors.newSingleThreadExecutor { r -> Thread(r, "order-flow").apply { isDaemon = true } }.asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + thread)
@@ -307,7 +314,7 @@ object OrderFlowLive {
         if (w.isEmpty()) return
         val mine = got.filter { it.token in w || it.token in MoveRecorder.INDEX_TOKENS }
         if (mine.isEmpty()) return
-        queue.add(mine to now)
+        queue.offer(mine to now)
         kick()
     }
 
@@ -327,7 +334,7 @@ object OrderFlowLive {
             try { pump() } finally {
                 runCatching { com.optionslab.app.work.BatteryMeter.meter.off(com.optionslab.ira.LoopMeter.ORDER_FLOW) }
                 pumping.set(false)
-                if (queue.isNotEmpty()) kick()
+                if (queue.size() > 0) kick()
             }
         }
     }
@@ -348,8 +355,7 @@ object OrderFlowLive {
 
     @Synchronized private fun drain(): Int {
         var n = 0
-        while (true) {
-            val (ticks, at) = queue.poll() ?: break
+        for ((ticks, at) in queue.drain()) {
             for (t in ticks) {
                 if (t.token in MoveRecorder.INDEX_TOKENS && t.token !in watched) { MoveRecorder.onIndexTick(t.token, t.last, at); continue }
                 if (board.offer(t, at)) n++
@@ -544,7 +550,7 @@ object OrderFlowLive {
                     }
                 }
             }
-            if ((buf.isNotEmpty() || footBuf.isNotEmpty()) && (now - lastFlush >= 60_000 || buf.length > 512_000)) flush(now)
+            if ((buf.isNotEmpty() || footBuf.isNotEmpty()) && (now - lastFlush >= 60_000 || buf.length > OrderFlow.RECORDER_FLUSH_CHARS)) flush(now)
         }
 
         /** Writes what is buffered to today's files (a new gzip member each) and drops days over [KEEP_DAYS] or the budget. */
@@ -681,7 +687,7 @@ object OrderFlowLive {
     /** TEST ONLY: forget everything followed and read. Throws unless BuildConfig.DEBUG. */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        queue.clear(); board.layout(emptyList()); watched = emptySet(); _reads.value = emptyMap(); testRead = null
+        queue.drain(); board.layout(emptyList()); watched = emptySet(); _reads.value = emptyMap(); testRead = null
         testAuction = null; _auction.value = emptyMap(); _chartLevels.value = emptyMap(); watching = null
         synchronized(cursors) { cursors.clear() }; sequencer.clear(); centred.clear(); expiries.clear(); testManual = false
         Recorder.resetForTest()

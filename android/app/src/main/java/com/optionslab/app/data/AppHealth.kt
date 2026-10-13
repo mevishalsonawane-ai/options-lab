@@ -58,7 +58,7 @@ object AppHealth {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        scope.launch { runCatching { ensureLoaded(); readExits() } }
+        scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded(); readExits() } }
         // 12 Oct: one look a minute and a half after the start (the app's start time, last night's budget), market watch or not.
         // (Never in the unit tests' process: a tick a test did not ask for would change another test's state.)
         if (android.os.Build.FINGERPRINT != "robolectric") scope.launch { delay(90_000L); runCatching { tick(null) } }
@@ -141,19 +141,21 @@ object AppHealth {
     fun stale() { val now = System.currentTimeMillis(); mutate { HealthBook.stale(it, now) } }
 
     /**
-     * Android asked for memory back ([level]: ComponentCallbacks2's): counted, and the caches that are safe to drop are dropped
-     * - the short-answer readings and the move recorder's parsed summaries (both made again when next needed). The screen
-     * just hidden (UI_HIDDEN) is not memory pressure.
+     * Android asked for memory back ([level]: ComponentCallbacks2's). Memory audit (14 Oct): counted (as a background trim on
+     * Android 14 and later, where most are), and what [com.optionslab.ira.MemoryPlan] lists for the level let go in the
+     * background ([MemoryTrim]): the language model, the research index, the caches, the diary's lines and the paths and
+     * candles of instruments nothing follows. The position watch, its prices, its checks and their cadence are never touched.
+     * The screen just hidden (UI_HIDDEN) is not counted; it lets the model go.
      */
     fun trim(level: Int) {
-        if (level == android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN || level < android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) return
         val now = System.currentTimeMillis()
-        mutate { HealthBook.trim(it, now) }
-        runCatching { com.optionslab.ira.ShortAnswer.clearCache() }
-        runCatching { MoveRecorder.dropCaches() }
-        if (now - trimmedAt > TICK_MS) {
+        val counted = com.optionslab.ira.MemoryPlan.counted(level)
+        if (counted) mutate { HealthBook.trim(it, now) }
+        runCatching { MemoryTrim.onTrim(level, now) }
+        if (counted && now - trimmedAt > TICK_MS) {
             trimmedAt = now
-            runCatching { Diag.record("health", "memory trim (level $level): the answer and big-move summary caches dropped") }
+            val what = com.optionslab.ira.MemoryPlan.releases(level).joinToString(", ") { it.words }
+            runCatching { Diag.record("health", "${com.optionslab.ira.MemoryPlan.kind(level)} (level $level): letting go $what; the position watch untouched") }
         }
     }
 

@@ -116,7 +116,7 @@ class HealthBookTest {
         b = HealthTuner.evaluate(b, d0).first
         assertEquals("Health: 3 stalls today (longest 1.2 s, most in BrainSection.invoke) · last ANR 12 Oct 09:30 in Input dispatching timed out · " +
             "no crash seen · tuner: the Brain card's consensus refresh every 30 s (normally 15 s, since 12 Oct) · stream reconnects 1, stale 0, " +
-            "worker overruns 0, battery saver on, memory trims 1", HealthBook.diagLine(b, d0, ::hhmm))
+            "worker overruns 0, battery saver on, background trims 1", HealthBook.diagLine(b, d0, ::hhmm))
         val h = HealthBook.sayHealthy(b, d0)
         assertTrue(h.startsWith("Not quite, Boss. Today: 3 stalls of 0.7 s or more (longest 1.2 s). Last 7 days: 3 stalls, 1 ANR, 0 crashes."), h)
         assertTrue("Orders today: signal to sent 210 ms typical over 4." in h, h)

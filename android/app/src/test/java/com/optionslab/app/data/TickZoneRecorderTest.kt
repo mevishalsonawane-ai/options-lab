@@ -233,4 +233,22 @@ class TickZoneRecorderTest : RobolectricTest() {
         val readme = entries.getValue("README.txt").toString(Charsets.UTF_8)
         assertTrue(readme, "DECRYPTED" in readme && "orderflow_1m.jsonl.gz" in readme)
     }
+
+    /** Memory audit (14 Oct, item 6): once a run is closed, the instruments no longer on the watch-list are let go. */
+    @Test fun aClosedRunLetsGoTheInstrumentsNoLongerWatched() {
+        var prev: Long? = null
+        for (i in 0L until 5L) { feed(base + i, 52_100.0, 1_000 + i); sample(base + i, prev); prev = base + i }
+        runBlocking { TickZoneRecorder.drain((base + 6) * 1000) }
+        assertEquals(3 to 3, TickZoneRecorder.heldForTest())
+        // The layout narrowed the list to the future (say battery saver); the run then closes (no second for over 90 s).
+        TickZoneRecorder.setListForTest(list.take(1))
+        runBlocking { TickZoneRecorder.drain((base + 200) * 1000) }
+        assertEquals(1 to 1, TickZoneRecorder.heldForTest())
+        // The same list kept through a pause: nothing let go (the day's flow goes on).
+        TickZoneRecorder.setListForTest(list)
+        for (i in 300L until 303L) { feed(base + i, 52_100.0, 2_000 + i); sample(base + i, if (i == 300L) null else base + i - 1) }
+        runBlocking { TickZoneRecorder.drain((base + 304) * 1000) }
+        runBlocking { TickZoneRecorder.drain((base + 500) * 1000) }
+        assertEquals(3 to 3, TickZoneRecorder.heldForTest())
+    }
 }

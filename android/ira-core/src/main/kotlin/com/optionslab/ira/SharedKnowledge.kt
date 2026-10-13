@@ -202,14 +202,20 @@ object SharedKnowledge {
     )
 
     /** The recent findings counted by kind (how many posts on how many days): one context item a kind. */
-    fun findingItems(findings: List<Findings.Finding>, day: LocalDate?): List<Item> {
-        if (findings.isEmpty()) return emptyList()
-        return findings.groupBy { it.kind }.map { (k, fs) ->
-            val days = fs.map { AgentLessons.dayOf(it.atMs) }.distinct().size
-            val who = fs.groupingBy { it.who }.eachCount().entries.sortedByDescending { it.value }.take(3).joinToString(", ") { it.key }
+    fun findingItems(findings: List<Findings.Finding>, day: LocalDate?): List<Item> = findingItems(FindingsTally.of(findings), day)
+
+    /**
+     * [findingItems] from the counts alone (memory audit, 14 Oct: the logs are counted as they are read, never kept as
+     * objects). The same items as from the list.
+     */
+    fun findingItems(tally: FindingsTally, day: LocalDate?): List<Item> {
+        if (tally.isEmpty()) return emptyList()
+        return tally.byKind().map { kc ->
+            val k = kc.kind; val n = kc.count; val days = kc.days
+            val who = kc.who.sortedByDescending { it.second }.take(3).joinToString(", ") { it.first }
             Item("findings:${k.name.lowercase(Locale.ENGLISH)}", listOf(FINDING_TOPICS[k] ?: "note"), null, null, null, null,
-                k == Findings.Kind.DATA_UNRELIABLE, Source.FINDINGS, day?.toString() ?: "", fs.size, null, Gate.NONE, Verdict.CONTEXT,
-                "The findings bus: ${fs.size} ${k.words} post${if (fs.size == 1) "" else "s"} on $days day${if (days == 1) "" else "s"} (most from $who)", "findings/")
+                k == Findings.Kind.DATA_UNRELIABLE, Source.FINDINGS, day?.toString() ?: "", n, null, Gate.NONE, Verdict.CONTEXT,
+                "The findings bus: $n ${k.words} post${if (n == 1) "" else "s"} on $days day${if (days == 1) "" else "s"} (most from $who)", "findings/")
         }.sortedBy { it.id }
     }
 
@@ -250,7 +256,11 @@ object SharedKnowledge {
     }
 
     /** The snapshot from the pack's research [r], Jarvis's [book] and the recent [findings], for [day]. Pure; a worker thread. */
-    fun build(r: Research?, book: AgentLessons.Book?, findings: List<Findings.Finding> = emptyList(), day: LocalDate? = null, version: String = ""): Snapshot {
+    fun build(r: Research?, book: AgentLessons.Book?, findings: List<Findings.Finding> = emptyList(), day: LocalDate? = null, version: String = ""): Snapshot =
+        build(r, book, FindingsTally.of(findings), day, version)
+
+    /** [build] from the findings' counts (the phone's way since 14 Oct: no finding is kept as an object). */
+    fun build(r: Research?, book: AgentLessons.Book?, findings: FindingsTally, day: LocalDate?, version: String): Snapshot {
         // Strong and building lessons - and a lesson the pass marked "contradicts research" (kept weak there): exactly the one the
         // conflict rule must say beside the research, never drop.
         val lessons = book?.let { AgentLessons.active(it) }.orEmpty()
@@ -261,6 +271,10 @@ object SharedKnowledge {
 
     /** [build] from a pack (its shared section and version). */
     fun build(pack: Knowledge.Pack?, book: AgentLessons.Book?, findings: List<Findings.Finding> = emptyList(), day: LocalDate? = null): Snapshot =
+        build(pack?.shared, book, findings, day, pack?.version.orEmpty())
+
+    /** [build] from a pack and the findings' counts. */
+    fun build(pack: Knowledge.Pack?, book: AgentLessons.Book?, findings: FindingsTally, day: LocalDate?): Snapshot =
         build(pack?.shared, book, findings, day, pack?.version.orEmpty())
 
     // ---- the simple API ------------------------------------------------------------------------------------------------------

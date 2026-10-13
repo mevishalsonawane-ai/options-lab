@@ -87,7 +87,7 @@ object VariantRunner {
     fun init(context: Context) {
         appContext = context.applicationContext
         if (!enabled()) return
-        scope.launch { runCatching { ensureLoaded() } }
+        scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
         runCatching { com.optionslab.app.work.DiscoveryWorker.schedule(context.applicationContext) }
     }
 

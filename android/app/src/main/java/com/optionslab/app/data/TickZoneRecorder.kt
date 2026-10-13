@@ -274,6 +274,8 @@ object TickZoneRecorder {
             if (d != day) {
                 day?.let { old -> endOfRun().let { (g, a) -> ticks += g; aggs += a }; flush(old) }
                 day = d; flows = HashMap(); gaps = TickZone.Gaps(); written = null; listWritten = null
+                // Memory (14 Oct): yesterday's instruments go with the day (this list names them again at once).
+                insts.clear()
             }
             if (s.list !== listWritten) {
                 ticks += TickZone.instruments(s.sec, s.list); listWritten = s.list
@@ -305,11 +307,25 @@ object TickZoneRecorder {
             if (items.isEmpty() && last != null && nowSec - last > 90) {
                 endOfRun().let { (g, a) -> ticks += g; aggs += a }
                 written = null
+                // Memory audit (14 Oct, item 6): the run is closed (the close, recording off, a pause): instruments no longer
+                // on the watch-list are let go - their minute closed above; one that comes back starts afresh.
+                pruneAfterRun(list.map { it.token }.toSet())
             } else for (f in flows.values) aggLine(f.roll(nowSec - 5))
             flush(cur)
         }
         runOpen = written != null
     }
+
+    /** Every instrument's flow and name not in [keep] let go (the writer's thread, after a run closed). */
+    private fun pruneAfterRun(keep: Set<Long>) {
+        flows.keys.retainAll(keep)
+        // Names let go: the next second written names its watch-list again (even the same list coming back), so no minute
+        // row is ever written without its instrument's name.
+        if (insts.keys.retainAll(keep)) listWritten = null
+    }
+
+    /** The writer's instruments held now (flows, names): the memory figures and the tests. */
+    internal fun heldForTest(): Pair<Int, Int> = flows.size to insts.size
 
     /** The open gap runs and each instrument's last minute, closed (rows for the tick and minute files). */
     private fun endOfRun(): Pair<List<String>, List<String>> {
@@ -395,4 +411,7 @@ object TickZoneRecorder {
 
     /** TEST ONLY: the watch-list followed now. */
     internal fun listForTest(): List<TickZone.Inst> = list
+
+    /** TEST ONLY: [l] as the watch-list from now (the layout's own change). Throws unless BuildConfig.DEBUG. */
+    internal fun setListForTest(l: List<TickZone.Inst>) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; list = l }
 }

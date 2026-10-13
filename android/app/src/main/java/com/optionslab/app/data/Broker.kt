@@ -1002,14 +1002,11 @@ object Broker {
         val f = File(app.filesDir, "kite_instruments.json")
         val stamp = f.lastModified() to f.length()
         instrumentsMemo?.let { if (it.stamp == stamp && stamp.first != 0L) return it }
+        // Memory audit (14 Oct, item 5): read as a stream, the repeated names and expiries shared - no whole-file string, no
+        // JSON tree (several MB at once after every restart).
         return runCatching {
-            val o = JSONObject(f.readText())
-            val a = o.getJSONArray("i")
-            val list = (0 until a.length()).map { a.getJSONArray(it) }.map {
-                Kite.Instrument(it.getLong(0), it.getString(1), it.getString(2), LocalDate.parse(it.getString(3)), it.getDouble(4),
-                    it.getInt(5), if (it.getString(6) == "CE") Right.CE else Right.PE, it.getDouble(7))
-            }
-            InstrumentsMemo(stamp, o.optString("day"), list).also { instrumentsMemo = it }
+            val (day, list) = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.read(it) } ?: return@runCatching null
+            InstrumentsMemo(stamp, day, list).also { instrumentsMemo = it }
         }.getOrNull() ?: instrumentsMemo?.takeIf { f.exists() }   // G1-6: a file that does not parse keeps the list in memory; a file gone (cleared data) has none
     }
 
@@ -1031,7 +1028,7 @@ object Broker {
         val f = File(app.filesDir, "kite_instruments.json")
         instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
-        val list = Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"))
+        val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
         val a = JSONArray()

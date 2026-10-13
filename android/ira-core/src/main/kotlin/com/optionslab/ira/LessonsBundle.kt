@@ -127,7 +127,8 @@ object LessonsBundle {
     }
 
     /** The findings log counted ([FindingCount]s) from parsed findings. */
-    fun counts(findings: List<Findings.Finding>): List<FindingCount> = findings.groupBy { it.kind.name to it.who }.map { (k, fs) ->
-        FindingCount(k.first, k.second, fs.size, fs.map { AgentLessons.dayOf(it.atMs) }.distinct().size)
-    }.sortedWith(compareByDescending<FindingCount> { it.count }.thenBy { it.kind }.thenBy { it.who.lowercase(Locale.ENGLISH) })
+    fun counts(findings: List<Findings.Finding>): List<FindingCount> = counts(FindingsTally.of(findings))
+
+    /** [counts] from the findings' counts alone (14 Oct: nothing kept as objects). */
+    fun counts(tally: FindingsTally): List<FindingCount> = tally.counts().sortedWith(compareByDescending<FindingCount> { it.count }.thenBy { it.kind }.thenBy { it.who.lowercase(Locale.ENGLISH) })
 }

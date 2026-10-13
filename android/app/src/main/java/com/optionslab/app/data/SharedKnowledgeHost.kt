@@ -4,7 +4,9 @@ import android.content.Context
 import com.optionslab.app.security.SecurePrefs
 import com.optionslab.app.security.Vault
 import com.optionslab.ira.AgentLessons
-import com.optionslab.ira.Findings
+import com.optionslab.ira.FindingsTally
+import com.optionslab.ira.MemoryPlan
+import com.optionslab.ira.StartOrder
 import com.optionslab.ira.LessonsBundle
 import com.optionslab.ira.SharedKnowledge
 import kotlinx.coroutines.CoroutineScope
@@ -24,10 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * ira-core's [SharedKnowledge] merges the research (the knowledge pack's shared section), Jarvis's lessons and the recent
  * findings into one [SharedKnowledge.Snapshot]; this keeps it:
  *
- *  - Built once in the background at start ([init]: the pack read by [com.optionslab.app.ira.KnowledgeLibrary] - one parse for
- *    both - Jarvis's lessons file, the findings logs) and again each night after Jarvis's pass ([nightly]). Every agent reads it
- *    with [snapshot]: a volatile field, memory only - nothing on the order or tick path ever touches the disk, the settings
- *    vault or the network through here, and nothing waits. Before the first build it is [SharedKnowledge.EMPTY] (no opinion).
+ *  - Built once in the background after the start ([init]: Boss, 14 Oct - only once the open positions are restored and
+ *    watched and the stream is back ([PositionsFirst]), on one low-priority thread; in market hours under memory pressure or
+ *    battery saver it waits for the close) and again each night after Jarvis's pass ([nightly]). The pack's shared section
+ *    comes from the head of the APK's prebuilt index ([com.optionslab.app.ira.KnowledgeLibrary.shared]: the index itself is
+ *    not opened for it); the findings logs are counted line by line, never kept ([FindingsTally]); each night the counts of
+ *    the days before today go into one small encrypted snapshot ([SNAPSHOT]), so the next morning counts only the new logs.
+ *    Every agent reads it with [snapshot]: a volatile field, memory only - nothing on the order or tick path ever touches the
+ *    disk, the settings vault or the network through here, and nothing waits. Before the first build it is [SharedKnowledge.EMPTY] (no opinion).
  *  - What each agent read from it and added today ([read], [added]; a small map in memory): the "What I learned" sheet's lines
  *    ([agentLines]).
  *  - Nightly, under the recordings folder: the day's lessons bundle ([LessonsBundle], recordings/YYYY-MM-DD/lessons_bundle.json):
@@ -45,6 +51,8 @@ object SharedKnowledgeHost {
     /** Findings log lines read at most per night (the logs can be large; a count needs no more). */
     private const val MAX_FINDING_LINES = 200_000
     private const val FINDING_DAYS = 30L
+    /** The findings counts of the days before the night it was written (encrypted with the app's Vault; counts only). */
+    const val SNAPSHOT = "findings_snapshot.vault"
 
     @Volatile private var appContext: Context? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -67,7 +75,31 @@ object SharedKnowledgeHost {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        if (enabled()) scope.launch { runCatching { refresh() } }
+        if (enabled()) background.launch { runCatching { afterStart() } }
+    }
+
+    /** The first build's own thread: one at a time, at the background's priority (never main, never the tick or order threads). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    /**
+     * The first build, after the start (Boss, 14 Oct): once the open positions are watched and the stream is back, and - in
+     * NSE's or MCX's hours - not while the phone is under memory pressure or in battery saver (then a look each minute, so it
+     * runs after the close). Answers that need it before then say they are still loading; nothing waits on it.
+     */
+    internal suspend fun afterStart() {
+        PositionsFirst.awaitPositions()
+        PositionsFirst.awaitStream()
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND) }
+        while (!loadNow()) kotlinx.coroutines.delay(60_000L)
+        refresh()
+        PositionsFirst.order.done(StartOrder.Step.KNOWLEDGE, android.os.SystemClock.uptimeMillis())
+    }
+
+    private fun loadNow(): Boolean {
+        val market = runCatching { Market.isOpen() || McxMarket.isOpen() }.getOrDefault(true)
+        val saver = runCatching { appContext?.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)
+        return MemoryPlan.knowledgeNow(market, MemoryTrim.underPressure(), saver)
     }
 
     // ---- the switch ----------------------------------------------------------------------------------------------------------
@@ -90,38 +122,66 @@ object SharedKnowledgeHost {
     // ---- the build -----------------------------------------------------------------------------------------------------------
 
     /** The snapshot built again from the pack, Jarvis's lessons and the findings logs. A worker thread; one at a time. */
-    fun refresh(day: LocalDate? = runCatching { Market.today() }.getOrNull()): SharedKnowledge.Snapshot? {
+    fun refresh(day: LocalDate? = runCatching { Market.today() }.getOrNull(), writeSnapshot: Boolean = false): SharedKnowledge.Snapshot? {
         if (!building.compareAndSet(false, true)) return null
         try {
             val ctx = appContext
-            val pack = runCatching { com.optionslab.app.ira.KnowledgeLibrary.index(ctx)?.pack }.getOrNull()
+            val shared = runCatching { com.optionslab.app.ira.KnowledgeLibrary.shared(ctx) }.getOrNull()
             runCatching { com.optionslab.app.ira.JarvisLearning.ensureLoaded() }
             val book = runCatching { com.optionslab.app.ira.JarvisLearning.book.value }.getOrNull()
-            val findings = runCatching { findingsRecent(day) }.getOrDefault(emptyList())
-            val s = SharedKnowledge.build(pack, book, findings, day)
+            val tally = runCatching { findingsRecent(day) }.getOrDefault(FindingsTally())
+            val s = SharedKnowledge.build(shared?.first, book, tally, day, shared?.second.orEmpty())
             current = s
-            lastFindings = findings
+            lastCounts = LessonsBundle.counts(tally)
+            if (writeSnapshot && day != null) runCatching { writeSnapshot(tally, day) }
             runCatching { Diag.record("knowledge", "shared knowledge built: ${s.summary()}" + if (s.conflicts.isNotEmpty()) "; ${s.conflicts.size} conflict(s) kept" else "") }
             publish()
             return s
         } finally { building.set(false) }
     }
 
-    @Volatile private var lastFindings: List<Findings.Finding> = emptyList()
+    /** The last build's findings counts by kind and agent (the night's bundle; a few dozen rows). Dropped on a memory trim. */
+    @Volatile private var lastCounts: List<LessonsBundle.FindingCount> = emptyList()
 
-    /** The findings logs of the last [FINDING_DAYS] days (noBackupFilesDir/findings), read line by line up to a cap. */
-    private fun findingsRecent(day: LocalDate?): List<Findings.Finding> {
-        val dir = appContext?.let { File(it.noBackupFilesDir, "findings") } ?: return emptyList()
+    /** Memory trim: the counts kept for the bundle let go (the night's build counts again before it writes). */
+    fun dropCounts() { lastCounts = emptyList() }
+
+    /**
+     * The findings of the last [FINDING_DAYS] days counted (memory audit, 14 Oct: no finding is kept as an object): the
+     * snapshot's days, then only the logs (noBackupFilesDir/findings) after its last day, line by line up to a cap. Without a
+     * snapshot (the first night, a damaged file) every log in the window is counted, as before.
+     */
+    private fun findingsRecent(day: LocalDate?): FindingsTally {
+        val ctx = appContext ?: return FindingsTally()
         val from = (day ?: LocalDate.now()).minusDays(FINDING_DAYS)
-        val out = ArrayList<Findings.Finding>()
+        val snap = runCatching { readSnapshot(ctx) }.getOrNull()
+        return countLogs(File(ctx.noBackupFilesDir, "findings"), from, snap)
+    }
+
+    /** [dir]'s logs from [from] on that come after [snap]'s last day, newest first, counted; then [snap]'s days from [from]. */
+    internal fun countLogs(dir: File, from: LocalDate, snap: Pair<LocalDate, FindingsTally>?): FindingsTally {
+        val out = FindingsTally()
         var lines = 0
         for (f in dir.listFiles().orEmpty().sortedByDescending { it.name }) {
             val d = runCatching { LocalDate.parse(f.name.removeSuffix(".log")) }.getOrNull() ?: continue
             if (d.isBefore(from)) continue
-            runCatching { f.useLines { ls -> for (l in ls) { if (++lines > MAX_FINDING_LINES) break; Findings.parse(l)?.let { out += it } } } }
+            if (snap != null && !d.isAfter(snap.first)) continue
+            runCatching { f.useLines { ls -> for (l in ls) { if (++lines > MAX_FINDING_LINES) break; out.line(l) } } }
             if (lines > MAX_FINDING_LINES) break
         }
+        snap?.let { out.addAll(it.second.since(from)) }
         return out
+    }
+
+    private fun snapshotFile(ctx: Context) = File(ctx.noBackupFilesDir, SNAPSHOT)
+
+    private fun readSnapshot(ctx: Context): Pair<LocalDate, FindingsTally>? =
+        Vault.readFile(snapshotFile(ctx))?.let { FindingsTally.read(String(it, Charsets.UTF_8)) }
+
+    /** Tonight's snapshot: the counts of the days before [today] (today's log is counted whole again tomorrow). */
+    private fun writeSnapshot(tally: FindingsTally, today: LocalDate) {
+        val ctx = appContext ?: return
+        Vault.writeFile(snapshotFile(ctx), tally.before(today).text(today.minusDays(1)).toByteArray(Charsets.UTF_8))
     }
 
     // ---- what each agent read and added ---------------------------------------------------------------------------------------
@@ -190,7 +250,7 @@ object SharedKnowledgeHost {
         val today = runCatching { Market.today() }.getOrNull() ?: return false
         if (nightOf == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
-        val s = refresh(today) ?: return false
+        val s = refresh(today, writeSnapshot = true) ?: return false
         nightOf = today
         val trips = runCatching {
             val owners = Strategies.owners()
@@ -213,7 +273,7 @@ object SharedKnowledgeHost {
         val book = runCatching { com.optionslab.app.ira.JarvisLearning.book.value }.getOrDefault(AgentLessons.Book())
         val vr = VariantRunner
         val app = runCatching { com.optionslab.app.BuildConfig.VERSION_NAME }.getOrDefault("")
-        val built = LessonsBundle.build(LessonsBundle.Inputs(day, app, s.version, book, LessonsBundle.counts(lastFindings),
+        val built = LessonsBundle.build(LessonsBundle.Inputs(day, app, s.version, book, lastCounts,
             runCatching { if (vr.enabled()) vr.forge.value else null }.getOrNull(), synchronized(skippedIdeas) { ArrayList(skippedIdeas) },
             runCatching { if (vr.enabled()) vr.variants.value else null }.getOrNull(), runCatching { OrderReviewHost.book.value }.getOrNull(),
             shadow, agentLines()))

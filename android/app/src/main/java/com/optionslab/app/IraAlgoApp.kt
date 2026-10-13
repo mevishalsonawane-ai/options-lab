@@ -99,6 +99,10 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Protections.init(this)
         com.optionslab.app.data.TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
+        // OPEN POSITIONS AND ORDERS COME FIRST (14 Oct, memory audit): every position book is read now on a thread of its own
+        // at the top priority, the watch started when anything is open, then the stream - before the rest of the start's
+        // background work (the shared knowledge waits for both). Every position store's init above only names its file.
+        com.optionslab.app.data.PositionsFirst.start(this)
         com.optionslab.app.data.LiveRecorder.init(this)
         // The tick zone (12 Oct): the watch-list's order flow every second, from the stream's memory, written in the background.
         com.optionslab.app.data.TickZoneRecorder.init(this)
@@ -158,6 +162,8 @@ class IraAlgoApp : Application() {
             }
             SecurePrefs.put(com.optionslab.app.data.Backup.DISARM, null)
         }
+        // The restore-disarm above is done: a watch started by the positions-first thread may tick now.
+        com.optionslab.app.data.PositionsFirst.appReady()
         ProcessLifecycleOwner.get().lifecycle.addObserver(SessionLock)
         // Keystore work stays off the main thread.
         Thread { runCatching { Jobs.scheduleAll(this) } }.start()
@@ -168,6 +174,8 @@ class IraAlgoApp : Application() {
     /** Android asks for memory back: counted in the app's health, and the caches that are safe to drop are dropped. */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        // Memory audit (14 Oct): counted, and what [com.optionslab.ira.MemoryPlan] lists for the level freed on a background
+        // thread - never the position watch, its prices, its checks or their cadence.
         runCatching { com.optionslab.app.data.AppHealth.trim(level) }
     }
 
