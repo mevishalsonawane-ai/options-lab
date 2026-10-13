@@ -113,6 +113,16 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   report the results first; only then add the Liquidity 15+5 arm to the app (engine rules in `orb/LiquidityRules.kt`).
 - [ ] R2. AFTER the Liquidity 15+5 arm is tested and pushed: run the same liquidity rules on XAUUSD (gold vs US dollar,
   forex) - the `forex/` folder has the fetch scripts. Note: forex is not tradable from Zerodha / the app; research only.
+- [ ] R3. ORB family deep study (owner, 13 Oct): ORB, ORB Fresh, ORB Sweep and Range Fade are PAUSED, not retired.
+  They were switched off on 13 Oct after losing in every backtest year. Their code, settings and history stay, and
+  Boss can re-arm them at any time. Once the full Dhan download is in the data lake, study them deeply and try to
+  enhance them:
+  - when they win and lose (by day type, VIX, gap, range width, expiry day, time of day, index);
+  - filters that skip the losing day types; better exits (trail, profit lock, time stop) and strikes;
+  - the R19c consistency rules on each of them.
+  Follow the research gates: pre-register, walk-forward, locked holdout read once, real costs, BH across every variant
+  tried, and log every idea in research/experiments/entries/, failures included. A version that passes the gates can
+  come back on paper at once, logged and undoable in one tap, and labelled. A version that fails stays a note only.
 
 ## P. Position screen (owner, 2026-10-08)
 
