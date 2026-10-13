@@ -35,7 +35,9 @@ def _fwd(a: np.ndarray, day: np.ndarray, h: int, how: str) -> np.ndarray:
     return out
 
 
-def compute(minutes: pd.DataFrame) -> pd.DataFrame:
+def compute(minutes: pd.DataFrame, horizons=HORIZONS) -> pd.DataFrame:
+    """Labels for every minute. `day` bounds each window: the Indian cube passes its session, the crypto brain
+    (24x7) passes one constant so windows run across midnight (13 Oct 2026)."""
     m = minutes.sort_values("ts").reset_index(drop=True)
     good = m.flag.isin(["ok", "stale"]).values
     c = np.where(good, m.close.values, np.nan)
@@ -44,7 +46,7 @@ def compute(minutes: pd.DataFrame) -> pd.DataFrame:
     day = pd.factorize(m.day)[0]
     out = {"ts": m.ts.values}
     n = len(m)
-    for H in HORIZONS:
+    for H in horizons:
         fut = np.full(n, np.nan)
         same = np.zeros(n, bool)
         same[:-H] = day[H:] == day[:-H]
