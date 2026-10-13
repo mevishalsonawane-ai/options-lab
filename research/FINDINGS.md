@@ -327,3 +327,40 @@ Full study: `HUNT_R18_EXITS.md` (pre-registered `hunt/r18/PREREG.md`, amendment 
 - Corrected after a review (expiry-day square-off at 15:05; no fill after the square-off) and re-run with the same 60
   rows: only VIX divergence BANKNIFTY (3 trades) and one Pine EMA NIFTY holdout trade changed; no verdict changed.
 - Order-flow exits not tested (recording began 12 Oct). Hero: 10 trades in two years, too few to judge.
+## Boss's Rs 500 give-back trail on Liquidity (R19b, 13 Oct 2026) - fails; keep the plain rules
+Full study: `HUNT_R19B_LIQUIDITY_TRAIL.md` (pre-registered `hunt/r19b/PREREG.md`; design Feb 2024 - Feb 2025, holdout
+3 Mar - 22 Aug 2025 read once; 14 hypotheses, one BH family; release data, Liquidity BANKNIFTY 15m and 5m books).
+- Boss's rule ("down Rs 500 a lot from its best, sell", from +Rs 500) made both books earn LESS. Holdout: 15m +Rs 4,584
+  vs +Rs 14,633 on plain rules (27 trades), 5m +Rs 2,968 vs +Rs 22,124 (83 trades).
+- It cut 12 of the 13 big winners (Rs 62,175 given up). It did worse than random early exits (beat 3% / 0.2% of twins).
+  BH q >= 0.92 for every variant (Rs 300 / 750 / 1,000 give-backs, from the entry, 3% of premium).
+- Why: a BANKNIFTY option moves Rs 500 a lot (about 17 points) in a minute or two, so the trail fires on half the trades
+  and cuts the runners that pay for the arm. The same lesson as LIQUIDITY_TRAIL.md and R12.
+- Today's MIDCPNIFTY trade (-Rs 864) would have been about +Rs 2,000 under it. One trade; the history says the opposite.
+  MIDCPNIFTY itself was not tested (no option minutes without the Dhan API).
+- App: not added to the arm. Boss's opt-in paper switch only ("Try the ₹500 trail on paper", off by default, "failed
+  research, your choice"); never live; its trades are labelled and kept out of the plain-rules paper record.
+
+## Consistency: Boss's +Rs 1,000 / Rs 500 floor on every arm, and account day rules (R19c, 13 Oct 2026) - fails; the leak is the ORB family
+Full study: `HUNT_R19C_CONSISTENCY.md` (pre-registered `hunt/r19c/PREREG.md`; objective = more green days, a worst day and
+drawdown no worse, net > 0 and >= 70% of plain; design before 1 Apr 2025, holdout from 1 Apr 2025 read once; 61
+hypotheses, one BH family; release data, 1 lot each arm).
+- Boss's floor ("from +Rs 1,000 a lot, sell Rs 500 below the best") failed on all 10 arms, as did +Rs 750 / +Rs 1,500 and
+  Rs 300 / Rs 700 give-backs. It raises green days (holdout: Solo 52% -> 80%, n 75; VIX divergence BANKNIFTY 32% -> 68%,
+  n 37; Liquidity 5m 40% -> 50%, n 170) and removes the "in profit, ended in loss" trades. But it gives up far more than 30% of
+  net (Liquidity 15m +Rs 23,373 -> -Rs 6,911; 5m +Rs 27,342 -> +Rs 6,675; Solo +Rs 42,457 -> +Rs 18,451). It leaves the
+  worst day unchanged, and random early exits do as well.
+- Why: red days come from trades that never reached +Rs 1,000 (they hit their stop), which the floor never touches; Rs 500
+  a lot is 14-17 BANKNIFTY / 7-8 NIFTY option points, so the floor cuts the few long runners that pay for each arm.
+- ORB / Fresh / Fade: the ladder locks before +Rs 1,000 (the whole +40 target is Rs 1,200 a lot at lot 30), so the floor on
+  top changes <= Rs 3k; the floor INSTEAD of the ladder is worse (ORB -Rs 18,026 vs -Rs 10,958, n 207).
+- ORB, ORB Fresh, ORB Sweep and Range Fade lost in BOTH years. Switched off: holdout net -Rs 1.29L -> +Rs 68.9k, max drawdown
+  -Rs 1.71L -> -Rs 35.2k, green months 4 -> 8 of 12 (design +Rs 7.5k -> +Rs 116.8k). It passed the daily and net gates in both
+  years but failed the pre-registered colour sign test (days with only ORB-family winners become no-trade days).
+- Day loss cap (-Rs 2,000 / -3,000, no new entries) lowers green days (42% -> 36% / 39%): it blocks the afternoon recoveries.
+  Day profit lock (+Rs 2,000 -> keep +Rs 1,000) raises green days (42% -> 49%; on top of ORB-off 44% -> 53%, post hoc), but
+  failed net / drawdown or its random twin. It is the next pre-registered test (R19d), on fresh data.
+- Not tested: MIDCPNIFTY (no option minutes in the release or the IraAlgo data repo), MCX (no data), Night (inputs
+  missing; ~11 open minutes to act), Pine (already locked).
+- App: nothing acts by itself. Liquidity's opt-in "your choice" paper switch now uses Boss's exact rule (off by default,
+  labelled failed, never live). Recommendation to Boss: switch off the ORB family; no strategy guarantees no losses.

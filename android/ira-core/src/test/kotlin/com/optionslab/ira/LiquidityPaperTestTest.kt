@@ -33,6 +33,28 @@ class LiquidityPaperTestTest {
         assertEquals(LiquidityFreeze.State(), LiquidityFreeze.decode(null)); assertEquals(LiquidityFreeze.State(), LiquidityFreeze.decode("junk"))
     }
 
+    @Test fun bossesTrailSwitchIsOffByDefaultKeptAndSaysItFailed() {
+        // Off by default, and a file written before the switch existed reads back off.
+        assertFalse(LiquidityFreeze.State().trail)
+        assertFalse(LiquidityFreeze.decode("v1\nunfrozen=true\nstopResetAt=0\nstopTold=\nwatched=false\n").trail)
+        val on = LiquidityFreeze.State(unfrozen = true, watched = true, trail = true)
+        assertEquals(on, LiquidityFreeze.decode(LiquidityFreeze.encode(on)))
+        assertEquals(on.copy(trail = false), LiquidityFreeze.decode(LiquidityFreeze.encode(on.copy(trail = false))))
+        val offNote = LiquidityFreeze.trailNote(LiquidityFreeze.State())
+        assertTrue(offNote.contains("failed research, your choice") && offNote.contains("off."), offNote)
+        assertTrue(offNote.contains("12 of 13 big winners") && offNote.contains("MIDCPNIFTY was not tested"), offNote)
+        // R19c (13 Oct, later): Boss's rule from +Rs 1,000 a lot, never under +Rs 500, with its failed holdout numbers.
+        assertTrue(offNote.contains("from +₹1,000 a lot, sell ₹500 below the best") && offNote.contains("never under +₹500"), offNote)
+        assertTrue(offNote.contains("R19c") && offNote.contains("-₹6.9k") && offNote.contains("170 trades"), offNote)
+        assertTrue(LiquidityFreeze.trailSaid(true).contains("from +₹1,000 a lot"))
+        val onNote = LiquidityFreeze.trailNote(on)
+        assertTrue(onNote.contains("ON for new Liquidity PAPER trades") && onNote.contains("live trades never use it"), onNote)
+        assertTrue(LiquidityFreeze.trailSaid(true).contains("Live trades never use it"))
+        assertTrue(LiquidityFreeze.trailSaid(false).contains("plain rules again"))
+        // The freeze itself is unchanged by the trail switch.
+        assertTrue(LiquidityFreeze.frozen(LiquidityFreeze.State(trail = true), oct14))
+    }
+
     // ---- fill quality ----
 
     private val close = ms(oct14, 10, 20)

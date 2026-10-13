@@ -23,9 +23,11 @@ object LiquidityFreeze {
     /**
      * The paper test's small state: [unfrozen] by Boss; the live stop rule's restart ([stopResetAtMs]: trades closed before
      * it no longer count, set when Boss re-enables live entries with his PIN) and the stop already told ([stopTold]); Boss's
-     * own tick that he watched the first live trade ([watched]).
+     * own tick that he watched the first live trade ([watched]); Boss's own opt-in Rs 500 give-back trail on the Liquidity PAPER
+     * books ([trail], research R19b: failed its gates, so off unless he switches it on; see [trailNote]).
      */
-    data class State(val unfrozen: Boolean = false, val stopResetAtMs: Long = 0L, val stopTold: String = "", val watched: Boolean = false)
+    data class State(val unfrozen: Boolean = false, val stopResetAtMs: Long = 0L, val stopTold: String = "", val watched: Boolean = false,
+                     val trail: Boolean = false)
 
     fun frozen(s: State, today: LocalDate): Boolean = !s.unfrozen && !today.isAfter(UNTIL)
 
@@ -42,11 +44,39 @@ object LiquidityFreeze {
     /** Whether an Autopilot change target ("paper:liquidity", "flow:liquidity:BANKNIFTY", "mgr:liquidity:paper") is Liquidity's. */
     fun touches(target: String): Boolean = target.contains("liquidity", ignoreCase = true)
 
-    fun encode(s: State): String = "v1\nunfrozen=${s.unfrozen}\nstopResetAt=${s.stopResetAtMs}\nstopTold=${s.stopTold.replace('\n', ' ')}\nwatched=${s.watched}\n"
+    fun encode(s: State): String = "v1\nunfrozen=${s.unfrozen}\nstopResetAt=${s.stopResetAtMs}\nstopTold=${s.stopTold.replace('\n', ' ')}\nwatched=${s.watched}\n" +
+        "trail=${s.trail}\n"
 
     fun decode(text: String?): State {
         if (text.isNullOrBlank()) return State()
         val m = text.lineSequence().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()
-        return State(m["unfrozen"] == "true", m["stopResetAt"]?.toLongOrNull() ?: 0L, m["stopTold"].orEmpty(), m["watched"] == "true")
+        return State(m["unfrozen"] == "true", m["stopResetAt"]?.toLongOrNull() ?: 0L, m["stopTold"].orEmpty(), m["watched"] == "true",
+            m["trail"] == "true")
     }
+
+    // ---- Boss's Rs 500 give-back trail (R19b, 13 Oct): his own choice, on paper only -----------------------------------------
+    // 13 Oct, later (R19c): Boss's rule is now "from +Rs 1,000 a lot, sell Rs 500 below the best" (never under +Rs 500).
+
+    /** The switch's name on the Strategy lab card. */
+    const val TRAIL_ON = "Try your ₹1,000 / ₹500 trail on paper"
+    const val TRAIL_OFF = "Back to plain rules"
+
+    /**
+     * The switch's line: what the trail is, that it FAILED the research (with its numbers) and is Boss's choice, that it is
+     * paper only and labels each trade, and whether it is on.
+     */
+    fun trailNote(s: State): String = "Your trail: from +₹1,000 a lot, sell ₹500 below the best, so never under +₹500 " +
+        "(failed research, your choice): " +
+        (if (s.trail) "ON for new Liquidity PAPER trades - each one is labelled \"with ₹500 trail\"; live trades never use it."
+        else "off. Liquidity trades on plain rules.") +
+        " R19c (locked holdout Apr 2025 - Feb 2026): more green days (15m 37% to 47%, 5m 40% to 50%) but the net fell from +₹23.4k " +
+        "to -₹6.9k (15m, 51 trades) and from +₹27.3k to +₹6.7k (5m, 170 trades), worse than random early exits. R19b's ₹500 from " +
+        "+₹500 cut 12 of 13 big winners. MIDCPNIFTY was not tested (no option data)."
+
+    /** What Boss's switch does, said back to Boss (and to the diagnostics) when they flip it. */
+    fun trailSaid(on: Boolean): String = if (on)
+        "Your trail (from +₹1,000 a lot, ₹500 below the best) ON for new Liquidity PAPER trades (failed research, your choice): each trade " +
+            "is labelled \"with ₹500 trail\". " +
+            "Live trades never use it. Switch it off on the Strategy lab card at any time."
+    else "Your trail off: new Liquidity paper trades run on plain rules again (open trades keep the rule they entered with)."
 }

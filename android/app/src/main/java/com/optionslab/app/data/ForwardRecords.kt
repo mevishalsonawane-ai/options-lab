@@ -22,10 +22,13 @@ object ForwardRecords {
         return if (perLot) n / p.lots else n
     }
 
-    /** Liquidity 15+5's closed paper trades, per lot (its four books). */
+    /**
+     * Liquidity 15+5's closed paper trades on plain rules, per lot (its books). Trades under Boss's opt-in Rs 500 give-back
+     * trail (R19b, [OrbArms.Position.trail]) are left out: this record is the rules' own.
+     */
     fun liquidity(closed: List<OrbArms.Position>): List<ForwardCheck.Trade> {
         val books = LiquidityRules.BOOKS.map { it.source }.toSet()
-        return closed.filter { it.arm in books && !it.open && !it.live }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
+        return closed.filter { it.arm in books && !it.open && !it.live && it.trail == null }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
     }
 
     /** Liquidity 15+5's closed LIVE (Zerodha) trades, per lot - the self-review judges them apart from paper. */
@@ -36,11 +39,11 @@ object ForwardRecords {
 
     /**
      * Liquidity 15+5's closed paper trades for its "Paper record" chart ([LiquidityEquity]): per lot as [liquidity], with the
-     * index its book trades and the entry time (the order on a day).
+     * index its book trades and the entry time (the order on a day). Plain rules only, as [liquidity].
      */
     fun liquidityEquityTrades(closed: List<OrbArms.Position>): List<LiquidityEquity.Trade> {
         val books = LiquidityRules.BOOKS.associateBy { it.source }
-        return closed.filter { it.arm in books && !it.open && !it.live }.map { p ->
+        return closed.filter { it.arm in books && !it.open && !it.live && it.trail == null }.map { p ->
             LiquidityEquity.Trade(p.day, net(p, perLot = true), books[p.arm]?.let { LiquidityRules.underlyingOf(it) } ?: "", p.entryTime.toLocalTime())
         }
     }

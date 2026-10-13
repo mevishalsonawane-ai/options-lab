@@ -66,6 +66,9 @@ class ArmDayTest {
         val p = ArmDay.hold(liq.copy(entryTime = at(12, 30), signalBar = at(12, 25), exitTime = at(12, 50)), ones, range, now)
         assertEquals(ArmDay.Shape.PREMIUM, p.shape)
         assertTrue(p.text.contains("yet the option's price lost"), p.text)
+        // Boss's opt-in paper trail (R19b): its exit said in words, not as a code.
+        val g = ArmDay.hold(liq.copy(why = com.optionslab.engine.orb.LiquidityTrail.WHY), ones, range, now)
+        assertTrue(g.text.contains("out at your ₹500 give-back trail (paper)"), g.text)
     }
 
     @Test fun theAnswerTiesTheLosingTradesTogether() {
