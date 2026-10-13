@@ -178,7 +178,8 @@ Not possible yet:
       - Card: "Last backup to GitHub: date ✓". A failure, or no backup for 2 days, goes to Problems found.
 
 - [ ] G3. Nightly diagnostics to GitHub, with a daily fix loop (owner, 2026-10-13).
-      - Phone (after G1/G2 merge, same uploader and token): every evening after 15:45 (Wi-Fi + charging) it commits
+      - Phone (after G1/G2 merge, same uploader and token): every night AFTER THE MCX CLOSE (23:30 IST, 23:55 when US DST
+        is on; from the app's MCX calendar; Wi-Fi + charging; Boss, 13 Oct) it commits
         that day's diagnostics to the private data repo `mevishalsonawane-ai/IraAlgo` at
         `diagnostics/YYYY/MM/YYYY-MM-DD.json`. It is the same content as Settings → Diagnostics → Copy diagnostics:
         Problems found, health, stalls/ANRs, crashes, worker runs, stream gaps, Order Review flaws, self-healing
@@ -193,6 +194,11 @@ Not possible yet:
         tests, review, CI green. Then it merges and sends the APK, and reports to Boss in a few lines: "Yesterday:
         N problems, fixed X, need you: Y". Problems that need Boss (token, static IP, login) are only reported,
         never worked around.
+
+- [ ] G4. Upload time (Boss, 13 Oct: "after the commodities close"): G1 recordings and G2 backups also wait until after
+      the MCX evening close (23:30/23:55 IST from the app's MCX calendar), not 15:45, so the MCX session is included and
+      nothing uploads while any market the app trades is open. On days with no MCX session (MCX holiday), 15:45 after the
+      NSE close is fine. The manual "Upload now" is unchanged.
 
 ## F. Strategy Factory (owner go-ahead 2026-10-13)
 
