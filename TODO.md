@@ -132,6 +132,10 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
 - [ ] R20b. ORB range from support and resistance (owner's idea, 13 Oct): previous-day high/low/pivots, liquidity
   zones and option OI walls (previous-day bhavcopy OI; intraday Dhan OI if in the lake) used as or to clip the range.
   Point-in-time only, with a random-level twin, and BH counted together with R20. Branch claude/r20b-sr-range.
+- [ ] R20c. What happens after a support/resistance break (owner, 13 Oct: "if 2 candles are above resistance and 2
+  candles are below support"). Event study first (follow-through vs fake-out at 15/30/60 min, 1 vs 2 vs 3 closes, by
+  level, timeframe, time, VIX, expiry, index), then at most 4 pre-registered rules with random-level and random-time
+  twins, BH counted with R20 and R20b. Branch claude/r20c-sr-break.
 - [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
