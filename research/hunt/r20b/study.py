@@ -17,7 +17,6 @@ import math
 import os
 import pickle
 import sys
-from bisect import bisect_left
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -156,7 +155,7 @@ def prep(und):
     import data as D17
     days = D17.load(und)
     oii = oii_cache(und)
-    bd = bhav_days(und)
+    bd = set(bhav_days(und))
     tb = tables(und)
     out = []
     for i, d in enumerate(days):
@@ -164,8 +163,7 @@ def prep(und):
         if not np.isfinite(atr):
             continue
         bh, bl, bc = five(d.ix)
-        j = bisect_left(bd, d.day)
-        prev_b = bd[j - 1] if j > 0 else None
+        prev_b = days[i - 1].day if days[i - 1].day in bd else None     # the previous session's file, never an older one
         di = DayIn(d.day, und, i, atr, float(bh[:10].max()), float(bl[:10].min()), float(d.ix[LV.P0_ROW, 3]), bh, bl, bc,
                    LV.piv_levels(days[i - 1].ix), LV.oi_walls(und, d.day, prev_b), oii.get(str(d.day), []),
                    LV.LiqDay(LV.liq_history(days, i), d.ix))
