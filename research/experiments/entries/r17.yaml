@@ -1,0 +1,39 @@
+id: r17
+title: 'Better exits for every arm: VWAP band, next S/R, time stop, expected range, breakeven (TODO I9)'
+family: trade-management
+date: '2026-10-13'
+doc: research/HUNT_R17_EXITS.md
+hypothesis: One of five pre-registered exit overlays (each can only exit earlier or raise the stop) improves an arm's net
+  after charges over today's exits, consistently across walk-forward folds, in the locked holdout.
+data_version: research-data release parquet (BANKNIFTY 13 Feb 2024 - 23 Feb 2026, NIFTY 1 Apr 2024 - 13 Apr 2026, expiry_days,
+  extra_series VIX) via research/brain/adapters/release.py; config switch R17_SOURCE=lake for the Dhan lake later (a new entry)
+period:
+  design: BANKNIFTY 2024-02-13 .. 2025-08-22, NIFTY 2024-04-01 .. 2025-10-10 (4 folds)
+  holdout: BANKNIFTY 2025-08-25 .. 2026-02-23 (122 sessions), NIFTY 2025-10-13 .. 2026-04-13 (120 sessions)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- session VWAP bands (ATM option-volume proxy on the release)
+- prior-day levels, pivots, opening range, day high/low, round numbers
+- R16 expected 30-min range (4-input formula)
+- minutes since entry
+- option high since entry
+model_or_rule: 'V1 VWAP band trail, V2 next support/resistance, V3 45-minute time stop, V4 expected range used up, V5
+  breakeven after +15%; overlays on each arm''s own exits (ORB, ORB Fresh, ORB Sweep, Range Fade, VIX div NIFTY/BANKNIFTY,
+  Hero, Pine EMA 9/21 and Supertrend on NIFTY/BANKNIFTY, Liquidity BANKNIFTY study only)'
+settings: research/hunt/r17/PREREG.md (all settings fixed before any run)
+prereg: research/hunt/r17/PREREG.md
+variants_tried: 60
+results:
+  summary: 0 of 60 passed the design gates (best BH q 0.48), so no holdout test; holdout read once, descriptive only. Today's
+    exits keep about 0% of the best reachable option price on the losing arms (ORB -0.4%, n 320); the problem is the entries.
+    Liquidity BANKNIFTY (frozen) was hurt by every variant (design -Rs 0.1k to -76k on 336 trades). Post hoc, V2 helped 9 of
+    10 non-frozen arms in design (+Rs 62.6k on 4,964 trades) and 7 of 10 in the holdout (+Rs 15.1k on 1,539) - a candidate
+    to pre-register on the 6-year lake, not a result.
+  costs: app paper fills (+-5 bps, stops -10 bps), app charges (SandboxCosts, STT 0.15%), 0.16% real half-spread each side
+    (Hero 1 tick); stress 2x spread
+holdout_read: true
+verdict: rejected
+notes: No shadow line or switch was added (only a clear pass would have earned one). ORB and ORB Fresh are identical under
+  the 1-a-side paper cap. Order-flow exits not tested (recording began 12 Oct; shadow-only until 60 recorded days).

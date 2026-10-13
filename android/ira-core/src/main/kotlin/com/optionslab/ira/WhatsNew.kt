@@ -50,10 +50,15 @@ object WhatsNew {
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
+    private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-exit-research", OCT13, "Exit research: today's exits stay",
+            "Five new ways to exit were tested against today's exits on every arm, over two years of data: VWAP bands, the next support or resistance, a 45-minute time stop, the expected range, and breakeven after +15%. " +
+                "None beat today's exits after charges once chance was allowed for, so nothing in the app changes (Liquidity BANKNIFTY was only studied, as it is frozen to 26 Oct, and none helped it either).",
+            "Not in the app: the research write-up HUNT_R17_EXITS.md"),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
             "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
                 "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",

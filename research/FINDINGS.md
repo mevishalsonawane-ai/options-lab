@@ -307,3 +307,18 @@ Full study: `HUNT_R16_PREDICTABILITY.md` (pre-registered `hunt/r16/PREREG.md`; 2
   0.58% vs 0.52% NIFTY); "days like today" analogs (worse than all past days pooled, all 8 cases).
 - App: build an expected-range nowcast (stop/target sizing, quiet-market warning, Jarvis); show analogs only as
   context, never as a forecast; no direction / regime / max-pain models.
+
+## Better exits (R17, 13 Oct 2026) - none beats today's exits; the losses come from the entries
+Full study: `HUNT_R17_EXITS.md` (pre-registered `hunt/r17/PREREG.md`; 60 tests in one BH family; holdout read once).
+- Data: release 1-min BANKNIFTY (Feb 2024 - Feb 2026) and NIFTY (Apr 2024 - Apr 2026) with chains and VIX; R16's locked
+  holdouts (122 / 120 sessions). One switch (`R17_SOURCE=lake`) re-runs it on the 6-year Dhan lake as a new experiment.
+- Five overlays on every arm's own exits (each only exits earlier or raises the stop): VWAP band trail, next
+  support/resistance, 45-minute time stop, R16 expected range used up, breakeven after +15%.
+- 0 of 60 passed (best BH q 0.48). Today's exits stay on every arm; no shadow line was added.
+- The losing arms keep about 0% of the best price their option reached (ORB -0.4% on 320 trades, Pine -0.1% to -3.0% on
+  632-1,173, Sweep / Range Fade -5% on 460-493): the best exit moved their loss by 1-9%. Fix entries, not exits.
+- Liquidity BANKNIFTY (frozen, study only): every overlay made it worse (+Rs 96.6k own exits on 336 design trades; the
+  overlays -Rs 0.1k to -76k). Proposal for after 26 Oct: keep its exits.
+- Post hoc only: "exit at the next support/resistance" helped 9 of 10 non-frozen arms in design and 7 of 10 in the
+  holdout (+Rs 62.6k / +15.1k on 4,964 / 1,539 trades) - worth one pre-registered test on the lake, nothing more.
+- Order-flow exits not tested (recording began 12 Oct). Hero: 10 trades in two years, too few to judge.
