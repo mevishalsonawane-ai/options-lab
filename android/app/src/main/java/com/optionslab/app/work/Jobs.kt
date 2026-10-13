@@ -357,10 +357,51 @@ object Tasks {
         "Today is a ${s.ticketUnderlying} expiry. The strategy sells its put at ${s.entry} IST, ${"%.2f".format(100 * s.otmPct)}% below the parity forward. Hold to settlement; never buy it back.",
         "ticket")
 
-    suspend fun ticket(context: Context, s: AppSettings) {
-        if (Ledger.all().any { it.row.ticket.session == Market.today() }) return
-        val d = Market.draftTicket(s)
+    /**
+     * The expiry-day paper ticket: drafted at the entry bar, recorded in the paper ledger, and noticed; with a prepared real
+     * order, Boss is asked to review it (nothing is sent). 13 Oct: when the entry bar is late ([com.optionslab.engine.Live.TooEarly]
+     * after the entry time) it is drafted again every 30 s until six minutes past the entry ([com.optionslab.ira.TicketRetry]),
+     * each try at the entry bar only; every other error goes on as before. [draft] and [pause] are the tests' seams.
+     */
+    suspend fun ticket(
+        context: Context, s: AppSettings,
+        draft: suspend () -> Market.TicketDraft = { Market.draftTicket(s) },
+        pause: suspend (Long) -> Unit = { delay(it) },
+    ) {
+        val entry = LocalTime.of(s.entryMinute / 60, s.entryMinute % 60)
+        var attempt = 0
+        var drafted: Market.TicketDraft? = null
+        while (drafted == null) {
+            if (Ledger.all().any { it.row.ticket.session == Market.today() }) return
+            attempt++
+            try {
+                drafted = draft()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val now = Market.now().toLocalTime()
+                when (val next = com.optionslab.ira.TicketRetry.next(e, now, entry)) {
+                    is com.optionslab.ira.TicketRetry.Next.Wait -> {
+                        Heartbeat.diary(com.optionslab.ira.TicketRetry.retryLine(attempt, now, entry, next.seconds))
+                        pause(next.seconds * 1000L)
+                    }
+                    com.optionslab.ira.TicketRetry.Next.GiveUp -> {
+                        val why = com.optionslab.ira.TicketRetry.gaveUpText(entry, attempt)
+                        Heartbeat.diary(com.optionslab.ira.TicketRetry.gaveUpLine(now, why))
+                        // The job's own failure notice (same id), with the reason in words.
+                        Notifier.post(context, 2900 + Jobs.Kind.TICKET.ordinal, Notifier.SCHEDULE, "Ticket did not complete", why, "almanac")
+                        return
+                    }
+                    com.optionslab.ira.TicketRetry.Next.PassOn -> {
+                        if (attempt > 1) Heartbeat.diary(com.optionslab.ira.TicketRetry.stoppedLine(attempt, now, reason(e)))
+                        throw e
+                    }
+                }
+            }
+        }
+        val d = checkNotNull(drafted)
         Ledger.record(d.ticket, d.shortKey, d.wingKey)
+        if (attempt > 1) Heartbeat.diary(com.optionslab.ira.TicketRetry.recordedLine(attempt, Market.now().toLocalTime(), entry))
         val t = d.ticket
         Notifier.post(context, 2002, Notifier.SCHEDULE, "Paper ticket: SELL ${t.underlying} ${fmtG(t.strike)} PE",
             "Credit Rs %.2f/unit (Rs %,.0f), breakeven %,.1f. Recorded as paper - nothing was sent."
