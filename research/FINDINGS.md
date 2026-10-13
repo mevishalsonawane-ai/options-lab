@@ -398,3 +398,12 @@ Full study: `HUNT_R20B_SR_RANGE.md` (pre-registered `hunt/r20b/PREREG.md`; 7 var
   (twin), 0.50 (t-test); nothing survives BH. Levels mirrored at random to the other side of the price made more on
   average than the real ones in 6 of 7 variants (random-level twins, 1,000 each), so the level positions add nothing.
 - App: no change; the ORB family stays paused on paper with the plain 09:15-10:00 range. Levels stay as context only.
+## Support / resistance breaks confirmed by 2 candles (R20c, 13 Oct 2026) - not an edge; no app change
+Full study: `HUNT_R20C_SR_BREAK.md` (pre-registered `hunt/r20c/PREREG.md`; 12 holdout tests, BH with R20 / R20b's 28).
+- Event study, design (BANKNIFTY / NIFTY / FINNIFTY, 1,121 sessions, 7,548 two-close breaks of PDH/PDL, R1/S1,
+  liquidity zones, bhavcopy OI walls, opening range): to the close +0.02 ATR14, 51% further on, 32-49% back through the
+  level within 30 min; random levels at the same distance about the same. Holdout: -0.004 to -0.020 ATR.
+- The 2nd candle sorts real from false breaks, but its wait costs 14 (5-min) / 18 (15-min) points (BANKNIFTY 23 / 30)
+  and leaves about +4 points; a 3rd candle costs more and gains nothing.
+- 0 of 4 option-buying rules passed (best BH q 0.16). 2-close R1/S1 on 5-min: design Rs -21,292, holdout +25,603, but
+  random levels made +19,734 on average (momentum, not the level). Low-VIX 15-min rule: design +66,057, holdout -33,153.
