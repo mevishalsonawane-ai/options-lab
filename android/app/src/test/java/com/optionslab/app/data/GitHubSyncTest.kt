@@ -37,6 +37,8 @@ class GitHubSyncTest : RobolectricTest() {
         val seen = ArrayList<GitHubReleases.Request>()
         var uploadCode = 201
         var codeRepo: Map<String, Any?>? = null
+        /** What the write probe on options-lab answers (403: the token cannot write there; 422: it can). */
+        var probeCode = 403
         val assets = ArrayList<Map<String, Any?>>()
         var releaseMade = false
         /** False: the token no longer sees the data repository (GitHub then answers 404). */
@@ -54,6 +56,8 @@ class GitHubSyncTest : RobolectricTest() {
                 u == "https://api.github.com/repos/mevishalsonawane-ai/IraAlgo" ->
                     if (seesRepo) json(200, mapOf("id" to 1, "private" to true)) else json(404, mapOf("message" to "Not Found"))
                 u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab" -> codeRepo?.let { json(200, it) } ?: json(404, mapOf("message" to "Not Found"))
+                r.method == "POST" && u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab/git/refs" ->
+                    json(probeCode, mapOf("message" to if (probeCode == 422) "Object does not exist" else "Resource not accessible by personal access token"))
                 u.endsWith("/releases/tags/phone-backup") -> if (releaseMade) json(200, mapOf("id" to 7)) else json(404, mapOf("message" to "Not Found"))
                 r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/IraAlgo/releases") -> { releaseMade = true; json(201, mapOf("id" to 7)) }
                 u.contains("/releases/7/assets?per_page") -> json(200, assets)
@@ -180,6 +184,19 @@ class GitHubSyncTest : RobolectricTest() {
         try { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray()); fail() }
         catch (e: IOException) { assertTrue(e.message, e.message!!.contains("options-lab")); assertFalse(e.message!!.contains(token)) }
         assertFalse(GitHubSync.tokenSet)
+    }
+
+    /** Boss's token (13 Oct): IraAlgo only. options-lab is public and Boss owns it, so GitHub's GET says admin: still accepted. */
+    @Test fun anIraAlgoOnlyTokenIsAcceptedThoughBossOwnsOptionsLab() = runBlocking {
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("admin" to true, "push" to true, "pull" to true))
+        gh.probeCode = 403
+        assertEquals("boss", GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray()))
+        assertTrue(GitHubSync.tokenSet)
+        assertTrue(gh.seen.any { it.method == "POST" && it.url.endsWith("/options-lab/git/refs") })
+        // A token that can write there (the probe gets past GitHub's access check) is refused.
+        gh.probeCode = 422
+        try { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray()); fail() }
+        catch (e: IOException) { assertTrue(e.message, e.message!!.contains("can also reach options-lab")) }
     }
 
     @Test fun theWorkersCopyOpensOnlyForItsRepository() {

@@ -27,6 +27,10 @@ class CloudRunTest {
         var expiryHeader: String? = "2027-01-10 10:20:30 UTC"
         /** What GET /repos/<owner>/options-lab answers (null: 404, the token cannot see it). */
         var codeRepo: Map<String, Any?>? = null
+        /** What the write probe (POST /repos/<owner>/options-lab/git/refs) answers, with [probeHeaders] and [probeMessage]. */
+        var probeCode = 403
+        var probeHeaders: Map<String, String> = emptyMap()
+        var probeMessage = "Resource not accessible by personal access token"
         /** Answers a request whose method and URL match with a code, then forgets it. */
         var failOnce: Triple<String, String, Int>? = null
 
@@ -70,7 +74,12 @@ class CloudRunTest {
                 return json(201, assetJson(id, name to body))
             }
             Regex("^https://api.github.com/repos/mevishalsonawane-ai/options-lab$").find(u)?.let {
+                assertEquals("GET", r.method)
                 return codeRepo?.let { json(200, it) } ?: json(404, mapOf("message" to "Not Found"))
+            }
+            if (u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab/git/refs") {
+                assertEquals("POST", r.method)
+                return json(probeCode, mapOf("message" to probeMessage), probeHeaders)
             }
             Regex("/releases/assets/(\\d+)$").find(u)?.let { m ->
                 val id = m.groupValues[1].toLong()
@@ -262,18 +271,78 @@ class CloudRunTest {
 
     @Test fun aTokenThatReachesTheCodeIsSpotted() {
         assertFalse(client.reachesCode())                                         // 404: cannot see it
+        assertEquals(1, gh.seen.size, "no probe when it cannot see the code")
         gh.codeRepo = mapOf("private" to true)
         assertTrue(client.reachesCode())                                          // sees the private code repository
-        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("pull" to true, "push" to false))
-        assertFalse(client.reachesCode())                                         // public, read only
-        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("push" to true))
-        assertTrue(client.reachesCode())
-        assertTrue(gh.seen.all { it.method == "GET" })
+        assertTrue(gh.seen.all { it.method == "GET" }, "no probe for a private code repository")
+        gh.codeRepo = mapOf("id" to 1)
+        assertTrue(client.reachesCode(), "private not said: fails closed")
         // An ambiguous refusal fails closed; a rate limit is an error, not an answer.
         val refusing = GitHubReleases({ GitHubReleases.Response(403, emptyMap(), Json.write(mapOf("message" to "SAML enforcement")).toByteArray()) }, token)
         assertTrue(refusing.reachesCode())
         val limited = GitHubReleases({ GitHubReleases.Response(403, mapOf("x-ratelimit-remaining" to "0"), ByteArray(0)) }, token)
         assertFailsWith<GitHubReleases.Failure> { limited.reachesCode() }
+    }
+
+    /** Boss's token (13 Oct): IraAlgo only, Contents read/write. options-lab is public and Boss owns it, so GitHub's GET says admin. */
+    private val publicOwned = mapOf("private" to false, "permissions" to mapOf("admin" to true, "maintain" to true, "push" to true, "pull" to true))
+
+    @Test fun bossesIraAlgoOnlyTokenIsAccepted() {
+        gh.codeRepo = publicOwned
+        gh.probeCode = 403
+        assertFalse(client.reachesCode(), "the user's admin role is not the token's grant")
+        assertEquals(listOf("GET", "POST"), gh.seen.map { it.method })
+        gh.probeCode = 404; gh.probeMessage = "Not Found"
+        assertFalse(client.reachesCode())
+        // Also when the GET says read only: the probe alone decides.
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("pull" to true, "push" to false))
+        gh.probeCode = 403
+        assertFalse(client.reachesCode())
+    }
+
+    @Test fun aTokenThatCanWriteTheCodeIsRefused() {
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("pull" to true, "push" to false))   // whatever the GET says
+        // 422 and 409 got past GitHub's access check; 200/201 should be impossible; 5xx and a redirect are not understood.
+        for (code in listOf(422, 409, 201, 200, 500, 502, 302)) {
+            gh.probeCode = code; gh.probeMessage = "Object does not exist"
+            assertTrue(client.reachesCode(), "probe $code")
+        }
+    }
+
+    @Test fun theProbeIsAWriteThatCanNeverBeMade() {
+        gh.codeRepo = publicOwned
+        client.reachesCode()
+        val p = gh.seen.single { it.method == "POST" }
+        assertEquals("https://api.github.com/repos/mevishalsonawane-ai/options-lab/git/refs", p.url)
+        assertEquals("Bearer $token", p.headers["Authorization"])
+        val bytes = ByteArrayOutputStream().also { p.body!!.write(it) }.toByteArray()
+        assertEquals("application/json", p.body!!.contentType)
+        assertEquals(bytes.size.toLong(), p.body!!.length)
+        val o = Json.parse(String(bytes)) as Map<*, *>
+        assertEquals(setOf("ref", "sha"), o.keys)
+        assertEquals("refs/heads/__iraalgo_token_probe__", o["ref"])
+        assertEquals("0".repeat(40), o["sha"])
+        // Never a real sha: the only 40-hex run in the request is the all-zero one.
+        val hex = Regex("[0-9a-fA-F]{40}").findAll(String(bytes) + p.url).map { it.value }.toList()
+        assertEquals(listOf("0".repeat(40)), hex)
+        // Nothing else was asked of options-lab, and nothing at all of any other repository.
+        assertTrue(gh.seen.all { it.url.startsWith("https://api.github.com/repos/mevishalsonawane-ai/options-lab") })
+        assertEquals(2, gh.seen.size)
+    }
+
+    @Test fun theProbeThrowsOnARefusedTokenOrARateLimit() {
+        gh.codeRepo = publicOwned
+        gh.probeCode = 401; gh.probeMessage = "Bad credentials"
+        assertEquals(401, assertFailsWith<GitHubReleases.Failure> { client.reachesCode() }.code)
+        gh.probeCode = 429; gh.probeMessage = "Too many requests"
+        assertEquals(429, assertFailsWith<GitHubReleases.Failure> { client.reachesCode() }.code)
+        gh.probeCode = 403; gh.probeMessage = "You have exceeded a secondary rate limit"
+        assertEquals(429, assertFailsWith<GitHubReleases.Failure> { client.reachesCode() }.code)
+        gh.probeMessage = "Resource not accessible by personal access token"; gh.probeHeaders = mapOf("x-ratelimit-remaining" to "0")
+        assertEquals(429, assertFailsWith<GitHubReleases.Failure> { client.reachesCode() }.code)
+        // No error carries the token.
+        gh.probeCode = 401; gh.probeHeaders = emptyMap()
+        assertFalse(assertFailsWith<GitHubReleases.Failure> { client.reachesCode() }.message!!.contains(token))
     }
 
     @Test fun aReplacementNeverLeavesNoCopy() {

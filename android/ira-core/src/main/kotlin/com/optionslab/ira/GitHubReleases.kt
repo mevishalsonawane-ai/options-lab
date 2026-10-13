@@ -10,7 +10,8 @@ import java.time.LocalDate
  * GitHub's REST API for release assets, as the phone's sync uses it (TODO G1/G2, 13 Oct): who the token belongs to (GET /user,
  * which also says when the token expires), a release by tag (made when missing), its assets, an upload (an asset of the same
  * name is replaced, never leaving no copy: [upload]), a rename, a delete and a download. Nothing else: no commit, no branch,
- * no workflow. Only ever the data repository: options-lab is refused at construction ([CloudSync.repoRefused], 13 Oct).
+ * no workflow. Only ever the data repository: options-lab is refused at construction ([CloudSync.repoRefused], 13 Oct). The
+ * one request to options-lab besides a GET is [reachesCode]'s write probe, which GitHub can never carry out.
  *
  * The network itself is [Http], given by the caller (the phone's HTTPS, or a test's fake), so every rule here is tested
  * without a network. The token goes only into the Authorization header of requests to api.github.com and
@@ -102,20 +103,52 @@ class GitHubReleases(private val http: Http, private val token: String,
     }
 
     /**
-     * True when the token reaches the app's code ([CloudSync.CODE_REPO]): it sees it while it is private, or may push to it.
-     * Such a token is refused (13 Oct review): a stolen phone could otherwise push code CI signs. Read-only (GET).
+     * True when the token reaches the app's code ([CloudSync.CODE_REPO]): it sees it while it is private, or may write to
+     * it. Such a token is refused (13 Oct review): a stolen phone could otherwise push code CI signs.
+     *
+     * How (fixed 13 Oct, after Boss's correct IraAlgo-only token was refused): options-lab is PUBLIC, so the GET answers 200
+     * for any token, and its `permissions` field is the signed-in USER's role on the repository (Boss owns it: admin), not
+     * what the fine-grained token was granted. So `permissions` is no longer read. Instead:
+     *  1. GET the repository. 404: the token cannot see it, so it does not reach it.
+     *  2. 200 and private (or not said): it sees the private code, so it reaches it.
+     *  3. Public: a write that can never succeed decides ([probeWrite]).
+     * Fails closed: an answer not understood counts as "reaches". A rate limit is an error, not an answer.
      */
     fun reachesCode(): Boolean {
-        val r = http.send(Request("GET", "$api/repos/${CloudSync.OWNER}/${CloudSync.CODE_REPO}", headers()))
+        val r = http.send(Request("GET", codeBase, headers()))
         if (r.code == 404) return false
         // Any other refusal is ambiguous (SSO, a policy): taken as "reaches", so it fails closed. A rate limit is an error.
         if (r.code == 403 || r.code == 401) { val f = failure(r); if (f.code == 429) throw f; return true }
         if (r.code != 200) throw failure(r)
-        val o = obj(r)
-        if (o["private"] == true) return true
-        val perms = o["permissions"] as? Map<*, *> ?: return false
-        return perms["push"] == true || perms["maintain"] == true || perms["admin"] == true
+        if (obj(r)["private"] != false) return true
+        return probeWrite()
     }
+
+    /**
+     * Whether the token may write to the public code repository, found by a write GitHub can never carry out (13 Oct):
+     * POST /repos/{owner}/options-lab/git/refs making branch [PROBE_REF] at the all-zero sha [ZERO_SHA]. No object has that
+     * sha, so no branch is ever made, whatever the token may do. GitHub checks the token's access before the request
+     * itself (REST docs, "Create a reference", and the fine-grained token docs):
+     *  - 403 ("Resource not accessible by personal access token") or 404: no write access → false;
+     *  - 422 ("Object does not exist", or a ruleset refusing the name) or 409 (Conflict, the docs' other error): it got past
+     *    the access check → true;
+     *  - 200/201 (a ref made: should be impossible) → true;
+     *  - 401: the token is refused → thrown; a rate limit (429, or 403 saying so) → thrown;
+     *  - anything else (5xx, a redirect, …): not understood → true (fail closed).
+     */
+    private fun probeWrite(): Boolean {
+        val body = Json.write(mapOf("ref" to PROBE_REF, "sha" to ZERO_SHA)).toByteArray(Charsets.UTF_8)
+        val r = http.send(Request("POST", "$codeBase/git/refs", headers(), Body.of(body, "application/json")))
+        return when (r.code) {
+            403 -> { val f = failure(r); if (f.code == 429) throw f; false }
+            404 -> false
+            401, 429 -> throw failure(r)
+            409, 422 -> true
+            else -> true                    // not understood: fails closed
+        }
+    }
+
+    private val codeBase get() = "$api/repos/${CloudSync.OWNER}/${CloudSync.CODE_REPO}"
 
     // ---- releases -----------------------------------------------------------------------------------------------------
 
@@ -211,5 +244,10 @@ class GitHubReleases(private val http: Http, private val token: String,
     companion object {
         /** The temporary name a replacement goes up under ([upload]). Never a live or backup name. */
         fun tempName(name: String) = "$name.new"
+
+        /** The branch [reachesCode]'s write probe asks for; never made, as [ZERO_SHA] is no object (13 Oct). */
+        const val PROBE_REF = "refs/heads/__iraalgo_token_probe__"
+        /** The all-zero sha: no commit has it, so a ref to it can never be created. */
+        const val ZERO_SHA = "0000000000000000000000000000000000000000"
     }
 }
