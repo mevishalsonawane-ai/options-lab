@@ -129,6 +129,9 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   happens; then pre-registered variants (15/30/45-minute range, an adaptive range by width vs ATR, last entry 14:30,
   the inside-range rule on wide days) with walk-forward, holdout once and BH. A variant that passes goes to paper only,
   logged and undoable; none goes to live by itself.
+- [ ] R20b. ORB range from support and resistance (owner's idea, 13 Oct): previous-day high/low/pivots, liquidity
+  zones and option OI walls (previous-day bhavcopy OI; intraday Dhan OI if in the lake) used as or to clip the range.
+  Point-in-time only, with a random-level twin, and BH counted together with R20. Branch claude/r20b-sr-range.
 - [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
   When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
   same days, BEFORE (today's plain rules) and AFTER (every change that passed):
