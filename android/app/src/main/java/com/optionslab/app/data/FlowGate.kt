@@ -91,7 +91,8 @@ object FlowGate {
             cached = m; _modes.value = m
             runCatching { SecurePrefs.putAllSoon(mapOf(K_MODES to FlowShadow.encode(m))) }
         }
-        runCatching { Diag.record("flow", "${st.label}: order flow ${mode.name}" + if (mode == OrderFlow.Mode.CONFIRM) " at $th" else "") }
+        runCatching { Diag.record("flow", "${st.label}: order flow ${mode.name}" + (if (mode == OrderFlow.Mode.CONFIRM) " at $th" else "") +
+            (researchVerdict()?.let { " ($it)" } ?: "")) }
         return when (mode) {
             OrderFlow.Mode.OFF -> "${st.label}: order flow off."
             OrderFlow.Mode.SHADOW -> "${st.label}: the order flow is logged beside each signal; nothing changes."
@@ -407,7 +408,14 @@ object FlowGate {
     }
 
     /** Jarvis's "how is order flow helping?" (reads the log; call off the main thread). */
-    fun helpAnswer(): String = FlowShadow.helpAnswer(refreshRecords())
+    fun helpAnswer(): String = FlowShadow.helpAnswer(refreshRecords()) + (researchVerdict()?.let { " $it" } ?: "")
+
+    /**
+     * The research's verdict on order flow (13 Oct, the shared knowledge: still unproven while the S7 re-test is open), said beside
+     * the log in the answer, the diagnostics and a mode change. Words only; memory only; null before the knowledge is built.
+     */
+    fun researchVerdict(): String? = runCatching { com.optionslab.ira.SharedKnowledge.flowVerdict(SharedKnowledgeHost.snapshot) }.getOrNull()
+        ?.also { SharedKnowledgeHost.read("Order flow", "the research's verdict on order flow (unproven until S7)") }
 
     /** The Diagnostics line: modes set, signals logged. */
     fun diagLine(): String {
@@ -416,7 +424,7 @@ object FlowGate {
         val off = m.filterValues { it.mode == OrderFlow.Mode.OFF }.keys
         return "Order flow modes: SHADOW by default" + (if (confirm.isNotEmpty()) " · CONFIRM ${confirm.joinToString(", ")}" else "") +
             (if (off.isNotEmpty()) " · OFF ${off.joinToString(", ")}" else "") +
-            " · log %,d bytes".format(Locale.ENGLISH, files().sumOf { it.length() })
+            " · log %,d bytes".format(Locale.ENGLISH, files().sumOf { it.length() }) + (researchVerdict()?.let { " · $it" } ?: "")
     }
 
     // ---- tests --------------------------------------------------------------------------------------------------------------

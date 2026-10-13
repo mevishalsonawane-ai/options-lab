@@ -1,0 +1,33 @@
+# Questions the research has NOT settled yet (13 Oct 2026), for the app's shared knowledge: the study agent asks these
+# first, the forge seeds from them, and every agent that cites one says "still open". Entries of the experiment log whose
+# verdict is `inconclusive` or `shadow` are added to these automatically by build_pack.py. Every number below must appear
+# in its cited source (checked like strategies.yaml).
+
+- id: s7-order-flow
+  topics: [order-flow, traps]
+  text: "Order flow, delta, absorption and the trap guard are not proven yet: they are re-tested on the phone's own recordings once there are 2-4 weeks of NSE sessions (about 150-200 recorded trades per strategy family). Until then they are a shadow log only."
+  src: TODO.md
+  sec: "S7"
+- id: liquidity-addons-shadow
+  topics: [liquidity, oi, filter]
+  arm: liquidity
+  inst: BANKNIFTY
+  text: "Liquidity add-ons A1 OI veto, A2 calls need OI and A3 Night R3 BANKNIFTY leg run in shadow only; they are judged at 300 Liquidity trades (A1/A2) / 100 nights (A3)."
+  src: research/FINDINGS.md
+  sec: "Daily filters on Liquidity BANKNIFTY (R15, 12 Oct 2026)"
+- id: defined-risk-selling
+  topics: [option-selling, theta]
+  text: "Defined-risk premium selling (credit spreads / iron fly), which has time decay on its side, is not yet tested."
+  src: research/FINDINGS.md
+  sec: "Conclusions"
+- id: signal-time-spread
+  topics: [costs, time-of-day]
+  exec: true
+  text: "How wide the option spread is at a signal, and how it changes through the day, is unknown: the real spread was measured at one moment of one day."
+  src: research/HUNT_H24.md
+  sec: "Does the spread widen at signal time? (Roll can't say)"
+- id: deep-history-retest
+  topics: [ml, holdout]
+  text: "The forge and the variants' pre-checks need years of index and option 1-minute history again (the Dhan token expired on 2026-10-10)."
+  src: TODO.md
+  sec: "S6"

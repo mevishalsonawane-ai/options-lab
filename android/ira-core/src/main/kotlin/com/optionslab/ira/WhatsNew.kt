@@ -50,10 +50,20 @@ object WhatsNew {
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
+    private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-shared-knowledge", OCT13, "All the agents now learn from one shared knowledge",
+            "Every agent now reads one shared knowledge: the research, Jarvis's lessons and the latest findings. " +
+                "The trade manager, order review, order flow, strategy lab and study now say what the research found. " +
+                "The slippage record, the Liquidity test and the study now add to Jarvis's lessons. " +
+                "Each night a lessons summary is saved for the research, with your money in it encrypted. " +
+                "It only explains and ranks: it never adds a trade or raises a size. " +
+                "A new skip rule only counts in shadow, and stays off until you turn it on.",
+            "Home → Ira → What Jarvis has learned → Shared knowledge today; the shadow switch in Bot settings → Shared knowledge",
+            ask = "what have you learned", jarvisOnly = true),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
             "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
                 "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",

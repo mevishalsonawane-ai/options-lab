@@ -405,6 +405,8 @@ object DailyReports {
         // Jarvis: what he learned from the agents today (his pass runs now if the brain's worker has not run it yet).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching {
             com.optionslab.app.ira.JarvisLearning.learnIfDue(context)
+            // The shared knowledge and the lessons bundle right after his pass (13 Oct; its own once-a-day check).
+            runCatching { com.optionslab.app.data.SharedKnowledgeHost.nightly(context) }
             // Autopilot learning right after his pass (its own once-a-day check; it tells its own changes).
             runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
             com.optionslab.app.ira.JarvisLearning.eveningLine()

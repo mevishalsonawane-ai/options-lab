@@ -158,7 +158,7 @@ object OrderReviewHost {
         val dayStart = ms(day.atStartOfDay())
         val from = if (b0.cutoffMs > 0) maxOf(b0.cutoffMs, dayStart - 4 * 86_400_000L) else dayStart
         val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(day, from, nowMs) ?: gather(day, from, nowMs) }.getOrNull() } ?: return null
-        val reviewed = withContext(Dispatchers.Default) { OrderReview.review(inputs) }
+        val reviewed = withContext(Dispatchers.Default) { cited(OrderReview.review(inputs)) }
         val before = b0.last
         val dayResult = if (morning && before != null && before.day == day) OrderReview.merge(before, reviewed) else reviewed
         val logs = OrderReview.keep(b0.logs, OrderReview.log(dayResult))
@@ -177,6 +177,26 @@ object OrderReviewHost {
         runCatching { Diag.record("orders", "reviewed $day${if (morning) " (MCX catch-up)" else ""}: ${reviewed.orders} orders, ${reviewed.trades} trades, " +
             "${reviewed.flaws.size} flaws, ${patterns.size} recurring") }
         return dayResult
+    }
+
+    /**
+     * [d]'s flaws with the research they touch (13 Oct, the shared knowledge): a charges-ate-the-day or re-entry flaw cites R14's
+     * charges-versus-edge finding, a slippage flaw the real spread baseline (h24), a give-back the profit-lock study, and so on
+     * ([com.optionslab.ira.SharedKnowledge.flawCite]). Words in the flaw's evidence only: the flaws found, their counts and their
+     * rupees are the review's own, unchanged. Before the knowledge is built: as found.
+     */
+    internal fun cited(d: OrderReview.Day): OrderReview.Day {
+        val s = SharedKnowledgeHost.snapshot
+        if (s.size == 0 || d.flaws.isEmpty()) return d
+        var n = 0
+        val flaws = d.flaws.map { f ->
+            if (f.evidence.contains("research:")) return@map f
+            val c = runCatching { com.optionslab.ira.SharedKnowledge.flawCite(s, f.category.key, f.strategy) }.getOrNull() ?: return@map f
+            n++
+            f.copy(evidence = "${f.evidence} - $c")
+        }
+        if (n > 0) SharedKnowledgeHost.read("Order review", "the research behind $n flaw${if (n == 1) "" else "s"} (R14's charges vs edge, the real spread)")
+        return d.copy(flaws = flaws)
     }
 
     /** The parameter-like patterns asked of the strategy lab (once per pattern per [REASK_DAYS]); every queued one handed over again. */

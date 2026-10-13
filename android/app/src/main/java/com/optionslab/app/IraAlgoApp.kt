@@ -108,6 +108,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.SmartWorkers.init(this)
         // Jarvis's lessons from the agents (11 Oct): his small file read on a background thread; learned once a day after the close.
         com.optionslab.app.ira.JarvisLearning.init(this)
+        // The shared knowledge (13 Oct): research + Jarvis's lessons + recent findings, built once in the background for every agent.
+        com.optionslab.app.data.SharedKnowledgeHost.init(this)
         com.optionslab.app.data.OrderReviewHost.init(this)
         // 12 Oct: the open problems any agent found (the Automation card shows them).
         com.optionslab.app.data.ProblemsHost.init(this)

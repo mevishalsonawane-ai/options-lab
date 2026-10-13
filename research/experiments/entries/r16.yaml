@@ -1,0 +1,29 @@
+id: r16
+title: 'What is predictable? Range, direction, trend day, max pain, analogs'
+family: market-facts
+date: '2026-10-12'
+doc: research/HUNT_R16_PREDICTABILITY.md
+hypothesis: Some part of the next 15-60 minutes or the next day (direction, range, trend vs range, expiry close) can be predicted from past data.
+data_version: research-data release 1-min BANKNIFTY (Feb 2024 - Feb 2026) and NIFTY (Apr 2024 - Apr 2026); Yahoo daily index/VIX; NSE bhavcopy OI
+period:
+  design: 2024-02-13 .. 2025-08-22 (BANKNIFTY), 2024-04-01 .. 2025-10-10 (NIFTY)
+  holdout: last ~6 months of each data set (read once)
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- usual range at this time
+- last 30/60-min range
+- VIX
+- open interest (max pain)
+model_or_rule: 24 pre-registered holdout tests, one BH family
+settings: see doc (backfilled at summary level)
+prereg: research/hunt/r16/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Range of the next 30/60 min predictable (q 0.003, holdout error 15-20% below the time-of-day average); direction 15/30/60 min not (holdout AUC 0.509-0.536); trend vs range day from the first 30/45 min not (AUC 0.46-0.52); max pain worse than no change; analogs worse than all past days.'
+  costs: option-buying versions after real costs (an ATM round trip ~Rs 133 BANKNIFTY / ~Rs 98 NIFTY)
+holdout_read: true
+verdict: adopted
+backfilled: true
+notes: Adopted only as an expected-range nowcast (stop/target sizing, quiet-market warning); no direction, regime or max-pain model.

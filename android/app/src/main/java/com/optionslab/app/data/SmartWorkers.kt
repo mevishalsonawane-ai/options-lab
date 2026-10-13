@@ -477,6 +477,8 @@ object SmartWorkers {
                     // The order review first (12 Oct): its recurring flaws are one of the agents' records Jarvis learns from tonight.
                     runCatching { OrderReviewHost.runIfDue(context) }
                     runCatching { com.optionslab.app.ira.JarvisLearning.learnIfDue(context) }
+                    // The shared knowledge rebuilt with tonight's lessons, and the lessons bundle for the research (13 Oct).
+                    runCatching { SharedKnowledgeHost.nightly(context) }
                     runCatching { com.optionslab.app.ira.Autopilot.runIfDue(context) }
                 } finally { nightlyRunning.set(false) }
             }
@@ -786,6 +788,7 @@ object SmartWorkers {
         feed(15, now).ifEmpty { listOf("none standing") }.forEach { out += "    $it" }
         runCatching { TradeManagerHost.diagLines() }.getOrDefault(emptyList()).forEach { out += "  $it" }
         if (com.optionslab.app.ira.JarvisLearning.enabled()) runCatching { out += "  " + com.optionslab.app.ira.JarvisLearning.diagLine() }
+        if (SharedKnowledgeHost.enabled()) runCatching { out += "  " + SharedKnowledgeHost.diagLine() }
         if (com.optionslab.app.ira.Autopilot.enabled()) runCatching { out += "  " + com.optionslab.app.ira.Autopilot.diagLine() }
         return out
     }

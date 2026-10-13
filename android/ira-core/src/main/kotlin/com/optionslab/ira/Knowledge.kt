@@ -25,7 +25,11 @@ object Knowledge {
         val doc: String get() = src.substringAfterLast('/')
     }
 
-    class Pack(val schema: Int, val version: String, val builtFrom: String, val facts: List<Fact>)
+    /**
+     * [shared]: the pack's "shared" section, typed once as it is read (13 Oct 2026: the tagged research items and the execution
+     * baselines every agent reads through [SharedKnowledge]; null in a pack built before it). A few hundred small items.
+     */
+    class Pack(val schema: Int, val version: String, val builtFrom: String, val facts: List<Fact>, val shared: SharedKnowledge.Research? = null)
 
     data class Hit(val fact: Fact, val score: Double)
 
@@ -39,7 +43,8 @@ object Knowledge {
         val schema = (root["schema"] as? Number)?.toInt() ?: throw IllegalArgumentException("pack: no schema")
         require(schema == SCHEMA) { "pack: schema $schema, this build reads $SCHEMA" }
         val facts = (root["facts"] as? List<*>).orEmpty().mapNotNull { f -> (f as? Map<*, *>)?.let(::fact) }
-        return Pack(schema, root["version"] as? String ?: "", root["built_from"] as? String ?: "", facts)
+        return Pack(schema, root["version"] as? String ?: "", root["built_from"] as? String ?: "", facts,
+            (root["shared"] as? Map<*, *>)?.let { runCatching { SharedKnowledge.research(it) }.getOrNull() })
     }
 
     /** The pack from its bytes: gzip (the asset as shipped) or, should a packer have unzipped it, the plain JSON. */

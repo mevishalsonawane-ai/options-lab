@@ -40,3 +40,5 @@ python research/experiments/validate.py --json   # the same counts as JSON (inpu
 - `variants_tried` counts every version run, including the ones not reported.
 - Backfilled entries (h1-h47, R1-R15, X1-X3) are summaries of the docs; where a doc did not say how many versions it ran
   the count is null and the family total is a lower bound.
+- Entries named `app-lab-*` are written by `research/knowledge/import_app_lessons.py` from the phone's own strategy lab (13 Oct
+  2026): one per idea family it tested, `variants_tried` = its lab tests, refreshed on each import. They count in their family.
