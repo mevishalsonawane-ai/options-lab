@@ -44,6 +44,8 @@ class TicketRetryTest {
         assertEquals(11 to "gave up at 11:06", play(t(11, 1), arrives = null))
         assertEquals(TicketRetry.Next.Wait(10), TicketRetry.next(early, t(11, 5, 50), entry), "the last wait never passes the cap")
         assertEquals(TicketRetry.Next.GiveUp, TicketRetry.next(early, t(11, 6), entry))
+        // Half a second before the cap still waits (rounded up) for the last try at the cap.
+        assertEquals(TicketRetry.Next.Wait(1), TicketRetry.next(early, t(11, 5, 59).plusNanos(500_000_000), entry))
         // A bar at 11:05:59 is still caught by the try at the cap.
         assertEquals(11 to "recorded at 11:06", play(t(11, 1), arrives = t(11, 5, 59)))
     }
@@ -74,11 +76,11 @@ class TicketRetryTest {
     @Test fun theWordsSayWhy() {
         assertEquals("Ticket: the 11:00 prices are not out yet at 11:01:00 (try 1); trying again in 30 s, until 11:06",
             TicketRetry.retryLine(1, t(11, 1), entry, 30))
-        assertEquals("Ticket: recorded at 11:01:30 on try 2, priced at the 11:00 bar", TicketRetry.recordedLine(2, t(11, 1, 30), entry))
+        assertEquals("Ticket: recorded at 11:01:30 on try 2", TicketRetry.recordedLine(2, t(11, 1, 30)))
         assertEquals("Ticket: try 3 at 11:02:00 stopped with SessionSkipped", TicketRetry.stoppedLine(3, t(11, 2), "SessionSkipped"))
         val why = TicketRetry.gaveUpText(entry, 11)
         assertEquals("The 11:00 prices never arrived: the data source had not published the 11:00 bar by 11:06 (11 tries). " +
-            "No ticket today - it is never priced from older quotes.", why)
+            "No ticket was recorded today.", why)
         assertTrue(TicketRetry.gaveUpText(entry, 1).contains("(1 try)"))
         assertEquals("Ticket: given up at 11:06:00. $why", TicketRetry.gaveUpLine(t(11, 6), why))
     }

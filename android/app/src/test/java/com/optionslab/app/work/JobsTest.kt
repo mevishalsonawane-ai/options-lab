@@ -449,7 +449,7 @@ class JobsTest : RobolectricTest() {
         assertEquals("Paper ticket: SELL NIFTY 24000 PE", Background.title(n))
         assertNull("no failure notice", Background.notifications(context).getNotification(2900 + Jobs.Kind.TICKET.ordinal))
         assertEquals(1, diaryOf("Ticket: the 11:00 prices are not out yet at 11:01:00 (try 1); trying again in 30 s, until 11:06").size)
-        assertEquals(1, diaryOf("Ticket: recorded at 11:01:30 on try 2, priced at the 11:00 bar").size)
+        assertEquals(1, diaryOf("Ticket: recorded at 11:01:30 on try 2").size)
     } }
 
     @Test fun anEntryBarThatNeverArrivesEndsAtTheCapWithAClearNotice() = com.optionslab.app.testing.bounded("anEntryBarThatNeverArrives") { runBlocking {

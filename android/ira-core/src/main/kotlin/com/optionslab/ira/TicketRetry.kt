@@ -40,7 +40,8 @@ object TicketRetry {
         if (e !is Live.TooEarly) return Next.PassOn
         // Before the entry time the signal does not exist yet by design (no bar is late): as before.
         if (now.isBefore(entry)) return Next.PassOn
-        val left = Duration.between(now, cap(entry)).seconds
+        // Rounded up: 0.5 s before the cap still waits for the last try at the cap.
+        val left = (Duration.between(now, cap(entry)).toMillis() + 999).floorDiv(1000)
         if (left <= 0) return Next.GiveUp
         return Next.Wait(minOf(EVERY_SECONDS, left))
     }
@@ -53,8 +54,8 @@ object TicketRetry {
         "Ticket: the ${hm(entry)} prices are not out yet at ${hms(now)} (try $attempt); trying again in $seconds s, until ${hm(cap(entry))}"
 
     /** The diary line when a try after the first one recorded the ticket. */
-    fun recordedLine(attempt: Int, now: LocalTime, entry: LocalTime): String =
-        "Ticket: recorded at ${hms(now)} on try $attempt, priced at the ${hm(entry)} bar"
+    fun recordedLine(attempt: Int, now: LocalTime): String =
+        "Ticket: recorded at ${hms(now)} on try $attempt"
 
     /** The diary line when a later try stopped with another error (named by its type only), passed on as before. */
     fun stoppedLine(attempt: Int, now: LocalTime, reason: String): String =
@@ -66,5 +67,5 @@ object TicketRetry {
     /** The diary line and notice text when the entry prices never came by [cap]. */
     fun gaveUpText(entry: LocalTime, attempts: Int): String =
         "The ${hm(entry)} prices never arrived: the data source had not published the ${hm(entry)} bar by ${hm(cap(entry))} " +
-            "($attempts ${if (attempts == 1) "try" else "tries"}). No ticket today - it is never priced from older quotes."
+            "($attempts ${if (attempts == 1) "try" else "tries"}). No ticket was recorded today."
 }
