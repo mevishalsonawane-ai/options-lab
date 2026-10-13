@@ -53,7 +53,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * diagnostics ([diagLine] has no secret), never logged, and no error carries the token ([CloudSync.redact]).
  *
  * Runs only from [com.optionslab.app.work.GitHubSyncWorker] (WorkManager: after the MCX evening close, 15:45 on a day without
- * an MCX session ([eveningFrom], G4, 13 Oct), or a missed evening the next morning before 09:00; on unmetered Wi-Fi while
+ * an MCX session ([eveningFrom], G4, 13 Oct), or a missed evening the next morning before 08:00; on unmetered Wi-Fi while
  * charging; "Upload now" is Boss's tap: unmetered Wi-Fi only) and the card's buttons, always off the main thread. While GitHub's last
  * answer refused the token (401/403), the automatic runs build no backup and send nothing: Problems found says
  * "GitHub token invalid" ([CloudSync.authRefused]). Nothing here is on the order or tick path: [changed] only starts a
@@ -259,14 +259,15 @@ object GitHubSync {
      * One run: the waiting recorded days when [withDays] (never in a trading day's 09:00-15:45) and the phone backup when
      * [withBackup]. One run at a time. True when everything it tried worked. [goOn]: false once the worker is stopped.
      */
-    suspend fun run(withBackup: Boolean, withDays: Boolean, manual: Boolean = false, goOn: () -> Boolean = { true }): Boolean =
-        runLock.withLock { withContext(Dispatchers.IO) { runNow(withBackup, withDays, manual, goOn) } }
+    suspend fun run(withBackup: Boolean, withDays: Boolean, manual: Boolean = false, eveningFrom: Int = CloudSync.EVENING,
+                    goOn: () -> Boolean = { true }): Boolean =
+        runLock.withLock { withContext(Dispatchers.IO) { runNow(withBackup, withDays, manual, eveningFrom, goOn) } }
 
     /**
      * [manual]: Boss tapped "Upload now" - the only run that tries after GitHub refused the token. An automatic run builds
      * no backup and sends nothing while it is refused (13 Oct review).
      */
-    private suspend fun runNow(withBackup: Boolean, withDays: Boolean, manual: Boolean, goOn: () -> Boolean): Boolean {
+    private suspend fun runNow(withBackup: Boolean, withDays: Boolean, manual: Boolean, eveningFrom: Int, goOn: () -> Boolean): Boolean {
         val c = app ?: return false
         if (!ready()) return false
         if (!manual && authBlocked()) return false
@@ -284,11 +285,16 @@ object GitHubSync {
         val made = if (withBackup) runCatching { Backup.createSealed(c, bk.second, bk.first) } else null
         bk.second.fill(0)
         val dir = File(c.noBackupFilesDir, OUT_DIR).apply { mkdirs(); listFiles()?.forEach { it.delete() } }
-        // G4 (13 Oct): a run that began before 09:00 (a missed evening caught up overnight, or a tap) starts no new day's
-        // file once a trading day's 09:00-15:45 has begun; the days left wait for the next evening.
-        val phone = Phone(liveKey, dir, made) {
-            goOn() && Market.now().let { t -> CloudSync.liveAllowed(t.hour * 60 + t.minute, Market.isTradingDay(t.toLocalDate())) }
+        // G4 (13 Oct, and its review): the clock is read again before each day's file and before the backup
+        // ([CloudSync.sendNow]). No day's file once a trading day's 09:00-15:45 has begun, by hand or not; an automatic run
+        // sends nothing new once its window (the gate [eveningFrom] to 08:00 the next morning) has ended. What is left waits
+        // for the next evening.
+        val sendNow = { dayFile: Boolean ->
+            Market.now().let { t ->
+                CloudSync.sendNow(t.hour * 60 + t.minute, Market.isTradingDay(t.toLocalDate()), manual, dayFile, eveningFrom)
+            }
         }
+        val phone = Phone(liveKey, dir, made) { goOn() && sendNow(true) }
         val sync = CloudRun(gh, phone)
         val outcomes = ArrayList<CloudSync.Last>()
         try {
@@ -303,7 +309,7 @@ object GitHubSync {
             if (withDays && CloudSync.liveAllowed(minute, Market.isTradingDay(now.toLocalDate())))
                 sync.live(now.toLocalDate(), minute)?.let { o -> outcomes += lastOf(o, gh) }
             // The same refused token is not tried again in the same run.
-            if (withBackup && goOn() && outcomes.none { CloudSync.authRefused(it) })
+            if (withBackup && goOn() && sendNow(false) && outcomes.none { CloudSync.authRefused(it) })
                 outcomes += lastOf(sync.backup(now.toLocalDateTime().withNano(0)), gh)
         } finally {
             liveKey.wipe()

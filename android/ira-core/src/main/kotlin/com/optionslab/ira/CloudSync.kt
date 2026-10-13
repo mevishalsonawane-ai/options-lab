@@ -22,7 +22,7 @@ import java.util.Locale
  * the commodities close", TODO G4): after MCX's evening close (23:30, or 23:55 in US winter time, from the app's MCX
  * calendar), so the MCX session is in the day's file and nothing uploads while any market the app trades is open; 15:45
  * on a day with no MCX session (an MCX holiday, a weekend). An evening run that was missed may still run the next morning
- * until 09:00. On unmetered Wi-Fi and while charging (the worker's own WorkManager constraints); only Boss's "Upload now"
+ * until 08:00 ([MORNING_UNTIL], an hour before any market opens). On unmetered Wi-Fi and while charging (the worker's own WorkManager constraints); only Boss's "Upload now"
  * goes at any hour without charging, still on unmetered Wi-Fi. Never a day's big file between 09:00 and 15:45 of a trading
  * day, even by hand. A missed day stays waiting and goes next evening ([pendingDays]).
  *
@@ -56,6 +56,11 @@ object CloudSync {
     /** The day's last minute (23:59): the gate for an MCX window that does not close before midnight. */
     const val LAST_MINUTE = 23 * 60 + 59
     const val MARKET_FROM = 9 * 60
+    /**
+     * A missed evening's catch-up, and every automatic send, ends at 08:00 the next morning (13 Oct review of G4): an hour
+     * before NSE and MCX open, so a big file or backup started late is done well before 09:00.
+     */
+    const val MORNING_UNTIL = 8 * 60
     /** Daily backups kept before the one-a-month rule. */
     const val DAILY_KEPT = 30
     /** No successful upload for this many days: a problem. */
@@ -123,16 +128,23 @@ object CloudSync {
     }
 
     /**
-     * Which day's evening run belongs to now (null: none, 09:00 until the gate): [today]'s from its gate [eveningFrom], and
-     * the day before's from midnight until 09:00 (a run that was due after a late MCX close, 23:55, but missed - the phone
-     * was not charging - goes the next morning, before any market opens). Every MCX session has closed by midnight, so the
-     * day before's gate has passed.
+     * Which day's evening run belongs to now (null: none, 08:00 until the gate): [today]'s from its gate [eveningFrom], and
+     * the day before's from midnight until [MORNING_UNTIL] 08:00 (a run that was due after a late MCX close, 23:55, but
+     * missed - the phone was not charging - goes the next morning, well before any market opens). Every MCX session has
+     * closed by midnight, so the day before's gate has passed.
      */
     fun eveningOf(minute: Int, today: LocalDate, eveningFrom: Int = EVENING): LocalDate? = when {
         minute >= eveningFrom -> today
-        minute < MARKET_FROM -> today.minusDays(1)
+        minute < MORNING_UNTIL -> today.minusDays(1)
         else -> null
     }
+
+    /**
+     * May an automatic run (not Boss's tap) send now: from today's gate [eveningFrom] to midnight, or from midnight until
+     * [MORNING_UNTIL] (08:00). [plan] uses it to start a run; the app checks it again before each day's file and before the
+     * backup, so a run that started late stops sending once the window has ended (13 Oct review of G4).
+     */
+    fun autoSendAllowed(minute: Int, eveningFrom: Int = EVENING): Boolean = minute >= eveningFrom || minute < MORNING_UNTIL
 
     /**
      * The evening whose run is due now, or null: [eveningOf], unless that evening (or a later one) is already done
@@ -171,10 +183,11 @@ object CloudSync {
     /**
      * What a worker run of [kind] does now (null: only the problems check, no network). [eveningFrom]: today's evening gate
      * (after MCX's close, 15:45 on a day without MCX; see the function [eveningFrom]):
-     *  - EVENING: from the gate, once a day ([eveningDue]), or a missed one the next morning before 09:00: the days and the
+     *  - EVENING: from the gate, once a day ([eveningDue]), or a missed one the next morning before 08:00: the days and the
      *    backup.
-     *  - BACKUP (after a strategy or Pine change): the backup, only from the gate (the worker also needs charging and
-     *    unmetered Wi-Fi, as EVENING; before the gate, or after midnight, the evening run covers it).
+     *  - BACKUP (after a strategy or Pine change): the backup, from the gate, or overnight until 08:00 when the job was held
+     *    past midnight ([autoSendAllowed]; the worker also needs charging and unmetered Wi-Fi, as EVENING; 08:00 to the
+     *    gate, the evening run covers it).
      *  - NOW: Boss's tap on "Upload now": both, at any hour and without charging (still unmetered Wi-Fi; a day's recordings
      *    still never in a trading day's 09:00-15:45, [liveAllowed]). Also the only kind that tries again after GitHub
      *    refused the token ([authBlocked]): a tap is a deliberate retry.
@@ -185,8 +198,8 @@ object CloudSync {
         if (!ready) return null
         if (authBlocked && kind != KIND_NOW) return null
         return when (kind) {
-            KIND_EVENING -> if (eveningDue && (minute >= eveningFrom || minute < MARKET_FROM)) Plan(backup = true, days = true) else null
-            KIND_BACKUP -> if (minute >= eveningFrom) Plan(backup = true, days = false) else null
+            KIND_EVENING -> if (eveningDue && autoSendAllowed(minute, eveningFrom)) Plan(backup = true, days = true) else null
+            KIND_BACKUP -> if (autoSendAllowed(minute, eveningFrom)) Plan(backup = true, days = false) else null
             KIND_NOW -> Plan(backup = true, days = true)
             else -> null
         }
@@ -201,6 +214,15 @@ object CloudSync {
 
     /** May a day's recordings (big files) be zipped and sent now? Never in a trading day's 09:00-15:45. */
     fun liveAllowed(minute: Int, tradingDay: Boolean): Boolean = !(tradingDay && minute in MARKET_FROM until EVENING)
+
+    /**
+     * The check a run makes again just before each thing it sends (13 Oct review of G4): a day's file ([dayFile]) never in
+     * a trading day's 09:00-15:45 ([liveAllowed]), by hand or not; and a run not by Boss's hand ([manual] false) only in its
+     * window ([autoSendAllowed]: from the gate [eveningFrom], or before 08:00). So a run that began at 07:59, or a long
+     * upload, starts nothing new once its window has ended. Boss's backup by hand goes at any hour, as before.
+     */
+    fun sendNow(minute: Int, tradingDay: Boolean, manual: Boolean, dayFile: Boolean, eveningFrom: Int = EVENING): Boolean =
+        (!dayFile || liveAllowed(minute, tradingDay)) && (manual || autoSendAllowed(minute, eveningFrom))
 
     /**
      * The recorded days to upload now, oldest first, at most [max]: every day not yet uploaded, or whose files grew since
@@ -321,7 +343,7 @@ object CloudSync {
     )
 
     /** When the automatic uploads run, for the reminders (G4, 13 Oct). */
-    const val WHEN = "after the MCX evening close (15:45 on days without an MCX session), or overnight before 09:00"
+    const val WHEN = "after the MCX evening close (15:45 on days without an MCX session), or overnight before 08:00"
 
     /** "13 Oct". */
     fun day(d: LocalDate): String = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH).format(d)

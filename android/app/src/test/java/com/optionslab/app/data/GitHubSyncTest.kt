@@ -41,6 +41,8 @@ class GitHubSyncTest : RobolectricTest() {
         var releaseMade = false
         /** False: the token no longer sees the data repository (GitHub then answers 404). */
         var seesRepo = true
+        /** Called during each upload, before GitHub answers (a test moves the clock here: the upload takes time). */
+        var onUpload: ((GitHubReleases.Request) -> Unit)? = null
 
         private fun json(code: Int, v: Any?) = GitHubReleases.Response(code, emptyMap(), Json.write(v).toByteArray())
 
@@ -56,10 +58,13 @@ class GitHubSyncTest : RobolectricTest() {
                 r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/IraAlgo/releases") -> { releaseMade = true; json(201, mapOf("id" to 7)) }
                 u.contains("/releases/7/assets?per_page") -> json(200, assets)
                 u.startsWith("https://uploads.github.com/repos/mevishalsonawane-ai/IraAlgo/releases/7/assets") ->
-                    if (uploadCode != 201) json(uploadCode, mapOf("message" to "Bad credentials"))
-                    else {
-                        val a = mapOf("id" to 100 + assets.size, "name" to u.substringAfter("name="), "size" to (r.body?.length ?: 0))
-                        assets += a; json(201, a)
+                    run {
+                        onUpload?.invoke(r)
+                        if (uploadCode != 201) json(uploadCode, mapOf("message" to "Bad credentials"))
+                        else {
+                            val a = mapOf("id" to 100 + assets.size, "name" to u.substringAfter("name="), "size" to (r.body?.length ?: 0))
+                            assets += a; json(201, a)
+                        }
                     }
                 else -> json(404, mapOf("message" to "Not Found"))
             }
@@ -84,6 +89,62 @@ class GitHubSyncTest : RobolectricTest() {
         GitHubSync.setPassphrase("Test-Passphrase-42!".toCharArray())
         assertTrue(GitHubSync.ready())
         gh.seen.clear()
+    }
+
+    // ---- the clock checked again during a run (13 Oct review of G4) ------------------------------------------------------
+
+    /** Two recorded days waiting (Mon and Tue before [Background.WED]); the names their uploads carry. */
+    private fun twoDaysRecorded(): List<String> {
+        LiveRecorder.attachForTest(context)
+        val root = LiveRecorder.rootForTest()!!
+        return listOf(Background.WED.minusDays(2), Background.WED.minusDays(1)).map { d ->
+            java.io.File(root, d.toString()).apply { mkdirs() }.resolve("market.gz").writeBytes(ByteArray(2048) { it.toByte() })
+            CloudSync.liveAsset(d)
+        }
+    }
+
+    private fun sent(): List<String> = gh.seen.filter { it.url.startsWith("https://uploads.github.com/") }.map { it.url.substringAfter("name=") }
+
+    @Test fun anAutomaticRunStartsNothingNewOnceItsWindowEnds() {
+        ready()
+        val (mon, tue) = twoDaysRecorded()
+        try {
+            // A missed evening caught up at 07:59 on a trading day; the clock passes 08:00 while Monday's file uploads.
+            Background.at(Background.WED, 7, 59)
+            gh.onUpload = { Background.at(Background.WED, 8, 0) }
+            assertTrue(runBlocking { GitHubSync.run(withBackup = true, withDays = true, eveningFrom = 23 * 60 + 30) })
+            val names = sent()
+            assertEquals(names.toString(), 1, names.count { it.startsWith(mon) })
+            assertTrue("Tuesday waits for the next evening: $names", names.none { it.startsWith(tue) })
+            assertTrue("no backup after 08:00: $names", names.none { it.startsWith("phone-backup") })
+        } finally { gh.onUpload = null; LiveRecorder.detachForTest() }
+    }
+
+    @Test fun aTapStartsNoDayFileOnceTheMarketOpensButItsBackupGoes() {
+        ready()
+        val (mon, tue) = twoDaysRecorded()
+        try {
+            // Boss's tap at 08:59; the clock passes 09:00 while Monday's file uploads: no Tuesday, the backup still goes.
+            Background.at(Background.WED, 8, 59)
+            gh.onUpload = { Background.at(Background.WED, 9, 0) }
+            assertTrue(runBlocking { GitHubSync.run(withBackup = true, withDays = true, manual = true) })
+            val names = sent()
+            assertEquals(names.toString(), 1, names.count { it.startsWith(mon) })
+            assertTrue(names.toString(), names.none { it.startsWith(tue) })
+            assertEquals(names.toString(), 1, names.count { it.startsWith("phone-backup") })
+        } finally { gh.onUpload = null; LiveRecorder.detachForTest() }
+    }
+
+    @Test fun anEveningRunSendsBothDaysAndTheBackup() {
+        ready()
+        val (mon, tue) = twoDaysRecorded()
+        try {
+            Background.at(Background.WED, 23, 30)
+            assertTrue(runBlocking { GitHubSync.run(withBackup = true, withDays = true, eveningFrom = 23 * 60 + 30) })
+            val names = sent()
+            assertTrue(names.toString(), names.any { it.startsWith(mon) } && names.any { it.startsWith(tue) })
+            assertTrue(names.toString(), names.any { it.startsWith("phone-backup") })
+        } finally { LiveRecorder.detachForTest() }
     }
 
     // ---- the data repository ------------------------------------------------------------------------------------------

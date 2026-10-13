@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
 /**
  * GitHub sync's worker after the 13 Oct review: what each kind does, the evening gate for every automatic kind (the backup
  * after a strategy or Pine change included; G4, 13 Oct: after MCX's close from the MCX calendar - 23:30 on Wed 15 Oct 2025,
- * US summer time - and 15:45 on a day without MCX; a missed evening the next morning before 09:00, kept as its own evening),
+ * US summer time - and 15:45 on a day without MCX; a missed evening the next morning before 08:00, kept as its own evening),
  * charging for all but Boss's "Upload now", the retry limit, and no retry and no backup built while GitHub refuses the
  * token. A fake GitHub; the token is a made-up test value.
  */
@@ -114,8 +114,8 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         Background.at(thu, 1, 30)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals("once", 1, uploads())
-        // 09:00 to Thursday's close: nothing.
-        Background.at(thu, 9, 0)
+        // 08:00 to Thursday's close: nothing.
+        Background.at(thu, 8, 0)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         Background.at(thu, 16, 0)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)

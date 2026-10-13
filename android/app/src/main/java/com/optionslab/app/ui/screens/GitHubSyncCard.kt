@@ -365,7 +365,7 @@ internal fun GitHubSyncLines(status: CloudSync.Status?, lines: List<Pair<String,
     val p = LocalPalette.current
     // G4 (13 Oct, Boss: "after the commodities close"): the evening upload waits for MCX's evening close.
     Note("Every evening after the MCX evening close (15:45 on days without an MCX session; a missed evening goes the next " +
-        "morning before 09:00), on Wi-Fi while charging, the phone uploads each recorded day and a phone backup to " +
+        "morning before 08:00), on Wi-Fi while charging, the phone uploads each recorded day and a phone backup to " +
         "GitHub: the private data repository ${status?.repo ?: CloudSync.DEFAULT_REPO}'s releases, never options-lab (the app's code). " +
         "Both are sealed on the phone with your backup passphrase: GitHub sees only noise. A strategy or Pine change is backed " +
         "up that evening too. The token stays sealed by your PIN.")

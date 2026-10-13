@@ -55,7 +55,7 @@ new one.
 
 The phone uploads each recorded day and a phone backup every evening, on Wi-Fi while charging, after the MCX evening
 close (23:30, or 23:55 in US winter time; 15:45 on days without an MCX session; a missed evening goes the next morning
-before 09:00). They go to
+before 08:00). They go to
 the private **data-only** repository `mevishalsonawane-ai/IraAlgo`, **never options-lab**. The phone needs one token that
 can do only that.
 
@@ -132,7 +132,8 @@ IraAlgo's own access.
 - "Run workflow" on that page runs it now.
 
 **What the card says:** "Last upload: date · size · ✓/✗", "Days waiting", "Last backup to GitHub". A failed upload, or
-none for 2 days, also shows in Problems found. Most often the fix is: leave the phone on charge, on Wi-Fi, after 15:45.
+none for 2 days, also shows in Problems found. Most often the fix is: leave the phone on charge, on Wi-Fi, overnight (uploads start after the MCX evening close,
+15:45 on days without an MCX session).
 
 ## 4. Static IP (needed for live orders)
 

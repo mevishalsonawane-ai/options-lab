@@ -23,9 +23,10 @@ import java.util.concurrent.TimeUnit
  *    ([GitHubSync.eveningFrom]; G4, 13 Oct, Boss: "after the commodities close"): after MCX's evening close (23:30, or 23:55
  *    in US winter time, from the app's MCX calendar), 15:45 on a day without an MCX session, 23:55 when the calendar cannot
  *    be read. The waiting recorded days and the phone backup. An evening missed (the phone was not charging) still runs the
- *    next morning until 09:00, once ([CloudSync.eveningDueDay]); a day missed waits for the next evening.
+ *    next morning until 08:00, once ([CloudSync.eveningDueDay]); a day missed waits for the next evening.
  *  - BACKUP (one-off, after a strategy or Pine change): the phone backup only, under the same gates as EVENING (13 Oct
- *    review): unmetered Wi-Fi AND charging, and not before the evening gate (it waits until then, [CloudSync.backupDelayMin]).
+ *    review): unmetered Wi-Fi AND charging, and not before the evening gate (it waits until then, [CloudSync.backupDelayMin]);
+ *    a job held past midnight still runs until 08:00 ([CloudSync.autoSendAllowed]).
  *  - NOW ("Upload now", only from Boss's tap on the card; unchanged by G4): both, at any hour and without charging, still
  *    only on unmetered Wi-Fi; a day's recordings never between 09:00 and 15:45 of a trading day. The only kind that tries
  *    after GitHub refused the token.
@@ -49,7 +50,7 @@ class GitHubSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
             return Result.success()
         }
         val ok = try {
-            GitHubSync.run(withBackup = plan.backup, withDays = plan.days, manual = kind == NOW) { !isStopped }
+            GitHubSync.run(withBackup = plan.backup, withDays = plan.days, manual = kind == NOW, eveningFrom = from) { !isStopped }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { false }
         // Kept as the evening the run was for, even when it ended after midnight (G4).
         if (ok && evening != null) runCatching { GitHubSync.eveningDone(evening) }

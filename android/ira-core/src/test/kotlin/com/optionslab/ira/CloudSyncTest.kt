@@ -244,7 +244,9 @@ class CloudSyncTest {
         assertNull(plan(CloudSync.KIND_EVENING, e + 60, due = false))
         // BACKUP (a strategy or Pine change): the backup only, and only from 15:45.
         assertNull(plan(CloudSync.KIND_BACKUP, 10 * 60))
-        assertNull(plan(CloudSync.KIND_BACKUP, 30))                  // 00:30 is before 15:45 too
+        // 00:30: a job held past midnight still runs overnight, until 08:00 (13 Oct review of G4); 08:00 does not.
+        assertEquals(CloudSync.Plan(backup = true, days = false), plan(CloudSync.KIND_BACKUP, 30))
+        assertNull(plan(CloudSync.KIND_BACKUP, 8 * 60))
         assertEquals(CloudSync.Plan(backup = true, days = false), plan(CloudSync.KIND_BACKUP, e + 5))
         // NOW (Boss's tap): any hour.
         assertEquals(CloudSync.Plan(backup = true, days = true), plan(CloudSync.KIND_NOW, 10 * 60))
@@ -339,8 +341,10 @@ class CloudSyncTest {
         // Monday's run was due at 23:55 but the phone was not charging: Tuesday 00:30 it is still Monday's evening.
         assertEquals(mon, CloudSync.eveningOf(30, tue, gate(tue)))
         assertEquals(mon, CloudSync.eveningDueDay(30, d(1, 11), tue, gate(tue)))
-        assertEquals(mon, CloudSync.eveningDueDay(8 * 60 + 59, null, tue, gate(tue)))   // until 08:59
-        // 09:00 to the gate: nothing (the markets are open, or about to be).
+        assertEquals(mon, CloudSync.eveningDueDay(7 * 60 + 59, null, tue, gate(tue)))   // until 07:59
+        // 08:00 to the gate: nothing (an hour before the markets open, and while they are open).
+        assertNull(CloudSync.eveningOf(8 * 60, tue, gate(tue)))
+        assertNull(CloudSync.eveningDueDay(8 * 60 + 59, null, tue, gate(tue)))
         assertNull(CloudSync.eveningOf(9 * 60, tue, gate(tue)))
         assertNull(CloudSync.eveningDueDay(9 * 60, d(1, 11), tue, gate(tue)))
         assertNull(CloudSync.eveningDueDay(15 * 60 + 45, d(1, 11), tue, gate(tue)))
@@ -371,19 +375,23 @@ class CloudSyncTest {
         fun plan(kind: String, minute: Int, due: Boolean = true) = CloudSync.plan(kind, minute, due, true, false, eveningFrom = g)
         val both = CloudSync.Plan(backup = true, days = true)
         val backup = CloudSync.Plan(backup = true, days = false)
-        // EVENING: not at 15:45 or 23:29 on an MCX day; from 23:30; the next morning until 08:59; never 09:00 to the gate.
+        // EVENING: not at 15:45 or 23:29 on an MCX day; from 23:30; the next morning until 07:59; never 08:00 to the gate.
         assertNull(plan(CloudSync.KIND_EVENING, CloudSync.EVENING))
         assertNull(plan(CloudSync.KIND_EVENING, g - 1))
         assertEquals(both, plan(CloudSync.KIND_EVENING, g))
         assertEquals(both, plan(CloudSync.KIND_EVENING, 30))
-        assertEquals(both, plan(CloudSync.KIND_EVENING, 8 * 60 + 59))
+        assertEquals(both, plan(CloudSync.KIND_EVENING, 7 * 60 + 59))
+        assertNull(plan(CloudSync.KIND_EVENING, 8 * 60))
+        assertNull(plan(CloudSync.KIND_EVENING, 8 * 60 + 58))           // the 08:58 catch-up of the review: no more
         assertNull(plan(CloudSync.KIND_EVENING, 9 * 60))
         assertNull(plan(CloudSync.KIND_EVENING, 30, due = false))
-        // BACKUP: from the gate only (after midnight the evening run covers it).
+        // BACKUP: from the gate, or held past midnight until 07:59; never 08:00 to the gate.
         assertNull(plan(CloudSync.KIND_BACKUP, CloudSync.EVENING))
         assertNull(plan(CloudSync.KIND_BACKUP, g - 1))
         assertEquals(backup, plan(CloudSync.KIND_BACKUP, g))
-        assertNull(plan(CloudSync.KIND_BACKUP, 30))
+        assertEquals(backup, plan(CloudSync.KIND_BACKUP, 5))
+        assertEquals(backup, plan(CloudSync.KIND_BACKUP, 7 * 60 + 59))
+        assertNull(plan(CloudSync.KIND_BACKUP, 8 * 60))
         // NOW (Boss's tap): unchanged, any hour.
         assertEquals(both, plan(CloudSync.KIND_NOW, CloudSync.EVENING))
         assertEquals(both, plan(CloudSync.KIND_NOW, 10 * 60))
@@ -423,5 +431,37 @@ class CloudSyncTest {
             assertTrue(p.contains("after the MCX evening close (15:45 on days without an MCX session)"), p)
             assertFalse(p.contains("after 15:45."), p)
         }
+    }
+
+    @Test fun aRunChecksTheClockAgainBeforeEachSend() {
+        val g = mcx2330
+        // The automatic window: the gate to midnight, and midnight to 07:59.
+        assertTrue(CloudSync.autoSendAllowed(g, g))
+        assertTrue(CloudSync.autoSendAllowed(23 * 60 + 59, g))
+        assertTrue(CloudSync.autoSendAllowed(0, g))
+        assertTrue(CloudSync.autoSendAllowed(7 * 60 + 59, g))
+        assertFalse(CloudSync.autoSendAllowed(8 * 60, g))
+        assertFalse(CloudSync.autoSendAllowed(9 * 60 + 5, g))
+        assertFalse(CloudSync.autoSendAllowed(CloudSync.EVENING, g))
+        assertFalse(CloudSync.autoSendAllowed(g - 1, g))
+        assertTrue(CloudSync.autoSendAllowed(CloudSync.EVENING))         // a day without MCX: 15:45
+        // The review's case: an automatic run that began at 07:59 reaches 08:00, then 09:05 on a trading day: no new day's
+        // file and no backup.
+        for (m in listOf(8 * 60, 9 * 60 + 5)) {
+            assertFalse(CloudSync.sendNow(m, tradingDay = true, manual = false, dayFile = true, eveningFrom = g), "day at $m")
+            assertFalse(CloudSync.sendNow(m, tradingDay = true, manual = false, dayFile = false, eveningFrom = g), "backup at $m")
+        }
+        // Inside the window: both go.
+        assertTrue(CloudSync.sendNow(7 * 60 + 59, tradingDay = true, manual = false, dayFile = true, eveningFrom = g))
+        assertTrue(CloudSync.sendNow(7 * 60 + 59, tradingDay = true, manual = false, dayFile = false, eveningFrom = g))
+        assertTrue(CloudSync.sendNow(g + 5, tradingDay = true, manual = false, dayFile = true, eveningFrom = g))
+        // An evening run that runs past midnight keeps going overnight.
+        assertTrue(CloudSync.sendNow(10, tradingDay = true, manual = false, dayFile = true, eveningFrom = g))
+        // Boss's tap: a day's file never in a trading day's 09:00-15:45, but any hour otherwise; the backup at any hour.
+        assertFalse(CloudSync.sendNow(9 * 60 + 5, tradingDay = true, manual = true, dayFile = true, eveningFrom = g))
+        assertTrue(CloudSync.sendNow(9 * 60 + 5, tradingDay = false, manual = true, dayFile = true, eveningFrom = g))
+        assertTrue(CloudSync.sendNow(8 * 60 + 30, tradingDay = true, manual = true, dayFile = true, eveningFrom = g))
+        assertTrue(CloudSync.sendNow(9 * 60 + 5, tradingDay = true, manual = true, dayFile = false, eveningFrom = g))
+        assertTrue(CloudSync.sendNow(CloudSync.EVENING, tradingDay = true, manual = true, dayFile = true, eveningFrom = g))
     }
 }

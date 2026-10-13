@@ -263,8 +263,11 @@ Not possible yet:
       - Done 13 Oct: `CloudSync.eveningFrom` picks the gate from today's MCX window (its close, never before 15:45; 15:45
         when MCX is shut; 23:55 when the calendar cannot be read), and `plan`, `eveningDue` and `backupDelayMin` take it.
         The app reads the MCX calendar on the worker's thread (`GitHubSync.eveningFrom`). A missed evening runs the next
-        morning until 09:00 and is kept as its own evening (`eveningDueDay`), so a run that ends after midnight neither
+        morning until 08:00 (13 Oct review: an hour before the open) and is kept as its own evening (`eveningDueDay`), so a run that ends after midnight neither
         skips the next day nor runs twice. The 09:00-15:45 rule for a day's big file is unchanged; so is "Upload now".
+        The run reads the clock again before each day's file and before the backup (`CloudSync.sendNow`): an automatic
+        run sends nothing new after 08:00, a tap starts no day's file in a trading day's 09:00-15:45, and a backup job held
+        past midnight still runs until 08:00.
 
 ## F. Strategy Factory (owner go-ahead 2026-10-13)
 

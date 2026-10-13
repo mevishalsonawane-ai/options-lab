@@ -68,7 +68,7 @@ class GitHubSyncCardTest {
         show(status())
         assertTrue(shows("Every evening after the MCX evening close", sub = true))
         assertTrue(shows("15:45 on days without an MCX session", sub = true))
-        assertTrue(shows("next morning before 09:00", sub = true))
+        assertTrue(shows("next morning before 08:00", sub = true))
         assertFalse(shows("Every evening after 15:45", sub = true))
     }
 
