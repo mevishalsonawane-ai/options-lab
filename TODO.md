@@ -201,3 +201,55 @@ Not possible yet:
         results fall outside what its tests predicted, or on drift. Boss is notified.
       - Order: after the data lake merges and the first specialists exist (Data Brain roadmap P3). Liquidity BANKNIFTY
         stays frozen until 26 Oct and is not touched by the factory.
+
+## I. Using the Data Brain (owner go-ahead 2026-10-13: "add all"). Priority: I3, I5, I14 first.
+
+Rules for all of these:
+- New behaviour runs in shadow or paper first.
+- Anything that changes live orders needs Boss's PIN.
+- Automatic changes may only lower risk.
+- Every claim shown to Boss carries its sample size and source.
+
+Save money on every trade:
+- [ ] I1. Best time to enter: learn the spread and slippage for each minute from the recordings (Order Review and
+      FillSlippage), then suggest or apply a wait ("09:15–09:20 spreads cost ₹20 a lot; wait to 09:21"). Paper first.
+- [ ] I2. Smart order type: choose a limit at mid price or a market order from the live book (depth, imbalance, spread).
+      Paper first; live needs the PIN.
+- [ ] I3. **Charges check before each trade**: expected move (the R16 range model) against charges plus expected
+      slippage. A trade whose costs take more than X% of the expected move is flagged, and skipped on paper. ORB's
+      lesson (R14).
+
+Protect capital:
+- [ ] I4. Daily danger meter: each morning, rate today against the days that hurt the strategies most (gap, VIX, event,
+      expiry, global cues), with a suggested size (normal, half, or paper only). Shown in the Good morning check.
+- [ ] I5. **Smart stop-loss**: base the stop distance on the R16 expected 30–60 min range instead of fixed points.
+      Backtest each arm first, then paper.
+- [ ] I6. Event shield: how BankNifty and NIFTY behaved around RBI, Budget, US CPI/Fed and heavyweight results; warn,
+      or pause the arms before the event. Builds on the existing event calendar and S11.
+
+Find and improve edges:
+- [ ] I7. Strategy Factory: see F1.
+- [ ] I8. Improve the existing arms with the new fields (value area, OI build-up, VWAP, order flow). Pre-registered,
+      gated. Liquidity BANKNIFTY only after its freeze ends on 26 Oct.
+- [ ] I9. Better exits: test exits by VWAP band, the next support/resistance level, an order-flow turn, and the
+      expected range. Measure how much of the profit each one keeps.
+- [ ] I10. Expiry-day playbook: 6 years of expiry days (theta, straddle decay, max-pain behaviour, pin risk), giving a
+      separate rulebook and checks for the Hero arm and expiry exits.
+
+Help Boss decide faster:
+- [ ] I11. "Days like today" morning brief: the nearest past days and what happened next, with how each arm did on
+      them. Labelled as context, not a forecast (R16).
+- [ ] I12. Live level map on the chart: support/resistance, POC/VAH/VAL, VWAP bands and max-OI strikes, each with
+      "held N of M times".
+- [ ] I13. Explain any candle: long-press a candle and Jarvis explains it from OI, IV, VIX, volume, order flow and news
+      at that minute.
+
+Learn from Boss's own trading:
+- [ ] I14. **Personal mistakes report**: from Boss's own trades, the hours, setups and habits that lose (for example,
+      trades after 14:00, or trades right after a loss), with numbers. Extends the existing mistakes list (Batch K).
+- [ ] I15. Weekly review with Jarvis: a 2-minute spoken summary every Sunday covering what worked, what cost money,
+      and one change to make.
+
+Later (when profitable):
+- [ ] I16. Stocks and MCX strategies, on the downloaded data, once the index arms are proven.
+- [ ] I17. Package the tested signals as a product. Far future; check SEBI research-analyst and algo rules first.
