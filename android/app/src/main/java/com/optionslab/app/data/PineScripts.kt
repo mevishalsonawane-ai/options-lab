@@ -221,7 +221,7 @@ object PineScripts {
         val i = list.indexOfFirst { it.id == saved.id }
         if (i >= 0) list[i] = saved else list += saved
         save(list)
-        GitHubSync.changed()                // G2 (13 Oct): the phone backup goes to GitHub that evening (from 15:45, charging)
+        GitHubSync.changed()                // G2 (13 Oct): the phone backup goes to GitHub that evening (after the MCX close, G4; charging)
         if (saved.onChart || drawn?.onChart == true) _chartRev.value++
         return saved
     }

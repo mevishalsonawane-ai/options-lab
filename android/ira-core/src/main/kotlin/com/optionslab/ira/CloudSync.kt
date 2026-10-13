@@ -1,5 +1,6 @@
 package com.optionslab.ira
 
+import com.optionslab.engine.mcx.McxSession
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -14,13 +15,16 @@ import java.util.Locale
  *    Boss's encrypted trades, as they are) is zipped, sealed with Boss's backup passphrase ([LiveSeal]) and uploaded to the
  *    release `live-YYYY-MM` as `live-YYYY-MM-DD.irlive`.
  *  - G2: the phone backup (sealed as Backup.kt seals it, with the same passphrase) goes to the release `phone-backup` every
- *    evening, and after a strategy or Pine script is added or changed (from 15:45, [backupDelayMin]). The last [DAILY_KEPT] daily backups
- *    are kept, plus one a month before them ([retention]).
+ *    evening, and after a strategy or Pine script is added or changed (from the evening gate, [backupDelayMin]). The last
+ *    [DAILY_KEPT] daily backups are kept, plus one a month before them ([retention]).
  *
- * When ([plan], [eveningDue], [liveAllowed]): every automatic run after 15:45, on unmetered Wi-Fi and while charging (the
- * worker's own WorkManager constraints); only Boss's "Upload now" goes at any hour without charging, still on unmetered
- * Wi-Fi. Never a day's big file between 09:00 and 15:45 of a trading day, even by hand. A missed day stays
- * waiting and goes next evening ([pendingDays]).
+ * When ([plan], [eveningDue], [liveAllowed]): every automatic run from the evening gate ([eveningFrom]; 13 Oct, Boss: "after
+ * the commodities close", TODO G4): after MCX's evening close (23:30, or 23:55 in US winter time, from the app's MCX
+ * calendar), so the MCX session is in the day's file and nothing uploads while any market the app trades is open; 15:45
+ * on a day with no MCX session (an MCX holiday, a weekend). An evening run that was missed may still run the next morning
+ * until 09:00. On unmetered Wi-Fi and while charging (the worker's own WorkManager constraints); only Boss's "Upload now"
+ * goes at any hour without charging, still on unmetered Wi-Fi. Never a day's big file between 09:00 and 15:45 of a trading
+ * day, even by hand. A missed day stays waiting and goes next evening ([pendingDays]).
  *
  * Where (Boss, 13 Oct): the private, data-only repository [DATA_REPO] (mevishalsonawane-ai/IraAlgo), never options-lab. A
  * token that can write to options-lab could push code to the branch CI signs and publishes, or replace the `latest-apk`
@@ -42,8 +46,15 @@ object CloudSync {
     const val LIVE_EXT = ".irlive"
     const val BACKUP_EXT = ".irabk"
 
-    /** The evening run's earliest minute (15:45 IST). */
+    /** The evening run's earliest minute on a day with no MCX session (15:45 IST, after F&O's 15:40 close). */
     const val EVENING = 15 * 60 + 45
+    /**
+     * The evening gate when MCX's calendar cannot be read (23:55 IST: MCX's latest ordinary close, in US winter time). Never
+     * earlier than a close it might be (G4, 13 Oct).
+     */
+    const val EVENING_SAFE = 23 * 60 + 55
+    /** The day's last minute (23:59): the gate for an MCX window that does not close before midnight. */
+    const val LAST_MINUTE = 23 * 60 + 59
     const val MARKET_FROM = 9 * 60
     /** Daily backups kept before the one-a-month rule. */
     const val DAILY_KEPT = 30
@@ -96,14 +107,54 @@ object CloudSync {
 
     // ---- when -------------------------------------------------------------------------------------------------------
 
-    /** The evening run is due: after 15:45 and not yet done [today] (any day: the backup runs on holidays too). */
-    fun eveningDue(minute: Int, lastEvening: LocalDate?, today: LocalDate): Boolean = minute >= EVENING && lastEvening != today
+    /**
+     * Today's evening gate, the earliest minute of every automatic upload (G4, 13 Oct, Boss: "after the commodities close"):
+     *  - MCX trades today ([mcxToday], today's window from the app's MCX calendar): its close (23:30, or 23:55 in US winter
+     *    time; a short holiday session's own close), never before 15:45;
+     *  - MCX does not trade today (an MCX holiday, a weekend): 15:45, after F&O's close;
+     *  - the calendar could not be read ([calendarRead] false): the later, safe time, never earlier ([EVENING_SAFE], 23:55);
+     *    a window that does not close after it opens (a session past midnight): [LAST_MINUTE].
+     */
+    fun eveningFrom(calendarRead: Boolean, mcxToday: McxSession.Window?): Int = when {
+        !calendarRead -> EVENING_SAFE
+        mcxToday == null -> EVENING
+        !mcxToday.close.isAfter(mcxToday.open) -> LAST_MINUTE
+        else -> maxOf(EVENING, mcxToday.close.hour * 60 + mcxToday.close.minute)
+    }
+
+    /**
+     * Which day's evening run belongs to now (null: none, 09:00 until the gate): [today]'s from its gate [eveningFrom], and
+     * the day before's from midnight until 09:00 (a run that was due after a late MCX close, 23:55, but missed - the phone
+     * was not charging - goes the next morning, before any market opens). Every MCX session has closed by midnight, so the
+     * day before's gate has passed.
+     */
+    fun eveningOf(minute: Int, today: LocalDate, eveningFrom: Int = EVENING): LocalDate? = when {
+        minute >= eveningFrom -> today
+        minute < MARKET_FROM -> today.minusDays(1)
+        else -> null
+    }
+
+    /**
+     * The evening whose run is due now, or null: [eveningOf], unless that evening (or a later one) is already done
+     * ([lastEvening], the evening day kept by the last run that worked). A run that starts at 23:58 and ends after midnight
+     * keeps the evening it started for, so the next day is neither skipped nor run twice. A [lastEvening] after [today] is a
+     * clock that went back: not trusted.
+     */
+    fun eveningDueDay(minute: Int, lastEvening: LocalDate?, today: LocalDate, eveningFrom: Int = EVENING): LocalDate? {
+        val d = eveningOf(minute, today, eveningFrom) ?: return null
+        val done = lastEvening != null && !lastEvening.isBefore(d) && !lastEvening.isAfter(today)
+        return if (done) null else d
+    }
+
+    /** The evening run is due (any day: the backup runs on holidays too): [eveningDueDay] is not null. */
+    fun eveningDue(minute: Int, lastEvening: LocalDate?, today: LocalDate, eveningFrom: Int = EVENING): Boolean =
+        eveningDueDay(minute, lastEvening, today, eveningFrom) != null
 
     /**
      * Minutes until a backup after a strategy or Pine change may run: [DEBOUNCE_MIN] after the last change, and never before
-     * 15:45 (the same evening gate as every automatic upload; 13 Oct review).
+     * today's evening gate [eveningFrom] (the same gate as every automatic upload; 13 Oct review, G4).
      */
-    fun backupDelayMin(minute: Int): Long = maxOf(DEBOUNCE_MIN, (EVENING - minute).toLong())
+    fun backupDelayMin(minute: Int, eveningFrom: Int = EVENING): Long = maxOf(DEBOUNCE_MIN, (eveningFrom - minute).toLong())
 
     /** What one worker run does: the phone backup and/or the waiting recorded days. */
     data class Plan(val backup: Boolean, val days: Boolean)
@@ -118,22 +169,24 @@ object CloudSync {
     const val MAX_TRIES = 4
 
     /**
-     * What a worker run of [kind] does now (null: only the problems check, no network):
-     *  - EVENING: from 15:45, once a day ([eveningDue]): the days and the backup.
-     *  - BACKUP (after a strategy or Pine change): the backup, only from 15:45 (the worker also needs charging and unmetered
-     *    Wi-Fi, as EVENING; before 15:45 the evening run covers it).
+     * What a worker run of [kind] does now (null: only the problems check, no network). [eveningFrom]: today's evening gate
+     * (after MCX's close, 15:45 on a day without MCX; see the function [eveningFrom]):
+     *  - EVENING: from the gate, once a day ([eveningDue]), or a missed one the next morning before 09:00: the days and the
+     *    backup.
+     *  - BACKUP (after a strategy or Pine change): the backup, only from the gate (the worker also needs charging and
+     *    unmetered Wi-Fi, as EVENING; before the gate, or after midnight, the evening run covers it).
      *  - NOW: Boss's tap on "Upload now": both, at any hour and without charging (still unmetered Wi-Fi; a day's recordings
      *    still never in a trading day's 09:00-15:45, [liveAllowed]). Also the only kind that tries again after GitHub
      *    refused the token ([authBlocked]): a tap is a deliberate retry.
      *  - CHECK, an unknown kind, or the setup not [ready]: nothing.
      * While GitHub's last answer was 401/403 ([authRefused]), no automatic kind builds a backup or sends anything.
      */
-    fun plan(kind: String, minute: Int, eveningDue: Boolean, ready: Boolean, authBlocked: Boolean): Plan? {
+    fun plan(kind: String, minute: Int, eveningDue: Boolean, ready: Boolean, authBlocked: Boolean, eveningFrom: Int = EVENING): Plan? {
         if (!ready) return null
         if (authBlocked && kind != KIND_NOW) return null
         return when (kind) {
-            KIND_EVENING -> if (eveningDue && minute >= EVENING) Plan(backup = true, days = true) else null
-            KIND_BACKUP -> if (minute >= EVENING) Plan(backup = true, days = false) else null
+            KIND_EVENING -> if (eveningDue && (minute >= eveningFrom || minute < MARKET_FROM)) Plan(backup = true, days = true) else null
+            KIND_BACKUP -> if (minute >= eveningFrom) Plan(backup = true, days = false) else null
             KIND_NOW -> Plan(backup = true, days = true)
             else -> null
         }
@@ -152,7 +205,8 @@ object CloudSync {
     /**
      * The recorded days to upload now, oldest first, at most [max]: every day not yet uploaded, or whose files grew since
      * (a late paper fill in the evening) - never one that only shrank (the raw tick file is deleted after 10 days on the
-     * phone, and the bigger copy on GitHub must stay). Today's only from 15:45.
+     * phone, and the bigger copy on GitHub must stay). Today's only from 15:45 (an automatic run only starts from the evening
+     * gate, after MCX's close: [plan]).
      */
     fun pendingDays(recorded: Map<LocalDate, Long>, uploaded: Map<LocalDate, Long>, today: LocalDate, minute: Int,
                     max: Int = DAYS_PER_RUN): List<LocalDate> =
@@ -266,6 +320,9 @@ object CloudSync {
         val repo: String = DEFAULT_REPO,
     )
 
+    /** When the automatic uploads run, for the reminders (G4, 13 Oct). */
+    const val WHEN = "after the MCX evening close (15:45 on days without an MCX session), or overnight before 09:00"
+
     /** "13 Oct". */
     fun day(d: LocalDate): String = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH).format(d)
 
@@ -313,9 +370,9 @@ object CloudSync {
         val since = s.lastOk?.atMs
         val sinceDay = since?.let(toDay)
         if (sinceDay != null && ChronoUnit.DAYS.between(sinceDay, today) >= STALE_DAYS)
-            return "Nothing uploaded to GitHub since ${day(sinceDay)}: put the phone on charge on Wi-Fi after 15:45." +
+            return "Nothing uploaded to GitHub since ${day(sinceDay)}: put the phone on charge on Wi-Fi $WHEN." +
                 if (s.waiting > 0) " ${s.waiting} recorded day${if (s.waiting == 1) "" else "s"} waiting." else ""
-        if (since == null && s.waiting >= STALE_DAYS) return "Nothing uploaded to GitHub yet: ${s.waiting} recorded days waiting. Put the phone on charge on Wi-Fi after 15:45."
+        if (since == null && s.waiting >= STALE_DAYS) return "Nothing uploaded to GitHub yet: ${s.waiting} recorded days waiting. Put the phone on charge on Wi-Fi $WHEN."
         return null
     }
 }

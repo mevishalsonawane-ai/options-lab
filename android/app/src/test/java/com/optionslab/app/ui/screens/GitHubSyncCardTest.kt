@@ -62,6 +62,16 @@ class GitHubSyncCardTest {
         assertEquals(listOf("token", "pass"), asks)
     }
 
+    @Test fun theNoteSaysTheUploadWaitsForTheMcxClose() {
+        // G4 (13 Oct, Boss: "after the commodities close"): the evening upload waits for MCX's evening close.
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        show(status())
+        assertTrue(shows("Every evening after the MCX evening close", sub = true))
+        assertTrue(shows("15:45 on days without an MCX session", sub = true))
+        assertTrue(shows("next morning before 09:00", sub = true))
+        assertFalse(shows("Every evening after 15:45", sub = true))
+    }
+
     @Test fun setUpOffersUploadAndRestore() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         show(status(last = CloudSync.Last(ms(today), true, 4_200_000, "backup")))

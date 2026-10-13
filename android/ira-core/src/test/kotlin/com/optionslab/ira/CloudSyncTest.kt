@@ -273,4 +273,155 @@ class CloudSyncTest {
         assertEquals(CloudSync.EVENING - 600L, CloudSync.backupDelayMin(600))
         assertEquals(CloudSync.DEBOUNCE_MIN, CloudSync.backupDelayMin(CloudSync.EVENING - 1))   // 1 minute short: the debounce
     }
+
+    // ---- G4 (13 Oct, Boss: "after the commodities close"): the evening gate after MCX's close ---------------------------
+
+    private val cal = com.optionslab.engine.mcx.McxSession.DEFAULT
+    private fun gate(day: LocalDate) = CloudSync.eveningFrom(true, cal.window(day))
+    private val mcx2330 = 23 * 60 + 30
+    private val mcx2355 = 23 * 60 + 55
+
+    @Test fun theGateIsMcxsCloseFromItsCalendar() {
+        // Tue 13 Oct 2026, US summer time: MCX closes 23:30.
+        assertEquals(mcx2330, gate(d(13)))
+        // Mon 2 Nov 2026, the first day after the US clocks went back: 23:55.
+        assertEquals(mcx2355, gate(d(2, 11)))
+        // An MCX holiday with only the evening session (Dussehra, 20 Oct): still its close.
+        assertEquals(mcx2330, gate(d(20)))
+        // Diwali Muhurat on a Sunday (18:00-19:00): after that session.
+        assertEquals(19 * 60, gate(d(8, 11)))
+        // MCX shut all day (Gandhi Jayanti, 2 Oct; Christmas): 15:45, after F&O's close.
+        assertEquals(CloudSync.EVENING, gate(d(2)))
+        assertEquals(CloudSync.EVENING, gate(d(25, 12)))
+        // A weekend: 15:45.
+        assertEquals(CloudSync.EVENING, gate(d(17)))
+        assertEquals(CloudSync.EVENING, gate(d(18)))
+        // The calendar could not be read: the safe, later 23:55, whatever window was passed.
+        assertEquals(CloudSync.EVENING_SAFE, CloudSync.eveningFrom(false, null))
+        assertEquals(CloudSync.EVENING_SAFE, CloudSync.eveningFrom(false, cal.window(d(13))))
+        assertEquals(mcx2355, CloudSync.EVENING_SAFE)
+    }
+
+    @Test fun theGateIsNeverBefore1545NorBeforeAnOddClose() {
+        val w = { a: Int, b: Int -> com.optionslab.engine.mcx.McxSession.Window(java.time.LocalTime.of(a, 0), java.time.LocalTime.of(b, 0)) }
+        // A morning-only session (09:00-14:00): 15:45 still, after F&O's close.
+        assertEquals(CloudSync.EVENING, CloudSync.eveningFrom(true, w(9, 14)))
+        // A session that ends at 17:00: 17:00.
+        assertEquals(17 * 60, CloudSync.eveningFrom(true, w(9, 17)))
+        // A window that does not close after it opens (past midnight, or empty): the day's last minute, never earlier.
+        assertEquals(CloudSync.LAST_MINUTE, CloudSync.eveningFrom(true, w(18, 0)))
+        assertEquals(CloudSync.LAST_MINUTE, CloudSync.eveningFrom(true, w(18, 18)))
+    }
+
+    @Test fun theEveningRunWaitsForMcxsCloseJustBeforeAndJustAfter() {
+        val g = gate(today)                                                   // 23:30
+        assertFalse(CloudSync.eveningDue(CloudSync.EVENING, null, today, g))  // 15:45: MCX still trades
+        assertFalse(CloudSync.eveningDue(22 * 60, null, today, g))
+        assertFalse(CloudSync.eveningDue(g - 1, null, today, g))              // 23:29
+        assertTrue(CloudSync.eveningDue(g, null, today, g))                   // 23:30
+        assertEquals(today, CloudSync.eveningDueDay(g, today.minusDays(1), today, g))
+        assertNull(CloudSync.eveningDueDay(g + 10, today, today, g))          // done tonight
+        // US winter time: 23:54 no, 23:55 yes.
+        val nov2 = d(2, 11)
+        assertFalse(CloudSync.eveningDue(mcx2355 - 1, null, nov2, gate(nov2)))
+        assertTrue(CloudSync.eveningDue(mcx2355, null, nov2, gate(nov2)))
+        // A day without MCX: from 15:45, as before.
+        val sat = d(17)
+        assertFalse(CloudSync.eveningDue(CloudSync.EVENING - 1, null, sat, gate(sat)))
+        assertTrue(CloudSync.eveningDue(CloudSync.EVENING, null, sat, gate(sat)))
+        // The old callers (no gate given) keep 15:45.
+        assertTrue(CloudSync.eveningDue(CloudSync.EVENING, null, today))
+    }
+
+    @Test fun aMissedEveningRunsTheNextMorningOnceAndNeverSkipsADay() {
+        val mon = d(2, 11); val tue = d(3, 11)
+        val g = gate(mon)                                                      // 23:55
+        // Monday's run was due at 23:55 but the phone was not charging: Tuesday 00:30 it is still Monday's evening.
+        assertEquals(mon, CloudSync.eveningOf(30, tue, gate(tue)))
+        assertEquals(mon, CloudSync.eveningDueDay(30, d(1, 11), tue, gate(tue)))
+        assertEquals(mon, CloudSync.eveningDueDay(8 * 60 + 59, null, tue, gate(tue)))   // until 08:59
+        // 09:00 to the gate: nothing (the markets are open, or about to be).
+        assertNull(CloudSync.eveningOf(9 * 60, tue, gate(tue)))
+        assertNull(CloudSync.eveningDueDay(9 * 60, d(1, 11), tue, gate(tue)))
+        assertNull(CloudSync.eveningDueDay(15 * 60 + 45, d(1, 11), tue, gate(tue)))
+        // Monday done at 00:30 Tuesday (kept as Monday): not again that morning ...
+        assertNull(CloudSync.eveningDueDay(31, mon, tue, gate(tue)))
+        assertNull(CloudSync.eveningDueDay(8 * 60, mon, tue, gate(tue)))
+        // ... and Tuesday's own evening still runs after Tuesday's close (no day skipped).
+        assertEquals(tue, CloudSync.eveningDueDay(gate(tue), mon, tue, gate(tue)))
+        // Monday's ran at 23:58 and ended after midnight: kept as Monday, so Tuesday morning does not run it twice ...
+        assertNull(CloudSync.eveningDueDay(5, mon, tue, gate(tue)))
+        // ... and Tuesday's evening is not skipped (had it been kept as Tuesday, the run that started on Monday would hide it).
+        assertNotNull(CloudSync.eveningDueDay(gate(tue), mon, tue, gate(tue)))
+        assertNull(CloudSync.eveningDueDay(gate(tue), tue, tue, gate(tue)), "kept as Tuesday would skip Tuesday")
+        // Monday at its own gate, before midnight, is Monday's.
+        assertEquals(mon, CloudSync.eveningDueDay(g, d(1, 11), mon, g))
+        // A Friday's evening missed: Saturday morning runs it; Saturday's own evening (no MCX) from 15:45.
+        val fri = d(16); val sat = d(17)
+        assertEquals(fri, CloudSync.eveningDueDay(60, d(15), sat, gate(sat)))
+        assertEquals(sat, CloudSync.eveningDueDay(CloudSync.EVENING, fri, sat, gate(sat)))
+        // Two evenings missed: the morning runs the latest; the older day's files go with it (pendingDays).
+        assertEquals(mon, CloudSync.eveningDueDay(60, d(30), tue, gate(tue)))
+        // A kept evening after today is a clock that went back: not trusted.
+        assertEquals(tue, CloudSync.eveningDueDay(gate(tue), d(9, 11), tue, gate(tue)))
+    }
+
+    @Test fun theWorkersPlanWithTheMcxGate() {
+        val g = mcx2330
+        fun plan(kind: String, minute: Int, due: Boolean = true) = CloudSync.plan(kind, minute, due, true, false, eveningFrom = g)
+        val both = CloudSync.Plan(backup = true, days = true)
+        val backup = CloudSync.Plan(backup = true, days = false)
+        // EVENING: not at 15:45 or 23:29 on an MCX day; from 23:30; the next morning until 08:59; never 09:00 to the gate.
+        assertNull(plan(CloudSync.KIND_EVENING, CloudSync.EVENING))
+        assertNull(plan(CloudSync.KIND_EVENING, g - 1))
+        assertEquals(both, plan(CloudSync.KIND_EVENING, g))
+        assertEquals(both, plan(CloudSync.KIND_EVENING, 30))
+        assertEquals(both, plan(CloudSync.KIND_EVENING, 8 * 60 + 59))
+        assertNull(plan(CloudSync.KIND_EVENING, 9 * 60))
+        assertNull(plan(CloudSync.KIND_EVENING, 30, due = false))
+        // BACKUP: from the gate only (after midnight the evening run covers it).
+        assertNull(plan(CloudSync.KIND_BACKUP, CloudSync.EVENING))
+        assertNull(plan(CloudSync.KIND_BACKUP, g - 1))
+        assertEquals(backup, plan(CloudSync.KIND_BACKUP, g))
+        assertNull(plan(CloudSync.KIND_BACKUP, 30))
+        // NOW (Boss's tap): unchanged, any hour.
+        assertEquals(both, plan(CloudSync.KIND_NOW, CloudSync.EVENING))
+        assertEquals(both, plan(CloudSync.KIND_NOW, 10 * 60))
+        // CHECK: nothing; a refused token: no automatic kind.
+        assertNull(plan(CloudSync.KIND_CHECK, g))
+        assertNull(CloudSync.plan(CloudSync.KIND_EVENING, g, true, true, true, eveningFrom = g))
+        assertNull(CloudSync.plan(CloudSync.KIND_BACKUP, g, true, true, true, eveningFrom = g))
+        // A day without MCX: the old 15:45.
+        assertEquals(both, CloudSync.plan(CloudSync.KIND_EVENING, CloudSync.EVENING, true, true, false, eveningFrom = CloudSync.EVENING))
+        // The calendar unread: 23:55.
+        assertNull(CloudSync.plan(CloudSync.KIND_EVENING, mcx2330, true, true, false, eveningFrom = CloudSync.EVENING_SAFE))
+        assertEquals(both, CloudSync.plan(CloudSync.KIND_EVENING, mcx2355, true, true, false, eveningFrom = CloudSync.EVENING_SAFE))
+    }
+
+    @Test fun aChangesBackupWaitsForMcxsClose() {
+        // 11:00 on an MCX day closing 23:30: 750 minutes.
+        assertEquals(mcx2330 - 11 * 60L, CloudSync.backupDelayMin(11 * 60, mcx2330))
+        // 16:00 (after the old 15:45): still waits for 23:30.
+        assertEquals(mcx2330 - 16 * 60L, CloudSync.backupDelayMin(16 * 60, mcx2330))
+        // 23:29: the debounce (1 minute short); after the close: the debounce.
+        assertEquals(CloudSync.DEBOUNCE_MIN, CloudSync.backupDelayMin(mcx2330 - 1, mcx2330))
+        assertEquals(CloudSync.DEBOUNCE_MIN, CloudSync.backupDelayMin(mcx2330 + 10, mcx2330))
+        // US winter, or the calendar unread: 23:55.
+        assertEquals(mcx2355 - 20 * 60L, CloudSync.backupDelayMin(20 * 60, CloudSync.EVENING_SAFE))
+        // No MCX today: 15:45, as before.
+        assertEquals(CloudSync.EVENING - 600L, CloudSync.backupDelayMin(600, gate(d(17))))
+        // Never in a trading day's 09:00-15:45 for a day's big file, whatever the gate.
+        assertFalse(CloudSync.liveAllowed(15 * 60 + 44, tradingDay = true))
+    }
+
+    @Test fun theRemindersSayAfterTheMcxClose() {
+        val toDay = { ms: Long -> LocalDate.ofEpochDay(ms) }
+        fun st(last: CloudSync.Last?, waiting: Int) = CloudSync.Status(true, true, null, last, last, null, waiting)
+        val old = CloudSync.Last(today.minusDays(3).toEpochDay(), true, 10, "backup")
+        for (p in listOf(CloudSync.problem(st(old, 1), today, toDay), CloudSync.problem(st(null, 3), today, toDay))) {
+            assertNotNull(p)
+            assertTrue(p.contains("after the MCX evening close (15:45 on days without an MCX session)"), p)
+            assertFalse(p.contains("after 15:45."), p)
+        }
+    }
 }

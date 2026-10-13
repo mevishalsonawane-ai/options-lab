@@ -34,7 +34,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  *    still encrypted as they are) zipped with a manifest, sealed with the backup passphrase's key ([LiveSeal]) and uploaded
  *    to the release `live-YYYY-MM`. research/data/decrypt_live.py opens it on a PC with the passphrase.
  *  - G2: the phone backup ([Backup.createSealed], the same passphrase) to the release `phone-backup` each evening, and
- *    after a strategy or Pine script is added or changed ([changed]; from 15:45, charging); old ones pruned. "Restore from GitHub"
+ *    after a strategy or Pine script is added or changed ([changed]; from the evening gate, charging); old ones pruned. "Restore from GitHub"
  *    lists them ([backups]) and opens one through [Backup.open] / [Backup.restore], with every restore rule as it is.
  *
  * The token (a fine-grained GitHub token for the data repository only, Contents read and write, 90 days):
@@ -52,8 +52,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Neither copy, nor the passphrase's keys, is in a backup ("github." is [com.optionslab.ira.Upkeep.PRIVATE]) or in the
  * diagnostics ([diagLine] has no secret), never logged, and no error carries the token ([CloudSync.redact]).
  *
- * Runs only from [com.optionslab.app.work.GitHubSyncWorker] (WorkManager: after 15:45, on unmetered Wi-Fi while charging;
- * "Upload now" is Boss's tap: unmetered Wi-Fi only) and the card's buttons, always off the main thread. While GitHub's last
+ * Runs only from [com.optionslab.app.work.GitHubSyncWorker] (WorkManager: after the MCX evening close, 15:45 on a day without
+ * an MCX session ([eveningFrom], G4, 13 Oct), or a missed evening the next morning before 09:00; on unmetered Wi-Fi while
+ * charging; "Upload now" is Boss's tap: unmetered Wi-Fi only) and the card's buttons, always off the main thread. While GitHub's last
  * answer refused the token (401/403), the automatic runs build no backup and send nothing: Problems found says
  * "GitHub token invalid" ([CloudSync.authRefused]). Nothing here is on the order or tick path: [changed] only starts a
  * coroutine. Not in IraGoldAlgo.
@@ -105,7 +106,8 @@ object GitHubSync {
 
     /**
      * A strategy or Pine script was added or changed: the phone backup goes to GitHub [CloudSync.DEBOUNCE_MIN] minutes after
-     * the last change, never before 15:45, on unmetered Wi-Fi while charging ([CloudSync.backupDelayMin]). Memory only on the
+     * the last change, never before the evening gate ([eveningFrom]: after MCX's close), on unmetered Wi-Fi while charging
+     * ([CloudSync.backupDelayMin]). Memory only on the
      * caller's thread: a coroutine looks at the setup.
      */
     fun changed() {
@@ -224,10 +226,34 @@ object GitHubSync {
 
     // ---- a run ---------------------------------------------------------------------------------------------------------
 
-    /** The evening run is due now (after 15:45, not yet done today). */
-    fun eveningDue(): Boolean = CloudSync.eveningDue(Market.minuteNow(), SecurePrefs.getString(K_EVENING)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }, Market.today())
+    /**
+     * [day]'s evening gate, the earliest minute of every automatic upload (G4, 13 Oct, Boss: "after the commodities close"):
+     * MCX's close from the app's MCX calendar ([McxMarket.calendar]: 23:30, or 23:55 in US winter time), 15:45 on a day MCX
+     * does not trade (an MCX holiday, a weekend), and the safe 23:55 when the calendar cannot be read
+     * ([CloudSync.eveningFrom]; an unreadable holiday file already falls back to the built-in list, which takes any weekday
+     * not listed as an MCX day: a later gate, never an earlier one). The calendar's first read opens its small holiday file,
+     * then it is kept in memory: called only from the worker's thread and [changed]'s coroutine, never the main thread, the
+     * order or the tick path.
+     */
+    fun eveningFrom(day: LocalDate): Int {
+        val w = runCatching { McxMarket.calendar().window(day) }
+        return CloudSync.eveningFrom(w.isSuccess, w.getOrNull())
+    }
 
-    fun eveningDone() = SecurePrefs.put(K_EVENING, Market.today().toString())
+    /**
+     * The evening whose automatic run is due at [now] (from [from], the gate of [now]'s day; a missed one until 09:00 the next
+     * morning), or null: none, or already done ([CloudSync.eveningDueDay]). The minute and the day come from the same [now],
+     * so a check at 23:59:59 cannot mix two days.
+     */
+    fun eveningDueDay(now: java.time.ZonedDateTime, from: Int): LocalDate? =
+        CloudSync.eveningDueDay(now.hour * 60 + now.minute, SecurePrefs.getString(K_EVENING)?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+            now.toLocalDate(), from)
+
+    /**
+     * The evening [day]'s run worked. Kept as that evening, not the day it ended (G4): a run that began at 23:58 and ended
+     * after midnight must not hide the next day's own evening run.
+     */
+    fun eveningDone(day: LocalDate) = SecurePrefs.put(K_EVENING, day.toString())
 
     /**
      * One run: the waiting recorded days when [withDays] (never in a trading day's 09:00-15:45) and the phone backup when
@@ -258,7 +284,11 @@ object GitHubSync {
         val made = if (withBackup) runCatching { Backup.createSealed(c, bk.second, bk.first) } else null
         bk.second.fill(0)
         val dir = File(c.noBackupFilesDir, OUT_DIR).apply { mkdirs(); listFiles()?.forEach { it.delete() } }
-        val phone = Phone(liveKey, dir, made, goOn)
+        // G4 (13 Oct): a run that began before 09:00 (a missed evening caught up overnight, or a tap) starts no new day's
+        // file once a trading day's 09:00-15:45 has begun; the days left wait for the next evening.
+        val phone = Phone(liveKey, dir, made) {
+            goOn() && Market.now().let { t -> CloudSync.liveAllowed(t.hour * 60 + t.minute, Market.isTradingDay(t.toLocalDate())) }
+        }
         val sync = CloudRun(gh, phone)
         val outcomes = ArrayList<CloudSync.Last>()
         try {

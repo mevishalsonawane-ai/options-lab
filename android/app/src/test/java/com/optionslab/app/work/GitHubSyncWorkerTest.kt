@@ -25,9 +25,11 @@ import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 /**
- * GitHub sync's worker after the 13 Oct review: what each kind does, the 15:45 gate for every automatic kind (the backup
- * after a strategy or Pine change included), charging for all but Boss's "Upload now", the retry limit, and no retry and no
- * backup built while GitHub refuses the token. A fake GitHub; the token is a made-up test value.
+ * GitHub sync's worker after the 13 Oct review: what each kind does, the evening gate for every automatic kind (the backup
+ * after a strategy or Pine change included; G4, 13 Oct: after MCX's close from the MCX calendar - 23:30 on Wed 15 Oct 2025,
+ * US summer time - and 15:45 on a day without MCX; a missed evening the next morning before 09:00, kept as its own evening),
+ * charging for all but Boss's "Upload now", the retry limit, and no retry and no backup built while GitHub refuses the
+ * token. A fake GitHub; the token is a made-up test value.
  */
 class GitHubSyncWorkerTest : RobolectricTest() {
     private val token = "github_pat_" + "TEST" + "z".repeat(60)
@@ -67,25 +69,73 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         assertTrue("no network for a check", gh.seen.isEmpty())
     }
 
-    @Test fun theEveningRunOnlyFrom1545AndOnceADay() {
+    @Test fun theEveningRunOnlyAfterTheMcxCloseAndOnceADay() {
         ready()
-        Background.at(WED, 15, 44)
+        // Wednesday: MCX trades until 23:30, so not at 15:45 any more (G4), nor at 23:29.
+        Background.at(WED, 15, 45)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals("MCX is still open", 0, uploads())
+        Background.at(WED, 23, 29)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals(0, uploads())
-        Background.at(WED, 15, 45)
+        Background.at(WED, 23, 30)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals("the backup went up", 1, uploads())
         assertEquals(WED.toString(), SecurePrefs.getString("backup.last"))
+        assertEquals(WED.toString(), SecurePrefs.getString("github.evening"))
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals("done for today", 1, uploads())
+        // After midnight: Wednesday's evening is done, so not again.
+        Background.at(WED.plusDays(1), 0, 30)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals("not twice", 1, uploads())
     }
 
-    @Test fun theBackupAfterAChangeWaitsFor1545() {
+    @Test fun aDayWithoutMcxRunsFrom1545() {
+        ready()
+        val sat = WED.plusDays(3)                       // Saturday: no MCX session
+        Background.at(sat, 15, 44)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals(0, uploads())
+        Background.at(sat, 15, 45)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals(1, uploads())
+        assertEquals(sat.toString(), SecurePrefs.getString("github.evening"))
+    }
+
+    @Test fun aMissedEveningRunsTheNextMorningOnceAndTheNextDayIsNotSkipped() {
+        ready()
+        val thu = WED.plusDays(1)
+        // Wednesday's 23:30 run was missed (the phone was not charging): Thursday 00:30 it runs, kept as Wednesday's.
+        Background.at(thu, 0, 30)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals(1, uploads())
+        assertEquals(WED.toString(), SecurePrefs.getString("github.evening"))
+        Background.at(thu, 1, 30)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals("once", 1, uploads())
+        // 09:00 to Thursday's close: nothing.
+        Background.at(thu, 9, 0)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        Background.at(thu, 16, 0)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals(1, uploads())
+        // Thursday's own evening still runs.
+        Background.at(thu, 23, 30)
+        assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
+        assertEquals(2, uploads())
+        assertEquals(thu.toString(), SecurePrefs.getString("github.evening"))
+    }
+
+    @Test fun theBackupAfterAChangeWaitsForTheMcxClose() {
         ready()
         Background.at(WED, 11, 0)
         assertTrue(run(GitHubSyncWorker.BACKUP) is ListenableWorker.Result.Success)
         assertEquals(0, uploads())
         Background.at(WED, 16, 0)
+        assertTrue(run(GitHubSyncWorker.BACKUP) is ListenableWorker.Result.Success)
+        assertEquals("MCX is still open", 0, uploads())
+        Background.at(WED, 23, 30)
         assertTrue(run(GitHubSyncWorker.BACKUP) is ListenableWorker.Result.Success)
         assertEquals(1, uploads())
         // Boss's tap: any hour.
@@ -106,11 +156,12 @@ class GitHubSyncWorkerTest : RobolectricTest() {
     @Test fun aRefusedTokenIsNotRetriedAndPausesTheAutomaticKinds() {
         ready()
         gh.uploadCode = 401
+        Background.at(WED, 23, 40)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)   // no retry: the same token is refused
         assertTrue(GitHubSync.authBlocked())
         gh.seen.clear()
         gh.uploadCode = 201
-        Background.at(WED.plusDays(1), 18, 0)
+        Background.at(WED.plusDays(1), 23, 40)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertTrue(run(GitHubSyncWorker.BACKUP) is ListenableWorker.Result.Success)
         assertTrue("nothing built or sent", gh.seen.isEmpty())
@@ -128,7 +179,7 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         val b = Background.unique(context, "github.sync.backup").single()
         assertTrue(b.constraints.requiresCharging())
         assertEquals(NetworkType.UNMETERED, b.constraints.requiredNetworkType)
-        assertEquals("waits for 15:45", TimeUnit.MINUTES.toMillis(CloudSync.EVENING - 11 * 60L), b.initialDelayMillis)
+        assertEquals("waits for MCX's 23:30 close", TimeUnit.MINUTES.toMillis(23 * 60 + 30 - 11 * 60L), b.initialDelayMillis)
         GitHubSyncWorker.now(context)
         val n = Background.unique(context, "github.sync.now").single()
         assertFalse(n.constraints.requiresCharging())

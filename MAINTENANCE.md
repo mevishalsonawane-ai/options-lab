@@ -53,7 +53,9 @@ new one.
 
 ### GitHub token (for the phone's GitHub sync)
 
-The phone uploads each recorded day and a phone backup every evening (after 15:45, on Wi-Fi while charging). They go to
+The phone uploads each recorded day and a phone backup every evening, on Wi-Fi while charging, after the MCX evening
+close (23:30, or 23:55 in US winter time; 15:45 on days without an MCX session; a missed evening goes the next morning
+before 09:00). They go to
 the private **data-only** repository `mevishalsonawane-ai/IraAlgo`, **never options-lab**. The phone needs one token that
 can do only that.
 
@@ -162,7 +164,7 @@ SEBI requires live orders from your registered static IP. The app's relay uses y
 | "Strategy X is armed but research says it loses" | a past decision of yours, or the research, rules it out | disarm it, or accept it knowingly |
 | "Charges eat the profit" (Order review) | too many small trades | look at that strategy's re-entry rules |
 | "Zerodha sync: mismatch" | app and Zerodha disagree on a position or stop | check Kite; fix the position there |
-| "GitHub upload failed …" / "Nothing uploaded to GitHub since …" | the evening upload did not run or GitHub refused it | leave the phone charging on Wi-Fi after 15:45; if it says the token was refused, renew it (section 3) |
+| "GitHub upload failed …" / "Nothing uploaded to GitHub since …" | the evening upload did not run or GitHub refused it | leave the phone charging on Wi-Fi overnight (uploads start after the MCX evening close, 15:45 on days without MCX); if it says the token was refused, renew it (section 3) |
 | "Night study: not working" | the overnight study didn't run | phone online overnight, battery Unrestricted |
 
 **Copy diagnostics** (Settings → Diagnostics → Copy diagnostics) gives one text with everything a developer needs. Keys,
@@ -172,7 +174,7 @@ tokens and passwords are never included.
 
 - **Automatic (GitHub sync)**: once the GitHub token and the backup passphrase are set (section 3), the phone uploads a
   sealed backup to the IraAlgo data repository every evening. A strategy or Pine script you add or change goes up in
-  that evening's backup (after 15:45, on Wi-Fi while charging). GitHub keeps the last 30 daily backups plus one per
+  that evening's backup (after the MCX evening close, 15:45 on days without MCX, on Wi-Fi while charging). GitHub keeps the last 30 daily backups plus one per
   month before them (IraAlgo's release `phone-backup`).
 - **By hand, Settings → Security → Backup**: an encrypted file you keep yourself (Google Drive or a PC).
 - Backups never carry your PIN, Live/AI-live switches, tokens or the paper-only period.

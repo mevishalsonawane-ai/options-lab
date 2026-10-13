@@ -256,10 +256,15 @@ Not possible yet:
         N problems, fixed X, need you: Y". Problems that need Boss (token, static IP, login) are only reported,
         never worked around.
 
-- [ ] G4. Upload time (Boss, 13 Oct: "after the commodities close"): G1 recordings and G2 backups also wait until after
+- [x] G4. Upload time (Boss, 13 Oct: "after the commodities close"): G1 recordings and G2 backups also wait until after
       the MCX evening close (23:30/23:55 IST from the app's MCX calendar), not 15:45, so the MCX session is included and
       nothing uploads while any market the app trades is open. On days with no MCX session (MCX holiday), 15:45 after the
       NSE close is fine. The manual "Upload now" is unchanged.
+      - Done 13 Oct: `CloudSync.eveningFrom` picks the gate from today's MCX window (its close, never before 15:45; 15:45
+        when MCX is shut; 23:55 when the calendar cannot be read), and `plan`, `eveningDue` and `backupDelayMin` take it.
+        The app reads the MCX calendar on the worker's thread (`GitHubSync.eveningFrom`). A missed evening runs the next
+        morning until 09:00 and is kept as its own evening (`eveningDueDay`), so a run that ends after midnight neither
+        skips the next day nor runs twice. The 09:00-15:45 rule for a day's big file is unchanged; so is "Upload now".
 
 ## F. Strategy Factory (owner go-ahead 2026-10-13)
 
