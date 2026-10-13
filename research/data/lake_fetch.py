@@ -203,6 +203,8 @@ def jobs_for(group, raw):
                                  fromDate=a.isoformat(), toDate=b.isoformat(), interval="1"), key=key))
     else:
         raise SystemExit(f"unknown group {group}")
+    if group == "stkopt":  # nearest strikes first for every stock, so a partial run is still a usable near-ATM set
+        J.sort(key=lambda j: abs(int(j.path.split("/")[-2][:-1])))
     return J
 
 

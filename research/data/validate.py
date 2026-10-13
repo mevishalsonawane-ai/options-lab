@@ -180,7 +180,8 @@ def contract_days(und, flag, dates, pattern=None):
         c = g.agg(open=("open", "first"), high=("high", "max"), low=("low", "min"), close=("close", "last"),
                   volume=("volume", "sum"), oi=("oi", "last"), first_ts=("ts", "first"), last_ts=("ts", "last")).reset_index()
         c = c.join(atm, on="date").join(step.rename("step"), on="date")
-        inband = (c.strike >= c["min"]) & (c.strike <= c["max"]) & ((c["max"] - c["min"]) <= 10 * c.step)
+        band = int(x.offset.abs().max())  # 10 for index options, 5 for stock/MCX options
+        inband = (c.strike >= c["min"]) & (c.strike <= c["max"]) & ((c["max"] - c["min"]) <= band * c.step)
         out.append(c[inband])
     if not out:
         return None, None
@@ -190,7 +191,7 @@ def contract_days(und, flag, dates, pattern=None):
 def check_options(bh):
     H("3. Expired options (rolling ATM-10..ATM+10, 1-minute) vs NSE F&O bhavcopy")
     md.append("Method: for every sampled bhavcopy date, each contract's whole-day candle is rebuilt from the Dhan minute "
-              "bars of all offsets carrying that strike, using only contracts that stayed inside the ATM±10 band all day, "
+              "bars of all offsets carrying that strike, using only contracts that stayed inside the fetched ATM band (±10 index, ±5 stocks) all day, "
               "so their minutes are complete. That candle is matched to NSE's bhavcopy row for the same strike and type at "
               "the nearest weekly (WEEK) or monthly (MONTH) expiry on or after the date. Only contracts NSE shows as "
               "traded are scored. *High/low/open match*: within 0.05 or 0.5%. *Last price*: Dhan's last minute close vs "
@@ -241,7 +242,7 @@ def check_options(bh):
             R[f"opt_{und}_{flag}_worst"] = bad.sort_values("err", ascending=False).head(5)[
                 ["date", "expiry", "strike", "side", "high", "high_n", "low", "low_n"]].astype(str).to_dict("records")
     idx_rows = [r for r in rows if r["underlying"] in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")]
-    stk_rows = [r for r in rows if r not in idx_rows]
+    stk_rows = [r for r in rows if r not in idx_rows and r["contract-days"] > 0]
     if idx_rows:
         table(idx_rows, list(idx_rows[0]))
     if stk_rows:
@@ -253,6 +254,12 @@ def check_options(bh):
             vals = [num(r[k]) for r in stk_rows]
             agg[k] = f"{np.nanmedian(vals):.2f}%" if "median" not in k else f"{np.nanmedian(vals):.3f}"
         table([agg], list(agg))
+        R["stkopt_median"] = agg
+        md.append("Stock options: the median contract-day matches NSE exactly, but about 30% of contract-days differ by "
+                  "more than 0.5% at the high or low (5th/95th percentile about -7%/+13%). Some show minute prices NSE never "
+                  "printed for that strike, which suggests strikes are mislabelled in Dhan's rolling stock-option data. "
+                  "That cause is not established. Use stock-option minutes with care; check against bhavcopy before "
+                  "trusting extremes.\n")
         worst = sorted(stk_rows, key=lambda r: num(r["high match"]))[:5]
         md.append("Stock options with the weakest high-match rate: " + ", ".join(
             f"{r['underlying']} {r['high match']}" for r in worst) + " (per-stock numbers in VALIDATION.json).\n")
@@ -348,6 +355,9 @@ if __name__ == "__main__":
             f"- Continuous futures (near month) close vs NSE: NIFTY {g('fut_NIFTY_c0', 'close match (<=0.05%)')}, BANKNIFTY "
             f"{g('fut_BANKNIFTY_c0', 'close match (<=0.05%)')}, MIDCPNIFTY {g('fut_MIDCPNIFTY_c0', 'close match (<=0.05%)')} "
             "(MIDCPNIFTY's early 2022 history has zero prices, which were dropped).",
+            f"- Stock options ({R.get('stkopt_median', {}).get('underlying', 'n/a')}): high/low match "
+            f"{R.get('stkopt_median', {}).get('high match', 'n/a')}/{R.get('stkopt_median', {}).get('low match', 'n/a')} — "
+            "clearly weaker than index options; see section 3. Coverage is partial (README, STOCK_OPTIONS_COVERAGE.json).",
             "- No prices were invented: gaps stay gaps; dropped rows are counted per file in section 5 and CATALOG.json.\n"]
     md[head:head] = summ
     open(OUT, "w").write("\n".join(md) + "\n")

@@ -7,6 +7,7 @@ only code and metadata:
 | file | what |
 |---|---|
 | `CATALOG.json` | every data file: rows, first/last timestamp, bytes, sha256, source endpoint, columns |
+| `STOCK_OPTIONS_COVERAGE.json` | fraction of stock-option chunks fetched, per stock and ATM offset |
 | `VALIDATION.md` / `VALIDATION.json` | checks against NSE bhavcopy, NSE index closes and Yahoo; gaps, duplicates, bad prices |
 | `fetch_release.py` | download assets of the release and verify sha256 (`--list`, `--match opt_NIFTY_WEEK`) |
 | `publish_release.py` | create the release and upload the files (run where release creation is allowed) |
@@ -46,7 +47,7 @@ NSE/BSE minute, 15:29 the last). Daily files have a naive `date` column.
 | `equity_1m_<YEAR>.parquet` | 1-minute OHLCV for the same 59 stocks, 2017 → | symbol, ts, OHLC, volume |
 | `stock_fut_daily_continuous.parquet` | continuous near-month stock futures, daily, same stocks | symbol, expiry_code (=0), date, OHLC, volume, oi |
 | `fut_1m_live_stock.parquet` | 1-minute stock futures, live contracts only | symbol, expiry, security_id, ts, OHLC, volume, oi |
-| `stkopt_<SYM>_MONTH.parquet` | stock options, rolling ATM-5..ATM+5, nearest monthly expiry, 1-minute, Aug 2021 → | as the index option files |
+| `stkopt_<SYM>_MONTH.parquet` | stock options, rolling ATM-5..ATM+5, nearest monthly expiry, 1-minute, Aug 2021 →. **Partial**, see below | as the index option files |
 | `opt_<MCXSYM>_MONTH_<YEAR>.parquet` | MCX options (CRUDEOIL, NATURALGAS, GOLD, GOLDM, SILVER, SILVERM), ATM-5..ATM+5, 1-minute, from mid-2025 | as the index option files |
 
 ### How the option series work
@@ -58,6 +59,23 @@ expiry after expiry. `spot` is the underlying value at that minute, `oi` is open
 `WEEK` = nearest weekly expiry; `MONTH` = nearest monthly expiry. NSE discontinued BANKNIFTY, FINNIFTY and MIDCPNIFTY
 weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices follows the nearest available
 (monthly) expiry.
+
+## Known gaps in this download (2026-10-12/13)
+
+* **Stock options are incomplete.** The download stopped at Dhan's **100,000 data requests per day** cap (DH-905 on
+  every data call from about 03:00 UTC on 13 Oct, quota resets at 00:00 IST). The access token expired before the
+  reset. Coverage of the planned 30-day chunks: ATM 78%, each of ±1..±5 about 23%. 10 stocks are ≥90% complete
+  at every offset ATM-5..+5 (alphabetically ADANIENT..BSE). 27 of 59 have ≥90% of ATM. TATASTEEL has 47% of ATM only, and
+  **TCS, TECHM, TITAN, TMPV, TRENT, ULTRACEMCO, UNIONBANK and YESBANK have no option file at all** (51 files exist).
+  Per stock and offset: `STOCK_OPTIONS_COVERAGE.json` (fraction of chunks fetched, 1.0 = complete).
+  Quality: index options match NSE bhavcopy contract-day high/low 87–98%, but stock options match only about 69%
+  (median day exact, tails ±10%). Treat stock-option minutes with care (see VALIDATION.md section 3).
+  **To finish:** set a fresh token and run
+  `python -I research/data/lake_fetch.py $RAW stkopt` (needs the same `$RAW` folder to resume; on a fresh machine it
+  starts over, about 83k requests = one day's quota), then `lake_build.py ... stkopt`, `validate.py`, `make_catalog.py`.
+* Chunks that still failed after retries (HTTP 429/504), left as gaps: HINDUNILVR equity 1-min, 7 windows (2015–2018);
+  FINNIFTY options, 8 series-months; live stock futures 1-min, 26 windows (INFY, ITC, INDUSINDBK, UNIONBANK, …).
+  Re-running the fetch command retries exactly these.
 
 ## Cleaning rules (nothing is filled)
 
@@ -104,6 +122,7 @@ python -I research/data/make_catalog.py $OUT data-YYYYMMDD YYYY-MM-DD
 GH_TOKEN=... python research/data/publish_release.py $OUT
 ```
 
-About 125,000 Dhan requests (83,000 of them stock options); roughly 10–12 hours at 40 threads. Dhan answers about
-3.5 requests per second and rate-limits above 5/s. Failed chunks (`.err`) are retried just by running the same
+About 125,000 Dhan requests (83,000 of them stock options). That is **more than one day's quota (100,000 data
+requests/day, retries included)**, so plan two days or two tokens. Dhan answers about 3.5 index-option requests per
+second at 40 threads (stock options 1–2/s; slower in Indian market hours) and rate-limits above 5/s. Failed chunks (`.err`) are retried just by running the same
 command again.

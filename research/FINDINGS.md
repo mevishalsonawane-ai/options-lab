@@ -306,4 +306,6 @@ Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); s
 - Validated against NSE bhavcopy, NSE index closes and Yahoo: index closes 99.7-100% within 0.05%. Option contract-day
   high/low match 87-98%. Dhan's option OI runs about 1-5% above NSE end-of-day OI, so treat it as intraday OI.
 - Dhan does not give historical bid/ask, expired futures minutes, or next-month continuous futures
-  (expiryCode 1/2 = same as 0).
+  (expiryCode 1/2 = same as 0). Data APIs are capped at 100,000 requests/day; the stock-option download hit it, so
+  stock options are partial (51 of 59 stocks, ATM 78%, ±1..5 ~23%; see data/README.md) and match NSE only ~69% at
+  contract-day high/low (index options 87-98%). Use stock-option minutes with care.
