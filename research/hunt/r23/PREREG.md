@@ -193,3 +193,31 @@ Caveat, stated before the test: both picks measure how far price has already gon
 decision. `brk_str` is partly tied to the FAKE definition by construction (a close far beyond the edge needs a bigger
 reversal to close back inside within 30 minutes), and an early break has more time to run (`t_break`). The trading test,
 with real option entries at the decision, is what decides whether this is money or arithmetic. Nothing else changes.
+
+## Part C. The frozen finalists and the exact lake test (written 13 Oct 2026 after Step 3, BEFORE any lake read)
+
+Steps 2-3 ran on the release (515 calendar days, 5 Mar 2024 - 13 Apr 2026, all design; `results/release.md|json`). By
+the A4 rule the finalists are, in rank order (`results/finalists.json`, frozen by this commit):
+
+1. `r23-r22-f2`: R22's range (high / low of 09:15 .. 09:59), first 15-min close beyond each edge (candles 10:00 .. 13:45),
+   taken only when twap_al > 0.21982 AND brk_str > 0.03538 at that close. Release: 390 trades, Rs +16,158, 2 of 4 blocks.
+2. `r23-r22-f1`: the same with twap_al > 0.21982 only. Release: 472 trades, Rs +15,593, 2 of 4 blocks.
+3. `r23-orb-f2`: today's ORB range (09:15 .. 10:04), first 5-min close beyond (10:05 .. 13:55), both filters. Release:
+   349 trades, Rs -12,461, 2 of 4 blocks.
+
+All three are flagged "carried, not promising" (none has 3 of 4 positive blocks; the third loses). The nested
+walk-forward of the rule lost out of sample (top-1 Rs -17,791 over blocks 2-4 vs `r22-brk15` Rs -8,535), and on the
+release the mirrored ranges made as much as the real ones (twin-level p 0.72 / 0.59 / 0.81). They are carried to the lake
+only because A4 says the top 3 go; nothing here suggests they will pass.
+
+The lake read, ONCE, after the lake is published (`research/data/fetch_release.py --dest $IRAALGO_LAKE` or the Drive copy):
+
+```
+R23_SOURCE=lake python3 research/hunt/r23/r23trades.py lake
+```
+
+It refuses if `results/finalists.json` is not committed unchanged, if the flag `<cache>/r23_lake/LAKE_HOLDOUT_READ`
+exists, or if either index has fewer than 100 sessions from 2026-04-27. Design = lake sessions up to 2026-04-13 (4
+blocks), embargo 2026-04-14 .. 26, holdout = 2026-04-27 on. Gates L1-L6 as in A5; BH at q 0.10 over m = 58 + 22 + 9 = 89.
+Optional and descriptive only, before the read: `R23_SOURCE=lake python3 research/hunt/r23/r23anatomy.py` (Step 1 on
+the lake's design years).

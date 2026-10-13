@@ -218,3 +218,71 @@ def test_period_of_release_and_lake(monkeypatch):
     assert CFG.period_of(date(2026, 4, 27)) == "holdout"
     monkeypatch.setattr(CFG, "SOURCE", "release")
     assert CFG.period_of(date(2026, 4, 27)) == "design"
+
+
+# ------------------------------------------------------------------------------------------------ configurations / selection
+def _trades_module():
+    pytest.importorskip("scipy")
+    import r23trades as T
+    return T
+
+
+def test_configs_registered():
+    T = _trades_module()
+    assert len(T.CONFIGS) == 22 and len({c.id for c in T.CONFIGS}) == 22
+    fam = {}
+    for c in T.CONFIGS:
+        fam[c.family] = fam.get(c.family, 0) + 1
+    assert fam == {"a": 5, "b": 6, "c": 3, "d": 2, "e": 2, "f": 4}
+    assert T.BY_ID["r23-r22-f2"].filt == ("twap_al", "brk_str") and T.BY_ID["r23-r22-f2"].tf == 15
+    assert T.FILTER_CUTS == {"twap_al": 0.21982, "brk_str": 0.03538}
+
+
+def test_config_ranges_on_a_day():
+    T = _trades_module()
+    ix = walk(3)
+    s = sess(ix, atr=150.0, prev=(19900.0, 20300.0, 19700.0, 20010.0))
+    assert T.BY_ID["r23-t30-5m"].mk(s) == R.time_range(ix, 30)
+    pd_ = T.BY_ID["r23-pd-or45"].mk(s)
+    assert pd_["hi"] >= 20300.0 and pd_["lo"] <= 19700.0 and pd_["end"] == 44
+    g = T.BY_ID["r23-gap-or30"].mk(s)
+    assert g["lo"] <= 20010.0 <= g["hi"]
+    v = T.BY_ID["r23-vol40"].mk(s)
+    assert 14 <= v["end"] <= 59 and (v["hi"] - v["lo"] >= 0.4 * 150.0 or v["end"] == 59)
+
+
+def test_filter_passes():
+    T = _trades_module()
+    cuts = {"twap_al": 0.2, "brk_str": 0.03}
+    assert T.passes({"twap_al": 0.3, "brk_str": 0.01}, ("twap_al",), cuts)
+    assert not T.passes({"twap_al": 0.3, "brk_str": 0.01}, ("twap_al", "brk_str"), cuts)
+    assert not T.passes({"twap_al": 0.2, "brk_str": 0.5}, ("twap_al",), cuts)        # strictly above the cut
+    assert not T.passes({"twap_al": float("nan"), "brk_str": 0.5}, ("twap_al",), cuts)
+
+
+def test_selection_rule():
+    T = _trades_module()
+    base = [-10.0, -10.0, -10.0, -10.0]
+    nets = {"a": [5.0, 5.0, 5.0, -100.0],        # total -85 > -40? no: not eligible
+            "b": [1.0, 1.0, 1.0, -1.0],          # 3 positive, worst -1
+            "c": [10.0, 10.0, -5.0, -5.0],       # 2 positive
+            "d": [1.0, 2.0, 1.0, -2.0],          # 3 positive, worst -2
+            "e": [-11.0, -11.0, -11.0, -11.0]}   # below the ORB
+    assert T.select(nets, base, [0, 1, 2, 3]) == ["b", "d", "c"]
+    assert T.select(nets, base, [0]) == ["c", "a", "b"]          # one training block: by its net; b = d tie keeps order
+    assert T.select({"e": nets["e"]}, base, [0, 1, 2, 3]) == []
+    assert T.rank_key([1.0, -2.0], -1.0) == (1, -2.0, -1.0)
+
+
+def test_block_of_and_nets():
+    T = _trades_module()
+    ss = [date(2025, 1, d) for d in range(1, 9)]
+    assert [T.block_of(d, ss) for d in ss] == [0, 0, 1, 1, 2, 2, 3, 3]
+    tr = [dict(day=date(2025, 1, 2), net=5.0), dict(day=date(2025, 1, 8), net=-3.0)]
+    assert T.block_nets(tr, ss) == [5.0, 0.0, 0.0, -3.0]
+
+
+def test_lake_refuses_on_release():
+    T = _trades_module()
+    with pytest.raises(SystemExit):
+        T.lake()
