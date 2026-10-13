@@ -215,15 +215,25 @@ Save money on every trade:
       FillSlippage), then suggest or apply a wait ("09:15–09:20 spreads cost ₹20 a lot; wait to 09:21"). Paper first.
 - [ ] I2. Smart order type: choose a limit at mid price or a market order from the live book (depth, imbalance, spread).
       Paper first; live needs the PIN.
-- [ ] I3. **Charges check before each trade**: expected move (the R16 range model) against charges plus expected
+- [x] I3. **Charges check before each trade**: expected move (the R16 range model) against charges plus expected
       slippage. A trade whose costs take more than X% of the expected move is flagged, and skipped on paper. ORB's
       lesson (R14).
+      - 13 Oct (R17, research/HUNT_R17_PRETRADE.md): costs are a median 3-6% of the expected 30-minute move on every
+        arm. The 10% line (design pick) skipped 3 of 499 holdout trades and FAILED (p 0.31, q 0.46).
+      - Built as SHADOW only: a note at each paper entry, in Order Review and the arm's day; nothing is skipped.
 
 Protect capital:
-- [ ] I4. Daily danger meter: each morning, rate today against the days that hurt the strategies most (gap, VIX, event,
+- [x] I4. Daily danger meter: each morning, rate today against the days that hurt the strategies most (gap, VIX, event,
       expiry, global cues), with a suggested size (normal, half, or paper only). Shown in the Good morning check.
-- [ ] I5. **Smart stop-loss**: base the stop distance on the R16 expected 30–60 min range instead of fixed points.
+      - 13 Oct (R17): FAILED walk-forward. On 122 holdout days the careful days lost less than normal ones (p 0.70).
+        No global cues are in the data.
+      - Shown as advice with its sample size (347 sessions). The half-size switch (paper arms only) is off; it changes
+        only Hero, since a 1-lot arm cannot be halved.
+- [x] I5. **Smart stop-loss**: base the stop distance on the R16 expected 30–60 min range instead of fixed points.
       Backtest each arm first, then paper.
+      - 13 Oct (R17): k x expected range x delta, k 0.5-1.5, two forms, 6 arms. No arm passed: only VIX divergence NIFTY
+        qualified in design, and it failed the holdout (q 0.46). Fixed stops stay.
+      - Shadow line per paper trade: "smart stop would be N points; fixed stop is M" (k = 1).
 - [ ] I6. Event shield: how BankNifty and NIFTY behaved around RBI, Budget, US CPI/Fed and heavyweight results; warn,
       or pause the arms before the event. Builds on the existing event calendar and S11.
 
