@@ -228,9 +228,15 @@ class Trail:
     kind: str = "rs"
     g: float = 500.0
     from_entry: bool = False
+    act: float | None = None      # R19c: activation in rupees per lot when it differs from the give-back (None: g)
 
     def points(self, entry, lot):
         return self.g / lot if self.kind == "rs" else self.g * entry
+
+    def act_points(self, entry, lot):
+        if self.act is None:
+            return self.points(entry, lot)
+        return self.act / lot if self.kind == "rs" else self.act * entry
 
 
 def trail_trigger(t: Trail | None, entry, peak, lot):
@@ -241,7 +247,7 @@ def trail_trigger(t: Trail | None, entry, peak, lot):
     pts = t.points(entry, lot)
     if not (pts > 0):
         return None
-    if not t.from_entry and peak - entry < pts - EPS:
+    if not t.from_entry and peak - entry < t.act_points(entry, lot) - EPS:
         return None
     trig = on_tick_up(peak - pts)
     if trig > peak + EPS:
