@@ -242,15 +242,17 @@ class PerpBook:
         self._settle(coin, pnl, day, fee)
 
     def check_liq(self, coin, lo, hi, day: date) -> bool:
-        """Closes the position at its liquidation price, losing the whole margin, if the bar touched it."""
+        """Closes the position if the bar touched its liquidation price (margin + unrealised P&L down to the maintenance
+        margin; funding already taken from the margin counts). The position's equity is lost: nothing comes back to
+        cash, and nothing beyond the posted margin is taken from it."""
         if coin not in self.pos:
             return False
         p = self.pos[coin]
         lp = self.liq_price(coin)
-        hit = p["margin"] <= 0 or (lo <= lp if p["n"] > 0 else hi >= lp)
+        hit = lo <= lp if p["n"] > 0 else hi >= lp
         if hit:
             self.liquidations += 1
-            self._settle(coin, -max(p["margin"], 0.0), day, 0.0)
+            self._settle(coin, -p["margin"], day, 0.0)
         return hit
 
     def apply_funding(self, coin, rate_sum, px):
@@ -272,10 +274,19 @@ class PerpBook:
         return max(0.0, net) * K.TAX
 
     def pay_tax(self, fy: int):
-        due = self.accrued_tax()
         if self.tax_on and self.reading == "B":
             while self.carry and self.carry[0][0] < fy - K.CARRY_YEARS:
                 self.carry.popleft()
+        due = self.accrued_tax()
+        short = due - max(self.cash, 0.0)
+        if short > 0 and self.pos:                 # pay from the open positions' margin (moves liquidation closer)
+            tot = sum(max(p["margin"], 0.0) for p in self.pos.values())
+            if tot > 0:
+                take = min(short, tot)
+                for p in self.pos.values():
+                    p["margin"] -= take * max(p["margin"], 0.0) / tot
+                self.cash += take
+        if self.tax_on and self.reading == "B":
             net = self.fy_net
             if net < 0:
                 self.carry.append((fy, -net))

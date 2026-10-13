@@ -312,3 +312,61 @@ def test_perp_long_pays_funding_through_simulate():
                    spells={"BTC": [(0, 5, None)]}, sleeve=1.0)
     # 10,000 notional (100,000 contracts of 0.001 at 100) pays 1% twice
     assert r.final == pytest.approx(10_000 - 200)
+
+
+# ------------------------------------------------------------------------------------------------ review fixes (13 Oct)
+
+
+def test_funding_does_not_liquidate_a_profitable_position():
+    p = E.PerpBook(10_000, ZERO, tax=False, lev=1)
+    p.open("BTC", +1, 10_000, 1_000.0)
+    p.apply_funding("BTC", 0.5, 4_000.0)             # pays 20,000 on a 40,000 notional: margin goes to -10,000
+    assert p.pos["BTC"]["margin"] < 0
+    assert not p.check_liq("BTC", 3_900.0, 4_000.0, D0)   # equity 20,000 > 0: not liquidated
+    p.close("BTC", 4_000.0, D0)
+    assert p.cash == pytest.approx(10_000 + 30_000 - 20_000)
+
+
+def test_liquidation_never_takes_more_than_the_posted_margin():
+    p = E.PerpBook(10_000, ZERO, tax=False, lev=3)
+    p.open("BTC", +1, 15_000, 1_000.0)               # 5,000 margin, 5,000 free cash
+    p.apply_funding("BTC", 0.01, 1_000.0)
+    assert p.check_liq("BTC", 1.0, 1_000.0, D0)
+    assert p.cash == pytest.approx(5_000)
+
+
+def test_shuffle_never_merges_spells():
+    rng = np.random.default_rng(1)
+    m = np.array([1, 1, 0, 1, 0, 0, 1, 1, 1, 0])     # 3 spells, a zero leading gap
+    for _ in range(300):
+        x = S.shuffle_mask(m, rng)
+        assert len(E.mask_to_spells(x)) == 3 and x.sum() == m.sum()
+        assert sorted(e - a for a, e in E.mask_to_spells(x)) == [1, 2, 3]
+
+
+def test_reading_b_carry_expires_after_8_years():
+    p = E.PerpBook(100_000, ZERO, tax=True, reading="B")
+    p.carry.append((2010, 5_000.0))
+    p.fy_net = 1_000.0
+    p.pay_tax(2019)                                   # the FY2010 loss is too old
+    assert p.tax_paid == pytest.approx(312)
+
+
+def test_perp_tax_shortfall_comes_from_margin_not_a_loan():
+    p = E.PerpBook(1_000, ZERO, tax=True, reading="B", lev=1)
+    p.open("BTC", +1, 1_000, 100.0)
+    assert p.cash == pytest.approx(0)
+    p.fy_net = 1_000.0
+    p.pay_tax(2024)
+    assert p.cash == pytest.approx(0) and p.pos["BTC"]["margin"] == pytest.approx(1_000 - 312)
+
+
+def test_breakout_twin_exits_match_the_real_rule():
+    rng = np.random.default_rng(3)
+    n = 800
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.02, n)))
+    h, lo = c * 1.01, c * 0.99
+    o = np.concatenate([[c[0]], c[:-1]])
+    real = S.breakout_spells(o, h, lo, c)
+    twin = S.breakout_exits([s[0] for s in real], o, h, lo, c)
+    assert twin == real

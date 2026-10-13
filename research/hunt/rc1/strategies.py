@@ -110,6 +110,30 @@ def breakout_spells(o, h, lo, c, start: int = 0) -> list:
     return out
 
 
+def breakout_exits(starts: list, o, h, lo, c) -> list:
+    """Idea g's twin: entries at the given bars (random), with exactly idea g's exits (stop = entry - 2 ATR(14) of the
+    bar before entry; exit at the next open after a close below the prior 10-bar low). Overlapping entries are skipped."""
+    n = len(c)
+    ll = pd.Series(lo).shift(1).rolling(K.BRK_EXIT_N, min_periods=K.BRK_EXIT_N).min().to_numpy()
+    a = atr(h, lo, c)
+    out, free = [], 0
+    for e in sorted(starts):
+        if e < free or e < 1 or e >= n or np.isnan(a[e - 1]):
+            continue
+        stop = o[e] - K.ATR_K * a[e - 1]
+        spell = (e, n, None)
+        for j in range(e, n):
+            if lo[j] <= stop:
+                spell = (e, j, min(o[j], stop))
+                break
+            if not np.isnan(ll[j]) and c[j] < ll[j]:
+                spell = (e, j + 1, None)
+                break
+        out.append(spell)
+        free = spell[1] + (1 if spell[2] is not None else 0)
+    return out
+
+
 def carry_state(fund_daily: np.ndarray) -> np.ndarray:
     """1 while the mean of the last 9 prints (3 days x 3), annualised, has gone above 10% and not yet below 0."""
     s = pd.Series(fund_daily).rolling(3, min_periods=3).sum().to_numpy() / 9 * 3 * 365
@@ -146,7 +170,16 @@ def shuffle_mask(mask: np.ndarray, rng: np.random.Generator) -> np.ndarray:
             i += 1
     gaps.append(g)
     rng.shuffle(sp)
-    rng.shuffle(gaps)
+    k = len(sp)
+    if k > 1:                                 # interior gaps must stay >= 1 or two spells would merge into one
+        order = list(rng.permutation(len(gaps)))
+        nonzero = [j for j in order if gaps[j] > 0]
+        interior = nonzero[:k - 1]
+        ends = [j for j in order if j not in interior]
+        rng.shuffle(ends)
+        gaps = [gaps[ends[0]]] + [gaps[j] for j in interior] + [gaps[ends[1]]]
+    else:
+        rng.shuffle(gaps)
     out = np.zeros(n, dtype=int)
     pos = 0
     for k in range(len(sp)):

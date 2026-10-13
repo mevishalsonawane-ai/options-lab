@@ -251,11 +251,13 @@ def twin_masks(W: World, idea: str, masks: dict, start: date, end: date, rng) ->
         a, b = W.ab(key, start, end)
         n = W.mk(key).n
         out = {}
+        m = W.mk(key)
         for c, sp in masks.items():
             mm = S.spells_to_mask(sp, n)
             x = np.zeros(n, dtype=int)
             x[a:b] = S.shuffle_mask(mm[a:b], rng)
-            out[c] = [(s, e, None) for s, e in E.mask_to_spells(x)]
+            starts = [s for s, _ in E.mask_to_spells(x)]
+            out[c] = S.breakout_exits(starts, m.o[c], m.h[c], m.l[c], m.c[c])
         return out
     raise ValueError(idea)
 
@@ -419,8 +421,7 @@ def holdout():
     marker = os.path.join(RES, "holdout_read.json")
     if os.path.exists(marker):
         raise SystemExit("the RC1 holdout has already been read once (results/holdout_read.json)")
-    with open(marker, "w") as f:
-        json.dump(dict(read_at=pd.Timestamp.utcnow().isoformat(), note="RC1 holdout read once"), f)
+    # Nothing is printed until the end: a crash before then shows no holdout number, so it is not a read.
     W = World("holdout")
     rules = wf_rules(W, K.WF_END, K.WF_FIRST_OOS)        # same picks: the last one is chosen on all design data
     hs, he = K.HOLDOUT_START, min(K.HOLDOUT_END, W.spot.d[-1])
@@ -438,9 +439,10 @@ def holdout():
         hold = run_one(W, "a1", {}, "50/50", hs, end, K.PRIMARY_ACCOUNT)
         gates[name] = dict(final=real.final, twin_median=med, twin_p=p, gate3=bool(real.final > med),
                            hold_final=hold.final, entries=real.entries, end=str(end))
-        print(name, gates[name], flush=True)
     res = dict(rules=[(str(s), r) for s, r in rules], rows=rows, gates=gates, holdout=[str(hs), str(he), str(he_perp)],
                data=dict(spot_last=str(W.spot.d[-1]), funding_end=str(W.fund_end)))
+    with open(marker, "w") as f:
+        json.dump(dict(read_at=pd.Timestamp.utcnow().isoformat(), note="RC1 holdout read once"), f)
     with open(os.path.join(RES, "holdout.json"), "w") as f:
         json.dump(res, f, indent=1, default=str)
     print("wrote results/holdout.json", flush=True)
