@@ -451,7 +451,7 @@ Full study: `HUNT_R23_ORB_RANGE.md` (pre-registered `hunt/r23/PREREG.md`; parts 
   - happen on wider ranges (0.58).
   No signal from option volume / OI, VIX level, gap, first-candle shape, inside day or expiry (AUC 0.48-0.53); VIX
   change leaned good (0.55) but failed BH (q 0.13).
-- Release trading (515 days, BANKNIFTY + NIFTY, after costs). All 18 plain ranges lose:
+- Release trading (515 days, BANKNIFTY + NIFTY, net of the app's fills and fees). All 18 plain ranges lose:
   - 15-75 minute windows, own-timeframe candles, volatility-sized, first-hour value area, plus yesterday's high / low,
     plus the gap. Rs -18k to -86k, against today's ORB -44,720 and R22's 15-min range -17,455;
   - a 15-minute close beats a 5-minute one on every window;

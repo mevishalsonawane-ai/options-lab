@@ -3,7 +3,7 @@ title: 'R23 range family (a): high / low of the first 30 minutes, first 5-min cl
 family: orb
 date: '2026-10-13'
 doc: research/HUNT_R23_ORB_RANGE.md
-hypothesis: This range definition makes the ORB arm money after costs (fresh lake holdout daily net > 0, beats today's ORB,
+hypothesis: This range definition makes the ORB arm money net of the app's paper fills and fees (fresh lake holdout daily net > 0, beats today's ORB,
   random-level and random-time twins, BH q < 0.10 over 89 with R20/R20b/R20c/R22, >= 3 of 4 lake design blocks).
 data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
   ALL sessions used as design (the release holdout was used up by R16-R22)
