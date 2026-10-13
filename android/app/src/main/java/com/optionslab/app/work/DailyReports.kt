@@ -288,6 +288,8 @@ object DailyReports {
             // and the FIIs' index positioning from NSE's participant OI - each only when a recent one is held. Facts only.
             runCatching { com.optionslab.app.ira.IraHub.morningCues() }.getOrDefault(emptyList()).forEach { lines += "• $it" }
             com.optionslab.app.ira.IraEvents.upcoming(1).forEach { e -> lines += "• " + com.optionslab.ira.Events.line(e, Market.today()).removeSuffix(".") }
+            // The market context (TODO I6, I10, I11): today's event warning, the expiry card, when "days like today" comes.
+            runCatching { com.optionslab.app.data.MarketContext.morningLines() }.getOrDefault(emptyList()).forEach { lines += "• $it" }
             // A mute said by voice lasts that day only (Boss, 5 Oct): yesterday's ends here, and the check says so.
             val voiceBack = runCatching { com.optionslab.app.ira.JarvisVoice.morningUnmute() }.getOrNull()
             voiceBack?.let { lines += "• $it" }
@@ -415,6 +417,8 @@ object DailyReports {
         if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraPreMarket.remember(com.optionslab.app.ira.IraPreMarket.armedNow()) }
         if (AppSettings.load().guardKill) lines += "⚠ The kill switch is on"
         if (lines.isEmpty()) lines += "No trades today."
+        // The event shield (TODO I6): the next session's event warning, the evening before.
+        runCatching { com.optionslab.app.data.MarketContext.eveningLines() }.getOrDefault(emptyList()).forEach { lines += it }
         // Jarvis: what he learned from the agents today (his pass runs now if the brain's worker has not run it yet).
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) runCatching {
             com.optionslab.app.ira.JarvisLearning.learnIfDue(context)

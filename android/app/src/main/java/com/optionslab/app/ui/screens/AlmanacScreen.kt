@@ -115,7 +115,8 @@ fun AlmanacScreen(model: AppModel, onGo: (String) -> Unit) {
     val automationCard: (@Composable () -> Unit)? = if (com.optionslab.app.BuildConfig.GOLD) null else { { AutomationHomeCard(model) } }
     AlmanacBody(s.live, loggedIn, { quotesState.value }, { noteState.value }, { dailyState.value },
         { accountState.value }, { paperState.value }, onGo, onRow = { model.rowAction.value = it }, owners = owners,
-        glance = { TodayGlanceCard(onGo) },
+        // Under it, the market context (TODO I6, I10, I11, 13 Oct): event warning, expiry card, days like today; none on a plain day.
+        glance = { androidx.compose.foundation.layout.Column { TodayGlanceCard(onGo); MarketContextCard() } },
         whatsNew = if (news.isNotEmpty()) {
             { WhatsNewCardContent(news, onGotIt = { com.optionslab.app.data.WhatsNewStore.markAllSeen() }, onGo = onGo) }
         } else null,

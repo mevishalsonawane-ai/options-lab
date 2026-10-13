@@ -234,7 +234,7 @@ Protect capital:
       - 13 Oct (R17): k x expected range x delta, k 0.5-1.5, two forms, 6 arms. No arm passed: only VIX divergence NIFTY
         qualified in design, and it failed the holdout (q 0.46). Fixed stops stay.
       - Shadow line per paper trade: "smart stop would be N points; fixed stop is M" (k = 1).
-- [ ] I6. Event shield: how BankNifty and NIFTY behaved around RBI, Budget, US CPI/Fed and heavyweight results; warn,
+- [x] I6. (done 13 Oct: research/EVENT_SHIELD.md - BANKNIFTY moved 1.48x a normal day on RBI/Budget days, 15 sessions, holdout confirmed; US CPI/Fed: bigger gaps, same range. Home card and the 09:00 / 15:45 reports warn the evening before and that morning; Bot settings → "Pause paper arms on event days": OFF by default, Shadow first, paper only, never Liquidity BANKNIFTY) Event shield: how BankNifty and NIFTY behaved around RBI, Budget, US CPI/Fed and heavyweight results; warn,
       or pause the arms before the event. Builds on the existing event calendar and S11.
 
 Find and improve edges:
@@ -243,15 +243,15 @@ Find and improve edges:
       gated. Liquidity BANKNIFTY only after its freeze ends on 26 Oct.
 - [ ] I9. Better exits: test exits by VWAP band, the next support/resistance level, an order-flow turn, and the
       expected range. Measure how much of the profit each one keeps.
-- [ ] I10. Expiry-day playbook: 6 years of expiry days (theta, straddle decay, max-pain behaviour, pin risk), giving a
+- [x] I10. (done 13 Oct on the release's ~1 year of expiries: research/EXPIRY_PLAYBOOK.md, in the knowledge pack; expiry-day card on Home. Re-run on the 6-year lake: IRAALGO_CONTEXT_SOURCE=lake) Expiry-day playbook: 6 years of expiry days (theta, straddle decay, max-pain behaviour, pin risk), giving a
       separate rulebook and checks for the Hero arm and expiry exits.
 
 Help Boss decide faster:
-- [ ] I11. "Days like today" morning brief: the nearest past days and what happened next, with how each arm did on
+- [x] I11. (done 13 Oct: research/DAYS_LIKE_TODAY.md - no forecast skill, as R16; Home card and Jarvis's morning brief from 09:21, labelled context, with sample sizes and each arm on those days) "Days like today" morning brief: the nearest past days and what happened next, with how each arm did on
       them. Labelled as context, not a forecast (R16).
-- [ ] I12. Live level map on the chart: support/resistance, POC/VAH/VAL, VWAP bands and max-OI strikes, each with
+- [x] I12. (done 13 Oct: chart indicator "Ira: level map" (Market context group), counted point in time on the phone; research/LEVEL_MAP.md - no level type beat random levels, 0 of 24; POC/VAH/VAL stay the order-flow indicator) Live level map on the chart: support/resistance, POC/VAH/VAL, VWAP bands and max-OI strikes, each with
       "held N of M times".
-- [ ] I13. Explain any candle: long-press a candle and Jarvis explains it from OI, IV, VIX, volume, order flow and news
+- [x] I13. (done 13 Oct: chart long-press menu → "Explain this candle (Jarvis)"; recordings, VIX, flow and news, each missing piece said) Explain any candle: long-press a candle and Jarvis explains it from OI, IV, VIX, volume, order flow and news
       at that minute.
 
 Learn from Boss's own trading:

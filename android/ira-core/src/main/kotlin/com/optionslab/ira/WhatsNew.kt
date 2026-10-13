@@ -55,6 +55,11 @@ object WhatsNew {
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-market-context", OCT13, "Market context: events, expiry, days like today",
+            "Home now warns you the evening before and the morning of an RBI, Budget, US CPI or Fed day, with how BankNifty and Nifty moved on such days and how many days that is; on expiry days it shows how fast option time value melts, and from 09:21 the past days most like today, as context, not a forecast. " +
+                "On the chart, add \"Ira: level map\" for support and resistance with how often each held, and long-press any candle and pick \"Explain this candle\" for what the app knows about those minutes; a new switch can pause paper arms on event days, and it is off.",
+            "Home → Market context; Chart → indicators → Market context; Settings → Bot settings → Pause paper arms on event days",
+            to = "chart"),
         Entry("2026-10-13-pretrade-checks", OCT13, "Three checks before each paper trade",
             "Before each paper trade (Liquidity aside) the app notes how much of the expected 30-minute move the charges eat. " +
                 "It also notes where a stop sized to that move would sit, beside the fixed stop. " +

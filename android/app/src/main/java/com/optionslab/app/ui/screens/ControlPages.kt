@@ -664,6 +664,8 @@ fun RiskPage(model: AppModel) {
         if (!com.optionslab.app.BuildConfig.GOLD) {
             item { PortfolioSettingCard() }
             item { EventCalendarCard() }
+            // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
+            item { EventShieldSwitchCard() }
             item { HistoryVaultCard() }
             // The shared knowledge's shadow rule (13 Oct): off by default; on, it only counts what it would skip.
             item { SharedKnowledgeCard() }
