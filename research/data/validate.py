@@ -41,14 +41,14 @@ def load_bhav():
         z = zipfile.ZipFile(f)
         b = pd.read_csv(io.BytesIO(z.read(z.namelist()[0])))
         if "INSTRUMENT" in b:
-            b = b[b.INSTRUMENT.isin(["FUTIDX", "OPTIDX"])]
-            x = pd.DataFrame(dict(date=d, kind=np.where(b.INSTRUMENT == "FUTIDX", "FUT", "OPT"), symbol=b.SYMBOL,
+            b = b[b.INSTRUMENT.isin(["FUTIDX", "OPTIDX", "OPTSTK", "FUTSTK"])]
+            x = pd.DataFrame(dict(date=d, kind=np.where(b.INSTRUMENT.str.startswith("FUT"), "FUT", "OPT"), symbol=b.SYMBOL,
                                   expiry=pd.to_datetime(b.EXPIRY_DT, format="%d-%b-%Y"), strike=b.STRIKE_PR.astype(float),
                                   opt=b.OPTION_TYP.str[:1], open=b.OPEN, high=b.HIGH, low=b.LOW, close=b.CLOSE, last=b.CLOSE, settle=b.SETTLE_PR,
                                   oi=b.OPEN_INT, traded=b.CONTRACTS > 0))
         else:
-            b = b[b.FinInstrmTp.isin(["IDF", "IDO"])]
-            x = pd.DataFrame(dict(date=d, kind=np.where(b.FinInstrmTp == "IDF", "FUT", "OPT"), symbol=b.TckrSymb,
+            b = b[b.FinInstrmTp.isin(["IDF", "IDO", "STO", "STF"])]
+            x = pd.DataFrame(dict(date=d, kind=np.where(b.FinInstrmTp.isin(["IDF", "STF"]), "FUT", "OPT"), symbol=b.TckrSymb,
                                   expiry=pd.to_datetime(b.XpryDt), strike=b.StrkPric.fillna(0).astype(float),
                                   opt=b.OptnTp.fillna("X").str[:1], open=b.OpnPric, high=b.HghPric, low=b.LwPric, close=b.ClsPric, last=b.LastPric,
                                   settle=b.SttlmPric, oi=b.OpnIntrst, traded=b.TtlTradgVol > 0))
@@ -99,7 +99,7 @@ def check_index_daily():
         big = rel[rel > 0.02]
         if len(big):
             md.append(f"- {sym}: >2% close differences vs Yahoo on {', '.join(str(x.date()) for x in big.index[:8])}"
-                      f"{' ...' if len(big) > 8 else ''} (Yahoo history has known bad prints; see NSE comparison)")
+                      f"{' ...' if len(big) > 8 else ''} ({len(big)} days; not checked against NSE for those dates)")
     n = nse_index_close()
     for sym, g in n.groupby("symbol"):
         a = dd[dd.symbol == sym].set_index("date")
@@ -162,11 +162,11 @@ def pick_expiry(exps, d, monthly, strict):
     return None
 
 
-def contract_days(und, flag, dates):
+def contract_days(und, flag, dates, pattern=None):
     """Per (date, strike, side): the contract's whole-day OHLCV rebuilt from all ATM offsets, plus its last-bar OI.
     Kept only when the contract was inside the ATM-10..+10 band all day (so the minutes are complete)."""
     out, sizes = [], []
-    for f in sorted(glob.glob(f"{LAKE}/opt_{und}_{flag}_*.parquet")):
+    for f in sorted(glob.glob(pattern or f"{LAKE}/opt_{und}_{flag}_*.parquet")):
         x = pd.read_parquet(f, columns=["ts", "offset", "side", "open", "high", "low", "close", "volume", "oi", "strike"])
         x["date"] = x.ts.dt.tz_localize(None).dt.normalize()
         sizes.append(x.groupby(["date", "offset", "side"], observed=True).size())
@@ -198,16 +198,20 @@ def check_options(bh):
               "not a last-trade price. *OI*: Dhan's OI on the last minute bar vs NSE end-of-day OI.\n")
     rows, comp = [], []
     opt = bh[bh.kind == "OPT"]
-    for und in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"):
+    stocks = sorted(os.path.basename(f)[7:-14] for f in glob.glob(f"{LAKE}/stkopt_*_MONTH.parquet"))
+    for und in ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"] + stocks:
         b = opt[opt.symbol == und]
         if not len(b):
             continue
         dates = set(b.date)
-        for flag in ("WEEK", "MONTH"):
-            c, sizes = contract_days(und, flag, dates)
+        stock = und in stocks
+        for flag in (("MONTH",) if stock else ("WEEK", "MONTH")):
+            c, sizes = contract_days(und, flag, dates, f"{LAKE}/stkopt_{und}_MONTH.parquet" if stock else None)
             if c is None:
                 continue
-            if sizes is not None:
+            if sizes is not None and stock:
+                R[f"stkopt_{und}_bars"] = dict(series_days=int(len(sizes)), full_375=float((sizes >= 375).mean()))
+            elif sizes is not None:
                 comp.append({"series": f"{und} {flag}", "series-days": len(sizes),
                              "days with 375 bars": f"{100 * (sizes >= 375).mean():.1f}%",
                              "days <300 bars": int((sizes < 300).sum())})
@@ -236,9 +240,23 @@ def check_options(bh):
             bad = m[~(hi & lo)].assign(err=lambda d: np.maximum((d.high / d.high_n - 1).abs(), (d.low / d.low_n - 1).abs()))
             R[f"opt_{und}_{flag}_worst"] = bad.sort_values("err", ascending=False).head(5)[
                 ["date", "expiry", "strike", "side", "high", "high_n", "low", "low_n"]].astype(str).to_dict("records")
-    if rows:
-        table(rows, list(rows[0]))
-    for r in rows:
+    idx_rows = [r for r in rows if r["underlying"] in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")]
+    stk_rows = [r for r in rows if r not in idx_rows]
+    if idx_rows:
+        table(idx_rows, list(idx_rows[0]))
+    if stk_rows:
+        num = lambda v: float(str(v).rstrip("%")) if str(v).rstrip("%").replace(".", "", 1).isdigit() else np.nan
+        agg = {"underlying": f"{len(stk_rows)} stocks (median of per-stock rates)", "flag": "MONTH",
+               "days": int(np.median([r["days"] for r in stk_rows])),
+               "contract-days": sum(r["contract-days"] for r in stk_rows)}
+        for k in list(stk_rows[0])[4:]:
+            vals = [num(r[k]) for r in stk_rows]
+            agg[k] = f"{np.nanmedian(vals):.2f}%" if "median" not in k else f"{np.nanmedian(vals):.3f}"
+        table([agg], list(agg))
+        worst = sorted(stk_rows, key=lambda r: num(r["high match"]))[:5]
+        md.append("Stock options with the weakest high-match rate: " + ", ".join(
+            f"{r['underlying']} {r['high match']}" for r in worst) + " (per-stock numbers in VALIDATION.json).\n")
+    for r in idx_rows:
         w = R.get(f"opt_{r['underlying']}_{r['flag']}_worst")
         if w:
             md.append(f"- {r['underlying']} {r['flag']} largest high/low mismatches (date expiry strike side: Dhan H/L vs NSE H/L): "
@@ -306,11 +324,32 @@ if __name__ == "__main__":
     bh = load_bhav()
     md.append(f"NSE F&O bhavcopies used: {bh.date.nunique()} trading days sampled about weekly from "
               f"{bh.date.min().date()} to {bh.date.max().date()} (old CSV format to 5 Jul 2024, UDiFF after).\n")
+    head = len(md)
     check_index_daily()
     check_index_1m()
     check_options(bh)
     check_futures(bh)
     check_qa()
+    g = lambda k, f: R.get(k, {}).get(f, "n/a")
+    summ = ["\n## Summary\n",
+            f"- Index daily closes: NIFTY {g('index_daily_yahoo_NIFTY', 'match <=0.05%')}, BANKNIFTY "
+            f"{g('index_daily_yahoo_BANKNIFTY', 'match <=0.05%')}, SENSEX {g('index_daily_yahoo_SENSEX', 'match <=0.05%')} "
+            f"within 0.05% of Yahoo. Against NSE's official closes (sampled days) NIFTY {g('index_daily_nse_NIFTY', 'match <=0.05%')}, "
+            f"BANKNIFTY {g('index_daily_nse_BANKNIFTY', 'match <=0.05%')}, FINNIFTY {g('index_daily_nse_FINNIFTY', 'match <=0.05%')}, "
+            f"MIDCPNIFTY {g('index_daily_nse_MIDCPNIFTY', 'match <=0.05%')}, INDIAVIX {g('index_daily_nse_INDIAVIX', 'match <=0.05%')}.",
+            f"- Index 1-minute: NIFTY has 375 bars on {g('index_1m_NIFTY', 'days with 375 bars')} of days; Muhurat sessions "
+            "are missing from Dhan's minute data, and BANKEX/SENSEX have short days in Aug–Sep 2021 (see section 2).",
+            f"- Expired options vs NSE bhavcopy (contract-day high/low): NIFTY weekly {g('opt_NIFTY_WEEK', 'high match')}/"
+            f"{g('opt_NIFTY_WEEK', 'low match')}, BANKNIFTY weekly {g('opt_BANKNIFTY_WEEK', 'high match')}/"
+            f"{g('opt_BANKNIFTY_WEEK', 'low match')}. Last price within 2% of NSE's last trade (Jul 2024 onward): NIFTY weekly "
+            f"{g('opt_NIFTY_WEEK', 'last price <=2% (2024-07+)')}. Dhan's last-minute OI is a median "
+            f"{g('opt_NIFTY_WEEK', 'OI Dhan/NSE median')}× NSE's end-of-day OI (cause unknown), so treat it as "
+            "an intraday OI series, not the official end-of-day figure.",
+            f"- Continuous futures (near month) close vs NSE: NIFTY {g('fut_NIFTY_c0', 'close match (<=0.05%)')}, BANKNIFTY "
+            f"{g('fut_BANKNIFTY_c0', 'close match (<=0.05%)')}, MIDCPNIFTY {g('fut_MIDCPNIFTY_c0', 'close match (<=0.05%)')} "
+            "(MIDCPNIFTY's early 2022 history has zero prices, which were dropped).",
+            "- No prices were invented: gaps stay gaps; dropped rows are counted per file in section 5 and CATALOG.json.\n"]
+    md[head:head] = summ
     open(OUT, "w").write("\n".join(md) + "\n")
     json.dump(R, open(OUT.replace(".md", ".json"), "w"), indent=1, default=str)
     print("wrote", OUT)

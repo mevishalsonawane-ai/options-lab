@@ -14,11 +14,13 @@ for f in sorted(glob.glob(f"{lake}/_qa/*.json")):
     e = {k: m[k] for k in ("file", "dataset") if k in m}
     e.update(rows=q["rows"], first=q.get("first"), last=q.get("last"), bytes=m["bytes"], sha256=m["sha256"],
              source=m["source"], columns=m["columns"])
+    e["qa"] = {k: v for k, v in q.items() if not k.startswith("per_") and k not in ("rows", "first", "last")}
     for k in ("symbol", "underlying", "expiry_flag", "expiry_code", "offsets", "year"):
         if k in m:
             e[k] = m[k]
     files.append(e)
 cat = dict(release_tag=tag, release_name=f"Data lake {day} (Dhan API v2)", repo="mevishalsonawane-ai/options-lab",
+           release_published=os.environ.get("LAKE_PUBLISHED") == "1",
            download_date=day, timezone="Asia/Kolkata (IST)", format="Parquet, zstd level 9",
            release_notes="Historical index, futures, equity and expired-option data from Dhan API v2. "
                          "See research/data/README.md and research/data/VALIDATION.md.",

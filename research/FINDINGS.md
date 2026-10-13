@@ -292,3 +292,18 @@ Full study: `HUNT_R15_DAILY_FILTERS.md` (pre-registered `hunt/r15/PREREG.md`); s
 - Pre-registered for SHADOW only (engine `LiquidityAddons`, default OFF): A1 OI veto (x2 R1), A2 calls need OI (x2 R5),
   A3 Night R3 BANKNIFTY leg. Judged at 300 Liquidity trades (A1/A2) / 100 nights (A3) with Holm; the shadow alone is
   too small to prove A1 (expected +Rs 30-40 a trade vs a Rs 55-60 standard error) - it mainly guards against harm.
+
+## Data lake from Dhan API v2 (DATA-LAKE, 12-13 Oct 2026) - read research/data/README.md first
+- `research/data/`: fetch/build/validate scripts, `CATALOG.json` (file list, rows, sha256), `VALIDATION.md`.
+  The data is Parquet (zstd), meant for release `data-20261012`. This session was not allowed to create GitHub
+  releases (HTTP 403), so run `research/data/publish_release.py` from a machine that can; `CATALOG.json` has
+  `release_published: false` until then.
+- Coverage: index daily 2006+ and 1-min 2017+ (NIFTY) / 2021+ (others) for NIFTY, BANKNIFTY, FINNIFTY,
+  MIDCPNIFTY, SENSEX, BANKEX, INDIA VIX. Expired index options at 1 minute (rolling ATM-10..+10, CE+PE, OHLC, volume,
+  OI, IV, spot), weekly and monthly nearest expiry, from Aug 2021 (SENSEX from 2023). MCX options at ATM-5..+5 from
+  mid-2025. Continuous near-month futures daily from 2011. NIFTY 50 + NIFTY BANK stocks: daily (2002+), 1-minute (2017+),
+  stock futures daily, stock options (ATM-5..+5, monthly).
+- Validated against NSE bhavcopy, NSE index closes and Yahoo: index closes 99.7-100% within 0.05%. Option contract-day
+  high/low match 87-98%. Dhan's option OI runs about 1-5% above NSE end-of-day OI, so treat it as intraday OI.
+- Dhan does not give historical bid/ask, expired futures minutes, or next-month continuous futures
+  (expiryCode 1/2 = same as 0).

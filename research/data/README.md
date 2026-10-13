@@ -70,7 +70,7 @@ weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices fo
 * Identical duplicate rows: one kept. Same key with different values: **all copies removed** and counted (for example
   SHRIRAMFIN 2005–2012, where Dhan interleaves two pre-merger price histories).
 * Missing minutes stay missing (options often do not trade every minute). Per-file counts of everything dropped are in
-  `CATALOG.json`'s source QA (`lake_build.py` writes `_qa/<file>.json`) and summarised in `VALIDATION.md`.
+  each `CATALOG.json` entry's `qa` field and summarised in `VALIDATION.md`.
 
 ## What Dhan does not provide (or refused)
 

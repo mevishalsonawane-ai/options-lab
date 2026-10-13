@@ -1,0 +1,6120 @@
+{
+ "release_tag": "data-20261012",
+ "release_name": "Data lake 2026-10-12 (Dhan API v2)",
+ "repo": "mevishalsonawane-ai/options-lab",
+ "release_published": false,
+ "download_date": "2026-10-12",
+ "timezone": "Asia/Kolkata (IST)",
+ "format": "Parquet, zstd level 9",
+ "release_notes": "Historical index, futures, equity and expired-option data from Dhan API v2. See research/data/README.md and research/data/VALIDATION.md.",
+ "total_bytes": 3723803114,
+ "total_rows": 226226283,
+ "files": [
+  {
+   "file": "equity_1m_2017.parquet",
+   "dataset": "equity_1m",
+   "rows": 3558928,
+   "first": "2017-04-03 09:15:00+05:30",
+   "last": "2017-12-29 15:29:00+05:30",
+   "bytes": 38661045,
+   "sha256": "5ee476631f25c2bb15605d3f5e882be970a68d4318ecc826b345337311c70cac",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 185,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 89,
+    "series_days_total": 9632,
+    "rows_dropped": {
+     "outside_session": 0,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2017
+  },
+  {
+   "file": "equity_1m_2018.parquet",
+   "dataset": "equity_1m",
+   "rows": 4885239,
+   "first": "2018-01-01 09:15:00+05:30",
+   "last": "2018-12-31 15:29:00+05:30",
+   "bytes": 55897143,
+   "sha256": "efacf32907673ed5a716727d810121fee27b126dade13e5ad36e71dd8c44d92d",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 68,
+    "series_days_total": 13162,
+    "rows_dropped": {
+     "outside_session": 0,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2018
+  },
+  {
+   "file": "equity_1m_2019.parquet",
+   "dataset": "equity_1m",
+   "rows": 4961233,
+   "first": "2019-01-01 09:15:00+05:30",
+   "last": "2019-12-31 15:29:00+05:30",
+   "bytes": 56392288,
+   "sha256": "4cac0687f89df8aebcd1ac548d70057fc6db9555b4b34fec52a5f65c9e988487",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 243,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 65,
+    "series_days_total": 13340,
+    "rows_dropped": {
+     "outside_session": 0,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2019
+  },
+  {
+   "file": "equity_1m_2020.parquet",
+   "dataset": "equity_1m",
+   "rows": 5276501,
+   "first": "2020-01-01 09:15:00+05:30",
+   "last": "2020-12-31 15:29:00+05:30",
+   "bytes": 62192124,
+   "sha256": "060cbbbee5c71e9fa8ca7d65d84f24d7c765bc977670d6a188b8f496a31d1260",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 20625,
+    "nonzero_seconds": 0,
+    "trading_days": 251,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 10,
+    "series_days_total": 14096,
+    "rows_dropped": {
+     "outside_session": 0,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2020
+  },
+  {
+   "file": "equity_1m_2021.parquet",
+   "dataset": "equity_1m",
+   "rows": 5168053,
+   "first": "2021-01-01 09:15:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 62018395,
+   "sha256": "f49b1af2fe938e5bd98477966b143fc55d150b3ac7144047c54d3d28f45b6d12",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 234582,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 58,
+    "series_days_total": 14183,
+    "rows_dropped": {
+     "outside_session": 153094,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 9831
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2021
+  },
+  {
+   "file": "equity_1m_2022.parquet",
+   "dataset": "equity_1m",
+   "rows": 5372117,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 63603116,
+   "sha256": "7f962807c34cd17bb7785042455175929281edbdce6325bf0000e1ae69f2862f",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 14326,
+    "rows_dropped": {
+     "outside_session": 162323,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 23705
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2022
+  },
+  {
+   "file": "equity_1m_2023.parquet",
+   "dataset": "equity_1m",
+   "rows": 5362067,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 63361550,
+   "sha256": "5b1fbbe6e6ce7a1a12be90a7223c31f6ec00d77fa8cc4b739d8d01db4974142a",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 14299,
+    "rows_dropped": {
+     "outside_session": 4908,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2023
+  },
+  {
+   "file": "equity_1m_2024.parquet",
+   "dataset": "equity_1m",
+   "rows": 5455317,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 69184474,
+   "sha256": "a3ba24b7400274a258bced597ea8a1554ef85086cc7fbfee8cd0281f44971fa8",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 34692,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 118,
+    "series_days_total": 14632,
+    "rows_dropped": {
+     "outside_session": 6961,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2024
+  },
+  {
+   "file": "equity_1m_2025.parquet",
+   "dataset": "equity_1m",
+   "rows": 5490462,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 66612619,
+   "sha256": "dbd0aa45d65f52c9aaa0ffc9e09016a923705c19ea4df86db282270bc6b94458",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 1,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 22125,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 59,
+    "series_days_total": 14691,
+    "rows_dropped": {
+     "outside_session": 0,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2025
+  },
+  {
+   "file": "equity_1m_2026.parquet",
+   "dataset": "equity_1m",
+   "rows": 4183395,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:14:00+05:30",
+   "bytes": 50565154,
+   "sha256": "05136393cfb8002dc872f3d1aedb3b3b2687b7a6dfff49ca8a599e346526d7ff",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 22125,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 11269,
+    "rows_dropped": {
+     "outside_session": 0,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 9000
+    },
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   },
+   "year": 2026
+  },
+  {
+   "file": "equity_daily.parquet",
+   "dataset": "equity_daily",
+   "rows": 296158,
+   "first": "2002-01-01 00:00:00",
+   "last": "2026-10-09 00:00:00",
+   "bytes": 5203524,
+   "sha256": "ff3250774bb638c56a20f42a0c7879ee7e5e25679571aa9487089a4cbe0be9b5",
+   "source": "Dhan /v2/charts/historical",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "date"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 1421,
+    "duplicates_dropped": {
+     "identical": 3,
+     "conflicting_removed": 1642
+    },
+    "rows_dropped": {
+     "nonpositive_or_missing_price": 0
+    }
+   }
+  },
+  {
+   "file": "fut_1m_live_index.parquet",
+   "dataset": "fut_1m_live_index",
+   "rows": 136936,
+   "first": "2026-07-29 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 1493088,
+   "sha256": "573b7bbf8b4ce265e9ac600a85146ee6e31c27073ca35fad19919ba27af61e1e",
+   "source": "Dhan /v2/charts/intraday (live contracts only)",
+   "columns": [
+    "symbol",
+    "expiry",
+    "security_id",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "oi",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 51,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 8,
+    "series_days_total": 379,
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped": {
+     "outside_session": 3830,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 4815
+    }
+   }
+  },
+  {
+   "file": "fut_1m_live_mcx.parquet",
+   "dataset": "fut_1m_live_mcx",
+   "rows": 1372287,
+   "first": "2025-10-20 09:08:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 10119689,
+   "sha256": "c38c4e10a77897b46a7554970f9d771a3e4246847dc759803dbd457650d2cf85",
+   "source": "Dhan /v2/charts/intraday (live contracts only)",
+   "columns": [
+    "symbol",
+    "expiry",
+    "security_id",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "oi",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 2,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 869.0,
+    "series_days_lt_50pct_median": 123,
+    "series_days_total": 1712,
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped": {
+     "nonpositive_or_missing_price": 0,
+     "weekend": 414
+    }
+   }
+  },
+  {
+   "file": "fut_1m_live_stock.parquet",
+   "dataset": "fut_1m_live_stock",
+   "rows": 1899230,
+   "first": "2026-07-29 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 13673102,
+   "sha256": "6aa3c8e41b82f061abea5a8ad1d4d1fd7984b5fe2a892c7e5818b10e4b510ad1",
+   "source": "Dhan /v2/charts/intraday (live contracts only)",
+   "columns": [
+    "symbol",
+    "expiry",
+    "security_id",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "oi",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 51,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 56,
+    "series_days_total": 5218,
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped": {
+     "nonpositive_or_missing_price": 0,
+     "weekend": 0
+    }
+   }
+  },
+  {
+   "file": "fut_daily_continuous.parquet",
+   "dataset": "fut_daily_continuous",
+   "rows": 35421,
+   "first": "2009-03-30 00:00:00",
+   "last": "2026-10-09 00:00:00",
+   "bytes": 899064,
+   "sha256": "be0da5326b399e9185b5a6ffebb2128bf607c7c3530b2cc1f7d4c156efd2d817",
+   "source": "Dhan /v2/charts/historical",
+   "columns": [
+    "symbol",
+    "expiry_code",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "oi",
+    "date"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 140,
+    "open_outside_hl": 0,
+    "weekend_rows": 592,
+    "duplicates_dropped": {
+     "identical": 17,
+     "conflicting_removed": 220
+    },
+    "rows_dropped": {
+     "nonpositive_or_missing_price": 91
+    }
+   }
+  },
+  {
+   "file": "index_1m_BANKEX_2021.parquet",
+   "dataset": "index_1m",
+   "rows": 31333,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 766498,
+   "sha256": "bce228142594228370a5223f6966b6c17580eb104aac1c8704b32fcc04e2ff44",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 4952,
+    "trading_days": 101,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 24,
+    "series_days_total": 101,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 41114,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520
+    }
+   },
+   "symbol": "BANKEX",
+   "year": 2021
+  },
+  {
+   "file": "index_1m_BANKEX_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 92465,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:28:00+05:30",
+   "bytes": 2287564,
+   "sha256": "b5d469f953b8aeff5381c3e80a411ea905d45eef878e679c1f664df963dd1e69",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 10,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 247,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 41114,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520
+    }
+   },
+   "symbol": "BANKEX",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_BANKEX_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91792,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 2240587,
+   "sha256": "9ed822140d9c94b24ea6e6fc34d8596239fadcd21a528e2cca94c7bb467e425c",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 41114,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520
+    }
+   },
+   "symbol": "BANKEX",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_BANKEX_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 2305250,
+   "sha256": "bb7a4cfe464fa12787002a1fbddd03c4df6b94e9cc52f7fbe4ef2160fda6dc1d",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 56,
+    "open_outside_hl": 3,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 41114,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520
+    }
+   },
+   "symbol": "BANKEX",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_BANKEX_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 2342196,
+   "sha256": "1cbc6b01d32886b5c9abac43e435c4b98e2e2dd922b62810b4882dd93bfb218c",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 41114,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520
+    }
+   },
+   "symbol": "BANKEX",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_BANKEX_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 2042180,
+   "sha256": "c46f63f25189dcea57e174df80170bc0ffec258075547583d5afec2207f9f80a",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 41114,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1520
+    }
+   },
+   "symbol": "BANKEX",
+   "year": 2026
+  },
+  {
+   "file": "index_1m_BANKNIFTY_2021.parquet",
+   "dataset": "index_1m",
+   "rows": 35352,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 759971,
+   "sha256": "e918876745dcb3cd6083f10fd13028f32e8c509117ce5d782c64acbd239dffc0",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 1299,
+    "trading_days": 102,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 102,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63442,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "BANKNIFTY",
+   "year": 2021
+  },
+  {
+   "file": "index_1m_BANKNIFTY_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 92572,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 1970594,
+   "sha256": "8635474bb674c20899166b1885aebe68b9852feb7ed8401d60bb1c8044be64b6",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 2,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 247,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63442,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "BANKNIFTY",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_BANKNIFTY_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91870,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 1863992,
+   "sha256": "8a75ade15b5f4be6d4714d612f74250229d4aa009ece2227652a1702523fd4d7",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63442,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "BANKNIFTY",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_BANKNIFTY_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 1920135,
+   "sha256": "b25626ef92f00a8b4a3ea230cfb359f6036a02a386d677e203cb0caf37a66f21",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 2,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63442,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "BANKNIFTY",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_BANKNIFTY_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 1983035,
+   "sha256": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63442,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "BANKNIFTY",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_BANKNIFTY_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 1860168,
+   "sha256": "b61a35d9a6de68d7844460a9d3901197242b2020695d74f8989d710978b615c7",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63442,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "BANKNIFTY",
+   "year": 2026
+  },
+  {
+   "file": "index_1m_FINNIFTY_2021.parquet",
+   "dataset": "index_1m",
+   "rows": 35945,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 685500,
+   "sha256": "5fb3e960d013f3ae6b99702df14ff67563b2a1dcd35ef4eaca72b9d994f05ba0",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 701,
+    "trading_days": 102,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 102,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63327,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "FINNIFTY",
+   "year": 2021
+  },
+  {
+   "file": "index_1m_FINNIFTY_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 92568,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 1704964,
+   "sha256": "83d2d197215e563a803341c67e7605432c3fdce2f9dfb5cbdeed84d11f9210ab",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 3,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 247,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63327,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "FINNIFTY",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_FINNIFTY_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91866,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 1623446,
+   "sha256": "3ccf8473241e1bed6b89c2be244d65ffae270a1bbd809339758969d917edb332",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63327,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "FINNIFTY",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_FINNIFTY_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 1693815,
+   "sha256": "46093c2b5000e3038d5d29532efbbc3651dd750ce43710f427bf9f6b1346a1c9",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 4,
+    "open_outside_hl": 1,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63327,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "FINNIFTY",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_FINNIFTY_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 1730086,
+   "sha256": "8082d59ad30b2786e51809077e62386adf9e019aedd0f164e37346266c3eb0fa",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63327,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "FINNIFTY",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_FINNIFTY_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 1696137,
+   "sha256": "8e2ebb653f3503d9cb725bf0daf1dd5e5a092a5949a215fb38abee3d96b2fed3",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63327,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1725
+    }
+   },
+   "symbol": "FINNIFTY",
+   "year": 2026
+  },
+  {
+   "file": "index_1m_INDIAVIX_2021.parquet",
+   "dataset": "index_1m",
+   "rows": 35550,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 346045,
+   "sha256": "b0af998f0065483560bc6b9dfcc82f8fd2e2023db8308c4a0a3aeed0e7296d61",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 1098,
+    "trading_days": 102,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 102,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 68842,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732
+    }
+   },
+   "symbol": "INDIAVIX",
+   "year": 2021
+  },
+  {
+   "file": "index_1m_INDIAVIX_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 92614,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 943906,
+   "sha256": "a34fe7406a362e7ecd61e26f20e94d1cd9994facc04fb21515887341291637b5",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 247,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 68842,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732
+    }
+   },
+   "symbol": "INDIAVIX",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_INDIAVIX_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91862,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 872940,
+   "sha256": "7e786ad0ba7669ced1f81095016bdf79978f4f3f08d8bfb14d567711d24106c9",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 68842,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732
+    }
+   },
+   "symbol": "INDIAVIX",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_INDIAVIX_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 903429,
+   "sha256": "0ffb198e60339bcb4dff322b5abb84d401259a9a39ab059f7c6c85619c50f165",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 3,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 68842,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732
+    }
+   },
+   "symbol": "INDIAVIX",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_INDIAVIX_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 899371,
+   "sha256": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 68842,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732
+    }
+   },
+   "symbol": "INDIAVIX",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_INDIAVIX_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 719562,
+   "sha256": "f7de838d1572fcc923b3876db84d6825fc3844f00d9aa0b7ca43607080eea003",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 68842,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1732
+    }
+   },
+   "symbol": "INDIAVIX",
+   "year": 2026
+  },
+  {
+   "file": "index_1m_MIDCPNIFTY_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 85432,
+   "first": "2022-01-31 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 1287626,
+   "sha256": "72fd93392e2adf74f848269cec963a05f54233c505a6215c64e10f97bfea0705",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 4,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 228,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 228,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 25527,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 886
+    }
+   },
+   "symbol": "MIDCPNIFTY",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_MIDCPNIFTY_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91840,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 1501109,
+   "sha256": "6cb50433ed5e78fc8f57c8fcbcf89bcc317d1fe83f333823409334746b005eb1",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 25527,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 886
+    }
+   },
+   "symbol": "MIDCPNIFTY",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_MIDCPNIFTY_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 1559716,
+   "sha256": "fb00253426a625372d6e88f88b8cde6f1d2f16513db73c01bb33258661faec07",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 12,
+    "open_outside_hl": 1,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 25527,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 886
+    }
+   },
+   "symbol": "MIDCPNIFTY",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_MIDCPNIFTY_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 1642448,
+   "sha256": "9c002d3bb2684befc0b713afa6d5347d1fb843342fed449d7d4da650211b26b2",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 25527,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 886
+    }
+   },
+   "symbol": "MIDCPNIFTY",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_MIDCPNIFTY_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 1582247,
+   "sha256": "5dc0e5a7e8857fd9fa4096999708c1874f20d04090b4fbcc318021a70eacdffa",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 25527,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 886
+    }
+   },
+   "symbol": "MIDCPNIFTY",
+   "year": 2026
+  },
+  {
+   "file": "index_1m_NIFTY_2017.parquet",
+   "dataset": "index_1m",
+   "rows": 69375,
+   "first": "2017-04-03 09:15:00+05:30",
+   "last": "2017-12-29 15:29:00+05:30",
+   "bytes": 1016446,
+   "sha256": "e30e2c26b68e5d4fd41920562cd9ce54c29927da2c003e25fd694c979774a8b7",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 185,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 185,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2017
+  },
+  {
+   "file": "index_1m_NIFTY_2018.parquet",
+   "dataset": "index_1m",
+   "rows": 91874,
+   "first": "2018-01-01 09:15:00+05:30",
+   "last": "2018-12-31 15:29:00+05:30",
+   "bytes": 1215460,
+   "sha256": "33600e095dcefae134262f3c56006f785a268652646440437d3682e26e47afa2",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2018
+  },
+  {
+   "file": "index_1m_NIFTY_2019.parquet",
+   "dataset": "index_1m",
+   "rows": 91500,
+   "first": "2019-01-01 09:15:00+05:30",
+   "last": "2019-12-31 15:29:00+05:30",
+   "bytes": 1216119,
+   "sha256": "7df71a7ebf5f66d94f06f4f3262c6baea510ebbe3524f17847afbaa94bfbdb9e",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 244,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 244,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2019
+  },
+  {
+   "file": "index_1m_NIFTY_2020.parquet",
+   "dataset": "index_1m",
+   "rows": 94125,
+   "first": "2020-01-01 09:15:00+05:30",
+   "last": "2020-12-31 15:29:00+05:30",
+   "bytes": 1557549,
+   "sha256": "dccf2e5126e773c382dc4587afdf5384410bff243556d10645e25e5cbe7b886b",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 251,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 251,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2020
+  },
+  {
+   "file": "index_1m_NIFTY_2021.parquet",
+   "dataset": "index_1m",
+   "rows": 93499,
+   "first": "2021-01-01 09:15:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 1538777,
+   "sha256": "337db166011a43a7c0b09da4de1a91017b4eb1d33f368917b80352bc49953de5",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 831,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2021
+  },
+  {
+   "file": "index_1m_NIFTY_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 92617,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 1617550,
+   "sha256": "0a01535c34f7c06907602d62e13c989795422a5663755d30730ad0735cc98e7a",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 3,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 247,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_NIFTY_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91870,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 1598930,
+   "sha256": "d5b62b6c96c2d1ee220a299ff74a991d958987d84a56fa926b7359acfe4610b4",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_NIFTY_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 1674516,
+   "sha256": "7d1816461a7fb3a91af2699873d58f66e92f82345fa3fedeae63e68d77ca07ef",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 9,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_NIFTY_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 1691389,
+   "sha256": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_NIFTY_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 1638294,
+   "sha256": "f78eff6c4e14196f20250a7d215b931f324c1c78351ec5832a2203b388b60a1f",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 63451,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1721
+    }
+   },
+   "symbol": "NIFTY",
+   "year": 2026
+  },
+  {
+   "file": "index_1m_SENSEX_2021.parquet",
+   "dataset": "index_1m",
+   "rows": 36483,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 892590,
+   "sha256": "941d86ae6d9dd29cfe961c7b690a02e3818a7cb41139f9e45f175a1701bb346d",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 117,
+    "trading_days": 102,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 102,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 44725,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843
+    }
+   },
+   "symbol": "SENSEX",
+   "year": 2021
+  },
+  {
+   "file": "index_1m_SENSEX_2022.parquet",
+   "dataset": "index_1m",
+   "rows": 92475,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:28:00+05:30",
+   "bytes": 2289857,
+   "sha256": "450ede48561dad2b909fda92c8f0634b87d3b0509edab588c5375dfecc859f3d",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 4,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 247,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 44725,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843
+    }
+   },
+   "symbol": "SENSEX",
+   "year": 2022
+  },
+  {
+   "file": "index_1m_SENSEX_2023.parquet",
+   "dataset": "index_1m",
+   "rows": 91800,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 2250567,
+   "sha256": "00bff5921cdda41a2516254e75770cf93169dcc09dbcfcdc35a67894922af0d7",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 245,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 44725,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843
+    }
+   },
+   "symbol": "SENSEX",
+   "year": 2023
+  },
+  {
+   "file": "index_1m_SENSEX_2024.parquet",
+   "dataset": "index_1m",
+   "rows": 92463,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 2297357,
+   "sha256": "5fb043e38cecddd114b1c4fa8d9f81540853cf9408e3bf46394a1bec48e8c8e1",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 60,
+    "open_outside_hl": 4,
+    "outside_session_rows": 0,
+    "weekend_rows": 588,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 2,
+    "series_days_total": 248,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 44725,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843
+    }
+   },
+   "symbol": "SENSEX",
+   "year": 2024
+  },
+  {
+   "file": "index_1m_SENSEX_2025.parquet",
+   "dataset": "index_1m",
+   "rows": 93060,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 2333465,
+   "sha256": "0faad1e83302c1198aa6781143cc22f7ce262b87c62671b78c0116b75327eae3",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 249,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 44725,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843
+    }
+   },
+   "symbol": "SENSEX",
+   "year": 2025
+  },
+  {
+   "file": "index_1m_SENSEX_2026.parquet",
+   "dataset": "index_1m",
+   "rows": 71625,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 2025673,
+   "sha256": "a23c52fe1f9d856e9a79b2b6d17645978a99c5a75f4302ea61172b06519b9159",
+   "source": "Dhan /v2/charts/intraday",
+   "columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 375,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 191,
+    "duplicates_dropped_symbol_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_symbol_total": {
+     "outside_session": 44725,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 1843
+    }
+   },
+   "symbol": "SENSEX",
+   "year": 2026
+  },
+  {
+   "file": "index_daily.parquet",
+   "dataset": "index_daily",
+   "rows": 31579,
+   "first": "2006-01-02 00:00:00",
+   "last": "2026-10-09 00:00:00",
+   "bytes": 836566,
+   "sha256": "aa57c229ab7e2ca3bfab416f8f6b80208b24ff3df2308b6aa912e697abfd04f0",
+   "source": "Dhan /v2/charts/historical",
+   "columns": [
+    "symbol",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "date"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 85,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 1,
+    "open_outside_hl": 1,
+    "weekend_rows": 141,
+    "duplicates_dropped": {
+     "identical": 0,
+     "conflicting_removed": 0
+    }
+   }
+  },
+  {
+   "file": "opt_BANKNIFTY_MONTH_2021.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1538856,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 27802455,
+   "sha256": "40f47f04fbac9a3ab4552eedf61c2eaa43039064c0cd1b8cc40838ac3871c551",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 101,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 5,
+    "series_days_total": 4242,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 35392,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 19183
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2021
+  },
+  {
+   "file": "opt_BANKNIFTY_MONTH_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3883735,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 75916090,
+   "sha256": "6859b8dafcd99c8ef9312850651c0bbc747b2ae8e9b59dcc1bcb5f5f5b4b7003",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10374,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 35392,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 36643
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_BANKNIFTY_MONTH_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3851771,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 77026555,
+   "sha256": "9e378c05086acdd9c59c58b0c6b2c5e12a5a0958d7129fedbeddbde4f1b1dd29",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 1,
+    "series_days_total": 10287,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 35392,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 96961
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_BANKNIFTY_MONTH_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3862166,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 75485536,
+   "sha256": "c0461398be97af534777ba7c971790ed732f303641af19931f425657088767d4",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 33820,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 60,
+    "series_days_total": 10392,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 35392,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 53679
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_BANKNIFTY_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3909098,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 78262111,
+   "sha256": "fee3405db5c9a03c38c0a7c11669c63dc05bfdf5ef8ddd30c9f5543ee9709236",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15738,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 42,
+    "series_days_total": 10458,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 35392,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 59870
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_BANKNIFTY_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3003079,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 61342015,
+   "sha256": "16cdf6a8d8b3a72b358fc4200c72eb3fcd50660f02f98c98b8104667c5d22834",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15745,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 3,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 35392,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 29329
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2021.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1544340,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 29711530,
+   "sha256": "7b783c163cff653859666adb77cc99b72d89b9138694a13185176036b8aa0ea2",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 101,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 4242,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 42078,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15747
+    },
+    "iv_null_or_zero": 76454
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2021
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3890192,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 81790204,
+   "sha256": "5f52b6eec37eb1fb8c571d16b014e99618c2047deceaa651dc123696f0eba80b",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10374,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 42078,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15747
+    },
+    "iv_null_or_zero": 164214
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3858663,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 81446135,
+   "sha256": "e36ae10506a5db2382fda5fc86bf672e99da9ce81d2e8ac859eb82f225ffc529",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10290,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 42078,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15747
+    },
+    "iv_null_or_zero": 296104
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3894335,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 85270572,
+   "sha256": "f7c38c716606baf183162acc27a937612f16e714a8ee3d69bfb73b5e972657df",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 35696,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 42,
+    "series_days_total": 10416,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 42078,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15747
+    },
+    "iv_null_or_zero": 206975
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3909098,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 78262111,
+   "sha256": "fee3405db5c9a03c38c0a7c11669c63dc05bfdf5ef8ddd30c9f5543ee9709236",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15738,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 42,
+    "series_days_total": 10458,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 42078,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15747
+    },
+    "iv_null_or_zero": 59870
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_BANKNIFTY_WEEK_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3003079,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 61342015,
+   "sha256": "16cdf6a8d8b3a72b358fc4200c72eb3fcd50660f02f98c98b8104667c5d22834",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15745,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 3,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 42078,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15747
+    },
+    "iv_null_or_zero": 29329
+   },
+   "underlying": "BANKNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_CRUDEOIL_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1236719,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 22388161,
+   "sha256": "5c8f24d2d5825c5acc2c5fde2389c10a707a7fee5f1ce62fdffb4e85af784a07",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 70,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 148,
+     "weekend": 6714
+    },
+    "iv_null_or_zero": 7145
+   },
+   "underlying": "CRUDEOIL",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_CRUDEOIL_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2353737,
+   "first": "2026-01-01 09:00:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 45873172,
+   "sha256": "1990aef567d7b2ced85a8540aff7f1ad290181522f3fa3be84f386f5fc04bae6",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 2,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 199,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 130,
+    "series_days_total": 2786,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 148,
+     "weekend": 6714
+    },
+    "iv_null_or_zero": 1352
+   },
+   "underlying": "CRUDEOIL",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2021.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 153372,
+   "first": "2021-08-05 14:34:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 831095,
+   "sha256": "91b182a0ca05ab71b589c32627d994b4da2025a726c2f93fbc5f3e59891dfa03",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 94,
+    "bars_per_day_median": 306.0,
+    "series_days_lt_50pct_median": 124,
+    "series_days_total": 589,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20189,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 15516
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2021
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1052150,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 12655696,
+   "sha256": "7a0f53363a5c54ab062257ea25ea268de45a2bb4f0c248d14c24a74583d6d6d2",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 246,
+    "bars_per_day_median": 371.0,
+    "series_days_lt_50pct_median": 445,
+    "series_days_total": 3331,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20189,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 87632
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2232140,
+   "first": "2023-01-02 15:17:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 28691580,
+   "sha256": "0d2f7df093e6f08b3331ea4cd950b60d91d1d8acc0aa51281eebdda2b8d41cb3",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 373.0,
+    "series_days_lt_50pct_median": 611,
+    "series_days_total": 6728,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20189,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 107016
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2291990,
+   "first": "2024-01-01 09:16:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 31645442,
+   "sha256": "4433a2f5e92fe18c04c8085bf69d79ce62acbe409494a2a8c18042481c5a7ca0",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15368,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 567,
+    "series_days_total": 6865,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20189,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 70307
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3748198,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 53817713,
+   "sha256": "596925047d9f63b5d5902ea4f4a6d00998570859a1d7d13ed2ae058edf2eca99",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 14772,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 165,
+    "series_days_total": 10295,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20189,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 63729
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_FINNIFTY_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2348783,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 35579760,
+   "sha256": "9dd3d60e45daf0252905d22a92882060bfa7e38df5386e94fbcb6fcfec3f15c4",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 14824,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 363.0,
+    "series_days_lt_50pct_median": 1198,
+    "series_days_total": 7736,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20189,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 41499
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2021.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 408546,
+   "first": "2021-08-04 10:00:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 2366448,
+   "sha256": "1508823e0c30335b5ea85ea4796aff76277cadfd2afce9c25ef31b8e5ddf11ed",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 101,
+    "bars_per_day_median": 326.0,
+    "series_days_lt_50pct_median": 266,
+    "series_days_total": 1464,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 28031,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 738
+    },
+    "iv_null_or_zero": 53599
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2021
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2638211,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 35725382,
+   "sha256": "c50490aa4d021aeec258dd317bfbc8f809eb63b98ca970cdc26ef2a758c81da9",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 631,
+    "series_days_total": 7809,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 28031,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 738
+    },
+    "iv_null_or_zero": 326956
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3832629,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 66714522,
+   "sha256": "1b5c5af431eed6edd49e0b3356220ebf70dad88c426b592fe9a644a8e0fe1222",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 14,
+    "series_days_total": 10269,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 28031,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 738
+    },
+    "iv_null_or_zero": 424064
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3880284,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 72569923,
+   "sha256": "982c47ab89d8bfbf6aaa684d90b63cc1760a5da4822c09fd4a0855306768f70f",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 33125,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 46,
+    "series_days_total": 10409,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 28031,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 738
+    },
+    "iv_null_or_zero": 268073
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3741868,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 53708619,
+   "sha256": "140e6628bcbb96e1ada666f51c1845cdfd840f30d00f97e6a272e5f67eae2000",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 14772,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 165,
+    "series_days_total": 10278,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 28031,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 738
+    },
+    "iv_null_or_zero": 63729
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_FINNIFTY_WEEK_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2347293,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 35564533,
+   "sha256": "679a11c1e3267969d3f07037893bee34bc6d85a9c71c5c3254d5b39449841f3c",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 14824,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 363.0,
+    "series_days_lt_50pct_median": 1198,
+    "series_days_total": 7732,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 28031,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 738
+    },
+    "iv_null_or_zero": 41499
+   },
+   "underlying": "FINNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_GOLDM_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1083764,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 15934524,
+   "sha256": "72602a6c89136d1d52212a2fed4d5e32e6b94fa79cf607249b93f2c4e9360193",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 1,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 238,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 75,
+     "weekend": 1301
+    },
+    "iv_null_or_zero": 14450
+   },
+   "underlying": "GOLDM",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_GOLDM_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1851898,
+   "first": "2026-01-01 09:01:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 34360542,
+   "sha256": "4ff46d99fc58752ce9c6fa604d16d8c34f40222d685895fe7ade1f23c919314e",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 199,
+    "bars_per_day_median": 860.0,
+    "series_days_lt_50pct_median": 701,
+    "series_days_total": 2786,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 75,
+     "weekend": 1301
+    },
+    "iv_null_or_zero": 2125
+   },
+   "underlying": "GOLDM",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "opt_GOLD_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 989431,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 13246818,
+   "sha256": "c8109910f2e39f8a3ecb97101a9f6c26ae42ca8db954469a18a3bc79701b0957",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 388,
+    "series_days_total": 1443,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 19,
+     "weekend": 201
+    },
+    "iv_null_or_zero": 26649
+   },
+   "underlying": "GOLD",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_GOLD_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 677776,
+   "first": "2026-01-01 09:11:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 9927478,
+   "sha256": "9286d8951eda689c522f1196f493785cac493173246db482b4ca94d2769dec43",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 197,
+    "bars_per_day_median": 150.0,
+    "series_days_lt_50pct_median": 775,
+    "series_days_total": 2655,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 19,
+     "weekend": 201
+    },
+    "iv_null_or_zero": 2030
+   },
+   "underlying": "GOLD",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "opt_MIDCPNIFTY_MONTH_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 13299,
+   "first": "2022-01-31 09:33:00+05:30",
+   "last": "2022-12-27 15:29:00+05:30",
+   "bytes": 76950,
+   "sha256": "618f8d137448fc3f876d588cf807c191878e31b43921b5e5dde145dd52057584",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 70,
+    "bars_per_day_median": 110.0,
+    "series_days_lt_50pct_median": 30,
+    "series_days_total": 94,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20294,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 5105
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_MIDCPNIFTY_MONTH_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 885911,
+   "first": "2023-01-03 11:34:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 10783804,
+   "sha256": "0860d13edba27bd831f62f5503072f1b6a806285570f1180e2d32dfff4ee6799",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 190,
+    "bars_per_day_median": 373.0,
+    "series_days_lt_50pct_median": 283,
+    "series_days_total": 2690,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20294,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 76964
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_MIDCPNIFTY_MONTH_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2246722,
+   "first": "2024-01-01 09:16:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 31562267,
+   "sha256": "76414fa713914c0a48086ec105b21fb25ec29f187c99a47e75822ff3df390ea9",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 22333,
+    "nonzero_seconds": 0,
+    "trading_days": 246,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 472,
+    "series_days_total": 6615,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20294,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 43604
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_MIDCPNIFTY_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3892341,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 63038668,
+   "sha256": "05385ec7bfabd33c2fce6f6d9de57d1784b91821bb568703fd95cdcefae2f0ad",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15618,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 45,
+    "series_days_total": 10457,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20294,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 49123
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_MIDCPNIFTY_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2897113,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 48703109,
+   "sha256": "23a9b535d2aa8cfb7fb30f2b35c1a4fbdd4ba27fb0f130f418f4024c912b55f8",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15691,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 166,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 20294,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 31737
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_MIDCPNIFTY_WEEK_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 13299,
+   "first": "2022-01-31 09:33:00+05:30",
+   "last": "2022-12-27 15:29:00+05:30",
+   "bytes": 76950,
+   "sha256": "618f8d137448fc3f876d588cf807c191878e31b43921b5e5dde145dd52057584",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 70,
+    "bars_per_day_median": 110.0,
+    "series_days_lt_50pct_median": 30,
+    "series_days_total": 94,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 27322,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 5105
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_MIDCPNIFTY_WEEK_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2040550,
+   "first": "2023-01-03 11:34:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 29874264,
+   "sha256": "a714001767003dea50c97fe922328dc5bbcf1d4fde2edc28b471844ec8a7d265",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 171,
+    "series_days_total": 5665,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 27322,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 244400
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_MIDCPNIFTY_WEEK_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3887269,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 71155317,
+   "sha256": "afa6f779a5ac345dfba8236317077b56d5e2de1640c755178a3442f5e1229599",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 33631,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 46,
+    "series_days_total": 10414,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 27322,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 179380
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_MIDCPNIFTY_WEEK_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3892341,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 63038668,
+   "sha256": "05385ec7bfabd33c2fce6f6d9de57d1784b91821bb568703fd95cdcefae2f0ad",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15618,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 45,
+    "series_days_total": 10457,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 27322,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 49123
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_MIDCPNIFTY_WEEK_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2897113,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 48703109,
+   "sha256": "23a9b535d2aa8cfb7fb30f2b35c1a4fbdd4ba27fb0f130f418f4024c912b55f8",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15691,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 374.0,
+    "series_days_lt_50pct_median": 166,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 27322,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 31737
+   },
+   "underlying": "MIDCPNIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_NATURALGAS_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1235905,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 20011653,
+   "sha256": "05a1aab39d01b89f4c55325370afb57724f6691144071a42088c62a3b8244ac6",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 70,
+    "series_days_total": 1456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 191,
+     "weekend": 6512
+    },
+    "iv_null_or_zero": 12437
+   },
+   "underlying": "NATURALGAS",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_NATURALGAS_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2356372,
+   "first": "2026-01-01 09:00:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 38141849,
+   "sha256": "fc0e7f792d7d513914116069f9bc4c47e06402ce490260aada1728496b99e29a",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 199,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 132,
+    "series_days_total": 2779,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 191,
+     "weekend": 6512
+    },
+    "iv_null_or_zero": 20280
+   },
+   "underlying": "NATURALGAS",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2021.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1636842,
+   "first": "2021-08-02 09:15:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 28748877,
+   "sha256": "e83f5a643fcdd3e060ff6d32e51a5b4334be54b9ed692e545e1b649cc51104ad",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 4368,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 36050,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 8593
+    },
+    "iv_null_or_zero": 104245
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2021
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3887305,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 71636555,
+   "sha256": "e873cc9b1a23c1b2d28b5ae0fdb5dbc59cf15d8cfb208cf00493334b0e8495e0",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10374,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 36050,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 8593
+    },
+    "iv_null_or_zero": 87146
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3854540,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 70459139,
+   "sha256": "c50fa2fc9b5a6b05ff4e65bd872b506113fff1171ff41ebc99151751c385cdfc",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10290,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 36050,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 8593
+    },
+    "iv_null_or_zero": 217466
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3890230,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 75289590,
+   "sha256": "a7d994af13630ff010aa9b9cef623756b3a423fbb7fefa12ac1368464aa68576",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 35126,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 42,
+    "series_days_total": 10416,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 36050,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 8593
+    },
+    "iv_null_or_zero": 87664
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3904744,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 71693849,
+   "sha256": "4c5defc340e71c1aed080adb9c8b416c47aece4a69515aea2bd6f3cbf8a9e4b1",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15719,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 45,
+    "series_days_total": 10456,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 36050,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 8593
+    },
+    "iv_null_or_zero": 82736
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_NIFTY_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2999307,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 59578359,
+   "sha256": "f614cd9d1c19e82d068272e09674ceb15df4397f785e3da41f639b6c5c41efa6",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15744,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 8,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 36050,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 8593
+    },
+    "iv_null_or_zero": 65745
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2021.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1636991,
+   "first": "2021-08-02 09:15:00+05:30",
+   "last": "2021-12-31 15:29:00+05:30",
+   "bytes": 29032304,
+   "sha256": "012c0e949578f1e412bfbfffdecc3a6bb2d2d2a40915e6a62bf928739490e5e4",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 4368,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 40993,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
+    },
+    "iv_null_or_zero": 174796
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2021
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2022.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3889783,
+   "first": "2022-01-03 09:15:00+05:30",
+   "last": "2022-12-30 15:29:00+05:30",
+   "bytes": 74301901,
+   "sha256": "b54ed507b49e978965d485ede95a3429ed19fdaa403fcbd2b85515a7642f9df7",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 247,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10374,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 40993,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
+    },
+    "iv_null_or_zero": 311477
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2022
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3857903,
+   "first": "2023-01-02 09:15:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 71189256,
+   "sha256": "f3a9df9edd39fb20247340377ffa865f1188eaa498c7f4b4adc75a5ea3fc1f61",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 10290,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 40993,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
+    },
+    "iv_null_or_zero": 466534
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3893713,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 78680284,
+   "sha256": "b33cd76320aa0795a31022c53360ea1a647228e0976add8fa0def3ab1ffe0b91",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 35311,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 42,
+    "series_days_total": 10416,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 40993,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
+    },
+    "iv_null_or_zero": 330475
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3910207,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 75530235,
+   "sha256": "38eb75161f348c5096ad1a63be7e1decec0de9661da10f224f36653e5d76fd71",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15747,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 42,
+    "series_days_total": 10458,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 40993,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
+    },
+    "iv_null_or_zero": 315986
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_NIFTY_WEEK_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3007788,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 61858103,
+   "sha256": "733d52bf8730dba88d28e4b83e3b96ff1d2f7f49fd7ebe14f5ea4df08c559701",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15750,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 40993,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
+    },
+    "iv_null_or_zero": 211045
+   },
+   "underlying": "NIFTY",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_SENSEX_MONTH_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1197210,
+   "first": "2023-05-15 11:07:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 14515999,
+   "sha256": "0f3cbeaeab96d3898a7e2cfabb1558e972ef36c0cede8f7e6a5f1e2679544728",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 157,
+    "bars_per_day_median": 369.0,
+    "series_days_lt_50pct_median": 246,
+    "series_days_total": 3598,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 16025,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 44423
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_SENSEX_MONTH_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1738232,
+   "first": "2024-01-01 11:01:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 26956868,
+   "sha256": "a57b387b231d800962141ebe16a6c189a2cf95370e44459300083a3fe34b39f8",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 11149,
+    "nonzero_seconds": 0,
+    "trading_days": 246,
+    "bars_per_day_median": 369.0,
+    "series_days_lt_50pct_median": 1106,
+    "series_days_total": 5813,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 16025,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 34517
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_SENSEX_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3294481,
+   "first": "2025-01-01 09:16:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 48351966,
+   "sha256": "99833fd0a3b47900ae6665c19f36e037d3c3c523dabb2c67076db022f291a751",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 56,
+    "nonzero_seconds": 0,
+    "trading_days": 245,
+    "bars_per_day_median": 373.0,
+    "series_days_lt_50pct_median": 475,
+    "series_days_total": 9443,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 16025,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 36700
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_SENSEX_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2168816,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 39641158,
+   "sha256": "6383aaa49c1185d9ab63a0ea3fd26729df8f2cf1f07278c12b4d65fbbe20a7c6",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 12677,
+    "nonzero_seconds": 0,
+    "trading_days": 182,
+    "bars_per_day_median": 371.0,
+    "series_days_lt_50pct_median": 1255,
+    "series_days_total": 7119,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 16025,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 23649
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_SENSEX_WEEK_2023.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 2184903,
+   "first": "2023-05-15 11:07:00+05:30",
+   "last": "2023-12-29 15:29:00+05:30",
+   "bytes": 34155357,
+   "sha256": "829482fff080e8ca2c4f7b86bd3fdc03c40d12ce547653dc5698c727045d06aa",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 157,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 132,
+    "series_days_total": 6043,
+    "duplicates_dropped_series_total": {
+     "identical": 15,
+     "conflicting_removed": 28568
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 24110,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 172103
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2023
+  },
+  {
+   "file": "opt_SENSEX_WEEK_2024.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3710720,
+   "first": "2024-01-01 09:15:00+05:30",
+   "last": "2024-12-31 15:29:00+05:30",
+   "bytes": 75358671,
+   "sha256": "482d72264d8c1f5d1a16f7591cc14a34979f0145e1714fddae1c4893af14d327",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 17368,
+    "nonzero_seconds": 0,
+    "trading_days": 248,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 491,
+    "series_days_total": 10404,
+    "duplicates_dropped_series_total": {
+     "identical": 15,
+     "conflicting_removed": 28568
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 24110,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 143438
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2024
+  },
+  {
+   "file": "opt_SENSEX_WEEK_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3893415,
+   "first": "2025-01-01 09:15:00+05:30",
+   "last": "2025-12-31 15:29:00+05:30",
+   "bytes": 80473936,
+   "sha256": "4018944b767958a9d6779d9c681f2d5f214c3346688bc1da80bf8edc7b7ac86a",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 14858,
+    "nonzero_seconds": 0,
+    "trading_days": 249,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 43,
+    "series_days_total": 10458,
+    "duplicates_dropped_series_total": {
+     "identical": 15,
+     "conflicting_removed": 28568
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 24110,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 163577
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2025
+  },
+  {
+   "file": "opt_SENSEX_WEEK_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 3006285,
+   "first": "2026-01-01 09:15:00+05:30",
+   "last": "2026-10-09 15:29:00+05:30",
+   "bytes": 65025427,
+   "sha256": "71cc32e4c871501b8ada76cb3a3841dd9ce9ad6ab8ce810e746443743e0b307f",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "outside_session_rows": 0,
+    "weekend_rows": 15749,
+    "nonzero_seconds": 0,
+    "trading_days": 191,
+    "bars_per_day_median": 375.0,
+    "series_days_lt_50pct_median": 0,
+    "series_days_total": 8022,
+    "duplicates_dropped_series_total": {
+     "identical": 15,
+     "conflicting_removed": 28568
+    },
+    "rows_dropped_series_total": {
+     "outside_session": 24110,
+     "nonpositive_or_missing_price": 0,
+     "date_not_a_trading_day_or_after_last_daily_close": 0
+    },
+    "iv_null_or_zero": 97307
+   },
+   "underlying": "SENSEX",
+   "expiry_flag": "WEEK",
+   "expiry_code": 1,
+   "offsets": "ATM-10..ATM+10",
+   "year": 2026
+  },
+  {
+   "file": "opt_SILVERM_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1069117,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 17025839,
+   "sha256": "a165a135553752434ea994ed316478482718b43e556e926daa110f79eb3298aa",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 245,
+    "series_days_total": 1448,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 78,
+     "weekend": 73
+    },
+    "iv_null_or_zero": 14958
+   },
+   "underlying": "SILVERM",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_SILVERM_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1404442,
+   "first": "2026-01-01 09:00:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 25994004,
+   "sha256": "b808a661095f4343388f3240055bfedd216c79ebe9f2609492d0865fae2c40f3",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 1,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 199,
+    "bars_per_day_median": 489.0,
+    "series_days_lt_50pct_median": 947,
+    "series_days_total": 2767,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 78,
+     "weekend": 73
+    },
+    "iv_null_or_zero": 1467
+   },
+   "underlying": "SILVERM",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "opt_SILVER_MONTH_2025.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 1006574,
+   "first": "2025-08-05 17:45:00+05:30",
+   "last": "2025-12-31 23:54:00+05:30",
+   "bytes": 14081777,
+   "sha256": "2d511fcfdc4c90441ccec7fc06aba205448d833eec6243514c3557beab8cbd61",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 104,
+    "bars_per_day_median": 870.0,
+    "series_days_lt_50pct_median": 388,
+    "series_days_total": 1442,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 24,
+     "weekend": 117
+    },
+    "iv_null_or_zero": 15880
+   },
+   "underlying": "SILVER",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2025
+  },
+  {
+   "file": "opt_SILVER_MONTH_2026.parquet",
+   "dataset": "options_rolling_1m",
+   "rows": 553459,
+   "first": "2026-01-01 09:11:00+05:30",
+   "last": "2026-10-09 23:29:00+05:30",
+   "bytes": 8714984,
+   "sha256": "f6283922e90dbc99aecc85812f62a098a61d9bf1e154270f3f74dc3664f4df3a",
+   "source": "Dhan /v2/charts/rollingoption",
+   "columns": [
+    "offset",
+    "side",
+    "iv",
+    "oi",
+    "strike",
+    "spot",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "ts"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 0,
+    "open_outside_hl": 0,
+    "weekend_rows": 0,
+    "nonzero_seconds": 0,
+    "trading_days": 199,
+    "bars_per_day_median": 109.0,
+    "series_days_lt_50pct_median": 872,
+    "series_days_total": 2701,
+    "duplicates_dropped_series_total": {
+     "identical": 0,
+     "conflicting_removed": 0
+    },
+    "rows_dropped_series_total": {
+     "nonpositive_or_missing_price": 24,
+     "weekend": 117
+    },
+    "iv_null_or_zero": 1972
+   },
+   "underlying": "SILVER",
+   "expiry_flag": "MONTH",
+   "expiry_code": 1,
+   "offsets": "ATM-5..ATM+5",
+   "year": 2026
+  },
+  {
+   "file": "stock_fut_daily_continuous.parquet",
+   "dataset": "stock_fut_daily_continuous",
+   "rows": 170202,
+   "first": "2011-10-03 00:00:00",
+   "last": "2026-10-09 00:00:00",
+   "bytes": 3781334,
+   "sha256": "5522fd65ef9a09fc7f103084088d6f73a58364ba31736098f4598f4be3d440ce",
+   "source": "Dhan /v2/charts/historical",
+   "columns": [
+    "symbol",
+    "expiry_code",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "oi",
+    "date"
+   ],
+   "qa": {
+    "nonpositive_price_rows": 0,
+    "nan_price_rows": 0,
+    "high_lt_low": 0,
+    "close_outside_hl": 146,
+    "open_outside_hl": 0,
+    "weekend_rows": 661,
+    "duplicates_dropped": {
+     "identical": 52,
+     "conflicting_removed": 240
+    },
+    "rows_dropped": {
+     "nonpositive_or_missing_price": 0
+    }
+   }
+  }
+ ]
+}

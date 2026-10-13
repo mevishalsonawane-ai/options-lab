@@ -1,0 +1,749 @@
+{
+ "index_daily_yahoo_NIFTY": {
+  "symbol": "NIFTY",
+  "source": "Yahoo",
+  "dhan_range": "2006-01-02..2026-10-09",
+  "compared": 4677,
+  "match <=0.05%": "100.00%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": 46,
+  "days only in Yahoo": 1
+ },
+ "index_daily_yahoo_BANKNIFTY": {
+  "symbol": "BANKNIFTY",
+  "source": "Yahoo",
+  "dhan_range": "2006-01-02..2026-10-09",
+  "compared": 4691,
+  "match <=0.05%": "99.85%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": 31,
+  "days only in Yahoo": 2
+ },
+ "index_daily_yahoo_INDIAVIX": {
+  "symbol": "INDIAVIX",
+  "source": "Yahoo",
+  "dhan_range": "2007-11-01..2026-10-09",
+  "compared": 4540,
+  "match <=0.05%": "98.85%",
+  "match <=0.5%": "99.60%",
+  ">2% (bad)": 13,
+  "days only in Dhan": 48,
+  "days only in Yahoo": 19
+ },
+ "index_daily_yahoo_SENSEX": {
+  "symbol": "SENSEX",
+  "source": "Yahoo",
+  "dhan_range": "2006-01-02..2026-10-09",
+  "compared": 5103,
+  "match <=0.05%": "99.98%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": 45,
+  "days only in Yahoo": 2
+ },
+ "index_daily_nse_BANKNIFTY": {
+  "symbol": "BANKNIFTY",
+  "source": "NSE ind_close_all (sample)",
+  "dhan_range": "2006-01-02..2026-10-09",
+  "compared": 392,
+  "match <=0.05%": "100.00%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": "",
+  "days only in Yahoo": "0 sample days missing in Dhan"
+ },
+ "index_daily_nse_FINNIFTY": {
+  "symbol": "FINNIFTY",
+  "source": "NSE ind_close_all (sample)",
+  "dhan_range": "2006-01-02..2026-10-09",
+  "compared": 392,
+  "match <=0.05%": "99.74%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": "",
+  "days only in Yahoo": "0 sample days missing in Dhan"
+ },
+ "index_daily_nse_INDIAVIX": {
+  "symbol": "INDIAVIX",
+  "source": "NSE ind_close_all (sample)",
+  "dhan_range": "2007-11-01..2026-10-09",
+  "compared": 392,
+  "match <=0.05%": "100.00%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": "",
+  "days only in Yahoo": "0 sample days missing in Dhan"
+ },
+ "index_daily_nse_MIDCPNIFTY": {
+  "symbol": "MIDCPNIFTY",
+  "source": "NSE ind_close_all (sample)",
+  "dhan_range": "2022-01-31..2026-10-09",
+  "compared": 373,
+  "match <=0.05%": "100.00%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": "",
+  "days only in Yahoo": "19 sample days missing in Dhan"
+ },
+ "index_daily_nse_NIFTY": {
+  "symbol": "NIFTY",
+  "source": "NSE ind_close_all (sample)",
+  "dhan_range": "2006-01-02..2026-10-09",
+  "compared": 392,
+  "match <=0.05%": "100.00%",
+  "match <=0.5%": "100.00%",
+  ">2% (bad)": 0,
+  "days only in Dhan": "",
+  "days only in Yahoo": "0 sample days missing in Dhan"
+ },
+ "index_1m_BANKEX": {
+  "symbol": "BANKEX",
+  "range": "2021-08-04..2026-10-09",
+  "days": 1281,
+  "rows": 472738,
+  "days with 375 bars": "79.31%",
+  "days <300 bars": 34,
+  "daily dates missing in 1m": 5,
+  "1m high = daily high (<=0.05%)": "96.57%",
+  "1m low = daily low (<=0.05%)": "96.80%",
+  "15:29 close vs daily close, median": "0.057%"
+ },
+ "index_1m_BANKNIFTY": {
+  "symbol": "BANKNIFTY",
+  "range": "2021-08-04..2026-10-09",
+  "days": 1282,
+  "rows": 476942,
+  "days with 375 bars": "96.57%",
+  "days <300 bars": 22,
+  "daily dates missing in 1m": 4,
+  "1m high = daily high (<=0.05%)": "97.43%",
+  "1m low = daily low (<=0.05%)": "97.50%",
+  "15:29 close vs daily close, median": "0.055%"
+ },
+ "index_1m_FINNIFTY": {
+  "symbol": "FINNIFTY",
+  "range": "2021-08-04..2026-10-09",
+  "days": 1282,
+  "rows": 477527,
+  "days with 375 bars": "95.94%",
+  "days <300 bars": 11,
+  "daily dates missing in 1m": 4,
+  "1m high = daily high (<=0.05%)": "96.72%",
+  "1m low = daily low (<=0.05%)": "97.27%",
+  "15:29 close vs daily close, median": "0.060%"
+ },
+ "index_1m_INDIAVIX": {
+  "symbol": "INDIAVIX",
+  "range": "2021-08-04..2026-10-09",
+  "days": 1282,
+  "rows": 477174,
+  "days with 375 bars": "95.55%",
+  "days <300 bars": 19,
+  "daily dates missing in 1m": 4,
+  "1m high = daily high (<=0.05%)": "98.60%",
+  "1m low = daily low (<=0.05%)": "96.96%",
+  "15:29 close vs daily close, median": "0.378%"
+ },
+ "index_1m_MIDCPNIFTY": {
+  "symbol": "MIDCPNIFTY",
+  "range": "2022-01-31..2026-10-09",
+  "days": 1161,
+  "rows": 434420,
+  "days with 375 bars": "96.21%",
+  "days <300 bars": 3,
+  "daily dates missing in 1m": 3,
+  "1m high = daily high (<=0.05%)": "99.31%",
+  "1m low = daily low (<=0.05%)": "99.22%",
+  "15:29 close vs daily close, median": "0.049%"
+ },
+ "index_1m_NIFTY": {
+  "symbol": "NIFTY",
+  "range": "2017-04-03..2026-10-09",
+  "days": 2353,
+  "rows": 882008,
+  "days with 375 bars": "99.32%",
+  "days <300 bars": 4,
+  "daily dates missing in 1m": 7,
+  "1m high = daily high (<=0.05%)": "98.17%",
+  "1m low = daily low (<=0.05%)": "99.45%",
+  "15:29 close vs daily close, median": "0.046%"
+ },
+ "index_1m_SENSEX": {
+  "symbol": "SENSEX",
+  "range": "2021-08-04..2026-10-09",
+  "days": 1282,
+  "rows": 477906,
+  "days with 375 bars": "80.66%",
+  "days <300 bars": 6,
+  "daily dates missing in 1m": 4,
+  "1m high = daily high (<=0.05%)": "98.91%",
+  "1m low = daily low (<=0.05%)": "98.60%",
+  "15:29 close vs daily close, median": "0.043%"
+ },
+ "opt_NIFTY_WEEK": {
+  "underlying": "NIFTY",
+  "flag": "WEEK",
+  "days": 386,
+  "contract-days": 3690,
+  "found in bhavcopy": "100.00%",
+  "high match": "93.82%",
+  "low match": "93.39%",
+  "open match": "99.97%",
+  "last price <=0.5% (2024-07+)": "74.19%",
+  "last price <=2% (2024-07+)": "92.63%",
+  "OI Dhan/NSE median": "1.051",
+  "OI within 1%": "8.08%",
+  "high&low match on expiry days": "83.65%"
+ },
+ "opt_NIFTY_WEEK_worst": [
+  {
+   "date": "2024-11-07",
+   "expiry": "2024-11-07",
+   "strike": "24200.0",
+   "side": "P",
+   "high": "72.25",
+   "high_n": "72.25",
+   "low": "0.75",
+   "low_n": "0.2"
+  },
+  {
+   "date": "2025-03-13",
+   "expiry": "2025-03-13",
+   "strike": "22400.0",
+   "side": "P",
+   "high": "45.0",
+   "high_n": "45.0",
+   "low": "2.6",
+   "low_n": "0.8"
+  },
+  {
+   "date": "2024-08-22",
+   "expiry": "2024-08-22",
+   "strike": "24800.0",
+   "side": "P",
+   "high": "59.1",
+   "high_n": "59.1",
+   "low": "0.15",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-03",
+   "strike": "25750.0",
+   "side": "C",
+   "high": "498.1",
+   "high_n": "667.45",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2025-12-01",
+   "expiry": "2025-12-02",
+   "strike": "26150.0",
+   "side": "P",
+   "high": "67.75",
+   "high_n": "69.0",
+   "low": "17.75",
+   "low_n": "14.5"
+  }
+ ],
+ "opt_NIFTY_MONTH": {
+  "underlying": "NIFTY",
+  "flag": "MONTH",
+  "days": 386,
+  "contract-days": 3694,
+  "found in bhavcopy": "100.00%",
+  "high match": "95.10%",
+  "low match": "94.75%",
+  "open match": "99.49%",
+  "last price <=0.5% (2024-07+)": "75.13%",
+  "last price <=2% (2024-07+)": "94.06%",
+  "OI Dhan/NSE median": "1.011",
+  "OI within 1%": "41.53%",
+  "high&low match on expiry days": "88.99%"
+ },
+ "opt_NIFTY_MONTH_worst": [
+  {
+   "date": "2025-04-08",
+   "expiry": "2025-04-30",
+   "strike": "22650.0",
+   "side": "C",
+   "high": "537.1",
+   "high_n": "526.75",
+   "low": "315.3",
+   "low_n": "440.0"
+  },
+  {
+   "date": "2026-03-10",
+   "expiry": "2026-03-30",
+   "strike": "24250.0",
+   "side": "C",
+   "high": "558.65",
+   "high_n": "666.4",
+   "low": "432.0",
+   "low_n": "432.0"
+  },
+  {
+   "date": "2022-02-07",
+   "expiry": "2022-02-24",
+   "strike": "17150.0",
+   "side": "C",
+   "high": "549.45",
+   "high_n": "477.5",
+   "low": "290.0",
+   "low_n": "290.0"
+  },
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-24",
+   "strike": "25700.0",
+   "side": "C",
+   "high": "707.7",
+   "high_n": "817.7",
+   "low": "336.8",
+   "low_n": "336.0"
+  },
+  {
+   "date": "2022-07-11",
+   "expiry": "2022-07-28",
+   "strike": "16250.0",
+   "side": "C",
+   "high": "241.75",
+   "high_n": "241.75",
+   "low": "160.65",
+   "low_n": "179.3"
+  }
+ ],
+ "opt_BANKNIFTY_WEEK": {
+  "underlying": "BANKNIFTY",
+  "flag": "WEEK",
+  "days": 367,
+  "contract-days": 4326,
+  "found in bhavcopy": "100.00%",
+  "high match": "98.15%",
+  "low match": "96.95%",
+  "open match": "99.86%",
+  "last price <=0.5% (2024-07+)": "75.84%",
+  "last price <=2% (2024-07+)": "97.01%",
+  "OI Dhan/NSE median": "1.043",
+  "OI within 1%": "15.58%",
+  "high&low match on expiry days": "94.59%"
+ },
+ "opt_BANKNIFTY_WEEK_worst": [
+  {
+   "date": "2026-04-08",
+   "expiry": "2026-04-28",
+   "strike": "55700.0",
+   "side": "P",
+   "high": "3348.85",
+   "high_n": "1512.65",
+   "low": "947.7",
+   "low_n": "920.6"
+  },
+  {
+   "date": "2026-04-22",
+   "expiry": "2026-04-28",
+   "strike": "57300.0",
+   "side": "C",
+   "high": "720.0",
+   "high_n": "720.0",
+   "low": "506.0",
+   "low_n": "333.0"
+  },
+  {
+   "date": "2026-01-19",
+   "expiry": "2026-01-27",
+   "strike": "59700.0",
+   "side": "P",
+   "high": "396.5",
+   "high_n": "397.35",
+   "low": "249.7",
+   "low_n": "182.85"
+  },
+  {
+   "date": "2026-04-08",
+   "expiry": "2026-04-28",
+   "strike": "55400.0",
+   "side": "C",
+   "high": "1417.45",
+   "high_n": "1417.45",
+   "low": "800.0",
+   "low_n": "694.8"
+  },
+  {
+   "date": "2026-04-08",
+   "expiry": "2026-04-28",
+   "strike": "54900.0",
+   "side": "P",
+   "high": "1122.5",
+   "high_n": "1298.65",
+   "low": "687.5",
+   "low_n": "687.5"
+  }
+ ],
+ "opt_BANKNIFTY_MONTH": {
+  "underlying": "BANKNIFTY",
+  "flag": "MONTH",
+  "days": 365,
+  "contract-days": 4304,
+  "found in bhavcopy": "99.35%",
+  "high match": "94.63%",
+  "low match": "94.24%",
+  "open match": "99.16%",
+  "last price <=0.5% (2024-07+)": "78.25%",
+  "last price <=2% (2024-07+)": "96.63%",
+  "OI Dhan/NSE median": "1.015",
+  "OI within 1%": "33.92%",
+  "high&low match on expiry days": "84.85%"
+ },
+ "opt_BANKNIFTY_MONTH_worst": [
+  {
+   "date": "2026-04-08",
+   "expiry": "2026-04-28",
+   "strike": "55700.0",
+   "side": "P",
+   "high": "3348.85",
+   "high_n": "1512.65",
+   "low": "947.7",
+   "low_n": "920.6"
+  },
+  {
+   "date": "2026-04-22",
+   "expiry": "2026-04-28",
+   "strike": "57300.0",
+   "side": "C",
+   "high": "720.0",
+   "high_n": "720.0",
+   "low": "506.0",
+   "low_n": "333.0"
+  },
+  {
+   "date": "2026-01-19",
+   "expiry": "2026-01-27",
+   "strike": "59700.0",
+   "side": "P",
+   "high": "396.5",
+   "high_n": "397.35",
+   "low": "249.7",
+   "low_n": "182.85"
+  },
+  {
+   "date": "2022-05-09",
+   "expiry": "2022-05-26",
+   "strike": "33900.0",
+   "side": "C",
+   "high": "1500.35",
+   "high_n": "1149.55",
+   "low": "830.05",
+   "low_n": "830.05"
+  },
+  {
+   "date": "2022-05-09",
+   "expiry": "2022-05-26",
+   "strike": "34500.0",
+   "side": "C",
+   "high": "805.95",
+   "high_n": "805.95",
+   "low": "373.15",
+   "low_n": "536.05"
+  }
+ ],
+ "opt_FINNIFTY_WEEK": {
+  "underlying": "FINNIFTY",
+  "flag": "WEEK",
+  "days": 368,
+  "contract-days": 3693,
+  "found in bhavcopy": "98.81%",
+  "high match": "91.74%",
+  "low match": "91.42%",
+  "open match": "94.64%",
+  "last price <=0.5% (2024-07+)": "82.33%",
+  "last price <=2% (2024-07+)": "90.11%",
+  "OI Dhan/NSE median": "1.017",
+  "OI within 1%": "27.43%",
+  "high&low match on expiry days": "91.67%"
+ },
+ "opt_FINNIFTY_WEEK_worst": [
+  {
+   "date": "2021-11-01",
+   "expiry": "2021-11-02",
+   "strike": "18800.0",
+   "side": "P",
+   "high": "149.0",
+   "high_n": "8.0",
+   "low": "3.0",
+   "low_n": "8.0"
+  },
+  {
+   "date": "2022-11-01",
+   "expiry": "2022-11-01",
+   "strike": "18550.0",
+   "side": "P",
+   "high": "426.05",
+   "high_n": "36.15",
+   "low": "0.05",
+   "low_n": "0.05"
+  },
+  {
+   "date": "2021-11-01",
+   "expiry": "2021-11-02",
+   "strike": "18900.0",
+   "side": "P",
+   "high": "299.0",
+   "high_n": "30.0",
+   "low": "15.0",
+   "low_n": "15.0"
+  },
+  {
+   "date": "2021-10-25",
+   "expiry": "2021-10-26",
+   "strike": "19800.0",
+   "side": "C",
+   "high": "80.0",
+   "high_n": "10.0",
+   "low": "10.0",
+   "low_n": "10.0"
+  },
+  {
+   "date": "2022-11-01",
+   "expiry": "2022-11-01",
+   "strike": "18600.0",
+   "side": "P",
+   "high": "422.85",
+   "high_n": "59.0",
+   "low": "0.05",
+   "low_n": "0.05"
+  }
+ ],
+ "opt_FINNIFTY_MONTH": {
+  "underlying": "FINNIFTY",
+  "flag": "MONTH",
+  "days": 250,
+  "contract-days": 2478,
+  "found in bhavcopy": "98.77%",
+  "high match": "89.18%",
+  "low match": "89.67%",
+  "open match": "93.26%",
+  "last price <=0.5% (2024-07+)": "85.30%",
+  "last price <=2% (2024-07+)": "91.70%",
+  "OI Dhan/NSE median": "1.013",
+  "OI within 1%": "31.23%",
+  "high&low match on expiry days": "86.05%"
+ },
+ "opt_FINNIFTY_MONTH_worst": [
+  {
+   "date": "2021-10-25",
+   "expiry": "2021-10-26",
+   "strike": "19800.0",
+   "side": "C",
+   "high": "80.0",
+   "high_n": "10.0",
+   "low": "10.0",
+   "low_n": "10.0"
+  },
+  {
+   "date": "2022-01-24",
+   "expiry": "2022-01-25",
+   "strike": "17800.0",
+   "side": "C",
+   "high": "350.0",
+   "high_n": "66.05",
+   "low": "8.75",
+   "low_n": "14.85"
+  },
+  {
+   "date": "2022-01-24",
+   "expiry": "2022-01-25",
+   "strike": "17500.0",
+   "side": "C",
+   "high": "350.0",
+   "high_n": "84.95",
+   "low": "84.95",
+   "low_n": "84.95"
+  },
+  {
+   "date": "2026-09-09",
+   "expiry": "2026-09-29",
+   "strike": "25400.0",
+   "side": "C",
+   "high": "2046.65",
+   "high_n": "741.75",
+   "low": "2046.65",
+   "low_n": "741.75"
+  },
+  {
+   "date": "2023-01-23",
+   "expiry": "2023-01-31",
+   "strike": "18900.0",
+   "side": "P",
+   "high": "350.0",
+   "high_n": "136.05",
+   "low": "98.8",
+   "low_n": "104.15"
+  }
+ ],
+ "opt_MIDCPNIFTY_WEEK": {
+  "underlying": "MIDCPNIFTY",
+  "flag": "WEEK",
+  "days": 242,
+  "contract-days": 3018,
+  "found in bhavcopy": "100.00%",
+  "high match": "90.46%",
+  "low match": "91.62%",
+  "open match": "94.40%",
+  "last price <=0.5% (2024-07+)": "81.28%",
+  "last price <=2% (2024-07+)": "90.72%",
+  "OI Dhan/NSE median": "1.016",
+  "OI within 1%": "30.98%",
+  "high&low match on expiry days": "89.72%"
+ },
+ "opt_MIDCPNIFTY_WEEK_worst": [
+  {
+   "date": "2026-09-02",
+   "expiry": "2026-09-29",
+   "strike": "14675.0",
+   "side": "P",
+   "high": "683.85",
+   "high_n": "227.15",
+   "low": "169.0",
+   "low_n": "167.55"
+  },
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-24",
+   "strike": "13625.0",
+   "side": "P",
+   "high": "619.6",
+   "high_n": "286.0",
+   "low": "193.9",
+   "low_n": "193.85"
+  },
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-24",
+   "strike": "13650.0",
+   "side": "P",
+   "high": "619.6",
+   "high_n": "295.35",
+   "low": "165.6",
+   "low_n": "202.55"
+  },
+  {
+   "date": "2023-05-16",
+   "expiry": "2023-05-17",
+   "strike": "7550.0",
+   "side": "P",
+   "high": "41.3",
+   "high_n": "20.0",
+   "low": "16.5",
+   "low_n": "16.5"
+  },
+  {
+   "date": "2026-04-01",
+   "expiry": "2026-04-28",
+   "strike": "12575.0",
+   "side": "C",
+   "high": "990.0",
+   "high_n": "487.05",
+   "low": "377.7",
+   "low_n": "368.25"
+  }
+ ],
+ "opt_MIDCPNIFTY_MONTH": {
+  "underlying": "MIDCPNIFTY",
+  "flag": "MONTH",
+  "days": 190,
+  "contract-days": 2451,
+  "found in bhavcopy": "98.76%",
+  "high match": "86.94%",
+  "low match": "88.41%",
+  "open match": "91.27%",
+  "last price <=0.5% (2024-07+)": "83.15%",
+  "last price <=2% (2024-07+)": "90.75%",
+  "OI Dhan/NSE median": "1.014",
+  "OI within 1%": "32.56%",
+  "high&low match on expiry days": "86.03%"
+ },
+ "opt_MIDCPNIFTY_MONTH_worst": [
+  {
+   "date": "2026-09-02",
+   "expiry": "2026-09-29",
+   "strike": "14675.0",
+   "side": "P",
+   "high": "683.85",
+   "high_n": "227.15",
+   "low": "169.0",
+   "low_n": "167.55"
+  },
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-24",
+   "strike": "13625.0",
+   "side": "P",
+   "high": "619.6",
+   "high_n": "286.0",
+   "low": "193.9",
+   "low_n": "193.85"
+  },
+  {
+   "date": "2026-02-03",
+   "expiry": "2026-02-24",
+   "strike": "13650.0",
+   "side": "P",
+   "high": "619.6",
+   "high_n": "295.35",
+   "low": "165.6",
+   "low_n": "202.55"
+  },
+  {
+   "date": "2026-04-01",
+   "expiry": "2026-04-28",
+   "strike": "12575.0",
+   "side": "C",
+   "high": "990.0",
+   "high_n": "487.05",
+   "low": "377.7",
+   "low_n": "368.25"
+  },
+  {
+   "date": "2024-10-03",
+   "expiry": "2024-10-28",
+   "strike": "12900.0",
+   "side": "P",
+   "high": "249.6",
+   "high_n": "127.1",
+   "low": "165.0",
+   "low_n": "127.0"
+  }
+ ],
+ "fut_NIFTY_c0": {
+  "underlying": "NIFTY",
+  "expiry code": 0,
+  "compared days": 384,
+  "close match (<=0.05%)": "98.18%",
+  "OI exact": "97.92%"
+ },
+ "fut_BANKNIFTY_c0": {
+  "underlying": "BANKNIFTY",
+  "expiry code": 0,
+  "compared days": 384,
+  "close match (<=0.05%)": "98.18%",
+  "OI exact": "98.18%"
+ },
+ "fut_FINNIFTY_c0": {
+  "underlying": "FINNIFTY",
+  "expiry code": 0,
+  "compared days": 385,
+  "close match (<=0.05%)": "97.92%",
+  "OI exact": "98.18%"
+ },
+ "fut_MIDCPNIFTY_c0": {
+  "underlying": "MIDCPNIFTY",
+  "expiry code": 0,
+  "compared days": 346,
+  "close match (<=0.05%)": "82.95%",
+  "OI exact": "86.13%"
+ }
+}
