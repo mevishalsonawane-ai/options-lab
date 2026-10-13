@@ -24,7 +24,7 @@ class GitHubBackupTest : RobolectricTest() {
 
     @Test fun theEveningBackupOpensWithThePassphraseAndCarriesNoTokenOrKey() = runBlocking {
         SecurePrefs.putAll(mapOf("s.capital" to 321_000.0, "github.token.pin" to "v2:not-a-real-sealed-token",
-            "github.token.dev" to "k1:00:00", "github.key.live" to "1000:00:00", "github.key.backup" to "00:00", "github.last" to "1|1|2|backup|"))
+            "github.token.worker" to "w1:00:00", "github.repo" to "mevishalsonawane-ai/IraAlgo", "github.key.live" to "1000:00:00", "github.key.backup" to "00:00", "github.last" to "1|1|2|backup|"))
         val pine = File(context.filesDir, "pine.vault")
         Vault.writeFile(pine, JSONArray().put(JSONObject().put("name", "t").put("auto", JSONObject().put("on", true))).toString().toByteArray())
         val key = Backup.stretch(pass.copyOf(), salt)
@@ -34,7 +34,7 @@ class GitHubBackupTest : RobolectricTest() {
         val c = Backup.open(bytes, pass.copyOf())
         val prefs = c.json.getJSONObject("prefs")
         assertEquals(321_000.0, prefs.getDouble("s.capital"), 0.0)
-        for (k in listOf("github.token.pin", "github.token.dev", "github.key.live", "github.key.backup", "github.last"))
+        for (k in listOf("github.token.pin", "github.token.worker", "github.repo", "github.key.live", "github.key.backup", "github.last"))
             assertFalse("$k was backed up", prefs.has(k))
         try { Backup.open(bytes, "Other-Passphrase-42!".toCharArray()); fail() } catch (_: Backup.WrongPin) {}
         // Restored as a file would be: the Pine script comes back switched off, and the disarm flag is set first.

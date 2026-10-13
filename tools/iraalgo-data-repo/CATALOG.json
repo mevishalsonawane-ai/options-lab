@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "about": "Every file the phone uploaded to this data repository that passed the nightly check (verify_uploads.py): the recorded days (kind live) and the phone backups (kind backup), sealed with Boss's backup passphrase. The Data Brain reads its live days from here (options-lab: research/data/ARCHITECTURE.md, L1).",
+  "files": []
+}

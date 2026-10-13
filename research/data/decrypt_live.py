@@ -22,7 +22,8 @@ Usage::
     python research/data/decrypt_live.py live-2026-10-13.irlive --extract dir/   # unzip too
 
 The passphrase is asked for (never shown, never stored). For scripts it can come from the
-environment variable ``IRAALGO_BACKUP_PASSPHRASE`` instead: never put it in a file in the repo.
+environment variable ``IRAALGO_BACKUP_PASSPHRASE`` on your own PC instead: never put it in a file in the repo, and
+never in GitHub (no Actions secret: the nightly check in the IraAlgo data repository needs no passphrase).
 
 File format "IRLIVE01" (big-endian), written by ``LiveSeal.kt`` (android/ira-core):
 

@@ -25,6 +25,10 @@ class CloudRunTest {
         var nextId = 100L
         var fail: Pair<String, Int>? = null
         var expiryHeader: String? = "2027-01-10 10:20:30 UTC"
+        /** What GET /repos/<owner>/options-lab answers (null: 404, the token cannot see it). */
+        var codeRepo: Map<String, Any?>? = null
+        /** Answers a request whose method and URL match with a code, then forgets it. */
+        var failOnce: Triple<String, String, Int>? = null
 
         private fun json(code: Int, v: Any?, headers: Map<String, String> = emptyMap()) =
             GitHubReleases.Response(code, headers, Json.write(v).toByteArray())
@@ -34,17 +38,20 @@ class CloudRunTest {
         override fun send(r: GitHubReleases.Request): GitHubReleases.Response {
             seen += r
             fail?.let { (part, code) -> if (r.url.contains(part)) return json(code, mapOf("message" to "Bad credentials")) }
+            failOnce?.let { (method, part, code) ->
+                if (r.method == method && r.url.contains(part)) { failOnce = null; return json(code, mapOf("message" to "Server Error")) }
+            }
             val u = r.url
             val body = r.body?.let { b -> ByteArrayOutputStream().also { b.write(it) }.toByteArray().also { assertEquals(b.length, it.size.toLong()) } }
             Regex("^https://api.github.com/user$").find(u)?.let {
                 return json(200, mapOf("login" to "boss"), expiryHeader?.let { mapOf("github-authentication-token-expiration" to it) } ?: emptyMap())
             }
-            Regex("^https://api.github.com/repos/mevishalsonawane-ai/options-lab$").find(u)?.let { return json(200, mapOf("id" to 1)) }
+            Regex("^https://api.github.com/repos/mevishalsonawane-ai/IraAlgo$").find(u)?.let { return json(200, mapOf("id" to 1)) }
             Regex("/releases/tags/([^/?]+)$").find(u)?.let { m ->
                 val rel = releases.firstOrNull { it.tag == m.groupValues[1] } ?: return json(404, mapOf("message" to "Not Found"))
                 return json(200, mapOf("id" to rel.id, "tag_name" to rel.tag))
             }
-            if (r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/options-lab/releases")) {
+            if (r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/IraAlgo/releases")) {
                 val o = Json.parse(String(body!!)) as Map<*, *>
                 val rel = Rel(nextId++, o["tag_name"].toString()); releases += rel
                 assertEquals(true, o["prerelease"])
@@ -55,17 +62,26 @@ class CloudRunTest {
                 val page = m.groupValues[2].toInt()
                 return json(200, rel.assets.entries.toList().drop((page - 1) * 100).take(100).map { assetJson(it.key, it.value) })
             }
-            Regex("^https://uploads.github.com/repos/mevishalsonawane-ai/options-lab/releases/(\\d+)/assets\\?name=(.+)$").find(u)?.let { m ->
+            Regex("^https://uploads.github.com/repos/mevishalsonawane-ai/IraAlgo/releases/(\\d+)/assets\\?name=(.+)$").find(u)?.let { m ->
                 val rel = releases.first { it.id == m.groupValues[1].toLong() }
                 val name = java.net.URLDecoder.decode(m.groupValues[2], "UTF-8")
                 if (rel.assets.values.any { it.first == name }) return json(422, mapOf("message" to "already_exists"))
                 val id = nextId++; rel.assets[id] = name to body!!
                 return json(201, assetJson(id, name to body))
             }
+            Regex("^https://api.github.com/repos/mevishalsonawane-ai/options-lab$").find(u)?.let {
+                return codeRepo?.let { json(200, it) } ?: json(404, mapOf("message" to "Not Found"))
+            }
             Regex("/releases/assets/(\\d+)$").find(u)?.let { m ->
                 val id = m.groupValues[1].toLong()
                 val rel = releases.firstOrNull { id in it.assets } ?: return json(404, mapOf("message" to "Not Found"))
                 if (r.method == "DELETE") { rel.assets.remove(id); return GitHubReleases.Response(204, emptyMap(), ByteArray(0)) }
+                if (r.method == "PATCH") {
+                    val name = (Json.parse(String(body!!)) as Map<*, *>)["name"].toString()
+                    if (rel.assets.any { it.key != id && it.value.first == name }) return json(422, mapOf("message" to "already_exists"))
+                    rel.assets[id] = name to rel.assets.getValue(id).second
+                    return json(200, assetJson(id, rel.assets.getValue(id)))
+                }
                 return GitHubReleases.Response(302, mapOf("location" to "https://objects.githubusercontent.com/store/$id?sig=1"), ByteArray(0))
             }
             Regex("^https://objects.githubusercontent.com/store/(\\d+)").find(u)?.let { m ->
@@ -85,6 +101,7 @@ class CloudRunTest {
         var cleaned = 0
         var backupBytes = "backup".toByteArray()
         var stopAfter = Int.MAX_VALUE
+        val backedUp = ArrayList<LocalDateTime>()
         override fun recorded() = rec
         override fun uploaded() = up
         override fun markUploaded(day: LocalDate, bytes: Long) { up[day] = bytes }
@@ -95,6 +112,7 @@ class CloudRunTest {
         }
         override fun backup() = backupBytes.copyOf()
         override fun goOn() = sealedDays.size < stopAfter
+        override fun backedUp(at: LocalDateTime) { backedUp += at }
     }
 
     private val gh = FakeGitHub()
@@ -228,5 +246,88 @@ class CloudRunTest {
         val rel = FakeGitHub.Rel(gh.nextId++, "big"); gh.releases += rel
         repeat(230) { rel.assets[gh.nextId++] = "f$it" to ByteArray(0) }
         assertEquals(230, client.assets(rel.id).size)
+    }
+    // ---- 13 Oct review ------------------------------------------------------------------------------------------------
+
+    @Test fun theClientRefusesOptionsLab() {
+        for (r in listOf("options-lab", "Options-Lab")) {
+            val e = assertFailsWith<IllegalArgumentException> { GitHubReleases(gh, token, CloudSync.OWNER, r) }
+            assertFalse(e.message!!.contains(token))
+        }
+        assertTrue(gh.seen.isEmpty(), "nothing was sent")
+        // The default is the data repository.
+        GitHubReleases(gh, token).canSeeRepo()
+        assertEquals("https://api.github.com/repos/mevishalsonawane-ai/IraAlgo", gh.seen.single().url)
+    }
+
+    @Test fun aTokenThatReachesTheCodeIsSpotted() {
+        assertFalse(client.reachesCode())                                         // 404: cannot see it
+        gh.codeRepo = mapOf("private" to true)
+        assertTrue(client.reachesCode())                                          // sees the private code repository
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("pull" to true, "push" to false))
+        assertFalse(client.reachesCode())                                         // public, read only
+        gh.codeRepo = mapOf("private" to false, "permissions" to mapOf("push" to true))
+        assertTrue(client.reachesCode())
+        assertTrue(gh.seen.all { it.method == "GET" })
+        // An ambiguous refusal fails closed; a rate limit is an error, not an answer.
+        val refusing = GitHubReleases({ GitHubReleases.Response(403, emptyMap(), Json.write(mapOf("message" to "SAML enforcement")).toByteArray()) }, token)
+        assertTrue(refusing.reachesCode())
+        val limited = GitHubReleases({ GitHubReleases.Response(403, mapOf("x-ratelimit-remaining" to "0"), ByteArray(0)) }, token)
+        assertFailsWith<GitHubReleases.Failure> { limited.reachesCode() }
+    }
+
+    @Test fun aReplacementNeverLeavesNoCopy() {
+        val rel = client.ensureRelease("live-2026-10", "t", "n")
+        client.upload(rel, "a.irlive", GitHubReleases.Body.of(byteArrayOf(1)))
+        // The new copy goes up under a temporary name; the upload fails: the old copy stays, alone.
+        gh.failOnce = Triple("POST", "a.irlive.new", 500)
+        assertFailsWith<GitHubReleases.Failure> { client.upload(rel, "a.irlive", GitHubReleases.Body.of(byteArrayOf(2, 2))) }
+        assertEquals(listOf("a.irlive" to 1L), client.assets(rel.id).map { it.name to it.size })
+        // The rename fails after the old copy went: the new copy is there under its temporary name.
+        gh.failOnce = Triple("PATCH", "/releases/assets/", 500)
+        assertFailsWith<GitHubReleases.Failure> { client.upload(rel, "a.irlive", GitHubReleases.Body.of(byteArrayOf(3, 3, 3))) }
+        assertEquals(listOf("a.irlive.new" to 3L), client.assets(rel.id).map { it.name to it.size })
+        // The next upload puts the final name back first, then removes the temporary copy.
+        val a = client.upload(rel, "a.irlive", GitHubReleases.Body.of(byteArrayOf(4, 4, 4, 4)))
+        assertEquals("a.irlive", a.name)
+        assertEquals(listOf("a.irlive" to 4L), client.assets(rel.id).map { it.name to it.size })
+        // A clean replacement: upload as .new, delete the old, rename. One asset, the new bytes.
+        client.upload(rel, "a.irlive", GitHubReleases.Body.of(byteArrayOf(5)))
+        assertEquals(listOf("GET", "POST", "DELETE", "PATCH"), gh.seen.takeLast(4).map { it.method })
+        assertEquals(listOf("a.irlive" to 1L), client.assets(rel.id).map { it.name to it.size })
+        tokenOnlyInAuthorization()
+    }
+
+    @Test fun theBackupReminderRestsOnlyAfterAnUploadThatWorked() {
+        gh.fail = "uploads.github.com" to 500
+        assertFalse(run.backup(LocalDateTime.of(2026, 10, 13, 18, 0)).ok)
+        assertTrue(phone.backedUp.isEmpty())
+        gh.fail = null
+        assertTrue(run.backup(LocalDateTime.of(2026, 10, 13, 18, 5)).ok)
+        assertEquals(listOf(LocalDateTime.of(2026, 10, 13, 18, 5)), phone.backedUp)
+    }
+
+    @Test fun aRefusedTokenCarriesItsCodeAndARateLimitDoesNot() {
+        gh.fail = "uploads.github.com" to 401
+        assertEquals(401, run.backup(LocalDateTime.of(2026, 10, 13, 18, 0)).code)
+        phone.rec[LocalDate.of(2026, 10, 9)] = 10
+        gh.fail = "uploads.github.com" to 403
+        assertEquals(403, assertNotNull(run.live(today, after)).code)
+        // GitHub's rate limit answers 403 too: kept as 429, so the uploads are not paused for it.
+        val limited = GitHubReleases({ GitHubReleases.Response(403, mapOf("x-ratelimit-remaining" to "0"),
+            Json.write(mapOf("message" to "API rate limit exceeded")).toByteArray()) }, token)
+        assertEquals(429, assertFailsWith<GitHubReleases.Failure> { limited.user() }.code)
+    }
+
+    @Test fun aBackupLeftUnderItsTemporaryNameIsNamedBackByThePrune() {
+        val rel = FakeGitHub.Rel(gh.nextId++, CloudSync.BACKUP_TAG); gh.releases += rel
+        val stuck = CloudSync.backupAsset(LocalDateTime.of(2026, 10, 12, 18, 0))
+        rel.assets[gh.nextId++] = "$stuck.new" to ByteArray(3)
+        val both = CloudSync.backupAsset(LocalDateTime.of(2026, 10, 11, 18, 0))
+        rel.assets[gh.nextId++] = both to ByteArray(1)
+        rel.assets[gh.nextId++] = "$both.new" to ByteArray(2)
+        run.prune(rel.id)
+        assertEquals(listOf(both, stuck), gh.names(CloudSync.BACKUP_TAG).sorted())
+        assertEquals(listOf(stuck, both), run.backups().map { it.first.name })
     }
 }

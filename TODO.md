@@ -153,21 +153,40 @@ Not possible yet:
         inside), sealed with the backup passphrase (PBKDF2-SHA256 600k, AES-256-GCM chunks), as `live-YYYY-MM-DD.irlive`.
         A day whose folder grew (a late fill) goes again; a day only uploads after 15:45. Left: Boss's token
         (MAINTENANCE.md, "GitHub token").
-      - Nightly job built 13 Oct: `.github/workflows/uploads.yml` runs `research/data/verify_uploads.py` at 03:22 IST (from
-        main): each new day checked whole without the passphrase (header, chunk layout, size, sha256, name and month),
-        backups' headers and age, weekday gaps; good days go to `research/data/CATALOG.json`; a bad file fails the run
-        (ntfy). Optional secret `IRAALGO_BACKUP_PASSPHRASE` adds a full open-and-manifest check. Feeding the Data Brain
-        from the catalogue is the brain's own step (P1/P6).
+      - Review fixes 13 Oct (Boss: the uploads go to the private data-only repository `mevishalsonawane-ai/IraAlgo`, never
+        options-lab, so a stolen phone token can never push code CI signs or replace `latest-apk`):
+        - The data repository is a constant and the card's "Data repository" field; options-lab is refused everywhere,
+          and a token that can reach options-lab is refused when pasted.
+        - The token's only PIN-less copy is the upload worker's, bound to the data repository. Restore from GitHub
+          needs the PIN.
+        - `backup.last` is set only after an upload worked. A 401/403 pauses the automatic runs, and Problems found
+          says "GitHub token invalid".
+        - A re-upload goes up as `<name>.new` first, then the old copy is deleted and the new one renamed.
+        - The backup after a strategy or Pine change waits for 15:45 and charging, as the evening run does.
+      - [ ] Nightly job: moved to the IraAlgo repository (13 Oct review). The files to commit there are staged in
+        `tools/iraalgo-data-repo/` (the workflow, `verify_uploads.py`, its tests, a README and an empty
+        `CATALOG.json`). Left: this session had no push access to IraAlgo; copy them to IraAlgo's default branch, then
+        delete the staging folder here. The job:
+        - loads its last `CATALOG.json` first and downloads only new or replaced files;
+        - checks each file's structure without the passphrase (header, chunk layout, size, sha256, name and month) and
+          each backup's header;
+        - warns on gaps and an old backup;
+        - turns the run red on a bad file (ntfy).
+
+        There is no passphrase secret, and nothing is decrypted. Feeding the Data Brain from that catalogue is the
+        brain's own step (P1/P6).
       - When: after 15:45, only on Wi-Fi and while charging. If it misses a day it retries the next evening.
       - Never on the order or tick path, and never on the main thread.
       - What: the day's file (per-second snapshots, per-minute order-flow aggregates, Boss's fills), encrypted on the
         phone before upload. It goes to a GitHub Release `live-YYYY-MM` as an asset, never as a git commit.
-      - Key: one fine-grained GitHub token, options-lab only, 90-day expiry.
+      - Key: one fine-grained GitHub token, for the IraAlgo data repository only (never options-lab), Contents read and
+        write, 90-day expiry.
         - Boss pastes it into the app (Settings → Data & Harvest), never into chat. It is stored wrapped by the PIN, like
           the Zerodha API secret, and never appears in diagnostics or backups.
         - The app reminds Boss 7 days before the token expires.
       - Card: "Last upload: date · size · ✓/✗", "N days waiting". A failure goes to Problems found.
-      - Nightly GitHub job: verifies each upload, adds it to `research/data/CATALOG.json` and feeds the Data Brain.
+      - Nightly GitHub job (in IraAlgo): verifies each upload, adds it to IraAlgo's `CATALOG.json` and feeds the Data
+        Brain.
       - Docs: MAINTENANCE.md gets the steps to create and renew the token, and tells Boss to turn on "protect main"
         (changes only after CI passes).
       - Until G1 ships: export the recorded data by hand every Friday (Data & Harvest → Export) and upload it to the

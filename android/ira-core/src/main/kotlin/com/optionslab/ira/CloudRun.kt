@@ -31,9 +31,18 @@ class CloudRun(private val gh: GitHubReleases, private val phone: Phone) {
         fun backup(): ByteArray
         /** False once the run must stop (WorkManager stopped the worker). */
         fun goOn(): Boolean = true
+        /**
+         * The backup made at [at] is on GitHub (called only after the upload worked): the phone's backup reminder may rest.
+         * Never on a failed upload (13 Oct review: a failed upload must not silence the reminder).
+         */
+        fun backedUp(at: LocalDateTime) = Unit
     }
 
-    data class Outcome(val ok: Boolean, val bytes: Long, val what: String, val why: String? = null, val days: List<LocalDate> = emptyList())
+    /** [code]: GitHub's HTTP code when it refused (0: none, or not GitHub's answer). */
+    data class Outcome(val ok: Boolean, val bytes: Long, val what: String, val why: String? = null, val days: List<LocalDate> = emptyList(),
+                       val code: Int = 0)
+
+    private fun code(e: Throwable): Int = (e as? GitHubReleases.Failure)?.code ?: 0
 
     private fun why(e: Throwable): String = CloudSync.redact(when (e) {
         is GitHubReleases.Failure -> e.message ?: "GitHub refused it"
@@ -62,7 +71,7 @@ class CloudRun(private val gh: GitHubReleases, private val phone: Phone) {
                 phone.markUploaded(d, size)
                 done += d; bytes += sealed.length
             } catch (e: Exception) {
-                return Outcome(false, bytes, "live $d", why(e), done)
+                return Outcome(false, bytes, "live $d", why(e), done, code(e))
             } finally { runCatching { sealed.done() } }
         }
         return Outcome(true, bytes, if (done.size == 1) "live ${done[0]}" else "live ${done.size} days", days = done)
@@ -76,13 +85,22 @@ class CloudRun(private val gh: GitHubReleases, private val phone: Phone) {
                 "IraAlgo's phone backups, sealed with Boss's backup passphrase. Restore one from the app: Settings → Data & Harvest → GitHub sync → Restore from GitHub.")
             gh.upload(r, CloudSync.backupAsset(now), GitHubReleases.Body.of(bytes))
             r
-        } catch (e: Exception) { return Outcome(false, 0, "backup", why(e)) } finally { bytes.fill(0) }
+        } catch (e: Exception) { return Outcome(false, 0, "backup", why(e), code = code(e)) } finally { bytes.fill(0) }
+        runCatching { phone.backedUp(now) }
         runCatching { prune(rel.id) }
         return Outcome(true, bytes.size.toLong(), "backup")
     }
 
     /** Deletes the backups [CloudSync.retention] does not keep; returns how many went. */
     fun prune(releaseId: Long): Int {
+        // A backup left under its temporary name by a failed rename: named back (or dropped when the real one is there),
+        // so Restore sees it and retention counts it.
+        val first = gh.assets(releaseId)
+        val names = first.map { it.name }.toSet()
+        first.filter { it.name.endsWith(".new") }.forEach { a ->
+            val base = a.name.removeSuffix(".new")
+            if (CloudSync.backupTime(base) != null) runCatching { if (base in names) gh.delete(a.id) else gh.rename(a.id, base) }
+        }
         val assets = gh.assets(releaseId)
         val gone = CloudSync.retention(assets.map { it.name }).delete.toSet()
         assets.filter { it.name in gone }.forEach { gh.delete(it.id) }

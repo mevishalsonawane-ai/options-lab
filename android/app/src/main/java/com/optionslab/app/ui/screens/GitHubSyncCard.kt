@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -46,11 +47,12 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 /**
- * Settings → Data & Harvest → "GitHub sync" (TODO G1/G2, 13 Oct; [GitHubSync]): the token (pasted here, checked with GitHub,
- * kept sealed by the PIN), the backup passphrase that seals every upload, the last upload (date · size · ✓/✗), the days
- * waiting, the last backup, "Upload now" and "Restore from GitHub" (pick a date, the backup passphrase, then this phone's PIN,
- * through the same [Backup.restore] as a file: everything comes back switched off; the PIN, Live/AI-live, tokens and the
- * paper-only period are never in a backup). Every read, check and upload runs off the main thread.
+ * Settings → Data & Harvest → "GitHub sync" (TODO G1/G2, 13 Oct; [GitHubSync]): the token and the data repository it is for
+ * (pasted here, checked with GitHub, kept sealed by the PIN; options-lab is refused), the backup passphrase that seals every
+ * upload, the last upload (date · size · ✓/✗), the days waiting, the last backup, "Upload now" and "Restore from GitHub" (the
+ * PIN opens the token, then pick a date, the backup passphrase, then this phone's PIN again, through the same
+ * [Backup.restore] as a file: everything comes back switched off; the PIN, Live/AI-live, tokens and the paper-only period
+ * are never in a backup). Every read, check and upload runs off the main thread. What the card shows is [GitHubSyncLines].
  */
 @Composable
 fun GitHubSyncCard(model: AppModel) {
@@ -61,10 +63,10 @@ fun GitHubSyncCard(model: AppModel) {
     var reread by remember { mutableIntStateOf(0) }
     var status by remember { mutableStateOf<CloudSync.Status?>(null) }
     var lines by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
-    var deviceOk by remember { mutableStateOf(true) }
+    var workerOk by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
-    var ask by remember { mutableStateOf<String?>(null) }      // "token" | "pass" | "unlock" | "forget" | "pick" | "open"
-    var choices by remember { mutableStateOf<List<GitHubSync.Saved>>(emptyList()) }
+    var ask by remember { mutableStateOf<String?>(null) }      // "token" | "pass" | "unlock" | "forget" | "restore" | "pick" | "open"
+    var restore by remember { mutableStateOf<GitHubSync.Restore?>(null) }
     var picked by remember { mutableStateOf<ByteArray?>(null) }
     var opened by remember { mutableStateOf<Backup.Contents?>(null) }
     LaunchedEffect(reread) {
@@ -72,7 +74,7 @@ fun GitHubSyncCard(model: AppModel) {
             val st = runCatching { GitHubSync.status() }.getOrNull()
             status = st
             lines = st?.let { runCatching { GitHubSync.card(it) }.getOrDefault(emptyList()) } ?: emptyList()
-            deviceOk = st?.tokenSet != true || runCatching { GitHubSync.deviceCopyOk() }.getOrDefault(false)
+            workerOk = st?.tokenSet != true || runCatching { GitHubSync.workerCopyOk() }.getOrDefault(false)
         }
     }
 
@@ -88,46 +90,16 @@ fun GitHubSyncCard(model: AppModel) {
     }
 
     LedgerCard(title = "GitHub sync") {
-        Note("Every evening after 15:45, on Wi-Fi while charging, the phone uploads each recorded day and a phone backup to " +
-            "GitHub (options-lab's releases, never the code). Both are sealed on the phone with your backup passphrase: GitHub " +
-            "sees only noise. A strategy or Pine change is backed up a few minutes later. The token stays sealed by your PIN.")
-        if (status == null) LedgerLine("Status", "…") else lines.forEach { (k, v) ->
-            LedgerLine(k, v, if (v.contains("✗") || k == "Token") p.oxblood else null)
-        }
-        val st = status
-        if (st?.tokenSet == true && !deviceOk) {
-            Note("The phone's copy of the token cannot be opened (its key was reset). Unlock it once with your PIN.")
-            BrassButton("Unlock with PIN", Modifier.fillMaxWidth().padding(top = 8.dp)) { ask = "unlock" }
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BrassButton(if (st?.tokenSet == true) "New token…" else "Paste token…", Modifier.weight(1f)) { ask = "token" }
-            BrassButton(if (st?.keyReady == true) "Change passphrase…" else "Set passphrase…", Modifier.weight(1f), tone = p.inkSoft) { ask = "pass" }
-        }
-        if (st?.tokenSet == true && st.keyReady) {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BrassButton("Upload now", Modifier.weight(1f), busy = busy && ask == null) {
-                    runCatching { com.optionslab.app.work.GitHubSyncWorker.now(ctx.applicationContext) }
-                    Alerts.success("Upload queued: it starts as soon as the phone is on Wi-Fi (recorded days only outside 09:00-15:45).")
-                }
-                BrassButton("Restore from GitHub…", Modifier.weight(1f), tone = p.inkSoft, busy = busy && ask == "pick") {
-                    busy = true
-                    scope.launch(Dispatchers.Main) {
-                        try {
-                            choices = GitHubSync.backups()
-                            if (choices.isEmpty()) Alerts.error("No phone backup on GitHub yet.") else ask = "pick"
-                        } catch (e: Exception) {
-                            Alerts.error(CloudSync.redact(e.message ?: "Could not read the backups on GitHub."))
-                        } finally { busy = false }
-                    }
-                }
-            }
-        }
-        if (st?.tokenSet == true) BrassButton("Remove the token", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.oxblood) { ask = "forget" }
+        GitHubSyncLines(status, lines, workerOk, busy, ask, onAsk = { ask = it }, onUploadNow = {
+            runCatching { com.optionslab.app.work.GitHubSyncWorker.now(ctx.applicationContext) }
+            Alerts.success("Upload queued: it starts as soon as the phone is on Wi-Fi (recorded days only outside 09:00-15:45).")
+        })
     }
 
     when (ask) {
         "token" -> {
             var token by remember { mutableStateOf("") }
+            var repo by remember { mutableStateOf(status?.repo ?: CloudSync.DEFAULT_REPO) }
             var until by remember { mutableStateOf(LocalDate.now().plusDays(90).toString()) }
             var pin by remember { mutableStateOf("") }
             AlertDialog(
@@ -136,8 +108,12 @@ fun GitHubSyncCard(model: AppModel) {
                 title = { Text("GitHub token", style = Type.title) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        Text("Paste a fine-grained token made for options-lab only, with Contents: read and write (MAINTENANCE.md, " +
-                            "\"GitHub token\"). Enter the expiry date you chose, and your app PIN: the token is sealed with it.", style = Type.bodySmall)
+                        Text("Paste a fine-grained token made for the data repository ONLY (${CloudSync.DEFAULT_REPO}), with Contents: " +
+                            "read and write and a 90-day expiry (MAINTENANCE.md, \"GitHub token\"). Never a token that can reach options-lab: " +
+                            "it is refused. Enter the expiry date you chose, and your app PIN: the token is sealed with it.", style = Type.bodySmall)
+                        OutlinedTextField(repo, { repo = it.trim().take(120) }, label = { Text("Data repository (owner/name)") }, singleLine = true,
+                            modifier = Modifier.testTag("github-repo"))
+                        repoProblem(repo)?.let { Text(it, style = Type.bodySmall, color = p.oxblood) }
                         OutlinedTextField(token, { token = it.trim().take(300) }, label = { Text("Token (github_pat_…)") }, singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false))
@@ -150,16 +126,16 @@ fun GitHubSyncCard(model: AppModel) {
                 confirmButton = {
                     TextButton({
                         val date = runCatching { LocalDate.parse(until.trim()) }.getOrNull()
+                        val wrong = tokenFormProblem(token, until, repo, LocalDate.now())
                         when {
-                            !CloudSync.tokenLooksRight(token) -> Alerts.error("That is not a fine-grained GitHub token (it starts with github_pat_).")
-                            date == null || date.isBefore(LocalDate.now()) -> Alerts.error("Enter the token's expiry date as YYYY-MM-DD (a future date).")
+                            wrong != null || date == null -> Alerts.error(wrong ?: "Enter the token's expiry date as YYYY-MM-DD (a future date).")
                             else -> {
                                 val typed = pin.toCharArray()
                                 busy = true
                                 scope.launch(Dispatchers.Main) {
                                     try {
                                         if (!pinOk(typed)) return@launch
-                                        val who = GitHubSync.saveToken(token, date, typed)
+                                        val who = GitHubSync.saveToken(token, date, typed, repo)
                                         token = ""
                                         ask = null
                                         Alerts.success("GitHub token checked and saved (account $who). Set the backup passphrase if you have not.")
@@ -277,21 +253,56 @@ fun GitHubSyncCard(model: AppModel) {
             },
             dismissButton = { TextButton({ ask = null }) { Text("Keep") } },
         )
+        "restore" -> {
+            var pin by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { if (!busy) ask = null },
+                properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
+                title = { Text("Restore from GitHub", style = Type.title) },
+                text = {
+                    Column {
+                        Text("Your app PIN opens the GitHub token to list the backups.", style = Type.bodySmall)
+                        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(12) }, label = { Text("App PIN") }, singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                    }
+                },
+                confirmButton = {
+                    TextButton({
+                        val typed = pin.toCharArray()
+                        busy = true
+                        scope.launch(Dispatchers.Main) {
+                            try {
+                                if (!pinOk(typed)) return@launch
+                                val r = GitHubSync.openRestore(typed)
+                                if (r.list.isEmpty()) { ask = null; Alerts.error("No phone backup on GitHub yet.") }
+                                else { restore = r; ask = "pick" }
+                            } catch (e: Exception) {
+                                Alerts.error(CloudSync.redact(e.message ?: "Could not read the backups on GitHub."))
+                            } finally { typed.fill('\u0000'); busy = false }
+                        }
+                    }, enabled = !busy) { Text(if (busy) "Reading…" else "Continue") }
+                },
+                dismissButton = { TextButton({ ask = null }, enabled = !busy) { Text("Cancel") } },
+            )
+        }
         "pick" -> AlertDialog(
-            onDismissRequest = { if (!busy) ask = null },
+            onDismissRequest = { if (!busy) { ask = null; restore = null } },
             title = { Text("Restore from GitHub", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text("Pick a backup (newest first). Next: its backup passphrase, then this phone's PIN.", style = Type.bodySmall)
-                    choices.take(60).forEach { b ->
+                    restore?.list.orEmpty().take(60).forEach { b ->
                         TextButton({
+                            val r = restore ?: return@TextButton
                             busy = true
                             scope.launch(Dispatchers.Main) {
                                 try {
-                                    val bytes = GitHubSync.download(b)
+                                    val bytes = r.download(b)
                                     val ver = withContext(Dispatchers.Default) { runCatching { Backup.version(bytes) }.getOrNull() }
                                     if (ver != 2) { Alerts.error("That file is not a passphrase-sealed IraAlgo backup."); return@launch }
                                     picked = bytes
+                                    restore = null
                                     ask = "open"
                                 } catch (e: Exception) {
                                     Alerts.error(CloudSync.redact(e.message ?: "Could not download that backup."))
@@ -303,7 +314,7 @@ fun GitHubSyncCard(model: AppModel) {
                     }
                 }
             },
-            confirmButton = { TextButton({ ask = null }, enabled = !busy) { Text(if (busy) "Downloading…" else "Cancel") } },
+            confirmButton = { TextButton({ ask = null; restore = null }, enabled = !busy) { Text(if (busy) "Downloading…" else "Cancel") } },
         )
         "open" -> {
             var pass by remember { mutableStateOf("") }
@@ -341,6 +352,56 @@ fun GitHubSyncCard(model: AppModel) {
         }
     }
     opened?.let { c -> GitHubRestoreConfirm(model, c) { opened = null } }
+}
+
+/**
+ * What the GitHub sync card shows (plain state, so a test sets it): the lines, the worker's copy of the token when it no longer
+ * opens ("Unlock with PIN"), and the buttons. "Upload now" and "Restore from GitHub…" only once a token and the passphrase are
+ * set. [onAsk] opens a dialog ("token", "pass", "unlock", "restore", "forget"); [onUploadNow] is Boss's tap.
+ */
+@Composable
+internal fun GitHubSyncLines(status: CloudSync.Status?, lines: List<Pair<String, String>>, workerOk: Boolean, busy: Boolean,
+                             ask: String?, onAsk: (String) -> Unit, onUploadNow: () -> Unit) {
+    val p = LocalPalette.current
+    Note("Every evening after 15:45, on Wi-Fi while charging, the phone uploads each recorded day and a phone backup to " +
+        "GitHub: the private data repository ${status?.repo ?: CloudSync.DEFAULT_REPO}'s releases, never options-lab (the app's code). " +
+        "Both are sealed on the phone with your backup passphrase: GitHub sees only noise. A strategy or Pine change is backed " +
+        "up that evening too. The token stays sealed by your PIN.")
+    if (status == null) LedgerLine("Status", "…") else lines.forEach { (k, v) ->
+        LedgerLine(k, v, if (v.contains("✗") || k == "Token") p.oxblood else null)
+    }
+    if (status?.tokenSet == true && !workerOk) {
+        Note("The evening upload's copy of the token cannot be opened (its key was reset). Unlock it once with your PIN.")
+        BrassButton("Unlock with PIN", Modifier.fillMaxWidth().padding(top = 8.dp)) { onAsk("unlock") }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BrassButton(if (status?.tokenSet == true) "New token…" else "Paste token…", Modifier.weight(1f)) { onAsk("token") }
+        BrassButton(if (status?.keyReady == true) "Change passphrase…" else "Set passphrase…", Modifier.weight(1f), tone = p.inkSoft) { onAsk("pass") }
+    }
+    if (status?.tokenSet == true && status.keyReady) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrassButton("Upload now", Modifier.weight(1f), busy = busy && ask == null) { onUploadNow() }
+            BrassButton("Restore from GitHub…", Modifier.weight(1f), tone = p.inkSoft, busy = busy && ask == "restore") { onAsk("restore") }
+        }
+    }
+    if (status?.tokenSet == true) BrassButton("Remove the token", Modifier.fillMaxWidth().padding(top = 8.dp), tone = p.oxblood) { onAsk("forget") }
+}
+
+/** What is wrong with the data repository field (null: fine): not owner/name, or options-lab (always refused). */
+internal fun repoProblem(repo: String): String? {
+    val r = CloudSync.parseRepo(repo) ?: return "Enter the data repository as owner/name, for example ${CloudSync.DEFAULT_REPO}."
+    return CloudSync.repoRefused(r.first, r.second)
+}
+
+/** What is wrong with the token dialog's fields (null: all fine): the repository, the token's shape, the expiry date. */
+internal fun tokenFormProblem(token: String, until: String, repo: String, today: LocalDate): String? {
+    val date = runCatching { LocalDate.parse(until.trim()) }.getOrNull()
+    return when {
+        repoProblem(repo) != null -> repoProblem(repo)
+        !CloudSync.tokenLooksRight(token) -> "That is not a fine-grained GitHub token (it starts with github_pat_)."
+        date == null || date.isBefore(today) -> "Enter the token's expiry date as YYYY-MM-DD (a future date)."
+        else -> null
+    }
 }
 
 /**

@@ -193,4 +193,84 @@ class CloudSyncTest {
         assertEquals(CloudSync.Last(1L, true, 2L, "backup"), CloudSync.Last.decode(CloudSync.Last(1L, true, 2L, "backup").encode()))
         assertNull(CloudSync.Last.decode("nope"))
     }
+    // ---- 13 Oct review: the data repository, the refused token, the worker's plan ----------------------------------------
+
+    @Test fun uploadsNeverGoToOptionsLab() {
+        assertEquals("mevishalsonawane-ai/IraAlgo", CloudSync.DEFAULT_REPO)
+        assertNull(CloudSync.repoRefused(CloudSync.OWNER, CloudSync.DATA_REPO))
+        for (r in listOf("options-lab", "Options-Lab", "OPTIONS-LAB"))
+            assertNotNull(CloudSync.repoRefused(CloudSync.OWNER, r)).let { assertTrue(it.contains("never"), it) }
+        assertNotNull(CloudSync.repoRefused("someone-else", "options-lab"))
+        assertNotNull(CloudSync.repoRefused(CloudSync.OWNER, "options-lab.git"))
+        assertNotNull(CloudSync.repoRefused("a/b", "c"))
+        assertEquals("mevishalsonawane-ai" to "IraAlgo", CloudSync.parseRepo(" mevishalsonawane-ai/IraAlgo.git "))
+        assertNull(CloudSync.parseRepo("IraAlgo"))
+        assertNull(CloudSync.parseRepo("a/b/c"))
+        assertNull(CloudSync.parseRepo("a/.."))
+        assertNull(CloudSync.parseRepo("a/b c"))
+        assertNull(CloudSync.parseRepo(null))
+    }
+
+    @Test fun aRefusedTokenSaysGitHubTokenInvalidAndPausesTheAutomaticRuns() {
+        val ok = CloudSync.Last(ms(today.minusDays(1)), true, 10, "backup")
+        val refused = CloudSync.Last(ms(today), false, 0, "backup", "401: the token was refused", 401)
+        val p = assertNotNull(CloudSync.problem(status(refused, lastOk = ok), today, toDay))
+        assertTrue(p.startsWith("GitHub token invalid"), p)
+        assertTrue(CloudSync.authRefused(refused))
+        assertTrue(CloudSync.authRefused(refused.copy(code = 403)))
+        assertFalse(CloudSync.authRefused(refused.copy(code = 429)))
+        assertFalse(CloudSync.authRefused(refused.copy(code = 500)))
+        assertFalse(CloudSync.authRefused(refused.copy(ok = true)))
+        assertFalse(CloudSync.authRefused(null))
+        assertEquals("✗ GitHub token invalid: paste a new one", CloudSync.card(status(refused, lastOk = ok), toDay, today).toMap()["Token"])
+        // Another failure keeps the ordinary words.
+        val other = refused.copy(code = 500, why = "500: GitHub is having trouble")
+        assertFalse(assertNotNull(CloudSync.problem(status(other, lastOk = ok), today, toDay)).contains("token invalid"))
+    }
+
+    @Test fun theCodeRoundTripsAndOldRecordsReadAsZero() {
+        val l = CloudSync.Last(5L, false, 0L, "backup", "403: refused", 403)
+        assertEquals(l, CloudSync.Last.decode(l.encode()))
+        assertEquals(0, CloudSync.Last.decode("5|0|0|backup|why")!!.code)
+    }
+
+    @Test fun theWorkersPlanForEachKind() {
+        val e = CloudSync.EVENING
+        fun plan(kind: String, minute: Int, due: Boolean = true, ready: Boolean = true, blocked: Boolean = false) =
+            CloudSync.plan(kind, minute, due, ready, blocked)
+        // EVENING: from 15:45, once a day.
+        assertNull(plan(CloudSync.KIND_EVENING, e - 1))
+        assertEquals(CloudSync.Plan(backup = true, days = true), plan(CloudSync.KIND_EVENING, e))
+        assertNull(plan(CloudSync.KIND_EVENING, e + 60, due = false))
+        // BACKUP (a strategy or Pine change): the backup only, and only from 15:45.
+        assertNull(plan(CloudSync.KIND_BACKUP, 10 * 60))
+        assertNull(plan(CloudSync.KIND_BACKUP, 30))                  // 00:30 is before 15:45 too
+        assertEquals(CloudSync.Plan(backup = true, days = false), plan(CloudSync.KIND_BACKUP, e + 5))
+        // NOW (Boss's tap): any hour.
+        assertEquals(CloudSync.Plan(backup = true, days = true), plan(CloudSync.KIND_NOW, 10 * 60))
+        // CHECK, an unknown kind, or not ready: nothing.
+        assertNull(plan(CloudSync.KIND_CHECK, e + 5))
+        assertNull(plan("other", e + 5))
+        for (k in listOf(CloudSync.KIND_EVENING, CloudSync.KIND_BACKUP, CloudSync.KIND_NOW)) assertNull(plan(k, e + 5, ready = false))
+        // A refused token: no automatic run builds a backup; only Boss's tap tries again.
+        assertNull(plan(CloudSync.KIND_EVENING, e + 5, blocked = true))
+        assertNull(plan(CloudSync.KIND_BACKUP, e + 5, blocked = true))
+        assertNotNull(plan(CloudSync.KIND_NOW, e + 5, blocked = true))
+    }
+
+    @Test fun theRetryLimitAndNoRetryOnARefusedToken() {
+        assertFalse(CloudSync.retry(ok = true, attempt = 0, authFailed = false))
+        assertTrue(CloudSync.retry(ok = false, attempt = 0, authFailed = false))
+        assertTrue(CloudSync.retry(ok = false, attempt = CloudSync.MAX_TRIES - 2, authFailed = false))
+        assertFalse(CloudSync.retry(ok = false, attempt = CloudSync.MAX_TRIES - 1, authFailed = false))
+        assertFalse(CloudSync.retry(ok = false, attempt = 0, authFailed = true))
+        assertEquals(4, (0 until 10).takeWhile { CloudSync.retry(false, it, false) }.size + 1)   // 4 tries in all
+    }
+
+    @Test fun aChangesBackupWaitsForTheEvening() {
+        assertEquals(CloudSync.DEBOUNCE_MIN, CloudSync.backupDelayMin(CloudSync.EVENING))
+        assertEquals(CloudSync.DEBOUNCE_MIN, CloudSync.backupDelayMin(22 * 60))
+        assertEquals(CloudSync.EVENING - 600L, CloudSync.backupDelayMin(600))
+        assertEquals(CloudSync.DEBOUNCE_MIN, CloudSync.backupDelayMin(CloudSync.EVENING - 1))   // 1 minute short: the debounce
+    }
 }

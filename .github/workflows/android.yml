@@ -7,14 +7,14 @@ on:
       - "options_lab/**"
       - "tools/export_android_assets.py"
       - "research/data/**"
-      - "!research/data/CATALOG.json"   # the nightly upload check's own commit (uploads.yml) builds nothing
+      - "tools/iraalgo-data-repo/**"
       - ".github/workflows/android.yml"
   pull_request:
     paths:
       - "android/**"
       - "options_lab/**"
       - "research/data/**"
-      - "!research/data/CATALOG.json"   # the nightly upload check's own commit (uploads.yml) builds nothing
+      - "tools/iraalgo-data-repo/**"
   workflow_dispatch:
 
 permissions:
@@ -35,8 +35,9 @@ jobs:
           python-version: "3.12"
       - run: pip install pandas numpy pyarrow requests pytest cryptography
       - run: PYTHONPATH=. python -m pytest options_lab/tests -q
-      # GitHub sync (13 Oct): the PC opens exactly what the phone seals (research/data/decrypt_live.py).
-      - run: python -m pytest research/data/tests -q
+      # GitHub sync (13 Oct): the PC opens exactly what the phone seals (research/data/decrypt_live.py), and the data
+      # repository's nightly check (tools/iraalgo-data-repo, staged here for IraAlgo) accepts it.
+      - run: python -m pytest research/data/tests tools/iraalgo-data-repo/tests -q
 
   engine:
     name: Engine parity with the PC

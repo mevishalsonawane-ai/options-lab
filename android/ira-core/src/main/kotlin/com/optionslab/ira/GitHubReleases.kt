@@ -9,7 +9,8 @@ import java.time.LocalDate
 /**
  * GitHub's REST API for release assets, as the phone's sync uses it (TODO G1/G2, 13 Oct): who the token belongs to (GET /user,
  * which also says when the token expires), a release by tag (made when missing), its assets, an upload (an asset of the same
- * name is replaced), a delete and a download. Nothing else: no commit, no branch, no workflow.
+ * name is replaced, never leaving no copy: [upload]), a rename, a delete and a download. Nothing else: no commit, no branch,
+ * no workflow. Only ever the data repository: options-lab is refused at construction ([CloudSync.repoRefused], 13 Oct).
  *
  * The network itself is [Http], given by the caller (the phone's HTTPS, or a test's fake), so every rule here is tested
  * without a network. The token goes only into the Authorization header of requests to api.github.com and
@@ -17,7 +18,9 @@ import java.time.LocalDate
  * words are GitHub's own short message, redacted ([CloudSync.redact]). Blocking: call it on a background thread.
  */
 class GitHubReleases(private val http: Http, private val token: String,
-                     private val owner: String = CloudSync.OWNER, private val repo: String = CloudSync.REPO) {
+                     private val owner: String = CloudSync.OWNER, private val repo: String = CloudSync.DATA_REPO) {
+
+    init { CloudSync.repoRefused(owner, repo)?.let { throw IllegalArgumentException(it) } }
 
     fun interface Http { fun send(r: Request): Response }
 
@@ -72,7 +75,9 @@ class GitHubReleases(private val http: Http, private val token: String,
             else -> "GitHub answered ${r.code}"
         }
         val words = said?.take(100)?.let { "$what: $it" } ?: what
-        return Failure(r.code, CloudSync.redact("${r.code}: $words"))
+        // A 403 for GitHub's rate limit is not a refused token: kept as 429, so the uploads are not paused for it.
+        val code = if (r.code == 403 && (said?.contains("rate limit", ignoreCase = true) == true || r.headers["x-ratelimit-remaining"] == "0")) 429 else r.code
+        return Failure(code, CloudSync.redact("${r.code}: $words"))
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -90,10 +95,26 @@ class GitHubReleases(private val http: Http, private val token: String,
         return User(obj(r)["login"]?.toString() ?: "?", CloudSync.expiryHeader(r.headers["github-authentication-token-expiration"]))
     }
 
-    /** True when the token can see options-lab (a token made for another repository gets 404). */
+    /** True when the token can see the data repository (a token made for another repository gets 404). */
     fun canSeeRepo(): Boolean {
         val r = http.send(Request("GET", base, headers()))
         return when (r.code) { 200 -> true; 404 -> false; else -> throw failure(r) }
+    }
+
+    /**
+     * True when the token reaches the app's code ([CloudSync.CODE_REPO]): it sees it while it is private, or may push to it.
+     * Such a token is refused (13 Oct review): a stolen phone could otherwise push code CI signs. Read-only (GET).
+     */
+    fun reachesCode(): Boolean {
+        val r = http.send(Request("GET", "$api/repos/${CloudSync.OWNER}/${CloudSync.CODE_REPO}", headers()))
+        if (r.code == 404) return false
+        // Any other refusal is ambiguous (SSO, a policy): taken as "reaches", so it fails closed. A rate limit is an error.
+        if (r.code == 403 || r.code == 401) { val f = failure(r); if (f.code == 429) throw f; return true }
+        if (r.code != 200) throw failure(r)
+        val o = obj(r)
+        if (o["private"] == true) return true
+        val perms = o["permissions"] as? Map<*, *> ?: return false
+        return perms["push"] == true || perms["maintain"] == true || perms["admin"] == true
     }
 
     // ---- releases -----------------------------------------------------------------------------------------------------
@@ -133,12 +154,37 @@ class GitHubReleases(private val http: Http, private val token: String,
         return out
     }
 
-    /** Uploads [body] as [name] to [release], replacing an asset of that name. Returns the new asset. */
+    /**
+     * Uploads [body] as [name] to [release], replacing an asset of that name. Returns the new asset. A replacement never
+     * leaves no copy (13 Oct review): the new file goes up as [tempName] first, then the old one is deleted and the new one
+     * renamed. A failure at any step leaves the old copy, or the new one under its temporary name; the next upload of that
+     * name puts the final name back and then removes the temporary one.
+     */
     fun upload(release: Release, name: String, body: Body): Asset {
-        (release.assets.firstOrNull { it.name == name } ?: assets(release.id).firstOrNull { it.name == name })?.let { delete(it.id) }
+        val now = assets(release.id)
+        val old = now.firstOrNull { it.name == name }
+        val stale = now.filter { it.name == tempName(name) }
+        if (old == null) {
+            val a = post(release, name, body)
+            stale.forEach { runCatching { delete(it.id) } }
+            return a
+        }
+        stale.forEach { delete(it.id) }                 // the old copy is still there
+        val fresh = post(release, tempName(name), body)
+        delete(old.id)
+        return rename(fresh.id, name)
+    }
+
+    private fun post(release: Release, name: String, body: Body): Asset {
         val r = http.send(Request("POST", "$uploads/repos/$owner/$repo/releases/${release.id}/assets?name=${enc(name)}", headers(), body))
         if (r.code != 201 && r.code != 200) throw failure(r)
         return asset(obj(r))
+    }
+
+    /** Renames asset [assetId] to [name] (PATCH). Returns it. */
+    fun rename(assetId: Long, name: String): Asset {
+        val body = Json.write(mapOf("name" to name)).toByteArray(Charsets.UTF_8)
+        return asset(obj(call("PATCH", "$base/releases/assets/$assetId", Body.of(body, "application/json"), ok = setOf(200))))
     }
 
     fun delete(assetId: Long) {
@@ -161,4 +207,9 @@ class GitHubReleases(private val http: Http, private val token: String,
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
+    companion object {
+        /** The temporary name a replacement goes up under ([upload]). Never a live or backup name. */
+        fun tempName(name: String) = "$name.new"
+    }
 }

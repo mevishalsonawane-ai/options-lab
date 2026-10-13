@@ -55,7 +55,7 @@ object WhatsNew {
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
         Entry("2026-10-13-github-sync", LocalDate.of(2026, 10, 13), "Recordings and backups go to GitHub by themselves",
-            "Each evening after 15:45, on Wi-Fi while charging, the phone uploads each recorded day and a backup to GitHub, sealed with your backup passphrase so GitHub sees only noise. " +
+            "Each evening after 15:45, on Wi-Fi while charging, the phone uploads each recorded day and a backup to GitHub (a private data-only repository, never the app's code), sealed with your backup passphrase so GitHub sees only noise. " +
                 "A new phone gets everything back with Restore from GitHub: strategies and Pine scripts return switched off, and your PIN, Live switches and tokens are never in it.",
             "Settings → Data and harvest → GitHub sync", to = "data"),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",

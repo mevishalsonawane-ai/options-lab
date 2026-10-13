@@ -139,15 +139,19 @@ object Backup {
     /**
      * The same backup as [create], sealed with a key already stretched by [stretch] from the passphrase and [salt]. The file
      * is an ordinary IRABK3 backup: it opens with the passphrase like any other ([open]), and [restore] treats it the same
-     * (everything comes back switched off). Reads on IO, seals on Default.
+     * (everything comes back switched off). Reads on IO, seals on Default. Made is not yet off the phone: the backup reminder
+     * rests only once GitHub has it ([markOffPhone], 13 Oct review).
      */
     suspend fun createSealed(ctx: Context, key: ByteArray, salt: ByteArray): ByteArray {
         require(key.size == 32 && salt.size == 16) { "The GitHub backup key is not set." }
         val body = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { snapshot(ctx) }
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             try { seal(body, SecretKeySpec(key, "AES"), salt) } finally { body.fill(0) }
-        }.also { runCatching { SecurePrefs.put("backup.last", Market.today().toString()) } }   // an off-phone backup: the reminder rests
+        }
     }
+
+    /** A backup is off the phone (GitHub sync uploaded it): the backup reminder rests. Never called for a failed upload. */
+    fun markOffPhone() { runCatching { SecurePrefs.put("backup.last", Market.today().toString()) } }
 
     private fun snapshot(ctx: Context): ByteArray {
         val files = JSONObject()

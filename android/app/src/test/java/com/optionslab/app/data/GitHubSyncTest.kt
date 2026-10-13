@@ -1,0 +1,248 @@
+package com.optionslab.app.data
+
+import com.optionslab.app.security.SecurePrefs
+import com.optionslab.app.testing.Background
+import com.optionslab.app.testing.RobolectricTest
+import com.optionslab.engine.strategy.Json
+import com.optionslab.ira.CloudSync
+import com.optionslab.ira.GitHubReleases
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.time.LocalDate
+
+/**
+ * GitHub sync after the 13 Oct review: the uploads go to the data repository (never options-lab), the token's only PIN-less
+ * copy is the upload worker's and is bound to that repository, Restore from GitHub needs the PIN, a failed upload leaves the
+ * backup reminder as it was, a refused token pauses the automatic runs, and HttpsGitHub keeps the token to GitHub's API.
+ * A fake GitHub ([FakeGitHub]); every token here is a made-up test value.
+ */
+class GitHubSyncTest : RobolectricTest() {
+    private val token = "github_pat_" + "TEST" + "y".repeat(60)
+    private val pin = "482913"
+    private val gh = FakeGitHub()
+
+    /** GitHub for the data repository: the user, the repository, releases and assets; [uploadCode] answers the uploads. */
+    class FakeGitHub : GitHubReleases.Http {
+        val seen = ArrayList<GitHubReleases.Request>()
+        var uploadCode = 201
+        var codeRepo: Map<String, Any?>? = null
+        val assets = ArrayList<Map<String, Any?>>()
+        var releaseMade = false
+        /** False: the token no longer sees the data repository (GitHub then answers 404). */
+        var seesRepo = true
+
+        private fun json(code: Int, v: Any?) = GitHubReleases.Response(code, emptyMap(), Json.write(v).toByteArray())
+
+        override fun send(r: GitHubReleases.Request): GitHubReleases.Response {
+            seen += r
+            val u = r.url
+            return when {
+                u == "https://api.github.com/user" -> json(200, mapOf("login" to "boss"))
+                u == "https://api.github.com/repos/mevishalsonawane-ai/IraAlgo" ->
+                    if (seesRepo) json(200, mapOf("id" to 1, "private" to true)) else json(404, mapOf("message" to "Not Found"))
+                u == "https://api.github.com/repos/mevishalsonawane-ai/options-lab" -> codeRepo?.let { json(200, it) } ?: json(404, mapOf("message" to "Not Found"))
+                u.endsWith("/releases/tags/phone-backup") -> if (releaseMade) json(200, mapOf("id" to 7)) else json(404, mapOf("message" to "Not Found"))
+                r.method == "POST" && u.endsWith("/repos/mevishalsonawane-ai/IraAlgo/releases") -> { releaseMade = true; json(201, mapOf("id" to 7)) }
+                u.contains("/releases/7/assets?per_page") -> json(200, assets)
+                u.startsWith("https://uploads.github.com/repos/mevishalsonawane-ai/IraAlgo/releases/7/assets") ->
+                    if (uploadCode != 201) json(uploadCode, mapOf("message" to "Bad credentials"))
+                    else {
+                        val a = mapOf("id" to 100 + assets.size, "name" to u.substringAfter("name="), "size" to (r.body?.length ?: 0))
+                        assets += a; json(201, a)
+                    }
+                else -> json(404, mapOf("message" to "Not Found"))
+            }
+        }
+    }
+
+    @Before fun setUp() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        ProblemsHost.clear(GitHubSync.PROBLEM); ProblemsHost.clear(GitHubSync.PROBLEM_TOKEN)
+        GitHubSync.init(context)
+        GitHubSync.http = gh
+        Background.at(Background.WED, 18, 0)
+    }
+
+    @After fun tearDown() {
+        GitHubSync.http = HttpsGitHub
+        Market.testClock = null
+    }
+
+    private fun ready() = runBlocking {
+        GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray())
+        GitHubSync.setPassphrase("Test-Passphrase-42!".toCharArray())
+        assertTrue(GitHubSync.ready())
+        gh.seen.clear()
+    }
+
+    // ---- the data repository ------------------------------------------------------------------------------------------
+
+    @Test fun theTokenIsSavedForTheDataRepository() {
+        ready()
+        assertEquals("mevishalsonawane-ai" to "IraAlgo", GitHubSync.repo())
+        assertTrue(GitHubSync.workerCopyOk())
+        assertNull("the PIN-less copy is gone", SecurePrefs.getString("github.token.dev"))
+        for (k in listOf("github.token.pin", "github.token.worker")) assertFalse(k, SecurePrefs.getString(k)!!.contains(token))
+        assertTrue(GitHubSync.diagLine().contains("to mevishalsonawane-ai/IraAlgo"))
+    }
+
+    @Test fun optionsLabIsRefusedAsTheUploadRepository() = runBlocking {
+        for (repo in listOf("mevishalsonawane-ai/options-lab", "mevishalsonawane-ai/Options-Lab", "options-lab")) {
+            try { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray(), repo); fail(repo) }
+            catch (e: IllegalArgumentException) { assertFalse(e.message!!.contains(token)) }
+        }
+        assertTrue("nothing was sent to GitHub", gh.seen.isEmpty())
+        assertFalse(GitHubSync.tokenSet)
+        // A repository set to options-lab by any other way is never used: not ready, and the worker's copy does not open.
+        ready()
+        SecurePrefs.put("github.repo", "mevishalsonawane-ai/options-lab")
+        assertNull(GitHubSync.repo())
+        assertFalse(GitHubSync.ready())
+        assertFalse(GitHubSync.workerCopyOk())
+        assertFalse(GitHubSync.run(withBackup = true, withDays = true, manual = true))
+        assertTrue(gh.seen.isEmpty())
+    }
+
+    @Test fun aTokenThatReachesOptionsLabIsRefused() = runBlocking {
+        gh.codeRepo = mapOf("private" to true)
+        try { GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray()); fail() }
+        catch (e: IOException) { assertTrue(e.message, e.message!!.contains("options-lab")); assertFalse(e.message!!.contains(token)) }
+        assertFalse(GitHubSync.tokenSet)
+    }
+
+    @Test fun theWorkersCopyOpensOnlyForItsRepository() {
+        ready()
+        SecurePrefs.put("github.repo", "mevishalsonawane-ai/another-data")
+        assertFalse("bound to IraAlgo", GitHubSync.workerCopyOk())
+    }
+
+    @Test fun anOldOptionsLabTokenAndThePinLessCopyAreForgotten() {
+        SecurePrefs.putAll(mapOf("github.token.pin" to "v2:old", "github.token.dev" to "k1:00:00", "github.key.live" to "1000:00:00",
+            "github.key.backup" to "00:00"))
+        GitHubSync.check()
+        assertNull(SecurePrefs.getString("github.token.dev"))
+        assertNull(SecurePrefs.getString("github.token.pin"))
+        assertTrue(ProblemsHost.open().any { it.text.contains("never options-lab") })
+        // It stands at the next check too, until a new token is pasted.
+        GitHubSync.check()
+        assertTrue(ProblemsHost.open().any { it.text.contains("never options-lab") })
+        ready()
+        GitHubSync.check()
+        assertFalse(ProblemsHost.open().any { it.text.contains("never options-lab") })
+    }
+
+    @Test fun aTokenThatLostItsAccessIsTakenAsRefused() = runBlocking {
+        ready()
+        gh.seesRepo = false
+        gh.uploadCode = 404
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue("a 404 from a repository the token no longer sees is a refused token", GitHubSync.authBlocked())
+    }
+
+    @Test fun aTokenWidenedToOptionsLabLaterIsStoppedAtTheNextRun() = runBlocking {
+        ready()
+        gh.codeRepo = mapOf("private" to true)
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue(gh.seen.none { it.url.startsWith("https://uploads.github.com/") })
+        assertTrue(GitHubSync.authBlocked())
+        assertNull(SecurePrefs.getString("backup.last"))
+    }
+
+    // ---- restore needs the PIN ----------------------------------------------------------------------------------------
+
+    @Test fun restoreFromGitHubOpensWithThePinOnly() = runBlocking {
+        ready()
+        try { GitHubSync.openRestore("000000".toCharArray()); fail() } catch (e: IOException) { assertFalse(e.message!!.contains(token)) }
+        val r = GitHubSync.openRestore(pin.toCharArray())
+        assertEquals(emptyList<GitHubSync.Saved>(), r.list)
+    }
+
+    // ---- the backup reminder ------------------------------------------------------------------------------------------
+
+    @Test fun aFailedUploadLeavesBackupLastUnset() = runBlocking {
+        ready()
+        gh.uploadCode = 500
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertNull("a failed upload must not silence the backup reminder", SecurePrefs.getString("backup.last"))
+        gh.uploadCode = 201
+        assertTrue(GitHubSync.run(withBackup = true, withDays = false))
+        assertEquals(Background.WED.toString(), SecurePrefs.getString("backup.last"))
+    }
+
+    @Test fun aRefusedTokenPausesTheAutomaticRunsAndSaysSo() = runBlocking {
+        ready()
+        gh.uploadCode = 401
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false))
+        assertTrue(GitHubSync.authBlocked())
+        assertNull(SecurePrefs.getString("backup.last"))
+        assertTrue(ProblemsHost.open().any { it.text.startsWith("GitHub token invalid") })
+        // An automatic run builds no backup and sends nothing.
+        gh.seen.clear()
+        gh.uploadCode = 201
+        assertFalse(GitHubSync.run(withBackup = true, withDays = true))
+        assertTrue(gh.seen.isEmpty())
+        // Boss's tap tries again; a new token ends the pause.
+        assertTrue(GitHubSync.run(withBackup = true, withDays = false, manual = true))
+        gh.uploadCode = 403
+        assertFalse(GitHubSync.run(withBackup = true, withDays = false, manual = true))
+        assertTrue(GitHubSync.authBlocked())
+        GitHubSync.saveToken(token, LocalDate.of(2027, 1, 10), pin.toCharArray())
+        assertFalse(GitHubSync.authBlocked())
+    }
+
+    // ---- HttpsGitHub --------------------------------------------------------------------------------------------------
+
+    private fun req(url: String, auth: Boolean = true) =
+        GitHubReleases.Request("GET", url, if (auth) mapOf("Authorization" to "Bearer $token") else emptyMap())
+
+    @Test fun httpsGitHubRefusesNonHttpsAndKeepsTheTokenToGitHubsApi() {
+        for (url in listOf("http://api.github.com/user", "ftp://api.github.com/user", "file:///etc/hosts", "not a url",
+            "https://evil.example.com/user", "https://api.github.com.evil.example.com/user", "https://objects.githubusercontent.com/x")) {
+            try { HttpsGitHub.send(req(url)); fail(url) } catch (e: IOException) {
+                assertFalse(url, e.message!!.contains(token))
+                assertFalse(url, e.message!!.contains("evil"))
+            }
+        }
+        assertNull(HttpsGitHub.refused(req("https://api.github.com/user")))
+        assertNull(HttpsGitHub.refused(req("https://uploads.github.com/repos/a/b/releases/1/assets?name=x")))
+        assertNull("a download from the file store goes without the token", HttpsGitHub.refused(req("https://objects.githubusercontent.com/x", auth = false)))
+        assertNotNull(HttpsGitHub.refused(req("http://objects.githubusercontent.com/x", auth = false)))
+    }
+
+    @Test fun httpsGitHubCapsTheAnswer() {
+        val b = ByteArray(200_000) { it.toByte() }
+        assertArrayEquals(b, HttpsGitHub.readCapped(ByteArrayInputStream(b), 200_000))
+        try { HttpsGitHub.readCapped(ByteArrayInputStream(b), 199_999); fail() } catch (e: IOException) {
+            assertTrue(e.message!!.contains("bigger than expected"))
+        }
+        assertEquals(0, HttpsGitHub.readCapped(ByteArrayInputStream(ByteArray(0)), 0).size)
+    }
+
+    @Test fun githubsOwnErrorTextNeverCarriesTheToken() {
+        val echo = GitHubReleases.Http { r ->
+            GitHubReleases.Response(401, emptyMap(), Json.write(mapOf("message" to "Bad credentials for ${r.headers["Authorization"]}")).toByteArray())
+        }
+        try { GitHubReleases(echo, token).user(); fail() } catch (e: GitHubReleases.Failure) {
+            assertFalse(e.message, e.message!!.contains(token))
+            assertEquals(401, e.code)
+        }
+    }
+
+    @Test fun theCardsLinesNameTheDataRepository() {
+        ready()
+        val lines = GitHubSync.card(GitHubSync.status()).toMap()
+        assertEquals("mevishalsonawane-ai/IraAlgo", lines["Uploads go to"])
+        assertTrue(CloudSync.DEFAULT_REPO.endsWith("IraAlgo"))
+    }
+}

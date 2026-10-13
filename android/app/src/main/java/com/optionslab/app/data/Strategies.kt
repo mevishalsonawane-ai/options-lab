@@ -235,7 +235,7 @@ object Strategies {
                 val i = b.defs.indexOfFirst { it.id == id }
                 if (i >= 0) b.defs[i] = saved else b.defs += saved
                 save(b)
-                GitHubSync.changed()            // G2 (13 Oct): the phone backup goes to GitHub a few minutes later
+                GitHubSync.changed()            // G2 (13 Oct): the phone backup goes to GitHub that evening (from 15:45, charging)
                 null
             }
         }

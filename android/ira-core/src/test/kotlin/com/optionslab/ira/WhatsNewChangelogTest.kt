@@ -92,7 +92,7 @@ class WhatsNewChangelogTest {
     @Test fun theGitHubSyncIsSaidWithItsSafety() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-13-github-sync" }
         for (w in listOf("after 15:45", "Wi-Fi while charging", "sealed with your backup passphrase", "Restore from GitHub",
-            "switched off", "never in it"))
+            "switched off", "never in it", "never the app's code"))
             assertTrue(w in x.what, w)
         assertTrue("GitHub sync" in x.where, x.where)
         assertEquals("data", x.to)
