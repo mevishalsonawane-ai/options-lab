@@ -39,6 +39,7 @@ object CandleExplain {
     const val END = "These are the facts the app holds for those minutes - not a cause proven, not a forecast."
 
     private val HM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val DAY_HM: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.ENGLISH)
     private fun n(x: Double) = String.format(Locale.ENGLISH, "%,.2f", x)
     private fun n0(x: Double) = String.format(Locale.ENGLISH, "%,.0f", x)
     private fun sp(x: Double) = String.format(Locale.ENGLISH, "%+.2f%%", x)
@@ -46,15 +47,35 @@ object CandleExplain {
     private fun median(xs: List<Double>): Double? { val s = xs.filter { it > 0 }.sorted(); if (s.isEmpty()) return null; return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2 }
     private fun lakh(x: Double) = if (abs(x) >= 1e5) String.format(Locale.ENGLISH, "%.1f lakh", x / 1e5) else n0(x)
 
-    fun span(i: Inputs): String = if (i.minutes <= 1) i.start.format(HM) else "${i.start.format(HM)}-${i.start.plusMinutes(i.minutes.toLong()).format(HM)}"
+    const val DAY_MIN = 1440
+    const val WEEK_MIN = 7 * 1440
+
+    /** The candle's time span: "10:35-10:40" intraday; a daily or weekly candle has no clock times (13 Oct review). */
+    fun span(i: Inputs): String = when {
+        i.minutes >= DAY_MIN -> ""
+        i.minutes <= 1 -> " " + i.start.format(HM)
+        else -> " ${i.start.format(HM)}-${i.start.plusMinutes(i.minutes.toLong()).format(HM)}"
+    }
+
+    /** "5-minute", "1-hour", "daily", "weekly". */
+    fun kind(minutes: Int): String = when {
+        minutes >= WEEK_MIN -> "weekly"
+        minutes >= DAY_MIN -> "daily"
+        minutes >= 60 -> "${minutes / 60}-hour"
+        else -> "${minutes}-minute"
+    }
+
+    private val INDICES = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BANKEX", "INDIA VIX", "INDIAVIX")
 
     fun explain(i: Inputs): List<String> {
         val out = ArrayList<String>()
         val move = i.close - i.open
         val range = i.high - i.low
-        val label = if (i.minutes >= 1440) "daily" else if (i.minutes >= 60) "${i.minutes / 60}-hour" else "${i.minutes}-minute"
-        out += "${i.symbol} $label candle of ${i.start.toLocalDate()} ${span(i)}: opened ${n(i.open)}, high ${n(i.high)}, low ${n(i.low)}, " +
-            "closed ${n(i.close)} - ${if (move > 0) "up" else if (move < 0) "down" else "flat"} ${n(abs(move))} (${sp(move / i.open * 100)}), range ${n(range)}."
+        val of = if (i.minutes >= WEEK_MIN) "the week of ${i.start.toLocalDate()}" else "${i.start.toLocalDate()}${span(i)}"
+        // A zero open (a bad or empty row) has no percentage move (13 Oct review: it printed Infinity / NaN).
+        val pct = if (i.open > 0) " (${sp(move / i.open * 100)})" else ""
+        out += "${i.symbol} ${kind(i.minutes)} candle of $of: opened ${n(i.open)}, high ${n(i.high)}, low ${n(i.low)}, " +
+            "closed ${n(i.close)} - ${if (move > 0) "up" else if (move < 0) "down" else "flat"} ${n(abs(move))}$pct, range ${n(range)}."
         median(i.dayRanges)?.let { m -> if (range > 0 && i.dayRanges.size >= 5)
             out += "Its range was ${String.format(Locale.ENGLISH, "%.1f", range / m)}x the median of that day's other ${i.dayRanges.size} candles on the chart." }
         // Body and wicks: where it closed inside its range.
@@ -68,7 +89,9 @@ object CandleExplain {
         }
         out += when {
             i.volume != null && i.volume > 0 -> "Volume ${lakh(i.volume)}" + (median(i.dayVolumes)?.let { m -> ", ${String.format(Locale.ENGLISH, "%.1f", i.volume / m)}x that day's median candle" } ?: "") + "."
-            else -> "Volume: none on this chart - an index has no volume of its own (its future's flow is below when recorded)."
+            i.symbol.trim().uppercase(Locale.ENGLISH) in INDICES ->
+                "Volume: none on this chart - an index has no volume of its own (its future's flow is below when recorded)."
+            else -> "Volume: none on this chart for that candle."
         }
         out += when {
             i.vixStart != null && i.vixEnd != null -> "India VIX ${n(i.vixEnd)}" + (if (abs(i.vixEnd - i.vixStart) >= 0.005) " (from ${n(i.vixStart)} at the start)" else ", unchanged over the candle") + "."
@@ -95,11 +118,12 @@ object CandleExplain {
                     "(${if (d > 0) "more bought at the offer" else if (d < 0) "more sold at the bid" else "balanced"})."
             }
         }
+        val nf = if (i.minutes >= DAY_MIN) DAY_HM else HM          // a daily / weekly candle spans days: the date is said
         val from = i.start.minusMinutes(NEWS_BEFORE_MIN)
         val to = i.start.plusMinutes(i.minutes.toLong())
         val near = i.news.filter { !it.first.isBefore(from) && !it.first.isAfter(to) }.sortedBy { it.first }
-        out += if (near.isEmpty()) "News: no headline on the phone from ${from.format(HM)} to ${to.format(HM)} (the phone keeps the last few days of its feeds)."
-        else "News near then: " + near.take(3).joinToString("; ") { "${it.first.format(HM)} \"${it.second.take(110)}\"" } +
+        out += if (near.isEmpty()) "News: no headline on the phone from ${from.format(nf)} to ${to.format(nf)} (the phone keeps the last few days of its feeds)."
+        else "News near then: " + near.take(3).joinToString("; ") { "${it.first.format(nf)} \"${it.second.take(110)}\"" } +
             (if (near.size > 3) " and ${near.size - 3} more" else "") + " - read at the same time, not shown to be the cause."
         out += END
         return out

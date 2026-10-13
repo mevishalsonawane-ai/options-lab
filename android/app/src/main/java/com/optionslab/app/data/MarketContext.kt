@@ -7,8 +7,11 @@ import com.optionslab.ira.DaysLikeToday
 import com.optionslab.ira.EventShield
 import com.optionslab.ira.ExpiryCard
 import com.optionslab.ira.LevelMap
+import com.optionslab.ira.MarketContextCore
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +62,11 @@ object MarketContext {
         started = true
         app = context.applicationContext
         scope.launch(Dispatchers.IO) {
-            runCatching { _mode.value = EventShield.mode(SecurePrefs.getString(K_PAUSE)) }
+            runCatching {
+                _mode.value = EventShield.mode(SecurePrefs.getString(K_PAUSE))
+                // Shadow first: this process watches from now (a restart mid-session does not count as watched from 09:15).
+                shadowSince = if (_mode.value == EventShield.Mode.SHADOW) nowIst() else null
+            }
             runCatching { _shadowDays.value = SecurePrefs.getString(K_SHADOW_DAYS).orEmpty().split(',').filter { it.isNotBlank() }.toSet() }
             while (true) {
                 runCatching { refresh() }
@@ -82,7 +89,9 @@ object MarketContext {
     fun setMode(m: EventShield.Mode): String {
         if (m == EventShield.Mode.ON && _shadowDays.value.isEmpty())
             return "Shadow first: run it in Shadow through at least one event day, see what it would have paused, then switch it on."
+        val was = _mode.value
         _mode.value = m
+        if (m != EventShield.Mode.SHADOW) shadowSince = null else if (was != EventShield.Mode.SHADOW) shadowSince = nowIst()
         scope.launch(Dispatchers.IO) { runCatching { SecurePrefs.putAllSoon(mapOf(K_PAUSE to m.name)) } }
         runCatching { Diag.record("context", "pause paper arms on event days: ${m.name}") }
         return when (m) {
@@ -96,8 +105,17 @@ object MarketContext {
     @Volatile private var today: Pair<LocalDate, List<String>> = LocalDate.MIN to emptyList()
 
     /**
+     * Shadow first (13 Oct review): a day counts only once the switch actually watched it - since when this process has had
+     * SHADOW on ([shadowSince], memory), and when a real shadow verdict was last given to the arms' gate ([shadowVerdictAt]).
+     */
+    @Volatile private var shadowSince: LocalDateTime? = null
+    @Volatile private var shadowVerdictAt: LocalDateTime? = null
+
+    private fun nowIst(): LocalDateTime = runCatching { Market.now().toLocalDateTime() }.getOrElse { LocalDateTime.now(IST) }
+
+    /**
      * A NEW entry by arm [key] ([live]: a Zerodha entry). Memory only - no vault, no file, no network: the order path may ask
-     * it. A SHADOW verdict is logged by the caller with its other shadow notes.
+     * it. A SHADOW verdict is logged by the caller (FlowGate) with its other shadow notes; its time is kept here in memory.
      */
     fun entry(key: String, live: Boolean): EventShield.Verdict {
         val m = _mode.value
@@ -105,30 +123,27 @@ object MarketContext {
         val (d, ev) = today
         if (ev.isEmpty() || d != runCatching { Market.today() }.getOrNull()) return EventShield.GO
         val frozen = runCatching { LiquidityTest.frozenKey(key) }.getOrDefault(true)
-        return EventShield.decide(m, ev, live, frozen)
+        val v = EventShield.decide(m, ev, live, frozen)
+        if (v.shadow != null) shadowVerdictAt = nowIst()
+        return v
     }
 
     // ---- events ------------------------------------------------------------------------------------------------------------
 
-    /** US CPI releases the app knows (08:30 New York, after the Indian close: the next Indian session reacts). Boss adds more. */
-    private val US_CPI = listOf("2026-10-14").map { LocalDate.parse(it) }
+    /** The names the calendar holds for [day]: the event calendar (RBI, Budget, Boss's own) and the Fed nights. */
+    private fun rawEvents(day: LocalDate): List<String> = rawEventsForTest?.invoke(day) ?:
+        runCatching { EventDays.calendar.value.on(day).map { it.name } }.getOrDefault(emptyList()) +
+            com.optionslab.ira.Events.builtIn(day, day).map { it.name }
 
-    /** The counting event names on [day]: the event calendar (RBI, Budget, Boss's own), the Fed nights and US CPI. */
-    fun eventsOn(day: LocalDate): List<String> {
-        val cal = runCatching { EventDays.calendar.value.on(day).map { it.name } }.getOrDefault(emptyList())
-        val fed = com.optionslab.ira.Events.builtIn(day, day).map { it.name }
-        val cpi = if (US_CPI.any { nextSession(it) == day }) listOf("US CPI overnight") else emptyList()
-        return (cal + fed + cpi).filter(EventShield::counts).distinct()
-    }
+    /**
+     * The counting event names of session [day] ([MarketContextCore.eventsOn]): its own, those of the closed days since the
+     * session before (a weekend Budget, a Fed night on a holiday), and US CPI ([EventShield.US_CPI]). None on a closed day.
+     */
+    fun eventsOn(day: LocalDate): List<String> = MarketContextCore.eventsOn(day, ::rawEvents, ::trading)
 
     private fun trading(d: LocalDate) = runCatching { Market.isTradingDay(d) }.getOrDefault(d.dayOfWeek.value <= 5)
 
-    fun nextSession(after: LocalDate): LocalDate {
-        var d = after.plusDays(1)
-        var n = 0
-        while (!trading(d) && n++ < 10) d = d.plusDays(1)
-        return d
-    }
+    fun nextSession(after: LocalDate): LocalDate = MarketContextCore.nextSession(after, ::trading)
 
     // ---- the card ----------------------------------------------------------------------------------------------------------
 
@@ -141,57 +156,50 @@ object MarketContext {
     val card: StateFlow<Card> = _card
 
     /** The event warning: today's (morning and through the day) or the next session's (the evening before). */
-    fun eventWarning(now: LocalDateTime): String? {
-        val d = now.toLocalDate()
-        if (trading(d) && now.toLocalTime().isBefore(LocalTime.of(15, 30))) EventShield.warning(eventsOn(d), d, d)?.let { return it }
-        val next = nextSession(d)
-        return EventShield.warning(eventsOn(next), next, d)
-    }
+    fun eventWarning(now: LocalDateTime): String? = MarketContextCore.eventWarning(now, ::eventsOn, ::trading)
 
     private val INDICES = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
 
     private fun expiringToday(d: LocalDate): List<String> =
         INDICES.filter { u -> runCatching { Market.isExpiryDay(u, d) }.getOrDefault(false) }
 
-    @Volatile private var briefDay: LocalDate? = null
+    /** The day's tries of the "days like today" brief (13 Oct review: it was rebuilt every minute when it could not be built). */
+    @Volatile private var briefTries = MarketContextCore.BriefTries()
     private val briefs = ConcurrentHashMap<String, List<String>>()
 
     /** One pass (this object's thread): today's events, the card, and the morning brief once after 09:21. */
     internal suspend fun refresh(now: LocalDateTime = LocalDateTime.now(IST)) {
         val d = now.toLocalDate()
         today = d to eventsOn(d)
-        // Shadow first: an event day lived through in SHADOW is kept (this loop runs on an IO thread).
-        if (_mode.value == EventShield.Mode.SHADOW && today.second.isNotEmpty() && trading(d) && d.toString() !in _shadowDays.value) {
+        // Shadow first: an event day counts only once Shadow actually watched it (a verdict logged in market hours, or on
+        // from before 09:15 through 15:30). This loop runs on an IO thread.
+        if (d.toString() !in _shadowDays.value &&
+            MarketContextCore.shadowDayCounts(d, today.second, trading(d), _mode.value, shadowSince, shadowVerdictAt, now)) {
             val next = (_shadowDays.value + d.toString()).sorted().takeLast(50).toSet()
             _shadowDays.value = next
             runCatching { SecurePrefs.putAllSoon(mapOf(K_SHADOW_DAYS to next.joinToString(","))) }
         }
         val exp = if (trading(d)) expiringToday(d) else emptyList()
-        if (briefDay != d) briefs.clear()
-        if (trading(d) && !now.toLocalTime().isBefore(DaysLikeToday.READY_AT) && briefDay != d) {
+        if (briefTries.day != d) briefs.clear()                     // the day's rollover: yesterday's brief is not today's
+        if (MarketContextCore.briefDue(briefTries, now, trading(d))) {
+            briefs.clear()
             for (u in listOf("BANKNIFTY", "NIFTY")) runCatching { daysBrief(u, d) }.getOrNull()?.let { briefs[u] = it }
-            if (briefs.isNotEmpty()) {
-                briefDay = d
-                if (com.optionslab.app.BuildConfig.JARVIS) runCatching {
-                    com.optionslab.app.ira.IraHub.note("Morning brief - " + briefs.values.joinToString(" ") { it.joinToString(" ") })
-                }
+            val ok = briefs.isNotEmpty()
+            briefTries = MarketContextCore.briefAfter(briefTries, now, ok)
+            if (ok && com.optionslab.app.BuildConfig.JARVIS) runCatching {
+                com.optionslab.app.ira.IraHub.note("Morning brief - " + briefs.values.joinToString(" ") { it.joinToString(" ") })
             }
         }
+        val shown = if (MarketContextCore.briefShown(briefTries, d)) HashMap(briefs) else HashMap()
         _card.value = Card(eventWarning(now), exp.takeIf { it.isNotEmpty() }?.let(ExpiryCard::title),
-            exp.firstOrNull()?.let { ExpiryCard.lines(it, now.toLocalTime()) }.orEmpty(), HashMap(briefs), _mode.value)
+            exp.firstOrNull()?.let { ExpiryCard.lines(it, now.toLocalTime()) }.orEmpty(), shown, _mode.value)
     }
 
-    /** The 09:00 morning check's lines. */
+    /** The 09:00 morning check's lines ([MarketContextCore.morningLines]). */
     fun morningLines(now: LocalDateTime = LocalDateTime.now(IST)): List<String> {
         if (!enabled()) return emptyList()
-        val out = ArrayList<String>()
-        eventWarning(now)?.let { out += it }
-        val exp = expiringToday(now.toLocalDate())
-        if (exp.isNotEmpty()) out += ExpiryCard.title(exp) + ": " + ExpiryCard.lines(exp.first(), now.toLocalTime()).first()
-        if (_mode.value != EventShield.Mode.OFF && eventsOn(now.toLocalDate()).isNotEmpty())
-            out += "Your switch \"pause paper arms on event days\" is ${_mode.value.words}."
-        out += "Days like today: on Home and from Jarvis after 09:21, once the open is known (context, not a forecast)."
-        return out
+        val d = now.toLocalDate()
+        return MarketContextCore.morningLines(now, ::eventsOn, ::trading, if (trading(d)) expiringToday(d) else emptyList(), _mode.value)
     }
 
     /** The 15:45 report's line: the next session's event warning, if any. */
@@ -226,7 +234,7 @@ object MarketContext {
         val expiries = dates.filter { it != d && ruleExpiry(und, it) }.toSet() + (if (runCatching { Market.isExpiryDay(und, d) }.getOrDefault(false)) setOf(d) else emptySet())
         val events = dates.filter { eventsOn(it).isNotEmpty() }.toSet()
         val arms = if (und == "BANKNIFTY") paperArms() else emptyMap()
-        val phone = DaysLikeToday.fromCandles(bars, vix, expiries, events, d, arms)
+        val phone = DaysLikeToday.fromCandles(bars, vix, expiries, events, d, arms, ::trading)
         val t = phone.firstOrNull { it.day == d } ?: return null
         return DaysLikeToday.brief(und, t, DaysLikeToday.merge(shippedRows(und), phone))
     }
@@ -243,37 +251,62 @@ object MarketContext {
     private class Cached(val atMs: Long, val json: String)
     private val levels = ConcurrentHashMap<String, Cached>()
     private val computing = ConcurrentHashMap.newKeySet<String>()
+    private val levelJobs = ConcurrentHashMap<String, Job>()
     const val LEVELS_MS = 60_000L
+
+    /** Where the level map is computed: this object's own thread pool (a test may hand its own; never the main thread). */
+    @Volatile internal var levelDispatcher: CoroutineDispatcher = Dispatchers.Default
 
     /**
      * The chart's level map for index [und] as JSON ({"levels":[{type,label,price,side}],"note"}), from the cache: never
-     * computed on the caller's thread. A stale or missing one starts a computation on this object's thread; the chart asks
+     * computed on the caller's thread. A stale or missing one starts a computation on [levelDispatcher]; the chart asks
      * again on its next redraw.
      */
     fun levelJson(und: String): String {
         if (!enabled() || market(und) == null) return "{\"levels\":[]}"
         val c = levels[und]
         val now = System.currentTimeMillis()
-        if ((c == null || now - c.atMs > LEVELS_MS) && computing.add(und)) scope.launch {
-            try { runCatching { levels[und] = Cached(System.currentTimeMillis(), computeLevels(und)) } } finally { computing.remove(und) }
+        if ((c == null || now - c.atMs > LEVELS_MS) && computing.add(und)) {
+            levelJobs[und] = scope.launch(levelDispatcher) {
+                try { runCatching { levels[und] = Cached(System.currentTimeMillis(), computeLevels(und)) } } finally { computing.remove(und) }
+            }
         }
         return c?.json ?: "{\"levels\":[]}"
+    }
+
+    /** TEST ONLY: waits for the level maps being computed. */
+    internal suspend fun awaitLevelsForTest() { levelJobs.values.toList().forEach { it.join() } }
+
+    /** The day's 09:20 largest-OI call and put strikes per index, kept once read (memory): the research's held rate is of 09:20. */
+    private val oi0920 = ConcurrentHashMap<String, Triple<LocalDate, Double?, Double?>>()
+
+    private fun maxOi0920(und: String, d: LocalDate): Pair<Double?, Double?> {
+        oi0920[und]?.takeIf { it.first == d }?.let { return it.second to it.third }
+        val (readMs, chain) = runCatching { Market.chainInMemory(und) }.getOrNull() ?: return null to null
+        val read = Instant.ofEpochMilli(readMs).atZone(IST)
+        if (read.toLocalDate() != d) return null to null
+        val minute = read.hour * 60 + read.minute
+        val snap = chain.pricedAt != null
+        val ce = LevelMap.maxOiStrikeAt0920(chain.series, com.optionslab.engine.Right.CE, minute, snap)
+        val pe = LevelMap.maxOiStrikeAt0920(chain.series, com.optionslab.engine.Right.PE, minute, snap)
+        if (ce != null && pe != null) oi0920[und] = Triple(d, ce, pe)
+        return ce to pe
     }
 
     private fun computeLevels(und: String): String {
         val m = market(und) ?: return "{\"levels\":[]}"
         val bars = com.optionslab.app.ira.IraHub.recentBars(m)
         val d = runCatching { Market.today() }.getOrDefault(LocalDate.now(IST))
-        val chain = runCatching { Market.chainInMemory(und)?.second }.getOrNull()
-        fun maxOi(r: com.optionslab.engine.Right) = chain?.series?.filter { it.right == r && it.oi.isNotEmpty() }?.maxByOrNull { it.oi.last() }?.strike
+        val (oiCall, oiPut) = runCatching { maxOi0920(und, d) }.getOrDefault(null to null)
         val vwap = runCatching { OrderFlowLive.chartLevels.value[und].orEmpty().filter { it.kind == com.optionslab.ira.Auction.ChartLevel.Kind.VWAP }
             .map { it.label to it.price } }.getOrDefault(emptyList())
-        val map = LevelMap.map(bars, d, maxOi(com.optionslab.engine.Right.CE), maxOi(com.optionslab.engine.Right.PE), vwap)
+        val map = LevelMap.map(bars, d, oiCall, oiPut, vwap, ::trading)
         val last = bars.lastOrNull()?.c
         val a = JSONArray()
         for (l in map) a.put(JSONObject().put("type", if (l.type == LevelMap.Type.VWAP_BAND) "VB:" + l.name else l.type.name)
             .put("label", l.label()).put("price", l.price).put("side", if (last != null && l.price < last) "S" else "R"))
-        return JSONObject().put("levels", a).put("note", LevelMap.note(LevelMap.counted(bars, d))).toString()
+        val note = if (map.any { it.type == LevelMap.Type.PDH }) LevelMap.note(LevelMap.counted(bars, d, ::trading)) else LevelMap.NO_HISTORY
+        return JSONObject().put("levels", a).put("note", note).toString()
     }
 
     // ---- explain a candle -----------------------------------------------------------------------------------------------------
@@ -333,7 +366,20 @@ object MarketContext {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { _mode.value = EventShield.DEFAULT_MODE; _shadowDays.value = emptySet(); today = LocalDate.MIN to emptyList(); levels.clear(); briefs.clear(); briefDay = null }
+    internal fun resetForTest() {
+        _mode.value = EventShield.DEFAULT_MODE; _shadowDays.value = emptySet(); today = LocalDate.MIN to emptyList()
+        // A level map a test started ends before the next test (it would write its cache after the clear otherwise).
+        levelJobs.values.forEach { j -> kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000L) { j.join() } } }
+        levelJobs.clear(); computing.clear(); levels.clear(); oi0920.clear()
+        levelDispatcher = Dispatchers.Default
+        briefs.clear(); briefTries = MarketContextCore.BriefTries(); shadowSince = null; shadowVerdictAt = null; rawEventsForTest = null
+    }
+
+    /** TEST ONLY: the calendar's event names per day (null: the real calendar). Cleared by [resetForTest]. */
+    @Volatile internal var rawEventsForTest: ((LocalDate) -> List<String>)? = null
+
+    /** TEST ONLY: the day's tries of the "days like today" brief. */
+    internal fun briefTriesForTest(): MarketContextCore.BriefTries = briefTries
 
     /** TEST ONLY: shadowed event days. */
     internal fun setShadowDaysForTest(days: Set<String>) { _shadowDays.value = days }

@@ -47,6 +47,7 @@ internal fun MarketContextContent(c: MarketContext.Card) {
         c.event?.let { Text(it, style = Type.bodySmall.copy(color = p.ink)) }
         if (c.event != null && c.pause != EventShield.Mode.OFF)
             Note("Pause paper arms on event days: ${c.pause.words}.", Modifier.padding(top = 4.dp))
+        if (c.event != null && open) Note(EventShield.cpiNote(), Modifier.padding(top = 4.dp))
         c.expiryTitle?.let { t ->
             Text(t, style = Type.label.copy(color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp), modifier = Modifier.padding(top = 8.dp))
             (if (open) c.expiry else c.expiry.take(1)).forEach { Text("• $it", style = Type.bodySmall.copy(color = p.ink)) }
@@ -70,7 +71,7 @@ internal fun EventShieldSwitchCard() {
         Note("On RBI, Budget, US CPI / Fed and results days (the event days above, and the ones you add): Off changes nothing (the default). " +
             "Shadow logs which paper entries it would have paused. On skips paper arms' new entries that day. Live orders, exits " +
             "and Liquidity BANKNIFTY (frozen until 26 Oct) are never touched. Research: BANKNIFTY moved 1.5x a normal day on RBI/Budget " +
-            "days (15 days); ORB Fresh's event-day losses were not confirmed (research/EVENT_SHIELD.md).")
+            "days (15 days); ORB Fresh's event-day losses were not confirmed (research/EVENT_SHIELD.md). " + EventShield.cpiNote())
         EventShield.Mode.entries.forEach { x ->
             TextButton({ said = MarketContext.setMode(x) }) {
                 Text((if (m == x) "● " else "○ ") + x.words.replaceFirstChar { it.uppercase() },

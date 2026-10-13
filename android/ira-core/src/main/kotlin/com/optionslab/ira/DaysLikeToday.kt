@@ -42,11 +42,12 @@ object DaysLikeToday {
         val armCols = head.withIndex().filter { it.value.startsWith("net_") }
         return lines.drop(1).mapNotNull { l ->
             val f = l.split(',')
-            fun d(n: String) = ix(n).takeIf { it >= 0 && it < f.size }?.let { f[it].trim().toDoubleOrNull() }
+            // A blank or NaN field is missing (13 Oct review: "NaN" parses as a number): a missing feature drops the row.
+            fun d(n: String) = ix(n).takeIf { it >= 0 && it < f.size }?.let { f[it].trim().toDoubleOrNull()?.takeIf { x -> x.isFinite() } }
             runCatching {
                 Row(LocalDate.parse(f[0].trim()), d("gap_pct")!!, d("vix_0920")!!, d("prev_range_pct")!!, (d("is_expiry") ?: 0.0) > 0.5,
                     (d("event") ?: 0.0) > 0.5, d("rest_range_pct"), d("rest_ret_pct"),
-                    armCols.mapNotNull { c -> f.getOrNull(c.index)?.trim()?.toDoubleOrNull()?.let { c.value.removePrefix("net_").replace('_', ' ') to it } }.toMap(),
+                    armCols.mapNotNull { c -> f.getOrNull(c.index)?.trim()?.toDoubleOrNull()?.takeIf { it.isFinite() }?.let { c.value.removePrefix("net_").replace('_', ' ') to it } }.toMap(),
                     if (armCols.isEmpty()) "" else RESEARCH)
             }.getOrNull()
         }
@@ -56,17 +57,24 @@ object DaysLikeToday {
 
     private val OPEN = LocalTime.of(9, 15)
     private val AT = LocalTime.of(9, 20)
+    /** A session held to its close: its last candle at or after this. */
+    private val WHOLE_AT = LocalTime.of(15, 25)
 
     /**
      * Rows from the phone's 1-minute [bars] (several sessions) and India VIX [vix]: one per session with a previous whole
      * session; [today]'s row (if on the phone from 09:15 and past 09:20) has no outcome. [expiries], [events]: the days that
      * were expiry / event days. [arms]: the paper account's net per arm by day.
+     *
+     * 13 Oct review: the gap and the previous range need the previous trading day ([isTrading]) held to its close (its last
+     * candle at 15:25 or later); a partial or older "previous" session skips the row. VIX: that day's at 09:20, else the
+     * previous session's last; none, no row.
      */
     fun fromCandles(bars: List<Candle>, vix: List<Candle>, expiries: Set<LocalDate>, events: Set<LocalDate>,
-                    today: LocalDate, arms: Map<LocalDate, Map<String, Double>> = emptyMap()): List<Row> {
+                    today: LocalDate, arms: Map<LocalDate, Map<String, Double>> = emptyMap(),
+                    isTrading: (LocalDate) -> Boolean = MarketContextCore::weekday): List<Row> {
         val days = bars.filter { !it.t.toLocalTime().isBefore(OPEN) && it.t.toLocalTime().isBefore(LocalTime.of(15, 30)) }
             .groupBy { it.t.toLocalDate() }.toSortedMap()
-        val vx = vix.groupBy { it.t.toLocalDate() }
+        val vx = vix.filter { it.c > 0 && it.c.isFinite() }.sortedBy { it.t }.groupBy { it.t.toLocalDate() }
         val out = ArrayList<Row>()
         var prev: List<Candle>? = null
         for ((d, b0) in days) {
@@ -74,13 +82,15 @@ object DaysLikeToday {
             val p = prev
             prev = b
             if (p == null || b.first().t.toLocalTime().isAfter(OPEN.plusMinutes(2))) continue
+            val pd = p.last().t.toLocalDate()
+            if (pd != MarketContextCore.previousSession(d, isTrading) || p.last().t.toLocalTime().isBefore(WHOLE_AT)) continue
             val at = b.lastOrNull { !it.t.toLocalTime().isAfter(AT) } ?: continue
             if (at.t.toLocalTime().isBefore(AT)) continue      // 09:20's bar not on the phone yet
             val pc = p.last().c
             if (pc <= 0) continue
-            val v = vx[d]?.lastOrNull { !it.t.toLocalTime().isAfter(AT) }?.c ?: vx.filterKeys { it < d }.maxByOrNull { it.key }?.value?.lastOrNull()?.c ?: continue
+            val v = vx[d]?.lastOrNull { !it.t.toLocalTime().isAfter(AT) }?.c ?: vx[pd]?.lastOrNull()?.c ?: continue
             val rest = b.filter { it.t.toLocalTime().isAfter(AT) }
-            val whole = !d.isEqual(today) && b.last().t.toLocalTime() >= LocalTime.of(15, 25)
+            val whole = !d.isEqual(today) && !b.last().t.toLocalTime().isBefore(WHOLE_AT)
             out += Row(d, (b.first().o - pc) / pc * 100, v, (p.maxOf { it.h } - p.minOf { it.l }) / pc * 100, d in expiries, d in events,
                 if (whole && rest.isNotEmpty()) (rest.maxOf { it.h } - rest.minOf { it.l }) / at.c * 100 else null,
                 if (whole) (b.last().c - at.c) / at.c * 100 else null, arms[d].orEmpty(), if (arms[d] != null) "your paper account" else "")
@@ -117,7 +127,12 @@ object DaysLikeToday {
         }.sortedWith(compareBy({ it.second }, { it.first.day })).take(k)
     }
 
-    private fun median(xs: List<Double>): Double { val s = xs.sorted(); return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2 }
+    /** Null for no values (13 Oct review: it threw when every neighbour's range after 09:20 was missing). */
+    internal fun median(xs: List<Double>): Double? {
+        if (xs.isEmpty()) return null
+        val s = xs.sorted()
+        return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2
+    }
     private fun sp(x: Double) = String.format(Locale.ENGLISH, "%+.2f%%", x)
     private fun p(x: Double) = String.format(Locale.ENGLISH, "%.2f%%", x)
     private fun rs(x: Double) = (if (x < 0) "−Rs " else "Rs ") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
@@ -135,8 +150,11 @@ object DaysLikeToday {
         out += "Days like today on $index ($LABEL): the $K nearest of $pastN past sessions by the gap (${sp(t.gapPct)} today), India VIX " +
             "(${String.format(Locale.ENGLISH, "%.1f", t.vix)}), the previous day's range (${p(t.prevRangePct)})" +
             (if (t.expiry) ", expiry day" else "") + (if (t.event) ", event day" else "") + "."
-        if (ret.isNotEmpty()) out += "After 09:20 those days moved a median ${sp(median(ret))} (from ${sp(ret.min())} to ${sp(ret.max())}); " +
-            "${ret.count { it > 0 }} of ${ret.size} closed above their 09:20 price; their range after 09:20 was a median ${p(median(rng))}."
+        median(ret)?.let { m ->
+            out += "After 09:20 those days moved a median ${sp(m)} (from ${sp(ret.min())} to ${sp(ret.max())}); " +
+                "${ret.count { it > 0 }} of ${ret.size} closed above their 09:20 price" +
+                (median(rng)?.let { r -> "; their range after 09:20 was a median ${p(r)}." } ?: ".")
+        }
         val armNames = hit.flatMap { it.arms.keys }.distinct().sorted()
         for (a in armNames) {
             val with = hit.filter { a in it.arms }

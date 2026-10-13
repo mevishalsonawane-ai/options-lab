@@ -42,6 +42,8 @@ object EventShield {
     fun group(name: String): Group {
         val n = " " + name.uppercase(Locale.ENGLISH).replace(Regex("[^A-Z0-9 ]"), " ") + " "
         return when {
+            // Election results (13 Oct review): "RESULT" would read them as a company's results - they are their own kind.
+            "ELECTION" in n -> Group.OTHER
             " RBI " in n || "BUDGET" in n || " MPC " in n -> Group.INDIA_POLICY
             "FOMC" in n || " FED " in n || " CPI " in n -> Group.US_MACRO
             "RESULT" in n || "EARNINGS" in n -> Group.RESULTS
@@ -54,6 +56,22 @@ object EventShield {
         val n = name.uppercase(Locale.ENGLISH)
         return !n.endsWith(" EXPIRY") && "EXPIRY MOVED" !in n && "REBALANCE" !in n
     }
+
+    // ---- US CPI (13 Oct review: it was one date hard-coded in the app) --------------------------------------------------
+
+    const val CPI_NAME = "US CPI overnight"
+
+    /**
+     * US CPI release days (US dates; 08:30 New York, after the Indian close, so the next Indian session reacts). Only dates
+     * known for certain are listed. TODO(Boss): add the BLS schedule for Nov 2026 - Dec 2027
+     * (bls.gov/schedule/news_release/cpi.htm) once confirmed; until then the app says how far the list goes ([cpiNote]).
+     */
+    val US_CPI: List<LocalDate> = listOf("2026-10-14").map { LocalDate.parse(it) }
+
+    /** "US CPI dates are listed until 14 Oct 2026; ...": said wherever US CPI warnings are offered. */
+    fun cpiNote(cpi: List<LocalDate> = US_CPI): String = cpi.maxOrNull()?.let {
+        "US CPI dates are listed until ${it.dayOfMonth} ${it.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)} ${it.year}; later releases are not warned yet."
+    } ?: "No US CPI dates are listed; CPI nights are not warned."
 
     private fun p2(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
     private fun r1(x: Double) = String.format(Locale.ENGLISH, "%.1f", x)

@@ -104,14 +104,33 @@ object LevelMap {
         return out
     }
 
-    /** "Held N of M" per kind, over the newest [HISTORY] whole sessions in [sessions] (oldest first), each from its own past. */
-    fun record(sessions: List<List<Bar5?>>): Map<Type, Pair<Int, Int>> {
-        val held = HashMap<Type, Int>(); val tested = HashMap<Type, Int>()
+    /** A whole session: at least this many of its 75 five-minute slots hold a candle. */
+    const val WHOLE_SLOTS = 60
+
+    /** The whole sessions in [bars] before [today], oldest first, with their days (a partial session is left out). */
+    fun sessionsBefore(bars: List<Candle>, today: LocalDate): List<Pair<LocalDate, List<Bar5?>>> =
+        bars.groupBy { it.t.toLocalDate() }.toSortedMap().filterKeys { it < today }
+            .map { (d, c) -> d to bars5(c) }.filter { (_, s) -> s.count { it != null } >= WHOLE_SLOTS }
+
+    /**
+     * The sessions [record] counts: the newest [HISTORY] after the first [SWING_DAYS], and only those whose session before
+     * is held whole on the phone (13 Oct review: with a gap or a partial day, "yesterday" would be an older day).
+     */
+    fun scored(sessions: List<Pair<LocalDate, List<Bar5?>>>, isTrading: (LocalDate) -> Boolean = MarketContextCore::weekday): List<Int> {
         val from = maxOf(SWING_DAYS, sessions.size - HISTORY)
-        for (i in from until sessions.size) {
-            val s = sessions[i]
+        return (from until sessions.size).filter { i ->
+            sessions[i - 1].first == MarketContextCore.previousSession(sessions[i].first, isTrading)
+        }
+    }
+
+    /** "Held N of M" per kind, over the [scored] sessions in [sessions] (oldest first), each from its own past. */
+    fun record(sessions: List<Pair<LocalDate, List<Bar5?>>>, isTrading: (LocalDate) -> Boolean = MarketContextCore::weekday): Map<Type, Pair<Int, Int>> {
+        val held = HashMap<Type, Int>(); val tested = HashMap<Type, Int>()
+        val bars = sessions.map { it.second }
+        for (i in scored(sessions, isTrading)) {
+            val s = bars[i]
             val open = s.firstOrNull { it != null }?.open ?: continue
-            for ((t, lv) in levelsFrom(sessions.subList(0, i), open)) {
+            for ((t, lv) in levelsFrom(bars.subList(0, i), open)) {
                 val (te, he) = test(s, lv, 0)
                 if (te) { tested[t] = (tested[t] ?: 0) + 1; if (he) held[t] = (held[t] ?: 0) + 1 }
             }
@@ -121,20 +140,24 @@ object LevelMap {
 
     /**
      * Today's map for an index from its 1-minute [bars] (several sessions, today's included or not) on [today], with the
-     * largest-OI strikes [maxOiCall] / [maxOiPut] of the morning and the VWAP lines ([vwap]: name to price) when known.
+     * largest-OI strikes [maxOiCall] / [maxOiPut] of 09:20 and the VWAP lines ([vwap]: name to price) when known.
+     * The previous-day, pivot and swing levels come only when the previous trading day ([isTrading]) is on the phone whole
+     * (13 Oct review): otherwise none of them - never an older day's high or low passed off as yesterday's. The OI and VWAP
+     * lines are today's own and stay.
      */
     fun map(bars: List<Candle>, today: LocalDate, maxOiCall: Double? = null, maxOiPut: Double? = null,
-            vwap: List<Pair<String, Double>> = emptyList()): List<Level> {
-        val byDay = bars.groupBy { it.t.toLocalDate() }.toSortedMap()
-        val past = byDay.filterKeys { it < today }.values.map { bars5(it) }.filter { s -> s.count { it != null } >= 60 }
-        if (past.isEmpty()) return emptyList()
-        val todays = byDay[today]?.let { bars5(it) }
-        val open = todays?.firstOrNull { it != null }?.open ?: past.last().filterNotNull().last().close
-        val rec = record(past)                       // earlier sessions only: today's own bars never count
+            vwap: List<Pair<String, Double>> = emptyList(), isTrading: (LocalDate) -> Boolean = MarketContextCore::weekday): List<Level> {
         val out = ArrayList<Level>()
-        for ((t, lv) in levelsFrom(past, open)) {
-            val (h, n) = rec[t] ?: (0 to 0)
-            out += Level(t, lv, h, n)
+        val sessions = sessionsBefore(bars, today)
+        if (sessions.isNotEmpty() && sessions.last().first == MarketContextCore.previousSession(today, isTrading)) {
+            val past = sessions.map { it.second }
+            val todays = bars.filter { it.t.toLocalDate() == today }.takeIf { it.isNotEmpty() }?.let { bars5(it) }
+            val open = todays?.firstOrNull { it != null }?.open ?: past.last().filterNotNull().last().close
+            val rec = record(sessions, isTrading)        // earlier sessions only: today's own bars never count
+            for ((t, lv) in levelsFrom(past, open)) {
+                val (h, n) = rec[t] ?: (0 to 0)
+                out += Level(t, lv, h, n)
+            }
         }
         maxOiCall?.let { out += Level(Type.MAX_OI_CALL, it) }
         maxOiPut?.let { out += Level(Type.MAX_OI_PUT, it) }
@@ -142,11 +165,42 @@ object LevelMap {
         return out
     }
 
-    /** How many sessions [map]'s counts read from [bars] (today left out). */
-    fun counted(bars: List<Candle>, today: LocalDate): Int {
-        val n = bars.groupBy { it.t.toLocalDate() }.filterKeys { it < today }.values.count { d -> bars5(d).count { it != null } >= 60 }
-        return (n - SWING_DAYS).coerceIn(0, HISTORY)
+    /** How many sessions [map]'s counts read from [bars] (today left out); 0 when [map] has no previous-day levels. */
+    fun counted(bars: List<Candle>, today: LocalDate, isTrading: (LocalDate) -> Boolean = MarketContextCore::weekday): Int {
+        val s = sessionsBefore(bars, today)
+        if (s.isEmpty() || s.last().first != MarketContextCore.previousSession(today, isTrading)) return 0
+        return scored(s, isTrading).size
     }
+
+    // ---- the 09:20 OI strikes (13 Oct review: the label quotes the research's 09:20 rate, so the line is the 09:20 OI) ----
+
+    /** 09:20 as an IST minute of the day. */
+    const val OI_MINUTE = 9 * 60 + 20
+
+    /**
+     * The largest-OI strike of [right] at 09:20 from one chain read today at IST minute [readMinute]: each contract's OI at
+     * its last 1-minute bar from 09:16 to 09:20 ([snapshot] false: minute candles; the chain must be read after 09:20's bar
+     * closed), or, for a quote snapshot ([snapshot] true: one row per contract), only when the snapshot was taken at 09:21
+     * or 09:22 (the state at 09:20's close). Null when the chain does not hold 09:20 (read before it, or a later snapshot):
+     * the app keeps the first 09:20 answer of the day and uses it all day.
+     */
+    fun maxOiStrikeAt0920(series: List<com.optionslab.engine.Series>, right: com.optionslab.engine.Right, readMinute: Int, snapshot: Boolean): Double? {
+        if (readMinute <= OI_MINUTE) return null
+        var best: Pair<Double, Long>? = null
+        for (s in series) {
+            if (s.right != right || s.size == 0) continue
+            val i = if (snapshot) (s.size - 1).takeIf { s.minutes[it] in OI_MINUTE + 1..OI_MINUTE + 2 } ?: -1
+                else s.lastAtOrBefore(OI_MINUTE).takeIf { it >= 0 && s.minutes[it] > OI_MINUTE - 5 } ?: -1
+            if (i < 0 || i >= s.oi.size) continue
+            val oi = s.oi[i]
+            if (oi > 0 && (best == null || oi > best.second)) best = s.strike to oi
+        }
+        return best?.first
+    }
+
+    /** The legend line when the previous session is not on the phone whole: no previous-day, pivot or swing levels. */
+    const val NO_HISTORY = "Level map: the previous session is not complete on this phone, so no previous-day, pivot or swing levels today " +
+        "(never an older day's passed off as yesterday's)."
 
     /** The legend line under the chart's level map. */
     fun note(sessions: Int): String =

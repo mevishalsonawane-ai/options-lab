@@ -209,7 +209,8 @@ try {
       { key: 'cV', type: 'color', label: 'VWAP colour', default: '#6b7b8c' },
     ],
     plots: LEVEL_KEYS.map((k, i) => ({ key: 'l' + i, title: LEVEL_TITLES[k] || k.replace('VB:', 'VWAP '),
-      colorKey: k === 'VWAP' || k.startsWith('VB:') ? 'cV' : (k.startsWith('S') || k === 'PDL' || k === 'MAX_OI_PUT' || k === 'SWING_LOW' ? 'cS' : 'cR'),
+      // Support: S1/S2 only (13 Oct review: startsWith('S') also caught SWING_HIGH, a resistance).
+      colorKey: k === 'VWAP' || k.startsWith('VB:') ? 'cV' : (/^S\d$/.test(k) || k === 'PDL' || k === 'MAX_OI_PUT' || k === 'SWING_LOW' ? 'cS' : 'cR'),
       type: 'line', style: { lineWidth: 1 } })),
     calc: (bars) => {
       const lv = levelRead();
