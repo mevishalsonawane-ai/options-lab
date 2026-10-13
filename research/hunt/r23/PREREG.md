@@ -170,3 +170,26 @@ available; never used to choose).
 If a finalist passes every lake gate, the write-up gives the exact rule for a PAPER-only ORB change (CLAUDE.md: a
 paper change from an idea that passed the research gates, logged in the Autopilot timeline, undoable, never live by
 itself). If none passes, or the lake is not ready, the write-up says so plainly.
+
+## Part B. The (f) quality filters (written 13 Oct 2026 after Step 1, BEFORE any trading test)
+
+Step 1 (`results/anatomy.md|json`; design = every release session; ORB range: 1,242 breaks on BANKNIFTY 413 / NIFTY
+423 / FINNIFTY 406 of 1,455 sessions, 284 RUN, 452 FAKE, 506 CHOP). Eight features qualify by the A4 rule (q < 0.10,
+the same side in both halves, on BANKNIFTY, on NIFTY and on the R30 range, abs(AUC - 0.5) >= 0.05): `twap_al` (AUC
+0.653), `brk_str` (0.631), `t_break` (0.396), `tests` (0.397), `w_atr` (0.582), `piv_al` (0.576), `pd_dir_al` (0.554),
+`w_prev` (0.553). The rule takes the two with the largest abs(AUC - 0.5):
+
+| filter | passes when (at the signal's decision minute) | fitted cut (median of the feature over the 1,242 ORB-range breaks) |
+|---|---|---|
+| f1 | `twap_al` = side x (decision close - mean of the 1-minute closes 09:15 .. decision) / ATR14 is ABOVE the cut | 0.21982 |
+| f2 | f1 AND `brk_str` = side x (decision close - broken edge) / ATR14 is ABOVE the cut | 0.03538 |
+
+So `r23-orb-f1` / `-f2` (today's ORB range, 5-min close break) and `r23-r22-f1` / `-f2` (R22's range, rows 0 .. 44,
+15-min close break) take the FIRST signal of each side only when its filter passes (a filtered first signal leaves that
+side untraded, as every configuration's "first signal of that side" rule says). In the nested walk-forward (A4) both cuts
+are refit as the median over the training blocks' ORB-range breaks. The same cuts are used for both bases.
+
+Caveat, stated before the test: both picks measure how far price has already gone in the break direction at the
+decision. `brk_str` is partly tied to the FAKE definition by construction (a close far beyond the edge needs a bigger
+reversal to close back inside within 30 minutes), and an early break has more time to run (`t_break`). The trading test,
+with real option entries at the decision, is what decides whether this is money or arithmetic. Nothing else changes.
