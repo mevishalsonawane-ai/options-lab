@@ -177,6 +177,23 @@ Not possible yet:
         phone.
       - Card: "Last backup to GitHub: date ✓". A failure, or no backup for 2 days, goes to Problems found.
 
+- [ ] G3. Nightly diagnostics to GitHub, with a daily fix loop (owner, 2026-10-13).
+      - Phone (after G1/G2 merge, same uploader and token): every evening after 15:45 (Wi-Fi + charging) it commits
+        that day's diagnostics to the private data repo `mevishalsonawane-ai/IraAlgo` at
+        `diagnostics/YYYY/MM/YYYY-MM-DD.json`. It is the same content as Settings → Diagnostics → Copy diagnostics:
+        Problems found, health, stalls/ANRs, crashes, worker runs, stream gaps, Order Review flaws, self-healing
+        incidents, app version.
+      - Redaction before upload: no keys or tokens (as Copy diagnostics today), and no account id, order ids, names or
+        rupee amounts. Money appears only as signs and percentages. The file is plain JSON so Claude can read it; the
+        repo stays private.
+      - A test proves the redaction against a sample with every secret and money pattern. A failed upload shows in
+        Problems found.
+      - Daily fix loop (Claude routine, after G3 ships): each morning before 09:00 IST it reads the latest
+        diagnostics, groups new or repeating problems, and drafts fixes on a branch. Every fix follows CLAUDE.md:
+        tests, review, CI green. Then it merges and sends the APK, and reports to Boss in a few lines: "Yesterday:
+        N problems, fixed X, need you: Y". Problems that need Boss (token, static IP, login) are only reported,
+        never worked around.
+
 ## F. Strategy Factory (owner go-ahead 2026-10-13)
 
 - [ ] F1. Automatic strategy discovery from the Data Brain. Nothing goes live without Boss's PIN.
