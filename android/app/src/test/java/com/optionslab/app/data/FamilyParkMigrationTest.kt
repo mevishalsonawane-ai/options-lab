@@ -45,26 +45,30 @@ class FamilyParkMigrationTest : RobolectricTest() {
         AutomationSupport.realClocks()
         if (Autopilot.enabled()) Autopilot.resetForTest()
         com.optionslab.app.security.SecurePrefs.put(Backup.DISARM, null)
+        // The trade manager's policy, read once in the background after a book with an open position is saved: read here and
+        // its one-time write put on disk, so it never lands in a later test's settings.
+        runCatching { TradeManagerHost.ensureLoaded() }
+        com.optionslab.app.security.SecurePrefs.flush()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
     private val four = FamilyPark.ARMS.map { it.source }
-    private val liqBooks = LiquidityRules.BOOKS.map { it.source }
     private fun arm(src: String) = runBlocking { OrbArms.view() }.arms.single { it.arm.source == src }
     private fun liqArmed() = runBlocking { OrbArms.liquidityDay(OrbArms.testNow!!.toLocalDate()) }.first.associate { it.book to it.armed }
     private fun noticeCount() = Diag.lines().count { it.contains(FamilyPark.NOTICE) }
 
     /**
-     * A book saved on 12 Oct (every earlier one-time change done): the four and every Liquidity book on, ORB cleared for
-     * Zerodha (Live, with the PIN), ORB Fresh approving each entry, the Hero arm on.
+     * A book saved on 12 Oct (every earlier one-time change done, FINNIFTY parked on 9 Oct): the four and every other
+     * Liquidity book on, ORB cleared for Zerodha (Live, with the PIN), ORB Fresh approving each entry, the Hero arm on.
      */
     private fun savedOn12Oct(extra: (JSONObject) -> Unit = {}) {
-        val on = four + liqBooks + "hero"
+        val liqOn = ParkedArms.armable(setOf("FINNIFTY")).map { it.source }
+        val on = four + liqOn + "hero"
         val o = JSONObject()
             .put("armed", JSONObject().apply { on.forEach { put(it, true) } })
             .put("auto", JSONObject().apply { on.forEach { put(it, it != "orb_fresh") } })
-            .put("liveOk", JSONObject().put("orb", true).apply { liqBooks.forEach { put(it, true) } })
-            .put("liqLots", 1)
+            .put("liveOk", JSONObject().put("orb", true).apply { liqOn.forEach { put(it, true) } })
+            .put("liqLots", 1).put("liqParked", JSONArray().put("FINNIFTY"))
             .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
                 .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(LiquidityRules.MIDCP_JOIN)
                 .put(com.optionslab.engine.orb.LiquidityLots.ONE_LOT_MIGRATION).put(ParkedArms.MIGRATION))
