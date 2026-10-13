@@ -203,7 +203,8 @@ object MarketContext {
     }
 
     /** The 15:45 report's line: the next session's event warning, if any. */
-    fun eveningLines(now: LocalDateTime = LocalDateTime.now(IST)): List<String> {
+    // The app's clock (Market.now, 13 Oct G3 CI fix): the wall clock made the day report's test depend on the hour CI ran.
+    fun eveningLines(now: LocalDateTime = Market.now().toLocalDateTime()): List<String> {
         if (!enabled()) return emptyList()
         val next = nextSession(now.toLocalDate())
         return listOfNotNull(EventShield.warning(eventsOn(next), next, now.toLocalDate()))
