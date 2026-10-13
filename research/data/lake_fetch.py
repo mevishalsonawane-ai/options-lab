@@ -64,12 +64,14 @@ class Job:
         df = arrays_df(js)
         if not len(df):
             open(self.path + ".empty", "w").write("")
-            return "empty", 0
-        df.to_parquet(self.path + ".parquet.tmp", compression="zstd")
-        os.replace(self.path + ".parquet.tmp", self.path + ".parquet")
-        if os.path.exists(self.path + ".err"):
+            res = "empty", 0
+        else:
+            df.to_parquet(self.path + ".parquet.tmp", compression="zstd")
+            os.replace(self.path + ".parquet.tmp", self.path + ".parquet")
+            res = "ok", len(df)
+        if os.path.exists(self.path + ".err"):  # an earlier failed try of this chunk
             os.remove(self.path + ".err")
-        return "ok", len(df)
+        return res
 
 
 def master(raw):

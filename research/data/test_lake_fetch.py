@@ -37,3 +37,13 @@ def test_expired_token_also_stops_the_run(tmp_path, monkeypatch):
     J = [FakeJob(str(tmp_path / f"j{i}"), ("err", "HTTP 401 {'errorCode': 'DH-901'}")) for i in range(100)]
     st = lf.fetch(str(tmp_path), "g", J, 1)
     assert st["capped"] and sum(j.ran for j in J) < 10
+
+
+def test_a_retried_chunk_clears_its_old_err_marker_also_when_empty(tmp_path, monkeypatch):
+    answers = {"a": {"timestamp": [1, 2], "open": [1.0, 2.0]}, "b": {}}
+    monkeypatch.setattr(lf.dh, "post", lambda ep, body: (200, answers[body["k"]], ""))
+    for k, ext in (("a", ".parquet"), ("b", ".empty")):
+        p = str(tmp_path / k)
+        open(p + ".err", "w").write("HTTP 429 DH-904")
+        lf.Job(p, "/x", {"k": k}).run()
+        assert os.path.exists(p + ext) and not os.path.exists(p + ".err")
