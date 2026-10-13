@@ -208,27 +208,46 @@ def jobs_for(group, raw):
     return J
 
 
+CAP_N = 50  # this many DH-905 answers in a row = Dhan refuses all data calls (daily cap or block): stop
+
+
+def fetch(raw, g, J, threads):
+    """Runs the jobs; returns the stats, with stats["capped"] = True when the run stopped because of DH-905."""
+    stats, t0, run905 = {"ok": 0, "empty": 0, "err": 0}, time.time(), 0
+    with cf.ThreadPoolExecutor(threads) as ex:
+        futs = {ex.submit(j.run): j for j in J}
+        for i, f in enumerate(cf.as_completed(futs), 1):
+            if f.cancelled():
+                continue
+            try:
+                k, v = f.result()
+            except Exception as e:
+                k, v = "err", f"{type(e).__name__}: {e}"
+                open(futs[f].path + ".err", "w").write(dh.redact(v)[:300])
+            stats[k] += 1
+            run905 = run905 + 1 if k == "err" and "DH-905" in str(v) else 0
+            if k == "err":
+                log("ERR", futs[f].path.split(raw)[-1], v)
+            if run905 >= CAP_N and not stats.get("capped"):
+                stats["capped"] = True
+                log(f"[{g}] {CAP_N} DH-905 in a row: Dhan refuses data calls (daily cap?); stopping")
+                for x in futs:
+                    x.cancel()
+            if i % 200 == 0 or i == len(J):
+                log(f"[{g}] {i}/{len(J)} {stats} {time.time() - t0:.0f}s")
+    return stats
+
+
 def main():
     raw, groups = sys.argv[1], sys.argv[2:]
     threads = int(os.environ.get("LAKE_THREADS", "5"))
     for g in groups:
         J = [j for j in jobs_for(g, raw) if not j.done()]
         log(f"[{g}] {len(J)} chunks to fetch")
-        stats, t0 = {"ok": 0, "empty": 0, "err": 0}, time.time()
-        with cf.ThreadPoolExecutor(threads) as ex:
-            futs = {ex.submit(j.run): j for j in J}
-            for i, f in enumerate(cf.as_completed(futs), 1):
-                try:
-                    k, v = f.result()
-                except Exception as e:
-                    k, v = "err", f"{type(e).__name__}: {e}"
-                    open(futs[f].path + ".err", "w").write(dh.redact(v)[:300])
-                stats[k] += 1
-                if k == "err":
-                    log("ERR", futs[f].path.split(raw)[-1], v)
-                if i % 200 == 0 or i == len(J):
-                    log(f"[{g}] {i}/{len(J)} {stats} {time.time() - t0:.0f}s")
+        stats = fetch(raw, g, J, threads)
         json.dump(stats, open(f"{raw}/_{g}.stats.json", "w"))
+        if stats.get("capped"):
+            sys.exit(3)
 
 
 if __name__ == "__main__":

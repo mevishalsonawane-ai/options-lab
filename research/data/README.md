@@ -24,7 +24,8 @@ The lake is kept in the Google Drive folder **IraAlgo-data-lake**, one sub-folde
 (`index_1m/`, `options_rolling_1m/`, …, `nse_bhavcopy/`). The folder root holds `MANIFEST.txt` (path, rows, sha256,
 bytes of every file), `STATUS.txt` (what is there and what is missing), `CATALOG.json` and `VALIDATION.*`.
 **As of 2026-10-13 only `nse_bhavcopy/` is uploaded**: the Dhan rebuild failed (every `/v2/charts` call returned
-DH-905), so the Parquet files in `CATALOG.json` are not on Drive yet.
+DH-905, also with the new token issued on 13 Oct, whose profile shows the data plan active), so the Parquet files
+in `CATALOG.json` are not on Drive yet.
 
 Download with [rclone](https://rclone.org) (remote `gdrive` = Google Drive, set up with `rclone config`):
 
@@ -150,3 +151,5 @@ About 125,000 Dhan requests (83,000 of them stock options). That is **more than 
 requests/day, retries included)**, so plan two days or two tokens. Dhan answers about 3.5 index-option requests per
 second at 40 threads (stock options 1–2/s; slower in Indian market hours) and rate-limits above 5/s. Failed chunks (`.err`) are retried just by running the same
 command again.
+`lake_fetch.py` stops with exit code 3 after 50 DH-905 answers in a row (Dhan refuses every data call, usually the
+daily cap), so a capped run does not turn every remaining chunk into an `.err`; re-run after 00:00 IST.
