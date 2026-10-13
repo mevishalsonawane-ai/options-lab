@@ -150,8 +150,8 @@ def load(split: str = "design") -> dict:
         market, iv = key.split("_")
         out[key] = {c: _cut(pd.read_parquet(os.path.join(CACHE, f"{market}_{c}_{iv}.parquet")), split) for c in SYMS}
     out["funding"] = {c: _cut(pd.read_parquet(os.path.join(CACHE, f"funding_{c}.parquet")), split) for c in SYMS}
-    u = pd.read_parquet(os.path.join(CACHE, "usdinr.parquet")).set_index("t").usdinr
-    out["usdinr"] = u
+    u = pd.read_parquet(os.path.join(CACHE, "usdinr.parquet"))
+    out["usdinr"] = _cut(u, split).set_index("t").usdinr
     return out
 
 

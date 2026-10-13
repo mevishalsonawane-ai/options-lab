@@ -422,3 +422,20 @@ Full study: `HUNT_R21_HERO.md` (pre-registered `hunt/r21/PREREG.md`, commit 78e9
 - Exits did not help: no holdout trade reached the 3-4x that arms a lock or trail; the plain 15:05 exit lost more
   (-Rs 61,863) than the app's -60% stop.
 - Deciding it needs the 6-year Dhan lake (~300 NIFTY weeklies): `R21_SOURCE=lake python3 research/hunt/r21/run.py all`.
+## Crypto for a small Indian account: hold or DCA, trade rarely (RC1, 13 Oct 2026) - no active strategy passes
+Full study: `HUNT_RC1_CRYPTO_SMALL_ACCOUNT.md` (pre-registered `hunt/rc1/PREREG.md`, commit 3ceda7b; 10 crypto ideas, BH
+across 8 active tests; holdout 13 Oct 2025 - 12 Oct 2026 read once). Research only, not financial advice; the tax figures
+are modelling assumptions (confirm with a CA).
+- Best after tax: buy and hold or DCA into BTC + ETH. Walk-forward 13 Oct 2019 - 12 Oct 2025 (73 months, Rs 1L, 50/50):
+  hold +58.8% a year after 31.2% tax and 1% TDS (max drawdown -76%, 632 days to recover), 12 monthly DCA buys +56.4%.
+  Holdout year: hold -30.4%, DCA +4.7%.
+- India's crypto tax (30% + cess on each profitable sale, no loss set-off) punishes frequent trading: spot trend made
+  +24.4% a year after tax vs +43.8% before (77 entries); the 4h breakout made +48.0% gross and -12.2% after tax (397
+  entries, 133 orders a year). 0 of 8 active ideas beat random-entry twins after BH (best q 0.356).
+- Leverage hurts a small account: trend on INR perps at 3x had a -95% drawdown, ETH alone at 3x was liquidated in
+  March 2020, and 3x lost -70.4% in the holdout year.
+- Funding carry (spot long + perp short) lost -10.9% a year after tax with 6 short liquidations at 1x; it needs two
+  exchanges and each leg is taxed separately. Not practical for a small Indian account.
+- INR futures' tax treatment is disputed: on the 4h breakout, the VDA reading gives -3.0% a year and the business-income
+  reading +21.3%. Ask a CA before trading crypto futures.
+- Day-of-week effects in BTC / ETH are not real after BH (16 tests, lowest q 0.355).

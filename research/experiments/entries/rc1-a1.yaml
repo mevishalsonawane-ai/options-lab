@@ -1,0 +1,30 @@
+id: rc1-a1
+title: 'Crypto baseline: buy and hold BTC / ETH / 50-50 from India after tax'
+family: mcx-crypto
+date: '2026-10-13'
+doc: research/HUNT_RC1_CRYPTO_SMALL_ACCOUNT.md
+hypothesis: The plain baseline every active idea must beat after Indian tax.
+data_version: 'Binance public archive (data.binance.vision): spot BTCUSDT/ETHUSDT 1d+1h 2017-08-17..2026-10-12, USD-M perps
+  1d+1h 2020-01-01..2026-10-12, funding 2020-01..2026-09-30; USD/INR ECB (frankfurter.dev); parquet cache outside git'
+period:
+  design: walk-forward OOS 2019-10-13..2025-10-12 (6 yearly OOS years, anchored; training from 2018-03-05)
+  holdout: 2025-10-13..2026-10-12 (13 months), read once
+instruments:
+- CRYPTO
+features:
+- BTC / ETH prices in INR
+model_or_rule: buy on day 1, sell at the end
+settings: research/hunt/rc1/config.py
+prereg: research/hunt/rc1/PREREG.md
+variants_tried: null
+results:
+  summary: 'Walk-forward 73 months, Rs 1L 50/50: +58.8%/yr after tax+TDS (pre-tax +68.4%), max DD -76%, worst month -42%,
+    60% green months, recovery 632 d, tax Rs 6.84 L. BTC +51.5%, ETH +64.7%. Holdout (13 months): -30.4% (BTC -23.8%, ETH
+    -36.9%), max DD -53%. Rs 25k identical in %.'
+  costs: Indian spot taker 0.25% + 18% GST + 0.15% half-spread per side (low 0.168% / high 0.890%); INR perps 0.05% + GST
+    + 0.02% (0.079%); real funding; 31.2% VDA tax per profitable sale, no loss set-off; 1% TDS locked 365 d; perps tax readings
+    A (VDA) and B (business)
+holdout_read: true
+verdict: not-a-test
+notes: 'RC1 (Boss 13 Oct 2026, small Indian account). BH across 8 active tests (b x2, c, c-perp, d, f, g, g-perp). Tax figures
+  are modelling assumptions; confirm with a CA. Research only: nothing in the app trades crypto.'
