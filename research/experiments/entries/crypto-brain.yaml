@@ -13,14 +13,14 @@ instruments:
 - BTCUSDT
 - ETHUSDT
 features:
-- 62 point-in-time features (research/brain/crypto/FEATURES.md)
+- 64 point-in-time features (research/brain/crypto/FEATURES.md)
 model_or_rule: none
 settings: research/brain/crypto/config.py
 prereg: null
 variants_tried: null
 results:
   summary: 'Cube: 913 days per symbol, 1,314,720 minutes each, no gap minutes; look-ahead guard PASS on the real cube
-    and on synthetic data for all 62 features.'
+    and on synthetic data for all 64 features.'
   costs: n/a
 holdout_read: null
 verdict: not-a-test

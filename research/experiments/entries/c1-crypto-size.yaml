@@ -6,7 +6,7 @@ doc: research/CRYPTO_C1_PREDICTABILITY.md
 hypothesis: A ridge model on recent realised ranges, hour of day, weekend and DVOL forecasts the log range of the next
   hour (A1) and next day (A2) better than the hour-of-day average / 20-day average, by at least 5%.
 data_version: Binance bulk archive (data.binance.vision, sha256-checked) BTCUSDT/ETHUSDT spot+perp 1m, funding, metrics;
-  repo crypto/data_extra/dvol_1h.csv; crypto cube v1, feature signature 9ab2268f33e7
+  repo crypto/data_extra/dvol_1h.csv; crypto cube v2, feature signature afe36b892dd9
 period:
   design: 2023-11-02 .. 2026-03-31 (walk-forward, 30 blocks, first 6 train only)
   holdout: 2026-04-01 onward, locked, not read

@@ -9,7 +9,7 @@ real costs, BH across ideas). It **reuses** the Indian code and changes only the
 L0 Binance bulk archive / Drive crypto lake ──fetch──► L1 <cache>/crypto/raw (the archive's own layout, never in git)
    ──adapters + clean──► L2 (UTC, deduped, ts units fixed, gaps marked, flags)
    ──cube──► L3 <cache>/crypto/cube/<SYM>/<YYYY>/<day>.parquet   one 1440-minute UTC grid per day, 24x7
-   ──features──► L4 <cache>/crypto/features/<SYM>/...            62 point-in-time features (FEATURES.md)
+   ──features──► L4 <cache>/crypto/features/<SYM>/...            64 point-in-time features (FEATURES.md)
    ──labels──►   <cache>/crypto/labels/<SYM>/...                 y_* over the next 60 / 240 / 1440 minutes
    ──study──► L5 results/c1_design.json → research/CRYPTO_C1_PREDICTABILITY.md, FINDINGS.md, the knowledge pack
 ```
@@ -35,6 +35,7 @@ python -m research.brain.crypto.guard --symbols BTCUSDT ETHUSDT               # 
 
 # L5: the pre-registered study (design data only) and the knowledge pack
 python -m research.brain.crypto.study --symbols BTCUSDT ETHUSDT               # -> results/c1_design.json
+python -m research.brain.crypto.window --symbols BTCUSDT ETHUSDT              # C2, Boss's 00:00-09:00 IST window
 python3 research/knowledge/build_pack.py && python3 research/knowledge/build_pack.py --check
 
 # checks (what CI runs, plus the crypto catalogue)
@@ -49,6 +50,14 @@ months are not needed again unless CUBE_VERSION changes).
 
 Measured here (one CPU): cube 913 days per symbol in ~3.5 minutes (~0.23 s a day, 0.25 MB a day); features ~6 s a
 month; labels ~25 s per symbol; the study ~40 s for two symbols.
+
+## Boss's window: 00:00-09:00 IST (13 Oct 2026)
+
+Boss: "crypto market should only run from morning 12am to morning 9am". `config.WINDOW` = 00:00-09:00 IST
+(18:30-03:30 UTC), every day; `markets.window_flags` and the features `in_boss_window` / `min_to_window_end` mark it.
+The raw data, cube and features stay 24x7, because the window's own features need the hours before it (a 24-hour
+VWAP, a 30-day funding z-score). Every decision, target and trade in `window.py` (study C2,
+`research/CRYPTO_C2_WINDOW.md`) is inside the window and flat by 09:00 IST, before NSE opens. Nothing trades crypto.
 
 ## What is market-aware (and where)
 
@@ -92,14 +101,14 @@ taker buy/sell ratio, DVOL with its age, and `vol_precision` (`estimate`: volume
 
 ## Features (`features/`, catalogue `FEATURES.md`)
 
-62 features in seven families: price (returns 1 m - 24 h, ranges, day return and position), vol (realised 1 h / 24 h,
+64 features in seven families: price (returns 1 m - 24 h, ranges, day return and position), vol (realised 1 h / 24 h,
 their ratio, ATR on hourly and daily bars, DVOL, DVOL change, DVOL minus realised), volume (USD volume, relative volume
 vs the same hour of the last 7 days, taker-buy share, rolling 24-hour VWAP with distance and z, day-anchored VWAP),
 profile (rolling 24-hour volume profile: POC, value-area high / low, state; recomputed each hour), levels (previous
 day / week high, low, close; nearest small / big round number; today's high / low), derivs (basis and its z / change,
 premium 8 h = the live funding estimate, funding in bps / annualised / z over 30 days, minutes to funding, OI change
 1 h / 24 h, long/short ratios, taker ratio, perp taker imbalance, two liquidation proxies), calendar (UTC hour, minute
-of day, weekday, weekend, Asia / Europe / US hours).
+of day, weekday, weekend, Asia / Europe / US hours, Boss's 00:00-09:00 IST window and the minutes left in it).
 
 Adding one: as in the Indian store (`research/brain/README.md`, "Add a feature"), with `features/registry.feature`
 from the crypto package, a lookback in minutes (`60m`) or days (`7d`), then

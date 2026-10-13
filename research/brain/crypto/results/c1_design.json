@@ -19,7 +19,7 @@
    "first": "2023-11-02 00:59:00",
    "last": "2026-03-31 22:59:00",
    "last_daily": "2026-03-30 23:59:00",
-   "signature": "9ab2268f33e7"
+   "signature": "afe36b892dd9"
   },
   "ETHUSDT": {
    "hourly_rows": 21143,
@@ -27,7 +27,7 @@
    "first": "2023-11-02 00:59:00",
    "last": "2026-03-31 22:59:00",
    "last_daily": "2026-03-30 23:59:00",
-   "signature": "9ab2268f33e7"
+   "signature": "afe36b892dd9"
   }
  },
  "describe": {
@@ -72,20 +72,20 @@
     "23": 0.482
    },
    "funding_bps_median": 0.7,
-   "funding_positive_pct": 88.2,
+   "funding_positive_pct": 88.1,
    "dvol_median": 52.7,
    "posthoc": {
     "b1_entry_1min_later_auc": 0.5364,
     "b1_entry_1min_later_n": 16818,
     "b1_single_input_auc": {
      "ret_60m": 0.4646,
-     "ret_240m": 0.4698,
+     "ret_240m": 0.4697,
      "ret_1440m": 0.472,
-     "funding_z_30d": 0.4971,
+     "funding_z_30d": 0.4977,
      "basis_z_7d": 0.5033,
-     "oi_chg_60m_pct": 0.4953,
-     "perp_taker_imb_60m": 0.4758,
-     "vwap24_z": 0.4658
+     "oi_chg_60m_pct": 0.4978,
+     "perp_taker_imb_60m": 0.4759,
+     "vwap24_z": 0.4657
     },
     "a1_mae_last60_only": 0.3924,
     "a1_mae_dvol_only": 0.4935,
@@ -104,7 +104,7 @@
       0.172,
       0.309
      ],
-     "n": 21143
+     "n": 21142
     }
    }
   },
@@ -152,15 +152,15 @@
    "funding_positive_pct": 86.7,
    "dvol_median": null,
    "posthoc": {
-    "b1_entry_1min_later_auc": 0.5401,
+    "b1_entry_1min_later_auc": 0.5404,
     "b1_entry_1min_later_n": 16816,
     "b1_single_input_auc": {
-     "ret_60m": 0.4642,
+     "ret_60m": 0.4643,
      "ret_240m": 0.4691,
      "ret_1440m": 0.4702,
      "funding_z_30d": 0.5,
      "basis_z_7d": 0.4978,
-     "oi_chg_60m_pct": 0.492,
+     "oi_chg_60m_pct": 0.4926,
      "perp_taker_imb_60m": 0.4744,
      "vwap24_z": 0.459
     },
@@ -179,7 +179,7 @@
       0.131,
       0.373
      ],
-     "n": 21143
+     "n": 21142
     }
    }
   }
@@ -214,22 +214,22 @@
   {
    "id": "B1-BTCUSDT",
    "n": 16822,
-   "auc": 0.5352,
+   "auc": 0.5353,
    "p": 0.0,
    "base_up_pct": 50.4,
    "bar": "auc>=0.52 and net>0",
-   "effect": 0.5352,
+   "effect": 0.5353,
    "costs": {
     "trades": 4340,
     "hit_pct": 55.0,
-    "gross_bps": 0.52,
-    "net_bps": -11.51
+    "gross_bps": 0.29,
+    "net_bps": -11.74
    },
    "costs_2x_slip": {
     "trades": 4340,
     "hit_pct": 55.0,
-    "gross_bps": 0.52,
-    "net_bps": -13.51
+    "gross_bps": 0.29,
+    "net_bps": -13.74
    },
    "q": 0.0,
    "pass": false
@@ -237,41 +237,41 @@
   {
    "id": "B2-BTCUSDT",
    "n": 670,
-   "auc": 0.5,
-   "p": 0.4995,
+   "auc": 0.4954,
+   "p": 0.571,
    "base_up_pct": 49.6,
    "bar": "auc>=0.52 and net>0",
-   "effect": 0.5,
+   "effect": 0.4954,
    "costs": {
-    "trades": 370,
-    "hit_pct": 50.0,
-    "gross_bps": -3.69,
-    "net_bps": -16.3
+    "trades": 378,
+    "hit_pct": 49.2,
+    "gross_bps": -4.98,
+    "net_bps": -17.54
    },
    "costs_2x_slip": {
-    "trades": 370,
-    "hit_pct": 50.0,
-    "gross_bps": -3.69,
-    "net_bps": -18.3
+    "trades": 378,
+    "hit_pct": 49.2,
+    "gross_bps": -4.98,
+    "net_bps": -19.54
    },
-   "q": 0.8562,
+   "q": 0.9103,
    "pass": false
   },
   {
    "id": "C1-BTCUSDT",
    "n": 880,
-   "rho": -0.0049,
-   "p": 0.8848,
+   "rho": -0.0065,
+   "p": 0.8468,
    "bar": "q<0.05",
-   "effect": -0.0049,
+   "effect": -0.0065,
    "next_day_bps_by_quintile": [
-    10.3,
-    -9.2,
-    32.5,
-    -4.6,
+    11.4,
+    -8.8,
+    30.1,
+    -3.8,
     9.2
    ],
-   "q": 0.9604,
+   "q": 0.9564,
    "pass": false
   },
   {
@@ -293,19 +293,19 @@
   },
   {
    "id": "C3-BTCUSDT",
-   "n": 876,
-   "rho": -0.0634,
-   "p": 0.06085,
+   "n": 877,
+   "rho": -0.0604,
+   "p": 0.07405,
    "bar": "q<0.05",
-   "effect": -0.0634,
+   "effect": -0.0604,
    "next_day_bps_by_quintile": [
-    32.4,
-    27.4,
-    14.3,
-    -21.5,
-    -16.5
+    37.8,
+    24.1,
+    12.5,
+    -24.6,
+    -12.2
    ],
-   "q": 0.2603,
+   "q": 0.2821,
    "pass": false
   },
   {
@@ -356,7 +356,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -0.31,
    "beats_costs": false,
-   "q": 0.9604,
+   "q": 0.9568,
    "pass": false
   },
   {
@@ -368,7 +368,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": 1.12,
    "beats_costs": false,
-   "q": 0.8562,
+   "q": 0.8744,
    "pass": false
   },
   {
@@ -380,7 +380,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": 0.91,
    "beats_costs": false,
-   "q": 0.8562,
+   "q": 0.8744,
    "pass": false
   },
   {
@@ -631,7 +631,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": 48.8,
    "beats_costs": true,
-   "q": 0.2781,
+   "q": 0.2821,
    "pass": false
   },
   {
@@ -735,16 +735,16 @@
    "bar": "auc>=0.52 and net>0",
    "effect": 0.5427,
    "costs": {
-    "trades": 5217,
-    "hit_pct": 55.4,
-    "gross_bps": -1.25,
-    "net_bps": -13.29
+    "trades": 5168,
+    "hit_pct": 55.6,
+    "gross_bps": -1.13,
+    "net_bps": -13.16
    },
    "costs_2x_slip": {
-    "trades": 5217,
-    "hit_pct": 55.4,
-    "gross_bps": -1.25,
-    "net_bps": -15.29
+    "trades": 5168,
+    "hit_pct": 55.6,
+    "gross_bps": -1.13,
+    "net_bps": -15.16
    },
    "q": 0.0,
    "pass": false
@@ -752,24 +752,24 @@
   {
    "id": "B2-ETHUSDT",
    "n": 670,
-   "auc": 0.5126,
-   "p": 0.28,
+   "auc": 0.5117,
+   "p": 0.2935,
    "base_up_pct": 50.0,
    "bar": "auc>=0.52 and net>0",
-   "effect": 0.5126,
+   "effect": 0.5117,
    "costs": {
-    "trades": 280,
-    "hit_pct": 49.3,
-    "gross_bps": -25.04,
-    "net_bps": -37.61
+    "trades": 277,
+    "hit_pct": 50.5,
+    "gross_bps": -19.69,
+    "net_bps": -32.24
    },
    "costs_2x_slip": {
-    "trades": 280,
-    "hit_pct": 49.3,
-    "gross_bps": -25.04,
-    "net_bps": -39.61
+    "trades": 277,
+    "hit_pct": 50.5,
+    "gross_bps": -19.69,
+    "net_bps": -34.24
    },
-   "q": 0.6908,
+   "q": 0.7115,
    "pass": false
   },
   {
@@ -803,24 +803,24 @@
     -15.0,
     4.2
    ],
-   "q": 0.8562,
+   "q": 0.8744,
    "pass": false
   },
   {
    "id": "C3-ETHUSDT",
    "n": 878,
    "rho": 0.0255,
-   "p": 0.45024,
+   "p": 0.4511,
    "bar": "q<0.05",
    "effect": 0.0255,
    "next_day_bps_by_quintile": [
-    24.0,
-    -17.9,
-    -14.6,
-    -14.7,
-    30.3
+    17.1,
+    -8.3,
+    -19.6,
+    -3.3,
+    21.4
    ],
-   "q": 0.8377,
+   "q": 0.8392,
    "pass": false
   },
   {
@@ -1039,7 +1039,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -2.12,
    "beats_costs": false,
-   "q": 0.8562,
+   "q": 0.8744,
    "pass": false
   },
   {
@@ -1075,7 +1075,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -2.71,
    "beats_costs": false,
-   "q": 0.6908,
+   "q": 0.7115,
    "pass": false
   },
   {
@@ -1135,7 +1135,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -3.4,
    "beats_costs": false,
-   "q": 0.2603,
+   "q": 0.2747,
    "pass": false
   },
   {
@@ -1157,7 +1157,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -57.3,
    "beats_costs": true,
-   "q": 0.2788,
+   "q": 0.2821,
    "pass": false
   },
   {
@@ -1190,7 +1190,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -5.4,
    "beats_costs": false,
-   "q": 0.9604,
+   "q": 0.9568,
    "pass": false
   },
   {
@@ -1212,7 +1212,7 @@
    "bar": "q<0.05 and |mean|>round trip",
    "effect": -5.4,
    "beats_costs": false,
-   "q": 0.9604,
+   "q": 0.9564,
    "pass": false
   }
  ]

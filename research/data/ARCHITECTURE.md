@@ -281,7 +281,7 @@ Only the market rules differ; `research/brain/markets.py` describes both markets
 | L1 raw | Parquet release assets | the archive's own files, in the Drive crypto lake (sibling session) or fetched a few months at a time; never in git |
 | L2 clean | IST, gaps marked, flags | UTC; the archive's ms -> microsecond switch (1 Jan 2025) fixed per value; gaps marked; the same `quality` flags; slow series placed when known, with their age |
 | L3 cube | 375 minutes a session, chain ATM +-10 | 1440 minutes a UTC day, 24x7: spot, perp, mark / index, basis, funding (+ minutes to the next 00/08/16 UTC settlement), OI, long/short, DVOL |
-| L4 features | 149, session-bound windows | 62, windows across midnight and weekends; day features on a UTC (or IST) analysis day; the same guard and catalogue check |
+| L4 features | 149, session-bound windows | 64, windows across midnight and weekends; day features on a UTC (or IST) analysis day; the same guard and catalogue check |
 | L5 study + knowledge | R16 and the hunts | C1 (`research/CRYPTO_C1_PREDICTABILITY.md`): size of the next hour / day predictable, direction not; in FINDINGS.md and the knowledge pack |
 | L6 gates | walk-forward, last 12 months locked | walk-forward, **holdout from 1 Apr 2026 locked** (`crypto/config.HOLDOUT_START`), BH, perp fees + slippage + funding |
 | L7-L8 | the phone | nothing yet: crypto is research only; the app does not trade crypto |

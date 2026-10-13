@@ -259,3 +259,12 @@ def test_labels_next_to_a_missing_day_are_nan_not_shifted():
     c = M.set_index("ts").close
     t = pd.Timestamp("2025-01-05 10:00")
     assert L.y_ret_60m[t] == pytest.approx(np.log(c[t + pd.Timedelta(minutes=60)] / c[t]) * 100)
+
+
+def test_boss_window_is_midnight_to_nine_ist():
+    from research.brain.markets import window_flags
+    t = pd.DatetimeIndex(["2025-01-03 18:29", "2025-01-03 18:30", "2025-01-04 03:29", "2025-01-04 03:30",
+                          "2025-01-04 12:00"])                  # 23:59, 00:00, 08:59, 09:00, 17:30 IST
+    inside, left = window_flags(t, config.WINDOW)
+    assert list(inside) == [False, True, True, False, False]
+    assert left[1] == 539 and left[2] == 0 and np.isnan(left[0]) and np.isnan(left[3])

@@ -286,18 +286,38 @@
     taker flow and the clock, traded as a perpetual.
   verdict: negative
   facts:
-    - text: "Crypto next-hour direction has a real short-term reversal (AUC 0.535 BTC, 0.543 ETH) but it is worth about 0 bps gross a trade, so after a 12 bps perp round trip it loses 11.51 (BTC, 4,340 trades) and 13.29 bps (ETH, 5,217 trades) a trade."
+    - text: "Crypto next-hour direction has a real short-term reversal (AUC 0.535 BTC, 0.543 ETH) but it is worth about 0 bps gross a trade, so after a 12 bps perp round trip it loses 11.74 (BTC, 4,340 trades) and 13.16 bps (ETH, 5,168 trades) a trade."
       period: "design 2 Nov 2023 - 31 Mar 2026; holdout not read"
       costs: "perp taker 0.05% + 1 bp slippage a side, plus funding; 2x slippage stress"
       src: research/CRYPTO_C1_PREDICTABILITY.md
       sec: "B) Direction: real reversal next hour, but it cannot pay"
-    - text: "Crypto next-day direction is a coin: AUC 0.500 (BTC) and 0.513 (ETH) over 670 days."
+    - text: "Crypto next-day direction is a coin: AUC 0.495 (BTC) and 0.512 (ETH) over 670 days."
       period: "design 2 Nov 2023 - 31 Mar 2026"
       costs: "perp taker round trip 0.12% plus funding"
       src: research/CRYPTO_C1_PREDICTABILITY.md
       sec: "B) Direction: real reversal next hour, but it cannot pay"
-    - text: "Funding, basis and OI change do not predict the next crypto day: rank correlations -0.063 to +0.026 over 880 days per coin, best q 0.26."
+    - text: "Funding, basis and OI change do not predict the next crypto day: rank correlations -0.060 to +0.026 over 877-880 days per coin, best q 0.28."
       period: "design 2 Nov 2023 - 30 Mar 2026"
       costs: "n/a (a correlation test)"
       src: research/CRYPTO_C1_PREDICTABILITY.md
       sec: "C) Funding, basis and OI: no next-day signal"
+
+- id: crypto-window
+  name: Crypto in Boss's window (00:00-09:00 IST)
+  instruments: [CRYPTO]
+  tags: [crypto, time-of-day]
+  what: >-
+    Boss's rule for crypto: it is studied, and would only ever be acted on, from 00:00 to 09:00 IST, flat by 09:00
+    before NSE opens. Research only: the app does not trade crypto.
+  verdict: context
+  facts:
+    - text: "Inside the 00:00-09:00 IST window the crypto range is predictable: next window hour error 27.8% (BTC) / 23.4% (ETH) below the window-hour average (6,308 hours), whole window 17.2% / 15.2% below the last 20 windows (670 windows). Median BTC window range 1.83%."
+      period: "design 2 Nov 2023 - 31 Mar 2026; holdout from 1 Apr 2026 not read"
+      costs: "n/a (a forecast of size)"
+      src: research/CRYPTO_C2_WINDOW.md
+      sec: "Verdict (read this first)"
+    - text: "Crypto direction inside the 00:00-09:00 IST window does not pay: window hours lose 10.45 (BTC) / 10.73 bps (ETH) a trade after costs; the whole-window ETH reversal cleared costs by only 0.37 bps on 351 trades and fell to -11.97 bps with the entry one minute later."
+      period: "design 2 Nov 2023 - 31 Mar 2026"
+      costs: "perp taker 0.05% + 1 bp slippage a side, plus funding"
+      src: research/CRYPTO_C2_WINDOW.md
+      sec: "Verdict (read this first)"

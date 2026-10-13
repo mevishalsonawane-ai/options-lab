@@ -5,7 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ...markets import region_flags
+from ...markets import region_flags, window_flags
+from .. import config
 from .registry import feature
 
 
@@ -47,3 +48,19 @@ def europe(ctx):
 @feature("in_us", "calendar", 1, ["minutes.ts"], "1m", "1 inside New York cash-equity hours (09:30-16:00 local, weekdays).")
 def us(ctx):
     return _reg(ctx)["us"].astype(float)
+
+
+def _win(ctx):
+    return ctx.memo("win", lambda: window_flags(ctx.ts, config.WINDOW))
+
+
+@feature("in_boss_window", "calendar", 1, ["minutes.ts"], "1m",
+         "1 inside Boss's crypto window, 00:00-09:00 IST (18:30-03:30 UTC), every day.")
+def in_window(ctx):
+    return _win(ctx)[0].astype(float)
+
+
+@feature("min_to_window_end", "calendar", 1, ["minutes.ts"], "1m",
+         "Minutes from this bar's end to 09:00 IST, the end of Boss's crypto window (NaN outside it).")
+def to_window_end(ctx):
+    return _win(ctx)[1]

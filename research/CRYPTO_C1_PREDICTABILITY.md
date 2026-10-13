@@ -15,15 +15,15 @@ for both BTC and ETH.** Crypto is also much quieter at the weekend. Nothing abou
 | A1 range of the next hour | **PREDICTABLE** (BTC and ETH) | error 24.7% (BTC) / 19.9% (ETH) smaller than the hour-of-day average |
 | A2 range of the next day | **PREDICTABLE** (BTC and ETH) | error 19.9% (BTC) / 15.1% (ETH) smaller than the 20-day average |
 | D1s weekend size | **real**: weekends are quieter | weekend hours move 0.595x (BTC) / 0.672x (ETH) of weekday hours |
-| B1 direction, next hour | statistically real, **worthless after costs** | AUC 0.535 (BTC) / 0.543 (ETH), but gross +0.52 / -1.25 bps a trade against a 12 bps round trip |
-| B2 direction, next day | not predictable | AUC 0.500 (BTC) / 0.513 (ETH) |
-| C1-C3 funding, basis, OI change vs next-day return | not predictable | rank correlation -0.063 to +0.026, best q 0.26 |
+| B1 direction, next hour | statistically real, **worthless after costs** | AUC 0.535 (BTC) / 0.543 (ETH), but gross +0.29 / -1.13 bps a trade against a 12 bps round trip |
+| B2 direction, next day | not predictable | AUC 0.495 (BTC) / 0.512 (ETH) |
+| C1-C3 funding, basis, OI change vs next-day return | not predictable | rank correlation -0.060 to +0.026, best q 0.28 |
 | D1d weekend vs weekday return | no difference | q 0.91 / 0.95 |
 | D2 hour-of-day return (48 tests) | nothing beats costs | best: ETH 21:00-22:00 UTC +7.5 bps (q 0.02), below the 12 bps round trip |
 | D4 day-of-week return (14 tests) | not significant | best q 0.12 (BTC Wednesday +62.4 bps, 125 weeks) |
 
 Multiple testing: 80 tests (40 per symbol), one Benjamini-Hochberg family. 6 pass every pre-registered bar: A1, A2 and
-D1s on both symbols (q < 0.001). B1 is significant (q < 0.001) but fails its trading bar (net -11.51 bps BTC, -13.29
+D1s on both symbols (q < 0.001). B1 is significant (q < 0.001) but fails its trading bar (net -11.74 bps BTC, -13.16
 bps ETH). ETH 21:00 UTC passes q (0.02) but not its cost bar. Everything else has q above 0.07.
 
 **These are design-period results.** The locked holdout (1 Apr 2026 on) was not read and was not even downloaded. A
@@ -64,7 +64,7 @@ Error = mean absolute error of the log range (0.35 means typically off by a fact
   the rest. DVOL adds little at these horizons.
 - Typical sizes (design, medians): BTC next-hour range 0.546% (10-90%: 0.244-1.307%), next-day range 3.34%
   (1.55-6.68%); ETH 0.786% (0.378-1.798%) and 4.64% (2.37-9.11%).
-- A portable next-hour formula (post hoc, fitted on all 21,143 design hours; natural logs; rangeK = high - low of the
+- A portable next-hour formula (post hoc, fitted on all 21,142 design hours; natural logs; rangeK = high - low of the
   last K one-minute bars, % of the close; rv1440 = realised vol of the last 24 hours, %):
   BTC: log range = -0.613 + 0.411 log range60 + 0.172 log range240 + 0.309 log rv1440;
   ETH: log range = -0.623 + 0.365 log range60 + 0.131 log range240 + 0.373 log rv1440.
@@ -74,10 +74,10 @@ Error = mean absolute error of the log range (0.35 means typically off by a fact
 
 | test | AUC | up share | trades (p >= .55 / <= .45) | hit rate | gross / trade | net / trade | net at 2x slippage | q |
 |---|---|---|---|---|---|---|---|---|
-| B1 BTC next hour | 0.535 | 50.4% | 4,340 | 55.0% | +0.52 bps | **-11.51 bps** | -13.51 bps | < 0.001 |
-| B1 ETH next hour | 0.543 | 50.4% | 5,217 | 55.4% | -1.25 bps | **-13.29 bps** | -15.29 bps | < 0.001 |
-| B2 BTC next day | 0.500 | 49.6% | 370 | 50.0% | -3.69 bps | -16.3 bps | -18.3 bps | 0.86 |
-| B2 ETH next day | 0.513 | 50.0% | 280 | 49.3% | -25.04 bps | -37.61 bps | -39.61 bps | 0.69 |
+| B1 BTC next hour | 0.535 | 50.4% | 4,340 | 55.0% | +0.29 bps | **-11.74 bps** | -13.74 bps | < 0.001 |
+| B1 ETH next hour | 0.543 | 50.4% | 5,168 | 55.6% | -1.13 bps | **-13.16 bps** | -15.16 bps | < 0.001 |
+| B2 BTC next day | 0.495 | 49.6% | 378 | 49.2% | -4.98 bps | -17.54 bps | -19.54 bps | 0.91 |
+| B2 ETH next day | 0.512 | 50.0% | 277 | 50.5% | -19.69 bps | -32.24 bps | -34.24 bps | 0.71 |
 
 - What drives B1 (post hoc, single inputs): the last 60 minutes' return has AUC 0.465 (BTC) / 0.464 (ETH), i.e. a
   short-term **reversal**: after an up hour the next hour is slightly more often down. VWAP-24h z and the perp taker
@@ -89,14 +89,14 @@ Error = mean absolute error of the log range (0.35 means typically off by a fact
 
 ## C) Funding, basis and OI: no next-day signal
 
-Spearman correlation with the next 24-hour return, at 23:59 UTC each day (880 days per symbol; 876 / 878 for OI change):
+Spearman correlation with the next 24-hour return, at 23:59 UTC each day (880 days per symbol; 877 / 878 for OI change):
 
 | | funding z (30 d) | basis z (7 d) | OI change 24 h |
 |---|---|---|---|
-| BTC | -0.005 (q 0.96) | -0.026 (q 0.84) | -0.063 (q 0.26) |
-| ETH | -0.010 (q 0.94) | -0.024 (q 0.86) | +0.026 (q 0.84) |
+| BTC | -0.007 (q 0.96) | -0.026 (q 0.84) | -0.060 (q 0.28) |
+| ETH | -0.010 (q 0.94) | -0.024 (q 0.87) | +0.026 (q 0.84) |
 
-Funding is positive on 88.2% (BTC) / 86.7% (ETH) of days, median 0.7 / 0.67 bps per 8 hours: longs usually pay. High
+Funding is positive on 88.1% (BTC) / 86.7% (ETH) of days, median 0.7 / 0.67 bps per 8 hours: longs usually pay. High
 funding does not foretell a fall the next day in this sample.
 
 ## D) Calendar
@@ -135,7 +135,7 @@ funding does not foretell a fall the next day in this sample.
    blocks trained only, not 6 (880 daily rows, 670 tested). The hourly tests used 6 as stated.
 8. Wording deviations from PREREG.md: rows whose spot bar is `stale` (zero volume) are kept, only gap / suspect rows
    are dropped (there were none); D1d's cost bar is coded as |weekend - weekday| > the round trip. Neither changes a
-   verdict. C3 has 876 (BTC) / 878 (ETH) days, where the OI change needs both ends.
+   verdict. C3 has 877 (BTC) / 878 (ETH) days, where the OI change needs both ends.
 9. Review fix before publishing (13 Oct): Binance's 5-minute metrics are stamped at the START of their period (their
    OI value matches the mark price 5 minutes later), so cube v1 had OI and long/short values up to 4 minutes early.
    Cube v2 places them at the period's end and every number here is from the rebuilt v2 cube. C1 samples HH:59 and

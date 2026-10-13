@@ -5,7 +5,7 @@ date: '2026-10-13'
 doc: research/CRYPTO_C1_PREDICTABILITY.md
 hypothesis: The funding-rate z-score (30 days), the perp-spot basis z-score (7 days) or the 24-hour OI change at 23:59
   UTC rank-correlate with the next 24-hour return.
-data_version: Binance bulk archive BTCUSDT/ETHUSDT funding, premium, 5-minute metrics; crypto cube v1
+data_version: Binance bulk archive BTCUSDT/ETHUSDT funding, premium, 5-minute metrics; crypto cube v2
 period:
   design: 2023-11-02 .. 2026-03-30 (880 days per symbol)
   holdout: 2026-04-01 onward, locked, not read
@@ -21,7 +21,7 @@ settings: research/brain/crypto/PREREG.md tests C1-C3
 prereg: research/brain/crypto/PREREG.md
 variants_tried: 6
 results:
-  summary: 'No signal: rank correlations -0.063 to +0.026 over 880 days per symbol, best q 0.26 (BTC OI change). 0 of 6
+  summary: 'No signal: rank correlations -0.060 to +0.026 over 877-880 days per symbol, best q 0.28 (BTC OI change). 0 of 6
     pass.'
   costs: n/a (a correlation test)
 holdout_read: false

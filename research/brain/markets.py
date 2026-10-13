@@ -59,6 +59,18 @@ REGIONS = {"asia": ("Asia/Tokyo", (9, 0), (17, 0)), "europe": ("Europe/London", 
            "us": ("America/New_York", (9, 30), (16, 0))}
 
 
+def window_flags(ts_utc, window) -> tuple[np.ndarray, np.ndarray]:
+    """For naive-UTC minute starts and a window (tz, (h0, m0), (h1, m1)) on that tz's clock, every day: (inside,
+    minutes from the bar's END to the window's end, NaN outside). Clock only, so point-in-time by construction."""
+    tz, (h0, m0), (h1, m1) = window
+    lt = pd.DatetimeIndex(ts_utc).tz_localize("UTC").tz_convert(tz)
+    mins = np.asarray(lt.hour * 60 + lt.minute)
+    a, b = h0 * 60 + m0, h1 * 60 + m1
+    inside = (mins >= a) & (mins < b) if a < b else (mins >= a) | (mins < b)
+    left = np.where(inside, (b - (mins + 1)) % 1440, np.nan).astype(float)
+    return inside, left
+
+
 def region_flags(ts_utc, weekdays_only: bool = True) -> dict[str, np.ndarray]:
     """For naive-UTC minute starts: True where the minute is inside each region's local business hours (on that
     region's local weekdays when weekdays_only). Depends only on the clock, so it is point-in-time by construction."""

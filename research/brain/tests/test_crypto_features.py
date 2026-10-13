@@ -36,8 +36,11 @@ def test_every_feature_is_computed_and_mostly_finite(minutes):
     F = R.compute(minutes, "BTCUSDT")
     last = F[F.ts >= pd.Timestamp("2025-02-04")]
     assert len(REGISTRY) >= 55 and F.shape[1] == len(REGISTRY) + 1
-    empty = [c for c in last.columns if c != "ts" and last[c].notna().mean() < 0.5]
+    in_window_only = {"min_to_window_end"}                     # NaN outside 00:00-09:00 IST by definition
+    empty = [c for c in last.columns if c not in {"ts"} | in_window_only and last[c].notna().mean() < 0.5]
     assert empty == [], f"features NaN on most of the last day: {empty}"
+    assert last.min_to_window_end.notna().mean() == pytest.approx(9 / 24, abs=1e-3)
+    assert (last.min_to_window_end.notna() == (last.in_boss_window == 1)).all()
 
 
 def test_every_feature_passes_the_lookahead_guard(minutes):

@@ -59,6 +59,12 @@ SLIP_BPS = {"BTCUSDT": 1.0, "ETHUSDT": 1.0, "SOLUSDT": 2.0, "BNBUSDT": 2.0, "XRP
 FUNDING_INTERVAL_H = 8      # BTC/ETH/SOL/BNB/XRP USDT perps settle at 00:00, 08:00, 16:00 UTC
 FUNDING_HOURS = (0, 8, 16)
 
+# --- Boss's crypto window (13 Oct 2026: "crypto market should only run from morning 12am to morning 9am") -------------
+# Crypto is studied, and would only ever be acted on, from 00:00 to 09:00 IST (18:30-03:30 UTC), every day; flat by
+# 09:00 IST, before NSE opens. The cube and features stay 24x7 (24-hour windows need the other hours); decisions,
+# targets and trades are restricted to the window (window.py, PREREG_C2_WINDOW.md).
+WINDOW = ("Asia/Kolkata", (0, 0), (9, 0))
+
 # --- quality ----------------------------------------------------------------------------------------------------------
 SUSPECT_JUMP = 0.10         # |1-minute close-to-close move| above 10% -> "suspect" (BTC's worst 1-minute moves are ~5%)
 STALE_RUN = india.STALE_RUN

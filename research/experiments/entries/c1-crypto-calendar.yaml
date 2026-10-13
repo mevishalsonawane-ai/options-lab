@@ -5,7 +5,7 @@ date: '2026-10-13'
 doc: research/CRYPTO_C1_PREDICTABILITY.md
 hypothesis: Weekend hours differ from weekday hours in size (D1s) or direction (D1d); some UTC hour (D2, 24) or weekday
   (D4, 7) has a mean return that beats a perp round trip.
-data_version: Binance bulk archive BTCUSDT/ETHUSDT spot 1m; crypto cube v1
+data_version: Binance bulk archive BTCUSDT/ETHUSDT spot 1m; crypto cube v2
 period:
   design: 2023-11-02 .. 2026-03-31
   holdout: 2026-04-01 onward, locked, not read

@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 import crypto_synth as syn
-from research.brain.crypto import config, cube, holdout, labels, study
+from research.brain.crypto import config, cube, holdout, labels, study, window
 from research.brain.crypto.adapters import ArchiveAdapter, DvolAdapter
 from research.brain.crypto.features import store
 
@@ -55,6 +55,7 @@ def test_end_to_end_design_rows_stop_before_the_holdout(tmp_path):
     study.WARMUP_DAYS = 10                                      # synthetic data is too short for the real warm-up
     try:
         H, Dd, meta = study.load(root, "BTCUSDT")
+        WH, WW, wmeta = window.load(root, "BTCUSDT")
     finally:
         study.WARMUP_DAYS = old
     assert len(H) > 200 and len(Dd) > 10
@@ -64,3 +65,11 @@ def test_end_to_end_design_rows_stop_before_the_holdout(tmp_path):
     assert (H.ts.dt.minute == 59).all() and (Dd.ts.dt.hour == 23).all()
     with pytest.raises(holdout.HoldoutError):
         holdout.assert_design(store.load(root, "BTCUSDT"))     # the store itself holds April rows: guarded
+
+    # Boss's window: 9 IST hours a day, every target inside 00:00-09:00 IST and before the holdout
+    assert set(WH.win_hour) == set(range(9)) and (WH.groupby(WH.ts.dt.date.map(str)).size() <= 9).all()
+    ends = WH.ts + pd.Timedelta(minutes=61)
+    ist_end = ends + pd.Timedelta(minutes=330)
+    assert ((ist_end.dt.hour < 9) | ((ist_end.dt.hour == 9) & (ist_end.dt.minute == 0))).all()
+    assert (WW.ts.dt.hour == 18).all() and (WW.ts.dt.minute == 29).all()
+    assert (WW.ts + pd.Timedelta(minutes=window.WIN_MIN) < config.HOLDOUT_START).all()

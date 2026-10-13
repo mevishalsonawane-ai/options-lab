@@ -435,8 +435,20 @@ family). Built on the new crypto Data Brain (`research/brain/crypto`, 24x7 UTC c
 - Crypto weekends are quieter: weekend hours move 0.595x (BTC) / 0.672x (ETH) of weekday hours (126 weeks). The busy
   hour is 14:00-15:00 UTC (the US open), 2.29x the quietest (05:00 UTC) for BTC.
 - NOT predictable after costs: crypto direction. Next hour has a real short-term reversal (AUC 0.535 BTC / 0.543 ETH,
-  4,340 / 5,217 trades) but it is worth about 0 bps gross against a 12 bps perp round trip (net -11.51 / -13.29 bps a
-  trade). Next day AUC 0.500 / 0.513. Funding, basis and OI change do not predict the next day (best q 0.26); no hour or
+  4,340 / 5,168 trades) but it is worth about 0 bps gross against a 12 bps perp round trip (net -11.74 / -13.16 bps a
+  trade). Next day AUC 0.495 / 0.512. Funding, basis and OI change do not predict the next day (best q 0.28); no hour or
   weekday return beats costs (best ETH 21:00 UTC +7.5 bps, q 0.02, below 12 bps).
 - App and Jarvis: an expected-range nowcast for BTC/ETH and weekend/hour-of-day context; say plainly that crypto
   direction, funding and basis are not forecasts. Nothing trades on it.
+
+## Crypto in Boss's window, 00:00-09:00 IST (C2, 13 Oct 2026) - size predictable; no direction edge
+Full study: `CRYPTO_C2_WINDOW.md` (pre-registered `brain/crypto/PREREG_C2_WINDOW.md`, commit 9bdbc27; 26 tests, one BH
+family). Boss: crypto only runs 00:00-09:00 IST (18:30-03:30 UTC), flat by 09:00. Design data only (BTC, ETH, Nov 2023 -
+Mar 2026: 7,928 window hours and 880 windows per coin); the holdout from 1 Apr 2026 was not read.
+- PREDICTABLE: the crypto range of the next window hour (error 27.8% BTC / 23.4% ETH below the window-hour average,
+  6,308 hours) and of the whole window (17.2% / 15.2% below the last 20 windows, 670 windows). Median BTC window range
+  1.83% (10-90%: 0.9-3.87%); the window is the quieter part of the crypto day (the US open is outside it).
+- NOT tradeable: crypto direction in the window. Window hours reverse slightly (AUC 0.547 / 0.550) but lose -10.45 /
+  -10.73 bps a trade after costs. The whole-window direction on ETH passed its bar by +0.37 bps a trade (351 trades),
+  is negative at 2x slippage, falls to -11.97 bps with the entry one minute later, and showed in 2025 only: not an edge.
+  BTC whole-window: -3.82 bps. No IST hour's mean return beats the 12 bps round trip (best ETH 03:00 IST +7.88 bps).
