@@ -17,6 +17,7 @@ only code and metadata:
 | `lake_build.py` | raw chunks → release files, with cleaning rules below and per-file QA |
 | `bhav_fetch.py` | sample of NSE F&O bhavcopies, NSE all-index closes and Yahoo index history for validation |
 | `validate.py`, `make_catalog.py` | write `VALIDATION.md` and `CATALOG.json` |
+| `stkopt_coverage.py` | write `STOCK_OPTIONS_COVERAGE.json` from the raw stock-option chunks |
 
 ## Where the data lives: Google Drive `gdrive:IraAlgo-data-lake`
 
@@ -151,5 +152,6 @@ About 125,000 Dhan requests (83,000 of them stock options). That is **more than 
 requests/day, retries included)**, so plan two days or two tokens. Dhan answers about 3.5 index-option requests per
 second at 40 threads (stock options 1–2/s; slower in Indian market hours) and rate-limits above 5/s. Failed chunks (`.err`) are retried just by running the same
 command again.
-`lake_fetch.py` stops with exit code 3 after 50 DH-905 answers in a row (Dhan refuses every data call, usually the
-daily cap), so a capped run does not turn every remaining chunk into an `.err`; re-run after 00:00 IST.
+`lake_fetch.py` stops with exit code 3 after 50 answers in a row with DH-905 (Dhan refuses every data call, usually
+the daily cap; re-run after 00:00 IST) or HTTP 401 / DH-901 (expired token), so such a run does not turn every
+remaining chunk into an `.err`.

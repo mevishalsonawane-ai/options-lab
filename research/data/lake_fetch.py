@@ -208,12 +208,13 @@ def jobs_for(group, raw):
     return J
 
 
-CAP_N = 50  # this many DH-905 answers in a row = Dhan refuses all data calls (daily cap or block): stop
+CAP_N = 50  # this many answers in a row with one of these = Dhan refuses all data calls (daily cap, expired token): stop
+FATAL = ("DH-905", "DH-901", "HTTP 401")
 
 
 def fetch(raw, g, J, threads):
-    """Runs the jobs; returns the stats, with stats["capped"] = True when the run stopped because of DH-905."""
-    stats, t0, run905 = {"ok": 0, "empty": 0, "err": 0}, time.time(), 0
+    """Runs the jobs; returns the stats, with stats["capped"] = True when the run stopped because of FATAL errors."""
+    stats, t0, nfatal = {"ok": 0, "empty": 0, "err": 0}, time.time(), 0
     with cf.ThreadPoolExecutor(threads) as ex:
         futs = {ex.submit(j.run): j for j in J}
         for i, f in enumerate(cf.as_completed(futs), 1):
@@ -225,12 +226,12 @@ def fetch(raw, g, J, threads):
                 k, v = "err", f"{type(e).__name__}: {e}"
                 open(futs[f].path + ".err", "w").write(dh.redact(v)[:300])
             stats[k] += 1
-            run905 = run905 + 1 if k == "err" and "DH-905" in str(v) else 0
+            nfatal = nfatal + 1 if k == "err" and any(c in str(v) for c in FATAL) else 0
             if k == "err":
                 log("ERR", futs[f].path.split(raw)[-1], v)
-            if run905 >= CAP_N and not stats.get("capped"):
+            if nfatal >= CAP_N and not stats.get("capped"):
                 stats["capped"] = True
-                log(f"[{g}] {CAP_N} DH-905 in a row: Dhan refuses data calls (daily cap?); stopping")
+                log(f"[{g}] {CAP_N} errors {FATAL} in a row: Dhan refuses data calls (daily cap or expired token); stopping")
                 for x in futs:
                     x.cancel()
             if i % 200 == 0 or i == len(J):
