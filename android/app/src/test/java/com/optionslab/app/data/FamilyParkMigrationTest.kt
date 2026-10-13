@@ -45,10 +45,6 @@ class FamilyParkMigrationTest : RobolectricTest() {
         AutomationSupport.realClocks()
         if (Autopilot.enabled()) Autopilot.resetForTest()
         com.optionslab.app.security.SecurePrefs.put(Backup.DISARM, null)
-        // The trade manager's policy, read once in the background after a book with an open position is saved: read here and
-        // its one-time write put on disk, so it never lands in a later test's settings.
-        runCatching { TradeManagerHost.ensureLoaded() }
-        com.optionslab.app.security.SecurePrefs.flush()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
 
