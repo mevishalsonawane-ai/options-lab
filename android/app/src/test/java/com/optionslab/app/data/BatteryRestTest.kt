@@ -67,21 +67,19 @@ class BatteryRestTest : RobolectricTest() {
         assertNotNull(SmartWorkers.refreshDelay(System.currentTimeMillis()))
     }
 
-    @Test fun aLiveMcxPositionKeepsThe15SecondPassZerodhasPositionsAndTheStream() {
+    @Test fun aLiveMcxPositionKeepsThe15SecondPassAndTheStream() {
         at(day, "22:30")
         booksRead()
         McxMarket.markLive()
         assertTrue(McxMarket.liveExposure())
         assertTrue(McxMarket.heldQuick())
         assertEquals(McxRest.HELD_MS, McxMarket.watchCadenceMs())
-        assertTrue("Zerodha's positions every pass", McxRest.bookDue(true, McxMarket.liveExposure(), 15_000L))
         assertTrue("the watch runs for it", McxMarket.watchDue())
         // Zerodha shows it closed: back to the minute's pace.
         McxMarket.noteLive(emptyList())
         assertFalse(McxMarket.liveExposure())
         assertFalse(McxMarket.heldQuick())
         assertEquals(McxRest.IDLE_MS, McxMarket.watchCadenceMs())
-        assertFalse(McxRest.bookDue(true, McxMarket.liveExposure(), 60_000L))
     }
 
     @Test fun nothingHeldIsOnceAMinuteOutsideTheArmsMinutesAnd15SecondsInside() {
@@ -93,9 +91,10 @@ class BatteryRestTest : RobolectricTest() {
         assertFalse(McxMarket.heldQuick())
         assertEquals(McxRest.IDLE_MS, McxMarket.watchCadenceMs())
         assertNull("the brain sleeps: nothing held on MCX", SmartWorkers.refreshDelay(System.currentTimeMillis()))
-        // Inside the evening break's minutes the 15 s pass is back, as before.
+        // Inside the evening break's minutes the 15 s pass is back, as before, and the brain's brake stays fresh.
         at(day, "20:00")
         assertEquals(McxRest.HELD_MS, McxMarket.watchCadenceMs())
+        assertNotNull(SmartWorkers.refreshDelay(System.currentTimeMillis()))
         // No arm at all and nothing held: no MCX watch.
         runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, false) }
         assertFalse(McxMarket.watchDue())
@@ -132,6 +131,8 @@ class BatteryRestTest : RobolectricTest() {
         assertEquals(emptyList<String>(), OrderFlowLive.mcxNames())
         at(day, "20:00")
         assertEquals(listOf(McxEveRules.UNDERLYING), OrderFlowLive.mcxNames())
+        at(day, "18:50")
+        assertEquals("ten minutes ahead, so the flow is warm at 19:00", listOf(McxEveRules.UNDERLYING), OrderFlowLive.mcxNames())
         at(day, "22:30")
         val r = Paper.place(McxMarket.paperContract(option), "BUY", 1, "MARKET", "NRML", null, null, Quote(242.0))
         assertTrue(r.message, r.ok)

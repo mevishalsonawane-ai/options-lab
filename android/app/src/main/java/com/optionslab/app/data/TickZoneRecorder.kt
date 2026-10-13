@@ -38,8 +38,8 @@ import java.util.zip.GZIPOutputStream
  *    killed between two writes loses at most the last minute's seconds, which is accepted.
  *
  * Battery (14 Oct, Boss: "my phone's battery drains in 3-4 hours"; [TickRest]): the three loops ran every second, 5 s and
- * 30 s all night and all weekend. Outside NSE's hours (nights, weekends, holidays, from the Market calendar) each now waits
- * once until a minute before the next open. The layout filters the day's option list once a day and rebuilds the watch-list
+ * 30 s all night and all weekend. Outside NSE's hours (nights, weekends, holidays, from the Market calendar) each now rests
+ * until a minute before the next open (in one-minute steps that only re-read the clock). The layout filters the day's option list once a day and rebuilds the watch-list
  * only when the money moves a strike (or the day, the futures or the narrowing change). Under Android's battery saver or
  * a low battery not charging, it records the futures, VIX and ATM±1 only (a diary line says so); it never stops for it.
  *
@@ -91,16 +91,19 @@ object TickZoneRecorder {
     /** Milliseconds to a minute before NSE's next open (0 in market hours, or when it cannot be told). */
     internal fun untilOpenMs(): Long = runCatching { Market.untilOpenMs(leadMs = 60_000L) }.getOrDefault(0L)
 
-    /** Outside market hours: one wait until a minute before the next open (Market's calendar), not a look each second. */
-    private suspend fun restUntilOpen() { val ms = untilOpenMs(); if (ms > 0) delay(ms) }
+    /**
+     * Outside market hours: asleep until a minute before the next open (Market's calendar), in steps of at most a minute
+     * that only re-read the clock ([com.optionslab.ira.RestClock.step]: a wait's clock stops in deep sleep), not a look
+     * each second.
+     */
+    private suspend fun restUntilOpen() { while (true) { val ms = untilOpenMs(); if (ms <= 0) return; delay(com.optionslab.ira.RestClock.step(ms)) } }
 
     /** The layout's rest outside market hours: the watch-list dropped first, so the next open builds it afresh. */
     private suspend fun layoutRest() {
-        val ms = untilOpenMs()
-        if (ms <= 0) return
+        if (untilOpenMs() <= 0) return
         if (list.isNotEmpty()) runCatching { follow(emptyList()) }
         lastKey = null
-        delay(ms)
+        restUntilOpen()
     }
 
     /** TEST ONLY: the loops do nothing (the tests sample and drain by hand). Throws unless BuildConfig.DEBUG. */
@@ -194,10 +197,9 @@ object TickZoneRecorder {
             if (active != was) { was = active; runCatching { com.optionslab.app.work.BatteryMeter.meter.set(com.optionslab.ira.LoopMeter.RECORDER, active) } }
             if (!active) {
                 prev = null
-                // Battery (14 Oct): outside market hours one wait to a minute before the next open, not a look each second;
+                // Battery (14 Oct): outside market hours asleep to a minute before the next open, not a look each second;
                 // recording switched off, a look every 30 s.
-                val ms = untilOpenMs()
-                if (ms > 0) delay(ms) else if (!testOff && !runCatching { LiveRecorder.on }.getOrDefault(true)) delay(30_000)
+                if (untilOpenMs() > 0) restUntilOpen() else if (!testOff && !runCatching { LiveRecorder.on }.getOrDefault(true)) delay(30_000)
                 continue
             }
             if (prev == sec) continue

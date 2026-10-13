@@ -64,23 +64,17 @@ class BatteryRestTest {
         assertEquals(15_000L, McxRest.cadenceMs(false, McxRest.inEntryMinutes(listOf(McxEveRules.SOURCE), m(20, 0))))
     }
 
-    @Test fun zerodhasPositionsEveryPassOnlyWithALiveMcxPosition() {
-        assertTrue(McxRest.bookDue(loggedIn = true, liveHeld = true, sinceLastMs = 1_000L), "live: every pass")
-        assertFalse(McxRest.bookDue(loggedIn = true, liveHeld = false, sinceLastMs = 60_000L), "none: not each minute")
-        assertTrue(McxRest.bookDue(loggedIn = true, liveHeld = false, sinceLastMs = McxRest.BOOK_LOOK_MS), "none: the 10-minute look")
-        assertTrue(McxRest.bookDue(loggedIn = true, liveHeld = false, sinceLastMs = null), "the first pass")
-        assertTrue(McxRest.bookDue(loggedIn = true, liveHeld = false, sinceLastMs = -5L), "a clock set back")
-        assertFalse(McxRest.bookDue(loggedIn = false, liveHeld = true, sinceLastMs = null), "no session: never")
-    }
-
     @Test fun theBrainTheStreamAndTheOrderFlowFollowMcxOnlyWhileHeldOrInAWindow() {
         assertTrue(McxRest.brainCounts(mcxOpen = true, held = true))
         assertFalse(McxRest.brainCounts(mcxOpen = true, held = false))
         assertFalse(McxRest.brainCounts(mcxOpen = false, held = true))
+        assertTrue(McxRest.brainCounts(mcxOpen = true, held = false, inEntryMinutes = true), "an arm's entry minutes: the brake stays fresh")
         assertTrue(McxRest.keepsStream(true))
         assertFalse(McxRest.keepsStream(false))
         val eve = McxEveRules.SOURCE
         assertTrue(McxRest.followFutures(eve, armed = true, held = false, minute = m(20, 0), mcxOpen = true), "inside the break window")
+        assertTrue(McxRest.followFutures(eve, armed = true, held = false, minute = m(18, 50), mcxOpen = true), "ten minutes ahead: warm at 19:00")
+        assertFalse(McxRest.followFutures(eve, armed = true, held = false, minute = m(18, 49), mcxOpen = true))
         assertFalse(McxRest.followFutures(eve, armed = true, held = false, minute = m(22, 30), mcxOpen = true), "after it, nothing held")
         assertTrue(McxRest.followFutures(eve, armed = true, held = true, minute = m(22, 30), mcxOpen = true), "held: all evening")
         assertFalse(McxRest.followFutures(eve, armed = false, held = true, minute = m(20, 0), mcxOpen = true), "not armed")
@@ -112,6 +106,10 @@ class BatteryRestTest {
         // On the holiday itself, at 10:00: not open, the next session is the 21st.
         assertEquals(23 * 3_600_000L + 15 * 60_000L,
             RestClock.untilOpenMs(at("2026-10-20T10:00"), 555, close, ::trading, capMs = Long.MAX_VALUE))
+        // A long rest goes in one-minute steps (the wait's clock stops in deep sleep).
+        assertEquals(60_000L, RestClock.step(RestClock.CAP_MS))
+        assertEquals(5_000L, RestClock.step(5_000L))
+        assertEquals(0L, RestClock.step(-1L))
         // A calendar with no session at all: the cap.
         assertEquals(RestClock.CAP_MS, RestClock.untilOpenMs(at("2026-10-14T16:00"), 555, close, { false }))
     }
@@ -207,9 +205,9 @@ class BatteryRestTest {
         assertFalse(ListenWhen.marketHours(false, m(11, 0), 940), "a holiday")
         assertEquals(0L, ListenWhen.recheckMs(ListenWhen.Mode.ALWAYS, null))
         assertEquals(5 * 60_000L, ListenWhen.recheckMs(uc, null))
-        assertEquals(30 * 60_000L, ListenWhen.recheckMs(mh, 10 * 3_600_000L), "at most half an hour")
+        assertEquals(5 * 60_000L, ListenWhen.recheckMs(mh, 10 * 3_600_000L), "at most five minutes")
         assertEquals(30_000L, ListenWhen.recheckMs(mh, 1_000L), "never a busy loop")
-        assertEquals(30 * 60_000L, ListenWhen.recheckMs(mh, null))
+        assertEquals(5 * 60_000L, ListenWhen.recheckMs(mh, null))
         assertTrue(ListenWhen.Mode.entries.all { it.label.isNotBlank() && it.what.isNotBlank() })
     }
 

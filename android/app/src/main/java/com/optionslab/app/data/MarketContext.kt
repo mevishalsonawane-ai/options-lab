@@ -75,7 +75,9 @@ object MarketContext {
                 runCatching { refresh() }
                 // Battery (14 Oct): each minute from 08:45 to 15:45 on a trading day; outside that just after midnight (the new
                 // day's events) and at 18:00 (the next session's warning) - it was every minute, 24x7 ([ContextPace]).
-                delay(runCatching { nextRefreshMs(nowIst()) }.getOrDefault(REFRESH_MS))
+                // Waited in steps of at most a minute against the wall clock (a wait's clock stops in deep sleep).
+                val due = System.currentTimeMillis() + runCatching { nextRefreshMs(nowIst()) }.getOrDefault(REFRESH_MS)
+                while (true) { val left = due - System.currentTimeMillis(); if (left <= 0) break; delay(com.optionslab.ira.RestClock.step(left)) }
             }
         }
     }

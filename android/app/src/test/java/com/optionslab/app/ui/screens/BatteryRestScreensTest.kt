@@ -61,6 +61,8 @@ class BatteryRestScreensTest {
 
     @Test fun listenForJarvisOffersThreeChoicesAlwaysByDefaultAndKeepsThePick() {
         assertEquals("nothing changes unless Boss picks another", ListenWhen.Mode.ALWAYS, JarvisVoice.listenWhen)
+        JarvisVoice.resetListenWhenForTest()
+        assertEquals("not read yet: the turns go by the default", ListenWhen.Mode.ALWAYS, JarvisVoice.listenWhenQuick())
         val picked = ArrayList<ListenWhen.Mode>()
         compose.setContent {
             var mode by remember { mutableStateOf(JarvisVoice.listenWhen) }

@@ -378,6 +378,8 @@ class JarvisVoice : Service() {
             }
         private const val WHEN_KEY = "jarvis.listen.when"
         @Volatile private var whenKept: com.optionslab.ira.ListenWhen.Mode? = null
+        /** [listenWhen] from memory only (the main thread's turns): the default until it has been read off the main thread. */
+        internal fun listenWhenQuick(): com.optionslab.ira.ListenWhen.Mode = whenKept ?: com.optionslab.ira.ListenWhen.DEFAULT
         /** Robolectric shares static state between tests: the setting read again from the settings. */
         internal fun resetListenWhenForTest() { whenKept = null }
         /** Listening is resting now for [listenWhen] (locked on battery, or outside market hours). */
@@ -1136,15 +1138,25 @@ class JarvisVoice : Service() {
             // Battery saver for listening: the screen coming on ends a rest at once (a system broadcast; nothing else read).
             // "Listen for 'Jarvis'" (14 Oct): unlocking and the charger end its rest at once too.
             if (screenOn == null) screenOn = object : android.content.BroadcastReceiver() {
-                override fun onReceive(c: Context?, i: Intent?) { main.post { endRest(); if (whenResting && !listening && !speaking && !held) again(0) } }
+                override fun onReceive(c: Context?, i: Intent?) {
+                    when (i?.action) { Intent.ACTION_POWER_CONNECTED -> chargingKept = true; Intent.ACTION_POWER_DISCONNECTED -> chargingKept = false }
+                    main.post { endRest(); if (whenResting && !listening && !speaking && !held) again(0) }
+                }
             }.also { r ->
-                val f = android.content.IntentFilter(Intent.ACTION_SCREEN_ON).apply { addAction(Intent.ACTION_USER_PRESENT); addAction(Intent.ACTION_POWER_CONNECTED) }
+                val f = android.content.IntentFilter(Intent.ACTION_SCREEN_ON).apply {
+                    addAction(Intent.ACTION_USER_PRESENT); addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED)
+                }
                 runCatching { ContextCompat.registerReceiver(this, r, f, ContextCompat.RECEIVER_NOT_EXPORTED) }
             }
             // The question reader's first use builds all its patterns (the slowest reading of the day): done now, off the
             // main thread, not inside Boss's first question. A reading only: nothing is asked.
             // The same for the patterns the spoken words go through ([com.optionslab.ira.SpokenReply.warm]; words only, dropped),
             // and the voice's own records read once into memory (read only: nothing is noted, changed or acted on).
+            // "Listen for 'Jarvis'" and the charger read once here, off the main thread (the turns then read memory).
+            scope.launch(Dispatchers.IO) {
+                runCatching { listenWhen }
+                runCatching { chargingKept = com.optionslab.app.work.Battery.state(this@JarvisVoice).second }
+            }
             scope.launch(Dispatchers.Default) {
                 runCatching { com.optionslab.ira.Ask.parse("how is nifty today") }
                 runCatching { com.optionslab.ira.SpokenReply.warm() }
@@ -1499,7 +1511,7 @@ class JarvisVoice : Service() {
      * and the screen coming on look again at once; otherwise after [com.optionslab.ira.ListenWhen.recheckMs]. Main thread.
      */
     private fun outsideListenHours(): Boolean {
-        val mode = listenWhen
+        val mode = listenWhenQuick()
         main.removeCallbacks(whenRecheck)
         val busy = oneShot || hold != null || held || awake() || speaking
         val ok = mode == com.optionslab.ira.ListenWhen.Mode.ALWAYS || busy ||
@@ -1531,7 +1543,9 @@ class JarvisVoice : Service() {
         interactive && getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked != true
     }.getOrDefault(true)
 
-    private fun chargingNow(): Boolean = runCatching { com.optionslab.app.work.Battery.state(this).second }.getOrDefault(true)
+    /** On the charger (from the charger broadcasts, first read off the main thread; unknown counts as charging). */
+    @Volatile private var chargingKept: Boolean? = null
+    private fun chargingNow(): Boolean = chargingKept ?: true
 
     /** 09:00 to ten minutes past F&O's close on a trading day; unknown counts as market hours. */
     private fun marketHoursNow(): Boolean = runCatching {

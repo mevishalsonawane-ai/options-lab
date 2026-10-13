@@ -1019,9 +1019,6 @@ object Tasks {
         return Tick(title, lines, progress, dest)
     }
 
-    /** When the MCX pass last read Zerodha's positions (memory; 0: not in this process). */
-    @Volatile private var mcxBookAt = 0L
-
     /**
      * The MCX pass (9 Oct): outside NSE's hours, while MCX trades and something is held or working there (or an MCX paper
      * arm is on inside its minutes). Only the steps that protect money, each in its own try: Zerodha's stream, paper fills
@@ -1040,14 +1037,10 @@ object Tasks {
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
-            // Battery (14 Oct): every pass while a live MCX position or order is known, else once in 10 minutes (one placed
-            // outside the app is still found); it was every 15 s all evening with an MCX arm merely switched on.
-            val sinceBook = mcxBookAt.takeIf { it > 0 }?.let { System.currentTimeMillis() - it }
-            if (com.optionslab.ira.McxRest.bookDue(com.optionslab.app.data.Broker.loggedIn, com.optionslab.app.data.McxMarket.liveExposure(), sinceBook))
-                step("Zerodha positions") {
-                    com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
-                        ?.let { mcxBookAt = System.currentTimeMillis(); com.optionslab.app.data.McxMarket.noteLive(it.net) }
-                }
+            if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
+                com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
+                    ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
+            }
             step("position cards") { PositionCards.refresh(context) }
             runCatching { Heartbeat.beat(context) }
         } } finally {
@@ -1481,8 +1474,9 @@ class WatchService : Service() {
         val t = Tasks.mcxTick(this, AppSettings.load())
         Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
         show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
-        mcxWait(due = { mcxDue() })
-        if (Market.minuteNow() >= Market.foClose() || !Market.isTradingDay())
+        // The wait also ends at NSE's open, so the first NSE pass is not held back by a 60 s MCX wait.
+        mcxWait(due = { mcxDue() && !(Market.isTradingDay() && Market.minuteNow() in Market.OPEN until Market.foClose()) })
+        if (Market.minuteNow() >= Market.foClose())
             runCatching { BatteryMeter.meter.add(com.optionslab.ira.LoopMeter.WATCH_EVENING, System.currentTimeMillis() - started) }
     }
 

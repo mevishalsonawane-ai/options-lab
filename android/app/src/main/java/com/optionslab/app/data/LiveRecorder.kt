@@ -233,10 +233,11 @@ object LiveRecorder {
 
     private suspend fun minutes() {
         while (true) {
-            // Battery (14 Oct): outside NSE's hours (nights, weekends, holidays) one wait until a minute before the next open,
-            // not a wake every minute; what is queued is written first (the writer also writes each item as it comes).
+            // Battery (14 Oct): outside NSE's hours (nights, weekends, holidays) no minute row is built: asleep until a minute
+            // before the next open, in steps that only re-read the clock (a wait's clock stops in deep sleep); what is queued
+            // is written first (the writer also writes each item as it comes).
             val rest = runCatching { Market.untilOpenMs(leadMs = 60_000L) }.getOrDefault(0L)
-            if (rest > 0) { runCatching { drain() }; delay(rest); continue }
+            if (rest > 0) { runCatching { drain() }; delay(com.optionslab.ira.RestClock.step(rest)); continue }
             val now = System.currentTimeMillis()
             // A few seconds past each minute, so the minute just ended is whole in the stream's paths.
             delay(60_000L - Math.floorMod(now, 60_000L) + 3_000L)

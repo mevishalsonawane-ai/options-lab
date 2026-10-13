@@ -261,11 +261,12 @@ object OrderFlowLive {
         }
     }
 
-    /** The commodities the armed MCX bots trade (their futures' flow confirms their entries). */
     /**
-     * The MCX futures followed: an armed arm's, while something is held or working on MCX or inside that arm's own entry
-     * minutes (Battery, 14 Oct: [com.optionslab.ira.McxRest.followFutures]; before, all evening with an arm merely switched
-     * on, which kept the 250 ms pump and its per-second work running to 23:30).
+     * The commodities the armed MCX bots trade (their futures' flow confirms their entries), followed while something is held
+     * or working on MCX, or from ten minutes before that arm's own entry minutes to their end, so the flow is warm then
+     * (Battery, 14 Oct: [com.optionslab.ira.McxRest.followFutures]; before, all evening with an arm merely switched on, which
+     * kept the 250 ms pump and its per-second work running to 23:30). The trend arm's legs follow its 09:00 open minutes and
+     * any MCX holding; a roll it makes outside them reads no flow (a shadow note, or a skipped entry under CONFIRM: only safer).
      */
     internal fun mcxNames(): List<String> {
         val open = runCatching { McxMarket.isOpen() }.getOrDefault(false)

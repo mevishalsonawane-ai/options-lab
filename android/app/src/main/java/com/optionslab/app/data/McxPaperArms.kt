@@ -307,8 +307,18 @@ object McxPaperArms {
     /** The arms switched on (the book as last read; read first when nothing has read it yet). */
     fun armedNow(): List<String> = loaded().let { v -> ARMS.filter { v.isArmed(it) } }
 
-    /** A position is open in an arm's book (memory: the book as last read). */
+    /**
+     * A position is open in an arm's book (memory: the book as last read; false before it is read - the arms' positions are
+     * the paper account's too, which [McxMarket.heldNow] counts on its own).
+     */
     fun holdsNow(): Boolean = _view.value.open.isNotEmpty()
+
+    /** [inEntryMinutes] from memory only (never the vault): false before the arms' book is read in this process. */
+    fun inEntryMinutesQuick(): Boolean = runCatching {
+        val v = _view.value
+        val now = McxMarket.now()
+        com.optionslab.ira.McxRest.inEntryMinutes(ARMS.filter { v.isArmed(it) }, now.hour * 60 + now.minute)
+    }.getOrDefault(false)
 
     /**
      * Battery (14 Oct): an armed arm is inside its own entry minutes now ([com.optionslab.ira.McxRest.entryMinutes]), so the

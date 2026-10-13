@@ -27,8 +27,11 @@ object McxRest {
     const val IDLE_MS = 60_000L
     /** Minutes before an arm's first entry minute the 15 s pass starts. */
     const val LEAD_MIN = 2
-    /** With no live MCX position or order seen, Zerodha's positions are still read this often (one placed outside the app). */
-    const val BOOK_LOOK_MS = 10 * 60_000L
+    /**
+     * Minutes before an arm's first entry minute the order flow follows its future: the flow's read needs two minutes warm
+     * and a five-minute rolling delta ([OrderFlow]), so it is ready at the decision.
+     */
+    const val FLOW_LEAD_MIN = 10
 
     /**
      * The minutes of the day (IST) [arm] may OPEN a position in (each with [LEAD_MIN] before it), from the engine's rules:
@@ -54,28 +57,34 @@ object McxRest {
     fun cadenceMs(held: Boolean, inEntryMinutes: Boolean): Long = if (held || inEntryMinutes) HELD_MS else IDLE_MS
 
     /**
-     * Zerodha's positions in the MCX pass: every pass while a live MCX position or order is known ([liveHeld]), else once
-     * every [BOOK_LOOK_MS] (a position opened outside the app is still found); never without a session. [sinceLastMs]:
-     * since the last read in this pass (null: none yet).
+     * The brain's 10 s refresh counts MCX's hours only while something is held there or an armed arm is inside its entry
+     * minutes (its data-health and trap flags are the arms' entry brake then).
      */
-    fun bookDue(loggedIn: Boolean, liveHeld: Boolean, sinceLastMs: Long?): Boolean =
-        loggedIn && (liveHeld || sinceLastMs == null || sinceLastMs < 0 || sinceLastMs >= BOOK_LOOK_MS)
-
-    /** The brain's 10 s refresh counts MCX's hours only while something is held there. */
-    fun brainCounts(mcxOpen: Boolean, held: Boolean): Boolean = mcxOpen && held
+    fun brainCounts(mcxOpen: Boolean, held: Boolean, inEntryMinutes: Boolean = false): Boolean = mcxOpen && (held || inEntryMinutes)
 
     /** MCX price reads keep the price stream awake only while something is held there (else a quote call answers). */
     fun keepsStream(held: Boolean): Boolean = held
 
-    /** The order flow follows an armed arm's MCX futures while something is held on MCX, or inside that arm's entry minutes. */
+    /**
+     * The order flow follows an armed arm's MCX futures while something is held on MCX, or from [FLOW_LEAD_MIN] before that
+     * arm's entry minutes to their end (so the flow is warm at the decision).
+     */
     fun followFutures(arm: String, armed: Boolean, held: Boolean, minute: Int, mcxOpen: Boolean): Boolean =
-        mcxOpen && armed && (held || inEntryMinutes(listOf(arm), minute))
+        mcxOpen && armed && (held || entryMinutes(arm).any { minute in it.first - (FLOW_LEAD_MIN - LEAD_MIN)..it.last })
 }
 
 /** The NSE calendar's next open, for the loops that rest outside market hours (one wait, not a poll each second). */
 object RestClock {
     /** At most this long in one wait, so a clock change or a new holiday list is seen within hours. */
     const val CAP_MS = 3 * 3_600_000L
+    /**
+     * A long rest is waited in steps of at most this, each re-reading the wall clock: a coroutine's wait runs on a clock that
+     * stops in deep sleep, so one long wait would end late after the phone slept. A step wakes nothing by itself.
+     */
+    const val STEP_MS = 60_000L
+
+    /** The next step of a rest with [remainingMs] left. */
+    fun step(remainingMs: Long): Long = remainingMs.coerceIn(0L, STEP_MS)
 
     /**
      * Milliseconds from [now] (IST) until NSE's next session opens at [openMinute] on a [tradingDay]; 0 while a session is
@@ -186,12 +195,13 @@ object ListenWhen {
 
     /**
      * Resting: looked at again after this. Unlocking and the charger wake it at once (system broadcasts), so that mode only
-     * needs a slow fallback; market hours wait for the next 09:00 ([untilOpenMs]), at most half an hour at a time.
+     * needs a slow fallback; market hours wait for the next 09:00 ([untilOpenMs]), at most five minutes at a time (the wait's
+     * clock stops in deep sleep).
      */
     fun recheckMs(mode: Mode, untilOpenMs: Long?): Long = when (mode) {
         Mode.ALWAYS -> 0L
         Mode.UNLOCKED_OR_CHARGING -> 5 * 60_000L
-        Mode.MARKET_HOURS -> (untilOpenMs ?: 30 * 60_000L).coerceIn(30_000L, 30 * 60_000L)
+        Mode.MARKET_HOURS -> (untilOpenMs ?: 5 * 60_000L).coerceIn(30_000L, 5 * 60_000L)
     }
 }
 
