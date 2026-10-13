@@ -6,11 +6,12 @@ doc: research/HUNT_RC2_CRYPTO_OPTIONS.md
 hypothesis: Buying a Delta India BTC/ETH option on '15-min move >= 2.5x the DVOL-implied 15-min move', with a stop-loss and
   a profit lock, makes money after real costs and beats random same-clock entries.
 data_version: 'Delta Exchange India public API: .DEXBTUSD/.DEETHUSD 5-min index 2024-03-01..2026-10-13, MARK 5-min candles
-  of 1,544 BTC/ETH daily expiries (2024-03-02..2026-10-13, strikes +-3.5% fine grid + 3.5-8% OTM); live chain polls 13 Oct
-  2026; Deribit DVOL and funding (hourly) and option trades (history API). Raw data in the session scratchpad, not in git.'
+  of 1,912 BTC/ETH daily expiries (956 per coin) (2024-03-02..2026-10-13, strikes +-3.5% fine grid + 3.5-8% OTM); live chain
+  polls 13 Oct 2026; Deribit DVOL and funding (hourly) and option trades (history API). Raw data in the session scratchpad,
+  not in git.'
 period:
   design: 2024-03-02..2026-04-12 (772 expiries per coin)
-  holdout: 2026-04-13..2026-10-13 12:00 UTC (183 expiries per coin; read once; partly seen by NN_CRYPTO/STRAD_CRYPTO)
+  holdout: 2026-04-13..2026-10-13 12:00 UTC (184 expiries per coin; read once; partly seen by NN_CRYPTO/STRAD_CRYPTO)
 instruments:
 - BTC options (Delta India)
 - ETH options (Delta India)

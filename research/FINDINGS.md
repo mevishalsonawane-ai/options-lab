@@ -430,7 +430,7 @@ rule). Research, not financial advice.
 - What exists: Delta India BTC/ETH calls and puts, a new daily expiry every day (weekends too) settling 17:30 IST,
   plus weeklies and monthlies; cash-settled; rupee wallet; 24x7.
   - Lots: 0.001 BTC (about Rs 8,050 notional) and 0.01 ETH (about Rs 2,430).
-  - An at-the-money daily lot costs about Rs 66 (BTC) / Rs 30 (ETH) with 24 h left.
+  - An at-the-money daily lot costs about Rs 69 (BTC) / Rs 31 (ETH) with 24 h left.
   - Fee: 0.01% of notional per side, capped at 3.5% of premium, + 18% GST.
 - Costs decide it: a round trip in an at-the-money daily option costs 7-14% of the premium (spread 3-6.5 points, fees
   2.7-6.8, slippage about 1); a cheap far strike about 36%.

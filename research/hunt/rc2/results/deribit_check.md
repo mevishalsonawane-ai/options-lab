@@ -31,3 +31,7 @@
 - ETH: 353996 bars with trades on 108 expiries; traded close / mark - 1: median +0.10%, 25-75% -3.80% to +4.81%; |dev| median 4.29%
   bars with trades by hours to expiry: (0, 3]: 38973.0 bars, (3, 6]: 35215.0 bars, (6, 12]: 70247.0 bars, (12, 30]: 207088.0 bars
 
+## (d) Delta India live mark vs its own bid/ask (near the money +-5%, < 48 h to expiry)
+- BTC: 1331 quotes in 11 snapshots; mark inside bid-ask 96%; mark / mid - 1 median -0.01% (10-90%: -0.59% to +0.34%)
+- ETH: 682 quotes in 11 snapshots; mark inside bid-ask 94%; mark / mid - 1 median +0.01% (10-90%: -0.72% to +0.55%)
+

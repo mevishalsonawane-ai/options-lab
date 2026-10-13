@@ -23,7 +23,7 @@ a paper arm.**
    - Settlement is cash, on Delta's index; the wallet is in rupees. Trading is 24×7.
    - Lot sizes: BTC 0.001 BTC (about Rs 8,050 of notional at $83,200 and Rs 96.78/$); ETH 0.01 ETH (about Rs 2,430).
    - One lot of an at-the-money daily option costs very little:
-     - with 24 h left: about Rs 66 (BTC) / Rs 30 (ETH);
+     - with 24 h left: about Rs 69 (BTC) / Rs 31 (ETH);
      - with 6 h left: about Rs 27 / Rs 12.
    - Fees: 0.01% of notional per side, capped at 3.5% of the premium, plus 18% GST.
      - About Rs 1 a lot per side on BTC.
@@ -71,34 +71,36 @@ a paper arm.**
 
 Full tables: `results/anatomy.md` and `results/deribit_check.md`.
 
-**Spreads and liquidity** (live Delta book, 8 snapshots 19:00-20:10 UTC, 6,456 quotes). Median spread as a share of the
+**Spreads and liquidity** (live Delta book, 9 snapshots 19:00-20:20 UTC, 7,263 quotes; the simulator's frozen fit used the
+first 8). Median spread as a share of the
 mid:
 
 | strike | BTC, 6-24 h left | BTC, 1-2 days | ETH, 6-24 h | ETH, 1-2 days |
 |---|---|---|---|---|
 | at the money (±0.25%) | 1.1% | 0.8% | 2.0% | - |
 | 0.25-1% out | 2.4% | 1.1% | 3.2% | 1.7% |
-| 1-2% out | 4.7% | 1.7% | 7.1% | 2.5% |
-| 2-4% out | 17% | 2.8% | 24% | 5.2% |
+| 1-2% out | 4.8% | 1.7% | 7.1% | 2.5% |
+| 2-4% out | 16% | 2.9% | 24% | 5.1% |
 
 - Every listed strike had both a bid and an ask. Typical size at the ask is 5,000-8,000 lots (BTC) and 4,000-6,000
   lots (ETH).
 - The book was not seen in its last 6 hours before settlement (all polls were in the UTC evening). The simulator
   therefore uses the WIDER of two fits (this one and STRAD_CRYPTO's 22 snapshots), plus a 1.5× stress.
 - **Mark vs real prices:**
-  - Delta's mark sat inside the bid/ask on 96% (BTC, 968 quotes) / 94% (ETH, 496) of near-the-money quotes, at the mid
-    (median deviation 0.01%).
+  - Delta's mark sat inside the bid/ask on 96% (BTC, 1,331 quotes) / 94% (ETH, 682) of near-the-money quotes (11
+    snapshots), at the mid (median deviation 0.01%; `results/deribit_check.md` section d).
   - In history, Delta's traded 5-minute closes sat −0.1% from the mark at the median, with a median distance of 4.3%
-    (850,241 BTC bars on 109 expiries; 353,996 ETH bars on 108). That is about half a spread, as modelled.
+    (850,241 BTC bars on 109 expiries; 353,996 ETH bars on 108). That covers all strikes, cheap ones included, so it is roughly consistent with the
+    modelled half-spread (about 1.5-3% at the money, much more on cheap strikes); it is not a precise check.
 
 **Premium decay of the daily at-the-money straddle** (call + put, % of spot, median over about 700-770 design days):
 
 | hours left | 24 | 12 | 6 | 3 | 1 | 0.17 |
 |---|---|---|---|---|---|---|
-| BTC | 1.64% | 0.94% | 0.66% | 0.46% | 0.26% | 0.11% |
-| ETH | 2.51% | 1.39% | 0.98% | 0.67% | 0.39% | 0.21% |
+| BTC | 1.72% | 0.94% | 0.66% | 0.46% | 0.26% | 0.11% |
+| ETH | 2.53% | 1.39% | 0.98% | 0.67% | 0.39% | 0.21% |
 
-- Decay is close to the square root of time: 57% of the 24-hour value is left at 12 h, 40% at 6 h, 16% at 1 h.
+- Decay is close to the square root of time: 55% of the 24-hour value is left at 12 h, 38% at 6 h, 15% at 1 h.
 - The 12-hour straddle bought at 05:30 IST paid back 1.02× its price on average (median 0.74×, 39% of 722 BTC days)
   and 1.03× for ETH (680 days). That is about fair before costs.
 
@@ -111,7 +113,7 @@ costs, never in a strike's first 15 minutes:
 | 14:30 IST (3 h before) | 3,554 | 17% | 9% | 4% | 0.68× | 38% | 2,185 | 13% | 4% | 0.69× |
 | 16:30 IST (1 h before) | 2,034 | 12% | 5% | 1% | 0.63× | 24% | 1,346 | 9% | 2% | 0.60× |
 
-- 76-88% of them are worth almost nothing at 17:20 IST.
+- 53-88% of them are worth almost nothing (< 5% of the entry) at 17:20 IST; the later they are bought, the fewer.
 - On Deribit's real traded prices (its 08:00 UTC expiries, every 3rd day 2022 - Apr 2026), the odds are lower. Bought
   2 h before, 7.7% reached 3× (BTC, 897 options) and 7.9% (ETH, 770); 10× 0.9% / 1.8%.
 
@@ -200,8 +202,9 @@ per rule. Fixed size, no compounding.
 
 - **Beating random times means little here.** The same-clock twins are bought at random moments, often when nothing is
   moving, and pay theta for nothing. The rules buy right after a move, when vol stays high for a while.
-- The coin-flip-direction twin is the sharper test. On it, only R4 (p 0.004-0.010) and R8's −40% variants (0.006-0.043)
-  pick the side better than chance, and not by enough to pay the costs.
+- The coin-flip-direction twin is the sharper test. On raw p-values only R4 (0.004-0.010) and R8 (0.006-0.043 for the
+  −40% variants, 0.015 for −25% trail) pick the side better than chance. After BH across the 32 variants none does (the
+  smallest q is 0.064), and none by enough to pay the costs.
 - BH ran across all 32 variants.
 
 ### Where the money goes (design, picks; points of the premium per round trip)
@@ -277,6 +280,9 @@ forced exit.
 - **Strikes.** ±3.5% of spot on Delta's grid, plus 3.5-8% out of the money on a coarser grid. 0-9% of the ATM rules'
   signals found no tradable strike. R5's rate was 18%: its jumps come in fast moves that leave the fetched band. 29% of
   the hero's signals found no option in its cheap band. All are counted in `design.csv`.
+- **Strike band.** The fetched strikes centre on spot 24 h before settlement. An entry 24-30 h before settlement
+  (R7, R8 and a few R5 trades) could find no strike if spot later moved more than about 3%. That only skips trades
+  before big moves, which favour buyers, so it can only make results look worse.
 - **Rupee conversion:** Rs 96.78/$ throughout. Fees as of 13 Oct 2026; older periods may have charged 0.03% (the stress
   covers it).
 - **Tax** is two simplified readings at the 30% slab + cess. A CA must confirm which applies, and whether 1% TDS does.

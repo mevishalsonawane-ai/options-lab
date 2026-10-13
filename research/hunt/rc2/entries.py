@@ -71,10 +71,10 @@ def main():
                        "hourly realised vs DVOL-implied", "big-day precursors", "Delta mark vs Deribit trade IV"],
              model_or_rule="descriptive", settings="research/hunt/rc2/anatomy.py, deribit_check.py", prereg=None,
              variants_tried=None,
-             results=dict(summary="Delta daily ATM straddle 1.64% (BTC) / 2.51% (ETH) of spot at 24 h left, 0.66%/0.98% at "
-                                  "6 h (771 days each). Cheap OTM options (0.02-0.10% of spot) bought 3 h before settlement "
+             results=dict(summary="Delta daily ATM straddle 1.72% (BTC, 767 days) / 2.53% (ETH, 764) of spot at 24 h left, "
+                                  "0.66%/0.98% at 6 h (712/655 days). Cheap OTM options (0.02-0.10% of spot) bought 3 h before settlement "
                                   "closed at >= 3x on 17% (BTC, 3,554 options) / 13% (ETH, 2,185), 10x on 4%/4%; worth 0.68x/0.69x "
-                                  "of entry at 11:50 on average. Realised/implied 1-h move 0.67-0.78 at 03:00-12:00 UTC, "
+                                  "of entry at 11:50 on average. Realised/implied 1-h move 0.67-0.87 (BTC) / 0.73-0.90 (ETH) at 03:00-12:00 UTC, "
                                   "1.12-1.46 at 13:00-16:00 UTC (773 days). Delta mark IV is 0.88x (BTC, 230 h) / 0.92x "
                                   "(ETH, 227 h) Deribit trade IV.",
                           costs="none (descriptive)"),

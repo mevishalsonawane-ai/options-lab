@@ -169,6 +169,19 @@ def trade_vs_mark():
     say("")
 
 
+def mark_vs_book():
+    """Delta's live mark vs its own bid/ask (near the money, < 48 h): can one trade at the mark plus half a spread?"""
+    from .anatomy import live_quotes
+    say("## (d) Delta India live mark vs its own bid/ask (near the money +-5%, < 48 h to expiry)")
+    d = live_quotes()
+    q = d[(d.bid > 0) & (d.ask > 0) & (d.otm.abs() < 0.05) & (d.hrs < 48)].copy()
+    q["dev"] = q.mark / ((q.bid + q.ask) / 2) - 1
+    for coin, g in q.groupby("coin"):
+        say(f"- {coin}: {len(g)} quotes in {g.t.nunique()} snapshots; mark inside bid-ask {((g.mark >= g.bid) & (g.mark <= g.ask)).mean():.0%}; "
+            f"mark / mid - 1 median {g.dev.median():+.2%} (10-90%: {g.dev.quantile(.1):+.2%} to {g.dev.quantile(.9):+.2%})")
+    say("")
+
+
 IDX = {}
 
 if __name__ == "__main__":
@@ -179,5 +192,6 @@ if __name__ == "__main__":
     iv_check()
     hero()
     trade_vs_mark()
+    mark_vs_book()
     os.makedirs(C.OUT, exist_ok=True)
     open(os.path.join(C.OUT, "deribit_check.md"), "w").write("\n".join(L) + "\n")
