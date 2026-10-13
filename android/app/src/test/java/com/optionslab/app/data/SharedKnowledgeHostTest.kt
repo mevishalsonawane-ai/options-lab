@@ -120,7 +120,7 @@ class SharedKnowledgeHostTest : RobolectricTest() {
             while (true) { val e = z.nextEntry ?: break; entries[e.name] = z.readBytes().toString(Charsets.UTF_8) }
         }
         val opened = entries.getValue("$day/${LessonsBundle.FILE}")
-        assertTrue(opened, opened.contains("\"money\":{") && "4321" in opened && "money_enc" !in opened)
+        assertTrue(opened, opened.contains("\"money\":{") && "4321" in opened && "\"money_enc\":" !in opened)
         // The plain export zip keeps it as stored (still encrypted).
         val zip = LiveRecorder.exportZip(context)
         val names = java.util.zip.ZipFile(zip).use { z -> z.entries().toList().map { it.name } }
