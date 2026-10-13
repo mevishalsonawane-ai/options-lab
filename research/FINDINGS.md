@@ -378,3 +378,12 @@ Full study: `HUNT_R19_LIQUIDITY_LOCK.md` (pre-registered `hunt/r19/PREREG.md`; 1
   the holdout.
 - MIDCPNIFTY could not be tested: the release has no MIDCPNIFTY data and the Dhan lake is not published. It stays on the
   plain rules until it is tested on its own data. App: no change, paper or live.
+## Adaptive opening range for the ORB (R20, 13 Oct 2026) - no variant passes; on a wide-range day the ORB simply sits out
+Full study: `HUNT_R20_RANGE.md` (pre-registered `hunt/r20/PREREG.md`; 7 variants, 14 holdout tests in one BH family).
+- Facts (BANKNIFTY, plain 09:15-10:00 range): no ORB trade on 15.2% of design days (55 of 361) and 12.3% of holdout days
+  (15 of 122); a late break after 14:00 on such a day (like 13 Oct) came 13 times in 361 design days and 4 in 122
+  holdout days, and the ORB trade on it made -Rs 567 in all (13 trades, design) and +Rs 925 (4, holdout).
+- 15- and 30-minute ranges trade more and lose more (A15 -Rs 34,682 over 416 design trades vs plain -Rs 14,772 over 337);
+  the adaptive range (45 minutes when W45 <= k x ATR14, else 15), the 14:30 last entry and the wide-day fade all failed
+  the design gates; best holdout (B0.5, +Rs 3,078 over 122 sessions) had BH q 0.91 and lost Rs 19,849 in design.
+- App: keep the plain range; the ORB family stays paused on paper. Wide-range days are rare and not why the ORB loses.
