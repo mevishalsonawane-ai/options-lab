@@ -1,0 +1,31 @@
+id: r21-v3
+title: Hero (a)+(c) one-sided trigger, window to 15:00
+family: calendar-events
+date: '2026-10-13'
+doc: research/HUNT_R21_HERO.md
+hypothesis: A later window catches late moves (13 Oct started ~14:30).
+data_version: 'research-data release: expiry-day chains from expiry_days.parquet (NIFTY 53 weeklies 2025-04-09..2026-04-13,
+  BANKNIFTY 11 monthlies 2025-02-27..2026-01-27), index from nifty_prev/nifty_year and banknifty_*_wide, VIX from extra_series;
+  the Dhan lake is not published yet'
+period:
+  design: NIFTY expiries < 2025-10-13 (27), BANKNIFTY < 2025-08-25 (6)
+  holdout: NIFTY expiries 2025-10-13..2026-04-13 (26), BANKNIFTY 2025-08-25..2026-01-27 (5)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- ATM straddle vs its low since 12:00
+- 15-minute index move
+- the option's own low since 12:00
+- option price band
+model_or_rule: Hero (a)+(c) one-sided trigger, window to 15:00
+settings: research/hunt/r21/PREREG.md
+prereg: research/hunt/r21/PREREG.md
+variants_tried: 1
+results:
+  summary: Design 8 trades, 3 wins, net Rs +7,398 (33 expiries). Holdout 11 trades, 0 wins, net Rs -35,188 (31 expiries; worst
+    Rs -3,387; big days caught 0 of 23). Twin p 0.846, BH q 1.000. FAILED the gates.
+  costs: 'app charges (current rates), liq fills: ask = open + 5 bps + 1-4 tick half-spread; stress x2 spread'
+holdout_read: true
+verdict: rejected
+notes: One of 9 R21 variants; BH across all 9. 13 Oct 2026 is a forward example only (not in the data).
