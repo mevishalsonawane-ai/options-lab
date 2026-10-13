@@ -99,6 +99,11 @@ internal object IraStudy {
         val edges = ArrayList<com.optionslab.ira.PatternExpert.Edge>()
         val ivs = HashMap<String, List<Pair<LocalDate, Double>>>()
         val events = ArrayList<Pair<String, String>>()
+        // 13 Oct (the shared knowledge): the setups the research already settled are not counted again, and the ones that touch an
+        // open question go first ([com.optionslab.ira.SharedKnowledge.studyPlan]). Before the knowledge is built: every setup, as before.
+        val plan = plan()
+        if (plan.skipped.isNotEmpty() || plan.open.isNotEmpty()) com.optionslab.app.data.SharedKnowledgeHost.read("Market study",
+            "the research's settled and open questions (${plan.skipped.size} setups skipped, ${plan.open.size} open questions first)")
         for (m in MARKETS) runCatching {
             // Each day's at-the-money IV over the last year, from the option prices the phone keeps.
             runCatching {
@@ -108,7 +113,7 @@ internal object IraStudy {
                     .mapNotNull { s -> com.optionslab.ira.IvRank.atm(s, step)?.let { s.day to it } }.toList()
             }
             val bars = IraHub.twoYears(m, 5) ?: return@runCatching
-            found += Study.run(m, bars)
+            found += Study.run(m, bars, plan.order)
             com.optionslab.ira.EventStudy.run(m, Study.days(bars)).forEach { events += it.kind.name to it.text() }
             // The pattern expert: every candle pattern's record on the 5- and 15-minute charts.
             // Played as option trades on the real option prices the phone keeps (bundled and harvested days).
@@ -118,6 +123,7 @@ internal object IraStudy {
         runCatching { regimeStudy(now) }
         if (found.isEmpty() && edges.isEmpty()) return
         save(_state.value.copy(at = Instant.now(), findings = found, edges = edges, iv = ivs.ifEmpty { _state.value.iv }, events = events))
+        com.optionslab.app.data.SharedKnowledgeHost.added("Market study", "${found.size} setups counted, ${found.count { it.held }} held in both years")
         runCatching { armRetestIfDue(now) }
     }
 
@@ -280,6 +286,10 @@ internal object IraStudy {
         return d
     }
 
+    /** The shared knowledge's plan for the study now (memory only): what to count, in which order, what the research settled. */
+    fun plan(): com.optionslab.ira.SharedKnowledge.StudyPlan =
+        com.optionslab.ira.SharedKnowledge.studyPlan(com.optionslab.app.data.SharedKnowledgeHost.snapshot, Study.KEYS)
+
     /** Everything, for "what did you study?" and the Ira screen. */
     fun lines(): List<String> {
         val k = _state.value
@@ -293,6 +303,10 @@ internal object IraStudy {
             out += k.events.map { it.second }
             if (k.arms.isNotEmpty()) { out += "Arms re-tested this month:"; out += k.arms }
             out += "Candle patterns that held in both years: " + com.optionslab.ira.PatternExpert.best(k.edges).joinToString(" ")
+            runCatching { plan() }.getOrNull()?.let { p ->
+                if (p.skipped.isNotEmpty()) out += "Not counted again, the research already settled them: " + p.skipped.entries.joinToString("; ") { "${it.key} (${it.value.removePrefix("settled by the research: ")})" }
+                if (p.open.isNotEmpty()) out += "Open questions the research lists (studied first where a setup touches them): " + p.open.take(3).joinToString(" ")
+            }
         }
         val night = overnightNow()
         if (night.isEmpty()) out += "No overnight news that matters." else { out += "Overnight news:"; out += night }

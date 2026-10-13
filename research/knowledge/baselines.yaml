@@ -1,0 +1,51 @@
+# Execution baselines for the app's shared knowledge (ira-core SharedKnowledge.executionBaseline): what a fill is EXPECTED
+# to cost before any app record exists, so the order review, the Liquidity paper test and the slippage record can flag a
+# fill that is far off it. Every number below must appear in its cited source (build_pack.py checks, like strategies.yaml).
+# 13 Oct 2026. Honest limits: the spread was measured at ONE moment of ONE calm day (h24), so the time-of-day shape is an
+# assumption (h24: "it may be up to about 2x the calm level" at a signal), said as such wherever it is used.
+
+spreads:
+  - inst: BANKNIFTY
+    half_spread_pct: 0.16
+    src: research/HUNT_H24.md
+    sec: "1. Real half-spreads (Dhan option chain, 2026-10-06)"
+    n: 1
+    text: "Real half-spread of 1-ITM/ATM nearest-monthly BANKNIFTY options at 11:02 IST on 2026-10-06: 0.16% of the premium (one calm moment of one day)."
+  - inst: NIFTY
+    half_spread_pct: 0.16
+    src: research/HUNT_H24.md
+    sec: "1. Real half-spreads (Dhan option chain, 2026-10-06)"
+    n: 1
+    text: "Real half-spread of 1-ITM/ATM nearest-monthly NIFTY options at 11:06 IST on 2026-10-06: 0.16% of the premium (one moment of one day)."
+  - inst: MIDCPNIFTY
+    half_spread_pct: 0.21
+    src: research/HUNT_H24.md
+    sec: "1. Real half-spreads (Dhan option chain, 2026-10-06)"
+    n: 1
+    text: "Real half-spread of 1-ITM/ATM nearest-monthly MIDCPNIFTY options at 11:04 IST on 2026-10-06: 0.21% of the premium (one moment of one day)."
+  - inst: FINNIFTY
+    half_spread_pct: 0.42
+    src: research/HUNT_H24.md
+    sec: "1. Real half-spreads (Dhan option chain, 2026-10-06)"
+    n: 1
+    text: "Real half-spread of 1-ITM/ATM nearest-monthly FINNIFTY options at 11:03 IST on 2026-10-06: 0.42% of the premium (range 0.13-0.64%; one moment of one day)."
+
+# At a signal (a breakout, the open, the last minutes) the spread may be wider than the calm level.
+signal_multiplier:
+  value: 2
+  src: research/HUNT_H24.md
+  sec: "Does the spread widen at signal time? (Roll can't say)"
+  text: "The signal-time spread is unknown; it may be up to about 2x the calm level."
+
+# What one ATM round trip costs (charges plus spread), from R16's cost test.
+round_trips:
+  - inst: BANKNIFTY
+    rs: 133
+    src: research/FINDINGS.md
+    sec: "What is predictable? (R16, 12 Oct 2026)"
+    text: "An ATM BANKNIFTY option round trip costs about Rs 133 (charges and spread)."
+  - inst: NIFTY
+    rs: 98
+    src: research/FINDINGS.md
+    sec: "What is predictable? (R16, 12 Oct 2026)"
+    text: "An ATM NIFTY option round trip costs about Rs 98 (charges and spread)."

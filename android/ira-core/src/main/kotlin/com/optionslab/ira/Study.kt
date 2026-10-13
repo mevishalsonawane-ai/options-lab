@@ -89,12 +89,19 @@ object Study {
         Setup("dow-${w.name.lowercase()}", "on ${name}s", "it closed up", { d -> d.date.dayOfWeek == w }, { d -> d.changePct?.let { it > 0 } })
     }
 
-    /** Every setup counted over [bars] (two years of intraday candles of [market]). */
-    fun run(market: Market, bars: List<Candle>): List<Finding> {
+    /** Every setup's key, in the study's own order (13 Oct: the shared knowledge orders and skips them, [SharedKnowledge.studyPlan]). */
+    val KEYS: List<String> get() = SETUPS.map { it.key }
+
+    /**
+     * Every setup counted over [bars] (two years of intraday candles of [market]); [keys]: only these, in this order (the shared
+     * knowledge's plan: the open questions first, the ones the research already settled left out); null: all of them.
+     */
+    fun run(market: Market, bars: List<Candle>, keys: List<String>? = null): List<Finding> {
         val ds = days(bars)
         if (ds.isEmpty()) return emptyList()
         val mid = ds[ds.size / 2].date
-        return SETUPS.mapNotNull { s ->
+        val setups = keys?.mapNotNull { k -> SETUPS.firstOrNull { it.key == k } } ?: SETUPS
+        return setups.mapNotNull { s ->
             val got = ds.mapNotNull { d -> if (s.applies(d) == true) s.hit(d)?.let { d.date to it } else null }
             val a = got.filter { it.first < mid }; val b = got.filter { it.first >= mid }
             if (got.size < MIN_DAYS || a.size < MIN_HALF || b.size < MIN_HALF) return@mapNotNull null
@@ -127,6 +134,15 @@ object Study {
             last.changePct, if (last.high > last.low) (last.close - last.low) / (last.high - last.low) else null)
         val keys = SETUPS.filter { it.applies(d) == true }.map { it.key }.toSet()
         return findings.filter { it.held && it.key in keys }.map { "Today is ${it.setup}. ${it.text()}" }
+    }
+
+    /**
+     * The night's findings as Jarvis's lesson evidence (13 Oct: the study writes to the shared lessons like every other agent):
+     * one [AgentLessons.StudyResult] a market and setup, held in both years or not.
+     */
+    fun results(findings: List<Finding>, day: LocalDate): List<AgentLessons.StudyResult> = findings.map { f ->
+        AgentLessons.StudyResult(day, "${f.market.name.lowercase(Locale.ENGLISH)}:${f.key}", "${f.market.label}: ${f.setup}, ${f.outcome}",
+            f.days, f.held, listOf(f.market.name.lowercase(Locale.ENGLISH), f.key))
     }
 
     /** The findings in short: the ones that held first, then how many were coin tosses. */

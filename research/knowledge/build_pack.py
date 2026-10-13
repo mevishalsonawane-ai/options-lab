@@ -13,6 +13,16 @@ Sources (all in the repo, nothing fetched):
   * research/knowledge/strategies.yaml - per-strategy cards (what it does, verdict, numbers with period and costs); every
     number in a card must appear in its cited source, else the build fails
   * research/models/*.md - model cards (none yet)
+  * research/experiments/entries/*.yaml - the experiment log: every idea tried, failures included (13 Oct 2026)
+  * research/app_lessons/*.json - the phone's own lessons sent back to research (import_app_lessons.py; rates, counts and
+    effects only, never Boss's money)
+  * research/knowledge/open_questions.yaml and baselines.yaml - the questions not settled yet and the execution baselines
+    (every number checked against its source, like strategy cards)
+
+The pack also carries a "shared" section (13 Oct 2026, Boss: "all the agents should learn from whatever findings we have"):
+compact, tagged items for ira-core's SharedKnowledge - each with its topics, strategy (arm), instrument, time of day,
+regime, execution flag, source kind, date, sample size, effect and gate (pass / fail / open) - plus the execution baselines.
+Every agent on the phone reads it (context, explanation and ranking only; never a trade).
 
 Each fact: id, kind, title, text (plain English with its numbers), tags, instruments, source doc + section, date,
 verdict (positive / weak / negative / context, a keyword heuristic except for strategy cards and h42), confidence
@@ -112,6 +122,8 @@ TAGS = {
     "time-of-day": r"\b(09|10|11|12|13|14|15):\d\d\b|first (15|30|hour)|midday|lunch|last hour",
     "day-of-week": r"monday|tuesday|wednesday|thursday|friday|weekday|day of week",
     "trade-manager": r"trade manager|specialists?",
+    "direction": r"\bdirection(al)?\b|up or down",
+    "traps": r"\btraps?\b|trap guard|stop hunt",
     "sizing": r"\blots?\b|position siz|kelly|capital|drawdown",
     "pine": r"\bpine\b",
     "pattern": r"pattern|inside day|nr4|nr7|\bcpr\b",
@@ -575,6 +587,212 @@ def add_model_cards(pack: Pack) -> int:
     return n
 
 
+# ---- the shared knowledge (13 Oct 2026) ------------------------------------------------------------------------------
+
+EXPERIMENTS = RESEARCH / "experiments/entries"
+APP_LESSONS = RESEARCH / "app_lessons"
+
+# A research strategy card -> the app's strategy (the trade manager's family keys, TradeManager.FAMILIES).
+STRATEGY_ARMS = {
+    "liquidity-15-5": "liquidity", "orb": "orb", "orb-fresh": "orb_fresh", "orb-sweep": "orb_sweep", "range-fade": "range_fade",
+    "big-candle-pullback": "solo", "expiry-hero": "hero", "night-r3": "night", "vix-divergence": "vixdiv",
+    "supertrend-ema": "pine", "mcx-bots": "mcx",
+}
+# The app's strategy a text names (the first that matches; ORB Fresh / Sweep before ORB).
+ARM_RX = [(a, re.compile(p, re.I)) for a, p in [
+    ("orb_fresh", r"\borb fresh\b"), ("orb_sweep", r"\borb sweep\b"), ("range_fade", r"\brange fade\b"),
+    ("liquidity", r"\bliquidity\b"), ("orb", r"\borb\b|opening range break"), ("hero", r"expiry hero|zero to hero"),
+    ("night", r"\bnight \(?r3\)?"), ("vixdiv", r"vix divergence"), ("solo", r"\bsolo\b|big-candle pullback"),
+    ("pine", r"\bpine\b|supertrend"), ("mcx", r"\bmcx\b"),
+]]
+TOD_RX = [("morning", re.compile(r"\bmorning|before 10:30|first (15|30|hour)|\bthe open\b|09:\d\d", re.I)),
+          ("midday", re.compile(r"\bmidday|lunch|1[12]:\d\d", re.I)),
+          ("afternoon", re.compile(r"afternoon|last hour|1[45]:\d\d|after 13:30", re.I))]
+REGIME_RX = [("busy", re.compile(r"\bbusy\b|high[- ]vix|volatile", re.I)), ("quiet", re.compile(r"\bquiet\b|low[- ]vix|calm", re.I)),
+             ("trending", re.compile(r"\btrend(ing)? day", re.I)), ("sideways", re.compile(r"sideways|range day", re.I))]
+EXEC_RX = re.compile(r"spread|slippage|charges|\bcosts?\b|fill(s|ed)? at|round trip|brokerage", re.I)
+N_RX = re.compile(r"\b(\d[\d,]*) (trades|days|sessions|touches|nights|orders|signals|episodes|questions|fills)\b", re.I)
+VERDICT_GATE = {"positive": "pass", "negative": "fail", "weak": "none", "context": "none", "open": "open"}
+EXP_VERDICT = {  # experiment-log verdict -> (pack verdict, gate)
+    "adopted": ("positive", "pass"), "paper-only": ("weak", "pass"), "shadow": ("open", "open"), "rejected": ("negative", "fail"),
+    "inconclusive": ("open", "open"), "superseded": ("context", "none"), "not-a-test": ("context", "none"),
+}
+EXP_FAMILY_TOPIC = {
+    "liquidity": "liquidity", "orb": "orb", "ml": "ml", "patterns-indicators": "pattern", "flow-oi": "order-flow",
+    "overnight": "overnight", "calendar-events": "expiry", "sizing-execution": "costs", "option-structure": "straddle",
+    "outside-strategies": "pine", "trade-management": "trade-manager", "daily-filters": "filter", "market-facts": "direction",
+    "mcx-crypto": "mcx", "stocks": "stocks", "diagnosis": "diagnosis",
+}
+
+
+def arm_of(text: str) -> str | None:
+    for a, rx in ARM_RX:
+        if rx.search(text):
+            return a
+    return None
+
+
+def first_of(rxs, text: str) -> str | None:
+    for name, rx in rxs:
+        if rx.search(text):
+            return name
+    return None
+
+
+def sample_size(text: str) -> int | None:
+    m = N_RX.search(text)
+    return int(m.group(1).replace(",", "")) if m else None
+
+
+def shared_item(*, id_: str, topics: list[str], text: str, src: str, source: str, date_: str | None, verdict: str,
+                gate: str | None = None, arm: str | None = None, inst: str | None = None, n: int | None = None,
+                effect: float | None = None, exec_: bool | None = None, sec: str = "") -> dict:
+    """One item of the shared section (short keys: the phone keeps a few hundred in memory)."""
+    it = {"id": id_, "t": sorted(set(topics))[:8], "x": text[:MAX_CHARS], "s": src, "k": source, "d": date_ or "",
+          "v": verdict, "g": gate or VERDICT_GATE.get(verdict, "none")}
+    a = arm if arm is not None else arm_of(text)
+    if a:
+        it["a"] = a
+    if inst:
+        it["i"] = inst
+    tod, reg = first_of(TOD_RX, text), first_of(REGIME_RX, text)
+    if tod:
+        it["tod"] = tod
+    if reg:
+        it["r"] = reg
+    if exec_ if exec_ is not None else bool(EXEC_RX.search(text)):
+        it["e"] = True
+    nn = n if n is not None else sample_size(text)
+    if nn:
+        it["n"] = nn
+    if effect is not None:
+        it["f"] = round(effect, 4)
+    if sec:
+        it["sec"] = sec
+    return it
+
+
+def checked(cards: list[dict], path: Path, cache: dict, label: str) -> list[str]:
+    """Every number in each card's text must appear in its cited source (like strategy cards)."""
+    errors = []
+    for c in cards:
+        src = c.get("src", "")
+        if not (ROOT / src).is_file():
+            errors.append(f"{label} {c.get('id', c.get('inst', '?'))}: source {src} not found")
+            continue
+        missing = [x for x in numbers(c.get("text", "")) if x not in source_numbers(src, cache)]
+        if missing:
+            errors.append(f"{label} {c.get('id', c.get('inst', '?'))}: numbers {missing} not in {src}")
+    return errors
+
+
+def add_experiments(pack: Pack, shared: list[dict]) -> int:
+    """The experiment log: one fact and one shared item per entry (every idea tried, failures included)."""
+    n = 0
+    for p in sorted(EXPERIMENTS.glob("*.yaml")) if EXPERIMENTS.is_dir() else []:
+        e = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        if not isinstance(e, dict) or "id" not in e:
+            continue
+        verdict, gate = EXP_VERDICT.get(str(e.get("verdict")), ("context", "none"))
+        res = (e.get("results") or {}).get("summary", "")
+        text = clean_md(f"{e.get('title', '')}: {e.get('hypothesis', '')} Result: {res} Verdict: {e.get('verdict', '?')}.")
+        insts = [i for i in (e.get("instruments") or []) if isinstance(i, str)]
+        fam = str(e.get("family", ""))
+        topics = sorted(set(tags(text) + [EXP_FAMILY_TOPIC.get(fam, fam)]))
+        src = e.get("doc") or rel(p)
+        app = str(e["id"]).startswith("app-")
+        pack.add(id_=f"exp.{slug(str(e['id']), 40)}", kind="experiment", title=clean_md(str(e.get("title", e["id"]))), text=text[:MAX_CHARS * 2],
+                 src=rel(p), sec=f"experiment {e['id']} ({fam})", date_=str(e.get("date", "")) or None, insts=insts, tags_=topics,
+                 verdict="weak" if verdict == "open" else verdict, conf="high" if e.get("holdout_read") else "medium", weight=2.5,
+                 personal=False, extra={"exp": str(e["id"]), "family": fam, "tries": e.get("variants_tried")})
+        shared.append(shared_item(id_=f"exp:{e['id']}", topics=topics, text=text, src=src,
+                                  source="app" if app else "experiment", date_=str(e.get("date", "")), verdict=verdict, gate=gate,
+                                  arm=arm_of(text) or (fam if fam in ("liquidity", "orb") else None),
+                                  inst=insts[0] if len(insts) == 1 else None, n=e.get("variants_tried") if app else None,
+                                  sec=fam))
+        n += 1
+    return n
+
+
+def add_app_lessons(pack: Pack, shared: list[dict]) -> int:
+    """The phone's lessons imported by import_app_lessons.py (rates, counts and effects only): facts and shared items."""
+    n = 0
+    for p in sorted(APP_LESSONS.glob("*.json")) if APP_LESSONS.is_dir() else []:
+        s = json.loads(p.read_text(encoding="utf-8"))
+        if s.get("kind") != "iraalgo-app-lessons":
+            continue
+        day = s.get("day", "")
+        src = f"research/app_lessons/{p.name}"
+        for l in s.get("lessons", []):
+            if l.get("confidence") not in ("strong", "building") or not l.get("n"):
+                continue
+            word = "held" if l.get("sign", 0) > 0 else "did not hold"
+            text = f"On the phone ({l.get('topic', '')}): {l['name']} {word} - {l.get('hits', 0)} of {l['n']} ({l['confidence']}, {l.get('first', '')} to {l.get('last', '')})."
+            topics = sorted(set([t for t in l.get("tags", []) if t] + tags(l["name"])))
+            verdict = ("positive" if l.get("sign", 0) > 0 else "negative") if l["confidence"] == "strong" else "weak"
+            pack.add(id_=f"app.{day}.{slug(l.get('id', l['name']), 40)}", kind="app_lesson", title="The phone's own lessons", text=text,
+                     src=src, sec=f"app lessons {day}", date_=day, insts=instruments(l["name"]), tags_=topics, verdict=verdict,
+                     conf="high" if l["confidence"] == "strong" else "medium", weight=1.5, personal=False)
+            shared.append(shared_item(id_=f"app:{l.get('id', slug(l['name']))}", topics=topics, text=text, src=src, source="app",
+                                      date_=day, verdict=verdict, gate="pass" if verdict == "positive" else ("fail" if verdict == "negative" else "none"),
+                                      n=int(l["n"]), effect=l.get("effect"), inst=(instruments(l["name"]) or [None])[0]))
+            n += 1
+    return n
+
+
+def add_open_questions(pack: Pack, shared: list[dict]) -> list[str]:
+    path = RESEARCH / "knowledge/open_questions.yaml"
+    cards = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    errors = checked(cards, path, {}, "open question")
+    # Dated by the file's own header ("13 Oct 2026"), not its commit: a rebuild after committing gives the same pack.
+    written = parse_date(" ".join(path.read_text(encoding="utf-8").splitlines()[:3]))
+    for c in cards:
+        text = clean_md(c["text"])
+        topics = sorted(set(c.get("topics", []) + tags(text)))
+        pack.add(id_=f"open.{slug(c['id'], 40)}", kind="open", title="Open questions (not settled yet)", text=text, src=c["src"],
+                 sec=c.get("sec", ""), date_=written, insts=[c["inst"]] if c.get("inst") else instruments(text),
+                 tags_=topics, verdict="weak", conf="medium", weight=2.0, personal=False)
+        shared.append(shared_item(id_=f"open:{c['id']}", topics=topics, text=text, src=c["src"], source="open",
+                                  date_=written, verdict="open", gate="open", arm=c.get("arm"),
+                                  inst=c.get("inst"), exec_=c.get("exec"), sec=c.get("sec", "")))
+    return errors
+
+
+def baselines() -> tuple[dict, list[str]]:
+    path = RESEARCH / "knowledge/baselines.yaml"
+    b = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    cache: dict = {}
+    spreads = b.get("spreads", [])
+    trips = b.get("round_trips", [])
+    mult = b.get("signal_multiplier") or {}
+    errors = checked(spreads, path, cache, "baseline") + checked(trips, path, cache, "round trip") + checked([mult], path, cache, "multiplier")
+    for x in spreads:
+        if str(x["half_spread_pct"]) not in source_numbers(x["src"], cache):
+            errors.append(f"baseline {x['inst']}: {x['half_spread_pct']} not in {x['src']}")
+    d = git_date(ROOT / "research/HUNT_H24.md", first=False) or ""
+    out = {
+        "spreads": [{"i": x["inst"], "hs": x["half_spread_pct"], "n": x.get("n", 1), "s": x["src"], "sec": x["sec"], "x": clean_md(x["text"]), "d": d}
+                    for x in spreads],
+        "signal_x": mult.get("value", 1), "signal_text": clean_md(mult.get("text", "")), "signal_src": mult.get("src", ""),
+        "round_trips": [{"i": x["inst"], "rs": x["rs"], "s": x["src"], "x": clean_md(x["text"])} for x in trips],
+    }
+    return out, errors
+
+
+def shared_from_facts(facts: list[dict]) -> list[dict]:
+    """The findings' and strategy cards' facts as shared items (the verdict-bearing ones only: context stays in the index)."""
+    out = []
+    for f in facts:
+        if f["kind"] not in ("finding", "strategy") or f["verdict"] == "context" or f.get("personal"):
+            continue
+        arm = STRATEGY_ARMS.get(f.get("strategy", "")) if f["kind"] == "strategy" else None
+        if f["kind"] == "strategy" and not arm:
+            arm = STRATEGY_ARMS.get(f["id"].split(".")[1], None)
+        out.append(shared_item(id_=f["id"], topics=f["tags"], text=f["text"], src=f["src"], source="research", date_=f["date"],
+                               verdict=f["verdict"], arm=arm, inst=f["inst"][0] if len(f["inst"]) == 1 else None, sec=f["sec"]))
+    return out
+
+
 def research_docs() -> list[Path]:
     docs = sorted(p for p in RESEARCH.glob("*.md") if p.name != "FINDINGS.md")
     return [p for p in docs if rel(p) not in SKIP_DOCS]
@@ -589,6 +807,12 @@ def build() -> tuple[dict, list[str]]:
         add_markdown(pack, p)
     add_h42(pack)
     model_cards = add_model_cards(pack)
+    shared: list[dict] = []
+    experiments = add_experiments(pack, shared)
+    app_lessons = add_app_lessons(pack, shared)
+    add_strategies_errors += add_open_questions(pack, shared)
+    base, base_errors = baselines()
+    add_strategies_errors += base_errors
     # Exact duplicates (the same sentence copied into several docs): the first (highest-weight source) is kept.
     seen, facts = set(), []
     for f in pack.facts:
@@ -596,7 +820,14 @@ def build() -> tuple[dict, list[str]]:
         if key in seen:
             continue
         seen.add(key); facts.append(f)
-    body = json.dumps(facts, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    shared = shared_from_facts(facts) + shared
+    seen_ids, items = set(), []
+    for it in shared:
+        if it["id"] in seen_ids:
+            continue
+        seen_ids.add(it["id"]); items.append(it)
+    shared_section = {"items": items, "baselines": base}
+    body = json.dumps([facts, shared_section], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     version = hashlib.sha256(body.encode()).hexdigest()[:12]
     dates = [f["date"] for f in facts if f["date"]]
     kinds: dict[str, int] = {}
@@ -608,8 +839,12 @@ def build() -> tuple[dict, list[str]]:
         "built_from": max(dates) if dates else "",
         "counts": kinds,
         "model_cards": model_cards,
+        "experiments": experiments,
+        "app_lessons": app_lessons,
+        "shared_items": len(items),
         "sources": sorted({f["src"] for f in facts}),
         "facts": facts,
+        "shared": shared_section,
     }
     return out, add_strategies_errors
 
@@ -628,13 +863,13 @@ def main() -> int:
     args = ap.parse_args()
     pack, errors = build()
     if errors:
-        print("strategy cards with numbers not found in their sources:\n  " + "\n  ".join(errors), file=sys.stderr)
+        print("cards with numbers not found in their sources:\n  " + "\n  ".join(errors), file=sys.stderr)
         return 1
     data = encode(pack)
     if len(data) > MAX_BYTES:
         print(f"pack too big: {len(data)} bytes", file=sys.stderr)
         return 1
-    meta = {k: pack[k] for k in ("schema", "version", "built_from", "counts", "model_cards")}
+    meta = {k: pack[k] for k in ("schema", "version", "built_from", "counts", "model_cards", "experiments", "app_lessons", "shared_items")}
     meta["facts"] = len(pack["facts"])
     meta["bytes"] = len(data)
     meta_text = json.dumps(meta, indent=2, sort_keys=True) + "\n"

@@ -315,6 +315,8 @@ object LiveRecord {
         trades.jsonl.gz.vault Boss's own records: each line base64(AES-256-GCM(gzip(JSON lines))) with a key that never
                               leaves the phone's Keystore; readable only by the app on that phone. S signal, O order sent,
                               F fill (paper or live), each with the market snapshot at that moment.
+        lessons_bundle.json   the agents' nightly lessons for the research: rates and counts in the clear, Boss's money
+                              only in "money_enc" (the same Keystore key).
         IV: Black-76 on the ATM put-call parity forward (else spot*e^(${RATE}T)), calendar time to expiry 15:30 IST.
         OI change: from the first OI the app saw that day (oiFrom).
     """.trimIndent()
@@ -331,6 +333,8 @@ object LiveRecord {
         trades.jsonl          Boss's own records, plain JSON lines (on the phone they stay encrypted): H header, S signal,
                               O order sent, F fill (paper or live), each with the market snapshot at that moment. A line
                               that could not be decrypted is a G gap line.
+        lessons_bundle.json   the agents' nightly lessons for the research, Boss's money DECRYPTED into "money"; import
+                              it with research/knowledge/import_app_lessons.py, which keeps rates, counts and effects only.
         IV: Black-76 on the ATM put-call parity forward (else spot*e^(${RATE}T)), calendar time to expiry 15:30 IST.
         OI change: from the first OI the app saw that day (oiFrom).
     """.trimIndent()

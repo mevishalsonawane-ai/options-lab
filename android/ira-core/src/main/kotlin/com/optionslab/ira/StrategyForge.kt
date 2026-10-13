@@ -236,33 +236,53 @@ object StrategyForge {
 
     // ---- the night ---------------------------------------------------------------------------------------------------------
 
-    data class Night(val book: Book, val made: List<Record>, val stoppedEarly: Boolean, val ms: Long)
+    /** [skipped]: the ideas not tested because the shared knowledge says the research already rejected them (name, why). */
+    data class Night(val book: Book, val made: List<Record>, val stoppedEarly: Boolean, val ms: Long,
+                     val skipped: List<Pair<String, String>> = emptyList())
+
+    /** A generated idea is drawn again at most this many times when the research already rejected it. */
+    const val AVOID_TRIES = 4
 
     /**
      * One night: up to [n] candidates (deterministic for [day] and the book), each counted as tried and backtested on
      * [history] (per index, oldest first), the false-discovery check across every p ever, survivors into the forward test
      * while there is room. Stops when [nowMs] passes [budgetMs] or [cancelled] says so (what was not made is not counted).
+     *
+     * The shared knowledge (13 Oct, [SharedKnowledge]): [avoid] says why an idea the research or the experiment log already
+     * rejected is not tested again (it is drawn again, [AVOID_TRIES] at most, and listed in [Night.skipped] - never counted as
+     * tried, so the false-discovery count stays honest); [prior] seeds the blocks' weights from the findings (added to their own
+     * record; the exploration floor stays and the gates never read it).
      */
     fun night(book: Book, day: LocalDate, history: Map<String, List<ShadowSim.Day>>, nowMs: () -> Long, budgetMs: Long = BUDGET_MS,
-              cancelled: () -> Boolean = { false }, n: Int = PER_NIGHT): Night {
+              cancelled: () -> Boolean = { false }, n: Int = PER_NIGHT, avoid: (Candidate) -> String? = { null },
+              prior: Map<String, Pair<Double, Double>> = emptyMap()): Night {
         val t0 = nowMs()
         val unders = history.filterValues { it.size >= 30 }.keys.sorted()
         if (unders.isEmpty() || book.lastNight == day) return Night(book, emptyList(), false, 0)
         val rng = DiscoveryStats.Rng(DiscoveryStats.seedOf(day, 17))
         var b = book.copy(lastNight = day)
         val made = ArrayList<Record>()
+        val skipped = ArrayList<Pair<String, String>>()
         var early = false
         val over = { nowMs() - t0 > budgetMs || cancelled() }
         for (i in 0 until n) {
             if (over()) { early = true; break }
-            val c = generate(b.tried + 1, day, unders, weights(b), rng)
+            val w = if (prior.isEmpty()) weights(b) else weights(b).mapValues { (k, v) -> prior[k]?.let { (a, f) -> v.first + a to v.second + f } ?: v }
+            var c = generate(b.tried + 1, day, unders, w, rng)
+            var why = avoid(c)
+            var tries = 1
+            while (why != null && tries < AVOID_TRIES) {
+                skipped += "${c.rules.entry.words} on ${c.underlying}" to why
+                c = generate(b.tried + 1, day, unders, w, rng); why = avoid(c); tries++
+            }
+            if (why != null) { skipped += "${c.rules.entry.words} on ${c.underlying}" to why; continue }
             val bt0 = backtest(c, history[c.underlying].orEmpty(), over)
             // Cut short by the budget: its twin may be unfinished, so it is not judged (nor counted) - tried again another night.
             if (over()) { early = true; break }
             val (nb, rec) = judge(b, c, bt0, history[c.underlying].orEmpty(), day)
             b = nb; made += rec
         }
-        return Night(trim(b), made, early, nowMs() - t0)
+        return Night(trim(b), made, early, nowMs() - t0, skipped)
     }
 
     /**

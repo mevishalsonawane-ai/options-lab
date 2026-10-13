@@ -28,7 +28,17 @@ object KnowledgeLibrary {
     fun answer(context: Context?, q: String, locked: Boolean): Pair<String, List<String>> {
         val ix = index(context) ?: return Knowledge.NOT_LOADED to emptyList()
         val hits = Knowledge.search(ix, q, k = 3, locked = locked)
-        return Knowledge.say(hits) to Knowledge.lines(hits)
+        // 13 Oct (the shared knowledge): the research's verdict merged with the app's own lessons on the same strategy or topic, each
+        // with its source, and a disagreement said plainly (both kept). A locked phone gets the research only (the lessons carry the
+        // bots' results). Memory only.
+        val merged = runCatching {
+            com.optionslab.ira.SharedKnowledge.answer(com.optionslab.app.data.SharedKnowledgeHost.snapshot, q, locked, max = 3)
+        }.getOrDefault(emptyList())
+        if (merged.isNotEmpty()) com.optionslab.app.data.SharedKnowledgeHost.read("Jarvis", "the research and the app's lessons for a research answer")
+        val said = Knowledge.say(hits)
+        if (merged.isEmpty()) return said to Knowledge.lines(hits)
+        val extra = " Beside it, from the shared knowledge: " + merged.joinToString(" ")
+        return (if (hits.isEmpty()) "From the shared knowledge, Boss: " + merged.joinToString(" ") else said + extra) to (Knowledge.lines(hits) + merged)
     }
 
     /** The model's notes for [question] from the pack (memory only: none until the pack has been read). */

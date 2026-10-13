@@ -335,7 +335,8 @@ object LiveRecorder {
         java.util.zip.ZipOutputStream(zip.outputStream().buffered()).use { z ->
             z.putNextEntry(java.util.zip.ZipEntry("README.txt")); z.write(LiveRecord.README.toByteArray(Charsets.UTF_8)); z.closeEntry()
             for ((day, f) in days()) for (file in f.listFiles().orEmpty().sortedBy { it.name }) {
-                if (file.name != LiveRecord.MARKET_FILE && file.name != LiveRecord.TRADES_FILE) continue
+                // The nightly lessons bundle (13 Oct) goes as stored too: its money still encrypted.
+                if (file.name != LiveRecord.MARKET_FILE && file.name != LiveRecord.TRADES_FILE && file.name != com.optionslab.ira.LessonsBundle.FILE) continue
                 z.putNextEntry(java.util.zip.ZipEntry("$day/${file.name}"))
                 file.inputStream().use { it.copyTo(z) }
                 z.closeEntry()
@@ -366,6 +367,14 @@ object LiveRecorder {
                         file.inputStream().use { it.copyTo(z) }
                         z.closeEntry()
                     }
+                    // The nightly lessons bundle (13 Oct, the shared knowledge): its money decrypted here on the phone, as the trades
+                    // are; research/knowledge/import_app_lessons.py reads it from this zip and keeps rates, counts and effects only.
+                    com.optionslab.ira.LessonsBundle.FILE -> {
+                        val text = runCatching { SharedKnowledgeHost.decryptedBundle(file.readText(Charsets.UTF_8)) }.getOrNull()
+                        z.putNextEntry(java.util.zip.ZipEntry("$day/${file.name}"))
+                        z.write((text ?: LiveRecord.gap(0L, "lessons bundle", "could not be read")).toByteArray(Charsets.UTF_8))
+                        z.closeEntry()
+                    }
                     LiveRecord.TRADES_FILE -> {
                         z.putNextEntry(java.util.zip.ZipEntry("$day/trades.jsonl"))
                         file.bufferedReader(Charsets.US_ASCII).useLines { lines ->
@@ -382,7 +391,7 @@ object LiveRecorder {
                         z.closeEntry()
                     }
                 }
-                if (files.any { it.name in plain || it.name == LiveRecord.TRADES_FILE }) n++
+                if (files.any { it.name in plain || it.name == LiveRecord.TRADES_FILE || it.name == com.optionslab.ira.LessonsBundle.FILE }) n++
             }
         }
         return n

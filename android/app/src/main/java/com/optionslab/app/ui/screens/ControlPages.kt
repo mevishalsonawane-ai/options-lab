@@ -665,6 +665,8 @@ fun RiskPage(model: AppModel) {
             item { PortfolioSettingCard() }
             item { EventCalendarCard() }
             item { HistoryVaultCard() }
+            // The shared knowledge's shadow rule (13 Oct): off by default; on, it only counts what it would skip.
+            item { SharedKnowledgeCard() }
         }
         // The learning freeze (S14): its state, Boss's own line and the unfreeze (PIN when live). Never from a backup.
         if (com.optionslab.app.ira.LearningFreeze.enabled()) item { com.optionslab.app.ui.SettingSpot("learn.freeze") { LearningFreezeCard(model) } }
