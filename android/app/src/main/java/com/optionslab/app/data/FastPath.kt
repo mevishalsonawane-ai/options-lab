@@ -140,6 +140,10 @@ object FastPath {
 
     private fun snapshot(now: Long): Snap {
         snap?.takeIf { now - it.at in 0 until STATE_MS }?.let { return it }
+        // Asked BEFORE the cover is read (13 Oct): the cover's own read starts the paper book's background load, which can
+        // finish before the end of this function - asked afterwards, a "not covered" read from before the load was kept the
+        // full 500 ms, and a live stop's tick in that window planned no LIVE lane (OrderPathRound2Test, after a quick load).
+        val paperReady = runCatching { Paper.loaded() }.getOrDefault(true)
         val cover = runCatching { Paper.streamCover() }.getOrDefault(Paper.StreamCover(emptySet(), covered = false, any = false))
         val orbLive = OrbArms.liveHint
         val jarvis = com.optionslab.app.BuildConfig.JARVIS
@@ -161,7 +165,7 @@ object FastPath {
         val tokens = cover.tokens + KiteStream.followed() + KiteStream.INDEX_TOKENS + live
         val liveActive = live.isNotEmpty() || (OrbArms.armedHint && liveMode(now))
         // Built before the paper book was in memory (not covered for now): kept only briefly, so the cover is read again soon.
-        val at = if (runCatching { Paper.loaded() }.getOrDefault(true)) now else now - STATE_MS + 25
+        val at = if (paperReady) now else now - STATE_MS + 25
         return Snap(at, st, tokens, cover.any, live, liveActive).also { snap = it }
     }
 
