@@ -79,6 +79,11 @@ object AutoChange {
         REGIME_THRESHOLD("market brain", "a regime threshold (shadow)"),
         DRIFT_THRESHOLD("self-review", "a park threshold"),
         FINDINGS_WEIGHT("findings", "a consensus weight (shadow)"),
+        /**
+         * An arm Boss parked by their own choice (13 Oct: ORB, ORB Fresh, ORB Sweep and Range Fade, [armPark]): logged so the
+         * change timeline shows it and its Undo switches the arm back on, on paper. Never proposed or applied by Autopilot.
+         */
+        ARM_PARK("strategies", "an arm parked on your choice"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -229,6 +234,7 @@ object AutoChange {
             Kind.MANAGER_MODE -> if (c.to == TradeManager.Mode.ACT.name) Risk.RAISE else Risk.LOWER
             Kind.PAPER_ENTRIES -> if (c.to == PAUSED) Risk.LOWER else Risk.RAISE
             Kind.LIVE_ENTRIES -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
+            Kind.ARM_PARK -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -252,6 +258,8 @@ object AutoChange {
     const val COUNTS = "counts"
     const val PAUSED = "paused"
     const val ON = "on"
+    /** An arm on, approving each entry ([Kind.ARM_PARK]'s "from" when it was not fully automatic). */
+    const val ON_APPROVE = "on, approve each entry"
     const val PARKED = "parked"
     const val LIVE = "live"
 
@@ -286,6 +294,17 @@ object AutoChange {
             }
         }
     }
+
+    /**
+     * Boss's 13 Oct park of the arm [source] ([label]; Kind.ARM_PARK), for the change timeline: "on → parked", lowering risk,
+     * on paper (its Undo switches the arm back on, on paper only - in Live it is armed with the PIN on its row). [tested]: its
+     * two tested years in words; [rs]: their sum, rupees a lot; [automatic]: it was fully automatic (else "on, approve each
+     * entry", as its Undo puts it back).
+     */
+    fun armPark(source: String, label: String, tested: String, rs: Double, automatic: Boolean = true): Change = Change(Kind.ARM_PARK, "arm:$source",
+        if (automatic) ON else ON_APPROVE, PARKED,
+        "your choice (13 Oct): $label lost money after costs in every tested year ($tested)", Evidence(2, rs, AgentLessons.Confidence.STRONG, -1),
+        Risk.LOWER, Scope.PAPER, what = "$label's switch")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
@@ -678,7 +697,7 @@ object AutoChange {
     }
 
     /** The newest change that can be undone ("undo the last change"). */
-    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied }
+    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && it.change.kind != Kind.ARM_PARK }
 
     /** [id] undone by Boss: its target rests [REST_DAYS] days (Autopilot does not redo what he undid). */
     fun undone(book: Book, id: String, day: LocalDate): Book {
@@ -811,6 +830,8 @@ object AutoChange {
                        val reverted: Int, val asked: Int, val effect: Double)
 
     fun summary(book: Book, day: LocalDate): Summary {
+        // Boss's own park (13 Oct, Kind.ARM_PARK) is logged here, but it is not Autopilot's change: never counted as one.
+        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { it.change.kind != Kind.ARM_PARK })
         val t = book.entries.filter { it.day == day && it.applied }
         return Summary(t.size, t.count { it.change.scope == Scope.PAPER }, t.count { it.change.scope == Scope.LIVE }, t.count { it.change.scope == Scope.SHADOW },
             book.entries.count { it.status == Status.PROBATION }, book.entries.count { it.status == Status.KEPT },
@@ -828,7 +849,7 @@ object AutoChange {
 
     /** "What did you change today?" */
     fun sayToday(book: Book, day: LocalDate): String {
-        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) }
+        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) && it.change.kind != Kind.ARM_PARK }
         val reverted = book.entries.filter { it.closedOn == day && it.status == Status.REVERTED }
         if (t.isEmpty() && reverted.isEmpty()) return "I changed nothing by myself today, Boss."
         val lines = t.map { "• " + it.change.what + ": " + it.change.from + " → " + it.change.to + " (" + it.change.scope.words + ", " +

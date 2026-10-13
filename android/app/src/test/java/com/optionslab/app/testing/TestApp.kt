@@ -93,6 +93,9 @@ class TestApp : Application() {
         com.optionslab.app.data.AppHealth.resetForTest()
         com.optionslab.app.ira.SelfGrowth.init(this)
         com.optionslab.app.ira.SelfGrowth.resetForTest()
+        // Reset before init too (13 Oct): init's background read of Boss's modes then finds them read and writes nothing - it
+        // raced the reset and could leave "trademanager.policy.perarm" in a test's settings (VaultTest).
+        com.optionslab.app.data.TradeManagerHost.resetForTest()
         com.optionslab.app.data.TradeManagerHost.init(this)
         com.optionslab.app.data.TradeManagerHost.resetForTest()
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.

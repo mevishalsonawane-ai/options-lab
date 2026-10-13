@@ -126,6 +126,14 @@ internal fun OrbRowsContent(
     // Liquidity BANKNIFTY's live entries re-enabled after its stop rule: the PIN first, always.
     var reenableAuth by remember { mutableStateOf(false) }
 
+    // Switching an arm on, by its switch or by the parked arm's tap (13 Oct): the same flow either way - the Hero arm's own
+    // confirmation, a paper-only arm at once, any other the automatic / approve choice (and the PIN in Live).
+    fun switchOn(a: OrbArms.ArmView) {
+        if (a.arm.hero) heroConfirm = a.arm.source
+        else if (a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
+        else choosing = a.arm.source
+    }
+
     view.arms.forEachIndexed { i, a ->
         if (i > 0) Rule()
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -161,6 +169,8 @@ internal fun OrbRowsContent(
                             ?.let { " · locked ${px(it)}" } ?: "")
                 } ?: when {
                     view.stopped != null && a.armed -> view.stopped.orEmpty()
+                    // Parked on Boss's choice (13 Oct): said so, with its tested record; the tap under it switches it back on.
+                    !a.armed && a.bossParked -> keepNumbersWhole(com.optionslab.engine.orb.FamilyPark.rowLine(a.arm.source))
                     !a.armed && a.arm.liquidity -> "BANKNIFTY (15 + 5-min) + FINNIFTY (30 + 5-min) + MIDCPNIFTY (15 + 5-min) liquidity pool taken on a swing zone · stop −15% · out 30 index pts back (FINNIFTY 15, MIDCPNIFTY 8) or not +5% in 20 min · else at the next liquidity"
 
                     a.arm.liquidity -> a.status
@@ -172,7 +182,15 @@ internal fun OrbRowsContent(
                     !a.armed -> "BANKNIFTY opening-range break" + (if (a.arm.freshOnly) ", fresh breaks only" else "") + " · profit lock ${rungsOf(a.arm)}"
                     else -> OrbArms.describe(a.status, a.arm) + (view.range?.let { r -> " Range ${px(r.second)}–${px(r.first)}." } ?: "")
                 }
-                Text(line, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 12.sp))
+                Text(line, style = Type.bodySmall.copy(color = if (!a.armed && a.bossParked && a.open == null) p.amber else p.inkSoft, fontSize = 12.sp),
+                    modifier = Modifier.testTag("orb-line:${a.arm.source}"))
+                // A parked arm (13 Oct, Boss's choice): one tap switches it back on, through the switch's own confirmation.
+                if (!a.armed && a.bossParked) {
+                    if (a.open != null) Text(keepNumbersWhole(com.optionslab.engine.orb.FamilyPark.ROW + ": its open position is still managed to its exit."),
+                        style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+                    Text("Switch ${a.arm.label} back on", style = Type.bodySmall.copy(color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.testTag("orb-unpark:${a.arm.source}").clickable { switchOn(a) }.padding(vertical = 4.dp))
+                }
                 // Liquidity 15+5's size for new entries; an open position keeps its own quantity.
                 a.lots?.let { n ->
                     // "Lots: 1 · 2 · 3" (a raise asks first, a cut applies at once).
@@ -210,9 +228,7 @@ internal fun OrbRowsContent(
                 modifier = Modifier.semantics { contentDescription = "Arm ${a.arm.label}" },
                 checked = a.armed,
                 // The Hero arm takes its own confirmation (not proven); Liquidity 15+5 chooses automatic or approve.
-                onCheckedChange = { on -> if (on && a.arm.hero) heroConfirm = a.arm.source
-                    else if (on && a.arm.paperOnly) actions.arm(a.arm.source, true, true, false)
-                    else if (on) choosing = a.arm.source else actions.arm(a.arm.source, false, a.automatic, false) },
+                onCheckedChange = { on -> if (on) switchOn(a) else actions.arm(a.arm.source, false, a.automatic, false) },
                 colors = SwitchDefaults.colors(checkedTrackColor = p.verdigris, checkedThumbColor = p.card),
             )
         }

@@ -195,12 +195,16 @@ internal object IraBots {
      * trades. Reads only. With the answer, the first armed arm that lost in both records (null: none), for [offerSwitchOff].
      */
     suspend fun switchOff(q: com.optionslab.ira.SwitchOff.Q): Pair<com.optionslab.ira.SwitchOff.Answer, com.optionslab.ira.SwitchOff.Arm?> {
-        val armed = com.optionslab.app.data.OrbArms.view().arms.associate { it.arm.label to it.armed }
+        val views = com.optionslab.app.data.OrbArms.view().arms
+        val armed = views.associate { it.arm.label to it.armed }
+        val bossParked = views.filter { it.bossParked }.map { it.arm.source }.toSet()
         val paper = bots().filter { it.where == "Paper" && it.name in armed }.associate { b -> b.name to b.trades.sortedBy { it.closedAt }.map { it.net } }
         val arms = armed.map { (name, on) -> com.optionslab.ira.SwitchOff.arm(name, on, paper[name].orEmpty()) }
         val a0 = com.optionslab.ira.SwitchOff.answer(q, arms)
-        // Asked about ORB, ORB Fresh, ORB Sweep or Range Fade: said first that Boss un-retired it on 07 Oct, with its record.
-        val record = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { com.optionslab.engine.orb.RetiredArms.history(it) }
+        // Asked about ORB, ORB Fresh, ORB Sweep or Range Fade: said first that it is parked on Boss's choice (13 Oct), or else
+        // that Boss un-retired it on 07 Oct, with its record.
+        val record = com.optionslab.engine.orb.RetiredArms.named(q.arm.orEmpty()).joinToString(" ") { r ->
+            if (r.arm.source in bossParked) com.optionslab.engine.orb.FamilyPark.history(r.arm.label) else com.optionslab.engine.orb.RetiredArms.history(r) }
         val a = if (record.isEmpty()) a0 else a0.copy(text = "$record ${a0.text}")
         return a to a.offer.firstOrNull()?.let { n -> arms.firstOrNull { it.name == n } }
     }

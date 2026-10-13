@@ -422,7 +422,7 @@ class OrbArmsDayTest : RobolectricTest() {
 
     // ---- the one-time switch-off (Boss's choice, 06 Oct) ------------------------------------------------
 
-    @Test fun aBookFromBeforeThe6thRunsEveryChangeOnceAndEndsWithTheFourOnPaper() {
+    @Test fun aBookFromBeforeThe6thRunsEveryChangeOnceAndEndsWithTheFourParked() {
         val books = listOf("orb_sweep", "range_fade", "liquidity15", "liquidity5", "orb")
         fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
         val t = day.atTime(9, 50)
@@ -435,13 +435,12 @@ class OrbArmsDayTest : RobolectricTest() {
         at(LocalTime.of(9, 50))
         val v = runBlocking { OrbArms.view() }
         // The 06 Oct switch-off and retirement took ORB Sweep, Range Fade and ORB off; Boss's 07 Oct un-retirement then switched
-        // all four back on - automatic, on paper only, never cleared for Zerodha.
+        // all four back on - automatic, on paper only, never cleared for Zerodha - and Boss's 13 Oct choice parked them again.
         for (src in listOf("orb", "orb_fresh", "range_fade")) {
             val a = v.arms.single { it.arm.source == src }
-            assertTrue("$src back on", a.armed)
-            assertTrue("$src automatic", a.automatic)
+            assertTrue("$src parked on 13 Oct", !a.armed && a.bossParked)
             assertTrue("$src paper only", !a.liveOk)
-            assertEquals(com.optionslab.engine.orb.RetiredArms.UNRETIRED, a.status)
+            assertEquals(com.optionslab.engine.orb.FamilyPark.PARKED, a.status)
             assertEquals("its record, as information", src, a.record!!.arm.source)
         }
         // ... and the 9 Oct parking (Boss's OK) then switched ORB Sweep off again, once, on paper terms.
@@ -453,18 +452,21 @@ class OrbArmsDayTest : RobolectricTest() {
         assertTrue(log.toString(), log.any { it.contains("Range Fade: ${OrbArms.SWITCHED_OFF}") })
         assertTrue(log.toString(), log.any { it.contains("ORB: switched off: lost on 6 years of real data (Boss's choice 06 Oct)") })
         assertTrue(log.toString(), log.any { it.contains("ORB: switched back on, paper only (Boss un-retired it 07 Oct 2026)") })
-        // ... and the retirement switched Liquidity 15+5 back on, on paper only.
+        assertTrue(log.toString(), log.any { it.contains("Range Fade: ${com.optionslab.engine.orb.FamilyPark.PARKED}; its open position is still managed to its exit") })
+        assertTrue(v.arms.single { it.arm.source == "orb_sweep" }.bossParked)
+        // ... and the retirement switched Liquidity 15+5 back on, on paper only (the 13 Oct park leaves it alone).
         val liq = v.arms.single { it.arm.source == "liquidity" }
         assertTrue("both liquidity books back on", liq.armed)
         assertTrue("paper only: never cleared for Zerodha", !liq.liveOk)
         assertNull("Liquidity has no record line", liq.record)
         assertTrue(liq.status, liq.status.contains("switched back on, paper only (Boss's choice 06 Oct)"))
         assertNotNull("Range Fade's open put is kept, managed to its exit", v.arms.single { it.arm.source == "range_fade" }.open)
-        // Boss switches ORB Sweep off (it already is): no change runs a second time, even after a restart.
-        runBlocking { OrbArms.setArmed("orb_sweep", false, automatic = true) }
+        // Boss switches ORB Sweep off (it already is) and ORB back on: no change runs a second time, even after a restart.
+        runBlocking { OrbArms.setArmed("orb_sweep", false, automatic = true); OrbArms.setArmed("orb", true, automatic = true) }
         AutomationSupport.reloadFromDisk(OrbArms)
         assertTrue("never switched on twice", !arm("orb_sweep").armed)
-        assertTrue(arm("orb").armed)
+        assertTrue("never parked twice", arm("orb").armed)
+        assertTrue(arm("liquidity").armed)
     }
 
     // ---- the retirement (06 Oct) and the un-retirement (Boss's explicit choice, 07 Oct) ---------------------
@@ -477,7 +479,9 @@ class OrbArmsDayTest : RobolectricTest() {
             .put("armed", flags(true, "orb", "orb_fresh").put("liquidity15", false).put("liquidity5", false).put("liquidity30_fin", false).put("liquidity5_fin", false))
             .put("auto", flags(true, "orb", "orb_fresh")).put("liveOk", flags(true, "orb"))
             .put("status", org.json.JSONObject().put("liquidity5", OrbArms.SWITCHED_OFF))
-            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS))
+            // (13 Oct's park marked done: these tests are about the 06 and 07 Oct changes alone; the chain from an empty
+            // list is aBookFromBeforeThe6thRunsEveryChangeOnceAndEndsWithTheFourParked.)
+            .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.FamilyPark.MIGRATION))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "orb")
                 .put("symbol", "BANKNIFTY-ORB-${strike}CE").put("right", "CE").put("qty", 30).put("entry", 300.0)
                 .put("entryTime", t.minusMinutes(5).toString()).put("signalBar", t.minusMinutes(10).toString())))
@@ -526,9 +530,9 @@ class OrbArmsDayTest : RobolectricTest() {
             .put("auto", org.json.JSONObject().put("liquidity5", true).put("orb_sweep", false))
             .put("liveOk", org.json.JSONObject().put("orb_sweep", false))
             .put("status", org.json.JSONObject().put("orb_sweep", "inside_range"))
-            // (9 Oct's parking marked done: this test is about the 07 Oct un-retirement alone.)
+            // (9 Oct's and 13 Oct's parking marked done: this test is about the 07 Oct un-retirement alone.)
             .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
-                .put(com.optionslab.engine.orb.ParkedArms.MIGRATION))
+                .put(com.optionslab.engine.orb.ParkedArms.MIGRATION).put(com.optionslab.engine.orb.FamilyPark.MIGRATION))
             .put("positions", org.json.JSONArray().put(org.json.JSONObject().put("arm", "range_fade")
                 .put("symbol", "BANKNIFTY-ORB-${strike}PE").put("right", "PE").put("qty", 30).put("entry", 280.0)
                 .put("entryTime", t.minusMinutes(5).toString()).put("signalBar", t.minusMinutes(10).toString()))))
@@ -642,7 +646,7 @@ class OrbArmsDayTest : RobolectricTest() {
             .put("armed", org.json.JSONObject().put("orb", true)).put("auto", org.json.JSONObject().put("orb", true))
             // Saved after every one-time change (ORB armed on paper since Boss un-retired it).
             .put("migrated", org.json.JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION)
-                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)).put("positions", closed))
+                .put(com.optionslab.engine.orb.RetiredArms.UNRETIRE).put(com.optionslab.engine.orb.FamilyPark.MIGRATION)).put("positions", closed))
         at(LocalTime.of(9, 50))
         val arms = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }
         val (orb, act) = arms.first { it.first.name == "ORB" }

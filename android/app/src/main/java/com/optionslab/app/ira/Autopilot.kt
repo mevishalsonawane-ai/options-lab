@@ -325,6 +325,16 @@ internal object Autopilot {
                 val key = c.target.removePrefix("paper:")
                 if (c.to == AutoChange.PAUSED) SmartWorkers.pausePaperByAutopilot(key) else SmartWorkers.resumePaperByAutopilot(key)
             }
+            // Boss's 13 Oct park ([logBossPark]): only its Undo applies here - the arm switched back on, ON PAPER (never cleared
+            // for Zerodha: in Live an ordinary arm asks for the PIN, which is never given here, so nothing changes). Never re-parked.
+            AutoChange.Kind.ARM_PARK -> {
+                val source = c.target.removePrefix("arm:")
+                if ((c.to != AutoChange.ON && c.to != AutoChange.ON_APPROVE) || !com.optionslab.engine.orb.FamilyPark.covers(source)) return null
+                val said = kotlinx.coroutines.runBlocking {
+                    com.optionslab.app.data.OrbArms.setArmed(source, true, automatic = c.to == AutoChange.ON, pinConfirmed = false)
+                }
+                said.takeIf { it.contains("armed on paper") }
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -621,6 +631,33 @@ internal object Autopilot {
             _book.value = b
         }
         saveSoon()
+    }
+
+    /**
+     * Boss's 13 Oct park of [source] ([label]; [com.optionslab.engine.orb.FamilyPark]), just applied by the arms' one-time
+     * change: logged as Boss's (kept, not on probation) so "Today's changes" shows it and one tap undoes it (back on, on paper).
+     * [wasLive]: it was armed for Zerodha; [holding]: its open position is still managed to its exit. In the background, on
+     * Autopilot's own worker: the arms' load never waits for the log's disk.
+     */
+    fun logBossPark(source: String, label: String, automatic: Boolean, wasLive: Boolean, holding: Boolean) {
+        if (!enabled()) return
+        val fp = com.optionslab.engine.orb.FamilyPark
+        val c = AutoChange.armPark(source, label, fp.record(source), fp.TESTED[source]?.let { it.first + it.second } ?: 0.0, automatic)
+        val note = "your choice, 13 Oct" +
+            (if (wasLive) "; it was armed for Zerodha - in Live, switch it on with your PIN on its row" else "") +
+            (if (holding) "; its open position is still managed to its exit" else "")
+        scope.launch {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    // Once: a second load of an old book (a restore) never logs it twice.
+                    if (_book.value.entries.none { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == c.target })
+                        _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                    save()
+                }
+            }
+        }
     }
 
     // ---- telling -------------------------------------------------------------------------------------------------------------

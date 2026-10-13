@@ -179,6 +179,8 @@ internal object IraCoach {
         val parked = prefsMap(PARKED_KEY); val kept = prefsMap(KEPT_KEY)
         // A parked arm found armed: Boss armed it again himself, so it is left alone while this regime holds.
         views.filter { it.armed && parked.containsKey(it.arm.source) }.forEach { parked.remove(it.arm.source); kept[it.arm.source] = now.name }
+        // Parked on Boss's choice (13 Oct, FamilyPark): the plan never switches it back on - that is Boss's alone.
+        views.filter { it.bossParked }.forEach { parked.remove(it.arm.source) }
         kept.entries.removeAll { it.value != now.name }
         val now0 = views.map { v -> com.optionslab.ira.DayPlan.ArmNow(v.arm.source, v.arm.label, v.armed,
             paper = (v.arm.paperOnly || !liveNow) && !v.liveOk, parked = parked.containsKey(v.arm.source),
@@ -204,6 +206,7 @@ internal object IraCoach {
                 if (step.on && stoppedNow) continue
                 val v = nowViews.firstOrNull { it.arm.source == step.source } ?: continue
                 if (v.armed == step.on) continue                  // already as planned (Boss changed it himself)
+                if (step.on && v.bossParked) continue             // parked on Boss's choice (13 Oct): only Boss switches it back on
                 // Armed on paper only: in Live an ordinary arm asks for the PIN, which is never given here, so it is not armed.
                 val said = runCatching { arms.setArmed(step.source, step.on, v.automatic, pinConfirmed = false) }.getOrNull() ?: continue
                 if (step.on && !said.contains("armed on paper") && !said.contains(" on paper, ")) continue
