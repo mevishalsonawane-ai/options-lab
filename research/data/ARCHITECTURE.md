@@ -174,6 +174,11 @@ The app downloads new models only after the gates pass. It keeps the previous ve
 The app's fills, slippage, Order Review flaws, trade-manager votes and paper/live results are uploaded each evening as
 new raw data (L1). So the brain learns from **real execution**, not just from history. This is how it keeps improving.
 
+Since 13 Oct (TODO G3) each evening upload also carries the day's redacted diagnostics (`diag-YYYY-MM-DD.json.gz` in
+IraAlgo's release `diag-YYYY-MM`): every arm's signals taken or skipped with the reason's kind, its trades in points and
+percent, the app's health and the change timeline. Not sealed (nothing personal is in it); `research/data/read_diagnostics.py`
+reads it, and MAINTENANCE.md ("Daily diagnostics") has the schema.
+
 ## Data dictionary: everything traders look at (12 Oct, Boss)
 
 The table has three kinds of row. **R** means stored raw from a source. **D** means derived, calculated in L3/L4 from

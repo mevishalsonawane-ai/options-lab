@@ -240,6 +240,20 @@ object CloudSync {
     fun daysWaiting(recorded: Map<LocalDate, Long>, uploaded: Map<LocalDate, Long>, today: LocalDate, minute: Int): Int =
         pendingDays(recorded, uploaded, today, minute, Int.MAX_VALUE).size
 
+    /**
+     * The day whose diagnostics a run of [kind] uploads ([DiagDay], G3), or null: none. The evening run: its evening
+     * ([eveningDay]); Boss's "Upload now": the evening it belongs to, else today so far (the evening run replaces it later).
+     * A backup after a strategy change uploads none.
+     */
+    fun diagDay(kind: String, eveningDay: LocalDate?, minute: Int, today: LocalDate, eveningFrom: Int = EVENING): LocalDate? = when (kind) {
+        KIND_EVENING -> eveningDay
+        KIND_NOW -> eveningOf(minute, today, eveningFrom) ?: today
+        else -> null
+    }
+
+    /** The later of the day kept and [day] (a re-run of an older day never moves the card's "last day uploaded" back). */
+    fun diagKept(kept: LocalDate?, day: LocalDate): LocalDate = if (kept != null && kept.isAfter(day)) kept else day
+
     /** The uploaded days as kept in the vault ("2026-10-13=1234,..."), and back; the newest [keep] only. */
     fun doneEncode(m: Map<LocalDate, Long>, keep: Int = 120): String =
         m.entries.sortedBy { it.key }.takeLast(keep).joinToString(",") { "${it.key}=${it.value}" }
@@ -340,6 +354,8 @@ object CloudSync {
         val waiting: Int,
         /** Where the uploads go ("owner/name"). */
         val repo: String = DEFAULT_REPO,
+        /** The last day whose diagnostics went up ([DiagDay], G3); null: none yet. */
+        val lastDiagDay: LocalDate? = null,
     )
 
     /** When the automatic uploads run, for the reminders (G4, 13 Oct). */
@@ -375,6 +391,7 @@ object CloudSync {
         if (t != null && !t.ok && s.lastOk != null) out += "Last that worked" to "${day(toDay(s.lastOk.atMs))} · ${size(s.lastOk.bytes)} · ✓"
         out += "Days waiting" to if (s.waiting == 0) "none" else "${s.waiting}"
         out += "Last backup to GitHub" to (s.lastBackupOk?.let { "${day(toDay(it.atMs))} ✓" } ?: "none yet")
+        out += "Diagnostics" to (s.lastDiagDay?.let { "last day uploaded: ${day(it)} ✓" } ?: "last day uploaded: none yet")
         expiryNote(s.expiry, today)?.let { out += "Token" to it }
         return out
     }

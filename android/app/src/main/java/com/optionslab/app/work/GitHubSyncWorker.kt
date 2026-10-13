@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 /**
  * GitHub sync's worker (TODO G1/G2, 13 Oct; [GitHubSync] does the work, [CloudSync.plan] decides what a run does). Four kinds:
  *
- *  - EVENING (every hour, WorkManager constraints: unmetered Wi-Fi AND charging): once a day from the evening gate
+ *  - EVENING (every hour, WorkManager constraints: unmetered Wi-Fi AND charging; with that evening's diagnostics, G3): once a day from the evening gate
  *    ([GitHubSync.eveningFrom]; G4, 13 Oct, Boss: "after the commodities close"): after MCX's evening close (23:30, or 23:55
  *    in US winter time, from the app's MCX calendar), 15:45 on a day without an MCX session, 23:55 when the calendar cannot
  *    be read. The waiting recorded days and the phone backup. An evening missed (the phone was not charging) still runs the
@@ -49,8 +49,10 @@ class GitHubSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
             runCatching { GitHubSync.check() }
             return Result.success()
         }
+        // G3: the evening run's day's diagnostics (Upload now: today's so far, replaced by the evening run).
+        val diagDay = CloudSync.diagDay(kind, evening, now.hour * 60 + now.minute, now.toLocalDate(), from)
         val ok = try {
-            GitHubSync.run(withBackup = plan.backup, withDays = plan.days, manual = kind == NOW, eveningFrom = from) { !isStopped }
+            GitHubSync.run(withBackup = plan.backup, withDays = plan.days, manual = kind == NOW, eveningFrom = from, diagDay = diagDay) { !isStopped }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { false }
         // Kept as the evening the run was for, even when it ended after midnight (G4).
         if (ok && evening != null) runCatching { GitHubSync.eveningDone(evening) }

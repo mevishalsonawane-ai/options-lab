@@ -36,6 +36,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  *  - G2: the phone backup ([Backup.createSealed], the same passphrase) to the release `phone-backup` each evening, and
  *    after a strategy or Pine script is added or changed ([changed]; from the evening gate, charging); old ones pruned. "Restore from GitHub"
  *    lists them ([backups]) and opens one through [Backup.open] / [Backup.restore], with every restore rule as it is.
+ *  - G3: the evening run's day's diagnostics ([DiagDayHost], [com.optionslab.ira.DiagDay]): one small redacted file,
+ *    `diag-YYYY-MM-DD.json.gz` in the release `diag-YYYY-MM`, replacing that day's file on a re-run. Not sealed: nothing
+ *    personal is in it (no ids, names or rupees), and the research sessions read it without the passphrase.
  *
  * The token (a fine-grained GitHub token for the data repository only, Contents read and write, 90 days):
  *  - sealed with Boss's PIN ([SecretBox], as the Zerodha API secret). Everything Boss does by hand with it (Restore from
@@ -78,6 +81,8 @@ object GitHubSync {
     private const val K_LAST_OK = "github.lastOk"
     private const val K_LAST_BACKUP = "github.lastBackup"
     private const val K_EVENING = "github.evening"
+    /** The last day whose diagnostics went up (G3): the card's "last day uploaded". */
+    private const val K_DIAG = "github.diag.day"
 
     const val PROBLEM = "github:sync"
     const val PROBLEM_TOKEN = "github:token"
@@ -259,18 +264,20 @@ object GitHubSync {
     fun eveningDone(day: LocalDate) = SecurePrefs.put(K_EVENING, day.toString())
 
     /**
-     * One run: the waiting recorded days when [withDays] (never in a trading day's 09:00-15:45) and the phone backup when
-     * [withBackup]. One run at a time. True when everything it tried worked. [goOn]: false once the worker is stopped.
+     * One run: the waiting recorded days when [withDays] (never in a trading day's 09:00-15:45), [diagDay]'s diagnostics when
+     * given (G3, [CloudSync.diagDay]) and the phone backup when [withBackup]. One run at a time. True when everything it tried
+     * worked. [goOn]: false once the worker is stopped.
      */
     suspend fun run(withBackup: Boolean, withDays: Boolean, manual: Boolean = false, eveningFrom: Int = CloudSync.EVENING,
-                    goOn: () -> Boolean = { true }): Boolean =
-        runLock.withLock { withContext(Dispatchers.IO) { runNow(withBackup, withDays, manual, eveningFrom, goOn) } }
+                    diagDay: LocalDate? = null, goOn: () -> Boolean = { true }): Boolean =
+        runLock.withLock { withContext(Dispatchers.IO) { runNow(withBackup, withDays, manual, eveningFrom, diagDay, goOn) } }
 
     /**
      * [manual]: Boss tapped "Upload now" - the only run that tries after GitHub refused the token. An automatic run builds
      * no backup and sends nothing while it is refused (13 Oct review).
      */
-    private suspend fun runNow(withBackup: Boolean, withDays: Boolean, manual: Boolean, eveningFrom: Int, goOn: () -> Boolean): Boolean {
+    private suspend fun runNow(withBackup: Boolean, withDays: Boolean, manual: Boolean, eveningFrom: Int, diagDay: LocalDate?,
+                               goOn: () -> Boolean): Boolean {
         val c = app ?: return false
         if (!ready()) return false
         if (!manual && authBlocked()) return false
@@ -317,6 +324,16 @@ object GitHubSync {
             }
             if (withDays && CloudSync.liveAllowed(minute, Market.isTradingDay(now.toLocalDate())))
                 sync.live(now.toLocalDate(), minute)?.let { o -> outcomes += lastOf(o, gh) }
+            // G3: the day's diagnostics, small and redacted, made here on the worker's thread (never the order or tick path).
+            if (diagDay != null && goOn() && sendNow(false) && outcomes.none { CloudSync.authRefused(it) }) {
+                val report = runCatching { DiagDayHost.report(diagDay) }
+                val o = sync.diag(diagDay) { report.getOrThrow() }
+                if (o.ok) runCatching {
+                    val kept = SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                    SecurePrefs.put(K_DIAG, CloudSync.diagKept(kept, diagDay).toString())
+                }
+                outcomes += lastOf(o, gh)
+            }
             // The same refused token is not tried again in the same run.
             if (withBackup && goOn() && sendNow(false) && outcomes.none { CloudSync.authRefused(it) })
                 outcomes += lastOf(sync.backup(now.toLocalDateTime().withNano(0)), gh)
@@ -437,7 +454,8 @@ object GitHubSync {
         }.getOrDefault(0)
         return CloudSync.Status(tokenSet, keyReady, expiry, CloudSync.Last.decode(SecurePrefs.getString(K_LAST)),
             CloudSync.Last.decode(SecurePrefs.getString(K_LAST_OK)), CloudSync.Last.decode(SecurePrefs.getString(K_LAST_BACKUP)), waiting,
-            repo()?.let { "${it.first}/${it.second}" } ?: CloudSync.DEFAULT_REPO)
+            repo()?.let { "${it.first}/${it.second}" } ?: CloudSync.DEFAULT_REPO,
+            SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
     }
 
     fun card(s: CloudSync.Status): List<Pair<String, String>> = CloudSync.card(s, ::toDay, Market.today())
@@ -492,6 +510,7 @@ object GitHubSync {
         return CloudSync.redact("GitHub sync: token ${if (s.tokenSet) "set" + (s.expiry?.let { ", expires $it" } ?: "") else "not set"} · " +
             "to ${s.repo} · " + (if (s.tokenSet && CloudSync.authRefused(s.lastTry)) "token invalid (GitHub refused it) · " else "") +
             "passphrase ${if (s.keyReady) "set" else "not set"} · last $t · last backup ${s.lastBackupOk?.let { toDay(it.atMs) } ?: "none"} · " +
+            "diagnostics ${s.lastDiagDay ?: "none"} · " +
             "days waiting ${s.waiting}")
     }
 

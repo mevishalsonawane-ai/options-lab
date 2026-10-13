@@ -205,6 +205,44 @@ python research/data/decrypt_live.py live-2026-10-13.irlive --extract days/
 It asks for the backup passphrase and checks every file against the day's manifest. Your own trades stay encrypted
 inside (only the phone opens them: Data & Harvest → Recordings → Export, with your PIN).
 
+### Daily diagnostics (for the research sessions)
+
+With each evening upload (same time and rules as above; "Upload now" sends today's so far, and the evening run replaces it)
+the phone sends one small file for that day: IraAlgo's release `diag-YYYY-MM`, asset `diag-YYYY-MM-DD.json.gz`. A re-run
+replaces that day's file, so there is only ever one per day. The GitHub sync card's **Diagnostics** line says the last day
+that went up; a failed upload shows in Problems found like any other.
+
+It is **not sealed**, on purpose: it is cleaned on the phone first, and the research sessions have no passphrase. What is
+never in it: tokens, keys, PINs, account or client ids, your name, phone or e-mail, broker order ids, and rupee balances,
+margins or P&L (an arm's P&L is in points and percent of the premium only). Every text goes through the diary's redaction
+and then a final scrub (GitHub tokens, JWTs, long letter-and-digit runs, digit runs of 9 or more, client-id shapes, rupee
+amounts and the figures after money words); tests prove it with a set of fake secrets. The recordings and backups, which
+hold your own trades, stay sealed.
+
+Read one on a PC (no passphrase needed):
+
+```
+python research/data/read_diagnostics.py diag-2026-10-13.json.gz          # a short summary
+python research/data/read_diagnostics.py --json diag-2026-10-13.json.gz   # the whole file
+```
+
+Schema 1 (built by `android/ira-core/.../DiagDay.kt`; a sample is `research/data/tests/diag_sample.json`, and a test keeps
+the phone and the sample in step):
+
+| Key | What |
+| --- | --- |
+| `schema`, `kind`, `day`, `generated_at`, `app`, `privacy`, `mode` | the file itself; the app's switches as on/off |
+| `arms[]` | one row per arm: `state` (armed, off, parked, awaiting_approval), `automatic`, `live_cleared`, `parked_indices`, `status` and `status_kind`; `today` (decisions, signals, taken, skipped, `skips` by reason, entries, exits, paper, live, wins, losses, points, avg_pct, sum_pct) and `all_days` (trades, since, wins, losses, points, avg_pct, sum_pct); `trades[]` (account paper/live, source label, right, entry/exit time and premium, why, points, pct, lots, open, unconfirmed, trail) |
+| `other_arms[]` | the other paper arms' one-line states (Night, VIX divergence, MCX, forge ideas) |
+| `decisions_since`, `decisions[]` | each verdict: time, arm, verdict, `kind` (taken, guard, lock, day_lock, kill_switch, flow, liquidity, pretrade, event, cap, exposure, lapsed, skipped_by_boss, refused, order_refused, no_quote, error, or a waiting kind), `outcome` (taken, skipped, waiting, holding, error), bar |
+| `orders[]`, `orders_by_source` | the day's orders, paper and live, with who placed each (never the order id) |
+| `health` | `errors` by kind, `unreadable`, `stream` drops, `lines` (app_health, speed, stream, github, order_speed, slippage in points, order_review, order_flow, zerodha_sync; as at the upload), `workers`, `sync` (failed, skipped, lines), `diary_lines` |
+| `timeline[]` | the Autopilot change timeline of the day; `own: true` is your own switch (the trail, the parks) |
+| `truncated` | how many items each long list lost to the size cap (256 KB before gzip; the newest are kept) |
+
+Decisions for Liquidity's books and Hero come from the app's memory since its last start (`decisions_since`); the other
+arms' come from the diagnostics diary. A morning catch-up run reads the evening's day from the diary and the books.
+
 ## 8. GitHub housekeeping
 
 - **Actions** tab: each push builds and tests the app. A red ✗ means that build has a problem; the previous green APK is

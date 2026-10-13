@@ -102,6 +102,20 @@ class WhatsNewChangelogTest {
         assertTrue("${ChargesCheck.HOLDOUT_TRADES}" in x.what && "${SmartStop.HOLDOUT_TRADES}" in x.what && "${DangerMeter.HOLDOUT_DAYS}" in x.what)
     }
 
+    @Test fun theDailyDiagnosticsAreSaidWithTheirPrivacy() {
+        // G3 (13 Oct): one small file a day with the evening upload, cleaned on the phone; P&L only in points and percent.
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-13-github-diagnostics" }
+        for (w in listOf("one small file", "taken or skipped and why", "points and percent", "no tokens, ids, names, phone, e-mail or rupee amounts",
+            "private data repository"))
+            assertTrue(w in x.what, w)
+        assertTrue("Diagnostics" in x.where && "GitHub sync" in x.where, x.where)
+        assertEquals("data", x.to)
+        assertFalse(x.jarvisOnly)
+        // Said right after the sync it rides on.
+        val ids = WhatsNew.ENTRIES.map { it.id }
+        assertEquals(ids.indexOf("2026-10-13-github-sync") + 1, ids.indexOf(x.id))
+    }
+
     @Test fun theGitHubSyncIsSaidWithItsSafety() {
         val x = WhatsNew.ENTRIES.first { it.id == "2026-10-13-github-sync" }
         // G4 (13 Oct): after the MCX evening close, 15:45 only on days without an MCX session.

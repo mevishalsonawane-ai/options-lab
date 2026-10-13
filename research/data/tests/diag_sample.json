@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "kind": "iraalgo-diagnostics",
+  "day": "2026-10-13",
+  "generated_at": "2026-10-13T23:41:05",
+  "app": "1.0 (build abc1234)",
+  "privacy": "Redacted on the phone: no tokens, keys, PINs, account or client ids, names, phone or e-mail, order ids, rupee balances, margins or P&L. Arm P&L is in points and percent of the premium.",
+  "mode": {"ai_trades_live": false, "kill_switch": false, "live": false, "paper_only_period": true, "real_orders_allowed": false},
+  "arms": [
+    {
+      "key": "liquidity",
+      "label": "Liquidity 15+5",
+      "state": "armed",
+      "automatic": true,
+      "live_cleared": false,
+      "parked_indices": ["FINNIFTY"],
+      "status": "BANKNIFTY 15-min: Holding a position.",
+      "status_kind": "other",
+      "today": {
+        "decisions": 4, "signals": 3, "taken": 1, "skipped": 2,
+        "skips": {"day_lock": 1, "liquidity": 1},
+        "entries": 3, "exits": 2, "paper": 2, "live": 1,
+        "wins": 1, "losses": 1, "points": 20.0, "avg_pct": 2.5, "sum_pct": 5.0
+      },
+      "all_days": {"trades": 3, "since": "2026-10-10", "wins": 2, "losses": 1, "points": 30.0, "avg_pct": 5.0, "sum_pct": 15.0},
+      "trades": [
+        {"account": "paper", "source": "Strategy: Liquidity 15+5", "right": "CE", "entry_at": "10:05:12", "entry": 200.0,
+         "exit_at": "10:40:00", "exit": 230.0, "why": "target", "points": 30.0, "pct": 15.0, "lots": 1.0, "open": false,
+         "unconfirmed": false, "trail": false},
+        {"account": "live", "source": "Strategy: Liquidity 15+5", "right": "PE", "entry_at": "11:00:00", "entry": 100.0,
+         "exit_at": "11:20:00", "exit": 90.0, "why": "stop", "points": -10.0, "pct": -10.0, "lots": 2.0, "open": false,
+         "unconfirmed": false, "trail": false},
+        {"account": "paper", "source": "Strategy: Liquidity 15+5", "right": "CE", "entry_at": "14:00:00", "entry": 150.0,
+         "exit_at": null, "exit": null, "why": null, "points": null, "pct": null, "lots": 1.0, "open": true,
+         "unconfirmed": false, "trail": true}
+      ]
+    },
+    {
+      "key": "orb",
+      "label": "ORB",
+      "state": "parked",
+      "automatic": true,
+      "live_cleared": false,
+      "parked_indices": [],
+      "status": "",
+      "status_kind": "other",
+      "today": {
+        "decisions": 1, "signals": 1, "taken": 0, "skipped": 1, "skips": {"kill_switch": 1},
+        "entries": 0, "exits": 0, "paper": 0, "live": 0, "wins": 0, "losses": 0, "points": 0.0, "avg_pct": null, "sum_pct": 0.0
+      },
+      "all_days": {"trades": 0, "since": null, "wins": 0, "losses": 0, "points": 0.0, "avg_pct": null, "sum_pct": 0.0},
+      "trades": []
+    }
+  ],
+  "other_arms": ["Night (R3): off"],
+  "decisions_since": "09:00:00",
+  "decisions": [
+    {"at": "10:05:00", "arm": "Liquidity 15m", "verdict": "entered", "kind": "taken", "outcome": "taken", "bar": "10:00"},
+    {"at": "10:05:01", "arm": "ORB", "verdict": "guard_refused: kill switch is on", "kind": "kill_switch", "outcome": "skipped", "bar": "10:00"},
+    {"at": "10:10:01", "arm": "ORB Sweep", "verdict": "no_sweep", "kind": "no_signal", "outcome": "waiting", "bar": null},
+    {"at": "10:50:00", "arm": "Liquidity 15m", "verdict": "liquidity_no_room", "kind": "liquidity", "outcome": "skipped", "bar": null},
+    {"at": "10:55:00", "arm": "Liquidity 5m", "verdict": "guard_refused: day lock: 2 losses", "kind": "day_lock", "outcome": "skipped", "bar": null}
+  ],
+  "orders": [
+    {"at": "10:05:12", "account": "paper", "source": "Liquidity 15+5", "symbol": "BANKNIFTY25OCT51200CE", "side": "BUY", "qty": 30,
+     "filled": 30, "status": "COMPLETE", "type": "MARKET", "avg": 200.0, "message": ""},
+    {"at": "11:00:00", "account": "live", "source": "Liquidity 15+5", "symbol": "BANKNIFTY25OCT51200PE", "side": "BUY", "qty": 60,
+     "filled": 60, "status": "COMPLETE", "type": "LIMIT", "avg": 100.0, "message": ""}
+  ],
+  "orders_by_source": {"live · Liquidity 15+5": 1, "paper · Liquidity 15+5": 1},
+  "health": {
+    "errors": {"missing required field: quantity": 2, "order # failed": 1},
+    "unreadable": {},
+    "stream": {"drops": 2, "last_at": "11:30:00", "whys": {"network lost": 1, "no data from Zerodha": 1}},
+    "lines": {
+      "app_health": "Health: 0 stalls today",
+      "order_speed": "Order speed: signal to fill p50 0.8 s, worst 2.1 s",
+      "slippage": "Slippage (median/p90 a unit, a cost positive): live today 0.45/1.20 pts (0.9/2.4 ticks) n2"
+    },
+    "workers": ["Workers (the watch has ended; as they last were):"],
+    "sync": {"failed": 1, "skipped": 1, "lines": ["23:40:00 upload skipped this time: the options-lab check failed (rate limit)",
+      "23:41:00 backup: failed: GitHub is having trouble", "23:42:00 live 2026-10-13: 2.1 MB uploaded"]},
+    "diary_lines": 12
+  },
+  "timeline": [
+    {"at": "09:30:00", "source": "autopilot", "agent": "Autopilot · Flow", "what": "Order flow: CONFIRM → SHADOW", "why": "3 losing skips",
+     "undo": "needs_pin", "scope": "live", "own": false},
+    {"at": "12:00:00", "source": "autopilot", "agent": "You (logged by Autopilot)", "what": "Liquidity paper trail: off → on",
+     "why": "your choice", "undo": "undoable", "scope": "paper", "own": true}
+  ],
+  "truncated": {}
+}

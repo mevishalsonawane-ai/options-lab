@@ -239,7 +239,18 @@ Not possible yet:
         phone.
       - Card: "Last backup to GitHub: date ✓". A failure, or no backup for 2 days, goes to Problems found.
 
-- [ ] G3. Nightly diagnostics to GitHub, with a daily fix loop (owner, 2026-10-13).
+- [x] G3. Nightly diagnostics to GitHub, with a daily fix loop (owner, 2026-10-13).
+      - Done 13 Oct (phone side): each evening run (and "Upload now") uploads ONE redacted file for its day,
+        `diag-YYYY-MM-DD.json.gz` in IraAlgo's release `diag-YYYY-MM` (a release asset like G1/G2, not a commit; a re-run
+        replaces the day's file). Built by ira-core's `DiagDay` (pure, tested), gathered by the app's `DiagDayHost` on the
+        worker's thread. Per arm: armed/off/parked, every verdict with its reason kind (guard, lock, day lock, flow,
+        liquidity, pre-trade, event, cap...), trades with times, premiums, points and percent, paper/live and source labels,
+        counts labelled `today` and `all_days`; the day's orders by source (no ids); health (errors by kind, order speed,
+        slippage in points, stream drops, workers, failed/skipped syncs); the change timeline with Boss's own switches.
+        Privacy: Diag.redact, then DiagDay.scrub (CloudSync.redact, Secrets.redact, JWTs, keys, client ids, rupees and money
+        figures, the holder's name/user id/login), proven by DiagDayTest's fake secrets. Not sealed (nothing personal in
+        it; research has no passphrase). Card: "Diagnostics: last day uploaded". Reader: `research/data/read_diagnostics.py`;
+        schema in MAINTENANCE.md ("Daily diagnostics"). Left: the daily fix loop (a Claude routine reading these files).
       - Phone (after G1/G2 merge, same uploader and token): every night AFTER THE MCX CLOSE (23:30 IST, 23:55 when US DST
         is on; from the app's MCX calendar; Wi-Fi + charging; Boss, 13 Oct) it commits
         that day's diagnostics to the private data repo `mevishalsonawane-ai/IraAlgo` at

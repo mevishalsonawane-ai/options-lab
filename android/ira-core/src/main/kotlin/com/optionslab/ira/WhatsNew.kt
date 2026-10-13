@@ -91,6 +91,10 @@ object WhatsNew {
             "Each evening after the MCX evening close (15:45 on days without an MCX session), on Wi-Fi while charging, the phone uploads each recorded day and a backup to GitHub (a private data-only repository, never the app's code), sealed with your backup passphrase so GitHub sees only noise. " +
                 "A new phone gets everything back with Restore from GitHub: strategies and Pine scripts return switched off, and your PIN, Live switches and tokens are never in it.",
             "Settings → Data and harvest → GitHub sync", to = "data"),
+        Entry("2026-10-13-github-diagnostics", OCT13, "Each evening's upload carries the day's diagnostics",
+            "With each evening's upload to the private data repository goes one small file for that day: each arm's signals, which were taken or skipped and why, its trades in points and percent, the app's health and the day's changes. " +
+                "It is cleaned on the phone first (no tokens, ids, names, phone, e-mail or rupee amounts), so the research sessions can read it to find and fix problems.",
+            "Settings → Data and harvest → GitHub sync (the Diagnostics line)", to = "data"),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
             "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
                 "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",
