@@ -148,3 +148,38 @@ stop / target exits, the baseline matches R20's V0 rule, and the look-ahead guar
 
 If a rule passes every gate, the write-up describes the exact rule a PAPER-only change would use; the parent session
 decides. If none passes, the write-up says so plainly.
+
+## Part B. The trading rules (written 13 Oct 2026 after the design-period event study, BEFORE any trading test)
+
+What the design event study showed (`results/events_design.md`; BANKNIFTY 361, NIFTY 364, FINNIFTY 396 sessions): the
+morning range's edges do not behave differently from lines at the same distance. Touches of OH / OL were rejected
+(3 closes inside) 29% of the time (347 of 1,211), the mirror twin 29% (358 of 1,256); after a reject, a hold, a fail or a
+retest the moves were about 0 (-0.06 to +0.02 ATR14 to the close, 45-52% further on), and the twin moved about as much.
+A 5-min break held (3 closes beyond) 63% of the time (688 of 1,099; twin 57%), a held break was retested within 0.10 x
+range 82% of the time and the retest closed beyond 78% of the time, but a held retest went on to the close only 45% of the
+time (-0.020 ATR, 442 events). The only clear split was range width: breaks on WIDE-range days (W >= 0.563 ATR14) carried
+to the close (+0.06 ATR, 56% further on, 329 events) and breaks on NARROW-range days (W < 0.407) faded (-0.02 ATR, 45%,
+391 events) - the opposite of "skip wide days". The 1x extension was reached after 31% of breaks (17% before a close
+back inside).
+
+Common to all six: BANKNIFTY and NIFTY (a day's net = the sum of both), both sides, at most 1 trade per side per index per
+day (the FIRST signal of that side; if it is outside the window or filtered, no trade that side), the decision = the close
+of the signalling candle (closing by 14:00), entry at the next minute's open, the ORB arm's contract (part A4).
+W = R / ATR14; the two cut points are the design terciles printed in `results/events_design.md` (0.407, 0.563).
+
+| id | entry signal (OH up / OL down) | stop | target | filter |
+|---|---|---|---|---|
+| `r22-brk15` | the first 15-min close beyond the edge (candle (b)) | -40 / -20 premium | +40 / +20 with the ladder | - |
+| `r22-retest` | 5-min break-and-retest: a HOLD (3 closes beyond), then the first bar back within 0.10R of the edge, if it closes beyond (candle (a)) | premium stop AND a 5-min close back inside the range (index) | +40 / +20 with the ladder | - |
+| `r22-brk15-x1` | as `r22-brk15` | -40 / -20 premium | the 1x extension (OH + R / OL - R) on the index; no premium target, no ladder (candle (c)) | - |
+| `r22-brk15-mid` | as `r22-brk15` | a 5-min close back through OM (index) INSTEAD of the premium stop (candle (d)) | +40 / +20 with the ladder | - |
+| `r22-brk15-nowide` | as `r22-brk15` | as `r22-brk15` | as `r22-brk15` | skip days with W >= 0.563 (candle (e), as asked) |
+| `r22-brk15-nonarrow` | as `r22-brk15` | as `r22-brk15` | as `r22-brk15` | skip days with W < 0.407 (the event study's split, the opposite of (e)) |
+
+Baseline (part A4) = today's ORB (R20's V0) on the same sessions. Twins (part A4): the random-level twin mirrors the
+rule's levels (edges, OM, extensions) around P10 on a random half of the days (W is unchanged by the mirror, so the
+filters are the same); the random-time twin's window = the rule's candles closing at or after 10:00 .. by 14:00 (15-min
+candles for the `brk15` rules, 5-min for `r22-retest`). BH family: these 6 rules x (G3, G4, G5) = 18 p-values + R20c's 12
++ R20 / R20b's 28 = 58.
+
+Nothing else is tuned. If a rule passes, the app rule would be the same rule on PAPER only (CLAUDE.md).
