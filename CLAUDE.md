@@ -40,6 +40,16 @@ notes; match the surrounding code.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
+- OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we
+  never miss a stop-loss or target"). While any position or order is open (paper or live, NSE or MCX):
+  - its prices stay on the live stream at full speed, and its stop, target, trail, lock, square-off and guard checks run
+    at full cadence; no battery, memory, saver or rest logic may slow, pause or skip them;
+  - when memory is short, everything else is released first (recorders, caches, the language model, charts), never the
+    position watch;
+  - after any restart or low-memory kill, the open positions and their stops are restored and watched FIRST, before any
+    other start-up work;
+  - live stops and targets also rest at the broker where possible (SL/GTT), so a dead phone cannot miss them.
+  Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.
 - Liquidity BANKNIFTY was frozen until 26 Oct 2026, but Boss UNFROZE it on 13 Oct on purpose ("paper costs nothing; for

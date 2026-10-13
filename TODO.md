@@ -393,3 +393,9 @@ Later (when profitable):
       - a read-only crypto context card (BTC/ETH price, funding, basis, DVOL) only if a live source is reachable from
         the phone (Binance's API is geo-blocked from the cloud; check from India);
       - tests for each, one WhatsNew entry, the usual review, CI and one APK.
+
+## W. Data watchdog (owner, 13–14 Oct)
+
+- W1 India brain v1 started 14 Oct on the data available then (branch claude/india-brain-v1). When the Dhan lake
+  completes, the watchdog runs that branch's REFRESH command (not a new build). The crypto brain is on claude/crypto-brain.
+  The Strategy Factory (F1) starts after the refresh.
