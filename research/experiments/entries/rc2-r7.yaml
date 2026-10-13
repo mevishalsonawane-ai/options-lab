@@ -13,8 +13,7 @@ period:
   design: 2024-03-02..2026-04-12 (772 expiries per coin)
   holdout: 2026-04-13..2026-10-13 12:00 UTC (184 expiries per coin; read once; partly seen by NN_CRYPTO/STRAD_CRYPTO)
 instruments:
-- BTC options (Delta India)
-- ETH options (Delta India)
+- CRYPTO
 features:
 - Deribit funding 8h rate vs its 60-day 2.5/97.5 percentiles
 - 1-h index move

@@ -12,8 +12,7 @@ data_version: 'Delta Exchange India public API: .DEXBTUSD/.DEETHUSD 5-min index 
 period:
   design: 2024-03-02..2026-04-12 (772 expiries per coin)
 instruments:
-- BTC
-- ETH
+- CRYPTO
 features:
 - live bid/ask by strike and expiry
 - ATM straddle by hours left

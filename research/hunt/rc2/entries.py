@@ -18,6 +18,7 @@ DATA = ("Delta Exchange India public API: .DEXBTUSD/.DEETHUSD 5-min index 2024-0
         "scratchpad, not in git.")
 PERIOD = dict(design="2024-03-02..2026-04-12 (772 expiries per coin)",
               holdout="2026-04-13..2026-10-13 12:00 UTC (184 expiries per coin; read once; partly seen by NN_CRYPTO/STRAD_CRYPTO)")
+# Instruments must be from the app knowledge pack's known set (KnowledgeTest): crypto entries use "CRYPTO".
 FEATURES = {
     "R1_asia_orb": ["00:00-01:00 UTC range", "5-min close"],
     "R2_eu_orb": ["07:00-08:00 UTC range", "5-min close"],
@@ -49,7 +50,7 @@ def main():
                  date="2026-10-13", doc=DOC,
                  hypothesis=f"Buying a Delta India BTC/ETH option on '{rule.title}', with a stop-loss and a profit lock, makes "
                             "money after real costs and beats random same-clock entries.",
-                 data_version=DATA, period=PERIOD, instruments=["BTC options (Delta India)", "ETH options (Delta India)"],
+                 data_version=DATA, period=PERIOD, instruments=["CRYPTO"],
                  features=FEATURES[name],
                  model_or_rule=f"{rule.title}; strike {rule.strike}; expiry >= {rule.min_left_h:g} h left; max hold {rule.max_hold_h:g} h; "
                                "exits: stop -40%/-25% (hero -50%/-70%) x step lock / trailing lock",
@@ -66,7 +67,7 @@ def main():
              family="market-facts", date="2026-10-13", doc=DOC,
              hypothesis="Describe spreads, premium decay, zero-to-hero odds, realised vs implied moves by hour and what "
                         "precedes big days, before choosing rules.",
-             data_version=DATA, period=dict(design=PERIOD["design"]), instruments=["BTC", "ETH"],
+             data_version=DATA, period=dict(design=PERIOD["design"]), instruments=["CRYPTO"],
              features=["live bid/ask by strike and expiry", "ATM straddle by hours left", "cheap OTM option multiples",
                        "hourly realised vs DVOL-implied", "big-day precursors", "Delta mark vs Deribit trade IV"],
              model_or_rule="descriptive", settings="research/hunt/rc2/anatomy.py, deribit_check.py", prereg=None,
