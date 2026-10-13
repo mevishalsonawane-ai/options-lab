@@ -123,6 +123,13 @@ Source paths prefixed `NTA:` are in D:\New Trading app.
   Follow the research gates: pre-register, walk-forward, locked holdout read once, real costs, BH across every variant
   tried, and log every idea in research/experiments/entries/, failures included. A version that passes the gates can
   come back on paper at once, logged and undoable in one tap, and labelled. A version that fails stays a note only.
+- [ ] R4. Before/after report for Boss (owner, 13 Oct: "show me before and after results after everything is done").
+  When R3, R19c and the 13–26 Oct paper run are finished, show one page with every arm and the whole portfolio on the
+  same days, BEFORE (today's plain rules) and AFTER (every change that passed):
+  - total P&L, P&L per day, % green days, win rate, average win and average loss;
+  - worst day, worst trade, max drawdown, the biggest winners cut short;
+  - backtest holdout and live paper shown separately, each with its sample size (trades and days);
+  - changes that failed listed too, with what they would have done.
 
 ## P. Position screen (owner, 2026-10-08)
 
