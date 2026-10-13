@@ -818,10 +818,24 @@ object OrbArms {
     /** Why a position's resting stop filled: the trade manager's lock (R12, ORB Fresh paper), the profit lock, or its stop. */
     private fun stopWhy(p: Position): String = when {
         p.mgrStop != null && p.stopTrigger != null && kotlin.math.abs(p.stopTrigger - p.mgrStop) < 1e-9 -> MANAGER_LOCK
-        // Boss's paper trail raised the stop to the price paid or higher (the -15% stop always rests under it).
-        p.trail != null && (p.stopTrigger ?: Double.NEGATIVE_INFINITY) >= p.entry - 1e-9 -> LiquidityTrail.WHY
+        // Boss's paper trail raised the stop to its own level (13 Oct review: a lab lock variant's stop is the lock's, not the trail's).
+        trailStopped(p) -> LiquidityTrail.WHY
         lockedStop(p) -> "profit_lock"
         else -> "stop"
+    }
+
+    /**
+     * Was [p]'s resting stop put where it is by Boss's paper give-back trail ([LiquidityTrail])? Its trigger is the trail's own
+     * level at the best price so far. Without the lab's lock ladder nothing else raises a Liquidity stop to the price paid or
+     * higher, so there any such stop is the trail's (a level from an earlier best whose move up had not gone through yet too).
+     * Under a lock variant only the trail's own level counts: a stop at the lock's level is the profit lock's.
+     */
+    private fun trailStopped(p: Position): Boolean {
+        if (p.trail == null) return false
+        val at = p.stopTrigger ?: return false
+        if (at < p.entry - 1e-9) return false
+        val own = LiquidityTrail.level(p.entry, p.peak, p.lot, p.trail, activateRs = p.trailFrom)
+        return (own != null && kotlin.math.abs(at - own) < 1e-6) || !p.ladder
     }
 
     /** An exit the trade manager decided (R12, ORB Fresh on paper only), and the fill of the stop its lock raised. */
@@ -1808,7 +1822,7 @@ object OrbArms {
                     atStop = cur.stopTrigger?.let { ltp <= it } == true, locked = locked, lockResting = false)
                     // Boss's paper trail given back to: sold as an earned lock is (its raised stop rests too, below). A stop the
                     // trail raised that the app sells itself is the trail's exit too.
-                    ?.let { if (it == "stop" && cur.trail != null && (cur.stopTrigger ?: Double.NEGATIVE_INFINITY) >= cur.entry - 1e-9) LiquidityTrail.WHY else it }
+                    ?.let { if (it == "stop" && trailStopped(cur)) LiquidityTrail.WHY else it }
                     ?: LiquidityTrail.WHY.takeIf { trailHit }
                 // The lock rests as the paper stop (moved up below), which the paper book fills; this sells at market only
                 // when that stop is not there or has not filled (no fresh price in the book's own pass).
@@ -2843,7 +2857,9 @@ object OrbArms {
         val lq = liqParamsOf(arm.source, now().toLocalDate(), live = false)
         val trigger = LiquidityRules.stopTrigger(fill.price, lq.stopPct)
         // Boss's own give-back trail (R19b / R19c failed: their opt-in switch, off by default): paper entries only, from +Rs 1,000 a lot.
-        val trail = LiquidityTrail.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.trailOn() }.getOrDefault(false))
+        // Only with the contract's lot known (13 Oct review): without it the trail has no points and the trade would run on plain
+        // rules while labelled "with ₹500 trail" and kept out of the plain-rules record.
+        val trail = LiquidityTrail.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.trailOn() }.getOrDefault(false), lot = c.lotSize)
         var stopId: String? = null
         if (trigger != null) {
             val stop = Paper.place(c, "SELL", (fill.quantity / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1), "SL-M", "MIS", null, trigger)

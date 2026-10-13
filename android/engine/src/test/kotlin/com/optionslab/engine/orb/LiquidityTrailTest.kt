@@ -113,10 +113,15 @@ class LiquidityTrailTest {
 
     @Test fun onlyPaperLiquidityEntriesWithTheSwitchOnCarryIt() {
         val liq = LiquidityRules.MID5
-        assertEquals(rs, LiquidityTrail.forEntry(liq, live = false, switchOn = true))
-        assertNull(LiquidityTrail.forEntry(liq, live = true, switchOn = true), "never live")
-        assertNull(LiquidityTrail.forEntry(liq, live = false, switchOn = false), "off by default")
-        assertNull(LiquidityTrail.forEntry(Arm("orb", "ORB"), live = false, switchOn = true), "Liquidity only")
+        assertEquals(rs, LiquidityTrail.forEntry(liq, live = false, switchOn = true, lot = 120))
+        assertNull(LiquidityTrail.forEntry(liq, live = true, switchOn = true, lot = 120), "never live")
+        assertNull(LiquidityTrail.forEntry(liq, live = false, switchOn = false, lot = 120), "off by default")
+        assertNull(LiquidityTrail.forEntry(Arm("orb", "ORB"), live = false, switchOn = true, lot = 120), "Liquidity only")
+        // 13 Oct review: no known lot, no trail (it would have no points, so the trade would run on plain rules while labelled trailed).
+        assertNull(LiquidityTrail.forEntry(liq, live = false, switchOn = true, lot = 0), "no lot known")
+        assertNull(LiquidityTrail.forEntry(liq, live = false, switchOn = true, lot = -1), "a broken lot")
+        assertNull(LiquidityTrail.forEntry(liq, live = false, switchOn = true, lot = null), "no lot at all")
+        assertNull(LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = false, switchOn = true, lot = 0)))
         assertEquals(LiquidityTrail.TRAILED, LiquidityTrail.label(rs))
         assertEquals(LiquidityTrail.PLAIN, LiquidityTrail.label(null))
     }
@@ -174,8 +179,8 @@ class LiquidityTrailTest {
 
     @Test fun aNewPaperEntryCarriesBossesActivation() {
         val liq = LiquidityRules.MID5
-        assertEquals(from, LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = false, switchOn = true)))
-        assertNull(LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = true, switchOn = true)), "never live")
+        assertEquals(from, LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = false, switchOn = true, lot = 120)))
+        assertNull(LiquidityTrail.forEntryFrom(LiquidityTrail.forEntry(liq, live = true, switchOn = true, lot = 120)), "never live")
         assertNull(LiquidityTrail.forEntryFrom(null))
     }
 }

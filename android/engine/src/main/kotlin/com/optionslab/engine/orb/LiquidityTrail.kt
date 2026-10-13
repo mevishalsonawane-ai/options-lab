@@ -80,9 +80,12 @@ object LiquidityTrail {
 
     /**
      * The give-back a NEW entry carries: [GIVE_BACK_RS] only on PAPER ([live] false), on a Liquidity book ([arm]), with Boss's
-     * switch on ([switchOn]); null otherwise. A live entry never carries it, whatever the switch says.
+     * switch on ([switchOn]) and the contract's [lot] known (13 Oct review: with no lot the trail has no points, so the trade
+     * would run on plain rules while labelled as trailed and kept out of the plain-rules record); null otherwise. A live
+     * entry never carries it, whatever the switch says.
      */
-    fun forEntry(arm: Arm, live: Boolean, switchOn: Boolean): Double? = if (switchOn && !live && arm.liquidity) GIVE_BACK_RS else null
+    fun forEntry(arm: Arm, live: Boolean, switchOn: Boolean, lot: Int?): Double? =
+        if (switchOn && !live && arm.liquidity && lot != null && lot > 0) GIVE_BACK_RS else null
 
     /** Where a NEW entry's trail starts: [ACTIVATE_RS] when it carries one ([giveBack] from [forEntry]), else null (no trail). */
     fun forEntryFrom(giveBack: Double?): Double? = if (giveBack != null) ACTIVATE_RS else null

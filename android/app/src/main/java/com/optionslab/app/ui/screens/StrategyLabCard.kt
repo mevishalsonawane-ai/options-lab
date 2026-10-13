@@ -111,6 +111,9 @@ internal fun LiquidityTrailRow(state: com.optionslab.ira.LiquidityFreeze.State, 
     val p = LocalPalette.current
     Text(com.optionslab.ira.LiquidityFreeze.trailNote(state),
         style = Type.label.copy(color = if (state.trail) p.amber else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-trail"))
+    // What it costs the 26 Oct decision (13 Oct review): said whether it is on or off, before the tap.
+    Text(com.optionslab.ira.LiquidityFreeze.TRAIL_RECORD, style = Type.label.copy(color = p.inkSoft, fontSize = 12.sp),
+        modifier = Modifier.padding(top = 4.dp).testTag("lab-liq-trail-record"))
     BrassButton(if (state.trail) com.optionslab.ira.LiquidityFreeze.TRAIL_OFF else com.optionslab.ira.LiquidityFreeze.TRAIL_ON,
         Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.trail) }
 }

@@ -84,6 +84,12 @@ object AutoChange {
          * change timeline shows it and its Undo switches the arm back on, on paper. Never proposed or applied by Autopilot.
          */
         ARM_PARK("strategies", "an arm parked on your choice"),
+        /**
+         * Boss's own Rs 500 give-back trail on the Liquidity PAPER books switched on or off from the Strategy lab card (13 Oct,
+         * [liqTrail]; research R19b / R19c failed, so it is their choice): logged so the change timeline shows it and its Undo
+         * flips the switch back. Never proposed or applied by Autopilot.
+         */
+        LIQ_TRAIL("strategies", "your ₹500 trail on Liquidity paper"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -235,6 +241,8 @@ object AutoChange {
             Kind.PAPER_ENTRIES -> if (c.to == PAUSED) Risk.LOWER else Risk.RAISE
             Kind.LIVE_ENTRIES -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
             Kind.ARM_PARK -> if (c.to == PARKED) Risk.LOWER else Risk.RAISE
+            // The trail only ever adds an earlier exit, on paper: on lowers risk, off takes that away.
+            Kind.LIQ_TRAIL -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -262,6 +270,14 @@ object AutoChange {
     const val ON_APPROVE = "on, approve each entry"
     const val PARKED = "parked"
     const val LIVE = "live"
+    /** A switch off ([Kind.LIQ_TRAIL]'s "from" when it was switched on, its "to" when switched off). */
+    const val SWITCHED_OFF = "off"
+
+    /**
+     * Boss's own changes, only logged here so they show in the timeline and undo in one tap (13 Oct: the arms' park, the
+     * Liquidity paper trail): never counted as Autopilot's change, never undone by "undo the last change" or "undo everything".
+     */
+    fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -305,6 +321,20 @@ object AutoChange {
         if (automatic) ON else ON_APPROVE, PARKED,
         "your choice (13 Oct): $label lost money after costs in every tested year ($tested)", Evidence(2, rs, AgentLessons.Confidence.STRONG, -1),
         Risk.LOWER, Scope.PAPER, what = "$label's switch")
+
+    /** The target of Boss's Liquidity paper trail switch ([Kind.LIQ_TRAIL]; no "liquidity" in it, so the paper-test freeze never holds its Undo). */
+    const val TRAIL_TARGET = "trail:liq_paper"
+
+    /**
+     * Boss switching their own Rs 500 give-back trail on the Liquidity PAPER books [on] or off ([Kind.LIQ_TRAIL]), for the change
+     * timeline: "off -> on" (or back), on paper only (live trades never use it), so its Undo needs no PIN.
+     */
+    fun liqTrail(on: Boolean): Change = Change(Kind.LIQ_TRAIL, TRAIL_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your choice (13 Oct): new Liquidity paper trades use your ₹500 give-back trail - failed research (R19b, R19c); " +
+            "they are kept apart from the plain-rules record for the 26 Oct decision"
+        else "your choice: new Liquidity paper trades are back on plain rules",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
+        what = "Liquidity's ₹500 trail (paper)")
 
     /** The change that undoes [c] (from and to swapped; its risk worked out afresh). */
     fun inverse(c: Change, reason: String): Change {
@@ -697,7 +727,7 @@ object AutoChange {
     }
 
     /** The newest change that can be undone ("undo the last change"). */
-    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && it.change.kind != Kind.ARM_PARK }
+    fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && !bossOwn(it.change.kind) }
 
     /** [id] undone by Boss: its target rests [REST_DAYS] days (Autopilot does not redo what he undid). */
     fun undone(book: Book, id: String, day: LocalDate): Book {
@@ -830,8 +860,9 @@ object AutoChange {
                        val reverted: Int, val asked: Int, val effect: Double)
 
     fun summary(book: Book, day: LocalDate): Summary {
-        // Boss's own park (13 Oct, Kind.ARM_PARK) is logged here, but it is not Autopilot's change: never counted as one.
-        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { it.change.kind != Kind.ARM_PARK })
+        // Boss's own changes (13 Oct: the park, the Liquidity paper trail; [bossOwn]) are logged here, but they are not
+        // Autopilot's: never counted as its change.
+        @Suppress("NAME_SHADOWING") val book = book.copy(entries = book.entries.filter { !bossOwn(it.change.kind) })
         val t = book.entries.filter { it.day == day && it.applied }
         return Summary(t.size, t.count { it.change.scope == Scope.PAPER }, t.count { it.change.scope == Scope.LIVE }, t.count { it.change.scope == Scope.SHADOW },
             book.entries.count { it.status == Status.PROBATION }, book.entries.count { it.status == Status.KEPT },
@@ -849,7 +880,7 @@ object AutoChange {
 
     /** "What did you change today?" */
     fun sayToday(book: Book, day: LocalDate): String {
-        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) && it.change.kind != Kind.ARM_PARK }
+        val t = book.entries.filter { it.day == day && (it.applied || it.status == Status.OFFERED) && !bossOwn(it.change.kind) }
         val reverted = book.entries.filter { it.closedOn == day && it.status == Status.REVERTED }
         if (t.isEmpty() && reverted.isEmpty()) return "I changed nothing by myself today, Boss."
         val lines = t.map { "• " + it.change.what + ": " + it.change.from + " → " + it.change.to + " (" + it.change.scope.words + ", " +

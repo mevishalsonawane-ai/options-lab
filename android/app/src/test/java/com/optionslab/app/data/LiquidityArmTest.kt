@@ -783,6 +783,86 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals(com.optionslab.engine.orb.LiquidityTrail.WHY, closed.why)
     }
 
+    /** 13 Oct review: the trail starts at exactly +Rs 1,000 a lot (R19c, Boss's rule) - a hair under it, the stop stays put. */
+    @Test fun theTrailStartsAtExactlyPlusRs1000ALot() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals(30, p.lot)
+        val edge = p.entry + com.optionslab.engine.orb.LiquidityTrail.ACTIVATE_RS / 30     // +Rs 1,000 a lot, to the paisa
+        val own = com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry)
+        // One tick under the edge (+Rs 998.50 a lot): not yet, the stop stays at -15%.
+        upstox.price(ceKey, edge - 0.05)
+        tick(LocalTime.of(13, 6))
+        assertEquals(own, row().today.single().stopTrigger)
+        // At the edge itself: the stop moves up to the best less Rs 500 a lot, never under +Rs 500 a lot.
+        upstox.price(ceKey, edge)
+        tick(LocalTime.of(13, 7))
+        val want = com.optionslab.engine.orb.LiquidityTrail.level(p.entry, edge, 30, 500.0, activateRs = 1000.0)
+        assertTrue("the edge starts the trail", want != null)
+        assertEquals(want!!, row().today.single().stopTrigger!!, 1e-9)
+        assertTrue((want - p.entry) * 30 >= 500.0 - 1e-6)
+        assertTrue(row().today.single().open)
+    }
+
+    /**
+     * 13 Oct review: a trailed trade is kept out of the plain-rules records the 26 Oct decision reads - the paper test's judge
+     * (said apart, labelled) and the paper stop rule.
+     */
+    @Test fun aTrailedTradeIsKeptOutOfThePaperTestAndThePaperStopRule() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        upstox.price(ceKey, p.entry + 40.0)
+        tick(LocalTime.of(13, 6))
+        upstox.price(ceKey, p.entry + 5.0)
+        at(LocalTime.of(13, 7))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open); assertEquals(500.0, closed.trail!!, 0.0)
+        assertEquals("the paper stop rule counts plain-rules trades only", 0, OrbArms.liquidityStopPaperHint.trades)
+        row().test?.let { t ->
+            assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
+            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, with ₹500 trail (failed research, your choice): 1 trade,"))
+        }
+        assertTrue("not in the forward check either", ForwardRecords.liquidity(runBlocking { OrbArms.closedPaper() }).isEmpty())
+        // Jarvis's Liquidity record: the plain rules' (none yet), the trailed trade on a labelled line of its own.
+        assertTrue(com.optionslab.app.ira.IraBots.tradeOf(closed).trail)
+        val said = runBlocking { com.optionslab.app.ira.IraBots.liquidityRecord(com.optionslab.ira.LiquidityRecord.Q()) }
+        assertTrue(said, said.startsWith("Liquidity 15+5 has no closed paper trade on plain rules in its book yet"))
+        assertTrue(said, said.contains("With your ₹500 trail (failed research, your choice), kept apart from the plain-rules record above: 1 trade, "))
+    }
+
+    /**
+     * 13 Oct review: with the trail on under a lab lock variant, a stop that rests at the LOCK's level (the trail not started yet)
+     * fills as the profit lock, not as the trail.
+     */
+    @Test fun underALockVariantAStopAtTheLocksLevelIsTheProfitLockNotTheTrail() = withLockVariant(0.3) { withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertTrue(p.ladder); assertEquals(500.0, p.trail!!, 0.0)
+        // +25 points (+Rs 750 a lot): the lock's first rung (a quarter of its 30% reference) is earned, the trail (+Rs 1,000) is not.
+        upstox.price(ceKey, p.entry + 25.0)
+        tick(LocalTime.of(13, 6))
+        val held = row().today.single()
+        assertTrue(held.open)
+        assertTrue("the lock moved the stop to the price paid or higher", held.stopTrigger!! >= p.entry)
+        assertNull("the trail has not started", com.optionslab.engine.orb.LiquidityTrail.level(p.entry, held.peak, 30, 500.0, activateRs = 1000.0))
+        // Back under it: the paper book fills the resting stop - the lock's, so booked as the lock.
+        upstox.price(ceKey, p.entry - 5.0)
+        at(LocalTime.of(13, 7))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals("profit_lock", closed.why)
+    } }
+
     // ---- review G2-4 / G2-8 (11 Oct): Liquidity under a paper profit-lock variant ----
 
     /** A paper profit-lock variant for Liquidity in force today ([lock] of the premium paid), as the lab promotes one (S9: exits only). */

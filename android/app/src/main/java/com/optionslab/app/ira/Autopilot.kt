@@ -335,6 +335,12 @@ internal object Autopilot {
                 }
                 said.takeIf { it.contains("armed on paper") }
             }
+            // Boss's own Liquidity paper trail switch ([logBossTrail]): only its Undo applies here - the switch flipped back,
+            // without logging the flip again (log = false: the Undo marks this entry undone, nothing new is recorded). Paper only.
+            AutoChange.Kind.LIQ_TRAIL -> {
+                if (c.target != AutoChange.TRAIL_TARGET || (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF)) return null
+                com.optionslab.app.data.LiquidityTest.setTrail(c.to == AutoChange.ON, log = false)
+            }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
                 if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
@@ -653,6 +659,36 @@ internal object Autopilot {
                 synchronized(lock) {
                     // Once: a second load of an old book (a restore) never logs it twice.
                     if (_book.value.entries.none { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == c.target })
+                        _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
+                    save()
+                }
+            }
+        }
+    }
+
+    /** One lane for [logBossTrail]: the switch's flips are logged in the order they were made. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val trailLane = Dispatchers.IO.limitedParallelism(1)
+
+    /**
+     * Boss switched their own Rs 500 give-back trail on the Liquidity PAPER books [on] or off ([com.optionslab.app.data.LiquidityTest.setTrail],
+     * the Strategy lab card): logged as Boss's (kept, not on probation, never counted as Autopilot's change) so "Today's
+     * changes" shows it and one tap undoes it (the switch flipped back, on paper). A switch already logged at the same value
+     * (the newest such entry, still applied) is not logged twice. In the background, on Autopilot's own worker: the switch
+     * never waits for the log's disk.
+     */
+    fun logBossTrail(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.liqTrail(on)
+        val note = if (on) "your choice; live trades never use it" else "your choice"
+        // One lane, in the order Boss flipped it: two quick taps are logged as they were made.
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val last = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.LIQ_TRAIL && it.change.target == c.target }
+                    if (last == null || !last.applied || last.change.to != c.to)
                         _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }

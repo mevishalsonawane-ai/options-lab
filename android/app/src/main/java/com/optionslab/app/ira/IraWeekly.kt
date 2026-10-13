@@ -160,6 +160,8 @@ internal object IraWeekly {
         runCatching { com.optionslab.app.data.OrbArms.closedPaper() }.getOrDefault(emptyList()).forEach { p ->
             val exit = p.exitTime?.toLocalDate() ?: return@forEach
             if (exit.isBefore(from)) return@forEach
+            // Liquidity's plain-rules record only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) are left out of it.
+            if (p.trail != null) return@forEach
             val net = (p.grossPnl ?: 0.0) - p.charges
             val book = books[p.arm]
             when {

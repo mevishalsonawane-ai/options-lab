@@ -75,9 +75,10 @@ object ChangeTimeline {
                 else -> if (AutoChange.undoNeedsPin(c) || undoNeedsPin(e)) UndoState.NEEDS_PIN else UndoState.UNDOABLE
             }
             Item("ap:${e.id}", if (tuning) Source.SPECIALISTS else Source.AUTOPILOT, e.atMs,
-                // Boss's own park (13 Oct), logged here so it can be undone in one tap: said as Boss's, not Autopilot's.
-                if (tuning) Source.SPECIALISTS.agent else if (c.kind == AutoChange.Kind.ARM_PARK) "You (logged by Autopilot)" else "Autopilot · ${c.kind.agent}",
-                "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id, own = c.kind == AutoChange.Kind.ARM_PARK)
+                // Boss's own changes (13 Oct: the park, the Liquidity paper trail), logged here so each can be undone in one tap:
+                // said as Boss's, not Autopilot's.
+                if (tuning) Source.SPECIALISTS.agent else if (AutoChange.bossOwn(c.kind)) "You (logged by Autopilot)" else "Autopilot · ${c.kind.agent}",
+                "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id, own = AutoChange.bossOwn(c.kind))
         }
 
     /** The lab's automatic paper promotions on [day] (a live rule moves back only through its own PIN flow). */

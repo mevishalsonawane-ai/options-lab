@@ -60,6 +60,9 @@ object LiquidityFreeze {
     /** The switch's name on the Strategy lab card. */
     const val TRAIL_ON = "Try your ₹1,000 / ₹500 trail on paper"
     const val TRAIL_OFF = "Back to plain rules"
+    /** The card's line under the switch (13 Oct review): what switching it on costs the plain-rules record. */
+    const val TRAIL_RECORD = "While it is on, new Liquidity BANKNIFTY paper trades use your trail, so the plain-rules record " +
+        "(used for the 26 Oct decision) does not grow."
 
     /**
      * The switch's line: what the trail is, that it FAILED the research (with its numbers) and is Boss's choice, that it is
