@@ -511,10 +511,16 @@ object KiteStream {
      */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        ticks.clear(); paths.clear(); candles.clear()
+        ticks.clear(); paths.clear(); candles.clear(); touched.clear()
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF
+    }
+
+    /** TEST ONLY: the instruments a price read keeps the stream awake for now (Battery, 14 Oct). Throws unless BuildConfig.DEBUG. */
+    internal fun touchedForTest(): Set<Long> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        return touched.keys.toSet()
     }
 
     /** TEST ONLY: a text frame as if the socket had brought it (an order update). Throws unless BuildConfig.DEBUG. */

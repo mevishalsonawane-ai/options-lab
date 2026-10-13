@@ -262,12 +262,23 @@ object OrderFlowLive {
     }
 
     /** The commodities the armed MCX bots trade (their futures' flow confirms their entries). */
-    private fun mcxNames(): List<String> {
+    /**
+     * The MCX futures followed: an armed arm's, while something is held or working on MCX or inside that arm's own entry
+     * minutes (Battery, 14 Oct: [com.optionslab.ira.McxRest.followFutures]; before, all evening with an arm merely switched
+     * on, which kept the 250 ms pump and its per-second work running to 23:30).
+     */
+    internal fun mcxNames(): List<String> {
+        val open = runCatching { McxMarket.isOpen() }.getOrDefault(false)
+        if (!open) return emptyList()
+        val held = runCatching { McxMarket.heldQuick() }.getOrDefault(true)
+        val now = McxMarket.now()
+        val minute = now.hour * 60 + now.minute
+        fun want(arm: String) = com.optionslab.ira.McxRest.followFutures(arm, McxPaperArms.armed(arm), held, minute, open)
         val names = ArrayList<String>()
-        if (McxPaperArms.armed(com.optionslab.engine.mcx.McxEveRules.SOURCE)) names += com.optionslab.engine.mcx.McxEveRules.UNDERLYING
-        if (McxPaperArms.armed(com.optionslab.engine.mcx.McxMorningRules.SOURCE)) names += com.optionslab.engine.mcx.McxMorningRules.UNDERLYING
-        if (McxPaperArms.armed(com.optionslab.engine.mcx.McxUsSilverRules.SOURCE)) names += com.optionslab.engine.mcx.McxUsSilverRules.UNDERLYING
-        if (McxPaperArms.armed(com.optionslab.engine.mcx.McxTrendRules.SOURCE)) names += com.optionslab.engine.mcx.McxTrendRules.LEGS
+        if (want(com.optionslab.engine.mcx.McxEveRules.SOURCE)) names += com.optionslab.engine.mcx.McxEveRules.UNDERLYING
+        if (want(com.optionslab.engine.mcx.McxMorningRules.SOURCE)) names += com.optionslab.engine.mcx.McxMorningRules.UNDERLYING
+        if (want(com.optionslab.engine.mcx.McxUsSilverRules.SOURCE)) names += com.optionslab.engine.mcx.McxUsSilverRules.UNDERLYING
+        if (want(com.optionslab.engine.mcx.McxTrendRules.SOURCE)) names += com.optionslab.engine.mcx.McxTrendRules.LEGS
         return names.distinct()
     }
 
@@ -310,7 +321,10 @@ object OrderFlowLive {
         if (testManual) return
         if (!pumping.compareAndSet(false, true)) return
         scope.launch {
+            // Battery (14 Oct): the pump's minutes today for the "Battery today" line (memory, the pump's own thread).
+            runCatching { com.optionslab.app.work.BatteryMeter.meter.on(com.optionslab.ira.LoopMeter.ORDER_FLOW) }
             try { pump() } finally {
+                runCatching { com.optionslab.app.work.BatteryMeter.meter.off(com.optionslab.ira.LoopMeter.ORDER_FLOW) }
                 pumping.set(false)
                 if (queue.isNotEmpty()) kick()
             }

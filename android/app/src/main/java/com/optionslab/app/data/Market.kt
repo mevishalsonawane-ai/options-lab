@@ -63,6 +63,13 @@ object Market {
     /** NSE F&O trades now: a trading day, 09:15 to [foClose] (15:40 from 3 Aug 2026). The app's "Market open". */
     fun isOpen(): Boolean = now().let { isOpenAt(it.toLocalDate(), it.hour * 60 + it.minute) }
 
+    /**
+     * Battery (14 Oct): milliseconds until F&O's next session opens (0 while one is open), on the holiday calendar, less
+     * [leadMs]; at most three hours at a time ([com.optionslab.ira.RestClock]). For the loops that rest outside market hours.
+     */
+    fun untilOpenMs(leadMs: Long = 0L): Long =
+        com.optionslab.ira.RestClock.untilOpenMs(now().toLocalDateTime(), OPEN, { foClose(it) }, { isTradingDay(it) }, leadMs)
+
     /** F&O trades on [d] at [minute] (minutes of the day, IST). */
     fun isOpenAt(d: LocalDate, minute: Int): Boolean = isTradingDay(d) && com.optionslab.engine.NseHours.foOpen(d, minute)
 

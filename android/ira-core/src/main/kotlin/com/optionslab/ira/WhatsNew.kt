@@ -51,10 +51,15 @@ object WhatsNew {
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
     private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
+    private val OCT14: LocalDate = LocalDate.of(2026, 10, 14)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-14-battery-rest", OCT14, "Battery: background work rests when nothing needs it",
+            "Battery: the evening MCX watch, the order-flow recorder and other background work now rest when nothing needs them, so the phone should last the day again. " +
+                "With an MCX position open, paper or live, every stop and exit is checked as often as before, and a new setting chooses when Jarvis listens for his name (Always stays the default).",
+            "Lab → Health → Background work today (also in the diagnostics); Jarvis's page → Listen for \"Jarvis\""),
         Entry("2026-10-13-orb-family-parked", OCT13, "ORB, ORB Fresh, Sweep and Range Fade parked",
             "On your choice, these four arms are paused once for research (they will be studied again on the full Dhan data), because each lost money after costs in every tested year; an open position is still managed to its own exit. " +
                 "Each row says \"parked on your choice (13 Oct)\" with a tap to switch it back on, and the morning check and Jarvis no longer nag about them.",

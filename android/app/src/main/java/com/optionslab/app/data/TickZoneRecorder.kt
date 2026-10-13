@@ -4,6 +4,7 @@ import android.content.Context
 import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
 import com.optionslab.ira.LiveRecord
+import com.optionslab.ira.TickRest
 import com.optionslab.ira.TickZone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +32,16 @@ import java.util.zip.GZIPOutputStream
  *    tick from memory, copies it into a [TickZone.Snap] and adds the second to a bounded queue ([TickZone.SecondQueue]:
  *    a short lock, never a wait, never the settings vault, a file or the network; past ten minutes waiting the oldest
  *    second is dropped and counted).
- *  - The writer (IO, every 5 s): turns the seconds into rows ([TickZone.TICKS_FILE]), feeds each instrument's
- *    [TickZone.Flow] and writes the closed minutes ([TickZone.FLOW_FILE]); every second not recorded becomes a gap run.
+ *  - The writer (IO, once a minute; every 5 s before 14 Oct): turns the seconds into rows ([TickZone.TICKS_FILE]), feeds
+ *    each instrument's [TickZone.Flow] and writes the closed minutes ([TickZone.FLOW_FILE]); every second not recorded
+ *    becomes a gap run. The rows are the same as with the 5 s writer (the queue holds ten minutes of seconds); a process
+ *    killed between two writes loses at most the last minute's seconds, which is accepted.
+ *
+ * Battery (14 Oct, Boss: "my phone's battery drains in 3-4 hours"; [TickRest]): the three loops ran every second, 5 s and
+ * 30 s all night and all weekend. Outside NSE's hours (nights, weekends, holidays, from the Market calendar) each now waits
+ * once until a minute before the next open. The layout filters the day's option list once a day and rebuilds the watch-list
+ * only when the money moves a strike (or the day, the futures or the narrowing change). Under Android's battery saver or
+ * a low battery not charging, it records the futures, VIX and ATM±1 only (a diary line says so); it never stops for it.
  *
  * Files sit beside the live recorder's in noBackupFilesDir/recordings/YYYY-MM-DD/. Raw tick files are deleted after
  * [TickZone.KEEP_TICK_DAYS] days (or over [TickZone.TICK_TOTAL_CAP_BYTES]); the minute files follow [LiveRecorder.keepDays].
@@ -58,15 +67,40 @@ object TickZoneRecorder {
 
     fun enabled(): Boolean = !com.optionslab.app.BuildConfig.GOLD
 
+    @Volatile private var appContext: Context? = null
+
     fun init(context: Context) {
         if (!enabled()) return
+        appContext = context.applicationContext
         root = File(context.applicationContext.noBackupFilesDir, DIR)
         if (jobs.any { it.isActive }) return
         jobs = listOf(
-            scope.launch { while (true) { if (!testOff) runCatching { layout() }; delay(30_000) } },
+            scope.launch { while (true) { if (!testOff) runCatching { layout() }; delay(TickRest.LAYOUT_MS); layoutRest() } },
             CoroutineScope(SupervisorJob() + Dispatchers.Default).launch { sampler() },
-            scope.launch { while (true) { delay(5_000); if (!testOff) runCatching { drain(System.currentTimeMillis()) } } },
+            scope.launch {
+                while (true) {
+                    delay(TickRest.DRAIN_MS)
+                    if (!testOff) runCatching { drain(System.currentTimeMillis()) }
+                    // The day's run written and closed, nothing waiting: asleep until the next open.
+                    if (queue.size() == 0 && !runOpen) restUntilOpen()
+                }
+            },
         )
+    }
+
+    /** Milliseconds to a minute before NSE's next open (0 in market hours, or when it cannot be told). */
+    internal fun untilOpenMs(): Long = runCatching { Market.untilOpenMs(leadMs = 60_000L) }.getOrDefault(0L)
+
+    /** Outside market hours: one wait until a minute before the next open (Market's calendar), not a look each second. */
+    private suspend fun restUntilOpen() { val ms = untilOpenMs(); if (ms > 0) delay(ms) }
+
+    /** The layout's rest outside market hours: the watch-list dropped first, so the next open builds it afresh. */
+    private suspend fun layoutRest() {
+        val ms = untilOpenMs()
+        if (ms <= 0) return
+        if (list.isNotEmpty()) runCatching { follow(emptyList()) }
+        lastKey = null
+        delay(ms)
     }
 
     /** TEST ONLY: the loops do nothing (the tests sample and drain by hand). Throws unless BuildConfig.DEBUG. */
@@ -75,31 +109,71 @@ object TickZoneRecorder {
 
     // ---- the watch-list ------------------------------------------------------------------------------------------------
 
+    // The layout's own state (the layout loop's coroutine, or a test calling [layout]).
+    /** The day and the instrument list's size the options below were filtered from. */
+    private var optionsFor: Pair<LocalDate, Int>? = null
+    private var optionsCache: Map<String, List<TickZone.Inst>> = emptyMap()
+    /** Each index's strikes of its nearest expiry (the money's strike is looked up in these). */
+    private var nearStrikes: Map<String, List<Double>> = emptyMap()
+    private var lastKey: TickRest.Key? = null
+    @Volatile private var narrowed: Boolean? = null
+
+    /** TEST ONLY: battery saver as the test says (null: the phone's). */
+    @Volatile internal var saverForTest: Boolean? = null
+
+    /** Android's battery saver, or the battery low and not charging ([TickRest.narrow]). */
+    private fun saverNow(): Boolean {
+        saverForTest?.let { return it }
+        val ctx = appContext ?: return false
+        val power = runCatching { ctx.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true }.getOrDefault(false)
+        val (percent, charging) = com.optionslab.app.work.Battery.state(ctx)
+        return TickRest.narrow(power, percent, charging)
+    }
+
     /** The instruments to follow (only with a Zerodha session; otherwise none and the stream owner cleared). */
     internal suspend fun layout() {
         if (root == null) return
         // Only while the stream runs (it is never started for this) and recording is on.
         if (!Broker.loggedIn || KiteStream.status.value == KiteStream.Status.OFF || runCatching { LiveRecorder.on }.getOrDefault(true).not()) {
             if (list.isNotEmpty()) follow(emptyList())
+            lastKey = null
             return
         }
         val today = Market.today()
         val futs = runCatching { Kite.nearestFutures(Broker.futures(), today) }.getOrDefault(emptyMap())
         val futures = TickZone.INDICES.mapNotNull { n -> futs[n]?.let { n to TickZone.Inst(it.token, it.tradingSymbol, n, TickZone.Kind.FUT, expiry = it.expiry) } }.toMap()
         val all = runCatching { Broker.cachedInstruments() }.getOrNull().orEmpty()
-        val options = TickZone.INDICES.associateWith { n ->
-            all.filter { it.name == n && !it.expiry.isBefore(today) && (it.right == Right.CE || it.right == Right.PE) }.map {
-                TickZone.Inst(it.token, it.tradingSymbol, n, if (it.right == Right.CE) TickZone.Kind.CE else TickZone.Kind.PE, it.strike, it.expiry)
+        // Battery (14 Oct): the day's options filtered once (again only when the day or the list changes), not every 30 s.
+        if (optionsFor != today to all.size) {
+            optionsCache = TickZone.INDICES.associateWith { n ->
+                all.filter { it.name == n && !it.expiry.isBefore(today) && (it.right == Right.CE || it.right == Right.PE) }.map {
+                    TickZone.Inst(it.token, it.tradingSymbol, n, if (it.right == Right.CE) TickZone.Kind.CE else TickZone.Kind.PE, it.strike, it.expiry)
+                }
             }
+            nearStrikes = optionsCache.mapValues { (_, o) -> o.mapNotNull { it.expiry }.minOrNull()?.let { e -> o.filter { it.expiry == e }.mapNotNull { it.strike }.distinct() }.orEmpty() }
+            optionsFor = today to all.size
         }
+        val options = optionsCache
         // The money from the index's own tick, else its future's.
         val spots = TickZone.INDICES.associateWith { n ->
             Broker.indexToken(n)?.let { KiteStream.seen(it) }?.tick?.last?.takeIf { it > 0 }
                 ?: futures[n]?.let { KiteStream.seen(it.token) }?.tick?.last?.takeIf { it > 0 }
         }
         val vix = Broker.indexToken("INDIAVIX")?.let { TickZone.Inst(it, "INDIA VIX", "INDIAVIX", TickZone.Kind.VIX) }
-        follow(TickZone.watchList(futures, options, spots, vix))
+        val narrow = saverNow()
+        TickRest.narrowNote(narrowed, narrow)?.let { runCatching { Diag.record("tickzone", it) } }
+        narrowed = narrow
+        val each = TickRest.eachSide(narrow)
+        // Rebuilt only when the money moved a strike, or the day, the futures or the narrowing changed.
+        val key = TickRest.Key(today, TickZone.INDICES.associateWith { TickRest.atm(nearStrikes[it].orEmpty(), spots[it]) }, each,
+            futures.values.map { it.token } + listOfNotNull(vix?.token))
+        if (!TickRest.relayout(lastKey, key)) return
+        lastKey = key
+        follow(TickZone.watchList(futures, options, spots, vix, each))
     }
+
+    /** Whether the recording is narrowed now (the card; null before the first layout). */
+    fun narrowedNow(): Boolean? = narrowed
 
     private fun follow(l: List<TickZone.Inst>) {
         if (l.map { it.token } != list.map { it.token }) list = l
@@ -110,13 +184,22 @@ object TickZoneRecorder {
 
     private suspend fun sampler() {
         var prev: Long? = null
+        var was = false
         while (true) {
             // Just past each second's start, so the second's ticks are in.
             delay(1_000L - Math.floorMod(System.currentTimeMillis(), 1_000L) + 20L)
             val nowMs = System.currentTimeMillis()
             val sec = nowMs / 1000
             val active = root != null && !testOff && runCatching { LiveRecorder.on && Market.isOpen() }.getOrDefault(false)
-            if (!active) { prev = null; continue }
+            if (active != was) { was = active; runCatching { com.optionslab.app.work.BatteryMeter.meter.set(com.optionslab.ira.LoopMeter.RECORDER, active) } }
+            if (!active) {
+                prev = null
+                // Battery (14 Oct): outside market hours one wait to a minute before the next open, not a look each second;
+                // recording switched off, a look every 30 s.
+                val ms = untilOpenMs()
+                if (ms > 0) delay(ms) else if (!testOff && !runCatching { LiveRecorder.on }.getOrDefault(true)) delay(30_000)
+                continue
+            }
             if (prev == sec) continue
             runCatching { sample(sec, prev, nowMs) }
             prev = sec
@@ -162,6 +245,8 @@ object TickZoneRecorder {
     private var written: Long? = null
     private var listWritten: List<TickZone.Inst>? = null
     private var fullNoted: LocalDate? = null
+    /** A run is being written (the last second written is not closed yet): the writer does not rest yet. */
+    @Volatile private var runOpen = false
 
     /** Everything queued turned into rows and written; minutes and gap runs closed once the sampler has stopped. */
     internal suspend fun drain(nowMs: Long) = writeLock.withLock {
@@ -221,6 +306,7 @@ object TickZoneRecorder {
             } else for (f in flows.values) aggLine(f.roll(nowSec - 5))
             flush(cur)
         }
+        runOpen = written != null
     }
 
     /** The open gap runs and each instrument's last minute, closed (rows for the tick and minute files). */
@@ -294,6 +380,7 @@ object TickZoneRecorder {
         // Anything the app's own loops queued before the switch went off is forgotten.
         queue.drain(); lastSec = null
         day = null; flows = HashMap(); gaps = TickZone.Gaps(); written = null; listWritten = null; insts.clear(); fullNoted = null; prunedOn = null
+        lastKey = null; optionsFor = null; narrowed = null; saverForTest = null; runOpen = false
     }
 
     /** TEST ONLY: not recording, and the writer's state forgotten. */
@@ -301,6 +388,7 @@ object TickZoneRecorder {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
         queue.drain(); lastSec = null; list = emptyList(); root = null
         writeLock.withLock { flows = HashMap(); gaps = TickZone.Gaps(); day = null; written = null; listWritten = null; insts.clear(); fullNoted = null; prunedOn = null }
+        lastKey = null; optionsFor = null; narrowed = null; saverForTest = null; runOpen = false
     }
 
     /** TEST ONLY: the watch-list followed now. */

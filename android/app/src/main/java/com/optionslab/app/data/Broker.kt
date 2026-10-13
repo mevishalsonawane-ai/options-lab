@@ -786,10 +786,12 @@ object Broker {
      * are answered from it at once; only the rest go to Kite's quote API (and are
      * followed by the stream from then on).
      */
-    suspend fun quotes(keys: List<String>): Map<String, Quote> {
+    suspend fun quotes(keys: List<String>, keepStream: Boolean = true): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
         val tokens = keys.associateWith { tokenOf(it) }
-        KiteStream.touch(tokens.values.filterNotNull())
+        // [keepStream] false (Battery, 14 Oct: the MCX price reads with nothing held on MCX): answered from the stream if it
+        // runs, else by the quote call, without keeping the stream awake for these instruments.
+        if (keepStream) KiteStream.touch(tokens.values.filterNotNull())
         val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed

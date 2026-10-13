@@ -109,6 +109,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Journal.init(this)
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
+        // Battery (14 Oct): the minutes each background loop ran today, for the diagnostics and the Health page.
+        com.optionslab.app.work.BatteryMeter.init()
         // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).
         com.optionslab.app.data.FlowGate.init(this)
         com.optionslab.app.data.SmartWorkers.init(this)

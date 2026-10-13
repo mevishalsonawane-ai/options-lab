@@ -179,6 +179,38 @@ class TickZoneRecorderTest : RobolectricTest() {
         LiveRecorder.on = true
     }
 
+    @Test fun batterySaverNarrowsTheRecordingToAtmPlusMinusOneWithADiaryLineAndNeverStopsIt() {
+        // Battery, 14 Oct: under Android's battery saver (or a low battery not charging) the futures, VIX and ATM±1 only.
+        for (i in -6..6) for (r in listOf("CE", "PE")) {
+            val k = 52_000.0 + i * 100
+            kite.instruments += FakeKite.Ins(33_000_000L + (i + 6) * 2 + (if (r == "CE") 0 else 1), "BANKNIFTY-${expiry}-${k.toInt()}$r", "BANKNIFTY", expiry, k, r, 30)
+        }
+        runBlocking { Broker.instruments() }
+        KiteStream.liveForTest(true)
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(260_105L, 52_040.0, tradable = false)))
+        TickZoneRecorder.saverForTest = true
+        runBlocking { TickZoneRecorder.layout() }
+        fun opts() = TickZoneRecorder.listForTest().filter { it.und == "BANKNIFTY" && (it.kind == TickZone.Kind.CE || it.kind == TickZone.Kind.PE) }
+        assertEquals((-1..1).map { 52_000.0 + it * 100 }, opts().mapNotNull { it.strike }.distinct())
+        assertEquals(6, opts().size)
+        assertTrue("VIX still recorded", TickZoneRecorder.listForTest().any { it.kind == TickZone.Kind.VIX })
+        assertEquals(true, TickZoneRecorder.narrowedNow())
+        assertTrue(Diag.lines().any { "battery saver: recording the futures, VIX and ATM±1 only" in it })
+        // The same money again: the watch-list stays as it is.
+        val same = TickZoneRecorder.listForTest()
+        runBlocking { TickZoneRecorder.layout() }
+        assertTrue(same === TickZoneRecorder.listForTest())
+        // Battery saver off: ATM±3 again, said once.
+        TickZoneRecorder.saverForTest = false
+        runBlocking { TickZoneRecorder.layout() }
+        assertEquals(14, opts().size)
+        assertTrue(Diag.lines().any { "battery saver off: recording ATM±3 again" in it })
+        // The money moves a strike: rebuilt around the new one.
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(260_105L, 52_160.0, tradable = false)))
+        runBlocking { TickZoneRecorder.layout() }
+        assertEquals((-1..5).map { 52_000.0 + it * 100 }, opts().mapNotNull { it.strike }.distinct())
+    }
+
     @Test fun thePinExportHasTheTickFilesAndTheTradesDecrypted() {
         KiteStream.liveForTest(true)
         feed(base, 52_100.0, 1_000); sample(base, null)

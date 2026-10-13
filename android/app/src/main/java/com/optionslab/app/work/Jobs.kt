@@ -1019,6 +1019,9 @@ object Tasks {
         return Tick(title, lines, progress, dest)
     }
 
+    /** When the MCX pass last read Zerodha's positions (memory; 0: not in this process). */
+    @Volatile private var mcxBookAt = 0L
+
     /**
      * The MCX pass (9 Oct): outside NSE's hours, while MCX trades and something is held or working there (or an MCX paper
      * arm is on inside its minutes). Only the steps that protect money, each in its own try: Zerodha's stream, paper fills
@@ -1037,10 +1040,14 @@ object Tasks {
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
             step("missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
-            if (com.optionslab.app.data.Broker.loggedIn) step("Zerodha positions") {
-                com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
-                    ?.let { com.optionslab.app.data.McxMarket.noteLive(it.net) }
-            }
+            // Battery (14 Oct): every pass while a live MCX position or order is known, else once in 10 minutes (one placed
+            // outside the app is still found); it was every 15 s all evening with an MCX arm merely switched on.
+            val sinceBook = mcxBookAt.takeIf { it > 0 }?.let { System.currentTimeMillis() - it }
+            if (com.optionslab.ira.McxRest.bookDue(com.optionslab.app.data.Broker.loggedIn, com.optionslab.app.data.McxMarket.liveExposure(), sinceBook))
+                step("Zerodha positions") {
+                    com.optionslab.app.data.Broker.within(20_000) { com.optionslab.app.data.Broker.passPositionBook() }
+                        ?.let { mcxBookAt = System.currentTimeMillis(); com.optionslab.app.data.McxMarket.noteLive(it.net) }
+                }
             step("position cards") { PositionCards.refresh(context) }
             runCatching { Heartbeat.beat(context) }
         } } finally {
@@ -1136,6 +1143,24 @@ class WatchService : Service() {
         internal fun resetRunsForTest() { synchronized(runDayLock) { watchRun = 0L; endSeenRun = 0L } }
         /** The watch's check pace now in seconds (30 before the open, 15 with a position open, 60 otherwise; 0 = not running), for the battery line. */
         @Volatile var stepSec: Int = 0
+
+        /**
+         * The wait after an MCX pass (Battery, 14 Oct; [com.optionslab.ira.McxRest]): 15 s when [cadence] says so, else up to
+         * 60 s in 15 s steps, ended as soon as [cadence] turns to 15 s (a position or order opened, an arm's entry minutes
+         * began) or [due] turns false - so nothing opened meanwhile waits longer for its first pass than before. [cadence] and
+         * [due] read memory (and the settings vault's cached values), never the network. Returns the first cadence.
+         */
+        internal suspend fun mcxWait(cadence: () -> Long = { com.optionslab.app.data.McxMarket.watchCadenceMs() }, due: () -> Boolean,
+                                     now: () -> Long = System::currentTimeMillis): Long {
+            val held = com.optionslab.ira.McxRest.HELD_MS
+            val first = cadence()
+            stepSec = (first / 1000).toInt()
+            runCatching { BatteryMeter.meter.count(if (first <= held) com.optionslab.ira.LoopMeter.MCX_FAST else com.optionslab.ira.LoopMeter.MCX_SLOW) }
+            val end = now() + first
+            delay(held)
+            while (now() < end && due() && cadence() > held) delay(minOf(held, end - now()).coerceAtLeast(1L))
+            return first
+        }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -1444,14 +1469,21 @@ class WatchService : Service() {
 
     private fun mcxDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
 
-    /** The MCX pass and its wait: every 15 s while MCX trades and something is held or working there. */
+    /**
+     * The MCX pass and its wait. Every 15 s while something is held or working on MCX (paper or live) or an armed MCX arm is
+     * inside its entry minutes; else every 60 s (Battery, 14 Oct: it was every 15 s to 23:30 with an arm merely switched on).
+     * The 60 s wait is looked at every 15 s from what is already in memory, so a position or order opened meanwhile gets the
+     * next full pass within 15 s, as before ([mcxWait]).
+     */
     private suspend fun mcxPass() {
+        val started = System.currentTimeMillis()
         Heartbeat.beat(this)
-        stepSec = 15
         val t = Tasks.mcxTick(this, AppSettings.load())
         Tasks.publishWatch(Tasks.LiveState(true, t.title, -1f, System.currentTimeMillis()))
         show(t.title, t.lines.joinToString("\n"), t.progress, t.dest)
-        delay(15_000)
+        mcxWait(due = { mcxDue() })
+        if (Market.minuteNow() >= Market.foClose() || !Market.isTradingDay())
+            runCatching { BatteryMeter.meter.add(com.optionslab.ira.LoopMeter.WATCH_EVENING, System.currentTimeMillis() - started) }
     }
 
     /** One pass of the watch loop and the wait until the next one. */

@@ -375,10 +375,13 @@ object SmartWorkers {
     @Volatile private var flushedAt = 0L
     @Volatile private var countsDay: LocalDate? = null
 
-    /** While market hours, NSE's or MCX's: every [REFRESH_MS]; else asleep (null). */
+    /**
+     * While NSE's market hours, or MCX's while something is held there: every [REFRESH_MS]; else asleep (null). Battery
+     * (14 Oct): MCX's hours alone (an arm switched on, nothing held) no longer keep it running every 10 s to 23:30.
+     */
     fun refreshDelay(lastRunMs: Long): Long? {
         val open = runCatching { Market.isTradingDay() && Market.minuteNow() in Market.OPEN - 15..Market.foClose() + 15 }.getOrDefault(false) ||
-            runCatching { McxMarket.isOpen() }.getOrDefault(false)
+            runCatching { com.optionslab.ira.McxRest.brainCounts(McxMarket.isOpen(), McxMarket.heldQuick()) }.getOrDefault(false)
         if (!open) return null
         return (REFRESH_MS - (System.currentTimeMillis() - lastRunMs)).coerceIn(0L, REFRESH_MS)
     }

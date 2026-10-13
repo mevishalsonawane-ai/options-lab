@@ -56,6 +56,9 @@ object MarketContext {
 
     fun enabled(): Boolean = !com.optionslab.app.BuildConfig.GOLD
 
+    /** The wait to the next refresh ([com.optionslab.ira.ContextPace]). */
+    internal fun nextRefreshMs(now: LocalDateTime): Long = com.optionslab.ira.ContextPace.nextMs(now, trading(now.toLocalDate()))
+
     /** At the app's start: the switch read on an IO thread, then the refresh loop on this object's own thread. */
     fun init(context: Context) {
         if (!enabled() || started) return
@@ -70,7 +73,9 @@ object MarketContext {
             runCatching { _shadowDays.value = SecurePrefs.getString(K_SHADOW_DAYS).orEmpty().split(',').filter { it.isNotBlank() }.toSet() }
             while (true) {
                 runCatching { refresh() }
-                delay(REFRESH_MS)
+                // Battery (14 Oct): each minute from 08:45 to 15:45 on a trading day; outside that just after midnight (the new
+                // day's events) and at 18:00 (the next session's warning) - it was every minute, 24x7 ([ContextPace]).
+                delay(runCatching { nextRefreshMs(nowIst()) }.getOrDefault(REFRESH_MS))
             }
         }
     }
@@ -91,6 +96,8 @@ object MarketContext {
             return "Shadow first: run it in Shadow through at least one event day, see what it would have paused, then switch it on."
         val was = _mode.value
         _mode.value = m
+        // The card shows the switch at once (the refresh may now be hours away out of market hours: Battery, 14 Oct).
+        _card.value = _card.value.copy(pause = m)
         if (m != EventShield.Mode.SHADOW) shadowSince = null else if (was != EventShield.Mode.SHADOW) shadowSince = nowIst()
         scope.launch(Dispatchers.IO) { runCatching { SecurePrefs.putAllSoon(mapOf(K_PAUSE to m.name)) } }
         runCatching { Diag.record("context", "pause paper arms on event days: ${m.name}") }

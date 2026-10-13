@@ -175,6 +175,12 @@ object McxMarket {
 
     // ---- prices ----------------------------------------------------------------------------------------------------------
 
+    /**
+     * Battery (14 Oct): an MCX price read keeps the price stream awake only while something is held or working on MCX
+     * ([heldQuick]); else it is a quote call (the MCX pass's once a minute), and the stream's idle stop may close it.
+     */
+    private fun streamKept(): Boolean = com.optionslab.ira.McxRest.keepsStream(heldQuick())
+
     /** One contract's price. [lastSession]: the last session's close (MCX shut, or no candle yet today). */
     data class Quote(val contract: McxContract, val last: Double, val open: Double, val bid: Double?, val ask: Double?, val lastSession: Boolean) {
         val changePct: Double? get() = if (open > 0 && !lastSession) (last - open) / open else null
@@ -186,7 +192,7 @@ object McxMarket {
      */
     suspend fun quote(c: McxContract, quick: Boolean = true): Quote? {
         if (AppSettings.load().live || Broker.loggedIn) {
-            val q = runCatching { Broker.quotes(listOf(c.kiteKey))[c.kiteKey] }.getOrNull()
+            val q = runCatching { Broker.quotes(listOf(c.kiteKey), keepStream = streamKept())[c.kiteKey] }.getOrNull()
             if (q != null && q.last > 0) return Quote(c, q.last, q.open, q.bid, q.ask, false)
             if (AppSettings.load().live) return null
         }
@@ -203,7 +209,7 @@ object McxMarket {
     suspend fun quotes(list: List<McxContract>): Map<String, Quote> = coroutineScope {
         if (list.isEmpty()) return@coroutineScope emptyMap()
         if (AppSettings.load().live || Broker.loggedIn) {
-            val got = runCatching { Broker.quotes(list.map { it.kiteKey }) }.getOrNull()
+            val got = runCatching { Broker.quotes(list.map { it.kiteKey }, keepStream = streamKept()) }.getOrNull()
             if (got != null && (got.isNotEmpty() || AppSettings.load().live))
                 return@coroutineScope list.mapNotNull { c -> got[c.kiteKey]?.takeIf { it.last > 0 }?.let { q -> c.tradingSymbol to Quote(c, q.last, q.open, q.bid, q.ask, false) } }.toMap()
         }
@@ -263,18 +269,51 @@ object McxMarket {
 
     /** Zerodha showed an open MCX position at the last look (kept for the day, so a restart keeps watching). */
     fun liveExposure(): Boolean = runCatching { SecurePrefs.getString(K_LIVE_HELD) == Market.today().toString() }.getOrDefault(false)
+        .also { liveSeen = Market.today() to it }
+
+    /** [liveExposure] as last read or written in this process (memory; null: not today, or not read yet). */
+    @Volatile private var liveSeen: Pair<LocalDate, Boolean>? = null
 
     /** Called with each read of Zerodha's positions. */
     fun noteLive(positions: List<Broker.Position>) {
         val held = positions.any { it.exchange == Mcx.EXCHANGE && it.qty != 0 }
         val now = liveExposure()
-        if (held != now) runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to if (held) Market.today().toString() else null)) }
+        if (held != now) {
+            liveSeen = Market.today() to held
+            runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to if (held) Market.today().toString() else null)) }
+        }
     }
 
     /** An MCX order was just sent to Zerodha from the app: watched from now (the next read of the positions settles it). */
-    fun markLive() { runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to Market.today().toString())) } }
+    fun markLive() {
+        liveSeen = Market.today() to true
+        runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE_HELD to Market.today().toString())) }
+    }
 
     fun exposure(): Boolean = paperExposure() || liveExposure()
+
+    // ---- Battery (14 Oct): how often the MCX pass runs, and what it keeps awake ([com.optionslab.ira.McxRest]) ------------
+
+    /** Something is held or working on MCX: a paper position or order, a live one, or a position in an MCX arm's book. */
+    fun heldNow(): Boolean = com.optionslab.ira.McxRest.held(paperExposure(), liveExposure(), runCatching { McxPaperArms.holdsNow() }.getOrDefault(true))
+
+    /**
+     * [heldNow] from memory only (no vault read, no file, no lock): for the price reads and the brain's scheduling. Anything
+     * not known yet in this process counts as held (the stream kept, as before).
+     */
+    fun heldQuick(): Boolean {
+        val paper = runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: true
+        val live = liveSeen?.takeIf { it.first == Market.today() }?.second ?: true
+        return com.optionslab.ira.McxRest.held(paper, live, runCatching { McxPaperArms.holdsNow() }.getOrDefault(true))
+    }
+
+    /**
+     * The MCX pass's wait now: 15 s with anything held or working on MCX (paper or live) or inside an armed arm's entry
+     * minutes - as before - else 60 s ([com.optionslab.ira.McxRest.cadenceMs]). A failed read counts as 15 s.
+     */
+    fun watchCadenceMs(): Long = runCatching {
+        com.optionslab.ira.McxRest.cadenceMs(heldNow(), McxPaperArms.inEntryMinutes())
+    }.getOrDefault(com.optionslab.ira.McxRest.HELD_MS)
 
     /**
      * The watch should run now for MCX: MCX is open and something is held or working there, or an MCX paper arm is on and
@@ -373,5 +412,5 @@ object McxMarket {
     }
 
     /** For tests: the day's lists and the calendar forgotten (their files go with the test's directories). */
-    internal fun wipe() { mem = null; cal = null; margins = null; synchronized(hintLock) { hints = null } }
+    internal fun wipe() { mem = null; cal = null; margins = null; liveSeen = null; synchronized(hintLock) { hints = null } }
 }

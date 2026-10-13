@@ -135,6 +135,8 @@ object Diag {
         if (com.optionslab.app.BuildConfig.GOLD) append(gold())
         // Battery, round 1: what runs in the background now (listening, the stream, the watch's pace, the AI model, the phone's charge).
         append(com.optionslab.app.work.BatteryNow.line(app)).append('\n')
+        // Battery (14 Oct): which background loops ran today and for how long (the evening watch, the recorder, the stream).
+        append(com.optionslab.app.work.BatteryMeter.line()).append('\n')
         // Speed (Boss, 5 Oct: "too slow"): the screen's stalls today, the longest and what was running then; the app's start.
         append(runCatching { Speed.line() }.getOrElse { "Speed: could not read" }).append('\n')
         // The settings vault's size (12 Oct): its biggest key classes and the large values kept in their own files - names and
