@@ -664,6 +664,8 @@ fun RiskPage(model: AppModel) {
         if (!com.optionslab.app.BuildConfig.GOLD) {
             item { PortfolioSettingCard() }
             item { EventCalendarCard() }
+            // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
+            item { EventShieldSwitchCard() }
             item { HistoryVaultCard() }
         }
         // The learning freeze (S14): its state, Boss's own line and the unfreeze (PIN when live). Never from a backup.

@@ -50,10 +50,16 @@ object WhatsNew {
     private val OCT10: LocalDate = LocalDate.of(2026, 10, 10)
     private val OCT11: LocalDate = LocalDate.of(2026, 10, 11)
     private val OCT12: LocalDate = LocalDate.of(2026, 10, 12)
+    private val OCT13: LocalDate = LocalDate.of(2026, 10, 13)
     private const val JARVIS_CHAT = "Ask Jarvis, by voice or in the chat (Home → Ira)"
 
     /** Every entry, newest first (within a day in the order the changes came). */
     val ENTRIES: List<Entry> = listOf(
+        Entry("2026-10-13-market-context", OCT13, "Market context: events, expiry, days like today",
+            "Home now warns you the evening before and the morning of an RBI, Budget, US CPI or Fed day, with how BankNifty and Nifty moved on such days and how many days that is; on expiry days it shows how fast option time value melts, and from 09:21 the past days most like today, as context, not a forecast. " +
+                "On the chart, add \"Ira: level map\" for support and resistance with how often each held, and long-press any candle and pick \"Explain this candle\" for what the app knows about those minutes; a new switch can pause paper arms on event days, and it is off.",
+            "Home → Market context; Chart → indicators → Market context; Settings → Bot settings → Pause paper arms on event days",
+            to = "chart"),
         Entry("2026-10-12-tick-zone", OCT12, "Every second of order flow recorded",
             "While the market is open the app now records, every second, the order flow of the BANKNIFTY and NIFTY futures, their options three strikes either side of the money, and VIX: price, volume, VWAP, OI and the five-level book. " +
                 "Each minute it also saves buying vs selling, the order-book balance, the spread, big trades and absorption; and \"Export recordings\" now asks your PIN and saves everything, your trades decrypted, to a file you pick.",
