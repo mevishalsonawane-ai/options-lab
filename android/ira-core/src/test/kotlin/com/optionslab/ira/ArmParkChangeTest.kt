@@ -21,7 +21,7 @@ class ArmParkChangeTest {
         assertEquals(AutoChange.ON_APPROVE, c.from); assertEquals(AutoChange.PARKED, c.to)
         assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(c))
         assertEquals(AutoChange.Scope.PAPER, c.scope)
-        assertFalse("undone without the PIN: back on paper only", AutoChange.undoNeedsPin(c))
+        assertFalse(AutoChange.undoNeedsPin(c), "undone without the PIN: back on paper only")
         assertFalse(AutoChange.never(c))
         val back = AutoChange.inverse(c, "undone by you")
         assertEquals(AutoChange.ON_APPROVE, back.to)
