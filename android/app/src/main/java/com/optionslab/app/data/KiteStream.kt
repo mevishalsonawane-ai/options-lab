@@ -494,19 +494,26 @@ object KiteStream {
         val keep = followedNow()
         var paths = 0
         val it = this.paths.keys.iterator()
-        while (it.hasNext()) { if (it.next() !in keep) { it.remove(); paths++ } }
+        while (it.hasNext()) {
+            val t = it.next()
+            // Looked at again just before it goes (review, 14 Oct): one followed this very moment keeps its path.
+            if (t !in keep && !followsNow(t)) { it.remove(); paths++ }
+        }
         val candles = runCatching { candles.prune(keep, nowMs / 1000) }.getOrDefault(0)
         return paths to candles
     }
 
     /** Everything followed now: every part's instruments, the ones just quoted, and every subscribed one (memory only). */
     fun followedNow(): Set<Long> {
-        val keep = HashSet<Long>()
+        val keep = HashSet<Long>(MoveRecorder.INDEX_TOKENS.keys)
         for (v in wants.values) keep.addAll(v)
         keep.addAll(touched.keys)
         synchronized(subscribed) { keep.addAll(subscribed) }
         return keep
     }
+
+    private fun followsNow(t: Long): Boolean = t in MoveRecorder.INDEX_TOKENS || touched.containsKey(t) || wants.values.any { t in it } ||
+        synchronized(subscribed) { t in subscribed }
 
     /** The instruments with a tick path and with candles kept (the trim's figures; memory only). */
     fun keptCounts(): Pair<Int, Int> = paths.size to candles.instruments()

@@ -54,7 +54,8 @@ object PositionsFirst {
         Thread({
             runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_FOREGROUND) }
             runBlocking { steps(::restore, { runCatching { com.optionslab.app.work.Jobs.ensureWatch(app) } }, { runCatching { KiteStream.ensure() } }) }
-        }, "positions-first").apply { isDaemon = true; priority = Thread.MAX_PRIORITY }.start()
+        // The nice level only (review, 14 Oct: Java's MAX_PRIORITY would be inherited by every thread this one creates).
+        }, "positions-first").apply { isDaemon = true }.start()
     }
 
     /** The app's start has done its synchronous steps (called at the end of the app's onCreate). */
@@ -68,9 +69,9 @@ object PositionsFirst {
         val open = runCatching { restore() }.getOrDefault(true)
         foundOpen = open
         if (open) {
-            // The restore-disarm step of the app's start runs before any watch can tick (a few ms; never waited on forever).
-            withTimeoutOrNull(WAIT_MS) { appReady.await() }
-            watch()
+            // The restore-disarm step of the app's start runs before any watch can tick (a few ms). Not done in time (a start
+            // that took longer than [WAIT_MS]): this thread does not start the watch; the start's own alarms and the screens do.
+            if (withTimeoutOrNull(WAIT_MS) { appReady.await() } != null) watch()
         }
         order.done(StartOrder.Step.POSITIONS, clock())
         runCatching { Diag.record("start", "positions first: ${if (open) "open positions or orders found, watch started" else "nothing open"} " +
@@ -99,6 +100,8 @@ object PositionsFirst {
         one { GrammarArm.refresh(); false }
         one { Ledger.openTicket() != null }
         one { McxMarket.liveExposure() }
+        // Jarvis's own paper trades (review, 14 Oct; the fast exits' minute lane counts them).
+        if (com.optionslab.app.BuildConfig.JARVIS) one { com.optionslab.app.ira.IraSolo.holding() }
         return open || failed
     }
 

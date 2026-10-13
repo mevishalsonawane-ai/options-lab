@@ -47,5 +47,6 @@
 
 # The app's own class and method NAMES (memory audit, 14 Oct: the main-thread stalls said only "o.a" - the screen watchdog,
 # Speed.runningOnMain, looks for the app's first "com.optionslab." frame, which -repackageclasses had renamed away). Names only:
-# the code is still shrunk and optimised, and nothing secret is in a name (the repository is public).
--keepnames class com.optionslab.** { <methods>; }
+# the code is still shrunk and optimised (allowoptimization: R8 may still inline and merge; review, 14 Oct), and nothing
+# secret is in a name (the repository is public).
+-keepnames,allowoptimization class com.optionslab.** { <methods>; }

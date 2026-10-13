@@ -35,6 +35,9 @@ object MemoryTrim {
         val items = MemoryPlan.releases(level)
         if (MemoryPlan.counted(level)) lastAt = nowMs
         if (items.isEmpty()) return
+        // Never in the unit tests' process (as the app's health tick): a release a test did not ask for would reach into the next
+        // test's state; the tests call [release] themselves.
+        if (android.os.Build.FINGERPRINT == "robolectric") return
         scope.launch { release(items, level) }
     }
 

@@ -36,17 +36,27 @@ object Diag {
         return out
     }
 
+    /**
+     * The file could not be read when the lines were last loaded (review, 14 Oct): the lines in memory are only the new ones,
+     * so the file is never written over with them - the next write reads it again and adds them after it.
+     */
+    private var unread = false
+
     @Synchronized
     private fun diary(): ArrayDeque<String> {
         cache?.let { return it }
         val out = ArrayDeque<String>()
-        runCatching {
-            val a = JSONArray(String(Vault.readFileSteady(file) ?: return@runCatching, Charsets.UTF_8))
-            for (i in 0 until a.length()) out.addLast(a.getString(i))
-        }
+        unread = readInto(out).not()
         cache = out
         return out
     }
+
+    /** The file's lines added to [out]; false when it exists and could not be read (a missing file reads as none). */
+    private fun readInto(out: ArrayDeque<String>): Boolean = runCatching {
+        val a = JSONArray(String(Vault.readFileSteady(file) ?: return true, Charsets.UTF_8))
+        for (i in 0 until a.length()) out.addLast(a.getString(i))
+        true
+    }.getOrDefault(false)
 
     /** One writer thread: a banner shown from the screen's thread never waits on the disk. */
     private val writer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "diag").apply { isDaemon = true } }
@@ -98,6 +108,14 @@ object Diag {
     private fun save(): Boolean {
         scheduled = false
         if (!dirty) return true
+        if (unread) {
+            // The earlier read failed: read again and put the new lines after the file's (never the new ones alone over it).
+            val disk = ArrayDeque<String>()
+            if (!readInto(disk)) return false
+            cache?.let { disk.addAll(it) }
+            while (disk.size > MAX) disk.removeFirst()
+            cache = disk; unread = false
+        }
         dirty = false
         // 14 Oct: a failed write leaves the lines marked unwritten (the next line tries again; a trim never lets them go).
         return runCatching { Vault.writeFile(file, JSONArray(diary().toList()).toString().toByteArray(Charsets.UTF_8)) }.isSuccess.also { if (!it) dirty = true }
@@ -301,5 +319,5 @@ object Diag {
     }
 
     @Synchronized
-    fun wipe() { cache = null; dirty = false; if (::file.isInitialized) file.delete() }
+    fun wipe() { cache = null; dirty = false; unread = false; if (::file.isInitialized) file.delete() }
 }

@@ -102,6 +102,9 @@ class IraAlgoApp : Application() {
         // OPEN POSITIONS AND ORDERS COME FIRST (14 Oct, memory audit): every position book is read now on a thread of its own
         // at the top priority, the watch started when anything is open, then the stream - before the rest of the start's
         // background work (the shared knowledge waits for both). Every position store's init above only names its file.
+        // The diary and the stream's context first (each only names its file or keeps the context): the positions' lines are kept.
+        com.optionslab.app.data.Diag.init(this)
+        com.optionslab.app.data.KiteStream.init(this)
         com.optionslab.app.data.PositionsFirst.start(this)
         com.optionslab.app.data.LiveRecorder.init(this)
         // The tick zone (12 Oct): the watch-list's order flow every second, from the stream's memory, written in the background.
@@ -111,8 +114,6 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.GitHubSync.init(this)
         com.optionslab.app.data.LiquidityTest.init(this)
         com.optionslab.app.data.Journal.init(this)
-        com.optionslab.app.data.Diag.init(this)
-        com.optionslab.app.data.KiteStream.init(this)
         // Battery (14 Oct): the minutes each background loop ran today, for the diagnostics and the Health page.
         com.optionslab.app.work.BatteryMeter.init()
         // The live order flow (shown, logged beside each signal; it can only ever skip an entry where Boss set CONFIRM).

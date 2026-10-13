@@ -346,10 +346,10 @@ object IraModel {
      */
     fun releaseForMemory() {
         if (handle == 0L) return
-        scope.launch {
-            if (_state.value.writing) { releaseSoon = true; return@launch }
-            lock.withLock { if (_state.value.writing) releaseSoon = true else { idle?.cancel(); unloadLocked() } }
-        }
+        // Marked first (review, 14 Oct): a reply ending right now sees it and leaves at once; otherwise the model leaves as soon
+        // as the lock is free (at once when it is not writing).
+        releaseSoon = true
+        scope.launch { lock.withLock { idle?.cancel(); unloadLocked() } }
     }
 
     /**

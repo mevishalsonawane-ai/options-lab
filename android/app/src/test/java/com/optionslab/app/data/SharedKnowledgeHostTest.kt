@@ -176,4 +176,21 @@ class SharedKnowledgeHostTest : RobolectricTest() {
         dir.deleteRecursively(); snap.delete()
         assertTrue(checkNotNull(SharedKnowledgeHost.refresh(day)).items.none { it.id.startsWith("findings:") })
     }
+
+    /** Review (14 Oct): a line stamped the day before its log's name (written after midnight) is never counted twice. */
+    @Test fun aLineWrittenAfterMidnightIsCountedOnce() {
+        val day = LocalDate.of(2026, 10, 13)
+        log(day.minusDays(1), 2)
+        // Yesterday's finding, flushed into today's log just after midnight.
+        val dir = File(context.noBackupFilesDir, "findings")
+        val lateAt = day.minusDays(1).atTime(23, 59).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        File(dir, "$day.log").appendText(com.optionslab.ira.Findings.line(com.optionslab.ira.Findings.Finding("Order flow", com.optionslab.ira.Findings.Kind.ABSORPTION, "NIFTY", atMs = lateAt)) + "\n")
+        log(day, 1)
+        SharedKnowledgeHost.refresh(day, writeSnapshot = true)
+        val snap = checkNotNull(com.optionslab.app.security.Vault.readFile(File(context.noBackupFilesDir, SharedKnowledgeHost.SNAPSHOT))).toString(Charsets.UTF_8)
+            .let { checkNotNull(com.optionslab.ira.FindingsTally.read(it)) }
+        val from = day.minusDays(29)
+        assertEquals(SharedKnowledgeHost.countLogs(dir, from, null).total, SharedKnowledgeHost.countLogs(dir, from, snap).total)
+        assertEquals(4, SharedKnowledgeHost.countLogs(dir, from, snap).total)
+    }
 }

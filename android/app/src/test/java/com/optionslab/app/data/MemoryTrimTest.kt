@@ -85,4 +85,21 @@ class MemoryTrimTest : RobolectricTest() {
         assertNull(kotlinx.coroutines.runBlocking { com.optionslab.app.ira.IraModel.rewriteWhenFree("q", listOf("a fact"), "the draft") })
         assertEquals(false, com.optionslab.app.ira.IraModel.state.value.loaded)
     }
+
+    /** Review (14 Oct): a diary file that cannot be read is never written over with only the new lines. */
+    @Test fun anUnreadableDiaryIsNeverWrittenOverWithTheNewLinesAlone() {
+        Diag.record("test", "kept from before"); Diag.flush()
+        val f = java.io.File(context.noBackupFilesDir, "diag.vault")
+        val before = f.readBytes()
+        Diag.trimMemory(); Diag.flush()
+        // The file unreadable for now (the Keystore busy, say): the next line is kept in memory, the file left as it was.
+        f.writeBytes(byteArrayOf(1, 2, 3))
+        Diag.record("test", "while unreadable"); Diag.flush()
+        org.junit.Assert.assertArrayEquals(byteArrayOf(1, 2, 3), f.readBytes())
+        // Readable again: the next write puts the new line after the file's own.
+        f.writeBytes(before)
+        Diag.record("test", "after"); Diag.flush()
+        val lines = Diag.lines()
+        for (w in listOf("kept from before", "while unreadable", "after")) assertTrue(w, lines.any { w in it })
+    }
 }

@@ -12,6 +12,7 @@ import com.optionslab.ira.SharedKnowledge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -78,9 +79,13 @@ object SharedKnowledgeHost {
         if (enabled()) background.launch { runCatching { afterStart() } }
     }
 
-    /** The first build's own thread: one at a time, at the background's priority (never main, never the tick or order threads). */
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    /**
+     * The first build's own thread, at the background's priority and used for nothing else (review, 14 Oct: lowering a shared
+     * IO thread's priority would have slowed whatever watch or order work landed on it next).
+     */
+    private val background = CoroutineScope(SupervisorJob() + java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread({ runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND) }; r.run() }, "knowledge").apply { isDaemon = true }
+    }.asCoroutineDispatcher())
 
     /**
      * The first build, after the start (Boss, 14 Oct): once the open positions are watched and the stream is back, and - in
@@ -90,7 +95,6 @@ object SharedKnowledgeHost {
     internal suspend fun afterStart() {
         PositionsFirst.awaitPositions()
         PositionsFirst.awaitStream()
-        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND) }
         while (!loadNow()) kotlinx.coroutines.delay(60_000L)
         refresh()
         PositionsFirst.order.done(StartOrder.Step.KNOWLEDGE, android.os.SystemClock.uptimeMillis())
@@ -169,8 +173,10 @@ object SharedKnowledgeHost {
             runCatching { f.useLines { ls -> for (l in ls) { if (++lines > MAX_FINDING_LINES) break; out.line(l) } } }
             if (lines > MAX_FINDING_LINES) break
         }
-        snap?.let { out.addAll(it.second.since(from)) }
-        return out
+        if (snap == null) return out
+        // Review (14 Oct): a log can hold a line stamped the day before its name (written just after midnight); only the days
+        // after the snapshot's last one are taken from the logs, so no line is counted twice.
+        return out.since(maxOf(from, snap.first.plusDays(1))).also { it.addAll(snap.second.since(from)) }
     }
 
     private fun snapshotFile(ctx: Context) = File(ctx.noBackupFilesDir, SNAPSHOT)
@@ -251,6 +257,8 @@ object SharedKnowledgeHost {
         if (nightOf == today) return false
         if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return false
         val s = refresh(today, writeSnapshot = true) ?: return false
+        // The counts of this build, held for the bundle below (a memory trim meanwhile empties [lastCounts]).
+        val counts = lastCounts
         nightOf = today
         val trips = runCatching {
             val owners = Strategies.owners()
@@ -258,7 +266,7 @@ object SharedKnowledgeHost {
         }.getOrDefault(emptyList())
         val shadow = if (shadowOn) runCatching { SharedKnowledge.shadowSkips(s, trips, today) }.getOrDefault(emptyList()) else emptyList()
         for (sk in shadow) runCatching { Diag.record("knowledge", "shadow (logs only): ${sk.why} - would have skipped ${sk.wouldSkip} of ${sk.trades} trades today; nothing was skipped") }
-        runCatching { writeBundle(today, s, shadow) }
+        runCatching { writeBundle(today, s, shadow, counts) }
         return true
     }
 
@@ -268,12 +276,12 @@ object SharedKnowledgeHost {
     /** The bundle files kept (one a recorded day), oldest first: the hook the future G1 uploader reads (sent as stored, encrypted). */
     fun bundleFiles(): List<File> = runCatching { LiveRecorder.days().mapNotNull { (_, d) -> File(d, LessonsBundle.FILE).takeIf { it.isFile } } }.getOrDefault(emptyList())
 
-    internal fun writeBundle(day: LocalDate, s: SharedKnowledge.Snapshot, shadow: List<SharedKnowledge.ShadowSkip>) {
+    internal fun writeBundle(day: LocalDate, s: SharedKnowledge.Snapshot, shadow: List<SharedKnowledge.ShadowSkip>, counts: List<LessonsBundle.FindingCount> = lastCounts) {
         val f = bundleFile(day) ?: return
         val book = runCatching { com.optionslab.app.ira.JarvisLearning.book.value }.getOrDefault(AgentLessons.Book())
         val vr = VariantRunner
         val app = runCatching { com.optionslab.app.BuildConfig.VERSION_NAME }.getOrDefault("")
-        val built = LessonsBundle.build(LessonsBundle.Inputs(day, app, s.version, book, lastCounts,
+        val built = LessonsBundle.build(LessonsBundle.Inputs(day, app, s.version, book, counts,
             runCatching { if (vr.enabled()) vr.forge.value else null }.getOrNull(), synchronized(skippedIdeas) { ArrayList(skippedIdeas) },
             runCatching { if (vr.enabled()) vr.variants.value else null }.getOrNull(), runCatching { OrderReviewHost.book.value }.getOrNull(),
             shadow, agentLines()))
