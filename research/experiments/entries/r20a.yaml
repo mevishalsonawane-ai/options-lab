@@ -3,7 +3,7 @@ title: 'R20 A15: the 15-minute opening range (orEnd 09:30)'
 family: orb
 date: '2026-10-13'
 doc: research/HUNT_R20_RANGE.md
-hypothesis: The ORB arm under this range rule makes money after real costs on BANKNIFTY (holdout daily net > 0 and beats a
+hypothesis: The ORB arm under this range rule makes money net of the app's paper fills and fees on BANKNIFTY (holdout daily net > 0 and beats a
   random-entry twin after BH over 14 tests) and beats the plain 09:15-10:00 rule.
 data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
   Yahoo daily ^INDIAVIX for gaps
