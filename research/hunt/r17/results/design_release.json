@@ -1,0 +1,1983 @@
+{
+ "meta": {
+  "source": "release",
+  "tests": 60,
+  "design_cut": {
+   "BANKNIFTY": "2025-08-25",
+   "NIFTY": "2025-10-13"
+  },
+  "sessions": {
+   "BANKNIFTY": 376,
+   "NIFTY": 379
+  },
+  "fold_bounds": {
+   "BANKNIFTY": [
+    [
+     "2024-02-13",
+     "2024-07-03"
+    ],
+    [
+     "2024-07-04",
+     "2024-11-21"
+    ],
+    [
+     "2024-11-22",
+     "2025-04-07"
+    ],
+    [
+     "2025-04-08",
+     "2025-08-22"
+    ]
+   ],
+   "NIFTY": [
+    [
+     "2024-04-01",
+     "2024-08-20"
+    ],
+    [
+     "2024-08-21",
+     "2025-01-07"
+    ],
+    [
+     "2025-01-08",
+     "2025-05-28"
+    ],
+    [
+     "2025-05-29",
+     "2025-10-10"
+    ]
+   ]
+  }
+ },
+ "arms": {
+  "orb": {
+   "V0": {
+    "trades": 320,
+    "days": 287,
+    "net": -31507,
+    "win": 42.8,
+    "charges": 27432,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32404,
+    "changed": 0,
+    "whys": {
+     "stop": 266,
+     "target": 54
+    }
+   },
+   "V1": {
+    "trades": 320,
+    "days": 287,
+    "net": -31722,
+    "win": 42.2,
+    "charges": 27431,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32713,
+    "changed": 11,
+    "whys": {
+     "stop": 255,
+     "target": 54,
+     "variant": 11
+    },
+    "delta": -215,
+    "p": 0.5805419458054195,
+    "folds": [
+     153,
+     -935,
+     667,
+     -100
+    ],
+    "delta_2x_spread": -213,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 320,
+    "days": 287,
+    "net": -30014,
+    "win": 42.8,
+    "charges": 27434,
+    "mfe_capture": -0.3,
+    "worst_day": -2757,
+    "max_dd": -31297,
+    "changed": 11,
+    "whys": {
+     "stop": 258,
+     "target": 51,
+     "variant": 11
+    },
+    "delta": 1494,
+    "p": 0.06409359064093591,
+    "folds": [
+     32,
+     0,
+     267,
+     1195
+    ],
+    "delta_2x_spread": 1492,
+    "twin_p": 0.000999000999000999,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 320,
+    "days": 287,
+    "net": -32063,
+    "win": 42.5,
+    "charges": 27430,
+    "mfe_capture": -0.5,
+    "worst_day": -2757,
+    "max_dd": -32959,
+    "changed": 3,
+    "whys": {
+     "stop": 263,
+     "target": 54,
+     "variant": 3
+    },
+    "delta": -555,
+    "p": 0.8023197680231977,
+    "folds": [
+     0,
+     -1049,
+     0,
+     494
+    ],
+    "delta_2x_spread": -554,
+    "twin_p": 0.9690309690309691,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 320,
+    "days": 287,
+    "net": -31507,
+    "win": 42.8,
+    "charges": 27432,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32404,
+    "changed": 0,
+    "whys": {
+     "stop": 266,
+     "target": 54
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 320,
+    "days": 287,
+    "net": -31507,
+    "win": 42.8,
+    "charges": 27432,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32404,
+    "changed": 0,
+    "whys": {
+     "stop": 266,
+     "target": 54
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "orb_fresh": {
+   "V0": {
+    "trades": 320,
+    "days": 287,
+    "net": -31507,
+    "win": 42.8,
+    "charges": 27432,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32404,
+    "changed": 0,
+    "whys": {
+     "stop": 266,
+     "target": 54
+    }
+   },
+   "V1": {
+    "trades": 320,
+    "days": 287,
+    "net": -31722,
+    "win": 42.2,
+    "charges": 27431,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32713,
+    "changed": 11,
+    "whys": {
+     "stop": 255,
+     "target": 54,
+     "variant": 11
+    },
+    "delta": -215,
+    "p": 0.5805419458054195,
+    "folds": [
+     153,
+     -935,
+     667,
+     -100
+    ],
+    "delta_2x_spread": -213,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 320,
+    "days": 287,
+    "net": -30014,
+    "win": 42.8,
+    "charges": 27434,
+    "mfe_capture": -0.3,
+    "worst_day": -2757,
+    "max_dd": -31297,
+    "changed": 11,
+    "whys": {
+     "stop": 258,
+     "target": 51,
+     "variant": 11
+    },
+    "delta": 1494,
+    "p": 0.06409359064093591,
+    "folds": [
+     32,
+     0,
+     267,
+     1195
+    ],
+    "delta_2x_spread": 1492,
+    "twin_p": 0.000999000999000999,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 320,
+    "days": 287,
+    "net": -32063,
+    "win": 42.5,
+    "charges": 27430,
+    "mfe_capture": -0.5,
+    "worst_day": -2757,
+    "max_dd": -32959,
+    "changed": 3,
+    "whys": {
+     "stop": 263,
+     "target": 54,
+     "variant": 3
+    },
+    "delta": -555,
+    "p": 0.8023197680231977,
+    "folds": [
+     0,
+     -1049,
+     0,
+     494
+    ],
+    "delta_2x_spread": -554,
+    "twin_p": 0.9690309690309691,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 320,
+    "days": 287,
+    "net": -31507,
+    "win": 42.8,
+    "charges": 27432,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32404,
+    "changed": 0,
+    "whys": {
+     "stop": 266,
+     "target": 54
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 320,
+    "days": 287,
+    "net": -31507,
+    "win": 42.8,
+    "charges": 27432,
+    "mfe_capture": -0.4,
+    "worst_day": -2757,
+    "max_dd": -32404,
+    "changed": 0,
+    "whys": {
+     "stop": 266,
+     "target": 54
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "orb_sweep": {
+   "V0": {
+    "trades": 460,
+    "days": 272,
+    "net": -89054,
+    "win": 28.3,
+    "charges": 34537,
+    "mfe_capture": -5.4,
+    "worst_day": -3191,
+    "max_dd": -89588,
+    "changed": 0,
+    "whys": {
+     "square_off": 10,
+     "stop": 420,
+     "target": 30
+    }
+   },
+   "V1": {
+    "trades": 460,
+    "days": 272,
+    "net": -93496,
+    "win": 27.6,
+    "charges": 34528,
+    "mfe_capture": -5.9,
+    "worst_day": -3191,
+    "max_dd": -94029,
+    "changed": 28,
+    "whys": {
+     "square_off": 6,
+     "stop": 397,
+     "target": 29,
+     "variant": 28
+    },
+    "delta": -4442,
+    "p": 0.8912108789121088,
+    "folds": [
+     38,
+     -808,
+     134,
+     -3805
+    ],
+    "delta_2x_spread": -4436,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 460,
+    "days": 272,
+    "net": -83240,
+    "win": 35.9,
+    "charges": 34548,
+    "mfe_capture": -4.8,
+    "worst_day": -3191,
+    "max_dd": -83774,
+    "changed": 108,
+    "whys": {
+     "square_off": 6,
+     "stop": 331,
+     "target": 14,
+     "variant": 109
+    },
+    "delta": 5814,
+    "p": 0.2004799520047995,
+    "folds": [
+     -137,
+     555,
+     6819,
+     -1422
+    ],
+    "delta_2x_spread": 5804,
+    "twin_p": 0.000999000999000999,
+    "q": 0.7792,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 460,
+    "days": 272,
+    "net": -81213,
+    "win": 28.3,
+    "charges": 34552,
+    "mfe_capture": -4.6,
+    "worst_day": -3191,
+    "max_dd": -81763,
+    "changed": 104,
+    "whys": {
+     "stop": 331,
+     "target": 23,
+     "variant": 106
+    },
+    "delta": 7842,
+    "p": 0.12108789121087891,
+    "folds": [
+     502,
+     -2190,
+     3064,
+     6466
+    ],
+    "delta_2x_spread": 7831,
+    "twin_p": 0.00999000999000999,
+    "q": 0.7265,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 460,
+    "days": 272,
+    "net": -88758,
+    "win": 28.5,
+    "charges": 34537,
+    "mfe_capture": -5.4,
+    "worst_day": -3191,
+    "max_dd": -89291,
+    "changed": 37,
+    "whys": {
+     "square_off": 9,
+     "stop": 395,
+     "target": 19,
+     "variant": 37
+    },
+    "delta": 297,
+    "p": 0.47255274472552744,
+    "folds": [
+     -167,
+     -20,
+     1032,
+     -549
+    ],
+    "delta_2x_spread": 298,
+    "twin_p": 0.000999000999000999,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 460,
+    "days": 272,
+    "net": -92099,
+    "win": 31.3,
+    "charges": 34531,
+    "mfe_capture": -5.7,
+    "worst_day": -3191,
+    "max_dd": -92638,
+    "changed": 21,
+    "whys": {
+     "square_off": 9,
+     "stop": 422,
+     "target": 29
+    },
+    "delta": -3044,
+    "p": 0.8743125687431257,
+    "folds": [
+     247,
+     -505,
+     6,
+     -2793
+    ],
+    "delta_2x_spread": -3039,
+    "twin_p": 0.903096903096903,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "range_fade": {
+   "V0": {
+    "trades": 493,
+    "days": 272,
+    "net": -91671,
+    "win": 30.6,
+    "charges": 37103,
+    "mfe_capture": -5.2,
+    "worst_day": -3118,
+    "max_dd": -92214,
+    "changed": 0,
+    "whys": {
+     "square_off": 3,
+     "stop": 448,
+     "target": 42
+    }
+   },
+   "V1": {
+    "trades": 493,
+    "days": 272,
+    "net": -93683,
+    "win": 30.2,
+    "charges": 37099,
+    "mfe_capture": -5.4,
+    "worst_day": -2671,
+    "max_dd": -94226,
+    "changed": 14,
+    "whys": {
+     "square_off": 1,
+     "stop": 436,
+     "target": 42,
+     "variant": 14
+    },
+    "delta": -2012,
+    "p": 0.9213078692130787,
+    "folds": [
+     -577,
+     -723,
+     -174,
+     -538
+    ],
+    "delta_2x_spread": -2009,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 493,
+    "days": 272,
+    "net": -86859,
+    "win": 34.1,
+    "charges": 37112,
+    "mfe_capture": -4.7,
+    "worst_day": -3118,
+    "max_dd": -87402,
+    "changed": 59,
+    "whys": {
+     "square_off": 3,
+     "stop": 400,
+     "target": 31,
+     "variant": 59
+    },
+    "delta": 4812,
+    "p": 0.06129387061293871,
+    "folds": [
+     914,
+     167,
+     371,
+     3359
+    ],
+    "delta_2x_spread": 4805,
+    "twin_p": 0.000999000999000999,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 493,
+    "days": 272,
+    "net": -85467,
+    "win": 30.0,
+    "charges": 37115,
+    "mfe_capture": -4.6,
+    "worst_day": -3118,
+    "max_dd": -86266,
+    "changed": 45,
+    "whys": {
+     "stop": 406,
+     "target": 42,
+     "variant": 45
+    },
+    "delta": 6204,
+    "p": 0.04889511048895111,
+    "folds": [
+     170,
+     949,
+     -1690,
+     6775
+    ],
+    "delta_2x_spread": 6193,
+    "twin_p": 0.5274725274725275,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 493,
+    "days": 272,
+    "net": -91766,
+    "win": 30.6,
+    "charges": 37103,
+    "mfe_capture": -5.2,
+    "worst_day": -3118,
+    "max_dd": -92310,
+    "changed": 5,
+    "whys": {
+     "square_off": 3,
+     "stop": 445,
+     "target": 40,
+     "variant": 5
+    },
+    "delta": -96,
+    "p": 0.639036096390361,
+    "folds": [
+     -85,
+     146,
+     -156,
+     0
+    ],
+    "delta_2x_spread": -95,
+    "twin_p": 0.000999000999000999,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 493,
+    "days": 272,
+    "net": -92296,
+    "win": 31.4,
+    "charges": 37102,
+    "mfe_capture": -5.2,
+    "worst_day": -3118,
+    "max_dd": -92840,
+    "changed": 5,
+    "whys": {
+     "square_off": 3,
+     "stop": 448,
+     "target": 42
+    },
+    "delta": -626,
+    "p": 0.7468253174682532,
+    "folds": [
+     5,
+     7,
+     4,
+     -643
+    ],
+    "delta_2x_spread": -625,
+    "twin_p": 0.2897102897102897,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "vixdiv_ni": {
+   "V0": {
+    "trades": 57,
+    "days": 57,
+    "net": 1219,
+    "win": 33.3,
+    "charges": 3917,
+    "mfe_capture": 3.3,
+    "worst_day": -2625,
+    "max_dd": -17735,
+    "changed": 0,
+    "whys": {
+     "square_off": 9,
+     "stop": 14,
+     "time_stop": 34
+    }
+   },
+   "V1": {
+    "trades": 57,
+    "days": 57,
+    "net": -2695,
+    "win": 35.1,
+    "charges": 3909,
+    "mfe_capture": 0.8,
+    "worst_day": -2625,
+    "max_dd": -12371,
+    "changed": 11,
+    "whys": {
+     "square_off": 4,
+     "stop": 12,
+     "time_stop": 30,
+     "variant": 11
+    },
+    "delta": -3914,
+    "p": 0.6462353764623537,
+    "folds": [
+     -9295,
+     520,
+     5441,
+     -580
+    ],
+    "delta_2x_spread": -3907,
+    "twin_p": 0.939060939060939,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 57,
+    "days": 57,
+    "net": -7357,
+    "win": 43.9,
+    "charges": 3900,
+    "mfe_capture": -2.2,
+    "worst_day": -2625,
+    "max_dd": -12768,
+    "changed": 19,
+    "whys": {
+     "square_off": 1,
+     "stop": 10,
+     "time_stop": 27,
+     "variant": 19
+    },
+    "delta": -8576,
+    "p": 0.7425257474252575,
+    "folds": [
+     -13471,
+     -2446,
+     2714,
+     4626
+    ],
+    "delta_2x_spread": -8563,
+    "twin_p": 0.9460539460539461,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 57,
+    "days": 57,
+    "net": -5925,
+    "win": 35.1,
+    "charges": 3903,
+    "mfe_capture": -1.3,
+    "worst_day": -2625,
+    "max_dd": -13526,
+    "changed": 11,
+    "whys": {
+     "stop": 12,
+     "time_stop": 34,
+     "variant": 11
+    },
+    "delta": -7144,
+    "p": 0.7674232576742326,
+    "folds": [
+     -8350,
+     -5332,
+     5127,
+     1411
+    ],
+    "delta_2x_spread": -7133,
+    "twin_p": 0.5894105894105894,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 57,
+    "days": 57,
+    "net": -3258,
+    "win": 36.8,
+    "charges": 3908,
+    "mfe_capture": 0.4,
+    "worst_day": -2625,
+    "max_dd": -10964,
+    "changed": 12,
+    "whys": {
+     "square_off": 1,
+     "stop": 12,
+     "time_stop": 32,
+     "variant": 12
+    },
+    "delta": -4477,
+    "p": 0.6527347265273473,
+    "folds": [
+     -12233,
+     -3989,
+     7544,
+     4201
+    ],
+    "delta_2x_spread": -4470,
+    "twin_p": 0.3926073926073926,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 57,
+    "days": 57,
+    "net": 792,
+    "win": 38.6,
+    "charges": 3916,
+    "mfe_capture": 3.0,
+    "worst_day": -2625,
+    "max_dd": -16552,
+    "changed": 8,
+    "whys": {
+     "square_off": 6,
+     "stop": 19,
+     "time_stop": 32
+    },
+    "delta": -427,
+    "p": 0.555044495550445,
+    "folds": [
+     -2225,
+     -1270,
+     2074,
+     993
+    ],
+    "delta_2x_spread": -426,
+    "twin_p": 0.994005994005994,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "vixdiv_bn": {
+   "V0": {
+    "trades": 59,
+    "days": 59,
+    "net": -19129,
+    "win": 37.3,
+    "charges": 4743,
+    "mfe_capture": -8.9,
+    "worst_day": -8745,
+    "max_dd": -33495,
+    "changed": 0,
+    "whys": {
+     "square_off": 59
+    }
+   },
+   "V1": {
+    "trades": 59,
+    "days": 59,
+    "net": -11188,
+    "win": 39.0,
+    "charges": 4758,
+    "mfe_capture": -4.0,
+    "worst_day": -8745,
+    "max_dd": -23844,
+    "changed": 39,
+    "whys": {
+     "square_off": 20,
+     "variant": 39
+    },
+    "delta": 7941,
+    "p": 0.291970802919708,
+    "folds": [
+     -3267,
+     8174,
+     -4590,
+     7625
+    ],
+    "delta_2x_spread": 7931,
+    "twin_p": 0.8311688311688312,
+    "q": 0.9008,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 59,
+    "days": 59,
+    "net": 16630,
+    "win": 69.5,
+    "charges": 4812,
+    "mfe_capture": 13.3,
+    "worst_day": -8745,
+    "max_dd": -22121,
+    "changed": 39,
+    "whys": {
+     "square_off": 20,
+     "variant": 39
+    },
+    "delta": 35759,
+    "p": 0.0354964503549645,
+    "folds": [
+     655,
+     11721,
+     17503,
+     5880
+    ],
+    "delta_2x_spread": 35703,
+    "twin_p": 0.002997002997002997,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 59,
+    "days": 59,
+    "net": -22846,
+    "win": 35.6,
+    "charges": 4736,
+    "mfe_capture": -11.2,
+    "worst_day": -5182,
+    "max_dd": -28015,
+    "changed": 59,
+    "whys": {
+     "variant": 59
+    },
+    "delta": -3717,
+    "p": 0.5652434756524347,
+    "folds": [
+     -9031,
+     464,
+     -579,
+     5429
+    ],
+    "delta_2x_spread": -3708,
+    "twin_p": 0.7932067932067932,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 59,
+    "days": 59,
+    "net": 15122,
+    "win": 61.0,
+    "charges": 4809,
+    "mfe_capture": 12.3,
+    "worst_day": -8745,
+    "max_dd": -24275,
+    "changed": 34,
+    "whys": {
+     "square_off": 25,
+     "variant": 34
+    },
+    "delta": 34251,
+    "p": 0.024997500249975,
+    "folds": [
+     -1204,
+     12225,
+     19983,
+     3247
+    ],
+    "delta_2x_spread": 34197,
+    "twin_p": 0.000999000999000999,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 59,
+    "days": 59,
+    "net": -7975,
+    "win": 47.5,
+    "charges": 4764,
+    "mfe_capture": -2.0,
+    "worst_day": -8745,
+    "max_dd": -24538,
+    "changed": 13,
+    "whys": {
+     "square_off": 46,
+     "stop": 13
+    },
+    "delta": 11154,
+    "p": 0.1650834916508349,
+    "folds": [
+     203,
+     11248,
+     1163,
+     -1460
+    ],
+    "delta_2x_spread": 11136,
+    "twin_p": 0.1798201798201798,
+    "q": 0.7792,
+    "candidate": false
+   }
+  },
+  "hero": {
+   "V0": {
+    "trades": 8,
+    "days": 8,
+    "net": -14822,
+    "win": 12.5,
+    "charges": 466,
+    "mfe_capture": -26.9,
+    "worst_day": -3951,
+    "max_dd": -14822,
+    "changed": 0,
+    "whys": {
+     "close_stop": 8
+    }
+   },
+   "V1": {
+    "trades": 8,
+    "days": 8,
+    "net": -13303,
+    "win": 12.5,
+    "charges": 469,
+    "mfe_capture": -24.1,
+    "worst_day": -3951,
+    "max_dd": -13303,
+    "changed": 3,
+    "whys": {
+     "close_stop": 5,
+     "variant": 3
+    },
+    "delta": 1520,
+    "p": 0.032396760323967606,
+    "folds": [
+     0,
+     0,
+     0,
+     1520
+    ],
+    "delta_2x_spread": 1520,
+    "twin_p": 0.5824175824175825,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 8,
+    "days": 8,
+    "net": -5878,
+    "win": 37.5,
+    "charges": 459,
+    "mfe_capture": -10.2,
+    "worst_day": -3951,
+    "max_dd": -12464,
+    "changed": 4,
+    "whys": {
+     "close_stop": 4,
+     "variant": 4
+    },
+    "delta": 8944,
+    "p": 0.1972802719728027,
+    "folds": [
+     0,
+     0,
+     1939,
+     7005
+    ],
+    "delta_2x_spread": 8944,
+    "twin_p": 0.3196803196803197,
+    "q": 0.7792,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 8,
+    "days": 8,
+    "net": -8375,
+    "win": 12.5,
+    "charges": 478,
+    "mfe_capture": -14.8,
+    "worst_day": -3951,
+    "max_dd": -12683,
+    "changed": 2,
+    "whys": {
+     "close_stop": 6,
+     "variant": 2
+    },
+    "delta": 6447,
+    "p": 0.10678932106789321,
+    "folds": [
+     0,
+     0,
+     0,
+     6447
+    ],
+    "delta_2x_spread": 6447,
+    "twin_p": 0.21978021978021978,
+    "q": 0.7119,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 8,
+    "days": 8,
+    "net": -12660,
+    "win": 25.0,
+    "charges": 446,
+    "mfe_capture": -22.9,
+    "worst_day": -3951,
+    "max_dd": -16059,
+    "changed": 2,
+    "whys": {
+     "close_stop": 6,
+     "variant": 2
+    },
+    "delta": 2162,
+    "p": 0.37646235376462356,
+    "folds": [
+     0,
+     0,
+     0,
+     2162
+    ],
+    "delta_2x_spread": 2162,
+    "twin_p": 0.4515484515484515,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 8,
+    "days": 8,
+    "net": -9200,
+    "win": 50.0,
+    "charges": 453,
+    "mfe_capture": -16.4,
+    "worst_day": -3464,
+    "max_dd": -9264,
+    "changed": 6,
+    "whys": {
+     "close_stop": 2,
+     "stop": 6
+    },
+    "delta": 5622,
+    "p": 0.30956904309569044,
+    "folds": [
+     0,
+     0,
+     4506,
+     1116
+    ],
+    "delta_2x_spread": 5622,
+    "twin_p": 0.7052947052947053,
+    "q": 0.9008,
+    "candidate": false
+   }
+  },
+  "pine_ema_ni": {
+   "V0": {
+    "trades": 1101,
+    "days": 351,
+    "net": -73461,
+    "win": 40.9,
+    "charges": 71075,
+    "mfe_capture": -0.1,
+    "worst_day": -6272,
+    "max_dd": -77873,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 275,
+     "square_off": 27,
+     "stop": 787,
+     "target": 12
+    }
+   },
+   "V1": {
+    "trades": 1101,
+    "days": 351,
+    "net": -82974,
+    "win": 39.1,
+    "charges": 71057,
+    "mfe_capture": -0.5,
+    "worst_day": -5423,
+    "max_dd": -87461,
+    "changed": 129,
+    "whys": {
+     "arm_exit": 194,
+     "square_off": 24,
+     "stop": 743,
+     "target": 11,
+     "variant": 129
+    },
+    "delta": -9512,
+    "p": 0.8923107689231077,
+    "folds": [
+     -2671,
+     -6310,
+     508,
+     -1039
+    ],
+    "delta_2x_spread": -9504,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 1101,
+    "days": 351,
+    "net": -67938,
+    "win": 44.9,
+    "charges": 71086,
+    "mfe_capture": 0.1,
+    "worst_day": -5958,
+    "max_dd": -69357,
+    "changed": 273,
+    "whys": {
+     "arm_exit": 265,
+     "square_off": 18,
+     "stop": 545,
+     "variant": 273
+    },
+    "delta": 5523,
+    "p": 0.31526847315268475,
+    "folds": [
+     1483,
+     -5780,
+     6119,
+     3702
+    ],
+    "delta_2x_spread": 5514,
+    "twin_p": 0.000999000999000999,
+    "q": 0.9008,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 1101,
+    "days": 351,
+    "net": -84453,
+    "win": 39.8,
+    "charges": 71054,
+    "mfe_capture": -0.6,
+    "worst_day": -6395,
+    "max_dd": -87615,
+    "changed": 75,
+    "whys": {
+     "arm_exit": 244,
+     "square_off": 17,
+     "stop": 754,
+     "target": 10,
+     "variant": 76
+    },
+    "delta": -10991,
+    "p": 0.9757024297570243,
+    "folds": [
+     -2653,
+     136,
+     -9103,
+     629
+    ],
+    "delta_2x_spread": -10976,
+    "twin_p": 0.6493506493506493,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 1101,
+    "days": 351,
+    "net": -68968,
+    "win": 40.9,
+    "charges": 71084,
+    "mfe_capture": 0.1,
+    "worst_day": -6272,
+    "max_dd": -71743,
+    "changed": 64,
+    "whys": {
+     "arm_exit": 275,
+     "square_off": 25,
+     "stop": 731,
+     "target": 6,
+     "variant": 64
+    },
+    "delta": 4493,
+    "p": 0.16718328167183283,
+    "folds": [
+     2333,
+     405,
+     585,
+     1170
+    ],
+    "delta_2x_spread": 4484,
+    "twin_p": 0.000999000999000999,
+    "q": 0.7792,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 1101,
+    "days": 351,
+    "net": -73461,
+    "win": 40.9,
+    "charges": 71075,
+    "mfe_capture": -0.1,
+    "worst_day": -6272,
+    "max_dd": -77873,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 275,
+     "square_off": 27,
+     "stop": 787,
+     "target": 12
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "pine_ema_bn": {
+   "V0": {
+    "trades": 1173,
+    "days": 351,
+    "net": -166774,
+    "win": 26.9,
+    "charges": 91968,
+    "mfe_capture": -3.0,
+    "worst_day": -5995,
+    "max_dd": -170547,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 190,
+     "square_off": 15,
+     "stop": 887,
+     "target": 81
+    }
+   },
+   "V1": {
+    "trades": 1173,
+    "days": 351,
+    "net": -166230,
+    "win": 26.7,
+    "charges": 91969,
+    "mfe_capture": -3.0,
+    "worst_day": -5714,
+    "max_dd": -170004,
+    "changed": 26,
+    "whys": {
+     "arm_exit": 179,
+     "square_off": 15,
+     "stop": 873,
+     "target": 80,
+     "variant": 26
+    },
+    "delta": 543,
+    "p": 0.393960603939606,
+    "folds": [
+     -1187,
+     78,
+     934,
+     717
+    ],
+    "delta_2x_spread": 541,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 1173,
+    "days": 351,
+    "net": -163182,
+    "win": 30.5,
+    "charges": 91974,
+    "mfe_capture": -2.9,
+    "worst_day": -5714,
+    "max_dd": -164041,
+    "changed": 176,
+    "whys": {
+     "arm_exit": 176,
+     "square_off": 12,
+     "stop": 754,
+     "target": 54,
+     "variant": 177
+    },
+    "delta": 3591,
+    "p": 0.268973102689731,
+    "folds": [
+     -33,
+     469,
+     4091,
+     -936
+    ],
+    "delta_2x_spread": 3587,
+    "twin_p": 0.000999000999000999,
+    "q": 0.9008,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 1173,
+    "days": 351,
+    "net": -162688,
+    "win": 27.2,
+    "charges": 91975,
+    "mfe_capture": -2.8,
+    "worst_day": -5995,
+    "max_dd": -166461,
+    "changed": 22,
+    "whys": {
+     "arm_exit": 182,
+     "square_off": 13,
+     "stop": 874,
+     "target": 80,
+     "variant": 24
+    },
+    "delta": 4086,
+    "p": 0.021497850214978503,
+    "folds": [
+     396,
+     1103,
+     2235,
+     352
+    ],
+    "delta_2x_spread": 4079,
+    "twin_p": 0.11988011988011989,
+    "q": 0.4807,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 1173,
+    "days": 351,
+    "net": -168364,
+    "win": 26.9,
+    "charges": 91964,
+    "mfe_capture": -3.1,
+    "worst_day": -5995,
+    "max_dd": -172000,
+    "changed": 13,
+    "whys": {
+     "arm_exit": 186,
+     "square_off": 15,
+     "stop": 881,
+     "target": 78,
+     "variant": 13
+    },
+    "delta": -1590,
+    "p": 0.9059094090590941,
+    "folds": [
+     -26,
+     23,
+     -489,
+     -1098
+    ],
+    "delta_2x_spread": -1587,
+    "twin_p": 0.000999000999000999,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 1173,
+    "days": 351,
+    "net": -166774,
+    "win": 26.9,
+    "charges": 91968,
+    "mfe_capture": -3.0,
+    "worst_day": -5995,
+    "max_dd": -170547,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 190,
+     "square_off": 15,
+     "stop": 887,
+     "target": 81
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "pine_st_ni": {
+   "V0": {
+    "trades": 661,
+    "days": 325,
+    "net": -63896,
+    "win": 44.8,
+    "charges": 43238,
+    "mfe_capture": -1.2,
+    "worst_day": -4706,
+    "max_dd": -75934,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 23,
+     "square_off": 28,
+     "stop": 600,
+     "target": 10
+    }
+   },
+   "V1": {
+    "trades": 661,
+    "days": 325,
+    "net": -64943,
+    "win": 41.3,
+    "charges": 43236,
+    "mfe_capture": -1.2,
+    "worst_day": -5619,
+    "max_dd": -76094,
+    "changed": 102,
+    "whys": {
+     "arm_exit": 5,
+     "square_off": 14,
+     "stop": 530,
+     "target": 10,
+     "variant": 102
+    },
+    "delta": -1047,
+    "p": 0.5494450554944506,
+    "folds": [
+     -83,
+     -2645,
+     1294,
+     387
+    ],
+    "delta_2x_spread": -1049,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 661,
+    "days": 325,
+    "net": -59523,
+    "win": 49.5,
+    "charges": 43247,
+    "mfe_capture": -0.9,
+    "worst_day": -4706,
+    "max_dd": -64376,
+    "changed": 177,
+    "whys": {
+     "arm_exit": 22,
+     "square_off": 26,
+     "stop": 435,
+     "target": 1,
+     "variant": 177
+    },
+    "delta": 4373,
+    "p": 0.3106689331066893,
+    "folds": [
+     1079,
+     -6828,
+     4990,
+     5132
+    ],
+    "delta_2x_spread": 4360,
+    "twin_p": 0.000999000999000999,
+    "q": 0.9008,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 661,
+    "days": 325,
+    "net": -67386,
+    "win": 42.1,
+    "charges": 43232,
+    "mfe_capture": -1.4,
+    "worst_day": -4706,
+    "max_dd": -77144,
+    "changed": 77,
+    "whys": {
+     "arm_exit": 11,
+     "square_off": 9,
+     "stop": 553,
+     "target": 10,
+     "variant": 78
+    },
+    "delta": -3490,
+    "p": 0.6959304069593041,
+    "folds": [
+     -3559,
+     -1931,
+     -2150,
+     4151
+    ],
+    "delta_2x_spread": -3487,
+    "twin_p": 0.7432567432567433,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 661,
+    "days": 325,
+    "net": -61162,
+    "win": 44.6,
+    "charges": 43244,
+    "mfe_capture": -1.0,
+    "worst_day": -4706,
+    "max_dd": -72522,
+    "changed": 35,
+    "whys": {
+     "arm_exit": 23,
+     "square_off": 28,
+     "stop": 569,
+     "target": 6,
+     "variant": 35
+    },
+    "delta": 2734,
+    "p": 0.20777922207779223,
+    "folds": [
+     381,
+     -784,
+     5157,
+     -2020
+    ],
+    "delta_2x_spread": 2726,
+    "twin_p": 0.000999000999000999,
+    "q": 0.7792,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 661,
+    "days": 325,
+    "net": -63896,
+    "win": 44.8,
+    "charges": 43238,
+    "mfe_capture": -1.2,
+    "worst_day": -4706,
+    "max_dd": -75934,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 23,
+     "square_off": 28,
+     "stop": 600,
+     "target": 10
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "pine_st_bn": {
+   "V0": {
+    "trades": 632,
+    "days": 323,
+    "net": -87448,
+    "win": 30.7,
+    "charges": 50014,
+    "mfe_capture": -2.3,
+    "worst_day": -3310,
+    "max_dd": -87953,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 1,
+     "square_off": 7,
+     "stop": 570,
+     "target": 54
+    }
+   },
+   "V1": {
+    "trades": 632,
+    "days": 323,
+    "net": -90281,
+    "win": 30.5,
+    "charges": 50008,
+    "mfe_capture": -2.5,
+    "worst_day": -3310,
+    "max_dd": -91029,
+    "changed": 13,
+    "whys": {
+     "square_off": 6,
+     "stop": 560,
+     "target": 53,
+     "variant": 13
+    },
+    "delta": -2832,
+    "p": 0.9133086691330867,
+    "folds": [
+     -1003,
+     -345,
+     341,
+     -1826
+    ],
+    "delta_2x_spread": -2829,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 632,
+    "days": 323,
+    "net": -86599,
+    "win": 32.6,
+    "charges": 50015,
+    "mfe_capture": -2.2,
+    "worst_day": -3310,
+    "max_dd": -86979,
+    "changed": 75,
+    "whys": {
+     "arm_exit": 1,
+     "square_off": 6,
+     "stop": 509,
+     "target": 41,
+     "variant": 75
+    },
+    "delta": 849,
+    "p": 0.42785721427857215,
+    "folds": [
+     -185,
+     539,
+     1825,
+     -1330
+    ],
+    "delta_2x_spread": 848,
+    "twin_p": 0.000999000999000999,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 632,
+    "days": 323,
+    "net": -86572,
+    "win": 31.0,
+    "charges": 50015,
+    "mfe_capture": -2.2,
+    "worst_day": -3310,
+    "max_dd": -87077,
+    "changed": 8,
+    "whys": {
+     "arm_exit": 1,
+     "square_off": 5,
+     "stop": 564,
+     "target": 54,
+     "variant": 8
+    },
+    "delta": 876,
+    "p": 0.20617938206179381,
+    "folds": [
+     137,
+     332,
+     866,
+     -458
+    ],
+    "delta_2x_spread": 875,
+    "twin_p": 0.007992007992007992,
+    "q": 0.7792,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 632,
+    "days": 323,
+    "net": -88361,
+    "win": 30.7,
+    "charges": 50012,
+    "mfe_capture": -2.3,
+    "worst_day": -3310,
+    "max_dd": -88866,
+    "changed": 3,
+    "whys": {
+     "arm_exit": 1,
+     "square_off": 6,
+     "stop": 570,
+     "target": 52,
+     "variant": 3
+    },
+    "delta": -912,
+    "p": 0.8836116388361164,
+    "folds": [
+     -288,
+     0,
+     0,
+     -624
+    ],
+    "delta_2x_spread": -911,
+    "twin_p": 0.007992007992007992,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 632,
+    "days": 323,
+    "net": -87448,
+    "win": 30.7,
+    "charges": 50014,
+    "mfe_capture": -2.3,
+    "worst_day": -3310,
+    "max_dd": -87953,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 1,
+     "square_off": 7,
+     "stop": 570,
+     "target": 54
+    },
+    "delta": 0,
+    "p": 1.0,
+    "folds": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "delta_2x_spread": 0,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  },
+  "liq_bn": {
+   "V0": {
+    "trades": 336,
+    "days": 210,
+    "net": 96584,
+    "win": 40.5,
+    "charges": 27728,
+    "mfe_capture": 10.7,
+    "worst_day": -3698,
+    "max_dd": -16982,
+    "changed": 0,
+    "whys": {
+     "arm_exit": 225,
+     "square_off": 11,
+     "stop": 39,
+     "time_stop": 61
+    }
+   },
+   "V1": {
+    "trades": 336,
+    "days": 210,
+    "net": 44648,
+    "win": 43.8,
+    "charges": 27628,
+    "mfe_capture": 6.2,
+    "worst_day": -3692,
+    "max_dd": -16107,
+    "changed": 52,
+    "whys": {
+     "arm_exit": 190,
+     "square_off": 5,
+     "stop": 33,
+     "time_stop": 56,
+     "variant": 52
+    },
+    "delta": -51936,
+    "p": 0.9653034696530347,
+    "folds": [
+     -5520,
+     -891,
+     -33306,
+     -12219
+    ],
+    "delta_2x_spread": -51854,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V2": {
+    "trades": 336,
+    "days": 210,
+    "net": 20260,
+    "win": 44.6,
+    "charges": 27581,
+    "mfe_capture": 4.1,
+    "worst_day": -3698,
+    "max_dd": -23468,
+    "changed": 64,
+    "whys": {
+     "arm_exit": 187,
+     "stop": 35,
+     "time_stop": 50,
+     "variant": 64
+    },
+    "delta": -76324,
+    "p": 0.9929007099290071,
+    "folds": [
+     -27237,
+     -7106,
+     -29582,
+     -12400
+    ],
+    "delta_2x_spread": -76204,
+    "twin_p": 0.996003996003996,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V3": {
+    "trades": 336,
+    "days": 210,
+    "net": 49456,
+    "win": 43.5,
+    "charges": 27637,
+    "mfe_capture": 6.6,
+    "worst_day": -3692,
+    "max_dd": -15841,
+    "changed": 38,
+    "whys": {
+     "arm_exit": 201,
+     "stop": 36,
+     "time_stop": 61,
+     "variant": 38
+    },
+    "delta": -47128,
+    "p": 0.932906709329067,
+    "folds": [
+     -21190,
+     5897,
+     -34853,
+     3018
+    ],
+    "delta_2x_spread": -47055,
+    "twin_p": 0.9760239760239761,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V4": {
+    "trades": 336,
+    "days": 210,
+    "net": 34881,
+    "win": 42.6,
+    "charges": 27609,
+    "mfe_capture": 5.4,
+    "worst_day": -3692,
+    "max_dd": -15317,
+    "changed": 45,
+    "whys": {
+     "arm_exit": 198,
+     "stop": 37,
+     "time_stop": 56,
+     "variant": 45
+    },
+    "delta": -61703,
+    "p": 0.9747025297470253,
+    "folds": [
+     -15259,
+     -682,
+     -40306,
+     -5456
+    ],
+    "delta_2x_spread": -61607,
+    "twin_p": 0.8931068931068931,
+    "q": 1.0,
+    "candidate": false
+   },
+   "V5": {
+    "trades": 336,
+    "days": 210,
+    "net": 96461,
+    "win": 43.8,
+    "charges": 27728,
+    "mfe_capture": 10.7,
+    "worst_day": -3692,
+    "max_dd": -18830,
+    "changed": 30,
+    "whys": {
+     "arm_exit": 212,
+     "square_off": 7,
+     "stop": 61,
+     "time_stop": 56
+    },
+    "delta": -123,
+    "p": 0.5392460753924607,
+    "folds": [
+     -1982,
+     2398,
+     -1632,
+     1093
+    ],
+    "delta_2x_spread": -123,
+    "twin_p": 1.0,
+    "q": 1.0,
+    "candidate": false
+   }
+  }
+ }
+}
