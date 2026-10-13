@@ -1,0 +1,43 @@
+id: r23-anatomy
+title: 'R23 Step 1: what good-break mornings look like vs fakeout mornings (28 pre-break features)'
+family: market-facts
+date: '2026-10-13'
+doc: research/HUNT_R23_ORB_RANGE.md
+hypothesis: 'Descriptive: some features known at the break minute separate breaks that run >= 0.5 ATR14 by 14:59 from breaks
+  that close back inside within 30 minutes.'
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13) via research/hunt/r17/data.py;
+  ALL sessions used as design (the release holdout was used up by R16-R22); FINNIFTY index (release finnifty_index.parquet)
+period:
+  design: release, all sessions after 15 for ATR14
+instruments:
+- BANKNIFTY
+- NIFTY
+- FINNIFTY
+features:
+- range width vs ATR14 and previous day
+- gap and gap fill
+- first 5/15/30-min candle body and colour
+- option volume and OI (first 15-60 min)
+- VIX and its change
+- inside / outside previous day
+- edge tests before the break
+- break time
+- position vs previous day, pivot, TWAP
+- expiry day
+- break candle strength
+model_or_rule: first 5-min close beyond the ORB range (09:15-10:04) and the 30-min range; RUN = MFE >= 0.5 ATR14, FAKE = back
+  inside within 30 min and MFE < 0.25 ATR14; Mann-Whitney AUC, BH per range, halves and indices
+settings: research/hunt/r23/PREREG.md part A2
+prereg: research/hunt/r23/PREREG.md
+variants_tried: null
+results:
+  summary: 'ORB range: 1,242 breaks of 1,455 sessions (BANKNIFTY 413 / NIFTY 423 / FINNIFTY 406): 284 RUN (23%), 452 FAKE
+    (36%), 506 CHOP; only 3 per index (<1%) ran 1.5 x ATR14. Eight features qualified (q < 0.10, same side in both halves,
+    both indices and the 30-min range): twap_al AUC 0.653, brk_str 0.631, t_break 0.396, tests 0.397, w_atr 0.582, piv_al
+    0.576, pd_dir_al 0.554, w_prev 0.553. Nothing for option volume (0.485), OI flow (0.512), VIX (0.497), gap (0.531), first-candle
+    shape (0.48-0.50), expiry (0.502).'
+  costs: none (index moves only)
+holdout_read: null
+verdict: not-a-test
+notes: Descriptive. The two strongest (twap_al, brk_str) measure how far price has already gone; brk_str is partly tied to
+  the FAKE definition. They became the (f) filters by the pre-stated rule.

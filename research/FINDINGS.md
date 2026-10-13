@@ -437,3 +437,25 @@ family of 58 with R20 / R20b / R20c).
   1x-extension target -1,17,565 / -53,564 (stop hit on 486 of 665); mid stop +21,472 / -27,859; skip wide -7,785 / -7,529;
   skip narrow -2,751 / -9,915. Best R22 BH q 1.00. App: no change; the ORB stays paused.
 - Re-run on the 6-year lake: `R22_SOURCE=lake python3 research/hunt/r22/r22trades.py design` (and `r22study.py events`).
+
+## Which morning range helps the ORB (R23, 13 Oct 2026) - none on the release; the verdict waits for the fresh lake
+Full study: `HUNT_R23_ORB_RANGE.md` (pre-registered `hunt/r23/PREREG.md`; parts A / B / C in ddc9e8a / 5c342af / a9a21ed;
+22 range configurations, BH family of 80 now, 89 at the lake read).
+- The release (2 years) was already read by R16-R22, so R23 used it all as design data. The fresh test is the Dhan
+  lake from 27 Apr 2026 (R18 amendment 1). The lake is NOT published (13 Oct), so there is no verdict yet. One command
+  reads it: `R23_SOURCE=lake python3 research/hunt/r23/r23trades.py lake`.
+- Anatomy (1,242 ORB-range breaks, BANKNIFTY / NIFTY / FINNIFTY): 23% ran >= 0.5 ATR14, 36% faked out, under 1% ran
+  1.5 ATR. Good breaks:
+  - are already further from the morning TWAP (AUC 0.65) and close clearly beyond the edge (0.63);
+  - come early (after 11:05: 16% run / 44% fake) and after few edge tests (3+: 17% / 45%);
+  - happen on wider ranges (0.58).
+  No signal from option volume / OI, VIX, gap, first-candle shape, inside day or expiry (AUC 0.48-0.53).
+- Release trading (515 days, BANKNIFTY + NIFTY, after costs). All 18 plain ranges lose:
+  - 15-75 minute windows, own-timeframe candles, volatility-sized, first-hour value area, plus yesterday's high / low,
+    plus the gap. Rs -18k to -86k, against today's ORB -44,720 and R22's 15-min range -17,455;
+  - a 15-minute close beats a 5-minute one on every window;
+  - only R22's range plus the TWAP / break-strength filter was positive (+15,593 / +16,158). That was in-sample, in
+    2 of 4 blocks, and mirrored ranges with the same filter made more (+20,408 / +26,318).
+- The nested walk-forward of the selection lost Rs -17,791 out of sample, against R22's plain range at -8,535. BH:
+  nothing (best q 0.32). App: no change; the ORB stays paused. Finalists for the lake: `r23-r22-f2`, `r23-r22-f1`,
+  `r23-orb-f2`, all "carried, not promising".
