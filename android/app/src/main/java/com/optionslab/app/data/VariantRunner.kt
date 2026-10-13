@@ -315,7 +315,8 @@ object VariantRunner {
         runCatching {
             val closed = OrbArms.closedPaper() + OrbArms.closedLive()
             for (p in closed) {
-                if (p.day != d || p.exit == null) continue
+                // Boss's opt-in Liquidity give-back trail (R19b) is not the rules' own result: left out of the baseline.
+                if (p.day != d || p.exit == null || p.trail != null) continue
                 val key = lab(p.arm)
                 val run = runs[key] ?: continue
                 if (run == VariantLab.Run.OFF || p.live != (run == VariantLab.Run.LIVE)) continue

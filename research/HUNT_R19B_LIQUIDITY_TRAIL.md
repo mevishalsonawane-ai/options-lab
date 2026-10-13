@@ -158,8 +158,9 @@ switch is built and tested so he can decide after reading the numbers:
   If the stop is gone, the app sells it itself. It never widens a stop. Nothing new is read on the order path: the
   switch is a memory read at a paper entry.
 - **Labels.** Every Liquidity paper trade's notices say "Rules: plain rules" or "Rules: with ₹500 trail". A trail exit
-  reads "₹500 trail". Liquidity BANKNIFTY's paper-test verdict (the 26 Oct decision) counts **plain-rules trades only**.
-  Trail trades are kept apart on their own line, so the plain-rules record stays clean.
+  reads "₹500 trail". Every plain-rules record counts **plain-rules trades only**: Liquidity BANKNIFTY's paper-test
+  verdict (the 26 Oct decision), the paper drift / forward check, the "Paper record" chart, the paper stop-rule hint and
+  the strategy lab's daily baseline. Trail trades are kept apart on their own line, so the plain-rules record stays clean.
 - Code: engine `LiquidityTrail` (pure, tested: activation, never lower, rupees to points per lot size, gap through the
   trigger, missing peak); ira-core `LiquidityFreeze.State.trail` and its words; app `OrbArms` (paper path only),
   `LiquidityTest.setTrail`, `StrategyLabCard.LiquidityTrailRow`.

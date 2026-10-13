@@ -64,6 +64,7 @@ internal fun StrategyLabSection(model: AppModel) {
     val liq by com.optionslab.app.data.LiquidityTest.state.collectAsState(Dispatchers.Main.immediate)
     val today = remember { runCatching { com.optionslab.app.data.Market.today() }.getOrElse { java.time.LocalDate.now() } }
     LiquidityFreezeRow(liq, today) { model.liquidityFreeze(it) }
+    LiquidityTrailRow(liq) { model.liquidityTrail(it) }
     open?.let { sel -> StrategyLabDialog(model, sel.ifEmpty { null }) { open = null } }
 }
 
@@ -97,6 +98,20 @@ internal fun LiquidityFreezeRow(state: com.optionslab.ira.LiquidityFreeze.State,
         confirmButton = { com.optionslab.app.ui.components.TextButton({ confirm = false; onSet(true) }) { Text("Unfreeze") } },
         dismissButton = { com.optionslab.app.ui.components.TextButton({ confirm = false }) { Text("Keep it frozen") } },
     )
+}
+
+/**
+ * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail]): research R19b
+ * failed, so it is off by default and said as "failed research, your choice" with its numbers. One tap switches it on
+ * (new paper trades carry it, each labelled), one tap back to plain rules. [onSet] true: on. Live trades never use it.
+ */
+@Composable
+internal fun LiquidityTrailRow(state: com.optionslab.ira.LiquidityFreeze.State, onSet: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Text(com.optionslab.ira.LiquidityFreeze.trailNote(state),
+        style = Type.label.copy(color = if (state.trail) p.amber else p.inkSoft, fontSize = 12.sp), modifier = Modifier.padding(top = 6.dp).testTag("lab-liq-trail"))
+    BrassButton(if (state.trail) com.optionslab.ira.LiquidityFreeze.TRAIL_OFF else com.optionslab.ira.LiquidityFreeze.TRAIL_ON,
+        Modifier.fillMaxWidth().padding(top = 4.dp), tone = p.inkSoft) { onSet(!state.trail) }
 }
 
 /** The card from plain state (tests drive it). [onOpen]: the sheet, at a candidate's id or at the top (null). */

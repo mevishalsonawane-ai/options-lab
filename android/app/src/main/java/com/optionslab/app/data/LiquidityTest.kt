@@ -96,6 +96,24 @@ object LiquidityTest {
             else "Liquidity BANKNIFTY frozen for its paper test until ${LiquidityFreeze.UNTIL.dayOfMonth} Oct: automatic changes only record."
     }
 
+    /**
+     * Boss's own Rs 500 give-back trail on the Liquidity PAPER books ([com.optionslab.engine.orb.LiquidityTrail]; research R19b
+     * failed, so it is his choice and off by default). Memory only: the order path reads it at a paper entry.
+     */
+    fun trailOn(): Boolean = _state.value.trail
+
+    /**
+     * Boss's switch from the Strategy lab card (one tap on, one tap off): new paper entries carry the trail or plain rules;
+     * open trades keep the rule they entered with. Live trades never use it. Said back and kept in the diagnostics.
+     */
+    fun setTrail(on: Boolean): String {
+        _state.value = _state.value.copy(trail = on)
+        saveSoon()
+        val said = LiquidityFreeze.trailSaid(on)
+        runCatching { Diag.record("liquidity", "$said (by you)") }
+        return said
+    }
+
     /** Boss's tick: he watched the first live trade with the app open (or took the tick back). */
     fun setWatched(watched: Boolean) {
         _state.value = _state.value.copy(watched = watched)

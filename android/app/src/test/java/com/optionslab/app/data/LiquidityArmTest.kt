@@ -651,6 +651,83 @@ class LiquidityArmTest : RobolectricTest() {
 
     @Test fun inShadowLiquidityStopTradesExactlyAsBefore() = ManagerShadow.rerun("liquidity", { looks = it }) { theOptionFalling15PercentIsSoldByItsStop() }
 
+    // ---- Boss's own Rs 500 give-back trail on paper (R19b, 13 Oct: failed research, his opt-in switch, off by default) ----
+
+    /** [body] with Boss's paper trail switch on; the state put back after. */
+    private fun <T> withTrail(body: () -> T): T {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(trail = true))
+        try { return body() } finally { LiquidityTest.setStateForTest(before) }
+    }
+
+    @Test fun offByDefaultTheTradeRunsOnPlainRules() {
+        assertFalse("off unless Boss switches it on", LiquidityTest.trailOn())
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertNull("plain rules", p.trail)
+        upstox.price(ceKey, p.entry * 1.10)
+        tick(LocalTime.of(13, 6))
+        assertEquals("no trail: the 15% stop stays where it was", com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), row().today.single().stopTrigger)
+        assertEquals(com.optionslab.engine.orb.LiquidityTrail.PLAIN, com.optionslab.engine.orb.LiquidityTrail.label(row().today.single().trail))
+    }
+
+    @Test fun withTheTrailTheRestingStopRisesAndFillsAsTheTrail() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        assertEquals("entered under Boss's Rs 500 a lot", com.optionslab.engine.orb.LiquidityTrail.GIVE_BACK_RS, p.trail!!, 0.0)
+        assertEquals(30, p.lot)
+        assertFalse(p.live)
+        // +Rs 300 a lot (10 points): not yet +Rs 500, the stop stays at -15%.
+        upstox.price(ceKey, p.entry + 10.0)
+        tick(LocalTime.of(13, 6))
+        assertEquals(com.optionslab.engine.orb.LiquidityRules.stopTrigger(p.entry), row().today.single().stopTrigger)
+        // +Rs 900 a lot (30 points): the resting stop moves up to the best less Rs 500 a lot (16.67 points), on the tick.
+        upstox.price(ceKey, p.entry + 30.0)
+        tick(LocalTime.of(13, 7))
+        val up = row().today.single()
+        val want = com.optionslab.engine.orb.LiquidityTrail.level(p.entry, p.entry + 30.0, 30, 500.0)!!
+        assertEquals(want, up.stopTrigger!!, 1e-9)
+        assertEquals("the paper book's stop order moved too", want, Paper.state.orders.single { it.orderId == up.stopOrderId }.triggerPrice!!.toDouble(), 1e-9)
+        // A smaller price never lowers it.
+        upstox.price(ceKey, p.entry + 20.0)
+        tick(LocalTime.of(13, 8))
+        assertEquals(want, row().today.single().stopTrigger!!, 1e-9)
+        assertTrue(row().today.single().open)
+        // Saved and read back: the trade keeps its rule over a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(500.0, row().today.single().trail!!, 0.0)
+        // The price gives back through it: the paper book fills the resting stop, booked as the trail.
+        upstox.price(ceKey, p.entry + 5.0)
+        at(LocalTime.of(13, 9))
+        runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 9))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals(com.optionslab.engine.orb.LiquidityTrail.WHY, closed.why)
+        assertTrue("sold above the price paid", closed.exit!! > p.entry)
+        assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
+    }
+
+    @Test fun withTheTrailAndNoRestingStopTheAppSellsItItself() = withTrail {
+        failDay = false
+        armLiquidity()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        val p = row().today.single()
+        runBlocking { Paper.cancel(checkNotNull(p.stopOrderId), "test") }   // its resting stop is gone
+        upstox.price(ceKey, p.entry + 30.0)
+        tick(LocalTime.of(13, 6))
+        assertTrue(row().today.single().open)
+        upstox.price(ceKey, p.entry + 10.0)                                // Rs 600 a lot under its best, far above the 15% stop
+        tick(LocalTime.of(13, 7))
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals(com.optionslab.engine.orb.LiquidityTrail.WHY, closed.why)
+    }
+
     // ---- review G2-4 / G2-8 (11 Oct): Liquidity under a paper profit-lock variant ----
 
     /** A paper profit-lock variant for Liquidity in force today ([lock] of the premium paid), as the lab promotes one (S9: exits only). */

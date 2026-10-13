@@ -23,9 +23,11 @@ object LiquidityFreeze {
     /**
      * The paper test's small state: [unfrozen] by Boss; the live stop rule's restart ([stopResetAtMs]: trades closed before
      * it no longer count, set when Boss re-enables live entries with his PIN) and the stop already told ([stopTold]); Boss's
-     * own tick that he watched the first live trade ([watched]).
+     * own tick that he watched the first live trade ([watched]); Boss's own opt-in Rs 500 give-back trail on the Liquidity PAPER
+     * books ([trail], research R19b: failed its gates, so off unless he switches it on; see [trailNote]).
      */
-    data class State(val unfrozen: Boolean = false, val stopResetAtMs: Long = 0L, val stopTold: String = "", val watched: Boolean = false)
+    data class State(val unfrozen: Boolean = false, val stopResetAtMs: Long = 0L, val stopTold: String = "", val watched: Boolean = false,
+                     val trail: Boolean = false)
 
     fun frozen(s: State, today: LocalDate): Boolean = !s.unfrozen && !today.isAfter(UNTIL)
 
@@ -42,11 +44,35 @@ object LiquidityFreeze {
     /** Whether an Autopilot change target ("paper:liquidity", "flow:liquidity:BANKNIFTY", "mgr:liquidity:paper") is Liquidity's. */
     fun touches(target: String): Boolean = target.contains("liquidity", ignoreCase = true)
 
-    fun encode(s: State): String = "v1\nunfrozen=${s.unfrozen}\nstopResetAt=${s.stopResetAtMs}\nstopTold=${s.stopTold.replace('\n', ' ')}\nwatched=${s.watched}\n"
+    fun encode(s: State): String = "v1\nunfrozen=${s.unfrozen}\nstopResetAt=${s.stopResetAtMs}\nstopTold=${s.stopTold.replace('\n', ' ')}\nwatched=${s.watched}\n" +
+        "trail=${s.trail}\n"
 
     fun decode(text: String?): State {
         if (text.isNullOrBlank()) return State()
         val m = text.lineSequence().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()
-        return State(m["unfrozen"] == "true", m["stopResetAt"]?.toLongOrNull() ?: 0L, m["stopTold"].orEmpty(), m["watched"] == "true")
+        return State(m["unfrozen"] == "true", m["stopResetAt"]?.toLongOrNull() ?: 0L, m["stopTold"].orEmpty(), m["watched"] == "true",
+            m["trail"] == "true")
     }
+
+    // ---- Boss's Rs 500 give-back trail (R19b, 13 Oct): his own choice, on paper only -----------------------------------------
+
+    /** The switch's name on the Strategy lab card. */
+    const val TRAIL_ON = "Try the ₹500 trail on paper"
+    const val TRAIL_OFF = "Back to plain rules"
+
+    /**
+     * The switch's line: what the trail is, that it FAILED the research (with its numbers) and is Boss's choice, that it is
+     * paper only and labels each trade, and whether it is on.
+     */
+    fun trailNote(s: State): String = "₹500 give-back trail (failed research, your choice): " +
+        (if (s.trail) "ON for new Liquidity PAPER trades - each one is labelled \"with ₹500 trail\"; live trades never use it."
+        else "off. Liquidity trades on plain rules.") +
+        " R19b: on both BANKNIFTY books it cut 12 of 13 big winners and lost ₹10.0k (15m) and ₹19.2k (5m) against plain rules in the " +
+        "locked holdout (Mar-Aug 2025), worse than random early exits. MIDCPNIFTY was not tested (no option data)."
+
+    /** What Boss's switch does, said back to him (and to the diagnostics) when he flips it. */
+    fun trailSaid(on: Boolean): String = if (on)
+        "₹500 give-back trail ON for new Liquidity PAPER trades (failed research, your choice): each trade is labelled \"with ₹500 trail\". " +
+            "Live trades never use it. Switch it off on the Strategy lab card at any time."
+    else "₹500 give-back trail off: new Liquidity paper trades run on plain rules again (open trades keep the rule they entered with)."
 }
