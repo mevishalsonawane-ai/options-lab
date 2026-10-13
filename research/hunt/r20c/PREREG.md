@@ -137,3 +137,31 @@ to that bar are identical when every minute after it is replaced by noise.
 
 If a rule passes every gate, the write-up describes the exact rule a PAPER-only change would use; the parent session
 decides. If none passes, the write-up says so plainly.
+
+## Part B. The trading rules (written 13 Oct 2026 after the design-period event study, BEFORE any trading test)
+
+What the design event study showed (`results/events_design.md`, 361 BANKNIFTY / 364 NIFTY / 396 FINNIFTY sessions):
+moves after a confirmed break are small (about +0.02 ATR14 to the close for N = 2, win rate about 50%, a fake-out within
+30 minutes in 32-49% of events) and the random-level twins move almost as much. The cells best supported in all three
+indices (>= 30 events each): R1 / S1 breaks on 5-minute candles (excess move over 30 minutes about +0.03 ATR, the only
+level type clearly above its twin), and breaks before 10:30 of R1 / S1 / PDH / PDL on 15-minute candles (they carry to the
+close: +0.06-0.07 ATR, fake-out about 22%). Days with VIX below 13 carried further for every level type. OI walls only
+worked on NIFTY (n 34-41) and are not used; LIQ and OR breaks showed nothing.
+
+Common to all four: BANKNIFTY and NIFTY (a day's net = the sum of both), both sides, at most 1 trade per side per index
+per day (the FIRST confirmed break of that side; if it is outside the window or filters, no trade that side), the decision
+= the close of the confirming candle, entry at the next minute's open (part A3).
+
+| id | levels | candles | N | window (confirming candle closes by) | filter | exits |
+|---|---|---|---|---|---|---|
+| `r20brk-piv5n2` | PIV (R1 up, S1 down) | 5-min | 2 | 14:00 | - | ORB family |
+| `r20brk-piv5n1` | PIV | 5-min | 1 | 14:00 | - | ORB family (the 1-close twin of the rule above: does waiting for the 2nd candle help?) |
+| `r20brk-early15` | PIV + PDHL (R1, PDH up; S1, PDL down; the farthest crossed) | 15-min | 2 | 10:30 | - | Liquidity family |
+| `r20brk-lowvix15` | PIV | 15-min | 2 | 14:00 | India VIX previous close < 13 | Liquidity family |
+
+Random-time twin details: the twin's decision rows are the closes of the rule's candles from the first one that could
+confirm (candle N - 1) to the window's end, drawn uniformly; the Liquidity family's failed-break level is the rule's level
+that day; the ORB family has no level. The VIX filter of `r20brk-lowvix15` is the same in its twins (a twin only trades
+the rule's own trade days). BH family: these 4 rules x (G3, G4, G5) = 12 p-values + R20 / R20b's 28 = 40.
+
+Nothing else is tuned. If a rule passes, the app rule would be the same rule on PAPER only (CLAUDE.md).

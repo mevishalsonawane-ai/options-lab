@@ -198,7 +198,7 @@ COLS = ["mv15_a", "mv30_a", "mv60_a", "mvc_a", "fake30", "mfe60_a", "mae60_a", "
 
 def stats(g: pd.DataFrame) -> dict:
     n = len(g)
-    out = {"n": n, "days": int(g.day.nunique()), "flag": "n<30" if n < 30 else ""}
+    out = {"events": n, "days": int(g.day.nunique()), "flag": "n<30" if n < 30 else ""}
     for c in COLS:
         v = g[c].astype(float)
         out[c] = float(v.mean()) if v.notna().any() else np.nan
@@ -251,12 +251,12 @@ def summarize(ev: pd.DataFrame) -> dict:
     return T
 
 
-def md_table(rows, keys, cols=("n", "mv15_a", "mv30_a", "mv60_a", "mvc_a", "ex30_a", "exc_a", "t_exc", "fake30",
+def md_table(rows, keys, cols=("events", "mv15_a", "mv30_a", "mv60_a", "mvc_a", "ex30_a", "exc_a", "t_exc", "fake30",
                               "mfe60_a", "mae60_a", "wait")):
     def f(c, v):
         if isinstance(v, str):
             return v
-        if c in ("n",):
+        if c == "events":
             return f"{v}"
         if c == "fake30" or c == "win_c":
             return f"{100 * v:.0f}%" if np.isfinite(v) else "-"

@@ -41,7 +41,14 @@ TWINS = 1000
 BH_Q = 0.05
 
 # Part B rules (PREREG.md). Filled in the part B commit, before any trading test.
-RULES: dict = {}
+BOTH = ("BANKNIFTY", "NIFTY")
+RULES: dict = {
+    "r20brk-piv5n2": dict(types=["PIV"], tf=5, n=2, last_entry=(14, 0), sides=(1, -1), exit="orb", unds=BOTH),
+    "r20brk-piv5n1": dict(types=["PIV"], tf=5, n=1, last_entry=(14, 0), sides=(1, -1), exit="orb", unds=BOTH),
+    "r20brk-early15": dict(types=["PIV", "PDHL"], tf=15, n=2, last_entry=(10, 30), sides=(1, -1), exit="liq", unds=BOTH),
+    "r20brk-lowvix15": dict(types=["PIV"], tf=15, n=2, last_entry=(14, 0), sides=(1, -1), exit="liq", unds=BOTH,
+                            filters={"vix": ["<13"]}),
+}
 
 
 # ------------------------------------------------------------------------------------------------ one rule, one day
