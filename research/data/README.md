@@ -1,8 +1,8 @@
 # Data lake (Dhan API v2)
 
-Historical market data for IraAlgo research, downloaded from Dhan API v2 on 2026-10-12. It is stored as
-Parquet (zstd) files meant to be **GitHub Release assets** (tag `data-20261012`), **not** in git. This folder holds
-only code and metadata:
+Historical market data for IraAlgo research, downloaded from Dhan API v2 on 2026-10-13/14 (UTC; data up to
+2026-10-12). It is stored as Parquet (zstd) files on **Google Drive** (below; a GitHub Release with tag `data-20261014`
+is optional), **not** in git. This folder holds only code and metadata:
 
 | file | what |
 |---|---|
@@ -24,9 +24,9 @@ only code and metadata:
 The lake is kept in the Google Drive folder **IraAlgo-data-lake**, one sub-folder per dataset
 (`index_1m/`, `options_rolling_1m/`, …, `nse_bhavcopy/`). The folder root holds `MANIFEST.txt` (path, rows, sha256,
 bytes of every file), `STATUS.txt` (what is there and what is missing), `CATALOG.json` and `VALIDATION.*`.
-**As of 2026-10-13 only `nse_bhavcopy/` is uploaded**: the Dhan rebuild failed (every `/v2/charts` call returned
-DH-905, also with the new token issued on 13 Oct, whose profile shows the data plan active), so the Parquet files
-in `CATALOG.json` are not on Drive yet.
+**As of 2026-10-14 every file in `CATALOG.json` is on Drive** (187 Parquet files, 6.09 GB, 12 dataset folders
+including `nse_bhavcopy/`, all verified with `rclone check`). Stock options are partial (see Known gaps). The folders
+`brain_models/`, `derived/` and `participants/` on Drive were uploaded separately and are not described here.
 
 Download with [rclone](https://rclone.org) (remote `gdrive` = Google Drive, set up with `rclone config`):
 
@@ -40,7 +40,8 @@ Upload after a build (each dataset is copied with `--checksum`, then checked, so
 
 ```bash
 python -I research/data/publish_gdrive.py $OUT --extra nse_bhavcopy=/path/bhav \
-   --meta research/data/CATALOG.json research/data/VALIDATION.md research/data/VALIDATION.json
+   --meta research/data/CATALOG.json research/data/VALIDATION.md research/data/VALIDATION.json \
+   research/data/STOCK_OPTIONS_COVERAGE.json
 ```
 
 ## Getting the data from a GitHub Release (if one is published)
@@ -86,22 +87,21 @@ expiry after expiry. `spot` is the underlying value at that minute, `oi` is open
 weeklies in Nov 2024. After that date, Dhan's `WEEK` series for those indices follows the nearest available
 (monthly) expiry.
 
-## Known gaps in this download (2026-10-12/13)
+## Known gaps in this download (2026-10-13/14)
 
-* **Stock options are incomplete.** The download stopped at Dhan's **100,000 data requests per day** cap (DH-905 on
-  every data call from about 03:00 UTC on 13 Oct, quota resets at 00:00 IST). The access token expired before the
-  reset. Coverage of the planned 30-day chunks: ATM 78%, each of ±1..±5 about 23%. 10 stocks are ≥90% complete
-  at every offset ATM-5..+5 (alphabetically ADANIENT..BSE). 27 of 59 have ≥90% of ATM. TATASTEEL has 47% of ATM only, and
-  **TCS, TECHM, TITAN, TMPV, TRENT, ULTRACEMCO, UNIONBANK and YESBANK have no option file at all** (51 files exist).
-  Per stock and offset: `STOCK_OPTIONS_COVERAGE.json` (fraction of chunks fetched, 1.0 = complete).
-  Quality: index options match NSE bhavcopy contract-day high/low 87–98%, but stock options match only about 69%
+* **Stock options are incomplete.** Fetched share of the planned 30-day chunks: ATM 97% (58 of 59 stocks ≥90%),
+  ATM±1 100%, ATM±2 24%, ATM±3..±5 none (nearest strikes are fetched first). Per stock and offset:
+  `STOCK_OPTIONS_COVERAGE.json` (1.0 = complete). The download stopped because Dhan answered every
+  `/charts/rollingoption` call with HTTP 429 DH-904 from about 02:55 UTC on 14 Oct (other data endpoints still
+  answered; the token expires at 05:39 UTC on 14 Oct). About 57,000 chunks remain.
+  Quality: index options match NSE bhavcopy contract-day high/low 86–98%, but stock options match only about 68%
   (median day exact, tails ±10%). Treat stock-option minutes with care (see VALIDATION.md section 3).
-  **To finish:** set a fresh token and run
-  `python -I research/data/lake_fetch.py $RAW stkopt` (needs the same `$RAW` folder to resume; on a fresh machine it
-  starts over, about 83k requests = one day's quota), then `lake_build.py ... stkopt`, `validate.py`, `make_catalog.py`.
-* Chunks that still failed after retries (HTTP 429/504), left as gaps: HINDUNILVR equity 1-min, 7 windows (2015–2018);
-  FINNIFTY options, 8 series-months; live stock futures 1-min, 26 windows (INFY, ITC, INDUSINDBK, UNIONBANK, …).
-  Re-running the fetch command retries exactly these.
+  **To finish:** set a fresh token and run `python -I research/data/lake_fetch.py $RAW stkopt`, then
+  `lake_build.py ... stkopt`, `stkopt_coverage.py`, `validate.py`, `make_catalog.py` and `publish_gdrive.py`. The raw
+  chunks stayed on the build machine, so a fresh `$RAW` starts again from ATM (about 83,000 requests in all, more than the
+  stock-option rate limit allowed in one night).
+* Every other dataset was fetched with no failed chunks left (the gaps of the 12 Oct download, in HINDUNILVR equity
+  minutes, FINNIFTY options and live stock futures, are filled).
 
 ## Cleaning rules (nothing is filled)
 
