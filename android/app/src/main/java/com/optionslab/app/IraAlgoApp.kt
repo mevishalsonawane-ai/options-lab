@@ -107,6 +107,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.KiteStream.init(this)
         com.optionslab.app.data.PositionsFirst.start(this)
         com.optionslab.app.data.LiveRecorder.init(this)
+        // The OI-wall shadow log (14 Oct, Boss approved; R26): names its encrypted file only (a record, never an order).
+        com.optionslab.app.data.OiWallShadowHost.init(this)
         // The tick zone (12 Oct): the watch-list's order flow every second, from the stream's memory, written in the background.
         com.optionslab.app.data.TickZoneRecorder.init(this)
         // GitHub sync (13 Oct, TODO G1/G2): the context only; its worker uploads after the MCX evening close (15:45 without

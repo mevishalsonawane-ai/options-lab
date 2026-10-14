@@ -780,6 +780,12 @@ object Tasks {
         word("opening read") { com.optionslab.app.ira.IraOpening.watch() }
         // Jarvis: on an index's expiry day, the straddle's decay, spot against max pain and the last hour, at set times.
         word("expiry watch") { com.optionslab.app.ira.IraCoach.expiryWatch() }
+        // Jarvis (14 Oct, Boss approved): 10:00-10:15 on a trading day, the morning gamma line once - R28's dealer GEX from the
+        // chain already in memory; information only, never a trade signal (nothing is armed, sized or changed).
+        word("gamma line") { com.optionslab.app.data.GammaMorningHost.watch() }
+        // The OI-wall check in SHADOW (14 Oct, Boss approved; R26 rule P): expiry days only, 11:59-15:21, from memory; a record
+        // and one evening line, never an order or an alert. Any other day: one look at the calendar.
+        word("OI-wall shadow") { com.optionslab.app.data.OiWallShadowHost.watch() }
         word("VIX") { com.optionslab.app.ira.IraCoach.vixWatch() }
         // Jarvis: a sharp move within minutes - what coincided with it (headlines, VIX, the other indices), timing only.
         word("sharp move") { com.optionslab.app.ira.IraCoach.sharpMoveWatch() }

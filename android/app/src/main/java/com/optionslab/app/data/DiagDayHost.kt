@@ -110,6 +110,8 @@ object DiagDayHost {
         }.getOrDefault(emptyList()).map(::r)
         val others = if (GOLD) emptyList() else listOf(
             { NightArm.diagLine() }, { VixDivArm.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
+            // 14 Oct (Boss approved): the morning gamma line (signs and strikes) and the OI-wall shadow log (points only).
+            { GammaMorningHost.diagLine(day) }, { OiWallShadowHost.diagLine(day) },
         ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }
 
         // The holder's name whole and word by word, the Zerodha user id, the GitHub login and the repository owner (a personal

@@ -98,7 +98,22 @@ class WhatsNewChangelogTest {
             "chart is refused; option-derived ideas are labelled.", x.what)
         assertTrue("Pine" in x.where && "Strategies" in x.where && "Strategy lab" in x.where, x.where)
         assertNull(x.ask)
+        assertEquals(1, WhatsNew.ENTRIES.indexOf(x), "under the gamma line's entry (14 Oct, later that day)")
+    }
+
+    @Test fun theGammaLineAndTheOiWallShadowAreSaidAsInformationOnly() {
+        // 14 Oct (Boss approved): two non-trading additions, the newest entry.
+        val x = WhatsNew.ENTRIES.first { it.id == "2026-10-14-gamma-line-oi-wall-shadow" }
         assertEquals(0, WhatsNew.ENTRIES.indexOf(x), "the newest entry")
+        assertEquals(LocalDate.of(2026, 10, 14), x.date)
+        for (w in listOf("10:00", "dealer gamma", "says nothing about direction", "never a trade signal", "expiry days", "13:45 to 14:30",
+            "only written down", "in points", "never places an order"))
+            assertTrue(w in x.what, w)
+        assertTrue("Settings → Jarvis → Market alerts" in x.where && "Order Review" in x.where, x.where)
+        // No question to try here (the audit's list of features is fixed); the switch's own words name "what's gamma saying".
+        assertNull(x.ask)
+        assertEquals("", GammaMorning.asked("what's gamma saying"))
+        assertTrue(x.jarvisOnly); assertEquals("jarvis", x.to)
     }
 
     @Test fun thePreTradeChecksAreSaidWithTheirTestResult() {
