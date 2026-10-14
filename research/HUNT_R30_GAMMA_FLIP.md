@@ -67,9 +67,11 @@ Written 14 Oct 2026, for Boss's gamma-exposure blueprint.
 
 - **G1's exits:** 33 held to 15:05 and 9 hit the lock. Its best trade was 7 Sep 2023 (NIFTY 19700 CE at Rs 8.80,
   peak 7×, +Rs 5,115).
-- **Gates:** all 4 fail gates 2, 4, 5 and 6. G1, G3 and G4 also fail the drawdown limit.
+- **Gates:** all 4 fail gates 2, 3 (the 2023-26 block is negative), 4, 5 and 6. G1, G3 and G4 also fail the drawdown
+  limit.
 - **BH family: 52.** The smallest q is 0.104; every R30 q is 1.00.
-- **Puts dominate** (34 of 42), because "negative gamma" sits below the flip under this convention.
+- **Puts dominate** in G1 (34 of 42). G1 has no gamma-side filter, so this is just how the crossings fell. Only G2,
+  which requires the destination side to be negative gamma, is all puts (34 of 34).
 
 ## Honest notes
 

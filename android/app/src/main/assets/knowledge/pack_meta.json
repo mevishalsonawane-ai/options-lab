@@ -1,7 +1,7 @@
 {
   "app_lessons": 0,
   "built_from": "2026-10-14",
-  "bytes": 886034,
+  "bytes": 886099,
   "counts": {
     "answer": 1296,
     "doc": 9270,
@@ -17,5 +17,5 @@
   "model_cards": 1,
   "schema": 1,
   "shared_items": 411,
-  "version": "432a8cd96f54"
+  "version": "a51005f89012"
 }

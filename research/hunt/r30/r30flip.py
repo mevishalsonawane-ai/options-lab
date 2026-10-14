@@ -129,7 +129,7 @@ def signal(day, rule: Rule, ctx, fl, prof):
 
 
 # ------------------------------------------------------------------------------------------------ the trade
-def simulate(day, k: float, sgn: int, t: int, ref: float, exits: str, mult: float = 1.0):
+def simulate(day, k: float, sgn: int, t: int, ref: float, exits: str, mult: float = 1.0, arm: str = "high"):
     """(trade or None, skipped-for-size). T2: breakeven lock at 2x, then 50% of each doubling level; else 15:05."""
     side = "C" if sgn > 0 else "P"
     f = R.enter(day, k, side, t, ref, mult)
@@ -162,7 +162,11 @@ def simulate(day, k: float, sgn: int, t: int, ref: float, exits: str, mult: floa
             conf = R.confirmed(a, r)
             if not px and not math.isnan(conf):
                 peak = max(peak, min(hi, conf))
-            best = max(best, hi)
+            if arm == "confirmed":                    # the exit audit's sensitivity (14 Oct): locks raised by confirmed prices
+                if not px and not math.isnan(conf):
+                    best = max(best, min(hi, conf))
+            else:
+                best = max(best, hi)
         if best >= 2 * e - R.EPS:                     # takes effect from the next minute's close
             lock = max(lock, e)
         if best >= 4 * e - R.EPS:

@@ -268,7 +268,7 @@ def signal(day: Day, rule: Rule) -> Signal | None:
 
 # ------------------------------------------------------------------------------------------------ the trade
 def simulate(day: Day, k: float, sgn: int, sig_row: int, ref: float, exits: str, budget: float | None = K26.BUDGET,
-             mult: float = 1.0, oor_zero: bool = False, rule: str = "") -> R.Trade | None:
+             mult: float = 1.0, oor_zero: bool = False, rule: str = "", arm: str = "high") -> R.Trade | None:
     """One ticket with R25's entry, fills, charges and out-of-range prices. Lots = floor(budget / (fill x lot)), at
     least 1 (the real risk is then above the budget; `over_budget`). exits: E1 | E1b | E2 | E3."""
     side = "C" if sgn > 0 else "P"
@@ -315,7 +315,12 @@ def simulate(day: Day, k: float, sgn: int, sig_row: int, ref: float, exits: str,
         if exits == "E3" and fr < r <= exit_row - 2 and not math.isnan(c) and c <= lock + R.EPS:
             why = "lock"
         if not math.isnan(hi):
-            best_hi = max(best_hi, hi)
+            if arm == "confirmed":
+                cf = R.confirmed(a, r)
+                if not math.isnan(cf) and not px:
+                    best_hi = max(best_hi, min(hi, cf))
+            else:
+                best_hi = max(best_hi, hi)
         if exits == "E3" and best_hi >= 2 * e - R.EPS:      # takes effect from the next minute's close
             m = math.floor(best_hi / e + 1e-9)
             lock = max(lock, (m - 1) * e)
