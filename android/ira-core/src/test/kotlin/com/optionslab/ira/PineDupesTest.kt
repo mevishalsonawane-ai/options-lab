@@ -70,4 +70,21 @@ class PineDupesTest {
         assertTrue(PineDupes.note(3).startsWith("Switched off: the same strategy as #3"))
         assertTrue(PineDupes.note(3).contains("managed to its exit"))
     }
+
+    @Test fun twoSpellingsOfOneIndexBecomeOneScriptOnceRenamed() {
+        // 14 Oct: #11 was saved as "NIFTY 50" and #12 as "NIFTY"; read back, both say "NIFTY" (#11 renamed).
+        val saved = listOf(
+            PineDupes.Script(11, engulfing, "NIFTY", "15m", true),
+            PineDupes.Script(12, again, "NIFTY", "15m", true),
+            PineDupes.Script(13, "plot(close)", "NIFTY", "15m", true),      // a different script on the same index: kept
+            PineDupes.Script(14, "plot(close)", "BANKNIFTY", "5m", true),   // an old repeat nobody renamed: left as it is
+            PineDupes.Script(15, "plot(close)", "BANKNIFTY", "5m", true),
+        )
+        assertEquals(listOf(12L to 11L), PineDupes.extraArmedAfterRename(saved, setOf(11L)).map { it.first.id to it.second })
+        // The renamed one is the later: it is the one switched off; the first armed keeps trading.
+        assertEquals(listOf(12L to 11L), PineDupes.extraArmedAfterRename(saved, setOf(12L)).map { it.first.id to it.second })
+        assertTrue(PineDupes.extraArmedAfterRename(saved, emptySet()).isEmpty())
+        assertTrue(PineDupes.extraArmedAfterRename(saved, setOf(13L)).isEmpty(), "a different script stays armed")
+        assertTrue(PineDupes.extraArmedAfterRename(saved.map { if (it.id == 12L) it.copy(armed = false) else it }, setOf(11L)).isEmpty())
+    }
 }

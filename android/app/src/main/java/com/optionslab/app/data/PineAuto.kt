@@ -224,6 +224,29 @@ object PineAuto {
     }
 
     /**
+     * 14 Oct: two armed scripts saved under two spellings of one index ("NIFTY 50" and "NIFTY") with the same code and chart
+     * were not the same to the one-time 06 Oct check ([dedupe]); written the index's own way on load they are, and both
+     * would trade every signal. Once per load: of each such pair the first armed (the oldest) keeps trading and the later one
+     * is switched off - never deleted - said in its log; an option it holds is managed to its exit ([Book.winding]). Other
+     * scripts on the same index stay armed. True when [b] changed (it is then saved).
+     */
+    private fun renamedDupes(b: Book): Boolean {
+        val items = PineScripts.loadNow() ?: return false
+        val renamed = PineScripts.takeRenamed().ifEmpty { return false }      // nearly every pass: nothing to look at
+        val extra = com.optionslab.ira.PineDupes.extraArmedAfterRename(items.map {
+            com.optionslab.ira.PineDupes.Script(it.id, it.code, it.auto.symbol, it.auto.interval, it.auto.on)
+        }, renamed)
+        for ((s, kept) in extra) {
+            val item = PineScripts.get(s.id) ?: continue
+            PineScripts.setAuto(s.id, item.auto.copy(on = false))
+            b.liveOk.remove(s.id)
+            if (b.held.containsKey(s.id)) b.winding[s.id] = "the same strategy as #$kept"
+            note(b, s.id, com.optionslab.ira.PineDupes.note(kept))
+        }
+        return extra.isNotEmpty()
+    }
+
+    /**
      * Switch a script off by the app's own rule (Boss's yes to switching a losing script off, [com.optionslab.ira.ArmCutoff]):
      * unlike [arm] off, what it holds is NOT sold now - it is managed to its exit, and nothing more is bought. Never
      * switches anything on. Returns "ok", or why not.
@@ -278,7 +301,7 @@ object PineAuto {
         save(b); publish(b)
     }
 
-    suspend fun load() = lock.withLock { val b = book(); if (ruleNotes(b)) save(b); Unit }
+    suspend fun load() = lock.withLock { val b = book(); if (ruleNotes(b) or renamedDupes(b)) save(b); Unit }
 
     /**
      * The lines Boss's 06 Oct rule left when it protected an armed script on load ("Pine 'EMA': stop-loss 30 and target 60
@@ -332,6 +355,8 @@ object PineAuto {
         // 14 Oct: a script switched on some other way on a chart that is not an index (the saved file and [arm] both refuse
         // one) is switched off before anything runs, said once; an option it holds is managed to its exit.
         if (!disarm && offNonIndex(b)) save(b)
+        // 14 Oct: two spellings of one index, written the same on load, are one script: the later one is switched off.
+        if (renamedDupes(b)) save(b)
         val all = PineScripts.items.value
         val on = if (disarm) emptyList() else all.filter { it.auto.on }
         // Switched off by the app's own rule while holding: managed to its exit, buying nothing more.

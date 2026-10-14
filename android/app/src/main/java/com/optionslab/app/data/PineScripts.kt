@@ -107,8 +107,19 @@ object PineScripts {
     /** The lines [ensure] left for the auto-trader's log (each given once). */
     fun takeRuleNotes(): List<Pair<Long, String>> = synchronized(ruleNotes) { ruleNotes.toList().also { ruleNotes.clear() } }
 
+    /**
+     * 14 Oct: armed scripts whose symbol the load wrote the index's own way ("NIFTY 50" -> "NIFTY"): [PineAuto] takes them
+     * once and switches off a later repeat of the same script they now match ([com.optionslab.ira.PineDupes.extraArmedAfterRename]).
+     */
+    private val renamed = HashSet<Long>()
+
+    /** The armed scripts renamed on load (each given once). */
+    fun takeRenamed(): Set<Long> = synchronized(renamed) { renamed.toSet().also { renamed.clear() } }
+
     private fun load(): Pair<List<Item>, List<Pair<Long, String>>> = runCatching {
-        val r = parseNoting(String(Vault.readFileSteady(file) ?: return emptyList<Item>() to emptyList<Pair<Long, String>>(), Charsets.UTF_8))
+        val found = HashSet<Long>()
+        val r = parseNoting(String(Vault.readFileSteady(file) ?: return emptyList<Item>() to emptyList<Pair<Long, String>>(), Charsets.UTF_8), found)
+        synchronized(renamed) { renamed += found }
         needsRewrite = r.third
         r.first to r.second
     }.getOrElse { if (file.exists()) Vault.setAside(file); emptyList<Item>() to emptyList<Pair<Long, String>>() }
@@ -128,9 +139,10 @@ object PineScripts {
 
     /**
      * [parse], with the activity-log lines for armed scripts the rule protected (once each: the file is rewritten) and
-     * whether anything was changed at all.
+     * whether anything was changed at all. [renamed] (14 Oct) collects the armed scripts whose symbol was just written the
+     * index's own way, for the duplicates check ([takeRenamed]).
      */
-    internal fun parseNoting(text: String): Triple<List<Item>, List<Pair<Long, String>>, Boolean> {
+    internal fun parseNoting(text: String, renamed: MutableSet<Long>? = null): Triple<List<Item>, List<Pair<Long, String>>, Boolean> {
         val a = JSONArray(text)
         val notes = ArrayList<Pair<Long, String>>()
         var changed = false
@@ -153,7 +165,7 @@ object PineScripts {
                 // its symbol kept so the Pine screen and its log say which one was refused ([com.optionslab.ira.PineUnderlying]).
                 val raw = x.optString("symbol", "BANKNIFTY")
                 val root = com.optionslab.ira.PineUnderlying.rootOf(raw)
-                if (root != null && root != raw) changed = true
+                if (root != null && root != raw) { changed = true; if (x.optBoolean("on")) renamed?.add(o.getLong("id")) }
                 if (root == null && x.optBoolean("on")) {
                     changed = true
                     notes += o.getLong("id") to "Pine '${o.getString("name")}': switched off - ${com.optionslab.ira.PineUnderlying.refusal(raw)}."

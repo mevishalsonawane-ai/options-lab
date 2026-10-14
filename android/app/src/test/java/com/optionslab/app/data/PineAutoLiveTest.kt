@@ -694,4 +694,31 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(again.second.isEmpty()); assertFalse(again.third)
         assertEquals("NIFTY", again.first.single { it.id == 2L }.auto.symbol)
     }
+
+    @Test fun twoSpellingsOfOneIndexAreOneScriptAfterLoadAndOnlyTheFirstKeepsTrading() {
+        val f = java.io.File(context.filesDir, "pine.vault")
+        val other = "//@version=5\nindicator(\"Other\")\nplotshape(close > open, \"Buy\")\nplotshape(close < open, \"Sell\")"
+        fun script(id: Int, name: String, code: String, symbol: String, interval: String = "5m") = org.json.JSONObject().put("id", id).put("name", name)
+            .put("code", code).put("auto", org.json.JSONObject().put("on", true).put("symbol", symbol).put("interval", interval)
+                .put("stopPts", 30.0).put("targetPts", 60.0))
+        val text = org.json.JSONArray()
+            .put(script(1, "Level, as NIFTY 50", code, "NIFTY 50"))
+            .put(script(2, "Level, as NIFTY", "$code\n// the same, saved again", "NIFTY"))
+            .put(script(3, "Another script on NIFTY", other, "NIFTY"))
+            .put(script(4, "Level on 15m", code, "nifty", "15m"))
+            .toString()
+        PineScripts.wipe()
+        com.optionslab.app.security.Vault.writeFile(f, text.toByteArray(Charsets.UTF_8))
+        PineScripts::class.java.getDeclaredField("loaded").apply { isAccessible = true }.set(null, false)
+        assertEquals(listOf("NIFTY", "NIFTY", "NIFTY", "NIFTY"), PineScripts.loadNow()!!.sortedBy { it.id }.map { it.auto.symbol })
+        runBlocking { PineAuto.load() }
+        val on = PineScripts.items.value.associate { it.id to it.auto.on }
+        assertEquals(mapOf(1L to true, 2L to false, 3L to true, 4L to true), on)
+        val lines = PineAuto.log.value.filter { it.script == 2L }.map { it.text }
+        assertEquals(listOf(com.optionslab.ira.PineDupes.note(1)), lines)
+        // Once: another load says nothing more and switches nothing else off.
+        runBlocking { PineAuto.load() }
+        assertEquals(1, PineAuto.log.value.count { it.script == 2L && it.text.startsWith("Switched off: the same strategy") })
+        assertEquals(mapOf(1L to true, 2L to false, 3L to true, 4L to true), PineScripts.items.value.associate { it.id to it.auto.on })
+    }
 }
