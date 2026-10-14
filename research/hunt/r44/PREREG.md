@@ -1,7 +1,9 @@
 # R44 pre-registration: independent re-test of Boss's 5-year sweep (7 strategies)
 
 Written 14 Oct 2026, BEFORE any R44 profit or loss was computed. Committed and pushed on its own. Amendment 1 (same
-day, still before any P&L): signal and entry in the same session; MCX morning entries from 09:05.
+day, still before any P&L): signal and entry in the same session; MCX morning entries from 09:05. Amendment 2 (same day, before any
+P&L; a data rule): CRUDEOIL expiry thresholds, because its last-day straddle at 22:00 is 0.4-2.7% of spot, so the
+NSE threshold found 5 of its 14 expiries.
 
 Boss (14 Oct): "Check the above strategy and provide me results". Boss's own workspace ran a 5-year sweep (`sweep.py`,
 not in this repo) and found 0 of 14 strategy-side combos positive in-sample (2021-2023, 98,761 trades) or
@@ -50,8 +52,9 @@ No rule reads an option's own chart.
   that side's position is open is ignored. CE and PE are separate books.
 - **Expiry days skipped** (primary): a day is an expiry day of the nearest contract if the ATM straddle's time value
   at 15:15 is < 0.6% of spot and the next session's is > 2x it (R25/R29 rule; the contract dies that day). A version
-  that keeps expiry days is reported separately, labelled "incl. expiry". CRUDEOIL: the same rule with the straddle
-  read at 22:00 IST (its session runs to 23:30/23:55).
+  that keeps expiry days is reported separately, labelled "incl. expiry". CRUDEOIL: the straddle is read at 22:00 IST
+  (its session runs to 23:30/23:55) with thresholds < 3.0% and a next-session jump > 3x (amendment 2). The straddle is
+  read at the last ATM minute at or before the read time (within 30 minutes), for every market.
 - **Stepped profit lock (1b)**: the peak premium is the highest bar high since entry. Peak >= +25% -> lock at entry;
   +50% -> lock +25%; +75% -> lock +50%; +100% -> lock +75%. The lock set by a bar's high applies from the NEXT bar
   (the order inside a bar is unknown). Exit when a bar's low <= max(stop, lock), filled at min(open, that level).
