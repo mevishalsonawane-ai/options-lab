@@ -14,8 +14,10 @@ import pandas as pd
 
 from .. import config as india
 
-CUBE_VERSION = 2            # 1: spot + perp OHLCV, mark/index/premium, basis, funding (+ time to next), OI, L/S, DVOL
+CUBE_VERSION = 3            # 1: spot + perp OHLCV, mark/index/premium, basis, funding (+ time to next), OI, L/S, DVOL
                             # 2: 5-minute metrics placed at the END of their period (stamp + 5 min), 13 Oct 2026 review
+                            # 3: Deribit option-trade columns opt_* (hourly, at the hour's end) and DVOL for ETH from
+                            #    the options lake (14 Oct 2026, F1 refresh)
 METRICS_PERIOD_MIN = 5      # a metrics row stamped T describes [T, T + 5 min): its OI value uses the mark price at T + 5
 
 # --- the grid ---------------------------------------------------------------------------------------------------------
@@ -70,7 +72,8 @@ SUSPECT_JUMP = 0.10         # |1-minute close-to-close move| above 10% -> "suspe
 STALE_RUN = india.STALE_RUN
 FLAGS = india.FLAGS
 # How long a slow series (funding, OI metrics, DVOL) may be carried forward before it is NaN, in minutes.
-MAX_AGE = dict(funding=FUNDING_INTERVAL_H * 60 + 60, metrics_5m=15, metrics_1h=120, dvol=120, hourly=120)
+MAX_AGE = dict(funding=FUNDING_INTERVAL_H * 60 + 60, metrics_5m=15, metrics_1h=120, dvol=120, hourly=120, options=120)
+COIN = {"BTCUSDT": "BTC", "ETHUSDT": "ETH"}       # Deribit underlying for the option-trade columns and DVOL
 
 # --- the locked holdout (13 Oct 2026) ---------------------------------------------------------------------------------
 # Everything from 1 Apr 2026 00:00 UTC on is the crypto holdout: the last ~6 months before this brain was built. It is
@@ -95,6 +98,10 @@ class Paths:
     @property
     def raw(self) -> Path:                   # Binance archive mirror (data.binance.vision layout) or a Drive pull
         return Path(os.environ.get("IRAALGO_CRYPTO_RAW", self.base / "raw")).expanduser()
+
+    @property
+    def options(self) -> Path:               # the options lake pulled from gdrive:IraAlgo-data-crypto/options
+        return Path(os.environ.get("IRAALGO_CRYPTO_OPTIONS", self.base / "options")).expanduser()
 
     def cube(self, sym: str) -> Path:
         return self.base / "cube" / sym

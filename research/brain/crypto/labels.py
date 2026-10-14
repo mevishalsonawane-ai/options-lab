@@ -3,7 +3,7 @@ and no session: the windows run across midnight and weekends (one constant "day"
 
     python -m research.brain.crypto.labels build --symbols BTCUSDT ETHUSDT
 
--> <cache>/crypto/labels/<SYM>/<YYYY>/<day>.parquet: y_ret_{60,240,1440}m (log %, spot close t -> t+h), y_range_*,
+-> <cache>/crypto/labels/<SYM>/<YYYY>/<day>.parquet: y_ret_{15,60,240,1440}m (log %, spot close t -> t+h), y_range_*,
 y_mfe_*, y_mae_* over t+1 .. t+h (NaN when any of the window is missing at the end of the data). Joined to features
 only through research/brain/split.join_forward. A design row whose window reaches the holdout is dropped by
 holdout.design().
@@ -20,7 +20,7 @@ import pandas as pd
 from .. import labels as india
 from . import config, cube
 
-HORIZONS = (60, 240, 1440)
+HORIZONS = (15, 60, 240, 1440)          # 15 added for the F1 screen (14 Oct 2026)
 MAX_HORIZON_MIN = max(HORIZONS)
 
 

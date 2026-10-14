@@ -20,7 +20,10 @@ Columns (row t = the bar that starts at t and closes at t + 1 minute; known once
   min_to_next_funding                    minutes from the bar's end to the next 00/08/16 UTC settlement (clock only)
   oi oi_value top_ls_accounts top_ls_positions ls_accounts taker_ls_vol metrics_age_min
                                          5-minute OI and long/short metrics, from the END of their 5-minute period
-  dvol, dvol_age_min                     Deribit DVOL (hourly close, from the row holding the hour's end; BTC only)
+  dvol, dvol_age_min                     Deribit DVOL (hourly close, from the row holding the hour's end; BTC, ETH)
+  opt_atm_iv opt_skew opt_pc_24h opt_flow_24h opt_n_1h opt_age_min
+                                         Deribit option trades by UTC hour (adapters.option_hours), from the row
+                                         holding the hour's end, carried up to 2 hours (BTC, ETH; v3, 14 Oct 2026)
   vol_precision                          "estimate" (1-minute bars) where spot volume exists, else "none"
 """
 from __future__ import annotations
@@ -38,7 +41,7 @@ import pandas as pd
 
 from .. import quality
 from . import clean, config
-from .adapters import ArchiveAdapter, DvolAdapter
+from .adapters import OPT_COLS, ArchiveAdapter, DvolAdapter, OptionsAdapter
 
 PERP = ["perp_" + c for c in clean.BAR]
 METRICS = list(clean.METRIC_MAP.values())
@@ -106,6 +109,15 @@ def build_frame(raw: dict, dvol: pd.DataFrame | None, g: pd.DatetimeIndex) -> tu
                                                        config.MAX_AGE["dvol"])
     else:
         m["dvol"] = m["dvol_age_min"] = np.nan
+    op = raw.get("options")
+    if op is not None and len(op):
+        for c in OPT_COLS:
+            m[c], age = clean.ffill_age(clean.place_asof(op.ts, op[c].values, g), config.MAX_AGE["options"])
+            if c == "opt_n_1h":
+                m["opt_age_min"] = age
+    else:
+        for c in OPT_COLS + ["opt_age_min"]:
+            m[c] = np.nan
     m["vol_precision"] = np.where(np.isfinite(m.volume.to_numpy(float)), "estimate", "none")
     return m.reset_index(), info
 
@@ -142,14 +154,16 @@ def _write_day(root: Path, sym: str, d: date, m: pd.DataFrame, fp: str, info: di
     pj.write_text(json.dumps(dict(cube_version=config.CUBE_VERSION, fingerprint=hashlib.sha256(fp.encode()).hexdigest()[:16],
                                   rows=len(m), flags=flags, sha256=sha, raw=info,
                                   coverage={c: int(np.isfinite(m[c].to_numpy(float)).sum()) for c in
-                                            ("close", "perp_close", "funding_rate", "oi", "dvol")}), indent=1))
+                                            ("close", "perp_close", "funding_rate", "oi", "dvol", "opt_atm_iv")}), indent=1))
 
 
 def build(root: Path, sym: str, frm: date, to: date, adapter: ArchiveAdapter | None = None,
-          dvol: DvolAdapter | None = None, force: bool = False, verbose: bool = True) -> dict:
+          dvol: DvolAdapter | None = None, force: bool = False, verbose: bool = True,
+          options: OptionsAdapter | None = None) -> dict:
     root = Path(root)
     adapter = adapter or ArchiveAdapter(config.paths(root).raw)
-    dvol = dvol or DvolAdapter()
+    dvol = dvol or DvolAdapter(options_root=config.paths(root).options)
+    options = options or OptionsAdapter(config.paths(root).options)
     t0, n, skipped = time.time(), 0, 0
     for mo in adapter.months(sym):
         p = pd.Period(mo, "M")
@@ -157,7 +171,8 @@ def build(root: Path, sym: str, frm: date, to: date, adapter: ArchiveAdapter | N
         if lo > hi:
             continue
         days = [d.date() for d in pd.date_range(lo, hi, freq="D")]
-        fp = adapter.fingerprint(sym, [str(p - 1), mo]) + f"|dvol:{dvol.fingerprint(sym)}"
+        fp = (adapter.fingerprint(sym, [str(p - 1), mo]) + f"|dvol:{dvol.fingerprint(sym)}"
+              + f"|opt:{options.fingerprint(sym, [str(p - 1), mo])}")
         fph = hashlib.sha256(fp.encode()).hexdigest()[:16]
         if not force and all((man := manifest(root, sym, d)) and man.get("cube_version") == config.CUBE_VERSION
                              and man.get("fingerprint") == fph for d in days):
@@ -167,6 +182,9 @@ def build(root: Path, sym: str, frm: date, to: date, adapter: ArchiveAdapter | N
         end = pd.Timestamp(days[-1]) + pd.Timedelta(minutes=config.MINUTES_PER_DAY - 1)
         warm = start - pd.Timedelta(days=1)
         raw = adapter.load(sym, warm, end)
+        opt = options.load(sym, warm, end)
+        if opt is not None:
+            raw["options"] = opt
         g = clean.grid(warm, end)
         M, info = build_frame(raw, dvol.load(sym, warm, end), g)
         M = M[M.ts >= start]

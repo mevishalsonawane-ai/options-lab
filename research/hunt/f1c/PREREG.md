@@ -124,9 +124,54 @@ time exit, to at least 2R more (perps) or to 2x the exit price (options).
 A pass would be a **candidate for a watch-only paper log**, not an arm; nothing in the app trades crypto and any
 change there is a separate decision for Boss.
 
-## 8. The candidate rules (part B)
+## 8. The candidate rules (part B, written after the screen, before any rule P&L)
 
-To be added after the screen, before any rule P&L: at most 20 rules, each with the four exit variants of its type.
+What the screen (section 3) said, design data only (`results/screen.csv`, `screen.json`): of 1,080 testable direction
+tests (78 features x 3 horizons x 5 coins, less the option / DVOL features the alt coins lack), 356 passed BH and 245
+were confirmed on the selection split; **89% of the confirmed ones are reversals** (price stretched away from the
+24-hour VWAP, the day's range, the EMA ribbon, or after one-sided taker flow tends to come back a little), and they are
+two to three times stronger inside Boss's window (median selection IC at 60 minutes -0.067 in the window vs -0.034 at
+all hours). The typical edge is tiny: median half decile spread 0.7 bps against a 15.8-21.8 bps round trip; 2 of 245
+"pay" on paper (XRP at 240 minutes). Funding, basis, premium, long/short ratios, DVOL, every option-market feature
+(skew, put/call, ATM IV, option flow) and the calendar confirmed nothing for direction: noise. Size (|move|) is
+predictable from realised volatility and ranges (550 confirmed), as C1 found.
+
+So the rules are mostly reversal rules on the confirmed features, plus breakout / trend rules as the opposite bet
+and the earlier studies' best near-misses (C2 W4, RC2 R8, RC2 R4). Before any P&L, decision counts were checked (BTC
+202-4,720 decisions per rule over 670 window days). Three rules first drafted on funding, skew and put/call were
+replaced at that point by P12, P14 and P15, because the screen had already called those features noise.
+
+Every rule: decisions at 5-minute closes whose entry minute is inside 00:00-09:00 IST; entry the next minute; one
+position per rule and coin at a time; the 3% day loss cap; flat by 09:00 IST or the time limit; the four exit variants
+of its venue (section 5). Code: `research/hunt/f1c/rules.py` (thresholds are written there; ATR = `atr14_1h_pct`).
+
+| id | venue, coins | rule | time limit | max a day |
+|---|---|---|---|---|
+| P01 | perp, all 5 | VWAP-24h stretch fade: `vwap24_z` > 2 short, < -2 long | 60 min | 2 |
+| P02 | perp, all 5 | Day-extreme fade: `day_range_pos` >= 0.95 after a > 1 ATR hour -> short; <= 0.05 after a < -1 ATR hour -> long | 120 | 2 |
+| P03 | perp, all 5 | Ribbon stretch fade: close more than 1.5 ATR from the 15-min ribbon's middle EMA, against it | 60 | 2 |
+| P04 | perp, all 5 | Hour reversal: at a UTC hour's close, an hour that moved > 1.5 ATR, against it | 60 | 2 |
+| P05 | perp, all 5 | Taker exhaustion: 60-min perp taker imbalance > 0.2 on an up hour -> short; < -0.2 on a down hour -> long | 60 | 2 |
+| P06 | perp, all 5 | Window-open fade (C2 W4 as a rule): at 00:00 IST, `vwap24_z` > 1 short, < -1 long | 09:00 IST | 1 |
+| P07 | perp, all 5 | Previous UTC day high / low break, with it (first cross of the day) | 180 | 1 |
+| P08 | perp, all 5 | Asia opening range: first 5-min close outside the 00:00-01:00 IST spot range, 01:00-06:00 IST, with it | 09:00 IST | 1 |
+| P09 | perp, all 5 | Ribbon squeeze break: 15-min ribbon width < 0.25 ATR and a 15-min move > 0.5 ATR, with it | 120 | 2 |
+| P10 | perp, all 5 | Ribbon trend: 1-h ribbon fully ordered and the 15-min ribbon turning fully ordered the same way, with it | 180 | 2 |
+| P11 | perp, all 5 | Liquidation-flush fade (`liq_flush_60m` = 1), against the 60-min move | 120 | 1 |
+| P12 | perp, all 5 | Day-extreme 4-hour fade: close within 0.1% of the UTC day's high -> short, of its low -> long (first of the day) | 240 | 1 |
+| P13 | perp, all 5 | OI divergence: a > 1 ATR hour while OI fell > 0.5% (|OI change| < 20%, the lake has bad OI prints), against it | 120 | 2 |
+| P14 | perp, all 5 | Ribbon slope fade: the 15-min ribbon's middle EMA moved > 0.5 ATR in 60 min, against it | 60 | 2 |
+| P15 | perp, all 5 | Consensus reversal: `vwap24_z` > 1, `day_range_pos` > 0.8, ribbon distance > 0.5 ATR and taker imbalance > 0.1 all at once -> short (mirror -> long) | 60 | 2 |
+| O16 | Delta options, BTC ETH | P01's signal; buy the ATM call (long) / put (short) of the day's 17:30 IST expiry | 60 | 2 |
+| O17 | Delta options, BTC ETH | P04's signal, ATM call / put | 60 | 2 |
+| O18 | Delta options, BTC ETH | P07's signal, ATM call / put | 180 | 1 |
+| O19 | Delta options, BTC ETH | Volatility burst: |15-min move| >= 2.5x DVOL's 15-min move, with it (RC2 R4 inside the window) | 120 | 2 |
+| O20 | Delta options, BTC ETH | P08's signal, ATM call / put | 09:00 IST | 1 |
+
+20 rules x 4 exit variants = 80 tests in one BH family. Perp rules pool their coins (one test per rule and variant),
+option rules pool BTC and ETH. Random twins: 1,500 per rule, variant and coin. Walk-forward, gates and the holdout
+read as in sections 6-7; the holdout is read for all 20 rules at once, in one run, after the design results are
+committed.
 
 ## Amendments
 

@@ -5,5 +5,5 @@ from .registry import PENDING, REGISTRY, Ctx, compute, feature, pending, signatu
 
 
 def load_all():
-    from . import calendar_f, derivs, levels_f, price, volume  # noqa: F401
+    from . import calendar_f, derivs, levels_f, options_f, price, trend_f, volume  # noqa: F401
     return REGISTRY

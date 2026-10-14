@@ -106,3 +106,23 @@ def write_archive(root: Path, frames: dict, sym: str = "BTCUSDT") -> None:
                           sum_taker_long_short_vol_ratio=part.taker_ls_vol)).to_csv(buf, index=False)
         name = f"{sym}-metrics-{d}"
         _zip(root / f"data/futures/um/daily/metrics/{sym}" / f"{name}.zip", f"{name}.csv", buf.getvalue())
+
+
+def option_trades(days: int = 4, start: str = "2025-01-03", seed: int = 2, price: float = 90000.0,
+                  per_hour: int = 120) -> pd.DataFrame:
+    """Deribit-shaped option trades (the options lake's columns, epoch ms), from 2 days before start: random strikes
+    70-130% of the index, 0.3-60 days to expiry, a smile in IV, random taker sides and amounts."""
+    rng = np.random.default_rng(seed)
+    t0 = pd.Timestamp(start) - pd.Timedelta(days=2)
+    n = (days + 2) * 24 * per_hour
+    ms = np.sort(rng.integers(0, (days + 2) * 86_400_000, n)) + int(t0.value // 1_000_000)
+    idx = price * np.exp(np.cumsum(rng.normal(0, 3e-4, n)))
+    m = rng.uniform(0.7, 1.3, n)
+    tte = rng.uniform(0.3, 60, n)
+    put = rng.random(n) < 0.45
+    iv = 50 + 40 * (m - 1) ** 2 + np.where(m < 1, 8 * (1 - m), 0) + rng.normal(0, 2, n)
+    iv[rng.random(n) < 0.003] = 0.0                                 # the lake has a few IV-0 prints
+    return pd.DataFrame(dict(timestamp=ms, iv=iv, index_price=idx, strike=np.round(m * idx, -2),
+                             expiry_ts=ms + (tte * 86_400_000).astype(np.int64), option_type=np.where(put, "P", "C"),
+                             direction=np.where(rng.random(n) < 0.5, "buy", "sell"),
+                             amount=np.round(rng.lognormal(-1.5, 1.0, n), 1) + 0.1))
