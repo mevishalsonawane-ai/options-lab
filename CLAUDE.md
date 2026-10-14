@@ -57,6 +57,16 @@ notes; match the surrounding code.
   plain-rules record can still be separated from the record after changes for the 26 Oct live decision. Boss is on paper
   only 13–26 Oct. Account stop rule:
   −₹40k drawdown or −₹13k a month.
+- SIGNAL ON THE UNDERLYING, TRADE THE OPTION (Boss, 14 Oct: "all the indicators and strategies should be on the
+  regular funds/index, and on the basis of that we buy options; make this default"). By default every indicator,
+  pattern and strategy, in research, paper, Pine, Strategy Lab, Jarvis and the arms, computes its entry and exit
+  signals on the underlying (the index spot or index futures; for stocks, funds or MCX, the stock, fund or future
+  itself) and then buys the option (or trades the future) chosen by the strike rule.
+  - Option-chain data (OI, PCR, IV, skew, GEX, max pain) may be used as context or filters around an underlying signal.
+  - Stops, targets, trails and locks may be set on the option premium.
+  - A rule whose signal is read from an option's own price chart is NOT the default: it must be labelled as such,
+    reported separately, and switched on only by Boss.
+  - Research write-ups state the signal source of every rule.
 - Crypto (Boss, 13 Oct): every crypto trade, in research, paper or any future live use, ALWAYS has a stop-loss and a
   profit lock (a trailing or step lock that protects open profit). No crypto strategy is tested, proposed or run without
   both; studies compare lock and stop variants, never "no stop". Nothing in the app trades crypto yet.
