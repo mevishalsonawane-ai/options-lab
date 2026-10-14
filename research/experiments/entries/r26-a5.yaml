@@ -1,0 +1,40 @@
+id: r26-a5
+title: 'OI wall blast A5: A5: hold to 15:20'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R26_OI_WALL_BLAST.md
+hypothesis: A third-party hero-zero framework (call/put wall break held 15+ min with wall OI unwinding and a volume spike,
+  ATM+1 at Rs 15-30) makes money after costs on every expiry.
+data_version: 'Dhan lake on Drive (IraAlgo-data-lake): options_rolling_1m opt_{NIFTY,BANKNIFTY,SENSEX,FINNIFTY}_WEEK (ATM+-10,
+  nearest expiry, OI per strike), index_1m NIFTY/BANKNIFTY/SENSEX/FINNIFTY/INDIAVIX; expiry days found from the data (R25
+  loader); BANKNIFTY weeklies to 2024-11-13, FINNIFTY to 2024-11-19; 13 Oct 2026 not in the lake'
+period:
+  design: 'ALL expiry days 2021-08-05..2026-10-08 as an out-of-sample test of a third-party rule (no fitted parameter): NIFTY
+    271, BANKNIFTY 172, SENSEX 175, FINNIFTY 152 (770); R25''s blocks reported separately (2021-22: 201, 2023-26: 569)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+- FINNIFTY
+features:
+- option-chain OI per strike (walls)
+- index minutes
+- option-chain volume
+- ATM+-1 option prices
+model_or_rule: 'Boss''s OI wall blast framework: 13:45-14:30, spot beyond the 13:00 call (put) wall for 16 one-minute closes,
+  the wall''s OI down >= 15% (NIFTY/SENSEX) or 25% (BANKNIFTY/FINNIFTY) from its peak since 12:00, chain volume 15 min >=
+  2x the session''s 15-min average, price with the move and summed call (put) OI falling; ATM+1 CE / ATM-1 PE in Rs 15-30;
+  Rs 2,000 a trade; target 4x else 15:05. This variant: A5: hold to 15:20'
+settings: research/hunt/r26/r26lib.py
+prereg: research/hunt/r26/PREREG.md
+variants_tried: 10
+results:
+  summary: 15 trades on 770 expiries (7 UP / 8 DOWN), hit 26.7%, >= 4x 20.0%, net Rs +14,499 (+579 per Rs 1,000 risked); 2021-22
+    3 trades Rs -1,828, 2023-26 12 trades Rs +16,327; worst day Rs -1,929, max DD Rs -6,850, net without the best day Rs -1,115;
+    random-time twin p 1.0 (twin mean Rs +53,563), BH q 1.0 (family 28). FAILED the gates.
+  costs: app charges at today's rates (Rs 20/order, STT 0.15% sell, exchange NSE/BSE, SEBI, stamp, GST); fills at the next
+    open + 5 bps + a 1/2/4-tick half-spread by 5-min volume; stress x2 spread; out-of-range prices at 0
+holdout_read: null
+verdict: rejected
+notes: One of 10 R26 rules (P + 8 alternative readings + the no-OI baseline); BH across R21 9 + R25 9 + R26 10 = 28. Every
+  parameter comes from the external text, so all expiries are out-of-sample; no holdout was locked.

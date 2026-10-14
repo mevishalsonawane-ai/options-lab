@@ -1,0 +1,34 @@
+id: r35-s2
+title: 'Dual-Supertrend hero S2: S1 held to 15:05'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R35_DUAL_SUPERTREND.md
+hypothesis: Boss's 1-minute Dual-Supertrend framework (ST 7,3 + 10,2 on the ATM+1 premium, option volume 2x EMA10, index above
+  TWAP, 3 heavyweights green, 14:00-14:45, Rs 2,000) pays after costs.
+data_version: 'Dhan lake on Drive: opt_{NIFTY,SENSEX}_WEEK (ATM+-10), index_1m NIFTY/SENSEX/INDIAVIX, equity_1m HDFCBANK/RELIANCE/ICICIBANK;
+  R26 day files; 13 Oct 2026 not in the lake'
+period:
+  design: 'ALL expiries (nothing fitted): NIFTY 271 (2021-08-05..2026-10-06), SENSEX 175 (2023-05-19..2026-10-08); R25 blocks
+    reported'
+instruments:
+- NIFTY
+- SENSEX
+features:
+- supertrend on option premium
+- option volume
+- index TWAP
+- heavyweight stock minutes
+model_or_rule: S1 held to 15:05
+settings: research/hunt/r35/r35lib.py
+prereg: research/hunt/r35/PREREG.md
+variants_tried: 5
+results:
+  summary: 114 trades on 446 expiries (NIFTY 77, SENSEX 37), hit 13.2%, >= 4x 9.6%, net Rs -87,116 (-430 per Rs 1,000); worst
+    day Rs -1,998, max DD Rs -87,116, without the best day Rs -112,269; random-time twin mean Rs -12,358, p 1.0, BH q 1.0
+    (family 44). FAILED the gates.
+  costs: app charges at today's rates; next-open fills + 5 bps + 1/2/4-tick half-spread; entry limit 1.2x + 0.10 for 3 min;
+    x2 spread stress
+holdout_read: null
+verdict: rejected
+notes: 'One of 5 R35 rules; BH across R21 9 + R25 9 + R26 10 + R34 11 + R35 5 = 44. The index has no volume: VWAP is a time-weighted
+  average since the open.'
