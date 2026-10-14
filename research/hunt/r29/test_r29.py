@@ -63,10 +63,23 @@ def test_regime_flags_use_earlier_expiries_only():
     assert G.SCALE_N == 20 and G.MIN_CUT == 10
 
 
-@pytest.mark.skipif(not D.path("NIFTY").exists(), reason="the lake day files are not built here")
-def test_scaling_never_reads_a_later_day():
-    ds = sorted(D.load("NIFTY", "all"), key=lambda d: d.day)[:40]
-    vals = [G.gex(d, G.T0, G.atm_iv(d, G.T0))[0] for d in ds]
-    # the 30th day's scale uses days 10..29 only: changing day 35 cannot change it
-    prev = [x for x in vals[10:30] if x == x]
-    assert len(prev) >= 1 and np.isfinite(np.median(prev))
+def test_regime_flags_read_earlier_expiries_only():
+    rng = np.random.default_rng(1)
+    gs = list(rng.uniform(1, 2, 60))
+    gn = list(rng.uniform(-1, 1, 60))
+    full = G.regime_flags(gs, gn)
+    assert not any(f["ok"] for f in full[: G.SCALE_N + G.MIN_CUT])         # 20 to scale, then 10 for a cut
+    assert all(f["ok"] for f in full[G.SCALE_N + G.MIN_CUT:])
+    # changing a later expiry changes nothing before it
+    gs2, gn2 = gs[:], gn[:]
+    gs2[45], gn2[45] = 99.0, -99.0
+    alt = G.regime_flags(gs2, gn2)
+    assert alt[:45] == full[:45]
+    assert alt[45]["x1"] and alt[45]["x2"]
+    # a day without GEX gets no decision, and the scale waits until the last 20 expiry slots all have GEX again
+    gs3 = gs[:]
+    gs3[40] = math.nan
+    f3 = G.regime_flags(gs3, gn)
+    assert not f3[40]["ok"] and not f3[41]["ok"]
+    assert all(not f["ok"] for f in f3[40: 40 + G.SCALE_N + 1])
+    assert f3[:40] == full[:40]

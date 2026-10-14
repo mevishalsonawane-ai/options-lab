@@ -112,31 +112,41 @@ def leg_ivrv(day, t: int, sgn: int, k: float, p: float, ratio: float) -> float:
     return iv * 100 / fc if iv == iv and fc == fc and fc > 0 else math.nan
 
 
+def regime_flags(gs: list, gn: list) -> list[dict]:
+    """Per expiry (in date order): the scaled GEX (the day's value / the median of the previous 20 expiries' values; the
+    net, which changes sign, / the median SIZE of the previous 20 nets) and the regime flags against the expanding 2/3
+    and 1/3 quantiles of all EARLIER scaled values (at least MIN_CUT of them). Entry i reads entries < i only."""
+    out, hs, hn, cs, cn = [], [], [], [], []
+    for x, y in zip(gs, gn):
+        f = {"ok": False, "x1": False, "x2": False}
+        ps = [v for v in hs[-SCALE_N:] if v == v]
+        pn = [v for v in hn[-SCALE_N:] if v == v]
+        if x == x and len(ps) >= SCALE_N:
+            ss, sn = x / float(np.median(ps)), y / float(np.median(np.abs(pn)))
+            f.update(s_short=ss, s_net=sn)
+            if len(cs) >= MIN_CUT:
+                f.update(ok=True, x1=ss >= float(np.quantile(cs, 2 / 3)), x2=sn <= float(np.quantile(cn, 1 / 3)))
+            cs.append(ss)
+            cn.append(sn)
+        hs.append(x)
+        hn.append(y)
+        out.append(f)
+    return out
+
+
 def build() -> list[dict]:
     rows = []
     for u in UNDS:
         ds = sorted(D.load(u, "all"), key=lambda d: d.day)
         rat = F.all_ratios(ds)
         j = (T0 - F.DECISIONS[0]) // 5
-        hist_s, hist_n, sc_s, sc_n = [], [], [], []
-        for d, ratio in zip(ds, rat):
+        meas = []
+        for d in ds:
             sig = atm_iv(d, T0)
-            gs, gn = gex(d, T0, sig)
-            row = {"und": u, "day": d.day, "sig": sig, "gex_short": gs, "gex_net": gn, "x1": False, "x2": False, "ok": False}
-            prev_s = [x for x in hist_s[-SCALE_N:] if x == x]
-            prev_n = [x for x in hist_n[-SCALE_N:] if x == x]
-            if gs == gs and len(prev_s) >= SCALE_N:
-                ss = gs / float(np.median(prev_s))
-                sn = gn / float(np.median(np.abs(prev_n)))          # net can change sign: scale by the median size
-                row.update(s_short=ss, s_net=sn)
-                if len(sc_s) >= MIN_CUT:
-                    row["ok"] = True
-                    row["x1"] = ss >= float(np.quantile(sc_s, 2 / 3))
-                    row["x2"] = sn <= float(np.quantile(sc_n, 1 / 3))
-                sc_s.append(ss)
-                sc_n.append(sn)
-            hist_s.append(gs)
-            hist_n.append(gn)
+            meas.append((d, sig, *gex(d, T0, sig)))
+        flags = regime_flags([m[2] for m in meas], [m[3] for m in meas])
+        for (d, sig, gs, gn), ratio, fl in zip(meas, rat, flags):
+            row = {"und": u, "day": d.day, "sig": sig, "gex_short": gs, "gex_net": gn, **fl}
             if row["ok"]:
                 row["move"] = move_ratio(d, T0, sig)
                 legs = []
@@ -234,17 +244,38 @@ def describe(rows) -> dict:
     for key in ("s_short", "s_net"):
         x = np.array([r[key] for r in ok])
         mv = np.array([r["move"] for r in ok])
-        pn = np.array([day_net(r)[0] / max(day_net(r)[1], 1) * 1000 for r in ok])
+        traded = np.array([day_net(r)[2] > 0 for r in ok])
+        pn = np.array([day_net(r)[0] / day_net(r)[1] * 1000 if day_net(r)[1] > 0 else np.nan for r in ok])
         rho, p = spearmanr(x, mv)
         cuts = np.quantile(x, [1 / 3, 2 / 3])
         bins = np.digitize(x, cuts)
         out[key] = {"spearman_move": round(float(rho), 3), "p": round(float(p), 4), "n": int(len(x)),
                     "terciles": {f"T{b + 1}": {"n": int((bins == b).sum()), "move_mean": round(float(mv[bins == b].mean()), 3),
                                                "move_median": round(float(np.median(mv[bins == b])), 3),
-                                               "pair_per1000_E3": round(float(pn[bins == b].mean()), 1)} for b in range(3)}}
+                                               "traded_days": int((traded & (bins == b)).sum()),
+                                               "pair_per1000_E3": round(float(np.nanmean(pn[bins == b])), 1)} for b in range(3)}}
     mv = np.array([r["move"] for r in ok])
     out["all"] = {"n": int(len(mv)), "move_mean": round(float(mv.mean()), 3), "move_median": round(float(np.median(mv)), 3),
                   "share_move_gt1": round(float((mv > 1).mean()) * 100, 1)}
+    return out
+
+
+def confound(rows) -> dict:
+    """Is the GEX-move link an implied-vol effect? Rank correlations and the partial rank correlation given ATM IV."""
+    from scipy.stats import rankdata
+    ok = [r for r in rows if r["ok"] and r.get("move") == r.get("move") and r.get("move") is not None]
+    s = np.array([r["s_short"] for r in ok])
+    sig = np.array([r["sig"] for r in ok])
+    mv = np.array([r["move"] for r in ok])
+    rs, rg, rm = rankdata(s), rankdata(sig), rankdata(mv)
+
+    def res(y, x):
+        return y - np.polyval(np.polyfit(x, y, 1), x)
+    out = {"n": len(ok), "rho_gex_iv": round(float(spearmanr(s, sig)[0]), 3), "rho_iv_move": round(float(spearmanr(sig, mv)[0]), 3),
+           "partial_rho_gex_move_given_iv": round(float(np.corrcoef(res(rs, rg), res(rm, rg))[0, 1]), 3), "by_index": {}}
+    for u in UNDS:
+        m = [i for i, r in enumerate(ok) if r["und"] == u]
+        out["by_index"][u] = round(float(spearmanr(s[m], mv[m])[0]), 3)
     return out
 
 
@@ -274,7 +305,7 @@ def main():
              "4 BH q < 0.05": v["q"] < 0.05, "5 x2 spread > 0": v["x2_spread"] > 0,
              "6 w/o best day > 0": m["wo_best"] > 0, "7 max DD > -40k": m["max_dd"] > -40000}
         v["gates"], v["passes"] = g, all(g.values())
-    out = {"bh_size": len(fam), "bh_min_q": round(min(qs.values()), 4), "describe": describe(rows),
+    out = {"bh_size": len(fam), "bh_min_q": round(min(qs.values()), 4), "describe": describe(rows), "confound": confound(rows),
            "eligible": {u: sum(1 for r in rows if r["ok"] and r["und"] == u) for u in UNDS},
            "no_gex": {u: sum(1 for r in rows if r["und"] == u and not r["gex_short"] == r["gex_short"]) for u in UNDS},
            "rules": res}
