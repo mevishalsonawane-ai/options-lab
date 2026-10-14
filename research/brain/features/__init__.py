@@ -6,5 +6,5 @@ from .registry import PENDING, REGISTRY, Ctx, Feature, compute, feature, pending
 
 def load_all():
     from . import (breadth, calendar_f, candles, indicators, levels_f, market, options, options_x,  # noqa: F401
-                   price, profile_f, structure, volume)
+                   price, profile_f, ribbon, structure, volume)
     return REGISTRY
