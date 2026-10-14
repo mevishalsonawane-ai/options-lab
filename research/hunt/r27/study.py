@@ -376,8 +376,9 @@ def report():
           ", ".join(f"{s.id} {t['pooled'][s.id]['bh_q_with_family']:.2f}" for s in R.VARIANTS) + ".",
           f"Anchored walk-forward pick: " + "; ".join(f"{p['year']} {p['pick']} ({p['diff_that_year']:+,})" for p in t["wf_pick"]["picks"]) +
           f"; total {t['wf_pick']['total_diff_vs_b0']:+,} vs B0.", "",
-          "PASS_WF: " + ", ".join(f"{s.id} {t['pooled'][s.id]['PASS_WF']}" for s in R.VARIANTS) + ". Holdout pass: none tested "
-          "(no variant passed the walk-forward); the holdout is information only.", ""]
+          "PASS_WF: " + ", ".join(f"{s.id} {t['pooled'][s.id]['PASS_WF']}" for s in R.VARIANTS) + ". Holdout pass: " +
+          (", ".join(f"{k} {v}" for k, v in h.get("holdout_pass", {}).items()) or "none tested (no variant passed the "
+           "walk-forward); the holdout is information only") + ".", ""]
     (K.RESULTS / "report.md").write_text("\n".join(L))
     print("\n".join(L))
 

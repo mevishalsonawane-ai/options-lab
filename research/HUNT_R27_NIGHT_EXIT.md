@@ -23,7 +23,7 @@ paper arm's BANKNIFTY 55400 CE (bought 13 Oct 15:20 at about Rs 789) was sold by
 - **How often it helped vs hurt.** It is a coin flip.
   - Holding always (the six "H1" ways) helped on 75-85 nights and hurt on 88-98 in the locked year. Over 2023-25 it was
     about 50/50: 217-243 helped vs 227-255 hurt of 472.
-  - The morning after 09:16 swings both ways. On 4 mornings in 5 the index goes 20 points our way before 10:30, but its
+  - The morning after 09:16 swings both ways (2021-22 block, 224 trades). On 4 mornings in 5 the index goes 20 points our way before 10:30, but its
     median move against us is about 55 points. So a +20 target and a -20 stop are reached about equally often.
 - **Holding when the morning "looks good" made it worse, not better (H2).** "Hold only if it opened our way and the first
   minute also went our way, sell on +30, stop if the index falls back through its open":
@@ -236,5 +236,13 @@ never live.
   per-year and holdout B0 totals match X2 within normal noise.
 - **2021-22 was read before the PREREG.** The descriptive step read it, and its in-sample results (p 0.006-0.04) are
   reported but never used to pass anything.
+- **Small simulation approximations** (an independent review; none changes a result, and none can be refitted without
+  a second holdout read):
+  - The lock (V8) arms at the start only if the 09:16 open is already +Rs 1,000. It ignores the 09:15 bar's high and
+    the entry day's 15:20-15:29 highs, so it arms a little late.
+  - The entry may fill on a 15:23 bar. The app stops buying before 15:23.
+  - With no option bar for 6 minutes, a sale falls back to the next bar (after 10:30 at the latest 11:30) or the last
+    close. This happened once, V8 in the walk-forward.
+  - Index minutes before the option's first morning bar are not watched.
 - **No raw data in git.** The lake caches are in `~/.cache/iraalgo/r27`; only small JSON and markdown results are
   committed.
