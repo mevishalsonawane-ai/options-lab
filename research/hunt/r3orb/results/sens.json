@@ -1,0 +1,426 @@
+{
+ "design": {
+  "base-orb": {
+   "net": -223040,
+   "clean_net": -224370,
+   "dropped": 6,
+   "trades": 2489,
+   "clean_by_und": {
+    "BANKNIFTY": -125265,
+    "NIFTY": -99106
+   }
+  },
+  "base-orb_fresh": {
+   "net": -223812,
+   "clean_net": -225142,
+   "dropped": 6,
+   "trades": 2489,
+   "clean_by_und": {
+    "BANKNIFTY": -125265,
+    "NIFTY": -99877
+   }
+  },
+  "base-orb_sweep": {
+   "net": -505954,
+   "clean_net": -503111,
+   "dropped": 3,
+   "trades": 3156,
+   "clean_by_und": {
+    "BANKNIFTY": -296585,
+    "NIFTY": -206526
+   }
+  },
+  "base-range_fade": {
+   "net": -510978,
+   "clean_net": -509122,
+   "dropped": 4,
+   "trades": 3512,
+   "clean_by_und": {
+    "BANKNIFTY": -284176,
+    "NIFTY": -224946
+   }
+  },
+  "r3-orb-F": {
+   "net": -175484,
+   "clean_net": -175707,
+   "dropped": 4,
+   "trades": 2222,
+   "clean_by_und": {
+    "BANKNIFTY": -99853,
+    "NIFTY": -75854
+   }
+  },
+  "r3-orb-E": {
+   "net": -230006,
+   "clean_net": -230449,
+   "dropped": 6,
+   "trades": 2489,
+   "clean_by_und": {
+    "BANKNIFTY": -123065,
+    "NIFTY": -107384
+   }
+  },
+  "r3-orb-S": {
+   "net": -216857,
+   "clean_net": -215961,
+   "dropped": 14,
+   "trades": 2489,
+   "clean_by_und": {
+    "BANKNIFTY": -116298,
+    "NIFTY": -99663
+   }
+  },
+  "r3-orb-C": {
+   "net": -169567,
+   "clean_net": -167682,
+   "dropped": 11,
+   "trades": 2221,
+   "clean_by_und": {
+    "BANKNIFTY": -85849,
+    "NIFTY": -81833
+   }
+  },
+  "r3-orb_fresh-F": {
+   "net": -171694,
+   "clean_net": -173539,
+   "dropped": 2,
+   "trades": 1893,
+   "clean_by_und": {
+    "BANKNIFTY": -101562,
+    "NIFTY": -71976
+   }
+  },
+  "r3-orb_fresh-E": {
+   "net": -230773,
+   "clean_net": -231216,
+   "dropped": 6,
+   "trades": 2489,
+   "clean_by_und": {
+    "BANKNIFTY": -123065,
+    "NIFTY": -108151
+   }
+  },
+  "r3-orb_fresh-S": {
+   "net": -217509,
+   "clean_net": -216614,
+   "dropped": 14,
+   "trades": 2489,
+   "clean_by_und": {
+    "BANKNIFTY": -116288,
+    "NIFTY": -100325
+   }
+  },
+  "r3-orb_fresh-C": {
+   "net": -163199,
+   "clean_net": -162966,
+   "dropped": 10,
+   "trades": 1893,
+   "clean_by_und": {
+    "BANKNIFTY": -91067,
+    "NIFTY": -71899
+   }
+  },
+  "r3-orb_sweep-F": {
+   "net": -319572,
+   "clean_net": -320004,
+   "dropped": 1,
+   "trades": 2172,
+   "clean_by_und": {
+    "BANKNIFTY": -185256,
+    "NIFTY": -134748
+   }
+  },
+  "r3-orb_sweep-E": {
+   "net": -407744,
+   "clean_net": -404820,
+   "dropped": 3,
+   "trades": 3387,
+   "clean_by_und": {
+    "BANKNIFTY": -246704,
+    "NIFTY": -158116
+   }
+  },
+  "r3-orb_sweep-S": {
+   "net": -342812,
+   "clean_net": -341098,
+   "dropped": 2,
+   "trades": 2500,
+   "clean_by_und": {
+    "BANKNIFTY": -195046,
+    "NIFTY": -146053
+   }
+  },
+  "r3-orb_sweep-C": {
+   "net": -192702,
+   "clean_net": -192633,
+   "dropped": 1,
+   "trades": 1769,
+   "clean_by_und": {
+    "BANKNIFTY": -127141,
+    "NIFTY": -65492
+   }
+  },
+  "r3-range_fade-F": {
+   "net": -444049,
+   "clean_net": -442193,
+   "dropped": 4,
+   "trades": 3081,
+   "clean_by_und": {
+    "BANKNIFTY": -254431,
+    "NIFTY": -187761
+   }
+  },
+  "r3-range_fade-E": {
+   "net": -460856,
+   "clean_net": -459000,
+   "dropped": 4,
+   "trades": 3630,
+   "clean_by_und": {
+    "BANKNIFTY": -282730,
+    "NIFTY": -176270
+   }
+  },
+  "r3-range_fade-S": {
+   "net": -368454,
+   "clean_net": -369920,
+   "dropped": 3,
+   "trades": 2585,
+   "clean_by_und": {
+    "BANKNIFTY": -209936,
+    "NIFTY": -159984
+   }
+  },
+  "r3-range_fade-C": {
+   "net": -280854,
+   "clean_net": -281831,
+   "dropped": 3,
+   "trades": 2141,
+   "clean_by_und": {
+    "BANKNIFTY": -197059,
+    "NIFTY": -84772
+   }
+  }
+ },
+ "holdout": {
+  "base-orb": {
+   "net": -113993,
+   "clean_net": -72589,
+   "dropped": 31,
+   "trades": 2572,
+   "clean_by_und": {
+    "FINNIFTY": 3604,
+    "MIDCPNIFTY": -44487,
+    "SENSEX": -31706
+   }
+  },
+  "base-orb_fresh": {
+   "net": -149434,
+   "clean_net": -104036,
+   "dropped": 31,
+   "trades": 2556,
+   "clean_by_und": {
+    "FINNIFTY": -28095,
+    "MIDCPNIFTY": -44789,
+    "SENSEX": -31152
+   }
+  },
+  "base-orb_sweep": {
+   "net": -585798,
+   "clean_net": -555858,
+   "dropped": 8,
+   "trades": 3303,
+   "clean_by_und": {
+    "FINNIFTY": -243003,
+    "MIDCPNIFTY": -191188,
+    "SENSEX": -121667
+   }
+  },
+  "base-range_fade": {
+   "net": -577344,
+   "clean_net": -580021,
+   "dropped": 8,
+   "trades": 3794,
+   "clean_by_und": {
+    "FINNIFTY": -275075,
+    "MIDCPNIFTY": -185754,
+    "SENSEX": -119192
+   }
+  },
+  "r3-orb-F": {
+   "net": -70250,
+   "clean_net": -33278,
+   "dropped": 28,
+   "trades": 2289,
+   "clean_by_und": {
+    "FINNIFTY": 21809,
+    "MIDCPNIFTY": -26035,
+    "SENSEX": -29052
+   }
+  },
+  "r3-orb-E": {
+   "net": -265716,
+   "clean_net": -219564,
+   "dropped": 31,
+   "trades": 2572,
+   "clean_by_und": {
+    "FINNIFTY": -112661,
+    "MIDCPNIFTY": -66060,
+    "SENSEX": -40842
+   }
+  },
+  "r3-orb-S": {
+   "net": -83320,
+   "clean_net": -61141,
+   "dropped": 32,
+   "trades": 2554,
+   "clean_by_und": {
+    "FINNIFTY": 51468,
+    "MIDCPNIFTY": -63185,
+    "SENSEX": -49424
+   }
+  },
+  "r3-orb-C": {
+   "net": -146770,
+   "clean_net": -133792,
+   "dropped": 32,
+   "trades": 2275,
+   "clean_by_und": {
+    "FINNIFTY": -27384,
+    "MIDCPNIFTY": -73192,
+    "SENSEX": -33215
+   }
+  },
+  "r3-orb_fresh-F": {
+   "net": -102865,
+   "clean_net": -63480,
+   "dropped": 25,
+   "trades": 1958,
+   "clean_by_und": {
+    "FINNIFTY": -7278,
+    "MIDCPNIFTY": -35827,
+    "SENSEX": -20375
+   }
+  },
+  "r3-orb_fresh-E": {
+   "net": -271695,
+   "clean_net": -221549,
+   "dropped": 31,
+   "trades": 2556,
+   "clean_by_und": {
+    "FINNIFTY": -114160,
+    "MIDCPNIFTY": -66363,
+    "SENSEX": -41026
+   }
+  },
+  "r3-orb_fresh-S": {
+   "net": -96033,
+   "clean_net": -74013,
+   "dropped": 32,
+   "trades": 2537,
+   "clean_by_und": {
+    "FINNIFTY": 41653,
+    "MIDCPNIFTY": -65194,
+    "SENSEX": -50472
+   }
+  },
+  "r3-orb_fresh-C": {
+   "net": -140017,
+   "clean_net": -124620,
+   "dropped": 27,
+   "trades": 1948,
+   "clean_by_und": {
+    "FINNIFTY": -9945,
+    "MIDCPNIFTY": -85620,
+    "SENSEX": -29055
+   }
+  },
+  "r3-orb_sweep-F": {
+   "net": -391289,
+   "clean_net": -363724,
+   "dropped": 4,
+   "trades": 2240,
+   "clean_by_und": {
+    "FINNIFTY": -159917,
+    "MIDCPNIFTY": -118435,
+    "SENSEX": -85373
+   }
+  },
+  "r3-orb_sweep-E": {
+   "net": -536744,
+   "clean_net": -507693,
+   "dropped": 8,
+   "trades": 3520,
+   "clean_by_und": {
+    "FINNIFTY": -231032,
+    "MIDCPNIFTY": -178316,
+    "SENSEX": -98345
+   }
+  },
+  "r3-orb_sweep-S": {
+   "net": -448350,
+   "clean_net": -449745,
+   "dropped": 7,
+   "trades": 2535,
+   "clean_by_und": {
+    "FINNIFTY": -123928,
+    "MIDCPNIFTY": -200813,
+    "SENSEX": -125004
+   }
+  },
+  "r3-orb_sweep-C": {
+   "net": -272424,
+   "clean_net": -291510,
+   "dropped": 4,
+   "trades": 1759,
+   "clean_by_und": {
+    "FINNIFTY": -120198,
+    "MIDCPNIFTY": -115304,
+    "SENSEX": -56009
+   }
+  },
+  "r3-range_fade-F": {
+   "net": -550920,
+   "clean_net": -553598,
+   "dropped": 8,
+   "trades": 3391,
+   "clean_by_und": {
+    "FINNIFTY": -263165,
+    "MIDCPNIFTY": -181348,
+    "SENSEX": -109084
+   }
+  },
+  "r3-range_fade-E": {
+   "net": -564373,
+   "clean_net": -564866,
+   "dropped": 8,
+   "trades": 3896,
+   "clean_by_und": {
+    "FINNIFTY": -285025,
+    "MIDCPNIFTY": -192211,
+    "SENSEX": -87631
+   }
+  },
+  "r3-range_fade-S": {
+   "net": -407959,
+   "clean_net": -383087,
+   "dropped": 8,
+   "trades": 2696,
+   "clean_by_und": {
+    "FINNIFTY": -162686,
+    "MIDCPNIFTY": -124706,
+    "SENSEX": -95695
+   }
+  },
+  "r3-range_fade-C": {
+   "net": -355105,
+   "clean_net": -364997,
+   "dropped": 7,
+   "trades": 2312,
+   "clean_by_und": {
+    "FINNIFTY": -173235,
+    "MIDCPNIFTY": -117933,
+    "SENSEX": -73829
+   }
+  }
+ }
+}

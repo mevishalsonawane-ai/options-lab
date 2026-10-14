@@ -494,6 +494,37 @@ Full study: `HUNT_R24_WHATIF_PATTERNS.md` (pre-registered `hunt/r24/PREREG.md`, 
 - Re-run on the full lake (incl. monthly series): `bash research/hunt/r24/refresh_lake.sh` (Steps 1-2; Step 3 needs a new
   pre-registration).
 
+## The ORB family on the full lake (R3, 14 Oct 2026) - every version loses; ORB, ORB Fresh, ORB Sweep and Range Fade stay paused
+Full study: `HUNT_R3_ORB_FAMILY.md` (pre-registered `hunt/r3orb/PREREG.md`; Dhan lake Aug 2021 - 12 Oct 2026; design
+BANKNIFTY + NIFTY, holdout out-of-instrument FINNIFTY + MIDCPNIFTY + SENSEX read once; app charges, liq fills, 1 lot).
+- Rebuilt exactly as the app has them (matches R14 / R12 within a few percent), BANKNIFTY + NIFTY over 5 years: ORB
+  -Rs 2,23,040 (2,489 trades), ORB Fresh -Rs 2,23,812, ORB Sweep -Rs 5,05,954 (3,156), Range Fade -Rs 5,10,978 (3,512);
+  0 of 6 years in profit for every arm. Unseen indices: ORB -Rs 1,13,993, Fresh -Rs 1,49,434, Sweep -Rs 5,85,798, Fade
+  -Rs 5,77,344.
+- Anatomy: no point-in-time feature (VIX, VIX change, gap, range width, time, expiry, distance from the morning TWAP)
+  has a third in which any arm makes money. Even on days that trended its way the ORB lost Rs 52 a trade (1,094 trades):
+  it buys after the move. Sweep and Fade win only on trend days traded with the trend (known only after the close).
+- 16 pre-registered versions (a day-type filter, Boss's R19c exits without a target, 1-ITM with 1 entry a side, all
+  three together): all lose in every design year and on the unseen indices; 0 of 16 pass. The least bad, ORB with all
+  three, lost Rs 1,69,567 on design and Rs 1,46,770 unseen. BH over 183 ORB-family tests.
+- 13 Oct's wide range: on BANKNIFTY days with a range of at least 0.8 x ATR14, price stayed inside until 13:55 on 28%
+  of days (33 of 119); not trading them saves money.
+- App: nothing changes; the four arms stay paused (code and settings kept); nothing goes on paper.
+
+## Every indicator at once, and why candles turn green or red (B2, 14 Oct 2026) - direction stays a coin flip; nothing trades
+Full study: `HUNT_B2_ALL_AT_ONCE.md` (pre-registered `hunt/b2/PREREG.md`; NIFTY, BANKNIFTY, FINNIFTY, SENSEX; design
+2021-08 .. 2026-04 walk-forward, holdout 27 Apr - 12 Oct 2026 read once).
+- 469 inputs in one model (every brain feature + every indicator setting on 1/5/15-min charts, option volume profile,
+  order-flow proxy, R28 gamma, other indices, Fibonacci / round levels), in a linear model, boosted trees and a neural net.
+- Next 15 / 30 / 60-minute candle colour: holdout AUC 0.516 / 0.511 / 0.518 (0.5 = coin flip); no direction target passes;
+  all 469 inputs add at most 0.005 over the 208 base ones; the neural net is worst.
+- Trading the most confident 10%: all 4 rules lose (holdout 15-min Rs -21,397 on 527 trades); none beats random entries.
+- Predictable: move size (holdout AUC 0.64), whether a bought option pays (0.59-0.63, calls and puts alike: timing, not
+  direction), "green day" at 10:15 (0.73, but it is mostly the move since the open; the rest of the day is a coin flip).
+- A green 15-minute candle forms with call buying / put writing / call short covering, breadth rising, gamma up and
+  VIX / IV falling (concurrent, not known before). Before it: a small reversal (after red 15 minutes, green 52.6% vs 49.6%).
+- App: nothing changes.
+
 ## Crypto: what is predictable? (C1, 13 Oct 2026) - only the size of the next hour / day, not its direction
 Full study: `CRYPTO_C1_PREDICTABILITY.md` (pre-registered `brain/crypto/PREREG.md`, commit 5adf2a6; 80 tests in one BH
 family). Built on the new crypto Data Brain (`research/brain/crypto`, 24x7 UTC cube of Binance spot, perp, funding, OI).

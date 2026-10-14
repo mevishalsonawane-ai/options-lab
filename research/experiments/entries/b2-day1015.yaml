@@ -1,0 +1,33 @@
+id: b2-day1015
+title: 'B2 all inputs at once: day green, decided at 10:15'
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_B2_ALL_AT_ONCE.md
+data_version: F1 feature rows + outcomes (brain on the Dhan lake data-20261014) + B2 sweep bank (research/hunt/b2/b2sweep.py)
+period:
+  design: 2021-08-02..2026-04-13, walk-forward test blocks 2023 / 2024 / 2025 / 2026 (to 13 Apr)
+  holdout: 2026-04-27..2026-10-12 (116 days per index), read once 14 Oct 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+prereg: research/hunt/b2/PREREG.md
+hypothesis: With every input at once, a model predicts 'day green, decided at 10:15' on unseen data (AUC >= 0.52, p < 0.05,
+  BH q < 0.10 over 54).
+features:
+- '469 inputs at once: 208 brain/F1 features (EMA, VWAP, Supertrend, RSI, MACD, ADX, Bollinger, pivots, CPR, OI build-up,
+  PCR, max pain, OI walls, IV, skew, VIX, Greeks, GEX proxy, breadth)'
+- 261 sweep inputs (every indicator setting on 1/5/15-min charts, option volume profile, order-flow proxy, R28 gamma, other
+  indices, Fibonacci / round levels, multi-day, calendar)
+model_or_rule: logistic regression, boosted trees (HistGradientBoosting), neural network (MLP 128-64), each on base (208)
+  and all (469) inputs
+settings: research/hunt/b2/PREREG.md sections 3-5, 8 and amendments 1-3
+variants_tried: 6
+results:
+  summary: 'Walk-forward AUC (LR / boosted trees / neural net, base and all inputs): base-LR 0.688, base-GBM 0.722, base-NN
+    0.685, all-LR 0.663, all-GBM 0.726, all-NN 0.672 (3,108 test rows). Holdout (454 rows, 116 days): best all-LR AUC 0.726
+    (p 0.000, q 0.001); pattern gate passed by 6 of 6. As DAY0930.'
+  costs: none for AUC; option targets use F1's outcomes (app fees, liq fills)
+holdout_read: true
+verdict: inconclusive

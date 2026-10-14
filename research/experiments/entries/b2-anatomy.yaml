@@ -1,0 +1,33 @@
+id: b2-anatomy
+title: B2 why candles turn green or red (concurrent inputs, green vs red days)
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_B2_ALL_AT_ONCE.md
+data_version: F1 feature rows + outcomes (brain on the Dhan lake data-20261014) + B2 sweep bank (research/hunt/b2/b2sweep.py)
+period:
+  design: 2021-08-02..2026-04-13, walk-forward test blocks 2023 / 2024 / 2025 / 2026 (to 13 Apr)
+  holdout: 2026-04-27..2026-10-12 (116 days per index), read once 14 Oct 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+prereg: research/hunt/b2/PREREG.md
+hypothesis: 'Descriptive: what moves together with a green / red 15-minute candle, and which day conditions go with green
+  days.'
+features:
+- '469 inputs at once: 208 brain/F1 features (EMA, VWAP, Supertrend, RSI, MACD, ADX, Bollinger, pivots, CPR, OI build-up,
+  PCR, max pain, OI walls, IV, skew, VIX, Greeks, GEX proxy, breadth)'
+- 261 sweep inputs (every indicator setting on 1/5/15-min charts, option volume profile, order-flow proxy, R28 gamma, other
+  indices, Fibonacci / round levels, multi-day, calendar)
+model_or_rule: per-input AUC of the change during the candle; green-day shares by gap, yesterday, VIX, weekday, month
+settings: research/hunt/b2/study.py anatomy
+variants_tried: null
+results:
+  summary: 'While a 15-minute candle is green: option order-flow proxy (AUC 0.83), put writing / call short covering (0.79-0.80),
+    breadth (0.74), gamma more positive (0.74), VIX and IV falling (0.31). Known only as the candle forms. Before it: a small
+    reversal (after a red 15 minutes the next is green 52.6% vs 49.6% after green, 272,667 cases). Green days (4,251 index-days,
+    48% green): gap up 42-48%, gap down 53-54%, after a very red yesterday 56%, Monday 53%.'
+  costs: none (descriptive)
+holdout_read: false
+verdict: not-a-test

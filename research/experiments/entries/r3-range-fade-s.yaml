@@ -1,0 +1,40 @@
+id: r3-range-fade-s
+title: 'R3 Range Fade variant S: 1 strike in the money, at most 1 entry a side a day'
+family: orb
+date: '2026-10-14'
+doc: research/HUNT_R3_ORB_FAMILY.md
+data_version: Dhan lake data-20261014 (options_rolling_1m opt_<UND>_WEEK = nearest expiry on or after the day, ATM+-10; index_1m
+  incl. INDIAVIX) read by research/hunt/r3orb/r3data.py
+period:
+  design: BANKNIFTY 2021-09-03..2026-10-12 (1,255 sessions) + NIFTY 2021-08-02..2026-10-12 (1,284)
+  holdout: 'out-of-instrument: FINNIFTY 2021-09-03.. (1,254), MIDCPNIFTY 2022-02-21.. (906), SENSEX 2023-05-15.. (845), all
+    to 2026-10-12; read once 14 Oct 2026'
+prereg: research/hunt/r3orb/PREREG.md
+hypothesis: Range Fade with 1 strike in the money, at most 1 entry a side a day makes money net of the app's fees and fills
+  on unseen data (PREREG A8 gates D1-D4, H1-H5).
+instruments:
+- BANKNIFTY
+- NIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 1-minute index
+- opening range
+- VIX
+- gap
+- range width / ATR14
+- signal time
+- expiry day
+- TWAP distance
+model_or_rule: 'Range Fade: 1 strike in the money, at most 1 entry a side a day.'
+settings: research/hunt/r3orb/PREREG.md A6 and Part B
+variants_tried: 16
+results:
+  summary: 'Design: 2,585 trades, net Rs -368,454 (Rs -287 a day), win rate 31%, worst day Rs -4,428, max drawdown Rs -368,627;
+    per year [-28361, -66761, -60057, -51653, -100272, -61350]; gates D1-D4 nnnn. Holdout: 2,696 trades, net Rs -407,959 (Rs
+    -325 a day), win rate 34%, worst day Rs -16,711, max drawdown Rs -410,253; t p 1.000, twin mean Rs -477,127 p 0.075, BH
+    q 1.00 / 0.77 (m 183); gates H1-H5 nynyn. FAIL.'
+  costs: app fees at today's rates (BSE for SENSEX); liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks; 1 lot in force
+holdout_read: true
+verdict: rejected
