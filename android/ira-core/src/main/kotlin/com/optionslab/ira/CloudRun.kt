@@ -11,6 +11,7 @@ import java.time.LocalDateTime
  *    then marked done with its size. A failure stops the run (the rest wait for the next one); what was done stays done.
  *  - [backup]: the sealed phone backup uploaded to `phone-backup`, then the old ones pruned ([CloudSync.retention]). A failed
  *    prune is not a failed backup.
+ *  - [diag]: the day's redacted diagnostics ([DiagDay], G3) uploaded to `diag-YYYY-MM`, replacing that day's file.
  *
  * Words for Boss only in the outcome (redacted); never the token. Blocking: a background thread.
  */
@@ -75,6 +76,22 @@ class CloudRun(private val gh: GitHubReleases, private val phone: Phone) {
             } finally { runCatching { sealed.done() } }
         }
         return Outcome(true, bytes, if (done.size == 1) "live ${done[0]}" else "live ${done.size} days", days = done)
+    }
+
+    /**
+     * [day]'s diagnostics ([DiagDay], TODO G3, 13 Oct): one small file, `diag-YYYY-MM-DD.json.gz` in the release `diag-YYYY-MM`.
+     * A re-run replaces that day's file ([GitHubReleases.upload]), so the same day never has two. [report] makes the bytes
+     * (already redacted and capped); a report that cannot be made is a failed outcome, never a crash of the run.
+     */
+    fun diag(day: LocalDate, report: () -> ByteArray): Outcome {
+        val what = "diagnostics $day"
+        val bytes = try { report() } catch (e: Exception) { return Outcome(false, 0, what, "could not make the diagnostics: ${why(e)}") }
+        return try {
+            val rel = gh.ensureRelease(DiagDay.tag(day), "Diagnostics ${DiagDay.tag(day).removePrefix("diag-")}",
+                "The phone's daily diagnostics, redacted on the phone (no tokens, ids, names or rupees): research/data/read_diagnostics.py reads them.")
+            gh.upload(rel, DiagDay.assetName(day), GitHubReleases.Body.of(bytes, "application/gzip"))
+            Outcome(true, bytes.size.toLong(), what, days = listOf(day))
+        } catch (e: Exception) { Outcome(false, 0, what, why(e), code = code(e)) }
     }
 
     /** The phone backup made at [now], uploaded; then the old ones pruned. */

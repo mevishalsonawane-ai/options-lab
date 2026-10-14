@@ -72,6 +72,22 @@ class GitHubSyncCardTest {
         assertFalse(shows("Every evening after 15:45", sub = true))
     }
 
+    @Test fun theCardSaysTheLastDayOfDiagnosticsUploaded() {
+        // G3 (13 Oct): each evening's upload carries that day's diagnostics; the card names the last day that went up.
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        show(status().copy(lastDiagDay = today.minusDays(1)))
+        assertTrue(shows("Diagnostics"))
+        assertTrue(shows("last day uploaded: 12 Oct ✓"))
+        assertFalse(shows("last day uploaded: none yet"))
+    }
+
+    @Test fun beforeAnyDiagnosticsTheCardSaysNoneYet() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        show(status())
+        assertTrue(shows("Diagnostics"))
+        assertTrue(shows("last day uploaded: none yet"))
+    }
+
     @Test fun setUpOffersUploadAndRestore() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         show(status(last = CloudSync.Last(ms(today), true, 4_200_000, "backup")))

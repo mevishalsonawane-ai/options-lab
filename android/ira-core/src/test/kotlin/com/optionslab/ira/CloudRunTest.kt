@@ -455,4 +455,44 @@ class CloudRunTest {
         assertEquals(listOf(both, stuck), gh.names(CloudSync.BACKUP_TAG).sorted())
         assertEquals(listOf(stuck, both), run.backups().map { it.first.name })
     }
+
+    // ---- G3: the day's diagnostics ----
+
+    @Test fun theDiagnosticsGoUpAsOneFileADayAndARerunReplacesIt() {
+        val first = run.diag(today) { "one".toByteArray() }
+        assertTrue(first.ok, first.why)
+        assertEquals("diagnostics 2026-10-13", first.what)
+        assertEquals(listOf(today), first.days)
+        assertEquals(listOf("diag-2026-10-13.json.gz"), gh.names("diag-2026-10"))
+        val again = run.diag(today) { "two!".toByteArray() }
+        assertTrue(again.ok, again.why)
+        assertEquals(4L, again.bytes)
+        // Still one file for the day, now the new one: no temporary name left, no second copy.
+        assertEquals(listOf("diag-2026-10-13.json.gz"), gh.names("diag-2026-10"))
+        assertContentEquals("two!".toByteArray(), gh.releases.first { it.tag == "diag-2026-10" }.assets.values.single().second)
+        // The next month has its own release; the same day's file is never in two releases.
+        assertTrue(run.diag(LocalDate.of(2026, 11, 2)) { "nov".toByteArray() }.ok)
+        assertEquals(listOf("diag-2026-11-02.json.gz"), gh.names("diag-2026-11"))
+        assertEquals(1, gh.names("diag-2026-10").size)
+        // Only the data repository is ever written, the token only in the Authorization header.
+        assertTrue(gh.seen.filter { it.method != "GET" }.all { "IraAlgo" in it.url }, gh.seen.joinToString { it.url })
+        tokenOnlyInAuthorization()
+    }
+
+    @Test fun aReportThatCannotBeMadeIsAFailedOutcomeNotACrash() {
+        val o = run.diag(today) { throw IllegalStateException("boom $token") }
+        assertFalse(o.ok)
+        assertTrue(o.why!!.startsWith("could not make the diagnostics"), o.why)
+        assertFalse(o.why!!.contains(token))
+        // Nothing went to GitHub.
+        assertTrue(gh.seen.isEmpty())
+    }
+
+    @Test fun aRefusedDiagnosticsUploadCarriesGitHubsCode() {
+        gh.fail = "/releases/tags/diag-2026-10" to 401
+        val o = run.diag(today) { "x".toByteArray() }
+        assertFalse(o.ok)
+        assertEquals(401, o.code)
+        assertTrue(CloudSync.authCode(o.code))
+    }
 }

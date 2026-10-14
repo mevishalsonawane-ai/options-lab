@@ -58,7 +58,12 @@ class GitHubSyncWorkerTest : RobolectricTest() {
 
     private fun run(kind: String, attempt: Int = 0) = runBlocking { worker(kind, attempt).doWork() }
 
-    private fun uploads() = gh.seen.count { it.url.startsWith("https://uploads.github.com/") }
+    /** The recordings and backups sent (the day's diagnostics, G3, are counted apart: [diags]). */
+    private fun uploads() = gh.seen.count { it.url.startsWith("https://uploads.github.com/") && !it.url.contains("name=diag-") }
+
+    /** The days whose diagnostics were sent (G3), in order. */
+    private fun diags() = gh.seen.filter { it.url.startsWith("https://uploads.github.com/") && it.url.contains("name=diag-") }
+        .map { it.url.substringAfter("name=diag-").removeSuffix(".json.gz") }
 
     @Test fun notSetUpOrACheckSendsNothing() {
         for (k in listOf(GitHubSyncWorker.EVENING, GitHubSyncWorker.BACKUP, GitHubSyncWorker.NOW, GitHubSyncWorker.CHECK))
@@ -83,8 +88,12 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         assertEquals("the backup went up", 1, uploads())
         assertEquals(WED.toString(), SecurePrefs.getString("backup.last"))
         assertEquals(WED.toString(), SecurePrefs.getString("github.evening"))
+        // G3: the evening's diagnostics went with it, once; the card says the day.
+        assertEquals(listOf(WED.toString()), diags())
+        assertEquals(WED, GitHubSync.status().lastDiagDay)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals("done for today", 1, uploads())
+        assertEquals(1, diags().size)
         // After midnight: Wednesday's evening is done, so not again.
         Background.at(WED.plusDays(1), 0, 30)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
@@ -111,6 +120,8 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals(1, uploads())
         assertEquals(WED.toString(), SecurePrefs.getString("github.evening"))
+        // Its diagnostics are Wednesday's, not Thursday's (G3).
+        assertEquals(listOf(WED.toString()), diags())
         Background.at(thu, 1, 30)
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals("once", 1, uploads())
@@ -125,6 +136,8 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         assertTrue(run(GitHubSyncWorker.EVENING) is ListenableWorker.Result.Success)
         assertEquals(2, uploads())
         assertEquals(thu.toString(), SecurePrefs.getString("github.evening"))
+        assertEquals(listOf(WED.toString(), thu.toString()), diags())
+        assertEquals(thu, GitHubSync.status().lastDiagDay)
     }
 
     @Test fun theBackupAfterAChangeWaitsForTheMcxClose() {
@@ -138,10 +151,12 @@ class GitHubSyncWorkerTest : RobolectricTest() {
         Background.at(WED, 23, 30)
         assertTrue(run(GitHubSyncWorker.BACKUP) is ListenableWorker.Result.Success)
         assertEquals(1, uploads())
-        // Boss's tap: any hour.
+        assertEquals("a backup after a change sends no diagnostics", 0, diags().size)
+        // Boss's tap: any hour, with today's diagnostics so far (the evening run replaces them).
         Background.at(WED, 11, 0)
         assertTrue(run(GitHubSyncWorker.NOW) is ListenableWorker.Result.Success)
         assertEquals(2, uploads())
+        assertEquals(listOf(WED.toString()), diags())
     }
 
     @Test fun aFailureIsTriedFourTimesInAll() {

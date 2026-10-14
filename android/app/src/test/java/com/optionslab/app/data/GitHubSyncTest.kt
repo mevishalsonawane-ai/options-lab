@@ -154,6 +154,57 @@ class GitHubSyncTest : RobolectricTest() {
         } finally { LiveRecorder.detachForTest() }
     }
 
+    // ---- G3: the day's diagnostics ------------------------------------------------------------------------------------
+
+    @Test fun theEveningRunSendsTheDaysDiagnosticsRedactedAndReplacesThemOnARerun() {
+        ready()
+        Background.at(Background.WED, 23, 40)
+        val bodies = ArrayList<ByteArray>()
+        gh.onUpload = { r -> if (r.url.contains("name=diag-")) bodies += java.io.ByteArrayOutputStream().also { o -> r.body!!.write(o) }.toByteArray() }
+        try {
+            assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED) })
+        } finally { gh.onUpload = null }
+        val name = "diag-${Background.WED}.json.gz"
+        assertEquals(listOf(name), sent())
+        assertEquals(Background.WED, GitHubSync.status().lastDiagDay)
+        assertTrue(GitHubSync.diagLine(), GitHubSync.diagLine().contains("diagnostics ${Background.WED}"))
+        // The file: gzip JSON of that day, with no token, PIN or passphrase in it.
+        val raw = String(java.util.zip.GZIPInputStream(bodies.single().inputStream()).readBytes(), Charsets.UTF_8)
+        val o = Json.parse(raw) as Map<*, *>
+        assertEquals("iraalgo-diagnostics", o["kind"])
+        assertEquals(Background.WED.toString(), o["day"])
+        for (secret in listOf(token, "github_pat_", pin, "Test-Passphrase-42!")) assertFalse(secret, raw.contains(secret))
+        // Only the data repository was written.
+        assertTrue(gh.seen.filter { it.method != "GET" }.joinToString { it.url }, gh.seen.filter { it.method != "GET" }.all { "IraAlgo" in it.url })
+        // A re-run for an older day never moves the card's day back.
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED.minusDays(1)) })
+        assertEquals(Background.WED, GitHubSync.status().lastDiagDay)
+    }
+
+    @Test fun aFailedDiagnosticsUploadShowsAndKeepsTheLastDay() {
+        ready()
+        Background.at(Background.WED, 23, 40)
+        gh.uploadCode = 500
+        // Shown, but not a failed run: a failed run is tried again and would send the backup again every hour (G3 review).
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED) })
+        assertNull(GitHubSync.status().lastDiagDay)
+        val last = GitHubSync.status().lastTry!!
+        assertFalse(last.ok)
+        assertTrue(last.what, last.what.startsWith("diagnostics"))
+        assertFalse("a server error is not a refused token", GitHubSync.authBlocked())
+        // A refused token still fails the run, and pauses the automatic ones.
+        gh.uploadCode = 401
+        assertFalse(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = Background.WED) })
+        assertTrue(GitHubSync.authBlocked())
+    }
+
+    @Test fun noDiagnosticsDayNoDiagnosticsUpload() {
+        ready()
+        Background.at(Background.WED, 23, 40)
+        assertTrue(runBlocking { GitHubSync.run(withBackup = true, withDays = false, eveningFrom = 23 * 60 + 30) })
+        assertTrue(sent().toString(), sent().none { it.startsWith("diag-") })
+    }
+
     // ---- the data repository ------------------------------------------------------------------------------------------
 
     @Test fun theTokenIsSavedForTheDataRepository() {

@@ -333,11 +333,12 @@ object OrderReviewHost {
         return serious to misfires
     }
 
-    /** Every order and trade in [from]..[to] for [day], from memory and the app's own files (no network). A worker thread. */
-    private suspend fun gather(day: LocalDate, from: Long, to: Long): OrderReview.Inputs {
-        val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
+    /**
+     * The orders placed in [from]..[to] with who placed each ([owners]' labels): Zerodha's order book as the app's regular
+     * passes last read it (never read for this) and the paper book. Memory only. Also the day's diagnostics' orders (G3).
+     */
+    internal fun ordersIn(owners: Map<String, String>, from: Long, to: Long): List<OrderReview.Order> {
         val orders = ArrayList<OrderReview.Order>()
-        // Zerodha's order book as the app's regular passes last read it (never read for this).
         runCatching { AppState.orders.value?.value }.getOrNull()?.forEach { o ->
             val at = kiteMs(o.placedAt) ?: return@forEach
             if (at !in from..to) return@forEach
@@ -353,6 +354,13 @@ object OrderReviewHost {
             orders += OrderReview.Order("paper:${o.orderId}", OrderReview.Venue.PAPER, strategy, o.symbol, o.action, o.quantity, o.filledQuantity, o.status,
                 o.rejectionReason.orEmpty(), at, o.averagePrice?.toDouble() ?: 0.0, o.priceType, manual = strategy == "Manual")
         }
+        return orders
+    }
+
+    /** Every order and trade in [from]..[to] for [day], from memory and the app's own files (no network). A worker thread. */
+    private suspend fun gather(day: LocalDate, from: Long, to: Long): OrderReview.Inputs {
+        val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
+        val orders = ArrayList(ordersIn(owners, from, to))
         // The arms' trades as the trade manager records each (every arm is hooked), with the original rules' exit.
         runCatching { TradeManagerHost.ensureLoaded() }
         val records = runCatching { TradeManagerHost.records.value }.getOrDefault(emptyList())

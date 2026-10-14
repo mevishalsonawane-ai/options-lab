@@ -368,7 +368,8 @@ internal fun GitHubSyncLines(status: CloudSync.Status?, lines: List<Pair<String,
         "morning before 08:00), on Wi-Fi while charging, the phone uploads each recorded day and a phone backup to " +
         "GitHub: the private data repository ${status?.repo ?: CloudSync.DEFAULT_REPO}'s releases, never options-lab (the app's code). " +
         "Both are sealed on the phone with your backup passphrase: GitHub sees only noise. A strategy or Pine change is backed " +
-        "up that evening too. The token stays sealed by your PIN.")
+        "up that evening too. With them goes one small file of the day's diagnostics for the research sessions: redacted on the " +
+        "phone (no ids, names or rupees), so it is not sealed. The token stays sealed by your PIN.")
     if (status == null) LedgerLine("Status", "…") else lines.forEach { (k, v) ->
         LedgerLine(k, v, if (v.contains("✗") || k == "Token") p.oxblood else null)
     }

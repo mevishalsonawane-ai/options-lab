@@ -157,6 +157,40 @@ class CloudSyncTest {
                        token: Boolean = true, key: Boolean = true, expiry: LocalDate? = d(10, 12)) =
         CloudSync.Status(token, key, expiry, lastTry, lastOk, lastOk?.takeIf { it.what == "backup" }, waiting)
 
+    // ---- G3: the day's diagnostics ------------------------------------------------------------------------------------
+
+    @Test fun theDiagnosticsLineSaysTheLastDayUploaded() {
+        assertEquals("last day uploaded: none yet", CloudSync.card(status(), toDay, today).toMap()["Diagnostics"])
+        val s = status().copy(lastDiagDay = d(12))
+        assertEquals("last day uploaded: 12 Oct ✓", CloudSync.card(s, toDay, today).toMap()["Diagnostics"])
+        // It follows the backup line on the card.
+        val keys = CloudSync.card(s, toDay, today).map { it.first }
+        assertEquals(keys.indexOf("Last backup to GitHub") + 1, keys.indexOf("Diagnostics"))
+    }
+
+    @Test fun whichDaysDiagnosticsARunUploads() {
+        val gate = 23 * 60 + 30
+        // The evening run: its own evening, also when it runs as the next morning's catch-up.
+        assertEquals(d(13), CloudSync.diagDay(CloudSync.KIND_EVENING, d(13), 23 * 60 + 40, today, gate))
+        assertEquals(d(12), CloudSync.diagDay(CloudSync.KIND_EVENING, d(12), 7 * 60, today, gate))
+        assertNull(CloudSync.diagDay(CloudSync.KIND_EVENING, null, 12 * 60, today, gate))
+        // Upload now: the evening it belongs to (after the gate: today; before 08:00: yesterday), else today so far.
+        assertEquals(d(13), CloudSync.diagDay(CloudSync.KIND_NOW, null, 23 * 60 + 40, today, gate))
+        assertEquals(d(12), CloudSync.diagDay(CloudSync.KIND_NOW, null, 6 * 60, today, gate))
+        assertEquals(d(13), CloudSync.diagDay(CloudSync.KIND_NOW, null, 11 * 60, today, gate))
+        // A backup after a strategy change, and the problems check: none.
+        assertNull(CloudSync.diagDay(CloudSync.KIND_BACKUP, d(13), 23 * 60 + 40, today, gate))
+        assertNull(CloudSync.diagDay(CloudSync.KIND_CHECK, d(13), 23 * 60 + 40, today, gate))
+        assertNull(CloudSync.diagDay("weird", d(13), 23 * 60 + 40, today, gate))
+    }
+
+    @Test fun anOlderDaysRerunNeverMovesTheCardBack() {
+        assertEquals(d(13), CloudSync.diagKept(null, d(13)))
+        assertEquals(d(13), CloudSync.diagKept(d(12), d(13)))
+        assertEquals(d(13), CloudSync.diagKept(d(13), d(12)))
+        assertEquals(d(13), CloudSync.diagKept(d(13), d(13)))
+    }
+
     @Test fun theCardSaysDateSizeAndTick() {
         val ok = CloudSync.Last(ms(today), true, 4_200_000, "live 2026-10-13")
         val lines = CloudSync.card(status(ok, waiting = 1), toDay, today).toMap()
