@@ -7,8 +7,8 @@
  "timezone": "Asia/Kolkata (IST)",
  "format": "Parquet, zstd level 9",
  "release_notes": "Historical index, futures, equity and expired-option data from Dhan API v2. See research/data/README.md and research/data/VALIDATION.md.",
- "total_bytes": 6089962789,
- "total_rows": 387701629,
+ "total_bytes": 6090290667,
+ "total_rows": 387717379,
  "files": [
   {
    "file": "equity_1m_2017.parquet",
@@ -5140,21 +5140,21 @@
    "rows": 1636991,
    "first": "2021-08-02 09:15:00+05:30",
    "last": "2021-12-31 15:29:00+05:30",
-   "bytes": 29032304,
-   "sha256": "012c0e949578f1e412bfbfffdecc3a6bb2d2d2a40915e6a62bf928739490e5e4",
+   "bytes": 29032302,
+   "sha256": "3fa14724da48acb5045fff1aafa8fdc52a562cb7683b4a0d57ad06b7834818f0",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
     "side",
-    "iv",
-    "oi",
-    "strike",
-    "spot",
     "open",
     "high",
     "low",
     "close",
+    "iv",
     "volume",
+    "strike",
+    "oi",
+    "spot",
     "ts"
    ],
    "qa": {
@@ -5171,13 +5171,13 @@
     "series_days_lt_50pct_median": 0,
     "series_days_total": 4368,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 40993,
+     "outside_session": 44353,
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 0
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
     },
     "iv_null_or_zero": 174796
    },
@@ -5193,21 +5193,21 @@
    "rows": 3889783,
    "first": "2022-01-03 09:15:00+05:30",
    "last": "2022-12-30 15:29:00+05:30",
-   "bytes": 74301901,
-   "sha256": "b54ed507b49e978965d485ede95a3429ed19fdaa403fcbd2b85515a7642f9df7",
+   "bytes": 74301899,
+   "sha256": "f284875e4cc331843b722fd974eda5ae108055e6b168d59a710eb733e2899262",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
     "side",
-    "iv",
-    "oi",
-    "strike",
-    "spot",
     "open",
     "high",
     "low",
     "close",
+    "iv",
     "volume",
+    "strike",
+    "oi",
+    "spot",
     "ts"
    ],
    "qa": {
@@ -5224,13 +5224,13 @@
     "series_days_lt_50pct_median": 0,
     "series_days_total": 10374,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 40993,
+     "outside_session": 44353,
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 0
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
     },
     "iv_null_or_zero": 311477
    },
@@ -5246,21 +5246,21 @@
    "rows": 3857903,
    "first": "2023-01-02 09:15:00+05:30",
    "last": "2023-12-29 15:29:00+05:30",
-   "bytes": 71189256,
-   "sha256": "f3a9df9edd39fb20247340377ffa865f1188eaa498c7f4b4adc75a5ea3fc1f61",
+   "bytes": 71189254,
+   "sha256": "51f6dfc27edd864ef7aac3f69cc290cde7262f5c12070d787b278edc126600e1",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
     "side",
-    "iv",
-    "oi",
-    "strike",
-    "spot",
     "open",
     "high",
     "low",
     "close",
+    "iv",
     "volume",
+    "strike",
+    "oi",
+    "spot",
     "ts"
    ],
    "qa": {
@@ -5277,13 +5277,13 @@
     "series_days_lt_50pct_median": 0,
     "series_days_total": 10290,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 40993,
+     "outside_session": 44353,
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 0
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
     },
     "iv_null_or_zero": 466534
    },
@@ -5299,21 +5299,21 @@
    "rows": 3893713,
    "first": "2024-01-01 09:15:00+05:30",
    "last": "2024-12-31 15:29:00+05:30",
-   "bytes": 78680284,
-   "sha256": "b33cd76320aa0795a31022c53360ea1a647228e0976add8fa0def3ab1ffe0b91",
+   "bytes": 78680282,
+   "sha256": "069d2eae5b9f417700154078e03e048913eccf9124f22d71e6f097839f49f5ae",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
     "side",
-    "iv",
-    "oi",
-    "strike",
-    "spot",
     "open",
     "high",
     "low",
     "close",
+    "iv",
     "volume",
+    "strike",
+    "oi",
+    "spot",
     "ts"
    ],
    "qa": {
@@ -5330,13 +5330,13 @@
     "series_days_lt_50pct_median": 42,
     "series_days_total": 10416,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 40993,
+     "outside_session": 44353,
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 0
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
     },
     "iv_null_or_zero": 330475
    },
@@ -5352,21 +5352,21 @@
    "rows": 3910207,
    "first": "2025-01-01 09:15:00+05:30",
    "last": "2025-12-31 15:29:00+05:30",
-   "bytes": 75530235,
-   "sha256": "38eb75161f348c5096ad1a63be7e1decec0de9661da10f224f36653e5d76fd71",
+   "bytes": 75530233,
+   "sha256": "abc852a2ac5efed056b683d010ec66e8e5f9a6ecef6146f5a3dde542a35f6cd7",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
     "side",
-    "iv",
-    "oi",
-    "strike",
-    "spot",
     "open",
     "high",
     "low",
     "close",
+    "iv",
     "volume",
+    "strike",
+    "oi",
+    "spot",
     "ts"
    ],
    "qa": {
@@ -5383,13 +5383,13 @@
     "series_days_lt_50pct_median": 42,
     "series_days_total": 10458,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 40993,
+     "outside_session": 44353,
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 0
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
     },
     "iv_null_or_zero": 315986
    },
@@ -5402,24 +5402,24 @@
   {
    "file": "opt_NIFTY_WEEK_2026.parquet",
    "dataset": "options_rolling_1m",
-   "rows": 3023538,
+   "rows": 3039288,
    "first": "2026-01-01 09:15:00+05:30",
-   "last": "2026-10-12 15:29:00+05:30",
-   "bytes": 62208384,
-   "sha256": "6f27edd1c398a97ae77d2673129024d6a68f8c9615675de18ab257f09fa94553",
+   "last": "2026-10-13 15:29:00+05:30",
+   "bytes": 62536272,
+   "sha256": "4f480815953c326b9057b2371c0a280202d3099c505df0cd3bfdce379ddf9354",
    "source": "Dhan /v2/charts/rollingoption",
    "columns": [
     "offset",
     "side",
-    "iv",
-    "oi",
-    "strike",
-    "spot",
     "open",
     "high",
     "low",
     "close",
+    "iv",
     "volume",
+    "strike",
+    "oi",
+    "spot",
     "ts"
    ],
    "qa": {
@@ -5431,20 +5431,20 @@
     "outside_session_rows": 0,
     "weekend_rows": 15750,
     "nonzero_seconds": 0,
-    "trading_days": 192,
+    "trading_days": 193,
     "bars_per_day_median": 375.0,
     "series_days_lt_50pct_median": 0,
-    "series_days_total": 8064,
+    "series_days_total": 8106,
     "duplicates_dropped_series_total": {
-     "identical": 0,
-     "conflicting_removed": 0
+     "conflicting_removed": 0,
+     "identical": 0
     },
     "rows_dropped_series_total": {
-     "outside_session": 40993,
+     "outside_session": 44353,
      "nonpositive_or_missing_price": 0,
-     "date_not_a_trading_day_or_after_last_daily_close": 0
+     "date_not_a_trading_day_or_after_last_daily_close": 15750
     },
-    "iv_null_or_zero": 211764
+    "iv_null_or_zero": 214703
    },
    "underlying": "NIFTY",
    "expiry_flag": "WEEK",
