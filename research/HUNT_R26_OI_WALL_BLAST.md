@@ -237,7 +237,7 @@ and counts in no gate.
 - What this shows is that the extra filters cut a rare trigger down to about 1 trade in 5 years. No rule can be judged
   on that, either way. The PCR filter kept the worst trades. The premium filter kept the least bad, but 5 trades is
   noise.
-- A proper test needs its own pre-registration (R27), with the heavyweight data and one fixed reading of each filter.
+- A proper test needs its own pre-registration in a new study, with the heavyweight data and one fixed reading of each filter.
 
 ## Forward test plan (shadow only; a description, no app change)
 
