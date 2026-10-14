@@ -266,22 +266,25 @@ def net_per1000(df, idx, ex):
     return (sum(t.net for t in trs) / risk * 1000 if risk else -math.inf), len(trs)
 
 
-def choose_q(df: pd.DataFrame, y: int, ex: str) -> float:
-    """Inner split: model fit on years < y-1, scored on year y-1; the q giving the best net per Rs 1,000 (>= 15 trades)."""
+def choose_q(df: pd.DataFrame, y: int, ex: str) -> tuple[float, float]:
+    """Inner split: a model fit on years < y-1 scores year y-1 (out of sample). Amendment 1 (PREREG.md): tau = the q-quantile
+    of those OUT-OF-SAMPLE scores (in-sample training scores sat far above any test score: 0 trades). The q giving the best
+    net per Rs 1,000 on year y-1 (>= 15 trades) is kept; else the largest q. Returns (q, tau)."""
     inner_tr, val = df[df.year < y - 1], df[df.year == y - 1]
     if inner_tr.empty or val.empty:
-        return QS[-1]
+        return QS[-1], math.inf
     m = fit(inner_tr)
-    s_tr = m.predict_proba(inner_tr[FEATS].values)[:, 1]
     s_val = m.predict_proba(val[FEATS].values)[:, 1]
     best = None
     for q in QS:
-        tau = np.quantile(s_tr, q)
+        tau = float(np.quantile(s_val, q))
         idx = first_rows(val, s_val > tau, s_val)
         v, n = net_per1000(val, idx, ex)
         if n >= 15 and (best is None or v > best[0]):
-            best = (v, q)
-    return best[1] if best else QS[-1]
+            best = (v, q, tau)
+    if best:
+        return best[1], best[2]
+    return QS[-1], float(np.quantile(s_val, QS[-1]))
 
 
 def metrics(df, picks: list) -> dict:
@@ -342,13 +345,11 @@ def main():
         te = df[df.year == y]
         m, p = scores[y]
         tr = df[df.year < y]
-        s_tr = m.predict_proba(tr[FEATS].values)[:, 1]
         for rid, ex in (("P1", "TR25"), ("P2", "E1")):
-            q = choose_q(df, y, ex)
-            tau = np.quantile(s_tr, q)
+            q, tau = choose_q(df, y, ex)
             idx = first_rows(te, p > tau, p)
             picks[rid] += [(i, ex) for i in idx]
-            choices.setdefault(rid, {})[y] = {"q": q}
+            choices.setdefault(rid, {})[y] = {"q": q, "tau": round(tau, 4)}
         conds, cuts, lift, n = mine(tr)
         if conds:
             mm = match(te, conds, cuts)

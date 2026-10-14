@@ -1,0 +1,3071 @@
+{
+ "rows": 936286,
+ "days": {
+  "NIFTY": 271,
+  "SENSEX": 175
+ },
+ "base_rates_pct": {
+  "y2": 17.06,
+  "y4": 6.36,
+  "y10": 1.71
+ },
+ "event_study": {
+  "launches": 487,
+  "launch_days": 118,
+  "controls": 2923,
+  "by_band": {
+   "1-3": 174,
+   "5-10": 118,
+   "3-5": 79,
+   "15-30": 63,
+   "10-15": 53
+  },
+  "by_index": {
+   "NIFTY": 250,
+   "SENSEX": 237
+  },
+  "smd_top20": [
+   [
+    "op_pos30",
+    -1.032
+   ],
+   [
+    "op_body",
+    -0.92
+   ],
+   [
+    "op_green2",
+    -0.821
+   ],
+   [
+    "op_green3",
+    -0.815
+   ],
+   [
+    "op_r10",
+    -0.776
+   ],
+   [
+    "op_green4",
+    -0.744
+   ],
+   [
+    "op_hl",
+    -0.732
+   ],
+   [
+    "op_r5",
+    -0.705
+   ],
+   [
+    "op_ema",
+    -0.685
+   ],
+   [
+    "op_r30",
+    -0.667
+   ],
+   [
+    "ix_r5",
+    -0.66
+   ],
+   [
+    "hv_r5",
+    -0.653
+   ],
+   [
+    "dist_em",
+    -0.642
+   ],
+   [
+    "op_r3",
+    -0.637
+   ],
+   [
+    "op_r15",
+    -0.622
+   ],
+   [
+    "ix_r30",
+    -0.609
+   ],
+   [
+    "op_st7",
+    -0.594
+   ],
+   [
+    "ix_ema",
+    -0.592
+   ],
+   [
+    "op_vwap",
+    -0.589
+   ],
+   [
+    "op_hh",
+    -0.542
+   ]
+  ],
+  "smd": {
+   "op_green2": -0.821,
+   "op_green3": -0.815,
+   "op_green4": -0.744,
+   "op_hh": -0.542,
+   "op_hl": -0.732,
+   "op_inside": -0.378,
+   "op_engulf": -0.331,
+   "op_rise3": -0.283,
+   "op_body": -0.92,
+   "op_comp": -0.022,
+   "op_pos30": -1.032,
+   "op_r1": -0.419,
+   "op_r2": -0.5,
+   "op_r3": -0.637,
+   "op_r5": -0.705,
+   "op_r10": -0.776,
+   "op_r15": -0.622,
+   "op_r30": -0.667,
+   "op_vol1": -0.026,
+   "op_vol5_30": 0.082,
+   "op_vol12": 0.213,
+   "op_oi1": -0.113,
+   "op_oi5": 0.049,
+   "op_oi15": 0.178,
+   "op_oi30": 0.296,
+   "op_iv5": -0.186,
+   "op_iv15": -0.239,
+   "op_ema": -0.685,
+   "op_emax": 0.279,
+   "op_st7": -0.594,
+   "op_st7_age": -0.008,
+   "op_st10": -0.528,
+   "op_st10_age": 0.186,
+   "op_vwap": -0.589,
+   "ix_r1": -0.436,
+   "ix_r5": -0.66,
+   "ix_r15": -0.537,
+   "ix_r30": -0.609,
+   "ix_ema": -0.592,
+   "ix_adx": -0.067,
+   "ix_twap": -0.418,
+   "ix_rngpos": -0.349,
+   "ix_since_ext": 0.234,
+   "ix_open": -0.274,
+   "ix_first30": -0.061,
+   "ix_gap": -0.126,
+   "ix_rv15": -0.064,
+   "ix_rv60": -0.009,
+   "ix_rvx": -0.107,
+   "vix": 0.065,
+   "vix_ch": -0.158,
+   "atm_iv": 0.044,
+   "st_ch15": -0.078,
+   "pcr": 0.048,
+   "pcr_ch15": 0.28,
+   "wall_em": -0.051,
+   "wall_oi": 0.051,
+   "maxpain": 0.018,
+   "gex_s": 0.148,
+   "gex_n": -0.019,
+   "iv_rv": -0.463,
+   "rv_fc": -0.011,
+   "dist_em": -0.642,
+   "mins_left": 0.06,
+   "price": 0.18,
+   "hv_r1": -0.462,
+   "hv_r5": -0.653,
+   "hv_agree": -0.502
+  },
+  "patterns": {
+   "2 green candles in a row": {
+    "launch_pct": 1.4,
+    "control_pct": 14.6,
+    "lift": 0.1
+   },
+   "3 green candles in a row": {
+    "launch_pct": 0.6,
+    "control_pct": 4.9,
+    "lift": 0.13
+   },
+   "4 green candles in a row": {
+    "launch_pct": 0.2,
+    "control_pct": 2.1,
+    "lift": 0.1
+   },
+   "3 rising closes": {
+    "launch_pct": 0.4,
+    "control_pct": 4.9,
+    "lift": 0.08
+   },
+   "2+ higher highs": {
+    "launch_pct": 2.1,
+    "control_pct": 13.5,
+    "lift": 0.15
+   },
+   "inside bar": {
+    "launch_pct": 1.4,
+    "control_pct": 10.1,
+    "lift": 0.14
+   },
+   "bullish engulfing": {
+    "launch_pct": 0.4,
+    "control_pct": 6.3,
+    "lift": 0.07
+   },
+   "volume >= 2x its EMA10": {
+    "launch_pct": 10.1,
+    "control_pct": 6.1,
+    "lift": 1.64
+   },
+   "both Supertrends green": {
+    "launch_pct": 2.5,
+    "control_pct": 15.9,
+    "lift": 0.15
+   },
+   "option EMA9 > EMA21": {
+    "launch_pct": 3.3,
+    "control_pct": 21.3,
+    "lift": 0.15
+   },
+   "option above its VWAP": {
+    "launch_pct": 1.0,
+    "control_pct": 7.5,
+    "lift": 0.14
+   },
+   "strike OI falling (15 min)": {
+    "launch_pct": 32.9,
+    "control_pct": 38.2,
+    "lift": 0.86
+   },
+   "strike OI rising (15 min)": {
+    "launch_pct": 54.6,
+    "control_pct": 46.0,
+    "lift": 1.19
+   },
+   "index EMA9 > EMA21 toward option": {
+    "launch_pct": 33.5,
+    "control_pct": 61.4,
+    "lift": 0.54
+   },
+   "index beyond TWAP toward option": {
+    "launch_pct": 38.2,
+    "control_pct": 54.1,
+    "lift": 0.71
+   },
+   "index ADX > 25": {
+    "launch_pct": 37.0,
+    "control_pct": 39.3,
+    "lift": 0.94
+   },
+   "all 3 heavyweights agree (1 min)": {
+    "launch_pct": 8.6,
+    "control_pct": 19.7,
+    "lift": 0.44
+   },
+   "option cheap vs move (iv_rv <= 1)": {
+    "launch_pct": 33.1,
+    "control_pct": 18.5,
+    "lift": 1.78
+   },
+   "wall within 1 expected move": {
+    "launch_pct": 34.7,
+    "control_pct": 34.8,
+    "lift": 1.0
+   },
+   "GEX_short above its noon value": {
+    "launch_pct": 77.4,
+    "control_pct": 70.1,
+    "lift": 1.1
+   },
+   "range compressed (5 vs 30 bars < 0.3)": {
+    "launch_pct": 43.7,
+    "control_pct": 43.5,
+    "lift": 1.01
+   }
+  },
+  "paths": {
+   "launch": {
+    "price_vs_now": [
+     2.668,
+     2.408,
+     2.145,
+     1.994,
+     1.785,
+     1.511,
+     1.0
+    ],
+    "volume_vs_last10": [
+     0.96,
+     0.9,
+     1.01,
+     0.98,
+     1.02,
+     0.98,
+     1.32
+    ],
+    "n": 487
+   },
+   "control": {
+    "price_vs_now": [
+     1.654,
+     1.573,
+     1.407,
+     1.334,
+     1.226,
+     1.114,
+     1.0
+    ],
+    "volume_vs_last10": [
+     1.04,
+     1.02,
+     1.03,
+     0.98,
+     1.0,
+     0.98,
+     1.1
+    ],
+    "n": 2923
+   },
+   "bars": [
+    -30,
+    -25,
+    -20,
+    -15,
+    -10,
+    -5,
+    0
+   ]
+  },
+  "launch_time_median": 242
+ },
+ "model": {
+  "2023": {
+   "rows": 142183,
+   "base_y10_pct": 1.34,
+   "auc": 0.699,
+   "top1pct_y10_pct": 1.83,
+   "top01pct_y10_pct": 0.0,
+   "lift_top1pct": 1.36
+  },
+  "2024": {
+   "rows": 234490,
+   "base_y10_pct": 2.18,
+   "auc": 0.607,
+   "top1pct_y10_pct": 4.22,
+   "top01pct_y10_pct": 1.28,
+   "lift_top1pct": 1.94
+  },
+  "2025": {
+   "rows": 249046,
+   "base_y10_pct": 1.51,
+   "auc": 0.73,
+   "top1pct_y10_pct": 10.16,
+   "top01pct_y10_pct": 78.31,
+   "lift_top1pct": 6.74
+  },
+  "2026": {
+   "rows": 181897,
+   "base_y10_pct": 1.66,
+   "auc": 0.594,
+   "top1pct_y10_pct": 6.82,
+   "top01pct_y10_pct": 9.39,
+   "lift_top1pct": 4.11
+  },
+  "family_importance_auc_drop_2026": {
+   "pricing (iv_rv, distance, time, price)": 0.1112,
+   "index trend (returns, EMA, ADX, TWAP)": 0.0153,
+   "chain OI (PCR, walls, max pain)": 0.0072,
+   "EMA / Supertrend / VWAP (option)": 0.0049,
+   "option momentum": 0.0038,
+   "option IV": 0.0026,
+   "option OI": 0.0011,
+   "heavyweights": -0.0003,
+   "candles (2/3/4 patterns)": -0.0029,
+   "index volatility / VIX": -0.0074,
+   "option volume": -0.008,
+   "gamma exposure": -0.014
+  }
+ },
+ "choices": {
+  "P1": {
+   "2023": {
+    "q": 0.999
+   },
+   "2024": {
+    "q": 0.9999
+   },
+   "2025": {
+    "q": 0.9999
+   },
+   "2026": {
+    "q": 0.9999
+   }
+  },
+  "P2": {
+   "2023": {
+    "q": 0.999
+   },
+   "2024": {
+    "q": 0.9999
+   },
+   "2025": {
+    "q": 0.9999
+   },
+   "2026": {
+    "q": 0.9999
+   }
+  },
+  "pattern": {
+   "2023": {
+    "conds": [
+     [
+      "wall_em",
+      0
+     ],
+     [
+      "iv_rv",
+      0
+     ],
+     [
+      "op_vwap",
+      0
+     ]
+    ],
+    "train_lift": 7.85,
+    "train_rows": 2136,
+    "test_lift": 0.31,
+    "test_rows": 2601
+   },
+   "2024": {
+    "conds": [
+     [
+      "op_vwap",
+      0
+     ],
+     [
+      "wall_em",
+      0
+     ],
+     [
+      "ix_gap",
+      0
+     ]
+    ],
+    "train_lift": 7.98,
+    "train_rows": 2640,
+    "test_lift": 0.8,
+    "test_rows": 9362
+   },
+   "2025": {
+    "conds": [
+     [
+      "wall_em",
+      0
+     ],
+     [
+      "rv_fc",
+      2
+     ],
+     [
+      "gex_s",
+      1
+     ]
+    ],
+    "train_lift": 5.24,
+    "train_rows": 7562,
+    "test_lift": 0.06,
+    "test_rows": 2117
+   },
+   "2026": {
+    "conds": [
+     [
+      "dist_em",
+      0
+     ],
+     [
+      "price",
+      0
+     ],
+     [
+      "ix_rv60",
+      0
+     ]
+    ],
+    "train_lift": 6.87,
+    "train_rows": 2177,
+    "test_lift": null,
+    "test_rows": 197
+   }
+  }
+ },
+ "rules": {
+  "P1": {
+   "m": {
+    "expiries": 372,
+    "trades": 0,
+    "hit_pct": 0.0,
+    "avg_win": 0.0,
+    "avg_loss": 0.0,
+    "net": 0.0,
+    "per_expiry": 0.0,
+    "per_1000_risked": 0.0,
+    "green_expiries_pct": 0.0,
+    "worst_day": 0.0,
+    "best_day": 0.0,
+    "max_dd": 0.0,
+    "losing_streak_trades": 0,
+    "losing_streak_expiries": 0,
+    "best_day_share_pct": null,
+    "net_without_best_day": 0.0,
+    "proxy_trades": 0,
+    "x10_pct": 0.0,
+    "x4_pct": 0.0,
+    "years": {
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    },
+    "x2_spread": 0
+   },
+   "twins": {
+    "p": 1.0,
+    "mean": 0.0
+   },
+   "trades_list": [],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": false,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  },
+  "P2": {
+   "m": {
+    "expiries": 372,
+    "trades": 0,
+    "hit_pct": 0.0,
+    "avg_win": 0.0,
+    "avg_loss": 0.0,
+    "net": 0.0,
+    "per_expiry": 0.0,
+    "per_1000_risked": 0.0,
+    "green_expiries_pct": 0.0,
+    "worst_day": 0.0,
+    "best_day": 0.0,
+    "max_dd": 0.0,
+    "losing_streak_trades": 0,
+    "losing_streak_expiries": 0,
+    "best_day_share_pct": null,
+    "net_without_best_day": 0.0,
+    "proxy_trades": 0,
+    "x10_pct": 0.0,
+    "x4_pct": 0.0,
+    "years": {
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    },
+    "x2_spread": 0
+   },
+   "twins": {
+    "p": 1.0,
+    "mean": 0.0
+   },
+   "trades_list": [],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": false,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  },
+  "P3": {
+   "m": {
+    "expiries": 372,
+    "trades": 119,
+    "hit_pct": 16.0,
+    "avg_win": 784.2,
+    "avg_loss": -523.1,
+    "net": -37412.64,
+    "per_expiry": -100.57,
+    "per_1000_risked": -164.9,
+    "green_expiries_pct": 5.1,
+    "worst_day": -1118.63,
+    "best_day": 2811.12,
+    "max_dd": -38249.79,
+    "losing_streak_trades": 15,
+    "losing_streak_expiries": 15,
+    "best_day_share_pct": null,
+    "net_without_best_day": -40223.76,
+    "proxy_trades": 3,
+    "x10_pct": 0.8,
+    "x4_pct": 6.7,
+    "years": {
+     "2023": -11758.0,
+     "2024": -16987.0,
+     "2025": -8151.0,
+     "2026": -516.0
+    },
+    "x2_spread": -42139.0
+   },
+   "twins": {
+    "p": 0.799,
+    "mean": -20821.0
+   },
+   "trades_list": [
+    {
+     "und": "NIFTY",
+     "day": "2023-01-05",
+     "side": "CE",
+     "strike": 18000.0,
+     "sig": 289,
+     "entry": 8.0,
+     "peak": 1.6,
+     "net": -838.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-01-12",
+     "side": "PE",
+     "strike": 17700.0,
+     "sig": 218,
+     "entry": 2.1,
+     "peak": 4.02,
+     "net": 659.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-01-25",
+     "side": "PE",
+     "strike": 17800.0,
+     "sig": 261,
+     "entry": 2.1,
+     "peak": 1.12,
+     "net": -479.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-02-02",
+     "side": "PE",
+     "strike": 17400.0,
+     "sig": 183,
+     "entry": 6.6,
+     "peak": 1.95,
+     "net": 38.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-02-16",
+     "side": "CE",
+     "strike": 18100.0,
+     "sig": 327,
+     "entry": 5.6,
+     "peak": 1.04,
+     "net": -611.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-02-23",
+     "side": "CE",
+     "strike": 17650.0,
+     "sig": 201,
+     "entry": 3.5,
+     "peak": 2.0,
+     "net": -573.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-02",
+     "side": "CE",
+     "strike": 17500.0,
+     "sig": 164,
+     "entry": 2.1,
+     "peak": 1.36,
+     "net": -99.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-09",
+     "side": "CE",
+     "strike": 17750.0,
+     "sig": 186,
+     "entry": 2.95,
+     "peak": 1.19,
+     "net": -441.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-16",
+     "side": "PE",
+     "strike": 16800.0,
+     "sig": 165,
+     "entry": 4.65,
+     "peak": 1.71,
+     "net": 288.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-23",
+     "side": "CE",
+     "strike": 17250.0,
+     "sig": 272,
+     "entry": 1.9,
+     "peak": 1.0,
+     "net": -628.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-29",
+     "side": "CE",
+     "strike": 17100.0,
+     "sig": 168,
+     "entry": 3.25,
+     "peak": 2.11,
+     "net": -621.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-04-06",
+     "side": "CE",
+     "strike": 17600.0,
+     "sig": 276,
+     "entry": 7.3,
+     "peak": 2.36,
+     "net": -463.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-04-13",
+     "side": "CE",
+     "strike": 17850.0,
+     "sig": 167,
+     "entry": 3.5,
+     "peak": 1.07,
+     "net": -546.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-04",
+     "side": "PE",
+     "strike": 18200.0,
+     "sig": 324,
+     "entry": 5.6,
+     "peak": 1.0,
+     "net": -646.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-11",
+     "side": "PE",
+     "strike": 18300.0,
+     "sig": 303,
+     "entry": 5.65,
+     "peak": 5.65,
+     "net": -454.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-18",
+     "side": "CE",
+     "strike": 18250.0,
+     "sig": 300,
+     "entry": 2.2,
+     "peak": 1.0,
+     "net": -860.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-25",
+     "side": "CE",
+     "strike": 18350.0,
+     "sig": 339,
+     "entry": 1.0,
+     "peak": 2.4,
+     "net": 447.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-06-08",
+     "side": "CE",
+     "strike": 18700.0,
+     "sig": 309,
+     "entry": 10.26,
+     "peak": 1.05,
+     "net": -472.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-06-15",
+     "side": "CE",
+     "strike": 18700.0,
+     "sig": 327,
+     "entry": 9.25,
+     "peak": 1.26,
+     "net": -800.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-06-22",
+     "side": "CE",
+     "strike": 18850.0,
+     "sig": 237,
+     "entry": 8.8,
+     "peak": 3.5,
+     "net": 2811.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-07-06",
+     "side": "CE",
+     "strike": 19550.0,
+     "sig": 337,
+     "entry": 1.35,
+     "peak": 1.11,
+     "net": -558.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-03",
+     "side": "CE",
+     "strike": 19550.0,
+     "sig": 185,
+     "entry": 5.75,
+     "peak": 1.0,
+     "net": -620.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-10",
+     "side": "PE",
+     "strike": 19450.0,
+     "sig": 215,
+     "entry": 3.9,
+     "peak": 2.36,
+     "net": -376.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-17",
+     "side": "CE",
+     "strike": 19500.0,
+     "sig": 166,
+     "entry": 3.3,
+     "peak": 1.05,
+     "net": -531.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-24",
+     "side": "CE",
+     "strike": 19550.0,
+     "sig": 164,
+     "entry": 5.85,
+     "peak": 1.09,
+     "net": -605.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-31",
+     "side": "CE",
+     "strike": 19350.0,
+     "sig": 255,
+     "entry": 4.1,
+     "peak": 1.79,
+     "net": 240.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-07",
+     "side": "PE",
+     "strike": 19550.0,
+     "sig": 164,
+     "entry": 4.05,
+     "peak": 1.51,
+     "net": -52.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-14",
+     "side": "CE",
+     "strike": 20150.0,
+     "sig": 195,
+     "entry": 5.9,
+     "peak": 1.59,
+     "net": -321.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-21",
+     "side": "CE",
+     "strike": 19850.0,
+     "sig": 164,
+     "entry": 2.8,
+     "peak": 1.0,
+     "net": -541.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-28",
+     "side": "CE",
+     "strike": 19750.0,
+     "sig": 164,
+     "entry": 5.25,
+     "peak": 1.15,
+     "net": -523.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-05",
+     "side": "PE",
+     "strike": 19550.0,
+     "sig": 330,
+     "entry": 5.7,
+     "peak": 1.15,
+     "net": -716.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-12",
+     "side": "PE",
+     "strike": 19750.0,
+     "sig": 225,
+     "entry": 3.4,
+     "peak": 1.09,
+     "net": -546.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-19",
+     "side": "PE",
+     "strike": 19550.0,
+     "sig": 164,
+     "entry": 3.7,
+     "peak": 1.0,
+     "net": -750.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-26",
+     "side": "CE",
+     "strike": 18950.0,
+     "sig": 173,
+     "entry": 7.45,
+     "peak": 1.7,
+     "net": -52.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-02",
+     "side": "CE",
+     "strike": 19150.0,
+     "sig": 164,
+     "entry": 2.95,
+     "peak": 2.27,
+     "net": -506.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-09",
+     "side": "PE",
+     "strike": 19350.0,
+     "sig": 193,
+     "entry": 1.4,
+     "peak": 1.61,
+     "net": -541.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-16",
+     "side": "PE",
+     "strike": 19750.0,
+     "sig": 185,
+     "entry": 4.35,
+     "peak": 1.24,
+     "net": -321.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-23",
+     "side": "CE",
+     "strike": 19850.0,
+     "sig": 173,
+     "entry": 6.4,
+     "peak": 1.88,
+     "net": 173.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-30",
+     "side": "CE",
+     "strike": 20150.0,
+     "sig": 169,
+     "entry": 3.85,
+     "peak": 4.65,
+     "net": -576.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-07",
+     "side": "PE",
+     "strike": 20900.0,
+     "sig": 246,
+     "entry": 8.25,
+     "peak": 1.29,
+     "net": -251.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-14",
+     "side": "PE",
+     "strike": 21150.0,
+     "sig": 293,
+     "entry": 5.0,
+     "peak": 1.0,
+     "net": -970.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-21",
+     "side": "PE",
+     "strike": 21200.0,
+     "sig": 261,
+     "entry": 9.75,
+     "peak": 3.16,
+     "net": 2012.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-28",
+     "side": "PE",
+     "strike": 21700.0,
+     "sig": 216,
+     "entry": 9.45,
+     "peak": 1.23,
+     "net": -541.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-01-11",
+     "side": "PE",
+     "strike": 21550.0,
+     "sig": 222,
+     "entry": 1.7,
+     "peak": 6.53,
+     "net": 120.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-01-18",
+     "side": "CE",
+     "strike": 21550.0,
+     "sig": 211,
+     "entry": 4.1,
+     "peak": 1.24,
+     "net": -388.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-01",
+     "side": "PE",
+     "strike": 21250.0,
+     "sig": 172,
+     "entry": 3.4,
+     "peak": 1.15,
+     "net": -518.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-08",
+     "side": "PE",
+     "strike": 21550.0,
+     "sig": 289,
+     "entry": 1.1,
+     "peak": 1.45,
+     "net": -681.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-15",
+     "side": "PE",
+     "strike": 21650.0,
+     "sig": 165,
+     "entry": 3.0,
+     "peak": 1.58,
+     "net": -474.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-22",
+     "side": "PE",
+     "strike": 21850.0,
+     "sig": 181,
+     "entry": 7.7,
+     "peak": 1.68,
+     "net": 48.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-03-21",
+     "side": "PE",
+     "strike": 21800.0,
+     "sig": 221,
+     "entry": 1.3,
+     "peak": 1.0,
+     "net": -651.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-04-04",
+     "side": "PE",
+     "strike": 22350.0,
+     "sig": 217,
+     "entry": 8.55,
+     "peak": 1.21,
+     "net": -321.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-04-10",
+     "side": "PE",
+     "strike": 22550.0,
+     "sig": 227,
+     "entry": 2.7,
+     "peak": 1.0,
+     "net": -611.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-05-09",
+     "side": "CE",
+     "strike": 22250.0,
+     "sig": 208,
+     "entry": 6.35,
+     "peak": 1.03,
+     "net": -666.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-05-30",
+     "side": "CE",
+     "strike": 22700.0,
+     "sig": 164,
+     "entry": 8.85,
+     "peak": 1.47,
+     "net": -175.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-06",
+     "side": "PE",
+     "strike": 22600.0,
+     "sig": 337,
+     "entry": 1.4,
+     "peak": 1.14,
+     "net": -1119.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-13",
+     "side": "PE",
+     "strike": 23200.0,
+     "sig": 174,
+     "entry": 2.6,
+     "peak": 1.08,
+     "net": -501.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-20",
+     "side": "PE",
+     "strike": 23450.0,
+     "sig": 164,
+     "entry": 8.5,
+     "peak": 1.49,
+     "net": -243.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-07-04",
+     "side": "PE",
+     "strike": 24100.0,
+     "sig": 174,
+     "entry": 1.5,
+     "peak": 1.0,
+     "net": -647.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-07-11",
+     "side": "PE",
+     "strike": 24250.0,
+     "sig": 280,
+     "entry": 6.0,
+     "peak": 1.22,
+     "net": -571.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-07-25",
+     "side": "CE",
+     "strike": 24550.0,
+     "sig": 262,
+     "entry": 1.1,
+     "peak": 1.91,
+     "net": -681.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-08-08",
+     "side": "CE",
+     "strike": 24300.0,
+     "sig": 295,
+     "entry": 4.35,
+     "peak": 1.85,
+     "net": 644.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-08-22",
+     "side": "PE",
+     "strike": 24750.0,
+     "sig": 164,
+     "entry": 4.15,
+     "peak": 1.86,
+     "net": -573.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-09-12",
+     "side": "PE",
+     "strike": 24800.0,
+     "sig": 245,
+     "entry": 2.65,
+     "peak": 1.32,
+     "net": -202.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-09-19",
+     "side": "PE",
+     "strike": 25250.0,
+     "sig": 293,
+     "entry": 1.6,
+     "peak": 1.0,
+     "net": -676.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-10-03",
+     "side": "CE",
+     "strike": 25550.0,
+     "sig": 164,
+     "entry": 16.06,
+     "peak": 1.13,
+     "net": -298.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-10-17",
+     "side": "PE",
+     "strike": 24650.0,
+     "sig": 301,
+     "entry": 1.15,
+     "peak": 1.0,
+     "net": -913.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-11-14",
+     "side": "CE",
+     "strike": 23650.0,
+     "sig": 177,
+     "entry": 6.4,
+     "peak": 1.63,
+     "net": 68.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-12-05",
+     "side": "PE",
+     "strike": 24200.0,
+     "sig": 336,
+     "entry": 10.05,
+     "peak": 1.57,
+     "net": -530.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-04-26",
+     "side": "PE",
+     "strike": 73600.0,
+     "sig": 306,
+     "entry": 6.6,
+     "peak": 1.11,
+     "net": -725.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-06-21",
+     "side": "PE",
+     "strike": 76300.0,
+     "sig": 279,
+     "entry": 7.35,
+     "peak": 6.0,
+     "net": -537.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-06-28",
+     "side": "PE",
+     "strike": 78200.0,
+     "sig": 249,
+     "entry": 5.25,
+     "peak": 1.1,
+     "net": -545.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-07-05",
+     "side": "CE",
+     "strike": 80300.0,
+     "sig": 234,
+     "entry": 3.9,
+     "peak": 1.03,
+     "net": -586.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-07-12",
+     "side": "PE",
+     "strike": 80100.0,
+     "sig": 270,
+     "entry": 12.21,
+     "peak": 1.0,
+     "net": -556.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-07-19",
+     "side": "PE",
+     "strike": 80300.0,
+     "sig": 178,
+     "entry": 6.3,
+     "peak": 2.4,
+     "net": 536.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-02",
+     "side": "CE",
+     "strike": 81500.0,
+     "sig": 189,
+     "entry": 16.71,
+     "peak": 1.36,
+     "net": -92.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-09",
+     "side": "PE",
+     "strike": 79000.0,
+     "sig": 194,
+     "entry": 8.0,
+     "peak": 1.09,
+     "net": -576.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-16",
+     "side": "PE",
+     "strike": 79300.0,
+     "sig": 267,
+     "entry": 4.95,
+     "peak": 1.03,
+     "net": -611.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-30",
+     "side": "PE",
+     "strike": 82200.0,
+     "sig": 258,
+     "entry": 20.86,
+     "peak": 1.39,
+     "net": -511.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-09-13",
+     "side": "PE",
+     "strike": 82500.0,
+     "sig": 164,
+     "entry": 16.56,
+     "peak": 1.47,
+     "net": -569.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-09-20",
+     "side": "PE",
+     "strike": 83400.0,
+     "sig": 204,
+     "entry": 14.01,
+     "peak": 21.03,
+     "net": -675.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-10-04",
+     "side": "CE",
+     "strike": 82500.0,
+     "sig": 261,
+     "entry": 15.86,
+     "peak": 1.44,
+     "net": -329.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-10-18",
+     "side": "CE",
+     "strike": 81400.0,
+     "sig": 291,
+     "entry": 11.16,
+     "peak": 1.49,
+     "net": 47.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-11-22",
+     "side": "PE",
+     "strike": 77300.0,
+     "sig": 261,
+     "entry": 29.86,
+     "peak": 1.0,
+     "net": -702.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-01-09",
+     "side": "PE",
+     "strike": 23450.0,
+     "sig": 229,
+     "entry": 6.8,
+     "peak": 1.04,
+     "net": -466.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-02-13",
+     "side": "PE",
+     "strike": 23000.0,
+     "sig": 315,
+     "entry": 14.81,
+     "peak": 1.54,
+     "net": -447.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-03-06",
+     "side": "CE",
+     "strike": 22600.0,
+     "sig": 189,
+     "entry": 2.4,
+     "peak": 3.35,
+     "net": -464.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-15",
+     "side": "PE",
+     "strike": 24350.0,
+     "sig": 188,
+     "entry": 6.8,
+     "peak": 1.0,
+     "net": -522.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-22",
+     "side": "CE",
+     "strike": 24700.0,
+     "sig": 326,
+     "entry": 6.55,
+     "peak": 1.17,
+     "net": -426.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-29",
+     "side": "CE",
+     "strike": 24900.0,
+     "sig": 228,
+     "entry": 15.01,
+     "peak": 1.0,
+     "net": -411.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-05",
+     "side": "PE",
+     "strike": 24600.0,
+     "sig": 247,
+     "entry": 3.6,
+     "peak": 3.29,
+     "net": 1599.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-12",
+     "side": "PE",
+     "strike": 24700.0,
+     "sig": 296,
+     "entry": 4.9,
+     "peak": 1.11,
+     "net": -688.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-26",
+     "side": "CE",
+     "strike": 25650.0,
+     "sig": 295,
+     "entry": 2.65,
+     "peak": 1.74,
+     "net": -127.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-10-07",
+     "side": "CE",
+     "strike": 25300.0,
+     "sig": 181,
+     "entry": 2.85,
+     "peak": 1.65,
+     "net": -523.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-10-28",
+     "side": "PE",
+     "strike": 25700.0,
+     "sig": 271,
+     "entry": 2.5,
+     "peak": 1.28,
+     "net": -838.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-01-03",
+     "side": "PE",
+     "strike": 79200.0,
+     "sig": 170,
+     "entry": 16.96,
+     "peak": 3.67,
+     "net": -113.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-01-28",
+     "side": "PE",
+     "strike": 75600.0,
+     "sig": 170,
+     "entry": 19.01,
+     "peak": 1.98,
+     "net": -548.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-02-11",
+     "side": "PE",
+     "strike": 75800.0,
+     "sig": 327,
+     "entry": 7.9,
+     "peak": 1.0,
+     "net": -1094.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-18",
+     "side": "CE",
+     "strike": 75300.0,
+     "sig": 225,
+     "entry": 14.96,
+     "peak": 2.5,
+     "net": -491.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-25",
+     "side": "PE",
+     "strike": 77500.0,
+     "sig": 196,
+     "entry": 14.61,
+     "peak": 1.94,
+     "net": -155.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-04-01",
+     "side": "PE",
+     "strike": 75400.0,
+     "sig": 180,
+     "entry": 8.45,
+     "peak": 2.13,
+     "net": -260.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-27",
+     "side": "PE",
+     "strike": 80600.0,
+     "sig": 196,
+     "entry": 29.36,
+     "peak": 1.0,
+     "net": -346.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-06-24",
+     "side": "PE",
+     "strike": 81600.0,
+     "sig": 205,
+     "entry": 14.16,
+     "peak": 4.36,
+     "net": 1727.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-08-26",
+     "side": "PE",
+     "strike": 80600.0,
+     "sig": 310,
+     "entry": 8.9,
+     "peak": 1.0,
+     "net": -908.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-09-18",
+     "side": "CE",
+     "strike": 83200.0,
+     "sig": 258,
+     "entry": 8.45,
+     "peak": 1.04,
+     "net": -820.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-10-23",
+     "side": "PE",
+     "strike": 84500.0,
+     "sig": 257,
+     "entry": 10.11,
+     "peak": 2.95,
+     "net": -520.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-06",
+     "side": "PE",
+     "strike": 83000.0,
+     "sig": 235,
+     "entry": 7.7,
+     "peak": 1.71,
+     "net": -531.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-27",
+     "side": "CE",
+     "strike": 86100.0,
+     "sig": 174,
+     "entry": 27.01,
+     "peak": 1.21,
+     "net": -492.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-12-04",
+     "side": "PE",
+     "strike": 84800.0,
+     "sig": 212,
+     "entry": 14.96,
+     "peak": 1.22,
+     "net": -287.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-01-06",
+     "side": "PE",
+     "strike": 26050.0,
+     "sig": 181,
+     "entry": 1.9,
+     "peak": 1.18,
+     "net": -415.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-01-20",
+     "side": "PE",
+     "strike": 25300.0,
+     "sig": 246,
+     "entry": 2.3,
+     "peak": 7.59,
+     "net": 2605.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-02-10",
+     "side": "CE",
+     "strike": 26000.0,
+     "sig": 317,
+     "entry": 2.05,
+     "peak": 1.0,
+     "net": -733.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-07-07",
+     "side": "CE",
+     "strike": 24500.0,
+     "sig": 306,
+     "entry": 2.2,
+     "peak": 3.05,
+     "net": -305.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-07-21",
+     "side": "CE",
+     "strike": 24250.0,
+     "sig": 281,
+     "entry": 2.4,
+     "peak": 1.31,
+     "net": -636.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-07-28",
+     "side": "CE",
+     "strike": 24050.0,
+     "sig": 315,
+     "entry": 1.85,
+     "peak": 1.24,
+     "net": -623.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-08-11",
+     "side": "PE",
+     "strike": 24250.0,
+     "sig": 164,
+     "entry": 2.25,
+     "peak": 1.16,
+     "net": -389.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-08-18",
+     "side": "PE",
+     "strike": 24100.0,
+     "sig": 240,
+     "entry": 2.25,
+     "peak": 1.4,
+     "net": -52.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-08-25",
+     "side": "PE",
+     "strike": 24050.0,
+     "sig": 221,
+     "entry": 2.4,
+     "peak": 1.94,
+     "net": 805.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-10-06",
+     "side": "PE",
+     "strike": 22600.0,
+     "sig": 333,
+     "entry": 2.35,
+     "peak": 1.6,
+     "net": 32.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2026-01-01",
+     "side": "CE",
+     "strike": 85400.0,
+     "sig": 335,
+     "entry": 2.35,
+     "peak": 1.15,
+     "net": -806.0
+    }
+   ],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": true
+   },
+   "passes": false
+  },
+  "P4": {
+   "m": {
+    "expiries": 372,
+    "trades": 119,
+    "hit_pct": 3.4,
+    "avg_win": 4365.3,
+    "avg_loss": -1701.9,
+    "net": -178255.07,
+    "per_expiry": -479.18,
+    "per_1000_risked": -785.5,
+    "green_expiries_pct": 1.1,
+    "worst_day": -1998.15,
+    "best_day": 12674.75,
+    "max_dd": -178802.7,
+    "losing_streak_trades": 79,
+    "losing_streak_expiries": 79,
+    "best_day_share_pct": null,
+    "net_without_best_day": -190929.82,
+    "proxy_trades": 9,
+    "x10_pct": 0.8,
+    "x4_pct": 6.7,
+    "years": {
+     "2023": -62622.0,
+     "2024": -71671.0,
+     "2025": -40944.0,
+     "2026": -3017.0
+    },
+    "x2_spread": -181684.0
+   },
+   "twins": {
+    "p": 0.983,
+    "mean": -94181.0
+   },
+   "trades_list": [
+    {
+     "und": "NIFTY",
+     "day": "2023-01-05",
+     "side": "CE",
+     "strike": 18000.0,
+     "sig": 289,
+     "entry": 8.0,
+     "peak": 1.6,
+     "net": -426.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-01-12",
+     "side": "PE",
+     "strike": 17700.0,
+     "sig": 218,
+     "entry": 2.1,
+     "peak": 4.02,
+     "net": -1996.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-01-25",
+     "side": "PE",
+     "strike": 17800.0,
+     "sig": 261,
+     "entry": 2.1,
+     "peak": 1.12,
+     "net": -1853.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-02-02",
+     "side": "PE",
+     "strike": 17400.0,
+     "sig": 183,
+     "entry": 6.6,
+     "peak": 1.95,
+     "net": -1968.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-02-16",
+     "side": "CE",
+     "strike": 18100.0,
+     "sig": 327,
+     "entry": 5.6,
+     "peak": 1.04,
+     "net": -1903.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-02-23",
+     "side": "CE",
+     "strike": 17650.0,
+     "sig": 201,
+     "entry": 3.5,
+     "peak": 2.0,
+     "net": -1836.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-02",
+     "side": "CE",
+     "strike": 17500.0,
+     "sig": 164,
+     "entry": 2.1,
+     "peak": 1.36,
+     "net": -1948.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-09",
+     "side": "CE",
+     "strike": 17750.0,
+     "sig": 186,
+     "entry": 2.95,
+     "peak": 1.19,
+     "net": -1901.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-16",
+     "side": "PE",
+     "strike": 16800.0,
+     "sig": 165,
+     "entry": 4.65,
+     "peak": 1.71,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-23",
+     "side": "CE",
+     "strike": 17250.0,
+     "sig": 272,
+     "entry": 1.9,
+     "peak": 1.0,
+     "net": -1938.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-03-29",
+     "side": "CE",
+     "strike": 17100.0,
+     "sig": 168,
+     "entry": 3.25,
+     "peak": 2.11,
+     "net": -1429.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-04-06",
+     "side": "CE",
+     "strike": 17600.0,
+     "sig": 276,
+     "entry": 7.3,
+     "peak": 2.36,
+     "net": 335.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-04-13",
+     "side": "CE",
+     "strike": 17850.0,
+     "sig": 167,
+     "entry": 3.5,
+     "peak": 1.07,
+     "net": -1699.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-04",
+     "side": "PE",
+     "strike": 18200.0,
+     "sig": 324,
+     "entry": 5.6,
+     "peak": 1.0,
+     "net": -1938.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-11",
+     "side": "PE",
+     "strike": 18300.0,
+     "sig": 303,
+     "entry": 5.65,
+     "peak": 5.65,
+     "net": 4241.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-18",
+     "side": "CE",
+     "strike": 18250.0,
+     "sig": 300,
+     "entry": 2.2,
+     "peak": 1.0,
+     "net": -1804.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-05-25",
+     "side": "CE",
+     "strike": 18350.0,
+     "sig": 339,
+     "entry": 1.0,
+     "peak": 2.4,
+     "net": -551.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-06-08",
+     "side": "CE",
+     "strike": 18700.0,
+     "sig": 309,
+     "entry": 10.26,
+     "peak": 1.05,
+     "net": -1557.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-06-15",
+     "side": "CE",
+     "strike": 18700.0,
+     "sig": 327,
+     "entry": 9.25,
+     "peak": 1.26,
+     "net": -571.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-06-22",
+     "side": "CE",
+     "strike": 18850.0,
+     "sig": 237,
+     "entry": 8.8,
+     "peak": 3.5,
+     "net": -1738.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-07-06",
+     "side": "CE",
+     "strike": 19550.0,
+     "sig": 337,
+     "entry": 1.35,
+     "peak": 1.11,
+     "net": -1861.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-03",
+     "side": "CE",
+     "strike": 19550.0,
+     "sig": 185,
+     "entry": 5.75,
+     "peak": 1.0,
+     "net": -1728.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-10",
+     "side": "PE",
+     "strike": 19450.0,
+     "sig": 215,
+     "entry": 3.9,
+     "peak": 2.36,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-17",
+     "side": "CE",
+     "strike": 19500.0,
+     "sig": 166,
+     "entry": 3.3,
+     "peak": 1.05,
+     "net": -1998.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-24",
+     "side": "CE",
+     "strike": 19550.0,
+     "sig": 164,
+     "entry": 5.85,
+     "peak": 1.09,
+     "net": -1773.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-08-31",
+     "side": "CE",
+     "strike": 19350.0,
+     "sig": 255,
+     "entry": 4.1,
+     "peak": 1.79,
+     "net": -1871.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-07",
+     "side": "PE",
+     "strike": 19550.0,
+     "sig": 164,
+     "entry": 4.05,
+     "peak": 1.51,
+     "net": -1781.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-14",
+     "side": "CE",
+     "strike": 20150.0,
+     "sig": 195,
+     "entry": 5.9,
+     "peak": 1.59,
+     "net": -1743.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-21",
+     "side": "CE",
+     "strike": 19850.0,
+     "sig": 164,
+     "entry": 2.8,
+     "peak": 1.0,
+     "net": -1903.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-09-28",
+     "side": "CE",
+     "strike": 19750.0,
+     "sig": 164,
+     "entry": 5.25,
+     "peak": 1.15,
+     "net": -1816.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-05",
+     "side": "PE",
+     "strike": 19550.0,
+     "sig": 330,
+     "entry": 5.7,
+     "peak": 1.15,
+     "net": 210.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-12",
+     "side": "PE",
+     "strike": 19750.0,
+     "sig": 225,
+     "entry": 3.4,
+     "peak": 1.09,
+     "net": -1781.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-19",
+     "side": "PE",
+     "strike": 19550.0,
+     "sig": 164,
+     "entry": 3.7,
+     "peak": 1.0,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-10-26",
+     "side": "CE",
+     "strike": 18950.0,
+     "sig": 173,
+     "entry": 7.45,
+     "peak": 1.7,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-02",
+     "side": "CE",
+     "strike": 19150.0,
+     "sig": 164,
+     "entry": 2.95,
+     "peak": 2.27,
+     "net": -1609.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-09",
+     "side": "PE",
+     "strike": 19350.0,
+     "sig": 193,
+     "entry": 1.4,
+     "peak": 1.61,
+     "net": -1868.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-16",
+     "side": "PE",
+     "strike": 19750.0,
+     "sig": 185,
+     "entry": 4.35,
+     "peak": 1.24,
+     "net": -1691.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-23",
+     "side": "CE",
+     "strike": 19850.0,
+     "sig": 173,
+     "entry": 6.4,
+     "peak": 1.88,
+     "net": -1923.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-11-30",
+     "side": "CE",
+     "strike": 20150.0,
+     "sig": 169,
+     "entry": 3.85,
+     "peak": 4.65,
+     "net": -1200.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-07",
+     "side": "PE",
+     "strike": 20900.0,
+     "sig": 246,
+     "entry": 8.25,
+     "peak": 1.29,
+     "net": -750.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-14",
+     "side": "PE",
+     "strike": 21150.0,
+     "sig": 293,
+     "entry": 5.0,
+     "peak": 1.0,
+     "net": -1928.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-21",
+     "side": "PE",
+     "strike": 21200.0,
+     "sig": 261,
+     "entry": 9.75,
+     "peak": 3.16,
+     "net": -1868.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2023-12-28",
+     "side": "PE",
+     "strike": 21700.0,
+     "sig": 216,
+     "entry": 9.45,
+     "peak": 1.23,
+     "net": -1868.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-01-11",
+     "side": "PE",
+     "strike": 21550.0,
+     "sig": 222,
+     "entry": 1.7,
+     "peak": 6.53,
+     "net": -1774.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-01-18",
+     "side": "CE",
+     "strike": 21550.0,
+     "sig": 211,
+     "entry": 4.1,
+     "peak": 1.24,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-01",
+     "side": "PE",
+     "strike": 21250.0,
+     "sig": 172,
+     "entry": 3.4,
+     "peak": 1.15,
+     "net": -1863.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-08",
+     "side": "PE",
+     "strike": 21550.0,
+     "sig": 289,
+     "entry": 1.1,
+     "peak": 1.45,
+     "net": -1759.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-15",
+     "side": "PE",
+     "strike": 21650.0,
+     "sig": 165,
+     "entry": 3.0,
+     "peak": 1.58,
+     "net": -1901.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-02-22",
+     "side": "PE",
+     "strike": 21850.0,
+     "sig": 181,
+     "entry": 7.7,
+     "peak": 1.68,
+     "net": -1936.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-03-21",
+     "side": "PE",
+     "strike": 21800.0,
+     "sig": 221,
+     "entry": 1.3,
+     "peak": 1.0,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-04-04",
+     "side": "PE",
+     "strike": 22350.0,
+     "sig": 217,
+     "entry": 8.55,
+     "peak": 1.21,
+     "net": -1708.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-04-10",
+     "side": "PE",
+     "strike": 22550.0,
+     "sig": 227,
+     "entry": 2.7,
+     "peak": 1.0,
+     "net": -1833.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-05-09",
+     "side": "CE",
+     "strike": 22250.0,
+     "sig": 208,
+     "entry": 6.35,
+     "peak": 1.03,
+     "net": -1923.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-05-30",
+     "side": "CE",
+     "strike": 22700.0,
+     "sig": 164,
+     "entry": 8.85,
+     "peak": 1.47,
+     "net": -1972.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-06",
+     "side": "PE",
+     "strike": 22600.0,
+     "sig": 337,
+     "entry": 1.4,
+     "peak": 1.14,
+     "net": -1759.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-13",
+     "side": "PE",
+     "strike": 23200.0,
+     "sig": 174,
+     "entry": 2.6,
+     "peak": 1.08,
+     "net": -1886.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-06-20",
+     "side": "PE",
+     "strike": 23450.0,
+     "sig": 164,
+     "entry": 8.5,
+     "peak": 1.49,
+     "net": -1927.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-07-04",
+     "side": "PE",
+     "strike": 24100.0,
+     "sig": 174,
+     "entry": 1.5,
+     "peak": 1.0,
+     "net": -1969.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-07-11",
+     "side": "PE",
+     "strike": 24250.0,
+     "sig": 280,
+     "entry": 6.0,
+     "peak": 1.22,
+     "net": -1852.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-07-25",
+     "side": "CE",
+     "strike": 24550.0,
+     "sig": 262,
+     "entry": 1.1,
+     "peak": 1.91,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-08-08",
+     "side": "CE",
+     "strike": 24300.0,
+     "sig": 295,
+     "entry": 4.35,
+     "peak": 1.85,
+     "net": -1938.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-08-22",
+     "side": "PE",
+     "strike": 24750.0,
+     "sig": 164,
+     "entry": 4.15,
+     "peak": 1.86,
+     "net": -1972.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-09-12",
+     "side": "PE",
+     "strike": 24800.0,
+     "sig": 245,
+     "entry": 2.65,
+     "peak": 1.32,
+     "net": -1699.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-09-19",
+     "side": "PE",
+     "strike": 25250.0,
+     "sig": 293,
+     "entry": 1.6,
+     "peak": 1.0,
+     "net": -1799.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-10-03",
+     "side": "CE",
+     "strike": 25550.0,
+     "sig": 164,
+     "entry": 16.06,
+     "peak": 1.13,
+     "net": -1624.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-10-17",
+     "side": "PE",
+     "strike": 24650.0,
+     "sig": 301,
+     "entry": 1.15,
+     "peak": 1.0,
+     "net": -1860.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-11-14",
+     "side": "CE",
+     "strike": 23650.0,
+     "sig": 177,
+     "entry": 6.4,
+     "peak": 1.63,
+     "net": -1938.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2024-12-05",
+     "side": "PE",
+     "strike": 24200.0,
+     "sig": 336,
+     "entry": 10.05,
+     "peak": 1.57,
+     "net": -1383.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-04-26",
+     "side": "PE",
+     "strike": 73600.0,
+     "sig": 306,
+     "entry": 6.6,
+     "peak": 1.11,
+     "net": -1594.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-06-21",
+     "side": "PE",
+     "strike": 76300.0,
+     "sig": 279,
+     "entry": 7.35,
+     "peak": 6.0,
+     "net": -1736.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-06-28",
+     "side": "PE",
+     "strike": 78200.0,
+     "sig": 249,
+     "entry": 5.25,
+     "peak": 1.1,
+     "net": -1683.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-07-05",
+     "side": "CE",
+     "strike": 80300.0,
+     "sig": 234,
+     "entry": 3.9,
+     "peak": 1.03,
+     "net": -1299.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-07-12",
+     "side": "PE",
+     "strike": 80100.0,
+     "sig": 270,
+     "entry": 12.21,
+     "peak": 1.0,
+     "net": -1682.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-07-19",
+     "side": "PE",
+     "strike": 80300.0,
+     "sig": 178,
+     "entry": 6.3,
+     "peak": 2.4,
+     "net": -1815.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-02",
+     "side": "CE",
+     "strike": 81500.0,
+     "sig": 189,
+     "entry": 16.71,
+     "peak": 1.36,
+     "net": -1743.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-09",
+     "side": "PE",
+     "strike": 79000.0,
+     "sig": 194,
+     "entry": 8.0,
+     "peak": 1.09,
+     "net": -1973.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-16",
+     "side": "PE",
+     "strike": 79300.0,
+     "sig": 267,
+     "entry": 4.95,
+     "peak": 1.03,
+     "net": -1729.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-08-30",
+     "side": "PE",
+     "strike": 82200.0,
+     "sig": 258,
+     "entry": 20.86,
+     "peak": 1.39,
+     "net": -1827.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-09-13",
+     "side": "PE",
+     "strike": 82500.0,
+     "sig": 164,
+     "entry": 16.56,
+     "peak": 1.47,
+     "net": -1604.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-09-20",
+     "side": "PE",
+     "strike": 83400.0,
+     "sig": 204,
+     "entry": 14.01,
+     "peak": 21.03,
+     "net": -1639.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-10-04",
+     "side": "CE",
+     "strike": 82500.0,
+     "sig": 261,
+     "entry": 15.86,
+     "peak": 1.44,
+     "net": -1921.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-10-18",
+     "side": "CE",
+     "strike": 81400.0,
+     "sig": 291,
+     "entry": 11.16,
+     "peak": 1.49,
+     "net": -1852.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2024-11-22",
+     "side": "PE",
+     "strike": 77300.0,
+     "sig": 261,
+     "entry": 29.86,
+     "peak": 1.0,
+     "net": -1756.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-01-09",
+     "side": "PE",
+     "strike": 23450.0,
+     "sig": 229,
+     "entry": 6.8,
+     "peak": 1.04,
+     "net": -1544.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-02-13",
+     "side": "PE",
+     "strike": 23000.0,
+     "sig": 315,
+     "entry": 14.81,
+     "peak": 1.54,
+     "net": -1095.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-03-06",
+     "side": "CE",
+     "strike": 22600.0,
+     "sig": 189,
+     "entry": 2.4,
+     "peak": 3.35,
+     "net": -1863.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-15",
+     "side": "PE",
+     "strike": 24350.0,
+     "sig": 188,
+     "entry": 6.8,
+     "peak": 1.0,
+     "net": -1522.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-22",
+     "side": "CE",
+     "strike": 24700.0,
+     "sig": 326,
+     "entry": 6.55,
+     "peak": 1.17,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-05-29",
+     "side": "CE",
+     "strike": 24900.0,
+     "sig": 228,
+     "entry": 15.01,
+     "peak": 1.0,
+     "net": -1121.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-05",
+     "side": "PE",
+     "strike": 24600.0,
+     "sig": 247,
+     "entry": 3.6,
+     "peak": 3.29,
+     "net": -1859.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-12",
+     "side": "PE",
+     "strike": 24700.0,
+     "sig": 296,
+     "entry": 4.9,
+     "peak": 1.11,
+     "net": -1848.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-06-26",
+     "side": "CE",
+     "strike": 25650.0,
+     "sig": 295,
+     "entry": 2.65,
+     "peak": 1.74,
+     "net": -1774.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-10-07",
+     "side": "CE",
+     "strike": 25300.0,
+     "sig": 181,
+     "entry": 2.85,
+     "peak": 1.65,
+     "net": -1904.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2025-10-28",
+     "side": "PE",
+     "strike": 25700.0,
+     "sig": 271,
+     "entry": 2.5,
+     "peak": 1.28,
+     "net": -1773.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-01-03",
+     "side": "PE",
+     "strike": 79200.0,
+     "sig": 170,
+     "entry": 16.96,
+     "peak": 3.67,
+     "net": -1265.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-01-28",
+     "side": "PE",
+     "strike": 75600.0,
+     "sig": 170,
+     "entry": 19.01,
+     "peak": 1.98,
+     "net": -1754.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-02-11",
+     "side": "PE",
+     "strike": 75800.0,
+     "sig": 327,
+     "entry": 7.9,
+     "peak": 1.0,
+     "net": -1836.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-18",
+     "side": "CE",
+     "strike": 75300.0,
+     "sig": 225,
+     "entry": 14.96,
+     "peak": 2.5,
+     "net": -1592.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-03-25",
+     "side": "PE",
+     "strike": 77500.0,
+     "sig": 196,
+     "entry": 14.61,
+     "peak": 1.94,
+     "net": -1705.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-04-01",
+     "side": "PE",
+     "strike": 75400.0,
+     "sig": 180,
+     "entry": 8.45,
+     "peak": 2.13,
+     "net": -1819.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-05-27",
+     "side": "PE",
+     "strike": 80600.0,
+     "sig": 196,
+     "entry": 29.36,
+     "peak": 1.0,
+     "net": -1783.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-06-24",
+     "side": "PE",
+     "strike": 81600.0,
+     "sig": 205,
+     "entry": 14.16,
+     "peak": 4.36,
+     "net": -1849.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-08-26",
+     "side": "PE",
+     "strike": 80600.0,
+     "sig": 310,
+     "entry": 8.9,
+     "peak": 1.0,
+     "net": -1611.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-09-18",
+     "side": "CE",
+     "strike": 83200.0,
+     "sig": 258,
+     "entry": 8.45,
+     "peak": 1.04,
+     "net": -1665.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-10-23",
+     "side": "PE",
+     "strike": 84500.0,
+     "sig": 257,
+     "entry": 10.11,
+     "peak": 2.95,
+     "net": -700.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-06",
+     "side": "PE",
+     "strike": 83000.0,
+     "sig": 235,
+     "entry": 7.7,
+     "peak": 1.71,
+     "net": -1764.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-11-27",
+     "side": "CE",
+     "strike": 86100.0,
+     "sig": 174,
+     "entry": 27.01,
+     "peak": 1.21,
+     "net": -1636.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2025-12-04",
+     "side": "PE",
+     "strike": 84800.0,
+     "sig": 212,
+     "entry": 14.96,
+     "peak": 1.22,
+     "net": -1813.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-01-06",
+     "side": "PE",
+     "strike": 26050.0,
+     "sig": 181,
+     "entry": 1.9,
+     "peak": 1.18,
+     "net": -1920.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-01-20",
+     "side": "PE",
+     "strike": 25300.0,
+     "sig": 246,
+     "entry": 2.3,
+     "peak": 7.59,
+     "net": 12675.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-02-10",
+     "side": "CE",
+     "strike": 26000.0,
+     "sig": 317,
+     "entry": 2.05,
+     "peak": 1.0,
+     "net": -1658.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-07-07",
+     "side": "CE",
+     "strike": 24500.0,
+     "sig": 306,
+     "entry": 2.2,
+     "peak": 3.05,
+     "net": -1823.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-07-21",
+     "side": "CE",
+     "strike": 24250.0,
+     "sig": 281,
+     "entry": 2.4,
+     "peak": 1.31,
+     "net": -1803.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-07-28",
+     "side": "CE",
+     "strike": 24050.0,
+     "sig": 315,
+     "entry": 1.85,
+     "peak": 1.24,
+     "net": -1816.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-08-11",
+     "side": "PE",
+     "strike": 24250.0,
+     "sig": 164,
+     "entry": 2.25,
+     "peak": 1.16,
+     "net": -1696.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-08-18",
+     "side": "PE",
+     "strike": 24100.0,
+     "sig": 240,
+     "entry": 2.25,
+     "peak": 1.4,
+     "net": -1317.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-08-25",
+     "side": "PE",
+     "strike": 24050.0,
+     "sig": 221,
+     "entry": 2.4,
+     "peak": 1.94,
+     "net": -1414.0
+    },
+    {
+     "und": "NIFTY",
+     "day": "2026-10-06",
+     "side": "PE",
+     "strike": 22600.0,
+     "sig": 333,
+     "entry": 2.35,
+     "peak": 1.6,
+     "net": -600.0
+    },
+    {
+     "und": "SENSEX",
+     "day": "2026-01-01",
+     "side": "CE",
+     "strike": 85400.0,
+     "sig": 335,
+     "entry": 2.35,
+     "peak": 1.15,
+     "net": -1645.0
+    }
+   ],
+   "q": 1.0,
+   "gates": {
+    "1 >= 30 trades": true,
+    "2 net > 0": false,
+    "3 >= 3 of 4 years > 0": false,
+    "4 BH q < 0.05": false,
+    "5 x2 spread > 0": false,
+    "6 w/o best day > 0": false,
+    "7 max DD > -40k": false
+   },
+   "passes": false
+  }
+ },
+ "bh_size": 82,
+ "bh_min_q": 0.164
+}

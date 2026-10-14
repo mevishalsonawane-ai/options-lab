@@ -117,3 +117,13 @@ many of the three agree.
 ## If a rule passes
 
 Paper only, after Boss's go-ahead (CLAUDE.md); never live by itself. No app change in R32.
+
+## Amendment 1 (14 Oct 2026, after the first run; P1 / P2 only)
+
+The first run gave **P1 and P2 zero trades**: τ was the q-quantile of the outer model's scores on its OWN training rows,
+which are in-sample and far higher than any score the model gives an unseen year (0.988-0.994 on training rows against
+a test-year maximum of 0.51-0.88). That made the rule untestable, not wrong in a way the data could show. The fix
+keeps everything else:
+- τ is now the q-quantile of the INNER model's out-of-sample scores on year y−1, the same scores used to choose q;
+- that τ is applied to the outer model's test-year scores.
+No P1 / P2 outcome had been seen (there were no trades). P3 / P4, the event study and the model report are unchanged.
