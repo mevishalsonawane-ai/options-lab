@@ -110,6 +110,11 @@ object SettingsIndex {
             "liquidity", "notification", "skipped"),
         sub("OPENING", "Market alerts", "Opening read", "Just after 09:20: the gaps against the previous close (and GIFT Nifty), the open against Liquidity's levels, the first candle.",
             "gift", "opening", "gap", "liquidity"),
+        // 14 Oct (Boss approved): information only / a shadow record only.
+        sub("GAMMA", "Market alerts", "Morning gamma line", "10:00: dealer gamma negative or positive on each index, what such days did to the range, the gamma walls. Information only.",
+            "gamma", "gex", "dealer", "walls"),
+        sub("OIWALL", "Market alerts", "OI-wall check (shadow)", "Expiry days: your OI-wall rule checked from 13:45 to 14:30 and written down in points, never traded.",
+            "oi wall", "short covering", "shadow", "expiry"),
         sub("FORWARD", "Coach me", "Forward-test watch", "Liquidity 15+5, Solo and Hero against their backtests: a note when an arm's verdict changes.",
             "hero", "solo", "liquidity", "backtest", "drifting"),
         sub("LIQINSIGHT", "Coach me", "What's working (Liquidity)", "Saturday morning: Liquidity 15+5's paper trades cut by time, book, side, exit, room and weekday - what stands out beyond noise.",
