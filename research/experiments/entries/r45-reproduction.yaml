@@ -1,0 +1,28 @@
+id: r45-reproduction
+title: 'Premium scalp audit: reproducing the claim on the lake (step 0)'
+hypothesis: Their numbers come from the lake's rolling ATM call series.
+instruments:
+- NIFTY
+features:
+- 5-minute ATM call premium
+model_or_rule: their rule, 12 series / band combinations
+variants_tried: null
+results:
+  summary: '12 pre-registered combinations (WEEK / MONTH / both x band per session / across sessions x population / sample
+    SD) on design sessions. Closest: R-WEEK+MONTH-cont-sd0: 2843 trades (2.89 a trade day; claim scaled to the design share
+    3364), Rs +264.4/trade vs the claimed +174, win 59.8% vs 53.4%, PF 1.7 vs 1.45. Their code was not attached; reproduced
+    from the rule text. The positive result is reproduced in kind (larger, not smaller).'
+  costs: Rs 95/trade, lot 75 (theirs)
+holdout_read: false
+verdict: not-a-test
+notes: 'SIGNAL SOURCE: the option''s own price chart (not the default kind of rule; only Boss can switch it on for paper).'
+family: outside-strategies
+date: '2026-10-14'
+doc: research/HUNT_R45_PREMIUM_SCALP_AUDIT.md
+data_version: Drive lake gdrive:IraAlgo-data-lake/options_rolling_1m, opt_{NIFTY,BANKNIFTY}_{WEEK,MONTH}_2021-2026 (1-minute
+  rolling ATM+-10, Aug 2021 - 13 Oct 2026)
+period:
+  design: sessions Aug 2021 - 13 Apr 2026 (each year its own out-of-sample block; nothing fitted)
+  holdout: 27 Apr - 13 Oct 2026, read once (14-26 Apr embargo)
+prereg: research/hunt/r45/PREREG.md
+settings: research/hunt/r45/r45cfg.py

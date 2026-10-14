@@ -778,3 +778,19 @@ target +50%, 60-minute exit, 15:15 square-off, max 2 a day a side); expiry days 
 - The "October champion" EMA8/21 + ADX15 (most likely BANKNIFTY both sides: our 46 and 306 trades match their 46 and 288)
   made +Rs 6,410 in the last 25 sessions (Boss: +12,192) after -Rs 1,612 in Jan-Aug 2026 (Boss: -40,109): a short
   lucky patch. The plain rule lost Rs 8.3 lakh on 9,455 NSE trades over 2021 - Oct 2026. Nothing to paper.
+
+## The other AI's "NIFTY premium mean-reversion scalp" (R45, 14 Oct 2026) - an artifact of the rolling ATM series; loses on one contract
+Full study: `HUNT_R45_PREMIUM_SCALP_AUDIT.md` (pre-registered `hunt/r45/PREREG.md`, commit b1b24f3; holdout 27 Apr -
+13 Oct 2026 read once). Signal source: the OPTION'S OWN PRICE CHART (5-minute ATM call premium crossing below its
+Bollinger(20, 2) lower band). That is not the default; it is reported separately.
+- The claim (+Rs 174 a trade, 3,726 trades, 53.4% win, PF 1.45) reproduces in kind on the lake: +Rs 264 a trade on 2,843
+  design trades (WEEK + MONTH pooled, which also breaks its own max-2-a-day rule: 404 of 983 days had 4 trades).
+- The lake's `offset == 0` rows switch contract as spot moves. The ATM strike changed during 68.6% of the trades, and
+  those trades made +Rs 341 against +Rs 98 for the rest. The "bounce" is the series jumping to the lower strike's
+  dearer call, which no trader holds.
+- Priced on the strike bought at entry, the same signals lose Rs 65 a trade (2,826 trades, 17/57 green months). With
+  every fix (gap fills, 15-minute hold, real expiry days, real charges + 0.5% slippage, WEEK only) they lose Rs 170 (fixed
+  contract, 1,250 trades) or Rs 149 (09:15 contract, 1,125 trades). Every year 2021-2026 is negative, and the holdout
+  shows -106 and -127 (122 and 130 trades). On the fixed contract the signal is no better than random entries (q 0.62).
+- BANKNIFTY: +Rs 237 on the rolling series, -Rs 124 a trade on one contract at real lots (1,405 trades).
+- Rule for every lake study: never trade the rolling ATM series as one instrument; hold the strike that was bought.
