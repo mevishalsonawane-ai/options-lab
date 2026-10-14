@@ -103,8 +103,12 @@ def design():
     G["X"], G["cols"] = X, column_sets(X, base_cols)
     print("inputs:", {k: len(v) for k, v in G["cols"].items()}, "rows", len(X), flush=True)
     jobs = [(t, i, m) for t in TARGETS for i in INPUTS for m in M.MODELS]
-    with mp.get_context("fork").Pool(4) as pool:
-        res = pool.map(job, jobs, chunksize=1)
+    import os
+    if os.environ.get("B2_SERIAL"):            # one process (the forked pool can deadlock in the GBM's OpenMP)
+        res = [job(j) for j in jobs]
+    else:
+        with mp.get_context("fork").Pool(4) as pool:
+            res = pool.map(job, jobs, chunksize=1)
     q = M.bh([r["p"] for r in res])
     for r, qq in zip(res, q):
         r["q"] = float(qq)
