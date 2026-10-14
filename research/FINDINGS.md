@@ -498,6 +498,20 @@ BANKNIFTY + NIFTY, holdout out-of-instrument FINNIFTY + MIDCPNIFTY + SENSEX read
   of days (33 of 119); not trading them saves money.
 - App: nothing changes; the four arms stay paused (code and settings kept); nothing goes on paper.
 
+## Every indicator at once, and why candles turn green or red (B2, 14 Oct 2026) - direction stays a coin flip; nothing trades
+Full study: `HUNT_B2_ALL_AT_ONCE.md` (pre-registered `hunt/b2/PREREG.md`; NIFTY, BANKNIFTY, FINNIFTY, SENSEX; design
+2021-08 .. 2026-04 walk-forward, holdout 27 Apr - 12 Oct 2026 read once).
+- 469 inputs in one model (every brain feature + every indicator setting on 1/5/15-min charts, option volume profile,
+  order-flow proxy, R28 gamma, other indices, Fibonacci / round levels), in a linear model, boosted trees and a neural net.
+- Next 15 / 30 / 60-minute candle colour: holdout AUC 0.516 / 0.511 / 0.518 (0.5 = coin flip); no direction target passes;
+  all 469 inputs add at most 0.005 over the 208 base ones; the neural net is worst.
+- Trading the most confident 10%: all 4 rules lose (holdout 15-min Rs -21,397 on 527 trades); none beats random entries.
+- Predictable: move size (holdout AUC 0.64), whether a bought option pays (0.59-0.63, calls and puts alike: timing, not
+  direction), "green day" at 10:15 (0.73, but it is mostly the move since the open; the rest of the day is a coin flip).
+- A green 15-minute candle forms with call buying / put writing / call short covering, breadth rising, gamma up and
+  VIX / IV falling (concurrent, not known before). Before it: a small reversal (after red 15 minutes, green 52.6% vs 49.6%).
+- App: nothing changes.
+
 ## Crypto: what is predictable? (C1, 13 Oct 2026) - only the size of the next hour / day, not its direction
 Full study: `CRYPTO_C1_PREDICTABILITY.md` (pre-registered `brain/crypto/PREREG.md`, commit 5adf2a6; 80 tests in one BH
 family). Built on the new crypto Data Brain (`research/brain/crypto`, 24x7 UTC cube of Binance spot, perp, funding, OI).

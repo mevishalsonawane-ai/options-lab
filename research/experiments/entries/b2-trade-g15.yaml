@@ -1,0 +1,33 @@
+id: b2-trade-g15
+title: 'B2 trading rule: next 15-min direction (boosted trees on all inputs, top 10% confidence, ATM option)'
+family: ml
+date: '2026-10-14'
+doc: research/HUNT_B2_ALL_AT_ONCE.md
+data_version: F1 feature rows + outcomes (brain on the Dhan lake data-20261014) + B2 sweep bank (research/hunt/b2/b2sweep.py)
+period:
+  design: 2021-08-02..2026-04-13, walk-forward test blocks 2023 / 2024 / 2025 / 2026 (to 13 Apr)
+  holdout: 2026-04-27..2026-10-12 (116 days per index), read once 14 Oct 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+prereg: research/hunt/b2/PREREG.md
+hypothesis: Buying the ATM option when the all-inputs model is in its most confident 10% makes money net of the app's fees
+  and fills on unseen data and beats random entry times.
+features:
+- '469 inputs at once: 208 brain/F1 features (EMA, VWAP, Supertrend, RSI, MACD, ADX, Bollinger, pivots, CPR, OI build-up,
+  PCR, max pain, OI walls, IV, skew, VIX, Greeks, GEX proxy, breadth)'
+- 261 sweep inputs (every indicator setting on 1/5/15-min charts, option volume profile, order-flow proxy, R28 gamma, other
+  indices, Fibonacci / round levels, multi-day, calendar)
+model_or_rule: 'next 15-min direction: first row per index-day and side with p >= its training 90th percentile (CE) or <=
+  10th (PE); F1 exits x1'
+settings: research/hunt/b2/PREREG.md section 7
+variants_tried: 4
+results:
+  summary: 'Design walk-forward 2023 - Apr 2026: 2,726 trades, net Rs -165,022, win 44%, blocks 2023 -24,333, 2024 +38,532,
+    2025 -139,091, 2026 -40,130. Holdout: 527 trades, net Rs -21,397 (Rs -184 a day), win 47%, avg win / loss Rs +812 / -799,
+    worst day Rs -5,688, max drawdown Rs -39,789; random-entry twin mean Rs -59,324, p 0.062, q 0.25. FAIL.'
+  costs: app fees at today's rates; liq fills; today's lots (F1 outcomes)
+holdout_read: true
+verdict: rejected
