@@ -182,3 +182,25 @@ Crypto: a placeholder section in the write-up; the data watchdog adds it.
 - P&L a day, % green days, worst day and max drawdown are on the rule's daily P&L over every session in the period
   that has a chain for at least one traded index; a day without a trade counts as 0.
 - Holdout BH: m = every rule in the list (at most 20), whether or not it passed the design gates.
+
+## Amendment 2 (14 Oct 2026, before any screen statistic or rule result)
+
+**MIDCPNIFTY is dropped; F1 covers four indices: NIFTY, BANKNIFTY, FINNIFTY, SENSEX.**
+- The brain had no expiry calendar for FINNIFTY, MIDCPNIFTY or SENSEX, so their cubes had no option chain.
+- Their expiry days are now inferred from the lake's option prices: the R25 method in
+  `research/brain/expiry_infer.py`, written to `calendar_data/expiries.csv`.
+  - FINNIFTY and SENSEX look right: 7-day gaps, and the weekday shifts match the exchange calendar changes.
+  - MIDCPNIFTY shows Friday "expiries" 3-4 days before Monday ones in 2023-24. Its dates are not reliable, and a wrong
+    expiry would corrupt its IV, Greeks and expiry-day square-off, so it stays index-only and out of F1.
+- Before this amendment, the only outcome computed was one NIFTY day (9 Mar 2022), as a simulator check.
+
+**Breadth (Boss: "breadth if available")**: the lake's equity_1m holds 1-minute bars of today's 58 NIFTY 50 and NIFTY
+BANK stocks, 2017-2026. F1 adds four breadth features, computed point in time in `research/hunt/f1/breadth.py`
+(not yet brain features). Each uses every listed stock with a bar this minute:
+- `br_adv_share`: the share above its previous session close.
+- `br_above_vwap`: the share above its own session VWAP.
+- `br_adv_share_chg15`: the change of `br_adv_share` over 15 minutes.
+- `br_bank_adv_share`: `br_adv_share` for the bank stocks only.
+
+Caveat: these are today's constituents (survivorship bias). The same screen treatment applies; they join the "every
+feature" list.
