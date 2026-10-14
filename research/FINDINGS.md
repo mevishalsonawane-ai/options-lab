@@ -700,3 +700,17 @@ signal on the underlying, last 60 one-minute bars + the brain's features) agains
 - Crypto: a tiny real 60-minute direction signal (holdout AUC 0.533, log-loss 0.6915 vs 0.6928, q 0.006, 35,112
   forecasts), far below Delta India costs: every stop-and-lock perp rule loses (-Rs 4 to -301 a day before tax).
 - If ever used, the models are tiny: under 0.4 MB for all three, about 6 ms per forecast on a CPU.
+
+## SILVERM morning call (M4) vs bad option prices (R42, 14 Oct 2026) - not bad prices, but no edge: switch the paper arm off
+Full study: `HUNT_R42_SILVERM_SPIKES.md` (pre-registered `hunt/r42/PREREG.md`, commit b91dc30f). Signal source: the clock
+(15-minute morning grid), strike from the SILVERM future; option premium only for P&L.
+- The ">50% one-minute jumps" in the lake's metal options are 98-99% strike rolls of the rolling ATM+k series (the +4,000x
+  ones are expiry-day handovers). Real one-off bad prints (F1: >1.5x both neighbour medians, per contract) are 0.02-0.08%
+  of traded minutes in GOLD/GOLDM/SILVER/SILVERM, mostly in the evening; SILVERM 09:00-10:44 has 5 of 120,739.
+- 0 of M4's 51 holdout trades touched a flagged price, and cleaning changed no trade (95 design, 53 holdout).
+- Rebuilt from the lake, M4 reproduces (to 7 Oct: 51 trades, +Rs 466/trade, p 0.050). On the pre-registered holdout
+  (8 Jul - 8 Oct): 53 trades, +Rs 336/trade, +Rs 17.8k, but random-twin p 0.079 (same day, random morning minute);
+  2x spread +Rs 62/trade. Design on fuller data: 95 trades +Rs 871/trade (M4: 78, +1,439), twin p 0.33. Walk-forward
+  -Rs 44.6k (129 trades). Extra 9-12 Oct: 4 trades, -Rs 3.8k.
+- Pre-registered verdict: switch the M4 SILVERM paper arm off (risk-lowering paper change; Boss decides; R42 does not
+  change the app).
