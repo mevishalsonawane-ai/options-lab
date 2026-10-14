@@ -1,0 +1,33 @@
+id: r22-brk15-mid
+title: 15-minute close break of the morning range, stop at the range mid (5-min close) instead of the premium stop
+family: orb
+date: '2026-10-13'
+doc: research/HUNT_R22_ORB_15M_LEVELS.md
+hypothesis: Buying the option on this morning-range rule makes money net of the app's paper fills and fees (holdout daily
+  net > 0, beats a random-level and a random-time twin after BH over 58 tests with R20 / R20b / R20c) and beats today's ORB
+  on the same sessions.
+data_version: research-data release (BANKNIFTY 2024-02-13..2026-02-23, NIFTY 2024-04-01..2026-04-13, FINNIFTY index 2024-02-12..2026-02-24)
+  via research/hunt/r17/data.py
+period:
+  design: BANKNIFTY < 2025-08-25, NIFTY < 2025-10-13 (after 15 sessions for ATR14)
+  holdout: BANKNIFTY 2025-08-25..2026-02-23, NIFTY 2025-10-13..2026-04-13
+instruments:
+- BANKNIFTY
+- NIFTY
+features:
+- three 15-minute candles 09:15-09:59 (high, low, mid, extensions)
+- 5- / 15-minute index candles
+- ATR14
+model_or_rule: as r22-brk15 but no premium stop; out on a 5-min index close back through the range mid; +40/+20 with ladder
+settings: research/hunt/r22/PREREG.md part B
+prereg: research/hunt/r22/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design (395 sessions, BANKNIFTY + NIFTY): 665 trades, net Rs 21,472 (Rs 54 a session), blocks [3445, -7198, -9364,
+    34590], G1 pass, G2 fail; today''s ORB on the same sessions Rs -15,603. Holdout (153 sessions): 229 trades, net Rs -27,859
+    (Rs -182 a session), t-test p 0.90 (q 1.00), random-level twin p 0.96 (q 1.00), random-time twin p 0.95 (q 1.00), 2x ticks
+    Rs -29,050; today''s ORB Rs -29,117. FAILED.'
+  costs: app charges at today's rates; liq fills (5 bps + 1-4 ticks), stops 10 bps + 2x ticks
+holdout_read: true
+verdict: rejected
+notes: One of 6 R22 rules picked from the design event study (BH family of 58 with R20 / R20b / R20c).

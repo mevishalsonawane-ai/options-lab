@@ -422,3 +422,18 @@ Full study: `HUNT_R21_HERO.md` (pre-registered `hunt/r21/PREREG.md`, commit 78e9
 - Exits did not help: no holdout trade reached the 3-4x that arms a lock or trail; the plain 15:05 exit lost more
   (-Rs 61,863) than the app's -60% stop.
 - Deciding it needs the 6-year Dhan lake (~300 NIFTY weeklies): `R21_SOURCE=lake python3 research/hunt/r21/run.py all`.
+## The morning's three 15-minute candles as support and resistance (R22, 13 Oct 2026) - not real levels; no rule passes
+Full study: `HUNT_R22_ORB_15M_LEVELS.md` (pre-registered `hunt/r22/PREREG.md`, commits 19a8660 / 7dee09e; 6 rules, BH
+family of 58 with R20 / R20b / R20c).
+- Levels from 09:15-09:59 only (high, low, mid, each candle's high / low, 0.5x / 1x extensions); events 10:00-15:00 on
+  BANKNIFTY / NIFTY / FINNIFTY (design 1,121 sessions). A touch of the high / low was turned back (3 closes inside) 29%
+  of the time (347 of 1,211); lines at the same distance in the wrong place (mirror twin) 29% too; holdout 22% vs 30%.
+- A 5-min break held 63% (688 of 1,099; twin 57%), but a held break was further on at 15:29 only 47% (-0.008 ATR14).
+  Break-and-retest is not better: retested 82%, the retest closed beyond 78%, then 45% further on (-0.020 ATR, 442).
+  The 1x extension was reached after 31% of breaks (17% before a close back inside). Mid and inner candle levels: same.
+- The one design split (wide-range days carried +0.06 ATR, narrow faded -0.02) reversed in the holdout (-0.05 / +0.045).
+- 0 of 6 option-buying rules passed; all lost in the holdout. 15-min close break Rs -8,573 design / -8,882 holdout vs
+  today's ORB -15,603 / -29,117 (loses less, still loses; mirrored levels made +16,040). Retest -20,547 / -6,095;
+  1x-extension target -1,17,565 / -53,564 (stop hit on 486 of 665); mid stop +21,472 / -27,859; skip wide -7,785 / -7,529;
+  skip narrow -2,751 / -9,915. Best R22 BH q 1.00. App: no change; the ORB stays paused.
+- Re-run on the 6-year lake: `R22_SOURCE=lake python3 research/hunt/r22/r22trades.py design` (and `r22study.py events`).
