@@ -285,7 +285,21 @@ def variants() -> list[E.Variant]:
     return out
 
 
-def evaluate(vs, sb, twins=0, seed=K.SEED):
+_G = {}
+
+
+def _twin_job(args):
+    """Worker (forked; reads the parent's sessions and trades): `n` twins of one variant, its own seed."""
+    i, n = args
+    v = _G["vs"][i]
+    rng = np.random.default_rng(K.SEED + i)
+    return [E.twin_net(_G["by_key"], _G["trades"][v.id], v, rng) for _ in range(n)]
+
+
+def evaluate(vs, sb, twins=0, twin_ids=None):
+    """Every rule on the sessions; with `twins`, PREREG A9's random-entry twins for the rules in `twin_ids` (default all),
+    seed K.SEED + the rule's position in `vs`, run in 4 forked workers."""
+    import multiprocessing as mp
     res, trades_by = {}, {}
     allk = keys(sb)
     by_key = {(u, s.day): s for u, ss in sb.items() for s in ss}
@@ -299,13 +313,18 @@ def evaluate(vs, sb, twins=0, seed=K.SEED):
             r[u] = E.score([t for t in tr if t["und"] == u], keys(sb, unds=[u]))
         r["years"] = per_year(tr, sb)
         r["years_by_und"] = {u: per_year(tr, sb, [u]) for u in sb}
-        if twins:
-            rng = np.random.default_rng(seed)
-            tw = np.array([E.twin_net(by_key, tr, v, rng) for _ in range(twins)])
-            r["twin_mean"] = float(tw.mean())
-            r["twin_p"] = float((1 + (tw >= r["all"]["net"]).sum()) / (twins + 1))
         res[v.id] = r
         print(v.id, r["all"]["trades"], round(r["all"]["net"]), r["years"], flush=True)
+    if twins:
+        _G.update(vs=vs, by_key=by_key, trades=trades_by)
+        idx = [i for i, v in enumerate(vs) if twin_ids is None or v.id in twin_ids]
+        with mp.get_context("fork").Pool(4) as pool:
+            outs = pool.map(_twin_job, [(i, twins) for i in idx])
+        for i, tw in zip(idx, outs):
+            r, tw = res[vs[i].id], np.array(tw)
+            r["twin_mean"] = float(tw.mean())
+            r["twin_p"] = float((1 + (tw >= r["all"]["net"]).sum()) / (twins + 1))
+            print(vs[i].id, "twin mean", round(r["twin_mean"]), "p", round(r["twin_p"], 4), flush=True)
     return res, trades_by
 
 
@@ -344,7 +363,7 @@ def holdout():
     K.HOLDOUT_FLAG.write_text(datetime.now(timezone.utc).isoformat(timespec="seconds") + "\n")
     sb = {u: D.load(u, "holdout") for u in K.HOLDOUT_UNDS}
     vs = [E.baseline(a) for a in ARMS4] + variants()
-    res, trades_by = evaluate(vs, sb, twins=K.TWINS)
+    res, trades_by = evaluate(vs, sb, twins=K.TWINS, twin_ids={v.id for v in vs[4:]})
     prior = json.loads((K.RESULTS / "prior_p.json").read_text())
     pri = [p for g in prior["groups"].values() for p in g.values()]
     own = []
