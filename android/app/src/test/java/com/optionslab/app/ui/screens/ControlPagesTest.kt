@@ -737,7 +737,9 @@ class ControlPagesTest {
         val label = "Add a holiday (yyyy-mm-dd)"
         field(label, "2026-13-40")
         compose.onNodeWithText("Add").assertIsNotEnabled()
-        val day = Market.today().plusDays(40)
+        // 15 Oct: about 40 days on, but never a built-in date (taken out above, so adding it back would not hold): on 15 Oct
+        // IST, 40 days on is 24 Nov, Guru Nanak Jayanti, and the row showed its name instead of "added by you".
+        val day = generateSequence(Market.today().plusDays(40)) { it.plusDays(1) }.first { it !in Holidays.BUILT_IN.keys }
         field(label, day.toString())
         compose.onNodeWithText("Add").assertIsEnabled()
         tap("Add")
