@@ -142,3 +142,22 @@ so it cannot be in this model.
 Every model in section 4 is fitted twice: on the 205 base features ("base") and on base + the sweep bank ("all"). Both
 count in the BH families (section 8: 8 targets x 3 models x 2 input sets = 48 per family). The trading rules (section 7)
 use the "all" GBM only (still 4 rules). Nothing else changes.
+
+## Amendment 2 (14 Oct 2026, before any B2 model is fitted or any target is looked at)
+
+Boss (14 Oct): "include all the other things ... like gamma, vertical volume etc. Add all you can think of." The "all"
+input set (amendment 1) also gets, in `b2sweep.py`:
+- **Vertical volume (volume profile) from the option chain** (the index itself has no volume): the day's option volume by
+  strike so far -> point of control, volume-weighted strike, 70% value-area high / low (distances from spot), call share
+  of volume (day and last 15 minutes), share of volume at strikes above spot; OI-weighted call / put strike; today's call
+  vs put OI change.
+- **Order-flow proxy (tick rule on options)**: option volume signed by its own price change (calls rising / puts falling
+  = buying pressure), over the day, the last 15 and the last 5 minutes.
+- **Gamma exposure**: R28's per-minute GEX (`derived/r28_gex`): near-expiry gamma ratio, gamma flip distance and side,
+  positive / negative / absolute gamma walls, edge share, net share (near, month, all).
+- **Other indices** at the same minute: NIFTY, BANKNIFTY, FINNIFTY, SENSEX, MIDCPNIFTY, BANKEX: last 15 minutes and day
+  so far.
+- **Levels**: distance to round numbers (100 / 500 / 1,000), position in yesterday's range and distance to its
+  Fibonacci levels (0.236 .. 0.786); returns over the last 1, 2, 5, 10, 20 days; gap; session TWAP distance; day of month,
+  month.
+Nothing else changes (same targets, models, families of 48, rules and gates).
