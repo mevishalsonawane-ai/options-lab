@@ -4,7 +4,7 @@
   "day": "2026-10-13",
   "generated_at": "2026-10-13T23:41:05",
   "app": "1.0 (build abc1234)",
-  "privacy": "Redacted on the phone: no tokens, keys, PINs, account or client ids, names, phone or e-mail, order ids, rupee balances, margins or P&L. Arm P&L is in points and percent of the premium.",
+  "privacy": "Redacted on the phone: no tokens, keys, PINs, account or client ids, names, phone or e-mail, order ids, rupee figures (balances, margins, charges or P&L). Arm P&L is in points and percent of the premium; a live order has no fill price, an order's message only its reason.",
   "mode": {"ai_trades_live": false, "kill_switch": false, "live": false, "paper_only_period": true, "real_orders_allowed": false},
   "arms": [
     {
@@ -65,7 +65,7 @@
     {"at": "10:05:12", "account": "paper", "source": "Liquidity 15+5", "symbol": "BANKNIFTY25OCT51200CE", "side": "BUY", "qty": 30,
      "filled": 30, "status": "COMPLETE", "type": "MARKET", "avg": 200.0, "message": ""},
     {"at": "11:00:00", "account": "live", "source": "Liquidity 15+5", "symbol": "BANKNIFTY25OCT51200PE", "side": "BUY", "qty": 60,
-     "filled": 60, "status": "COMPLETE", "type": "LIMIT", "avg": 100.0, "message": ""}
+     "filled": 60, "status": "COMPLETE", "type": "LIMIT", "avg": null, "message": ""}
   ],
   "orders_by_source": {"live · Liquidity 15+5": 1, "paper · Liquidity 15+5": 1},
   "health": {

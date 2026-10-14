@@ -68,6 +68,23 @@ class DiagDayHostTest : RobolectricTest() {
         assertTrue(((r["health"] as Map<*, *>)["errors"] as Map<*, *>).isNotEmpty())
     }
 
+    @Test fun theHoldersNameWordsOfTwoLettersOrMoreAreAllHandedOver() {
+        // 14 Oct review of G3: short name words ("Om") were only taken out as part of the whole name.
+        assertEquals(listOf("Om", "Prakash", "Rao"), DiagDayHost.nameWords("R. Om Prakash-Rao"))
+        assertEquals(listOf("Om"), DiagDayHost.nameWords("Om om Om"))
+        assertEquals(emptyList<String>(), DiagDayHost.nameWords(null))
+        assertEquals(emptyList<String>(), DiagDayHost.nameWords(""))
+        assertEquals(emptyList<String>(), DiagDayHost.nameWords("A. B."))
+    }
+
+    @Test fun theOtherArmsLinesCarryNoRupeeNet() {
+        // 14 Oct review of G3: Night, VIX divergence, MCX and the forge ideas say their net "after charges" in rupees.
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        // The arms' lines as the phone has them (ira-core's DiagDayTest feeds each one with rupee amounts).
+        val others = (report()["other_arms"] as List<*>).map { it.toString() }
+        for (l in others) assertFalse(l, Regex("\\d\\s*after charges").containsMatchIn(l))
+    }
+
     @Test fun anotherDayReadsNothingOfToday() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         Diag.record("orb", "ORB: guard_refused: kill switch is on")

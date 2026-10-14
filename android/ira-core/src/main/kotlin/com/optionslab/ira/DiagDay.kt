@@ -26,10 +26,14 @@ import java.util.zip.GZIPOutputStream
  *
  * Privacy (13 Oct, tested in DiagDayTest): every text goes through [scrub] - GitHub tokens ([CloudSync.redact]), the owner's
  * secret rules ([Secrets.redact]: digit runs of 9+, phone numbers, e-mail, PAN), JWTs (eyJ...), long letter-and-digit runs
- * (keys), client-id shapes (AB1234), rupee amounts and the numbers after money words (margin, funds, balance, P&L), and the
- * personal words the app hands over (the account holder's name, the user id, the GitHub login). No order id, account id or
- * rupee figure is ever an input. It is NOT sealed (13 Oct decision): nothing personal is left in it, the repository is
- * private, and the research sessions have no passphrase; the recordings and backups, which hold Boss's trades, stay sealed.
+ * (keys), client-id shapes (AB1234, ab1234), rupee amounts, the figures of every clause with a money word (margin, required,
+ * available, cash, funds, balance, P&L, MTM, realised, net, charges, ...; [hideMoney]), lakh-grouped figures, and the
+ * personal words the app hands over (the account holder's name and each of its words, the user id, the GitHub login). No
+ * order id or account id is ever an input. 14 Oct review: the other arms' lines lose their rupee net ([otherArmLine]), an
+ * order's message keeps only its reason ([orderReason]: Kite's RMS text names the margins), and a live order has no fill
+ * price (avg null: with the quantities it would give the live account's rupees). It is NOT sealed (13 Oct decision):
+ * nothing personal is left in it, the repository is private, and the research sessions have no passphrase; the recordings
+ * and backups, which hold Boss's trades, stay sealed.
  */
 object DiagDay {
     const val SCHEMA = 1
@@ -78,7 +82,10 @@ object DiagDay {
     /** One decision an arm made ([arm]: its label), with the bar it decided on when known. */
     data class Decision(val at: LocalDateTime, val arm: String, val verdict: String, val bar: LocalTime? = null)
 
-    /** One order of the day (no id): [live] Zerodha, else paper; [source] the label the order screens show. */
+    /**
+     * One order of the day (no id): [live] Zerodha, else paper; [source] the label the order screens show. The file keeps
+     * [avg] for paper orders only, and [message]'s reason only ([orderReason]).
+     */
     data class Order(
         val at: LocalDateTime, val live: Boolean, val source: String, val symbol: String, val side: String, val qty: Int, val filled: Int,
         val status: String, val type: String = "", val avg: Double = 0.0, val message: String = "",
@@ -180,7 +187,8 @@ object DiagDay {
     private val LONG_RUN = Regex("[A-Za-z0-9+/=_\\-]{16,}")
     /** A derivative's trading symbol (BANKNIFTY25OCT51200CE, NIFTY2510725000PE, CRUDEOIL25NOVFUT): kept. */
     private val SYMBOL = Regex("^[A-Z][A-Z&]{1,19}\\d{2}(?:[A-Z]{3}|[0-9OND]\\d{2})(?:\\d+(?:\\.\\d+)?)?(?:CE|PE|FUT)$")
-    private val CLIENT_ID = Regex("\\b[A-Z]{2,3}\\d{3,6}\\b")
+    /** A client id's shape: AB1234, and ab1234 too (Kite's texts are not always upper case; 14 Oct review). */
+    private val CLIENT_ID = Regex("(?i)\\b[A-Z]{2,3}\\d{3,6}\\b")
     private val RUPEES_BEFORE = Regex("(?i)(₹|\\brs\\.?(?=\\s*[-+−]?\\d)|\\binr\\b)\\s*[-+−]?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*(?:k|lakhs?|cr|crores?)\\b)?")
     private val RUPEES_AFTER = Regex("(?i)[-+−]?\\d[\\d,]*(?:\\.\\d+)?\\s*(?:k\\s+|lakhs?\\s+|crores?\\s+)?(?:rupees?|₹|\\brs\\b\\.?)")
     private val MONEY_WORD = Regex("(?i)\\b(margins?|funds?|balance|utili[sz]ed|p&l|pnl|net worth|collateral|payout)\\b([^0-9\\n]{0,24}?)([-+−]?\\d[\\d,]*(?:\\.\\d+)?)")
@@ -188,16 +196,130 @@ object DiagDay {
     private val CODE = Regex("^[a-z0-9]+(?:_[a-z0-9]+)+$")
 
     /**
-     * Every text in the report goes through this, last: GitHub tokens, the owner's secret rules, JWTs, keys, client ids,
-     * rupee amounts, the numbers after money words, and [personal] words. Cut to [MAX_TEXT] after the scrub (so a cut can
-     * never leave part of a secret).
+     * The money words of a clause (14 Oct review of G3; [hideMoney]). Whole words only, so the app's codes
+     * (refused_premium_at_or_under_40) and longer words (network, losses) are not money words.
+     */
+    private val MONEY_WORDS = Regex("(?i)(?<![A-Za-z0-9_])(?:margins?|required|available|balance|cash|collateral|funds?|profit|loss|" +
+        "p&l|pnl|mtm|m2m|drawdown|(?:un)?reali[sz]ed|net|charges|brokerage|premium\\s+(?:paid|received)|rs|inr|rupees?|" +
+        "utili[sz]ed|payout)(?![A-Za-z0-9_])|₹")
+    /**
+     * A clause's end: "·", ";", "|", ", " and ". " (the comma or point inside a figure, 1,200 or 95536.25, has no space
+     * after it, so it never ends a clause). Not a bracket: "P&L 1,200 (2,300)" is one clause, and the scrub's own "[hidden]"
+     * must never split a money clause in two.
+     */
+    private val CLAUSE_END = Regex("·|;|\\||,\\s|\\.\\s")
+    /**
+     * A figure: 7, -2,340, 1,23,456, 95536.25, 12k, 1.2 lakh. Never one inside a word or a symbol (AB1234, R14,
+     * BANKNIFTY25OCT51200CE) or the tail of another figure, and never a time (15:30, 10:00:05: a figure next to ":" and a
+     * digit). One after a comma or colon that follows a word ("Exceeds,32112.60", "Required:95536.25") is a figure.
+     */
+    private val FIGURE = Regex("(?i)(?<![A-Za-z0-9_])(?<!\\d[.,:])[-+−]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?" +
+        "(?:\\s?(?:k|lakhs?|cr|crores?)(?![A-Za-z0-9_]))?(?![A-Za-z0-9_])(?!:\\d)")
+    /**
+     * What makes a figure in a money clause not money: a unit right after it - percent, points, ticks ("P&L +12.5 pts"),
+     * a time ("Safety net ...: every 30 s"), a size ("available 312 MB"), lots, trades or orders.
+     */
+    private val UNIT_AFTER = Regex("(?i)^\\s*(?:%|(?:pts?|points?|ticks?|ms|s|secs?|seconds?|mins?|minutes?|h|hrs?|hours?|days?|" +
+        "[kmg]b|bytes?|lots?|trades?|orders?)(?![A-Za-z0-9_]))")
+    /** Lakh grouping (1,23,456; 12,34,56,789): only rupees are written this way. Hidden wherever it is. */
+    private val LAKH_GROUPED = Regex("(?<![\\d,.])[-+−]?\\d{1,2},(?:\\d{2},)+\\d{3}(?:\\.\\d+)?(?![\\d,])")
+
+    /**
+     * A figure before a money word that looks like money (14 Oct review): signed (-2,340), comma-grouped (1,200), with
+     * decimals (95536.25), of 3 digits or more (540), or with k, lakh or crore. A plain count of one or two digits before the
+     * word ("3 required", "last 7 closed") is kept; after a money word every figure goes.
+     */
+    private fun moneyLike(f: String): Boolean =
+        f.first() in "-+−" || ',' in f || '.' in f || f.count { it.isDigit() } >= 3 || f.any { it.isLetter() }
+
+    /**
+     * The money clauses' figures hidden (14 Oct review of G3: Kite's "RMS:Margin Exceeds,Required:95536.25, Available:32112.60"
+     * kept its second figure, and "P&L 1,200 (2,300 realised)" its second). In each clause that holds a money word, every
+     * figure after the first money word and every money-like figure before it ([moneyLike]) is hidden; a percent, points or
+     * ticks stay, and so do times. A clause that follows a money clause after ", " ("Margin 1,200, 2,300") is a list of the
+     * same: its money-like figures go too. Other clauses are left as they are (index levels, ranges, bars).
+     */
+    fun hideMoney(text: String): String {
+        val out = StringBuilder(text.length)
+        /** One clause written out; true: it was a money clause. */
+        fun clause(c: String, inherit: Boolean): Boolean {
+            val first = MONEY_WORDS.find(c)
+            if (first == null && !inherit) { out.append(c); return false }
+            var last = 0
+            var hid = false
+            for (m in FIGURE.findAll(c)) {
+                val after = first != null && m.range.first > first.range.last
+                if (!(after || moneyLike(m.value)) || UNIT_AFTER.containsMatchIn(c.substring(m.range.last + 1))) continue
+                out.append(c, last, m.range.first).append(Secrets.HIDDEN)
+                last = m.range.last + 1
+                hid = true
+            }
+            out.append(c, last, c.length)
+            return first != null || hid
+        }
+        var from = 0
+        var money = false
+        var comma = false
+        for (e in CLAUSE_END.findAll(text)) {
+            money = clause(text.substring(from, e.range.first), money && comma)
+            comma = e.value.startsWith(",")
+            out.append(e.value)
+            from = e.range.last + 1
+        }
+        clause(text.substring(from), money && comma)
+        return out.toString()
+    }
+
+    /**
+     * The personal words taken out: one of 4 letters or more wherever it is (a login inside a path, the name in a sentence);
+     * a shorter one (a short word of the holder's name, "Om", "Ali"; 14 Oct review) only as a whole word, case-insensitively,
+     * so it never cuts other words apart ("Ali" inside "realised" would also break the money word). The longest first, so
+     * the whole name goes before its words.
+     */
+    private fun hidePersonal(text: String, personal: Collection<String?>): String {
+        var t = text
+        for (w in personal.mapNotNull { it?.trim() }.filter { it.length >= 2 }.distinct().sortedByDescending { it.length }) {
+            t = if (w.length >= 4) t.replace(w, Secrets.HIDDEN, ignoreCase = true)
+            else Regex("(?i)(?<![A-Za-z0-9_])" + Regex.escape(w) + "(?![A-Za-z0-9_])").replace(t, Secrets.HIDDEN)
+        }
+        return t
+    }
+
+    /**
+     * An order's message as the file keeps it (14 Oct review of G3): Kite's RMS text carries the account's margins ("RMS:Margin
+     * Exceeds,Required:95536.25, Available:32112.60 for entity account-AB1234 ..."), so only its reason is kept: the words
+     * before the first figure, at most [ORDER_REASON] characters. A digit inside a word or a code (AB1234,
+     * refused_premium_at_or_under_40) does not end it; [scrub] still runs on what is left.
+     */
+    fun orderReason(message: String): String {
+        val m = message.replace('\n', ' ').replace('\r', ' ')
+        val cut = ORDER_FIGURE.find(m)?.range?.first ?: m.length
+        return m.substring(0, cut).take(ORDER_REASON).trimEnd(' ', ':', ',', '.', '-', '=', '(', '₹').trim()
+    }
+
+    const val ORDER_REASON = 80
+    private val ORDER_FIGURE = Regex("(?<![A-Za-z0-9_])[-+−₹]?\\d")
+
+    /** The rupee net in the other arms' lines: Night's, VIX divergence's and MCX's "-2,340 after charges", GrammarArm's "4 trades -1,250". */
+    private val NET_AFTER_CHARGES = Regex("(?i)[-+−]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?\\s*after charges")
+    private val NET_AFTER_TRADES = Regex("(?i)(?<![A-Za-z0-9_.,])(\\d+ trades?)\\s+[-+−]?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?")
+
+    /**
+     * One of the other paper arms' lines without its rupee net (14 Oct review of G3: their diagLine(), made for Copy
+     * diagnostics, says "last 7 closed -2,340 after charges"; the file keeps the count, never the amount). [scrub] runs after.
+     */
+    fun otherArmLine(line: String): String =
+        NET_AFTER_TRADES.replace(NET_AFTER_CHARGES.replace(line, "(net hidden)")) { m -> m.groupValues[1] }
+
+    /**
+     * Every text in the report goes through this, last: GitHub tokens, the owner's secret rules, JWTs, keys, client ids (any
+     * case), rupee amounts, the figures of money clauses ([hideMoney]), lakh-grouped figures, and [personal] words. Cut to
+     * [MAX_TEXT] after the scrub (so a cut can never leave part of a secret). The personal words go after the money rules
+     * (14 Oct review): a name word taken out of the middle of a money word ("Ali" in "realised") must not hide that word
+     * from them.
      */
     fun scrub(text: String, personal: Collection<String?> = emptyList()): String {
         var t = text.replace('\n', ' ').replace('\r', ' ')
-        for (p in personal) {
-            val w = p?.trim().orEmpty()
-            if (w.length >= 3) t = t.replace(w, Secrets.HIDDEN, ignoreCase = true)
-        }
         t = CloudSync.redact(t)
         t = JWT.replace(t, Secrets.HIDDEN)
         t = LONG_RUN.replace(t) { m ->
@@ -208,6 +330,9 @@ object DiagDay {
         t = RUPEES_BEFORE.replace(t, "₹${Secrets.HIDDEN}")
         t = RUPEES_AFTER.replace(t, "${Secrets.HIDDEN} rupees")
         t = MONEY_WORD.replace(t) { m -> m.groupValues[1] + m.groupValues[2] + Secrets.HIDDEN }
+        t = hideMoney(t)
+        t = LAKH_GROUPED.replace(t, Secrets.HIDDEN)
+        t = hidePersonal(t, personal)
         t = CLIENT_ID.replace(t, Secrets.HIDDEN)
         t = Secrets.redact(t)
         return if (t.length > MAX_TEXT) t.take(MAX_TEXT - 1) + "…" else t
@@ -327,20 +452,25 @@ object DiagDay {
         val report = linkedMapOf<String, Any?>(
             "schema" to SCHEMA, "kind" to KIND, "day" to i.day.toString(), "generated_at" to STAMP.format(i.generatedAt), "app" to s(i.app),
             "privacy" to "Redacted on the phone: no tokens, keys, PINs, account or client ids, names, phone or e-mail, order ids, " +
-                "rupee balances, margins or P&L. Arm P&L is in points and percent of the premium.",
+                "rupee figures (balances, margins, charges or P&L). Arm P&L is in points and percent of the premium; a live " +
+                "order has no fill price, an order's message only its reason.",
             "mode" to i.mode.toSortedMap(),
             "arms" to arms,
-            "other_arms" to capped("other_arms", i.otherArms, MAX_LINES).map { s(it) },
+            // The other arms' lines without their rupee net (14 Oct review): the count stays, the amount never.
+            "other_arms" to capped("other_arms", i.otherArms, MAX_LINES).map { s(otherArmLine(it)) },
             "decisions_since" to i.decisionsSince?.let { at(it, i.day) },
             "decisions" to capped("decisions", decisions, MAX_DECISIONS).map { d ->
                 val k = reasonKind(d.verdict)
                 linkedMapOf("at" to at(d.at, i.day), "arm" to s(d.arm), "verdict" to s(d.verdict), "kind" to k, "outcome" to outcome(k),
                     "bar" to d.bar?.let { HM.format(it) })
             },
+            // 14 Oct review: a live order's fill price is left out (null), so the live account's rupee P&L cannot be rebuilt
+            // from its quantities and fills; a paper order keeps it. Live trades are read in points from the arms' trades.
+            // A message keeps only its reason ([orderReason]): Kite's RMS text carries the account's margins.
             "orders" to capped("orders", i.orders.sortedBy { it.at }, MAX_ORDERS).map { o ->
                 linkedMapOf("at" to at(o.at, i.day), "account" to if (o.live) "live" else "paper", "source" to s(o.source), "symbol" to s(o.symbol),
                     "side" to s(o.side), "qty" to o.qty, "filled" to o.filled, "status" to s(o.status), "type" to s(o.type),
-                    "avg" to r2(o.avg), "message" to s(o.message))
+                    "avg" to if (o.live) null else r2(o.avg), "message" to s(orderReason(o.message)))
             },
             "orders_by_source" to i.orders.groupingBy { (if (it.live) "live · " else "paper · ") + s(it.source) }.eachCount().toSortedMap(),
             "health" to linkedMapOf(

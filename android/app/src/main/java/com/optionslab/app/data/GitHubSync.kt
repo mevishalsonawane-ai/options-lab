@@ -38,7 +38,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  *    lists them ([backups]) and opens one through [Backup.open] / [Backup.restore], with every restore rule as it is.
  *  - G3: the evening run's day's diagnostics ([DiagDayHost], [com.optionslab.ira.DiagDay]): one small redacted file,
  *    `diag-YYYY-MM-DD.json.gz` in the release `diag-YYYY-MM`, replacing that day's file on a re-run. Not sealed: nothing
- *    personal is in it (no ids, names or rupees), and the research sessions read it without the passphrase.
+ *    personal is in it (no ids, names or rupees), and the research sessions read it without the passphrase. 14 Oct
+ *    review: each day's state is kept (tried, partial, full); a run also sends the days of the last three that never went
+ *    up in full, and the card names the ones still missing and says when the last one is a pre-close partial.
  *
  * The token (a fine-grained GitHub token for the data repository only, Contents read and write, 90 days):
  *  - sealed with Boss's PIN ([SecretBox], as the Zerodha API secret). Everything Boss does by hand with it (Restore from
@@ -81,8 +83,10 @@ object GitHubSync {
     private const val K_LAST_OK = "github.lastOk"
     private const val K_LAST_BACKUP = "github.lastBackup"
     private const val K_EVENING = "github.evening"
-    /** The last day whose diagnostics went up (G3): the card's "last day uploaded". */
+    /** The last day whose diagnostics went up (G3): read only as the record's start when [K_DIAG_DAYS] is not kept yet. */
     private const val K_DIAG = "github.diag.day"
+    /** Each recent day's diagnostics: tried, partial or full ([CloudSync.diagDecode]; 14 Oct review). */
+    private const val K_DIAG_DAYS = "github.diag.days"
 
     const val PROBLEM = "github:sync"
     const val PROBLEM_TOKEN = "github:token"
@@ -309,7 +313,7 @@ object GitHubSync {
         val outcomes = ArrayList<CloudSync.Last>()
         // G3 review: the diagnostics' outcome is shown like any other, but only a refused token makes it fail the run (a
         // failed run is tried again, and the evening run would send the backup again every hour until 08:00).
-        var diagLast: CloudSync.Last? = null
+        val diagLasts = ArrayList<CloudSync.Last>()
         try {
             // A token that can reach options-lab (its access widened on GitHub after it was pasted) is refused before anything
             // is sent: recorded as refused (403), so the automatic runs pause and Problems found says "GitHub token invalid".
@@ -330,19 +334,27 @@ object GitHubSync {
             // G3: the day's diagnostics, small and redacted, made here on the worker's thread (never the order or tick path).
             // A report that cannot be made is a diary line only, never a failed run: the evening run would otherwise try
             // again (and send the backup again) every hour until 08:00. A failed upload counts like any other.
-            if (diagDay != null && goOn() && sendNow(false) && outcomes.none { CloudSync.authRefused(it) }) {
-                val report = try { DiagDayHost.report(diagDay) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
-                    runCatching { Diag.record("github", CloudSync.redact("diagnostics $diagDay: could not be made (${e.javaClass.simpleName})")) }
-                    null
-                }
-                if (report != null) {
-                    val o = sync.diag(diagDay) { report }
-                    if (o.ok) runCatching {
-                        val kept = SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-                        SecurePrefs.put(K_DIAG, CloudSync.diagKept(kept, diagDay).toString())
+            // 14 Oct review: the day is recorded as tried first, and each run also sends the days of the last three that
+            // never went up in full ([CloudSync.diagDays]), oldest first; "Upload now" before the evening gate is recorded
+            // as partial, so the card does not take it for the day's file.
+            if (diagDay != null) {
+                runCatching { SecurePrefs.put(K_DIAG_DAYS, CloudSync.diagEncode(CloudSync.diagMark(diagDone(), diagDay, CloudSync.DIAG_TRIED))) }
+                for (d in CloudSync.diagDays(diagDay, diagDone())) {
+                    if (!goOn() || !sendNow(false) || outcomes.any { CloudSync.authRefused(it) }) break
+                    val made: ByteArray? = try { DiagDayHost.report(d) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                        runCatching { Diag.record("github", CloudSync.redact("diagnostics $d: could not be made (${e.javaClass.simpleName})")) }
+                        null
                     }
-                    diagLast = lastOf(o, gh)
-                    outcomes += diagLast!!
+                    val report = made ?: continue
+                    val o = sync.diag(d) { report }
+                    if (o.ok) runCatching {
+                        val t = Market.now()
+                        val state = CloudSync.diagState(d, t.toLocalDate(), t.hour * 60 + t.minute, eveningFrom)
+                        SecurePrefs.put(K_DIAG_DAYS, CloudSync.diagEncode(CloudSync.diagMark(diagDone(), d, state)))
+                    }
+                    val l = lastOf(o, gh)
+                    diagLasts += l
+                    outcomes += l
                 }
             }
             // The same refused token is not tried again in the same run.
@@ -358,7 +370,18 @@ object GitHubSync {
             outcomes.firstOrNull { !it.ok }?.let { SecurePrefs.put(K_LAST, it.encode()) }
         }
         runCatching { check() }
-        return outcomes.all { it.ok || (it === diagLast && !CloudSync.authRefused(it)) }
+        return outcomes.all { o -> o.ok || (diagLasts.any { it === o } && !CloudSync.authRefused(o)) }
+    }
+
+    /**
+     * Each recent day's diagnostics as kept ([CloudSync.diagDecode]). Before the record existed (the 13 Oct build kept the
+     * last day only), that day is its start, as full. Reads the vault: off the main thread.
+     */
+    private fun diagDone(): Map<LocalDate, Int> {
+        val m = CloudSync.diagDecode(SecurePrefs.getString(K_DIAG_DAYS))
+        if (m.isNotEmpty()) return m
+        val old = SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return m
+        return mapOf(old to CloudSync.DIAG_FULL)
     }
 
     /**
@@ -463,10 +486,14 @@ object GitHubSync {
             CloudSync.daysWaiting(LiveRecorder.days().associate { (d, f) -> d to f.walkTopDown().filter { it.isFile }.sumOf { it.length() } },
                 CloudSync.doneDecode(SecurePrefs.getString(K_DONE)), Market.today(), minute)
         }.getOrDefault(0)
+        // The last day that went up (partial or full: a day only tried is not "uploaded"), and the days that never did.
+        val diag = runCatching { diagDone() }.getOrDefault(emptyMap())
+        val lastDiag = diag.filterValues { it >= CloudSync.DIAG_PARTIAL }.keys.maxOrNull()
         return CloudSync.Status(tokenSet, keyReady, expiry, CloudSync.Last.decode(SecurePrefs.getString(K_LAST)),
             CloudSync.Last.decode(SecurePrefs.getString(K_LAST_OK)), CloudSync.Last.decode(SecurePrefs.getString(K_LAST_BACKUP)), waiting,
             repo()?.let { "${it.first}/${it.second}" } ?: CloudSync.DEFAULT_REPO,
-            SecurePrefs.getString(K_DIAG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
+            lastDiag, diagPartial = lastDiag != null && diag[lastDiag] == CloudSync.DIAG_PARTIAL,
+            diagMissed = CloudSync.diagMissed(diag, Market.today(), minute))
     }
 
     fun card(s: CloudSync.Status): List<Pair<String, String>> = CloudSync.card(s, ::toDay, Market.today())
@@ -521,7 +548,8 @@ object GitHubSync {
         return CloudSync.redact("GitHub sync: token ${if (s.tokenSet) "set" + (s.expiry?.let { ", expires $it" } ?: "") else "not set"} · " +
             "to ${s.repo} · " + (if (s.tokenSet && CloudSync.authRefused(s.lastTry)) "token invalid (GitHub refused it) · " else "") +
             "passphrase ${if (s.keyReady) "set" else "not set"} · last $t · last backup ${s.lastBackupOk?.let { toDay(it.atMs) } ?: "none"} · " +
-            "diagnostics ${s.lastDiagDay ?: "none"} · " +
+            "diagnostics ${s.lastDiagDay ?: "none"}${if (s.diagPartial) " (partial)" else ""} · " +
+            (if (s.diagMissed.isNotEmpty()) "diagnostics missed ${s.diagMissed.joinToString(",")} · " else "") +
             "days waiting ${s.waiting}")
     }
 

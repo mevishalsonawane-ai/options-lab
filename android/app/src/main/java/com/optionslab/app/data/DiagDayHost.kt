@@ -16,7 +16,9 @@ import java.time.LocalDateTime
  * Called only from the GitHub sync's run ([GitHubSync.run], the evening worker's thread): never the main thread, the order
  * or the tick path. It reads memory and the files those parts already read for Copy diagnostics; it writes nothing. Every
  * part is read on its own: one that fails is left out, never the whole file. Texts pass [Diag.redact] (keys, the account
- * holder's name) before [DiagDay.scrub]'s final pass; no order id, account id or rupee figure is handed over.
+ * holder's name) before [DiagDay.scrub]'s final pass; no order id or account id is handed over. 14 Oct review: the other
+ * arms' lines and the orders' messages can carry rupees (the arms' "-2,340 after charges", Kite's RMS margins): [DiagDay]
+ * strips those before its scrub ([DiagDay.otherArmLine], [DiagDay.orderReason]) and leaves a live order's fill price out.
  */
 object DiagDayHost {
     private val GOLD get() = com.optionslab.app.BuildConfig.GOLD
@@ -25,6 +27,10 @@ object DiagDayHost {
     suspend fun report(day: LocalDate): ByteArray = withContext(Dispatchers.IO) { DiagDay.encode(input(day)) }
 
     private fun r(s: String): String = runCatching { Diag.redact(s) }.getOrDefault(s)
+
+    /** The words of the holder's [name] of 2 letters or more ("R. K. Om Sharma" → Om, Sharma; 14 Oct review). */
+    internal fun nameWords(name: String?): List<String> =
+        name.orEmpty().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 2 }.distinctBy { it.lowercase() }
 
     private fun ms(t: LocalDateTime): Long = t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
 
@@ -106,11 +112,12 @@ object DiagDayHost {
             { NightArm.diagLine() }, { VixDivArm.diagLine() }, { McxPaperArms.diagLine() }, { GrammarArm.diagLine() },
         ).mapNotNull { f -> runCatching { r(f()) }.getOrNull() }
 
-        // The holder's name whole and word by word (4 letters or more), the Zerodha user id, the GitHub login and the
-        // repository owner (a personal handle).
+        // The holder's name whole and word by word, the Zerodha user id, the GitHub login and the repository owner (a personal
+        // handle). 14 Oct review: every name word of 2 letters or more ("Om", "Raj"), not only the long ones; DiagDay.scrub
+        // takes a short word out only as a whole word.
         val name = runCatching { Broker.userName }.getOrNull()
         val personal = listOf(name, runCatching { Broker.userId }.getOrNull(), runCatching { GitHubSync.login }.getOrNull(),
-            com.optionslab.ira.CloudSync.OWNER) + name.orEmpty().split(' ').filter { it.length >= 4 }
+            com.optionslab.ira.CloudSync.OWNER) + nameWords(name)
         return DiagDay.Input(
             day = day, generatedAt = Market.now().toLocalDateTime().withNano(0),
             app = "${com.optionslab.app.BuildConfig.VERSION_NAME} (build ${com.optionslab.app.BuildConfig.COMMIT})",

@@ -198,6 +198,68 @@ class GitHubSyncTest : RobolectricTest() {
         assertTrue(GitHubSync.authBlocked())
     }
 
+    @Test fun aFailedDaysDiagnosticsGoUpWithTheNextRunAndTheCardSaysSoMeanwhile() {
+        // 14 Oct review of G3: a failed upload was lost for good (the evening was done, only that evening's day was sent).
+        ready()
+        val wed = Background.WED
+        val thu = wed.plusDays(1)
+        Background.at(wed, 23, 40)
+        gh.uploadCode = 500
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = wed) })
+        assertNull(GitHubSync.status().lastDiagDay)
+        // Until Wednesday's morning catch-up is over, the card does not call it missed; after 08:00 it does, in red.
+        Background.at(thu, 7, 0)
+        assertEquals(emptyList<LocalDate>(), GitHubSync.status().diagMissed)
+        Background.at(thu, 12, 0)
+        assertEquals(listOf(wed), GitHubSync.status().diagMissed)
+        val missed = GitHubSync.card(GitHubSync.status()).toMap()["Diagnostics missed"]
+        assertNotNull(missed)
+        val line: String = missed!!
+        assertTrue(line, line.startsWith("✗ diagnostics") && line.contains("not uploaded") && line.contains("tries again"))
+        // Thursday's evening run sends Wednesday's too, oldest first; then nothing is missed.
+        gh.uploadCode = 201
+        gh.seen.clear()
+        Background.at(thu, 23, 40)
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = thu) })
+        assertEquals(listOf("diag-$wed.json.gz", "diag-$thu.json.gz"), sent())
+        val s = GitHubSync.status()
+        assertEquals(thu, s.lastDiagDay)
+        assertFalse(s.diagPartial)
+        assertEquals(emptyList<LocalDate>(), s.diagMissed)
+        assertNull(GitHubSync.card(s).toMap()["Diagnostics missed"])
+        // Friday's run: both are full, so only Friday's goes.
+        gh.seen.clear()
+        Background.at(thu.plusDays(1), 23, 40)
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = thu.plusDays(1)) })
+        assertEquals(listOf("diag-${thu.plusDays(1)}.json.gz"), sent())
+    }
+
+    @Test fun anUploadNowBeforeTheCloseIsPartialUntilTheEveningRun() {
+        // 14 Oct review of G3: "Upload now" during the day sends the day so far; the card must not take it for the day's file.
+        ready()
+        val wed = Background.WED
+        Background.at(wed, 11, 0)
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, manual = true, eveningFrom = 23 * 60 + 30, diagDay = wed) })
+        var s = GitHubSync.status()
+        assertEquals(wed, s.lastDiagDay)
+        assertTrue(s.diagPartial)
+        val line = GitHubSync.card(s).toMap()["Diagnostics"]!!
+        assertTrue(line, line.contains("partial") && !line.contains("✓"))
+        // The evening run replaces it: the whole day.
+        Background.at(wed, 23, 40)
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = wed) })
+        s = GitHubSync.status()
+        assertFalse(s.diagPartial)
+        assertTrue(GitHubSync.card(s).toMap()["Diagnostics"]!!.endsWith("✓"))
+        // A later tap before the next close never lowers it: Wednesday stays whole, Thursday is the partial one.
+        Background.at(wed.plusDays(1), 11, 0)
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, manual = true, eveningFrom = 23 * 60 + 30, diagDay = wed.plusDays(1)) })
+        s = GitHubSync.status()
+        assertEquals(wed.plusDays(1), s.lastDiagDay)
+        assertTrue(s.diagPartial)
+        assertEquals(emptyList<LocalDate>(), s.diagMissed)
+    }
+
     @Test fun noDiagnosticsDayNoDiagnosticsUpload() {
         ready()
         Background.at(Background.WED, 23, 40)

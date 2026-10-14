@@ -18,6 +18,11 @@ Schema 1 (see MAINTENANCE.md, "Daily diagnostics"):
 - ``decisions_since`` and ``decisions``: at, arm, verdict, kind (the reason: guard, lock, day_lock, kill_switch, flow,
   liquidity, pretrade, event, cap, exposure, lapsed, ...), outcome (taken / skipped / waiting / holding / error), bar.
 - ``orders`` (at, account, source, symbol, side, qty, filled, status, type, avg, message) and ``orders_by_source``.
+  Since 14 Oct 2026: ``avg`` (the fill price) is null for a live order, so the live account's rupees cannot be rebuilt
+  from it; ``message`` is only the reason, cut before its first figure (Kite's RMS text names the margins).
+  ``other_arms`` lines say "(net hidden)" where the phone shows a rupee net. A file whose ``generated_at`` is on a
+  later date than ``day`` was sent late (a retry): its arm states, ``mode``, health lines and workers are as at
+  ``generated_at``, not as on ``day``.
 - ``health``: errors by kind, unreadable failures, stream drops, named summary lines (order_speed, slippage, ...),
   workers, sync (failed, skipped, lines), diary_lines.
 - ``timeline``: the Autopilot change timeline (at, source, agent, what, why, undo, scope, own: Boss's own switch).

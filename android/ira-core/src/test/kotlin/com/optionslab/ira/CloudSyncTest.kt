@@ -184,11 +184,76 @@ class CloudSyncTest {
         assertNull(CloudSync.diagDay("weird", d(13), 23 * 60 + 40, today, gate))
     }
 
-    @Test fun anOlderDaysRerunNeverMovesTheCardBack() {
-        assertEquals(d(13), CloudSync.diagKept(null, d(13)))
-        assertEquals(d(13), CloudSync.diagKept(d(12), d(13)))
-        assertEquals(d(13), CloudSync.diagKept(d(13), d(12)))
-        assertEquals(d(13), CloudSync.diagKept(d(13), d(13)))
+    // ---- 14 Oct review of G3: a failed day is sent again, a pre-close upload is partial ---------------------------------
+
+    @Test fun aRunAlsoSendsTheMissedDaysOfTheLastThree() {
+        val full = CloudSync.DIAG_FULL
+        // Nothing kept yet (the first run): its own day only, never days before the diagnostics began.
+        assertEquals(listOf(d(13)), CloudSync.diagDays(d(13), emptyMap()))
+        assertEquals(emptyList(), CloudSync.diagDays(null, mapOf(d(12) to full)))
+        // 10 Oct full, 11 Oct failed (tried), 12 Oct partial only: 11 and 12 go again, oldest first, then 13.
+        val done = mapOf(d(10) to full, d(11) to CloudSync.DIAG_TRIED, d(12) to CloudSync.DIAG_PARTIAL)
+        assertEquals(listOf(d(11), d(12), d(13)), CloudSync.diagDays(d(13), done))
+        // A day missed with no record at all (the phone was off two evenings) goes too, once the record began before it.
+        assertEquals(listOf(d(11), d(12), d(13)), CloudSync.diagDays(d(13), mapOf(d(10) to full)))
+        // At most three days back: 9 Oct is too old.
+        assertEquals(listOf(d(10), d(11), d(12), d(13)), CloudSync.diagDays(d(13), mapOf(d(5) to CloudSync.DIAG_TRIED)))
+        // A re-run of an older day than the record's first sends that day only.
+        assertEquals(listOf(d(8)), CloudSync.diagDays(d(8), mapOf(d(12) to full)))
+        // Its own day is sent again even when full (the evening run replaces a re-run).
+        assertEquals(listOf(d(13)), CloudSync.diagDays(d(13), mapOf(d(12) to full, d(13) to full)))
+        // Across a month's end.
+        assertEquals(listOf(d(30, 9), d(1), d(2)), CloudSync.diagDays(d(2), mapOf(d(29, 9) to full)))
+    }
+
+    @Test fun anUploadBeforeTheEveningGateIsPartialAndNeverLowersAFullDay() {
+        val gate = 23 * 60 + 30
+        assertEquals(CloudSync.DIAG_PARTIAL, CloudSync.diagState(d(13), today, 11 * 60, gate))
+        assertEquals(CloudSync.DIAG_PARTIAL, CloudSync.diagState(d(13), today, gate - 1, gate))
+        assertEquals(CloudSync.DIAG_FULL, CloudSync.diagState(d(13), today, gate, gate))
+        assertEquals(CloudSync.DIAG_FULL, CloudSync.diagState(d(12), today, 1 * 60, gate), "a past day is whole")
+        var m = CloudSync.diagMark(emptyMap(), d(13), CloudSync.DIAG_TRIED)
+        assertEquals(CloudSync.DIAG_TRIED, m[d(13)])
+        m = CloudSync.diagMark(m, d(13), CloudSync.DIAG_FULL)
+        assertEquals(CloudSync.DIAG_FULL, CloudSync.diagMark(m, d(13), CloudSync.DIAG_PARTIAL)[d(13)])
+        assertEquals(CloudSync.DIAG_FULL, CloudSync.diagMark(m, d(13), CloudSync.DIAG_TRIED)[d(13)])
+        // Kept and read back; a broken entry is dropped; an odd state is held to the known ones.
+        val kept = CloudSync.diagEncode(mapOf(d(13) to 2, d(11) to 0, d(12) to 1))
+        assertEquals("2026-10-11=0,2026-10-12=1,2026-10-13=2", kept)
+        assertEquals(mapOf(d(11) to 0, d(12) to 1, d(13) to 2), CloudSync.diagDecode(kept))
+        assertEquals(mapOf(d(13) to 2), CloudSync.diagDecode("2026-10-13=7,junk,2026-13-40=1,2026-10-14=x"))
+        assertEquals(emptyMap(), CloudSync.diagDecode(null))
+        assertEquals(60, CloudSync.diagDecode(CloudSync.diagEncode((1..90).associate { LocalDate.of(2026, 1, 1).plusDays(it.toLong()) to 2 })).size)
+    }
+
+    @Test fun theCardNamesTheDaysThatNeverWentUpOnceTheirWindowEnded() {
+        val full = CloudSync.DIAG_FULL
+        // Nothing kept: nothing missed.
+        assertEquals(emptyList(), CloudSync.diagMissed(emptyMap(), today, 12 * 60))
+        // 10 Oct full, 11 Oct failed, 12 Oct partial. At 12:00 on the 13th, the 12th's window (its evening and the morning
+        // catch-up to 08:00) is over: 11 and 12 are missed. Today is not, its evening is still to come.
+        val done = mapOf(d(10) to full, d(11) to CloudSync.DIAG_TRIED, d(12) to CloudSync.DIAG_PARTIAL)
+        assertEquals(listOf(d(11), d(12)), CloudSync.diagMissed(done, today, 12 * 60))
+        // At 07:00, the 12th's morning catch-up may still send it: only the 11th.
+        assertEquals(listOf(d(11)), CloudSync.diagMissed(done, today, 7 * 60))
+        // A day with no record at all after the first is missed too; at most a week back.
+        assertEquals(listOf(d(11), d(12)), CloudSync.diagMissed(mapOf(d(10) to full), today, 9 * 60))
+        assertEquals((6..12).map { d(it) }, CloudSync.diagMissed(mapOf(d(1) to CloudSync.DIAG_TRIED), today, 9 * 60))
+        // The card's line, in red (✗), saying the next run tries again while the days are within its reach.
+        val s = status().copy(lastDiagDay = d(10), diagMissed = listOf(d(11), d(12)))
+        val card = CloudSync.card(s, toDay, today).toMap()
+        assertEquals("last day uploaded: 10 Oct ✓", card["Diagnostics"])
+        assertEquals("✗ diagnostics 11 Oct, 12 Oct not uploaded · the next run tries again", card["Diagnostics missed"])
+        val old = CloudSync.card(status().copy(lastDiagDay = d(10), diagMissed = listOf(d(6))), toDay, today).toMap()
+        assertEquals("✗ diagnostics 6 Oct not uploaded", old["Diagnostics missed"])
+        assertNull(CloudSync.card(status().copy(lastDiagDay = d(12)), toDay, today).toMap()["Diagnostics missed"])
+    }
+
+    @Test fun aPartialDayIsSaidOnTheCard() {
+        val s = status().copy(lastDiagDay = d(13), diagPartial = true)
+        val line = CloudSync.card(s, toDay, today).toMap()["Diagnostics"]!!
+        assertEquals("last day uploaded: 13 Oct · partial (sent before the close; the evening run replaces it)", line)
+        assertFalse(line.contains("✓"))
     }
 
     @Test fun theCardSaysDateSizeAndTick() {
